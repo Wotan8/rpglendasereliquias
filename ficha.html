@@ -1,0 +1,2932 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1e1b4b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Lendas e Relíquias - Ficha Digital</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --primary: #8b5cf6;
+            --secondary: #ec4899;
+            --dark: #1e1b4b;
+            --darker: #0f172a;
+            --light: #f8fafc;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border: #334155;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            color: var(--light);
+            min-height: 100vh;
+            padding: 10px;
+            overflow-x: hidden;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(139, 92, 246, 0.2);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            color: var(--primary);
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .user-info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(139, 92, 246, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 12px 20px;
+            border-radius: 30px;
+            border: 2px solid var(--primary);
+            z-index: 9998;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: calc(100vw - 40px);
+            flex-wrap: wrap;
+        }
+
+        .user-email {
+            color: #cbd5e1;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .btn-logout {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-logout:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-logout:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 639px) {
+            .user-info {
+                top: 5px;
+                right: 5px;
+                padding: 8px 12px;
+                font-size: 0.75rem;
+                gap: 8px;
+            }
+
+            .user-email {
+                font-size: 0.7rem;
+                max-width: 150px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .btn-logout {
+                padding: 6px 12px;
+                font-size: 0.7rem;
+            }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            margin-top: 70px;
+            background: rgba(30, 27, 75, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            margin-bottom: 20px;
+            font-size: clamp(0.75rem, 2.5vw, 0.9rem);
+            padding: 0 10px;
+        }
+
+        .autosave-indicator {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            z-index: 9999;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .autosave-indicator.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .autosave-indicator.saving {
+            background: rgba(245, 158, 11, 0.9);
+        }
+
+        .autosave-indicator.error {
+            background: rgba(239, 68, 68, 0.9);
+        }
+
+        @media (max-width: 639px) {
+            .autosave-indicator {
+                top: 60px;
+                left: 10px;
+                font-size: 0.7rem;
+                padding: 6px 12px;
+            }
+
+            .container {
+                margin-top: 80px;
+            }
+        }
+
+        .tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 8px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scroll-behavior: smooth;
+        }
+
+        .tabs::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .tabs::-webkit-scrollbar-track {
+            background: rgba(51, 65, 85, 0.3);
+            border-radius: 2px;
+        }
+
+        .tabs::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        .tab {
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: clamp(0.8rem, 2.5vw, 1rem);
+            font-weight: 600;
+            transition: all 0.3s;
+            border-radius: 8px 8px 0 0;
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-width: fit-content;
+            touch-action: manipulation;
+        }
+
+        .tab:active {
+            transform: scale(0.95);
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-size: clamp(1.1rem, 4vw, 1.3rem);
+            margin-bottom: 15px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .grid-2 { grid-template-columns: 1fr; }
+        .grid-3 { grid-template-columns: 1fr; }
+        .grid-4 { grid-template-columns: 1fr; }
+
+        @media (min-width: 640px) {
+            .grid-2 { grid-template-columns: repeat(2, 1fr); }
+            .grid-3 { grid-template-columns: repeat(2, 1fr); }
+            .grid-4 { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (min-width: 1024px) {
+            .grid-3 { grid-template-columns: repeat(3, 1fr); }
+            .grid-4 { grid-template-columns: repeat(4, 1fr); }
+            .container { padding: 30px; }
+            .section { padding: 20px; }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: clamp(0.85rem, 2.5vw, 0.9rem);
+            color: #cbd5e1;
+        }
+
+        input, select, textarea {
+            padding: 14px 12px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: clamp(0.95rem, 3vw, 1rem);
+            transition: all 0.3s;
+            touch-action: manipulation;
+            width: 100%;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+        }
+
+        textarea {
+            min-height: 200px;
+            resize: vertical;
+            font-family: inherit;
+            line-height: 1.6;
+        }
+
+        .attribute-group {
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 10px;
+            padding: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .attribute-header {
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 12px;
+            font-size: clamp(0.95rem, 3vw, 1.1rem);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .attribute-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+            gap: 10px;
+        }
+
+        .attribute-item:last-child {
+            border-bottom: none;
+        }
+
+        .attribute-name {
+            font-weight: 600;
+            color: #e2e8f0;
+            font-size: clamp(0.9rem, 2.8vw, 1rem);
+        }
+
+        .attribute-code {
+            color: #94a3b8;
+            font-size: clamp(0.75rem, 2.2vw, 0.85rem);
+            margin-left: 4px;
+        }
+
+        .dots {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+            flex-wrap: nowrap;
+        }
+
+        .dot {
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
+            min-height: 28px;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            touch-action: manipulation;
+        }
+
+        .dot:active {
+            transform: scale(1.15);
+        }
+
+        .dot.filled {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
+        }
+
+        .skill-item {
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid transparent;
+            transition: all 0.3s;
+            gap: 8px;
+        }
+
+        .skill-item:active {
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .skill-item.inapto {
+            opacity: 0.5;
+        }
+
+        .skill-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .skill-info {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .skill-name {
+            font-weight: 600;
+            color: #e2e8f0;
+            font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+            line-height: 1.3;
+        }
+
+        .skill-attrs {
+            font-size: clamp(0.7rem, 2vw, 0.75rem);
+            color: #64748b;
+            line-height: 1.2;
+        }
+
+        .skill-input {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: clamp(0.85rem, 2.5vw, 0.9rem);
+            margin-top: 0;
+            background: rgba(15, 23, 42, 0.9);
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            color: var(--light);
+        }
+
+        .skill-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+        }
+
+        .penalty {
+            color: var(--danger);
+            font-size: clamp(0.7rem, 2vw, 0.75rem);
+            font-weight: 600;
+        }
+
+        .characteristic-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 10px;
+            border: 2px solid var(--primary);
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+
+        .char-label {
+            font-weight: 700;
+            color: #e2e8f0;
+            font-size: clamp(0.95rem, 3vw, 1.1rem);
+        }
+
+        .char-formula {
+            font-size: clamp(0.7rem, 2vw, 0.75rem);
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .char-value {
+            font-size: clamp(1.5rem, 5vw, 1.8rem);
+            font-weight: 900;
+            color: var(--primary);
+            text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+            flex-shrink: 0;
+        }
+
+        .btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: clamp(0.9rem, 2.8vw, 1rem);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            touch-action: manipulation;
+            width: 100%;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(51, 65, 85, 0.6);
+            color: white;
+            border: 2px solid var(--border);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+            color: white;
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-small {
+            padding: 10px 14px;
+            font-size: clamp(0.8rem, 2.5vw, 0.85rem);
+            width: auto;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        @media (min-width: 640px) {
+            .button-group {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            .button-group .btn {
+                width: auto;
+                flex: 1;
+                min-width: 150px;
+            }
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            font-size: clamp(0.85rem, 2.5vw, 0.9rem);
+            display: none;
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.2);
+            border: 2px solid var(--success);
+            color: var(--success);
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid var(--danger);
+            color: var(--danger);
+        }
+
+        .exp-tracker {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2));
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .exp-value {
+            font-size: clamp(2.5rem, 8vw, 3rem);
+            font-weight: 900;
+            color: var(--primary);
+            text-shadow: 0 0 20px rgba(139, 92, 246, 0.7);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        @media (min-width: 640px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .stat-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .stat-card:active {
+            transform: scale(0.98);
+        }
+
+        .stat-label {
+            font-size: clamp(0.75rem, 2.2vw, 0.8rem);
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: clamp(1.5rem, 5vw, 2rem);
+            font-weight: 900;
+            color: var(--primary);
+        }
+
+        .hp-bar-container {
+            margin: 15px 0;
+        }
+
+        .hp-bar {
+            width: 100%;
+            height: 40px;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid var(--border);
+            position: relative;
+        }
+
+        .hp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--danger), var(--warning), var(--success));
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: clamp(1rem, 3.5vw, 1.2rem);
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .hp-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .hp-controls input {
+            width: 80px;
+            text-align: center;
+            padding: 10px 8px;
+        }
+
+        .combat-helper {
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid var(--danger);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .dice-roller {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .dice-input {
+            width: 80px;
+        }
+
+        .roll-result {
+            font-size: clamp(1.8rem, 6vw, 2rem);
+            font-weight: 900;
+            color: var(--danger);
+            text-shadow: 0 0 20px rgba(239, 68, 68, 0.7);
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .container-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .container-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border);
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .container-name {
+            font-weight: 700;
+            font-size: clamp(1rem, 3vw, 1.1rem);
+            color: var(--primary);
+        }
+
+        .container-capacity {
+            font-size: clamp(0.85rem, 2.5vw, 0.9rem);
+            color: #94a3b8;
+        }
+
+        .container-capacity.overload {
+            color: var(--danger);
+            font-weight: 700;
+        }
+
+        .inventory-item {
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .item-name {
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 5px;
+            font-size: clamp(0.9rem, 2.8vw, 1rem);
+        }
+
+        .item-details {
+            font-size: clamp(0.75rem, 2.2vw, 0.85rem);
+            color: #94a3b8;
+            word-wrap: break-word;
+        }
+
+        .class-ability-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border);
+            gap: 10px;
+        }
+
+        .class-ability-name {
+            font-weight: 600;
+            color: #e2e8f0;
+            font-size: clamp(0.9rem, 2.8vw, 1rem);
+            flex: 1;
+        }
+
+        .test-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid var(--warning);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .test-name {
+            font-weight: 700;
+            color: var(--warning);
+            margin-bottom: 8px;
+            font-size: clamp(0.95rem, 3vw, 1.05rem);
+        }
+
+        .test-formula {
+            font-size: clamp(0.8rem, 2.3vw, 0.85rem);
+            color: #94a3b8;
+            margin-bottom: 5px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .test-result {
+            font-size: clamp(1.2rem, 4vw, 1.4rem);
+            font-weight: 900;
+            color: var(--warning);
+            text-align: center;
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(245, 158, 11, 0.1);
+            border-radius: 6px;
+        }
+
+        .resource-tracker {
+            background: rgba(139, 92, 246, 0.15);
+            border: 2px solid var(--primary);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .resource-header {
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: clamp(1rem, 3vw, 1.1rem);
+        }
+
+        .resource-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .resource-value {
+            font-size: clamp(1.8rem, 6vw, 2.2rem);
+            font-weight: 900;
+            color: var(--primary);
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .info-box {
+            background: rgba(245, 158, 11, 0.1);
+            border: 2px solid var(--warning);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+            font-size: clamp(0.8rem, 2.3vw, 0.85rem);
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+
+        .info-box strong {
+            color: var(--warning);
+        }
+
+        @media (max-width: 639px) {
+            body {
+                padding: 5px;
+            }
+
+            .container {
+                padding: 10px;
+                border-radius: 12px;
+            }
+
+            h1 {
+                margin-bottom: 5px;
+            }
+
+            .subtitle {
+                margin-bottom: 15px;
+            }
+
+            .tabs {
+                gap: 4px;
+                padding-bottom: 6px;
+                margin-bottom: 15px;
+            }
+
+            .tab {
+                padding: 10px 12px;
+                font-size: 0.8rem;
+            }
+
+            .section {
+                padding: 10px;
+                margin-bottom: 10px;
+            }
+
+            .section-title {
+                margin-bottom: 10px;
+                font-size: 1rem;
+            }
+
+            .attribute-group {
+                padding: 8px;
+            }
+
+            .attribute-header {
+                font-size: 0.9rem;
+                margin-bottom: 8px;
+            }
+
+            .attribute-item {
+                padding: 8px 0;
+            }
+
+            .dots {
+                gap: 3px;
+            }
+
+            .dot {
+                width: 26px;
+                height: 26px;
+                min-width: 26px;
+                min-height: 26px;
+                border-width: 2px;
+            }
+
+            .skill-item {
+                padding: 8px;
+                gap: 6px;
+            }
+
+            .skill-header {
+                gap: 6px;
+            }
+
+            .skill-name {
+                font-size: 0.85rem;
+            }
+
+            .skill-attrs {
+                font-size: 0.7rem;
+            }
+
+            .hp-controls {
+                gap: 6px;
+            }
+
+            .hp-controls input {
+                width: 70px;
+                padding: 8px 6px;
+            }
+
+            .hp-controls .btn-small {
+                padding: 8px 10px;
+                font-size: 0.75rem;
+            }
+
+            .button-group {
+                padding-bottom: 20px;
+            }
+
+            textarea {
+                min-height: 250px;
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (min-width: 640px) and (max-width: 1023px) {
+            .skill-header {
+                flex-direction: row;
+            }
+
+            .dots {
+                gap: 5px;
+            }
+
+            .dot {
+                width: 30px;
+                height: 30px;
+                min-width: 30px;
+                min-height: 30px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .skill-item {
+                flex-direction: row;
+                align-items: center;
+                padding: 12px;
+            }
+
+            .skill-header {
+                flex: 1;
+            }
+
+            .skill-input {
+                margin-top: 0;
+            }
+
+            .dot {
+                width: 32px;
+                height: 32px;
+                min-width: 32px;
+                min-height: 32px;
+                border-width: 3px;
+            }
+
+            .dots {
+                gap: 6px;
+            }
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        @media (min-width: 640px) {
+            .container {
+                background: rgba(30, 27, 75, 0.98);
+            }
+
+            .section {
+                background: rgba(15, 23, 42, 0.8);
+            }
+        }
+        
+        .load-class-button {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 3px solid #f59e0b;
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <!-- TELA DE CARREGAMENTO -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">⚔️ Carregando Ficha...</div>
+    </div>
+
+    <!-- INFORMAÇÕES DO USUÁRIO -->
+    <div class="user-info" id="userInfo" style="display: none;">
+        <span class="user-email" id="userEmail">Carregando...</span>
+        <button class="btn-logout" onclick="logout()">🚪 SAIR</button>
+    </div>
+
+    <div class="autosave-indicator" id="autosaveIndicator">💾 Salvando na nuvem...</div>
+
+    <div class="container" id="mainContainer" style="display: none;">
+        <h1>⚔️ LENDAS E RELÍQUIAS ⚔️</h1>
+        <p class="subtitle">Sistema de Ficha Digital com Firebase - Auto-Save na Nuvem ☁️</p>
+
+        <div class="alert alert-success" id="alertSuccess"></div>
+        <div class="alert alert-danger" id="alertError"></div>
+
+        <div class="tabs" id="tabContainer">
+            <button class="tab active" onclick="switchTab('basico')">📋 Básico</button>
+            <button class="tab" onclick="switchTab('atributos')">💪 Atributos</button>
+            <button class="tab" onclick="switchTab('habilidades')">🎯 Habilidades</button>
+            <button class="tab" onclick="switchTab('caracteristicas')">📊 Stats</button>
+            <button class="tab" onclick="switchTab('classe')">⭐ Classe</button>
+            <button class="tab" onclick="switchTab('combate')">⚔️ Combate</button>
+            <button class="tab" onclick="switchTab('inventario')">🎒 Inventário</button>
+            <button class="tab" onclick="switchTab('notas')">📝 Notas</button>
+            <button class="tab" onclick="switchTab('evolucao')">⭐ EXP</button>
+        </div>
+
+        <!-- ABA BÁSICO -->
+        <div id="basico" class="tab-content active">
+            <div class="section">
+                <h2 class="section-title">Informações Básicas</h2>
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label>Nome do Personagem</label>
+                        <input type="text" id="nome" placeholder="Digite o nome...">
+                    </div>
+                    <div class="form-group">
+                        <label>Jogador</label>
+                        <input type="text" id="jogador" placeholder="Seu nome...">
+                    </div>
+                    <div class="form-group">
+                        <label>Idade</label>
+                        <input type="number" id="idade" placeholder="0" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label>Raça</label>
+                        <select id="raca">
+                            <option value="">Selecione...</option>
+                            <option value="Humano">Humano</option>
+                            <option value="Elorin">Elorin</option>
+                            <option value="Karu-Selvagem">Karu-Selvagem</option>
+                            <option value="Picxi">Picxi</option>
+                            <option value="Yotun">Yotun</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Classe</label>
+                        <select id="classe">
+                            <option value="">Selecione...</option>
+                            <option value="Caçador">Caçador</option>
+                            <option value="Druida">Druida</option>
+                            <option value="Guerreiro">Guerreiro</option>
+                            <option value="Adepto">Adepto (Necromante)</option>
+                            <option value="Ladino">Ladino</option>
+                            <option value="Pallacerdote">Pallacerdote</option>
+                            <option value="Ritualista">Ritualista (Abismancia)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Virtude</label>
+                        <select id="virtude">
+                            <option value="">Selecione...</option>
+                            <option value="Caridade">Caridade</option>
+                            <option value="Esperança">Esperança</option>
+                            <option value="Fé">Fé</option>
+                            <option value="Fortaleza">Fortaleza</option>
+                            <option value="Justiça">Justiça</option>
+                            <option value="Prudência">Prudência</option>
+                            <option value="Temperança">Temperança</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Vício</label>
+                        <select id="vicio">
+                            <option value="">Selecione...</option>
+                            <option value="Avareza">Avareza</option>
+                            <option value="Gula">Gula</option>
+                            <option value="Inveja">Inveja</option>
+                            <option value="Ira">Ira</option>
+                            <option value="Luxúria">Luxúria</option>
+                            <option value="Orgulho">Orgulho</option>
+                            <option value="Preguiça">Preguiça</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">Características Raciais</h2>
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label>Tamanho</label>
+                        <input type="number" id="tamanho" value="5" min="1" max="15" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label>Luns (Dinheiro)</label>
+                        <input type="number" id="luns" value="0" min="0" inputmode="numeric">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA ATRIBUTOS -->
+        <div id="atributos" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">Atributos do Personagem</h2>
+                <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">Toque nas bolinhas para preencher/esvaziar.</p>
+                
+                <div class="grid grid-3">
+                    <div class="attribute-group">
+                        <div class="attribute-header">⚡ Poder</div>
+                        <div class="attribute-item">
+                            <div>
+                                <span class="attribute-name">Inteligência</span>
+                                <span class="attribute-code">[INT]</span>
+                            </div>
+                            <div class="dots" id="dots-int"></div>
+                        </div>
+                        <div class="attribute-item">
+                            <div>
+                                <span class="attribute-name">Força</span>
+                                <span class="attribute-code">[FOR]</span>
+                            </div>
+                            <div class="dots" id="dots-for"></div>
+                        </div>
+                        <div class="attribute-item">
+                            <div>
+                                <span class="attribute-name">Presença</span>
+                                <span class="attribute-code">[PRE]</span>
+                            </div>
+                            <div class="dots" id="dots-pre"></div>
+                        </div>
+                    </div>
+
+                    <div class="attribute-group">
+                        <div class="attribute-header">🎯 Refinamento</div>
+                        <div class="attribute-item">
+                            <div>
+                                <span class="attribute-name">Raciocínio</span>
+                                <span class="attribute-code">[RAC]</span>
+                            </div>
+                            <div class="dots" id="dots-rac"></div>
+                        </div>
+                        <div class="attribute-item">
+                            <div>
+                                <span class="attribute-name">Destreza</span>
+                                <span class="attribute-code">[DES]</span>
+                            </div>
+                            <div class="dots" id="dots-des"></div>
+                        </div>
+                        <div class="attribute-item">
+                            <div>
+                                <span class="attribute-name">Manipulação</span>
+                                <span class="attribute-code">[MAN]</span>
+                            </div>
+                            <div class="dots" id="dots-man"></div>
+                        </div>
+                    </div>
+
+                    <div class="attribute-group">
+                        <div class="attribute-header">🛡️ Resistência</div>
+                        <div class="attribute-item">
+                            <div>
+                                <span class="attribute-name">Perseverança</span>
+                                <span class="attribute-code">[PRS]</span>
+                            </div>
+                            <div class="dots" id="dots-prs"></div>
+                        </div>
+                        <div class="attribute-item">
+                            <div>
+                                <span class="attribute-name">Vigor</span>
+                                <span class="attribute-code">[VIG]</span>
+                            </div>
+                            <div class="dots" id="dots-vig"></div>
+                        </div>
+                        <div class="attribute-item">
+                            <div>
+                                <span class="attribute-name">Autocontrole</span>
+                                <span class="attribute-code">[AUT]</span>
+                            </div>
+                            <div class="dots" id="dots-aut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA HABILIDADES -->
+        <div id="habilidades" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">Habilidades</h2>
+                <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">Cada habilidade tem 5 níveis. Toque nas bolinhas.</p>
+
+                <div class="grid grid-3">
+                    <div class="attribute-group">
+                        <div class="attribute-header">🧠 Mental <span class="penalty">(-3 se inapto)</span></div>
+                        <div id="skills-mental"></div>
+                    </div>
+
+                    <div class="attribute-group">
+                        <div class="attribute-header">💪 Físico <span class="penalty">(-1 se inapto)</span></div>
+                        <div id="skills-fisico"></div>
+                    </div>
+
+                    <div class="attribute-group">
+                        <div class="attribute-header">💬 Social <span class="penalty">(-1 se inapto)</span></div>
+                        <div id="skills-social"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA CARACTERÍSTICAS -->
+        <div id="caracteristicas" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">Características</h2>
+                <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">Calculadas automaticamente.</p>
+
+                <div class="grid grid-2">
+                    <div class="characteristic-item">
+                        <div>
+                            <div class="char-label">Iniciativa</div>
+                            <div class="char-formula">RAC+DES+AUT+Agil-Tam</div>
+                        </div>
+                        <div class="char-value" id="calc-iniciativa">0</div>
+                    </div>
+
+                    <div class="characteristic-item">
+                        <div>
+                            <div class="char-label">Reação</div>
+                            <div class="char-formula">Min(DES,RAC)+Agil</div>
+                        </div>
+                        <div class="char-value" id="calc-reacao">0</div>
+                    </div>
+
+                    <div class="characteristic-item">
+                        <div>
+                            <div class="char-label">Deslocamento</div>
+                            <div class="char-formula">FOR+DES+Tam+Agil</div>
+                        </div>
+                        <div class="char-value" id="calc-deslocamento">0</div>
+                    </div>
+
+                    <div class="characteristic-item">
+                        <div>
+                            <div class="char-label">HP Max</div>
+                            <div class="char-formula">VIG+Tamanho</div>
+                        </div>
+                        <div class="char-value" id="calc-vitalidade-max">0</div>
+                    </div>
+
+                    <div class="characteristic-item">
+                        <div>
+                            <div class="char-label">DET Max</div>
+                            <div class="char-formula">PRS+AUT</div>
+                        </div>
+                        <div class="char-value" id="calc-determinacao-max">0</div>
+                    </div>
+
+                    <div class="characteristic-item">
+                        <div>
+                            <div class="char-label">Carga Max</div>
+                            <div class="char-formula">FOR+VIG</div>
+                        </div>
+                        <div class="char-value" id="calc-carga">0</div>
+                    </div>
+
+                    <div class="characteristic-item">
+                        <div>
+                            <div class="char-label">Sanidade</div>
+                            <div class="char-formula">(INT+AUT-Abis×2)×10</div>
+                        </div>
+                        <div class="char-value" id="calc-sanidade">0</div>
+                    </div>
+
+                    <div class="characteristic-item">
+                        <div>
+                            <div class="char-label">Blindagem</div>
+                            <div class="char-formula">Armadura</div>
+                        </div>
+                        <div class="char-value" id="calc-blindagem">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA CLASSE -->
+        <div id="classe" class="tab-content">
+            <div class="load-class-button">
+                <h2 style="font-size: clamp(1.3rem, 4vw, 1.6rem); margin-bottom: 10px; font-weight: 900;">🔥 CARREGAR CLASSE 🔥</h2>
+                <p style="margin-bottom: 15px; font-size: clamp(0.85rem, 2.5vw, 0.95rem);">Selecione sua classe na aba Básico e clique abaixo</p>
+                <button class="btn" onclick="forceLoadClass()" style="background: white; color: #d97706; font-size: clamp(1rem, 3vw, 1.2rem); padding: 18px 36px; max-width: 400px; margin: 0 auto;">
+                    ⚔️ CARREGAR AGORA
+                </button>
+            </div>
+            
+            <div id="class-content"></div>
+        </div>
+
+        <!-- ABA COMBATE -->
+        <div id="combate" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">Status de Combate</h2>
+
+                <div class="hp-bar-container">
+                    <label style="margin-bottom: 10px; display: block; font-weight: 700;">❤️ Vitalidade</label>
+                    <div class="hp-bar">
+                        <div class="hp-fill" id="hp-fill" style="width: 100%;">
+                            <span id="hp-text">5 / 5</span>
+                        </div>
+                    </div>
+                    <div class="hp-controls">
+                        <button class="btn btn-secondary btn-small" onclick="adjustHP(-1)">-1</button>
+                        <button class="btn btn-secondary btn-small" onclick="adjustHP(-5)">-5</button>
+                        <input type="number" id="hp-current" value="5" onchange="updateHPBar()" inputmode="numeric">
+                        <button class="btn btn-primary btn-small" onclick="adjustHP(1)">+1</button>
+                        <button class="btn btn-primary btn-small" onclick="adjustHP(5)">+5</button>
+                        <button class="btn btn-secondary btn-small" onclick="resetHP()">Max</button>
+                    </div>
+                </div>
+
+                <div class="hp-bar-container">
+                    <label style="margin-bottom: 10px; display: block; font-weight: 700;">⚡ Determinação</label>
+                    <div class="hp-bar">
+                        <div class="hp-fill" id="det-fill" style="width: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary));">
+                            <span id="det-text">3 / 3</span>
+                        </div>
+                    </div>
+                    <div class="hp-controls">
+                        <button class="btn btn-secondary btn-small" onclick="adjustDET(-1)">-1</button>
+                        <input type="number" id="det-current" value="3" onchange="updateDETBar()" inputmode="numeric">
+                        <button class="btn btn-primary btn-small" onclick="adjustDET(1)">+1</button>
+                        <button class="btn btn-secondary btn-small" onclick="resetDET()">Max</button>
+                    </div>
+                </div>
+
+                <div class="hp-bar-container">
+                    <label style="margin-bottom: 10px; display: block; font-weight: 700;">🧠 Sanidade</label>
+                    <div class="hp-bar">
+                        <div class="hp-fill" id="san-fill" style="width: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6);">
+                            <span id="san-text">100 / 100</span>
+                        </div>
+                    </div>
+                    <div class="hp-controls">
+                        <button class="btn btn-secondary btn-small" onclick="adjustSAN(-1)">-1</button>
+                        <button class="btn btn-secondary btn-small" onclick="adjustSAN(-5)">-5</button>
+                        <input type="number" id="san-current" value="100" onchange="updateSANBar()" inputmode="numeric">
+                        <button class="btn btn-primary btn-small" onclick="adjustSAN(1)">+1</button>
+                        <button class="btn btn-primary btn-small" onclick="adjustSAN(5)">+5</button>
+                        <button class="btn btn-secondary btn-small" onclick="resetSAN()">Max</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="combat-helper">
+                <h3 style="color: var(--danger); margin-bottom: 12px; font-size: 1.1rem;">🎲 Rolador de Dados</h3>
+                <p style="color: #94a3b8; margin-bottom: 12px; font-size: 0.85rem;">Sucessos: 8, 9, 10. Falha: 1.</p>
+                <div class="dice-roller">
+                    <div class="form-group" style="width: auto;">
+                        <label>Dados</label>
+                        <input type="number" id="dice-count" class="dice-input" value="1" min="1" max="20" inputmode="numeric">
+                    </div>
+                    <button class="btn btn-primary btn-small" onclick="rollDice()" style="flex: 1;">🎲 ROLAR</button>
+                    <div class="roll-result" id="roll-result">—</div>
+                </div>
+                <div id="roll-details" style="margin-top: 12px; color: #94a3b8; font-size: 0.85rem;"></div>
+            </div>
+        </div>
+
+        <!-- ABA INVENTÁRIO -->
+        <div id="inventario" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">Sistema de Inventário</h2>
+                
+                <div style="margin-bottom: 20px;">
+                    <button class="btn btn-primary" onclick="addContainer()">➕ Adicionar Container</button>
+                </div>
+
+                <div id="containers-list"></div>
+            </div>
+        </div>
+
+        <!-- ABA NOTAS -->
+        <div id="notas" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">Notas do Personagem</h2>
+                <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">
+                    Escreva suas anotações, histórias, objetivos ou qualquer informação importante sobre seu personagem.
+                    Suas notas são salvas automaticamente na nuvem e exportadas junto com a ficha.
+                </p>
+                
+                <div class="form-group">
+                    <textarea id="notas-textarea" placeholder="Digite suas notas aqui...
+
+Exemplos:
+- Background do personagem
+- Objetivos e missões
+- NPCs importantes
+- Itens especiais
+- Estratégias de combate
+- Anotações da sessão"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA EVOLUÇÃO -->
+        <div id="evolucao" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">Experiência</h2>
+                
+                <div class="exp-tracker">
+                    <div style="color: #94a3b8; margin-bottom: 8px; font-size: 0.85rem;">PONTOS DE EXP</div>
+                    <div class="exp-value" id="exp-total">0</div>
+                    <div style="margin-top: 15px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                        <button class="btn btn-secondary btn-small" onclick="adjustEXP(-1)">-1</button>
+                        <button class="btn btn-primary btn-small" onclick="adjustEXP(1)">+1</button>
+                        <button class="btn btn-primary btn-small" onclick="adjustEXP(5)">+5</button>
+                        <button class="btn btn-primary btn-small" onclick="adjustEXP(10)">+10</button>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Atributo</div>
+                        <div class="stat-value">Nv × 5</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Habilidade</div>
+                        <div class="stat-value">Nv × 4</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Especialização</div>
+                        <div class="stat-value">4 EXP</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px; padding: 15px; background: rgba(139, 92, 246, 0.1); border-radius: 10px; border: 2px solid var(--primary);">
+                    <h3 style="color: var(--primary); margin-bottom: 12px; font-size: 1rem;">💡 Custos de Evolução</h3>
+                    <ul style="color: #cbd5e1; line-height: 1.8; font-size: 0.85rem; padding-left: 20px;">
+                        <li>Atributos: nível × 5 EXP</li>
+                        <li>Habilidades: nível × 4 EXP</li>
+                        <li>Especializações: 4 EXP</li>
+                        <li>Hab. Classe: nível × 2 EXP (ou × 4 para Pallacerdote e Ritualista)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTÕES DE AÇÃO FORA DAS ABAS -->
+        <div class="button-group">
+            <button class="btn btn-primary" onclick="exportCharacter()">📤 EXPORTAR</button>
+            <button class="btn btn-primary" onclick="importCharacter()">📥 IMPORTAR</button>
+            <button class="btn btn-danger" onclick="resetCharacter()">🔄 NOVO PERSONAGEM</button>
+        </div>
+    </div>
+
+    <!-- FIREBASE SDK -->
+    <script type="module">
+        // ============= CONFIGURAÇÃO FIREBASE =============
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCjwW7u11HgO0L89qJDhxVlUZ_cesTkd0Y",
+            authDomain: "lendasereliquiasrpg.firebaseapp.com",
+            projectId: "lendasereliquiasrpg",
+            storageBucket: "lendasereliquiasrpg.firebasestorage.app",
+            messagingSenderId: "311648525241",
+            appId: "1:311648525241:web:49a14229bc9956a098f468",
+            measurementId: "G-4Z3J52P1XM"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+
+        // ============= VERIFICAR AUTENTICAÇÃO =============
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                console.log('✅ Usuário logado:', user.email);
+                
+                document.getElementById('userEmail').textContent = user.email;
+                document.getElementById('userInfo').style.display = 'flex';
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('mainContainer').style.display = 'block';
+                
+                await loadFromFirebase();
+                init();
+            } else {
+                console.log('❌ Usuário não autenticado. Redirecionando...');
+                window.location.href = 'index.html';
+            }
+        });
+
+        // ============= LOGOUT =============
+        window.logout = async function() {
+            if (confirm('🚪 Tem certeza que deseja sair?')) {
+                try {
+                    await signOut(auth);
+                    window.location.href = 'index.html';
+                } catch (error) {
+                    console.error('Erro ao fazer logout:', error);
+                    showAlert('❌ Erro ao sair. Tente novamente.', 'danger');
+                }
+            }
+        };
+
+        // ============= SALVAR NO FIREBASE =============
+        window.saveToFirebase = async function() {
+            if (!currentUser) return;
+            
+            const indicator = document.getElementById('autosaveIndicator');
+            indicator.textContent = '💾 Salvando...';
+            indicator.classList.add('show', 'saving');
+            
+            try {
+                const char = getChar();
+                const userDoc = doc(db, 'characters', currentUser.uid);
+                
+                await setDoc(userDoc, {
+                    ...char,
+                    lastUpdate: new Date().toISOString(),
+                    userEmail: currentUser.email
+                });
+                
+                indicator.textContent = '✅ Salvo na nuvem!';
+                indicator.classList.remove('saving', 'error');
+                indicator.classList.add('show');
+                
+                setTimeout(() => {
+                    indicator.classList.remove('show');
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Erro ao salvar:', error);
+                indicator.textContent = '❌ Erro ao salvar!';
+                indicator.classList.remove('saving');
+                indicator.classList.add('error', 'show');
+                
+                setTimeout(() => {
+                    indicator.classList.remove('show');
+                }, 3000);
+            }
+        };
+
+        // ============= CARREGAR DO FIREBASE =============
+        async function loadFromFirebase() {
+            if (!currentUser) return;
+            
+            try {
+                const userDoc = doc(db, 'characters', currentUser.uid);
+                const docSnap = await getDoc(userDoc);
+                
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    console.log('✅ Ficha carregada do Firebase:', data);
+                    
+                    delete data.lastUpdate;
+                    delete data.userEmail;
+                    
+                    window.character = {
+                        ...window.character,
+                        ...data
+                    };
+                    
+                    showAlert('✅ Ficha carregada da nuvem!', 'success');
+                } else {
+                    console.log('📝 Primeira vez! Criando ficha nova...');
+                    showAlert('📝 Bem-vindo! Crie seu personagem.', 'success');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar ficha:', error);
+                showAlert('⚠️ Erro ao carregar ficha. Usando dados locais.', 'danger');
+            }
+        }
+
+        // Expor função para uso global
+        window.saveToFirebase = window.saveToFirebase;
+    </script>
+
+    <!-- LÓGICA DO SISTEMA -->
+    <script>
+        // ============= DADOS DO SISTEMA =============
+        const SKILLS = {
+            mental: [
+                { name: 'Abismo', attr: '[PRS]', penalty: -3, hasInput: false },
+                { name: 'Alquimia', attr: '[RAC]', penalty: -3, hasInput: false },
+                { name: 'Essência', attr: '[INT/RAC/PRS]', penalty: -3, hasInput: false },
+                { name: 'Herbalismo', attr: '[INT/PRS]', penalty: -3, hasInput: false },
+                { name: 'História', attr: '[INT]', penalty: -3, hasInput: false },
+                { name: 'Investigação', attr: '[INT/RAC]', penalty: -3, hasInput: false },
+                { name: 'Ofício Intelectual', attr: '', penalty: -3, hasInput: true, placeholder: 'Ex: Escriba, Cartógrafo...' },
+                { name: 'Relíquia', attr: '[INT]', penalty: -3, hasInput: false },
+                { name: 'Runomancia', attr: '[INT/RAC]', penalty: -3, hasInput: false }
+            ],
+            fisico: [
+                { name: 'Arma', attr: '[FOR/DES]', penalty: -1, hasInput: false },
+                { name: 'Disparo', attr: '[DES]', penalty: -1, hasInput: false },
+                { name: 'Atletismo', attr: '[VIG]', penalty: -1, hasInput: false },
+                { name: 'Briga', attr: '[FOR]', penalty: -1, hasInput: false },
+                { name: 'Agilidade', attr: '[DES]', penalty: -1, hasInput: false },
+                { name: 'Furtividade', attr: '[DES]', penalty: -1, hasInput: false },
+                { name: 'Montaria', attr: '[DES]', penalty: -1, hasInput: false },
+                { name: 'Ofício Braçal', attr: '', penalty: -1, hasInput: true, placeholder: 'Ex: Ferreiro, Lenhador...' },
+                { name: 'Sobrevivência', attr: '[VIG]', penalty: -1, hasInput: false }
+            ],
+            social: [
+                { name: 'Barganha', attr: '[MAN]', penalty: -1, hasInput: false },
+                { name: 'Diplomacia', attr: '[MAN]', penalty: -1, hasInput: false },
+                { name: 'Domar', attr: '[AUT]', penalty: -1, hasInput: false },
+                { name: 'Empatia', attr: '[AUT]', penalty: -1, hasInput: false },
+                { name: 'Intimidação', attr: '[PRE]', penalty: -1, hasInput: false },
+                { name: 'Liderança', attr: '[PRE]', penalty: -1, hasInput: false },
+                { name: 'Malandragem', attr: '[AUT]', penalty: -1, hasInput: false },
+                { name: 'Performance', attr: '[PRE]', penalty: -1, hasInput: false },
+                { name: 'Sedução', attr: '[MAN]', penalty: -1, hasInput: false }
+            ]
+        };
+
+        const CLASS_ABILITIES = {
+            'Caçador': {
+                abilities: [
+                    { id: 'erudição-ofensiva', name: 'Erudição Ofensiva', maxLevel: 5 },
+                    { id: 'maceração', name: 'Maceração', maxLevel: 5 },
+                    { id: 'dosagem', name: 'Dosagem', maxLevel: 5 },
+                    { id: 'precisão', name: 'Precisão', maxLevel: 5 },
+                    { id: 'marcar-presa', name: 'Marcar Presa', maxLevel: 5 }
+                ],
+                quickTests: [
+                    { name: 'Disparo', formula: 'DES + Disparo + Precisão + Equipamento', calculate: (char) => {
+                        const disparo = char.skills['disparo'] || 0;
+                        const precisao = char.classAbilities?.['precisão'] || 0;
+                        return char.des + disparo + precisao;
+                    }},
+                    { name: 'Disparo Furtivo', formula: 'DES + Disparo + Furtividade + Precisão', calculate: (char) => {
+                        const disparo = char.skills['disparo'] || 0;
+                        const furtividade = char.skills['furtividade'] || 0;
+                        const precisao = char.classAbilities?.['precisão'] || 0;
+                        return char.des + disparo + furtividade + precisao;
+                    }},
+                    { name: 'Rastreamento', formula: 'RAC + PRE + Sobrevivência', calculate: (char) => {
+                        const sobrevivencia = char.skills['sobrevivência'] || 0;
+                        return char.rac + char.pre + sobrevivencia;
+                    }},
+                    { name: 'Preparar Loção', formula: 'RAC + Herbalismo + Maceração', calculate: (char) => {
+                        const herbalismo = char.skills['herbalismo'] || 0;
+                        const maceracao = char.classAbilities?.['maceração'] || 0;
+                        return char.rac + herbalismo + maceracao;
+                    }},
+                    { name: 'Dosagem', formula: 'INT + Herbalismo + Dosagem', calculate: (char) => {
+                        const herbalismo = char.skills['herbalismo'] || 0;
+                        const dosagem = char.classAbilities?.['dosagem'] || 0;
+                        return char.int + herbalismo + dosagem;
+                    }},
+                    { name: 'Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
+                ],
+                resources: [
+                    { id: 'kits-ingredientes', name: 'Kits/Ingredientes', max: 10, info: 'Usados na preparação de loções' }
+                ],
+                info: `<strong>Papel:</strong> Rastreio, combate à distância e alquimancia ofensiva.<br>
+                    <strong>Recursos:</strong> Determinação + Kits/Ingredientes.<br>
+                    <strong>Marca de Caça:</strong> Ganhe (1 + Marcar Presa) em rastreamento e ataques contra o alvo marcado.<br>
+                    <strong>Dica:</strong> Prepare loções antes do combate e marque os inimigos mais perigosos.`
+            },
+            'Druida': {
+                abilities: [
+                    { id: 'erudição-ofensiva', name: 'Erudição Ofensiva', maxLevel: 5 },
+                    { id: 'erudição-defensiva', name: 'Erudição Defensiva', maxLevel: 5 },
+                    { id: 'maceração', name: 'Maceração', maxLevel: 5 },
+                    { id: 'dosagem', name: 'Dosagem', maxLevel: 5 },
+                    { id: 'aliado-animal', name: 'Aliado Animal', maxLevel: 5 },
+                    { id: 'linguagem-animal', name: 'Linguagem Animal', maxLevel: 5 }
+                ],
+                quickTests: [
+                    { name: 'Domar Aliado', formula: 'PRE + Domar + Aliado Animal', calculate: (char) => {
+                        const domar = char.skills['domar'] || 0;
+                        const aliadoAnimal = char.classAbilities?.['aliado-animal'] || 0;
+                        return char.pre + domar + aliadoAnimal;
+                    }},
+                    { name: 'Comandar Aliado', formula: 'PRE + Liderança + Aliado Animal', calculate: (char) => {
+                        const lideranca = char.skills['liderança'] || 0;
+                        const aliadoAnimal = char.classAbilities?.['aliado-animal'] || 0;
+                        return char.pre + lideranca + aliadoAnimal;
+                    }},
+                    { name: 'Convocar Manada (-1 DET)', formula: 'PRE + Liderança + Linguagem Animal', calculate: (char) => {
+                        const lideranca = char.skills['liderança'] || 0;
+                        const linguagemAnimal = char.classAbilities?.['linguagem-animal'] || 0;
+                        return char.pre + lideranca + linguagemAnimal;
+                    }},
+                    { name: 'Fusão Selvagem (-1 DET)', formula: 'PRE + Aliado Animal + Linguagem Animal', calculate: (char) => {
+                        const aliadoAnimal = char.classAbilities?.['aliado-animal'] || 0;
+                        const linguagemAnimal = char.classAbilities?.['linguagem-animal'] || 0;
+                        return char.pre + aliadoAnimal + linguagemAnimal;
+                    }},
+                    { name: 'Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
+                ],
+                resources: [
+                    { id: 'kits-ingredientes', name: 'Kits/Ingredientes', max: 10, info: 'Usados na preparação de loções' },
+                    { id: 'aliados-ativos', name: 'Aliados Ativos', max: 'aliado-animal', info: 'Máximo = nível de Aliado Animal' }
+                ],
+                info: `<strong>Papel:</strong> Suporte, comunhão animal e alquimancia.<br>
+                    <strong>Fusão Selvagem:</strong> Emissor (controla animal) ou Receptor (ganha poderes).<br>
+                    <strong>Dica:</strong> Proteja quem estiver em transe durante Fusão Selvagem.`
+            },
+            'Guerreiro': {
+                abilities: [
+                    { id: 'armas-haste', name: 'Armas de Haste', maxLevel: 5 },
+                    { id: 'armas-pesadas', name: 'Armas Pesadas', maxLevel: 5 },
+                    { id: 'armas-uma-mao', name: 'Armas de Uma Mão', maxLevel: 5 },
+                    { id: 'armas-duas-maos', name: 'Armas de Duas Mãos', maxLevel: 5 },
+                    { id: 'armas-duplas', name: 'Armas Duplas', maxLevel: 5 },
+                    { id: 'armas-arremessaveis', name: 'Armas Arremessáveis', maxLevel: 5 },
+                    { id: 'escudo', name: 'Escudo', maxLevel: 5 },
+                    { id: 'postura-combate', name: 'Postura de Combate', maxLevel: 5 },
+                    { id: 'contra-ataque', name: 'Contra-Ataque', maxLevel: 5 },
+                    { id: 'impeto', name: 'Ímpeto', maxLevel: 5 },
+                    { id: 'guerrilha', name: 'Guerrilha', maxLevel: 5 },
+                    { id: 'controle', name: 'Controle', maxLevel: 5 }
+                ],
+                quickTests: [
+                    { name: 'Mãos Vazias', formula: 'FOR + Briga', calculate: (char) => {
+                        const briga = char.skills['briga'] || 0;
+                        return char.for + briga;
+                    }},
+                    { name: 'Arma', formula: 'FOR/DES + Arma + Especialização', calculate: (char) => {
+                        const arma = char.skills['arma'] || 0;
+                        const specs = ['armas-haste', 'armas-pesadas', 'armas-uma-mao', 'armas-duas-maos', 'armas-duplas', 'armas-arremessaveis'];
+                        let maxSpec = 0;
+                        specs.forEach(s => {
+                            const val = char.classAbilities?.[s] || 0;
+                            if (val > maxSpec) maxSpec = val;
+                        });
+                        return Math.max(char.for, char.des) + arma + maxSpec;
+                    }},
+                    { name: 'Escudo (Absorve Dano)', formula: 'Nível de Escudo', calculate: (char) => char.classAbilities?.['escudo'] || 0 },
+                    { name: 'Inspirar', formula: 'MAN + Liderança + Guerrilha', calculate: (char) => {
+                        const lideranca = char.skills['liderança'] || 0;
+                        const guerrilha = char.classAbilities?.['guerrilha'] || 0;
+                        return char.man + lideranca + guerrilha;
+                    }},
+                    { name: 'Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
+                ],
+                resources: [],
+                info: `<strong>Papel:</strong> Combate direto, controle de campo.<br>
+                    <strong>Manobras:</strong> 1 DET cada. Máx 1/turno.<br>
+                    <strong>Posturas:</strong> Ofensiva (+ataque, sem reação) ou Defensiva (+reação, sem ataque).<br>
+                    <strong>Dica:</strong> Alterne posturas conforme a situação.`
+            },
+            'Adepto': {
+                abilities: [
+                    { id: 'contato-setimo', name: 'Contato com o Sétimo', maxLevel: 5 },
+                    { id: 'selo-profano', name: 'Selo do Profano', maxLevel: 5 },
+                    { id: 'talisma-profano', name: 'Talismã Profano', maxLevel: 5 },
+                    { id: 'fragmento-identidade', name: 'Fragmento de Identidade', maxLevel: 5 },
+                    { id: 'servos', name: 'Servos', maxLevel: 5 },
+                    { id: 'vozes-tumulo', name: 'Vozes do Túmulo', maxLevel: 5 }
+                ],
+                quickTests: [
+                    { name: 'Controle da Ruína', formula: 'INT + Selo do Profano', calculate: (char) => {
+                        const seloProfano = char.classAbilities?.['selo-profano'] || 0;
+                        return char.int + seloProfano;
+                    }},
+                    { name: 'Contato (Reanimação)', formula: 'PRS + Performance + Contato Sétimo + Talismã', calculate: (char) => {
+                        const performance = char.skills['performance'] || 0;
+                        const contato = char.classAbilities?.['contato-setimo'] || 0;
+                        const talisma = char.classAbilities?.['talisma-profano'] || 0;
+                        return char.prs + performance + contato + talisma;
+                    }},
+                    { name: 'Limite de Fantoches', formula: 'INT + Liderança + Servos', calculate: (char) => {
+                        const lideranca = char.skills['liderança'] || 0;
+                        const servos = char.classAbilities?.['servos'] || 0;
+                        return char.int + lideranca + servos;
+                    }},
+                    { name: 'Fragmentos', formula: 'Nível de Fragmento de Identidade', calculate: (char) => char.classAbilities?.['fragmento-identidade'] || 0 },
+                    { name: 'Convocar Fantoches', formula: 'PRS + Liderança + Talismã Profano', calculate: (char) => {
+                        const lideranca = char.skills['liderança'] || 0;
+                        const talisma = char.classAbilities?.['talisma-profano'] || 0;
+                        return char.prs + lideranca + talisma;
+                    }},
+                    { name: 'Vozes do Túmulo', formula: 'PRE + Essência + Vozes do Túmulo', calculate: (char) => {
+                        const essencia = char.skills['essência'] || 0;
+                        const vozes = char.classAbilities?.['vozes-tumulo'] || 0;
+                        return char.pre + essencia + vozes;
+                    }},
+                    { name: 'Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
+                ],
+                resources: [
+                    { id: 'servos-permanentes', name: 'Servos Permanentes', max: 'servos', info: 'Máximo = nível de Servos' },
+                    { id: 'fantoches-ativos', name: 'Fantoches Ativos', max: 'calc-fantoches', info: 'Máximo = INT + Liderança + Servos' }
+                ],
+                info: `<strong>Papel:</strong> Necromancia, controle de mortos-vivos.<br>
+                    <strong>Fragmentos:</strong> 0-5. Mais fragmentos = mais poder, menos controle.<br>
+                    <strong>Talismã Profano:</strong> OBRIGATÓRIO para rituais.<br>
+                    <strong>Dica:</strong> Fragmentos 2-3 equilibram poder e controle.`
+            },
+            'Ladino': {
+                abilities: [
+                    { id: 'armas-punho', name: 'Armas de Punho', maxLevel: 5 },
+                    { id: 'ferramentas-crime', name: 'Ferramentas do Crime', maxLevel: 5 },
+                    { id: 'precisão', name: 'Precisão', maxLevel: 5 },
+                    { id: 'arrombamento', name: 'Arrombamento', maxLevel: 5 },
+                    { id: 'prestidigitação', name: 'Prestidigitação', maxLevel: 5 },
+                    { id: 'furtividade-ii', name: 'Furtividade II', maxLevel: 5 },
+                    { id: 'malandragem-ii', name: 'Malandragem II', maxLevel: 5 },
+                    { id: 'olho-brechas', name: 'Olho Para Brechas', maxLevel: 5 }
+                ],
+                quickTests: [
+                    { name: 'Punhal', formula: 'DES + Arma + Armas Punho', calculate: (char) => {
+                        const arma = char.skills['arma'] || 0;
+                        const punho = char.classAbilities?.['armas-punho'] || 0;
+                        return char.des + arma + punho;
+                    }},
+                    { name: 'Punhal Furtivo', formula: 'DES + Arma + Punho + Furtividade + Furtividade II', calculate: (char) => {
+                        const arma = char.skills['arma'] || 0;
+                        const punho = char.classAbilities?.['armas-punho'] || 0;
+                        const furt = char.skills['furtividade'] || 0;
+                        const furtII = char.classAbilities?.['furtividade-ii'] || 0;
+                        return char.des + arma + punho + furt + furtII;
+                    }},
+                    { name: 'Abrir Fechaduras', formula: 'DES + Arrombamento + Ferramentas', calculate: (char) => {
+                        const arromb = char.classAbilities?.['arrombamento'] || 0;
+                        const ferram = char.classAbilities?.['ferramentas-crime'] || 0;
+                        return char.des + arromb + ferram;
+                    }},
+                    { name: 'Furto', formula: 'DES + Prestidigitação + Furtividade I e II', calculate: (char) => {
+                        const presti = char.classAbilities?.['prestidigitação'] || 0;
+                        const furt = char.skills['furtividade'] || 0;
+                        const furtII = char.classAbilities?.['furtividade-ii'] || 0;
+                        return char.des + presti + furt + furtII;
+                    }},
+                    { name: 'Discrição (Furtividade)', formula: 'DES + Furtividade + Furtividade II', calculate: (char) => {
+                        const furt = char.skills['furtividade'] || 0;
+                        const furtII = char.classAbilities?.['furtividade-ii'] || 0;
+                        return char.des + furt + furtII;
+                    }},
+                    { name: 'Percepção', formula: 'RAC + PRE + Olho Para Brechas', calculate: (char) => {
+                        const olho = char.classAbilities?.['olho-brechas'] || 0;
+                        return char.rac + char.pre + olho;
+                    }}
+                ],
+                resources: [
+                    { id: 'kit-larapio', name: 'Kit de Larápio', max: 1, info: 'Ferramentas para arrombamento' }
+                ],
+                info: `<strong>Papel:</strong> Furtividade, manipulação, dano oportunista.<br>
+                    <strong>VULNERABILIDADE:</strong> Recebe 2× dano físico!<br>
+                    <strong>Dica:</strong> Mantenha-se furtivo e evite combate direto.`
+            },
+            'Pallacerdote': {
+                abilities: [
+                    { id: 'simbolo-sagrado', name: 'Símbolo Sagrado', maxLevel: 5 },
+                    { id: 'devocao-palla', name: 'Devoção em Palla', maxLevel: 5 }
+                ],
+                quickTests: [
+                    { name: 'Prece Breve (-1 DET → +1 Graça)', formula: 'PRE + Essência + Símbolo Sagrado', calculate: (char) => {
+                        const essencia = char.skills['essência'] || 0;
+                        const simbolo = char.classAbilities?.['simbolo-sagrado'] || 0;
+                        return char.pre + essencia + simbolo;
+                    }},
+                    { name: 'Benção', formula: 'PRE + Performance + Essência + Símbolo', calculate: (char) => {
+                        const performance = char.skills['performance'] || 0;
+                        const essencia = char.skills['essência'] || 0;
+                        const simbolo = char.classAbilities?.['simbolo-sagrado'] || 0;
+                        return char.pre + performance + essencia + simbolo;
+                    }},
+                    { name: 'Súplica', formula: 'MAN + Performance + Essência + Símbolo', calculate: (char) => {
+                        const performance = char.skills['performance'] || 0;
+                        const essencia = char.skills['essência'] || 0;
+                        const simbolo = char.classAbilities?.['simbolo-sagrado'] || 0;
+                        return char.man + performance + essencia + simbolo;
+                    }},
+                    { name: 'Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
+                ],
+                resources: [
+                    { id: 'graca', name: 'Graça', max: 'devocao-palla', info: 'Máximo = nível de Devoção (substitui DET nas preces)' }
+                ],
+                info: `<strong>Papel:</strong> Suporte, cura e controle por luz.<br>
+                    <strong>Graça:</strong> Substitui Determinação nas preces.<br>
+                    <strong>Dica:</strong> Use Graça para preces e guarde DET para emergências.`
+            },
+            'Ritualista': {
+                abilities: [
+                    { id: 'contato-oitavo', name: 'Contato com o Oitavo', maxLevel: 10 },
+                    { id: 'selo-abissal', name: 'Selo Abissal', maxLevel: 5 },
+                    { id: 'sacrificio', name: 'Sacrifício', maxLevel: 5 },
+                    { id: 'resistencia-loucura', name: 'Resistência a Loucura', maxLevel: 5 }
+                ],
+                quickTests: [
+                    { name: 'Contato (Abertura)', formula: 'PRS + Performance + CA + Contato + Sacrifício', calculate: (char) => {
+                        const performance = char.skills['performance'] || 0;
+                        const contato = char.classAbilities?.['contato-oitavo'] || 0;
+                        const sacrificio = char.classAbilities?.['sacrificio'] || 0;
+                        return char.prs + performance + contato + sacrificio;
+                    }},
+                    { name: 'Selo (Controle)', formula: 'RAC + Abismo + Selo + Sacrifício', calculate: (char) => {const abismo = char.skills['abismo'] || 0;
+                        const selo = char.classAbilities?.['selo-abissal'] || 0;
+                        const sacrificio = char.classAbilities?.['sacrificio'] || 0;
+                        return char.rac + abismo + selo + sacrificio;
+                    }},
+                    { name: 'CA (Contato Abissal)', formula: 'Nível de Contato com o Oitavo', calculate: (char) => char.classAbilities?.['contato-oitavo'] || 0 },
+                    { name: 'Despertar', formula: 'AUT + Essência vs (CA - Abismo)', calculate: (char) => {
+                        const essencia = char.skills['essência'] || 0;
+                        return char.aut + essencia;
+                    }},
+                    { name: 'Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
+                ],
+                resources: [
+                    { id: 'ruptura-venire', name: 'Ruptura Venire (RV)', max: 10, info: 'Acumulado de falhas em Despertar' }
+                ],
+                info: `<strong>Papel:</strong> Controle do campo por rituais abissais.<br>
+                    <strong>CA:</strong> Define poder dos rituais.<br>
+                    <strong>Despertar:</strong> AUT + Essência vs (CA - Abismo). Falha = -1 Sanidade.<br>
+                    <strong>Dica:</strong> CA alto = mais poder, mais risco.`
+            }
+        };
+
+        // STATE
+        window.character = {
+            nome: '', jogador: '', idade: 0, raca: '', classe: '', virtude: '', vicio: '',
+            tamanho: 5, luns: 0,
+            int: 1, for: 1, pre: 1, rac: 1, des: 1, man: 1, prs: 1, vig: 1, aut: 1,
+            skills: {},
+            skillInputs: {},
+            classAbilities: {},
+            classResources: {},
+            hpCurrent: 5, detCurrent: 3, sanCurrent: 100, blindagem: 0,
+            containers: [{
+                id: Date.now(),
+                name: 'Mochila',
+                maxCapacity: 6,
+                items: []
+            }],
+            notas: '',
+            exp: 0
+        };
+
+        function getChar() {
+            return window.character;
+        }
+
+        window.forceLoadClass = function() {
+            const char = getChar();
+            const classe = char.classe;
+            
+            console.log('BOTÃO CLICADO! Classe atual:', classe);
+            
+            if (!classe) {
+                showAlert('❌ Selecione uma classe na aba "Básico" primeiro!', 'danger');
+                return;
+            }
+            
+            if (!CLASS_ABILITIES[classe]) {
+                showAlert('❌ Classe não encontrada no sistema!', 'danger');
+                return;
+            }
+            
+            console.log('Carregando classe:', classe);
+            renderClassContent(classe);
+            showAlert('✅ Habilidades da classe carregadas com sucesso!', 'success');
+            autoSave();
+        };
+
+        function renderClassContent(classe) {
+            const char = getChar();
+            const classData = CLASS_ABILITIES[classe];
+            const classContent = document.getElementById('class-content');
+            
+            let html = `
+                <div class="section">
+                    <h2 class="section-title">🎯 Habilidades de ${classe}</h2>
+                    <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">
+                        Clique nas bolinhas para aumentar o nível. 
+                        ${classe === 'Pallacerdote' || classe === 'Ritualista' ? 'Custo: Nível × 4 EXP' : 'Custo: Nível × 2 EXP'}
+                    </p>
+                    <div class="grid grid-2">
+            `;
+            
+            classData.abilities.forEach(ability => {
+                if (!char.classAbilities[ability.id]) {
+                    char.classAbilities[ability.id] = 0;
+                }
+                
+                html += `
+                    <div class="class-ability-item">
+                        <div class="class-ability-name">${ability.name}</div>
+                        <div class="dots" id="dots-class-${ability.id}"></div>
+                    </div>
+                `;
+            });
+            
+            html += `</div></div>`;
+            
+            html += `
+                <div class="section">
+                    <h2 class="section-title">⚡ Testes Rápidos</h2>
+                    <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">
+                        Valores calculados automaticamente com seus atributos e habilidades.
+                    </p>
+                    <div id="class-tests-container"></div>
+                </div>
+            `;
+            
+            if (classData.resources && classData.resources.length > 0) {
+                html += `
+                    <div class="section">
+                        <h2 class="section-title">📦 Recursos da Classe</h2>
+                `;
+                
+                classData.resources.forEach(resource => {
+                    if (!char.classResources[resource.id]) {
+                        char.classResources[resource.id] = 0;
+                    }
+                    
+                    let maxValue = getResourceMax(resource);
+                    
+                    html += `
+                        <div class="resource-tracker">
+                            <div class="resource-header">${resource.name}</div>
+                            <div class="info-box">
+                                <strong>Info:</strong> ${resource.info}
+                                ${maxValue > 0 ? `<br><strong>Máximo atual:</strong> ${maxValue}` : ''}
+                            </div>
+                            <div class="resource-value" id="resource-${resource.id}">${char.classResources[resource.id]} / ${maxValue}</div>
+                            <div class="resource-controls">
+                                <button class="btn btn-secondary btn-small" onclick="adjustResource('${resource.id}', -1)">-1</button>
+                                <button class="btn btn-secondary btn-small" onclick="adjustResource('${resource.id}', -5)">-5</button>
+                                <input type="number" id="resource-input-${resource.id}" 
+                                       value="${char.classResources[resource.id]}" 
+                                       min="0" max="${maxValue}"
+                                       onchange="setResource('${resource.id}', this.value)"
+                                       style="width: 80px; text-align: center;"
+                                       inputmode="numeric">
+                                <button class="btn btn-primary btn-small" onclick="adjustResource('${resource.id}', 1)">+1</button>
+                                <button class="btn btn-primary btn-small" onclick="adjustResource('${resource.id}', 5)">+5</button>
+                                <button class="btn btn-secondary btn-small" onclick="resetResource('${resource.id}')">Max</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `</div>`;
+            }
+            
+            html += `
+                <div class="section">
+                    <h2 class="section-title">📖 Informações da Classe</h2>
+                    <div class="info-box">
+                        ${classData.info}
+                    </div>
+                </div>
+            `;
+            
+            classContent.innerHTML = html;
+            
+            classData.abilities.forEach(ability => {
+                createClassAbilityDots(ability.id, ability.maxLevel);
+            });
+            
+            updateClassTests();
+            
+            console.log('Classe renderizada com sucesso!');
+        }
+
+        function init() {
+            const attributes = ['int', 'for', 'pre', 'rac', 'des', 'man', 'prs', 'vig', 'aut'];
+            attributes.forEach(attr => createAttributeDots(attr, 4));
+            createSkills();
+            
+            const char = getChar();
+            if (!char.containers || char.containers.length === 0) {
+                char.containers = [{
+                    id: Date.now(),
+                    name: 'Mochila',
+                    maxCapacity: char.for + char.vig,
+                    items: []
+                }];
+            }
+            
+            loadCharacterData();
+            updateAllCalculations();
+            setupEventListeners();
+            updateContainers();
+        }
+
+        function setupEventListeners() {
+            const inputs = {
+                'nome': 'nome', 'jogador': 'jogador', 'idade': 'idade',
+                'raca': 'raca', 'classe': 'classe', 'virtude': 'virtude',
+                'vicio': 'vicio', 'tamanho': 'tamanho', 'luns': 'luns'
+            };
+            
+            Object.entries(inputs).forEach(([id, key]) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('change', (e) => {
+                        const char = getChar();
+                        char[key] = ['idade', 'tamanho', 'luns'].includes(key) 
+                            ? parseInt(e.target.value) || 0 
+                            : e.target.value;
+                        if (key === 'tamanho') updateAllCalculations();
+                        autoSave();
+                    });
+                }
+            });
+
+            const notasTextarea = document.getElementById('notas-textarea');
+            if (notasTextarea) {
+                notasTextarea.addEventListener('input', (e) => {
+                    const char = getChar();
+                    char.notas = e.target.value;
+                    autoSave();
+                });
+            }
+        }
+
+        let autoSaveTimeout;
+        function autoSave() {
+            clearTimeout(autoSaveTimeout);
+            
+            autoSaveTimeout = setTimeout(() => {
+                if (window.saveToFirebase) {
+                    window.saveToFirebase();
+                }
+            }, 1000);
+        }
+
+        function createAttributeDots(attrName, maxDots) {
+            const container = document.getElementById(`dots-${attrName}`);
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            const char = getChar();
+            for (let i = 1; i <= maxDots; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                if (i <= char[attrName]) dot.classList.add('filled');
+                
+                dot.addEventListener('click', () => {
+                    char[attrName] = i;
+                    updateAttributeDots(attrName);
+                    updateAllCalculations();
+                    autoSave();
+                });
+                
+                container.appendChild(dot);
+            }
+        }
+
+        function updateAttributeDots(attrName) {
+            const char = getChar();
+            const dots = document.querySelectorAll(`#dots-${attrName} .dot`);
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('filled', index < char[attrName]);
+            });
+        }
+
+        function createClassAbilityDots(abilityId, maxLevel) {
+            const container = document.getElementById(`dots-class-${abilityId}`);
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            const char = getChar();
+            for (let i = 1; i <= maxLevel; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                if (i <= (char.classAbilities[abilityId] || 0)) {
+                    dot.classList.add('filled');
+                }
+                
+                dot.addEventListener('click', () => {
+                    char.classAbilities[abilityId] = i;
+                    updateClassAbilityDots(abilityId);
+                    updateClassTests();
+                    updateClassResourcesDisplay();
+                    updateAllCalculations();
+                    autoSave();
+                });
+                
+                container.appendChild(dot);
+            }
+        }
+
+        function updateClassAbilityDots(abilityId) {
+            const char = getChar();
+            const dots = document.querySelectorAll(`#dots-class-${abilityId} .dot`);
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('filled', index < (char.classAbilities[abilityId] || 0));
+            });
+        }
+
+        function createSkills() {
+            const char = getChar();
+            Object.keys(SKILLS).forEach(category => {
+                const container = document.getElementById(`skills-${category}`);
+                if (!container) return;
+                
+                SKILLS[category].forEach(skill => {
+                    const skillId = skill.name.toLowerCase().replace(/\s+/g, '-').replace(/\./g, '');
+                    if (!char.skills[skillId]) char.skills[skillId] = 0;
+                    if (skill.hasInput && !char.skillInputs[skillId]) char.skillInputs[skillId] = '';
+                    
+                    const skillDiv = document.createElement('div');
+                    skillDiv.className = 'skill-item';
+                    if (char.skills[skillId] === 0) skillDiv.classList.add('inapto');
+                    
+                    skillDiv.innerHTML = `
+                        <div class="skill-header">
+                            <div class="skill-info">
+                                <div class="skill-name">${skill.name}</div>
+                                <div class="skill-attrs">${skill.attr}</div>
+                            </div>
+                            <div class="dots" id="skill-${skillId}"></div>
+                        </div>
+                        ${skill.hasInput ? `<input type="text" class="skill-input" id="input-${skillId}" placeholder="${skill.placeholder}" value="${char.skillInputs[skillId] || ''}">` : ''}
+                    `;
+                    
+                    container.appendChild(skillDiv);
+                    
+                    if (skill.hasInput) {
+                        const inputEl = skillDiv.querySelector(`#input-${skillId}`);
+                        inputEl.addEventListener('change', (e) => {
+                            char.skillInputs[skillId] = e.target.value;
+                            autoSave();
+                        });
+                    }
+                    
+                    const dotsContainer = skillDiv.querySelector('.dots');
+                    for (let i = 1; i <= 5; i++) {
+                        const dot = document.createElement('div');
+                        dot.className = 'dot';
+                        if (i <= char.skills[skillId]) dot.classList.add('filled');
+                        
+                        dot.addEventListener('click', () => {
+                            char.skills[skillId] = i;
+                            updateSkillDots(skillId);
+                            skillDiv.classList.toggle('inapto', i === 0);
+                            updateAllCalculations();
+                            updateClassTests();
+                            autoSave();
+                        });
+                        
+                        dotsContainer.appendChild(dot);
+                    }
+                });
+            });
+        }
+
+        function updateSkillDots(skillId) {
+            const char = getChar();
+            const dots = document.querySelectorAll(`#skill-${skillId} .dot`);
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('filled', index < char.skills[skillId]);
+            });
+        }
+
+        function getResourceMax(resource) {
+            const char = getChar();
+            if (typeof resource.max === 'number') {
+                return resource.max;
+            } else if (resource.max === 'calc-fantoches') {
+                const lideranca = char.skills['liderança'] || 0;
+                const servos = char.classAbilities['servos'] || 0;
+                return char.int + lideranca + servos;
+            } else {
+                return char.classAbilities[resource.max] || 0;
+            }
+        }
+
+        function updateClassTests() {
+            const char = getChar();
+            const classe = char.classe;
+            if (!classe || !CLASS_ABILITIES[classe]) return;
+            
+            const container = document.getElementById('class-tests-container');
+            if (!container) return;
+            
+            const classData = CLASS_ABILITIES[classe];
+            let html = '';
+            
+            classData.quickTests.forEach(test => {
+                const result = test.calculate(char);
+                
+                html += `
+                    <div class="test-card">
+                        <div class="test-name">${test.name}</div>
+                        <div class="test-formula">${test.formula}</div>
+                        <div class="test-result">${result} dados</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function updateClassResourcesDisplay() {
+            const char = getChar();
+            const classe = char.classe;
+            if (!classe || !CLASS_ABILITIES[classe]) return;
+            
+            const classData = CLASS_ABILITIES[classe];
+            if (!classData.resources) return;
+            
+            classData.resources.forEach(resource => {
+                const maxValue = getResourceMax(resource);
+                const displayEl = document.getElementById(`resource-${resource.id}`);
+                const inputEl = document.getElementById(`resource-input-${resource.id}`);
+                
+                if (displayEl) {
+                    displayEl.textContent = `${char.classResources[resource.id]} / ${maxValue}`;
+                }
+                if (inputEl) {
+                    inputEl.max = maxValue;
+                    if (char.classResources[resource.id] > maxValue) {
+                        char.classResources[resource.id] = maxValue;
+                        inputEl.value = maxValue;
+                    }
+                }
+            });
+        }
+
+        window.adjustResource = function(resourceId, amount) {
+            const char = getChar();
+            const classe = char.classe;
+            if (!classe || !CLASS_ABILITIES[classe]) return;
+            
+            const classData = CLASS_ABILITIES[classe];
+            const resource = classData.resources.find(r => r.id === resourceId);
+            if (!resource) return;
+            
+            const max = getResourceMax(resource);
+            char.classResources[resourceId] = Math.max(0, Math.min(
+                (char.classResources[resourceId] || 0) + amount,
+                max
+            ));
+            updateResourceDisplay(resourceId);
+            autoSave();
+        };
+
+        window.setResource = function(resourceId, value) {
+            const char = getChar();
+            const classe = char.classe;
+            if (!classe || !CLASS_ABILITIES[classe]) return;
+            
+            const classData = CLASS_ABILITIES[classe];
+            const resource = classData.resources.find(r => r.id === resourceId);
+            if (!resource) return;
+            
+            const max = getResourceMax(resource);
+            char.classResources[resourceId] = Math.max(0, Math.min(parseInt(value) || 0, max));
+            updateResourceDisplay(resourceId);
+            autoSave();
+        };
+
+        window.resetResource = function(resourceId) {
+            const char = getChar();
+            const classe = char.classe;
+            if (!classe || !CLASS_ABILITIES[classe]) return;
+            
+            const classData = CLASS_ABILITIES[classe];
+            const resource = classData.resources.find(r => r.id === resourceId);
+            if (!resource) return;
+            
+            const max = getResourceMax(resource);
+            char.classResources[resourceId] = max;
+            updateResourceDisplay(resourceId);
+            autoSave();
+        };
+
+        function updateResourceDisplay(resourceId) {
+            const char = getChar();
+            const classe = char.classe;
+            if (!classe || !CLASS_ABILITIES[classe]) return;
+            
+            const classData = CLASS_ABILITIES[classe];
+            const resource = classData.resources.find(r => r.id === resourceId);
+            if (!resource) return;
+            
+            const max = getResourceMax(resource);
+            const displayEl = document.getElementById(`resource-${resource.id}`);
+            const inputEl = document.getElementById(`resource-input-${resource.id}`);
+            
+            if (displayEl) {
+                displayEl.textContent = `${char.classResources[resourceId]} / ${max}`;
+            }
+            if (inputEl) {
+                inputEl.value = char.classResources[resourceId];
+                inputEl.max = max;
+            }
+        }
+
+        function updateAllCalculations() {
+            const char = getChar();
+            const agilidade = char.skills['agilidade'] || 0;
+            const abismo = char.skills['abismo'] || 0;
+            
+            document.getElementById('calc-iniciativa').textContent = 
+                char.rac + char.des + char.aut + agilidade - char.tamanho;
+            
+            document.getElementById('calc-reacao').textContent = 
+                Math.min(char.des, char.rac) + agilidade;
+            
+            document.getElementById('calc-deslocamento').textContent = 
+                (char.for + char.des + char.tamanho + agilidade) + 'm';
+            
+            const vitalidadeMax = char.vig + char.tamanho;
+            document.getElementById('calc-vitalidade-max').textContent = vitalidadeMax;
+            
+            const determinacaoMax = char.prs + char.aut;
+            document.getElementById('calc-determinacao-max').textContent = determinacaoMax;
+            
+            const cargaMax = char.for + char.vig;
+            document.getElementById('calc-carga').textContent = cargaMax;
+            
+            const sanidadeMax = (char.int + char.aut - (abismo * 2)) * 10;
+            document.getElementById('calc-sanidade').textContent = sanidadeMax;
+            
+            document.getElementById('calc-blindagem').textContent = char.blindagem;
+            
+            if (!char.hpCurrent || char.hpCurrent > vitalidadeMax) {
+                char.hpCurrent = vitalidadeMax;
+            }
+            if (!char.detCurrent || char.detCurrent > determinacaoMax) {
+                char.detCurrent = determinacaoMax;
+            }
+            if (!char.sanCurrent || char.sanCurrent > sanidadeMax) {
+                char.sanCurrent = sanidadeMax;
+            }
+            
+            updateHPBar();
+            updateDETBar();
+            updateSANBar();
+            document.getElementById('exp-total').textContent = char.exp || 0;
+            
+            updateClassTests();
+            updateClassResourcesDisplay();
+        }
+
+        window.updateHPBar = function() {
+            const char = getChar();
+            const max = char.vig + char.tamanho;
+            const current = parseInt(document.getElementById('hp-current').value) || 0;
+            char.hpCurrent = Math.max(0, Math.min(current, max));
+            document.getElementById('hp-current').value = char.hpCurrent;
+            const percent = (char.hpCurrent / max) * 100;
+            document.getElementById('hp-fill').style.width = percent + '%';
+            document.getElementById('hp-text').textContent = `${char.hpCurrent} / ${max}`;
+            autoSave();
+        };
+
+        window.adjustHP = function(amount) {
+            const char = getChar();
+            const max = char.vig + char.tamanho;
+            char.hpCurrent = Math.max(0, Math.min(char.hpCurrent + amount, max));
+            document.getElementById('hp-current').value = char.hpCurrent;
+            updateHPBar();
+        };
+
+        window.resetHP = function() {
+            const char = getChar();
+            const max = char.vig + char.tamanho;
+            char.hpCurrent = max;
+            document.getElementById('hp-current').value = char.hpCurrent;
+            updateHPBar();
+        };
+
+        window.updateDETBar = function() {
+            const char = getChar();
+            const max = char.prs + char.aut;
+            const current = parseInt(document.getElementById('det-current').value) || 0;
+            char.detCurrent = Math.max(0, Math.min(current, max));
+            document.getElementById('det-current').value = char.detCurrent;
+            const percent = (char.detCurrent / max) * 100;
+            document.getElementById('det-fill').style.width = percent + '%';
+            document.getElementById('det-text').textContent = `${char.detCurrent} / ${max}`;
+            autoSave();
+        };
+
+        window.adjustDET = function(amount) {
+            const char = getChar();
+            const max = char.prs + char.aut;
+            char.detCurrent = Math.max(0, Math.min(char.detCurrent + amount, max));
+            document.getElementById('det-current').value = char.detCurrent;
+            updateDETBar();
+        };
+
+        window.resetDET = function() {
+            const char = getChar();
+            const max = char.prs + char.aut;
+            char.detCurrent = max;
+            document.getElementById('det-current').value = char.detCurrent;
+            updateDETBar();
+        };
+
+        window.updateSANBar = function() {
+            const char = getChar();
+            const abismo = char.skills['abismo'] || 0;
+            const max = (char.int + char.aut - (abismo * 2)) * 10;
+            const current = parseInt(document.getElementById('san-current').value) || 0;
+            char.sanCurrent = Math.max(0, Math.min(current, max));
+            document.getElementById('san-current').value = char.sanCurrent;
+            const percent = (char.sanCurrent / max) * 100;
+            document.getElementById('san-fill').style.width = percent + '%';
+            document.getElementById('san-text').textContent = `${char.sanCurrent} / ${max}`;
+            autoSave();
+        };
+
+        window.adjustSAN = function(amount) {
+            const char = getChar();
+            const abismo = char.skills['abismo'] || 0;
+            const max = (char.int + char.aut - (abismo * 2)) * 10;
+            char.sanCurrent = Math.max(0, Math.min(char.sanCurrent + amount, max));
+            document.getElementById('san-current').value = char.sanCurrent;
+            updateSANBar();
+        };
+
+        window.resetSAN = function() {
+            const char = getChar();
+            const abismo = char.skills['abismo'] || 0;
+            const max = (char.int + char.aut - (abismo * 2)) * 10;
+            char.sanCurrent = max;
+            document.getElementById('san-current').value = char.sanCurrent;
+            updateSANBar();
+        };
+
+        window.rollDice = function() {
+            const count = parseInt(document.getElementById('dice-count').value) || 1;
+            let results = [];
+            let successes = 0;
+            let failures = 0;
+            
+            for (let i = 0; i < count; i++) {
+                const roll = Math.floor(Math.random() * 10) + 1;
+                results.push(roll);
+                
+                if (roll === 1) {
+                    failures++;
+                } else if (roll >= 8) {
+                    successes++;
+                    
+                    if (roll === 10) {
+                        let explode = roll;
+                        while (explode === 10) {
+                            explode = Math.floor(Math.random() * 10) + 1;
+                            results.push(explode);
+                            if (explode >= 8) successes++;
+                        }
+                    }
+                }
+            }
+            
+            const netSuccesses = successes - failures;
+            
+            document.getElementById('roll-result').textContent = netSuccesses;
+            document.getElementById('roll-details').innerHTML = `
+                <strong>Dados:</strong> ${results.join(', ')}<br>
+                <strong>Sucessos:</strong> ${successes} | <strong>Falhas:</strong> ${failures}<br>
+                <strong>Total:</strong> ${netSuccesses}
+            `;
+        };
+
+        window.addContainer = function() {
+            const char = getChar();
+            const name = prompt('Nome do container (ex: Mochila, Bolsa, Carroça):');
+            if (!name) return;
+            
+            const maxCapacity = parseInt(prompt('Capacidade máxima de carga:')) || 10;
+            
+            const newContainer = {
+                id: Date.now(),
+                name,
+                maxCapacity,
+                items: []
+            };
+            
+            char.containers.push(newContainer);
+            updateContainers();
+            autoSave();
+        };
+
+        window.removeContainer = function(containerId) {
+            if (!confirm('⚠️ Remover este container e todos os itens dentro dele?')) return;
+            
+            const char = getChar();
+            char.containers = char.containers.filter(c => c.id !== containerId);
+            updateContainers();
+            autoSave();
+        };
+
+        window.addItemToContainer = function(containerId) {
+            const name = prompt('Nome do item:');
+            if (!name) return;
+            
+            const weight = parseInt(prompt('Peso (Carga):')) || 1;
+            const quantity = parseInt(prompt('Quantidade:')) || 1;
+            const description = prompt('Descrição (opcional):') || '';
+            
+            const char = getChar();
+            const container = char.containers.find(c => c.id === containerId);
+            if (container) {
+                const newItem = {
+                    id: Date.now(),
+                    name,
+                    weight,
+                    quantity,
+                    description
+                };
+                
+                container.items.push(newItem);
+                updateContainers();
+                autoSave();
+            }
+        };
+
+        window.removeItemFromContainer = function(containerId, itemId) {
+            const char = getChar();
+            const container = char.containers.find(c => c.id === containerId);
+            if (container) {
+                container.items = container.items.filter(i => i.id !== itemId);
+                updateContainers();
+                autoSave();
+            }
+        };
+
+        function updateContainers() {
+            const char = getChar();
+            const containersList = document.getElementById('containers-list');
+            
+            if (!char.containers || char.containers.length === 0) {
+                containersList.innerHTML = '<p style="color: #64748b; text-align: center; padding: 20px; font-size: 0.9rem;">Nenhum container. Adicione uma mochila, bolsa ou carroça!</p>';
+                return;
+            }
+            
+            containersList.innerHTML = char.containers.map(container => {
+                const currentLoad = container.items.reduce((sum, item) => 
+                    sum + (item.weight * item.quantity), 0
+                );
+                
+                const isOverload = currentLoad > container.maxCapacity;
+                
+                const itemsHTML = container.items.length === 0 
+                    ? '<p style="color: #64748b; text-align: center; padding: 10px; font-size: 0.85rem;">Vazio</p>'
+                    : container.items.map(item => `
+                        <div class="inventory-item">
+                            <div class="item-info">
+                                <div class="item-name">${item.name} ${item.quantity > 1 ? `(x${item.quantity})` : ''}</div>
+                                <div class="item-details">
+                                    Peso: ${item.weight} | Total: ${item.weight * item.quantity}
+                                    ${item.description ? `<br>${item.description}` : ''}
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary btn-small" onclick="removeItemFromContainer(${container.id}, ${item.id})">🗑️</button>
+                        </div>
+                    `).join('');
+                
+                return `
+                    <div class="container-card">
+                        <div class="container-header">
+                            <div class="container-name">📦 ${container.name}</div>
+                            <div class="container-capacity ${isOverload ? 'overload' : ''}">
+                                ${currentLoad} / ${container.maxCapacity} ${isOverload ? '⚠️ SOBRECARGA!' : ''}
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                            <button class="btn btn-primary btn-small" onclick="addItemToContainer(${container.id})" style="flex: 1; min-width: 120px;">➕ Item</button>
+                            <button class="btn btn-danger btn-small" onclick="removeContainer(${container.id})" style="min-width: 120px;">🗑️ Container</button>
+                        </div>
+                        ${itemsHTML}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.adjustEXP = function(amount) {
+            const char = getChar();
+            char.exp = Math.max(0, (char.exp || 0) + amount);
+            document.getElementById('exp-total').textContent = char.exp;
+            autoSave();
+        };
+
+        window.switchTab = function(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            const targetTab = document.querySelector(`.tab-content[id="${tabName}"]`);
+            
+            if (!targetTab) {
+                console.error('❌ Aba não encontrada:', tabName);
+                return;
+            }
+            
+            event.target.classList.add('active');
+            targetTab.classList.add('active');
+            
+            event.target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        };
+
+        function loadCharacterData() {
+            const char = getChar();
+            ['nome', 'jogador', 'idade', 'raca', 'classe', 'virtude', 'vicio', 'tamanho', 'luns'].forEach(key => {
+                const el = document.getElementById(key);
+                if (el) el.value = char[key] || (key === 'tamanho' ? 5 : '');
+            });
+            
+            const attributes = ['int', 'for', 'pre', 'rac', 'des', 'man', 'prs', 'vig', 'aut'];
+            attributes.forEach(attr => updateAttributeDots(attr));
+            
+            Object.keys(char.skills).forEach(skillId => updateSkillDots(skillId));
+            
+            Object.keys(char.skillInputs || {}).forEach(skillId => {
+                const inputEl = document.getElementById(`input-${skillId}`);
+                if (inputEl) inputEl.value = char.skillInputs[skillId];
+            });
+
+            const notasTextarea = document.getElementById('notas-textarea');
+            if (notasTextarea) {
+                notasTextarea.value = char.notas || '';
+            }
+            
+            updateContainers();
+            
+            if (char.classe && CLASS_ABILITIES[char.classe]) {
+                renderClassContent(char.classe);
+            }
+        }
+
+        window.exportCharacter = function() {
+            const char = getChar();
+            const json = JSON.stringify(char, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${char.nome || 'personagem'}_lendas.json`;
+            a.click();
+            showAlert('✅ Personagem exportado com sucesso!', 'success');
+        };
+
+        window.importCharacter = function() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        window.character = JSON.parse(event.target.result);
+                        const char = getChar();
+                        
+                        if (!char.containers) char.containers = [];
+                        if (!char.skillInputs) char.skillInputs = {};
+                        if (!char.notas) char.notas = '';
+                        if (!char.classAbilities) char.classAbilities = {};
+                        if (!char.classResources) char.classResources = {};
+                        
+                        loadCharacterData();
+                        updateAllCalculations();
+                        autoSave();
+                        showAlert('✅ Personagem importado com sucesso!', 'success');
+                    } catch (error) {
+                        showAlert('❌ Erro ao importar arquivo! Verifique se é um JSON válido.', 'danger');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        };
+
+        window.resetCharacter = function() {
+            if (confirm('⚠️ ATENÇÃO! Criar um novo personagem irá APAGAR o personagem atual permanentemente. Deseja continuar?')) {
+                if (confirm('⚠️ ÚLTIMA CONFIRMAÇÃO! Todos os dados serão perdidos. Tem certeza ABSOLUTA?')) {
+                    window.character = {
+                        nome: '', jogador: '', idade: 0, raca: '', classe: '', virtude: '', vicio: '',
+                        tamanho: 5, luns: 0,
+                        int: 1, for: 1, pre: 1, rac: 1, des: 1, man: 1, prs: 1, vig: 1, aut: 1,
+                        skills: {},
+                        skillInputs: {},
+                        classAbilities: {},
+                        classResources: {},
+                        hpCurrent: 5, detCurrent: 3, sanCurrent: 100, blindagem: 0,
+                        containers: [{
+                            id: Date.now(),
+                            name: 'Mochila',
+                            maxCapacity: 6,
+                            items: []
+                        }],
+                        notas: '',
+                        exp: 0
+                    };
+                    
+                    loadCharacterData();
+                    updateAllCalculations();
+                    autoSave();
+                    showAlert('🔄 Personagem resetado! Dados salvos na nuvem.', 'success');
+                }
+            }
+        };
+
+        function showAlert(message, type) {
+            const alert = type === 'success' 
+                ? document.getElementById('alertSuccess')
+                : document.getElementById('alertError');
+            
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

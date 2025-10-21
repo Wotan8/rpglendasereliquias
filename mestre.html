@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1e1b4b">
+    <title>Painel do Mestre - Lendas e Relíquias</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --primary: #8b5cf6;
+            --secondary: #ec4899;
+            --dark: #1e1b4b;
+            --darker: #0f172a;
+            --light: #f8fafc;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border: #334155;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            color: var(--light);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(139, 92, 246, 0.2);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            color: var(--primary);
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .header {
+            max-width: 1800px;
+            margin: 0 auto 20px;
+            background: rgba(139, 92, 246, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 16px;
+            border: 2px solid var(--primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        h1 {
+            font-size: clamp(1.5rem, 5vw, 2rem);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .master-badge {
+            background: linear-gradient(135deg, var(--warning), #d97706);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .live-indicator {
+            background: var(--success);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .btn-logout {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-logout:hover {
+            transform: scale(1.05);
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(30, 27, 75, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid var(--border);
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--primary);
+            text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 14px 45px 14px 14px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            color: var(--light);
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 1.2rem;
+        }
+
+        .filter-btn {
+            padding: 14px 20px;
+            background: rgba(139, 92, 246, 0.2);
+            border: 2px solid var(--primary);
+            border-radius: 10px;
+            color: var(--light);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .filter-btn:hover {
+            background: rgba(139, 92, 246, 0.3);
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+        }
+
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+            gap: 20px;
+        }
+
+        .player-card {
+            background: rgba(30, 27, 75, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 20px;
+            border: 2px solid var(--border);
+            transition: all 0.3s;
+        }
+
+        .player-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+        }
+
+        .player-card.critical {
+            border-color: var(--danger);
+            animation: criticalPulse 2s infinite;
+        }
+
+        @keyframes criticalPulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.6); }
+        }
+
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .player-name {
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: var(--primary);
+        }
+
+        .player-status {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-online {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .badge-critical {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+
+        .player-class {
+            background: rgba(139, 92, 246, 0.2);
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--light);
+        }
+
+        .player-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .info-item {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--light);
+        }
+
+        .vitals-bar {
+            margin-bottom: 10px;
+        }
+
+        .vital-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+        }
+
+        .bar {
+            width: 100%;
+            height: 25px;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid var(--border);
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .bar-hp { background: linear-gradient(90deg, var(--danger), var(--warning), var(--success)); }
+        .bar-det { background: linear-gradient(90deg, var(--primary), var(--secondary)); }
+        .bar-san { background: linear-gradient(90deg, #6366f1, #8b5cf6); }
+
+        .attributes-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .attribute-item {
+            background: rgba(139, 92, 246, 0.1);
+            padding: 8px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid var(--primary);
+        }
+
+        .attr-name {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-bottom: 3px;
+        }
+
+        .attr-value {
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: var(--primary);
+        }
+
+        .expand-btn {
+            width: 100%;
+            padding: 12px;
+            background: rgba(139, 92, 246, 0.2);
+            border: 2px solid var(--primary);
+            border-radius: 10px;
+            color: var(--light);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 15px;
+        }
+
+        .expand-btn:hover {
+            background: var(--primary);
+        }
+
+        .expanded-content {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid var(--border);
+        }
+
+        .expanded-content.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 15px 0 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .skills-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .skill-item {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+
+        .skill-name {
+            color: #94a3b8;
+            font-size: 0.75rem;
+        }
+
+        .skill-value {
+            color: var(--light);
+            font-weight: 700;
+        }
+
+        .class-abilities-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .class-ability-item {
+            background: rgba(139, 92, 246, 0.15);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--primary);
+        }
+
+        .ability-name {
+            font-weight: 700;
+            color: var(--light);
+            margin-bottom: 3px;
+        }
+
+        .ability-level {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .log-container {
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .log-item {
+            padding: 8px;
+            margin-bottom: 8px;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            border-left: 3px solid var(--primary);
+        }
+
+        .log-time {
+            color: #94a3b8;
+            font-size: 0.7rem;
+            margin-bottom: 3px;
+        }
+
+        .log-change {
+            color: var(--light);
+        }
+
+        .log-change.damage {
+            color: var(--danger);
+        }
+
+        .log-change.heal {
+            color: var(--success);
+        }
+
+        .log-change.suspicious {
+            color: var(--warning);
+            font-weight: 700;
+        }
+
+        .last-update {
+            text-align: center;
+            color: #64748b;
+            font-size: 0.75rem;
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+        .no-players {
+            text-align: center;
+            padding: 50px;
+            background: rgba(30, 27, 75, 0.95);
+            border-radius: 16px;
+            border: 2px solid var(--border);
+        }
+
+        .no-players-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid var(--danger);
+            color: var(--danger);
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.2);
+            border: 2px solid var(--warning);
+            color: var(--warning);
+        }
+
+        .inventory-preview {
+            display: grid;
+            gap: 6px;
+        }
+
+        .inventory-item {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .item-name {
+            color: var(--light);
+            font-weight: 600;
+        }
+
+        .item-weight {
+            color: #94a3b8;
+        }
+
+        .notes-preview {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 12px;
+            border-radius: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            border: 1px solid var(--border);
+        }
+
+        @media (max-width: 768px) {
+            .players-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .attributes-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .skills-list {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary);
+        }
+
+        .resource-item {
+            background: rgba(139, 92, 246, 0.15);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid var(--primary);
+        }
+
+        .resource-name {
+            font-weight: 700;
+            color: var(--light);
+            margin-bottom: 3px;
+        }
+
+        .resource-value {
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- TELA DE CARREGAMENTO -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">👑 Carregando Painel do Mestre...</div>
+    </div>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <div id="mainContent" style="display: none;">
+        <div class="header">
+            <div>
+                <h1>👑 PAINEL DO MESTRE</h1>
+                <p style="color: #94a3b8; margin-top: 5px; font-size: 0.9rem;">Lendas e Relíquias RPG - Monitoramento em Tempo Real</p>
+            </div>
+            <div class="header-info">
+                <span class="live-indicator">🔴 AO VIVO</span>
+                <span class="master-badge">⚔️ MESTRE</span>
+                <span id="masterEmail" style="color: #cbd5e1; font-size: 0.9rem;"></span>
+                <button class="btn-logout" onclick="logout()">🚪 SAIR</button>
+            </div>
+        </div>
+
+        <div class="container">
+            <div id="alertContainer"></div>
+
+            <!-- ESTATÍSTICAS GERAIS -->
+            <div class="stats-overview">
+                <div class="stat-card">
+                    <div class="stat-label">👥 Jogadores Totais</div>
+                    <div class="stat-value" id="totalPlayers">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">⚔️ Em Combate</div>
+                    <div class="stat-value" id="playersInCombat">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">💀 HP Crítico</div>
+                    <div class="stat-value" id="playersCritical">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">🧠 Sanidade Baixa</div>
+                    <div class="stat-value" id="playersLowSanity">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">⭐ EXP Média</div>
+                    <div class="stat-value" id="avgExp">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">🎯 Total EXP</div>
+                    <div class="stat-value" id="totalExp">0</div>
+                </div>
+            </div>
+
+            <!-- CONTROLES -->
+            <div class="controls">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="🔍 Buscar jogador, classe, raça..." oninput="filterPlayers()">
+                    <span class="search-icon">🔍</span>
+                </div>
+                <button class="filter-btn active" id="filterAll" onclick="setFilter('all')">Todos</button>
+                <button class="filter-btn" id="filterCritical" onclick="setFilter('critical')">💀 Críticos</button>
+                <button class="filter-btn" id="filterLowSanity" onclick="setFilter('lowSanity')">🧠 Sanidade Baixa</button>
+            </div>
+
+            <!-- LISTA DE JOGADORES -->
+            <div id="playersContainer" class="players-grid"></div>
+        </div>
+    </div>
+
+    <!-- FIREBASE SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, collection, onSnapshot, doc, getDoc, query } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCjwW7u11HgO0L89qJDhxVlUZ_cesTkd0Y",
+            authDomain: "lendasereliquiasrpg.firebaseapp.com",
+            projectId: "lendasereliquiasrpg",
+            storageBucket: "lendasereliquiasrpg.firebasestorage.app",
+            messagingSenderId: "311648525241",
+            appId: "1:311648525241:web:49a14229bc9956a098f468",
+            measurementId: "G-4Z3J52P1XM"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let unsubscribe = null;
+        let allPlayers = [];
+        let currentFilter = 'all';
+        let previousData = {};
+
+        // ============= VERIFICAR AUTENTICAÇÃO E PERMISSÃO =============
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                console.log('✅ Usuário autenticado:', user.email);
+                
+                // Verificar se é mestre
+                try {
+                    const userDoc = doc(db, 'users', user.uid);
+                    const docSnap = await getDoc(userDoc);
+                    
+                    if (docSnap.exists()) {
+                        const userData = docSnap.data();
+                        console.log('📋 Dados do usuário:', userData);
+                        
+                        if (userData.role !== 'mestre') {
+                            alert('⚠️ Você não tem permissão para acessar o painel do mestre!\nRedirecionando para sua ficha...');
+                            window.location.href = 'ficha.html';
+                            return;
+                        }
+                    } else {
+                        alert('⚠️ Erro ao verificar permissões. Faça login novamente.');
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                } catch (error) {
+                    console.error('❌ Erro ao verificar permissões:', error);
+                    alert('⚠️ Erro ao verificar permissões. Faça login novamente.');
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                document.getElementById('masterEmail').textContent = user.email;
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                
+                console.log('🔄 Iniciando monitoramento de jogadores...');
+                loadAllPlayers();
+            } else {
+                console.log('❌ Usuário não autenticado');
+                window.location.href = 'index.html';
+            }
+        });
+
+        // ============= LOGOUT =============
+        window.logout = async function() {
+            if (confirm('Deseja realmente sair?')) {
+                if (unsubscribe) unsubscribe();
+                await signOut(auth);
+            }
+        };
+
+        // ============= CARREGAR TODOS OS JOGADORES EM TEMPO REAL =============
+        function loadAllPlayers() {
+            console.log('📡 Conectando ao Firestore...');
+            
+            const charactersRef = collection(db, 'characters');
+            
+            // Listener em tempo real
+            unsubscribe = onSnapshot(charactersRef, (snapshot) => {
+                console.log(`📦 Recebidos ${snapshot.size} documentos`);
+                
+                const players = [];
+                
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const playerId = doc.id;
+                    
+                    console.log(`📄 Documento ${playerId}:`, data);
+                    
+                    // Detectar mudanças
+                    if (previousData[playerId]) {
+                        detectChanges(playerId, previousData[playerId], data);
+                    }
+                    
+                    // Atualizar dados anteriores
+                    previousData[playerId] = { ...data };
+                    
+                    // Adicionar à lista
+                    players.push({ 
+                        id: playerId, 
+                        ...data 
+                    });
+                });
+
+                console.log(`✅ Total de ${players.length} jogadores carregados`);
+                allPlayers = players;
+                renderPlayers(players);
+                updateStats(players);
+            }, (error) => {
+                console.error('❌ Erro ao carregar jogadores:', error);
+                showAlert('Erro ao carregar jogadores: ' + error.message, 'danger');
+            });
+        }
+
+        // ============= DETECTAR MUDANÇAS E CRIAR LOGS =============
+        function detectChanges(playerId, oldData, newData) {
+            const changes = [];
+            
+            // HP
+            if (oldData.hpCurrent !== newData.hpCurrent) {
+                const diff = newData.hpCurrent - oldData.hpCurrent;
+                const type = diff > 0 ? 'heal' : 'damage';
+                
+                // Detectar mudança suspeita (ganhou HP acima do máximo)
+                const hpMax = (newData.vig || 1) + (newData.tamanho || 5);
+                if (newData.hpCurrent > hpMax) {
+                    changes.push({
+                        type: 'suspicious',
+                        message: `⚠️ HP SUSPEITO: ${newData.hpCurrent} (MAX: ${hpMax})`
+                    });
+                } else {
+                    changes.push({
+                        type,
+                        message: `HP: ${oldData.hpCurrent} → ${newData.hpCurrent} (${diff > 0 ? '+' : ''}${diff})`
+                    });
+                }
+            }
+            
+            // Determinação
+            if (oldData.detCurrent !== newData.detCurrent) {
+                const diff = newData.detCurrent - oldData.detCurrent;
+                const detMax = (newData.prs || 1) + (newData.aut || 1);
+                
+                if (newData.detCurrent > detMax) {
+                    changes.push({
+                        type: 'suspicious',
+                        message: `⚠️ DET SUSPEITO: ${newData.detCurrent} (MAX: ${detMax})`
+                    });
+                } else {
+                    changes.push({
+                        type: 'change',
+                        message: `DET: ${oldData.detCurrent} → ${newData.detCurrent} (${diff > 0 ? '+' : ''}${diff})`
+                    });
+                }
+            }
+            
+            // Sanidade
+            if (oldData.sanCurrent !== newData.sanCurrent) {
+                const diff = newData.sanCurrent - oldData.sanCurrent;
+                const abismo = newData.skills?.['abismo'] || 0;
+                const sanMax = ((newData.int || 1) + (newData.aut || 1) - (abismo * 2)) * 10;
+                
+                if (newData.sanCurrent > sanMax) {
+                    changes.push({
+                        type: 'suspicious',
+                        message: `⚠️ SAN SUSPEITO: ${newData.sanCurrent} (MAX: ${sanMax})`
+                    });
+                } else {
+                    changes.push({
+                        type: 'change',
+                        message: `SAN: ${oldData.sanCurrent} → ${newData.sanCurrent} (${diff > 0 ? '+' : ''}${diff})`
+                    });
+                }
+            }
+            
+            // EXP
+            if (oldData.exp !== newData.exp) {
+                const diff = newData.exp - oldData.exp;
+                changes.push({
+                    type: diff > 10 ? 'suspicious' : 'change',
+                    message: `${diff > 10 ? '⚠️ ' : ''}EXP: ${oldData.exp} → ${newData.exp} (${diff > 0 ? '+' : ''}${diff})`
+                });
+            }
+            
+            // Atributos
+            const attrs = ['int', 'for', 'pre', 'rac', 'des', 'man', 'prs', 'vig', 'aut'];
+            attrs.forEach(attr => {
+                if (oldData[attr] !== newData[attr]) {
+                    const diff = newData[attr] - oldData[attr];
+                    changes.push({
+                        type: Math.abs(diff) > 1 ? 'suspicious' : 'change',
+                        message: `${Math.abs(diff) > 1 ? '⚠️ ' : ''}${attr.toUpperCase()}: ${oldData[attr]} → ${newData[attr]}`
+                    });
+                }
+            });
+            
+            // Adicionar logs ao localStorage
+            if (changes.length > 0) {
+                const logs = JSON.parse(localStorage.getItem(`logs_${playerId}`) || '[]');
+                changes.forEach(change => {
+                    logs.unshift({
+                        time: new Date().toISOString(),
+                        ...change
+                    });
+                });
+                // Manter apenas os últimos 50 logs
+                localStorage.setItem(`logs_${playerId}`, JSON.stringify(logs.slice(0, 50)));
+                
+                console.log(`📝 ${changes.length} mudanças detectadas para ${newData.nome}`);
+            }
+        }
+
+        // ============= RENDERIZAR JOGADORES =============
+        function renderPlayers(players) {
+            const playersContainer = document.getElementById('playersContainer');
+            
+            if (players.length === 0) {
+                playersContainer.innerHTML = `
+                    <div class="no-players">
+                        <div class="no-players-icon">🎭</div>
+                        <h2 style="color: var(--primary); margin-bottom: 10px;">Nenhum jogador encontrado</h2>
+                        <p style="color: #94a3b8;">Os jogadores aparecerão aqui quando criarem suas fichas.</p>
+                        <p style="color: #64748b; margin-top: 10px; font-size: 0.85rem;">Total de documentos na coleção: ${players.length}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            console.log(`🎨 Renderizando ${players.length} jogadores`);
+
+            playersContainer.innerHTML = players.map(player => {
+                const hpMax = (player.vig || 1) + (player.tamanho || 5);
+                const detMax = (player.prs || 1) + (player.aut || 1);
+                const abismo = player.skills?.['abismo'] || 0;
+                const sanMax = ((player.int || 1) + (player.aut || 1) - (abismo * 2)) * 10;
+
+                const hpPercent = Math.max(0, Math.min(100, ((player.hpCurrent || hpMax) / hpMax) * 100));
+                const detPercent = Math.max(0, Math.min(100, ((player.detCurrent || detMax) / detMax) * 100));
+                const sanPercent = Math.max(0, Math.min(100, ((player.sanCurrent || sanMax) / sanMax) * 100));
+
+                const isCriticalHP = hpPercent <= 25;
+                const isLowSanity = sanPercent <= 30;
+                const cardClass = isCriticalHP ? 'player-card critical' : 'player-card';
+
+                // Logs
+                const logs = JSON.parse(localStorage.getItem(`logs_${player.id}`) || '[]');
+                const logsHtml = logs.slice(0, 10).map(log => `
+                    <div class="log-item">
+                        <div class="log-time">${formatTime(log.time)}</div>
+                        <div class="log-change ${log.type}">${log.message}</div>
+                    </div>
+                `).join('');
+
+                // Skills com valor > 0
+                const skillsList = Object.entries(player.skills || {})
+                    .filter(([key, value]) => value > 0)
+                    .sort((a, b) => b[1] - a[1]);
+
+                // Habilidades de classe
+                const classAbilitiesList = Object.entries(player.classAbilities || {})
+                    .filter(([key, value]) => value > 0)
+                    .sort((a, b) => b[1] - a[1]);
+
+                // Recursos de classe
+                const classResourcesList = Object.entries(player.classResources || {})
+                    .map(([key, value]) => ({ key, value }));
+
+                // Inventário
+                const totalItems = (player.containers || []).reduce((total, container) => 
+                    total + (container.items?.length || 0), 0
+                );
+
+                const lastUpdate = player.lastUpdate ? new Date(player.lastUpdate).toLocaleString('pt-BR') : 'Nunca';
+
+                return `
+                    <div class="${cardClass}" data-player-id="${player.id}">
+                        <div class="player-header">
+                            <div>
+                                <div class="player-name">${player.nome || 'Sem Nome'}</div>
+                                <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 5px;">
+                                    👤 ${player.jogador || 'Jogador'} | 📧 ${player.userEmail || 'N/A'}
+                                </div>
+                            </div>
+                            <div class="player-status">
+                                ${isCriticalHP ? '<span class="status-badge badge-critical">💀 CRÍTICO</span>' : ''}
+                                ${isLowSanity ? '<span class="status-badge badge-warning">🧠 SAN BAIXA</span>' : ''}
+                                <span class="player-class">${player.classe || 'Sem Classe'}</span>
+                            </div>
+                        </div>
+
+                        <div class="player-info">
+                            <div class="info-item">
+                                <div class="info-label">Raça</div>
+                                <div class="info-value">${player.raca || '-'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Idade</div>
+                                <div class="info-value">${player.idade || 0}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Tamanho</div>
+                                <div class="info-value">${player.tamanho || 5}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">💰 Luns</div>
+                                <div class="info-value">${player.luns || 0}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Virtude</div>
+                                <div class="info-value" style="font-size: 0.9rem;">${player.virtude || '-'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Vício</div>
+                                <div class="info-value" style="font-size: 0.9rem;">${player.vicio || '-'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">⭐ EXP</div>
+                                <div class="info-value">${player.exp || 0}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">🛡️ Blindagem</div>
+                                <div class="info-value">${player.blindagem || 0}</div>
+                            </div>
+                        </div>
+
+                        <div class="vitals-bar">
+                            <div class="vital-label">
+                                <span>❤️ Vitalidade</span>
+                                <span style="font-weight: 700; ${isCriticalHP ? 'color: var(--danger)' : ''}">${player.hpCurrent || hpMax} / ${hpMax}</span>
+                            </div>
+                            <div class="bar">
+                                <div class="bar-fill bar-hp" style="width: ${hpPercent}%;">
+                                    ${isCriticalHP ? '⚠️ CRÍTICO' : Math.round(hpPercent) + '%'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="vitals-bar">
+                            <div class="vital-label">
+                                <span>⚡ Determinação</span>
+                                <span style="font-weight: 700;">${player.detCurrent || detMax} / ${detMax}</span>
+                            </div>
+                            <div class="bar">
+                                <div class="bar-fill bar-det" style="width: ${detPercent}%;">
+                                    ${Math.round(detPercent)}%
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="vitals-bar">
+                            <div class="vital-label">
+                                <span>🧠 Sanidade</span>
+                                <span style="font-weight: 700; ${isLowSanity ? 'color: var(--warning)' : ''}">${player.sanCurrent || sanMax} / ${sanMax}</span>
+                            </div>
+                            <div class="bar">
+                                <div class="bar-fill bar-san" style="width: ${sanPercent}%;">
+                                    ${isLowSanity ? '⚠️ BAIXA' : Math.round(sanPercent) + '%'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="attributes-grid">
+                            <div class="attribute-item">
+                                <div class="attr-name">INT</div>
+                                <div class="attr-value">${player.int || 1}</div>
+                            </div>
+                            <div class="attribute-item">
+                                <div class="attr-name">FOR</div>
+                                <div class="attr-value">${player.for || 1}</div>
+                            </div>
+                            <div class="attribute-item">
+                                <div class="attr-name">PRE</div>
+                                <div class="attr-value">${player.pre || 1}</div>
+                            </div>
+                            <div class="attribute-item">
+                                <div class="attr-name">RAC</div>
+                                <div class="attr-value">${player.rac || 1}</div>
+                            </div>
+                            <div class="attribute-item">
+                                <div class="attr-name">DES</div>
+                                <div class="attr-value">${player.des || 1}</div>
+                            </div>
+                            <div class="attribute-item">
+                                <div class="attr-name">MAN</div>
+                                <div class="attr-value">${player.man || 1}</div>
+                            </div>
+                            <div class="attribute-item">
+                                <div class="attr-name">PRS</div>
+                                <div class="attr-value">${player.prs || 1}</div>
+                            </div>
+                            <div class="attribute-item">
+                                <div class="attr-name">VIG</div>
+                                <div class="attr-value">${player.vig || 1}</div>
+                            </div>
+                            <div class="attribute-item">
+                                <div class="attr-name">AUT</div>
+                                <div class="attr-value">${player.aut || 1}</div>
+                            </div>
+                        </div>
+
+                        <button class="expand-btn" onclick="toggleExpand('${player.id}')">
+                            📋 Ver Detalhes Completos
+                        </button>
+
+                        <div class="expanded-content" id="expanded-${player.id}">
+                            <div class="section-title">🎯 Todas as Habilidades (${skillsList.length})</div>
+                            <div class="skills-list">
+                                ${skillsList.length > 0 ? skillsList.map(([key, value]) => `
+                                    <div class="skill-item">
+                                        <span class="skill-name">${formatSkillName(key)}</span>
+                                        <span class="skill-value">Nível ${value}</span>
+                                    </div>
+                                `).join('') : '<div style="color: #64748b; text-align: center; padding: 10px; grid-column: 1/-1;">Nenhuma habilidade desenvolvida</div>'}
+                            </div>
+
+                            ${classAbilitiesList.length > 0 ? `
+                                <div class="section-title">⚔️ Habilidades de Classe (${classAbilitiesList.length})</div>
+                                <div class="class-abilities-list">
+                                    ${classAbilitiesList.map(([key, value]) => `
+                                        <div class="class-ability-item">
+                                            <div class="ability-name">${formatSkillName(key)}</div>
+                                            <div class="ability-level">Nível ${value}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+
+                            ${classResourcesList.length > 0 ? `
+                                <div class="section-title">📦 Recursos de Classe</div>
+                                <div class="class-abilities-list">
+                                    ${classResourcesList.map(({ key, value }) => `
+                                        <div class="resource-item">
+                                            <div class="resource-name">${formatSkillName(key)}</div>
+                                            <div class="resource-value">${value}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+
+                            <div class="section-title">🎒 Inventário (${totalItems} itens)</div>
+                            <div class="inventory-preview">
+                                ${player.containers && player.containers.length > 0 ? 
+                                    player.containers.map(container => {
+                                        const currentLoad = container.items?.reduce((sum, item) => sum + (item.weight * item.quantity), 0) || 0;
+                                        const isOverload = currentLoad > container.maxCapacity;
+                                        
+                                        return `
+                                        <div style="margin-bottom: 10px;">
+                                            <div style="font-weight: 700; color: ${isOverload ? 'var(--danger)' : 'var(--primary)'}; margin-bottom: 5px;">
+                                                📦 ${container.name} (${currentLoad} / ${container.maxCapacity}) ${isOverload ? '⚠️ SOBRECARGA!' : ''}
+                                            </div>
+                                            ${container.items && container.items.length > 0 ?
+                                                container.items.map(item => `
+                                                    <div class="inventory-item">
+                                                        <span class="item-name">${item.name} ${item.quantity > 1 ? `(x${item.quantity})` : ''}</span>
+                                                        <span class="item-weight">Peso: ${item.weight * item.quantity}</span>
+                                                    </div>
+                                                    ${item.description ? `<div style="color: #64748b; font-size: 0.75rem; padding-left: 10px; margin-top: 2px;">${item.description}</div>` : ''}
+                                                `).join('')
+                                                : '<div style="color: #64748b; text-align: center; padding: 5px; font-size: 0.8rem;">Vazio</div>'
+                                            }
+                                        </div>
+                                    `}).join('')
+                                    : '<div style="color: #64748b; text-align: center; padding: 10px;">Nenhum container</div>'
+                                }
+                            </div>
+
+                            ${player.notas ? `
+                                <div class="section-title">📝 Notas do Personagem</div>
+                                <div class="notes-preview">${player.notas || 'Sem notas'}</div>
+                            ` : ''}
+
+                            <div class="section-title">📜 Histórico de Mudanças (Últimas 10)</div>
+                            <div class="log-container">
+                                ${logsHtml || '<div style="color: #64748b; text-align: center; padding: 10px;">Nenhuma mudança registrada ainda</div>'}
+                            </div>
+
+                            <div class="last-update">
+                                ⏱️ Última atualização: ${lastUpdate}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============= ATUALIZAR ESTATÍSTICAS =============
+        function updateStats(players) {
+            document.getElementById('totalPlayers').textContent = players.length;
+
+            const inCombat = players.filter(p => {
+                const hpMax = (p.vig || 1) + (p.tamanho || 5);
+                return (p.hpCurrent || hpMax) < hpMax;
+            }).length;
+
+            const critical = players.filter(p => {
+                const hpMax = (p.vig || 1) + (p.tamanho || 5);
+                const hpPercent = ((p.hpCurrent || hpMax) / hpMax) * 100;
+                return hpPercent <= 25;
+            }).length;
+
+            const lowSanity = players.filter(p => {
+                const abismo = p.skills?.['abismo'] || 0;
+                const sanMax = ((p.int || 1) + (p.aut || 1) - (abismo * 2)) * 10;
+                const sanPercent = ((p.sanCurrent || sanMax) / sanMax) * 100;
+                return sanPercent <= 30;
+            }).length;
+
+            const totalExp = players.reduce((sum, p) => sum + (p.exp || 0), 0);
+            const avgExp = players.length > 0 ? Math.round(totalExp / players.length) : 0;
+
+            document.getElementById('playersInCombat').textContent = inCombat;
+            document.getElementById('playersCritical').textContent = critical;
+            document.getElementById('playersLowSanity').textContent = lowSanity;
+            document.getElementById('totalExp').textContent = totalExp;
+            document.getElementById('avgExp').textContent = avgExp;
+        }
+
+        // ============= EXPANDIR/CONTRAIR CARD =============
+        window.toggleExpand = function(playerId) {
+            const expanded = document.getElementById(`expanded-${playerId}`);
+            const btn = event.target;
+            
+            if (expanded.classList.contains('show')) {
+                expanded.classList.remove('show');
+                btn.textContent = '📋 Ver Detalhes Completos';
+            } else {
+                expanded.classList.add('show');
+                btn.textContent = '⬆️ Ocultar Detalhes';
+            }
+        };
+
+        // ============= FILTROS =============
+        window.setFilter = function(filter) {
+            currentFilter = filter;
+            
+            // Atualizar botões
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            
+            if (filter === 'all') {
+                document.getElementById('filterAll').classList.add('active');
+            } else if (filter === 'critical') {
+                document.getElementById('filterCritical').classList.add('active');
+            } else if (filter === 'lowSanity') {
+                document.getElementById('filterLowSanity').classList.add('active');
+            }
+            
+            filterPlayers();
+        };
+
+        window.filterPlayers = function() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            let filtered = allPlayers;
+
+            // Filtro de busca
+            if (searchTerm) {
+                filtered = filtered.filter(p => 
+                    (p.nome || '').toLowerCase().includes(searchTerm) ||
+                    (p.jogador || '').toLowerCase().includes(searchTerm) ||
+                    (p.classe || '').toLowerCase().includes(searchTerm) ||
+                    (p.raca || '').toLowerCase().includes(searchTerm) ||
+                    (p.userEmail || '').toLowerCase().includes(searchTerm)
+                );
+            }
+
+            // Filtros especiais
+            if (currentFilter === 'critical') {
+                filtered = filtered.filter(p => {
+                    const hpMax = (p.vig || 1) + (p.tamanho || 5);
+                    const hpPercent = ((p.hpCurrent || hpMax) / hpMax) * 100;
+                    return hpPercent <= 25;
+                });
+            } else if (currentFilter === 'lowSanity') {
+                filtered = filtered.filter(p => {
+                    const abismo = p.skills?.['abismo'] || 0;
+                    const sanMax = ((p.int || 1) + (p.aut || 1) - (abismo * 2)) * 10;
+                    const sanPercent = ((p.sanCurrent || sanMax) / sanMax) * 100;
+                    return sanPercent <= 30;
+                });
+            }
+
+            renderPlayers(filtered);
+        };
+
+        // ============= FUNÇÕES AUXILIARES =============
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => container.innerHTML = '', 8000);
+        }
+
+        function formatTime(isoString) {
+            const date = new Date(isoString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            
+            if (diffMins < 1) return 'Agora mesmo';
+            if (diffMins < 60) return `Há ${diffMins} min`;
+            if (diffMins < 1440) return `Há ${Math.floor(diffMins / 60)}h`;
+            return date.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatSkillName(key) {
+            return key
+                .split('-')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+    </script>
+</body>
+</html>
