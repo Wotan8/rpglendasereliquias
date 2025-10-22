@@ -1591,6 +1591,29 @@ Exemplos:
 
         let currentUser = null;
 
+        /**
+         * Garante que o documento do personagem tenha o ownerUid definido para o usuário atual.
+         * Sempre utiliza merge para evitar sobrescrever campos existentes.
+         * @param {import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js').DocumentReference} characterRef
+         */
+        async function ensureOwnerUid(characterRef) {
+            const user = auth.currentUser;
+            if (!user) {
+                throw new Error('Não autenticado.');
+            }
+
+            const snap = await getDoc(characterRef);
+            if (!snap.exists()) {
+                await setDoc(characterRef, { ownerUid: user.uid }, { merge: true });
+                return;
+            }
+
+            const data = snap.data() || {};
+            if (!data.ownerUid) {
+                await setDoc(characterRef, { ownerUid: user.uid }, { merge: true });
+            }
+        }
+
         // ============= VERIFICAR AUTENTICAÇÃO =============
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -1634,12 +1657,14 @@ Exemplos:
             try {
                 const char = getChar();
                 const userDoc = doc(db, 'characters', currentUser.uid);
-                
+
+                await ensureOwnerUid(userDoc);
+
                 await setDoc(userDoc, {
                     ...char,
                     lastUpdate: new Date().toISOString(),
                     userEmail: currentUser.email
-                });
+                }, { merge: true });
                 
                 indicator.textContent = '✅ Salvo na nuvem!';
                 indicator.classList.remove('saving', 'error');
