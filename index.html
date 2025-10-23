@@ -469,7 +469,7 @@
                         window.location.href = 'mestre.html';
                     } else {
                         console.log('🎭 Redirecionando para ficha do jogador...');
-                        window.location.href = 'ficha.html';
+                        window.location.href = 'personagens.html';
                     }
                 } else {
                     // Se não encontrar o documento, assumir jogador (para contas antigas)
@@ -485,7 +485,7 @@
                     localStorage.setItem('userName', user.displayName || 'Jogador');
                     localStorage.setItem('userRole', 'jogador');
                     
-                    window.location.href = 'ficha.html';
+                    window.location.href = 'personagens.html';
                 }
             } catch (error) {
                 console.error('❌ Erro ao verificar role:', error);

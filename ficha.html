@@ -189,6 +189,35 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
+        .btn-menu {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-menu:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-menu:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 639px) {
+            .btn-menu {
+                padding: 6px 12px;
+                font-size: 0.7rem;
+            }
+        }
         .autosave-indicator.show {
             opacity: 1;
             transform: translateY(0);
@@ -1105,6 +1134,7 @@
     <!-- INFORMAÇÕES DO USUÁRIO -->
     <div class="user-info" id="userInfo" style="display: none;">
         <span class="user-email" id="userEmail">Carregando...</span>
+        <button class="btn-menu" onclick="voltarMenu()">📋 MENU</button>
         <button class="btn-logout" onclick="logout()">🚪 SAIR</button>
     </div>
 
@@ -1590,6 +1620,7 @@ Exemplos:
         const db = getFirestore(app);
 
         let currentUser = null;
+        let currentCharacterId = null;
 
         /**
          * Garante que o documento do personagem tenha o ownerUid definido para o usuário atual.
@@ -1646,6 +1677,13 @@ Exemplos:
             }
         };
 
+        // ============= VOLTAR PARA MENU =============
+        window.voltarMenu = function() {
+            if (confirm('📋 Voltar para o menu de personagens?')) {
+                window.location.href = 'personagens.html';
+            }
+        };
+
         // ============= SALVAR NO FIREBASE =============
         window.saveToFirebase = async function() {
             if (!currentUser) return;
@@ -1656,12 +1694,14 @@ Exemplos:
             
             try {
                 const char = getChar();
-                const userDoc = doc(db, 'characters', currentUser.uid);
+                const characterId = currentCharacterId || currentUser.uid;  // USE currentCharacterId
+                const userDoc = doc(db, 'characters', characterId);
 
                 await ensureOwnerUid(userDoc);
 
                 await setDoc(userDoc, {
                     ...char,
+                    ownerUid: currentUser.uid,
                     lastUpdate: new Date().toISOString(),
                     userEmail: currentUser.email
                 }, { merge: true });
@@ -1691,9 +1731,12 @@ Exemplos:
             if (!currentUser) return;
             
             try {
-                const userDoc = doc(db, 'characters', currentUser.uid);
+                const urlParams = new URLSearchParams(window.location.search);
+                const characterId = urlParams.get('id') || currentUser.uid;
+                currentCharacterId = characterId;
+                const userDoc = doc(db, 'characters', characterId);
                 const docSnap = await getDoc(userDoc);
-                
+
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     console.log('✅ Ficha carregada do Firebase:', data);
