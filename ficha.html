@@ -2419,6 +2419,7 @@ Exemplos:
             loadCharacterData();
             updateAllCalculations();
             setupEventListeners();
+            setupInputListeners(); // FIX: Adicionar listeners de input para campos de texto
             updateContainers();
             updateEXPDisplay();
             updateConditions();
@@ -2455,6 +2456,24 @@ Exemplos:
                     autoSave();
                 });
             }
+        }
+
+        // ============= FIX: ADICIONAR INPUT LISTENERS PARA CAMPOS DE TEXTO =============
+        // Adiciona event listener 'input' para campos de texto salvarem enquanto digita
+        function setupInputListeners() {
+            const textFields = ['nome', 'jogador'];
+            
+            textFields.forEach(fieldId => {
+                const el = document.getElementById(fieldId);
+                if (el) {
+                    el.addEventListener('input', (e) => {
+                        const char = getChar();
+                        char[fieldId] = e.target.value;
+                        console.log(`[INPUT] ${fieldId} atualizado:`, e.target.value);
+                        autoSave();
+                    });
+                }
+            });
         }
 
         // ============= SISTEMA DE UPLOAD DE IMAGEM =============
@@ -2545,10 +2564,7 @@ Exemplos:
                 if (i <= char[attrName]) dot.classList.add('filled');
                 
                 dot.addEventListener('click', () => {
-                    char[attrName] = i;
-                    updateAttributeDots(attrName);
-                    updateAllCalculations();
-                    autoSave();
+                    upgradeAttribute(attrName, i);
                 });
                 
                 container.appendChild(dot);
@@ -3404,7 +3420,7 @@ Exemplos:
             const char = getChar();
             const currentLevel = char[attr] || 0;
             
-            // Não permite diminuir níveis
+            // Não permite diminuir ou manter o mesmo nível
             if (targetLevel <= currentLevel) {
                 return;
             }
@@ -3440,7 +3456,7 @@ Exemplos:
             const char = getChar();
             const currentLevel = char.skills[skillId] || 0;
             
-            // Não permite diminuir níveis
+            // Não permite diminuir ou manter o mesmo nível
             if (targetLevel <= currentLevel) {
                 return;
             }
@@ -3479,7 +3495,7 @@ Exemplos:
             const char = getChar();
             const currentLevel = char.classAbilities[abilityId] || 0;
             
-            // Não permite diminuir níveis
+            // Não permite diminuir ou manter o mesmo nível
             if (targetLevel <= currentLevel) {
                 return;
             }
