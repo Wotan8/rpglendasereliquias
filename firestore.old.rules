@@ -11,43 +11,29 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/masters/$(request.auth.uid));
     }
 
-    // Coleção de mestres (sem alterações)
     match /masters/{uid} {
       allow read: if isMaster();
       allow write: if false;
     }
 
-    // Coleção de usuários (sem alterações)
     match /users/{userId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
-    // Coleção de personagens (CORRIGIDA)
     match /characters/{characterId} {
-      // ✅ Leitura: dono OU mestre
       allow read: if isSignedIn() && (
         resource.data.ownerUid == request.auth.uid || isMaster()
       );
 
-      // ✅ Criação: apenas se definir ele mesmo como dono
       allow create: if isSignedIn() && 
         request.resource.data.ownerUid == request.auth.uid;
 
-      // ✅ CORREÇÃO DO BUG: Atualização precisa garantir que ownerUid não mude
-      allow update: if isSignedIn() && (
-        (resource.data.ownerUid == request.auth.uid && 
-         request.resource.data.ownerUid == resource.data.ownerUid) || 
-        isMaster()
-      );
-      
-      // ✅ Exclusão: dono OU mestre
-      allow delete: if isSignedIn() && (
+      allow update, delete: if isSignedIn() && (
         resource.data.ownerUid == request.auth.uid || isMaster()
       );
     }
 
-    // Coleção de logs (sem alterações)
     match /logs/{logId} {
       allow create: if isSignedIn();
       allow read: if isMaster();

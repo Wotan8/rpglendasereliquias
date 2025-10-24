@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1e1b4b">
+    <title>Aliado - Lendas e Relíquias</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --primary: #8b5cf6;
+            --secondary: #ec4899;
+            --dark: #1e1b4b;
+            --darker: #0f172a;
+            --light: #f8fafc;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border: #334155;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            color: var(--light);
+            min-height: 100vh;
+            padding: 10px;
+            overflow-x: hidden;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(139, 92, 246, 0.2);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            color: var(--primary);
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .user-info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(139, 92, 246, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 12px 20px;
+            border-radius: 30px;
+            border: 2px solid var(--primary);
+            z-index: 9998;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: calc(100vw - 40px);
+            flex-wrap: wrap;
+        }
+
+        .user-email {
+            color: #cbd5e1;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .btn-top {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-top:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-logout {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+        }
+
+        .btn-logout:hover {
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            margin-top: 70px;
+            background: rgba(30, 27, 75, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            margin-bottom: 20px;
+            font-size: clamp(0.75rem, 2.5vw, 0.9rem);
+            padding: 0 10px;
+        }
+
+        .autosave-indicator {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            z-index: 9999;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .autosave-indicator.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .autosave-indicator.saving {
+            background: rgba(245, 158, 11, 0.9);
+        }
+
+        .autosave-indicator.error {
+            background: rgba(239, 68, 68, 0.9);
+        }
+
+        .section {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-size: clamp(1.1rem, 4vw, 1.3rem);
+            margin-bottom: 15px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .grid-2 { grid-template-columns: 1fr; }
+        .grid-3 { grid-template-columns: 1fr; }
+        .grid-4 { grid-template-columns: 1fr; }
+
+        @media (min-width: 640px) {
+            .grid-2 { grid-template-columns: repeat(2, 1fr); }
+            .grid-3 { grid-template-columns: repeat(2, 1fr); }
+            .grid-4 { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (min-width: 1024px) {
+            .grid-3 { grid-template-columns: repeat(3, 1fr); }
+            .grid-4 { grid-template-columns: repeat(4, 1fr); }
+            .container { padding: 30px; }
+            .section { padding: 20px; }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: clamp(0.85rem, 2.5vw, 0.9rem);
+            color: #cbd5e1;
+        }
+
+        input, select, textarea {
+            padding: 14px 12px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: clamp(0.95rem, 3vw, 1rem);
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: inherit;
+            line-height: 1.6;
+        }
+
+        .attribute-group {
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 10px;
+            padding: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .attribute-header {
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 12px;
+            font-size: clamp(0.95rem, 3vw, 1.1rem);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .attribute-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+            gap: 10px;
+        }
+
+        .attribute-item:last-child {
+            border-bottom: none;
+        }
+
+        .attribute-name {
+            font-weight: 600;
+            color: #e2e8f0;
+            font-size: clamp(0.9rem, 2.8vw, 1rem);
+        }
+
+        .attribute-code {
+            color: #94a3b8;
+            font-size: clamp(0.75rem, 2.2vw, 0.85rem);
+            margin-left: 4px;
+        }
+
+        .dots {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+            flex-wrap: nowrap;
+        }
+
+        .dot {
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
+            min-height: 28px;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            touch-action: manipulation;
+        }
+
+        .dot:active {
+            transform: scale(1.15);
+        }
+
+        .dot.filled {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
+        }
+
+        .skill-item {
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid transparent;
+            transition: all 0.3s;
+            gap: 8px;
+        }
+
+        .skill-item.inapto {
+            opacity: 0.5;
+        }
+
+        .skill-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .skill-info {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .skill-name {
+            font-weight: 600;
+            color: #e2e8f0;
+            font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+            line-height: 1.3;
+        }
+
+        .skill-attrs {
+            font-size: clamp(0.7rem, 2vw, 0.75rem);
+            color: #64748b;
+            line-height: 1.2;
+        }
+
+        .skill-input {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: clamp(0.85rem, 2.5vw, 0.9rem);
+            margin-top: 0;
+            background: rgba(15, 23, 42, 0.9);
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            color: var(--light);
+        }
+
+        .penalty {
+            color: var(--danger);
+            font-size: clamp(0.7rem, 2vw, 0.75rem);
+            font-weight: 600;
+        }
+
+        .characteristic-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 10px;
+            border: 2px solid var(--primary);
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+
+        .char-label {
+            font-weight: 700;
+            color: #e2e8f0;
+            font-size: clamp(0.95rem, 3vw, 1.1rem);
+        }
+
+        .char-value {
+            font-size: clamp(1.5rem, 5vw, 1.8rem);
+            font-weight: 900;
+            color: var(--primary);
+            text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+            flex-shrink: 0;
+        }
+
+        .hp-bar-container {
+            margin: 15px 0;
+        }
+
+        .hp-bar {
+            width: 100%;
+            height: 40px;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid var(--border);
+            position: relative;
+        }
+
+        .hp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--danger), var(--warning), var(--success));
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: clamp(1rem, 3.5vw, 1.2rem);
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .hp-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .hp-controls input {
+            width: 80px;
+            text-align: center;
+            padding: 10px 8px;
+        }
+
+        .btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: clamp(0.9rem, 2.8vw, 1rem);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            touch-action: manipulation;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(51, 65, 85, 0.6);
+            color: white;
+            border: 2px solid var(--border);
+        }
+
+        .btn-small {
+            padding: 10px 14px;
+            font-size: clamp(0.8rem, 2.5vw, 0.85rem);
+            width: auto;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            display: none;
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.2);
+            border: 2px solid var(--success);
+            color: var(--success);
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid var(--danger);
+            color: var(--danger);
+        }
+
+        @media (max-width: 639px) {
+            .user-info {
+                top: 5px;
+                right: 5px;
+                padding: 8px 12px;
+                font-size: 0.75rem;
+                gap: 8px;
+            }
+
+            .container {
+                margin-top: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">👥 Carregando Aliado...</div>
+    </div>
+
+    <div class="user-info" id="userInfo" style="display: none;">
+        <span class="user-email" id="userEmail">Carregando...</span>
+        <button class="btn-top" onclick="voltarFicha()">◀️ VOLTAR</button>
+        <button class="btn-top" onclick="voltarMenu()">📋 MENU</button>
+        <button class="btn-top btn-logout" onclick="logout()">🚪 SAIR</button>
+    </div>
+
+    <div class="autosave-indicator" id="autosaveIndicator">💾 Salvando...</div>
+
+    <div class="container" id="mainContainer" style="display: none;">
+        <h1>👥 FICHA DE ALIADO</h1>
+        <p class="subtitle">Gerenciamento de Aliados e Companheiros</p>
+
+        <div class="alert alert-success" id="alertSuccess"></div>
+        <div class="alert alert-danger" id="alertError"></div>
+
+        <!-- INFORMAÇÕES BÁSICAS -->
+        <div class="section">
+            <h2 class="section-title">📝 Informações Básicas</h2>
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label>Nome do Aliado</label>
+                    <input type="text" id="nome" placeholder="Nome do aliado">
+                </div>
+                <div class="form-group">
+                    <label>Tipo/Raça</label>
+                    <input type="text" id="tipoRaca" placeholder="Humano, Lobo, Grifo...">
+                </div>
+                <div class="form-group">
+                    <label>Função</label>
+                    <input type="text" id="funcao" placeholder="Guarda, Montaria, Companheiro...">
+                </div>
+                <div class="form-group">
+                    <label>Idade</label>
+                    <input type="number" id="idade" value="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Virtude</label>
+                    <select id="virtude">
+                        <option value="">Selecione...</option>
+                        <option value="Caridade">Caridade</option>
+                        <option value="Esperança">Esperança</option>
+                        <option value="Fé">Fé</option>
+                        <option value="Fortaleza">Fortaleza</option>
+                        <option value="Justiça">Justiça</option>
+                        <option value="Prudência">Prudência</option>
+                        <option value="Temperança">Temperança</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Vício</label>
+                    <select id="vicio">
+                        <option value="">Selecione...</option>
+                        <option value="Avareza">Avareza</option>
+                        <option value="Gula">Gula</option>
+                        <option value="Inveja">Inveja</option>
+                        <option value="Ira">Ira</option>
+                        <option value="Luxúria">Luxúria</option>
+                        <option value="Orgulho">Orgulho</option>
+                        <option value="Preguiça">Preguiça</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Lealdade (0-5)</label>
+                    <input type="number" id="lealdade" value="3" min="0" max="5">
+                </div>
+                <div class="form-group">
+                    <label>Aura de Imortalidade (0-5)</label>
+                    <input type="number" id="auraImortalidade" value="0" min="0" max="5">
+                </div>
+                <div class="form-group">
+                    <label>Tamanho</label>
+                    <input type="number" id="tamanho" value="5" min="1" max="15">
+                </div>
+            </div>
+        </div>
+
+        <!-- ATRIBUTOS -->
+        <div class="section">
+            <h2 class="section-title">⚡ Atributos do Aliado</h2>
+            <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">Toque nas bolinhas para preencher/esvaziar.</p>
+            
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 12px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--border); font-size: 1.1rem;"></th>
+                            <th style="padding: 12px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--border); font-size: 1.1rem;">⚡ Poder</th>
+                            <th style="padding: 12px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--border); font-size: 1.1rem;">🎯 Refinamento</th>
+                            <th style="padding: 12px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--border); font-size: 1.1rem;">🛡️ Resistência</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 12px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--border); font-weight: 700; font-size: 1rem;">🧠 Mental</td>
+                            <td style="padding: 12px; border: 1px solid var(--border);">
+                                <div class="attribute-item" style="flex-direction: column; gap: 8px;">
+                                    <div style="text-align: center;">
+                                        <span class="attribute-name">Inteligência</span><br>
+                                        <span class="attribute-code">[INT]</span>
+                                    </div>
+                                    <div class="dots" id="dots-int" style="justify-content: center;"></div>
+                                </div>
+                            </td>
+                            <td style="padding: 12px; border: 1px solid var(--border);">
+                                <div class="attribute-item" style="flex-direction: column; gap: 8px;">
+                                    <div style="text-align: center;">
+                                        <span class="attribute-name">Raciocínio</span><br>
+                                        <span class="attribute-code">[RAC]</span>
+                                    </div>
+                                    <div class="dots" id="dots-rac" style="justify-content: center;"></div>
+                                </div>
+                            </td>
+                            <td style="padding: 12px; border: 1px solid var(--border);">
+                                <div class="attribute-item" style="flex-direction: column; gap: 8px;">
+                                    <div style="text-align: center;">
+                                        <span class="attribute-name">Perseverança</span><br>
+                                        <span class="attribute-code">[PRS]</span>
+                                    </div>
+                                    <div class="dots" id="dots-prs" style="justify-content: center;"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--border); font-weight: 700; font-size: 1rem;">💪 Físico</td>
+                            <td style="padding: 12px; border: 1px solid var(--border);">
+                                <div class="attribute-item" style="flex-direction: column; gap: 8px;">
+                                    <div style="text-align: center;">
+                                        <span class="attribute-name">Força</span><br>
+                                        <span class="attribute-code">[FOR]</span>
+                                    </div>
+                                    <div class="dots" id="dots-for" style="justify-content: center;"></div>
+                                </div>
+                            </td>
+                            <td style="padding: 12px; border: 1px solid var(--border);">
+                                <div class="attribute-item" style="flex-direction: column; gap: 8px;">
+                                    <div style="text-align: center;">
+                                        <span class="attribute-name">Destreza</span><br>
+                                        <span class="attribute-code">[DES]</span>
+                                    </div>
+                                    <div class="dots" id="dots-des" style="justify-content: center;"></div>
+                                </div>
+                            </td>
+                            <td style="padding: 12px; border: 1px solid var(--border);">
+                                <div class="attribute-item" style="flex-direction: column; gap: 8px;">
+                                    <div style="text-align: center;">
+                                        <span class="attribute-name">Vigor</span><br>
+                                        <span class="attribute-code">[VIG]</span>
+                                    </div>
+                                    <div class="dots" id="dots-vig" style="justify-content: center;"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--border); font-weight: 700; font-size: 1rem;">💬 Social</td>
+                            <td style="padding: 12px; border: 1px solid var(--border);">
+                                <div class="attribute-item" style="flex-direction: column; gap: 8px;">
+                                    <div style="text-align: center;">
+                                        <span class="attribute-name">Presença</span><br>
+                                        <span class="attribute-code">[PRE]</span>
+                                    </div>
+                                    <div class="dots" id="dots-pre" style="justify-content: center;"></div>
+                                </div>
+                            </td>
+                            <td style="padding: 12px; border: 1px solid var(--border);">
+                                <div class="attribute-item" style="flex-direction: column; gap: 8px;">
+                                    <div style="text-align: center;">
+                                        <span class="attribute-name">Manipulação</span><br>
+                                        <span class="attribute-code">[MAN]</span>
+                                    </div>
+                                    <div class="dots" id="dots-man" style="justify-content: center;"></div>
+                                </div>
+                            </td>
+                            <td style="padding: 12px; border: 1px solid var(--border);">
+                                <div class="attribute-item" style="flex-direction: column; gap: 8px;">
+                                    <div style="text-align: center;">
+                                        <span class="attribute-name">Autocontrole</span><br>
+                                        <span class="attribute-code">[AUT]</span>
+                                    </div>
+                                    <div class="dots" id="dots-aut" style="justify-content: center;"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- CARACTERÍSTICAS -->
+        <div class="section">
+            <h2 class="section-title">📊 Características</h2>
+            <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">Calculadas automaticamente.</p>
+
+            <div class="grid grid-2">
+                <div class="characteristic-item">
+                    <div>
+                        <div class="char-label">Iniciativa</div>
+                    </div>
+                    <div class="char-value" id="calc-iniciativa">0</div>
+                </div>
+
+                <div class="characteristic-item">
+                    <div>
+                        <div class="char-label">Reação</div>
+                    </div>
+                    <div class="char-value" id="calc-reacao">0</div>
+                </div>
+
+                <div class="characteristic-item">
+                    <div>
+                        <div class="char-label">Deslocamento</div>
+                    </div>
+                    <div class="char-value" id="calc-deslocamento">0</div>
+                </div>
+
+                <div class="characteristic-item">
+                    <div>
+                        <div class="char-label">Blindagem</div>
+                    </div>
+                    <input type="number" id="blindagem" value="0" min="0" style="max-width: 100px;" onchange="saveToFirebase()">
+                </div>
+
+                <div class="characteristic-item">
+                    <div>
+                        <div class="char-label">VIT Max</div>
+                    </div>
+                    <div class="char-value" id="calc-vitalidade-max">0</div>
+                </div>
+
+                <div class="characteristic-item">
+                    <div>
+                        <div class="char-label">DET Max</div>
+                    </div>
+                    <div class="char-value" id="calc-determinacao-max">0</div>
+                </div>
+
+                <div class="characteristic-item">
+                    <div>
+                        <div class="char-label">SAN Max</div>
+                    </div>
+                    <div class="char-value" id="calc-sanidade-max">0</div>
+                </div>
+
+                <div class="characteristic-item">
+                    <div>
+                        <div class="char-label">Carga Max</div>
+                    </div>
+                    <div class="char-value" id="calc-carga">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATUS DE COMBATE -->
+        <div class="section">
+            <h2 class="section-title">⚔️ Status de Combate</h2>
+
+            <div class="hp-bar-container">
+                <label style="margin-bottom: 10px; display: block; font-weight: 700;">❤️ Vitalidade</label>
+                <div class="hp-bar">
+                    <div class="hp-fill" id="hp-fill" style="width: 100%;">
+                        <span id="hp-text">5 / 5</span>
+                    </div>
+                </div>
+                <div class="hp-controls">
+                    <button class="btn btn-secondary btn-small" onclick="adjustHP(-1)">-1</button>
+                    <button class="btn btn-secondary btn-small" onclick="adjustHP(-5)">-5</button>
+                    <input type="number" id="hp-current" value="5" onchange="updateHPBar()" inputmode="numeric">
+                    <button class="btn btn-primary btn-small" onclick="adjustHP(1)">+1</button>
+                    <button class="btn btn-primary btn-small" onclick="adjustHP(5)">+5</button>
+                    <button class="btn btn-secondary btn-small" onclick="resetHP()">Max</button>
+                </div>
+            </div>
+
+            <div class="hp-bar-container">
+                <label style="margin-bottom: 10px; display: block; font-weight: 700;">🧠 Sanidade</label>
+                <div class="hp-bar">
+                    <div class="hp-fill" id="san-fill" style="width: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6);">
+                        <span id="san-text">100 / 100</span>
+                    </div>
+                </div>
+                <div class="hp-controls">
+                    <button class="btn btn-secondary btn-small" onclick="adjustSAN(-1)">-1</button>
+                    <button class="btn btn-secondary btn-small" onclick="adjustSAN(-5)">-5</button>
+                    <input type="number" id="san-current" value="100" onchange="updateSANBar()" inputmode="numeric">
+                    <button class="btn btn-primary btn-small" onclick="adjustSAN(1)">+1</button>
+                    <button class="btn btn-primary btn-small" onclick="adjustSAN(5)">+5</button>
+                    <button class="btn btn-secondary btn-small" onclick="resetSAN()">Max</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ATAQUES E TALENTOS -->
+        <div class="section">
+            <h2 class="section-title">⚔️ Ataques e Talentos</h2>
+            <div class="form-group">
+                <textarea id="ataquesTalentos" placeholder="Ex: Mordida +3d10, Garras +2d10, Voo..." style="min-height: 150px;"></textarea>
+            </div>
+        </div>
+
+        <!-- INVENTÁRIO -->
+        <div class="section">
+            <h2 class="section-title">🎒 Bagagens e Equipamentos</h2>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label>Peso Atual</label>
+                    <input type="number" id="pesoAtual" value="0" min="0" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Peso Máximo</label>
+                    <input type="number" id="pesoMax" value="10" min="0" readonly>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="addItem()">➕ Adicionar Item</button>
+            <div id="itemsList" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- NOTAS -->
+        <div class="section">
+            <h2 class="section-title">📝 Notas</h2>
+            <div class="form-group">
+                <textarea id="notas" style="min-height: 150px;" placeholder="Anotações sobre o aliado..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
+          authDomain: "rpg-lendasereliquias.firebaseapp.com",
+          projectId: "rpg-lendasereliquias",
+          storageBucket: "rpg-lendasereliquias.firebasestorage.app",
+          messagingSenderId: "546994339773",
+          appId: "1:546994339773:web:0116cf7c8667f113075cd4"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let characterId = null;
+        let allyId = null;
+        let allyData = {
+            nome: '',
+            tipoRaca: '',
+            funcao: '',
+            idade: 0,
+            virtude: '',
+            vicio: '',
+            lealdade: 3,
+            auraImortalidade: 0,
+            tamanho: 5,
+            int: 1, for: 1, pre: 1, rac: 1, des: 1, man: 1, prs: 1, vig: 1, aut: 1,
+            blindagem: 0,
+            hpCurrent: 5,
+            sanCurrent: 100,
+            ataquesTalentos: '',
+            pesoAtual: 0,
+            pesoMax: 10,
+            inventario: [],
+            notas: ''
+        };
+
+        // Autenticação
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('userEmail').textContent = user.email;
+                document.getElementById('userInfo').style.display = 'flex';
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                characterId = urlParams.get('characterId');
+                allyId = urlParams.get('allyId');
+                
+                if (!characterId || !allyId) {
+                    showAlert('❌ Parâmetros inválidos!', 'danger');
+                    setTimeout(() => window.location.href = 'personagens.html', 2000);
+                    return;
+                }
+                
+                await loadAlly();
+                init();
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('mainContainer').style.display = 'block';
+                
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        function init() {
+            const attributes = ['int', 'for', 'pre', 'rac', 'des', 'man', 'prs', 'vig', 'aut'];
+            attributes.forEach(attr => createAttributeDots(attr, 5));
+            
+            updateAllCalculations();
+            
+            // Event listeners
+            document.querySelectorAll('input, select, textarea').forEach(el => {
+                el.addEventListener('change', triggerAutoSave);
+                if (el.type === 'text' || el.type === 'number' || el.tagName === 'TEXTAREA') {
+                    el.addEventListener('input', triggerAutoSave);
+                }
+            });
+        }
+
+        async function loadAlly() {
+            try {
+                const charDoc = await getDoc(doc(db, 'characters', characterId));
+                
+                if (charDoc.exists()) {
+                    const charData = charDoc.data();
+                    
+                    if (charData.allies && Array.isArray(charData.allies)) {
+                        const ally = charData.allies.find(a => a.id === allyId);
+                        
+                        if (ally) {
+                            allyData = { ...allyData, ...ally };
+                            loadFormData();
+                            showAlert('✅ Aliado carregado!', 'success');
+                        } else {
+                            showAlert('⚠️ Novo aliado', 'success');
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar aliado:', error);
+                showAlert('❌ Erro ao carregar: ' + error.message, 'danger');
+            }
+        }
+
+        function loadFormData() {
+            const fields = ['nome', 'tipoRaca', 'funcao', 'idade', 'virtude', 'vicio', 'lealdade', 
+                          'auraImortalidade', 'tamanho', 'blindagem', 'ataquesTalentos', 'pesoAtual', 
+                          'pesoMax', 'notas'];
+            
+            fields.forEach(field => {
+                const el = document.getElementById(field);
+                if (el && allyData[field] !== undefined) {
+                    el.value = allyData[field];
+                }
+            });
+            
+            const attributes = ['int', 'for', 'pre', 'rac', 'des', 'man', 'prs', 'vig', 'aut'];
+            attributes.forEach(attr => updateAttributeDots(attr));
+            
+            updateHPBar();
+            updateSANBar();
+            renderItems();
+        }
+
+        function saveFormData() {
+            const fields = ['nome', 'tipoRaca', 'funcao', 'virtude', 'vicio', 'ataquesTalentos', 'notas'];
+            
+            fields.forEach(field => {
+                const el = document.getElementById(field);
+                if (el) allyData[field] = el.value;
+            });
+            
+            const numFields = ['idade', 'lealdade', 'auraImortalidade', 'tamanho', 'blindagem', 'pesoAtual', 'pesoMax'];
+            
+            numFields.forEach(field => {
+                const el = document.getElementById(field);
+                if (el) allyData[field] = parseInt(el.value) || 0;
+            });
+            
+            const attributes = ['int', 'for', 'pre', 'rac', 'des', 'man', 'prs', 'vig', 'aut'];
+            attributes.forEach(attr => {
+                allyData[attr] = allyData[attr] || 1;
+            });
+            
+            allyData.hpCurrent = parseInt(document.getElementById('hp-current').value) || 0;
+            allyData.sanCurrent = parseInt(document.getElementById('san-current').value) || 0;
+            
+            allyData.id = allyId;
+        }
+
+        async function saveToFirebase() {
+            const indicator = document.getElementById('autosaveIndicator');
+            indicator.textContent = '💾 Salvando...';
+            indicator.classList.add('show', 'saving');
+            
+            try {
+                saveFormData();
+                
+                const charDoc = await getDoc(doc(db, 'characters', characterId));
+                let allies = [];
+                
+                if (charDoc.exists()) {
+                    const charData = charDoc.data();
+                    allies = charData.allies || [];
+                    
+                    const index = allies.findIndex(a => a.id === allyId);
+                    if (index >= 0) {
+                        allies[index] = allyData;
+                    } else {
+                        allies.push(allyData);
+                    }
+                }
+                
+                await setDoc(doc(db, 'characters', characterId), {
+                    allies: allies,
+                    lastUpdate: new Date().toISOString()
+                }, { merge: true });
+                
+                indicator.textContent = '✅ Salvo!';
+                indicator.classList.remove('saving', 'error');
+                
+                setTimeout(() => {
+                    indicator.classList.remove('show');
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Erro ao salvar:', error);
+                indicator.textContent = '❌ Erro!';
+                indicator.classList.remove('saving');
+                indicator.classList.add('error');
+                
+                setTimeout(() => {
+                    indicator.classList.remove('show');
+                }, 3000);
+            }
+        }
+
+        window.saveToFirebase = saveToFirebase;
+
+        let autoSaveTimeout;
+        function triggerAutoSave() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => {
+                saveToFirebase();
+            }, 1000);
+        }
+
+        // Atributos
+        function createAttributeDots(attrName, maxDots) {
+            const container = document.getElementById(`dots-${attrName}`);
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            for (let i = 1; i <= maxDots; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                if (i <= allyData[attrName]) dot.classList.add('filled');
+                
+                dot.addEventListener('click', () => {
+                    allyData[attrName] = i;
+                    updateAttributeDots(attrName);
+                    updateAllCalculations();
+                    triggerAutoSave();
+                });
+                
+                container.appendChild(dot);
+            }
+        }
+
+        function updateAttributeDots(attrName) {
+            const dots = document.querySelectorAll(`#dots-${attrName} .dot`);
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('filled', index < allyData[attrName]);
+            });
+        }
+
+        function updateAllCalculations() {
+            const iniciativa = allyData.rac + allyData.des + allyData.aut - allyData.tamanho;
+            const reacao = Math.min(allyData.des, allyData.rac);
+            const deslocamento = allyData.for + allyData.des + allyData.tamanho;
+            const vitalidadeMax = allyData.vig + allyData.tamanho;
+            const determinacaoMax = allyData.prs + allyData.aut;
+            const sanidadeMax = (allyData.int + allyData.aut) * 10;
+            const cargaMax = allyData.for + allyData.vig;
+            
+            document.getElementById('calc-iniciativa').textContent = iniciativa;
+            document.getElementById('calc-reacao').textContent = reacao;
+            document.getElementById('calc-deslocamento').textContent = deslocamento + 'm';
+            document.getElementById('calc-vitalidade-max').textContent = vitalidadeMax;
+            document.getElementById('calc-determinacao-max').textContent = determinacaoMax;
+            document.getElementById('calc-sanidade-max').textContent = sanidadeMax;
+            document.getElementById('calc-carga').textContent = cargaMax;
+            document.getElementById('pesoMax').value = cargaMax;
+            
+            if (!allyData.hpCurrent || allyData.hpCurrent > vitalidadeMax) {
+                allyData.hpCurrent = vitalidadeMax;
+            }
+            if (!allyData.sanCurrent || allyData.sanCurrent > sanidadeMax) {
+                allyData.sanCurrent = sanidadeMax;
+            }
+            
+            updateHPBar();
+            updateSANBar();
+        }
+
+        window.updateHPBar = function() {
+            const max = allyData.vig + allyData.tamanho;
+            const current = parseInt(document.getElementById('hp-current').value) || 0;
+            allyData.hpCurrent = Math.max(0, Math.min(current, max));
+            document.getElementById('hp-current').value = allyData.hpCurrent;
+            const percent = (allyData.hpCurrent / max) * 100;
+            document.getElementById('hp-fill').style.width = percent + '%';
+            document.getElementById('hp-text').textContent = `${allyData.hpCurrent} / ${max}`;
+            triggerAutoSave();
+        };
+
+        window.adjustHP = function(amount) {
+            const max = allyData.vig + allyData.tamanho;
+            allyData.hpCurrent = Math.max(0, Math.min(allyData.hpCurrent + amount, max));
+            document.getElementById('hp-current').value = allyData.hpCurrent;
+            updateHPBar();
+        };
+
+        window.resetHP = function() {
+            const max = allyData.vig + allyData.tamanho;
+            allyData.hpCurrent = max;
+            document.getElementById('hp-current').value = allyData.hpCurrent;
+            updateHPBar();
+        };
+
+        window.updateSANBar = function() {
+            const max = (allyData.int + allyData.aut) * 10;
+            const current = parseInt(document.getElementById('san-current').value) || 0;
+            allyData.sanCurrent = Math.max(0, Math.min(current, max));
+            document.getElementById('san-current').value = allyData.sanCurrent;
+            const percent = (allyData.sanCurrent / max) * 100;
+            document.getElementById('san-fill').style.width = percent + '%';
+            document.getElementById('san-text').textContent = `${allyData.sanCurrent} / ${max}`;
+            triggerAutoSave();
+        };
+
+        window.adjustSAN = function(amount) {
+            const max = (allyData.int + allyData.aut) * 10;
+            allyData.sanCurrent = Math.max(0, Math.min(allyData.sanCurrent + amount, max));
+            document.getElementById('san-current').value = allyData.sanCurrent;
+            updateSANBar();
+        };
+
+        window.resetSAN = function() {
+            const max = (allyData.int + allyData.aut) * 10;
+            allyData.sanCurrent = max;
+            document.getElementById('san-current').value = allyData.sanCurrent;
+            updateSANBar();
+        };
+
+        // Items do Inventário
+        window.addItem = function() {
+            const nome = prompt('Nome do item:');
+            if (!nome) return;
+            
+            const qnt = parseInt(prompt('Quantidade:') || '1');
+            const peso = parseInt(prompt('Peso por unidade:') || '1');
+            const sobre = prompt('Descrição:') || '';
+            
+            allyData.inventario.push({
+                id: Date.now(),
+                nome,
+                qnt,
+                peso,
+                sobre
+            });
+            
+            updatePeso();
+            renderItems();
+            triggerAutoSave();
+        };
+
+        window.removeItem = function(id) {
+            if (confirm('Remover este item?')) {
+                allyData.inventario = allyData.inventario.filter(i => i.id !== id);
+                updatePeso();
+                renderItems();
+                triggerAutoSave();
+            }
+        };
+
+        function updatePeso() {
+            const total = allyData.inventario.reduce((sum, item) => sum + (item.qnt * item.peso), 0);
+            allyData.pesoAtual = total;
+            document.getElementById('pesoAtual').value = total;
+        }
+
+        function renderItems() {
+            const list = document.getElementById('itemsList');
+            
+            if (!allyData.inventario || allyData.inventario.length === 0) {
+                list.innerHTML = '<p style="color: #64748b; text-align: center; padding: 10px;">Inventário vazio</p>';
+                return;
+            }
+            
+            list.innerHTML = allyData.inventario.map(item => `
+                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700; color: var(--light); margin-bottom: 5px;">
+                                ${item.nome} ${item.qnt > 1 ? `(x${item.qnt})` : ''}
+                            </div>
+                            <div style="font-size: 0.85rem; color: #94a3b8;">
+                                <strong>Peso:</strong> ${item.peso} | 
+                                <strong>Total:</strong> ${item.qnt * item.peso}
+                                ${item.sobre ? `<br>${item.sobre}` : ''}
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-small" onclick="removeItem(${item.id})">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Navegação
+        window.voltarFicha = function() {
+            window.location.href = `ficha.html?id=${characterId}`;
+        };
+
+        window.voltarMenu = function() {
+            if (confirm('Voltar para o menu de personagens?')) {
+                window.location.href = 'personagens.html';
+            }
+        };
+
+        window.logout = async function() {
+            if (confirm('Deseja sair?')) {
+                try {
+                    await signOut(auth);
+                    window.location.href = 'index.html';
+                } catch (error) {
+                    console.error('Erro ao fazer logout:', error);
+                }
+            }
+        };
+
+        function showAlert(message, type) {
+            const alert = type === 'success' 
+                ? document.getElementById('alertSuccess')
+                : document.getElementById('alertError');
+            
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

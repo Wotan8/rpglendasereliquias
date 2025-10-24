@@ -1237,12 +1237,13 @@
             <button class="tab active" onclick="switchTab('basico')">📋 Básico</button>
             <button class="tab" onclick="switchTab('atributos')">💪 Atributos</button>
             <button class="tab" onclick="switchTab('habilidades')">🎯 Habilidades</button>
-            <button class="tab" onclick="switchTab('caracteristicas')">📊 Stats</button>
+            <button class="tab" onclick="switchTab('caracteristicas')">📊 Características</button>
             <button class="tab" onclick="switchTab('classe')">⭐ Classe</button>
             <button class="tab" onclick="switchTab('combate')">⚔️ Combate</button>
             <button class="tab" onclick="switchTab('inventario')">🎒 Inventário</button>
+            <button class="tab" onclick="switchTab('aliados')">👥 Aliados</button>
+            <button class="tab" onclick="switchTab('propriedades')">🏠 Propriedades</button>
             <button class="tab" onclick="switchTab('notas')">📝 Notas</button>
-            
         </div>
 
         <!-- ABA BÁSICO -->
@@ -1525,7 +1526,7 @@
 
                     <div class="characteristic-item">
                         <div>
-                            <div class="char-label">Deslocamento</div>
+                            <div class="char-label">Desloc. Terrestre</div>
                             <div class="char-formula">FOR+DES+Tam+Agil</div>
                         </div>
                         <div class="char-value" id="calc-deslocamento">0</div>
@@ -1655,6 +1656,11 @@
                 <div id="conditions-list"></div>
             </div>
 
+            <div class="section" id="alliesCombatSection" style="display: none; margin-top: 20px;">
+                <h2 class="section-title">👥 Status dos Aliados</h2>
+                <div id="allies-combat-list"></div>
+            </div>
+
             <div class="combat-helper">
                 <h3 style="color: var(--danger); margin-bottom: 12px; font-size: 1.1rem;">🎲 Rolador de Dados</h3>
                 <p style="color: #94a3b8; margin-bottom: 12px; font-size: 0.85rem;">Sucessos: 8, 9, 10. Falha: 1.</p>
@@ -1724,6 +1730,38 @@
                 </div>
 
                 <div id="containers-list"></div>
+            </div>
+        </div>
+
+        <!-- ABA ALIADOS -->
+        <div id="aliados" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">👥 Aliados</h2>
+                <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">
+                    Gerencie seus aliados, companheiros e montarias. Clique em um aliado para editar sua ficha completa.
+                </p>
+                
+                <div style="margin-bottom: 20px;">
+                    <button class="btn btn-primary" onclick="addAlly()">➕ Adicionar Aliado</button>
+                </div>
+
+                <div id="allies-list"></div>
+            </div>
+        </div>
+
+        <!-- ABA PROPRIEDADES -->
+        <div id="propriedades" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">🏠 Propriedades</h2>
+                <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">
+                    Gerencie suas propriedades, imóveis, estabelecimentos e veículos. Clique em uma propriedade para editar seus detalhes completos.
+                </p>
+                
+                <div style="margin-bottom: 20px;">
+                    <button class="btn btn-primary" onclick="addProperty()">➕ Adicionar Propriedade</button>
+                </div>
+
+                <div id="properties-list"></div>
             </div>
         </div>
 
@@ -1900,7 +1938,9 @@ Exemplos:
                     
                     window.character = {
                         ...window.character,
-                        ...data
+                        ...data,
+                        allies: data.allies || [],
+                        properties: data.properties || []
                     };
                     
                     showAlert('✅ Ficha carregada da nuvem!', 'success');
@@ -1914,8 +1954,400 @@ Exemplos:
             }
         }
 
+        // ============= ALIADOS =============
+        window.addAlly = function() {
+            const char = getChar();
+            const nome = prompt('Nome do aliado:');
+            if (!nome) return;
+            
+            const allyId = 'ally-' + Date.now();
+            
+            if (!char.allies) char.allies = [];
+            
+            char.allies.push({
+                id: allyId,
+                nome: nome,
+                tipoRaca: '',
+                funcao: '',
+                idade: 0,
+                virtude: '',
+                vicio: '',
+                lealdade: 3,
+                auraImortalidade: 0,
+                tamanho: 5,
+                int: 1, for: 1, pre: 1, rac: 1, des: 1, man: 1, prs: 1, vig: 1, aut: 1,
+                blindagem: 0,
+                hpCurrent: 5,
+                sanCurrent: 100,
+                ataquesTalentos: '',
+                inventario: [],
+                notas: ''
+            });
+            
+            updateAlliesList();
+            updateAlliesCombat();
+            autoSave();
+            showAlert('✅ Aliado criado! Clique nele para editar detalhes.', 'success');
+        };
+
+        window.removeAlly = function(allyId) {
+            if (!confirm('⚠️ Tem certeza que deseja remover este aliado permanentemente?')) return;
+            
+            const char = getChar();
+            char.allies = char.allies.filter(a => a.id !== allyId);
+            updateAlliesList();
+            updateAlliesCombat();
+            autoSave();
+            showAlert('🗑️ Aliado removido!', 'success');
+        };
+
+        window.openAlly = function(allyId) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const characterId = urlParams.get('id') || currentUser.uid;
+            window.location.href = `aliado.html?characterId=${characterId}&allyId=${allyId}`;
+        };
+
+        function updateAlliesList() {
+            const char = getChar();
+            const list = document.getElementById('allies-list');
+            
+            if (!char.allies || char.allies.length === 0) {
+                list.innerHTML = '<p style="color: #64748b; text-align: center; padding: 20px; font-size: 0.9rem;">Nenhum aliado ainda. Adicione um companheiro, montaria ou servo!</p>';
+                return;
+            }
+            
+            list.innerHTML = char.allies.map(ally => {
+                const vitalidadeMax = (ally.vig || 1) + (ally.tamanho || 5);
+                const sanidadeMax = ((ally.int || 1) + (ally.aut || 1)) * 10;
+                const hpPercent = Math.round(((ally.hpCurrent || 5) / vitalidadeMax) * 100);
+                const sanPercent = Math.round(((ally.sanCurrent || 100) / sanidadeMax) * 100);
+                
+                return `
+                    <div class="container-card" style="cursor: pointer;" onclick="openAlly('${ally.id}')">
+                        <div class="container-header">
+                            <div class="container-name">👤 ${ally.nome || 'Sem nome'}</div>
+                            <button class="btn btn-danger btn-small" onclick="event.stopPropagation(); removeAlly('${ally.id}')">🗑️</button>
+                        </div>
+                        <div style="padding: 12px;">
+                            <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 10px;">
+                                <strong>Tipo:</strong> ${ally.tipoRaca || '—'} | 
+                                <strong>Função:</strong> ${ally.funcao || '—'}
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <div style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 4px;">
+                                    ❤️ Vitalidade: ${ally.hpCurrent || 5} / ${vitalidadeMax} (${hpPercent}%)
+                                </div>
+                                <div style="width: 100%; height: 8px; background: rgba(15, 23, 42, 0.8); border-radius: 4px; overflow: hidden;">
+                                    <div style="width: ${hpPercent}%; height: 100%; background: linear-gradient(90deg, var(--danger), var(--success)); transition: width 0.3s;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 4px;">
+                                    🧠 Sanidade: ${ally.sanCurrent || 100} / ${sanidadeMax} (${sanPercent}%)
+                                </div>
+                                <div style="width: 100%; height: 8px; background: rgba(15, 23, 42, 0.8); border-radius: 4px; overflow: hidden;">
+                                    <div style="width: ${sanPercent}%; height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6); transition: width 0.3s;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="padding: 12px; border-top: 1px solid var(--border); text-align: center; color: var(--primary); font-weight: 600; font-size: 0.85rem;">
+                            ✏️ CLIQUE PARA EDITAR FICHA COMPLETA
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         // Expor função para uso global
-        window.saveToFirebase = window.saveToFirebase;
+        window.updateAlliesList = updateAlliesList;
+
+        function updateAlliesCombat() {
+            const char = getChar();
+            const section = document.getElementById('alliesCombatSection');
+            const list = document.getElementById('allies-combat-list');
+            
+            if (!char.allies || char.allies.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            
+            section.style.display = 'block';
+            
+            list.innerHTML = char.allies.map(ally => {
+                const vitalidadeMax = (ally.vig || 1) + (ally.tamanho || 5);
+                const sanidadeMax = ((ally.int || 1) + (ally.aut || 1)) * 10;
+                
+                return `
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+                        <div style="font-weight: 700; color: var(--light); font-size: 1.1rem; margin-bottom: 12px;">
+                            👤 ${ally.nome || 'Sem nome'}
+                        </div>
+                        
+                        <!-- Vitalidade -->
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; font-weight: 700; margin-bottom: 8px;">❤️ Vitalidade</label>
+                            <div class="hp-bar">
+                                <div class="hp-fill" id="ally-hp-fill-${ally.id}" style="width: ${(ally.hpCurrent / vitalidadeMax) * 100}%;">
+                                    <span id="ally-hp-text-${ally.id}">${ally.hpCurrent} / ${vitalidadeMax}</span>
+                                </div>
+                            </div>
+                            <div class="hp-controls">
+                                <button class="btn btn-secondary btn-small" onclick="adjustAllyHP('${ally.id}', -1)">-1</button>
+                                <button class="btn btn-secondary btn-small" onclick="adjustAllyHP('${ally.id}', -5)">-5</button>
+                                <input type="number" id="ally-hp-${ally.id}" value="${ally.hpCurrent}" onchange="updateAllyHPBar('${ally.id}')" inputmode="numeric" style="width: 80px; text-align: center; padding: 8px;">
+                                <button class="btn btn-primary btn-small" onclick="adjustAllyHP('${ally.id}', 1)">+1</button>
+                                <button class="btn btn-primary btn-small" onclick="adjustAllyHP('${ally.id}', 5)">+5</button>
+                                <button class="btn btn-secondary btn-small" onclick="resetAllyHP('${ally.id}')">Max</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Sanidade -->
+                        <div>
+                            <label style="display: block; font-weight: 700; margin-bottom: 8px;">🧠 Sanidade</label>
+                            <div class="hp-bar">
+                                <div class="hp-fill" id="ally-san-fill-${ally.id}" style="width: ${(ally.sanCurrent / sanidadeMax) * 100}%; background: linear-gradient(90deg, #6366f1, #8b5cf6);">
+                                    <span id="ally-san-text-${ally.id}">${ally.sanCurrent} / ${sanidadeMax}</span>
+                                </div>
+                            </div>
+                            <div class="hp-controls">
+                                <button class="btn btn-secondary btn-small" onclick="adjustAllySAN('${ally.id}', -1)">-1</button>
+                                <button class="btn btn-secondary btn-small" onclick="adjustAllySAN('${ally.id}', -5)">-5</button>
+                                <input type="number" id="ally-san-${ally.id}" value="${ally.sanCurrent}" onchange="updateAllySANBar('${ally.id}')" inputmode="numeric" style="width: 80px; text-align: center; padding: 8px;">
+                                <button class="btn btn-primary btn-small" onclick="adjustAllySAN('${ally.id}', 1)">+1</button>
+                                <button class="btn btn-primary btn-small" onclick="adjustAllySAN('${ally.id}', 5)">+5</button>
+                                <button class="btn btn-secondary btn-small" onclick="resetAllySAN('${ally.id}')">Max</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Expor função para uso global
+        window.updateAlliesCombat = updateAlliesCombat;
+
+        window.adjustAllyHP = function(allyId, amount) {
+            const char = getChar();
+            const ally = char.allies.find(a => a.id === allyId);
+            if (!ally) return;
+            
+            const max = (ally.vig || 1) + (ally.tamanho || 5);
+            ally.hpCurrent = Math.max(0, Math.min((ally.hpCurrent || 5) + amount, max));
+            
+            updateAllyHPBar(allyId);
+            updateAlliesList();
+            autoSave();
+        };
+
+        window.updateAllyHPBar = function(allyId) {
+            const char = getChar();
+            const ally = char.allies.find(a => a.id === allyId);
+            if (!ally) return;
+            
+            const max = (ally.vig || 1) + (ally.tamanho || 5);
+            const input = document.getElementById(`ally-hp-${allyId}`);
+            if (input) {
+                ally.hpCurrent = Math.max(0, Math.min(parseInt(input.value) || 0, max));
+                input.value = ally.hpCurrent;
+            }
+            
+            const fill = document.getElementById(`ally-hp-fill-${allyId}`);
+            const text = document.getElementById(`ally-hp-text-${allyId}`);
+            if (fill && text) {
+                const percent = (ally.hpCurrent / max) * 100;
+                fill.style.width = percent + '%';
+                text.textContent = `${ally.hpCurrent} / ${max}`;
+            }
+            
+            updateAlliesList();
+            autoSave();
+        };
+
+        window.resetAllyHP = function(allyId) {
+            const char = getChar();
+            const ally = char.allies.find(a => a.id === allyId);
+            if (!ally) return;
+            
+            const max = (ally.vig || 1) + (ally.tamanho || 5);
+            ally.hpCurrent = max;
+            updateAllyHPBar(allyId);
+        };
+
+        window.adjustAllySAN = function(allyId, amount) {
+            const char = getChar();
+            const ally = char.allies.find(a => a.id === allyId);
+            if (!ally) return;
+            
+            const max = ((ally.int || 1) + (ally.aut || 1)) * 10;
+            ally.sanCurrent = Math.max(0, Math.min((ally.sanCurrent || 100) + amount, max));
+            
+            updateAllySANBar(allyId);
+            updateAlliesList();
+            autoSave();
+        };
+
+        window.updateAllySANBar = function(allyId) {
+            const char = getChar();
+            const ally = char.allies.find(a => a.id === allyId);
+            if (!ally) return;
+            
+            const max = ((ally.int || 1) + (ally.aut || 1)) * 10;
+            const input = document.getElementById(`ally-san-${allyId}`);
+            if (input) {
+                ally.sanCurrent = Math.max(0, Math.min(parseInt(input.value) || 0, max));
+                input.value = ally.sanCurrent;
+            }
+            
+            const fill = document.getElementById(`ally-san-fill-${allyId}`);
+            const text = document.getElementById(`ally-san-text-${allyId}`);
+            if (fill && text) {
+                const percent = (ally.sanCurrent / max) * 100;
+                fill.style.width = percent + '%';
+                text.textContent = `${ally.sanCurrent} / ${max}`;
+            }
+            
+            updateAlliesList();
+            autoSave();
+        };
+
+        window.resetAllySAN = function(allyId) {
+            const char = getChar();
+            const ally = char.allies.find(a => a.id === allyId);
+            if (!ally) return;
+            
+            const max = ((ally.int || 1) + (ally.aut || 1)) * 10;
+            ally.sanCurrent = max;
+            updateAllySANBar(allyId);
+        };
+
+        // ============= PROPRIEDADES =============
+        window.addProperty = function() {
+            const char = getChar();
+            const nome = prompt('Nome da propriedade:');
+            if (!nome) return;
+            
+            const propertyId = 'property-' + Date.now();
+            
+            if (!char.properties) char.properties = [];
+            
+            char.properties.push({
+                id: propertyId,
+                nome: nome,
+                tipo: '',
+                categoria: '',
+                localizacao: '',
+                tamanho: '',
+                estado: '',
+                material: '',
+                qualidade: '',
+                integridade: 100,
+                blindagem: 0,
+                conforto: 0,
+                saneamento: 0,
+                seguranca: 0,
+                capPessoas: 0,
+                capCarga: 0,
+                notoriedade: 0,
+                receita: 0,
+                despesas: 0,
+                impostos: 0,
+                modulos: {},
+                modulosSobre: '',
+                protocolos: '',
+                horarioOperacao: '',
+                funcionarios: [],
+                inventario: [],
+                portas: 1,
+                janelas: 0,
+                passagensSecretas: 0,
+                trancas: '',
+                alarmes: '',
+                riscosLocais: '',
+                pendenciasAtuais: '',
+                reputacao: '',
+                dataAquisicao: '',
+                proprietariosAnteriores: '',
+                ocorrenciasMarcantes: '',
+                upgrades: [],
+                notas: ''
+            });
+            
+            updatePropertiesList();
+            autoSave();
+            showAlert('✅ Propriedade criada! Clique nela para editar detalhes.', 'success');
+        };
+
+        window.removeProperty = function(propertyId) {
+            if (!confirm('⚠️ Tem certeza que deseja remover esta propriedade permanentemente?')) return;
+            
+            const char = getChar();
+            char.properties = char.properties.filter(p => p.id !== propertyId);
+            updatePropertiesList();
+            autoSave();
+            showAlert('🗑️ Propriedade removida!', 'success');
+        };
+
+        window.openProperty = function(propertyId) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const characterId = urlParams.get('id') || currentUser.uid;
+            window.location.href = `propriedade.html?characterId=${characterId}&propertyId=${propertyId}`;
+        };
+
+        function updatePropertiesList() {
+            const char = getChar();
+            const list = document.getElementById('properties-list');
+            
+            if (!char.properties || char.properties.length === 0) {
+                list.innerHTML = '<p style="color: #64748b; text-align: center; padding: 20px; font-size: 0.9rem;">Nenhuma propriedade ainda. Adicione uma taverna, casa, oficina ou estabelecimento!</p>';
+                return;
+            }
+            
+            list.innerHTML = char.properties.map(property => {
+                const integPercent = Math.round((property.integridade / 100) * 100);
+                let integColor = 'var(--success)';
+                if (integPercent < 30) integColor = 'var(--danger)';
+                else if (integPercent < 70) integColor = 'var(--warning)';
+                
+                return `
+                    <div class="container-card" style="cursor: pointer;" onclick="openProperty('${property.id}')">
+                        <div class="container-header">
+                            <div class="container-name">🏠 ${property.nome || 'Sem nome'}</div>
+                            <button class="btn btn-danger btn-small" onclick="event.stopPropagation(); removeProperty('${property.id}')">🗑️</button>
+                        </div>
+                        <div style="padding: 12px;">
+                            <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 10px;">
+                                <strong>Tipo:</strong> ${property.tipo || '—'} | 
+                                <strong>Localização:</strong> ${property.localizacao || '—'}
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <div style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 4px;">
+                                    🏗️ Integridade: ${property.integridade}% | 
+                                    🛡️ Blindagem: ${property.blindagem}
+                                </div>
+                                <div style="width: 100%; height: 8px; background: rgba(15, 23, 42, 0.8); border-radius: 4px; overflow: hidden;">
+                                    <div style="width: ${integPercent}%; height: 100%; background: ${integColor}; transition: width 0.3s;"></div>
+                                </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 0.8rem; color: #94a3b8;">
+                                <div>⭐ Qualidade: ${property.qualidade || '—'}</div>
+                                <div>👥 Cap: ${property.capPessoas || 0}</div>
+                                <div>📦 Carga: ${property.capCarga || 0}</div>
+                            </div>
+                        </div>
+                        <div style="padding: 12px; border-top: 1px solid var(--border); text-align: center; color: var(--primary); font-weight: 600; font-size: 0.85rem;">
+                            ✏️ CLIQUE PARA EDITAR DETALHES COMPLETOS
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.updatePropertiesList = updatePropertiesList;
+
+        // Expor funções para uso global
+        window.updateAlliesList = updateAlliesList;
+        window.updatePropertiesList = updatePropertiesList;
+        window.updateAlliesCombat = updateAlliesCombat;
     </script>
 
     <!-- LÓGICA DO SISTEMA -->
@@ -2436,6 +2868,25 @@ Exemplos:
                 updateEXPDisplay();
                 updateConditions();
                 updateLunsDisplay();
+
+                // Update allies and properties (defensivo - aguarda funções estarem disponíveis)
+                if (typeof window.updateAlliesList === 'function') {
+                    updateAlliesList();
+                } else {
+                    console.warn('⚠️ updateAlliesList ainda não disponível');
+                }
+
+                if (typeof window.updatePropertiesList === 'function') {
+                    updatePropertiesList();
+                } else {
+                    console.warn('⚠️ updatePropertiesList ainda não disponível');
+                }
+
+                if (typeof window.updateAlliesCombat === 'function') {
+                    updateAlliesCombat();
+                } else {
+                    console.warn('⚠️ updateAlliesCombat ainda não disponível');
+                }
                 
                 console.log('✅ Sistema inicializado com sucesso');
                 
@@ -3525,6 +3976,11 @@ Exemplos:
             updateConditions();
             updateLunsDisplay();
             updateEXPDisplay();
+
+            // Update allies and properties
+            updateAlliesList();
+            updatePropertiesList();
+            updateAlliesCombat();
             
             if (char.classe && CLASS_ABILITIES[char.classe]) {
                 renderClassContent(char.classe);

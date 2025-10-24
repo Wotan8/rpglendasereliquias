@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1e1b4b">
+    <title>Propriedade - Lendas e Relíquias</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --primary: #8b5cf6;
+            --secondary: #ec4899;
+            --dark: #1e1b4b;
+            --darker: #0f172a;
+            --light: #f8fafc;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border: #334155;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            color: var(--light);
+            min-height: 100vh;
+            padding: 10px;
+            overflow-x: hidden;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(139, 92, 246, 0.2);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            color: var(--primary);
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .user-info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(139, 92, 246, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 12px 20px;
+            border-radius: 30px;
+            border: 2px solid var(--primary);
+            z-index: 9998;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: calc(100vw - 40px);
+            flex-wrap: wrap;
+        }
+
+        .user-email {
+            color: #cbd5e1;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .btn-top {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-top:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-logout {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+        }
+
+        .btn-logout:hover {
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            margin-top: 70px;
+            background: rgba(30, 27, 75, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            margin-bottom: 20px;
+            font-size: clamp(0.75rem, 2.5vw, 0.9rem);
+            padding: 0 10px;
+        }
+
+        .autosave-indicator {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            z-index: 9999;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .autosave-indicator.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .autosave-indicator.saving {
+            background: rgba(245, 158, 11, 0.9);
+        }
+
+        .autosave-indicator.error {
+            background: rgba(239, 68, 68, 0.9);
+        }
+
+        .section {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-size: clamp(1.1rem, 4vw, 1.3rem);
+            margin-bottom: 15px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .grid-2 { grid-template-columns: 1fr; }
+        .grid-3 { grid-template-columns: 1fr; }
+        .grid-4 { grid-template-columns: 1fr; }
+
+        @media (min-width: 640px) {
+            .grid-2 { grid-template-columns: repeat(2, 1fr); }
+            .grid-3 { grid-template-columns: repeat(2, 1fr); }
+            .grid-4 { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (min-width: 1024px) {
+            .grid-3 { grid-template-columns: repeat(3, 1fr); }
+            .grid-4 { grid-template-columns: repeat(4, 1fr); }
+            .container { padding: 30px; }
+            .section { padding: 20px; }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: clamp(0.85rem, 2.5vw, 0.9rem);
+            color: #cbd5e1;
+        }
+
+        input, select, textarea {
+            padding: 14px 12px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: clamp(0.95rem, 3vw, 1rem);
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: inherit;
+            line-height: 1.6;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: auto;
+            height: 20px;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: clamp(0.9rem, 2.8vw, 1rem);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(51, 65, 85, 0.6);
+            color: white;
+            border: 2px solid var(--border);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+            color: white;
+        }
+
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            width: auto;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            display: none;
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.2);
+            border: 2px solid var(--success);
+            color: var(--success);
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid var(--danger);
+            color: var(--danger);
+        }
+
+        @media (max-width: 639px) {
+            .user-info {
+                top: 5px;
+                right: 5px;
+                padding: 8px 12px;
+                font-size: 0.75rem;
+                gap: 8px;
+            }
+
+            .container {
+                margin-top: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">🏠 Carregando Propriedade...</div>
+    </div>
+
+    <div class="user-info" id="userInfo" style="display: none;">
+        <span class="user-email" id="userEmail">Carregando...</span>
+        <button class="btn-top" onclick="voltarFicha()">◀️ VOLTAR</button>
+        <button class="btn-top" onclick="voltarMenu()">📋 MENU</button>
+        <button class="btn-top btn-logout" onclick="logout()">🚪 SAIR</button>
+    </div>
+
+    <div class="autosave-indicator" id="autosaveIndicator">💾 Salvando...</div>
+
+    <div class="container" id="mainContainer" style="display: none;">
+        <h1>🏠 PROPRIEDADE</h1>
+        <p class="subtitle">Gerenciamento de Propriedades</p>
+
+        <div class="alert alert-success" id="alertSuccess"></div>
+        <div class="alert alert-danger" id="alertError"></div>
+
+        <!-- INFORMAÇÕES BÁSICAS -->
+        <div class="section">
+            <h2 class="section-title">📝 Informações Básicas</h2>
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label>Nome da Propriedade</label>
+                    <input type="text" id="nome" placeholder="Ex: Taverna do Dragão Vermelho">
+                </div>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <input type="text" id="tipo" placeholder="Ex: Taverna, Casa, Loja">
+                </div>
+                <div class="form-group">
+                    <label>Categoria</label>
+                    <select id="categoria">
+                        <option value="">Selecione...</option>
+                        <option value="Residência">Residência</option>
+                        <option value="Comércio">Comércio</option>
+                        <option value="Oficina">Oficina</option>
+                        <option value="Defesa">Defesa</option>
+                        <option value="Sagrado/Especial">Sagrado/Especial</option>
+                        <option value="Infra">Infraestrutura</option>
+                        <option value="Transporte">Transporte</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Localização</label>
+                    <input type="text" id="localizacao" placeholder="Ex: Centro da cidade, Bairro do Porto">
+                </div>
+                <div class="form-group">
+                    <label>Tamanho</label>
+                    <input type="text" id="tamanho" placeholder="Ex: Pequeno, Médio, Grande">
+                </div>
+                <div class="form-group">
+                    <label>Estado</label>
+                    <select id="estado">
+                        <option value="">Selecione...</option>
+                        <option value="Excelente">Excelente</option>
+                        <option value="Bom">Bom</option>
+                        <option value="Regular">Regular</option>
+                        <option value="Ruim">Ruim</option>
+                        <option value="Péssimo">Péssimo</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Material</label>
+                    <input type="text" id="material" placeholder="Ex: Pedra, Madeira, Tijolo">
+                </div>
+                <div class="form-group">
+                    <label>Qualidade</label>
+                    <select id="qualidade">
+                        <option value="">Selecione...</option>
+                        <option value="Precária">Precária</option>
+                        <option value="Simples">Simples</option>
+                        <option value="Comum">Comum</option>
+                        <option value="Boa">Boa</option>
+                        <option value="Excelente">Excelente</option>
+                        <option value="Luxuosa">Luxuosa</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- ESTATÍSTICAS -->
+        <div class="section">
+            <h2 class="section-title">📊 Estatísticas</h2>
+            <div class="grid grid-4">
+                <div class="form-group">
+                    <label>Integridade</label>
+                    <input type="number" id="integridade" value="100" min="0" max="100">
+                </div>
+                <div class="form-group">
+                    <label>Blindagem</label>
+                    <input type="number" id="blindagem" value="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Conforto (0-5)</label>
+                    <input type="number" id="conforto" value="0" min="0" max="5">
+                </div>
+                <div class="form-group">
+                    <label>Saneamento (0-5)</label>
+                    <input type="number" id="saneamento" value="0" min="0" max="5">
+                </div>
+                <div class="form-group">
+                    <label>Segurança (0-5)</label>
+                    <input type="number" id="seguranca" value="0" min="0" max="5">
+                </div>
+                <div class="form-group">
+                    <label>Capacidade de Pessoas</label>
+                    <input type="number" id="capPessoas" value="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Cap. Carga/Armazenamento</label>
+                    <input type="number" id="capCarga" value="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Notoriedade (-5 a +5)</label>
+                    <input type="number" id="notoriedade" value="0" min="-5" max="5">
+                </div>
+            </div>
+        </div>
+
+        <!-- FINANÇAS -->
+        <div class="section">
+            <h2 class="section-title">💰 Finanças</h2>
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label>Receita (Moeda/Ciclo)</label>
+                    <input type="number" id="receita" value="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Despesas (Moeda/Ciclo)</label>
+                    <input type="number" id="despesas" value="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Impostos/Licenças</label>
+                    <input type="number" id="impostos" value="0" min="0">
+                </div>
+            </div>
+        </div>
+
+        <!-- MÓDULOS -->
+        <div class="section">
+            <h2 class="section-title">🔧 Módulos</h2>
+            <div class="checkbox-group">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="modResidencia">
+                    <label for="modResidencia">🏠 Residência</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="modComercio">
+                    <label for="modComercio">🏪 Comércio</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="modOficina">
+                    <label for="modOficina">🔨 Oficina</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="modDefesa">
+                    <label for="modDefesa">🛡️ Defesa</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="modSagrado">
+                    <label for="modSagrado">✨ Sagrado/Especial</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="modInfra">
+                    <label for="modInfra">🏗️ Infraestrutura</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="modTransporte">
+                    <label for="modTransporte">🚢 Transporte</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Sobre os Módulos</label>
+                <textarea id="modulosSobre" placeholder="Descreva os módulos ativos e suas funcionalidades..."></textarea>
+            </div>
+        </div>
+
+        <!-- PESSOAL/FUNCIONAMENTO -->
+        <div class="section">
+            <h2 class="section-title">👥 Pessoal / Funcionamento</h2>
+            <div class="form-group">
+                <label>Protocolos e Comandos</label>
+                <textarea id="protocolos" placeholder="Abrir/fechar, toque de recolher, emergência, prioridade de defesa..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Horário de Operação</label>
+                <input type="text" id="horarioOperacao" placeholder="Ex: 08:00 - 22:00">
+            </div>
+            <button class="btn btn-primary" onclick="addFuncionario()">➕ Adicionar Funcionário</button>
+            <div id="funcionariosList" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- INVENTÁRIO -->
+        <div class="section">
+            <h2 class="section-title">📦 Inventário</h2>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label>Capacidade Atual</label>
+                    <input type="number" id="capacidadeAtual" value="0" min="0" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Capacidade Máxima</label>
+                    <input type="number" id="capacidadeMax" value="100" min="0">
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="addItem()">➕ Adicionar Item</button>
+            <div id="itemsList" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- ACESSOS E SEGURANÇA -->
+        <div class="section">
+            <h2 class="section-title">🚪 Portas, Trancas e Acessos</h2>
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label>Portas</label>
+                    <input type="number" id="portas" value="1" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Janelas</label>
+                    <input type="number" id="janelas" value="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Passagens Secretas</label>
+                    <input type="number" id="passagensSecretas" value="0" min="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Trancas (tipo/nível/CD)</label>
+                <textarea id="trancas" placeholder="Ex: Fechadura de boa qualidade, Nível 3, CD 15"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Alarmes/Sinais</label>
+                <textarea id="alarmes" placeholder="Ex: Sino na entrada, alarme mágico no cofre..."></textarea>
+            </div>
+        </div>
+
+        <!-- EVENTOS E COMPLICAÇÕES -->
+        <div class="section">
+            <h2 class="section-title">⚠️ Eventos & Complicações</h2>
+            <div class="form-group">
+                <label>Riscos Locais</label>
+                <textarea id="riscosLocais" placeholder="Ex: Bairro perigoso, infestação de ratos..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Pendências Atuais</label>
+                <textarea id="pendenciasAtuais" placeholder="Ex: Dívida com fornecedor, reparo no telhado..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Reputação com Vizinhos/Autoridades</label>
+                <textarea id="reputacao" placeholder="Ex: Bem visto pela guarda, conflito com vizinho..."></textarea>
+            </div>
+        </div>
+
+        <!-- HISTÓRICO -->
+        <div class="section">
+            <h2 class="section-title">📜 Histórico / Log</h2>
+            <div class="form-group">
+                <label>Data de Aquisição</label>
+                <input type="text" id="dataAquisicao" placeholder="Ex: Primavera de 1425">
+            </div>
+            <div class="form-group">
+                <label>Proprietários Anteriores</label>
+                <textarea id="proprietariosAnteriores" placeholder="Ex: Família Albuquerque por 3 gerações..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Ocorrências Marcantes</label>
+                <textarea id="ocorrenciasMarcantes" placeholder="Ex: Sobreviveu ao grande incêndio de 1420..."></textarea>
+            </div>
+        </div>
+
+        <!-- UPGRADES E MANUTENÇÕES -->
+        <div class="section">
+            <h2 class="section-title">🔧 Upgrades e Manutenções</h2>
+            <button class="btn btn-primary" onclick="addUpgrade()">➕ Adicionar Upgrade/Manutenção</button>
+            <div id="upgradesList" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- NOTAS -->
+        <div class="section">
+            <h2 class="section-title">📝 Notas Adicionais</h2>
+            <div class="form-group">
+                <textarea id="notas" style="min-height: 200px;" placeholder="Anotações gerais sobre a propriedade..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
+          authDomain: "rpg-lendasereliquias.firebaseapp.com",
+          projectId: "rpg-lendasereliquias",
+          storageBucket: "rpg-lendasereliquias.firebasestorage.app",
+          messagingSenderId: "546994339773",
+          appId: "1:546994339773:web:0116cf7c8667f113075cd4"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let characterId = null;
+        let propertyId = null;
+        let propertyData = {
+            nome: '',
+            tipo: '',
+            categoria: '',
+            localizacao: '',
+            tamanho: '',
+            estado: '',
+            material: '',
+            qualidade: '',
+            integridade: 100,
+            blindagem: 0,
+            conforto: 0,
+            saneamento: 0,
+            seguranca: 0,
+            capPessoas: 0,
+            capCarga: 0,
+            notoriedade: 0,
+            receita: 0,
+            despesas: 0,
+            impostos: 0,
+            modulos: {
+                residencia: false,
+                comercio: false,
+                oficina: false,
+                defesa: false,
+                sagrado: false,
+                infra: false,
+                transporte: false
+            },
+            modulosSobre: '',
+            protocolos: '',
+            horarioOperacao: '',
+            funcionarios: [],
+            capacidadeAtual: 0,
+            capacidadeMax: 100,
+            inventario: [],
+            portas: 1,
+            janelas: 0,
+            passagensSecretas: 0,
+            trancas: '',
+            alarmes: '',
+            riscosLocais: '',
+            pendenciasAtuais: '',
+            reputacao: '',
+            dataAquisicao: '',
+            proprietariosAnteriores: '',
+            ocorrenciasMarcantes: '',
+            upgrades: [],
+            notas: ''
+        };
+
+        // Autenticação
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('userEmail').textContent = user.email;
+                document.getElementById('userInfo').style.display = 'flex';
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                characterId = urlParams.get('characterId');
+                propertyId = urlParams.get('propertyId');
+                
+                if (!characterId || !propertyId) {
+                    showAlert('❌ Parâmetros inválidos!', 'danger');
+                    setTimeout(() => window.location.href = 'personagens.html', 2000);
+                    return;
+                }
+                
+                await loadProperty();
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('mainContainer').style.display = 'block';
+                
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        async function loadProperty() {
+            try {
+                const charDoc = await getDoc(doc(db, 'characters', characterId));
+                
+                if (charDoc.exists()) {
+                    const charData = charDoc.data();
+                    
+                    if (charData.properties && Array.isArray(charData.properties)) {
+                        const property = charData.properties.find(p => p.id === propertyId);
+                        
+                        if (property) {
+                            propertyData = { ...propertyData, ...property };
+                            loadFormData();
+                            showAlert('✅ Propriedade carregada!', 'success');
+                        } else {
+                            showAlert('⚠️ Nova propriedade', 'success');
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar propriedade:', error);
+                showAlert('❌ Erro ao carregar: ' + error.message, 'danger');
+            }
+        }
+
+        function loadFormData() {
+            // Campos simples
+            const fields = ['nome', 'tipo', 'categoria', 'localizacao', 'tamanho', 'estado', 'material', 'qualidade',
+                          'integridade', 'blindagem', 'conforto', 'saneamento', 'seguranca', 'capPessoas', 'capCarga',
+                          'notoriedade', 'receita', 'despesas', 'impostos', 'modulosSobre', 'protocolos', 'horarioOperacao',
+                          'capacidadeAtual', 'capacidadeMax', 'portas', 'janelas', 'passagensSecretas', 'trancas', 'alarmes',
+                          'riscosLocais', 'pendenciasAtuais', 'reputacao', 'dataAquisicao', 'proprietariosAnteriores',
+                          'ocorrenciasMarcantes', 'notas'];
+            
+            fields.forEach(field => {
+                const el = document.getElementById(field);
+                if (el && propertyData[field] !== undefined) {
+                    el.value = propertyData[field];
+                }
+            });
+            
+            // Módulos (checkboxes)
+            if (propertyData.modulos) {
+                document.getElementById('modResidencia').checked = propertyData.modulos.residencia || false;
+                document.getElementById('modComercio').checked = propertyData.modulos.comercio || false;
+                document.getElementById('modOficina').checked = propertyData.modulos.oficina || false;
+                document.getElementById('modDefesa').checked = propertyData.modulos.defesa || false;
+                document.getElementById('modSagrado').checked = propertyData.modulos.sagrado || false;
+                document.getElementById('modInfra').checked = propertyData.modulos.infra || false;
+                document.getElementById('modTransporte').checked = propertyData.modulos.transporte || false;
+            }
+            
+            renderFuncionarios();
+            renderItems();
+            renderUpgrades();
+        }
+
+        function saveFormData() {
+            // Campos simples
+            const fields = ['nome', 'tipo', 'categoria', 'localizacao', 'tamanho', 'estado', 'material', 'qualidade',
+                          'modulosSobre', 'protocolos', 'horarioOperacao', 'trancas', 'alarmes',
+                          'riscosLocais', 'pendenciasAtuais', 'reputacao', 'dataAquisicao', 'proprietariosAnteriores',
+                          'ocorrenciasMarcantes', 'notas'];
+            
+            fields.forEach(field => {
+                const el = document.getElementById(field);
+                if (el) propertyData[field] = el.value;
+            });
+            
+            // Campos numéricos
+            const numFields = ['integridade', 'blindagem', 'conforto', 'saneamento', 'seguranca', 'capPessoas', 'capCarga',
+                             'notoriedade', 'receita', 'despesas', 'impostos', 'capacidadeAtual', 'capacidadeMax',
+                             'portas', 'janelas', 'passagensSecretas'];
+            
+            numFields.forEach(field => {
+                const el = document.getElementById(field);
+                if (el) propertyData[field] = parseInt(el.value) || 0;
+            });
+            
+            // Módulos
+            propertyData.modulos = {
+                residencia: document.getElementById('modResidencia').checked,
+                comercio: document.getElementById('modComercio').checked,
+                oficina: document.getElementById('modOficina').checked,
+                defesa: document.getElementById('modDefesa').checked,
+                sagrado: document.getElementById('modSagrado').checked,
+                infra: document.getElementById('modInfra').checked,
+                transporte: document.getElementById('modTransporte').checked
+            };
+            
+            propertyData.id = propertyId;
+        }
+
+        async function saveToFirebase() {
+            const indicator = document.getElementById('autosaveIndicator');
+            indicator.textContent = '💾 Salvando...';
+            indicator.classList.add('show', 'saving');
+            
+            try {
+                saveFormData();
+                
+                const charDoc = await getDoc(doc(db, 'characters', characterId));
+                let properties = [];
+                
+                if (charDoc.exists()) {
+                    const charData = charDoc.data();
+                    properties = charData.properties || [];
+                    
+                    const index = properties.findIndex(p => p.id === propertyId);
+                    if (index >= 0) {
+                        properties[index] = propertyData;
+                    } else {
+                        properties.push(propertyData);
+                    }
+                }
+                
+                await setDoc(doc(db, 'characters', characterId), {
+                    properties: properties,
+                    lastUpdate: new Date().toISOString()
+                }, { merge: true });
+                
+                indicator.textContent = '✅ Salvo!';
+                indicator.classList.remove('saving', 'error');
+                
+                setTimeout(() => {
+                    indicator.classList.remove('show');
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Erro ao salvar:', error);
+                indicator.textContent = '❌ Erro!';
+                indicator.classList.remove('saving');
+                indicator.classList.add('error');
+                
+                setTimeout(() => {
+                    indicator.classList.remove('show');
+                }, 3000);
+            }
+        }
+
+        // Auto-save
+        let autoSaveTimeout;
+        function triggerAutoSave() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => {
+                saveToFirebase();
+            }, 1000);
+        }
+
+        // Event listeners
+        document.querySelectorAll('input, select, textarea').forEach(el => {
+            el.addEventListener('change', triggerAutoSave);
+            if (el.type === 'text' || el.type === 'number' || el.tagName === 'TEXTAREA') {
+                el.addEventListener('input', triggerAutoSave);
+            }
+        });
+
+        // Funcionários
+        window.addFuncionario = function() {
+            const nome = prompt('Nome do funcionário:');
+            if (!nome) return;
+            
+            const funcao = prompt('Função:') || '';
+            const turno = prompt('Turno:') || '';
+            const salario = parseInt(prompt('Salário (por ciclo):') || '0');
+            const obs = prompt('Observações:') || '';
+            
+            propertyData.funcionarios.push({
+                id: Date.now(),
+                nome,
+                funcao,
+                turno,
+                salario,
+                obs
+            });
+            
+            renderFuncionarios();
+            triggerAutoSave();
+        };
+
+        window.removeFuncionario = function(id) {
+            if (confirm('Remover este funcionário?')) {
+                propertyData.funcionarios = propertyData.funcionarios.filter(f => f.id !== id);
+                renderFuncionarios();
+                triggerAutoSave();
+            }
+        };
+
+        function renderFuncionarios() {
+            const list = document.getElementById('funcionariosList');
+            
+            if (!propertyData.funcionarios || propertyData.funcionarios.length === 0) {
+                list.innerHTML = '<p style="color: #64748b; text-align: center; padding: 10px;">Nenhum funcionário cadastrado</p>';
+                return;
+            }
+            
+            list.innerHTML = propertyData.funcionarios.map(f => `
+                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700; color: var(--light); margin-bottom: 5px;">${f.nome}</div>
+                            <div style="font-size: 0.85rem; color: #94a3b8;">
+                                <strong>Função:</strong> ${f.funcao || '—'} | 
+                                <strong>Turno:</strong> ${f.turno || '—'} | 
+                                <strong>Salário:</strong> ${f.salario} moedas
+                                ${f.obs ? `<br><strong>Obs:</strong> ${f.obs}` : ''}
+                            </div>
+                        </div>
+                        <button class="btn btn-danger btn-small" onclick="removeFuncionario(${f.id})">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Items do Inventário
+        window.addItem = function() {
+            const nome = prompt('Nome do item:');
+            if (!nome) return;
+            
+            const qnt = parseInt(prompt('Quantidade:') || '1');
+            const peso = parseInt(prompt('Peso por unidade:') || '1');
+            const sobre = prompt('Descrição:') || '';
+            
+            propertyData.inventario.push({
+                id: Date.now(),
+                nome,
+                qnt,
+                peso,
+                sobre
+            });
+            
+            updateCapacidade();
+            renderItems();
+            triggerAutoSave();
+        };
+
+        window.removeItem = function(id) {
+            if (confirm('Remover este item?')) {
+                propertyData.inventario = propertyData.inventario.filter(i => i.id !== id);
+                updateCapacidade();
+                renderItems();
+                triggerAutoSave();
+            }
+        };
+
+        function updateCapacidade() {
+            const total = propertyData.inventario.reduce((sum, item) => sum + (item.qnt * item.peso), 0);
+            propertyData.capacidadeAtual = total;
+            document.getElementById('capacidadeAtual').value = total;
+        }
+
+        function renderItems() {
+            const list = document.getElementById('itemsList');
+            
+            if (!propertyData.inventario || propertyData.inventario.length === 0) {
+                list.innerHTML = '<p style="color: #64748b; text-align: center; padding: 10px;">Inventário vazio</p>';
+                return;
+            }
+            
+            list.innerHTML = propertyData.inventario.map(item => `
+                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700; color: var(--light); margin-bottom: 5px;">
+                                ${item.nome} ${item.qnt > 1 ? `(x${item.qnt})` : ''}
+                            </div>
+                            <div style="font-size: 0.85rem; color: #94a3b8;">
+                                <strong>Peso:</strong> ${item.peso} | 
+                                <strong>Total:</strong> ${item.qnt * item.peso}
+                                ${item.sobre ? `<br>${item.sobre}` : ''}
+                            </div>
+                        </div>
+                        <button class="btn btn-danger btn-small" onclick="removeItem(${item.id})">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Upgrades
+        window.addUpgrade = function() {
+            const descricao = prompt('Descrição do upgrade/manutenção:');
+            if (!descricao) return;
+            
+            const data = prompt('Data:') || '';
+            const custo = parseInt(prompt('Custo:') || '0');
+            const tempo = prompt('Tempo:') || '';
+            const efeito = prompt('Efeito mecânico:') || '';
+            
+            propertyData.upgrades.push({
+                id: Date.now(),
+                data,
+                descricao,
+                custo,
+                tempo,
+                efeito
+            });
+            
+            renderUpgrades();
+            triggerAutoSave();
+        };
+
+        window.removeUpgrade = function(id) {
+            if (confirm('Remover este registro?')) {
+                propertyData.upgrades = propertyData.upgrades.filter(u => u.id !== id);
+                renderUpgrades();
+                triggerAutoSave();
+            }
+        };
+
+        function renderUpgrades() {
+            const list = document.getElementById('upgradesList');
+            
+            if (!propertyData.upgrades || propertyData.upgrades.length === 0) {
+                list.innerHTML = '<p style="color: #64748b; text-align: center; padding: 10px;">Nenhum upgrade/manutenção registrado</p>';
+                return;
+            }
+            
+            list.innerHTML = propertyData.upgrades.map(u => `
+                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700; color: var(--light); margin-bottom: 5px;">${u.descricao}</div>
+                            <div style="font-size: 0.85rem; color: #94a3b8;">
+                                ${u.data ? `<strong>Data:</strong> ${u.data} | ` : ''}
+                                <strong>Custo:</strong> ${u.custo} moedas
+                                ${u.tempo ? ` | <strong>Tempo:</strong> ${u.tempo}` : ''}
+                                ${u.efeito ? `<br><strong>Efeito:</strong> ${u.efeito}` : ''}
+                            </div>
+                        </div>
+                        <button class="btn btn-danger btn-small" onclick="removeUpgrade(${u.id})">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Navegação
+        window.voltarFicha = function() {
+            window.location.href = `ficha.html?id=${characterId}`;
+        };
+
+        window.voltarMenu = function() {
+            if (confirm('Voltar para o menu de personagens?')) {
+                window.location.href = 'personagens.html';
+            }
+        };
+
+        window.logout = async function() {
+            if (confirm('Deseja sair?')) {
+                try {
+                    await signOut(auth);
+                    window.location.href = 'index.html';
+                } catch (error) {
+                    console.error('Erro ao fazer logout:', error);
+                }
+            }
+        };
+
+        function showAlert(message, type) {
+            const alert = type === 'success' 
+                ? document.getElementById('alertSuccess')
+                : document.getElementById('alertError');
+            
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
