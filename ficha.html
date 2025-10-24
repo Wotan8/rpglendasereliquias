@@ -1329,6 +1329,10 @@
                             <option value="Preguiça">Preguiça</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label>Aura de Imortalidade (AI)</label>
+                        <input type="number" id="auraImortalidade" value="1" min="0" max="10" inputmode="numeric">
+                    </div>
                 </div>
             </div>
 
@@ -1570,6 +1574,19 @@
                             <div class="char-formula">Armadura</div>
                         </div>
                         <div class="char-value" id="calc-blindagem">0</div>
+                    </div>
+                    <div class="characteristic-item" style="grid-column: 1 / -1; border: 3px solid var(--warning); background: rgba(245, 158, 11, 0.1);">
+                        <div>
+                            <div class="char-label" style="font-size: 1.3rem; color: var(--warning);">⚡ Classe de Poder (CP)</div>
+                            <div class="char-formula" style="font-size: 0.8rem;">⌈2·OF + DF + RS + MB⌉ × AI</div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+                            <div class="char-value" id="calc-cp" style="color: var(--warning);">0</div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div id="calc-cp-letra" style="font-size: 1.8rem; font-weight: 900; color: var(--warning);">E</div>
+                                <div id="calc-cp-nome" style="font-size: 1rem; font-weight: 700; color: var(--warning); text-transform: uppercase;">CIVIL/NOVATO</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2688,7 +2705,7 @@ Exemplos:
         // STATE
         window.character = {
             nome: '', jogador: '', idade: 0, raca: '', classe: '', virtude: '', vicio: '',
-            tamanho: 5, luns: 0,
+            tamanho: 5, luns: 0, auraImortalidade: 1,
             int: 1, for: 1, pre: 1, rac: 1, des: 1, man: 1, prs: 1, vig: 1, aut: 1,
             skills: {},
             skillInputs: {},
@@ -2906,7 +2923,8 @@ Exemplos:
                 'virtude': 'virtude',
                 'vicio': 'vicio', 
                 'tamanho': 'tamanho', 
-                'luns': 'luns'
+                'luns': 'luns',
+                'auraImortalidade': 'auraImortalidade'
             };
             
             Object.entries(inputs).forEach(([id, key]) => {
@@ -3345,6 +3363,120 @@ Exemplos:
             });
         }
 
+        function calculateCP() {
+            const char = getChar();
+            const agilidade = char.skills['agilidade'] || 0;
+            
+            // OF (Ofensa) - Maior Parada de Ataque
+            const arma = char.skills['arma'] || 0;
+            const disparo = char.skills['disparo'] || 0;
+            const briga = char.skills['briga'] || 0;
+            
+            // Considerar também habilidades de classe para armas
+            let bonusArma = 0;
+            if (char.classAbilities) {
+                const weaponSkills = ['armas-haste', 'armas-pesadas', 'armas-uma-mao', 'armas-duas-maos', 'armas-duplas', 'armas-arremessaveis', 'armas-punho'];
+                weaponSkills.forEach(skill => {
+                    const val = char.classAbilities[skill] || 0;
+                    if (val > bonusArma) bonusArma = val;
+                });
+            }
+            
+            const paradaArma = Math.max(char.for, char.des) + arma + bonusArma;
+            const paradaDisparo = char.des + disparo + (char.classAbilities?.['precisão'] || 0);
+            const paradaBriga = char.for + briga;
+            
+            const PMA = Math.max(paradaArma, paradaDisparo, paradaBriga);
+            const OF = Math.ceil(PMA / 3);
+            
+            // DF (Defesa)
+            const REA = Math.min(char.des, char.rac + agilidade);
+            const BL = char.blindagem || 0;
+            const DF = Math.ceil((REA + BL) / 3);
+            
+            // RS (Resistência/Sustentação)
+            const VIT = char.vig + char.tamanho;
+            const DET = char.prs + char.aut;
+            const RS = Math.ceil((VIT + Math.floor(DET / 2)) / 3);
+            
+            // MB (Mobilidade)
+            const DESL = char.for + char.des + char.tamanho + agilidade;
+            const MB = Math.ceil(DESL / 6);
+            
+            // CP Final
+            const AI = char.auraImortalidade || 1;
+            const cpBase = Math.ceil(2 * OF + DF + RS + MB);
+            const CP = cpBase * AI;
+            
+            // Determinar Letra e Nome
+            let letra = 'E';
+            let nome = 'CIVIL/NOVATO';
+            let corLetra = '#94a3b8';
+            
+            if (CP >= 301) { 
+                letra = 'ULTRA'; 
+                nome = 'ULTRALIAL'; 
+                corLetra = '#ff00ff'; 
+            }
+            else if (CP >= 151) { 
+                letra = 'OP+'; 
+                nome = 'SOBERANO'; 
+                corLetra = '#ff0080'; 
+            }
+            else if (CP >= 91) { 
+                letra = 'OP'; 
+                nome = 'LENDÁRIO'; 
+                corLetra = '#ff0000'; 
+            }
+            else if (CP >= 71) { 
+                letra = 'M+'; 
+                nome = 'CRONAL'; 
+                corLetra = '#ff6600'; 
+            }
+            else if (CP >= 51) { 
+                letra = 'M'; 
+                nome = 'DIVINO'; 
+                corLetra = '#ff9900'; 
+            }
+            else if (CP >= 36) { 
+                letra = 'SS'; 
+                nome = 'ÉPICO'; 
+                corLetra = '#ffcc00'; 
+            }
+            else if (CP >= 29) { 
+                letra = 'S+'; 
+                nome = 'MITO'; 
+                corLetra = '#ffff00'; 
+            }
+            else if (CP >= 23) { 
+                letra = 'S'; 
+                nome = 'LEGADO'; 
+                corLetra = '#00ff00'; 
+            }
+            else if (CP >= 19) { 
+                letra = 'A'; 
+                nome = 'CAMPEÃO'; 
+                corLetra = '#00ffff'; 
+            }
+            else if (CP >= 15) { 
+                letra = 'B'; 
+                nome = 'ELITE'; 
+                corLetra = '#0099ff'; 
+            }
+            else if (CP >= 12) { 
+                letra = 'C'; 
+                nome = 'VETERANO'; 
+                corLetra = '#0066ff'; 
+            }
+            else if (CP >= 9) { 
+                letra = 'D'; 
+                nome = 'SOLDADO COMUM'; 
+                corLetra = '#6666ff'; 
+            }
+            
+            return { CP, letra, nome, corLetra, OF, DF, RS, MB, AI };
+        }
+
         function getResourceMax(resource) {
             const char = getChar();
             if (typeof resource.max === 'number') {
@@ -3514,6 +3646,21 @@ Exemplos:
                 safeUpdate('calc-sanidade', sanidadeMax);
                 
                 safeUpdate('calc-blindagem', char.blindagem);
+
+                const cpData = calculateCP();
+                safeUpdate('calc-cp', cpData.CP);
+                
+                const cpLetraEl = document.getElementById('calc-cp-letra');
+                if (cpLetraEl) {
+                    cpLetraEl.textContent = cpData.letra;
+                    cpLetraEl.style.color = cpData.corLetra;
+                }
+                
+                const cpNomeEl = document.getElementById('calc-cp-nome');
+                if (cpNomeEl) {
+                    cpNomeEl.textContent = cpData.nome;
+                    cpNomeEl.style.color = cpData.corLetra;
+                }
                 
                 // Ajustar valores atuais se necessário
                 if (!char.hpCurrent || char.hpCurrent > vitalidadeMax) {
@@ -3947,9 +4094,9 @@ Exemplos:
 
         function loadCharacterData() {
             const char = getChar();
-            ['nome', 'jogador', 'idade', 'raca', 'classe', 'virtude', 'vicio', 'tamanho'].forEach(key => {
+            ['nome', 'jogador', 'idade', 'raca', 'classe', 'virtude', 'vicio', 'tamanho', 'auraImortalidade'].forEach(key => {
                 const el = document.getElementById(key);
-                if (el) el.value = char[key] || (key === 'tamanho' ? 5 : '');
+                if (el) el.value = char[key] || (key === 'tamanho' ? 5 : key === 'auraImortalidade' ? 1 : '');
             });
             
             // Carregar Luns separadamente
