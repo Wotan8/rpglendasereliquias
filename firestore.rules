@@ -11,43 +11,32 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/masters/$(request.auth.uid));
     }
 
-    // Carteirinha de mestre: apenas leitura por mestres. Nenhum write pelo cliente.
     match /masters/{uid} {
       allow read: if isMaster();
       allow write: if false;
     }
 
-    // Fichas de personagem
-    match /characters/{charId} {
-      // Todos logados podem ler (ajuste para mais restrito se quiser)
+    match /users/{userId} {
       allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
 
-      // Criar só se o dono for quem está logado
-      allow create: if isSignedIn()
-        && request.resource.data.ownerUid == request.auth.uid;
+    match /characters/{characterId} {
+      allow read: if isSignedIn() && (
+        resource.data.ownerUid == request.auth.uid || isMaster()
+      );
 
-      // Atualizar/Excluir se:
-      // - é o dono OU
-      // - é mestre
+      allow create: if isSignedIn() && 
+        request.resource.data.ownerUid == request.auth.uid;
+
       allow update, delete: if isSignedIn() && (
         resource.data.ownerUid == request.auth.uid || isMaster()
       );
     }
 
-    // Logs de alterações
     match /logs/{logId} {
-      // Criar log: precisa estar logado e o log deve apontar para uma character existente.
-      allow create: if isSignedIn()
-        && exists(/databases/$(database)/documents/characters/$(request.resource.data.characterId))
-        && request.resource.data.userUid == request.auth.uid;
-
-      // Ler logs: mestres podem ler tudo; jogador pode ler logs da sua própria ficha
-      allow read: if isMaster()
-        || (isSignedIn()
-            && exists(/databases/$(database)/documents/characters/$(resource.data.characterId))
-            && get(/databases/$(database)/documents/characters/$(resource.data.characterId)).data.ownerUid == request.auth.uid);
-
-      // Nunca permitir update/delete de logs pelo cliente
+      allow create: if isSignedIn();
+      allow read: if isMaster();
       allow update, delete: if false;
     }
   }

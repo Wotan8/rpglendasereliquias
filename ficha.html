@@ -2402,60 +2402,152 @@ Exemplos:
         }
 
         function init() {
-            const attributes = ['int', 'for', 'pre', 'rac', 'des', 'man', 'prs', 'vig', 'aut'];
-            attributes.forEach(attr => createAttributeDots(attr, 4));
-            createSkills();
+            try {
+                console.log('🚀 Iniciando sistema...');
+                
+                const attributes = ['int', 'for', 'pre', 'rac', 'des', 'man', 'prs', 'vig', 'aut'];
+                attributes.forEach(attr => createAttributeDots(attr, 5)); // 5 NÍVEIS
+                
+                createSkills();
             
-            const char = getChar();
-            if (!char.containers || char.containers.length === 0) {
-                char.containers = [{
-                    id: Date.now(),
-                    name: 'Mochila',
-                    maxCapacity: char.for + char.vig,
-                    items: []
-                }];
+                const char = getChar();
+                if (!char.containers || char.containers.length === 0) {
+                    char.containers = [{
+                        id: Date.now(),
+                        name: 'Mochila',
+                        maxCapacity: char.for + char.vig,
+                        items: []
+                    }];
+                }
+                
+                loadCharacterData();
+            
+                // Tentar atualizar cálculos, mas não travar se falhar
+                try {
+                    updateAllCalculations();
+                } catch (error) {
+                    console.error('⚠️ Erro ao atualizar cálculos iniciais (não crítico):', error);
+                }
+                
+                setupEventListeners();
+                setupInputListeners();
+                
+                updateContainers();
+                updateEXPDisplay();
+                updateConditions();
+                updateLunsDisplay();
+                
+                console.log('✅ Sistema inicializado com sucesso');
+                
+            } catch (error) {
+                console.error('❌ ERRO CRÍTICO na inicialização:', error);
+                alert('Erro ao inicializar ficha. Verifique o console (F12).');
             }
-            
-            loadCharacterData();
-            updateAllCalculations();
-            setupEventListeners();
-            setupInputListeners(); // FIX: Adicionar listeners de input para campos de texto
-            updateContainers();
-            updateEXPDisplay();
-            updateConditions();
-            updateLunsDisplay();
-            updateEXPDisplay();
         }
 
         function setupEventListeners() {
             const inputs = {
-                'nome': 'nome', 'jogador': 'jogador', 'idade': 'idade',
-                'raca': 'raca', 'classe': 'classe', 'virtude': 'virtude',
-                'vicio': 'vicio', 'tamanho': 'tamanho', 'luns': 'luns'
+                'nome': 'nome', 
+                'jogador': 'jogador', 
+                'idade': 'idade',
+                'raca': 'raca', 
+                'classe': 'classe', 
+                'virtude': 'virtude',
+                'vicio': 'vicio', 
+                'tamanho': 'tamanho', 
+                'luns': 'luns'
             };
             
             Object.entries(inputs).forEach(([id, key]) => {
                 const el = document.getElementById(id);
-                if (el) {
-                    el.addEventListener('change', (e) => {
+                if (!el) {
+                    console.warn(`⚠️ Campo ${id} não encontrado no DOM`);
+                    return;
+                }
+                
+                // Listener para 'change' (blur, selects)
+                el.addEventListener('change', (e) => {
+                    try {
                         const char = getChar();
+                        const oldValue = char[key];
+                        
                         char[key] = ['idade', 'tamanho', 'luns'].includes(key) 
                             ? parseInt(e.target.value) || 0 
                             : e.target.value;
-                        if (key === 'tamanho') updateAllCalculations();
+                        
+                        console.log(`[CHANGE] ${key}: "${oldValue}" → "${char[key]}"`);
+                        
+                        if (key === 'tamanho') {
+                            try {
+                                updateAllCalculations();
+                            } catch (err) {
+                                console.error('Erro ao atualizar cálculos:', err);
+                                // Continua mesmo com erro
+                            }
+                        }
+                        
+                        if (key === 'classe') {
+                            const classContent = document.getElementById('class-content');
+                            if (classContent) classContent.innerHTML = '';
+                        }
+                        
+                        // GARANTIR que salva mesmo se houver erro
                         autoSave();
+                        
+                    } catch (error) {
+                        console.error(`❌ Erro ao processar mudança em ${key}:`, error);
+                    }
+                });
+                
+                // Listener para 'input' (digitação em tempo real)
+                if (el.type === 'text' || el.type === 'number') {
+                    el.addEventListener('input', (e) => {
+                        try {
+                            const char = getChar();
+                            
+                            char[key] = ['idade', 'tamanho', 'luns'].includes(key) 
+                                ? parseInt(e.target.value) || 0 
+                                : e.target.value;
+                            
+                            console.log(`[INPUT] ${key} = "${char[key]}"`);
+                            
+                            if (key === 'tamanho') {
+                                try {
+                                    updateAllCalculations();
+                                } catch (err) {
+                                    console.error('Erro ao atualizar cálculos:', err);
+                                    // Continua mesmo com erro
+                                }
+                            }
+                            
+                            // GARANTIR que salva mesmo se houver erro
+                            autoSave();
+                            
+                        } catch (error) {
+                            console.error(`❌ Erro ao processar input em ${key}:`, error);
+                        }
                     });
                 }
             });
 
+            // Listener para notas
             const notasTextarea = document.getElementById('notas-textarea');
             if (notasTextarea) {
                 notasTextarea.addEventListener('input', (e) => {
-                    const char = getChar();
-                    char.notas = e.target.value;
-                    autoSave();
+                    try {
+                        const char = getChar();
+                        char.notas = e.target.value;
+                        console.log('[INPUT] Notas atualizadas');
+                        autoSave();
+                    } catch (error) {
+                        console.error('❌ Erro ao atualizar notas:', error);
+                    }
                 });
+            } else {
+                console.warn('⚠️ Textarea de notas não encontrado');
             }
+            
+            console.log('✅ Event listeners configurados com sucesso');
         }
 
         // ============= FIX: ADICIONAR INPUT LISTENERS PARA CAMPOS DE TEXTO =============
@@ -2545,8 +2637,26 @@ Exemplos:
             clearTimeout(autoSaveTimeout);
             
             autoSaveTimeout = setTimeout(() => {
-                if (window.saveToFirebase) {
-                    window.saveToFirebase();
+                try {
+                    if (window.saveToFirebase) {
+                        console.log('💾 Salvando dados...');
+                        window.saveToFirebase();
+                    } else {
+                        console.warn('⚠️ Função saveToFirebase não disponível');
+                    }
+                } catch (error) {
+                    console.error('❌ Erro ao salvar:', error);
+                    // Mostrar alerta visual para o usuário
+                    const indicator = document.getElementById('autosaveIndicator');
+                    if (indicator) {
+                        indicator.textContent = '❌ Erro ao salvar!';
+                        indicator.classList.add('show', 'error');
+                        indicator.classList.remove('saving');
+                        
+                        setTimeout(() => {
+                            indicator.classList.remove('show');
+                        }, 3000);
+                    }
                 }
             }, 1000);
         }
@@ -2920,50 +3030,72 @@ Exemplos:
         }
 
         function updateAllCalculations() {
-            const char = getChar();
-            const agilidade = char.skills['agilidade'] || 0;
-            const abismo = char.skills['abismo'] || 0;
-            
-            document.getElementById('calc-iniciativa').textContent = 
-                char.rac + char.des + char.aut + agilidade - char.tamanho;
-            
-            document.getElementById('calc-reacao').textContent = 
-                Math.min(char.des, char.rac) + agilidade;
-            
-            document.getElementById('calc-deslocamento').textContent = 
-                (char.for + char.des + char.tamanho + agilidade) + 'm';
-            
-            const vitalidadeMax = char.vig + char.tamanho;
-            document.getElementById('calc-vitalidade-max').textContent = vitalidadeMax;
-            
-            const determinacaoMax = char.prs + char.aut;
-            document.getElementById('calc-determinacao-max').textContent = determinacaoMax;
-            
-            const cargaMax = char.for + char.vig;
-            document.getElementById('calc-carga').textContent = cargaMax;
-            
-            const sanidadeMax = (char.int + char.aut - (abismo * 2)) * 10;
-            document.getElementById('calc-sanidade').textContent = sanidadeMax;
-            
-            document.getElementById('calc-blindagem').textContent = char.blindagem;
-            
-            if (!char.hpCurrent || char.hpCurrent > vitalidadeMax) {
-                char.hpCurrent = vitalidadeMax;
+            try {
+                const char = getChar();
+                const agilidade = char.skills['agilidade'] || 0;
+                const abismo = char.skills['abismo'] || 0;
+                
+                // Função auxiliar para atualizar elemento com segurança
+                const safeUpdate = (id, value) => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.textContent = value;
+                    } else {
+                        console.warn(`⚠️ Elemento ${id} não encontrado`);
+                    }
+                };
+                
+                // Atualizar cálculos com proteção
+                safeUpdate('calc-iniciativa', char.rac + char.des + char.aut + agilidade - char.tamanho);
+                safeUpdate('calc-reacao', Math.min(char.des, char.rac) + agilidade);
+                safeUpdate('calc-deslocamento', (char.for + char.des + char.tamanho + agilidade) + 'm');
+                
+                const vitalidadeMax = char.vig + char.tamanho;
+                safeUpdate('calc-vitalidade-max', vitalidadeMax);
+                
+                const determinacaoMax = char.prs + char.aut;
+                safeUpdate('calc-determinacao-max', determinacaoMax);
+                
+                const cargaMax = char.for + char.vig;
+                safeUpdate('calc-carga', cargaMax);
+                
+                const sanidadeMax = (char.int + char.aut - (abismo * 2)) * 10;
+                safeUpdate('calc-sanidade', sanidadeMax);
+                
+                safeUpdate('calc-blindagem', char.blindagem);
+                
+                // Ajustar valores atuais se necessário
+                if (!char.hpCurrent || char.hpCurrent > vitalidadeMax) {
+                    char.hpCurrent = vitalidadeMax;
+                }
+                if (!char.detCurrent || char.detCurrent > determinacaoMax) {
+                    char.detCurrent = determinacaoMax;
+                }
+                if (!char.sanCurrent || char.sanCurrent > sanidadeMax) {
+                    char.sanCurrent = sanidadeMax;
+                }
+                
+                // Atualizar barras
+                updateHPBar();
+                updateDETBar();
+                updateSANBar();
+                
+                // Atualizar displays
+                const expDisplay = document.getElementById('exp-display');
+                if (expDisplay) {
+                    expDisplay.textContent = char.exp || 0;
+                }
+                
+                // Atualizar testes da classe e recursos
+                updateClassTests();
+                updateClassResourcesDisplay();
+                
+                console.log('✅ Cálculos atualizados com sucesso');
+                
+            } catch (error) {
+                console.error('❌ Erro em updateAllCalculations:', error);
+                // NÃO impedir o salvamento mesmo se houver erro aqui
             }
-            if (!char.detCurrent || char.detCurrent > determinacaoMax) {
-                char.detCurrent = determinacaoMax;
-            }
-            if (!char.sanCurrent || char.sanCurrent > sanidadeMax) {
-                char.sanCurrent = sanidadeMax;
-            }
-            
-            updateHPBar();
-            updateDETBar();
-            updateSANBar();
-            document.getElementById('exp-total').textContent = char.exp || 0;
-            
-            updateClassTests();
-            updateClassResourcesDisplay();
         }
 
         window.updateHPBar = function() {
