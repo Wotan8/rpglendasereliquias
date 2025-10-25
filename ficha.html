@@ -1812,7 +1812,7 @@ Exemplos:
         // ============= CONFIGURAÇÃO FIREBASE =============
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, doc, getDoc, setDoc, collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -1830,6 +1830,7 @@ Exemplos:
 
         let currentUser = null;
         let currentCharacterId = null;
+        let previousCharacterState = null;
 
         /**
          * Garante que o documento do personagem tenha o ownerUid definido para o usuário atual.
@@ -1903,7 +1904,7 @@ Exemplos:
             
             try {
                 const char = getChar();
-                const characterId = currentCharacterId || currentUser.uid;  // USE currentCharacterId
+                const characterId = currentCharacterId || currentUser.uid;
                 const userDoc = doc(db, 'characters', characterId);
 
                 await ensureOwnerUid(userDoc);
@@ -1914,6 +1915,35 @@ Exemplos:
                     lastUpdate: new Date().toISOString(),
                     userEmail: currentUser.email
                 }, { merge: true });
+                
+                // ✅ SISTEMA DE DETECÇÃO DE MUDANÇAS
+                if (previousCharacterState) {
+                    const changes = detectChanges(previousCharacterState, char);
+                    
+                    if (changes.length > 0) {
+                        try {
+                            const logsRef = collection(db, 'logs');
+                            
+                            // Criar um log para cada mudança
+                            for (const change of changes) {
+                                await addDoc(logsRef, {
+                                    user: currentUser.email,
+                                    action: change,
+                                    character: char.nome || 'Personagem sem nome',
+                                    type: 'player-update',
+                                    timestamp: new Date().toISOString()
+                                });
+                            }
+                            
+                            console.log(`✅ ${changes.length} log(s) criado(s) com sucesso`);
+                        } catch (logError) {
+                            console.error('⚠️ Erro ao criar log (não crítico):', logError);
+                        }
+                    }
+                }
+                
+                // Atualizar estado anterior
+                previousCharacterState = JSON.parse(JSON.stringify(char));
                 
                 indicator.textContent = '✅ Salvo na nuvem!';
                 indicator.classList.remove('saving', 'error');
@@ -1934,6 +1964,196 @@ Exemplos:
                 }, 3000);
             }
         };
+
+        // ============= DETECTAR MUDANÇAS =============
+        function detectChanges(oldChar, newChar) {
+            const changes = [];
+            
+            // 1. ATRIBUTOS
+            const attributes = ['int', 'for', 'pre', 'rac', 'des', 'man', 'prs', 'vig', 'aut'];
+            attributes.forEach(attr => {
+                if (oldChar[attr] !== newChar[attr]) {
+                    const attrName = attr.toUpperCase();
+                    changes.push(`${attrName}: ${oldChar[attr]} → ${newChar[attr]}`);
+                }
+            });
+            
+            // 2. DADOS BÁSICOS
+            if (oldChar.nome !== newChar.nome) {
+                changes.push(`Mudou nome para "${newChar.nome}"`);
+            }
+            if (oldChar.classe !== newChar.classe) {
+                changes.push(`Mudou classe de "${oldChar.classe}" para "${newChar.classe}"`);
+            }
+            if (oldChar.raca !== newChar.raca) {
+                changes.push(`Mudou raça de "${oldChar.raca}" para "${newChar.raca}"`);
+            }
+            if (oldChar.idade !== newChar.idade) {
+                changes.push(`Mudou idade: ${oldChar.idade} → ${newChar.idade}`);
+            }
+            if (oldChar.virtude !== newChar.virtude) {
+                changes.push(`Mudou virtude para "${newChar.virtude}"`);
+            }
+            if (oldChar.vicio !== newChar.vicio) {
+                changes.push(`Mudou vício para "${newChar.vicio}"`);
+            }
+            if (oldChar.tamanho !== newChar.tamanho) {
+                changes.push(`Tamanho: ${oldChar.tamanho} → ${newChar.tamanho}`);
+            }
+            if (oldChar.auraImortalidade !== newChar.auraImortalidade) {
+                changes.push(`Aura de Imortalidade: ${oldChar.auraImortalidade} → ${newChar.auraImortalidade}`);
+            }
+            
+            // 3. EXP e LUNS
+            if (oldChar.exp !== newChar.exp) {
+                const diff = newChar.exp - oldChar.exp;
+                if (diff > 0) {
+                    changes.push(`📈 Ganhou ${diff} EXP (Total: ${newChar.exp})`);
+                } else {
+                    changes.push(`📉 Gastou ${Math.abs(diff)} EXP (Total: ${newChar.exp})`);
+                }
+            }
+            if (oldChar.luns !== newChar.luns) {
+                const diff = newChar.luns - oldChar.luns;
+                if (diff > 0) {
+                    changes.push(`💰 Ganhou ${diff} Luns (Total: ${newChar.luns})`);
+                } else {
+                    changes.push(`💸 Gastou ${Math.abs(diff)} Luns (Total: ${newChar.luns})`);
+                }
+            }
+            
+            // 4. HP e SANIDADE
+            if (oldChar.hpCurrent !== newChar.hpCurrent) {
+                const diff = newChar.hpCurrent - oldChar.hpCurrent;
+                if (diff > 0) {
+                    changes.push(`❤️ Curou ${diff} HP (${newChar.hpCurrent}/${newChar.hpMax})`);
+                } else {
+                    changes.push(`💔 Perdeu ${Math.abs(diff)} HP (${newChar.hpCurrent}/${newChar.hpMax})`);
+                }
+            }
+            if (oldChar.sanCurrent !== newChar.sanCurrent) {
+                const diff = newChar.sanCurrent - oldChar.sanCurrent;
+                if (diff > 0) {
+                    changes.push(`🧠 Recuperou ${diff} Sanidade (${newChar.sanCurrent}/100)`);
+                } else {
+                    changes.push(`😵 Perdeu ${Math.abs(diff)} Sanidade (${newChar.sanCurrent}/100)`);
+                }
+            }
+            
+            // 5. PERÍCIAS (SKILLS)
+            Object.keys(newChar.skills).forEach(skillId => {
+                if (oldChar.skills[skillId] !== newChar.skills[skillId]) {
+                    const skillName = skillId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    changes.push(`🎯 ${skillName}: ${oldChar.skills[skillId]} → ${newChar.skills[skillId]}`);
+                }
+            });
+            
+            // 6. HABILIDADES DE CLASSE
+            Object.keys(newChar.classAbilities || {}).forEach(abilityId => {
+                const oldLevel = oldChar.classAbilities?.[abilityId] || 0;
+                const newLevel = newChar.classAbilities[abilityId];
+                if (oldLevel !== newLevel) {
+                    const abilityName = abilityId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    changes.push(`⭐ ${abilityName}: ${oldLevel} → ${newLevel}`);
+                }
+            });
+            
+            // 7. INVENTÁRIO (CONTAINERS E ITENS)
+            const oldContainers = oldChar.containers || [];
+            const newContainers = newChar.containers || [];
+            
+            // Containers adicionados
+            newContainers.forEach(newCont => {
+                if (!oldContainers.find(c => c.id === newCont.id)) {
+                    changes.push(`🎒 Adicionou container "${newCont.name}"`);
+                }
+            });
+            
+            // Containers removidos
+            oldContainers.forEach(oldCont => {
+                if (!newContainers.find(c => c.id === oldCont.id)) {
+                    changes.push(`🗑️ Removeu container "${oldCont.name}"`);
+                }
+            });
+            
+            // Itens adicionados/removidos
+            newContainers.forEach(newCont => {
+                const oldCont = oldContainers.find(c => c.id === newCont.id);
+                if (oldCont) {
+                    // Itens adicionados
+                    (newCont.items || []).forEach(newItem => {
+                        if (!(oldCont.items || []).find(i => i.id === newItem.id)) {
+                            changes.push(`➕ Adicionou "${newItem.name}" em ${newCont.name}`);
+                        }
+                    });
+                    
+                    // Itens removidos
+                    (oldCont.items || []).forEach(oldItem => {
+                        if (!(newCont.items || []).find(i => i.id === oldItem.id)) {
+                            changes.push(`➖ Removeu "${oldItem.name}" de ${oldCont.name}`);
+                        }
+                    });
+                    
+                    // Quantidade alterada
+                    (newCont.items || []).forEach(newItem => {
+                        const oldItem = (oldCont.items || []).find(i => i.id === newItem.id);
+                        if (oldItem && oldItem.quantity !== newItem.quantity) {
+                            changes.push(`🔢 "${newItem.name}": ${oldItem.quantity} → ${newItem.quantity}`);
+                        }
+                    });
+                }
+            });
+            
+            // 8. CONDIÇÕES
+            const oldConditions = oldChar.conditions || [];
+            const newConditions = newChar.conditions || [];
+            
+            newConditions.forEach(cond => {
+                if (!oldConditions.includes(cond)) {
+                    changes.push(`⚠️ Adicionou condição: ${cond}`);
+                }
+            });
+            
+            oldConditions.forEach(cond => {
+                if (!newConditions.includes(cond)) {
+                    changes.push(`✅ Removeu condição: ${cond}`);
+                }
+            });
+            
+            // 9. ALIADOS
+            const oldAllies = oldChar.allies || [];
+            const newAllies = newChar.allies || [];
+            
+            newAllies.forEach(ally => {
+                if (!oldAllies.find(a => a.id === ally.id)) {
+                    changes.push(`👥 Adicionou aliado: ${ally.nome}`);
+                }
+            });
+            
+            oldAllies.forEach(ally => {
+                if (!newAllies.find(a => a.id === ally.id)) {
+                    changes.push(`👋 Removeu aliado: ${ally.nome}`);
+                }
+            });
+            
+            // 10. PROPRIEDADES
+            const oldProps = oldChar.properties || [];
+            const newProps = newChar.properties || [];
+            
+            newProps.forEach(prop => {
+                if (!oldProps.find(p => p.id === prop.id)) {
+                    changes.push(`🏠 Adicionou propriedade: ${prop.nome}`);
+                }
+            });
+            
+            oldProps.forEach(prop => {
+                if (!newProps.find(p => p.id === prop.id)) {
+                    changes.push(`🏚️ Removeu propriedade: ${prop.nome}`);
+                }
+            });
+            
+            return changes;
+        }
 
         // ============= CARREGAR DO FIREBASE =============
         async function loadFromFirebase() {
@@ -1960,9 +2180,11 @@ Exemplos:
                         properties: data.properties || []
                     };
                     
+                    previousCharacterState = JSON.parse(JSON.stringify(window.character));
                     showAlert('✅ Ficha carregada da nuvem!', 'success');
                 } else {
                     console.log('📝 Primeira vez! Criando ficha nova...');
+                    previousCharacterState = JSON.parse(JSON.stringify(window.character));
                     showAlert('📝 Bem-vindo! Crie seu personagem.', 'success');
                 }
             } catch (error) {

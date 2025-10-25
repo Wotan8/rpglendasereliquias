@@ -681,7 +681,7 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, doc, getDoc, setDoc, collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         const firebaseConfig = {
           apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
@@ -897,7 +897,26 @@
                     properties: properties,
                     lastUpdate: new Date().toISOString()
                 }, { merge: true });
-                
+
+                // ✅ ADICIONAR LOG AQUI
+                try {
+                    const charDoc = await getDoc(doc(db, 'characters', characterId));
+                    const charData = charDoc.data();
+                    const logsRef = collection(db, 'logs');
+                    
+                    await addDoc(logsRef, {
+                        user: auth.currentUser.email,
+                        action: 'Atualizou a propriedade',
+                        character: propertyData.nome || 'Propriedade sem nome',
+                        type: 'property-update',
+                        timestamp: new Date().toISOString(),
+                        parentCharacter: charData.nome || 'Personagem sem nome'
+                    });
+                    console.log('✅ Log de propriedade criado com sucesso');
+                } catch (logError) {
+                    console.error('⚠️ Erro ao criar log (não crítico):', logError);
+                }
+
                 indicator.textContent = '✅ Salvo!';
                 indicator.classList.remove('saving', 'error');
                 
