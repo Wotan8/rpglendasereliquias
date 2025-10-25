@@ -1,1326 +1,1817 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel do Mestre - Lendas e Relíquias</title>
-  <style>
-    :root {
-      color-scheme: dark;
-      --bg: #0f172a;
-      --panel: #1e293b;
-      --border: #334155;
-      --text: #e2e8f0;
-      --muted: #94a3b8;
-      --accent: #8b5cf6;
-      --danger: #ef4444;
-      --success: #22c55e;
-      --warning: #f59e0b;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top, rgba(79,70,229,0.25), transparent 55%), var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      padding: 1rem;
-    }
-
-    main {
-      max-width: 1400px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-
-    header {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      gap: 1rem;
-      align-items: center;
-      padding: 1rem;
-      background: rgba(15,23,42,0.85);
-      border-radius: 1rem;
-      border: 1px solid var(--border);
-    }
-
-    h1 {
-      font-size: clamp(1.5rem, 4vw, 2.4rem);
-      font-weight: 800;
-      letter-spacing: -0.02em;
-    }
-
-    h1 span {
-      color: var(--accent);
-    }
-
-    .header-info {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .status-message {
-      font-size: 0.9rem;
-      color: var(--muted);
-    }
-
-    button {
-      appearance: none;
-      border: none;
-      border-radius: 0.75rem;
-      padding: 0.7rem 1.2rem;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    button:hover:not(:disabled) {
-      transform: translateY(-1px);
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      color: #0b1120;
-    }
-
-    .btn-secondary {
-      background: transparent;
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-
-    .btn-danger {
-      background: var(--danger);
-      color: white;
-    }
-
-    .btn-small {
-      padding: 0.5rem 0.9rem;
-      font-size: 0.85rem;
-    }
-
-    .alert {
-      border-radius: 0.75rem;
-      padding: 0.75rem 1rem;
-      font-size: 0.95rem;
-      margin-bottom: 1rem;
-      animation: slideIn 0.3s ease;
-    }
-
-    @keyframes slideIn {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .alert-success { 
-      background: rgba(34,197,94,0.12); 
-      color: var(--success); 
-      border: 1px solid rgba(34,197,94,0.4); 
-    }
-    
-    .alert-danger { 
-      background: rgba(239,68,68,0.12); 
-      color: var(--danger); 
-      border: 1px solid rgba(239,68,68,0.35); 
-    }
-
-    .alert-warning {
-      background: rgba(245,158,11,0.12);
-      color: var(--warning);
-      border: 1px solid rgba(245,158,11,0.35);
-    }
-
-    .panel {
-      border-radius: 1rem;
-      border: 1px solid var(--border);
-      background: rgba(15,23,42,0.85);
-      padding: 1.5rem;
-      display: none;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .panel.active {
-      display: flex;
-    }
-
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .toolbar input {
-      flex: 1;
-      min-width: min(220px, 100%);
-      border-radius: 0.75rem;
-      border: 1px solid var(--border);
-      background: rgba(15,23,42,0.6);
-      color: var(--text);
-      padding: 0.65rem 1rem;
-      font-size: 1rem;
-      outline: none;
-    }
-
-    .toolbar input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(139,92,246,0.25);
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-bottom: 1rem;
-    }
-
-    .stat-card {
-      background: rgba(139,92,246,0.1);
-      border: 1px solid var(--accent);
-      border-radius: 0.75rem;
-      padding: 1rem;
-      text-align: center;
-    }
-
-    .stat-label {
-      font-size: 0.85rem;
-      color: var(--muted);
-      margin-bottom: 0.5rem;
-    }
-
-    .stat-value {
-      font-size: 2rem;
-      font-weight: 800;
-      color: var(--accent);
-    }
-
-    .table-wrapper {
-      overflow-x: auto;
-      border-radius: 0.75rem;
-      border: 1px solid var(--border);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.9rem;
-    }
-
-    thead {
-      background: rgba(15,23,42,0.95);
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-
-    th, td {
-      padding: 0.9rem;
-      text-align: left;
-      border-bottom: 1px solid rgba(148,163,184,0.15);
-      vertical-align: top;
-    }
-
-    th {
-      font-weight: 700;
-      color: var(--accent);
-    }
-
-    tbody tr {
-      transition: background 0.2s ease;
-    }
-
-    tbody tr:hover {
-      background: rgba(148,163,184,0.08);
-    }
-
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0.25rem 0.6rem;
-      border-radius: 999px;
-      background: rgba(148,163,184,0.18);
-      color: var(--muted);
-      font-size: 0.75rem;
-      font-weight: 600;
-      font-family: monospace;
-    }
-
-    .tag.critical {
-      background: rgba(239,68,68,0.2);
-      color: var(--danger);
-    }
-
-    .tag.warning {
-      background: rgba(245,158,11,0.2);
-      color: var(--warning);
-    }
-
-    /* MODAL STYLES */
-    dialog {
-      border: none;
-      border-radius: 1rem;
-      width: min(900px, 95vw);
-      max-height: 90vh;
-      padding: 0;
-      overflow: hidden;
-      background: rgba(15,23,42,0.98);
-      color: var(--text);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-    }
-
-    dialog::backdrop {
-      background: rgba(15,23,42,0.7);
-      backdrop-filter: blur(4px);
-    }
-
-    .modal-header {
-      padding: 1.25rem 1.5rem;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .modal-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-    }
-
-    .modal-body {
-      padding: 1.5rem;
-      overflow-y: auto;
-      max-height: calc(90vh - 180px);
-    }
-
-    .form-section {
-      margin-bottom: 1.5rem;
-    }
-
-    .form-section-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--accent);
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .form-section-title::before {
-      content: '';
-      width: 4px;
-      height: 20px;
-      background: var(--accent);
-      border-radius: 2px;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .form-group label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--muted);
-    }
-
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-      padding: 0.7rem;
-      border-radius: 0.5rem;
-      border: 1px solid var(--border);
-      background: rgba(2,6,23,0.85);
-      color: var(--text);
-      font-size: 0.95rem;
-      font-family: inherit;
-    }
-
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(139,92,246,0.25);
-    }
-
-    .form-group textarea {
-      min-height: 120px;
-      resize: vertical;
-      font-family: inherit;
-    }
-
-    .json-editor {
-      width: 100%;
-      min-height: 400px;
-      border-radius: 0.75rem;
-      border: 1px solid var(--border);
-      padding: 1rem;
-      background: rgba(2,6,23,0.95);
-      color: var(--text);
-      font-family: "Fira Code", "Consolas", "Monaco", monospace;
-      font-size: 0.85rem;
-      line-height: 1.6;
-      resize: vertical;
-    }
-
-    .json-editor:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(139,92,246,0.25);
-    }
-
-    .modal-tabs {
-      display: flex;
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
-      border-bottom: 2px solid var(--border);
-    }
-
-    .modal-tab {
-      padding: 0.75rem 1.25rem;
-      background: transparent;
-      border: none;
-      border-bottom: 2px solid transparent;
-      color: var(--muted);
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      margin-bottom: -2px;
-    }
-
-    .modal-tab:hover {
-      color: var(--text);
-    }
-
-    .modal-tab.active {
-      color: var(--accent);
-      border-bottom-color: var(--accent);
-    }
-
-    .tab-content {
-      display: none;
-    }
-
-    .tab-content.active {
-      display: block;
-      animation: fadeIn 0.3s ease;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-      }
-      to {
-        opacity: 1;
-      }
-    }
-
-    .modal-footer {
-      padding: 1rem 1.5rem;
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.75rem;
-      border-top: 1px solid var(--border);
-      background: rgba(15,23,42,0.5);
-    }
-
-    .info-box {
-      background: rgba(245,158,11,0.1);
-      border: 1px solid rgba(245,158,11,0.3);
-      border-radius: 0.5rem;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      color: var(--warning);
-      font-size: 0.9rem;
-    }
-
-    .character-preview {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-
-    .preview-item {
-      background: rgba(139,92,246,0.1);
-      border: 1px solid var(--border);
-      border-radius: 0.5rem;
-      padding: 0.75rem;
-    }
-
-    .preview-label {
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-bottom: 0.25rem;
-    }
-
-    .preview-value {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    @media (max-width: 768px) {
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
-
-      th:nth-child(3), 
-      td:nth-child(3) {
-        display: none;
-      }
-    }
-
-    /* Loading indicator */
-    .loading {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    
-
-    .exp-distribution-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1.5rem;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-
-    .exp-distribution-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--accent);
-    }
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    .section-toggle {
-      cursor: pointer;
-      user-select: none;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .toggle-icon {
-      transition: transform 0.3s;
-    }
-
-    .toggle-icon.collapsed {
-      transform: rotate(-90deg);
-    }
-
-    @media (max-width: 768px) {
-      
-
-      
-
-      
-
-      
-    }
-
-    
-
-    .exp-distribution-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1.5rem;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-
-    .exp-distribution-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--accent);
-    }
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    @media (max-width: 768px) {
-      
-      
-      
-      
-      
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1e1b4b">
+    <title>Lendas e Relíquias - Painel do Mestre</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #8b5cf6;
+            --secondary: #ec4899;
+            --dark: #1e1b4b;
+            --darker: #0f172a;
+            --light: #f8fafc;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border: #334155;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            color: var(--light);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(139, 92, 246, 0.2);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            color: var(--primary);
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .user-info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(139, 92, 246, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 12px 20px;
+            border-radius: 30px;
+            border: 2px solid var(--primary);
+            z-index: 9998;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-email {
+            color: #cbd5e1;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .btn-logout {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-logout:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .tabs-container {
+            margin: 80px 20px 20px;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 2px solid var(--border);
+            overflow: hidden;
+        }
+
+        .tabs-header {
+            display: flex;
+            background: rgba(30, 27, 75, 0.8);
+            border-bottom: 2px solid var(--border);
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 20px;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-right: 1px solid var(--border);
+        }
+
+        .tab-button:last-child {
+            border-right: none;
+        }
+
+        .tab-button:hover {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--primary);
+        }
+
+        .tab-button.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .logs-toggle {
+            position: fixed;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 20px 0 0 20px;
+            padding: 20px 10px;
+            cursor: pointer;
+            z-index: 9999;
+            font-size: 1.2rem;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .logs-toggle:hover {
+            padding-right: 15px;
+        }
+
+        .logs-panel {
+            position: fixed;
+            right: -450px;
+            top: 0;
+            width: 450px;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.98);
+            backdrop-filter: blur(20px);
+            border-left: 2px solid var(--primary);
+            z-index: 10000;
+            transition: right 0.4s ease;
+            overflow-y: auto;
+            box-shadow: -8px 0 24px rgba(0, 0, 0, 0.5);
+        }
+
+        .logs-panel.open {
+            right: 0;
+        }
+
+        .logs-header {
+            position: sticky;
+            top: 0;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .logs-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .logs-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .logs-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .logs-content {
+            padding: 20px;
+        }
+
+        .log-entry {
+            background: rgba(30, 27, 75, 0.6);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .log-time {
+            color: #64748b;
+            font-size: 0.75rem;
+            margin-bottom: 8px;
+        }
+
+        .log-user {
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .log-action {
+            color: #cbd5e1;
+            font-size: 0.85rem;
+        }
+
+        .log-character {
+            color: var(--secondary);
+            font-weight: 700;
+        }
+
+        .no-logs {
+            text-align: center;
+            color: #64748b;
+            padding: 40px;
+            font-size: 0.9rem;
+        }
+
+        .characters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .character-card {
+            background: rgba(30, 27, 75, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .character-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+        }
+
+        .character-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+
+        .character-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--light);
+        }
+
+        .character-level {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .character-info {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+
+        .character-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--light);
+        }
+
+        .exp-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .exp-input {
+            flex: 1;
+            min-width: 150px;
+            padding: 12px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            color: var(--light);
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .exp-checkbox {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #64748b, #475569);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #059669);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning), #d97706);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 10001;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            border: 2px solid var(--primary);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .modal-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .modal-close {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid var(--danger);
+            color: var(--danger);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: var(--danger);
+            color: white;
+            transform: rotate(90deg);
+        }
+
+        .modal-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .modal-tab {
+            padding: 12px 20px;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 700;
+            transition: all 0.3s;
+            border-radius: 8px 8px 0 0;
+            white-space: nowrap;
+        }
+
+        .modal-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .modal-tab-content {
+            display: none;
+        }
+
+        .modal-tab-content.active {
+            display: block;
+        }
+
+        .form-section {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 2px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            padding: 12px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .btn-save {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--success), #059669);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            z-index: 10002;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .alert-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .alert-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .alert-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .items-list, .allies-list, .properties-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .item-card, .ally-card, .property-card {
+            background: rgba(15, 23, 42, 0.4);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .item-header, .ally-header, .property-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        .item-name, .ally-name, .property-name {
+            font-weight: 700;
+            color: var(--light);
+            font-size: 1.1rem;
+        }
+
+        .item-details, .ally-details, .property-details {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        .condition-item {
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid var(--danger);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .condition-name {
+            font-weight: 700;
+            color: var(--danger);
+        }
+
+        .btn-remove {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid var(--danger);
+            color: var(--danger);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .btn-remove:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .master-notes-section {
+            background: rgba(245, 158, 11, 0.1);
+            border: 2px solid var(--warning);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .master-notes-label {
+            color: var(--warning);
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .tabs-header {
+                flex-direction: column;
+            }
+
+            .characters-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .logs-panel {
+                width: 100%;
+                right: -100%;
+            }
+
+            .modal-content {
+                padding: 20px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <main>
-    <header>
-      <div class="header-info">
-        <h1>👑 <span>Painel do Mestre</span></h1>
-        <p class="status-message" id="statusMessage">Carregando...</p>
-      </div>
-      <div style="display:flex; gap:0.5rem; flex-wrap: wrap;">
-        <button id="refreshButton" class="btn-secondary btn-small" style="display:none;">🔄 Atualizar</button>
-        <button id="logoutButton" class="btn-danger btn-small" style="display:none;">🚪 Sair</button>
-      </div>
-    </header>
-
-    <section id="alertArea"></section>
-
-    <section class="panel" id="masterPanel">
-      <div class="stats-grid" id="statsGrid" style="display:none;">
-        <div class="stat-card">
-          <div class="stat-label">Total de Fichas</div>
-          <div class="stat-value" id="totalCharacters">0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Jogadores Ativos</div>
-          <div class="stat-value" id="activePlayers">0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">EXP Médio</div>
-          <div class="stat-value" id="averageExp">0</div>
-        </div>
-      </div>
-
-      <div class="toolbar">
-        <input 
-          type="search" 
-          id="searchInput" 
-          placeholder="🔍 Buscar por nome, classe, raça..." 
-          autocomplete="off"
-        >
-        <span class="tag" id="charactersCount">0 fichas</span>
-      </div>
-
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Classe / Raça</th>
-              <th>VIT / DET</th>
-              <th>EXP</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody id="charactersBody">
-            <tr>
-              <td colspan="5" style="text-align:center; padding:2rem; color:var(--muted);">
-                Carregando personagens...
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-  </main>
-
-  <!-- MODAL DE EDIÇÃO -->
-  <dialog id="editorModal">
-    <div class="modal-header">
-      <h2 class="modal-title">
-        ✏️ Editando: <span id="modalCharacterName" style="color:var(--accent);"></span>
-      </h2>
-      <button id="closeModalBtn" class="btn-secondary btn-small">✕</button>
+    <!-- TELA DE CARREGAMENTO -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">⚡ Carregando Painel do Mestre...</div>
     </div>
 
-    <div class="modal-body">
-      <div class="modal-tabs">
-        <button class="modal-tab active" data-tab="visual">📋 Visual</button>
-        <button class="modal-tab" data-tab="json">🔧 JSON</button>
-      </div>
-
-      <!-- ABA VISUAL -->
-      <div id="tab-visual" class="tab-content active">
-        <div class="info-box">
-          <strong>⚠️ Atenção:</strong> Alterações feitas aqui serão salvas diretamente na ficha do jogador.
-        </div>
-
-        <div class="form-section">
-          <div class="form-section-title">📝 Informações Básicas</div>
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Nome do Personagem</label>
-              <input type="text" id="edit-nome">
-            </div>
-            <div class="form-group">
-              <label>Jogador</label>
-              <input type="text" id="edit-jogador">
-            </div>
-            <div class="form-group">
-              <label>Classe</label>
-              <input type="text" id="edit-classe">
-            </div>
-            <div class="form-group">
-              <label>Raça</label>
-              <input type="text" id="edit-raca">
-            </div>
-            <div class="form-group">
-              <label>Idade</label>
-              <input type="number" id="edit-idade">
-            </div>
-            <div class="form-group">
-              <label>Tamanho</label>
-              <input type="number" id="edit-tamanho">
-            </div>
-          </div>
-        </div>
-
-        <div class="form-section">
-          <div class="form-section-title">⚔️ Status de Combate</div>
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Vitalidade Atual</label>
-              <input type="number" id="edit-hpCurrent">
-            </div>
-            <div class="form-group">
-              <label>Determinação Atual</label>
-              <input type="number" id="edit-detCurrent">
-            </div>
-            <div class="form-group">
-              <label>Sanidade Atual</label>
-              <input type="number" id="edit-sanCurrent">
-            </div>
-            <div class="form-group">
-              <label>Blindagem</label>
-              <input type="number" id="edit-blindagem">
-            </div>
-          </div>
-        </div>
-
-        <div class="form-section">
-          <div class="form-section-title">⭐ Experiência</div>
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Pontos de EXP</label>
-              <input type="number" id="edit-exp">
-            </div>
-            <div class="form-group">
-              <label>Luns (Dinheiro)</label>
-              <input type="number" id="edit-luns">
-            </div>
-          </div>
-        </div>
-
-        <div class="form-section">
-          <div class="form-section-title">📝 Notas do Personagem</div>
-          <div class="form-group">
-            <textarea id="edit-notas" placeholder="Notas do mestre..."></textarea>
-          </div>
-        </div>
-
-        <div id="characterPreview" class="character-preview" style="display:none;"></div>
-      </div>
-
-      <!-- ABA JSON -->
-      <div id="tab-json" class="tab-content">
-        <div class="info-box">
-          <strong>⚠️ Modo Avançado:</strong> Edite o JSON diretamente. Tenha cuidado para não quebrar a estrutura dos dados.
-        </div>
-        <textarea id="jsonTextarea" class="json-editor"></textarea>
-        <div id="modalError" class="alert alert-danger" style="display:none; margin-top:1rem;"></div>
-      </div>
+    <!-- INFORMAÇÕES DO USUÁRIO -->
+    <div class="user-info" id="userInfo" style="display: none;">
+        <span class="user-email" id="userEmail">Carregando...</span>
+        <button class="btn-logout" onclick="logout()">🚪 SAIR</button>
     </div>
 
-    <div class="modal-footer">
-      <button type="button" class="btn-secondary" id="cancelEdit">Cancelar</button>
-      <button type="button" class="btn-primary" id="saveEdit">
-        💾 Salvar Alterações
-      </button>
+    <!-- BOTÃO DE LOGS -->
+    <button class="logs-toggle" id="logsToggle" onclick="toggleLogs()">📜</button>
+
+    <!-- PAINEL DE LOGS -->
+    <div class="logs-panel" id="logsPanel">
+        <div class="logs-header">
+            <div class="logs-title">📜 Histórico de Alterações</div>
+            <button class="logs-close" onclick="toggleLogs()">✕</button>
+        </div>
+        <div class="logs-content" id="logsContent">
+            <div class="no-logs">Nenhuma alteração registrada ainda...</div>
+        </div>
     </div>
-  </dialog>
 
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-    import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-    import {
-      getFirestore,
-      collection,
-      doc,
-      getDoc,
-      setDoc,
-      onSnapshot,
-      serverTimestamp
-    } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    <!-- SISTEMA DE ABAS -->
+    <div class="tabs-container">
+        <div class="tabs-header">
+            <button class="tab-button active" onclick="switchTab('personagens')">👥 PERSONAGENS</button>
+            <button class="tab-button" onclick="switchTab('exp')">⭐ GERENCIAR EXP</button>
+        </div>
 
-    // Configuração do Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
-      authDomain: "rpg-lendasereliquias.firebaseapp.com",
-      projectId: "rpg-lendasereliquias",
-      storageBucket: "rpg-lendasereliquias.firebasestorage.app",
-      messagingSenderId: "546994339773",
-      appId: "1:546994339773:web:0116cf7c8667f113075cd4"
-    };
+        <!-- ABA PERSONAGENS -->
+        <div id="tabPersonagens" class="tab-content active">
+            <div class="characters-grid" id="charactersGrid">
+                <div style="text-align: center; padding: 40px; color: #64748b; grid-column: 1/-1;">
+                    Carregando personagens...
+                </div>
+            </div>
+        </div>
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+        <!-- ABA GERENCIAR EXP -->
+        <div id="tabExp" class="tab-content">
+            <div class="exp-controls">
+                <input type="number" class="exp-input" id="expValue" placeholder="Quantidade de EXP" value="10" min="1">
+                <button class="btn btn-primary" onclick="addExpToSelected(10)">+10 EXP</button>
+                <button class="btn btn-primary" onclick="addExpToSelected(50)">+50 EXP</button>
+                <button class="btn btn-primary" onclick="addExpToSelected(100)">+100 EXP</button>
+                <button class="btn btn-success" onclick="addCustomExpToSelected()">+ ADICIONAR EXP</button>
+                <button class="btn btn-danger" onclick="subtractCustomExpFromSelected()">- SUBTRAIR EXP</button>
+            </div>
 
-    // Estado da aplicação
-    const state = {
-      unsubscribe: null,
-      characters: new Map(),
-      selectedCharacterId: null,
-      selectedCharacterData: null,
-      currentTab: 'visual',
-      isSaving: false
-    };
+            <div class="characters-grid" id="expCharactersGrid">
+                <div style="text-align: center; padding: 40px; color: #64748b; grid-column: 1/-1;">
+                    Selecione os personagens acima para gerenciar EXP
+                </div>
+            </div>
+        </div>
+    </div>
 
-    // Elementos DOM
-    const statusMessage = document.getElementById('statusMessage');
-    const logoutButton = document.getElementById('logoutButton');
-    const refreshButton = document.getElementById('refreshButton');
-    const masterPanel = document.getElementById('masterPanel');
-    const alertArea = document.getElementById('alertArea');
-    const searchInput = document.getElementById('searchInput');
-    const charactersBody = document.getElementById('charactersBody');
-    const charactersCount = document.getElementById('charactersCount');
-    const statsGrid = document.getElementById('statsGrid');
-    const totalCharacters = document.getElementById('totalCharacters');
-    const activePlayers = document.getElementById('activePlayers');
-    const averageExp = document.getElementById('averageExp');
-    
-    // Modal
-    const modal = document.getElementById('editorModal');
-    const modalCharacterName = document.getElementById('modalCharacterName');
-    const closeModalBtn = document.getElementById('closeModalBtn');
-    const cancelEdit = document.getElementById('cancelEdit');
-    const saveEdit = document.getElementById('saveEdit');
-    const jsonTextarea = document.getElementById('jsonTextarea');
-    const modalError = document.getElementById('modalError');
+    <!-- MODAL DE EDIÇÃO -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Editar Personagem</div>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
 
-    // Tabs do modal
-    const modalTabs = document.querySelectorAll('.modal-tab');
-    const tabVisual = document.getElementById('tab-visual');
-    const tabJson = document.getElementById('tab-json');
+            <div class="modal-tabs">
+                <button class="modal-tab active" onclick="switchModalTab('basico')">📋 Básico</button>
+                <button class="modal-tab" onclick="switchModalTab('atributos')">💪 Atributos</button>
+                <button class="modal-tab" onclick="switchModalTab('combate')">⚔️ Combate</button>
+                <button class="modal-tab" onclick="switchModalTab('inventario')">🎒 Inventário</button>
+                <button class="modal-tab" onclick="switchModalTab('aliados')">👥 Aliados</button>
+                <button class="modal-tab" onclick="switchModalTab('propriedades')">🏠 Propriedades</button>
+                <button class="modal-tab" onclick="switchModalTab('notas')">📝 Notas</button>
+                <button class="modal-tab" onclick="switchModalTab('caracteristicas')">📊 Características</button>
+            </div>
 
-    // ============= EVENT LISTENERS =============
-    logoutButton.addEventListener('click', handleLogout);
-    refreshButton.addEventListener('click', () => location.reload());
-    searchInput.addEventListener('input', renderTable);
-    closeModalBtn.addEventListener('click', closeModal);
-    cancelEdit.addEventListener('click', closeModal);
-    saveEdit.addEventListener('click', handleSave);
+            <div id="modalBasico" class="modal-tab-content active">
+                <div class="form-section">
+                    <div class="section-title">Informações Básicas</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Nome do Personagem</label>
+                            <input type="text" class="form-input" id="edit_nome">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Jogador</label>
+                            <input type="text" class="form-input" id="edit_jogador">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Idade</label>
+                            <input type="number" class="form-input" id="edit_idade">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Raça</label>
+                            <select class="form-select" id="edit_raca">
+                                <option value="">Selecione...</option>
+                                <option value="Humano">Humano</option>
+                                <option value="Elorin">Elorin</option>
+                                <option value="Karu-Selvagem">Karu-Selvagem</option>
+                                <option value="Picxi">Picxi</option>
+                                <option value="Yotun">Yotun</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Classe</label>
+                            <select class="form-select" id="edit_classe">
+                                <option value="">Selecione...</option>
+                                <option value="Caçador">Caçador</option>
+                                <option value="Druida">Druida</option>
+                                <option value="Guerreiro">Guerreiro</option>
+                                <option value="Adepto">Adepto (Necromante)</option>
+                                <option value="Ladino">Ladino</option>
+                                <option value="Pallacerdote">Pallacerdote</option>
+                                <option value="Ritualista">Ritualista (Abismancia)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Virtude</label>
+                            <select class="form-select" id="edit_virtude">
+                                <option value="">Selecione...</option>
+                                <option value="Caridade">Caridade</option>
+                                <option value="Esperança">Esperança</option>
+                                <option value="Fé">Fé</option>
+                                <option value="Fortaleza">Fortaleza</option>
+                                <option value="Justiça">Justiça</option>
+                                <option value="Prudência">Prudência</option>
+                                <option value="Temperança">Temperança</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Vício</label>
+                            <select class="form-select" id="edit_vicio">
+                                <option value="">Selecione...</option>
+                                <option value="Avareza">Avareza</option>
+                                <option value="Gula">Gula</option>
+                                <option value="Inveja">Inveja</option>
+                                <option value="Ira">Ira</option>
+                                <option value="Luxúria">Luxúria</option>
+                                <option value="Orgulho">Orgulho</option>
+                                <option value="Preguiça">Preguiça</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Tamanho</label>
+                            <input type="number" class="form-input" id="edit_tamanho" value="5" min="1" max="15">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">EXP</label>
+                            <input type="number" class="form-input" id="edit_exp" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Aura de Imortalidade (AI)</label>
+                            <input type="number" class="form-input" id="edit_auraImortalidade" value="1" min="0" max="10">
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    // Tabs do modal
-    modalTabs.forEach(tab => {
-      tab.addEventListener('click', () => switchTab(tab.dataset.tab));
-    });
+            <div id="modalAtributos" class="modal-tab-content">
+                <div class="form-section">
+                    <div class="section-title">Atributos do Personagem</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">INT (Inteligência)</label>
+                            <input type="number" class="form-input" id="edit_int" value="1" min="1" max="5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">FOR (Força)</label>
+                            <input type="number" class="form-input" id="edit_for" value="1" min="1" max="5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">PRE (Presença)</label>
+                            <input type="number" class="form-input" id="edit_pre" value="1" min="1" max="5">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">RAC (Raciocínio)</label>
+                            <input type="number" class="form-input" id="edit_rac" value="1" min="1" max="5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">DES (Destreza)</label>
+                            <input type="number" class="form-input" id="edit_des" value="1" min="1" max="5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">MAN (Manha)</label>
+                            <input type="number" class="form-input" id="edit_man" value="1" min="1" max="5">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">PRS (Persuasão)</label>
+                            <input type="number" class="form-input" id="edit_prs" value="1" min="1" max="5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">VIG (Vigor)</label>
+                            <input type="number" class="form-input" id="edit_vig" value="1" min="1" max="5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">AUT (Autocontrole)</label>
+                            <input type="number" class="form-input" id="edit_aut" value="1" min="1" max="5">
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    // Fechar modal com ESC
-    modal.addEventListener('cancel', (e) => {
-      e.preventDefault();
-      closeModal();
-    });
+            <div id="modalCombate" class="modal-tab-content">
+                <div class="form-section">
+                    <div class="section-title">Status de Combate</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">❤️ Vitalidade (VIT) Atual</label>
+                            <input type="number" class="form-input" id="edit_hpCurrent" value="5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">❤️ Vitalidade (VIT) Máxima</label>
+                            <input type="number" class="form-input" id="edit_hpMax" value="5" readonly style="background: rgba(15, 23, 42, 0.4);">
+                            <small style="color: #64748b; font-size: 0.8rem;">Calculado: VIG + Tamanho</small>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">⚡ Determinação Atual</label>
+                            <input type="number" class="form-input" id="edit_detCurrent" value="3">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">⚡ Determinação Máxima</label>
+                            <input type="number" class="form-input" id="edit_detMax" value="3" readonly style="background: rgba(15, 23, 42, 0.4);">
+                            <small style="color: #64748b; font-size: 0.8rem;">Calculado: AUT</small>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">🧠 Sanidade Atual</label>
+                            <input type="number" class="form-input" id="edit_sanCurrent" value="80">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🛡️ Blindagem</label>
+                            <input type="number" class="form-input" id="edit_blindagem" value="0">
+                        </div>
+                    </div>
+                </div>
 
-    // ============= AUTENTICAÇÃO =============
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        statusMessage.textContent = '⚠️ Você precisa fazer login como mestre';
-        logoutButton.style.display = 'none';
-        refreshButton.style.display = 'none';
-        masterPanel.classList.remove('active');
-        showAlert('Você não está autenticado. Redirecionando...', 'danger');
-        setTimeout(() => {
-          window.location.href = 'index.html';
-        }, 2000);
-        return;
-      }
+                <div class="form-section">
+                    <div class="section-title">⚠️ Condições Ativas</div>
+                    <div id="edit_conditions">
+                        <p style="color: #64748b; text-align: center; padding: 20px;">Nenhuma condição ativa</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="addConditionToCharacter()" style="margin-top: 10px;">➕ Adicionar Condição</button>
+                </div>
+            </div>
 
-      try {
-        // Verificar se é mestre
-        const masterDoc = await getDoc(doc(db, 'masters', user.uid));
-        
-        if (!masterDoc.exists()) {
-          statusMessage.textContent = '🚫 Acesso negado - você não é um mestre';
-          logoutButton.style.display = 'inline-block';
-          refreshButton.style.display = 'none';
-          masterPanel.classList.remove('active');
-          showAlert('Sua conta não tem permissões de mestre. Entre em contato com o administrador.', 'danger');
-          return;
+            <div id="modalInventario" class="modal-tab-content">
+                <div class="form-section">
+                    <div class="section-title">💰 LUNS (Dinheiro)</div>
+                    <div class="form-group">
+                        <label class="form-label">Saldo Atual</label>
+                        <input type="number" class="form-input" id="edit_luns" value="0">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">🎒 Inventário</div>
+                    <div id="edit_inventory" class="items-list">
+                        <p style="color: #64748b; text-align: center; padding: 20px;">Sem itens no inventário</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="modalAliados" class="modal-tab-content">
+                <div class="form-section">
+                    <div class="section-title">👥 Aliados do Personagem</div>
+                    <div id="edit_allies" class="allies-list">
+                        <p style="color: #64748b; text-align: center; padding: 20px;">Nenhum aliado cadastrado</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="modalPropriedades" class="modal-tab-content">
+                <div class="form-section">
+                    <div class="section-title">🏠 Propriedades do Personagem</div>
+                    <div id="edit_properties" class="properties-list">
+                        <p style="color: #64748b; text-align: center; padding: 20px;">Nenhuma propriedade cadastrada</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="modalNotas" class="modal-tab-content">
+                <div class="form-section">
+                    <div class="section-title">📝 Notas do Personagem</div>
+                    <div class="form-group">
+                        <textarea class="form-textarea" id="edit_notas" style="min-height: 200px;" placeholder="Notas escritas pelo jogador..."></textarea>
+                    </div>
+                </div>
+
+                <div class="master-notes-section">
+                    <div class="master-notes-label">
+                        🔒 NOTAS DO MESTRE (Visível apenas para você)
+                    </div>
+                    <div class="form-group">
+                        <textarea class="form-textarea" id="edit_masterNotes" style="min-height: 200px;" placeholder="Escreva suas anotações secretas sobre este personagem...
+
+Exemplos:
+- Segredos do personagem
+- Planos futuros para a história
+- Fraquezas e pontos importantes
+- Conexões com NPCs
+- Revelações planejadas"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div id="modalCaracteristicas" class="modal-tab-content">
+                <div class="form-section">
+                    <div class="section-title">📊 Características do Personagem</div>
+                    <div id="edit_characteristics">
+                        <p style="color: #64748b; text-align: center; padding: 20px;">Carregando características...</p>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-save" onclick="saveCharacterChanges()">
+                💾 SALVAR TODAS AS ALTERAÇÕES
+            </button>
+        </div>
+    </div>
+
+    <!-- FIREBASE SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, collection, query, orderBy, limit, onSnapshot, doc, getDoc, getDocs, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
+          authDomain: "rpg-lendasereliquias.firebaseapp.com",
+          projectId: "rpg-lendasereliquias",
+          storageBucket: "rpg-lendasereliquias.firebasestorage.app",
+          messagingSenderId: "546994339773",
+          appId: "1:546994339773:web:0116cf7c8667f113075cd4"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let allCharacters = [];
+        let currentEditingCharacter = null;
+
+        // ============= ATALHO ESC PARA FECHAR LOGS =============
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const logsPanel = document.getElementById('logsPanel');
+                if (logsPanel.classList.contains('open')) {
+                    toggleLogs();
+                }
+            }
+        });
+
+        // ============= VERIFICAR AUTENTICAÇÃO =============
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                console.log('✅ Mestre logado:', user.email);
+                
+                document.getElementById('userEmail').textContent = user.email;
+                document.getElementById('userInfo').style.display = 'flex';
+                document.getElementById('loadingScreen').style.display = 'none';
+                
+                await loadAllCharacters();
+                setupRealtimeLogs();
+            } else {
+                console.log('❌ Usuário não autenticado. Redirecionando...');
+                window.location.href = 'index.html';
+            }
+        });
+
+        // ============= LOGOUT =============
+        window.logout = async function() {
+            if (confirm('🚪 Tem certeza que deseja sair?')) {
+                try {
+                    await signOut(auth);
+                    window.location.href = 'index.html';
+                } catch (error) {
+                    console.error('Erro ao fazer logout:', error);
+                    showAlert('❌ Erro ao sair. Tente novamente.', 'danger');
+                }
+            }
+        };
+
+        // ============= CARREGAR PERSONAGENS =============
+        window.loadAllCharacters = async function() {
+            try {
+                const charactersRef = collection(db, 'characters');
+                const snapshot = await getDocs(charactersRef);
+                
+                allCharacters = [];
+                snapshot.forEach(doc => {
+                    allCharacters.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+
+                console.log(`✅ ${allCharacters.length} personagens carregados`);
+                displayCharacters();
+                displayExpCharacters();
+            } catch (error) {
+                console.error('❌ Erro ao carregar personagens:', error);
+                showAlert('❌ Erro ao carregar personagens', 'danger');
+            }
+        };
+
+        // ============= EXIBIR PERSONAGENS =============
+        function displayCharacters() {
+            const grid = document.getElementById('charactersGrid');
+            
+            if (allCharacters.length === 0) {
+                grid.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b; grid-column: 1/-1;">Nenhum personagem encontrado</div>';
+                return;
+            }
+
+            grid.innerHTML = allCharacters.map(char => {
+                const vitalidadeMax = (char.vig || 1) + (char.tamanho || 5);
+                const determinacaoMax = char.aut || 1;
+                
+                return `
+                    <div class="character-card" onclick="openCharacter('${char.id}')">
+                        <div class="character-header">
+                            <div class="character-name">${char.nome || 'Sem nome'}</div>
+                            <div class="character-level">AI ${char.auraImortalidade || 1}</div>
+                        </div>
+                        <div class="character-info">
+                            👤 ${char.jogador || 'Jogador'} | 
+                            ⚔️ ${char.classe || 'Sem classe'} | 
+                            🎭 ${char.raca || 'Sem raça'}
+                        </div>
+                        <div class="character-stats">
+                            <div class="stat-box">
+                                <div class="stat-label">❤️ Vitalidade</div>
+                                <div class="stat-value">${char.hpCurrent || vitalidadeMax} / ${vitalidadeMax}</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">⚡ Determinação</div>
+                                <div class="stat-value">${char.detCurrent || determinacaoMax} / ${determinacaoMax}</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">🧠 Sanidade</div>
+                                <div class="stat-value">${char.sanCurrent || 80} / 100</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">⭐ EXP</div>
+                                <div class="stat-value">${char.exp || 0}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        // Mestre autenticado
-        statusMessage.textContent = `✅ Logado como mestre: ${user.email}`;
-        logoutButton.style.display = 'inline-block';
-        refreshButton.style.display = 'inline-block';
-        masterPanel.classList.add('active');
-        statsGrid.style.display = 'grid';
-        
-        // Iniciar escuta de personagens
-        listenToCharacters();
-        
-      } catch (error) {
-        console.error('Erro ao verificar permissões:', error);
-        statusMessage.textContent = '❌ Erro ao verificar permissões';
-        showAlert(`Erro: ${error.message}`, 'danger');
-      }
-    });
+        // ============= EXIBIR PERSONAGENS PARA EXP =============
+        function displayExpCharacters() {
+            const grid = document.getElementById('expCharactersGrid');
+            
+            if (allCharacters.length === 0) {
+                grid.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b; grid-column: 1/-1;">Nenhum personagem encontrado</div>';
+                return;
+            }
 
-    // ============= FIRESTORE LISTENERS =============
-    function listenToCharacters() {
-      if (state.unsubscribe) {
-        state.unsubscribe();
-      }
-
-      const charactersRef = collection(db, 'characters');
-      
-      state.unsubscribe = onSnapshot(
-        charactersRef,
-        (snapshot) => {
-          state.characters.clear();
-          
-          snapshot.forEach((doc) => {
-            state.characters.set(doc.id, doc.data());
-          });
-          
-          renderTable();
-          updateStats();
-          console.log(`✅ ${state.characters.size} personagens carregados`);
-        },
-        (error) => {
-          console.error('Erro ao escutar personagens:', error);
-          showAlert(`Erro ao carregar fichas: ${error.message}`, 'danger');
+            grid.innerHTML = allCharacters.map(char => {
+                return `
+                    <div class="character-card" style="cursor: default;">
+                        <div class="character-header">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <input type="checkbox" class="exp-checkbox" data-character-id="${char.id}" data-character-name="${char.nome || 'Sem nome'}">
+                                <div class="character-name">${char.nome || 'Sem nome'}</div>
+                            </div>
+                            <div class="character-level">⭐ ${char.exp || 0} EXP</div>
+                        </div>
+                        <div class="character-info">
+                            👤 ${char.jogador || 'Jogador'} | 
+                            ⚔️ ${char.classe || 'Sem classe'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
-      );
-    }
 
-    // ============= RENDERIZAÇÃO =============
-    function renderTable() {
-      const query = searchInput.value.trim().toLowerCase();
-      const entries = Array.from(state.characters.entries());
-      
-      const filtered = !query ? entries : entries.filter(([id, data]) => {
-        const nome = (data.nome || '').toString().toLowerCase();
-        const classe = (data.classe || '').toString().toLowerCase();
-        const raca = (data.raca || '').toString().toLowerCase();
-        const jogador = (data.jogador || '').toString().toLowerCase();
-        
-        return nome.includes(query) || 
-               classe.includes(query) || 
-               raca.includes(query) ||
-               jogador.includes(query) ||
-               id.toLowerCase().includes(query);
-      });
+        // ============= ABRIR PERSONAGEM PARA EDIÇÃO =============
+        window.openCharacter = async function(characterId) {
+            try {
+                const character = allCharacters.find(c => c.id === characterId);
+                if (!character) {
+                    showAlert('❌ Personagem não encontrado', 'danger');
+                    return;
+                }
 
-      charactersCount.textContent = `${filtered.length} ficha${filtered.length === 1 ? '' : 's'}`;
+                currentEditingCharacter = character;
+                document.getElementById('modalTitle').textContent = `Editando: ${character.nome || 'Sem nome'}`;
 
-      if (!filtered.length) {
-        charactersBody.innerHTML = `
-          <tr>
-            <td colspan="5" style="text-align:center; padding:2rem; color:var(--muted);">
-              ${query ? 'Nenhum personagem encontrado com esse filtro.' : 'Nenhum personagem cadastrado ainda.'}
-            </td>
-          </tr>
-        `;
-        return;
-      }
+                // Calcular valores máximos
+                const vitalidadeMax = (character.vig || 1) + (character.tamanho || 5);
+                const determinacaoMax = character.aut || 1;
 
-      const rows = filtered.map(([id, data]) => {
-        const nome = data.nome || 'Sem nome';
-        const classe = data.classe || '—';
-        const raca = data.raca || '—';
-        const hpCurrent = data.hpCurrent || 0;
-        const hpMax = (data.vig || 1) + (data.tamanho || 5);
-        const detCurrent = data.detCurrent || 0;
-        const detMax = (data.prs || 1) + (data.aut || 1);
-        const exp = data.exp || 0;
-        
-        // Alertas de status
-        let hpTag = '';
-        if (hpCurrent <= 0) {
-          hpTag = '<span class="tag critical">💀 MORTO</span>';
-        } else if (hpCurrent <= Math.floor(hpMax * 0.3)) {
-          hpTag = '<span class="tag critical">❤️ VITALIDADE CRÍTICA</span>';
+                // Preencher aba Básico
+                document.getElementById('edit_nome').value = character.nome || '';
+                document.getElementById('edit_jogador').value = character.jogador || '';
+                document.getElementById('edit_idade').value = character.idade || 0;
+                document.getElementById('edit_raca').value = character.raca || '';
+                document.getElementById('edit_classe').value = character.classe || '';
+                document.getElementById('edit_virtude').value = character.virtude || '';
+                document.getElementById('edit_vicio').value = character.vicio || '';
+                document.getElementById('edit_tamanho').value = character.tamanho || 5;
+                document.getElementById('edit_exp').value = character.exp || 0;
+                document.getElementById('edit_auraImortalidade').value = character.auraImortalidade || 1;
+
+                // Preencher aba Atributos
+                document.getElementById('edit_int').value = character.int || 1;
+                document.getElementById('edit_for').value = character.for || 1;
+                document.getElementById('edit_pre').value = character.pre || 1;
+                document.getElementById('edit_rac').value = character.rac || 1;
+                document.getElementById('edit_des').value = character.des || 1;
+                document.getElementById('edit_man').value = character.man || 1;
+                document.getElementById('edit_prs').value = character.prs || 1;
+                document.getElementById('edit_vig').value = character.vig || 1;
+                document.getElementById('edit_aut').value = character.aut || 1;
+
+                // Preencher aba Combate
+                document.getElementById('edit_hpCurrent').value = character.hpCurrent !== undefined ? character.hpCurrent : vitalidadeMax;
+                document.getElementById('edit_hpMax').value = vitalidadeMax;
+                document.getElementById('edit_detCurrent').value = character.detCurrent !== undefined ? character.detCurrent : determinacaoMax;
+                document.getElementById('edit_detMax').value = determinacaoMax;
+                document.getElementById('edit_sanCurrent').value = character.sanCurrent !== undefined ? character.sanCurrent : 80;
+                document.getElementById('edit_blindagem').value = character.blindagem || 0;
+
+                // Preencher condições
+                displayConditions(character);
+
+                // Preencher inventário
+                displayInventory(character);
+
+                // Preencher aliados
+                displayAllies(character);
+
+                // Preencher propriedades
+                displayProperties(character);
+
+                // Preencher notas
+                document.getElementById('edit_notas').value = character.notas || '';
+                document.getElementById('edit_masterNotes').value = character.masterNotes || '';
+
+                // Preencher inventário (LUNS)
+                document.getElementById('edit_luns').value = character.luns || 0;
+
+                // Preencher características
+                displayCharacteristics(character);
+
+                // Listener para atualizar vitalidade máxima quando VIG ou Tamanho mudar
+                ['edit_vig', 'edit_tamanho'].forEach(id => {
+                    const element = document.getElementById(id);
+                    element.removeEventListener('input', updateVitMax);
+                    element.addEventListener('input', updateVitMax);
+                });
+
+                // Listener para atualizar determinação máxima quando AUT mudar
+                const autElement = document.getElementById('edit_aut');
+                autElement.removeEventListener('input', updateDetMax);
+                autElement.addEventListener('input', updateDetMax);
+
+                document.getElementById('editModal').classList.add('active');
+            } catch (error) {
+                console.error('❌ Erro ao abrir modal:', error);
+                showAlert('❌ Erro ao abrir personagem', 'danger');
+            }
+        };
+
+        function updateVitMax() {
+            const vig = parseInt(document.getElementById('edit_vig').value) || 1;
+            const tamanho = parseInt(document.getElementById('edit_tamanho').value) || 5;
+            document.getElementById('edit_hpMax').value = vig + tamanho;
         }
-        
-        let sanTag = '';
-        const sanCurrent = data.sanCurrent || 100;
-        if (sanCurrent <= 20) {
-          sanTag = '<span class="tag critical">🧠 INSANO</span>';
-        } else if (sanCurrent <= 50) {
-          sanTag = '<span class="tag warning">🧠 SANIDADE BAIXA</span>';
+
+        function updateDetMax() {
+            const aut = parseInt(document.getElementById('edit_aut').value) || 1;
+            document.getElementById('edit_detMax').value = aut;
         }
-        
-        return `
-          <tr>
-            <td>
-              <strong>${escapeHtml(nome)}</strong>
-              ${data.jogador ? `<br><small style="color:var(--muted);">👤 ${escapeHtml(data.jogador)}</small>` : ''}
-            </td>
-            <td>
-              <span class="tag">${escapeHtml(classe)}</span>
-              ${raca !== '—' ? `<br><span class="tag">${escapeHtml(raca)}</span>` : ''}
-            </td>
-            <td>
-              <strong>${hpCurrent} / ${hpMax}</strong> Vitalidade
-              <br>
-              <strong>${detCurrent} / ${detMax}</strong> DET
-              ${hpTag}
-              ${sanTag}
-            </td>
-            <td><strong>${exp}</strong> EXP</td>
-            <td>
-              <button 
-                class="btn-primary btn-small" 
-                data-id="${escapeHtml(id)}"
-                onclick="window.openEditModal('${escapeHtml(id)}')"
-              >
-                ✏️ Editar
-              </button>
-            </td>
-          </tr>
-        `;
-      });
 
-      charactersBody.innerHTML = rows.join('');
-    }
+        // ============= EXIBIR CONDIÇÕES =============
+        function displayConditions(character) {
+            const container = document.getElementById('edit_conditions');
+            const conditions = character.conditions || [];
+            
+            if (conditions.length === 0) {
+                container.innerHTML = '<p style="color: #64748b; text-align: center; padding: 20px;">Nenhuma condição ativa</p>';
+                return;
+            }
 
-    function updateStats() {
-      const chars = Array.from(state.characters.values());
-      
-      totalCharacters.textContent = chars.length;
-      
-      // Jogadores únicos (por ownerUid)
-      const uniqueOwners = new Set(
-        chars.map(c => c.ownerUid).filter(Boolean)
-      );
-      activePlayers.textContent = uniqueOwners.size;
-      
-      // EXP médio
-      const totalExp = chars.reduce((sum, c) => sum + (c.exp || 0), 0);
-      const avgExp = chars.length > 0 ? Math.round(totalExp / chars.length) : 0;
-      averageExp.textContent = avgExp;
-    }
-
-    // ============= MODAL DE EDIÇÃO =============
-    window.openEditModal = function(characterId) {
-      const data = state.characters.get(characterId);
-      
-      if (!data) {
-        showAlert('Personagem não encontrado!', 'danger');
-        return;
-      }
-
-      state.selectedCharacterId = characterId;
-      state.selectedCharacterData = JSON.parse(JSON.stringify(data));
-      
-      modalCharacterName.textContent = data.nome || characterId;
-      
-      // Preencher campos visuais
-      document.getElementById('edit-nome').value = data.nome || '';
-      document.getElementById('edit-jogador').value = data.jogador || '';
-      document.getElementById('edit-classe').value = data.classe || '';
-      document.getElementById('edit-raca').value = data.raca || '';
-      document.getElementById('edit-idade').value = data.idade || 0;
-      document.getElementById('edit-tamanho').value = data.tamanho || 5;
-      document.getElementById('edit-hpCurrent').value = data.hpCurrent || 0;
-      document.getElementById('edit-detCurrent').value = data.detCurrent || 0;
-      document.getElementById('edit-sanCurrent').value = data.sanCurrent || 100;
-      document.getElementById('edit-blindagem').value = data.blindagem || 0;
-      document.getElementById('edit-exp').value = data.exp || 0;
-      document.getElementById('edit-luns').value = data.luns || 0;
-      document.getElementById('edit-notas').value = data.notas || '';
-      
-      // Preencher JSON
-      jsonTextarea.value = JSON.stringify(data, null, 2);
-      
-      modalError.style.display = 'none';
-      switchTab('visual');
-      modal.showModal();
-    };
-
-    function closeModal() {
-      if (state.isSaving) return;
-      
-      modal.close();
-      state.selectedCharacterId = null;
-      state.selectedCharacterData = null;
-      modalError.style.display = 'none';
-    }
-
-    function switchTab(tabName) {
-      state.currentTab = tabName;
-      
-      modalTabs.forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.tab === tabName);
-      });
-      
-      tabVisual.classList.toggle('active', tabName === 'visual');
-      tabJson.classList.toggle('active', tabName === 'json');
-      
-      // Sincronizar dados entre abas
-      if (tabName === 'json') {
-        syncVisualToJson();
-      } else {
-        // Tentar sincronizar JSON para visual
-        try {
-          const parsed = JSON.parse(jsonTextarea.value);
-          state.selectedCharacterData = parsed;
-        } catch (e) {
-          // Se JSON inválido, manter dados visuais
+            container.innerHTML = conditions.map((condition, index) => `
+                <div class="condition-item">
+                    <span class="condition-name">${condition}</span>
+                    <button class="btn-remove" onclick="removeConditionFromCharacter(${index})">🗑️ Remover</button>
+                </div>
+            `).join('');
         }
-      }
-    }
 
-    function syncVisualToJson() {
-      // Pegar valores dos campos visuais e atualizar o JSON
-      if (!state.selectedCharacterData) return;
-      
-      state.selectedCharacterData.nome = document.getElementById('edit-nome').value;
-      state.selectedCharacterData.jogador = document.getElementById('edit-jogador').value;
-      state.selectedCharacterData.classe = document.getElementById('edit-classe').value;
-      state.selectedCharacterData.raca = document.getElementById('edit-raca').value;
-      state.selectedCharacterData.idade = parseInt(document.getElementById('edit-idade').value) || 0;
-      state.selectedCharacterData.tamanho = parseInt(document.getElementById('edit-tamanho').value) || 5;
-      state.selectedCharacterData.hpCurrent = parseInt(document.getElementById('edit-hpCurrent').value) || 0;
-      state.selectedCharacterData.detCurrent = parseInt(document.getElementById('edit-detCurrent').value) || 0;
-      state.selectedCharacterData.sanCurrent = parseInt(document.getElementById('edit-sanCurrent').value) || 100;
-      state.selectedCharacterData.blindagem = parseInt(document.getElementById('edit-blindagem').value) || 0;
-      state.selectedCharacterData.exp = parseInt(document.getElementById('edit-exp').value) || 0;
-      state.selectedCharacterData.luns = parseInt(document.getElementById('edit-luns').value) || 0;
-      state.selectedCharacterData.notas = document.getElementById('edit-notas').value;
-      
-      jsonTextarea.value = JSON.stringify(state.selectedCharacterData, null, 2);
-    }
+        // ============= ADICIONAR CONDIÇÃO =============
+        window.addConditionToCharacter = function() {
+            const conditionName = prompt('Digite o nome da condição (Ex: Fadiga, Fratura, Envenenado):');
+            if (!conditionName) return;
 
-    async function handleSave() {
-      if (state.isSaving) return;
-      
-      const characterId = state.selectedCharacterId;
-      if (!characterId) {
-        showAlert('Nenhuma ficha selecionada!', 'danger');
-        return;
-      }
+            if (!currentEditingCharacter.conditions) {
+                currentEditingCharacter.conditions = [];
+            }
 
-      let dataToSave;
-      
-      if (state.currentTab === 'json') {
-        // Validar JSON
-        try {
-          dataToSave = JSON.parse(jsonTextarea.value);
-        } catch (error) {
-          modalError.textContent = `❌ JSON inválido: ${error.message}`;
-          modalError.style.display = 'block';
-          return;
+            currentEditingCharacter.conditions.push(conditionName.trim());
+            displayConditions(currentEditingCharacter);
+        };
+
+        // ============= REMOVER CONDIÇÃO =============
+        window.removeConditionFromCharacter = function(index) {
+            if (!confirm('Remover esta condição?')) return;
+            
+            currentEditingCharacter.conditions.splice(index, 1);
+            displayConditions(currentEditingCharacter);
+        };
+
+        // ============= EXIBIR INVENTÁRIO =============
+        function displayInventory(character) {
+            const container = document.getElementById('edit_inventory');
+            const containers = character.containers || [];
+            
+            if (containers.length === 0 || !containers.some(c => c.items && c.items.length > 0)) {
+                container.innerHTML = '<p style="color: #64748b; text-align: center; padding: 20px;">Sem itens no inventário</p>';
+                return;
+            }
+
+            container.innerHTML = containers.map(cont => {
+                if (!cont.items || cont.items.length === 0) return '';
+                
+                return `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: var(--primary); margin-bottom: 10px;">📦 ${cont.name || 'Container'}</h4>
+                        ${cont.items.map(item => `
+                            <div class="item-card">
+                                <div class="item-header">
+                                    <div class="item-name">${item.name || 'Item'}</div>
+                                    <div style="color: #64748b; font-size: 0.85rem;">Qtd: ${item.quantity || 1}</div>
+                                </div>
+                                ${item.description ? `<div class="item-details">${item.description}</div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }).join('');
         }
-      } else {
-        // Pegar dados dos campos visuais
-        syncVisualToJson();
-        dataToSave = state.selectedCharacterData;
-      }
 
-      try {
-        setSaving(true);
-        
-        // Adicionar timestamp de última atualização
-        dataToSave.lastUpdate = new Date().toISOString();
-        dataToSave.lastUpdateBy = 'mestre';
-        dataToSave.masterEdited = true;
-        
-        // Salvar no Firestore
-        const characterRef = doc(db, 'characters', characterId);
-        await setDoc(characterRef, dataToSave, { merge: true });
-        
-        // Registrar log (opcional)
-        try {
-          const logRef = doc(collection(db, 'logs'));
-          await setDoc(logRef, {
-            characterId,
-            userUid: auth.currentUser?.uid || null,
-            source: 'master-panel',
-            action: 'edit',
-            timestamp: serverTimestamp()
-          });
-        } catch (logError) {
-          console.warn('Erro ao criar log:', logError);
+        // ============= EXIBIR ALIADOS =============
+        function displayAllies(character) {
+            const container = document.getElementById('edit_allies');
+            const allies = character.allies || [];
+            
+            if (allies.length === 0) {
+                container.innerHTML = '<p style="color: #64748b; text-align: center; padding: 20px;">Nenhum aliado cadastrado</p>';
+                return;
+            }
+
+            container.innerHTML = allies.map(ally => {
+                const vitalidadeMax = (ally.vig || 1) + (ally.tamanho || 5);
+                const hpCurrent = ally.hpCurrent !== undefined ? ally.hpCurrent : vitalidadeMax;
+                const sanCurrent = ally.sanCurrent !== undefined ? ally.sanCurrent : 80;
+                
+                return `
+                    <div class="ally-card">
+                        <div class="ally-header">
+                            <div class="ally-name">👤 ${ally.nome || 'Sem nome'}</div>
+                        </div>
+                        <div class="ally-details">
+                            <strong>Tipo/Raça:</strong> ${ally.tipoRaca || '—'}<br>
+                            <strong>Função:</strong> ${ally.funcao || '—'}<br>
+                            <strong>❤️ Vitalidade:</strong> ${hpCurrent} / ${vitalidadeMax}<br>
+                            <strong>🧠 Sanidade:</strong> ${sanCurrent} / 100
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
-        
-        showAlert('✅ Ficha salva com sucesso!', 'success');
-        closeModal();
-        
-      } catch (error) {
-        console.error('Erro ao salvar:', error);
-        modalError.textContent = `❌ Erro ao salvar: ${error.message}`;
-        modalError.style.display = 'block';
-      } finally {
-        setSaving(false);
-      }
-    }
 
-    function setSaving(saving) {
-      state.isSaving = saving;
-      saveEdit.disabled = saving;
-      saveEdit.innerHTML = saving 
-        ? '<span class="loading"></span> Salvando...' 
-        : '💾 Salvar Alterações';
-    }
+        // ============= EXIBIR PROPRIEDADES =============
+        function displayProperties(character) {
+            const container = document.getElementById('edit_properties');
+            const properties = character.properties || [];
+            
+            if (properties.length === 0) {
+                container.innerHTML = '<p style="color: #64748b; text-align: center; padding: 20px;">Nenhuma propriedade cadastrada</p>';
+                return;
+            }
 
-    // ============= UTILIDADES =============
-    async function handleLogout() {
-      try {
-        await signOut(auth);
-        window.location.href = 'index.html';
-      } catch (error) {
-        showAlert(`Erro ao sair: ${error.message}`, 'danger');
-      }
-    }
-
-    function showAlert(message, type = 'success') {
-      const alert = document.createElement('div');
-      alert.className = `alert alert-${type}`;
-      alert.textContent = message;
-      alertArea.appendChild(alert);
-      
-      setTimeout(() => {
-        if (alert.parentNode === alertArea) {
-          alertArea.removeChild(alert);
+            container.innerHTML = properties.map(prop => {
+                return `
+                    <div class="property-card">
+                        <div class="property-header">
+                            <div class="property-name">🏠 ${prop.nome || 'Sem nome'}</div>
+                        </div>
+                        <div class="property-details">
+                            <strong>Tipo:</strong> ${prop.tipo || '—'}<br>
+                            <strong>Localização:</strong> ${prop.localizacao || '—'}<br>
+                            <strong>🏗️ Integridade:</strong> ${prop.integridade || 100}%<br>
+                            <strong>🛡️ Blindagem:</strong> ${prop.blindagem || 0}
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
-      }, 5000);
-    }
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
+        // ============= EXIBIR CARACTERÍSTICAS =============
+        function displayCharacteristics(character) {
+            const container = document.getElementById('edit_characteristics');
+            
+            const vitalidadeMax = (character.vig || 1) + (character.tamanho || 5);
+            const determinacaoMax = character.aut || 1;
+            
+            container.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div class="stat-box">
+                        <div class="stat-label">❤️ Vitalidade Máxima</div>
+                        <div class="stat-value">${vitalidadeMax}</div>
+                        <small style="color: #64748b;">VIG (${character.vig || 1}) + Tamanho (${character.tamanho || 5})</small>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">⚡ Determinação Máxima</div>
+                        <div class="stat-value">${determinacaoMax}</div>
+                        <small style="color: #64748b;">Igual ao AUT (${character.aut || 1})</small>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">🧠 Sanidade Máxima</div>
+                        <div class="stat-value">100</div>
+                        <small style="color: #64748b;">Fixa para todos</small>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">💰 LUNS</div>
+                        <div class="stat-value">${character.luns || 0}</div>
+                        <small style="color: #64748b;">Dinheiro disponível</small>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">⭐ EXP Total</div>
+                        <div class="stat-value">${character.exp || 0}</div>
+                        <small style="color: #64748b;">Pontos de experiência</small>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">🌟 Aura de Imortalidade</div>
+                        <div class="stat-value">${character.auraImortalidade || 1}</div>
+                        <small style="color: #64748b;">Nível do personagem</small>
+                    </div>
+                </div>
 
-    // Cleanup ao sair da página
-    window.addEventListener('beforeunload', () => {
-      if (state.unsubscribe) {
-        state.unsubscribe();
-      }
-    });
-  
-  // ============= SISTEMA DE DISTRIBUIÇÃO DE EXP =============
-  let expSectionCollapsed = false;
+                <div class="form-section" style="margin-top: 20px;">
+                    <div class="section-title">💪 Atributos</div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                        <div class="stat-box"><div class="stat-label">INT</div><div class="stat-value">${character.int || 1}</div></div>
+                        <div class="stat-box"><div class="stat-label">FOR</div><div class="stat-value">${character.for || 1}</div></div>
+                        <div class="stat-box"><div class="stat-label">PRE</div><div class="stat-value">${character.pre || 1}</div></div>
+                        <div class="stat-box"><div class="stat-label">RAC</div><div class="stat-value">${character.rac || 1}</div></div>
+                        <div class="stat-box"><div class="stat-label">DES</div><div class="stat-value">${character.des || 1}</div></div>
+                        <div class="stat-box"><div class="stat-label">MAN</div><div class="stat-value">${character.man || 1}</div></div>
+                        <div class="stat-box"><div class="stat-label">PRS</div><div class="stat-value">${character.prs || 1}</div></div>
+                        <div class="stat-box"><div class="stat-label">VIG</div><div class="stat-value">${character.vig || 1}</div></div>
+                        <div class="stat-box"><div class="stat-label">AUT</div><div class="stat-value">${character.aut || 1}</div></div>
+                    </div>
+                </div>
+            `;
+        }
 
-  function toggleExpSection() {
-    expSectionCollapsed = !expSectionCollapsed;
-    const content = document.getElementById('exp-section-content');
-    const icon = document.getElementById('exp-toggle-icon');
-    
-    if (expSectionCollapsed) {
-      content.style.display = 'none';
-      icon.classList.add('collapsed');
-    } else {
-      content.style.display = 'block';
-      icon.classList.remove('collapsed');
-    }
-  }
+        // ============= FECHAR MODAL =============
+        window.closeModal = function() {
+            document.getElementById('editModal').classList.remove('active');
+            currentEditingCharacter = null;
+        };
 
-  
+        // ============= SALVAR ALTERAÇÕES =============
+        window.saveCharacterChanges = async function() {
+            if (!currentEditingCharacter) return;
 
-  
+            try {
+                const updates = {
+                    // Básico
+                    nome: document.getElementById('edit_nome').value,
+                    jogador: document.getElementById('edit_jogador').value,
+                    idade: parseInt(document.getElementById('edit_idade').value) || 0,
+                    raca: document.getElementById('edit_raca').value,
+                    classe: document.getElementById('edit_classe').value,
+                    virtude: document.getElementById('edit_virtude').value,
+                    vicio: document.getElementById('edit_vicio').value,
+                    tamanho: parseInt(document.getElementById('edit_tamanho').value) || 5,
+                    exp: parseInt(document.getElementById('edit_exp').value) || 0,
+                    auraImortalidade: parseInt(document.getElementById('edit_auraImortalidade').value) || 1,
+                    
+                    // Atributos
+                    int: parseInt(document.getElementById('edit_int').value) || 1,
+                    for: parseInt(document.getElementById('edit_for').value) || 1,
+                    pre: parseInt(document.getElementById('edit_pre').value) || 1,
+                    rac: parseInt(document.getElementById('edit_rac').value) || 1,
+                    des: parseInt(document.getElementById('edit_des').value) || 1,
+                    man: parseInt(document.getElementById('edit_man').value) || 1,
+                    prs: parseInt(document.getElementById('edit_prs').value) || 1,
+                    vig: parseInt(document.getElementById('edit_vig').value) || 1,
+                    aut: parseInt(document.getElementById('edit_aut').value) || 1,
+                    
+                    // Combate
+                    hpCurrent: parseInt(document.getElementById('edit_hpCurrent').value) || 0,
+                    detCurrent: parseInt(document.getElementById('edit_detCurrent').value) || 0,
+                    sanCurrent: parseInt(document.getElementById('edit_sanCurrent').value) || 80,
+                    blindagem: parseInt(document.getElementById('edit_blindagem').value) || 0,
+                    conditions: currentEditingCharacter.conditions || [],
+                    
+                    // Inventário
+                    luns: parseInt(document.getElementById('edit_luns').value) || 0,
+                    
+                    // Notas
+                    notas: document.getElementById('edit_notas').value,
+                    masterNotes: document.getElementById('edit_masterNotes').value,
+                    
+                    // Manter dados existentes
+                    containers: currentEditingCharacter.containers || [],
+                    allies: currentEditingCharacter.allies || [],
+                    properties: currentEditingCharacter.properties || [],
+                    skills: currentEditingCharacter.skills || {},
+                    classAbilities: currentEditingCharacter.classAbilities || {},
+                    classResources: currentEditingCharacter.classResources || {},
+                    skillInputs: currentEditingCharacter.skillInputs || {},
+                    characterImage: currentEditingCharacter.characterImage || '',
+                    
+                    // Metadados
+                    lastUpdate: new Date().toISOString(),
+                    lastUpdateBy: currentUser.email,
+                    updatedByMaster: true
+                };
 
-  
+                const characterRef = doc(db, 'characters', currentEditingCharacter.id);
+                await setDoc(characterRef, updates, { merge: true });
 
-  
+                // Adicionar log
+                await addLog(
+                    currentUser.email,
+                    'Editou a ficha completa de',
+                    updates.nome,
+                    'characters'
+                );
 
+                showAlert('✅ Personagem atualizado com sucesso!', 'success');
+                closeModal();
+                await loadAllCharacters();
+            } catch (error) {
+                console.error('❌ Erro ao salvar:', error);
+                showAlert('❌ Erro ao salvar alterações', 'danger');
+            }
+        };
 
-  // ===== DISTRIBUIÇÃO DE EXP =====
-  
+        // ============= ADICIONAR EXP =============
+        window.addExpToSelected = async function(amount) {
+            const checkboxes = document.querySelectorAll('.exp-checkbox:checked');
+            
+            if (checkboxes.length === 0) {
+                showAlert('⚠️ Selecione pelo menos um personagem', 'warning');
+                return;
+            }
 
-  
+            try {
+                for (const checkbox of checkboxes) {
+                    const characterId = checkbox.dataset.characterId;
+                    const characterName = checkbox.dataset.characterName;
+                    const character = allCharacters.find(c => c.id === characterId);
+                    
+                    if (character) {
+                        const newExp = (character.exp || 0) + amount;
+                        const characterRef = doc(db, 'characters', characterId);
+                        
+                        await setDoc(characterRef, {
+                            exp: newExp,
+                            lastUpdate: new Date().toISOString(),
+                            lastUpdateBy: currentUser.email
+                        }, { merge: true });
 
-  
+                        await addLog(
+                            currentUser.email,
+                            `Adicionou ${amount} EXP para`,
+                            characterName,
+                            'characters'
+                        );
+                    }
+                }
 
-  
+                showAlert(`✅ ${amount} EXP adicionado a ${checkboxes.length} personagem(ns)!`, 'success');
+                
+                // Desmarcar checkboxes
+                checkboxes.forEach(cb => cb.checked = false);
+                
+                await loadAllCharacters();
+            } catch (error) {
+                console.error('❌ Erro ao adicionar EXP:', error);
+                showAlert('❌ Erro ao adicionar EXP', 'danger');
+            }
+        };
 
-</script>
+        window.addCustomExpToSelected = function() {
+            const amount = parseInt(document.getElementById('expValue').value) || 1;
+            addExpToSelected(amount);
+        };
+
+        // ============= SUBTRAIR EXP =============
+        window.subtractCustomExpFromSelected = async function() {
+            const amount = parseInt(document.getElementById('expValue').value) || 1;
+            const checkboxes = document.querySelectorAll('.exp-checkbox:checked');
+            
+            if (checkboxes.length === 0) {
+                showAlert('⚠️ Selecione pelo menos um personagem', 'warning');
+                return;
+            }
+
+            if (!confirm(`Tem certeza que deseja REMOVER ${amount} EXP de ${checkboxes.length} personagem(ns)?`)) {
+                return;
+            }
+
+            try {
+                for (const checkbox of checkboxes) {
+                    const characterId = checkbox.dataset.characterId;
+                    const characterName = checkbox.dataset.characterName;
+                    const character = allCharacters.find(c => c.id === characterId);
+                    
+                    if (character) {
+                        const newExp = Math.max(0, (character.exp || 0) - amount);
+                        const characterRef = doc(db, 'characters', characterId);
+                        
+                        await setDoc(characterRef, {
+                            exp: newExp,
+                            lastUpdate: new Date().toISOString(),
+                            lastUpdateBy: currentUser.email
+                        }, { merge: true });
+
+                        await addLog(
+                            currentUser.email,
+                            `Removeu ${amount} EXP de`,
+                            characterName,
+                            'characters'
+                        );
+                    }
+                }
+
+                showAlert(`✅ ${amount} EXP removido de ${checkboxes.length} personagem(ns)!`, 'success');
+                
+                // Desmarcar checkboxes
+                checkboxes.forEach(cb => cb.checked = false);
+                
+                await loadAllCharacters();
+            } catch (error) {
+                console.error('❌ Erro ao remover EXP:', error);
+                showAlert('❌ Erro ao remover EXP', 'danger');
+            }
+        };
+
+        // ============= SISTEMA DE LOGS EM TEMPO REAL =============
+        function setupRealtimeLogs() {
+            const logsRef = collection(db, 'logs');
+            const logsQuery = query(logsRef, orderBy('timestamp', 'desc'), limit(50));
+            
+            onSnapshot(logsQuery, (snapshot) => {
+                const logsContent = document.getElementById('logsContent');
+                
+                if (snapshot.empty) {
+                    logsContent.innerHTML = '<div class="no-logs">Nenhuma alteração registrada ainda...</div>';
+                    return;
+                }
+
+                logsContent.innerHTML = snapshot.docs.map(doc => {
+                    const log = doc.data();
+                    const date = log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Data desconhecida';
+                    
+                    return `
+                        <div class="log-entry">
+                            <div class="log-time">${date}</div>
+                            <div class="log-user">👤 ${log.user || 'Usuário'}</div>
+                            <div class="log-action">
+                                ${log.action || 'Realizou uma ação'} 
+                                <span class="log-character">${log.character || ''}</span>
+                            </div>
+                            ${log.type ? `<div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">Tipo: ${log.type}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            });
+        }
+
+        // ============= ADICIONAR LOG =============
+        async function addLog(user, action, character, type) {
+            try {
+                const logsRef = collection(db, 'logs');
+                const logDoc = doc(logsRef);
+                
+                await setDoc(logDoc, {
+                    user: user,
+                    action: action,
+                    character: character,
+                    type: type,
+                    timestamp: new Date().toISOString()
+                });
+            } catch (error) {
+                console.error('❌ Erro ao adicionar log:', error);
+            }
+        }
+
+        // ============= ALTERNAR PAINEL DE LOGS =============
+        window.toggleLogs = function() {
+            const panel = document.getElementById('logsPanel');
+            panel.classList.toggle('open');
+        };
+
+        // ============= TROCAR DE ABA PRINCIPAL =============
+        window.switchTab = function(tabName) {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
+        };
+
+        // ============= TROCAR DE ABA DO MODAL =============
+        window.switchModalTab = function(tabName) {
+            document.querySelectorAll('.modal-tab').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(`modal${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
+        };
+
+        // ============= ALERTAS =============
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            document.body.appendChild(alert);
+
+            setTimeout(() => {
+                alert.remove();
+            }, 3000);
+        }
+
+        // Fechar modal ao clicar fora
+        document.getElementById('editModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Expor funções globalmente
+        window.showAlert = showAlert;
+    </script>
 </body>
 </html>
