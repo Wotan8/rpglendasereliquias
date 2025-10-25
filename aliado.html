@@ -818,14 +818,14 @@
             <div class="hp-bar-container">
                 <label style="margin-bottom: 10px; display: block; font-weight: 700;">🧠 Sanidade</label>
                 <div class="hp-bar">
-                    <div class="hp-fill" id="san-fill" style="width: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6);">
-                        <span id="san-text">100 / 100</span>
+                    <div class="hp-fill" id="san-fill" style="width: 80%; background: linear-gradient(90deg, #6366f1, #8b5cf6);">
+                        <span id="san-text">80 / 100</span>
                     </div>
                 </div>
                 <div class="hp-controls">
                     <button class="btn btn-secondary btn-small" onclick="adjustSAN(-1)">-1</button>
                     <button class="btn btn-secondary btn-small" onclick="adjustSAN(-5)">-5</button>
-                    <input type="number" id="san-current" value="100" onchange="updateSANBar()" inputmode="numeric">
+                    <input type="number" id="san-current" value="80" onchange="updateSANBar()" inputmode="numeric">
                     <button class="btn btn-primary btn-small" onclick="adjustSAN(1)">+1</button>
                     <button class="btn btn-primary btn-small" onclick="adjustSAN(5)">+5</button>
                     <button class="btn btn-secondary btn-small" onclick="resetSAN()">Max</button>
@@ -901,7 +901,7 @@
             int: 1, for: 1, pre: 1, rac: 1, des: 1, man: 1, prs: 1, vig: 1, aut: 1,
             blindagem: 0,
             hpCurrent: 5,
-            sanCurrent: 100,
+            sanCurrent: 80,  // ← VALOR PADRÃO 80
             ataquesTalentos: '',
             pesoAtual: 0,
             pesoMax: 10,
@@ -979,8 +979,8 @@
 
         function loadFormData() {
             const fields = ['nome', 'tipoRaca', 'funcao', 'idade', 'virtude', 'vicio', 'lealdade', 
-                          'auraImortalidade', 'tamanho', 'blindagem', 'ataquesTalentos', 'pesoAtual', 
-                          'pesoMax', 'notas'];
+                        'auraImortalidade', 'tamanho', 'blindagem', 'ataquesTalentos', 'pesoAtual', 
+                        'pesoMax', 'notas'];
             
             fields.forEach(field => {
                 const el = document.getElementById(field);
@@ -991,6 +991,19 @@
             
             const attributes = ['int', 'for', 'pre', 'rac', 'des', 'man', 'prs', 'vig', 'aut'];
             attributes.forEach(attr => updateAttributeDots(attr));
+            
+            // Garantir valores padrão para HP e SAN se não existirem
+            const vitalidadeMax = allyData.vig + allyData.tamanho;
+            if (allyData.hpCurrent === undefined || allyData.hpCurrent === null) {
+                allyData.hpCurrent = vitalidadeMax;
+            }
+            if (allyData.sanCurrent === undefined || allyData.sanCurrent === null) {
+                allyData.sanCurrent = 80;
+            }
+            
+            // Carregar valores nos campos
+            document.getElementById('hp-current').value = allyData.hpCurrent;
+            document.getElementById('san-current').value = allyData.sanCurrent;
             
             updateHPBar();
             updateSANBar();
@@ -1040,7 +1053,12 @@
                     
                     const index = allies.findIndex(a => a.id === allyId);
                     if (index >= 0) {
-                        allies[index] = allyData;
+                        // Preservar hpCurrent e sanCurrent ao salvar
+                        allies[index] = {
+                            ...allyData,
+                            hpCurrent: allyData.hpCurrent,
+                            sanCurrent: allyData.sanCurrent
+                        };
                     } else {
                         allies.push(allyData);
                     }
@@ -1116,7 +1134,7 @@
             const deslocamento = allyData.for + allyData.des + allyData.tamanho;
             const vitalidadeMax = allyData.vig + allyData.tamanho;
             const determinacaoMax = allyData.prs + allyData.aut;
-            const sanidadeMax = (allyData.int + allyData.aut) * 10;
+            const sanidadeMax = 100;
             const cargaMax = allyData.for + allyData.vig;
             
             document.getElementById('calc-iniciativa').textContent = iniciativa;
@@ -1128,10 +1146,16 @@
             document.getElementById('calc-carga').textContent = cargaMax;
             document.getElementById('pesoMax').value = cargaMax;
             
-            if (!allyData.hpCurrent || allyData.hpCurrent > vitalidadeMax) {
+            // NÃO resetar valores, apenas garantir que estejam dentro dos limites
+            if (allyData.hpCurrent === undefined || allyData.hpCurrent === null) {
+                allyData.hpCurrent = vitalidadeMax;
+            } else if (allyData.hpCurrent > vitalidadeMax) {
                 allyData.hpCurrent = vitalidadeMax;
             }
-            if (!allyData.sanCurrent || allyData.sanCurrent > sanidadeMax) {
+            
+            if (allyData.sanCurrent === undefined || allyData.sanCurrent === null) {
+                allyData.sanCurrent = 80;
+            } else if (allyData.sanCurrent > sanidadeMax) {
                 allyData.sanCurrent = sanidadeMax;
             }
             
@@ -1165,7 +1189,7 @@
         };
 
         window.updateSANBar = function() {
-            const max = (allyData.int + allyData.aut) * 10;
+            const max = 100; // ← FIXO EM 100
             const current = parseInt(document.getElementById('san-current').value) || 0;
             allyData.sanCurrent = Math.max(0, Math.min(current, max));
             document.getElementById('san-current').value = allyData.sanCurrent;
@@ -1176,14 +1200,14 @@
         };
 
         window.adjustSAN = function(amount) {
-            const max = (allyData.int + allyData.aut) * 10;
+            const max = 100; // ← FIXO EM 100
             allyData.sanCurrent = Math.max(0, Math.min(allyData.sanCurrent + amount, max));
             document.getElementById('san-current').value = allyData.sanCurrent;
             updateSANBar();
         };
 
         window.resetSAN = function() {
-            const max = (allyData.int + allyData.aut) * 10;
+            const max = 100; // ← FIXO EM 100
             allyData.sanCurrent = max;
             document.getElementById('san-current').value = allyData.sanCurrent;
             updateSANBar();

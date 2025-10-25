@@ -1562,10 +1562,10 @@
 
                     <div class="characteristic-item">
                         <div>
-                            <div class="char-label">Sanidade</div>
-                            <div class="char-formula">(INT+AUT-Abis×2)×10</div>
+                            <div class="char-label">Sanidade Atual</div>
+                            <div class="char-formula">Editável na aba Combate</div>
                         </div>
-                        <div class="char-value" id="calc-sanidade">0</div>
+                        <div class="char-value" id="calc-sanidade">80</div>
                     </div>
 
                     <div class="characteristic-item">
@@ -2035,9 +2035,18 @@ Exemplos:
             
             list.innerHTML = char.allies.map(ally => {
                 const vitalidadeMax = (ally.vig || 1) + (ally.tamanho || 5);
-                const sanidadeMax = ((ally.int || 1) + (ally.aut || 1)) * 10;
-                const hpPercent = Math.round(((ally.hpCurrent || 5) / vitalidadeMax) * 100);
-                const sanPercent = Math.round(((ally.sanCurrent || 100) / sanidadeMax) * 100);
+                const sanidadeMax = 100;
+                
+                // NÃO sobrescrever valores existentes, apenas garantir que existam
+                if (ally.hpCurrent === undefined || ally.hpCurrent === null) {
+                    ally.hpCurrent = vitalidadeMax;
+                }
+                if (ally.sanCurrent === undefined || ally.sanCurrent === null) {
+                    ally.sanCurrent = 80;
+                }
+                
+                const hpPercent = Math.round((ally.hpCurrent / vitalidadeMax) * 100);
+                const sanPercent = Math.round((ally.sanCurrent / sanidadeMax) * 100);
                 
                 return `
                     <div class="container-card" style="cursor: pointer;" onclick="openAlly('${ally.id}')">
@@ -2052,7 +2061,7 @@ Exemplos:
                             </div>
                             <div style="margin-bottom: 8px;">
                                 <div style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 4px;">
-                                    ❤️ Vitalidade: ${ally.hpCurrent || 5} / ${vitalidadeMax} (${hpPercent}%)
+                                    ❤️ Vitalidade: ${ally.hpCurrent} / ${vitalidadeMax} (${hpPercent}%)
                                 </div>
                                 <div style="width: 100%; height: 8px; background: rgba(15, 23, 42, 0.8); border-radius: 4px; overflow: hidden;">
                                     <div style="width: ${hpPercent}%; height: 100%; background: linear-gradient(90deg, var(--danger), var(--success)); transition: width 0.3s;"></div>
@@ -2060,7 +2069,7 @@ Exemplos:
                             </div>
                             <div>
                                 <div style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 4px;">
-                                    🧠 Sanidade: ${ally.sanCurrent || 100} / ${sanidadeMax} (${sanPercent}%)
+                                    🧠 Sanidade: ${ally.sanCurrent} / ${sanidadeMax} (${sanPercent}%)
                                 </div>
                                 <div style="width: 100%; height: 8px; background: rgba(15, 23, 42, 0.8); border-radius: 4px; overflow: hidden;">
                                     <div style="width: ${sanPercent}%; height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6); transition: width 0.3s;"></div>
@@ -2092,7 +2101,15 @@ Exemplos:
             
             list.innerHTML = char.allies.map(ally => {
                 const vitalidadeMax = (ally.vig || 1) + (ally.tamanho || 5);
-                const sanidadeMax = ((ally.int || 1) + (ally.aut || 1)) * 10;
+                const sanidadeMax = 100;
+                
+                // NÃO sobrescrever valores existentes, apenas garantir que existam
+                if (ally.hpCurrent === undefined || ally.hpCurrent === null) {
+                    ally.hpCurrent = vitalidadeMax;
+                }
+                if (ally.sanCurrent === undefined || ally.sanCurrent === null) {
+                    ally.sanCurrent = 80;
+                }
                 
                 return `
                     <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 15px;">
@@ -2149,11 +2166,15 @@ Exemplos:
             if (!ally) return;
             
             const max = (ally.vig || 1) + (ally.tamanho || 5);
-            ally.hpCurrent = Math.max(0, Math.min((ally.hpCurrent || 5) + amount, max));
+            ally.hpCurrent = Math.max(0, Math.min((ally.hpCurrent || max) + amount, max));
+            
+            const input = document.getElementById(`ally-hp-${allyId}`);
+            if (input) input.value = ally.hpCurrent;
             
             updateAllyHPBar(allyId);
-            updateAlliesList();
-            autoSave();
+            
+            // Forçar salvamento imediato
+            saveToFirebase();
         };
 
         window.updateAllyHPBar = function(allyId) {
@@ -2176,8 +2197,12 @@ Exemplos:
                 text.textContent = `${ally.hpCurrent} / ${max}`;
             }
             
-            updateAlliesList();
-            autoSave();
+            if (typeof window.updateAlliesList === 'function') {
+                window.updateAlliesList();
+            }
+            
+            // Forçar salvamento imediato
+            saveToFirebase();
         };
 
         window.resetAllyHP = function(allyId) {
@@ -2187,6 +2212,10 @@ Exemplos:
             
             const max = (ally.vig || 1) + (ally.tamanho || 5);
             ally.hpCurrent = max;
+            
+            const input = document.getElementById(`ally-hp-${allyId}`);
+            if (input) input.value = ally.hpCurrent;
+            
             updateAllyHPBar(allyId);
         };
 
@@ -2195,12 +2224,16 @@ Exemplos:
             const ally = char.allies.find(a => a.id === allyId);
             if (!ally) return;
             
-            const max = ((ally.int || 1) + (ally.aut || 1)) * 10;
-            ally.sanCurrent = Math.max(0, Math.min((ally.sanCurrent || 100) + amount, max));
+            const max = 100;
+            ally.sanCurrent = Math.max(0, Math.min((ally.sanCurrent || 80) + amount, max));
+            
+            const input = document.getElementById(`ally-san-${allyId}`);
+            if (input) input.value = ally.sanCurrent;
             
             updateAllySANBar(allyId);
-            updateAlliesList();
-            autoSave();
+            
+            // Forçar salvamento imediato
+            saveToFirebase();
         };
 
         window.updateAllySANBar = function(allyId) {
@@ -2208,7 +2241,7 @@ Exemplos:
             const ally = char.allies.find(a => a.id === allyId);
             if (!ally) return;
             
-            const max = ((ally.int || 1) + (ally.aut || 1)) * 10;
+            const max = 100;
             const input = document.getElementById(`ally-san-${allyId}`);
             if (input) {
                 ally.sanCurrent = Math.max(0, Math.min(parseInt(input.value) || 0, max));
@@ -2223,8 +2256,12 @@ Exemplos:
                 text.textContent = `${ally.sanCurrent} / ${max}`;
             }
             
-            updateAlliesList();
-            autoSave();
+            if (typeof window.updateAlliesList === 'function') {
+                window.updateAlliesList();
+            }
+            
+            // Forçar salvamento imediato
+            saveToFirebase();
         };
 
         window.resetAllySAN = function(allyId) {
@@ -2232,8 +2269,12 @@ Exemplos:
             const ally = char.allies.find(a => a.id === allyId);
             if (!ally) return;
             
-            const max = ((ally.int || 1) + (ally.aut || 1)) * 10;
+            const max = 100;
             ally.sanCurrent = max;
+            
+            const input = document.getElementById(`ally-san-${allyId}`);
+            if (input) input.value = ally.sanCurrent;
+            
             updateAllySANBar(allyId);
         };
 
@@ -2711,7 +2752,7 @@ Exemplos:
             skillInputs: {},
             classAbilities: {},
             classResources: {},
-            hpCurrent: 5, detCurrent: 3, sanCurrent: 100, blindagem: 0,
+            hpCurrent: 5, detCurrent: 3, sanCurrent: 80, blindagem: 0,
             containers: [{
                 id: Date.now(),
                 name: 'Mochila',
@@ -3642,8 +3683,7 @@ Exemplos:
                 const cargaMax = char.for + char.vig;
                 safeUpdate('calc-carga', cargaMax);
                 
-                const sanidadeMax = (char.int + char.aut - (abismo * 2)) * 10;
-                safeUpdate('calc-sanidade', sanidadeMax);
+                safeUpdate('calc-sanidade', char.sanCurrent || 80);
                 
                 safeUpdate('calc-blindagem', char.blindagem);
 
@@ -3669,8 +3709,11 @@ Exemplos:
                 if (!char.detCurrent || char.detCurrent > determinacaoMax) {
                     char.detCurrent = determinacaoMax;
                 }
-                if (!char.sanCurrent || char.sanCurrent > sanidadeMax) {
-                    char.sanCurrent = sanidadeMax;
+                if (!char.sanCurrent) {
+                    char.sanCurrent = 80;
+                }
+                if (char.sanCurrent > 100) {
+                    char.sanCurrent = 100;
                 }
                 
                 // Atualizar barras
@@ -3754,21 +3797,26 @@ Exemplos:
 
         window.updateSANBar = function() {
             const char = getChar();
-            const abismo = char.skills['abismo'] || 0;
-            const max = (char.int + char.aut - (abismo * 2)) * 10;
+            const max = 100; // ← FIXO EM 100
             const current = parseInt(document.getElementById('san-current').value) || 0;
             char.sanCurrent = Math.max(0, Math.min(current, max));
             document.getElementById('san-current').value = char.sanCurrent;
             const percent = (char.sanCurrent / max) * 100;
             document.getElementById('san-fill').style.width = percent + '%';
             document.getElementById('san-text').textContent = `${char.sanCurrent} / ${max}`;
+            
+            // ADICIONAR: Atualizar exibição na aba Características
+            const sanExibicao = document.getElementById('calc-sanidade');
+            if (sanExibicao) {
+                sanExibicao.textContent = char.sanCurrent;
+            }
+            
             autoSave();
         };
 
         window.adjustSAN = function(amount) {
             const char = getChar();
-            const abismo = char.skills['abismo'] || 0;
-            const max = (char.int + char.aut - (abismo * 2)) * 10;
+            const max = 100; // ← FIXO EM 100
             char.sanCurrent = Math.max(0, Math.min(char.sanCurrent + amount, max));
             document.getElementById('san-current').value = char.sanCurrent;
             updateSANBar();
@@ -3776,8 +3824,7 @@ Exemplos:
 
         window.resetSAN = function() {
             const char = getChar();
-            const abismo = char.skills['abismo'] || 0;
-            const max = (char.int + char.aut - (abismo * 2)) * 10;
+            const max = 100; // ← FIXO EM 100
             char.sanCurrent = max;
             document.getElementById('san-current').value = char.sanCurrent;
             updateSANBar();
