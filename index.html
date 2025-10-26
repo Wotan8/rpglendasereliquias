@@ -461,6 +461,9 @@
                     localStorage.setItem('userName', user.displayName || 'Jogador');
                     localStorage.setItem('userRole', role);
                     
+                    localStorage.setItem('authConfirmed', 'true');
+                    localStorage.setItem('authTimestamp', Date.now().toString());
+
                     console.log('✅ Role do usuário:', role);
                     
                     // Redirecionar baseado na role
@@ -484,6 +487,9 @@
                     localStorage.setItem('userEmail', user.email);
                     localStorage.setItem('userName', user.displayName || 'Jogador');
                     localStorage.setItem('userRole', 'jogador');
+
+                    localStorage.setItem('authConfirmed', 'true');
+                    localStorage.setItem('authTimestamp', Date.now().toString());
                     
                     window.location.href = 'personagens.html';
                 }
