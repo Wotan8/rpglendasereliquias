@@ -53,5 +53,11 @@ service cloud.firestore {
       allow read: if isMaster();
       allow update, delete: if false;
     }
+    
+    // ========== ADICIONADO: Coleção de NPCs ==========
+    match /npcs/{npcId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
   }
 }
