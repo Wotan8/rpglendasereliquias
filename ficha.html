@@ -1812,7 +1812,7 @@ Exemplos:
         // ============= CONFIGURAÇÃO FIREBASE =============
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, doc, getDoc, setDoc, collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, doc, getDoc, setDoc, collection, addDoc, query, where, getDocs, deleteDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -1828,9 +1828,12 @@ Exemplos:
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        window.currentUser = null;
+        window.currentCharacterId = null;
         let currentUser = null;
         let currentCharacterId = null;
         let previousCharacterState = null;
+        let isEnsuringingEquipados = false;
 
         /**
          * Garante que o documento do personagem tenha o ownerUid definido para o usuário atual.
@@ -1855,10 +1858,180 @@ Exemplos:
             }
         }
 
+        /**
+         * Garante que o container Equipados existe
+         */
+        async function ensureEquipadosContainer(characterId) {
+            // Prevenir chamadas simultâneas
+            if (isEnsuringingEquipados) {
+                console.log('⏳ Já está criando/verificando Equipados...');
+                return;
+            }
+            
+            try {
+                isEnsuringingEquipados = true;
+                
+                if (!currentUser) {
+                    console.error('❌ Usuário não autenticado');
+                    return;
+                }
+                
+                const char = getChar();
+                const containers = await loadContainersFromFirebase(characterId);
+                
+                // Verificar se já existe Equipados (por nome, não apenas na memória)
+                let equipados = containers.find(c => c.name === 'Equipados');
+                
+                if (!equipados) {
+                    // Criar container Equipados
+                    const atletismo = char.skills['atletismo'] || 0;
+                    const vig = char.vig || 1;
+                    const forca = char.for || 1;
+                    
+                    // ✅ Se atletismo > 0, usa a fórmula completa. Se não, usa apenas VIG * FOR
+                    const maxSize = atletismo > 0 
+                        ? forca * vig * atletismo 
+                        : forca * vig;
+                    
+                    equipados = {
+                        id: 'equipados-' + Date.now(),
+                        name: 'Equipados',
+                        ownerId: currentUser.uid,
+                        characterId: characterId,
+                        maxCapacity: forca + vig,
+                        maxSize: maxSize,
+                        itemIds: []
+                    };
+                    
+                    await saveContainerToFirebase(equipados);
+                    console.log(`✅ Container Equipados criado com maxSize: ${maxSize} (${forca} × ${vig}${atletismo > 0 ? ` × ${atletismo}` : ''})`);
+                } else {
+                    console.log('✅ Container Equipados já existe');
+                }
+                
+                // Recarregar inventário
+                await loadInventoryFromFirebase(characterId);
+            } catch (error) {
+                console.error('Erro ao garantir container Equipados:', error);
+            } finally {
+                isEnsuringingEquipados = false;
+            }
+        }
+
+        // ============= CARREGAR DO FIREBASE =============
+        async function loadFromFirebase() {
+            if (!currentUser) return;
+            
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const characterId = urlParams.get('id') || currentUser.uid;
+                currentCharacterId = characterId;
+                window.currentCharacterId = characterId;
+                const userDoc = doc(db, 'characters', characterId);
+                const docSnap = await getDoc(userDoc);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    console.log('✅ Ficha carregada do Firebase:', data);
+                    
+                    delete data.lastUpdate;
+                    delete data.userEmail;
+                    delete data.containers; // Não usar containers do documento antigo
+                    
+                    window.character = {
+                        ...window.character,
+                        ...data,
+                        allies: data.allies || [],
+                        properties: data.properties || []
+                    };
+                    
+                    // Carregar containers e itens das coleções
+                    await loadInventoryFromFirebase(characterId);
+                    
+                    previousCharacterState = JSON.parse(JSON.stringify(window.character));
+                    showAlert('✅ Ficha carregada da nuvem!', 'success');
+                } else {
+                    console.log('📝 Primeira vez! Criando ficha nova...');
+                    
+                    // Criar container Equipados inicial
+                    await ensureEquipadosContainer(characterId);
+                    
+                    previousCharacterState = JSON.parse(JSON.stringify(window.character));
+                    showAlert('📝 Bem-vindo! Crie seu personagem.', 'success');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar ficha:', error);
+                showAlert('⚠️ Erro ao carregar ficha. Usando dados locais.', 'danger');
+            }
+        }
+
+        // ============= FUNÇÃO DE INICIALIZAÇÃO =============
+        async function init() {
+            try {
+                console.log('🚀 Iniciando sistema...');
+                
+                const attributes = ['int', 'for', 'pre', 'rac', 'des', 'man', 'prs', 'vig', 'aut'];
+                attributes.forEach(attr => createAttributeDots(attr, 5)); // 5 NÍVEIS
+                
+                createSkills();
+            
+                const char = getChar();
+                // Garantir que o container Equipados existe // ❌ REMOVER ESTA LINHA:
+                // await ensureEquipadosContainer(currentCharacterId || currentUser.uid);
+                
+                loadCharacterData();
+            
+                // Tentar atualizar cálculos, mas não travar se falhar
+                try {
+                    if (window.currentCharacterId && window.currentUser) {
+                        updateAllCalculations();
+                    } else {
+                        console.warn('⚠️ Aguardando inicialização completa antes de updateAllCalculations');
+                    }
+                } catch (error) {
+                    console.error('⚠️ Erro ao atualizar cálculos iniciais (não crítico):', error);
+                }
+                
+                setupEventListeners();
+                setupInputListeners();
+                
+                updateContainers();
+                updateEXPDisplay();
+                updateConditions();
+                updateLunsDisplay();
+
+                // Update allies and properties (defensivo - aguarda funções estarem disponíveis)
+                if (typeof window.updateAlliesList === 'function') {
+                    updateAlliesList();
+                } else {
+                    console.warn('⚠️ updateAlliesList ainda não disponível');
+                }
+
+                if (typeof window.updatePropertiesList === 'function') {
+                    updatePropertiesList();
+                } else {
+                    console.warn('⚠️ updatePropertiesList ainda não disponível');
+                }
+
+                if (typeof window.updateAlliesCombat === 'function') {
+                    updateAlliesCombat();
+                } else {
+                    console.warn('⚠️ updateAlliesCombat ainda não disponível');
+                }
+                
+                console.log('✅ Sistema inicializado com sucesso');
+                
+            } catch (error) {
+                console.error('❌ ERRO CRÍTICO na inicialização:', error);
+                alert('Erro ao inicializar ficha. Verifique o console (F12).');
+            }
+        }
+
         // ============= VERIFICAR AUTENTICAÇÃO =============
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
+                window.currentUser = user;
                 console.log('✅ Usuário logado:', user.email);
                 
                 document.getElementById('userEmail').textContent = user.email;
@@ -1867,7 +2040,7 @@ Exemplos:
                 document.getElementById('mainContainer').style.display = 'block';
                 
                 await loadFromFirebase();
-                init();
+                await init();
             } else {
                 console.log('❌ Usuário não autenticado. Redirecionando...');
                 window.location.href = 'index.html';
@@ -1964,6 +2137,189 @@ Exemplos:
                 }, 3000);
             }
         };
+
+        // ============= FUNÇÕES DE CONTAINERS NO FIREBASE =============
+        /**
+         * Busca todos os containers de um personagem
+         */
+        async function loadContainersFromFirebase(characterId) {
+            try {
+                const containersRef = collection(db, 'containers');
+                const q = query(containersRef, where('characterId', '==', characterId));
+                const querySnapshot = await getDocs(q);
+                
+                const containers = [];
+                querySnapshot.forEach((doc) => {
+                    containers.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                // Ordenar: Equipados sempre primeiro
+                containers.sort((a, b) => {
+                    if (a.name === 'Equipados') return -1;
+                    if (b.name === 'Equipados') return 1;
+                    return 0;
+                });
+                
+                return containers;
+            } catch (error) {
+                console.error('Erro ao carregar containers:', error);
+                return [];
+            }
+        }
+
+        /**
+         * Salva ou atualiza um container no Firebase
+         */
+        async function saveContainerToFirebase(container) {
+            try {
+                if (!currentUser) {
+                    throw new Error('Usuário não autenticado');
+                }
+                
+                const containerRef = doc(db, 'containers', container.id);
+                await setDoc(containerRef, {
+                    name: container.name,
+                    ownerId: currentUser.uid, // ✅ Sempre usar o uid do usuário autenticado
+                    characterId: container.characterId || currentCharacterId, // Vincular ao personagem
+                    maxCapacity: container.maxCapacity,
+                    maxSize: container.maxSize || 0,
+                    itemIds: container.itemIds || [],
+                    isContainerItem: container.isContainerItem || false,
+                    linkedContainerId: container.linkedContainerId || null,
+                    // Informações físicas (se for um Item de Container)
+                    description: container.description || '',
+                    dureza: container.dureza || 0,
+                    tamanho: container.tamanho || 1,
+                    integridade: container.integridade || 0,
+                    peso: container.peso || 0
+                }, { merge: true });
+                
+                console.log('✅ Container salvo:', container.name);
+            } catch (error) {
+                console.error('Erro ao salvar container:', error);
+                throw error;
+            }
+        }
+
+        /**
+         * Remove um container do Firebase
+         */
+        async function deleteContainerFromFirebase(containerId) {
+            try {
+                const containerRef = doc(db, 'containers', containerId);
+                await deleteDoc(containerRef);
+                console.log('✅ Container removido do Firebase');
+            } catch (error) {
+                console.error('Erro ao remover container:', error);
+                throw error;
+            }
+        }
+
+        // ============= FUNÇÕES DE ITENS NO FIREBASE =============
+
+        /**
+         * Busca todos os itens de um personagem
+         */
+        async function loadItemsFromFirebase(characterId) {
+            try {
+                console.log(`🔍 [loadItemsFromFirebase] Iniciando busca com characterId:`, characterId);
+                
+                const itemsRef = collection(db, 'items');
+                const q = query(itemsRef, where('characterId', '==', characterId));
+                const querySnapshot = await getDocs(q);
+                
+                console.log(`🔍 [loadItemsFromFirebase] Query executada. Documentos encontrados:`, querySnapshot.size);
+                
+                const items = [];
+                querySnapshot.forEach((doc) => {
+                    const itemData = {
+                        id: doc.id,
+                        ...doc.data()
+                    };
+                    console.log(`📦 [loadItemsFromFirebase] Item encontrado:`, itemData);
+                    items.push(itemData);
+                });
+                
+                console.log(`✅ [loadItemsFromFirebase] Total de itens retornados:`, items.length);
+                return items;
+            } catch (error) {
+                console.error('❌ [loadItemsFromFirebase] Erro ao carregar itens:', error);
+                return [];
+            }
+        }
+
+        /**
+         * Salva ou atualiza um item no Firebase
+         */
+        async function saveItemToFirebase(item) {
+            try {
+                if (!currentUser) {
+                    throw new Error('Usuário não autenticado');
+                }
+                
+                const itemRef = doc(db, 'items', item.id);
+                await setDoc(itemRef, {
+                    name: item.name,
+                    ownerId: currentUser.uid, // ✅ Sempre usar o uid do usuário autenticado
+                    characterId: item.characterId || currentCharacterId, // Vincular ao personagem
+                    containerId: item.containerId, // 'está com alguém' para Equipados
+                    quantity: item.quantity || 1,
+                    description: item.description || '',
+                    dureza: item.dureza || 0,
+                    tamanho: item.tamanho || 1,
+                    integridade: item.integridade || 0,
+                    peso: item.peso || 0,
+                    packSize: item.packSize || 1,
+                    totalWeight: item.totalWeight || item.peso,
+                    isContainerItem: item.isContainerItem || false,
+                    linkedContainerId: item.linkedContainerId || null
+                }, { merge: true });
+                
+                console.log('✅ Item salvo:', item.name);
+            } catch (error) {
+                console.error('Erro ao salvar item:', error);
+                throw error;
+            }
+        }
+
+        /**
+         * Remove um item do Firebase
+         */
+        async function deleteItemFromFirebase(itemId) {
+            try {
+                const itemRef = doc(db, 'items', itemId);
+                await deleteDoc(itemRef);
+                console.log('✅ Item removido do Firebase');
+            } catch (error) {
+                console.error('Erro ao remover item:', error);
+                throw error;
+            }
+        }
+
+        /**
+         * Move todos os itens de um container para outro
+         */
+        async function moveAllItemsToContainer(fromContainerId, toContainerId, characterId) {
+            try {
+                const itemsRef = collection(db, 'items');
+                const q = query(itemsRef, where('ownerId', '==', characterId), where('containerId', '==', fromContainerId));
+                const querySnapshot = await getDocs(q);
+                
+                const updates = [];
+                querySnapshot.forEach((doc) => {
+                    updates.push(updateDoc(doc.ref, { containerId: toContainerId }));
+                });
+                
+                await Promise.all(updates);
+                console.log('✅ Itens movidos com sucesso');
+            } catch (error) {
+                console.error('Erro ao mover itens:', error);
+                throw error;
+            }
+        }
 
         // ============= DETECTAR MUDANÇAS =============
         function detectChanges(oldChar, newChar) {
@@ -2155,41 +2511,49 @@ Exemplos:
             return changes;
         }
 
-        // ============= CARREGAR DO FIREBASE =============
-        async function loadFromFirebase() {
-            if (!currentUser) return;
-            
+        /**
+         * Carrega containers e itens do Firebase
+         */
+        async function loadInventoryFromFirebase(characterId) {
             try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const characterId = urlParams.get('id') || currentUser.uid;
-                currentCharacterId = characterId;
-                const userDoc = doc(db, 'characters', characterId);
-                const docSnap = await getDoc(userDoc);
-
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    console.log('✅ Ficha carregada do Firebase:', data);
+                console.log(`🔍 [loadInventoryFromFirebase] Iniciando com characterId:`, characterId);
+                
+                // Carregar containers
+                const containers = await loadContainersFromFirebase(characterId);
+                console.log(`📦 [loadInventoryFromFirebase] Containers carregados:`, containers.length, containers);
+                
+                // Carregar itens
+                const allItems = await loadItemsFromFirebase(characterId);
+                console.log(`📦 [loadInventoryFromFirebase] Itens carregados:`, allItems.length, allItems);
+                
+                // Organizar itens por container
+                const containersWithItems = containers.map(container => {
+                    console.log(`🔍 [loadInventoryFromFirebase] Processando container:`, container.name, `(ID: ${container.id})`);
                     
-                    delete data.lastUpdate;
-                    delete data.userEmail;
+                    const items = allItems.filter(item => {
+                        if (container.name === 'Equipados') {
+                            const match = item.containerId === 'está com alguém';
+                            console.log(`  📌 Item "${item.name}" - containerId: "${item.containerId}" - Match Equipados: ${match}`);
+                            return match;
+                        }
+                        const match = item.containerId === container.id;
+                        console.log(`  📌 Item "${item.name}" - containerId: "${item.containerId}" - containerID: "${container.id}" - Match: ${match}`);
+                        return match;
+                    });
                     
-                    window.character = {
-                        ...window.character,
-                        ...data,
-                        allies: data.allies || [],
-                        properties: data.properties || []
+                    console.log(`✅ [loadInventoryFromFirebase] Container "${container.name}" ficou com ${items.length} itens`);
+                    
+                    return {
+                        ...container,
+                        items: items
                     };
-                    
-                    previousCharacterState = JSON.parse(JSON.stringify(window.character));
-                    showAlert('✅ Ficha carregada da nuvem!', 'success');
-                } else {
-                    console.log('📝 Primeira vez! Criando ficha nova...');
-                    previousCharacterState = JSON.parse(JSON.stringify(window.character));
-                    showAlert('📝 Bem-vindo! Crie seu personagem.', 'success');
-                }
+                });
+                
+                window.character.containers = containersWithItems;
+                console.log('✅ Inventário carregado:', containersWithItems);
             } catch (error) {
-                console.error('Erro ao carregar ficha:', error);
-                showAlert('⚠️ Erro ao carregar ficha. Usando dados locais.', 'danger');
+                console.error('❌ [loadInventoryFromFirebase] Erro ao carregar inventário:', error);
+                window.character.containers = [];
             }
         }
 
@@ -2624,6 +2988,15 @@ Exemplos:
 
         window.updatePropertiesList = updatePropertiesList;
 
+        // Expor funções do Firebase para uso global
+        window.saveContainerToFirebase = saveContainerToFirebase;
+        window.saveItemToFirebase = saveItemToFirebase;
+        window.deleteContainerFromFirebase = deleteContainerFromFirebase;
+        window.deleteItemFromFirebase = deleteItemFromFirebase;
+        window.loadInventoryFromFirebase = loadInventoryFromFirebase;
+        window.ensureEquipadosContainer = ensureEquipadosContainer;
+        window.loadContainersFromFirebase = loadContainersFromFirebase;
+
         // Expor funções para uso global
         window.updateAlliesList = updateAlliesList;
         window.updatePropertiesList = updatePropertiesList;
@@ -2975,12 +3348,7 @@ Exemplos:
             classAbilities: {},
             classResources: {},
             hpCurrent: 5, detCurrent: 3, sanCurrent: 80, blindagem: 0,
-            containers: [{
-                id: Date.now(),
-                name: 'Mochila',
-                maxCapacity: 6,
-                items: []
-            }],
+            containers: [], // Agora containers não são mais salvos no documento do personagem
             notas: '',
             exp: 0,
             characterImage: ''
@@ -3111,69 +3479,6 @@ Exemplos:
             updateClassTests();
             
             console.log('Classe renderizada com sucesso!');
-        }
-
-        function init() {
-            try {
-                console.log('🚀 Iniciando sistema...');
-                
-                const attributes = ['int', 'for', 'pre', 'rac', 'des', 'man', 'prs', 'vig', 'aut'];
-                attributes.forEach(attr => createAttributeDots(attr, 5)); // 5 NÍVEIS
-                
-                createSkills();
-            
-                const char = getChar();
-                if (!char.containers || char.containers.length === 0) {
-                    char.containers = [{
-                        id: Date.now(),
-                        name: 'Mochila',
-                        maxCapacity: char.for + char.vig,
-                        items: []
-                    }];
-                }
-                
-                loadCharacterData();
-            
-                // Tentar atualizar cálculos, mas não travar se falhar
-                try {
-                    updateAllCalculations();
-                } catch (error) {
-                    console.error('⚠️ Erro ao atualizar cálculos iniciais (não crítico):', error);
-                }
-                
-                setupEventListeners();
-                setupInputListeners();
-                
-                updateContainers();
-                updateEXPDisplay();
-                updateConditions();
-                updateLunsDisplay();
-
-                // Update allies and properties (defensivo - aguarda funções estarem disponíveis)
-                if (typeof window.updateAlliesList === 'function') {
-                    updateAlliesList();
-                } else {
-                    console.warn('⚠️ updateAlliesList ainda não disponível');
-                }
-
-                if (typeof window.updatePropertiesList === 'function') {
-                    updatePropertiesList();
-                } else {
-                    console.warn('⚠️ updatePropertiesList ainda não disponível');
-                }
-
-                if (typeof window.updateAlliesCombat === 'function') {
-                    updateAlliesCombat();
-                } else {
-                    console.warn('⚠️ updateAlliesCombat ainda não disponível');
-                }
-                
-                console.log('✅ Sistema inicializado com sucesso');
-                
-            } catch (error) {
-                console.error('❌ ERRO CRÍTICO na inicialização:', error);
-                alert('Erro ao inicializar ficha. Verifique o console (F12).');
-            }
         }
 
         function setupEventListeners() {
@@ -3954,6 +4259,33 @@ Exemplos:
                 updateClassResourcesDisplay();
                 
                 console.log('✅ Cálculos atualizados com sucesso');
+            
+                // Atualizar capacidade e tamanho do container Equipados
+                const equipados = char.containers?.find(c => c.name === 'Equipados');
+                if (equipados) {
+                    const atletismo = char.skills['atletismo'] || 0;
+                    const vig = char.vig || 1;
+                    const forca = char.for || 1;
+                    
+                    equipados.maxCapacity = forca + vig;
+                    
+                    // ✅ Se atletismo > 0, usa a fórmula completa. Se não, usa apenas VIG * FOR
+                    equipados.maxSize = atletismo > 0 
+                        ? forca * vig * atletismo 
+                        : forca * vig;
+                    
+                    console.log(`📦 Equipados atualizado: maxSize = ${forca} × ${vig}${atletismo > 0 ? ` × ${atletismo}` : ''} = ${equipados.maxSize}`);
+                    
+                    // Salvar container atualizado
+                    const characterId = window.currentCharacterId || (window.currentUser || currentUser)?.uid;
+                    if (characterId && (window.currentUser || currentUser)) {
+                        equipados.characterId = characterId;  // Garantir que tem characterId
+                        equipados.ownerId = (window.currentUser || currentUser)?.uid;  // Garantir que tem ownerId
+                        window.saveContainerToFirebase(equipados).catch(err => 
+                            console.error('Erro ao atualizar Equipados:', err)
+                        );
+                    }
+                }
                 
             } catch (error) {
                 console.error('❌ Erro em updateAllCalculations:', error);
@@ -4214,82 +4546,281 @@ Exemplos:
             `).join('');
         }
 
-        window.addContainer = function() {
+        window.addContainer = async function() {
             const char = getChar();
             const name = prompt('Nome do container (ex: Mochila, Bolsa, Carroça):');
             if (!name) return;
             
+            if (name === 'Equipados') {
+                alert('❌ Esse nome é reservado!');
+                return;
+            }
+            
             const maxCapacity = parseInt(prompt('Capacidade máxima de carga:')) || 10;
-            
-            const newContainer = {
-                id: Date.now(),
-                name,
-                maxCapacity,
-                items: []
-            };
-            
-            char.containers.push(newContainer);
-            updateContainers();
-            updateEXPDisplay();
-            updateConditions();
-            updateLunsDisplay();
-            updateEXPDisplay();
-            autoSave();
-        };
-
-        window.removeContainer = function(containerId) {
-            if (!confirm('⚠️ Remover este container e todos os itens dentro dele?')) return;
-            
-            const char = getChar();
-            char.containers = char.containers.filter(c => c.id !== containerId);
-            updateContainers();
-            updateEXPDisplay();
-            updateConditions();
-            updateLunsDisplay();
-            updateEXPDisplay();
-            autoSave();
-        };
-
-        window.addItemToContainer = function(containerId) {
-            const name = prompt('Nome do item:');
-            if (!name) return;
-            
-            const weight = parseInt(prompt('Peso (Carga):')) || 1;
-            const quantity = parseInt(prompt('Quantidade:')) || 1;
+            const containerWeight = parseFloat(prompt('Peso do container vazio:')) || 1;
+            const tamanhoContainer = parseInt(prompt('Tamanho do container (1-10):')) || 3;
             const description = prompt('Descrição (opcional):') || '';
+            const dureza = parseInt(prompt('Dureza (0-10):')) || 0;
+            const integridade = parseInt(prompt('Integridade:')) || 10;
             
-            const char = getChar();
-            const container = char.containers.find(c => c.id === containerId);
-            if (container) {
-                const newItem = {
-                    id: Date.now(),
+            try {
+                const characterId = currentCharacterId || currentUser.uid;
+                const containerId = 'container-' + Date.now();
+                
+                // Criar novo container
+                const newContainer = {
+                    id: containerId,
                     name,
-                    weight,
-                    quantity,
-                    description
+                    ownerId: currentUser.uid, // ✅ Usar uid do usuário autenticado
+                    characterId: characterId, // Vincular ao personagem
+                    maxCapacity,
+                    maxSize: tamanhoContainer,
+                    itemIds: [],
+                    description,
+                    dureza,
+                    tamanho: tamanhoContainer,
+                    integridade,
+                    peso: containerWeight
                 };
                 
-                container.items.push(newItem);
+                await window.saveContainerToFirebase(newContainer);
+                
+                // Criar Item de Container no Equipados
+                const containerItemId = 'item-' + Date.now();
+                const containerItem = {
+                    id: containerItemId,
+                    name: name,
+                    ownerId: currentUser.uid, // ✅ Usar uid do usuário autenticado
+                    characterId: characterId, // Vincular ao personagem
+                    containerId: 'está com alguém', // No Equipados
+                    quantity: 1,
+                    description: 'Container: ' + (description || 'Sem descrição'),
+                    dureza,
+                    tamanho: tamanhoContainer,
+                    integridade,
+                    peso: containerWeight,
+                    packSize: 1,
+                    totalWeight: containerWeight,
+                    isContainerItem: true,
+                    linkedContainerId: containerId
+                };
+                
+                await window.saveItemToFirebase(containerItem);
+                
+                // Recarregar inventário
+                await window.loadInventoryFromFirebase(characterId);
                 updateContainers();
-            updateEXPDisplay();
-            updateConditions();
-            updateLunsDisplay();
-            updateEXPDisplay();
-                autoSave();
+                showAlert('✅ Container criado com sucesso!', 'success');
+            } catch (error) {
+                console.error('Erro ao criar container:', error);
+                alert('❌ Erro ao criar container!');
             }
         };
 
-        window.removeItemFromContainer = function(containerId, itemId) {
+        window.removeContainer = async function(containerId) {
             const char = getChar();
             const container = char.containers.find(c => c.id === containerId);
-            if (container) {
-                container.items = container.items.filter(i => i.id !== itemId);
+            
+            if (!container) return;
+            
+            if (container.name === 'Equipados') {
+                alert('❌ O container Equipados não pode ser removido!');
+                return;
+            }
+            
+            if (!confirm(`⚠️ Remover "${container.name}"?\n\nTodos os itens dentro serão movidos para Equipados.`)) return;
+            
+            try {
+                const characterId = currentCharacterId || currentUser.uid;
+                
+                // Mover todos os itens para Equipados
+                const equipados = char.containers.find(c => c.name === 'Equipados');
+                if (equipados) {
+                    await moveAllItemsToContainer(containerId, 'está com alguém', characterId);
+                }
+                
+                // Remover o Item de Container do Equipados
+                const containerItem = equipados.items.find(item => 
+                    item.isContainerItem && item.linkedContainerId === containerId
+                );
+                
+                if (containerItem) {
+                    await window.deleteItemFromFirebase(containerItem.id);
+                }
+                
+                // Remover container
+                await window.deleteContainerFromFirebase(containerId);
+                
+                // Recarregar inventário
+                await window.loadInventoryFromFirebase(characterId);
                 updateContainers();
-            updateEXPDisplay();
-            updateConditions();
-            updateLunsDisplay();
-            updateEXPDisplay();
-                autoSave();
+                showAlert('🗑️ Container removido! Itens movidos para Equipados.', 'success');
+            } catch (error) {
+                console.error('Erro ao remover container:', error);
+                alert('❌ Erro ao remover container!');
+            }
+        };
+
+        window.addItemToContainer = async function(containerId) {
+            const char = getChar();
+            const container = char.containers.find(c => c.id === containerId);
+            if (!container) return;
+            
+            const name = prompt('Nome do item:');
+            if (!name) return;
+            
+            const peso = parseFloat(prompt('Peso unitário (Carga):')) || 1;
+            const packSizeInput = prompt('Tamanho do Pack:\n1 = Individual\n5 = Pequeno\n10 = Médio\n50 = Grande\n\nDigite o número:', '1');
+            const packSize = parseInt(packSizeInput) || 1;
+            const quantity = parseInt(prompt('Quantidade de packs:')) || 1;
+            const tamanho = parseInt(prompt('Tamanho do item (1-10):')) || 1;
+            const description = prompt('Descrição (opcional):') || '';
+            const dureza = parseInt(prompt('Dureza (0-10):')) || 0;
+            const integridade = parseInt(prompt('Integridade:')) || 10;
+            
+            // Verificar tamanho
+            if (container.name === 'Equipados') {
+                const atletismo = char.skills['atletismo'] || 1;
+                const vig = char.vig || 1;
+                const forca = char.for || 1;
+                
+                const maxSize = forca * vig * atletismo;
+                
+                if (tamanho > maxSize) {
+                    alert(`❌ Item muito grande!\n\nTamanho máximo permitido: ${maxSize}\nTamanho do item: ${tamanho}`);
+                    return;
+                }
+            }
+            
+            try {
+                const characterId = window.currentCharacterId || currentUser?.uid;
+                const totalWeight = peso * packSize * quantity;
+                
+                const newItem = {
+                    id: 'item-' + Date.now(),
+                    name,
+                    ownerId: (window.currentUser || currentUser)?.uid, // ✅ Usar uid do usuário autenticado
+                    characterId: window.currentCharacterId || characterId, // Vincular ao personagem
+                    containerId: container.name === 'Equipados' ? 'está com alguém' : containerId,
+                    quantity,
+                    description,
+                    dureza,
+                    tamanho,
+                    integridade,
+                    peso,
+                    packSize,
+                    totalWeight,
+                    isContainerItem: false,
+                    linkedContainerId: null
+                };
+                
+                await window.saveItemToFirebase(newItem);
+                
+                // Recarregar inventário
+                await window.loadInventoryFromFirebase(characterId);
+                updateContainers();
+                showAlert('✅ Item adicionado!', 'success');
+            } catch (error) {
+                console.error('Erro ao adicionar item:', error);
+                alert('❌ Erro ao adicionar item!');
+            }
+        };
+
+        window.removeItemFromContainer = async function(containerId, itemId) {
+            const char = getChar();
+            const container = char.containers.find(c => c.id === containerId);
+            if (!container) return;
+            
+            const item = container.items.find(i => i.id === itemId);
+            if (!item) return;
+            
+            // Verificar se é Item de Container
+            if (item.isContainerItem && item.linkedContainerId) {
+                if (!confirm(`⚠️ Este item representa o container "${item.name}"!\n\nRemover este item também removerá o container e moverá todos os itens dentro dele para Equipados.\n\nContinuar?`)) {
+                    return;
+                }
+                
+                // Remover o container associado
+                await removeContainer(item.linkedContainerId);
+                return;
+            }
+            
+            if (!confirm(`🗑️ Remover "${item.name}"?`)) return;
+            
+            try {
+                await window.deleteItemFromFirebase(itemId);
+                
+                // Recarregar inventário
+                const characterId = currentCharacterId || currentUser.uid;
+                await window.loadInventoryFromFirebase(characterId);
+                updateContainers();
+                showAlert('🗑️ Item removido!', 'success');
+            } catch (error) {
+                console.error('Erro ao remover item:', error);
+                alert('❌ Erro ao remover item!');
+            }
+        };
+
+        window.editContainer = async function(containerId) {
+            const char = getChar();
+            const container = char.containers.find(c => c.id === containerId);
+            
+            if (!container) return;
+            
+            if (container.name === 'Equipados') {
+                alert('❌ O container Equipados não pode ser editado!');
+                return;
+            }
+            
+            const newName = prompt('Nome do container:', container.name);
+            if (newName === null) return;
+            
+            const newCapacity = parseInt(prompt('Capacidade máxima:', container.maxCapacity));
+            const newMaxSize = parseInt(prompt('Tamanho máximo de itens:', container.maxSize));
+            const newDescription = prompt('Descrição:', container.description || '');
+            const newDureza = parseInt(prompt('Dureza:', container.dureza || 0));
+            const newIntegridade = parseInt(prompt('Integridade:', container.integridade || 0));
+            const newPeso = parseFloat(prompt('Peso:', container.peso || 0));
+            
+            try {
+                if (newName && newName !== 'Equipados') container.name = newName;
+                if (!isNaN(newCapacity)) container.maxCapacity = newCapacity;
+                if (!isNaN(newMaxSize)) container.maxSize = newMaxSize;
+                if (newDescription !== null) container.description = newDescription;
+                if (!isNaN(newDureza)) container.dureza = newDureza;
+                if (!isNaN(newIntegridade)) container.integridade = newIntegridade;
+                if (!isNaN(newPeso)) container.peso = newPeso;
+                
+                await window.saveContainerToFirebase(container);
+                
+                // Atualizar Item de Container correspondente
+                const equipados = char.containers.find(c => c.name === 'Equipados');
+                if (equipados) {
+                    const containerItem = equipados.items.find(item => 
+                        item.isContainerItem && item.linkedContainerId === containerId
+                    );
+                    
+                    if (containerItem) {
+                        containerItem.name = container.name;
+                        containerItem.description = 'Container: ' + (container.description || 'Sem descrição');
+                        containerItem.dureza = container.dureza;
+                        containerItem.tamanho = container.tamanho;
+                        containerItem.integridade = container.integridade;
+                        containerItem.peso = container.peso;
+                        containerItem.totalWeight = container.peso;
+                        
+                        await window.saveItemToFirebase(containerItem);
+                    }
+                }
+                
+                // Recarregar inventário
+                const characterId = currentCharacterId || currentUser.uid;
+                await window.loadInventoryFromFirebase(characterId);
+                updateContainers();
+                showAlert('✅ Container atualizado!', 'success');
+            } catch (error) {
+                console.error('Erro ao editar container:', error);
+                alert('❌ Erro ao editar container!');
             }
         };
 
@@ -4298,43 +4829,72 @@ Exemplos:
             const containersList = document.getElementById('containers-list');
             
             if (!char.containers || char.containers.length === 0) {
-                containersList.innerHTML = '<p style="color: #64748b; text-align: center; padding: 20px; font-size: 0.9rem;">Nenhum container. Adicione uma mochila, bolsa ou carroça!</p>';
+                containersList.innerHTML = '<p style="color: #64748b; text-align: center; padding: 20px; font-size: 0.9rem;">Carregando containers...</p>';
                 return;
             }
             
             containersList.innerHTML = char.containers.map(container => {
                 const currentLoad = container.items.reduce((sum, item) => 
-                    sum + (item.weight * item.quantity), 0
+                    sum + (item.totalWeight || (item.peso * item.quantity)), 0
                 );
                 
                 const isOverload = currentLoad > container.maxCapacity;
                 
+                // Calcular tamanho máximo para Equipados
+                let sizeInfo = '';
+                if (container.name === 'Equipados') {
+                    const atletismo = char.skills['atletismo'] || 0;
+                    const vig = char.vig || 1;
+                    const forca = char.for || 1;
+                    
+                    // ✅ Se atletismo > 0, usa a fórmula completa. Se não, usa apenas VIG * FOR
+                    const maxSize = atletismo > 0 
+                        ? forca * vig * atletismo 
+                        : forca * vig;
+                    
+                    sizeInfo = `<span style="color: #94a3b8; font-size: 0.85rem; margin-right: 10px;">
+                        📏 Tamanho Max: ${maxSize} <span style="color: #64748b; font-size: 0.75rem;">(FOR × VIG × Atletismo)</span>
+                    </span>`;
+                }
+                
                 const itemsHTML = container.items.length === 0 
                     ? '<p style="color: #64748b; text-align: center; padding: 10px; font-size: 0.85rem;">Vazio</p>'
-                    : container.items.map(item => `
-                        <div class="inventory-item">
-                            <div class="item-info">
-                                <div class="item-name">${item.name} ${item.quantity > 1 ? `(x${item.quantity})` : ''}</div>
+                    : container.items.map((item, index) => `
+                        <div class="inventory-item" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; ${item.isContainerItem ? 'background: rgba(139, 92, 246, 0.1); border-left: 3px solid var(--primary);' : ''}">
+                            <div class="item-info" onclick="editItem('${container.id}', '${item.id}')" style="cursor: pointer; flex: 1;">
+                                <div class="item-name">${item.isContainerItem ? '📦 ' : ''}${item.name} ${item.packSize > 1 ? `[Pack ${item.packSize}]` : ''} (x${item.quantity})${item.isContainerItem ? ' [CONTAINER]' : ''}</div>
                                 <div class="item-details">
-                                    Peso: ${item.weight} | Total: ${item.weight * item.quantity}
+                                    Peso: ${item.peso} | Tam: ${item.tamanho} | Int: ${item.integridade}/${item.integridade} | Total: ${item.totalWeight || (item.peso * item.quantity)}
                                     ${item.description ? `<br>${item.description}` : ''}
                                 </div>
                             </div>
-                            <button class="btn btn-secondary btn-small" onclick="removeItemFromContainer(${container.id}, ${item.id})">🗑️</button>
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                ${index > 0 ? `<button class="btn btn-secondary btn-small" onclick="moveItemUp('${container.id}', '${item.id}')" style="padding: 4px 8px;">▲</button>` : ''}
+                                ${index < container.items.length - 1 ? `<button class="btn btn-secondary btn-small" onclick="moveItemDown('${container.id}', '${item.id}')" style="padding: 4px 8px;">▼</button>` : ''}
+                                <button class="btn btn-secondary btn-small" onclick="changeItemQuantity('${container.id}', '${item.id}')" style="padding: 4px 8px;">✏️</button>
+                                ${!item.isContainerItem ? `<button class="btn btn-secondary btn-small" onclick="moveItemToContainer('${container.id}', '${item.id}')" style="padding: 4px 8px;">📦</button>` : ''}
+                                <button class="btn btn-danger btn-small" onclick="removeItemFromContainer('${container.id}', '${item.id}')" style="padding: 4px 8px;">🗑️</button>
+                            </div>
                         </div>
                     `).join('');
                 
                 return `
                     <div class="container-card">
                         <div class="container-header">
-                            <div class="container-name">📦 ${container.name}</div>
-                            <div class="container-capacity ${isOverload ? 'overload' : ''}">
-                                ${currentLoad} / ${container.maxCapacity} ${isOverload ? '⚠️ SOBRECARGA!' : ''}
+                            <div class="container-name">
+                                ${container.name === 'Equipados' ? '⚔️' : '📦'} ${container.name}
+                                ${container.name !== 'Equipados' ? ` <button class="btn btn-secondary btn-small" onclick="editContainer('${container.id}')" style="padding: 2px 8px; font-size: 0.7rem;">✏️</button>` : ''}
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                ${sizeInfo}
+                                <div class="container-capacity ${isOverload ? 'overload' : ''}">
+                                    ${currentLoad} / ${container.maxCapacity} ${isOverload ? '⚠️ SOBRECARGA!' : ''}
+                                </div>
                             </div>
                         </div>
                         <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
-                            <button class="btn btn-primary btn-small" onclick="addItemToContainer(${container.id})" style="flex: 1; min-width: 120px;">➕ Item</button>
-                            <button class="btn btn-danger btn-small" onclick="removeContainer(${container.id})" style="min-width: 120px;">🗑️ Container</button>
+                            <button class="btn btn-primary btn-small" onclick="addItemToContainer('${container.id}')" style="flex: 1; min-width: 120px;">➕ Item</button>
+                            ${container.name !== 'Equipados' ? `<button class="btn btn-danger btn-small" onclick="removeContainer('${container.id}')" style="min-width: 120px;">🗑️ Container</button>` : ''}
                         </div>
                         ${itemsHTML}
                     </div>
@@ -4342,7 +4902,196 @@ Exemplos:
             }).join('');
         }
 
-        
+        window.editItem = async function(containerId, itemId) {
+            const char = getChar();
+            const container = char.containers.find(c => c.id === containerId);
+            if (!container) return;
+            
+            const item = container.items.find(i => i.id === itemId);
+            if (!item) return;
+            
+            if (item.isContainerItem) {
+                alert('ℹ️ Este é um Item de Container. Edite as informações através do botão de editar do container.');
+                return;
+            }
+            
+            const newName = prompt('Nome do item:', item.name);
+            if (newName === null) return;
+            
+            const newPeso = parseFloat(prompt('Peso unitário:', item.peso));
+            const newPackSize = parseInt(prompt('Tamanho do Pack:', item.packSize || 1));
+            const newQuantity = parseInt(prompt('Quantidade:', item.quantity));
+            const newTamanho = parseInt(prompt('Tamanho (1-10):', item.tamanho));
+            const newDescription = prompt('Descrição:', item.description || '');
+            const newDureza = parseInt(prompt('Dureza (0-10):', item.dureza || 0));
+            const newIntegridade = parseInt(prompt('Integridade:', item.integridade || 10));
+            
+            try {
+                if (newName) item.name = newName;
+                if (!isNaN(newPeso)) item.peso = newPeso;
+                if (!isNaN(newPackSize)) item.packSize = newPackSize;
+                if (!isNaN(newQuantity)) item.quantity = newQuantity;
+                if (!isNaN(newTamanho)) item.tamanho = newTamanho;
+                if (newDescription !== null) item.description = newDescription;
+                if (!isNaN(newDureza)) item.dureza = newDureza;
+                if (!isNaN(newIntegridade)) item.integridade = newIntegridade;
+                
+                item.totalWeight = item.peso * item.packSize * item.quantity;
+                
+                await window.saveItemToFirebase(item);
+                
+                // Recarregar inventário
+                const characterId = currentCharacterId || currentUser.uid;
+                await window.loadInventoryFromFirebase(characterId);
+                updateContainers();
+                showAlert('✅ Item atualizado!', 'success');
+            } catch (error) {
+                console.error('Erro ao editar item:', error);
+                alert('❌ Erro ao editar item!');
+            }
+        };
+
+        window.changeItemQuantity = async function(containerId, itemId) {
+            const char = getChar();
+            const container = char.containers.find(c => c.id === containerId);
+            if (!container) return;
+            
+            const item = container.items.find(i => i.id === itemId);
+            if (!item) return;
+            
+            if (item.isContainerItem) {
+                alert('❌ Não é possível alterar a quantidade de um Item de Container!');
+                return;
+            }
+            
+            const newQuantity = parseInt(prompt('Nova quantidade:', item.quantity));
+            if (!isNaN(newQuantity) && newQuantity > 0) {
+                try {
+                    item.quantity = newQuantity;
+                    item.totalWeight = item.peso * (item.packSize || 1) * item.quantity;
+                    
+                    await window.saveItemToFirebase(item);
+                    
+                    // Recarregar inventário
+                    const characterId = currentCharacterId || currentUser.uid;
+                    await window.loadInventoryFromFirebase(characterId);
+                    updateContainers();
+                    showAlert('✅ Quantidade atualizada!', 'success');
+                } catch (error) {
+                    console.error('Erro ao alterar quantidade:', error);
+                    alert('❌ Erro ao alterar quantidade!');
+                }
+            }
+        };
+
+        window.moveItemToContainer = async function(fromContainerId, itemId) {
+            const char = getChar();
+            const fromContainer = char.containers.find(c => c.id === fromContainerId);
+            if (!fromContainer) return;
+            
+            const item = fromContainer.items.find(i => i.id === itemId);
+            if (!item) return;
+            
+            // Verificar se é Item de Container
+            if (item.isContainerItem) {
+                alert('❌ Não é possível mover o Item de Container!\n\nEste item representa um container físico que você carrega.');
+                return;
+            }
+            
+            // Criar lista de containers disponíveis
+            const containerOptions = char.containers
+                .filter(c => {
+                    // Não pode mover para o mesmo container
+                    if (c.id === fromContainerId) return false;
+                    
+                    // Verificar se é o próprio container do item
+                    if (item.linkedContainerId && c.id === item.linkedContainerId) return false;
+                    
+                    // Verificar tamanho
+                    if (c.name === 'Equipados') {
+                        const atletismo = char.skills['atletismo'] || 1;
+                        const vig = char.vig || 1;
+                        const forca = char.for || 1;
+                        const maxSize = char.for * char.vig * atletismo;
+                        return item.tamanho <= maxSize;
+                    } else {
+                        return item.tamanho <= c.maxSize;
+                    }
+                })
+                .map((c, index) => `${index + 1}. ${c.name} (Tam máx: ${c.maxSize || 'N/A'})`)
+                .join('\n');
+            
+            if (!containerOptions) {
+                alert('❌ Nenhum container disponível!\n\nO item pode ser muito grande ou não há outros containers.');
+                return;
+            }
+            
+            const choice = prompt(`Para qual container mover "${item.name}"?\n\n${containerOptions}\n\nDigite o número:`);
+            if (!choice) return;
+            
+            const targetIndex = parseInt(choice) - 1;
+            const targetContainer = char.containers.filter(c => {
+                if (c.id === fromContainerId) return false;
+                if (item.linkedContainerId && c.id === item.linkedContainerId) return false;
+                if (c.name === 'Equipados') {
+                    const atletismo = char.skills['atletismo'] || 0;
+                    const maxSize = char.for * char.vig * atletismo;
+                    return item.tamanho <= maxSize;
+                } else {
+                    return item.tamanho <= c.maxSize;
+                }
+            })[targetIndex];
+            
+            if (targetContainer) {
+                try {
+                    // Atualizar containerId do item
+                    item.containerId = targetContainer.name === 'Equipados' ? 'está com alguém' : targetContainer.id;
+                    
+                    await window.saveItemToFirebase(item);
+                    
+                    // Recarregar inventário
+                    const characterId = currentCharacterId || currentUser.uid;
+                    await window.loadInventoryFromFirebase(characterId);
+                    updateContainers();
+                    showAlert(`✅ Item movido para ${targetContainer.name}!`, 'success');
+                } catch (error) {
+                    console.error('Erro ao mover item:', error);
+                    alert('❌ Erro ao mover item!');
+                }
+            }
+        };
+
+        window.moveItemUp = async function(containerId, itemId) {
+            const char = getChar();
+            const container = char.containers.find(c => c.id === containerId);
+            if (!container) return;
+            
+            const itemIndex = container.items.findIndex(i => i.id === itemId);
+            if (itemIndex > 0) {
+                // Trocar posições
+                [container.items[itemIndex], container.items[itemIndex - 1]] = 
+                [container.items[itemIndex - 1], container.items[itemIndex]];
+                
+                updateContainers();
+                // Não salva no Firebase, apenas reorganiza localmente
+            }
+        };
+
+        window.moveItemDown = async function(containerId, itemId) {
+            const char = getChar();
+            const container = char.containers.find(c => c.id === containerId);
+            if (!container) return;
+            
+            const itemIndex = container.items.findIndex(i => i.id === itemId);
+            if (itemIndex < container.items.length - 1) {
+                // Trocar posições
+                [container.items[itemIndex], container.items[itemIndex + 1]] = 
+                [container.items[itemIndex + 1], container.items[itemIndex]];
+                
+                updateContainers();
+                // Não salva no Firebase, apenas reorganiza localmente
+            }
+        };
 
         window.switchTab = function(tabName) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));

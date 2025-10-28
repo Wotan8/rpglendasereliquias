@@ -59,5 +59,53 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create, update, delete: if isMaster();
     }
+    
+    // ========== CORRIGIDO: Coleção de Containers ==========
+    match /containers/{containerId} {
+      // ✅ Permitir leitura/query para usuários autenticados
+      allow read: if isSignedIn();
+
+      // ✅ Criação: apenas se o usuário for o dono (ownerId = uid)
+      allow create: if isSignedIn() && 
+        request.resource.data.ownerId == request.auth.uid;
+
+      // ✅ Atualização: dono OU mestre
+      // O dono é identificado pelo ownerId (uid do usuário)
+      allow update: if isSignedIn() && (
+        (resource.data.ownerId == request.auth.uid && 
+         request.resource.data.ownerId == resource.data.ownerId) || 
+        isMaster()
+      );
+      
+      // ✅ Exclusão: dono OU mestre
+      allow delete: if isSignedIn() && (
+        resource.data.ownerId == request.auth.uid || 
+        isMaster()
+      );
+    }
+    
+    // ========== CORRIGIDO: Coleção de Itens ==========
+    match /items/{itemId} {
+      // ✅ Permitir leitura/query para usuários autenticados
+      allow read: if isSignedIn();
+
+      // ✅ Criação: apenas se o usuário for o dono (ownerId = uid)
+      allow create: if isSignedIn() && 
+        request.resource.data.ownerId == request.auth.uid;
+
+      // ✅ Atualização: dono OU mestre
+      // O dono é identificado pelo ownerId (uid do usuário)
+      allow update: if isSignedIn() && (
+        (resource.data.ownerId == request.auth.uid && 
+         request.resource.data.ownerId == resource.data.ownerId) || 
+        isMaster()
+      );
+      
+      // ✅ Exclusão: dono OU mestre
+      allow delete: if isSignedIn() && (
+        resource.data.ownerId == request.auth.uid || 
+        isMaster()
+      );
+    }
   }
 }
