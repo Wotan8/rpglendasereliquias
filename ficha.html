@@ -1827,6 +1827,7 @@ Exemplos:
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        window.db = db;
 
         window.currentUser = null;
         window.currentCharacterId = null;
@@ -1884,14 +1885,11 @@ Exemplos:
                 
                 if (!equipados) {
                     // Criar container Equipados
-                    const atletismo = char.skills['atletismo'] || 0;
+                    const atletismo = char.skills['atletismo'] || 1;
                     const vig = char.vig || 1;
                     const forca = char.for || 1;
                     
-                    // ✅ Se atletismo > 0, usa a fórmula completa. Se não, usa apenas VIG * FOR
-                    const maxSize = atletismo > 0 
-                        ? forca * vig * atletismo 
-                        : forca * vig;
+                    const maxSize = forca * vig * atletismo;
                     
                     equipados = {
                         id: 'equipados-' + Date.now(),
@@ -1947,6 +1945,14 @@ Exemplos:
                     
                     // Carregar containers e itens das coleções
                     await loadInventoryFromFirebase(characterId);
+                    
+                    // ✅ GARANTIR que container Equipados existe (importante para personagens antigos)
+                    if (!window.character.containers || !window.character.containers.find(c => c.name === 'Equipados')) {
+                        console.log('⚠️ Container Equipados não encontrado. Criando automaticamente...');
+                        await ensureEquipadosContainer(characterId);
+                        // Recarregar inventário após criar Equipados
+                        await loadInventoryFromFirebase(characterId);
+                    }
                     
                     previousCharacterState = JSON.parse(JSON.stringify(window.character));
                     showAlert('✅ Ficha carregada da nuvem!', 'success');
@@ -2305,7 +2311,7 @@ Exemplos:
         async function moveAllItemsToContainer(fromContainerId, toContainerId, characterId) {
             try {
                 const itemsRef = collection(db, 'items');
-                const q = query(itemsRef, where('ownerId', '==', characterId), where('containerId', '==', fromContainerId));
+                const q = query(itemsRef, where('characterId', '==', characterId), where('containerId', '==', fromContainerId));
                 const querySnapshot = await getDocs(q);
                 
                 const updates = [];
@@ -4263,16 +4269,12 @@ Exemplos:
                 // Atualizar capacidade e tamanho do container Equipados
                 const equipados = char.containers?.find(c => c.name === 'Equipados');
                 if (equipados) {
-                    const atletismo = char.skills['atletismo'] || 0;
+                    const atletismo = char.skills['atletismo'] || 1;
                     const vig = char.vig || 1;
                     const forca = char.for || 1;
                     
-                    equipados.maxCapacity = forca + vig;
-                    
-                    // ✅ Se atletismo > 0, usa a fórmula completa. Se não, usa apenas VIG * FOR
-                    equipados.maxSize = atletismo > 0 
-                        ? forca * vig * atletismo 
-                        : forca * vig;
+                    equipados.maxCapacity = forca + vig
+                    equipados.maxSize = forca * vig * atletismo;
                     
                     console.log(`📦 Equipados atualizado: maxSize = ${forca} × ${vig}${atletismo > 0 ? ` × ${atletismo}` : ''} = ${equipados.maxSize}`);
                     
@@ -4541,7 +4543,7 @@ Exemplos:
                     <div style="padding: 10px; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 10px;">
                         ${condition.description || 'Sem descrição'}
                     </div>
-                    <button class="btn btn-danger btn-small" onclick="removeCondition(${condition.id})">🗑️ Remover</button>
+                    <button class="btn btn-danger btn-small" onclick="removeCondition(${condition.id})">🗑️</button>
                 </div>
             `).join('');
         }
@@ -4631,24 +4633,40 @@ Exemplos:
             if (!confirm(`⚠️ Remover "${container.name}"?\n\nTodos os itens dentro serão movidos para Equipados.`)) return;
             
             try {
-                const characterId = currentCharacterId || currentUser.uid;
+                const characterId = window.currentCharacterId || (window.currentUser || currentUser)?.uid;
                 
-                // Mover todos os itens para Equipados
+                // Verificar se existe container Equipados
                 const equipados = char.containers.find(c => c.name === 'Equipados');
-                if (equipados) {
-                    await moveAllItemsToContainer(containerId, 'está com alguém', characterId);
+                
+                if (!equipados) {
+                    alert('❌ Container Equipados não encontrado! Não é possível remover este container.');
+                    return;
                 }
                 
-                // Remover o Item de Container do Equipados
+                // ✅ MOVER ITENS INLINE (sem usar função externa)
+                const itemsToMove = container.items || [];
+                console.log(`📦 Movendo ${itemsToMove.length} itens de "${container.name}" para Equipados`);
+                
+                for (const item of itemsToMove) {
+                    console.log(`  🔄 Movendo item: ${item.name}`);
+                    item.containerId = 'está com alguém';
+                    await window.saveItemToFirebase(item);
+                }
+                
+                console.log('✅ Todos os itens movidos para Equipados');
+                
+                // Remover o Item de Container do Equipados (se existir)
                 const containerItem = equipados.items.find(item => 
                     item.isContainerItem && item.linkedContainerId === containerId
                 );
                 
                 if (containerItem) {
+                    console.log(`🗑️ Removendo item de container: ${containerItem.name}`);
                     await window.deleteItemFromFirebase(containerItem.id);
                 }
                 
-                // Remover container
+                // Remover container do Firebase
+                console.log(`🗑️ Removendo container: ${container.name}`);
                 await window.deleteContainerFromFirebase(containerId);
                 
                 // Recarregar inventário
@@ -4656,8 +4674,8 @@ Exemplos:
                 updateContainers();
                 showAlert('🗑️ Container removido! Itens movidos para Equipados.', 'success');
             } catch (error) {
-                console.error('Erro ao remover container:', error);
-                alert('❌ Erro ao remover container!');
+                console.error('❌ Erro ao remover container:', error);
+                alert('❌ Erro ao remover container: ' + error.message);
             }
         };
 
@@ -4741,7 +4759,7 @@ Exemplos:
                 }
                 
                 // Remover o container associado
-                await removeContainer(item.linkedContainerId);
+                await window.removeContainer(item.linkedContainerId);
                 return;
             }
             
@@ -4843,18 +4861,20 @@ Exemplos:
                 // Calcular tamanho máximo para Equipados
                 let sizeInfo = '';
                 if (container.name === 'Equipados') {
-                    const atletismo = char.skills['atletismo'] || 0;
+                    const atletismo = char.skills['atletismo'] || 1;
                     const vig = char.vig || 1;
                     const forca = char.for || 1;
                     
-                    // ✅ Se atletismo > 0, usa a fórmula completa. Se não, usa apenas VIG * FOR
-                    const maxSize = atletismo > 0 
-                        ? forca * vig * atletismo 
-                        : forca * vig;
+                    const maxSize = forca * vig * atletismo;
                     
                     sizeInfo = `<span style="color: #94a3b8; font-size: 0.85rem; margin-right: 10px;">
                         📏 Tamanho Max: ${maxSize} <span style="color: #64748b; font-size: 0.75rem;">(FOR × VIG × Atletismo)</span>
                     </span>`;
+                } else {
+                    // Exibir tamanho do container para containers normais
+                    sizeInfo = `<span style="color: #ef4444; font-size: 0.85rem; margin-right: 15px; font-weight: 600;">
+                        Tamanho: ${container.maxSize || container.tamanho || 0}
+                    </span><span style="color: #475569; margin-right: 15px;">|</span>`;
                 }
                 
                 const itemsHTML = container.items.length === 0 
@@ -4894,7 +4914,6 @@ Exemplos:
                         </div>
                         <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
                             <button class="btn btn-primary btn-small" onclick="addItemToContainer('${container.id}')" style="flex: 1; min-width: 120px;">➕ Item</button>
-                            ${container.name !== 'Equipados' ? `<button class="btn btn-danger btn-small" onclick="removeContainer('${container.id}')" style="min-width: 120px;">🗑️ Container</button>` : ''}
                         </div>
                         ${itemsHTML}
                     </div>
@@ -5034,7 +5053,7 @@ Exemplos:
                 if (c.id === fromContainerId) return false;
                 if (item.linkedContainerId && c.id === item.linkedContainerId) return false;
                 if (c.name === 'Equipados') {
-                    const atletismo = char.skills['atletismo'] || 0;
+                    const atletismo = char.skills['atletismo'] || 1;
                     const maxSize = char.for * char.vig * atletismo;
                     return item.tamanho <= maxSize;
                 } else {
