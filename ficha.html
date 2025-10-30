@@ -1741,12 +1741,92 @@
 
             <div class="section">
                 <h2 class="section-title">Sistema de Inventário</h2>
-                
-                <div style="margin-bottom: 20px;">
-                    <button class="btn btn-primary" onclick="addContainer()">➕ Adicionar Container</button>
-                </div>
-
                 <div id="containers-list"></div>
+            </div>
+
+            <!-- Modal para Criar/Editar Item -->
+            <div id="itemModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; overflow-y: auto;">
+                <div style="max-width: 600px; margin: 20px auto; background: var(--dark); border-radius: 16px; padding: 20px; border: 2px solid var(--primary);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="color: var(--primary); margin: 0;" id="modalTitle">Criar Item</h2>
+                        <button onclick="closeItemModal()" style="background: var(--danger); color: white; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-weight: 700;">✖ Fechar</button>
+                    </div>
+                    
+                    <form id="itemForm" onsubmit="return false;">
+                        <!-- Campos Básicos -->
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Nome do Item*</label>
+                            <input type="text" id="itemName" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Descrição</label>
+                            <textarea id="itemDescription" rows="3" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);"></textarea>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                            <div>
+                                <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Dureza (0-10)*</label>
+                                <input type="number" id="itemDureza" min="0" max="10" value="0" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                            </div>
+                            <div>
+                                <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Tamanho do Item (1-10)*</label>
+                                <input type="number" id="itemTamanho" min="1" max="10" value="1" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                            <div>
+                                <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Reforço*</label>
+                                <input type="number" id="itemReforco" min="0" value="0" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                            </div>
+                            <div>
+                                <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Integridade*</label>
+                                <div style="display: flex; gap: 5px;">
+                                    <input type="number" id="itemIntegridade" min="0" value="10" required style="flex: 1; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                    <button type="button" onclick="repairItem()" title="Reparar Item" style="background: var(--success); color: white; border: none; border-radius: 8px; padding: 0 12px; cursor: pointer; font-size: 1.2rem;">🔧</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                            <div>
+                                <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Peso Unitário*</label>
+                                <input type="number" id="itemPeso" min="0" step="0.1" value="1" required oninput="calculateTotalWeight()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                            </div>
+                            <div>
+                                <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Peso Total</label>
+                                <input type="text" id="itemPesoTotal" readonly value="1.00" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.5); color: #94a3b8;">
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Tipo de Item*</label>
+                            <select id="itemTipo" onchange="updateItemTypeFields()" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                <option value="">Selecione um tipo...</option>
+                                <option value="Arma">Arma</option>
+                                <option value="Vestimenta">Vestimenta</option>
+                                <option value="Projétil">Projétil</option>
+                                <option value="Objeto">Objeto</option>
+                                <option value="Container">Container</option>
+                            </select>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Imagem do Item</label>
+                            <input type="file" id="itemImagem" accept="image/*" onchange="previewItemImage()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                            <div id="itemImagePreview" style="margin-top: 10px; text-align: center;"></div>
+                        </div>
+                        
+                        <!-- Campos Condicionais -->
+                        <div id="conditionalFields"></div>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button type="button" onclick="saveItem()" style="flex: 1; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border: none; border-radius: 8px; padding: 12px; cursor: pointer; font-weight: 700; font-size: 1rem;">💾 Salvar Item</button>
+                            <button type="button" onclick="closeItemModal()" style="background: var(--danger); color: white; border: none; border-radius: 8px; padding: 12px 20px; cursor: pointer; font-weight: 700;">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
 
@@ -2040,6 +2120,31 @@ Exemplos:
                 window.currentUser = user;
                 console.log('✅ Usuário logado:', user.email);
                 
+                // ADICIONAR ESTAS LINHAS:
+                try {
+                    // Limpar possíveis dados corrompidos
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const characterId = urlParams.get('id');
+                    
+                    if (characterId) {
+                        console.log('🔍 Tentando carregar personagem:', characterId);
+                        
+                        // Verificar se o documento existe antes de carregar
+                        const testDoc = await getDoc(doc(db, 'characters', characterId));
+                        if (!testDoc.exists()) {
+                            console.error('❌ Personagem não encontrado:', characterId);
+                            alert('Personagem não encontrado! Redirecionando...');
+                            window.location.href = 'personagens.html';
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ Erro ao verificar personagem:', error);
+                    alert('Erro ao carregar personagem. Tente novamente.');
+                    window.location.href = 'personagens.html';
+                    return;
+                }
+
                 document.getElementById('userEmail').textContent = user.email;
                 document.getElementById('userInfo').style.display = 'flex';
                 document.getElementById('loadingScreen').style.display = 'none';
@@ -4679,69 +4784,18 @@ Exemplos:
             }
         };
 
-        window.addItemToContainer = async function(containerId) {
-            const char = getChar();
-            const container = char.containers.find(c => c.id === containerId);
-            if (!container) return;
-            
-            const name = prompt('Nome do item:');
-            if (!name) return;
-            
-            const peso = parseFloat(prompt('Peso unitário (Carga):')) || 1;
-            const packSizeInput = prompt('Tamanho do Pack:\n1 = Individual\n5 = Pequeno\n10 = Médio\n50 = Grande\n\nDigite o número:', '1');
-            const packSize = parseInt(packSizeInput) || 1;
-            const quantity = parseInt(prompt('Quantidade de packs:')) || 1;
-            const tamanho = parseInt(prompt('Tamanho do item (1-10):')) || 1;
-            const description = prompt('Descrição (opcional):') || '';
-            const dureza = parseInt(prompt('Dureza (0-10):')) || 0;
-            const integridade = parseInt(prompt('Integridade:')) || 10;
-            
-            // Verificar tamanho
-            if (container.name === 'Equipados') {
-                const atletismo = char.skills['atletismo'] || 1;
-                const vig = char.vig || 1;
-                const forca = char.for || 1;
-                
-                const maxSize = forca * vig * atletismo;
-                
-                if (tamanho > maxSize) {
-                    alert(`❌ Item muito grande!\n\nTamanho máximo permitido: ${maxSize}\nTamanho do item: ${tamanho}`);
-                    return;
-                }
-            }
-            
-            try {
-                const characterId = window.currentCharacterId || currentUser?.uid;
-                const totalWeight = peso * packSize * quantity;
-                
-                const newItem = {
-                    id: 'item-' + Date.now(),
-                    name,
-                    ownerId: (window.currentUser || currentUser)?.uid, // ✅ Usar uid do usuário autenticado
-                    characterId: window.currentCharacterId || characterId, // Vincular ao personagem
-                    containerId: container.name === 'Equipados' ? 'está com alguém' : containerId,
-                    quantity,
-                    description,
-                    dureza,
-                    tamanho,
-                    integridade,
-                    peso,
-                    packSize,
-                    totalWeight,
-                    isContainerItem: false,
-                    linkedContainerId: null
-                };
-                
-                await window.saveItemToFirebase(newItem);
-                
-                // Recarregar inventário
-                await window.loadInventoryFromFirebase(characterId);
-                updateContainers();
-                showAlert('✅ Item adicionado!', 'success');
-            } catch (error) {
-                console.error('Erro ao adicionar item:', error);
-                alert('❌ Erro ao adicionar item!');
-            }
+        window.addItemToContainer = function(containerId) {
+            // A função agora apenas abre o modal
+            // Toda a lógica de validação e salvamento está na função saveItem()
+            window.currentEditingContainerId = containerId;
+            window.currentEditingItemId = null;
+            document.getElementById('modalTitle').textContent = 'Criar Novo Item';
+            document.getElementById('itemForm').reset();
+            document.getElementById('itemImagePreview').innerHTML = '';
+            document.getElementById('conditionalFields').innerHTML = '';
+            document.getElementById('itemPesoTotal').value = '1.00';
+            window.currentItemImageBase64 = null;
+            document.getElementById('itemModal').style.display = 'block';
         };
 
         window.removeItemFromContainer = async function(containerId, itemId) {
@@ -4879,24 +4933,45 @@ Exemplos:
                 
                 const itemsHTML = container.items.length === 0 
                     ? '<p style="color: #64748b; text-align: center; padding: 10px; font-size: 0.85rem;">Vazio</p>'
-                    : container.items.map((item, index) => `
-                        <div class="inventory-item" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; ${item.isContainerItem ? 'background: rgba(139, 92, 246, 0.1); border-left: 3px solid var(--primary);' : ''}">
-                            <div class="item-info" onclick="editItem('${container.id}', '${item.id}')" style="cursor: pointer; flex: 1;">
-                                <div class="item-name">${item.isContainerItem ? '📦 ' : ''}${item.name} ${item.packSize > 1 ? `[Pack ${item.packSize}]` : ''} (x${item.quantity})${item.isContainerItem ? ' [CONTAINER]' : ''}</div>
-                                <div class="item-details">
-                                    Peso: ${item.peso} | Tam: ${item.tamanho} | Int: ${item.integridade}/${item.integridade} | Total: ${item.totalWeight || (item.peso * item.quantity)}
-                                    ${item.description ? `<br>${item.description}` : ''}
+                    : container.items.map((item, index) => {
+                        // Exibir imagem se existir
+                        const imagemHTML = item.imagem ? `<img src="${item.imagem}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; margin-right: 10px;">` : '';
+                        
+                        // Detalhes do item
+                        let detalhes = `Peso: ${item.peso} | Tam: ${item.tamanho} | Int: ${item.integridade}/${item.dureza + item.tamanho + (item.reforco || 0)} | Total: ${item.totalWeight || (item.peso * item.quantity)}`;
+                        
+                        if (item.tipo === 'Arma') {
+                            detalhes += ` | Dano: +${item.dano || 0} | Reação: +${item.reacao || 0}`;
+                        } else if (item.tipo === 'Vestimenta') {
+                            detalhes += ` | Blindagem: +${item.blindagem || 0}`;
+                        } else if (item.tipo === 'Projétil') {
+                            detalhes += ` | Dano: +${item.dano || 0}`;
+                        } else if (item.tipo === 'Container') {
+                            detalhes += ` | Cap: ${item.maxCapacity} | TamMax: ${item.maxSize}`;
+                        }
+                        
+                        return `
+                            <div class="inventory-item" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; ${item.isContainerItem ? 'background: rgba(139, 92, 246, 0.1); border-left: 3px solid var(--primary);' : ''}">
+                                <div class="item-info" onclick="editItem('${container.id}', '${item.id}')" style="cursor: pointer; flex: 1; display: flex; align-items: center;">
+                                    ${imagemHTML}
+                                    <div style="flex: 1;">
+                                        <div class="item-name">${item.isContainerItem ? '📦 ' : ''}${item.name} ${item.packSize > 1 ? `[Pack ${item.packSize}]` : ''} (x${item.quantity})${item.isContainerItem ? ' [CONTAINER]' : ''}</div>
+                                        <div class="item-details">
+                                            ${detalhes}
+                                            ${item.description ? `<br>${item.description}` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    ${index > 0 ? `<button class="btn btn-secondary btn-small" onclick="moveItemUp('${container.id}', '${item.id}')" style="padding: 4px 8px;">▲</button>` : ''}
+                                    ${index < container.items.length - 1 ? `<button class="btn btn-secondary btn-small" onclick="moveItemDown('${container.id}', '${item.id}')" style="padding: 4px 8px;">▼</button>` : ''}
+                                    <button class="btn btn-secondary btn-small" onclick="changeItemQuantity('${container.id}', '${item.id}')" style="padding: 4px 8px;">✏️</button>
+                                    ${!item.isContainerItem ? `<button class="btn btn-secondary btn-small" onclick="moveItemToContainer('${container.id}', '${item.id}')" style="padding: 4px 8px;">📦</button>` : ''}
+                                    <button class="btn btn-danger btn-small" onclick="removeItemFromContainer('${container.id}', '${item.id}')" style="padding: 4px 8px;">🗑️</button>
                                 </div>
                             </div>
-                            <div style="display: flex; gap: 4px; align-items: center;">
-                                ${index > 0 ? `<button class="btn btn-secondary btn-small" onclick="moveItemUp('${container.id}', '${item.id}')" style="padding: 4px 8px;">▲</button>` : ''}
-                                ${index < container.items.length - 1 ? `<button class="btn btn-secondary btn-small" onclick="moveItemDown('${container.id}', '${item.id}')" style="padding: 4px 8px;">▼</button>` : ''}
-                                <button class="btn btn-secondary btn-small" onclick="changeItemQuantity('${container.id}', '${item.id}')" style="padding: 4px 8px;">✏️</button>
-                                ${!item.isContainerItem ? `<button class="btn btn-secondary btn-small" onclick="moveItemToContainer('${container.id}', '${item.id}')" style="padding: 4px 8px;">📦</button>` : ''}
-                                <button class="btn btn-danger btn-small" onclick="removeItemFromContainer('${container.id}', '${item.id}')" style="padding: 4px 8px;">🗑️</button>
-                            </div>
-                        </div>
-                    `).join('');
+                        `;
+                    }).join('');
                 
                 return `
                     <div class="container-card">
@@ -4921,7 +4996,7 @@ Exemplos:
             }).join('');
         }
 
-        window.editItem = async function(containerId, itemId) {
+        window.editItem = function(containerId, itemId) {
             const char = getChar();
             const container = char.containers.find(c => c.id === containerId);
             if (!container) return;
@@ -4934,40 +5009,52 @@ Exemplos:
                 return;
             }
             
-            const newName = prompt('Nome do item:', item.name);
-            if (newName === null) return;
+            // Preencher modal com dados do item
+            window.currentEditingContainerId = containerId;
+            window.currentEditingItemId = itemId;
+            document.getElementById('modalTitle').textContent = 'Editar Item';
             
-            const newPeso = parseFloat(prompt('Peso unitário:', item.peso));
-            const newPackSize = parseInt(prompt('Tamanho do Pack:', item.packSize || 1));
-            const newQuantity = parseInt(prompt('Quantidade:', item.quantity));
-            const newTamanho = parseInt(prompt('Tamanho (1-10):', item.tamanho));
-            const newDescription = prompt('Descrição:', item.description || '');
-            const newDureza = parseInt(prompt('Dureza (0-10):', item.dureza || 0));
-            const newIntegridade = parseInt(prompt('Integridade:', item.integridade || 10));
+            document.getElementById('itemName').value = item.name || '';
+            document.getElementById('itemDescription').value = item.description || '';
+            document.getElementById('itemDureza').value = item.dureza || 0;
+            document.getElementById('itemTamanho').value = item.tamanho || 1;
+            document.getElementById('itemReforco').value = item.reforco || 0;
+            document.getElementById('itemIntegridade').value = item.integridade || 10;
+            document.getElementById('itemPeso').value = item.peso || 1;
+            document.getElementById('itemTipo').value = item.tipo || '';
             
-            try {
-                if (newName) item.name = newName;
-                if (!isNaN(newPeso)) item.peso = newPeso;
-                if (!isNaN(newPackSize)) item.packSize = newPackSize;
-                if (!isNaN(newQuantity)) item.quantity = newQuantity;
-                if (!isNaN(newTamanho)) item.tamanho = newTamanho;
-                if (newDescription !== null) item.description = newDescription;
-                if (!isNaN(newDureza)) item.dureza = newDureza;
-                if (!isNaN(newIntegridade)) item.integridade = newIntegridade;
-                
-                item.totalWeight = item.peso * item.packSize * item.quantity;
-                
-                await window.saveItemToFirebase(item);
-                
-                // Recarregar inventário
-                const characterId = currentCharacterId || currentUser.uid;
-                await window.loadInventoryFromFirebase(characterId);
-                updateContainers();
-                showAlert('✅ Item atualizado!', 'success');
-            } catch (error) {
-                console.error('Erro ao editar item:', error);
-                alert('❌ Erro ao editar item!');
+            // Carregar imagem se existir
+            if (item.imagem) {
+                window.currentItemImageBase64 = item.imagem;
+                document.getElementById('itemImagePreview').innerHTML = `<img src="${item.imagem}" style="max-width: 200px; max-height: 200px; border-radius: 8px;">`;
+            } else {
+                window.currentItemImageBase64 = null;
+                document.getElementById('itemImagePreview').innerHTML = '';
             }
+            
+            // Atualizar campos condicionais
+            updateItemTypeFields();
+            
+            // Preencher campos condicionais
+            if (item.tipo === 'Arma') {
+                document.getElementById('itemDano').value = item.dano || 0;
+                document.getElementById('itemReacao').value = item.reacao || 0;
+            } else if (item.tipo === 'Vestimenta') {
+                document.getElementById('itemBlindagem').value = item.blindagem || 0;
+            } else if (item.tipo === 'Projétil') {
+                document.getElementById('itemQuantidade').value = item.quantity || 1;
+                document.getElementById('itemPackSize').value = item.packSize || 1;
+                document.getElementById('itemDanoProjétil').value = item.dano || 0;
+            } else if (item.tipo === 'Objeto') {
+                document.getElementById('itemQuantidade').value = item.quantity || 1;
+                document.getElementById('itemPackSize').value = item.packSize || 1;
+            } else if (item.tipo === 'Container') {
+                document.getElementById('itemCapacidadeMax').value = item.maxCapacity || 10;
+                document.getElementById('itemTamanhoMax').value = item.maxSize || 5;
+            }
+            
+            calculateTotalWeight();
+            document.getElementById('itemModal').style.display = 'block';
         };
 
         window.changeItemQuantity = async function(containerId, itemId) {
@@ -5109,6 +5196,312 @@ Exemplos:
                 
                 updateContainers();
                 // Não salva no Firebase, apenas reorganiza localmente
+            }
+        };
+
+        // ========== FUNÇÕES DO MODAL DE ITEM ==========
+        window.closeItemModal = function() {
+            document.getElementById('itemModal').style.display = 'none';
+            window.currentEditingContainerId = null;
+            window.currentEditingItemId = null;
+            window.currentItemImageBase64 = null;
+        };
+
+        window.updateItemTypeFields = function() {
+            const tipo = document.getElementById('itemTipo').value;
+            const conditionalFields = document.getElementById('conditionalFields');
+            
+            let html = '';
+            
+            switch(tipo) {
+                case 'Arma':
+                    html = `
+                        <div style="border-top: 2px solid var(--primary); padding-top: 15px; margin-top: 15px;">
+                            <h3 style="color: var(--primary); margin-bottom: 15px;">⚔️ Atributos de Arma</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Dano</label>
+                                    <input type="number" id="itemDano" min="0" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Reação (Defesa)</label>
+                                    <input type="number" id="itemReacao" min="0" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'Vestimenta':
+                    html = `
+                        <div style="border-top: 2px solid var(--primary); padding-top: 15px; margin-top: 15px;">
+                            <h3 style="color: var(--primary); margin-bottom: 15px;">🛡️ Atributos de Vestimenta</h3>
+                            <div>
+                                <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Blindagem</label>
+                                <input type="number" id="itemBlindagem" min="0" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'Projétil':
+                    html = `
+                        <div style="border-top: 2px solid var(--primary); padding-top: 15px; margin-top: 15px;">
+                            <h3 style="color: var(--primary); margin-bottom: 15px;">🎯 Atributos de Projétil</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Quantidade*</label>
+                                    <input type="number" id="itemQuantidade" min="1" value="1" required oninput="calculateTotalWeight()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Tamanho do Pack*</label>
+                                    <select id="itemPackSize" required onchange="calculateTotalWeight()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                        <option value="1">1</option>
+                                        <option value="5">5</option>
+                                        <option value="10">10</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Dano</label>
+                                    <input type="number" id="itemDanoProjétil" min="0" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'Objeto':
+                    html = `
+                        <div style="border-top: 2px solid var(--primary); padding-top: 15px; margin-top: 15px;">
+                            <h3 style="color: var(--primary); margin-bottom: 15px;">📦 Atributos de Objeto</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Quantidade*</label>
+                                    <input type="number" id="itemQuantidade" min="1" value="1" required oninput="calculateTotalWeight()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Tamanho do Pack*</label>
+                                    <select id="itemPackSize" required onchange="calculateTotalWeight()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                        <option value="1">1</option>
+                                        <option value="5">5</option>
+                                        <option value="10">10</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'Container':
+                    html = `
+                        <div style="border-top: 2px solid var(--primary); padding-top: 15px; margin-top: 15px;">
+                            <h3 style="color: var(--primary); margin-bottom: 15px;">📦 Atributos de Container</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Capacidade Máxima*</label>
+                                    <input type="number" id="itemCapacidadeMax" min="1" value="10" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Tamanho Máximo de Itens*</label>
+                                    <input type="number" id="itemTamanhoMax" min="1" value="5" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+            }
+            
+            conditionalFields.innerHTML = html;
+            calculateTotalWeight();
+        };
+
+        window.calculateTotalWeight = function() {
+            const tipo = document.getElementById('itemTipo').value;
+            const peso = parseFloat(document.getElementById('itemPeso').value) || 0;
+            
+            let totalWeight = peso;
+            
+            if (tipo === 'Projétil' || tipo === 'Objeto') {
+                const quantidade = parseInt(document.getElementById('itemQuantidade')?.value) || 1;
+                const packSize = parseInt(document.getElementById('itemPackSize')?.value) || 1;
+                totalWeight = Math.ceil((quantidade / packSize) * peso);
+            }
+            
+            document.getElementById('itemPesoTotal').value = totalWeight.toFixed(2);
+        };
+
+        window.repairItem = function() {
+            const dureza = parseInt(document.getElementById('itemDureza').value) || 0;
+            const tamanho = parseInt(document.getElementById('itemTamanho').value) || 0;
+            const reforco = parseInt(document.getElementById('itemReforco').value) || 0;
+            
+            const integridadeMax = dureza + tamanho + reforco;
+            document.getElementById('itemIntegridade').value = integridadeMax;
+            
+            showAlert('🔧 Item reparado!', 'success');
+        };
+
+        window.previewItemImage = function() {
+            const file = document.getElementById('itemImagem').files[0];
+            if (!file) return;
+            
+            // Verificar tamanho (máx 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                showAlert('❌ Imagem muito grande! Máximo 2MB.', 'danger');
+                document.getElementById('itemImagem').value = '';
+                return;
+            }
+            
+            // Verificar tipo
+            if (!file.type.startsWith('image/')) {
+                showAlert('❌ Por favor, selecione uma imagem válida.', 'danger');
+                document.getElementById('itemImagem').value = '';
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                window.currentItemImageBase64 = e.target.result;
+                document.getElementById('itemImagePreview').innerHTML = `<img src="${e.target.result}" style="max-width: 200px; max-height: 200px; border-radius: 8px;">`;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.saveItem = async function() {
+            const char = getChar();
+            const containerId = window.currentEditingContainerId;
+            const itemId = window.currentEditingItemId;
+            
+            // Validar campos obrigatórios
+            const name = document.getElementById('itemName').value.trim();
+            const tipo = document.getElementById('itemTipo').value;
+            
+            if (!name || !tipo) {
+                alert('❌ Preencha todos os campos obrigatórios!');
+                return;
+            }
+            
+            const container = char.containers.find(c => c.id === containerId);
+            if (!container) return;
+            
+            // Coletar dados básicos
+            const itemData = {
+                name,
+                tipo,
+                description: document.getElementById('itemDescription').value,
+                dureza: parseInt(document.getElementById('itemDureza').value) || 0,
+                tamanho: parseInt(document.getElementById('itemTamanho').value) || 1,
+                reforco: parseInt(document.getElementById('itemReforco').value) || 0,
+                integridade: parseInt(document.getElementById('itemIntegridade').value) || 10,
+                peso: parseFloat(document.getElementById('itemPeso').value) || 1,
+                imagem: window.currentItemImageBase64 || null,
+                quantity: 1,
+                packSize: 1,
+                totalWeight: parseFloat(document.getElementById('itemPesoTotal').value) || 1
+            };
+            
+            // Coletar dados específicos por tipo
+            switch(tipo) {
+                case 'Arma':
+                    itemData.dano = parseInt(document.getElementById('itemDano').value) || 0;
+                    itemData.reacao = parseInt(document.getElementById('itemReacao').value) || 0;
+                    break;
+                case 'Vestimenta':
+                    itemData.blindagem = parseInt(document.getElementById('itemBlindagem').value) || 0;
+                    break;
+                case 'Projétil':
+                    itemData.quantity = parseInt(document.getElementById('itemQuantidade').value) || 1;
+                    itemData.packSize = parseInt(document.getElementById('itemPackSize').value) || 1;
+                    itemData.dano = parseInt(document.getElementById('itemDanoProjétil').value) || 0;
+                    itemData.totalWeight = Math.ceil((itemData.quantity / itemData.packSize) * itemData.peso);
+                    break;
+                case 'Objeto':
+                    itemData.quantity = parseInt(document.getElementById('itemQuantidade').value) || 1;
+                    itemData.packSize = parseInt(document.getElementById('itemPackSize').value) || 1;
+                    itemData.totalWeight = Math.ceil((itemData.quantity / itemData.packSize) * itemData.peso);
+                    break;
+                case 'Container':
+                    itemData.maxCapacity = parseInt(document.getElementById('itemCapacidadeMax').value) || 10;
+                    itemData.maxSize = parseInt(document.getElementById('itemTamanhoMax').value) || 5;
+                    break;
+            }
+            
+            // Verificar tamanho no container
+            if (container.name === 'Equipados') {
+                const atletismo = char.skills['atletismo'] || 1;
+                const maxSize = char.for * char.vig * atletismo;
+                if (itemData.tamanho > maxSize) {
+                    alert(`❌ Item muito grande!\n\nTamanho máximo permitido: ${maxSize}\nTamanho do item: ${itemData.tamanho}`);
+                    return;
+                }
+            } else if (itemData.tamanho > container.maxSize) {
+                alert(`❌ Item muito grande para este container!\n\nTamanho máximo: ${container.maxSize}\nTamanho do item: ${itemData.tamanho}`);
+                return;
+            }
+            
+            try {
+                const characterId = window.currentCharacterId || currentUser?.uid;
+                
+                if (itemId) {
+                    // Editar item existente
+                    const item = container.items.find(i => i.id === itemId);
+                    Object.assign(item, itemData);
+                    await window.saveItemToFirebase(item);
+                    showAlert('✅ Item atualizado!', 'success');
+                } else {
+                    // Criar novo item
+                    const newItem = {
+                        ...itemData,
+                        id: 'item-' + Date.now(),
+                        ownerId: (window.currentUser || currentUser)?.uid,
+                        characterId: window.currentCharacterId || characterId,
+                        containerId: container.name === 'Equipados' ? 'está com alguém' : containerId,
+                        isContainerItem: false,
+                        linkedContainerId: null
+                    };
+                    
+                    await window.saveItemToFirebase(newItem);
+                    
+                    // Se for um Container, criar o container correspondente
+                    if (tipo === 'Container') {
+                        const containerId = 'container-' + Date.now();
+                        const newContainer = {
+                            id: containerId,
+                            name: name,
+                            ownerId: currentUser.uid,
+                            characterId: characterId,
+                            maxCapacity: itemData.maxCapacity,
+                            maxSize: itemData.maxSize,
+                            itemIds: [],
+                            description: itemData.description,
+                            dureza: itemData.dureza,
+                            tamanho: itemData.tamanho,
+                            integridade: itemData.integridade,
+                            peso: itemData.peso
+                        };
+                        
+                        await window.saveContainerToFirebase(newContainer);
+                        
+                        // Atualizar item para vincular ao container
+                        newItem.isContainerItem = true;
+                        newItem.linkedContainerId = containerId;
+                        await window.saveItemToFirebase(newItem);
+                    }
+                    
+                    showAlert('✅ Item criado!', 'success');
+                }
+                
+                // Recarregar inventário
+                await window.loadInventoryFromFirebase(characterId);
+                updateContainers();
+                closeItemModal();
+            } catch (error) {
+                console.error('Erro ao salvar item:', error);
+                alert('❌ Erro ao salvar item!');
             }
         };
 
