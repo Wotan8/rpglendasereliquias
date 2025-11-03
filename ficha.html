@@ -1755,6 +1755,12 @@
                     <form id="itemForm" onsubmit="return false;">
                         <!-- Campos Básicos -->
                         <div style="margin-bottom: 15px;">
+                            <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Imagem do Item</label>
+                            <input type="file" id="itemImagem" accept="image/*" onchange="previewItemImage()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                            <div id="itemImagePreview" style="margin-top: 10px; text-align: center;"></div>
+                        </div>
+
+                        <div style="margin-bottom: 15px;">
                             <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Nome do Item*</label>
                             <input type="text" id="itemName" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
                         </div>
@@ -1810,12 +1816,6 @@
                                 <option value="Objeto">Objeto</option>
                                 <option value="Container">Container</option>
                             </select>
-                        </div>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Imagem do Item</label>
-                            <input type="file" id="itemImagem" accept="image/*" onchange="previewItemImage()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
-                            <div id="itemImagePreview" style="margin-top: 10px; text-align: center;"></div>
                         </div>
                         
                         <!-- Campos Condicionais -->
@@ -2374,6 +2374,7 @@ Exemplos:
                 const itemRef = doc(db, 'items', item.id);
                 await setDoc(itemRef, {
                     name: item.name,
+                    tipo: item.tipo,
                     ownerId: currentUser.uid, // ✅ Sempre usar o uid do usuário autenticado
                     characterId: item.characterId || currentCharacterId, // Vincular ao personagem
                     containerId: item.containerId, // 'está com alguém' para Equipados
@@ -2381,12 +2382,19 @@ Exemplos:
                     description: item.description || '',
                     dureza: item.dureza || 0,
                     tamanho: item.tamanho || 1,
+                    reforco: item.reforco || 0,
                     integridade: item.integridade || 0,
                     peso: item.peso || 0,
                     packSize: item.packSize || 1,
                     totalWeight: item.totalWeight || item.peso,
+                    imagem: item.imagem || null,
                     isContainerItem: item.isContainerItem || false,
-                    linkedContainerId: item.linkedContainerId || null
+                    linkedContainerId: item.linkedContainerId || null,
+                    dano: item.dano || 0, // Arma e Projétil
+                    reacao: item.reacao || 0, // Arma
+                    blindagem: item.blindagem || 0, // Vestimenta
+                    maxCapacity: item.maxCapacity || 0, // Container
+                    maxSize: item.maxSize || 0 // Container
                 }, { merge: true });
                 
                 console.log('✅ Item salvo:', item.name);
