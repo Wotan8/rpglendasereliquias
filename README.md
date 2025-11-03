@@ -9,7 +9,7 @@
 
 Sistema online de fichas digitais para o RPG **Lendas e Relíquias**
 
-[🎮 Acessar Sistema](https://lendasereliquiasrpg.web.app) | [📖 Reportar Bug](https://github.com/lucasgabriel-fiap/lendas-reliquias-rpg/issues)
+[📖 Reportar Bug](https://github.com/Wotan8/rpglendasereliquias/issues)
 
 </div>
 
@@ -17,49 +17,106 @@ Sistema online de fichas digitais para o RPG **Lendas e Relíquias**
 
 ## 📖 Sobre o Projeto
 
-Sistema web completo para gerenciamento de personagens do RPG **Lendas e Relíquias**, com funcionalidades de autenticação, salvamento automático na nuvem e painel do mestre em tempo real.
+Sistema web **completo e robusto** para gerenciamento de personagens do RPG **Lendas e Relíquias**, desenvolvido com foco em experiência do usuário, performance e segurança. Inclui autenticação Firebase, sistema multi-personagem, salvamento automático em nuvem, painel do mestre em tempo real e muito mais.
 
 ### 🎲 Sobre o RPG
 
-**Lendas e Relíquias** é um sistema de RPG criado por **Igor Estevam AS**, mestre com mais de 12 anos de experiência, que desenvolveu todo o sistema de regras, mecânicas e ambientação.
+**Lendas e Relíquias** é um sistema de RPG criado por **Igor Estevam A.S.**, mestre com mais de 12 anos de experiência, que desenvolveu todo o sistema de regras, mecânicas, ambientação e balanceamento do jogo.
 
 ### 💻 Desenvolvimento
 
-Sistema online desenvolvido por **Lucas Gabriel**, transformando as regras físicas em uma plataforma digital interativa com Firebase.
+Este sistema online foi originalmente iniciado por **Lucas Gabriel** em uma versão 0 (básica). A partir dessa versão inicial, **Igor Estevam A.S.** assumiu o desenvolvimento completo, refatorando todo o código, corrigindo bugs, expandindo funcionalidades e transformando o projeto no sistema robusto e completo que é hoje.
 
 ---
 
-## ✨ Funcionalidades
+## ✨ Funcionalidades Principais
 
-### 👥 Para Jogadores
-- ✅ **Autenticação segura** com Firebase Auth
-- ✅ **Ficha digital completa** com todos atributos, habilidades e características
-- ✅ **Auto-save na nuvem** - nunca perca seus dados
-- ✅ **Sistema de classes** com habilidades específicas
-- ✅ **Gerenciamento de inventário** com múltiplos containers
-- ✅ **Rastreamento de recursos** (HP, Determinação, Sanidade)
-- ✅ **Notas do personagem** integradas
-- ✅ **Rolador de dados** D10 com explosão
-- ✅ **Sistema de EXP** e evolução
+### 👥 Sistema de Autenticação
+- ✅ **Login seguro** com Firebase Authentication
+- ✅ **Cadastro diferenciado** para Jogadores e Mestres
+- ✅ **Código secreto** para validação de contas de Mestre
+- ✅ **Persistência de sessão** com localStorage
+- ✅ **Logout seguro** com limpeza de dados
 
-### 👑 Para Mestres
-- ✅ **Painel em tempo real** com todos os jogadores
-- ✅ **Monitoramento de status** (HP crítico, sanidade baixa)
-- ✅ **Histórico de mudanças** automático
+### 🎭 Gerenciamento de Personagens
+- ✅ **Múltiplos personagens** por usuário
+- ✅ **Tela de seleção** com cards informativos
+- ✅ **Criação ilimitada** de personagens
+- ✅ **Exclusão segura** com confirmação
+- ✅ **Sincronização automática** com Firebase
+- ✅ **Visualização rápida** de status (HP, Classe, Nível)
+
+### 📋 Sistema de Ficha Completo
+- ✅ **9 Atributos principais** (Inteligência, Força, Presença, Raciocínio, Destreza, Manha, Perseverança, Vigor, Autocontrole)
+- ✅ **Sistema de pontos** visual com 5 níveis por atributo
+- ✅ **Skills especializadas** com rastreamento individual
+- ✅ **Cálculos automáticos** de bônus e penalidades
+- ✅ **HP, Determinação e Sanidade** com barras visuais
+- ✅ **Sistema de defesas** (Física, Mental, Bélica)
+- ✅ **Rastreamento de EXP** e progressão de nível
+- ✅ **Sistema monetário** (Luns)
+- ✅ **Condições de estado** (Ferido, Envenenado, etc.)
+- ✅ **Notas integradas** para anotações do jogador
+
+### 🎒 Sistema de Inventário Avançado
+- ✅ **Containers personalizados** (Mochilas, Bolsas, Baús, etc.)
+- ✅ **Sistema de peso** e capacidade
+- ✅ **Container "Equipados"** para itens em uso
+- ✅ **Gestão de itens** com descrição, quantidade e peso
+- ✅ **Drag & Drop** entre containers
+- ✅ **Coleções separadas** no Firebase (containers + items)
+- ✅ **Sincronização em tempo real**
+
+### 🤝 Sistema de Aliados
+- ✅ **Gerenciamento de NPCs aliados**
+- ✅ **Rastreamento de HP** e status
+- ✅ **Notas individuais** para cada aliado
+- ✅ **Interface dedicada** (aliado.html)
+- ✅ **Sincronização com personagem**
+
+### 🏠 Sistema de Propriedades
+- ✅ **Gestão de propriedades** (Casas, Lojas, Terras, etc.)
+- ✅ **Descrição detalhada** de cada propriedade
+- ✅ **Localização e características**
+- ✅ **Interface dedicada** (propriedade.html)
+- ✅ **Vínculo com personagem**
+
+### 🎲 Rolador de Dados
+- ✅ **Sistema D10** com explosão de dados
+- ✅ **Rolagem automática** baseada em atributos
+- ✅ **Histórico de rolagens**
+- ✅ **Animações visuais**
+
+### 👑 Painel do Mestre
+- ✅ **Visualização em tempo real** de todos os personagens
+- ✅ **Sistema de abas** organizado (Visão Geral, Personagens, Detalhes)
+- ✅ **Monitoramento de status críticos** (HP baixo, sanidade crítica)
+- ✅ **Histórico de mudanças** automático com logs
 - ✅ **Detecção de anomalias** (valores suspeitos)
-- ✅ **Visualização completa** de fichas, inventário e notas
-- ✅ **Estatísticas da mesa** (EXP médio, jogadores ativos)
+- ✅ **Visualização completa** de fichas, inventário, aliados e propriedades
+- ✅ **Estatísticas da mesa** (EXP médio, total de jogadores)
 - ✅ **Filtros e busca** inteligente
+- ✅ **Acesso somente leitura** às fichas dos jogadores
+
+### 🔒 Segurança e Performance
+- ✅ **Firestore Rules** robustas com validação de propriedade
+- ✅ **Coleções otimizadas** (characters, containers, items, npcs, logs, masters, users)
+- ✅ **Validação de permissões** (dono OU mestre)
+- ✅ **Auto-save inteligente** com debounce
+- ✅ **Proteção contra edição cruzada** de personagens
+- ✅ **Sistema de logs** para auditoria
+- ✅ **Criptografia de senha** via Firebase Auth
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
 - **Frontend:** HTML5, CSS3, JavaScript (Vanilla)
-- **Backend:** Firebase (Authentication + Firestore)
+- **Backend:** Firebase (Authentication + Firestore Database)
 - **Hosting:** Firebase Hosting
 - **Tempo Real:** Firestore Realtime Listeners
 - **Autenticação:** Firebase Auth (Email/Password)
+- **Arquitetura:** SPA (Single Page Application) multi-página
 
 ---
 
@@ -67,17 +124,21 @@ Sistema online desenvolvido por **Lucas Gabriel**, transformando as regras físi
 
 ### Para Jogadores:
 
-1. Acesse: [lendasereliquiasrpg.web.app](https://lendasereliquiasrpg.web.app)
+1. Acesse o sistema hospedado no Firebase
 2. Crie sua conta escolhendo **"Jogador"**
-3. Preencha sua ficha de personagem
-4. Tudo é salvo automaticamente na nuvem ☁️
+3. Na tela de personagens, clique em **"Criar Novo Personagem"**
+4. Preencha sua ficha com informações do personagem
+5. Gerencie inventário, aliados e propriedades
+6. Tudo é salvo automaticamente na nuvem ☁️
 
 ### Para Mestres:
 
 1. Crie conta escolhendo **"Mestre"**
-2. Insira o código secreto (fornecido pelo administrador)
-3. Acesse o painel para monitorar todos os jogadores
-4. Acompanhe em tempo real todas as mudanças
+2. Insira o **código secreto** (fornecido pelo administrador do sistema)
+3. Acesse o painel do mestre automaticamente
+4. Monitore todos os jogadores em tempo real
+5. Visualize fichas completas, inventários, aliados e propriedades
+6. Acompanhe estatísticas da mesa e histórico de mudanças
 
 ---
 
@@ -104,45 +165,99 @@ Sistema online desenvolvido por **Lucas Gabriel**, transformando as regras físi
 1. No menu lateral, vá em **Firestore Database**
 2. Clique em **"Criar banco de dados"**
 3. Escolha **"Produção"** (production mode)
-4. Selecione a localização (ex: `southamerica-east1`)
+4. Selecione a localização (ex: `southamerica-east1` para Brasil)
 5. Clique em **"Ativar"**
 
 ### 4️⃣ Regras de Segurança do Firestore
 
-Na aba **"Regras"** do Firestore, cole estas regras:
+Na aba **"Regras"** do Firestore, cole as regras do arquivo `firestore.rules`:
+
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Coleção de usuários (roles)
-    match /users/{userId} {
-      // Qualquer um autenticado pode ler (para verificar role)
-      allow read: if request.auth != null;
-      
-      // Apenas o próprio usuário pode escrever seus dados
-      allow write: if request.auth != null && request.auth.uid == userId;
+
+    function isSignedIn() {
+      return request.auth != null;
     }
-    
-    // Coleção de personagens (fichas)
+
+    function isMaster() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/masters/$(request.auth.uid));
+    }
+
+    // Coleção de mestres
+    match /masters/{uid} {
+      allow read: if isMaster();
+      allow write: if false;
+    }
+
+    // Coleção de usuários
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Coleção de personagens
     match /characters/{characterId} {
-      // Leitura permitida para:
-      // 1. O dono da ficha
-      // 2. Usuários com role 'mestre'
-      allow read: if request.auth != null && (
-        request.auth.uid == characterId ||
+      allow read: if isSignedIn() && (
+        resource.data.ownerUid == request.auth.uid || isMaster()
+      );
+      allow create: if isSignedIn() && 
+        request.resource.data.ownerUid == request.auth.uid;
+      allow update: if isSignedIn() && (
+        (resource.data.ownerUid == request.auth.uid && 
+         request.resource.data.ownerUid == resource.data.ownerUid) || 
         isMaster()
       );
-      
-      // Escrita permitida apenas para o dono da ficha
-      allow write: if request.auth != null && request.auth.uid == characterId;
+      allow delete: if isSignedIn() && (
+        resource.data.ownerUid == request.auth.uid || isMaster()
+      );
+    }
+
+    // Coleção de logs
+    match /logs/{logId} {
+      allow create: if isSignedIn();
+      allow read: if isMaster();
+      allow update, delete: if false;
     }
     
-    // Função auxiliar para verificar se é mestre
-    function isMaster() {
-      return request.auth != null && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'mestre';
+    // Coleção de NPCs
+    match /npcs/{npcId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+    
+    // Coleção de Containers
+    match /containers/{containerId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && 
+        request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        (resource.data.ownerId == request.auth.uid && 
+         request.resource.data.ownerId == resource.data.ownerId) || 
+        isMaster()
+      );
+      allow delete: if isSignedIn() && (
+        resource.data.ownerId == request.auth.uid || 
+        isMaster()
+      );
+    }
+    
+    // Coleção de Itens
+    match /items/{itemId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && 
+        request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        (resource.data.ownerId == request.auth.uid && 
+         request.resource.data.ownerId == resource.data.ownerId) || 
+        isMaster()
+      );
+      allow delete: if isSignedIn() && (
+        resource.data.ownerId == request.auth.uid || 
+        isMaster()
+      );
     }
   }
 }
@@ -152,9 +267,13 @@ service cloud.firestore {
 
 - **Usuários:** Qualquer pessoa autenticada pode ler (para verificar roles), mas só pode editar seus próprios dados
 - **Personagens:** 
-  - ✅ Jogadores podem ler/escrever apenas sua própria ficha
-  - ✅ Mestres podem ler TODAS as fichas (para o painel)
-  - ❌ Ninguém pode editar ficha de outro jogador
+  - ✅ Jogadores podem ler/escrever apenas personagens onde `ownerUid` seja igual ao seu UID
+  - ✅ Mestres podem ler TODOS os personagens (para o painel)
+  - ❌ Ninguém pode editar personagens de outros jogadores
+  - ✅ Sistema protege contra mudança de `ownerUid` em updates
+- **Containers e Itens:** Mesma lógica de personagens (dono OU mestre)
+- **NPCs:** Apenas mestres podem criar/editar/deletar
+- **Logs:** Qualquer um pode criar, apenas mestres podem ler
 
 **Clique em "Publicar"** após colar as regras.
 
@@ -174,7 +293,8 @@ service cloud.firestore {
 
 ### 7️⃣ Configurar o Código
 
-Abra os arquivos `index.html`, `ficha.html` e `mestre.html` e substitua o `firebaseConfig` pelo seu:
+Abra os arquivos HTML (`index.html`, `ficha.html`, `mestre.html`, `personagens.html`, `aliado.html`, `propriedade.html`) e substitua o `firebaseConfig` pelo seu:
+
 ```javascript
 const firebaseConfig = {
   apiKey: "SUA_API_KEY",
@@ -188,14 +308,29 @@ const firebaseConfig = {
 
 ### 8️⃣ Código Secreto do Mestre
 
-No arquivo `index.html`, procure pela linha (~200) e altere o código:
+No arquivo `index.html`, procure pela linha (~320) e altere o código:
+
 ```javascript
 const MASTER_SECRET_CODE = "SEUCÓDIGOAQUI";
 ```
 
-⚠️ **Importante:** Mude este código antes de fazer deploy! Este código é necessário para que alguém possa criar uma conta de Mestre.
+⚠️ **Importante:** Mude este código antes de fazer deploy! Este código é necessário para que alguém possa criar uma conta de Mestre. Mantenha este código em segredo e compartilhe apenas com pessoas autorizadas.
 
-### 9️⃣ Deploy
+### 9️⃣ Criar Documento de Mestre Manualmente
+
+Após criar a conta de mestre pela primeira vez, você precisa adicionar o UID do mestre na coleção `masters`:
+
+1. No Firebase Console, vá em **Authentication**
+2. Copie o **UID** do usuário mestre
+3. Vá em **Firestore Database**
+4. Crie a coleção `masters` (se não existir)
+5. Adicione um documento com o **UID do mestre** como ID do documento
+6. Adicione um campo qualquer (ex: `role: "mestre"`)
+
+Isso é necessário para que as regras de segurança reconheçam o usuário como mestre.
+
+### 🔟 Deploy
+
 ```bash
 # Instale o Firebase CLI (apenas uma vez)
 npm install -g firebase-tools
@@ -206,6 +341,13 @@ firebase login
 # Inicialize o projeto (se necessário)
 firebase init
 
+# Selecione:
+# - Hosting
+# - Use um projeto existente
+# - Public directory: . (ponto - diretório atual)
+# - Single-page app: No
+# - GitHub actions: No
+
 # Faça o deploy
 firebase deploy
 ```
@@ -213,14 +355,19 @@ firebase deploy
 ---
 
 ## 📋 Estrutura do Projeto
+
 ```
 lendas-reliquias-rpg/
 │
 ├── index.html          # Página de login/cadastro
-├── ficha.html          # Sistema de ficha do jogador
-├── mestre.html         # Painel do mestre
+├── personagens.html    # Tela de seleção de personagens
+├── ficha.html          # Sistema completo de ficha do jogador
+├── mestre.html         # Painel do mestre com múltiplas abas
+├── aliado.html         # Gestão de aliados/NPCs
+├── propriedade.html    # Gestão de propriedades
 ├── 404.html            # Página de erro
 ├── firebase.json       # Configuração do Firebase Hosting
+├── firestore.rules     # Regras de segurança do Firestore
 ├── .firebaserc         # Configuração do projeto Firebase
 └── .gitignore          # Arquivos ignorados pelo Git
 ```
@@ -229,36 +376,42 @@ lendas-reliquias-rpg/
 
 ## 🎮 Classes Disponíveis
 
-- ⚔️ **Guerreiro** - Combate direto e controle de campo
-- 🏹 **Caçador** - Rastreio e combate à distância
-- 🌿 **Druida** - Comunhão animal e alquimancia
-- 💀 **Adepto (Necromante)** - Controle de mortos-vivos
-- 🗡️ **Ladino** - Furtividade e dano oportunista
-- ✨ **Pallacerdote** - Suporte e cura divina
-- 🔮 **Ritualista (Abismancia)** - Controle por rituais abissais
+- ⚔️ **Guerreiro** - Combate direto, controle de campo e resistência
+- 🏹 **Caçador** - Rastreio, combate à distância e sobrevivência
+- 🌿 **Druida** - Comunhão animal, alquimancia e cura natural
+- 💀 **Adepto (Necromante)** - Controle de mortos-vivos e necromancia
+- 🗡️ **Ladino** - Furtividade, dano oportunista e habilidades sociais
+- ✨ **Pallacerdote** - Suporte divino, cura e proteção
+- 🔮 **Ritualista (Abismancia)** - Controle por rituais abissais e magias de controle
 
 ---
 
-## 🔐 Segurança
+## 🔒 Segurança
 
-- Autenticação obrigatória para acessar o sistema
-- Dados isolados por usuário no Firestore
-- Código de mestre para prevenir acesso não autorizado
-- Firestore Rules configuradas para máxima segurança
-- Mestres têm acesso read-only às fichas dos jogadores
-- Jogadores não podem editar fichas de outros jogadores
+- ✅ Autenticação obrigatória para acessar o sistema
+- ✅ Dados isolados por usuário no Firestore
+- ✅ Código de mestre para prevenir acesso não autorizado
+- ✅ Firestore Rules robustas com validação de propriedade (`ownerUid`, `ownerId`)
+- ✅ Mestres têm acesso read-only às fichas dos jogadores
+- ✅ Jogadores não podem editar personagens de outros jogadores
+- ✅ Sistema de logs para auditoria
+- ✅ Proteção contra mudança de propriedade em atualizações
+- ✅ Coleções separadas para melhor isolamento de dados
 
 ---
 
-## 📝 Roadmap
+## 📝 Roadmap Futuro
 
 - [ ] Sistema de combate integrado
-- [ ] Chat entre jogadores
-- [ ] Dados compartilhados na mesa
+- [ ] Chat entre jogadores em tempo real
+- [ ] Rolador de dados compartilhado na mesa
 - [ ] Sistema de iniciativa automática
 - [ ] Modo offline com sincronização
 - [ ] Exportação de fichas em PDF
-- [ ] Sistema de campanhas
+- [ ] Sistema de campanhas com progressão
+- [ ] Sistema de quests/missões
+- [ ] Marketplace de itens entre jogadores
+- [ ] App mobile nativo (iOS/Android)
 
 ---
 
@@ -266,29 +419,32 @@ lendas-reliquias-rpg/
 
 Encontrou algum problema? 
 
-1. Verifique se já não foi reportado em [Issues](https://github.com/lucasgabriel-fiap/lendas-reliquias-rpg/issues)
+1. Verifique se já não foi reportado em [Issues](https://github.com/Wotan8/rpglendasereliquias/issues)
 2. Abra uma nova issue com:
    - Descrição detalhada do problema
    - Passos para reproduzir
    - Screenshots (se possível)
    - Navegador e versão
+   - Se é jogador ou mestre
+   - Mensagens de erro do console (F12 no navegador)
 
 ---
 
-## 👥 Créditos
+## 💥 Créditos
 
 ### 🎲 Criador do Sistema de RPG
-**Igor Estevam AS**
+**Igor Estevam A.S.**
 - Criador do RPG Lendas e Relíquias
-- Desenvolvimento de mecânicas, regras e ambientação
+- Desenvolvimento de mecânicas, regras, ambientação e balanceamento
 - Mestre há mais de 12 anos
+- Desenvolvedor principal do sistema online (refatoração completa, correção de bugs, expansão de funcionalidades e arquitetura atual)
 
-### 💻 Desenvolvedor do Sistema Online
+### 💻 Versão Inicial (v0)
 **Lucas Gabriel**
-- Desenvolvimento da plataforma web
-- Integração com Firebase
-- Interface e experiência do usuário
-- [GitHub](https://github.com/lucasgabriel-fiap)
+- Desenvolvimento da primeira versão básica do sistema
+- Implementação inicial da estrutura HTML
+- **Participação apenas na versão 0 (inicial/básica) do projeto**
+- Sem envolvimento no desenvolvimento posterior
 
 ---
 
@@ -296,19 +452,20 @@ Encontrou algum problema?
 
 Este projeto é de código aberto para fins educacionais e de entretenimento. 
 
-O sistema de RPG **Lendas e Relíquias**, incluindo suas mecânicas, regras e ambientação, são propriedade intelectual de **Igor Estevam AS**.
+O sistema de RPG **Lendas e Relíquias**, incluindo suas mecânicas, regras, ambientação e balanceamento, são propriedade intelectual de **Igor Estevam A.S.**
 
 ---
 
 ## 📞 Suporte
 
-- **Issues:** [GitHub Issues](https://github.com/lucasgabriel-fiap/lendas-reliquias-rpg/issues)
-- **Desenvolvedor:** Lucas Gabriel
-- **Sistema RPG:** Igor Estevam AS
+- **Issues:** [GitHub Issues](https://github.com/Wotan8/rpglendasereliquias/issues)
+- **Desenvolvedor:** Igor Estevam A.S.
+- **Sistema RPG:** Igor Estevam A.S.
 
 ---
 
 <div align="center">
 
+**⚔️ Que suas aventuras sejam lendárias! ⚔️**
 
 </div>
