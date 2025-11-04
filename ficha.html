@@ -1652,7 +1652,7 @@
                     <div class="hp-controls">
                         <button class="btn btn-secondary btn-small" onclick="adjustSAN(-1)">-1</button>
                         <button class="btn btn-secondary btn-small" onclick="adjustSAN(-5)">-5</button>
-                        <input type="number" id="san-current" value="100" onchange="updateSANBar()" inputmode="numeric">
+                        <input type="number" id="san-current" onchange="updateSANBar()" inputmode="numeric">
                         <button class="btn btn-primary btn-small" onclick="adjustSAN(1)">+1</button>
                         <button class="btn btn-primary btn-small" onclick="adjustSAN(5)">+5</button>
                         <button class="btn btn-secondary btn-small" onclick="resetSAN()">Max</button>
@@ -1699,38 +1699,15 @@
                 <h2 class="section-title">💰 LUNS (DINHEIRO)</h2>
                 
                 <div style="background: rgba(245, 158, 11, 0.1); border: 2px solid #f59e0b; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-                    <div style="text-align: center; margin-bottom: 15px;">
-                        <div style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 8px;">SALDO ATUAL</div>
+                    <div style="text-align: center;">
+                        <div style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 8px;">RIQUEZA TOTAL</div>
                         <div style="font-size: 2.5rem; font-weight: 900; color: #f59e0b; text-shadow: 0 2px 10px rgba(245, 158, 11, 0.3);" id="luns-display">0</div>
                         <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 5px;">Luns</div>
                     </div>
                     
                     <div style="border-top: 1px solid rgba(245, 158, 11, 0.3); padding-top: 15px; margin-top: 15px;">
-                        <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 10px; font-weight: 600;">
-                            ⚖️ Valor da Transação
-                        </label>
-                        <input type="number" id="luns-transaction" value="0" min="0" inputmode="numeric" 
-                               placeholder="Digite o valor..." 
-                               style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light); font-size: 1.1rem; font-weight: 700; text-align: center;">
-                        
-                        <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
-                            <button class="btn btn-primary" onclick="addLuns()" style="flex: 1; min-width: 120px; background: linear-gradient(135deg, #10b981, #059669); font-size: 1rem; padding: 14px;">
-                                ➕ SOMAR
-                            </button>
-                            <button class="btn btn-danger" onclick="subtractLuns()" style="flex: 1; min-width: 120px; font-size: 1rem; padding: 14px;">
-                                ➖ RETIRAR
-                            </button>
-                        </div>
-                        
-                        <div style="margin-top: 15px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
-                            <button class="btn btn-secondary btn-small" onclick="quickLunsTransaction(10)" style="min-width: 60px;">+10</button>
-                            <button class="btn btn-secondary btn-small" onclick="quickLunsTransaction(50)" style="min-width: 60px;">+50</button>
-                            <button class="btn btn-secondary btn-small" onclick="quickLunsTransaction(100)" style="min-width: 60px;">+100</button>
-                            <button class="btn btn-secondary btn-small" onclick="quickLunsTransaction(500)" style="min-width: 60px;">+500</button>
-                        </div>
-                        
-                        <p style="color: #94a3b8; font-size: 0.8rem; margin-top: 12px; text-align: center; font-style: italic;">
-                            💡 Digite o valor e clique em Somar ou Retirar. Use os botões rápidos para valores comuns.
+                        <p style="color: #cbd5e1; font-size: 0.85rem; text-align: center; font-style: italic;">
+                            💡 Sua riqueza é calculada automaticamente baseada nos itens tipo "Lunis" em seu inventário.
                         </p>
                     </div>
                 </div>
@@ -1815,6 +1792,7 @@
                                 <option value="Projétil">Projétil</option>
                                 <option value="Objeto">Objeto</option>
                                 <option value="Container">Container</option>
+                                <option value="Lunis">Lunis</option>
                             </select>
                         </div>
                         
@@ -2373,6 +2351,7 @@ Exemplos:
                 await setDoc(itemRef, {
                     name: item.name,
                     tipo: item.tipo,
+                    tipoLun: item.tipoLun || null,
                     ownerId: currentUser.uid, // ✅ Sempre usar o uid do usuário autenticado
                     characterId: item.characterId || currentCharacterId, // Vincular ao personagem
                     containerId: item.containerId, // 'está com alguém' para Equipados
@@ -2668,6 +2647,8 @@ Exemplos:
                 
                 window.character.containers = containersWithItems;
                 console.log('✅ Inventário carregado:', containersWithItems);
+                updateLunsDisplay();
+
             } catch (error) {
                 console.error('❌ [loadInventoryFromFirebase] Erro ao carregar inventário:', error);
                 window.character.containers = [];
@@ -4542,65 +4523,46 @@ Exemplos:
             }
         }
 
-        // ============= FUNÇÕES DE LUNS =============
-        window.addLuns = function() {
-            const char = getChar();
-            const transactionInput = document.getElementById('luns-transaction');
-            const amount = parseInt(transactionInput.value) || 0;
-            
-            if (amount <= 0) {
-                alert('⚠️ Digite um valor válido para adicionar!');
-                return;
-            }
-            
-            char.luns = (char.luns || 0) + amount;
-            updateLunsDisplay();
-            transactionInput.value = 0;
-            
-            showAlert(`✅ +${amount} Luns adicionados! Saldo: ${char.luns}`, 'success');
-            autoSave();
-        };
-
-        window.subtractLuns = function() {
-            const char = getChar();
-            const transactionInput = document.getElementById('luns-transaction');
-            const amount = parseInt(transactionInput.value) || 0;
-            
-            if (amount <= 0) {
-                alert('⚠️ Digite um valor válido para retirar!');
-                return;
-            }
-            
-            if ((char.luns || 0) < amount) {
-                alert('⚠️ Saldo insuficiente! Você tem ' + (char.luns || 0) + ' Luns.');
-                return;
-            }
-            
-            char.luns = (char.luns || 0) - amount;
-            updateLunsDisplay();
-            transactionInput.value = 0;
-            
-            showAlert(`✅ -${amount} Luns retirados! Saldo: ${char.luns}`, 'success');
-            autoSave();
-        };
-
-        window.quickLunsTransaction = function(amount) {
-            const transactionInput = document.getElementById('luns-transaction');
-            transactionInput.value = amount;
-            transactionInput.focus();
-        };
-
         function updateLunsDisplay() {
             const char = getChar();
             const lunsDisplay = document.getElementById('luns-display');
             const lunsHidden = document.getElementById('luns');
             
+            // Calcular riqueza total baseada nos itens tipo Lunis
+            let totalLuns = 0;
+            
+            if (char.containers) {
+                char.containers.forEach(container => {
+                    if (container.items) {
+                        container.items.forEach(item => {
+                            if (item.tipo === 'Lunis' && item.tipoLun) {
+                                const quantity = item.quantity || 0;
+                                
+                                if (item.tipoLun === 'Lunis') {
+                                    totalLuns += quantity;
+                                } else if (item.tipoLun === "Ka'Lunis") {
+                                    totalLuns += quantity * 1000;
+                                } else if (item.tipoLun === "Mi'Lunis") {
+                                    totalLuns += quantity * 1000000;
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+            
+            // Atualizar display
             if (lunsDisplay) {
-                lunsDisplay.textContent = char.luns || 0;
+                lunsDisplay.textContent = totalLuns.toLocaleString('pt-BR');
             }
+            
+            // Atualizar campo oculto para compatibilidade
             if (lunsHidden) {
-                lunsHidden.value = char.luns || 0;
+                lunsHidden.value = totalLuns;
             }
+            
+            // Salvar no personagem
+            char.luns = totalLuns;
         }
 
         // ============= FUNÇÕES DE CONDIÇÕES =============
@@ -4989,9 +4951,26 @@ Exemplos:
                 const itemsHTML = container.items.length === 0 
                     ? '<p style="color: #64748b; text-align: center; padding: 10px; font-size: 0.85rem;">Vazio</p>'
                     : container.items.map((item, index) => {
+
                         // Exibir imagem se existir
-                        const imagemHTML = item.imagem ? `<img src="${item.imagem}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; margin-right: 10px;">` : '';
-                        
+                        // URLs das imagens dos Lunis
+                        const IMAGEM_LUN = 'https://i.imgur.com/RetxZ16.png'; // Cole a URL do Lun.png aqui
+                        const IMAGEM_KA_LUN = 'https://i.imgur.com/yRUSkDM.png'; // Cole a URL do Ka_Lun.png aqui
+                        const IMAGEM_MI_LUNIS = 'https://i.imgur.com/BTCzl1x.png'; // Cole a URL do Mi_Lunis.png aqui
+
+                        // Definir imagem baseada no tipo de Lun
+                        let imagemSrc = item.imagem;
+                        if (item.tipo === 'Lunis' && !item.imagem) {
+                            if (item.tipoLun === 'Lunis') {
+                                imagemSrc = IMAGEM_LUN;
+                            } else if (item.tipoLun === "Ka'Lunis") {
+                                imagemSrc = IMAGEM_KA_LUN;
+                            } else if (item.tipoLun === "Mi'Lunis") {
+                                imagemSrc = IMAGEM_MI_LUNIS;
+                            }
+                        }
+                        const imagemHTML = imagemSrc ? `<img src="${imagemSrc}" style="width: 40px; height: 40px; object-fit: contain; border-radius: 6px; margin-right: 10px; background: transparent;">` : '';
+
                         // Detalhes do item
                         let detalhes = `Peso: ${item.peso} | Tam: ${item.tamanho} | Int: ${item.integridade}/${item.dureza + item.tamanho + (item.reforco || 0)} | Total: ${item.totalWeight || (item.peso * item.quantity)}`;
                         
@@ -5006,7 +4985,13 @@ Exemplos:
                         }
                         
                         return `
-                            <div class="inventory-item" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; ${item.isContainerItem ? 'background: rgba(139, 92, 246, 0.1); border-left: 3px solid var(--primary);' : ''}">
+                            <div class="inventory-item" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; ${
+                                item.isContainerItem ? 'background: rgba(139, 92, 246, 0.1); border-left: 3px solid var(--primary);' : 
+                                item.tipo === 'Lunis' && item.tipoLun === 'Lunis' ? 'background: rgba(255, 255, 255, 0.1);' :
+                                item.tipo === 'Lunis' && item.tipoLun === "Ka'Lunis" ? 'background: rgba(255, 255, 255, 0.1); border: 2px solid #FFD700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);' :
+                                item.tipo === 'Lunis' && item.tipoLun === "Mi'Lunis" ? 'background: rgba(255, 224, 66, 0.2); border: 6px solid #FFD700; box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);' :
+                                ''
+                            }">
                                 <div class="item-info" onclick="editItem('${container.id}', '${item.id}')" style="cursor: pointer; flex: 1; display: flex; align-items: center;">
                                     ${imagemHTML}
                                     <div style="flex: 1;">
@@ -5020,7 +5005,7 @@ Exemplos:
                                 <div style="display: flex; gap: 4px; align-items: center;">
                                     ${index > 0 ? `<button class="btn btn-secondary btn-small" onclick="moveItemUp('${container.id}', '${item.id}')" style="padding: 4px 8px;">▲</button>` : ''}
                                     ${index < container.items.length - 1 ? `<button class="btn btn-secondary btn-small" onclick="moveItemDown('${container.id}', '${item.id}')" style="padding: 4px 8px;">▼</button>` : ''}
-                                    ${(item.tipo === 'Projétil' || item.tipo === 'Objeto') ? `
+                                    ${(item.tipo === 'Projétil' || item.tipo === 'Objeto' || item.tipo === 'Lunis') ? `
                                         <input type="number" min="1" value="${item.quantity}" 
                                             onchange="updateItemQuantity('${container.id}', '${item.id}', this.value)"
                                             style="width: 60px; padding: 4px 8px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--primary); border-radius: 8px; color: white; text-align: center; font-weight: 600;"
@@ -5054,6 +5039,9 @@ Exemplos:
                     </div>
                 `;
             }).join('');
+
+            // Atualizar display de Luns
+            updateLunsDisplay();
         }
 
         window.editItem = function(containerId, itemId) {
@@ -5123,6 +5111,35 @@ Exemplos:
             // Atualizar campos condicionais
             updateItemTypeFields();
             
+            // Se for Lunis, carregar tipoLun
+            if (item.tipo === 'Lunis' && item.tipoLun) {
+                document.getElementById('itemTipoLun').value = item.tipoLun;
+                
+                // Garantir que o nome seja atualizado ao editar
+                const itemNameField = document.getElementById('itemName');
+                if (itemNameField && !itemNameField.value) {
+                    if (item.tipoLun === 'Lunis') {
+                        itemNameField.value = 'Lunis';
+                    } else if (item.tipoLun === "Ka'Lunis") {
+                        itemNameField.value = "Ka'Lunis";
+                    } else if (item.tipoLun === "Mi'Lunis") {
+                        itemNameField.value = "Mi'Lunis";
+                    }
+                }
+                
+                setTimeout(() => {
+                    updateLunisFields();
+                    const tipoLunSelect = document.getElementById('itemTipoLun');
+                    if (tipoLunSelect) {
+                        tipoLunSelect.value = item.tipoLun;
+                        const quantidadeEl = document.getElementById('itemQuantidade');
+                        if (quantidadeEl) {
+                            quantidadeEl.value = item.quantity || 1;
+                        }
+                    }
+                }, 100);
+            }
+
             // Preencher campos condicionais
             if (item.tipo === 'Arma') {
                 document.getElementById('itemDano').value = item.dano || 0;
@@ -5136,6 +5153,7 @@ Exemplos:
             } else if (item.tipo === 'Objeto') {
                 document.getElementById('itemQuantidade').value = item.quantity || 1;
                 document.getElementById('itemPackSize').value = item.packSize || 1;
+            } else if (item.tipo === 'Lunis') {
             } else if (item.tipo === 'Container') {
                 document.getElementById('itemCapacidadeMax').value = item.maxCapacity || 10;
                 document.getElementById('itemTamanhoMax').value = item.maxSize || 5;
@@ -5401,6 +5419,24 @@ Exemplos:
                         </div>
                     `;
                     break;
+                
+                case 'Lunis':
+                    html = `
+                        <div style="border-top: 2px solid var(--primary); padding-top: 15px; margin-top: 15px;">
+                            <h3 style="color: var(--primary); margin-bottom: 15px;">💰 Atributos de Lunis</h3>
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Tipo de Lun*</label>
+                                <select id="itemTipoLun" onchange="updateLunisFields()" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                    <option value="">Selecione...</option>
+                                    <option value="Lunis">Lunis</option>
+                                    <option value="Ka'Lunis">Ka'Lunis</option>
+                                    <option value="Mi'Lunis">Mi'Lunis</option>
+                                </select>
+                            </div>
+                            <div id="lunisQuantityField"></div>
+                        </div>
+                    `;
+                    break;
             }
             
             conditionalFields.innerHTML = html;
@@ -5420,6 +5456,76 @@ Exemplos:
             }
             
             document.getElementById('itemPesoTotal').value = totalWeight.toFixed(2);
+        };
+
+        window.updateLunisFields = function() {
+            const tipoLun = document.getElementById('itemTipoLun')?.value;
+            const lunisQuantityField = document.getElementById('lunisQuantityField');
+            
+            if (!tipoLun || !lunisQuantityField) return;
+            
+            let descricao = '';
+            let packSize = 1;
+            
+            // URLs das imagens dos Lunis
+            const IMAGEM_LUN = 'https://i.imgur.com/RetxZ16.png'; // Cole a URL do Lun.png aqui
+            const IMAGEM_KA_LUN = 'https://i.imgur.com/yRUSkDM.png'; // Cole a URL do Ka_Lun.png aqui
+            const IMAGEM_MI_LUNIS = 'https://i.imgur.com/BTCzl1x.png'; // Cole a URL do Mi_Lunis.png aqui
+
+            // Atualizar imagem automaticamente baseada no tipo de Lun
+            if (tipoLun === 'Lunis') {
+                window.currentItemImageBase64 = IMAGEM_LUN;
+                document.getElementById('itemImagePreview').innerHTML = `<img src="${IMAGEM_LUN}" style="max-width: 200px; max-height: 200px; border-radius: 8px; object-fit: contain; background: transparent;">`;
+            } else if (tipoLun === "Ka'Lunis") {
+                window.currentItemImageBase64 = IMAGEM_KA_LUN;
+                document.getElementById('itemImagePreview').innerHTML = `<img src="${IMAGEM_KA_LUN}" style="max-width: 200px; max-height: 200px; border-radius: 8px; object-fit: contain; background: transparent;">`;
+            } else if (tipoLun === "Mi'Lunis") {
+                window.currentItemImageBase64 = IMAGEM_MI_LUNIS;
+                document.getElementById('itemImagePreview').innerHTML = `<img src="${IMAGEM_MI_LUNIS}" style="max-width: 200px; max-height: 200px; border-radius: 8px; object-fit: contain; background: transparent;">`;
+            }
+
+            // Atualizar o nome do item automaticamente
+            const itemNameField = document.getElementById('itemName');
+            if (itemNameField) {
+                if (tipoLun === 'Lunis') {
+                    itemNameField.value = 'Lunis';
+                } else if (tipoLun === "Ka'Lunis") {
+                    itemNameField.value = "Ka'Lunis";
+                } else if (tipoLun === "Mi'Lunis") {
+                    itemNameField.value = "Mi'Lunis";
+                }
+            }
+            if (tipoLun === 'Lunis') {
+                descricao = 'Cada Lun tem um valor unitário, comumente usado no comércio e em classe média para baixo.';
+                packSize = 50;
+            } else if (tipoLun === "Ka'Lunis") {
+                descricao = "Cada Ka'Lun, equivale a 1000 unidades de Luns, pouco usada pela classe baixa, comum entre a nobreza e no comércio.";
+                packSize = 10;
+            } else if (tipoLun === "Mi'Lunis") {
+                descricao = 'Cada Mi\'Lun equivale a 1.000.000 (1 Milhão) de unidades de Lunis, moeda rara até entre a nobreza.';
+                packSize = 1;
+            }
+            
+            lunisQuantityField.innerHTML = `
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Quantidade*</label>
+                    <input type="number" id="itemQuantidade" min="1" value="1" required oninput="calculateTotalWeight()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                </div>
+                <div style="background: rgba(139, 92, 246, 0.1); border-left: 3px solid var(--primary); padding: 12px; border-radius: 8px; margin-top: 10px;">
+                    <p style="color: #cbd5e1; font-size: 0.85rem; margin: 0;">${descricao}</p>
+                    <p style="color: #94a3b8; font-size: 0.75rem; margin-top: 8px;">
+                        📦 Tamanho do Pack: <strong style="color: var(--primary);">${packSize}</strong> (fixo)
+                    </p>
+                </div>
+            `;
+            
+            // Atualizar campos automaticamente
+            document.getElementById('itemDescription').value = descricao;
+            document.getElementById('itemDureza').value = 1;
+            document.getElementById('itemIntegridade').value = 2;
+            document.getElementById('itemPeso').value = 1;
+            
+            calculateTotalWeight();
         };
 
         window.repairItem = function() {
@@ -5470,6 +5576,12 @@ Exemplos:
             // Validar campos obrigatórios
             const name = document.getElementById('itemName').value.trim();
             const tipo = document.getElementById('itemTipo').value;
+
+            // Capturar tipo de Lun se for Lunis
+            let tipoLun = null;
+            if (tipo === 'Lunis') {
+                tipoLun = document.getElementById('itemTipoLun')?.value || null;
+            }
             
             if (!name || !tipo) {
                 alert('❌ Preencha todos os campos obrigatórios!');
@@ -5496,6 +5608,7 @@ Exemplos:
             const itemData = {
                 name,
                 tipo,
+                tipoLun,
                 description: document.getElementById('itemDescription').value,
                 dureza: parseInt(document.getElementById('itemDureza').value) || 0,
                 tamanho: parseInt(document.getElementById('itemTamanho').value) || 1,
@@ -5526,6 +5639,18 @@ Exemplos:
                 case 'Objeto':
                     itemData.quantity = parseInt(document.getElementById('itemQuantidade').value) || 1;
                     itemData.packSize = parseInt(document.getElementById('itemPackSize').value) || 1;
+                    itemData.totalWeight = Math.ceil((itemData.quantity / itemData.packSize) * itemData.peso);
+                    break;
+                case 'Lunis': 
+                    itemData.quantity = parseInt(document.getElementById('itemQuantidade').value) || 1;
+                    const tipoLunValue = document.getElementById('itemTipoLun')?.value;
+                    if (tipoLunValue === 'Lunis') {
+                        itemData.packSize = 50;
+                    } else if (tipoLunValue === "Ka'Lunis") {
+                        itemData.packSize = 10;
+                    } else if (tipoLunValue === "Mi'Lunis") {
+                        itemData.packSize = 1;
+                    }
                     itemData.totalWeight = Math.ceil((itemData.quantity / itemData.packSize) * itemData.peso);
                     break;
                 case 'Container':
@@ -5676,6 +5801,16 @@ Exemplos:
             const lunsEl = document.getElementById('luns');
             if (lunsEl) lunsEl.value = char.luns || 0;
             
+            // Carregar valores de combate
+            const hpInput = document.getElementById('hp-current');
+            if (hpInput) hpInput.value = char.hpCurrent || 5;
+
+            const detInput = document.getElementById('det-current');
+            if (detInput) detInput.value = char.detCurrent || 3;
+
+            const sanInput = document.getElementById('san-current');
+            if (sanInput) sanInput.value = char.sanCurrent || 80;
+
             const attributes = ['int', 'for', 'pre', 'rac', 'des', 'man', 'prs', 'vig', 'aut'];
             attributes.forEach(attr => updateAttributeDots(attr));
             
