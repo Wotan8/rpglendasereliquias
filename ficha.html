@@ -2062,8 +2062,6 @@ Exemplos:
                 createSkills();
             
                 const char = getChar();
-                // Garantir que o container Equipados existe // ❌ REMOVER ESTA LINHA:
-                // await ensureEquipadosContainer(currentCharacterId || currentUser.uid);
                 
                 loadCharacterData();
             
@@ -3041,7 +3039,7 @@ Exemplos:
         };
 
         window.removeProperty = function(propertyId) {
-            if (!confirm('⚠️ Tem certeza que deseja remover esta propriedade permanentemente?')) return;
+            if (!confirm('⚠️🗑️⚠️ Tem certeza que deseja remover esta propriedade permanentemente? ⚠️🗑️⚠️')) return;
             
             const char = getChar();
             char.properties = char.properties.filter(p => p.id !== propertyId);
@@ -3778,7 +3776,7 @@ Exemplos:
 
         // Função para remover imagem
         window.removeCharacterImage = function() {
-            if (confirm('🗑️ Remover imagem do personagem?')) {
+            if (confirm('⚠️🗑️⚠️ Remover imagem do personagem? ⚠️🗑️⚠️')) {
                 const char = getChar();
                 char.characterImage = '';
                 updateCharacterImageDisplay();
@@ -4627,7 +4625,7 @@ Exemplos:
         };
 
         window.removeCondition = function(conditionId) {
-            if (!confirm('⚠️ Remover esta condição?')) return;
+            if (!confirm('⚠️🗑️⚠️ Remover esta condição? ⚠️🗑️⚠️')) return;
             
             const char = getChar();
             if (!char.conditions) char.conditions = [];
@@ -4743,7 +4741,7 @@ Exemplos:
                 return;
             }
             
-            if (!confirm(`⚠️ Remover "${container.name}"?\n\nTodos os itens dentro serão movidos para Equipados.`)) return;
+            if (!confirm(`⚠️🗑️⚠️ Remover "${container.name}"? ⚠️🗑️⚠️\n\nTodos os itens dentro serão movidos para Equipados.`)) return;
             
             try {
                 const characterId = window.currentCharacterId || (window.currentUser || currentUser)?.uid;
@@ -4816,7 +4814,7 @@ Exemplos:
             
             // Verificar se é Item de Container
             if (item.isContainerItem && item.linkedContainerId) {
-                if (!confirm(`⚠️ Este item representa o container "${item.name}"!\n\nRemover este item também removerá o container e moverá todos os itens dentro dele para Equipados.\n\nContinuar?`)) {
+                if (!confirm(`⚠️🗑️⚠️ Este item representa o container "${item.name}"! ⚠️🗑️⚠️\n\nRemover este item também removerá o container e moverá todos os itens dentro dele para Equipados.\n\nContinuar?`)) {
                     return;
                 }
                 
@@ -4825,7 +4823,7 @@ Exemplos:
                 return;
             }
             
-            if (!confirm(`🗑️ Remover "${item.name}"?`)) return;
+            if (!confirm(`⚠️🗑️⚠️ Remover "${item.name}"? ⚠️🗑️⚠️`)) return;
             
             try {
                 await window.deleteItemFromFirebase(itemId);
@@ -4901,6 +4899,55 @@ Exemplos:
             } catch (error) {
                 console.error('Erro ao editar container:', error);
                 alert('❌ Erro ao editar container!');
+            }
+        };
+
+        window.editContainerItem = function(containerId) {
+            console.log('🔧 editContainerItem chamado para:', containerId);
+            const char = getChar();
+            const container = char.containers.find(c => c.id === containerId);
+            
+            if (!container) {
+                console.error('❌ Container não encontrado:', containerId);
+                return;
+            }
+            
+            if (container.name === 'Equipados') {
+                alert('❌ O container Equipados não pode ser editado!');
+                return;
+            }
+            
+            // Encontrar o Item de Container correspondente em "Equipados"
+            const equipados = char.containers.find(c => c.name === 'Equipados');
+            if (!equipados) {
+                console.error('❌ Container Equipados não encontrado');
+                return;
+            }
+            
+            console.log('🔍 Procurando containerItem vinculado a:', containerId);
+            
+            const containerItem = equipados.items.find(item => 
+                item.isContainerItem === true && item.linkedContainerId === containerId
+            );
+            
+            if (!containerItem) {
+                console.error('❌ Item não encontrado. Items em Equipados:', equipados.items);
+                alert('❌ Item de Container não encontrado!');
+                return;
+            }
+            
+            console.log('✅ Item de Container encontrado:', containerItem);
+            
+            // Abrir o modal de editar item com os dados do container
+            console.log('🎯 Chamando window.editItem com:', 'Equipados', containerItem.id);
+            console.log('Tipo de window.editItem:', typeof window.editItem);
+
+            try {
+                window.editItem('Equipados', containerItem.id);
+                console.log('✅ Modal deveria estar aberto agora');
+            } catch (error) {
+                console.error('❌ Erro ao chamar editItem:', error);
+                alert('Erro: ' + error.message);
             }
         };
 
@@ -4986,7 +5033,7 @@ Exemplos:
                         <div class="container-header">
                             <div class="container-name">
                                 ${container.name === 'Equipados' ? '⚔️' : '📦'} ${container.name}
-                                ${container.name !== 'Equipados' ? ` <button class="btn btn-secondary btn-small" onclick="editContainer('${container.id}')" style="padding: 2px 8px; font-size: 0.7rem;">✏️</button>` : ''}
+                                ${container.name !== 'Equipados' ? ` <button class="btn btn-secondary btn-small" onclick="editContainerItem('${container.id}')" style="padding: 2px 8px; font-size: 0.7rem;">✏️</button>` : ''}
                             </div>
                             <div style="display: flex; align-items: center;">
                                 ${sizeInfo}
@@ -5005,25 +5052,53 @@ Exemplos:
         }
 
         window.editItem = function(containerId, itemId) {
+            console.log('🔍 editItem chamado com containerId:', containerId, 'itemId:', itemId);
             const char = getChar();
-            const container = char.containers.find(c => c.id === containerId);
-            if (!container) return;
             
-            const item = container.items.find(i => i.id === itemId);
-            if (!item) return;
+            // Buscar container pelo ID ou pelo nome (caso seja "Equipados")
+            let container = char.containers.find(c => c.id === containerId);
+            if (!container) {
+                console.log('⚠️ Container não encontrado pelo ID, tentando pelo nome...');
+                container = char.containers.find(c => c.name === containerId);
+            }
             
-            if (item.isContainerItem) {
-                alert('ℹ️ Este é um Item de Container. Edite as informações através do botão de editar do container.');
+            if (!container) {
+                console.error('❌ Container não encontrado:', containerId);
+                console.log('Containers disponíveis:', char.containers.map(c => ({id: c.id, name: c.name})));
                 return;
             }
+            
+            console.log('✅ Container encontrado:', container.name, container.id);
+            
+            const item = container.items.find(i => i.id === itemId);
+            if (!item) {
+                console.error('❌ Item não encontrado:', itemId);
+                console.log('Items no container:', container.items.map(i => i.id));
+                return;
+            }
+            
+            console.log('✅ Item encontrado:', item);
             
             // Preencher modal com dados do item
             window.currentEditingContainerId = containerId;
             window.currentEditingItemId = itemId;
-            document.getElementById('modalTitle').textContent = 'Editar Item';
+
+            console.log('📝 Editando item:', item.id, 'isContainerItem:', item.isContainerItem, 'linkedContainerId:', item.linkedContainerId);
+
+            // Atualizar título para indicar se é um Container
+            if (item.isContainerItem) {
+                document.getElementById('modalTitle').textContent = '📦 Editar Container';
+            } else {
+                document.getElementById('modalTitle').textContent = 'Editar Item';
+            }
             
             document.getElementById('itemName').value = item.name || '';
-            document.getElementById('itemDescription').value = item.description || '';
+            // Se for container, remover o prefixo "Container: " da descrição
+            let description = item.description || '';
+            if (item.isContainerItem && description.startsWith('Container: ')) {
+                description = description.replace('Container: ', '');
+            }
+            document.getElementById('itemDescription').value = description;
             document.getElementById('itemDureza').value = item.dureza || 0;
             document.getElementById('itemTamanho').value = item.tamanho || 1;
             document.getElementById('itemReforco').value = item.reforco || 0;
@@ -5380,9 +5455,12 @@ Exemplos:
         };
 
         window.saveItem = async function() {
+            console.log('💾 saveItem chamado');
             const char = getChar();
             const containerId = window.currentEditingContainerId;
             const itemId = window.currentEditingItemId;
+            
+            console.log('📦 ContainerId:', containerId, 'ItemId:', itemId);
             
             // Validar campos obrigatórios
             const name = document.getElementById('itemName').value.trim();
@@ -5393,8 +5471,21 @@ Exemplos:
                 return;
             }
             
-            const container = char.containers.find(c => c.id === containerId);
-            if (!container) return;
+            // Buscar container pelo ID ou pelo nome (caso seja "Equipados")
+            let container = char.containers.find(c => c.id === containerId);
+            if (!container) {
+                console.log('⚠️ Container não encontrado pelo ID, tentando pelo nome...');
+                container = char.containers.find(c => c.name === containerId);
+            }
+            
+            if (!container) {
+                console.error('❌ Container não encontrado:', containerId);
+                console.log('Containers disponíveis:', char.containers.map(c => ({id: c.id, name: c.name})));
+                alert('❌ Erro: Container não encontrado!');
+                return;
+            }
+            
+            console.log('✅ Container encontrado para salvar:', container.name);
             
             // Coletar dados básicos
             const itemData = {
@@ -5458,7 +5549,46 @@ Exemplos:
                     // Editar item existente
                     const item = container.items.find(i => i.id === itemId);
                     Object.assign(item, itemData);
+                    // Garantir que a descrição do item de container tenha o prefixo
+                    if (item.isContainerItem && item.description && !item.description.startsWith('Container: ')) {
+                        item.description = 'Container: ' + item.description;
+                    }
                     await window.saveItemToFirebase(item);
+                    // Se for um Item de Container, atualizar o container vinculado
+                    if (item.isContainerItem && item.linkedContainerId) {
+                        console.log('🔄 Atualizando container vinculado:', item.linkedContainerId);
+                        const linkedContainer = char.containers.find(c => c.id === item.linkedContainerId);
+                        
+                        if (linkedContainer) {
+                            console.log('✅ Container encontrado, atualizando...');
+                            
+                            linkedContainer.name = item.name;
+                            
+                            // Limpar descrição do prefixo
+                            let cleanDescription = item.description || '';
+                            if (cleanDescription.startsWith('Container: ')) {
+                                cleanDescription = cleanDescription.replace('Container: ', '');
+                            }
+                            linkedContainer.description = cleanDescription;
+                            
+                            linkedContainer.dureza = item.dureza;
+                            linkedContainer.tamanho = item.tamanho;
+                            linkedContainer.integridade = item.integridade;
+                            linkedContainer.peso = item.peso;
+                            
+                            // Se for tipo Container, atualizar também capacidade
+                            if (item.tipo === 'Container' && item.maxCapacity) {
+                                linkedContainer.maxCapacity = item.maxCapacity;
+                                linkedContainer.maxSize = item.maxSize;
+                            }
+                            
+                            console.log('💾 Salvando container:', linkedContainer);
+                            await window.saveContainerToFirebase(linkedContainer);
+                            console.log('✅ Container salvo!');
+                        } else {
+                            console.error('❌ Container não encontrado:', item.linkedContainerId);
+                        }
+                    }
                     showAlert('✅ Item atualizado!', 'success');
                 } else {
                     // Criar novo item
