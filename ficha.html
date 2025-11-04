@@ -3131,32 +3131,32 @@ Exemplos:
                     { id: 'marcar-presa', name: 'Marcar Presa', maxLevel: 5 }
                 ],
                 quickTests: [
-                    { name: 'Disparo', formula: 'DES + Disparo + Precisão + Equipamento', calculate: (char) => {
+                    { name: '🏹 Disparo', formula: 'DES + Disparo + Precisão + Equipamento', calculate: (char) => {
                         const disparo = char.skills['disparo'] || 0;
                         const precisao = char.classAbilities?.['precisão'] || 0;
                         return char.des + disparo + precisao;
                     }},
-                    { name: 'Disparo Furtivo', formula: 'DES + Disparo + Furtividade + Precisão', calculate: (char) => {
+                    { name: '🎯 Disparo Furtivo', formula: 'DES + Disparo + Furtividade + Precisão', calculate: (char) => {
                         const disparo = char.skills['disparo'] || 0;
                         const furtividade = char.skills['furtividade'] || 0;
                         const precisao = char.classAbilities?.['precisão'] || 0;
                         return char.des + disparo + furtividade + precisao;
                     }},
-                    { name: 'Rastreamento', formula: 'RAC + PRE + Sobrevivência', calculate: (char) => {
+                    { name: '👣 Rastreamento', formula: 'RAC + PRE + Sobrevivência', calculate: (char) => {
                         const sobrevivencia = char.skills['sobrevivência'] || 0;
                         return char.rac + char.pre + sobrevivencia;
                     }},
-                    { name: 'Preparar Loção', formula: 'RAC + Herbalismo + Maceração', calculate: (char) => {
+                    { name: '🧪 Preparar Loção', formula: 'RAC + Herbalismo + Maceração', calculate: (char) => {
                         const herbalismo = char.skills['herbalismo'] || 0;
                         const maceracao = char.classAbilities?.['maceração'] || 0;
                         return char.rac + herbalismo + maceracao;
                     }},
-                    { name: 'Dosagem', formula: 'INT + Herbalismo + Dosagem', calculate: (char) => {
+                    { name: '💉 Dosagem', formula: 'INT + Herbalismo + Dosagem', calculate: (char) => {
                         const herbalismo = char.skills['herbalismo'] || 0;
                         const dosagem = char.classAbilities?.['dosagem'] || 0;
                         return char.int + herbalismo + dosagem;
                     }},
-                    { name: 'Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
+                    { name: '👁️ Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
                 ],
                 resources: [
                     { id: 'kits-ingredientes', name: 'Kits/Ingredientes', max: 10, info: 'Usados na preparação de loções' }
@@ -3196,7 +3196,7 @@ Exemplos:
                         const linguagemAnimal = char.classAbilities?.['linguagem-animal'] || 0;
                         return char.pre + aliadoAnimal + linguagemAnimal;
                     }},
-                    { name: 'Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
+                    { name: '👁️ Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
                 ],
                 resources: [
                     { id: 'kits-ingredientes', name: 'Kits/Ingredientes', max: 10, info: 'Usados na preparação de loções' },
@@ -3242,7 +3242,7 @@ Exemplos:
                         const guerrilha = char.classAbilities?.['guerrilha'] || 0;
                         return char.man + lideranca + guerrilha;
                     }},
-                    { name: 'Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
+                    { name: '👁️ Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
                 ],
                 resources: [],
                 info: `<strong>Papel:</strong> Combate direto, controle de campo.<br>
@@ -3286,7 +3286,7 @@ Exemplos:
                         const vozes = char.classAbilities?.['vozes-tumulo'] || 0;
                         return char.pre + essencia + vozes;
                     }},
-                    { name: 'Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
+                    { name: '👁️ Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
                 ],
                 resources: [
                     { id: 'servos-permanentes', name: 'Servos Permanentes', max: 'servos', info: 'Máximo = nível de Servos' },
@@ -3337,7 +3337,7 @@ Exemplos:
                         const furtII = char.classAbilities?.['furtividade-ii'] || 0;
                         return char.des + furt + furtII;
                     }},
-                    { name: 'Percepção', formula: 'RAC + PRE + Olho Para Brechas', calculate: (char) => {
+                    { name: '👁️ Percepção', formula: 'RAC + PRE + Olho Para Brechas', calculate: (char) => {
                         const olho = char.classAbilities?.['olho-brechas'] || 0;
                         return char.rac + char.pre + olho;
                     }}
@@ -3372,7 +3372,7 @@ Exemplos:
                         const simbolo = char.classAbilities?.['simbolo-sagrado'] || 0;
                         return char.man + performance + essencia + simbolo;
                     }},
-                    { name: 'Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
+                    { name: '👁️ Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
                 ],
                 resources: [
                     { id: 'graca', name: 'Graça', max: 'devocao-palla', info: 'Máximo = nível de Devoção (substitui DET nas preces)' }
@@ -3405,7 +3405,7 @@ Exemplos:
                         const essencia = char.skills['essência'] || 0;
                         return char.aut + essencia;
                     }},
-                    { name: 'Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
+                    { name: '👁️ Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
                 ],
                 resources: [
                     { id: 'ruptura-venire', name: 'Ruptura Venire (RV)', max: 10, info: 'Acumulado de falhas em Despertar' }
@@ -3430,7 +3430,8 @@ Exemplos:
             containers: [], // Agora containers não são mais salvos no documento do personagem
             notas: '',
             exp: 0,
-            characterImage: ''
+            characterImage: '',
+            recipes: [], // Receitas de Loção Ofensiva (apenas para Caçador)
         };
 
         function getChar() {
@@ -3477,47 +3478,19 @@ Exemplos:
                 </div>
             `;
             
-            if (classData.resources && classData.resources.length > 0) {
+            // Seção de Receitas (apenas para Caçador)
+            if (classe === 'Caçador') {
                 html += `
                     <div class="section">
-                        <h2 class="section-title">📦 Recursos da Classe</h2>
+                        <h2 class="section-title">🧪 Receitas de Loção Ofensiva</h2>
+                        <button class="btn btn-primary" onclick="openRecipeModal()" style="margin-bottom: 15px;">
+                            ➕ Adicionar Receita
+                        </button>
+                        <div id="recipes-list"></div>
+                    </div>
                 `;
-                
-                classData.resources.forEach(resource => {
-                    if (!char.classResources[resource.id]) {
-                        char.classResources[resource.id] = 0;
-                    }
-                    
-                    let maxValue = getResourceMax(resource);
-                    
-                    html += `
-                        <div class="resource-tracker">
-                            <div class="resource-header">${resource.name}</div>
-                            <div class="info-box">
-                                <strong>Info:</strong> ${resource.info}
-                                ${maxValue > 0 ? `<br><strong>Máximo atual:</strong> ${maxValue}` : ''}
-                            </div>
-                            <div class="resource-value" id="resource-${resource.id}">${char.classResources[resource.id]} / ${maxValue}</div>
-                            <div class="resource-controls">
-                                <button class="btn btn-secondary btn-small" onclick="adjustResource('${resource.id}', -1)">-1</button>
-                                <button class="btn btn-secondary btn-small" onclick="adjustResource('${resource.id}', -5)">-5</button>
-                                <input type="number" id="resource-input-${resource.id}" 
-                                       value="${char.classResources[resource.id]}" 
-                                       min="0" max="${maxValue}"
-                                       onchange="setResource('${resource.id}', this.value)"
-                                       style="width: 80px; text-align: center;"
-                                       inputmode="numeric">
-                                <button class="btn btn-primary btn-small" onclick="adjustResource('${resource.id}', 1)">+1</button>
-                                <button class="btn btn-primary btn-small" onclick="adjustResource('${resource.id}', 5)">+5</button>
-                                <button class="btn btn-secondary btn-small" onclick="resetResource('${resource.id}')">Max</button>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                html += `</div>`;
             }
-            
+
             html += `
                 <div class="section">
                     <h2 class="section-title">📖 Informações da Classe</h2>
@@ -3526,8 +3499,13 @@ Exemplos:
                     </div>
                 </div>
             `;
-            
+
             classContent.innerHTML = html;
+
+            // Atualizar lista de receitas se for Caçador
+            if (classe === 'Caçador') {
+                updateRecipesList();
+            }
             
             classData.abilities.forEach(ability => {
                 createClassAbilityDots(ability.id, ability.maxLevel);
@@ -5989,6 +5967,165 @@ Exemplos:
             }
         }
         
+        // ========== SISTEMA DE RECEITAS (CAÇADOR) ==========
+
+        window.openRecipeModal = function() {
+            document.getElementById('recipe-modal').style.display = 'flex';
+            // Limpar campos
+            document.getElementById('recipe-name').value = '';
+            document.getElementById('recipe-macerar').value = '';
+            document.getElementById('recipe-props').value = '';
+            document.getElementById('recipe-variedade').value = '';
+            document.getElementById('recipe-repetir').checked = false;
+        };
+
+        window.closeRecipeModal = function() {
+            document.getElementById('recipe-modal').style.display = 'none';
+        };
+
+        window.learnRecipe = function() {
+            const char = getChar();
+            
+            // Verificar se tem EXP
+            const currentEXP = char.exp || 0;
+            if (currentEXP < 1) {
+                alert('❌ EXP Insuficiente!\n\nPrecisa: 1 EXP\nTem: ' + currentEXP + ' EXP');
+                return;
+            }
+            
+            // Pegar valores
+            const name = document.getElementById('recipe-name').value.trim();
+            const macerar = parseInt(document.getElementById('recipe-macerar').value) || 0;
+            const props = document.getElementById('recipe-props').value.trim();
+            const variedade = parseInt(document.getElementById('recipe-variedade').value) || 0;
+            const repetir = document.getElementById('recipe-repetir').checked;
+            
+            // Validar
+            if (!name) {
+                alert('❌ Por favor, preencha o nome da receita!');
+                return;
+            }
+            
+            // Confirmar
+            if (!confirm(`Aprender a receita "${name}"?\n\nCusto: 1 EXP\nEXP atual: ${currentEXP}`)) {
+                return;
+            }
+            
+            // Inicializar array se não existir
+            if (!char.recipes) {
+                char.recipes = [];
+            }
+            
+            // Adicionar receita
+            const newRecipe = {
+                id: Date.now(),
+                name: name,
+                macerar: macerar,
+                propriedades: props,
+                variedadeMinima: variedade,
+                repetir: repetir
+            };
+            
+            char.recipes.push(newRecipe);
+            char.exp = currentEXP - 1;
+            
+            // Atualizar display
+            updateRecipesList();
+            updateEXPDisplay();
+            closeRecipeModal();
+            autoSave();
+            
+            showAlert(`✅ Receita "${name}" aprendida! (-1 EXP)`, 'success');
+        };
+
+        window.removeRecipe = function(recipeId) {
+            if (!confirm('⚠️🗑️⚠️ Remover esta receita? ⚠️🗑️⚠️')) return;
+            
+            const char = getChar();
+            if (!char.recipes) char.recipes = [];
+            
+            char.recipes = char.recipes.filter(r => r.id !== recipeId);
+            updateRecipesList();
+            autoSave();
+            showAlert('✅ Receita removida!', 'success');
+        };
+
+        function updateRecipesList() {
+            const recipesList = document.getElementById('recipes-list');
+            if (!recipesList) return;
+            
+            const char = getChar();
+            if (!char.recipes) char.recipes = [];
+            
+            if (char.recipes.length === 0) {
+                recipesList.innerHTML = '<p style="color: #64748b; text-align: center; padding: 20px; font-size: 0.9rem;">Nenhuma receita aprendida ainda. Clique em "Adicionar Receita" para aprender uma nova receita.</p>';
+                return;
+            }
+            
+            recipesList.innerHTML = char.recipes.map(recipe => `
+                <div class="container-card" style="border-left: 4px solid var(--primary); margin-bottom: 15px;">
+                    <div class="container-header">
+                        <div class="container-name">🧪 ${recipe.name}</div>
+                        <button class="btn btn-danger btn-small" onclick="removeRecipe(${recipe.id})">🗑️</button>
+                    </div>
+                    <div style="padding: 10px; color: #cbd5e1; font-size: 0.85rem;">
+                        <div style="margin-bottom: 8px;">
+                            <strong>Dif. de Macerar:</strong> ${recipe.macerar}
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <strong>Propriedades:</strong> ${recipe.propriedades || 'Nenhuma'}
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <strong>Variedade Mínima:</strong> ${recipe.variedadeMinima}
+                        </div>
+                        <div>
+                            <strong>Repetir Ingrediente:</strong> ${recipe.repetir ? '✅ Sim' : '❌ Não'}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
     </script>
+
+    <!-- Modal de Adicionar Receita -->
+    <div id="recipe-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center;">
+        <div style="background: var(--dark); padding: 30px; border-radius: 16px; max-width: 500px; width: 90%; border: 2px solid var(--primary);">
+            <h2 style="margin-bottom: 20px; color: var(--primary);">🧪 Nova Receita de Loção</h2>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #cbd5e1;">Nome da Receita:</label>
+                <input type="text" id="recipe-name" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--darker); color: white;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #cbd5e1;">Dificuldade de Macerar:</label>
+                <input type="number" id="recipe-macerar" min="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--darker); color: white;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #cbd5e1;">Propriedades:</label>
+                <textarea id="recipe-props" rows="3" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--darker); color: white; resize: vertical;"></textarea>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #cbd5e1;">Variedade Mínima:</label>
+                <input type="number" id="recipe-variedade" min="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--darker); color: white;">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: flex; align-items: center; gap: 10px; color: #cbd5e1; cursor: pointer;">
+                    <input type="checkbox" id="recipe-repetir" style="width: 20px; height: 20px;">
+                    <span>Permitir repetir ingrediente</span>
+                </label>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="learnRecipe()" style="flex: 1;">✅ Aprender Receita (1 EXP)</button>
+                <button class="btn btn-secondary" onclick="closeRecipeModal()" style="flex: 1;">❌ Cancelar</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
