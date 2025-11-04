@@ -1111,17 +1111,6 @@
                 background: rgba(15, 23, 42, 0.8);
             }
         }
-        
-        .load-class-button {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: white;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            text-align: center;
-            border: 3px solid #f59e0b;
-            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4);
-        }
 
         /* ESTILOS PARA UPLOAD DE IMAGEM */
         .character-image-section {
@@ -1593,15 +1582,7 @@
         </div>
 
         <!-- ABA CLASSE -->
-        <div id="classe" class="tab-content">
-            <div class="load-class-button">
-                <h2 style="font-size: clamp(1.3rem, 4vw, 1.6rem); margin-bottom: 10px; font-weight: 900;">🔥 CARREGAR CLASSE 🔥</h2>
-                <p style="margin-bottom: 15px; font-size: clamp(0.85rem, 2.5vw, 0.95rem);">Selecione sua classe na aba Básico e clique abaixo</p>
-                <button class="btn" onclick="forceLoadClass()" style="background: white; color: #d97706; font-size: clamp(1rem, 3vw, 1.2rem); padding: 18px 36px; max-width: 400px; margin: 0 auto;">
-                    ⚔️ CARREGAR AGORA
-                </button>
-            </div>
-            
+        <div id="classe" class="tab-content">          
             <div id="class-content"></div>
         </div>
 
@@ -3455,28 +3436,6 @@ Exemplos:
         function getChar() {
             return window.character;
         }
-
-        window.forceLoadClass = function() {
-            const char = getChar();
-            const classe = char.classe;
-            
-            console.log('BOTÃO CLICADO! Classe atual:', classe);
-            
-            if (!classe) {
-                showAlert('❌ Selecione uma classe na aba "Básico" primeiro!', 'danger');
-                return;
-            }
-            
-            if (!CLASS_ABILITIES[classe]) {
-                showAlert('❌ Classe não encontrada no sistema!', 'danger');
-                return;
-            }
-            
-            console.log('Carregando classe:', classe);
-            renderClassContent(classe);
-            showAlert('✅ Habilidades da classe carregadas com sucesso!', 'success');
-            autoSave();
-        };
 
         function renderClassContent(classe) {
             const char = getChar();
