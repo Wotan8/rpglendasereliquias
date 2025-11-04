@@ -4962,7 +4962,7 @@ Exemplos:
             
             containersList.innerHTML = char.containers.map(container => {
                 const currentLoad = container.items.reduce((sum, item) => 
-                    sum + (item.totalWeight || (item.peso * item.quantity)), 0
+                    sum + (item.totalWeight || ((item.quantity / (item.packSize || 1)) * item.peso)), 0
                 );
                 
                 const isOverload = currentLoad > container.maxCapacity;
@@ -5020,7 +5020,12 @@ Exemplos:
                                 <div style="display: flex; gap: 4px; align-items: center;">
                                     ${index > 0 ? `<button class="btn btn-secondary btn-small" onclick="moveItemUp('${container.id}', '${item.id}')" style="padding: 4px 8px;">▲</button>` : ''}
                                     ${index < container.items.length - 1 ? `<button class="btn btn-secondary btn-small" onclick="moveItemDown('${container.id}', '${item.id}')" style="padding: 4px 8px;">▼</button>` : ''}
-                                    <button class="btn btn-secondary btn-small" onclick="changeItemQuantity('${container.id}', '${item.id}')" style="padding: 4px 8px;">✏️</button>
+                                    ${(item.tipo === 'Projétil' || item.tipo === 'Objeto') ? `
+                                        <input type="number" min="1" value="${item.quantity}" 
+                                            onchange="updateItemQuantity('${container.id}', '${item.id}', this.value)"
+                                            style="width: 60px; padding: 4px 8px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--primary); border-radius: 8px; color: white; text-align: center; font-weight: 600;"
+                                            onclick="event.stopPropagation()">
+                                    ` : ''}
                                     ${!item.isContainerItem ? `<button class="btn btn-secondary btn-small" onclick="moveItemToContainer('${container.id}', '${item.id}')" style="padding: 4px 8px;">📦</button>` : ''}
                                     <button class="btn btn-danger btn-small" onclick="removeItemFromContainer('${container.id}', '${item.id}')" style="padding: 4px 8px;">🗑️</button>
                                 </div>
@@ -5140,7 +5145,7 @@ Exemplos:
             document.getElementById('itemModal').style.display = 'block';
         };
 
-        window.changeItemQuantity = async function(containerId, itemId) {
+        window.updateItemQuantity = async function(containerId, itemId, newQuantity) {
             const char = getChar();
             const container = char.containers.find(c => c.id === containerId);
             if (!container) return;
@@ -5148,28 +5153,28 @@ Exemplos:
             const item = container.items.find(i => i.id === itemId);
             if (!item) return;
             
-            if (item.isContainerItem) {
-                alert('❌ Não é possível alterar a quantidade de um Item de Container!');
+            const quantity = parseInt(newQuantity);
+            if (isNaN(quantity) || quantity < 1) {
+                showAlert('❌ Quantidade inválida!', 'error');
+                updateContainers(); // Recarregar para restaurar valor anterior
                 return;
             }
             
-            const newQuantity = parseInt(prompt('Nova quantidade:', item.quantity));
-            if (!isNaN(newQuantity) && newQuantity > 0) {
-                try {
-                    item.quantity = newQuantity;
-                    item.totalWeight = item.peso * (item.packSize || 1) * item.quantity;
-                    
-                    await window.saveItemToFirebase(item);
-                    
-                    // Recarregar inventário
-                    const characterId = currentCharacterId || currentUser.uid;
-                    await window.loadInventoryFromFirebase(characterId);
-                    updateContainers();
-                    showAlert('✅ Quantidade atualizada!', 'success');
-                } catch (error) {
-                    console.error('Erro ao alterar quantidade:', error);
-                    alert('❌ Erro ao alterar quantidade!');
-                }
+            try {
+                item.quantity = quantity;
+                item.totalWeight = (item.quantity / (item.packSize || 1)) * item.peso;
+                
+                await window.saveItemToFirebase(item);
+                
+                // Recarregar inventário
+                const characterId = currentCharacterId || currentUser.uid;
+                await window.loadInventoryFromFirebase(characterId);
+                updateContainers();
+                showAlert('✅ Quantidade atualizada!', 'success');
+            } catch (error) {
+                console.error('Erro ao alterar quantidade:', error);
+                showAlert('❌ Erro ao alterar quantidade!', 'error');
+                updateContainers(); // Recarregar para restaurar valor anterior
             }
         };
 
