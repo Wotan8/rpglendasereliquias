@@ -3622,8 +3622,41 @@ Exemplos:
                         }
                         
                         if (key === 'classe') {
-                            const classContent = document.getElementById('class-content');
-                            if (classContent) classContent.innerHTML = '';
+                            const newClasse = e.target.value;
+                            
+                            // Se já tinha uma classe bloqueada, não deixa mudar
+                            if (char.classeLocked && char.classe && char.classe !== newClasse) {
+                                alert('❌ Você já escolheu sua classe e não pode alterá-la!');
+                                e.target.value = char.classe; // Volta para a classe original
+                                return;
+                            }
+                            
+                            // Se selecionou uma classe válida
+                            if (newClasse && CLASS_ABILITIES[newClasse]) {
+                                // Pergunta se tem certeza
+                                const confirmacao = confirm(`⚠️ ATENÇÃO! ⚠️\n\nVocê deseja escolher a classe: ${newClasse}?\n\nApós confirmar, você NÃO PODERÁ MAIS MUDAR sua classe!\n\nTem certeza?`);
+                                
+                                if (confirmacao) {
+                                    // Confirma a escolha
+                                    char.classe = newClasse;
+                                    char.classeLocked = true; // Bloqueia a classe permanentemente
+                                    
+                                    // Renderiza o conteúdo da classe na aba
+                                    renderClassContent(newClasse);
+                                    
+                                    // Desabilita o select para não permitir mudanças
+                                    e.target.disabled = true;
+                                    e.target.style.opacity = '0.6';
+                                    e.target.style.cursor = 'not-allowed';
+                                    
+                                    showAlert(`✅ Classe ${newClasse} selecionada e bloqueada com sucesso!`, 'success');
+                                    autoSave();
+                                } else {
+                                    // Se cancelou, volta para vazio ou mantém a classe anterior
+                                    e.target.value = char.classe || '';
+                                    return;
+                                }
+                            }
                         }
                         
                         // GARANTIR que salva mesmo se houver erro
@@ -5839,6 +5872,16 @@ Exemplos:
             
             if (char.classe && CLASS_ABILITIES[char.classe]) {
                 renderClassContent(char.classe);
+                
+                // Se a classe está bloqueada, desabilita o select
+                if (char.classeLocked) {
+                    const classeSelect = document.getElementById('classe');
+                    if (classeSelect) {
+                        classeSelect.disabled = true;
+                        classeSelect.style.opacity = '0.6';
+                        classeSelect.style.cursor = 'not-allowed';
+                    }
+                }
             }
 
             updateCharacterImageDisplay();
