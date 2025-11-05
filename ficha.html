@@ -3467,6 +3467,48 @@ Exemplos:
             });
             
             html += `</div></div>`;
+
+            // Bloco Marca de Caça (apenas para Caçador)
+            if (classe === 'Caçador') {
+                const marcarPresa = char.classAbilities['marcar-presa'] || 0;
+                const bonusCaca = 1 + marcarPresa;
+                
+                html += `
+                    <div class="section" style="margin-top: 20px;">
+                        <h2 class="section-title">🎯 Marca de Caça</h2>
+                        <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem; font-style: italic;">
+                            Pode apagar ou trocar o Alvo caso consiga abatê-lo. Para trocar de Alvo sem o abater, deve pagar 1 Determinação.
+                        </p>
+                        
+                        <div style="background: rgba(139, 92, 246, 0.1); border: 2px solid var(--primary); border-radius: 12px; padding: 20px;">
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; color: #cbd5e1; font-weight: 700; margin-bottom: 8px;">🎯 Alvo:</label>
+                                <input type="text" id="marca-alvo" value="${char.marcaCaca?.alvo || ''}" 
+                                    placeholder="Nome do alvo marcado..." 
+                                    style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light); font-size: 1rem;">
+                            </div>
+                            
+                            <div style="margin-bottom: 15px; background: rgba(139, 92, 246, 0.2); padding: 15px; border-radius: 8px; border: 2px solid var(--primary);">
+                                <label style="display: block; color: #f59e0b; font-weight: 700; margin-bottom: 5px; font-size: 1.1rem;">⚡ Bônus de Caça:</label>
+                                <div style="font-size: 2rem; font-weight: 900; color: var(--primary); text-align: center;">
+                                    +${bonusCaca}
+                                </div>
+                                <div style="color: #94a3b8; font-size: 0.8rem; text-align: center; margin-top: 5px;">
+                                    (1 + Marcar Presa)
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label style="display: block; color: #cbd5e1; font-weight: 700; margin-bottom: 8px;">📝 Sobre o Alvo:</label>
+                                <textarea id="marca-sobre" 
+                                    placeholder="Descreva informações sobre o alvo, fraquezas, comportamento..."
+                                    style="width: 100%; min-height: 100px; padding: 12px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light); font-size: 0.9rem; resize: vertical;"
+                                >${char.marcaCaca?.sobre || ''}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
             
             html += `
                 <div class="section">
@@ -3514,6 +3556,28 @@ Exemplos:
             updateClassTests();
             
             console.log('Classe renderizada com sucesso!');
+
+            // Event listeners para Marca de Caça
+            if (classe === 'Caçador') {
+                const alvoInput = document.getElementById('marca-alvo');
+                const sobreTextarea = document.getElementById('marca-sobre');
+                
+                if (alvoInput) {
+                    alvoInput.addEventListener('input', (e) => {
+                        if (!char.marcaCaca) char.marcaCaca = {};
+                        char.marcaCaca.alvo = e.target.value;
+                        autoSave();
+                    });
+                }
+                
+                if (sobreTextarea) {
+                    sobreTextarea.addEventListener('input', (e) => {
+                        if (!char.marcaCaca) char.marcaCaca = {};
+                        char.marcaCaca.sobre = e.target.value;
+                        autoSave();
+                    });
+                }
+            }
         }
 
         function setupEventListeners() {
