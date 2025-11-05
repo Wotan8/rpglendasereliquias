@@ -1654,6 +1654,31 @@
                 <div id="conditions-list"></div>
             </div>
 
+            <!-- Bloco de Fantoches (apenas para Adepto) -->
+            <div class="section" id="fantoches-section" style="display: none; margin-top: 20px;">
+                <h2 class="section-title">🧟 Fantoches</h2>
+                <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">
+                    Controle seus fantoches ativos durante o combate. Máximo baseado em INT + Liderança + Servos.
+                </p>
+                
+                <div class="hp-bar-container">
+                    <label style="margin-bottom: 10px; display: block; font-weight: 700;">🧟 Fantoches Ativos</label>
+                    <div class="hp-bar">
+                        <div class="hp-fill" id="fantoches-fill" style="width: 0%; background: linear-gradient(90deg, #800080, #a020f0);">
+                            <span id="fantoches-text">0 / 0</span>
+                        </div>
+                    </div>
+                    <div class="hp-controls">
+                        <button class="btn btn-secondary btn-small" onclick="adjustFantoches(-1)">-1</button>
+                        <button class="btn btn-secondary btn-small" onclick="adjustFantoches(-5)">-5</button>
+                        <input type="number" id="fantoches-current" value="0" onchange="updateFantochesBar()" inputmode="numeric">
+                        <button class="btn btn-primary btn-small" onclick="adjustFantoches(1)">+1</button>
+                        <button class="btn btn-primary btn-small" onclick="adjustFantoches(5)">+5</button>
+                        <button class="btn btn-secondary btn-small" onclick="resetFantoches()">Max</button>
+                    </div>
+                </div>
+            </div>
+
             <div class="section" id="alliesCombatSection" style="display: none; margin-top: 20px;">
                 <h2 class="section-title">👥 Status dos Aliados</h2>
                 <div id="allies-combat-list"></div>
@@ -3467,6 +3492,80 @@ Exemplos:
             
             html += `</div></div>`;
 
+            // Bloco Servos e Fantoches (apenas para Adepto)
+            if (classe === 'Adepto') {
+                const maxServos = char.classAbilities?.['servos'] || 0;
+                const lideranca = char.skills?.['liderança'] || 0;
+                const servosHabilidade = char.classAbilities?.['servos'] || 0;
+                const maxFantoches = char.int + lideranca + servosHabilidade;
+                
+                // Contar servos atuais (aliados com função 'Servo Zumbi')
+                const servosAtuais = (char.allies || []).filter(ally => 
+                    (ally.funcao || '').toLowerCase().includes('servo zumbi')
+                ).length;
+                
+                const fantochesAtuais = char.fantochesAtivos || 0;
+                
+                html += `
+                    <div class="section" style="margin-top: 20px;">
+                        <h2 class="section-title">🧟 Servos e Fantoches</h2>
+                        <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">
+                            Acompanhe seus servos permanentes e fantoches temporários.
+                        </p>
+                        
+                        <div style="display: grid; gap: 15px;">
+                            <!-- Servos Permanentes -->
+                            <div style="background: rgba(128, 0, 128, 0.1); border: 2px solid #800080; border-radius: 12px; padding: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <div style="font-weight: 700; color: #a78bfa; font-size: 1.1rem;">
+                                        ⚰️ Servos Permanentes
+                                    </div>
+                                    <div style="font-size: 1.5rem; font-weight: 900; color: #800080;">
+                                        <span id="servos-atual">${servosAtuais}</span> / <span id="servos-max">${maxServos}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="hp-bar" style="margin-bottom: 10px;">
+                                    <div class="hp-fill" id="servos-fill" style="width: ${maxServos > 0 ? (servosAtuais / maxServos) * 100 : 0}%; background: linear-gradient(90deg, #800080, #a020f0);">
+                                        <span style="font-size: 0.9rem;">${servosAtuais} / ${maxServos}</span>
+                                    </div>
+                                </div>
+                                
+                                <div style="color: #94a3b8; font-size: 0.8rem;">
+                                    <strong>📊 Cálculo:</strong> Máximo = Habilidade Servos (${maxServos})<br>
+                                    <strong>📝 Atual:</strong> Contado dos Aliados com função "Servo Zumbi"<br>
+                                    <em>💡 Adicione aliados na aba "Aliados" com a função "Servo Zumbi" para contabilizar aqui.</em>
+                                </div>
+                            </div>
+                            
+                            <!-- Fantoches Temporários -->
+                            <div style="background: rgba(128, 0, 128, 0.1); border: 2px solid #800080; border-radius: 12px; padding: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <div style="font-weight: 700; color: #a78bfa; font-size: 1.1rem;">
+                                        🧟 Fantoches Ativos
+                                    </div>
+                                    <div style="font-size: 1.5rem; font-weight: 900; color: #800080;">
+                                        <span id="fantoches-atual">${fantochesAtuais}</span> / <span id="fantoches-max">${maxFantoches}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="hp-bar" style="margin-bottom: 10px;">
+                                    <div class="hp-fill" id="fantoches-classe-fill" style="width: ${maxFantoches > 0 ? (fantochesAtuais / maxFantoches) * 100 : 0}%; background: linear-gradient(90deg, #800080, #a020f0);">
+                                        <span style="font-size: 0.9rem;">${fantochesAtuais} / ${maxFantoches}</span>
+                                    </div>
+                                </div>
+                                
+                                <div style="color: #94a3b8; font-size: 0.8rem;">
+                                    <strong>📊 Cálculo:</strong> Máximo = INT (${char.int}) + Liderança (${lideranca}) + Servos (${servosHabilidade}) = ${maxFantoches}<br>
+                                    <strong>📝 Atual:</strong> Definido na aba "Combate"<br>
+                                    <em>💡 Vá para a aba "Combate" para ajustar fantoches durante batalhas.</em>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
             // Bloco Marca de Caça (apenas para Caçador)
             if (classe === 'Caçador') {
                 const marcarPresa = char.classAbilities['marcar-presa'] || 0;
@@ -5017,6 +5116,104 @@ Exemplos:
             updateSANBar();
         };
 
+        // Funções para Fantoches (Adepto)
+        window.updateFantochesBar = function() {
+            const char = getChar();
+            const lideranca = char.skills?.['liderança'] || 0;
+            const servos = char.classAbilities?.['servos'] || 0;
+            const max = char.int + lideranca + servos;
+            const current = parseInt(document.getElementById('fantoches-current')?.value) || 0;
+            
+            char.fantochesAtivos = Math.max(0, Math.min(current, max));
+            
+            const fantochesInput = document.getElementById('fantoches-current');
+            if (fantochesInput) {
+                fantochesInput.value = char.fantochesAtivos;
+            }
+            
+            const percent = max > 0 ? (char.fantochesAtivos / max) * 100 : 0;
+            
+            const fantochesFill = document.getElementById('fantoches-fill');
+            if (fantochesFill) {
+                fantochesFill.style.width = percent + '%';
+            }
+            
+            const fantochesText = document.getElementById('fantoches-text');
+            if (fantochesText) {
+                fantochesText.textContent = `${char.fantochesAtivos} / ${max}`;
+            }
+            
+            // Atualizar exibição na aba Classe
+            updateServosFantochesDisplay();
+            
+            autoSave();
+        };
+
+        window.adjustFantoches = function(amount) {
+            const char = getChar();
+            const lideranca = char.skills?.['liderança'] || 0;
+            const servos = char.classAbilities?.['servos'] || 0;
+            const max = char.int + lideranca + servos;
+            
+            char.fantochesAtivos = Math.max(0, Math.min((char.fantochesAtivos || 0) + amount, max));
+            
+            const fantochesInput = document.getElementById('fantoches-current');
+            if (fantochesInput) {
+                fantochesInput.value = char.fantochesAtivos;
+            }
+            
+            updateFantochesBar();
+        };
+
+        window.resetFantoches = function() {
+            adjustFantoches(9999); // Define para o máximo
+        };
+
+        // Função para atualizar exibição de Servos e Fantoches na aba Classe
+        window.updateServosFantochesDisplay = function() {
+            const char = getChar();
+            
+            // Calcular máximos
+            const maxServos = char.classAbilities?.['servos'] || 0;
+            const lideranca = char.skills?.['liderança'] || 0;
+            const servos = char.classAbilities?.['servos'] || 0;
+            const maxFantoches = char.int + lideranca + servos;
+            
+            // Contar servos atuais (aliados com função 'Servo Zumbi')
+            const servosAtuais = (char.allies || []).filter(ally => 
+                (ally.funcao || '').toLowerCase().includes('servo zumbi')
+            ).length;
+            
+            // Fantoches atuais
+            const fantochesAtuais = char.fantochesAtivos || 0;
+            
+            // Atualizar display de Servos
+            const servosAtual = document.getElementById('servos-atual');
+            const servosMax = document.getElementById('servos-max');
+            if (servosAtual) servosAtual.textContent = servosAtuais;
+            if (servosMax) servosMax.textContent = maxServos;
+            
+            // Atualizar display de Fantoches
+            const fantochesAtual = document.getElementById('fantoches-atual');
+            const fantochesMax = document.getElementById('fantoches-max');
+            if (fantochesAtual) fantochesAtual.textContent = fantochesAtuais;
+            if (fantochesMax) fantochesMax.textContent = maxFantoches;
+            
+            // Atualizar barra de progresso de Servos
+            const servosPercent = maxServos > 0 ? (servosAtuais / maxServos) * 100 : 0;
+            const servosFill = document.getElementById('servos-fill');
+            if (servosFill) {
+                servosFill.style.width = servosPercent + '%';
+            }
+            
+            // Atualizar barra de progresso de Fantoches
+            const fantochesPercent = maxFantoches > 0 ? (fantochesAtuais / maxFantoches) * 100 : 0;
+            const fantochesClasseFill = document.getElementById('fantoches-classe-fill');
+            if (fantochesClasseFill) {
+                fantochesClasseFill.style.width = fantochesPercent + '%';
+            }
+        };
+
         window.rollDice = function() {
             const count = parseInt(document.getElementById('dice-count').value) || 1;
             let results = [];
@@ -6365,6 +6562,29 @@ Exemplos:
                 notasTextarea.value = char.notas || '';
             }
             
+            // Inicializar Fantoches se for Adepto
+            if (char.classe === 'Adepto') {
+                const fantochesSection = document.getElementById('fantoches-section');
+                if (fantochesSection) {
+                    fantochesSection.style.display = 'block';
+                }
+                
+                if (!char.fantochesAtivos) {
+                    char.fantochesAtivos = 0;
+                }
+                
+                const fantochesInput = document.getElementById('fantoches-current');
+                if (fantochesInput) {
+                    fantochesInput.value = char.fantochesAtivos;
+                    updateFantochesBar();
+                }
+            } else {
+                const fantochesSection = document.getElementById('fantoches-section');
+                if (fantochesSection) {
+                    fantochesSection.style.display = 'none';
+                }
+            }
+
             updateContainers();
             updateEXPDisplay();
             updateConditions();
