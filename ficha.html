@@ -3222,7 +3222,7 @@ Exemplos:
                     { id: 'controle', name: 'Controle', maxLevel: 5 }
                 ],
                 quickTests: [
-                    { name: 'Mãos Vazias', formula: 'FOR + Briga', calculate: (char) => {
+                    { name: '👊 Mãos Vazias', formula: 'FOR + Briga', calculate: (char) => {
                         const briga = char.skills['briga'] || 0;
                         return char.for + briga;
                     }},
@@ -3510,6 +3510,224 @@ Exemplos:
                 `;
             }
             
+            // Bloco Manobras (apenas para Guerreiro)
+            if (classe === 'Guerreiro') {
+                // Definir todas as manobras com requisitos e cálculos
+                const manobras = [
+                    {
+                        nome: 'Postura Ofensiva',
+                        calculo: 'Postura de Combate',
+                        requisito: { tipo: 'atributo', nome: 'RAC', nivel: 3 },
+                        descricao: 'Gaste 1 ação para ativar/desativar. Aumenta seu ataque. Não tem reação enquanto estiver ativa.',
+                        calcular: (char) => char.classAbilities?.['postura-combate'] || 0
+                    },
+                    {
+                        nome: 'Postura Defensiva',
+                        calculo: 'Reação + Postura de Combate',
+                        requisito: { tipo: 'atributo', nome: 'PRS', nivel: 3 },
+                        descricao: 'Aumenta sua Reação, mas limita a 1 ação por turno e impede ataques.',
+                        calcular: (char) => {
+                            const reacao = char.rac + (char.classAbilities?.['contra-ataque'] || 0);
+                            const postura = char.classAbilities?.['postura-combate'] || 0;
+                            return reacao + postura;
+                        }
+                    },
+                    {
+                        nome: 'Investida',
+                        calculo: 'Ímpeto',
+                        requisito: { tipo: 'custom', verificar: (char) => {
+                            const deslocamento = (char.des * 3) + (char.skills?.['atletismo'] || 0);
+                            return deslocamento >= 15;
+                        }, texto: 'Deslocamento Terrestre ≥ 15' },
+                        descricao: 'Usar após uma ação de movimento na direção do alvo. Avança contra o alvo com força brutal.',
+                        calcular: (char) => char.classAbilities?.['impeto'] || 0
+                    },
+                    {
+                        nome: 'Romper Defesa',
+                        calculo: 'Ímpeto',
+                        requisito: { tipo: 'skill', nome: 'performance', nivel: 3 },
+                        descricao: 'Ignora a Reação do alvo no ataque.',
+                        calcular: (char) => char.classAbilities?.['impeto'] || 0
+                    },
+                    {
+                        nome: 'Golpe Preciso',
+                        calculo: 'Guerrilha',
+                        requisito: { tipo: 'atributo', nome: 'DES', nivel: 4 },
+                        descricao: 'Ignora a blindagem do inimigo.',
+                        calcular: (char) => char.classAbilities?.['guerrilha'] || 0
+                    },
+                    {
+                        nome: 'Golpe Giratório',
+                        calculo: 'Controle + Postura de Combate',
+                        requisito: { tipo: 'skill', nome: 'atletismo', nivel: 3 },
+                        descricao: 'Ataca todos os alvos adjacentes. Usa a maior Reação e Blindagem entre eles, para subtrair no ataque.',
+                        calcular: (char) => {
+                            const controle = char.classAbilities?.['controle'] || 0;
+                            const postura = char.classAbilities?.['postura-combate'] || 0;
+                            return controle + postura;
+                        }
+                    },
+                    {
+                        nome: 'Avanço Tático',
+                        calculo: 'Nenhum bônus (apenas ataque básico)',
+                        requisito: { tipo: 'class', nome: 'guerrilha', nivel: 4 },
+                        descricao: 'Move metade do deslocamento e ataca com uma mesma ação.',
+                        calcular: (char) => 0
+                    },
+                    {
+                        nome: 'Duelo Mortal',
+                        calculo: 'Postura de Combate',
+                        requisito: { tipo: 'skill', nome: 'intimidação', nivel: 3 },
+                        descricao: 'Não gasta Determinação. O Alvo deve estar vivo e ser capaz de se defender. Declara um único inimigo, e ganha bônus nos testes de ataque e defesa contra ele. Não pode atacar outros.',
+                        calcular: (char) => char.classAbilities?.['postura-combate'] || 0
+                    },
+                    {
+                        nome: 'Inspirar',
+                        calculo: 'MAN + Liderança + Guerrilha',
+                        requisito: { tipo: 'atributo', nome: 'PRE', nivel: 3 },
+                        descricao: 'Gasta 2 ações. Sucessos viram bônus na primeira ação de todos os aliados.',
+                        calcular: (char) => {
+                            const lideranca = char.skills?.['liderança'] || 0;
+                            const guerrilha = char.classAbilities?.['guerrilha'] || 0;
+                            return char.man + lideranca + guerrilha;
+                        }
+                    },
+                    {
+                        nome: 'Imobilizar',
+                        calculo: 'FOR + Briga + Controle',
+                        requisito: { tipo: 'nenhum' },
+                        descricao: 'O alvo testa pra resistir e o guerreiro para prender o inimigo. O Guerreiro só pode fazer 1 ação.',
+                        calcular: (char) => {
+                            const briga = char.skills?.['briga'] || 0;
+                            const controle = char.classAbilities?.['controle'] || 0;
+                            return char.for + briga + controle;
+                        }
+                    },
+                    {
+                        nome: 'Atordoar',
+                        calculo: 'Controle',
+                        requisito: { tipo: 'atributo', nome: 'VIG', nivel: 3 },
+                        descricao: 'Cada acerto remove 1 ação do alvo. E a cada 2 acertos ele sofre 1 de dano.',
+                        calcular: (char) => char.classAbilities?.['controle'] || 0
+                    },
+                    {
+                        nome: 'Cólera',
+                        calculo: 'Vários efeitos especiais',
+                        requisito: { tipo: 'class', nome: 'impeto', nivel: 4 },
+                        descricao: 'Se um aliado NPC cair: ative 1x. Se um jogador cair: ative pelo resto do combate. • Se matar um inimigo: recebe +1 ação. • Se for atingido: causa o mesmo dano de volta. • Se o inimigo errar: ganha 1 ação para ataque (com + Ímpeto) sem reação do inimigo.',
+                        calcular: (char) => 0
+                    }
+                ];
+
+                // Função para verificar requisito
+                const verificarRequisito = (req, char) => {
+                    if (req.tipo === 'nenhum') return true;
+                    if (req.tipo === 'atributo') {
+                        const atributos = {
+                            'FOR': char.for, 'DES': char.des, 'VIG': char.vig,
+                            'RAC': char.rac, 'PRE': char.pre, 'PRS': char.prs,
+                            'INT': char.int, 'MAN': char.man
+                        };
+                        return atributos[req.nome] >= req.nivel;
+                    }
+                    if (req.tipo === 'skill') {
+                        return (char.skills?.[req.nome] || 0) >= req.nivel;
+                    }
+                    if (req.tipo === 'class') {
+                        return (char.classAbilities?.[req.nome] || 0) >= req.nivel;
+                    }
+                    if (req.tipo === 'custom') {
+                        return req.verificar(char);
+                    }
+                    return false;
+                };
+
+                // Filtrar manobras disponíveis
+                const manobrasDisponiveis = manobras.filter(m => verificarRequisito(m.requisito, char));
+                const manobrasIndisponiveis = manobras.filter(m => !verificarRequisito(m.requisito, char));
+
+                html += `
+                    <div class="section" style="margin-top: 20px;">
+                        <h2 class="section-title">⚔️ Manobras</h2>
+                        <div style="background: rgba(139, 92, 246, 0.1); border: 2px solid var(--primary); border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+                            <p style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 10px;">
+                                <strong>ℹ️ Regras:</strong><br>
+                                • Todas custam 1 Determinação<br>
+                                • Pode usar 1 por turno (salvo indicação contrária)<br>
+                                • Manobras em <span style="color: var(--success); font-weight: 700;">verde</span> = disponíveis<br>
+                                • Manobras em <span style="color: #64748b; font-weight: 700;">cinza</span> = requisitos não atendidos
+                            </p>
+                        </div>
+                `;
+
+                // Manobras disponíveis
+                if (manobrasDisponiveis.length > 0) {
+                    html += `<h3 style="color: var(--success); margin: 15px 0 10px 0; font-size: 1.1rem;">✅ Manobras Disponíveis</h3>`;
+                    
+                    manobrasDisponiveis.forEach(manobra => {
+                        const valor = manobra.calcular(char);
+                        const reqTexto = manobra.requisito.tipo === 'atributo' ? `${manobra.requisito.nome} ${manobra.requisito.nivel}` :
+                                       manobra.requisito.tipo === 'skill' ? `${manobra.requisito.nome} ${manobra.requisito.nivel}` :
+                                       manobra.requisito.tipo === 'class' ? `${manobra.requisito.nome} ${manobra.requisito.nivel}` :
+                                       manobra.requisito.tipo === 'custom' ? manobra.requisito.texto :
+                                       'Nenhum';
+                        
+                        html += `
+                            <div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid var(--success); padding: 15px; border-radius: 8px; margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px; flex-wrap: wrap; gap: 10px;">
+                                    <div>
+                                        <div style="font-size: 1.1rem; font-weight: 700; color: var(--success); margin-bottom: 4px;">
+                                            ⚔️ ${manobra.nome}
+                                        </div>
+                                        <div style="font-size: 0.75rem; color: #94a3b8;">
+                                            <strong>Requer:</strong> ${reqTexto}
+                                        </div>
+                                    </div>
+                                    ${valor > 0 ? `<div style="background: var(--success); color: white; padding: 8px 16px; border-radius: 20px; font-weight: 900; font-size: 1.2rem; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                                        +${valor}
+                                    </div>` : ''}
+                                </div>
+                                <div style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 6px;">
+                                    <strong>Cálculo:</strong> ${manobra.calculo}
+                                </div>
+                                <div style="color: #94a3b8; font-size: 0.8rem; line-height: 1.4;">
+                                    ${manobra.descricao}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                // Manobras indisponíveis
+                if (manobrasIndisponiveis.length > 0) {
+                    html += `<h3 style="color: #64748b; margin: 20px 0 10px 0; font-size: 1.1rem;">🔒 Manobras Bloqueadas</h3>`;
+                    
+                    manobrasIndisponiveis.forEach(manobra => {
+                        const reqTexto = manobra.requisito.tipo === 'atributo' ? `${manobra.requisito.nome} ${manobra.requisito.nivel}` :
+                                       manobra.requisito.tipo === 'skill' ? `${manobra.requisito.nome} ${manobra.requisito.nivel}` :
+                                       manobra.requisito.tipo === 'class' ? `${manobra.requisito.nome} ${manobra.requisito.nivel}` :
+                                       manobra.requisito.tipo === 'custom' ? manobra.requisito.texto :
+                                       'Nenhum';
+                        
+                        html += `
+                            <div style="background: rgba(100, 116, 139, 0.1); border-left: 4px solid #64748b; padding: 15px; border-radius: 8px; margin-bottom: 12px; opacity: 0.6;">
+                                <div style="font-size: 1rem; font-weight: 700; color: #64748b; margin-bottom: 4px;">
+                                    🔒 ${manobra.nome}
+                                </div>
+                                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 8px;">
+                                    <strong>Requer:</strong> ${reqTexto}
+                                </div>
+                                <div style="color: #94a3b8; font-size: 0.8rem;">
+                                    ${manobra.descricao}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += `</div>`;
+            }
+
             html += `
                 <div class="section">
                     <h2 class="section-title">⚡ Testes Rápidos</h2>
