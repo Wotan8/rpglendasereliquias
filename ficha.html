@@ -3162,7 +3162,7 @@ Exemplos:
                     { id: 'kits-ingredientes', name: 'Kits/Ingredientes', max: 10, info: 'Usados na preparação de loções' }
                 ],
                 info: `<strong>Papel:</strong> Rastreio, combate à distância e alquimancia ofensiva.<br>
-                    <strong>Recursos:</strong> Determinação + Kits/Ingredientes.<br>
+                    <strong>Recursos:</strong> Determinação e Ingredientes.<br>
                     <strong>Marca de Caça:</strong> Ganhe (1 + Marcar Presa) em rastreamento e ataques contra o alvo marcado.<br>
                     <strong>Dica:</strong> Prepare loções antes do combate e marque os inimigos mais perigosos.`
             },
@@ -3176,22 +3176,22 @@ Exemplos:
                     { id: 'linguagem-animal', name: 'Linguagem Animal', maxLevel: 5 }
                 ],
                 quickTests: [
-                    { name: 'Domar Aliado', formula: 'PRE + Domar + Aliado Animal', calculate: (char) => {
+                    { name: '🦴 Domar Aliado', formula: 'PRE + Domar + Aliado Animal', calculate: (char) => {
                         const domar = char.skills['domar'] || 0;
                         const aliadoAnimal = char.classAbilities?.['aliado-animal'] || 0;
                         return char.pre + domar + aliadoAnimal;
                     }},
-                    { name: 'Comandar Aliado', formula: 'PRE + Liderança + Aliado Animal', calculate: (char) => {
+                    { name: '🗣️ Comandar Aliado', formula: 'PRE + Liderança + Aliado Animal', calculate: (char) => {
                         const lideranca = char.skills['liderança'] || 0;
                         const aliadoAnimal = char.classAbilities?.['aliado-animal'] || 0;
                         return char.pre + lideranca + aliadoAnimal;
                     }},
-                    { name: 'Convocar Manada (-1 DET)', formula: 'PRE + Liderança + Linguagem Animal', calculate: (char) => {
+                    { name: '🐺 Convocar Manada (-1 DET)', formula: 'PRE + Liderança + Linguagem Animal', calculate: (char) => {
                         const lideranca = char.skills['liderança'] || 0;
                         const linguagemAnimal = char.classAbilities?.['linguagem-animal'] || 0;
                         return char.pre + lideranca + linguagemAnimal;
                     }},
-                    { name: 'Fusão Selvagem (-1 DET)', formula: 'PRE + Aliado Animal + Linguagem Animal', calculate: (char) => {
+                    { name: '🔄 Fusão Selvagem (-1 DET)', formula: 'PRE + Aliado Animal + Linguagem Animal', calculate: (char) => {
                         const aliadoAnimal = char.classAbilities?.['aliado-animal'] || 0;
                         const linguagemAnimal = char.classAbilities?.['linguagem-animal'] || 0;
                         return char.pre + aliadoAnimal + linguagemAnimal;
@@ -3431,7 +3431,7 @@ Exemplos:
             notas: '',
             exp: 0,
             characterImage: '',
-            recipes: [], // Receitas de Loção Ofensiva (apenas para Caçador)
+            recipes: [], // Receitas de Loção (Caçador: Ofensivas | Druida: Defensivas e Ofensivas)
         };
 
         function getChar() {
@@ -3520,11 +3520,12 @@ Exemplos:
                 </div>
             `;
             
-            // Seção de Receitas (apenas para Caçador)
-            if (classe === 'Caçador') {
+            // Seção de Receitas (Caçador e Druida)
+            if (classe === 'Caçador' || classe === 'Druida') {
+                const tituloReceitas = classe === 'Caçador' ? '🧪 Receitas de Loção Ofensiva' : '🧪 Receitas de Loções';
                 html += `
                     <div class="section">
-                        <h2 class="section-title">🧪 Receitas de Loção Ofensiva</h2>
+                        <h2 class="section-title">${tituloReceitas}</h2>
                         <button class="btn btn-primary" onclick="openRecipeModal()" style="margin-bottom: 15px;">
                             ➕ Adicionar Receita
                         </button>
@@ -3544,8 +3545,8 @@ Exemplos:
 
             classContent.innerHTML = html;
 
-            // Atualizar lista de receitas se for Caçador
-            if (classe === 'Caçador') {
+            // Atualizar lista de receitas se for Caçador ou Druida
+            if (classe === 'Caçador' || classe === 'Druida') {
                 updateRecipesList();
             }
             
@@ -6034,13 +6035,33 @@ Exemplos:
         // ========== SISTEMA DE RECEITAS (CAÇADOR) ==========
 
         window.openRecipeModal = function() {
+            const char = getChar();
+            const classe = char.classe;
+            
             document.getElementById('recipe-modal').style.display = 'flex';
+            
             // Limpar campos
             document.getElementById('recipe-name').value = '';
             document.getElementById('recipe-macerar').value = '';
             document.getElementById('recipe-props').value = '';
             document.getElementById('recipe-variedade').value = '';
             document.getElementById('recipe-repetir').checked = false;
+            
+            // Configurar tipo baseado na classe
+            const tipoSelect = document.getElementById('recipe-tipo');
+            const tipoContainer = document.getElementById('recipe-tipo-container');
+            
+            if (classe === 'Caçador') {
+                tipoSelect.value = 'Ofensivo';
+                tipoSelect.disabled = true;
+                tipoContainer.style.display = 'block';
+            } else if (classe === 'Druida') {
+                tipoSelect.value = 'Defensivo';
+                tipoSelect.disabled = false;
+                tipoContainer.style.display = 'block';
+            } else {
+                tipoContainer.style.display = 'none';
+            }
         };
 
         window.closeRecipeModal = function() {
@@ -6081,9 +6102,11 @@ Exemplos:
             }
             
             // Adicionar receita
+            const tipo = document.getElementById('recipe-tipo').value;
             const newRecipe = {
                 id: Date.now(),
                 name: name,
+                tipo: tipo, // Defensivo ou Ofensivo
                 macerar: macerar,
                 propriedades: props,
                 variedadeMinima: variedade,
@@ -6126,28 +6149,36 @@ Exemplos:
                 return;
             }
             
-            recipesList.innerHTML = char.recipes.map(recipe => `
-                <div class="container-card" style="border-left: 4px solid var(--primary); margin-bottom: 15px;">
-                    <div class="container-header">
-                        <div class="container-name">🧪 ${recipe.name}</div>
-                        <button class="btn btn-danger btn-small" onclick="removeRecipe(${recipe.id})">🗑️</button>
+            recipesList.innerHTML = char.recipes.map(recipe => {
+                const tipoIcon = recipe.tipo === 'Ofensivo' ? '⚔️' : '🛡️';
+                const tipoColor = recipe.tipo === 'Ofensivo' ? '#ef4444' : '#10b981';
+                
+                return `
+                    <div class="container-card" style="border-left: 4px solid ${tipoColor}; margin-bottom: 15px;">
+                        <div class="container-header">
+                            <div class="container-name">🧪 ${recipe.name}</div>
+                            <button class="btn btn-danger btn-small" onclick="removeRecipe(${recipe.id})">🗑️</button>
+                        </div>
+                        <div style="padding: 10px; color: #cbd5e1; font-size: 0.85rem;">
+                            <div style="margin-bottom: 8px;">
+                                <strong>Tipo:</strong> <span style="color: ${tipoColor};">${tipoIcon} ${recipe.tipo || 'Ofensivo'}</span>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <strong>Dif. de Macerar:</strong> ${recipe.macerar}
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <strong>Propriedades:</strong> ${recipe.propriedades || 'Nenhuma'}
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <strong>Variedade Mínima:</strong> ${recipe.variedadeMinima}
+                            </div>
+                            <div>
+                                <strong>Repetir Ingrediente:</strong> ${recipe.repetir ? '✅ Sim' : '❌ Não'}
+                            </div>
+                        </div>
                     </div>
-                    <div style="padding: 10px; color: #cbd5e1; font-size: 0.85rem;">
-                        <div style="margin-bottom: 8px;">
-                            <strong>Dif. de Macerar:</strong> ${recipe.macerar}
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <strong>Propriedades:</strong> ${recipe.propriedades || 'Nenhuma'}
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <strong>Variedade Mínima:</strong> ${recipe.variedadeMinima}
-                        </div>
-                        <div>
-                            <strong>Repetir Ingrediente:</strong> ${recipe.repetir ? '✅ Sim' : '❌ Não'}
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
     </script>
@@ -6160,6 +6191,14 @@ Exemplos:
             <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 5px; color: #cbd5e1;">Nome da Receita:</label>
                 <input type="text" id="recipe-name" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--darker); color: white;">
+            </div>
+
+            <div id="recipe-tipo-container" style="margin-bottom: 15px; display: none;">
+                <label style="display: block; margin-bottom: 5px; color: #cbd5e1;">Tipo de Loção:</label>
+                <select id="recipe-tipo" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--darker); color: white; cursor: pointer;">
+                    <option value="Defensivo">💚 Defensivo</option>
+                    <option value="Ofensivo">💀 Ofensivo</option>
+                </select>
             </div>
             
             <div style="margin-bottom: 15px;">
