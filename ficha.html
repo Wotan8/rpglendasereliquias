@@ -3436,19 +3436,7 @@ Exemplos:
                     { id: 'resistencia-loucura', name: 'Resistência a Loucura', maxLevel: 5 }
                 ],
                 quickTests: [
-                    { name: 'Contato (Abertura)', formula: 'PRS + Performance + CA + Contato + Sacrifício', calculate: (char) => {
-                        const performance = char.skills['performance'] || 0;
-                        const contato = char.classAbilities?.['contato-oitavo'] || 0;
-                        const sacrificio = char.classAbilities?.['sacrificio'] || 0;
-                        return char.prs + performance + contato + sacrificio;
-                    }},
-                    { name: 'Selo (Controle)', formula: 'RAC + Abismo + Selo + Sacrifício', calculate: (char) => {const abismo = char.skills['abismo'] || 0;
-                        const selo = char.classAbilities?.['selo-abissal'] || 0;
-                        const sacrificio = char.classAbilities?.['sacrificio'] || 0;
-                        return char.rac + abismo + selo + sacrificio;
-                    }},
-                    { name: 'CA (Contato Abissal)', formula: 'Nível de Contato com o Oitavo', calculate: (char) => char.classAbilities?.['contato-oitavo'] || 0 },
-                    { name: 'Despertar', formula: 'AUT + Essência vs (CA - Abismo)', calculate: (char) => {
+                    { name: '🌀 Despertar', formula: 'AUT + Essência vs (CA - Abismo)', calculate: (char) => {
                         const essencia = char.skills['essência'] || 0;
                         return char.aut + essencia;
                     }},
@@ -3570,6 +3558,82 @@ Exemplos:
                                     <strong>📊 Cálculo:</strong> Máximo = PRE (${char.pre}) + Essência (${essencia}) = ${maxGraca}<br>
                                     <strong>📝 Atual:</strong> Ajustável na aba "Combate"<br>
                                     <em style="color: #fde047;">💡 A Graça pode substituir Determinação em algumas preces.</em>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Bloco CA e RV (apenas para Ritualista)
+            if (classe === 'Ritualista') {
+                const sanidadeAtual = char.sanCurrent || 0;
+                const ca = Math.max(0, (100 - sanidadeAtual) / 10);
+                const caFormatado = ca.toFixed(1);
+                const rv = char.classResources?.['ruptura-venire'] || 0;
+                
+                html += `
+                    <div class="section" style="margin-top: 20px;">
+                        <h2 class="section-title" style="background: linear-gradient(135deg, #000000, #1a1a1a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-shadow: 0 0 20px rgba(255,255,255,0.1);">
+                            🌑 Contato Abissal
+                        </h2>
+                        <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">
+                            Quanto menor sua Sanidade, maior seu Contato com o Abismo.
+                        </p>
+                        
+                        <div style="display: grid; gap: 20px; grid-template-columns: 1fr 1fr;">
+                            <!-- CA (Contato Abissal) -->
+                            <div style="background: linear-gradient(135deg, rgba(0, 0, 0, 0.6), rgba(26, 26, 26, 0.6)); border: 2px solid #000000; border-radius: 12px; padding: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+                                <label style="display: block; color: #ffffff; font-weight: 700; margin-bottom: 10px; font-size: 1rem; text-shadow: 0 0 10px rgba(0,0,0,0.8);">
+                                    🌀 CA (Contato Abissal):
+                                </label>
+                                <div style="text-align: center; margin-bottom: 10px;">
+                                    <div style="font-size: 2.5rem; font-weight: 900; color: #000000; background: white; padding: 10px; border-radius: 10px; display: inline-block; min-width: 80px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                                        ${caFormatado}
+                                    </div>
+                                </div>
+                                <div style="color: #cbd5e1; font-size: 0.75rem; text-align: center;">
+                                    <strong>📊 Cálculo:</strong><br>
+                                    (100 - Sanidade Atual) / 10<br>
+                                    (100 - ${sanidadeAtual}) / 10 = ${caFormatado}
+                                </div>
+                                <div style="margin-top: 12px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid #333;">
+                                    <div style="font-size: 0.7rem; color: #94a3b8; line-height: 1.5;">
+                                        <strong>⚠️ CA define:</strong><br>
+                                        • Poder dos rituais<br>
+                                        • Requisitos de tamanho/poder<br>
+                                        • Dificuldade do Despertar
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RV (Ruptura Venire) -->
+                            <div style="background: linear-gradient(135deg, rgba(26, 26, 26, 0.6), rgba(0, 0, 0, 0.6)); border: 2px solid #1a1a1a; border-radius: 12px; padding: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+                                <label style="display: block; color: #ffffff; font-weight: 700; margin-bottom: 10px; font-size: 1rem; text-shadow: 0 0 10px rgba(0,0,0,0.8);">
+                                    ⚡ RV (Ruptura Venire):
+                                </label>
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 12px;">
+                                    <button onclick="adjustRV(-1)" 
+                                        style="background: #ef4444; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 1.5rem; font-weight: 900; cursor: pointer; box-shadow: 0 2px 8px rgba(239,68,68,0.4); transition: all 0.2s;">
+                                        −
+                                    </button>
+                                    <div style="font-size: 2.5rem; font-weight: 900; color: #ffffff; background: #1a1a1a; padding: 10px 20px; border-radius: 10px; min-width: 80px; text-align: center; border: 2px solid #000000; box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);">
+                                        <span id="rv-display">${rv}</span>
+                                    </div>
+                                    <button onclick="adjustRV(1)" 
+                                        style="background: #10b981; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 1.5rem; font-weight: 900; cursor: pointer; box-shadow: 0 2px 8px rgba(16,185,129,0.4); transition: all 0.2s;">
+                                        +
+                                    </button>
+                                </div>
+                                <div style="color: #cbd5e1; font-size: 0.75rem; text-align: center; margin-bottom: 12px;">
+                                    <strong>📈 Máximo:</strong> 10 RV
+                                </div>
+                                <div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid #333;">
+                                    <div style="font-size: 0.7rem; color: #94a3b8; line-height: 1.5;">
+                                        <strong>⚠️ Acumula quando:</strong><br>
+                                        • Falha no teste de Despertar<br>
+                                        • RV alto = maior risco de consequências
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -3950,6 +4014,440 @@ Exemplos:
                                     reqTextos.push(r.texto);
                                 }
                             });
+                        }
+                        const reqTexto = reqTextos.join('; ');
+                        
+                        html += `
+                            <div style="background: rgba(100, 116, 139, 0.1); border-left: 4px solid #64748b; padding: 15px; border-radius: 8px; margin-bottom: 12px; opacity: 0.6;">
+                                <div style="font-size: 1rem; font-weight: 700; color: #64748b; margin-bottom: 8px;">
+                                    🔒 ${ritual.nome}
+                                </div>
+                                
+                                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 8px;">
+                                    <strong>🎯 Objetivo:</strong> ${ritual.objetivo}
+                                </div>
+                                
+                                ${reqTexto ? `<div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 8px;">
+                                    <strong>⚠️ Requer:</strong> ${reqTexto}
+                                </div>` : ''}
+                                
+                                <div style="color: #94a3b8; font-size: 0.75rem;">
+                                    ${ritual.passos.map(p => p.nome).join(' → ')}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += `</div>`;
+            }
+
+            // Bloco Rituais (apenas para Ritualista)
+            if (classe === 'Ritualista') {
+                // Definir todos os rituais do Ritualista com requisitos
+                const rituais = [
+                    {
+                        nome: 'Ritual de Invocação Abissal',
+                        objetivo: 'Chamar criaturas da Oitava',
+                        custo: '4D ou 4 Sanidade',
+                        tempo: 'Ritual de 5 Passos',
+                        quando: 'Fora de combate',
+                        requisito: { tipo: 'class', nome: 'contato-oitavo', nivel: 2 },
+                        passos: [
+                            {
+                                nome: '1º PASSO: TESTE DO RITUAL (CONTATO)',
+                                calculo: 'PRS + Performance + CA + Contato + Sacrifício',
+                                descricao: 'Dificuldade: 3. Memorize os acertos neste teste.',
+                                teste: 'Dificuldade 3',
+                                calcular: (char) => {
+                                    const performance = char.skills?.['performance'] || 0;
+                                    const contato = char.classAbilities?.['contato-oitavo'] || 0;
+                                    const sacrificio = char.classAbilities?.['sacrificio'] || 0;
+                                    return char.prs + performance + contato + sacrificio;
+                                }
+                            },
+                            {
+                                nome: '2º PASSO: DEFINIR ASPECTO',
+                                calculo: 'Role 1d10',
+                                descricao: 'Pode forçar resultado adjacente (±1) pagando 1 DET e -2 SAN. Antes de definir, pode reduzir resultados na mesma quantidade de CA.',
+                                teste: '1d10 para tipo de criatura',
+                                calcular: (char) => 0
+                            },
+                            {
+                                nome: '3º PASSO: DISPOSIÇÃO',
+                                calculo: '(Acertos - 3) - Risco do Aspecto',
+                                descricao: 'V.D = (Acertos-Dif) - Risco. +1 se sacrifício relevante, +1 se tiver trilha/marca, -1 se são (≥70% SAN), -1 se criatura predadora.',
+                                teste: 'Valor de Disposição',
+                                calcular: (char) => 0
+                            },
+                            {
+                                nome: '4º PASSO: TAMANHO',
+                                calculo: 'Role 1d10',
+                                descricao: 'Se CA < mínimo, adicione dado e role novamente. Resultados: 1-2=Minúsculo(CA≤4), 3-4=Pequeno(CA≥5), 5-6=Médio(CA≥6), 7=Grande(CA≥7), 8=Enorme(CA≥8), 9=Colossal(CA≥9), 10=Titânico(CA≥9.1).',
+                                teste: '1d10 vs CA',
+                                calcular: (char) => char.classAbilities?.['contato-oitavo'] || 0
+                            },
+                            {
+                                nome: '5º PASSO: PODER',
+                                calculo: 'Role 1d10 e Teste de Despertar',
+                                descricao: 'Define potência, Aura de Imortalidade (AI) e efeito. Após: teste Despertar (AUT+Essência) vs (CA-Abismo). Falha: -1 SAN; Crítica: Fenda Menor/Predador.',
+                                teste: '1d10 vs CA | Despertar após',
+                                calcular: (char) => {
+                                    const essencia = char.skills?.['essência'] || 0;
+                                    return char.aut + essencia;
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        nome: 'Ritual de Selo Negativo',
+                        objetivo: 'Contenção e aprisionamento',
+                        custo: '2D e 1 Sanidade ou 3 Sanidade',
+                        tempo: '1 turno',
+                        quando: 'Combate',
+                        duracao: '1 cena',
+                        requisito: { tipo: 'class', nome: 'selo-abissal', nivel: 3 },
+                        passos: [
+                            {
+                                nome: 'TESTE DO RITUAL (SELO)',
+                                calculo: 'RAC + Abismo + Selo + Sacrifício',
+                                descricao: 'Dificuldade: 3 + AI do alvo. Falha: área vira Fenda Menor por 1 turno. Cria jaula de 2-4m. Alvos testam (FOR/PRS+AUT) vs sucessos para escapar.',
+                                teste: 'Dificuldade 3 + AI do alvo',
+                                calcular: (char) => {
+                                    const abismo = char.skills?.['abismo'] || 0;
+                                    const selo = char.classAbilities?.['selo-abissal'] || 0;
+                                    const sacrificio = char.classAbilities?.['sacrificio'] || 0;
+                                    return char.rac + abismo + selo + sacrificio;
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        nome: 'Ritual de Ocultação de Eco Abissal',
+                        objetivo: 'Ocultação de rastros',
+                        custo: '1D ou 1 Sanidade',
+                        tempo: '1 turno',
+                        quando: 'Qualquer momento',
+                        raio: '6m',
+                        requisito: { tipo: 'class', nome: 'selo-abissal', nivel: 2 },
+                        passos: [
+                            {
+                                nome: 'TESTE DO RITUAL (SELO)',
+                                calculo: 'RAC + Abismo + Selo + Sacrifício',
+                                descricao: 'Dificuldade: 3. Falha: -1 SAN imediato. "Apaga" rastros abissais; rituais rastreadores na área sofrem +2 Dif até fim da cena.',
+                                teste: 'Dificuldade 3',
+                                calcular: (char) => {
+                                    const abismo = char.skills?.['abismo'] || 0;
+                                    const selo = char.classAbilities?.['selo-abissal'] || 0;
+                                    const sacrificio = char.classAbilities?.['sacrificio'] || 0;
+                                    return char.rac + abismo + selo + sacrificio;
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        nome: 'Ritual de Fechamento de Fenda',
+                        objetivo: 'Controlar variações caóticas',
+                        custo: '1D e 1 Sanidade ou 2 Sanidade',
+                        tempo: '3 turnos',
+                        quando: 'Fora de combate',
+                        requisito: { tipo: 'class', nome: 'selo-abissal', nivel: 4 },
+                        passos: [
+                            {
+                                nome: 'TESTE DO RITUAL (SELO)',
+                                calculo: 'RAC + Abismo + Selo + Sacrifício',
+                                descricao: 'Dificuldade: 2 + tamanho da Fenda (Menor=1, Maior=3, Verdadeira=5). Falha: Fenda aumenta 1 passo. Reduz fenda em 1 passo por sucesso; ao zerar, sela.',
+                                teste: 'Dificuldade 2 + tamanho Fenda',
+                                calcular: (char) => {
+                                    const abismo = char.skills?.['abismo'] || 0;
+                                    const selo = char.classAbilities?.['selo-abissal'] || 0;
+                                    const sacrificio = char.classAbilities?.['sacrificio'] || 0;
+                                    return char.rac + abismo + selo + sacrificio;
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        nome: 'Ritual Laço de Nome',
+                        objetivo: 'Domínio de criatura abissal',
+                        custo: '1D ou 1 Sanidade',
+                        tempo: '1 turno',
+                        quando: 'Combate',
+                        requisito: { tipo: 'class', nome: 'contato-oitavo', nivel: 3 },
+                        passos: [
+                            {
+                                nome: 'TESTE DO RITUAL (SELO)',
+                                calculo: 'RAC + Abismo + Selo + Sacrifício',
+                                descricao: 'Dificuldade: 3 + Risco do Aspecto + AI. Falha: criatura aprende seu nome e -1 V.D. Sucesso: +1 V.D imediato na Disposição.',
+                                teste: 'Dificuldade 3 + Risco + AI',
+                                calcular: (char) => {
+                                    const abismo = char.skills?.['abismo'] || 0;
+                                    const selo = char.classAbilities?.['selo-abissal'] || 0;
+                                    const sacrificio = char.classAbilities?.['sacrificio'] || 0;
+                                    return char.rac + abismo + selo + sacrificio;
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        nome: 'Ritual do Plano Inferior',
+                        objetivo: 'Acesso a outro plano',
+                        custo: '1D ou 1 Sanidade',
+                        tempo: '1 turno',
+                        quando: 'Qualquer momento',
+                        duracao: '1 cena',
+                        raio: '4m',
+                        requisito: { tipo: 'class', nome: 'contato-oitavo', nivel: 4 },
+                        passos: [
+                            {
+                                nome: 'TESTE DO RITUAL (CONTATO)',
+                                calculo: 'PRS + Performance + CA + Contato + Sacrifício',
+                                descricao: 'Dificuldade: 2. Falha: Portal rompe até a oitava, criando Fenda Menor. Cria passagem para bolha fixa na primeira camada inferior.',
+                                teste: 'Dificuldade 2',
+                                calcular: (char) => {
+                                    const performance = char.skills?.['performance'] || 0;
+                                    const contato = char.classAbilities?.['contato-oitavo'] || 0;
+                                    const sacrificio = char.classAbilities?.['sacrificio'] || 0;
+                                    return char.prs + performance + contato + sacrificio;
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        nome: 'Ritual do Plano Mental Inferior',
+                        objetivo: 'Acesso a plano móvel',
+                        custo: '1D ou 1 Sanidade',
+                        tempo: '1 turno',
+                        quando: 'Qualquer momento',
+                        duracao: '1 cena',
+                        raio: '4m',
+                        requisito: { tipo: 'class', nome: 'contato-oitavo', nivel: 5 },
+                        passos: [
+                            {
+                                nome: 'TESTE DO RITUAL (SELO)',
+                                calculo: 'RAC + Abismo + Selo + Sacrifício',
+                                descricao: 'Dificuldade: 2. Falha: Portal rompe até a oitava, criando Fenda Menor. Cria passagem para bolha móvel na segunda camada inferior (pertence ao usuário).',
+                                teste: 'Dificuldade 2',
+                                calcular: (char) => {
+                                    const abismo = char.skills?.['abismo'] || 0;
+                                    const selo = char.classAbilities?.['selo-abissal'] || 0;
+                                    const sacrificio = char.classAbilities?.['sacrificio'] || 0;
+                                    return char.rac + abismo + selo + sacrificio;
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        nome: 'Ritual do Vórtice na Fenda',
+                        objetivo: 'Deslocamento através das camadas',
+                        custo: '1D e 1 Sanidade ou 2 Sanidade',
+                        tempo: '1 turno',
+                        quando: 'Combate',
+                        requisito: { tipo: 'multi', reqs: [
+                            { tipo: 'class', nome: 'contato-oitavo', nivel: 5 },
+                            { tipo: 'class', nome: 'selo-abissal', nivel: 5 }
+                        ]},
+                        passos: [
+                            {
+                                nome: 'TESTE DO RITUAL (CONTATO)',
+                                calculo: 'PRS + Performance + CA + Contato + Sacrifício',
+                                descricao: 'Dificuldade: 4. Falha: perde Reação por 1 cena. Falha Crítica: preso no plano invertido por 1 cena. Teleporta através de fenda visível (até 10m) e retorna no mesmo turno em ponto até 200m.',
+                                teste: 'Dificuldade 4',
+                                calcular: (char) => {
+                                    const performance = char.skills?.['performance'] || 0;
+                                    const contato = char.classAbilities?.['contato-oitavo'] || 0;
+                                    const sacrificio = char.classAbilities?.['sacrificio'] || 0;
+                                    return char.prs + performance + contato + sacrificio;
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        nome: 'Ritual de Estilhaçar Causa',
+                        objetivo: 'Anulação de acontecimentos',
+                        custo: '2D e 1 Sanidade',
+                        tempo: '1 turno',
+                        quando: 'Combate',
+                        requisito: { tipo: 'multi', reqs: [
+                            { tipo: 'class', nome: 'contato-oitavo', nivel: 5 },
+                            { tipo: 'class', nome: 'selo-abissal', nivel: 5 },
+                            { tipo: 'class', nome: 'sacrificio', nivel: 5 }
+                        ]},
+                        passos: [
+                            {
+                                nome: 'TESTE DO RITUAL (CONTATO)',
+                                calculo: 'PRS + Performance + CA + Contato + Sacrifício',
+                                descricao: 'Dificuldade: 6. Falha: evento retorna pior (alvo ganha +1 sucesso). Cancela último evento. Memórias ficam turvas; deixa Eco Forte. Afetados testam Sanidade ou perdem 1.',
+                                teste: 'Dificuldade 6',
+                                calcular: (char) => {
+                                    const performance = char.skills?.['performance'] || 0;
+                                    const contato = char.classAbilities?.['contato-oitavo'] || 0;
+                                    const sacrificio = char.classAbilities?.['sacrificio'] || 0;
+                                    return char.prs + performance + contato + sacrificio;
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        nome: 'Chamado de Retorno',
+                        objetivo: 'Desconvocar criatura',
+                        custo: '1D',
+                        tempo: '1 turno',
+                        quando: 'Combate',
+                        requisito: { tipo: 'multi', reqs: [
+                            { tipo: 'class', nome: 'contato-oitavo', nivel: 5 },
+                            { tipo: 'class', nome: 'selo-abissal', nivel: 4 }
+                        ]},
+                        passos: [
+                            {
+                                nome: 'TESTE DO RITUAL (SELO)',
+                                calculo: 'RAC + Abismo + Selo + Sacrifício',
+                                descricao: 'Dificuldade: 3 + Risco + AI da Criatura. Falha: entidade marca seu cheiro; +1 Dif contra você até fim da aventura. Força ida embora de entidade abissal.',
+                                teste: 'Dificuldade 3 + Risco + AI',
+                                calcular: (char) => {
+                                    const abismo = char.skills?.['abismo'] || 0;
+                                    const selo = char.classAbilities?.['selo-abissal'] || 0;
+                                    const sacrificio = char.classAbilities?.['sacrificio'] || 0;
+                                    return char.rac + abismo + selo + sacrificio;
+                                }
+                            }
+                        ]
+                    }
+                ];
+
+                // Função para verificar requisito (mesma do Adepto)
+                const verificarRequisitoRitual = (req, char) => {
+                    if (req.tipo === 'multi') {
+                        return req.reqs.every(r => verificarRequisitoRitual(r, char));
+                    }
+                    if (req.tipo === 'atributo') {
+                        const atributos = {
+                            'FOR': char.for, 'DES': char.des, 'VIG': char.vig,
+                            'RAC': char.rac, 'PRE': char.pre, 'PRS': char.prs,
+                            'INT': char.int, 'MAN': char.man
+                        };
+                        return atributos[req.nome] >= req.nivel;
+                    }
+                    if (req.tipo === 'skill') {
+                        return (char.skills?.[req.nome] || 0) >= req.nivel;
+                    }
+                    if (req.tipo === 'class') {
+                        return (char.classAbilities?.[req.nome] || 0) >= req.nivel;
+                    }
+                    if (req.tipo === 'custom') {
+                        return req.verificar(char);
+                    }
+                    return false;
+                };
+
+                // Filtrar rituais disponíveis
+                const rituaisDisponiveis = rituais.filter(r => verificarRequisitoRitual(r.requisito, char));
+                const rituaisIndisponiveis = rituais.filter(r => !verificarRequisitoRitual(r.requisito, char));
+
+                html += `
+                    <div class="section" style="margin-top: 20px;">
+                        <h2 class="section-title">🌑 Rituais Abissais</h2>
+                        <div style="background: rgba(0, 0, 0, 0.4); border: 2px solid #000000; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+                            <p style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 10px;">
+                                <strong>ℹ️ Regras:</strong><br>
+                                • Cada ritual tem requisitos específicos<br>
+                                • Teste de Despertar após cada ritual<br>
+                                • Rituais em <span style="color: #000000; background: white; padding: 2px 6px; border-radius: 4px; font-weight: 700;">preto</span> = disponíveis<br>
+                                • Rituais em <span style="color: #64748b; font-weight: 700;">cinza</span> = requisitos não atendidos
+                            </p>
+                        </div>
+                `;
+
+                // Rituais disponíveis
+                if (rituaisDisponiveis.length > 0) {
+                    html += `<h3 style="color: #000000; background: white; padding: 8px 12px; border-radius: 8px; margin: 15px 0 10px 0; font-size: 1.1rem; display: inline-block;">✅ Rituais Disponíveis</h3>`;
+                    
+                    rituaisDisponiveis.forEach(ritual => {
+                        // Montar texto de requisitos
+                        let reqTextos = [];
+                        if (ritual.requisito.tipo === 'multi') {
+                            ritual.requisito.reqs.forEach(r => {
+                                if (r.tipo === 'class') {
+                                    const nomeFormatado = r.nome.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+                                    reqTextos.push(`${nomeFormatado} ${r.nivel}`);
+                                } else if (r.tipo === 'skill') {
+                                    const nomeFormatado = r.nome.charAt(0).toUpperCase() + r.nome.slice(1);
+                                    reqTextos.push(`${nomeFormatado} ${r.nivel}`);
+                                }
+                            });
+                        } else if (ritual.requisito.tipo === 'class') {
+                            const nomeFormatado = ritual.requisito.nome.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+                            reqTextos.push(`${nomeFormatado} ${ritual.requisito.nivel}`);
+                        }
+                        const reqTexto = reqTextos.join('; ');
+                        
+                        html += `
+                            <div style="background: rgba(0, 0, 0, 0.3); border-left: 4px solid #000000; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <div style="font-size: 1.1rem; font-weight: 700; color: #ffffff; margin-bottom: 8px; text-shadow: 0 0 10px rgba(0,0,0,0.8);">
+                                    🌑 ${ritual.nome}
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 10px; font-size: 0.75rem; color: #cbd5e1;">
+                                    <div><strong>🎯 Objetivo:</strong> ${ritual.objetivo}</div>
+                                    <div><strong>💰 Custo:</strong> ${ritual.custo}</div>
+                                    <div><strong>⏱️ Tempo:</strong> ${ritual.tempo}</div>
+                                    <div><strong>📍 Quando:</strong> ${ritual.quando}</div>
+                                    ${ritual.duracao ? `<div><strong>⏳ Duração:</strong> ${ritual.duracao}</div>` : ''}
+                                    ${ritual.raio ? `<div><strong>📏 Raio:</strong> ${ritual.raio}</div>` : ''}
+                                </div>
+                                
+                                ${reqTexto ? `<div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 10px;">
+                                    <strong>⚠️ Requer:</strong> ${reqTexto}
+                                </div>` : ''}
+                                
+                                <div style="margin-top: 12px;">
+                                    ${ritual.passos.map((passo, idx) => {
+                                        const valor = passo.calcular(char);
+                                        return `
+                                            <div style="background: rgba(0, 0, 0, 0.5); padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #333;">
+                                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
+                                                    <div style="font-weight: 700; color: #ffffff; font-size: 0.9rem; text-shadow: 0 0 8px rgba(0,0,0,0.9);">
+                                                        ${passo.nome}
+                                                    </div>
+                                                    ${valor > 0 ? `<div style="background: #000000; color: white; padding: 6px 12px; border-radius: 15px; font-weight: 900; font-size: 1rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);">
+                                                        ${valor}
+                                                    </div>` : ''}
+                                                </div>
+                                                <div style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 4px;">
+                                                    <strong>Teste:</strong> ${passo.teste}
+                                                </div>
+                                                <div style="color: #94a3b8; font-size: 0.75rem; line-height: 1.4;">
+                                                    ${passo.descricao}
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                // Rituais indisponíveis
+                if (rituaisIndisponiveis.length > 0) {
+                    html += `<h3 style="color: #64748b; margin: 20px 0 10px 0; font-size: 1.1rem;">🔒 Rituais Bloqueados</h3>`;
+                    
+                    rituaisIndisponiveis.forEach(ritual => {
+                        // Montar texto de requisitos
+                        let reqTextos = [];
+                        if (ritual.requisito.tipo === 'multi') {
+                            ritual.requisito.reqs.forEach(r => {
+                                if (r.tipo === 'class') {
+                                    const nomeFormatado = r.nome.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+                                    reqTextos.push(`${nomeFormatado} ${r.nivel}`);
+                                } else if (r.tipo === 'skill') {
+                                    const nomeFormatado = r.nome.charAt(0).toUpperCase() + r.nome.slice(1);
+                                    reqTextos.push(`${nomeFormatado} ${r.nivel}`);
+                                }
+                            });
+                        } else if (ritual.requisito.tipo === 'class') {
+                            const nomeFormatado = ritual.requisito.nome.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+                            reqTextos.push(`${nomeFormatado} ${ritual.requisito.nivel}`);
                         }
                         const reqTexto = reqTextos.join('; ');
                         
@@ -7464,6 +7962,25 @@ Exemplos:
             
             updateGracaCombate();
             updateGracaClasse();
+            autoSave();
+        };
+
+        // Função para ajustar RV (Ruptura Venire)
+        window.adjustRV = function(change) {
+            const char = getChar();
+            if (!char.classResources) {
+                char.classResources = {};
+            }
+            
+            let currentRV = char.classResources['ruptura-venire'] || 0;
+            currentRV = Math.max(0, Math.min(10, currentRV + change));
+            char.classResources['ruptura-venire'] = currentRV;
+            
+            const rvDisplay = document.getElementById('rv-display');
+            if (rvDisplay) {
+                rvDisplay.textContent = currentRV;
+            }
+            
             autoSave();
         };
 
