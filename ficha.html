@@ -3226,18 +3226,43 @@ Exemplos:
                         const briga = char.skills['briga'] || 0;
                         return char.for + briga;
                     }},
-                    { name: 'Arma', formula: 'FOR/DES + Arma + Especialização', calculate: (char) => {
+                    { name: '🔱 Arma de Haste', formula: 'FOR/DES + Arma + Armas de Haste', calculate: (char) => {
                         const arma = char.skills['arma'] || 0;
-                        const specs = ['armas-haste', 'armas-pesadas', 'armas-uma-mao', 'armas-duas-maos', 'armas-duplas', 'armas-arremessaveis'];
-                        let maxSpec = 0;
-                        specs.forEach(s => {
-                            const val = char.classAbilities?.[s] || 0;
-                            if (val > maxSpec) maxSpec = val;
-                        });
-                        return Math.max(char.for, char.des) + arma + maxSpec;
+                        const haste = char.classAbilities?.['armas-haste'] || 0;
+                        return Math.max(char.for, char.des) + arma + haste;
                     }},
-                    { name: 'Escudo (Absorve Dano)', formula: 'Nível de Escudo', calculate: (char) => char.classAbilities?.['escudo'] || 0 },
-                    { name: 'Inspirar', formula: 'MAN + Liderança + Guerrilha', calculate: (char) => {
+                    { name: '⚒️ Arma Pesada', formula: 'FOR + Arma + Armas Pesadas', calculate: (char) => {
+                        const arma = char.skills['arma'] || 0;
+                        const pesada = char.classAbilities?.['armas-pesadas'] || 0;
+                        return char.for + arma + pesada;
+                    }},
+                    { name: '⚔️ Arma de Uma Mão', formula: 'FOR/DES + Arma + Armas de Uma Mão', calculate: (char) => {
+                        const arma = char.skills['arma'] || 0;
+                        const umaMao = char.classAbilities?.['armas-uma-mao'] || 0;
+                        return Math.max(char.for, char.des) + arma + umaMao;
+                    }},
+                    { name: '🗡️ Arma de Duas Mãos', formula: 'FOR/DES + Arma + Armas de Duas Mãos', calculate: (char) => {
+                        const arma = char.skills['arma'] || 0;
+                        const duasMaos = char.classAbilities?.['armas-duas-maos'] || 0;
+                        return Math.max(char.for, char.des) + arma + duasMaos;
+                    }},
+                    { name: '⚔️⚔️ Armas Duplas', formula: 'FOR/DES + Arma + Armas Duplas', calculate: (char) => {
+                        const arma = char.skills['arma'] || 0;
+                        const duplas = char.classAbilities?.['armas-duplas'] || 0;
+                        return Math.max(char.for, char.des) + arma + duplas;
+                    }},
+                    { name: '🎯 Arremesso', formula: 'FOR/DES + Disparo + Armas Arremessáveis', calculate: (char) => {
+                        const disparo = char.skills['disparo'] || 0;
+                        const arremessaveis = char.classAbilities?.['armas-arremessaveis'] || 0;
+                        return Math.max(char.for, char.des) + disparo + arremessaveis;
+                    }},
+                    { name: '🛡️ Escudo (Absorve Dano)', formula: 'Nível de Escudo', calculate: (char) => char.classAbilities?.['escudo'] || 0 },
+                    { name: '🔄 Contra-Ataque', formula: 'Reação + Contra-Ataque', calculate: (char) => {
+                        const reacao = char.rac + (char.classAbilities?.['contra-ataque'] || 0);
+                        const contraAtaque = char.classAbilities?.['contra-ataque'] || 0;
+                        return reacao + contraAtaque;
+                    }},
+                    { name: '💪 Inspirar', formula: 'MAN + Liderança + Guerrilha', calculate: (char) => {
                         const lideranca = char.skills['liderança'] || 0;
                         const guerrilha = char.classAbilities?.['guerrilha'] || 0;
                         return char.man + lideranca + guerrilha;
@@ -3527,7 +3552,8 @@ Exemplos:
                         requisito: { tipo: 'atributo', nome: 'PRS', nivel: 3 },
                         descricao: 'Aumenta sua Reação, mas limita a 1 ação por turno e impede ataques.',
                         calcular: (char) => {
-                            const reacao = char.rac + (char.classAbilities?.['contra-ataque'] || 0);
+                            const agilidade = char.skills?.['agilidade'] || 0;
+                            const reacao = Math.min(char.des, char.rac) + agilidade;
                             const postura = char.classAbilities?.['postura-combate'] || 0;
                             return reacao + postura;
                         }
@@ -3536,7 +3562,8 @@ Exemplos:
                         nome: 'Investida',
                         calculo: 'Ímpeto',
                         requisito: { tipo: 'custom', verificar: (char) => {
-                            const deslocamento = (char.des * 3) + (char.skills?.['atletismo'] || 0);
+                            const agilidade = char.skills?.['agilidade'] || 0;
+                            const deslocamento = char.for + char.des + char.tamanho + agilidade;
                             return deslocamento >= 15;
                         }, texto: 'Deslocamento Terrestre ≥ 15' },
                         descricao: 'Usar após uma ação de movimento na direção do alvo. Avança contra o alvo com força brutal.',
@@ -3614,7 +3641,7 @@ Exemplos:
                         nome: 'Cólera',
                         calculo: 'Vários efeitos especiais',
                         requisito: { tipo: 'class', nome: 'impeto', nivel: 4 },
-                        descricao: 'Se um aliado NPC cair: ative 1x. Se um jogador cair: ative pelo resto do combate. • Se matar um inimigo: recebe +1 ação. • Se for atingido: causa o mesmo dano de volta. • Se o inimigo errar: ganha 1 ação para ataque (com + Ímpeto) sem reação do inimigo.',
+                        descricao: 'Se um aliado NPC cair: ative 1x. Se um jogador cair: ative pelo resto do combate.\n • Se matar um inimigo: recebe +1 ação.\n • Se for atingido: causa o mesmo dano de volta.\n • Se o inimigo errar: ganha 1 ação para ataque (com + Ímpeto) sem reação do inimigo.',
                         calcular: (char) => 0
                     }
                 ];
