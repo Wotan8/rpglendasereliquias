@@ -3285,32 +3285,6 @@ Exemplos:
                     { id: 'vozes-tumulo', name: 'Vozes do Túmulo', maxLevel: 5 }
                 ],
                 quickTests: [
-                    { name: 'Controle da Ruína', formula: 'INT + Selo do Profano', calculate: (char) => {
-                        const seloProfano = char.classAbilities?.['selo-profano'] || 0;
-                        return char.int + seloProfano;
-                    }},
-                    { name: 'Contato (Reanimação)', formula: 'PRS + Performance + Contato Sétimo + Talismã', calculate: (char) => {
-                        const performance = char.skills['performance'] || 0;
-                        const contato = char.classAbilities?.['contato-setimo'] || 0;
-                        const talisma = char.classAbilities?.['talisma-profano'] || 0;
-                        return char.prs + performance + contato + talisma;
-                    }},
-                    { name: 'Limite de Fantoches', formula: 'INT + Liderança + Servos', calculate: (char) => {
-                        const lideranca = char.skills['liderança'] || 0;
-                        const servos = char.classAbilities?.['servos'] || 0;
-                        return char.int + lideranca + servos;
-                    }},
-                    { name: 'Fragmentos', formula: 'Nível de Fragmento de Identidade', calculate: (char) => char.classAbilities?.['fragmento-identidade'] || 0 },
-                    { name: 'Convocar Fantoches', formula: 'PRS + Liderança + Talismã Profano', calculate: (char) => {
-                        const lideranca = char.skills['liderança'] || 0;
-                        const talisma = char.classAbilities?.['talisma-profano'] || 0;
-                        return char.prs + lideranca + talisma;
-                    }},
-                    { name: 'Vozes do Túmulo', formula: 'PRE + Essência + Vozes do Túmulo', calculate: (char) => {
-                        const essencia = char.skills['essência'] || 0;
-                        const vozes = char.classAbilities?.['vozes-tumulo'] || 0;
-                        return char.pre + essencia + vozes;
-                    }},
                     { name: '👁️ Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
                 ],
                 resources: [
@@ -3535,6 +3509,291 @@ Exemplos:
                 `;
             }
             
+            // Bloco Rituais (apenas para Adepto)
+            if (classe === 'Adepto') {
+                // Definir todos os rituais com requisitos e cálculos
+                const rituais = [
+                    {
+                        nome: 'Ritual de Reanimação',
+                        objetivo: 'Novo Servo Permanente',
+                        custo: '1 DET e 1 SAN',
+                        tempo: '~30 min',
+                        quando: 'Fora de combate',
+                        requisito: { tipo: 'multi', reqs: [
+                            { tipo: 'resource', nome: 'Espaço para Servo' },
+                            { tipo: 'class', nome: 'talisma-profano', nivel: 1 }
+                        ]},
+                        passos: [
+                            {
+                                nome: '1º PASSO: CONTROLE DA RUÍNA',
+                                calculo: 'Vigor máx. do cadáver - Controle da Ruína',
+                                descricao: 'Define o Potencial Máximo de Vigor (PMV) do servo.',
+                                teste: 'PMV = Vigor máx. cadáver - (INT + Selo Profano)',
+                                calcular: (char) => {
+                                    const seloProfano = char.classAbilities?.['selo-profano'] || 0;
+                                    return char.int + seloProfano;
+                                }
+                            },
+                            {
+                                nome: '2º PASSO: CONTATO',
+                                calculo: 'PRS + Performance + Contato Sétimo + Talismã Profano',
+                                descricao: 'Teste vs (PRS + AUT) do cadáver. Se falhar, cadáver é consumido.',
+                                teste: 'PRS + Performance + Contato Sétimo + Talismã',
+                                calcular: (char) => {
+                                    const performance = char.skills?.['performance'] || 0;
+                                    const contato = char.classAbilities?.['contato-setimo'] || 0;
+                                    const talisma = char.classAbilities?.['talisma-profano'] || 0;
+                                    return char.prs + performance + contato + talisma;
+                                }
+                            },
+                            {
+                                nome: '3º PASSO: DEFINIR VIGOR',
+                                calculo: 'Menor entre (Total do Contato ou PMV)',
+                                descricao: 'Define as capacidades e degradação do servo.',
+                                teste: 'VIGOR = min(Teste de Contato, PMV)',
+                                calcular: (char) => 0
+                            },
+                            {
+                                nome: '4º PASSO: DEFINIR FRAGMENTOS',
+                                calculo: 'Nível de Fragmento de Identidade',
+                                descricao: 'Define consciência do servo. De 0 (instinto raso) a 5 (identidade quase plena).',
+                                teste: 'FRAGMENTOS = Fragmento de Identidade',
+                                calcular: (char) => char.classAbilities?.['fragmento-identidade'] || 0
+                            }
+                        ]
+                    },
+                    {
+                        nome: 'Ritual dos Fantoches',
+                        objetivo: 'Novos Servos Imediatos',
+                        custo: '1 SAN',
+                        tempo: '2 Ações (≈ 3-8 seg)',
+                        quando: 'Em qualquer momento',
+                        duracao: '1 cena',
+                        raio: '5m',
+                        requisito: { tipo: 'multi', reqs: [
+                            { tipo: 'custom', verificar: (char) => {
+                                const lideranca = char.skills?.['liderança'] || 0;
+                                const servos = char.classAbilities?.['servos'] || 0;
+                                const limiteFantoches = char.int + lideranca + servos;
+                                const fantochesAtivos = char.resources?.['fantoches-ativos'] || 0;
+                                return fantochesAtivos < limiteFantoches;
+                            }, texto: 'Ter Limite de Fantoches disponível' },
+                            { tipo: 'class', nome: 'talisma-profano', nivel: 1 }
+                        ]},
+                        passos: [
+                            {
+                                nome: '1º PASSO: CONVOCAR',
+                                calculo: 'PRS + Liderança + Talismã Profano',
+                                descricao: 'Dificuldade = Quantidade de cadáveres. Se falhar, perde SAN igual à qtd de cadáveres.',
+                                teste: 'PRS + Liderança + Talismã vs Qtd Cadáveres',
+                                calcular: (char) => {
+                                    const lideranca = char.skills?.['liderança'] || 0;
+                                    const talisma = char.classAbilities?.['talisma-profano'] || 0;
+                                    return char.prs + lideranca + talisma;
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        nome: 'Vozes do Túmulo',
+                        objetivo: 'Extrair memórias e emoções',
+                        custo: '2 SAN',
+                        tempo: 'Minutos ou horas',
+                        quando: 'Fora de combate',
+                        raio: '20m',
+                        requisito: { tipo: 'multi', reqs: [
+                            { tipo: 'class', nome: 'talisma-profano', nivel: 1 },
+                            { tipo: 'skill', nome: 'essência', nivel: 2 },
+                            { tipo: 'class', nome: 'vozes-tumulo', nivel: 1 }
+                        ]},
+                        passos: [
+                            {
+                                nome: '1º PASSO: VOZES DO TÚMULO',
+                                calculo: 'PRE + Essência + Vozes do Túmulo',
+                                descricao: 'Cada sucesso extra traz mais informações.',
+                                teste: 'PRE + Essência + Vozes (Dif. min 1)',
+                                calcular: (char) => {
+                                    const essencia = char.skills?.['essência'] || 0;
+                                    const vozes = char.classAbilities?.['vozes-tumulo'] || 0;
+                                    return char.pre + essencia + vozes;
+                                }
+                            }
+                        ]
+                    }
+                ];
+
+                // Função para verificar requisito
+                const verificarRequisitoRitual = (req, char) => {
+                    if (req.tipo === 'multi') {
+                        return req.reqs.every(r => verificarRequisitoRitual(r, char));
+                    }
+                    if (req.tipo === 'atributo') {
+                        const atributos = {
+                            'FOR': char.for, 'DES': char.des, 'VIG': char.vig,
+                            'RAC': char.rac, 'PRE': char.pre, 'PRS': char.prs,
+                            'INT': char.int, 'MAN': char.man
+                        };
+                        return atributos[req.nome] >= req.nivel;
+                    }
+                    if (req.tipo === 'skill') {
+                        return (char.skills?.[req.nome] || 0) >= req.nivel;
+                    }
+                    if (req.tipo === 'class') {
+                        return (char.classAbilities?.[req.nome] || 0) >= req.nivel;
+                    }
+                    if (req.tipo === 'resource') {
+                        // Verificar se tem espaço para servos
+                        if (req.nome === 'Espaço para Servo') {
+                            const maxServos = char.classAbilities?.['servos'] || 0;
+                            const servosAtuais = char.resources?.['servos-permanentes'] || 0;
+                            return servosAtuais < maxServos;
+                        }
+                        return true;
+                    }
+                    if (req.tipo === 'custom') {
+                        return req.verificar(char);
+                    }
+                    return false;
+                };
+
+                // Filtrar rituais disponíveis
+                const rituaisDisponiveis = rituais.filter(r => verificarRequisitoRitual(r.requisito, char));
+                const rituaisIndisponiveis = rituais.filter(r => !verificarRequisitoRitual(r.requisito, char));
+
+                html += `
+                    <div class="section" style="margin-top: 20px;">
+                        <h2 class="section-title">🔮 Rituais</h2>
+                        <div style="background: rgba(128, 0, 128, 0.1); border: 2px solid #800080; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+                            <p style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 10px;">
+                                <strong>ℹ️ Sobre Rituais:</strong><br>
+                                • Rituais requerem Talismã Profano<br>
+                                • Custam Determinação e/ou Sanidade<br>
+                                • Rituais em <span style="color: #800080; font-weight: 700;">púrpura</span> = disponíveis<br>
+                                • Rituais em <span style="color: #64748b; font-weight: 700;">cinza</span> = requisitos não atendidos
+                            </p>
+                        </div>
+                `;
+
+                // Rituais disponíveis
+                if (rituaisDisponiveis.length > 0) {
+                    html += `<h3 style="color: #800080; margin: 15px 0 10px 0; font-size: 1.1rem;">✅ Rituais Disponíveis</h3>`;
+                    
+                    rituaisDisponiveis.forEach(ritual => {
+                        // Montar texto de requisitos
+                        let reqTextos = [];
+                        if (ritual.requisito.tipo === 'multi') {
+                            ritual.requisito.reqs.forEach(r => {
+                                if (r.tipo === 'class') {
+                                    const nomeFormatado = r.nome.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+                                    reqTextos.push(`${nomeFormatado} ${r.nivel}`);
+                                } else if (r.tipo === 'skill') {
+                                    const nomeFormatado = r.nome.charAt(0).toUpperCase() + r.nome.slice(1);
+                                    reqTextos.push(`${nomeFormatado} ${r.nivel}`);
+                                } else if (r.tipo === 'resource') {
+                                    reqTextos.push(r.nome);
+                                } else if (r.tipo === 'custom') {
+                                    reqTextos.push(r.texto);
+                                }
+                            });
+                        }
+                        const reqTexto = reqTextos.join('; ');
+                        
+                        html += `
+                            <div style="background: rgba(128, 0, 128, 0.15); border-left: 4px solid #800080; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <div style="font-size: 1.1rem; font-weight: 700; color: #800080; margin-bottom: 8px;">
+                                    🔮 ${ritual.nome}
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 10px; font-size: 0.75rem; color: #94a3b8;">
+                                    <div><strong>🎯 Objetivo:</strong> ${ritual.objetivo}</div>
+                                    <div><strong>💰 Custo:</strong> ${ritual.custo}</div>
+                                    <div><strong>⏱️ Tempo:</strong> ${ritual.tempo}</div>
+                                    <div><strong>📍 Quando:</strong> ${ritual.quando}</div>
+                                    ${ritual.duracao ? `<div><strong>⏳ Duração:</strong> ${ritual.duracao}</div>` : ''}
+                                    ${ritual.raio ? `<div><strong>📏 Raio:</strong> ${ritual.raio}</div>` : ''}
+                                </div>
+                                
+                                ${reqTexto ? `<div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 10px;">
+                                    <strong>⚠️ Requer:</strong> ${reqTexto}
+                                </div>` : ''}
+                                
+                                <div style="margin-top: 12px;">
+                                    ${ritual.passos.map((passo, idx) => {
+                                        const valor = passo.calcular(char);
+                                        return `
+                                            <div style="background: rgba(139, 92, 246, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 10px;">
+                                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
+                                                    <div style="font-weight: 700; color: #a78bfa; font-size: 0.9rem;">
+                                                        ${passo.nome}
+                                                    </div>
+                                                    ${(valor > 0 || passo.nome.includes('FRAGMENTOS')) ? `<div style="background: #800080; color: white; padding: 6px 12px; border-radius: 15px; font-weight: 900; font-size: 1rem; box-shadow: 0 2px 8px rgba(128, 0, 128, 0.3);">
+                                                        ${valor}
+                                                    </div>` : ''}
+                                                </div>
+                                                <div style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 4px;">
+                                                    <strong>Teste:</strong> ${passo.teste}
+                                                </div>
+                                                <div style="color: #94a3b8; font-size: 0.75rem; line-height: 1.4;">
+                                                    ${passo.descricao}
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                // Rituais indisponíveis
+                if (rituaisIndisponiveis.length > 0) {
+                    html += `<h3 style="color: #64748b; margin: 20px 0 10px 0; font-size: 1.1rem;">🔒 Rituais Bloqueados</h3>`;
+                    
+                    rituaisIndisponiveis.forEach(ritual => {
+                        // Montar texto de requisitos
+                        let reqTextos = [];
+                        if (ritual.requisito.tipo === 'multi') {
+                            ritual.requisito.reqs.forEach(r => {
+                                if (r.tipo === 'class') {
+                                    const nomeFormatado = r.nome.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+                                    reqTextos.push(`${nomeFormatado} ${r.nivel}`);
+                                } else if (r.tipo === 'skill') {
+                                    const nomeFormatado = r.nome.charAt(0).toUpperCase() + r.nome.slice(1);
+                                    reqTextos.push(`${nomeFormatado} ${r.nivel}`);
+                                } else if (r.tipo === 'resource') {
+                                    reqTextos.push(r.nome);
+                                } else if (r.tipo === 'custom') {
+                                    reqTextos.push(r.texto);
+                                }
+                            });
+                        }
+                        const reqTexto = reqTextos.join('; ');
+                        
+                        html += `
+                            <div style="background: rgba(100, 116, 139, 0.1); border-left: 4px solid #64748b; padding: 15px; border-radius: 8px; margin-bottom: 12px; opacity: 0.6;">
+                                <div style="font-size: 1rem; font-weight: 700; color: #64748b; margin-bottom: 8px;">
+                                    🔒 ${ritual.nome}
+                                </div>
+                                
+                                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 8px;">
+                                    <strong>🎯 Objetivo:</strong> ${ritual.objetivo}
+                                </div>
+                                
+                                ${reqTexto ? `<div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 8px;">
+                                    <strong>⚠️ Requer:</strong> ${reqTexto}
+                                </div>` : ''}
+                                
+                                <div style="color: #94a3b8; font-size: 0.75rem;">
+                                    ${ritual.passos.map(p => p.nome).join(' → ')}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += `</div>`;
+            }
+
             // Bloco Manobras (apenas para Guerreiro)
             if (classe === 'Guerreiro') {
                 // Definir todas as manobras com requisitos e cálculos
