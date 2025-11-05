@@ -1654,6 +1654,29 @@
                 <div id="conditions-list"></div>
             </div>
 
+            <!-- Bloco de Graça de Palla (apenas para Pallacerdote) -->
+            <div class="section" id="graca-section" style="display: none; margin-top: 20px;">
+                <h2 class="section-title" style="background: linear-gradient(135deg, #fbbf24, #fde047); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                    💎 Graça de Palla
+                </h2>
+                <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">
+                    Ajuste sua Graça atual durante o combate. Máximo baseado em PRE + Essência.
+                </p>
+                
+                <div class="hp-bar-container">
+                    <label style="margin-bottom: 10px; display: block; font-weight: 700; color: #fde047;">💎 Graça Atual</label>
+                    <div class="hp-bar" style="border: 2px solid #fbbf24;">
+                        <div class="hp-fill" id="graca-combate-fill" style="width: 0%; background: linear-gradient(90deg, #fbbf24, #fde047);">
+                            <span id="graca-combate-text" style="color: #1e1b4b; font-weight: 700;">0 / 0</span>
+                        </div>
+                    </div>
+                    <div class="hp-controls">
+                        <input type="number" id="graca-current" value="0" onchange="updateGracaBar()" inputmode="numeric" 
+                            style="background: rgba(251, 191, 36, 0.2); border: 2px solid #fbbf24; color: #fde047;">
+                    </div>
+                </div>
+            </div>
+
             <!-- Bloco de Fantoches (apenas para Adepto) -->
             <div class="section" id="fantoches-section" style="display: none; margin-top: 20px;">
                 <h2 class="section-title">🧟 Fantoches</h2>
@@ -3379,18 +3402,18 @@ Exemplos:
                     { id: 'devocao-palla', name: 'Devoção em Palla', maxLevel: 5 }
                 ],
                 quickTests: [
-                    { name: 'Prece Breve (-1 DET → +1 Graça)', formula: 'PRE + Essência + Símbolo Sagrado', calculate: (char) => {
+                    { name: '🙏 Prece Breve (-1 DET → +1 Graça)', formula: 'PRE + Essência + Símbolo Sagrado', calculate: (char) => {
                         const essencia = char.skills['essência'] || 0;
                         const simbolo = char.classAbilities?.['simbolo-sagrado'] || 0;
                         return char.pre + essencia + simbolo;
                     }},
-                    { name: 'Benção', formula: 'PRE + Performance + Essência + Símbolo', calculate: (char) => {
+                    { name: '😇 Benção', formula: 'PRE + Performance + Essência + Símbolo', calculate: (char) => {
                         const performance = char.skills['performance'] || 0;
                         const essencia = char.skills['essência'] || 0;
                         const simbolo = char.classAbilities?.['simbolo-sagrado'] || 0;
                         return char.pre + performance + essencia + simbolo;
                     }},
-                    { name: 'Súplica', formula: 'MAN + Performance + Essência + Símbolo', calculate: (char) => {
+                    { name: '📣 Súplica', formula: 'MAN + Performance + Essência + Símbolo', calculate: (char) => {
                         const performance = char.skills['performance'] || 0;
                         const essencia = char.skills['essência'] || 0;
                         const simbolo = char.classAbilities?.['simbolo-sagrado'] || 0;
@@ -3456,6 +3479,9 @@ Exemplos:
             exp: 0,
             characterImage: '',
             recipes: [], // Receitas de Loção (Caçador: Ofensivas | Druida: Defensivas e Ofensivas)
+            ritos: [], // Ritos de Pallacerdote (Prece e Liturgia)
+            circuloPalla: 'Diácono da Luz', // Círculo atual do Pallacerdote
+            gracaAtual: 0, // Graça atual do Pallacerdote
         };
 
         function getChar() {
@@ -3491,6 +3517,65 @@ Exemplos:
             });
             
             html += `</div></div>`;
+
+            // Bloco Círculo e Graça de Palla (apenas para Pallacerdote)
+            if (classe === 'Pallacerdote') {
+                const essencia = char.skills['essência'] || 0;
+                const maxGraca = char.pre + essencia;
+                const gracaAtual = char.gracaAtual || 0;
+                const circuloAtual = char.circuloPalla || 'Diácono da Luz';
+                
+                html += `
+                    <div class="section" style="margin-top: 20px;">
+                        <h2 class="section-title" style="background: linear-gradient(135deg, #fbbf24, #fde047); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            ✨ Círculo e Graça de Palla
+                        </h2>
+                        <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">
+                            Defina seu círculo atual e acompanhe sua Graça de Palla (ajustável na aba Combate).
+                        </p>
+                        
+                        <div style="display: grid; gap: 20px;">
+                            <!-- Círculo de Palla -->
+                            <div style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(253, 224, 71, 0.1)); border: 2px solid #fbbf24; border-radius: 12px; padding: 20px;">
+                                <label style="display: block; color: #fde047; font-weight: 700; margin-bottom: 10px; font-size: 1.1rem;">
+                                    🌟 Círculo Atual:
+                                </label>
+                                <select id="circulo-palla-select" 
+                                    style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #fbbf24; background: rgba(15, 23, 42, 0.9); color: #fde047; font-size: 1rem; cursor: pointer; font-weight: 700;">
+                                    <option value="Diácono da Luz" ${circuloAtual === 'Diácono da Luz' ? 'selected' : ''}>⭐ Diácono da Luz</option>
+                                    <option value="Sábio da Luz" ${circuloAtual === 'Sábio da Luz' ? 'selected' : ''}>✨ Sábio da Luz</option>
+                                    <option value="Bispo da Luz" ${circuloAtual === 'Bispo da Luz' ? 'selected' : ''}>🌟 Bispo da Luz</option>
+                                </select>
+                            </div>
+
+                            <!-- Graça de Palla -->
+                            <div style="background: linear-gradient(135deg, rgba(253, 224, 71, 0.1), rgba(250, 204, 21, 0.1)); border: 2px solid #fde047; border-radius: 12px; padding: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <div style="font-weight: 700; color: #fde047; font-size: 1.1rem;">
+                                        💎 Graça de Palla
+                                    </div>
+                                    <div style="font-size: 1.5rem; font-weight: 900; color: #fbbf24;">
+                                        <span id="graca-classe-atual">${gracaAtual}</span> / <span id="graca-classe-max">${maxGraca}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="hp-bar" style="margin-bottom: 10px; border: 2px solid #fbbf24;">
+                                    <div class="hp-fill" id="graca-classe-fill" 
+                                        style="width: ${maxGraca > 0 ? (gracaAtual / maxGraca) * 100 : 0}%; background: linear-gradient(90deg, #fbbf24, #fde047);">
+                                        <span style="font-size: 0.9rem; color: #1e1b4b; font-weight: 700;">${gracaAtual} / ${maxGraca}</span>
+                                    </div>
+                                </div>
+                                
+                                <div style="color: #cbd5e1; font-size: 0.8rem;">
+                                    <strong>📊 Cálculo:</strong> Máximo = PRE (${char.pre}) + Essência (${essencia}) = ${maxGraca}<br>
+                                    <strong>📝 Atual:</strong> Ajustável na aba "Combate"<br>
+                                    <em style="color: #fde047;">💡 A Graça pode substituir Determinação em algumas preces.</em>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
 
             // Bloco Servos e Fantoches (apenas para Adepto)
             if (classe === 'Adepto') {
@@ -4366,6 +4451,22 @@ Exemplos:
                 `;
             }
 
+            // Seção de Prece e Liturgia (Pallacerdote)
+            if (classe === 'Pallacerdote') {
+                html += `
+                    <div class="section">
+                        <h2 class="section-title" style="background: linear-gradient(135deg, #fbbf24, #fde047); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            ✨ Prece e Liturgia
+                        </h2>
+                        <button class="btn btn-primary" onclick="openRitoModal()" 
+                            style="margin-bottom: 15px; background: linear-gradient(135deg, #fbbf24, #fde047); border: 2px solid #fde047;">
+                            ➕ Adicionar Rito
+                        </button>
+                        <div id="ritos-list"></div>
+                    </div>
+                `;
+            }
+
             html += `
                 <div class="section">
                     <h2 class="section-title">📖 Informações da Classe</h2>
@@ -4380,6 +4481,11 @@ Exemplos:
             // Atualizar lista de receitas se for Caçador ou Druida
             if (classe === 'Caçador' || classe === 'Druida') {
                 updateRecipesList();
+            }
+
+            // Atualizar lista de ritos se for Pallacerdote
+            if (classe === 'Pallacerdote') {
+                updateRitosList();
             }
             
             classData.abilities.forEach(ability => {
@@ -4408,6 +4514,19 @@ Exemplos:
                         if (!char.marcaCaca) char.marcaCaca = {};
                         char.marcaCaca.sobre = e.target.value;
                         autoSave();
+                    });
+                }
+            }
+
+            // Event listener para Círculo de Palla
+            if (classe === 'Pallacerdote') {
+                const circuloSelect = document.getElementById('circulo-palla-select');
+                
+                if (circuloSelect) {
+                    circuloSelect.addEventListener('change', (e) => {
+                        char.circuloPalla = e.target.value;
+                        autoSave();
+                        showAlert(`✨ Círculo alterado para: ${e.target.value}`, 'success');
                     });
                 }
             }
@@ -6814,6 +6933,7 @@ Exemplos:
                 }
             }
 
+            updateGracaCombate();
             updateContainers();
             updateEXPDisplay();
             updateConditions();
@@ -7134,6 +7254,219 @@ Exemplos:
             }).join('');
         }
 
+        // ========== SISTEMA DE RITOS (PALLACERDOTE) ==========
+
+        window.openRitoModal = function() {
+            document.getElementById('rito-modal').style.display = 'flex';
+            
+            // Limpar campos
+            document.getElementById('rito-name').value = '';
+            document.getElementById('rito-circulo').value = 'Diácono da Luz';
+            document.getElementById('rito-teste').value = '';
+            document.getElementById('rito-custo').value = '';
+            document.getElementById('rito-efeito').value = '';
+            document.getElementById('rito-falha').value = '';
+        };
+
+        window.closeRitoModal = function() {
+            document.getElementById('rito-modal').style.display = 'none';
+        };
+
+        window.learnRito = function() {
+            const char = getChar();
+            
+            // Verificar se tem EXP
+            const currentEXP = char.exp || 0;
+            if (currentEXP < 1) {
+                alert('❌ EXP Insuficiente!\n\nPrecisa: 1 EXP\nTem: ' + currentEXP + ' EXP');
+                return;
+            }
+            
+            // Pegar valores
+            const name = document.getElementById('rito-name').value.trim();
+            const circulo = document.getElementById('rito-circulo').value;
+            const teste = document.getElementById('rito-teste').value.trim();
+            const custo = document.getElementById('rito-custo').value.trim();
+            const efeito = document.getElementById('rito-efeito').value.trim();
+            const falha = document.getElementById('rito-falha').value.trim();
+            
+            // Validar
+            if (!name) {
+                alert('❌ Por favor, preencha o nome do rito!');
+                return;
+            }
+            
+            // Confirmar
+            if (!confirm(`Aprender o rito "${name}"?\n\nCusto: 1 EXP\nEXP atual: ${currentEXP}`)) {
+                return;
+            }
+            
+            // Inicializar array se não existir
+            if (!char.ritos) {
+                char.ritos = [];
+            }
+            
+            // Adicionar rito
+            const newRito = {
+                id: Date.now(),
+                name: name,
+                circulo: circulo,
+                teste: teste,
+                custo: custo,
+                efeito: efeito,
+                falha: falha
+            };
+            
+            char.ritos.push(newRito);
+            char.exp = currentEXP - 1;
+            
+            // Atualizar display
+            updateRitosList();
+            updateEXPDisplay();
+            closeRitoModal();
+            autoSave();
+            
+            showAlert(`✨ Rito "${name}" aprendido! (-1 EXP)`, 'success');
+        };
+
+        window.removeRito = function(ritoId) {
+            if (!confirm('⚠️🗑️⚠️ Remover este rito? ⚠️🗑️⚠️')) return;
+            
+            const char = getChar();
+            if (!char.ritos) char.ritos = [];
+            
+            char.ritos = char.ritos.filter(r => r.id !== ritoId);
+            updateRitosList();
+            autoSave();
+            showAlert('✅ Rito removido!', 'success');
+        };
+
+        function updateRitosList() {
+            const ritosList = document.getElementById('ritos-list');
+            if (!ritosList) return;
+            
+            const char = getChar();
+            if (!char.ritos) char.ritos = [];
+            
+            if (char.ritos.length === 0) {
+                ritosList.innerHTML = '<p style="color: #cbd5e1; text-align: center; padding: 20px; font-size: 0.9rem;">Nenhum rito aprendido ainda. Clique em "Adicionar Rito" para aprender um novo rito.</p>';
+                return;
+            }
+            
+            ritosList.innerHTML = char.ritos.map(rito => {
+                // Cores mais claras para Pallacerdote (tons dourados e amarelos brilhantes)
+                const circuloColors = {
+                    'Diácono da Luz': { border: '#fbbf24', bg: 'rgba(251, 191, 36, 0.15)' },
+                    'Sábio da Luz': { border: '#fde047', bg: 'rgba(253, 224, 71, 0.15)' },
+                    'Bispo da Luz': { border: '#facc15', bg: 'rgba(250, 204, 21, 0.15)' }
+                };
+                const colors = circuloColors[rito.circulo] || circuloColors['Diácono da Luz'];
+                
+                return `
+                    <div class="container-card" style="border-left: 4px solid ${colors.border}; margin-bottom: 15px; background: ${colors.bg};">
+                        <div class="container-header">
+                            <div class="container-name" style="color: ${colors.border};">✨ ${rito.name}</div>
+                            <button class="btn btn-danger btn-small" onclick="removeRito(${rito.id})">🗑️</button>
+                        </div>
+                        <div style="padding: 15px; color: #f1f5f9; font-size: 0.9rem;">
+                            <div style="margin-bottom: 10px; padding: 8px; background: rgba(251, 191, 36, 0.2); border-radius: 8px; border: 1px solid ${colors.border};">
+                                <strong style="color: #fde047;">🌟 Círculo:</strong> 
+                                <span style="color: ${colors.border}; font-weight: 700;">${rito.circulo}</span>
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #fbbf24;">🎲 Teste:</strong> 
+                                <span style="color: #e2e8f0;">${rito.teste || 'Não especificado'}</span>
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #fbbf24;">💎 Custo:</strong> 
+                                <span style="color: #e2e8f0;">${rito.custo || 'Nenhum'}</span>
+                            </div>
+                            <div style="margin-bottom: 10px; padding: 10px; background: rgba(253, 224, 71, 0.1); border-radius: 8px; border-left: 3px solid #fde047;">
+                                <strong style="color: #fde047;">✨ Efeito:</strong><br>
+                                <span style="color: #f1f5f9;">${rito.efeito || 'Nenhum efeito descrito'}</span>
+                            </div>
+                            ${rito.falha ? `
+                                <div style="padding: 10px; background: rgba(248, 113, 113, 0.1); border-radius: 8px; border-left: 3px solid #fca5a5;">
+                                    <strong style="color: #fca5a5;">❌ Se Falha:</strong><br>
+                                    <span style="color: #fecaca;">${rito.falha}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ========== SISTEMA DE GRAÇA (PALLACERDOTE) ==========
+
+        function updateGracaCombate() {
+            const char = getChar();
+            const gracaSection = document.getElementById('graca-section');
+            
+            if (char.classe === 'Pallacerdote') {
+                if (gracaSection) gracaSection.style.display = 'block';
+                
+                const essencia = char.skills['essência'] || 0;
+                const maxGraca = char.pre + essencia;
+                const gracaAtual = char.gracaAtual || 0;
+                
+                const gracaInput = document.getElementById('graca-current');
+                const gracaFill = document.getElementById('graca-combate-fill');
+                const gracaText = document.getElementById('graca-combate-text');
+                
+                if (gracaInput) {
+                    gracaInput.value = gracaAtual;
+                    gracaInput.max = maxGraca;
+                }
+                
+                if (gracaFill && gracaText) {
+                    const percentage = maxGraca > 0 ? (gracaAtual / maxGraca) * 100 : 0;
+                    gracaFill.style.width = percentage + '%';
+                    gracaText.textContent = `${gracaAtual} / ${maxGraca}`;
+                }
+            } else {
+                if (gracaSection) gracaSection.style.display = 'none';
+            }
+        }
+
+        function updateGracaClasse() {
+            const char = getChar();
+            const essencia = char.skills['essência'] || 0;
+            const maxGraca = char.pre + essencia;
+            const gracaAtual = char.gracaAtual || 0;
+            
+            const gracaClasseAtual = document.getElementById('graca-classe-atual');
+            const gracaClasseMax = document.getElementById('graca-classe-max');
+            const gracaClasseFill = document.getElementById('graca-classe-fill');
+            
+            if (gracaClasseAtual) gracaClasseAtual.textContent = gracaAtual;
+            if (gracaClasseMax) gracaClasseMax.textContent = maxGraca;
+            
+            if (gracaClasseFill) {
+                const percentage = maxGraca > 0 ? (gracaAtual / maxGraca) * 100 : 0;
+                gracaClasseFill.style.width = percentage + '%';
+                gracaClasseFill.querySelector('span').textContent = `${gracaAtual} / ${maxGraca}`;
+            }
+        }
+
+        window.updateGracaBar = function() {
+            const char = getChar();
+            const essencia = char.skills['essência'] || 0;
+            const maxGraca = char.pre + essencia;
+            const input = document.getElementById('graca-current');
+            
+            if (input) {
+                let value = parseInt(input.value) || 0;
+                value = Math.max(0, Math.min(value, maxGraca));
+                char.gracaAtual = value;
+                input.value = value;
+            }
+            
+            updateGracaCombate();
+            updateGracaClasse();
+            autoSave();
+        };
+
     </script>
 
     <!-- Modal de Adicionar Receita -->
@@ -7179,6 +7512,66 @@ Exemplos:
             <div style="display: flex; gap: 10px;">
                 <button class="btn btn-primary" onclick="learnRecipe()" style="flex: 1;">✅ Aprender Receita (1 EXP)</button>
                 <button class="btn btn-secondary" onclick="closeRecipeModal()" style="flex: 1;">❌ Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Adicionar Rito -->
+    <div id="rito-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: center; overflow-y: auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); padding: 30px; border-radius: 20px; max-width: 600px; width: 100%; border: 3px solid #fbbf24; box-shadow: 0 0 40px rgba(251, 191, 36, 0.3);">
+            <h2 style="margin-bottom: 25px; background: linear-gradient(135deg, #fbbf24, #fde047); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 1.8rem; text-align: center;">
+                ✨ Novo Rito de Prece
+            </h2>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #fde047; font-weight: 700;">Nome do Rito:</label>
+                <input type="text" id="rito-name" placeholder="Ex: Luz Curativa" 
+                    style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #fbbf24; background: rgba(15, 23, 42, 0.8); color: #fde047; font-size: 1rem;">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #fde047; font-weight: 700;">Círculo:</label>
+                <select id="rito-circulo" 
+                    style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #fbbf24; background: rgba(15, 23, 42, 0.9); color: #fde047; font-size: 1rem; cursor: pointer;">
+                    <option value="Diácono da Luz">⭐ Diácono da Luz</option>
+                    <option value="Sábio da Luz">✨ Sábio da Luz</option>
+                    <option value="Bispo da Luz">🌟 Bispo da Luz</option>
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #fde047; font-weight: 700;">Teste:</label>
+                <input type="text" id="rito-teste" placeholder="Ex: PRE + Essência + Símbolo Sagrado" 
+                    style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #fbbf24; background: rgba(15, 23, 42, 0.8); color: white; font-size: 1rem;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #fde047; font-weight: 700;">Custo:</label>
+                <input type="text" id="rito-custo" placeholder="Ex: 1 Graça" 
+                    style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #fbbf24; background: rgba(15, 23, 42, 0.8); color: white; font-size: 1rem;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #fde047; font-weight: 700;">Efeito:</label>
+                <textarea id="rito-efeito" rows="4" placeholder="Descreva o efeito do rito..." 
+                    style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #fbbf24; background: rgba(15, 23, 42, 0.8); color: white; font-size: 1rem; resize: vertical;"></textarea>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; color: #fde047; font-weight: 700;">Se Falha:</label>
+                <textarea id="rito-falha" rows="2" placeholder="O que acontece se falhar no teste..." 
+                    style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #fbbf24; background: rgba(15, 23, 42, 0.8); color: white; font-size: 1rem; resize: vertical;"></textarea>
+            </div>
+            
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <button class="btn" onclick="learnRito()" 
+                    style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #fbbf24, #fde047); color: #1e1b4b; border: none; font-weight: 900; font-size: 1.1rem; padding: 14px; border-radius: 12px; box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);">
+                    ✨ Aprender Rito (1 EXP)
+                </button>
+                <button class="btn btn-secondary" onclick="closeRitoModal()" 
+                    style="flex: 1; min-width: 200px; background: rgba(100, 116, 139, 0.5); padding: 14px; font-size: 1.1rem; border-radius: 12px;">
+                    ❌ Cancelar
+                </button>
             </div>
         </div>
     </div>
