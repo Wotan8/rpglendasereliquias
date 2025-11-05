@@ -1329,10 +1329,177 @@
                 <h2 class="section-title">Características Raciais</h2>
                 <div class="grid grid-2">
                     <div class="form-group">
-                        <label>Tamanho</label>
+                        <label>Tamanho (Sistema)</label>
                         <input type="number" id="tamanho" value="5" min="1" max="15" inputmode="numeric">
                     </div>
+                    <div class="form-group">
+                        <label>Altura (metros)</label>
+                        <input type="number" id="altura" value="1.70" min="0.1" max="3" step="0.01" inputmode="decimal">
+                    </div>
+                </div>
 
+                <!-- Informações Raciais do Humano -->
+                <div id="info-racial-humano" style="display: none; margin-top: 20px; padding: 20px; background: rgba(139, 92, 246, 0.1); border: 2px solid var(--primary); border-radius: 12px;">
+                    <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.2rem;">📜 Características da Raça Humana</h3>
+                    
+                    <div style="display: grid; gap: 15px; margin-bottom: 20px;">
+                        <div style="background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 8px; border-left: 3px solid var(--primary);">
+                            <strong style="color: #94a3b8;">⏳ Expectativa de Vida:</strong> 
+                            <span style="color: var(--light);">80 anos</span>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 8px; border-left: 3px solid var(--primary);">
+                            <strong style="color: #94a3b8;">🎭 Tendência:</strong> 
+                            <span style="color: var(--light);">Ambiciosos – Adaptáveis – Contraditórios</span>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 8px; border-left: 3px solid var(--primary);">
+                            <strong style="color: #94a3b8;">👤 Aparência:</strong> 
+                            <span style="color: var(--light);">Pele em tons variados (claro a escuro), traços físicos diversos, variando por região</span>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 8px; border-left: 3px solid var(--primary);">
+                            <strong style="color: #94a3b8;">🏞️ Habitat:</strong> 
+                            <span style="color: var(--light);">Áreas Urbanas, Rurais, Regiões Polares, Desertos, Subterrâneos e de Grandes Altitudes</span>
+                        </div>
+                    </div>
+
+                    <h4 style="color: var(--secondary); margin-bottom: 10px; font-size: 1.1rem;">✨ Habilidades Raciais</h4>
+                    <div style="display: grid; gap: 12px;">
+                        <div style="background: rgba(236, 72, 153, 0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--secondary);">
+                            <strong style="color: var(--secondary);">📚 APRENDIZADO ACELERADO IV</strong>
+                            <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
+                                A capacidade de aprender novas coisas durante seu crescimento (infância, adolescência) é acima da média.
+                                <br><span style="color: var(--success);">+4 nível para distribuir em qualquer Habilidade na criação do personagem. (Não pode ser na mesma habilidade)</span>
+                            </p>
+                        </div>
+                        
+                        <div style="background: rgba(236, 72, 153, 0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--secondary);">
+                            <strong style="color: var(--secondary);">💪 FORÇA DE VONTADE NATURAL I</strong>
+                            <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
+                                Este usuário tem uma Determinação natural, devido ao seu histórico ou talvez de nascença.
+                                <br><span style="color: var(--success);">+1 ponto de Determinação Máxima na criação de personagem.</span>
+                            </p>
+                        </div>
+                        
+                        <div style="background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--danger);">
+                            <strong style="color: var(--danger);">⏱️ EXPECTATIVA DE VIDA CURTA I</strong>
+                            <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
+                                Expectativa de vida curta, envelhecem mais rápido, limitados por linhas temporais curtas.
+                            </p>
+                        </div>
+                        
+                        <div style="background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--danger);">
+                            <strong style="color: var(--danger);">⚠️ NATUREZA AUTODESTRUTIVA I</strong>
+                            <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
+                                São inclinados ao vício, conflito internos e corrupção moral.
+                                <br><span style="color: var(--danger);">-1 em testes de interação com o Abismo e resistir às suas tendências naturais.</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Imagem da Raça Humana -->
+                    <div style="margin-top: 25px; text-align: center; padding: 20px; background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 27, 75, 0.8)); border-radius: 12px; border: 2px solid var(--primary);">
+                        <h4 style="color: var(--primary); margin-bottom: 15px; font-size: 1.1rem;">🖼️ Representação Racial</h4>
+                        <img src="https://i.imgur.com/4LeoBro.png" 
+                            alt="Raça Humana" 
+                            style="max-width: 100%; height: auto; border-radius: 12px; border: 3px solid var(--primary); box-shadow: 0 8px 32px rgba(139, 92, 246, 0.4);"
+                            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div style="display: none; color: #94a3b8; padding: 20px; font-style: italic;">
+                            ⚠️ Imagem não disponível no momento
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Informações Raciais do Elorin -->
+                <div id="info-racial-elorin" style="display: none; margin-top: 20px; padding: 20px; background: rgba(34, 197, 94, 0.1); border: 2px solid #22c55e; border-radius: 12px;">
+                    <h3 style="color: #22c55e; margin-bottom: 15px; font-size: 1.2rem;">🌿 Características da Raça Elorin</h3>
+                    
+                    <div style="display: grid; gap: 15px; margin-bottom: 20px;">
+                        <div style="background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 8px; border-left: 3px solid #22c55e;">
+                            <strong style="color: #94a3b8;">⏳ Expectativa de Vida:</strong> 
+                            <span style="color: var(--light);">Cerca de 180 anos</span>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 8px; border-left: 3px solid #22c55e;">
+                            <strong style="color: #94a3b8;">🎭 Tendência:</strong> 
+                            <span style="color: var(--light);">Sábios – Reflexivos – Reservados</span>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 8px; border-left: 3px solid #22c55e;">
+                            <strong style="color: #94a3b8;">👤 Aparência:</strong> 
+                            <span style="color: var(--light);">Orelhas pontudas, pele verde, olhos esmeraldas</span>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 8px; border-left: 3px solid #22c55e;">
+                            <strong style="color: #94a3b8;">🏞️ Habitat:</strong> 
+                            <span style="color: var(--light);">Florestas, regiões densamente vegetadas e ambientes naturais preservados</span>
+                        </div>
+                    </div>
+
+                    <h4 style="color: #22c55e; margin-bottom: 10px; font-size: 1.1rem;">✨ Habilidades Raciais</h4>
+                    <div style="display: grid; gap: 12px;">
+                        <div style="background: rgba(34, 197, 94, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #22c55e;">
+                            <strong style="color: #22c55e;">🛡️ RESISTÊNCIA A VENENOS NATURAIS I</strong>
+                            <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
+                                É fisicamente resistente a venenos provenientes da natureza que não foram modificados ou alterados.
+                                <br><span style="color: var(--success);">+1 em testes contra Venenos Naturais</span>
+                            </p>
+                        </div>
+                        
+                        <div style="background: rgba(34, 197, 94, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #22c55e;">
+                            <strong style="color: #22c55e;">👁️ VISÃO DE ESSÊNCIA</strong>
+                            <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
+                                Pode enxergar as essências externalizadas de um corpo ou objeto, difusas no ambiente em suas respectivas cores "acendendo" seus olhos.
+                            </p>
+                        </div>
+                        
+                        <div style="background: rgba(34, 197, 94, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #22c55e;">
+                            <strong style="color: #22c55e;">🌱 CONEXÃO COM A NATUREZA I</strong>
+                            <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
+                                (Destreza + Autocontrole). Permite controlar pequenas porções de essência verde de algum elemento da natureza, extraindo-o, inserindo-o ou transformando de essência para matéria ou vice-versa.
+                            </p>
+                        </div>
+                        
+                        <div style="background: rgba(34, 197, 94, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #22c55e;">
+                            <strong style="color: #22c55e;">🍃 SATURAÇÃO VERDE I</strong>
+                            <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
+                                O usuário tem a capacidade de absorver a essência verde presente na floresta e se sente saciado três quartos (3/4) do dia apenas por estar em meio à natureza verde.
+                                <br><span style="color: var(--success);">Reduz necessidade de alimentação oral</span>
+                            </p>
+                        </div>
+                        
+                        <div style="background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--danger);">
+                            <strong style="color: var(--danger);">🏙️ FRAQUEZA URBANA I</strong>
+                            <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
+                                Perdem seu vigor natural ao se afastarem do ambiente verde.
+                                <br><span style="color: var(--danger);">-1 em testes físicos ou de percepção em ambientes urbanos ou construídos. Essa fraqueza não se aplica em florestas, cavernas naturais ou locais de forte presença vegetal.</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(15, 23, 42, 0.7); border-radius: 8px; border-left: 3px solid #fbbf24;">
+                        <h4 style="color: #fbbf24; margin-bottom: 10px; font-size: 1rem;">📜 História</h4>
+                        <p style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6;">
+                            Os Elorins surgiram em Vasteluna antes da Era de Ultimera, moldados pelos próprios criadores para viverem em harmonia com a natureza. Concedidos com uma poça sagrada contendo quatro peixes imortais, foram advertidos a jamais comerem o peixe do conhecimento. Contudo, após eras de paz, Eifra (A primeira Elorin, mulher de Aton, O primeiro Elorin), cedeu à tentação e comeu a criatura proibida. Como punição divina, os criadores amaldiçoaram Vasteluna, transformando sua paisagem antes fértil em um deserto abrasador, corroído pelo sol e calor incessantes, selando o destino de seu povo.
+                        </p>
+                    </div>
+
+                    <div style="margin-top: 15px; padding: 15px; background: rgba(15, 23, 42, 0.7); border-radius: 8px; border-left: 3px solid #06b6d4;">
+                        <h4 style="color: #06b6d4; margin-bottom: 10px; font-size: 1rem;">💡 Curiosidades</h4>
+                        <ul style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.8; padding-left: 20px;">
+                            <li><strong>Caçadores e Druidas:</strong> Embora pacíficos, os Elorins possuem guerreiros treinados para proteger suas florestas.</li>
+                            <li><strong>Herboristas Naturais:</strong> São mestres em alquimancia vegetal e medicina natural, criando poções e elixires únicos.</li>
+                            <li><strong>Tradição dos Guardiões:</strong> Alguns Elorins nascem com um vínculo especial com a floresta e tornam-se protetores espirituais de seu território.</li>
+                            <li><strong>Lendas sobre o Primeiro Elorin:</strong> Dizem que o primeiro da raça nasceu da fusão entre a Essência Verde e um raio de luz ao amanhecer.</li>
+                        </ul>
+                    </div>
+
+                    <!-- Imagem da Raça Elorin -->
+                    <div style="margin-top: 25px; text-align: center; padding: 20px; background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 27, 75, 0.8)); border-radius: 12px; border: 2px solid var(--primary);">
+                        <h4 style="color: var(--primary); margin-bottom: 15px; font-size: 1.1rem;">🖼️ Representação Racial</h4>
+                        <img src="https://i.imgur.com/jcdkRYA.png" 
+                            alt="Raça Elorin" 
+                            style="max-width: 100%; height: auto; border-radius: 12px; border: 3px solid var(--primary); box-shadow: 0 8px 32px rgba(139, 92, 246, 0.4);"
+                            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div style="display: none; color: #94a3b8; padding: 20px; font-style: italic;">
+                            ⚠️ Imagem não disponível no momento
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -5187,6 +5354,70 @@ Exemplos:
             });
         }
 
+        // Event listener para mudança de raça COM BLOQUEIO
+        document.getElementById('raca').addEventListener('change', function() {
+            const char = getChar();
+            const novRaca = this.value;
+            
+            // Se já está bloqueada, não permite mudança
+            if (char.racaLocked) {
+                alert('⚠️ A raça já foi definida e não pode mais ser alterada!');
+                this.value = char.raca; // Reverte para a raça anterior
+                return;
+            }
+            
+            // Se está mudando de uma raça vazia para uma raça válida, pede confirmação
+            if (novRaca && novRaca !== '') {
+                const confirmacao = confirm(
+                    `🔒 CONFIRMAÇÃO DE RAÇA\n\n` +
+                    `Você está escolhendo: ${novRaca}\n\n` +
+                    `⚠️ ATENÇÃO: Após confirmar, você NÃO poderá mais mudar de raça!\n\n` +
+                    `Deseja confirmar esta escolha?`
+                );
+                
+                if (!confirmacao) {
+                    // Se não confirmar, volta para a raça anterior
+                    this.value = char.raca || '';
+                    return;
+                }
+                
+                // Se confirmou, bloqueia a raça
+                char.raca = novRaca;
+                char.racaLocked = true;
+                
+                // Desabilita visualmente o select
+                this.disabled = true;
+                this.style.opacity = '0.6';
+                this.style.cursor = 'not-allowed';
+                
+                // Mostrar feedback visual
+                alert(`✅ Raça "${novRaca}" confirmada e bloqueada!\n\nAgora você não poderá mais alterar sua raça.`);
+            } else {
+                // Se está limpando a raça (voltando para vazio)
+                char.raca = novRaca;
+            }
+            
+            // Atualizar exibição de informações raciais
+            const infoRacialHumano = document.getElementById('info-racial-humano');
+            const infoRacialElorin = document.getElementById('info-racial-elorin');
+
+            if (infoRacialHumano) {
+                infoRacialHumano.style.display = char.raca === 'Humano' ? 'block' : 'none';
+            }
+            if (infoRacialElorin) {
+                infoRacialElorin.style.display = char.raca === 'Elorin' ? 'block' : 'none';
+            }
+            
+            autoSave();
+        });
+
+        // Event listener para altura
+        document.getElementById('altura').addEventListener('input', function() {
+            const char = getChar();
+            char.altura = parseFloat(this.value) || 1.70;
+            autoSave();
+        });
+
         // ============= SISTEMA DE UPLOAD DE IMAGEM =============
 
         // Event listener para upload de imagem
@@ -7374,10 +7605,29 @@ Exemplos:
 
         function loadCharacterData() {
             const char = getChar();
-            ['nome', 'jogador', 'idade', 'raca', 'classe', 'virtude', 'vicio', 'tamanho', 'auraImortalidade'].forEach(key => {
+            ['nome', 'jogador', 'idade', 'raca', 'classe', 'virtude', 'vicio', 'tamanho', 'altura', 'auraImortalidade'].forEach(key => {
                 const el = document.getElementById(key);
-                if (el) el.value = char[key] || (key === 'tamanho' ? 5 : key === 'auraImortalidade' ? 1 : '');
+                if (el) el.value = char[key] || (key === 'tamanho' ? 5 : key === 'altura' ? 1.70 : key === 'auraImortalidade' ? 1 : '');
             });
+
+            // Mostrar/Esconder informações raciais baseado na raça
+            const racaSelect = document.getElementById('raca');
+            const infoRacialHumano = document.getElementById('info-racial-humano');
+            const infoRacialElorin = document.getElementById('info-racial-elorin');
+
+            if (racaSelect && infoRacialHumano) {
+                infoRacialHumano.style.display = char.raca === 'Humano' ? 'block' : 'none';
+            }
+            if (racaSelect && infoRacialElorin) {
+                infoRacialElorin.style.display = char.raca === 'Elorin' ? 'block' : 'none';
+            }
+
+            // Se a raça está bloqueada, desabilita o select
+            if (char.racaLocked && racaSelect) {
+                racaSelect.disabled = true;
+                racaSelect.style.opacity = '0.6';
+                racaSelect.style.cursor = 'not-allowed';
+            }
             
             // Carregar Luns separadamente
             const lunsEl = document.getElementById('luns');
