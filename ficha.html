@@ -3333,30 +3333,30 @@ Exemplos:
                     { id: 'olho-brechas', name: 'Olho Para Brechas', maxLevel: 5 }
                 ],
                 quickTests: [
-                    { name: 'Punhal', formula: 'DES + Arma + Armas Punho', calculate: (char) => {
+                    { name: '🔪 Punhal', formula: 'DES + Arma + Armas Punho', calculate: (char) => {
                         const arma = char.skills['arma'] || 0;
                         const punho = char.classAbilities?.['armas-punho'] || 0;
                         return char.des + arma + punho;
                     }},
-                    { name: 'Punhal Furtivo', formula: 'DES + Arma + Punho + Furtividade + Furtividade II', calculate: (char) => {
+                    { name: '🩸 Punhal Furtivo', formula: 'DES + Arma + Punho + Furtividade + Furtividade II', calculate: (char) => {
                         const arma = char.skills['arma'] || 0;
                         const punho = char.classAbilities?.['armas-punho'] || 0;
                         const furt = char.skills['furtividade'] || 0;
                         const furtII = char.classAbilities?.['furtividade-ii'] || 0;
                         return char.des + arma + punho + furt + furtII;
                     }},
-                    { name: 'Abrir Fechaduras', formula: 'DES + Arrombamento + Ferramentas', calculate: (char) => {
+                    { name: '🔓 Abrir Fechaduras', formula: 'DES + Arrombamento + Ferramentas', calculate: (char) => {
                         const arromb = char.classAbilities?.['arrombamento'] || 0;
                         const ferram = char.classAbilities?.['ferramentas-crime'] || 0;
                         return char.des + arromb + ferram;
                     }},
-                    { name: 'Furto', formula: 'DES + Prestidigitação + Furtividade I e II', calculate: (char) => {
+                    { name: '🤏 Furto', formula: 'DES + Prestidigitação + Furtividade I e II', calculate: (char) => {
                         const presti = char.classAbilities?.['prestidigitação'] || 0;
                         const furt = char.skills['furtividade'] || 0;
                         const furtII = char.classAbilities?.['furtividade-ii'] || 0;
                         return char.des + presti + furt + furtII;
                     }},
-                    { name: 'Discrição (Furtividade)', formula: 'DES + Furtividade + Furtividade II', calculate: (char) => {
+                    { name: '🕵️ Discrição', formula: 'DES + Furtividade + Furtividade II', calculate: (char) => {
                         const furt = char.skills['furtividade'] || 0;
                         const furtII = char.classAbilities?.['furtividade-ii'] || 0;
                         return char.des + furt + furtII;
@@ -4069,6 +4069,235 @@ Exemplos:
                                         </div>
                                     </div>
                                     ${valor > 0 ? `<div style="background: var(--success); color: white; padding: 8px 16px; border-radius: 20px; font-weight: 900; font-size: 1.2rem; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                                        +${valor}
+                                    </div>` : ''}
+                                </div>
+                                <div style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 6px;">
+                                    <strong>Cálculo:</strong> ${manobra.calculo}
+                                </div>
+                                <div style="color: #94a3b8; font-size: 0.8rem; line-height: 1.4;">
+                                    ${manobra.descricao}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                // Manobras indisponíveis
+                if (manobrasIndisponiveis.length > 0) {
+                    html += `<h3 style="color: #64748b; margin: 20px 0 10px 0; font-size: 1.1rem;">🔒 Manobras Bloqueadas</h3>`;
+                    
+                    manobrasIndisponiveis.forEach(manobra => {
+                        const reqTexto = manobra.requisito.tipo === 'atributo' ? `${manobra.requisito.nome} ${manobra.requisito.nivel}` :
+                                       manobra.requisito.tipo === 'skill' ? `${manobra.requisito.nome} ${manobra.requisito.nivel}` :
+                                       manobra.requisito.tipo === 'class' ? `${manobra.requisito.nome} ${manobra.requisito.nivel}` :
+                                       manobra.requisito.tipo === 'custom' ? manobra.requisito.texto :
+                                       'Nenhum';
+                        
+                        html += `
+                            <div style="background: rgba(100, 116, 139, 0.1); border-left: 4px solid #64748b; padding: 15px; border-radius: 8px; margin-bottom: 12px; opacity: 0.6;">
+                                <div style="font-size: 1rem; font-weight: 700; color: #64748b; margin-bottom: 4px;">
+                                    🔒 ${manobra.nome}
+                                </div>
+                                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 8px;">
+                                    <strong>Requer:</strong> ${reqTexto}
+                                </div>
+                                <div style="color: #94a3b8; font-size: 0.8rem;">
+                                    ${manobra.descricao}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += `</div>`;
+            }
+
+            // Bloco Manobras (apenas para Ladino)
+            if (classe === 'Ladino') {
+                // Definir todas as manobras com requisitos e cálculos
+                const manobras = [
+                    {
+                        nome: 'Acrobacia',
+                        calculo: 'DES + Agilidade + Atletismo',
+                        requisito: { tipo: 'nenhum' },
+                        descricao: 'Gaste 2 ações para usar. Manobra manual. Desloca-se por/através de obstáculos até o máximo de Deslocamento Terrestre (sem provocar contra-ataques) e, ao fim, realiza 1 ataque com punhal. Com 5+ sucessos, ignora 1 ponto de Reação do alvo no ataque.',
+                        calcular: (char) => {
+                            const agilidade = char.skills?.['agilidade'] || 0;
+                            const atletismo = char.skills?.['atletismo'] || 0;
+                            return char.des + agilidade + atletismo;
+                        }
+                    },
+                    {
+                        nome: 'Golpe Pelas Costas',
+                        calculo: 'DES + Arma + Punhal + Furtividade I e II + B.Arma (+Dano)',
+                        requisito: { tipo: 'nenhum' },
+                        descricao: 'Condição: estar furtivo. Ignora Blindagem e causa +1 dano para cada 2 sucessos. <strong>B.Arma:</strong> O valor é adicionado no +Dano da arma.',
+                        calcular: (char) => {
+                            const arma = char.skills?.['arma'] || 0;
+                            const punho = char.classAbilities?.['armas-punho'] || 0;
+                            const furt = char.skills?.['furtividade'] || 0;
+                            const furtII = char.classAbilities?.['furtividade-ii'] || 0;
+                            const bonus = char.weaponInfo?.bonus || 0;
+                            return char.des + arma + punho + furt + furtII + bonus;
+                        }
+                    },
+                    {
+                        nome: 'Golpe Preciso',
+                        calculo: 'DES + Punhal + Precisão',
+                        requisito: { tipo: 'nenhum' },
+                        descricao: 'Ignora a Blindagem do alvo neste ataque. <strong>Punhal:</strong> DES + Arma + Armas Punho.',
+                        calcular: (char) => {
+                            const arma = char.skills?.['arma'] || 0;
+                            const punho = char.classAbilities?.['armas-punho'] || 0;
+                            const precisao = char.classAbilities?.['precisão'] || 0;
+                            return char.des + arma + punho + precisao;
+                        }
+                    },
+                    {
+                        nome: 'Troca De Mãos',
+                        calculo: 'DES + Prestidigitação vs Percepção do alvo',
+                        requisito: { tipo: 'nenhum' },
+                        descricao: 'Gatilho (não gasta determinação): Após acertar um ataque com punhal. Manobra manual. Executa Furto ou esconde um item como ação gratuita no mesmo turno. Se o alvo vencer no teste disputado, ele pode escolher gastar 1 reação do turno para evitar a "Troca de Mãos" ou deixar acontecer.',
+                        calcular: (char) => {
+                            const presti = char.classAbilities?.['prestidigitação'] || 0;
+                            return char.des + presti;
+                        }
+                    },
+                    {
+                        nome: 'Retirada Ágil',
+                        calculo: 'DES + Agilidade',
+                        requisito: { tipo: 'nenhum' },
+                        descricao: 'Gatilho: após atacar. Move até 3m sem provocar contra-ataques e sem reduzir Reação.',
+                        calcular: (char) => {
+                            const agilidade = char.skills?.['agilidade'] || 0;
+                            return char.des + agilidade;
+                        }
+                    },
+                    {
+                        nome: 'Desarme',
+                        calculo: 'DES + Arma + Precisão vs FOR + Briga do alvo',
+                        requisito: { tipo: 'nenhum' },
+                        descricao: 'Manobra manual. Se sucesso, o ladino desarma o alvo, retirando sua arma da sua mão; Com +3 sucessos, além de desarmar ele pode tomar posse da arma alvo em suas mãos; Com +5 sucessos, o ladino desarma e pode guardar em uma bolsa, em sua roupa ou arremessar até 3m sem que o alvo perceba onde foi sua arma.',
+                        calcular: (char) => {
+                            const arma = char.skills?.['arma'] || 0;
+                            const precisao = char.classAbilities?.['precisão'] || 0;
+                            return char.des + arma + precisao;
+                        }
+                    },
+                    {
+                        nome: 'Passos Sombrio',
+                        calculo: 'DES + Furtividade I e Furtividade II vs Percepção do alvo',
+                        requisito: { tipo: 'nenhum' },
+                        descricao: 'Se vencer, o ladino faz um movimento de até metade do seu Deslocamento Terrestre, entrando em modo furtivo.',
+                        calcular: (char) => {
+                            const furt = char.skills?.['furtividade'] || 0;
+                            const furtII = char.classAbilities?.['furtividade-ii'] || 0;
+                            return char.des + furt + furtII;
+                        }
+                    },
+                    {
+                        nome: 'Engodo',
+                        calculo: 'MAN + Malandragem + Performance vs RAC + AUT',
+                        requisito: { tipo: 'nenhum' },
+                        descricao: 'No próximo ataque contra esse alvo, ignora Reação do alvo.',
+                        calcular: (char) => {
+                            const malan = char.skills?.['malandragem'] || 0;
+                            const performance = char.skills?.['performance'] || 0;
+                            return char.man + malan + performance;
+                        }
+                    },
+                    {
+                        nome: 'Sombra Acelerada',
+                        calculo: 'Sem bônus numérico',
+                        requisito: { tipo: 'nenhum' },
+                        descricao: 'No seu turno, pode abdicar da Reação para ganhar 1 ação extra (movimento ou ataque). Não pode combinar com Ataque Total.',
+                        calcular: (char) => 0
+                    },
+                    {
+                        nome: 'Ataque Mudo',
+                        calculo: 'DES + Arma + Punhal + Precisão + B.Arma (+Dano)',
+                        requisito: { tipo: 'custom', verificar: (char) => {
+                            const malan = char.skills?.['malandragem'] || 0;
+                            const agilidade = char.skills?.['agilidade'] || 0;
+                            return malan >= 2 && agilidade >= 2;
+                        }, texto: 'Malandragem 2 e Agilidade 2' },
+                        descricao: 'Custo: 2 Determinação. Teste: (DES + Furtividade I e Furtividade II + Prestidigitação vs Percepção). Se vencer: este ataque ignora Reação e Blindagem e causa dano direto à Vitalidade. <strong>B.Arma:</strong> O valor é adicionado no +Dano da arma. <strong>Punhal:</strong> DES + Arma + Armas Punho. Limites: Não funciona contra construtos/elementais; 1× por cena no mesmo alvo.',
+                        calcular: (char) => {
+                            const arma = char.skills?.['arma'] || 0;
+                            const punho = char.classAbilities?.['armas-punho'] || 0;
+                            const precisao = char.classAbilities?.['precisão'] || 0;
+                            const bonus = char.weaponInfo?.bonus || 0;
+                            return char.des + arma + punho + precisao + bonus;
+                        }
+                    }
+                ];
+
+                // Função para verificar requisito
+                const verificarRequisito = (req, char) => {
+                    if (req.tipo === 'nenhum') return true;
+                    if (req.tipo === 'atributo') {
+                        const atributos = {
+                            'FOR': char.for, 'DES': char.des, 'VIG': char.vig,
+                            'RAC': char.rac, 'PRE': char.pre, 'PRS': char.prs,
+                            'INT': char.int, 'MAN': char.man
+                        };
+                        return atributos[req.nome] >= req.nivel;
+                    }
+                    if (req.tipo === 'skill') {
+                        return (char.skills?.[req.nome] || 0) >= req.nivel;
+                    }
+                    if (req.tipo === 'class') {
+                        return (char.classAbilities?.[req.nome] || 0) >= req.nivel;
+                    }
+                    if (req.tipo === 'custom') {
+                        return req.verificar(char);
+                    }
+                    return false;
+                };
+
+                // Filtrar manobras disponíveis
+                const manobrasDisponiveis = manobras.filter(m => verificarRequisito(m.requisito, char));
+                const manobrasIndisponiveis = manobras.filter(m => !verificarRequisito(m.requisito, char));
+
+                html += `
+                    <div class="section" style="margin-top: 20px;">
+                        <h2 class="section-title">🗡️ Manobras</h2>
+                        <div style="background: rgba(136, 8, 8, 0.1); border: 2px solid #880808; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+                            <p style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 10px;">
+                                <strong>ℹ️ Regras:</strong><br>
+                                • Todas custam 1 Determinação<br>
+                                • Pode usar 1 por turno (salvo indicação contrária)<br>
+                                • Manobras em <span style="color: #880808; font-weight: 700;">vermelho</span> = disponíveis<br>
+                                • Manobras em <span style="color: #64748b; font-weight: 700;">cinza</span> = requisitos não atendidos
+                            </p>
+                        </div>
+                `;
+
+                // Manobras disponíveis
+                if (manobrasDisponiveis.length > 0) {
+                    html += `<h3 style="color: #880808; margin: 15px 0 10px 0; font-size: 1.1rem;">✅ Manobras Disponíveis</h3>`;
+                    
+                    manobrasDisponiveis.forEach(manobra => {
+                        const valor = manobra.calcular(char);
+                        const reqTexto = manobra.requisito.tipo === 'atributo' ? `${manobra.requisito.nome} ${manobra.requisito.nivel}` :
+                                       manobra.requisito.tipo === 'skill' ? `${manobra.requisito.nome} ${manobra.requisito.nivel}` :
+                                       manobra.requisito.tipo === 'class' ? `${manobra.requisito.nome} ${manobra.requisito.nivel}` :
+                                       manobra.requisito.tipo === 'custom' ? manobra.requisito.texto :
+                                       'Nenhum';
+                        
+                        html += `
+                            <div style="background: rgba(136, 8, 8, 0.1); border-left: 4px solid #880808; padding: 15px; border-radius: 8px; margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px; flex-wrap: wrap; gap: 10px;">
+                                    <div>
+                                        <div style="font-size: 1.1rem; font-weight: 700; color: #880808; margin-bottom: 4px;">
+                                            🗡️ ${manobra.nome}
+                                        </div>
+                                        <div style="font-size: 0.75rem; color: #94a3b8;">
+                                            <strong>Requer:</strong> ${reqTexto}
+                                        </div>
+                                    </div>
+                                    ${valor > 0 ? `<div style="background: #880808; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 900; font-size: 1.2rem; box-shadow: 0 4px 12px rgba(136, 8, 8, 0.4);">
                                         +${valor}
                                     </div>` : ''}
                                 </div>
