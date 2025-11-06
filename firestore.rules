@@ -25,10 +25,9 @@ service cloud.firestore {
 
     // Coleção de personagens (CORRIGIDA)
     match /characters/{characterId} {
-      // ✅ Leitura: dono OU mestre
-      allow read: if isSignedIn() && (
-        resource.data.ownerUid == request.auth.uid || isMaster()
-      );
+      // ✅ Leitura: QUALQUER usuário autenticado pode ver todos os personagens
+      // (necessário para rankings públicos)
+      allow read: if isSignedIn();
 
       // ✅ Criação: apenas se definir ele mesmo como dono
       allow create: if isSignedIn() && 

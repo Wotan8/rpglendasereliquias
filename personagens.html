@@ -771,6 +771,7 @@
 
         let currentUser = null;
         let characters = [];
+        let allCharacters = []; // Nova variável para rankings globais
         let characterToDelete = null;
 
         // ============= AUTENTICAÇÃO =============
@@ -782,6 +783,7 @@
                 document.getElementById('mainContainer').style.display = 'block';
                 
                 await loadCharacters();
+                await loadAllCharactersForRankings();
             } else {
                 window.location.href = 'index.html';
             }
@@ -812,6 +814,25 @@
             }
         }
 
+        // ============= CARREGAR TODOS OS PERSONAGENS (PARA RANKINGS) =============
+        async function loadAllCharactersForRankings() {
+            try {
+                const querySnapshot = await getDocs(collection(db, 'characters'));
+                allCharacters = [];
+                
+                querySnapshot.forEach((doc) => {
+                    allCharacters.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+
+                renderAllRankings();
+            } catch (error) {
+                console.error('Erro ao carregar rankings:', error);
+            }
+        }
+
         // ============= RENDERIZAR PERSONAGENS =============
         function renderCharacters() {
             const grid = document.getElementById('charactersGrid');
@@ -831,8 +852,9 @@
                 const raca = char.raca || '—';
                 const exp = char.exp || 0;
 
-                // Calcular CP
-                const cpData = calculateCharacterCP(char);
+                // Buscar CP do Firebase (ou valores padrão se não existir)
+                const cpData = char.cp || { valor: 0, nome: 'CIVIL/NOVATO', rank: 'E' };
+                const cpCor = getCpColor(cpData.rank); // Você precisará desta função auxiliar
 
                 const lastUpdate = char.lastUpdate ? new Date(char.lastUpdate).toLocaleDateString('pt-BR') : 'Nunca';
 
@@ -864,8 +886,8 @@
                             <div class="info-item">
                                 <div class="info-label">CP</div>
                                 <div class="info-value">
-                                    <span class="cp-badge" style="border-color: ${cpData.corLetra}; color: ${cpData.corLetra};">
-                                        ${cpData.letra} - ${cpData.nome}
+                                    <span class="cp-badge" style="border-color: ${cpCor}; color: ${cpCor};">
+                                        ${cpData.rank} - ${cpData.nome}
                                     </span>
                                 </div>
                             </div>
@@ -881,15 +903,23 @@
                     </div>
                 `;
 
-                renderAllRankings();
-
             }).join('');
 
             grid.innerHTML = html;
+            
+            // Renderizar rankings com TODOS os personagens
+            loadAllCharactersForRankings();
         }
 
-        // ============= CÁLCULO DE CP E STATS =============
-        function calculateCharacterCP(char) {
+        // ============= BUSCAR CP E STATS DO FIREBASE =============
+        function getCharacterStats(char) {
+            // Buscar CP do Firebase
+            const cp = char.cp?.valor || 0;
+            const cpLetra = char.cp?.rank || 'E';
+            const cpNome = char.cp?.nome || 'CIVIL/NOVATO';
+            const cpCor = getCpColor(cpLetra);
+            
+            // Calcular outros stats (OF, DF, RS, MB) - mantém o cálculo original
             const agilidade = char.skills?.['agilidade'] || 0;
             
             // OF (Ofensa)
@@ -927,78 +957,27 @@
             const DESL = (char.for || 1) + (char.des || 1) + (char.tamanho || 5) + agilidade;
             const MB = Math.ceil(DESL / 6);
             
-            // CP Final
-            const AI = char.auraImortalidade || 1;
-            const cpBase = Math.ceil(2 * OF + DF + RS + MB);
-            const CP = cpBase * AI;
-            
-            // Determinar Letra e Nome
-            let letra = 'E';
-            let nome = 'CIVIL/NOVATO';
-            let corLetra = '#94a3b8';
-            
-            if (CP >= 301) { 
-                letra = 'ULTRA'; 
-                nome = 'ULTRALIAL'; 
-                corLetra = '#ff00ff'; 
-            }
-            else if (CP >= 151) { 
-                letra = 'OP+'; 
-                nome = 'SOBERANO'; 
-                corLetra = '#ff0080'; 
-            }
-            else if (CP >= 91) { 
-                letra = 'OP'; 
-                nome = 'LENDÁRIO'; 
-                corLetra = '#ff0000'; 
-            }
-            else if (CP >= 71) { 
-                letra = 'M+'; 
-                nome = 'CRONAL'; 
-                corLetra = '#ff6600'; 
-            }
-            else if (CP >= 51) { 
-                letra = 'M'; 
-                nome = 'DIVINO'; 
-                corLetra = '#ff9900'; 
-            }
-            else if (CP >= 36) { 
-                letra = 'SS'; 
-                nome = 'ÉPICO'; 
-                corLetra = '#ffcc00'; 
-            }
-            else if (CP >= 29) { 
-                letra = 'S+'; 
-                nome = 'MITO'; 
-                corLetra = '#ffff00'; 
-            }
-            else if (CP >= 23) { 
-                letra = 'S'; 
-                nome = 'LEGADO'; 
-                corLetra = '#00ff00'; 
-            }
-            else if (CP >= 19) { 
-                letra = 'A'; 
-                nome = 'CAMPEÃO'; 
-                corLetra = '#00ffff'; 
-            }
-            else if (CP >= 15) { 
-                letra = 'B'; 
-                nome = 'ELITE'; 
-                corLetra = '#0099ff'; 
-            }
-            else if (CP >= 12) { 
-                letra = 'C'; 
-                nome = 'VETERANO'; 
-                corLetra = '#0066ff'; 
-            }
-            else if (CP >= 9) { 
-                letra = 'D'; 
-                nome = 'SOLDADO COMUM'; 
-                corLetra = '#6666ff'; 
-            }
-            
-            return { CP, letra, nome, corLetra, OF, DF, RS, MB };
+            return { CP: cp, letra: cpLetra, nome: cpNome, corLetra: cpCor, OF, DF, RS, MB };
+        }
+
+        // Função auxiliar para cores do CP
+        function getCpColor(letra) {
+            const cores = {
+                'ULTRA': '#ff00ff',
+                'OP+': '#ff0080',
+                'OP': '#ff0000',
+                'M+': '#ff6600',
+                'M': '#ff9900',
+                'SS': '#ffcc00',
+                'S+': '#ffff00',
+                'S': '#00ff00',
+                'A': '#00ffff',
+                'B': '#0099ff',
+                'C': '#0066ff',
+                'D': '#6666ff',
+                'E': '#94a3b8'
+            };
+            return cores[letra] || '#94a3b8';
         }
 
         // ============= SISTEMA DE ABAS =============
@@ -1059,7 +1038,7 @@
         }
 
         function renderAllRankings() {
-            if (characters.length === 0) {
+            if (allCharacters.length === 0) {
                 ['ranking-cp', 'ranking-ofensivo', 'ranking-defensivo', 'ranking-resistencia', 'ranking-mobilidade', 'ranking-riqueza'].forEach(id => {
                     const container = document.getElementById(id);
                     if (container) {
@@ -1074,14 +1053,14 @@
                 return;
             }
             
-            const charsWithStats = characters.map(char => {
-                const stats = calculateCharacterCP(char);
+            const charsWithStats = allCharacters.map(char => {
+                const stats = getCharacterStats(char); // Usa a nova função
                 return {
                     char,
-                    cp: stats.CP,
-                    cpLetra: stats.letra,
-                    cpNome: stats.nome,
-                    cpCor: stats.corLetra,
+                    cp: char.cp?.valor || 0,        // Busca do Firebase
+                    cpLetra: char.cp?.rank || 'E',   // Busca do Firebase
+                    cpNome: char.cp?.nome || 'CIVIL/NOVATO', // Busca do Firebase
+                    cpCor: getCpColor(char.cp?.rank || 'E'),
                     of: stats.OF,
                     df: stats.DF,
                     rs: stats.RS,
@@ -1089,15 +1068,18 @@
                     luns: char.luns || 0
                 };
             });
-            
+
+            // Ordena por VALOR do CP
             const rankCP = [...charsWithStats].sort((a, b) => b.cp - a.cp);
             renderRanking('ranking-cp', rankCP.map(item => ({
                 char: item.char,
                 value: item.cp,
                 cpLetra: item.cpLetra,
+                cpNome: item.cpNome,
                 cpCor: item.cpCor
             })), (v, item) => {
-                return `${v} <span style="color: ${item.cpCor}; font-size: 0.8em;">(${item.cpLetra})</span>`;
+                // Exibe NOME e RANK (não o valor)
+                return `<span style="color: ${item.cpCor}; font-weight: 700;">${item.cpNome}</span> <span style="color: ${item.cpCor}; font-size: 0.85em;">(${item.cpLetra})</span>`;
             });
             
             const rankOF = [...charsWithStats].sort((a, b) => b.of - a.of);
