@@ -1449,9 +1449,19 @@
                         </div>
                         
                         <div style="background: rgba(34, 197, 94, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #22c55e;">
-                            <strong style="color: #22c55e;">🌱 CONEXÃO COM A NATUREZA I</strong>
-                            <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
-                                (Destreza + Autocontrole). Permite controlar pequenas porções de essência verde de algum elemento da natureza, extraindo-o, inserindo-o ou transformando de essência para matéria ou vice-versa.
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px; flex-wrap: wrap; gap: 10px;">
+                                <div>
+                                    <strong style="color: #22c55e;">🌱 CONEXÃO COM A NATUREZA I</strong>
+                                </div>
+                                <div id="calc-conexao-natureza" style="background: #22c55e; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 900; font-size: 1.2rem; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);">
+                                    +0
+                                </div>
+                            </div>
+                            <div style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 6px;">
+                                <strong>Cálculo:</strong> DES + AUT
+                            </div>
+                            <p style="color: #94a3b8; margin-top: 5px; font-size: 0.9rem;">
+                                Permite controlar pequenas porções de essência verde de algum elemento da natureza, extraindo-o, inserindo-o ou transformando de essência para matéria ou vice-versa.
                             </p>
                         </div>
                         
@@ -1528,7 +1538,19 @@
                     <h4 style="color: #ef4444; margin-bottom: 10px; font-size: 1.1rem;">✨ Peculiaridades Raciais</h4>
                     <div style="display: grid; gap: 12px;">
                         <div style="background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #ef4444;">
-                            <strong style="color: #ef4444;">🔥 CABEÇA QUENTE</strong>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <strong style="color: #ef4444;">🔥 CABEÇA QUENTE</strong>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <!-- Valor do teste de AUT (estilo Manobras) -->
+                                    <div style="background: #ef4444; color: white; padding: 6px 12px; border-radius: 15px; font-weight: 900; font-size: 1rem; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);" id="cabeca-quente-valor">
+                                        0
+                                    </div>
+                                    <!-- Botão de ativar -->
+                                    <button onclick="toggleCabecaQuente()" id="btn-cabeca-quente" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 1.2rem; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);">
+                                        🔥
+                                    </button>
+                                </div>
+                            </div>
                             <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
                                 Pode incendiar os cabelos, tornando-se mais ágil e perigoso, mas pode afetar a sanidade.
                                 <br><span style="color: var(--warning);">Exige teste de AUT por cena; falha resulta em dano de sanidade e fúria temporária; se sucesso, recebe +1 bônus em testes de Raciocínio, Força, Destreza, Vigor e Presença, enquanto o fogo estiver ativo.</span>
@@ -1539,7 +1561,7 @@
                             <strong style="color: #ef4444;">👣 PÉS INVERTIDOS I</strong>
                             <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
                                 Movimentos difíceis de prever.
-                                <br><span style="color: var(--success);">+1 nível em Briga e Esquiva</span>
+                                <br><span style="color: var(--success);">+1 nível em Briga e Agilidade</span>
                             </p>
                         </div>
                         
@@ -5722,6 +5744,20 @@ Exemplos:
                     char.altura = 1.70;
                     document.getElementById('tamanho').value = 5;
                     document.getElementById('altura').value = 1.70;
+                    
+                    // 🔥 BÔNUS RACIAL KARU-SELVAGEM: +1 em Briga e Agilidade
+                    if (novRaca === 'Karu-Selvagem') {
+                        char.skills['briga'] = (char.skills['briga'] || 0) + 1;
+                        char.skills['agilidade'] = (char.skills['agilidade'] || 0) + 1;
+                        
+                        // Atualizar visual das habilidades
+                        updateSkillDots('briga');
+                        updateSkillDots('agilidade');
+                        
+                        // Recalcular estatísticas
+                        updateAllCalculations();
+                        updateClassTests();
+                    }
                 } else if (novRaca === 'Yotun') {
                     // Yotun: Tamanho 10, Altura média 4.50m
                     char.tamanho = 10;
@@ -5890,12 +5926,48 @@ Exemplos:
 
         function updateAttributeDots(attrName) {
             const char = getChar();
-            const dots = document.querySelectorAll(`#dots-${attrName} .dot`);
-            dots.forEach((dot, index) => {
-                dot.classList.toggle('filled', index < char[attrName]);
+            const container = document.getElementById(`dots-${attrName}`);
+            if (!container) return;
+            
+            const currentValue = char[attrName] || 0;
+            const existingDots = container.querySelectorAll('.dot');
+            const existingDotsCount = existingDots.length;
+            
+            // Determinar quantos dots precisamos (mínimo 5, máximo o valor atual ou 6)
+            const neededDots = Math.max(5, Math.min(currentValue, 6));
+            
+            // Se precisamos de mais dots do que temos
+            if (neededDots > existingDotsCount) {
+                for (let i = existingDotsCount + 1; i <= neededDots; i++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'dot';
+                    dot.style.border = '3px solid #f59e0b'; // Borda dourada para o 6º dot
+                    dot.style.boxShadow = '0 0 10px rgba(245, 158, 11, 0.5)';
+                    
+                    dot.addEventListener('click', () => {
+                        upgradeAttribute(attrName, i);
+                    });
+                    
+                    container.appendChild(dot);
+                }
+            }
+            
+            // Se temos dots demais (mais que o necessário)
+            if (existingDotsCount > neededDots) {
+                for (let i = existingDotsCount; i > neededDots; i--) {
+                    const lastDot = container.lastElementChild;
+                    if (lastDot) {
+                        container.removeChild(lastDot);
+                    }
+                }
+            }
+            
+            // Atualizar o preenchimento de todos os dots
+            const allDots = container.querySelectorAll('.dot');
+            allDots.forEach((dot, index) => {
+                dot.classList.toggle('filled', index < currentValue);
             });
         }
-
 
         function upgradeClassAbility(abilityId, targetLevel) {
             const char = getChar();
@@ -6374,8 +6446,14 @@ Exemplos:
                 const vitalidadeMax = char.vig + char.tamanho;
                 safeUpdate('calc-vitalidade-max', vitalidadeMax);
                 
-                const determinacaoMax = char.prs + char.aut;
+                const determinacaoMax = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0);
                 safeUpdate('calc-determinacao-max', determinacaoMax);
+
+                // Cálculo de Conexão com a Natureza (Elorin)
+                if (char.raca === 'Elorin') {
+                    const conexaoNatureza = char.des + char.aut;
+                    safeUpdate('calc-conexao-natureza', '+' + conexaoNatureza);
+                }
                 
                 const cargaMax = char.for + char.vig;
                 safeUpdate('calc-carga', cargaMax);
@@ -8602,6 +8680,158 @@ Exemplos:
             
             autoSave();
         };
+
+        // ============= HABILIDADE RACIAL: CABEÇA QUENTE =============
+        let cabecaQuenteAtiva = false;
+
+        // Função para calcular o valor do teste de Cabeça Quente (AUT)
+        function updateCabecaQuenteValor() {
+            const char = getChar();
+            const valorAut = char.aut || 0;
+            const display = document.getElementById('cabeca-quente-valor');
+            if (display) {
+                display.textContent = valorAut;
+            }
+        }
+
+        // Função para verificar e corrigir Cabeça Quente ao carregar a página
+        function verificarCabecaQuenteAoCarregar() {
+            const char = getChar();
+            
+            // Se o flag indica que estava ativa ao fechar a página
+            if (char.cabecaQuenteAtiva === true) {
+                console.log('⚠️ Cabeça Quente estava ativa. Removendo bônus...');
+                
+                // Remover os bônus que ficaram salvos
+                char.rac = Math.max(0, (char.rac || 0) - 1);
+                char.for = Math.max(0, (char.for || 0) - 1);
+                char.des = Math.max(0, (char.des || 0) - 1);
+                char.vig = Math.max(0, (char.vig || 0) - 1);
+                char.pre = Math.max(0, (char.pre || 0) - 1);
+                
+                // Desmarcar o flag
+                char.cabecaQuenteAtiva = false;
+                
+                // Atualizar visual dos dots (bolinhas)
+                updateAttributeDots('rac');
+                updateAttributeDots('for');
+                updateAttributeDots('des');
+                updateAttributeDots('vig');
+                updateAttributeDots('pre');
+                
+                // Atualizar cálculos
+                updateAllCalculations();
+                
+                // Salvar as correções
+                autoSave();
+                
+                console.log('✅ Bônus de Cabeça Quente removidos e salvos');
+            }
+            
+            // Garantir que a variável local sempre inicia como false
+            cabecaQuenteAtiva = false;
+            
+            // Garantir que o fundo está normal
+            document.body.style.background = 'linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%)';
+        }
+
+        // Função para ativar/desativar Cabeça Quente
+        window.toggleCabecaQuente = function() {
+            const char = getChar();
+            const body = document.body;
+            
+            if (!cabecaQuenteAtiva) {
+                // ATIVAR Cabeça Quente
+                cabecaQuenteAtiva = true;
+                char.cabecaQuenteAtiva = true; // Salvar flag no character
+                
+                // Mudar cor de fundo para vermelho-fogo
+                body.style.background = 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #dc2626 100%)';
+                
+                // Adicionar +1 em RAC, FOR, DES, VIG, PRE
+                char.rac = (char.rac || 0) + 1;
+                char.for = (char.for || 0) + 1;
+                char.des = (char.des || 0) + 1;
+                char.vig = (char.vig || 0) + 1;
+                char.pre = (char.pre || 0) + 1;
+                
+                // Atualizar visual dos dots (bolinhas)
+                updateAttributeDots('rac');
+                updateAttributeDots('for');
+                updateAttributeDots('des');
+                updateAttributeDots('vig');
+                updateAttributeDots('pre');
+                
+                // Atualizar visual do botão
+                const btn = document.getElementById('btn-cabeca-quente');
+                if (btn) {
+                    btn.style.transform = 'scale(1.2)';
+                    btn.style.boxShadow = '0 0 30px rgba(239, 68, 68, 0.8)';
+                }
+                
+                // Atualizar todas as características calculadas
+                updateAllCalculations();
+                
+                // Salvar o estado (com o flag ativo)
+                autoSave();
+                
+                showAlert('🔥 Cabeça Quente ATIVADA! +1 em RAC, FOR, DES, VIG e PRE', 'warning');
+            } else {
+                // DESATIVAR Cabeça Quente
+                desativarCabecaQuente();
+            }
+        };
+
+        // Função para desativar Cabeça Quente
+        function desativarCabecaQuente() {
+            if (!cabecaQuenteAtiva) return;
+            
+            const char = getChar();
+            const body = document.body;
+            
+            cabecaQuenteAtiva = false;
+            char.cabecaQuenteAtiva = false; // Desmarcar flag no character
+            
+            // Restaurar cor de fundo original
+            body.style.background = 'linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%)';
+            
+            // Remover +1 dos atributos
+            char.rac = Math.max(0, (char.rac || 0) - 1);
+            char.for = Math.max(0, (char.for || 0) - 1);
+            char.des = Math.max(0, (char.des || 0) - 1);
+            char.vig = Math.max(0, (char.vig || 0) - 1);
+            char.pre = Math.max(0, (char.pre || 0) - 1);
+            
+            // Atualizar visual dos dots (bolinhas)
+            updateAttributeDots('rac');
+            updateAttributeDots('for');
+            updateAttributeDots('des');
+            updateAttributeDots('vig');
+            updateAttributeDots('pre');
+            
+            // Restaurar visual do botão
+            const btn = document.getElementById('btn-cabeca-quente');
+            if (btn) {
+                btn.style.transform = 'scale(1)';
+                btn.style.boxShadow = '0 4px 15px rgba(239, 68, 68, 0.4)';
+            }
+            
+            // Atualizar todas as características calculadas
+            updateAllCalculations();
+            
+            // Salvar o estado (com o flag desativado)
+            autoSave();
+            
+            showAlert('🔥 Cabeça Quente desativada. Bônus removidos.', 'info');
+        }
+
+        // Inicializar ao carregar a página
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                verificarCabecaQuenteAoCarregar();
+                updateCabecaQuenteValor();
+            }, 1500); // Aguardar 1.5s para garantir que o character foi carregado
+        });
 
     </script>
 
