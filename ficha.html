@@ -1653,15 +1653,25 @@
                         <div style="background: rgba(251, 191, 36, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #fbbf24;">
                             <strong style="color: #fbbf24;">🦋 DESCENDÊNCIA LUXIANA</strong>
                             <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
-                                Asas Luxianas fornecem mais Deslocamento Aéreo (PRS+DES+Agilidade) enquanto estão batendo asa. Flutua a poucos centímetros do chão sem bater asas.
+                                Asas Luxianas fornecem mais Deslocamento Aéreo (FOR+DES+Tamanho+Atletismo)*3 enquanto estão batendo asa. Flutua a poucos centímetros do chão sem bater asas.
                                 <br><span style="color: var(--success);">Flutuação lenta passiva e voo rápido com as asas</span>
-                                <br><span style="color: var(--danger);">Fora do voo: Deslocamento é igual a 2 enquanto flutuam sem bater asas e -2 em testes que envolvam corrida ou perseguição</span>
+                                <br><span style="color: var(--danger);">Fora do voo: Deslocamento Flutuante é igual a 2 enquanto flutuam sem bater asas e -2 em testes que envolvam corrida ou perseguição</span>
                             </p>
                         </div>
                         
                         <div style="background: rgba(251, 191, 36, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #fbbf24;">
-                            <strong style="color: #fbbf24;">🌟 AURA DE LEVITAÇÃO</strong>
-                            <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px; flex-wrap: wrap; gap: 10px;">
+                                <div>
+                                    <strong style="color: #fbbf24;">🌟 AURA DE LEVITAÇÃO</strong>
+                                </div>
+                                <div style="background: #fbbf24; color: #1e1b4b; padding: 8px 16px; border-radius: 20px; font-weight: 900; font-size: 1.2rem; box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);" id="calc-aura-levitacao">
+                                    +0
+                                </div>
+                            </div>
+                            <div style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 6px;">
+                                <strong>Cálculo:</strong> MAN
+                            </div>
+                            <p style="color: #cbd5e1; font-size: 0.9rem;">
                                 Podem fazer objetos/pessoas flutuarem por poucos segundos quando aplicam sua aura sobre elas.
                                 <br><span style="color: var(--success);">Faça teste de Manipulação. Se falha crítica, o alvo não flutua e o usuário perde o turno. Se falha, o alvo flutua por 1 turno. Se sucesso, o alvo flutua na quantidade de sucessos em turnos</span>
                             </p>
@@ -2016,7 +2026,7 @@
                 <div class="grid grid-2">
                     <div class="characteristic-item">
                         <div>
-                            <div class="char-label">Iniciativa</div>
+                            <div class="char-label">⏱️ Iniciativa</div>
                             <div class="char-formula">RAC+DES+AUT+Agil-Tam</div>
                         </div>
                         <div class="char-value" id="calc-iniciativa">0</div>
@@ -2024,23 +2034,40 @@
 
                     <div class="characteristic-item">
                         <div>
-                            <div class="char-label">Reação</div>
-                            <div class="char-formula">Min(DES,RAC)+Agil</div>
+                            <div class="char-label">✋ Reação</div>
+                            <div class="char-formula">Min(DES,RAC)+Agilidade</div>
                         </div>
                         <div class="char-value" id="calc-reacao">0</div>
                     </div>
 
                     <div class="characteristic-item">
                         <div>
-                            <div class="char-label">Desloc. Terrestre</div>
-                            <div class="char-formula">FOR+DES+Tam+Agil</div>
+                            <div class="char-label">🏃 Desloc. Terrestre</div>
+                            <div class="char-formula">FOR+DES+Tamanho+Agilidade</div>
                         </div>
                         <div class="char-value" id="calc-deslocamento">0</div>
                     </div>
 
+                    <!-- Deslocamentos exclusivos para Picxi -->
+                    <div class="characteristic-item" id="char-deslocamento-aereo" style="display: none;">
+                        <div>
+                            <div class="char-label">🕊️ Desloc. Aéreo</div>
+                            <div class="char-formula">(FOR+DES+Tam+Agil)×3</div>
+                        </div>
+                        <div class="char-value" id="calc-deslocamento-aereo">0m</div>
+                    </div>
+
+                    <div class="characteristic-item" id="char-deslocamento-flutuante" style="display: none;">
+                        <div>
+                            <div class="char-label">✨ Desloc. Flutuante</div>
+                            <div class="char-formula">Fixo</div>
+                        </div>
+                        <div class="char-value" id="calc-deslocamento-flutuante">2m</div>
+                    </div>
+
                     <div class="characteristic-item">
                         <div>
-                            <div class="char-label">VIT Max</div>
+                            <div class="char-label">💓 VIT Max</div>
                             <div class="char-formula">VIG+Tamanho</div>
                         </div>
                         <div class="char-value" id="calc-vitalidade-max">0</div>
@@ -2048,7 +2075,7 @@
 
                     <div class="characteristic-item">
                         <div>
-                            <div class="char-label">DET Max</div>
+                            <div class="char-label">⚡ DET Max</div>
                             <div class="char-formula">PRS+AUT</div>
                         </div>
                         <div class="char-value" id="calc-determinacao-max">0</div>
@@ -2056,7 +2083,7 @@
 
                     <div class="characteristic-item">
                         <div>
-                            <div class="char-label">Carga Max</div>
+                            <div class="char-label">📦 Carga Max</div>
                             <div class="char-formula">FOR+VIG</div>
                         </div>
                         <div class="char-value" id="calc-carga">0</div>
@@ -2064,7 +2091,7 @@
 
                     <div class="characteristic-item">
                         <div>
-                            <div class="char-label">Sanidade Atual</div>
+                            <div class="char-label">🧠 Sanidade Atual</div>
                             <div class="char-formula">Editável na aba Combate</div>
                         </div>
                         <div class="char-value" id="calc-sanidade">80</div>
@@ -2072,14 +2099,14 @@
 
                     <div class="characteristic-item">
                         <div>
-                            <div class="char-label">Blindagem</div>
+                            <div class="char-label">🧱 Blindagem</div>
                             <div class="char-formula">Armadura</div>
                         </div>
                         <div class="char-value" id="calc-blindagem">0</div>
                     </div>
                     <div class="characteristic-item" style="grid-column: 1 / -1; border: 3px solid var(--warning); background: rgba(245, 158, 11, 0.1);">
                         <div>
-                            <div class="char-label" style="font-size: 1.3rem; color: var(--warning);">⚡ Classe de Poder (CP)</div>
+                            <div class="char-label" style="font-size: 1.3rem; color: var(--warning);">👑 Classe de Poder (CP)</div>
                             <div class="char-formula" style="font-size: 0.8rem;">⌈2·OF + DF + RS + MB⌉ × AI</div>
                         </div>
                         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
@@ -5738,6 +5765,17 @@ Exemplos:
                     char.altura = 1.10;
                     document.getElementById('tamanho').value = 3;
                     document.getElementById('altura').value = 1.10;
+
+                    // 🌿 BÔNUS RACIAL PICXI: +1 em Herbalismo
+                    char.skills['herbalismo'] = (char.skills['herbalismo'] || 0) + 1;
+                        
+                    // Atualizar visual das habilidades
+                    updateSkillDots('herbalismo');
+
+                    // Recalcular estatísticas
+                    updateAllCalculations();
+                    updateClassTests();
+
                 } else if (novRaca === 'Humano' || novRaca === 'Elorin' || novRaca === 'Karu-Selvagem') {
                     // Todos com: Tamanho 5, Altura média 1.70m
                     char.tamanho = 5;
@@ -5749,10 +5787,11 @@ Exemplos:
                     if (novRaca === 'Karu-Selvagem') {
                         char.skills['briga'] = (char.skills['briga'] || 0) + 1;
                         char.skills['agilidade'] = (char.skills['agilidade'] || 0) + 1;
-                        
+
                         // Atualizar visual das habilidades
                         updateSkillDots('briga');
                         updateSkillDots('agilidade');
+   
                         
                         // Recalcular estatísticas
                         updateAllCalculations();
@@ -5796,6 +5835,16 @@ Exemplos:
             }
             if (infoRacialPicxi) {
                 infoRacialPicxi.style.display = char.raca === 'Picxi' ? 'block' : 'none';
+
+            // Controlar visibilidade dos deslocamentos exclusivos para Picxi
+            const deslocAereoElement = document.getElementById('char-deslocamento-aereo');
+            const deslocFlutElement = document.getElementById('char-deslocamento-flutuante');
+            if (deslocAereoElement) {
+                deslocAereoElement.style.display = char.raca === 'Picxi' ? 'flex' : 'none';
+            }
+            if (deslocFlutElement) {
+                deslocFlutElement.style.display = char.raca === 'Picxi' ? 'flex' : 'none';
+            }
             }
             if (infoRacialYotun) {
                 infoRacialYotun.style.display = char.raca === 'Yotun' ? 'block' : 'none';
@@ -6422,6 +6471,16 @@ Exemplos:
             }
         }
 
+        function updateAuraLevitacao() {
+            const char = getChar();
+            const auraElement = document.getElementById('calc-aura-levitacao');
+            
+            if (auraElement && char.raca === 'Picxi') {
+                const valorAura = char.man || 0;
+                auraElement.textContent = `+${valorAura}`;
+            }
+        }
+
         function updateAllCalculations() {
             try {
                 const char = getChar();
@@ -6453,6 +6512,28 @@ Exemplos:
                 if (char.raca === 'Elorin') {
                     const conexaoNatureza = char.des + char.aut;
                     safeUpdate('calc-conexao-natureza', '+' + conexaoNatureza);
+                }
+
+                // Deslocamentos exclusivos para Picxi
+                const deslocAereoElement = document.getElementById('char-deslocamento-aereo');
+                const deslocFlutElement = document.getElementById('char-deslocamento-flutuante');
+
+                if (char.raca === 'Picxi') {
+                    // Calcular Deslocamento Aéreo
+                    const atletismo = char.skills['atletismo'] || 0;
+                    const deslocamentoAereo = (char.for + char.des + char.tamanho + atletismo) * 3;
+                    safeUpdate('calc-deslocamento-aereo', deslocamentoAereo + 'm');
+                    
+                    // Deslocamento Flutuante é sempre 2
+                    safeUpdate('calc-deslocamento-flutuante', '2m');
+                    
+                    // Mostrar os campos
+                    if (deslocAereoElement) deslocAereoElement.style.display = 'flex';
+                    if (deslocFlutElement) deslocFlutElement.style.display = 'flex';
+                } else {
+                    // Ocultar os campos para outras raças
+                    if (deslocAereoElement) deslocAereoElement.style.display = 'none';
+                    if (deslocFlutElement) deslocFlutElement.style.display = 'none';
                 }
                 
                 const cargaMax = char.for + char.vig;
@@ -6505,6 +6586,7 @@ Exemplos:
                 // Atualizar testes da classe e recursos
                 updateClassTests();
                 updateClassResourcesDisplay();
+                updateAuraLevitacao();
                 
                 console.log('✅ Cálculos atualizados com sucesso');
             
