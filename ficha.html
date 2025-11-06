@@ -1775,7 +1775,7 @@
                                             box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);"
                                         onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 4px 15px rgba(139, 92, 246, 0.5)';"
                                         onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 8px rgba(139, 92, 246, 0.3)';">
-                                    UP
+                                    ⭐
                                 </button>
                             </div>
                             <p id="guardiao-desc" style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
@@ -1810,8 +1810,24 @@
                         </div>
                         
                         <div style="background: rgba(107, 114, 128, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #6b7280;">
-                            <strong style="color: #9ca3af;">💥 GOLPE TITÂNICO 1</strong>
-                            <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                                <strong id="golpe-titulo" style="color: #9ca3af;">💥 GOLPE TITÂNICO 1</strong>
+                                <button onclick="upgradeGolpeTitanico()" 
+                                        style="background: linear-gradient(135deg, var(--primary), var(--secondary)); 
+                                            border: none; 
+                                            color: white; 
+                                            font-size: 1.2rem; 
+                                            padding: 5px 12px; 
+                                            border-radius: 8px; 
+                                            cursor: pointer; 
+                                            transition: all 0.3s; 
+                                            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);"
+                                        onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 4px 15px rgba(139, 92, 246, 0.5)';"
+                                        onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 8px rgba(139, 92, 246, 0.3)';">
+                                    ⭐
+                                </button>
+                            </div>
+                            <p id="golpe-desc" style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
                                 Todo ataque físico afeta a área em torno do alvo, com redução de metade dos acertos.
                                 <br><span style="color: var(--success);">Raio de até 1,50m do alvo</span>
                                 <br><span style="color: #fbbf24;">Níveis: II (2m, 5 EXP), III (3m, 10 EXP), IV (4,5m, 25 EXP), V (6m, 40 EXP)</span>
@@ -9084,12 +9100,132 @@ Exemplos:
             }
         }
 
+        // ========== SISTEMA DE UPGRADE: GOLPE TITÂNICO ==========
+        // Função para fazer upgrade de GOLPE TITÂNICO
+        window.upgradeGolpeTitanico = function() {
+            try {
+                const char = getChar();
+                
+                // Inicializar skillRace se não existir
+                if (!char.skillRace) {
+                    char.skillRace = {};
+                }
+                
+                // Pegar o nível atual do BD (ou 1 se não existir)
+                const nivelAtual = char.skillRace.golpeTitanico || 1;
+                
+                // Verificar se já está no nível máximo
+                if (nivelAtual >= 5) {
+                    alert('⭐ GOLPE TITÂNICO já está no nível máximo!');
+                    return;
+                }
+                
+                // Definir custos de EXP para cada upgrade
+                const custos = {
+                    1: 5,   // Nível 1 → 2
+                    2: 10,  // Nível 2 → 3
+                    3: 25,  // Nível 3 → 4
+                    4: 40   // Nível 4 → 5
+                };
+                
+                // Definir raios para cada nível
+                const raios = {
+                    1: '1,50m',
+                    2: '2,00m',
+                    3: '3,00m',
+                    4: '4,50m',
+                    5: '6,00m'
+                };
+                
+                const custoUpgrade = custos[nivelAtual];
+                const proximoNivel = nivelAtual + 1;
+                const proximoRaio = raios[proximoNivel];
+                
+                // Verificar se tem EXP suficiente
+                const expAtual = parseInt(char.exp) || 0;
+                
+                if (expAtual < custoUpgrade) {
+                    alert(`❌ EXP insuficiente! Você precisa de ${custoUpgrade} EXP para subir para o nível ${proximoNivel}. Você tem: ${expAtual} EXP`);
+                    return;
+                }
+                
+                // Mostrar confirmação
+                const confirmacao = confirm(`🆙 Deseja fazer upgrade de GOLPE TITÂNICO?\n\nNível ${nivelAtual} → Nível ${proximoNivel}\nNovo Raio: ${proximoRaio}\nCusto: ${custoUpgrade} EXP\nEXP atual: ${expAtual}\nEXP após upgrade: ${expAtual - custoUpgrade}\n\nConfirmar?`);
+                
+                if (confirmacao) {
+                    // Subtrair o EXP
+                    char.exp = expAtual - custoUpgrade;
+                    
+                    const expInput = document.getElementById('exp');
+                    if (expInput) {
+                        expInput.value = char.exp;
+                    }
+                    
+                    // SALVAR O NOVO NÍVEL NO BD
+                    char.skillRace.golpeTitanico = proximoNivel;
+                    
+                    // Atualizar visualmente
+                    atualizarGolpeTitanicoHTML(proximoNivel);
+                    
+                    // Salvar no Firebase
+                    autoSave();
+                    
+                    // Mostrar mensagem de sucesso
+                    alert(`🎉 GOLPE TITÂNICO evoluiu para o nível ${proximoNivel}! Novo Raio: ${proximoRaio}`);
+                }
+            } catch (error) {
+                console.error('Erro no upgrade de Golpe Titânico:', error);
+                alert('❌ Erro ao fazer upgrade. Tente novamente.');
+            }
+        };
+
+        // Função auxiliar para atualizar o HTML do Golpe Titânico
+        function atualizarGolpeTitanicoHTML(nivel) {
+            const tituloElement = document.getElementById('golpe-titulo');
+            const descElement = document.getElementById('golpe-desc');
+            
+            if (!tituloElement || !descElement) return;
+            
+            // Definir raios para cada nível
+            const raios = {
+                1: '1,50m',
+                2: '2,00m',
+                3: '3,00m',
+                4: '4,50m',
+                5: '6,00m'
+            };
+            
+            // Atualizar o título com o novo nível
+            tituloElement.textContent = `💥 GOLPE TITÂNICO ${nivel}`;
+            
+            // Atualizar a descrição com o novo raio
+            const raioAtual = raios[nivel];
+            descElement.innerHTML = `
+                Todo ataque físico afeta a área em torno do alvo, com redução de metade dos acertos.
+                <br><span style="color: var(--success);">Raio de até ${raioAtual} do alvo</span>
+                <br><span style="color: #fbbf24;">Níveis: II (2m, 5 EXP), III (3m, 10 EXP), IV (4,5m, 25 EXP), V (6m, 40 EXP)</span>
+            `;
+        }
+
+        // Função para carregar o nível de Golpe Titânico do BD ao iniciar
+        function carregarGolpeTitanico() {
+            const char = getChar();
+            
+            // Verificar se é Yotun e se tem skillRace salvo
+            if (char.raca === 'Yotun' && char.skillRace && char.skillRace.golpeTitanico) {
+                const nivelSalvo = char.skillRace.golpeTitanico;
+                atualizarGolpeTitanicoHTML(nivelSalvo);
+                console.log(`✅ GOLPE TITÂNICO carregado: Nível ${nivelSalvo}`);
+            }
+        }
+
         // Inicializar ao carregar a página
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
                 verificarCabecaQuenteAoCarregar();
                 updateCabecaQuenteValor();
                 carregarGuardiaoImponente(); // Carregar nível de Guardião Imponente do BD
+                carregarGolpeTitanico(); // Carregar nível de Golpe Titânico do BD
             }, 1500); // Aguardar 1.5s para garantir que o character foi carregado
         });
 
