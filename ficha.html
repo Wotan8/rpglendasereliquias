@@ -2052,7 +2052,7 @@
                     <div class="characteristic-item" id="char-deslocamento-aereo" style="display: none;">
                         <div>
                             <div class="char-label">🕊️ Desloc. Aéreo</div>
-                            <div class="char-formula">(FOR+DES+Tam+Agil)×3</div>
+                            <div class="char-formula">(FOR+DES+Tam+Atletismo)×3</div>
                         </div>
                         <div class="char-value" id="calc-deslocamento-aereo">0m</div>
                     </div>
@@ -6259,7 +6259,17 @@ Exemplos:
             const RS = Math.ceil((VIT + Math.floor(DET / 2)) / 3);
             
             // MB (Mobilidade)
-            const DESL = char.for + char.des + char.tamanho + agilidade;
+            const deslocTerrestre = char.for + char.des + char.tamanho + agilidade;
+
+            // Para Picxi, calcular também o deslocamento aéreo
+            let deslocAereo = 0;
+            if (char.raca === 'Picxi') {
+                const atletismo = char.skills['atletismo'] || 0;
+                deslocAereo = (char.for + char.des + char.tamanho + atletismo) * 3;
+            }
+
+            // Usar o MAIOR deslocamento entre terrestre e aéreo
+            const DESL = Math.max(deslocTerrestre, deslocAereo);
             const MB = Math.ceil(DESL / 6);
             
             // CP Final
