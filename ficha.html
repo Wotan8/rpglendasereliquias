@@ -6555,18 +6555,25 @@ Exemplos:
 
                 const cpData = calculateCP();
                 safeUpdate('calc-cp', cpData.CP);
-                
+
                 const cpLetraEl = document.getElementById('calc-cp-letra');
                 if (cpLetraEl) {
                     cpLetraEl.textContent = cpData.letra;
                     cpLetraEl.style.color = cpData.corLetra;
                 }
-                
+
                 const cpNomeEl = document.getElementById('calc-cp-nome');
                 if (cpNomeEl) {
                     cpNomeEl.textContent = cpData.nome;
                     cpNomeEl.style.color = cpData.corLetra;
                 }
+
+                // 💾 SALVAR CP NO PERSONAGEM (Firebase)
+                char.cp = {
+                    valor: cpData.CP,
+                    nome: cpData.nome,
+                    rank: cpData.letra
+                };
                 
                 // Ajustar valores atuais se necessário
                 if (!char.hpCurrent || char.hpCurrent > vitalidadeMax) {
