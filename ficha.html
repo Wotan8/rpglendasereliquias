@@ -1789,7 +1789,7 @@
                             <strong style="color: #9ca3af;">🎒 ALTA CARGA</strong>
                             <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
                                 Pode carregar muito peso sem se incomodar.
-                                <br><span style="color: var(--success);">Dobre o valor de Carga Máxima (VIG) para determinar quantas pessoas é capaz de carregar</span>
+                                <br><span style="color: var(--success);">Dobre o valor de Carga Máxima e o (VIG)Vigor determina quantas pessoas (de Tamanho menor que 6) é capaz de carregar</span>
                             </p>
                         </div>
                         
@@ -2046,6 +2046,15 @@
                             <div class="char-formula">FOR+DES+Tamanho+Agilidade</div>
                         </div>
                         <div class="char-value" id="calc-deslocamento">0</div>
+                    </div>
+
+                    <!-- Deslocamento de Viagem exclusivo para Yotun -->
+                    <div class="characteristic-item" id="char-deslocamento-viagem" style="display: none;">
+                        <div>
+                            <div class="char-label">🏔️ Desloc. de Viagem</div>
+                            <div class="char-formula">Desloc. Terrestre × 2</div>
+                        </div>
+                        <div class="char-value" id="calc-deslocamento-viagem">0m</div>
                     </div>
 
                     <!-- Deslocamentos exclusivos para Picxi -->
@@ -5849,6 +5858,12 @@ Exemplos:
             if (infoRacialYotun) {
                 infoRacialYotun.style.display = char.raca === 'Yotun' ? 'block' : 'none';
             }
+
+            // Controlar visibilidade do deslocamento de viagem para Yotun
+            const deslocViagemElement = document.getElementById('char-deslocamento-viagem');
+            if (deslocViagemElement) {
+                deslocViagemElement.style.display = char.raca === 'Yotun' ? 'flex' : 'none';
+            }
             
             autoSave();
         });
@@ -6170,7 +6185,16 @@ Exemplos:
                 
                 SKILLS[category].forEach(skill => {
                     const skillId = skill.name.toLowerCase().replace(/\s+/g, '-').replace(/\./g, '');
-                    if (!char.skills[skillId]) char.skills[skillId] = 0;
+                    
+                    // Inicializar skill (Yotun tem GUARDIÃO IMPONENTE I: +1 em Intimidação)
+                    if (!char.skills[skillId]) {
+                        char.skills[skillId] = 0;
+                        
+                        // Se for Yotun e a skill for Intimidação, adicionar +1
+                        if (char.raca === 'Yotun' && skillId === 'intimidação') {
+                            char.skills[skillId] = 1;
+                        }
+                    }
                     if (!char.skillInputs[skillId]) char.skillInputs[skillId] = '';
                     
                     const skillDiv = document.createElement('div');
@@ -6545,13 +6569,38 @@ Exemplos:
                     if (deslocAereoElement) deslocAereoElement.style.display = 'none';
                     if (deslocFlutElement) deslocFlutElement.style.display = 'none';
                 }
+
+                // Deslocamento de Viagem exclusivo para Yotun (PASSOS DE GIGANTE)
+                const deslocViagemElement = document.getElementById('char-deslocamento-viagem');
                 
-                const cargaMax = char.for + char.vig;
+                if (char.raca === 'Yotun') {
+                    // Calcular Deslocamento de Viagem (Deslocamento Terrestre * 2)
+                    const deslocTerrestre = char.for + char.des + char.tamanho + agilidade;
+                    const deslocViagem = deslocTerrestre * 2;
+                    safeUpdate('calc-deslocamento-viagem', deslocViagem + 'm');
+                    
+                    // Mostrar o campo
+                    if (deslocViagemElement) deslocViagemElement.style.display = 'flex';
+                } else {
+                    // Ocultar o campo para outras raças
+                    if (deslocViagemElement) deslocViagemElement.style.display = 'none';
+                }
+                
+                // Cálculo de Carga Max (Yotun tem ALTA CARGA: dobra o valor)
+                let cargaMax = char.for + char.vig;
+                if (char.raca === 'Yotun') {
+                    cargaMax = cargaMax * 2; // Habilidade ALTA CARGA: dobra a Carga Max
+                }
                 safeUpdate('calc-carga', cargaMax);
                 
                 safeUpdate('calc-sanidade', char.sanCurrent || 80);
                 
-                safeUpdate('calc-blindagem', char.blindagem);
+                // Blindagem (Yotun tem BLINDAGEM NATURAL II: +2)
+                let blindagemTotal = char.blindagem || 0;
+                if (char.raca === 'Yotun') {
+                    blindagemTotal += 2; // Habilidade BLINDAGEM NATURAL II
+                }
+                safeUpdate('calc-blindagem', blindagemTotal);
 
                 const cpData = calculateCP();
                 safeUpdate('calc-cp', cpData.CP);
