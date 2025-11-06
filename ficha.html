@@ -1761,8 +1761,24 @@
                     <h4 style="color: #9ca3af; margin-bottom: 10px; font-size: 1.1rem;">⚔️ Peculiaridades</h4>
                     <div style="display: grid; gap: 12px;">
                         <div style="background: rgba(107, 114, 128, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #6b7280;">
-                            <strong style="color: #9ca3af;">🛡️ GUARDIÃO IMPONENTE I</strong>
-                            <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                                <strong id="guardiao-titulo" style="color: #9ca3af;">🛡️ GUARDIÃO IMPONENTE 1</strong>
+                                <button onclick="upgradeGuardiaoImponente()" 
+                                        style="background: linear-gradient(135deg, var(--primary), var(--secondary)); 
+                                            border: none; 
+                                            color: white; 
+                                            font-size: 1.2rem; 
+                                            padding: 5px 12px; 
+                                            border-radius: 8px; 
+                                            cursor: pointer; 
+                                            transition: all 0.3s; 
+                                            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);"
+                                        onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 4px 15px rgba(139, 92, 246, 0.5)';"
+                                        onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 8px rgba(139, 92, 246, 0.3)';">
+                                    UP
+                                </button>
+                            </div>
+                            <p id="guardiao-desc" style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
                                 Usam seu tamanho e imponência para intimidar invasores.
                                 <br><span style="color: var(--success);">+1 em testes de Intimidação e Proteção territorial</span>
                                 <br><span style="color: #fbbf24;">Níveis: II (+2, 5 EXP), III (+3, 10 EXP), IV (+4, 25 EXP), V (+5, 40 EXP)</span>
@@ -1794,7 +1810,7 @@
                         </div>
                         
                         <div style="background: rgba(107, 114, 128, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #6b7280;">
-                            <strong style="color: #9ca3af;">💥 GOLPE TITÂNICO I</strong>
+                            <strong style="color: #9ca3af;">💥 GOLPE TITÂNICO 1</strong>
                             <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
                                 Todo ataque físico afeta a área em torno do alvo, com redução de metade dos acertos.
                                 <br><span style="color: var(--success);">Raio de até 1,50m do alvo</span>
@@ -1803,7 +1819,7 @@
                         </div>
                         
                         <div style="background: rgba(107, 114, 128, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #6b7280;">
-                            <strong style="color: #9ca3af;">🛡️ BLINDAGEM NATURAL II</strong>
+                            <strong style="color: #9ca3af;">🛡️ BLINDAGEM NATURAL 2</strong>
                             <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
                                 Sua pele é dura como pedra, lhe oferecendo uma blindagem natural.
                                 <br><span style="color: var(--success);">+2 de Blindagem</span>
@@ -1812,7 +1828,7 @@
                         </div>
                         
                         <div style="background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--danger);">
-                            <strong style="color: var(--danger);">🎯 VULNERABILIDADE A PROJÉTEIS III</strong>
+                            <strong style="color: var(--danger);">🎯 VULNERABILIDADE A PROJÉTEIS 3</strong>
                             <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
                                 Ataques à distância causam dano acrescido.
                                 <br><span style="color: var(--danger);">Se ataque bem sucedido: com 1+ acerto: +1 dano | com 3+ acertos: +2 dano | com 5+ acertos: +3 dano</span>
@@ -1820,7 +1836,7 @@
                         </div>
                         
                         <div style="background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--danger);">
-                            <strong style="color: var(--danger);">🧠 VULNERABILIDADE PSÍQUICA I</strong>
+                            <strong style="color: var(--danger);">🧠 VULNERABILIDADE PSÍQUICA 1</strong>
                             <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
                                 Todo tipo de magia e controle psíquico tem grande influência sobre o Yotun.
                                 <br><span style="color: var(--danger);">-1 em testes de resistência a qualquer tipo de influência mágica ou controle psíquico/mental</span>
@@ -5859,6 +5875,11 @@ Exemplos:
                 infoRacialYotun.style.display = char.raca === 'Yotun' ? 'block' : 'none';
             }
 
+            // Carregar nível de Guardião Imponente ao trocar para Yotun
+            if (char.raca === 'Yotun') {
+                setTimeout(() => carregarGuardiaoImponente(), 100);
+            }
+
             // Controlar visibilidade do deslocamento de viagem para Yotun
             const deslocViagemElement = document.getElementById('char-deslocamento-viagem');
             if (deslocViagemElement) {
@@ -6185,16 +6206,7 @@ Exemplos:
                 
                 SKILLS[category].forEach(skill => {
                     const skillId = skill.name.toLowerCase().replace(/\s+/g, '-').replace(/\./g, '');
-                    
-                    // Inicializar skill (Yotun tem GUARDIÃO IMPONENTE I: +1 em Intimidação)
-                    if (!char.skills[skillId]) {
-                        char.skills[skillId] = 0;
-                        
-                        // Se for Yotun e a skill for Intimidação, adicionar +1
-                        if (char.raca === 'Yotun' && skillId === 'intimidação') {
-                            char.skills[skillId] = 1;
-                        }
-                    }
+                    if (!char.skills[skillId]) char.skills[skillId] = 0;
                     if (!char.skillInputs[skillId]) char.skillInputs[skillId] = '';
                     
                     const skillDiv = document.createElement('div');
@@ -8973,11 +8985,111 @@ Exemplos:
             showAlert('🔥 Cabeça Quente desativada. Bônus removidos.', 'info');
         }
 
+        // Função para fazer upgrade de GUARDIÃO IMPONENTE
+        window.upgradeGuardiaoImponente = function() {
+            try {
+                const char = getChar();
+                
+                // Inicializar skillRace se não existir
+                if (!char.skillRace) {
+                    char.skillRace = {};
+                }
+                
+                // Pegar o nível atual do BD (ou 1 se não existir)
+                const nivelAtual = char.skillRace.guardiaoImponente || 1;
+                
+                // Verificar se já está no nível máximo
+                if (nivelAtual >= 5) {
+                    alert('⭐ GUARDIÃO IMPONENTE já está no nível máximo!');
+                    return;
+                }
+                
+                // Definir custos de EXP para cada upgrade
+                const custos = {
+                    1: 5,   // Nível 1 → 2
+                    2: 10,  // Nível 2 → 3
+                    3: 25,  // Nível 3 → 4
+                    4: 40   // Nível 4 → 5
+                };
+                
+                const custoUpgrade = custos[nivelAtual];
+                const proximoNivel = nivelAtual + 1;
+                
+                // Verificar se tem EXP suficiente
+                const expAtual = parseInt(char.exp) || 0;
+                
+                if (expAtual < custoUpgrade) {
+                    alert(`❌ EXP insuficiente! Você precisa de ${custoUpgrade} EXP para subir para o nível ${proximoNivel}. Você tem: ${expAtual} EXP`);
+                    return;
+                }
+                
+                // Mostrar confirmação
+                const confirmacao = confirm(`🆙 Deseja fazer upgrade de GUARDIÃO IMPONENTE?\n\nNível ${nivelAtual} → Nível ${proximoNivel}\nCusto: ${custoUpgrade} EXP\nEXP atual: ${expAtual}\nEXP após upgrade: ${expAtual - custoUpgrade}\n\nConfirmar?`);
+                
+                if (confirmacao) {
+                    // Subtrair o EXP
+                    char.exp = expAtual - custoUpgrade;
+                    
+                    const expInput = document.getElementById('exp');
+                    if (expInput) {
+                        expInput.value = char.exp;
+                    }
+                    
+                    // SALVAR O NOVO NÍVEL NO BD
+                    char.skillRace.guardiaoImponente = proximoNivel;
+                    
+                    // Atualizar visualmente
+                    atualizarGuardiaoImponenteHTML(proximoNivel);
+                    
+                    // Salvar no Firebase
+                    autoSave();
+                    
+                    // Mostrar mensagem de sucesso
+                    alert(`🎉 GUARDIÃO IMPONENTE evoluiu para o nível ${proximoNivel}! Novo bônus: +${proximoNivel}`);
+                }
+            } catch (error) {
+                console.error('Erro no upgrade de Guardião Imponente:', error);
+                alert('❌ Erro ao fazer upgrade. Tente novamente.');
+            }
+        };
+
+        // Função auxiliar para atualizar o HTML do Guardião Imponente
+        function atualizarGuardiaoImponenteHTML(nivel) {
+            const tituloElement = document.getElementById('guardiao-titulo');
+            const descElement = document.getElementById('guardiao-desc');
+            
+            if (!tituloElement || !descElement) return;
+            
+            // Atualizar o título com o novo nível
+            tituloElement.textContent = `🛡️ GUARDIÃO IMPONENTE ${nivel}`;
+            
+            // Atualizar a descrição com o novo bônus
+            const bonusText = `+${nivel}`;
+            descElement.innerHTML = `
+                Usam seu tamanho e imponência para intimidar invasores.
+                <br><span style="color: var(--success);">${bonusText} em testes de Intimidação e Proteção territorial</span>
+                <br><span style="color: #fbbf24;">Níveis: II (+2, 5 EXP), III (+3, 10 EXP), IV (+4, 25 EXP), V (+5, 40 EXP)</span>
+            `;
+        }
+
+        // Função para carregar o nível de Guardião Imponente do BD ao iniciar
+        function carregarGuardiaoImponente() {
+            const char = getChar();
+            
+            // Verificar se é Yotun e se tem skillRace salvo
+            if (char.raca === 'Yotun' && char.skillRace && char.skillRace.guardiaoImponente) {
+                const nivelSalvo = char.skillRace.guardiaoImponente;
+                atualizarGuardiaoImponenteHTML(nivelSalvo);
+                console.log(`✅ GUARDIÃO IMPONENTE carregado: Nível ${nivelSalvo}`);
+            }
+        }
+
         // Inicializar ao carregar a página
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
                 verificarCabecaQuenteAoCarregar();
                 updateCabecaQuenteValor();
+                carregarGuardiaoImponente(); // Carregar nível de Guardião Imponente do BD
             }, 1500); // Aguardar 1.5s para garantir que o character foi carregado
         });
 
