@@ -3001,6 +3001,8 @@ Exemplos:
                     linkedContainerId: item.linkedContainerId || null,
                     dano: item.dano || 0, // Arma e Projétil
                     reacao: item.reacao || 0, // Arma
+                    tipoArma: item.tipoArma || '', // Tipo da Arma
+                    arremessavel: item.arremessavel || false, // Se a Arma é Arremessável?
                     blindagem: item.blindagem || 0, // Vestimenta
                     maxCapacity: item.maxCapacity || 0, // Container
                     maxSize: item.maxSize || 0 // Container
@@ -3897,7 +3899,7 @@ Exemplos:
                         const duasMaos = char.classAbilities?.['armas-duas-maos'] || 0;
                         return Math.max(char.for, char.des) + arma + duasMaos;
                     }},
-                    { name: '⚔️⚔️ Armas Duplas', formula: 'FOR/DES + Arma + Armas Duplas', calculate: (char) => {
+                    { name: '🔪🔪 Armas Duplas', formula: 'FOR/DES + Arma + Armas Duplas', calculate: (char) => {
                         const arma = char.skills['arma'] || 0;
                         const duplas = char.classAbilities?.['armas-duplas'] || 0;
                         return Math.max(char.for, char.des) + arma + duplas;
@@ -7218,6 +7220,8 @@ Exemplos:
             document.getElementById('conditionalFields').innerHTML = '';
             document.getElementById('itemPesoTotal').value = '1.00';
             window.currentItemImageBase64 = null;
+            // Habilitar os selects de tipo ao criar novo item
+            document.getElementById('itemTipo').disabled = false;
             document.getElementById('itemModal').style.display = 'block';
         };
 
@@ -7553,6 +7557,8 @@ Exemplos:
             document.getElementById('itemIntegridade').value = item.integridade || 10;
             document.getElementById('itemPeso').value = item.peso || 1;
             document.getElementById('itemTipo').value = item.tipo || '';
+            // Bloquear o select de Tipo de Item durante a edição
+            document.getElementById('itemTipo').disabled = true;
             
             // Carregar imagem se existir
             if (item.imagem) {
@@ -7587,6 +7593,7 @@ Exemplos:
                     const tipoLunSelect = document.getElementById('itemTipoLun');
                     if (tipoLunSelect) {
                         tipoLunSelect.value = item.tipoLun;
+                        tipoLunSelect.disabled = true; // Bloquear tipo de Lun
                         const quantidadeEl = document.getElementById('itemQuantidade');
                         if (quantidadeEl) {
                             quantidadeEl.value = item.quantity || 1;
@@ -7597,8 +7604,20 @@ Exemplos:
 
             // Preencher campos condicionais
             if (item.tipo === 'Arma') {
-                document.getElementById('itemDano').value = item.dano || 0;
-                document.getElementById('itemReacao').value = item.reacao || 0;
+                // Aguardar os campos serem criados pelo updateItemTypeFields
+                setTimeout(() => {
+                    const tipoArmaEl = document.getElementById('itemTipoArma');
+                    const arremessavelEl = document.getElementById('itemArremessavel');
+                    
+                    if (tipoArmaEl) {
+                        tipoArmaEl.value = item.tipoArma || '';
+                        tipoArmaEl.disabled = true; // Bloquear tipo de arma
+                    }
+                    if (arremessavelEl) arremessavelEl.checked = item.arremessavel || false;
+                    
+                    document.getElementById('itemDano').value = item.dano || 0;
+                    document.getElementById('itemReacao').value = item.reacao || 0;
+                }, 50);
             } else if (item.tipo === 'Vestimenta') {
                 document.getElementById('itemBlindagem').value = item.blindagem || 0;
             } else if (item.tipo === 'Projétil') {
@@ -7779,6 +7798,31 @@ Exemplos:
                     html = `
                         <div style="border-top: 2px solid var(--primary); padding-top: 15px; margin-top: 15px;">
                             <h3 style="color: var(--primary); margin-bottom: 15px;">⚔️ Atributos de Arma</h3>
+                            
+                            <!-- Tipo de Arma -->
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Tipo de Arma*</label>
+                                <select id="itemTipoArma" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                    <option value="">Selecione...</option>
+                                    <option value="Manopla">👊 Manopla</option>
+                                    <option value="Haste">🔱 Haste</option>
+                                    <option value="Pesada">⚒️ Pesada</option>
+                                    <option value="De Uma Mão">⚔️ De Uma Mão</option>
+                                    <option value="De Duas Mãos">🗡️ De Duas Mãos</option>
+                                    <option value="Dupla">🔪🔪 Dupla</option>
+                                    <option value="Escudo">🛡️ Escudo</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Arremessável -->
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: flex; align-items: center; gap: 10px; color: #cbd5e1; cursor: pointer;">
+                                    <input type="checkbox" id="itemArremessavel" style="width: 20px; height: 20px; cursor: pointer;">
+                                    <span style="font-size: 0.9rem;">🎯 Arremessável?</span>
+                                </label>
+                            </div>
+                            
+                            <!-- Dano e Reação -->
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                 <div>
                                     <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Dano</label>
@@ -8079,6 +8123,8 @@ Exemplos:
             // Coletar dados específicos por tipo
             switch(tipo) {
                 case 'Arma':
+                    itemData.tipoArma = document.getElementById('itemTipoArma')?.value || '';
+                    itemData.arremessavel = document.getElementById('itemArremessavel')?.checked || false;
                     itemData.dano = parseInt(document.getElementById('itemDano').value) || 0;
                     itemData.reacao = parseInt(document.getElementById('itemReacao').value) || 0;
                     break;
