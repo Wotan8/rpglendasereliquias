@@ -2185,6 +2185,18 @@
 
         <!-- ABA COMBATE -->
         <div id="combate" class="tab-content">
+
+            <!-- Ações Ofensivas -->
+            <div class="section" style="margin-bottom: 20px;">
+                <h2 class="section-title">⚔️ Ações Ofensivas</h2>
+                <div style="background: rgba(139, 92, 246, 0.1); border-radius: 12px; padding: 12px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(15, 23, 42, 0.6); border-radius: 8px; border-left: 4px solid var(--primary);">
+                        <span style="font-weight: 600; color: var(--light);">👊 Golpe Desarmado</span>
+                        <span style="font-weight: 700; color: var(--primary); font-size: 1.1rem;">🎲 <span id="golpe-desarmado-valor">0</span></span>
+                    </div>
+                </div>
+            </div>
+
             <div class="section">
                 <h2 class="section-title">Status de Combate</h2>
 
@@ -3285,6 +3297,32 @@ Exemplos:
                 });
                 
                 window.character.containers = containersWithItems;
+                // Garantir que itens fora do container 'Equipados' tenham equipado = false
+                const itemsToFix = [];
+                containersWithItems.forEach(container => {
+                    if (container.name !== 'Equipados') {
+                        container.items.forEach(item => {
+                            if ((item.tipo === 'Arma' || item.tipo === 'Vestimenta') && item.equipado === true) {
+                                console.log(`🔧 Corrigindo item "${item.name}" - mudando equipado de true para false`);
+                                item.equipado = false;
+                                itemsToFix.push(item);
+                            }
+                        });
+                    }
+                });
+
+                // Salvar itens corrigidos no Firebase
+                if (itemsToFix.length > 0) {
+                    console.log(`💾 Salvando ${itemsToFix.length} item(ns) corrigido(s) no Firebase`);
+                    for (const item of itemsToFix) {
+                        try {
+                            await window.saveItemToFirebase(item);
+                        } catch (error) {
+                            console.error(`❌ Erro ao salvar item ${item.name}:`, error);
+                        }
+                    }
+                }
+
                 console.log('✅ Inventário carregado:', containersWithItems);
                 updateLunsDisplay();
 
@@ -6572,6 +6610,40 @@ Exemplos:
             }
         }
 
+        /**
+         * Calcula os bônus totais de todas as vestimentas equipadas
+         */
+        function calcularBonusVestimentas() {
+            const char = getChar();
+            const bonus = {
+                blindagem: 0,
+                deslocTerrestre: 0,
+                reacao: 0,
+                iniciativa: 0,
+                cargaMax: 0
+            };
+            
+            // Percorrer containers procurando vestimentas equipadas
+            if (char.containers) {
+                char.containers.forEach(container => {
+                    if (container.items) {
+                        container.items.forEach(item => {
+                            // Se for vestimenta E estiver equipada
+                            if (item.tipo === 'Vestimenta' && item.equipado) {
+                                bonus.blindagem += (item.blindagem || 0);
+                                bonus.deslocTerrestre += (item.deslocTerrestre || 0);
+                                bonus.reacao += (item.reacaoVest || 0);
+                                bonus.iniciativa += (item.iniciativa || 0);
+                                bonus.cargaMax += (item.cargaMax || 0);
+                            }
+                        });
+                    }
+                });
+            }
+            
+            return bonus;
+        }
+
         function updateAllCalculations() {
             try {
                 const char = getChar();
@@ -6589,9 +6661,12 @@ Exemplos:
                 };
                 
                 // Atualizar cálculos com proteção
-                safeUpdate('calc-iniciativa', char.rac + char.des + char.aut + agilidade - char.tamanho);
-                safeUpdate('calc-reacao', Math.min(char.des, char.rac) + agilidade);
-                safeUpdate('calc-deslocamento', (char.for + char.des + char.tamanho + agilidade) + 'm');
+                // Calcular bônus de vestimentas equipadas
+                const bonusVest = calcularBonusVestimentas();
+
+                safeUpdate('calc-iniciativa', char.rac + char.des + char.aut + agilidade - char.tamanho + bonusVest.iniciativa);
+                safeUpdate('calc-reacao', Math.min(char.des, char.rac) + agilidade + bonusVest.reacao);
+                safeUpdate('calc-deslocamento', (char.for + char.des + char.tamanho + agilidade + bonusVest.deslocTerrestre) + 'm');
                 
                 const vitalidadeMax = char.vig + char.tamanho;
                 safeUpdate('calc-vitalidade-max', vitalidadeMax);
@@ -6648,6 +6723,7 @@ Exemplos:
                 if (char.raca === 'Yotun') {
                     cargaMax = cargaMax * 2; // Habilidade ALTA CARGA: dobra a Carga Max
                 }
+                cargaMax += bonusVest.cargaMax; // Adicionar bônus de vestimentas
                 safeUpdate('calc-carga', cargaMax);
                 
                 safeUpdate('calc-sanidade', char.sanCurrent || 80);
@@ -6659,6 +6735,7 @@ Exemplos:
                     const nivelBlindagem = (char.skillRace && char.skillRace.blindagemNatural) ? char.skillRace.blindagemNatural : 2;
                     blindagemTotal += nivelBlindagem; // Adiciona o nível atual (2, 3, 4 ou 5)
                 }
+                blindagemTotal += bonusVest.blindagem; // Adicionar bônus de vestimentas
 
                 safeUpdate('calc-blindagem', blindagemTotal);
 
@@ -6675,6 +6752,14 @@ Exemplos:
                 if (cpNomeEl) {
                     cpNomeEl.textContent = cpData.nome;
                     cpNomeEl.style.color = cpData.corLetra;
+                }
+
+                // Atualizar Golpe Desarmado (FOR + Briga)
+                const briga = char.skills?.['briga'] || 0;
+                const golpeDesarmado = char.for + briga;
+                const golpeDesarmadoElement = document.getElementById('golpe-desarmado-valor');
+                if (golpeDesarmadoElement) {
+                    golpeDesarmadoElement.textContent = golpeDesarmado;
                 }
 
                 // 💾 SALVAR CP NO PERSONAGEM (Firebase)
@@ -6728,7 +6813,8 @@ Exemplos:
                     if (char.raca === 'Yotun') {
                         maxCapacity = maxCapacity * 2; // Habilidade ALTA CARGA: dobra a Carga Max
                     }
-                    
+                    maxCapacity += bonusVest.cargaMax; // Adicionar bônus de vestimentas
+
                     equipados.maxCapacity = maxCapacity;
                     equipados.maxSize = forca * vig * atletismo;
                     
@@ -7542,6 +7628,9 @@ Exemplos:
                 
                 // Atualizar display
                 updateContainers();
+
+                // Atualizar cálculos do personagem (para refletir bônus de vestimentas)
+                updateAllCalculations();
                 
                 // Feedback visual
                 const texto = item.tipo === 'Arma' ? 
@@ -7734,6 +7823,14 @@ Exemplos:
             
             const item = fromContainer.items.find(i => i.id === itemId);
             if (!item) return;
+
+            // Verificar se o item está equipado no container Equipados
+            if (fromContainer.name === 'Equipados' && 
+                (item.tipo === 'Arma' || item.tipo === 'Vestimenta') && 
+                item.equipado === true) {
+                alert('⚠️ Item Equipado!\n\nVocê precisa desmarcar a caixinha de equipado antes de tirar este item do container "Equipados".');
+                return;
+            }
             
             // Verificar se é Item de Container
             if (item.isContainerItem) {
