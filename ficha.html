@@ -3004,6 +3004,10 @@ Exemplos:
                     tipoArma: item.tipoArma || '', // Tipo da Arma
                     arremessavel: item.arremessavel || false, // Se a Arma é Arremessável?
                     blindagem: item.blindagem || 0, // Vestimenta
+                    deslocTerrestre: item.deslocTerrestre || 0, // Vestimenta
+                    reacaoVest: item.reacaoVest || 0, // Vestimenta
+                    iniciativa: item.iniciativa || 0, // Vestimenta
+                    cargaMax: item.cargaMax || 0, // Vestimenta
                     maxCapacity: item.maxCapacity || 0, // Container
                     maxSize: item.maxSize || 0, // Container
                     equipado: item.equipado || false // Estado de equipado
@@ -7437,7 +7441,13 @@ Exemplos:
                         if (item.tipo === 'Arma') {
                             detalhes += ` | Dano: +${item.dano || 0} | Reação: +${item.reacao || 0}`;
                         } else if (item.tipo === 'Vestimenta') {
-                            detalhes += ` | Blindagem: +${item.blindagem || 0}`;
+                            const stats = [];
+                            if (item.blindagem) stats.push(`Blind: ${item.blindagem > 0 ? '+' : ''}${item.blindagem}`);
+                            if (item.deslocTerrestre) stats.push(`Desloc: ${item.deslocTerrestre > 0 ? '+' : ''}${item.deslocTerrestre}`);
+                            if (item.reacaoVest) stats.push(`Reação: ${item.reacaoVest > 0 ? '+' : ''}${item.reacaoVest}`);
+                            if (item.iniciativa) stats.push(`Inic: ${item.iniciativa > 0 ? '+' : ''}${item.iniciativa}`);
+                            if (item.cargaMax) stats.push(`Carga: ${item.cargaMax > 0 ? '+' : ''}${item.cargaMax}`);
+                            if (stats.length > 0) detalhes += ` | ${stats.join(' | ')}`;
                         } else if (item.tipo === 'Projétil') {
                             detalhes += ` | Dano: +${item.dano || 0}`;
                         } else if (item.tipo === 'Container') {
@@ -7663,6 +7673,10 @@ Exemplos:
                 }, 50);
             } else if (item.tipo === 'Vestimenta') {
                 document.getElementById('itemBlindagem').value = item.blindagem || 0;
+                document.getElementById('itemDeslocTerrestre').value = item.deslocTerrestre || 0;
+                document.getElementById('itemReacaoVest').value = item.reacaoVest || 0;
+                document.getElementById('itemIniciativa').value = item.iniciativa || 0;
+                document.getElementById('itemCargaMax').value = item.cargaMax || 0;
             } else if (item.tipo === 'Projétil') {
                 document.getElementById('itemQuantidade').value = item.quantity || 1;
                 document.getElementById('itemPackSize').value = item.packSize || 1;
@@ -7886,9 +7900,27 @@ Exemplos:
                     html = `
                         <div style="border-top: 2px solid var(--primary); padding-top: 15px; margin-top: 15px;">
                             <h3 style="color: var(--primary); margin-bottom: 15px;">🛡️ Atributos de Vestimenta</h3>
-                            <div>
-                                <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Blindagem</label>
-                                <input type="number" id="itemBlindagem" min="0" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Blindagem</label>
+                                    <input type="number" id="itemBlindagem" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Desloc. Terrestre</label>
+                                    <input type="number" id="itemDeslocTerrestre" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Reação</label>
+                                    <input type="number" id="itemReacaoVest" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Iniciativa</label>
+                                    <input type="number" id="itemIniciativa" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Carga Max</label>
+                                    <input type="number" id="itemCargaMax" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
                             </div>
                         </div>
                     `;
@@ -8175,6 +8207,10 @@ Exemplos:
                     break;
                 case 'Vestimenta':
                     itemData.blindagem = parseInt(document.getElementById('itemBlindagem').value) || 0;
+                    itemData.deslocTerrestre = parseInt(document.getElementById('itemDeslocTerrestre').value) || 0;
+                    itemData.reacaoVest = parseInt(document.getElementById('itemReacaoVest').value) || 0;
+                    itemData.iniciativa = parseInt(document.getElementById('itemIniciativa').value) || 0;
+                    itemData.cargaMax = parseInt(document.getElementById('itemCargaMax').value) || 0;
                     break;
                 case 'Projétil':
                     itemData.quantity = parseInt(document.getElementById('itemQuantidade').value) || 1;
