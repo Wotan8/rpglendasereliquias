@@ -3005,7 +3005,8 @@ Exemplos:
                     arremessavel: item.arremessavel || false, // Se a Arma é Arremessável?
                     blindagem: item.blindagem || 0, // Vestimenta
                     maxCapacity: item.maxCapacity || 0, // Container
-                    maxSize: item.maxSize || 0 // Container
+                    maxSize: item.maxSize || 0, // Container
+                    equipado: item.equipado || false // Estado de equipado
                 }, { merge: true });
                 
                 console.log('✅ Item salvo:', item.name);
@@ -7454,7 +7455,17 @@ Exemplos:
                                 <div class="item-info" onclick="editItem('${container.id}', '${item.id}')" style="cursor: pointer; flex: 1; display: flex; align-items: center;">
                                     ${imagemHTML}
                                     <div style="flex: 1;">
-                                        <div class="item-name">${item.isContainerItem ? '📦 ' : ''}${item.name} ${item.packSize > 1 ? `[Pack ${item.packSize}]` : ''} (x${item.quantity})${item.isContainerItem ? ' [CONTAINER]' : ''}</div>
+                                        <div class="item-name" style="display: flex; align-items: center; gap: 8px;">
+                                            ${container.name === 'Equipados' && (item.tipo === 'Arma' || item.tipo === 'Vestimenta') ? `
+                                                <input type="checkbox" 
+                                                    ${item.equipado ? 'checked' : ''} 
+                                                    onchange="toggleEquipado('${container.id}', '${item.id}')"
+                                                    style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); flex-shrink: 0;"
+                                                    title="${item.tipo === 'Arma' ? 'Arma empunhada' : 'Vestido'}"
+                                                    onclick="event.stopPropagation()">
+                                            ` : ''}
+                                            <span>${item.isContainerItem ? '📦 ' : ''}${item.name} ${item.packSize > 1 ? `[Pack ${item.packSize}]` : ''} (x${item.quantity})${item.isContainerItem ? ' [CONTAINER]' : ''}</span>
+                                        </div>
                                         <div class="item-details">
                                             ${detalhes}
                                             ${item.description ? `<br>${item.description}` : ''}
@@ -7502,6 +7513,38 @@ Exemplos:
             // Atualizar display de Luns
             updateLunsDisplay();
         }
+
+        // Função para marcar/desmarcar item como equipado
+        window.toggleEquipado = async function(containerId, itemId) {
+            try {
+                const char = getChar();
+                const container = char.containers.find(c => c.id === containerId || c.name === containerId);
+                if (!container) return;
+                
+                const item = container.items.find(i => i.id === itemId);
+                if (!item) return;
+                
+                // Alternar estado
+                item.equipado = !item.equipado;
+                
+                // Salvar usando a função existente que tem acesso ao Firebase
+                await window.saveItemToFirebase(item);
+                
+                // Atualizar display
+                updateContainers();
+                
+                // Feedback visual
+                const texto = item.tipo === 'Arma' ? 
+                    (item.equipado ? '⚔️ Arma empunhada!' : '🔽 Arma guardada') :
+                    (item.equipado ? '👕 Vestimenta equipada!' : '🔽 Vestimenta removida');
+                
+                showAlert(texto, 'success');
+                
+            } catch (error) {
+                console.error('Erro ao alternar equipado:', error);
+                showAlert('❌ Erro ao atualizar!', 'danger');
+            }
+        };
 
         window.editItem = function(containerId, itemId) {
             console.log('🔍 editItem chamado com containerId:', containerId, 'itemId:', itemId);
@@ -7811,6 +7854,8 @@ Exemplos:
                                     <option value="De Duas Mãos">🗡️ De Duas Mãos</option>
                                     <option value="Dupla">🔪🔪 Dupla</option>
                                     <option value="Escudo">🛡️ Escudo</option>
+                                    <option value="Disparo Leve">🏹💨 Disparo Leve</option>
+                                    <option value="Disparo Pesado">🏹🗜️ Disparo Pesado</option>
                                 </select>
                             </div>
                             
