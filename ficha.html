@@ -1835,11 +1835,27 @@
                         </div>
                         
                         <div style="background: rgba(107, 114, 128, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #6b7280;">
-                            <strong style="color: #9ca3af;">🛡️ BLINDAGEM NATURAL 2</strong>
-                            <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                                <strong id="blindagem-titulo" style="color: #9ca3af;">🛡️ BLINDAGEM NATURAL 2</strong>
+                                <button onclick="upgradeBlindagemNatural()" 
+                                        style="background: linear-gradient(135deg, var(--primary), var(--secondary)); 
+                                            border: none; 
+                                            color: white; 
+                                            font-size: 1.2rem; 
+                                            padding: 5px 12px; 
+                                            border-radius: 8px; 
+                                            cursor: pointer; 
+                                            transition: all 0.3s; 
+                                            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);"
+                                        onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 4px 15px rgba(139, 92, 246, 0.5)';"
+                                        onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 8px rgba(139, 92, 246, 0.3)';">
+                                    ⭐
+                                </button>
+                            </div>
+                            <p id="blindagem-desc" style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
                                 Sua pele é dura como pedra, lhe oferecendo uma blindagem natural.
                                 <br><span style="color: var(--success);">+2 de Blindagem</span>
-                                <br><span style="color: #fbbf24;">Níveis: III (+3, 10 EXP), IV (+4, 25 EXP), V (+5, 40 EXP) - Apenas na criação</span>
+                                <br><span style="color: #fbbf24;">Níveis: III (+3, 10 EXP), IV (+4, 25 EXP), V (+5, 40 EXP)</span>
                             </p>
                         </div>
                         
@@ -2558,13 +2574,19 @@ Exemplos:
                     const forca = char.for || 1;
                     
                     const maxSize = forca * vig * atletismo;
+
+                    // Calcular maxCapacity (Carga Max) - Yotun tem ALTA CARGA: dobra o valor
+                    let maxCapacity = forca + vig;
+                    if (char.raca === 'Yotun') {
+                        maxCapacity = maxCapacity * 2; // Habilidade ALTA CARGA: dobra a Carga Max
+                    }
                     
                     equipados = {
                         id: 'equipados-' + Date.now(),
                         name: 'Equipados',
                         ownerId: currentUser.uid,
                         characterId: characterId,
-                        maxCapacity: forca + vig,
+                        maxCapacity: maxCapacity,
                         maxSize: maxSize,
                         itemIds: []
                     };
@@ -6623,11 +6645,14 @@ Exemplos:
                 
                 safeUpdate('calc-sanidade', char.sanCurrent || 80);
                 
-                // Blindagem (Yotun tem BLINDAGEM NATURAL II: +2)
+                // Blindagem (Yotun tem BLINDAGEM NATURAL - nível variável)
                 let blindagemTotal = char.blindagem || 0;
                 if (char.raca === 'Yotun') {
-                    blindagemTotal += 2; // Habilidade BLINDAGEM NATURAL II
+                    // Pegar o nível de BLINDAGEM NATURAL do BD (padrão: 2)
+                    const nivelBlindagem = (char.skillRace && char.skillRace.blindagemNatural) ? char.skillRace.blindagemNatural : 2;
+                    blindagemTotal += nivelBlindagem; // Adiciona o nível atual (2, 3, 4 ou 5)
                 }
+
                 safeUpdate('calc-blindagem', blindagemTotal);
 
                 const cpData = calculateCP();
@@ -6690,8 +6715,14 @@ Exemplos:
                     const atletismo = char.skills['atletismo'] || 1;
                     const vig = char.vig || 1;
                     const forca = char.for || 1;
+
+                    // Calcular maxCapacity (Carga Max) - Yotun tem ALTA CARGA: dobra o valor
+                    let maxCapacity = forca + vig;
+                    if (char.raca === 'Yotun') {
+                        maxCapacity = maxCapacity * 2; // Habilidade ALTA CARGA: dobra a Carga Max
+                    }
                     
-                    equipados.maxCapacity = forca + vig
+                    equipados.maxCapacity = maxCapacity;
                     equipados.maxSize = forca * vig * atletismo;
                     
                     console.log(`📦 Equipados atualizado: maxSize = ${forca} × ${vig}${atletismo > 0 ? ` × ${atletismo}` : ''} = ${equipados.maxSize}`);
@@ -6743,7 +6774,7 @@ Exemplos:
 
         window.updateDETBar = function() {
             const char = getChar();
-            const max = char.prs + char.aut;
+            const max = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0);
             const current = parseInt(document.getElementById('det-current').value) || 0;
             char.detCurrent = Math.max(0, Math.min(current, max));
             document.getElementById('det-current').value = char.detCurrent;
@@ -6755,7 +6786,7 @@ Exemplos:
 
         window.adjustDET = function(amount) {
             const char = getChar();
-            const max = char.prs + char.aut;
+            const max = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0);
             char.detCurrent = Math.max(0, Math.min(char.detCurrent + amount, max));
             document.getElementById('det-current').value = char.detCurrent;
             updateDETBar();
@@ -6763,7 +6794,7 @@ Exemplos:
 
         window.resetDET = function() {
             const char = getChar();
-            const max = char.prs + char.aut;
+            const max = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0);
             char.detCurrent = max;
             document.getElementById('det-current').value = char.detCurrent;
             updateDETBar();
@@ -9219,6 +9250,109 @@ Exemplos:
             }
         }
 
+        // ========== SISTEMA DE UPGRADE: BLINDAGEM NATURAL ==========
+
+        // Função para fazer upgrade de BLINDAGEM NATURAL
+        window.upgradeBlindagemNatural = function() {
+            try {
+                const char = getChar();
+                
+                // Inicializar skillRace se não existir
+                if (!char.skillRace) {
+                    char.skillRace = {};
+                }
+                
+                // Pegar o nível atual do BD (ou 2 se não existir - Yotun começa no nível 2)
+                const nivelAtual = char.skillRace.blindagemNatural || 2;
+                
+                // Verificar se já está no nível máximo
+                if (nivelAtual >= 5) {
+                    alert('⭐ BLINDAGEM NATURAL já está no nível máximo!');
+                    return;
+                }
+                
+                // Definir custos de EXP para cada upgrade (começa do nível 2)
+                const custos = {
+                    2: 10,  // Nível 2 → 3
+                    3: 25,  // Nível 3 → 4
+                    4: 40   // Nível 4 → 5
+                };
+                
+                const custoUpgrade = custos[nivelAtual];
+                const proximoNivel = nivelAtual + 1;
+                
+                // Verificar se tem EXP suficiente
+                const expAtual = parseInt(char.exp) || 0;
+                
+                if (expAtual < custoUpgrade) {
+                    alert(`❌ EXP insuficiente! Você precisa de ${custoUpgrade} EXP para subir para o nível ${proximoNivel}. Você tem: ${expAtual} EXP`);
+                    return;
+                }
+                
+                // Mostrar confirmação
+                const confirmacao = confirm(`🆙 Deseja fazer upgrade de BLINDAGEM NATURAL?\n\nNível ${nivelAtual} → Nível ${proximoNivel}\nBlindagem atual: +${nivelAtual} → Nova Blindagem: +${proximoNivel}\nCusto: ${custoUpgrade} EXP\nEXP atual: ${expAtual}\nEXP após upgrade: ${expAtual - custoUpgrade}\n\nConfirmar?`);
+                
+                if (confirmacao) {
+                    // Subtrair o EXP
+                    char.exp = expAtual - custoUpgrade;
+                    
+                    const expInput = document.getElementById('exp');
+                    if (expInput) {
+                        expInput.value = char.exp;
+                    }
+                    
+                    // SALVAR O NOVO NÍVEL NO BD
+                    char.skillRace.blindagemNatural = proximoNivel;
+                    
+                    // Atualizar visualmente
+                    atualizarBlingagemNaturalHTML(proximoNivel);
+                    
+                    // Atualizar todos os cálculos (incluindo blindagem)
+                    updateAllCalculations();
+                    
+                    // Salvar no Firebase
+                    autoSave();
+                    
+                    // Mostrar mensagem de sucesso
+                    alert(`🎉 BLINDAGEM NATURAL evoluiu para o nível ${proximoNivel}! Nova Blindagem Total: +${proximoNivel}`);
+                }
+            } catch (error) {
+                console.error('Erro no upgrade de Blindagem Natural:', error);
+                alert('❌ Erro ao fazer upgrade. Tente novamente.');
+            }
+        };
+
+        // Função auxiliar para atualizar o HTML da Blindagem Natural
+        function atualizarBlingagemNaturalHTML(nivel) {
+            const tituloElement = document.getElementById('blindagem-titulo');
+            const descElement = document.getElementById('blindagem-desc');
+            
+            if (!tituloElement || !descElement) return;
+            
+            // Atualizar o título com o novo nível
+            tituloElement.textContent = `🛡️ BLINDAGEM NATURAL ${nivel}`;
+            
+            // Atualizar a descrição com o novo bônus
+            descElement.innerHTML = `
+                Sua pele é dura como pedra, lhe oferecendo uma blindagem natural.
+                <br><span style="color: var(--success);">+${nivel} de Blindagem</span>
+                <br><span style="color: #fbbf24;">Níveis: III (+3, 10 EXP), IV (+4, 25 EXP), V (+5, 40 EXP)</span>
+            `;
+        }
+
+        // Função para carregar o nível de Blindagem Natural do BD ao iniciar
+        function carregarBlingagemNatural() {
+            const char = getChar();
+            
+            // Verificar se é Yotun
+            if (char.raca === 'Yotun') {
+                // Pegar o nível salvo ou 2 (padrão do Yotun)
+                const nivelSalvo = (char.skillRace && char.skillRace.blindagemNatural) ? char.skillRace.blindagemNatural : 2;
+                atualizarBlingagemNaturalHTML(nivelSalvo);
+                console.log(`✅ BLINDAGEM NATURAL carregado: Nível ${nivelSalvo}`);
+            }
+        }
+
         // Inicializar ao carregar a página
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
@@ -9226,6 +9360,7 @@ Exemplos:
                 updateCabecaQuenteValor();
                 carregarGuardiaoImponente(); // Carregar nível de Guardião Imponente do BD
                 carregarGolpeTitanico(); // Carregar nível de Golpe Titânico do BD
+                carregarBlingagemNatural(); // Carregar nível de Blindagem Natural do BD
             }, 1500); // Aguardar 1.5s para garantir que o character foi carregado
         });
 
