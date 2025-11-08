@@ -6613,9 +6613,9 @@ Exemplos:
         }
 
         /**
-         * Calcula os bônus totais de todas as vestimentas equipadas
+         * Calcula os bônus totais de todas as vestimentas e armas equipadas
          */
-        function calcularBonusVestimentas() {
+        function calcularBonusEquipamentos() {
             const char = getChar();
             const bonus = {
                 blindagem: 0,
@@ -6625,7 +6625,7 @@ Exemplos:
                 cargaMax: 0
             };
             
-            // Percorrer containers procurando vestimentas equipadas
+            // Percorrer containers procurando itens equipados
             if (char.containers) {
                 char.containers.forEach(container => {
                     if (container.items) {
@@ -6637,6 +6637,10 @@ Exemplos:
                                 bonus.reacao += (item.reacaoVest || 0);
                                 bonus.iniciativa += (item.iniciativa || 0);
                                 bonus.cargaMax += (item.cargaMax || 0);
+                            }
+                            // Se for arma E estiver equipada
+                            else if (item.tipo === 'Arma' && item.equipado) {
+                                bonus.reacao += (item.reacao || 0);
                             }
                         });
                     }
@@ -6690,10 +6694,11 @@ Exemplos:
                 'Disparo Pesado': '🏹🗜️'
             };
             
-            // Skills necessárias
+            // Skills necessárias 
             const briga = char.skills?.['briga'] || 0;
             const arma = char.skills?.['arma'] || 0;
             const disparo = char.skills?.['disparo'] || 0;
+            // const essencia = char.skills?.['essência'] || 0;
 
             // Habilidades de classe (Cacador)
             const precisao = char.classAbilities?.['precisão'] || 0;
@@ -6705,8 +6710,12 @@ Exemplos:
             const armasDuasMaos = char.classAbilities?.['armas-duas-maos'] || 0;
             const armasDuplas = char.classAbilities?.['armas-duplas'] || 0;
 
-            // Habilidades de classe (Cacador)
+            // Habilidades de classe (Cacador) Foco Magico
             const armaspunho = char.classAbilities?.['armas-punho'] || 0;
+
+            // Habilidades de classe (Adepto e Pallacerdote) Foco Magico 
+            // const talismaProfano = char.classAbilities?.['talisma-profano'] || 0;
+            // const simboloSagrado = char.classAbilities?.['simbolo-sagrado'] || 0;
             
             // Calcular valor de teste para cada arma
             const armasHTML = armasEquipadas.map(itemArma => {
@@ -6791,12 +6800,12 @@ Exemplos:
                 };
                 
                 // Atualizar cálculos com proteção
-                // Calcular bônus de vestimentas equipadas
-                const bonusVest = calcularBonusVestimentas();
+                // Calcular bônus de equipamentos equipados (vestimentas e armas)
+                const bonusEquip = calcularBonusEquipamentos();
 
-                safeUpdate('calc-iniciativa', char.rac + char.des + char.aut + agilidade - char.tamanho + bonusVest.iniciativa);
-                safeUpdate('calc-reacao', Math.min(char.des, char.rac) + agilidade + bonusVest.reacao);
-                safeUpdate('calc-deslocamento', (char.for + char.des + char.tamanho + agilidade + bonusVest.deslocTerrestre) + 'm');
+                safeUpdate('calc-iniciativa', char.rac + char.des + char.aut + agilidade - char.tamanho + bonusEquip.iniciativa);
+                safeUpdate('calc-reacao', Math.min(char.des, char.rac) + agilidade + bonusEquip.reacao);
+                safeUpdate('calc-deslocamento', (char.for + char.des + char.tamanho + agilidade + bonusEquip.deslocTerrestre) + 'm');
                 
                 const vitalidadeMax = char.vig + char.tamanho;
                 safeUpdate('calc-vitalidade-max', vitalidadeMax);
@@ -6853,7 +6862,7 @@ Exemplos:
                 if (char.raca === 'Yotun') {
                     cargaMax = cargaMax * 2; // Habilidade ALTA CARGA: dobra a Carga Max
                 }
-                cargaMax += bonusVest.cargaMax; // Adicionar bônus de vestimentas
+                cargaMax += bonusEquip.cargaMax; // Adicionar bônus de equipamentos
                 safeUpdate('calc-carga', cargaMax);
                 
                 safeUpdate('calc-sanidade', char.sanCurrent || 80);
@@ -6865,7 +6874,7 @@ Exemplos:
                     const nivelBlindagem = (char.skillRace && char.skillRace.blindagemNatural) ? char.skillRace.blindagemNatural : 2;
                     blindagemTotal += nivelBlindagem; // Adiciona o nível atual (2, 3, 4 ou 5)
                 }
-                blindagemTotal += bonusVest.blindagem; // Adicionar bônus de vestimentas
+                blindagemTotal += bonusEquip.blindagem; // Adicionar bônus de equipamentos
 
                 safeUpdate('calc-blindagem', blindagemTotal);
 
@@ -6946,7 +6955,7 @@ Exemplos:
                     if (char.raca === 'Yotun') {
                         maxCapacity = maxCapacity * 2; // Habilidade ALTA CARGA: dobra a Carga Max
                     }
-                    maxCapacity += bonusVest.cargaMax; // Adicionar bônus de vestimentas
+                    maxCapacity += bonusEquip.cargaMax; // Adicionar bônus de equipamentos
 
                     equipados.maxCapacity = maxCapacity;
                     equipados.maxSize = forca * vig * atletismo;
