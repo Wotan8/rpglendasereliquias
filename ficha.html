@@ -2194,6 +2194,8 @@
                         <span style="font-weight: 600; color: var(--light);">👊 Golpe Desarmado</span>
                         <span style="font-weight: 700; color: var(--primary); font-size: 1.1rem;">🎲 <span id="golpe-desarmado-valor">0</span></span>
                     </div>
+                    <!-- Lista de armas equipadas será inserida aqui -->
+                    <div id="armas-equipadas-list"></div>
                 </div>
             </div>
 
@@ -6644,6 +6646,134 @@ Exemplos:
             return bonus;
         }
 
+        /**
+         * Calcula e exibe as armas equipadas nas Ações Ofensivas
+         */
+        function atualizarArmasEquipadas() {
+            const char = getChar();
+            const armasListElement = document.getElementById('armas-equipadas-list');
+            
+            if (!armasListElement) return;
+            
+            // Buscar armas equipadas
+            const armasEquipadas = [];
+            
+            if (char.containers) {
+                char.containers.forEach(container => {
+                    if (container.items) {
+                        container.items.forEach(item => {
+                            // Se for arma E estiver equipada
+                            if (item.tipo === 'Arma' && item.equipado) {
+                                armasEquipadas.push(item);
+                            }
+                        });
+                    }
+                });
+            }
+            
+            // Se não houver armas equipadas, limpar a lista
+            if (armasEquipadas.length === 0) {
+                armasListElement.innerHTML = '';
+                return;
+            }
+            
+            // Mapear emoji por tipo de arma
+            const emojiPorTipo = {
+                'Manopla': '👊',
+                'Haste': '🔱',
+                'Pesada': '⚒️',
+                'De Uma Mão': '⚔️',
+                'De Duas Mãos': '🗡️',
+                'Dupla': '🔪🔪',
+                'Escudo': '🛡️',
+                'Disparo Leve': '🏹💨',
+                'Disparo Pesado': '🏹🗜️'
+            };
+            
+            // Skills necessárias
+            const briga = char.skills?.['briga'] || 0;
+            const arma = char.skills?.['arma'] || 0;
+            const disparo = char.skills?.['disparo'] || 0;
+
+            // Habilidades de classe (Cacador)
+            const precisao = char.classAbilities?.['precisão'] || 0;
+
+            // Habilidades de classe (Guerreiro)
+            const armasHaste = char.classAbilities?.['armas-haste'] || 0;
+            const armasPesadas = char.classAbilities?.['armas-pesadas'] || 0;
+            const armasUmaMao = char.classAbilities?.['armas-uma-mao'] || 0;
+            const armasDuasMaos = char.classAbilities?.['armas-duas-maos'] || 0;
+            const armasDuplas = char.classAbilities?.['armas-duplas'] || 0;
+
+            // Habilidades de classe (Cacador)
+            const armaspunho = char.classAbilities?.['armas-punho'] || 0;
+            
+            // Calcular valor de teste para cada arma
+            const armasHTML = armasEquipadas.map(itemArma => {
+                let valorTeste = 0;
+                let emoji = emojiPorTipo[itemArma.tipoArma] || '⚔️';
+                
+                switch(itemArma.tipoArma) {
+                    case 'Manopla':
+                        // FOR + Briga + Dano da manopla
+                        valorTeste = char.for + briga + (itemArma.dano || 0);
+                        break;
+                        
+                    case 'Haste':
+                        // Maior entre FOR ou DES + Arma + Armas de Haste (se guerreiro) + Dano
+                        const forOuDesHaste = Math.max(char.for, char.des);
+                        valorTeste = forOuDesHaste + arma + armasHaste + (itemArma.dano || 0);
+                        break;
+                        
+                    case 'Pesada':
+                        // FOR + Arma + Armas Pesadas (se guerreiro) + Dano
+                        valorTeste = char.for + arma + armasPesadas + (itemArma.dano || 0);
+                        break;
+                        
+                    case 'De Uma Mão':
+                        // Maior entre FOR ou DES + Arma + Armas de Uma Mão (se guerreiro) + Dano
+                        const forOuDesUmaMao = Math.max(char.for, char.des);
+                        valorTeste = forOuDesUmaMao + arma + armasUmaMao + (itemArma.dano || 0);
+                        break;
+                        
+                    case 'De Duas Mãos':
+                        // Maior entre FOR ou DES + Arma + Armas de Duas Mãos (se guerreiro) + Dano
+                        const forOuDesDuasMaos = Math.max(char.for, char.des);
+                        valorTeste = forOuDesDuasMaos + arma + armasDuasMaos + (itemArma.dano || 0);
+                        break;
+                        
+                    case 'Dupla':
+                        // DES + Arma + Armas Duplas (se guerreiro) + armaspunho (se Ladino) + Dano
+                        valorTeste = char.des + arma + armasDuplas + armaspunho + (itemArma.dano || 0);
+                        break;
+                    
+                    case 'Disparo Leve':
+                        // DES + Disparo + Precisão (se caçador) + Dano
+                        valorTeste = char.des + disparo + precisao + (itemArma.dano || 0);
+                        break;
+                    
+                    case 'Disparo Pesado':
+                        // DES + Disparo + Precisão (se caçador) + Dano
+                        valorTeste = char.des + disparo + precisao + (itemArma.dano || 0);
+                        break;
+
+                    default:
+                        // Para outros tipos (Escudo)
+                        valorTeste = arma + (itemArma.dano || 0);
+                        break;
+                }
+                
+                return `
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(15, 23, 42, 0.6); border-radius: 8px; border-left: 4px solid var(--success); margin-top: 8px;">
+                        <span style="font-weight: 600; color: var(--light);">${emoji} ${itemArma.name}</span>
+                        <span style="font-weight: 700; color: var(--success); font-size: 1.1rem;">🎲 ${valorTeste}</span>
+                    </div>
+                `;
+            }).join('');
+            
+            armasListElement.innerHTML = armasHTML;
+        }
+
         function updateAllCalculations() {
             try {
                 const char = getChar();
@@ -6761,6 +6891,9 @@ Exemplos:
                 if (golpeDesarmadoElement) {
                     golpeDesarmadoElement.textContent = golpeDesarmado;
                 }
+
+                // Atualizar lista de armas equipadas
+                atualizarArmasEquipadas();
 
                 // 💾 SALVAR CP NO PERSONAGEM (Firebase)
                 char.cp = {
