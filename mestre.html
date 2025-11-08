@@ -1292,202 +1292,322 @@
         </div>
     </div>
 
-    <!-- MODAL DE EDIÇÃO -->
     <div id="editModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 1400px; max-height: 90vh; overflow-y: auto;">
             <div class="modal-header">
                 <div class="modal-title" id="modalTitle">Editar Personagem</div>
                 <button class="modal-close" onclick="closeModal()">✕</button>
             </div>
 
-            <div class="modal-tabs">
-                <button class="modal-tab active" onclick="switchModalTab('basico')">📋 Básico</button>
-                <button class="modal-tab" onclick="switchModalTab('atributos')">💪 Atributos</button>
-                <button class="modal-tab" onclick="switchModalTab('combate')">⚔️ Combate</button>
-                <button class="modal-tab" onclick="switchModalTab('inventario')">🎒 Inventário</button>
-                <button class="modal-tab" onclick="switchModalTab('aliados')">👥 Aliados</button>
-                <button class="modal-tab" onclick="switchModalTab('propriedades')">🏠 Propriedades</button>
-                <button class="modal-tab" onclick="switchModalTab('notas')">📝 Notas</button>
-                <button class="modal-tab" onclick="switchModalTab('caracteristicas')">📊 Características</button>
-            </div>
-
-            <div id="modalBasico" class="modal-tab-content active">
-                <div class="form-section">
-                    <div class="section-title">Informações Básicas</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Nome do Personagem</label>
-                            <input type="text" class="form-input" id="edit_nome">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Jogador</label>
-                            <input type="text" class="form-input" id="edit_jogador">
-                        </div>
+            <!-- INFORMAÇÕES BÁSICAS -->
+            <div class="form-section">
+                <div class="section-title">📋 Informações Básicas</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Nome do Personagem</label>
+                        <input type="text" class="form-input" id="edit_nome">
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Idade</label>
-                            <input type="number" class="form-input" id="edit_idade">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Raça</label>
-                            <select class="form-select" id="edit_raca">
-                                <option value="">Selecione...</option>
-                                <option value="Humano">Humano</option>
-                                <option value="Elorin">Elorin</option>
-                                <option value="Karu-Selvagem">Karu-Selvagem</option>
-                                <option value="Picxi">Picxi</option>
-                                <option value="Yotun">Yotun</option>
-                            </select>
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">Jogador</label>
+                        <input type="text" class="form-input" id="edit_jogador">
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Classe</label>
-                            <select class="form-select" id="edit_classe">
-                                <option value="">Selecione...</option>
-                                <option value="Caçador">Caçador</option>
-                                <option value="Druida">Druida</option>
-                                <option value="Guerreiro">Guerreiro</option>
-                                <option value="Adepto">Adepto (Necromante)</option>
-                                <option value="Ladino">Ladino</option>
-                                <option value="Pallacerdote">Pallacerdote</option>
-                                <option value="Ritualista">Ritualista (Abismancia)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Virtude</label>
-                            <select class="form-select" id="edit_virtude">
-                                <option value="">Selecione...</option>
-                                <option value="Caridade">Caridade</option>
-                                <option value="Esperança">Esperança</option>
-                                <option value="Fé">Fé</option>
-                                <option value="Fortaleza">Fortaleza</option>
-                                <option value="Justiça">Justiça</option>
-                                <option value="Prudência">Prudência</option>
-                                <option value="Temperança">Temperança</option>
-                            </select>
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">Idade</label>
+                        <input type="number" class="form-input" id="edit_idade">
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Vício</label>
-                            <select class="form-select" id="edit_vicio">
-                                <option value="">Selecione...</option>
-                                <option value="Avareza">Avareza</option>
-                                <option value="Gula">Gula</option>
-                                <option value="Inveja">Inveja</option>
-                                <option value="Ira">Ira</option>
-                                <option value="Luxúria">Luxúria</option>
-                                <option value="Orgulho">Orgulho</option>
-                                <option value="Preguiça">Preguiça</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Tamanho</label>
-                            <input type="number" class="form-input" id="edit_tamanho" value="5" min="1" max="15">
-                        </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Raça</label>
+                        <select class="form-select" id="edit_raca">
+                            <option value="">Selecione...</option>
+                            <option value="Humano">Humano</option>
+                            <option value="Elorin">Elorin</option>
+                            <option value="Karu-Selvagem">Karu-Selvagem</option>
+                            <option value="Picxi">Picxi</option>
+                            <option value="Yotun">Yotun</option>
+                            <option value="Dragau">Dragau</option>
+                        </select>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">EXP</label>
-                            <input type="number" class="form-input" id="edit_exp" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Aura de Imortalidade (AI)</label>
-                            <input type="number" class="form-input" id="edit_auraImortalidade" value="1" min="0" max="10">
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">Classe</label>
+                        <select class="form-select" id="edit_classe">
+                            <option value="">Selecione...</option>
+                            <option value="Caçador">Caçador</option>
+                            <option value="Druida">Druida</option>
+                            <option value="Guerreiro">Guerreiro</option>
+                            <option value="Adepto">Adepto (Necromante)</option>
+                            <option value="Ladino">Ladino</option>
+                            <option value="Pallacerdote">Pallacerdote</option>
+                            <option value="Ritualista">Ritualista (Abismancia)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Virtude</label>
+                        <select class="form-select" id="edit_virtude">
+                            <option value="">Selecione...</option>
+                            <option value="Caridade">Caridade</option>
+                            <option value="Esperança">Esperança</option>
+                            <option value="Fé">Fé</option>
+                            <option value="Fortaleza">Fortaleza</option>
+                            <option value="Justiça">Justiça</option>
+                            <option value="Prudência">Prudência</option>
+                            <option value="Temperança">Temperança</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Vício</label>
+                        <select class="form-select" id="edit_vicio">
+                            <option value="">Selecione...</option>
+                            <option value="Avareza">Avareza</option>
+                            <option value="Gula">Gula</option>
+                            <option value="Inveja">Inveja</option>
+                            <option value="Ira">Ira</option>
+                            <option value="Luxúria">Luxúria</option>
+                            <option value="Orgulho">Orgulho</option>
+                            <option value="Preguiça">Preguiça</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tamanho</label>
+                        <input type="number" class="form-input" id="edit_tamanho" value="5" min="1" max="15">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">EXP</label>
+                        <input type="number" class="form-input" id="edit_exp" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Aura de Imortalidade</label>
+                        <input type="number" class="form-input" id="edit_auraImortalidade" value="1" min="0" max="10">
                     </div>
                 </div>
             </div>
 
-            <div id="modalAtributos" class="modal-tab-content">
-                <div class="form-section">
-                    <div class="section-title">Atributos do Personagem</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">INT (Inteligência)</label>
-                            <input type="number" class="form-input" id="edit_int" value="1" min="1" max="5">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">FOR (Força)</label>
-                            <input type="number" class="form-input" id="edit_for" value="1" min="1" max="5">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">PRE (Presença)</label>
-                            <input type="number" class="form-input" id="edit_pre" value="1" min="1" max="5">
-                        </div>
+            <!-- ATRIBUTOS -->
+            <div class="form-section">
+                <div class="section-title">💪 Atributos</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">INT</label>
+                        <input type="number" class="form-input" id="edit_int" value="1" min="1" max="6">
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">RAC (Raciocínio)</label>
-                            <input type="number" class="form-input" id="edit_rac" value="1" min="1" max="5">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">DES (Destreza)</label>
-                            <input type="number" class="form-input" id="edit_des" value="1" min="1" max="5">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">MAN (Manha)</label>
-                            <input type="number" class="form-input" id="edit_man" value="1" min="1" max="5">
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">FOR</label>
+                        <input type="number" class="form-input" id="edit_for" value="1" min="1" max="6">
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">PRS (Persuasão)</label>
-                            <input type="number" class="form-input" id="edit_prs" value="1" min="1" max="5">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">VIG (Vigor)</label>
-                            <input type="number" class="form-input" id="edit_vig" value="1" min="1" max="5">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">AUT (Autocontrole)</label>
-                            <input type="number" class="form-input" id="edit_aut" value="1" min="1" max="5">
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">PRE</label>
+                        <input type="number" class="form-input" id="edit_pre" value="1" min="1" max="6">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">RAC</label>
+                        <input type="number" class="form-input" id="edit_rac" value="1" min="1" max="6">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">DES</label>
+                        <input type="number" class="form-input" id="edit_des" value="1" min="1" max="6">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">MAN</label>
+                        <input type="number" class="form-input" id="edit_man" value="1" min="1" max="6">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">PRS</label>
+                        <input type="number" class="form-input" id="edit_prs" value="1" min="1" max="6">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">VIG</label>
+                        <input type="number" class="form-input" id="edit_vig" value="1" min="1" max="6">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">AUT</label>
+                        <input type="number" class="form-input" id="edit_aut" value="1" min="1" max="6">
                     </div>
                 </div>
             </div>
 
-            <div id="modalCombate" class="modal-tab-content">
-                <div class="form-section">
-                    <div class="section-title">Status de Combate</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">❤️ Vitalidade (VIT) Atual</label>
-                            <input type="number" class="form-input" id="edit_hpCurrent" value="5">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">❤️ Vitalidade (VIT) Máxima</label>
-                            <input type="number" class="form-input" id="edit_hpMax" value="5" readonly style="background: rgba(15, 23, 42, 0.4);">
-                            <small style="color: #64748b; font-size: 0.8rem;">Calculado: VIG + Tamanho</small>
-                        </div>
+            <!-- PERÍCIAS MENTAIS -->
+            <div class="form-section">
+                <div class="section-title">🧠 Perícias Mentais</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Abismo</label>
+                        <input type="number" class="form-input" id="edit_skill_abismo" value="0" min="0" max="5">
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">⚡ Determinação Atual</label>
-                            <input type="number" class="form-input" id="edit_detCurrent" value="3">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">⚡ Determinação Máxima</label>
-                            <input type="number" class="form-input" id="edit_detMax" value="3" readonly style="background: rgba(15, 23, 42, 0.4);">
-                            <small style="color: #64748b; font-size: 0.8rem;">Calculado: AUT</small>
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">Alquimia</label>
+                        <input type="number" class="form-input" id="edit_skill_alquimia" value="0" min="0" max="5">
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">🧠 Sanidade Atual</label>
-                            <input type="number" class="form-input" id="edit_sanCurrent" value="80">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">🛡️ Blindagem</label>
-                            <input type="number" class="form-input" id="edit_blindagem" value="0">
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">Essência</label>
+                        <input type="number" class="form-input" id="edit_skill_essência" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Herbalismo</label>
+                        <input type="number" class="form-input" id="edit_skill_herbalismo" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">História</label>
+                        <input type="number" class="form-input" id="edit_skill_história" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Investigação</label>
+                        <input type="number" class="form-input" id="edit_skill_investigação" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Ofício Intelectual</label>
+                        <input type="number" class="form-input" id="edit_skill_ofício-intelectual" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Relíquia</label>
+                        <input type="number" class="form-input" id="edit_skill_relíquia" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Runomancia</label>
+                        <input type="number" class="form-input" id="edit_skill_runomancia" value="0" min="0" max="5">
+                    </div>
+                </div>
+            </div>
+
+            <!-- PERÍCIAS FÍSICAS -->
+            <div class="form-section">
+                <div class="section-title">💪 Perícias Físicas</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Arma</label>
+                        <input type="number" class="form-input" id="edit_skill_arma" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Disparo</label>
+                        <input type="number" class="form-input" id="edit_skill_disparo" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Atletismo</label>
+                        <input type="number" class="form-input" id="edit_skill_atletismo" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Briga</label>
+                        <input type="number" class="form-input" id="edit_skill_briga" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Agilidade</label>
+                        <input type="number" class="form-input" id="edit_skill_agilidade" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Furtividade</label>
+                        <input type="number" class="form-input" id="edit_skill_furtividade" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Montaria</label>
+                        <input type="number" class="form-input" id="edit_skill_montaria" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Ofício Braçal</label>
+                        <input type="number" class="form-input" id="edit_skill_ofício-braçal" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Sobrevivência</label>
+                        <input type="number" class="form-input" id="edit_skill_sobrevivência" value="0" min="0" max="5">
+                    </div>
+                </div>
+            </div>
+
+            <!-- PERÍCIAS SOCIAIS -->
+            <div class="form-section">
+                <div class="section-title">🗣️ Perícias Sociais</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Barganha</label>
+                        <input type="number" class="form-input" id="edit_skill_barganha" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Diplomacia</label>
+                        <input type="number" class="form-input" id="edit_skill_diplomacia" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Domar</label>
+                        <input type="number" class="form-input" id="edit_skill_domar" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Empatia</label>
+                        <input type="number" class="form-input" id="edit_skill_empatia" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Intimidação</label>
+                        <input type="number" class="form-input" id="edit_skill_intimidação" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Liderança</label>
+                        <input type="number" class="form-input" id="edit_skill_liderança" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Malandragem</label>
+                        <input type="number" class="form-input" id="edit_skill_malandragem" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Performance</label>
+                        <input type="number" class="form-input" id="edit_skill_performance" value="0" min="0" max="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Sedução</label>
+                        <input type="number" class="form-input" id="edit_skill_sedução" value="0" min="0" max="5">
+                    </div>
+                </div>
+            </div>
+
+            <!-- HABILIDADES DE CLASSE -->
+            <div class="form-section">
+                <div class="section-title">⭐ Habilidades de Classe</div>
+                <p style="color: #94a3b8; margin-bottom: 15px;">As habilidades disponíveis dependem da classe selecionada.</p>
+                <div id="edit_classAbilities" class="form-row">
+                    <p style="color: #64748b; text-align: center; padding: 20px;">Selecione uma classe para ver as habilidades</p>
+                </div>
+            </div>
+
+            <!-- RECURSOS DE CLASSE -->
+            <div class="form-section">
+                <div class="section-title">🎯 Recursos de Classe</div>
+                <div id="edit_classResources" class="form-row">
+                    <p style="color: #64748b; text-align: center; padding: 20px;">Selecione uma classe para ver os recursos</p>
+                </div>
+            </div>
+
+            <!-- COMBATE -->
+            <div class="form-section">
+                <div class="section-title">⚔️ Combate</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">❤️ Vitalidade Atual</label>
+                        <input type="number" class="form-input" id="edit_hpCurrent" value="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">❤️ Vitalidade Máxima</label>
+                        <input type="number" class="form-input" id="edit_hpMax" value="5" readonly style="background: rgba(15, 23, 42, 0.4);">
+                        <small style="color: #64748b;">VIG + Tamanho</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">⚡ Determinação Atual</label>
+                        <input type="number" class="form-input" id="edit_detCurrent" value="3">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">⚡ Determinação Máxima</label>
+                        <input type="number" class="form-input" id="edit_detMax" value="3" readonly style="background: rgba(15, 23, 42, 0.4);">
+                        <small style="color: #64748b;">AUT</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">🧠 Sanidade Atual</label>
+                        <input type="number" class="form-input" id="edit_sanCurrent" value="80">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">🛡️ Blindagem</label>
+                        <input type="number" class="form-input" id="edit_blindagem" value="0">
                     </div>
                 </div>
 
-                <div class="form-section">
-                    <div class="section-title">⚠️ Condições Ativas</div>
+                <div style="margin-top: 20px;">
+                    <h4 style="color: var(--primary); margin-bottom: 10px;">⚠️ Condições Ativas</h4>
                     <div id="edit_conditions">
                         <p style="color: #64748b; text-align: center; padding: 20px;">Nenhuma condição ativa</p>
                     </div>
@@ -1495,72 +1615,49 @@
                 </div>
             </div>
 
-            <div id="modalInventario" class="modal-tab-content">
-                <div class="form-section">
-                    <div class="section-title">💰 LUNS (Dinheiro)</div>
-                    <div class="form-group">
-                        <label class="form-label">Saldo Atual</label>
-                        <input type="number" class="form-input" id="edit_luns" value="0">
-                    </div>
+            <!-- INVENTÁRIO -->
+            <div class="form-section">
+                <div class="section-title">🎒 Inventário</div>
+                <div class="form-group">
+                    <label class="form-label">💰 LUNS (Dinheiro)</label>
+                    <input type="number" class="form-input" id="edit_luns" value="0">
                 </div>
-
-                <div class="form-section">
-                    <div class="section-title">🎒 Inventário</div>
-                    <div id="edit_inventory" class="items-list">
-                        <p style="color: #64748b; text-align: center; padding: 20px;">Sem itens no inventário</p>
-                    </div>
+                <div id="edit_inventory" class="items-list" style="margin-top: 15px;">
+                    <p style="color: #64748b; text-align: center; padding: 20px;">Sem itens no inventário</p>
                 </div>
             </div>
 
-            <div id="modalAliados" class="modal-tab-content">
-                <div class="form-section">
-                    <div class="section-title">👥 Aliados do Personagem</div>
-                    <div id="edit_allies" class="allies-list">
-                        <p style="color: #64748b; text-align: center; padding: 20px;">Nenhum aliado cadastrado</p>
-                    </div>
+            <!-- ALIADOS -->
+            <div class="form-section">
+                <div class="section-title">👥 Aliados</div>
+                <div id="edit_allies" class="allies-list">
+                    <p style="color: #64748b; text-align: center; padding: 20px;">Nenhum aliado cadastrado</p>
                 </div>
             </div>
 
-            <div id="modalPropriedades" class="modal-tab-content">
-                <div class="form-section">
-                    <div class="section-title">🏠 Propriedades do Personagem</div>
-                    <div id="edit_properties" class="properties-list">
-                        <p style="color: #64748b; text-align: center; padding: 20px;">Nenhuma propriedade cadastrada</p>
-                    </div>
+            <!-- PROPRIEDADES -->
+            <div class="form-section">
+                <div class="section-title">🏠 Propriedades</div>
+                <div id="edit_properties" class="properties-list">
+                    <p style="color: #64748b; text-align: center; padding: 20px;">Nenhuma propriedade cadastrada</p>
                 </div>
             </div>
 
-            <div id="modalNotas" class="modal-tab-content">
-                <div class="form-section">
-                    <div class="section-title">📝 Notas do Personagem</div>
-                    <div class="form-group">
-                        <textarea class="form-textarea" id="edit_notas" style="min-height: 200px;" placeholder="Notas escritas pelo jogador..."></textarea>
-                    </div>
-                </div>
-
-                <div class="master-notes-section">
-                    <div class="master-notes-label">
-                        🔒 NOTAS DO MESTRE (Visível apenas para você)
-                    </div>
-                    <div class="form-group">
-                        <textarea class="form-textarea" id="edit_masterNotes" style="min-height: 200px;" placeholder="Escreva suas anotações secretas sobre este personagem...
-
-Exemplos:
-- Segredos do personagem
-- Planos futuros para a história
-- Fraquezas e pontos importantes
-- Conexões com NPCs
-- Revelações planejadas"></textarea>
-                    </div>
+            <!-- NOTAS -->
+            <div class="form-section">
+                <div class="section-title">📝 Notas do Personagem</div>
+                <div class="form-group">
+                    <textarea class="form-textarea" id="edit_notas" style="min-height: 150px;" placeholder="Notas escritas pelo jogador..."></textarea>
                 </div>
             </div>
 
-            <div id="modalCaracteristicas" class="modal-tab-content">
-                <div class="form-section">
-                    <div class="section-title">📊 Características do Personagem</div>
-                    <div id="edit_characteristics">
-                        <p style="color: #64748b; text-align: center; padding: 20px;">Carregando características...</p>
-                    </div>
+            <!-- NOTAS DO MESTRE -->
+            <div class="master-notes-section">
+                <div class="master-notes-label">
+                    🔒 NOTAS DO MESTRE (Visível apenas para você)
+                </div>
+                <div class="form-group">
+                    <textarea class="form-textarea" id="edit_masterNotes" style="min-height: 150px;" placeholder="Suas anotações secretas..."></textarea>
                 </div>
             </div>
 
@@ -2039,7 +2136,7 @@ Exemplos:
                 const vitalidadeMax = (character.vig || 1) + (character.tamanho || 5);
                 const determinacaoMax = character.aut || 1;
 
-                // Preencher aba Básico
+                // INFORMAÇÕES BÁSICAS
                 document.getElementById('edit_nome').value = character.nome || '';
                 document.getElementById('edit_jogador').value = character.jogador || '';
                 document.getElementById('edit_idade').value = character.idade || 0;
@@ -2051,7 +2148,7 @@ Exemplos:
                 document.getElementById('edit_exp').value = character.exp || 0;
                 document.getElementById('edit_auraImortalidade').value = character.auraImortalidade || 1;
 
-                // Preencher aba Atributos
+                // ATRIBUTOS
                 document.getElementById('edit_int').value = character.int || 1;
                 document.getElementById('edit_for').value = character.for || 1;
                 document.getElementById('edit_pre').value = character.pre || 1;
@@ -2062,7 +2159,28 @@ Exemplos:
                 document.getElementById('edit_vig').value = character.vig || 1;
                 document.getElementById('edit_aut').value = character.aut || 1;
 
-                // Preencher aba Combate
+                // PERÍCIAS
+                const skills = character.skills || {};
+                const allSkills = [
+                    'abismo', 'alquimia', 'essência', 'herbalismo', 'história', 'investigação', 
+                    'ofício-intelectual', 'relíquia', 'runomancia', 'arma', 'disparo', 'atletismo', 
+                    'briga', 'agilidade', 'furtividade', 'montaria', 'ofício-braçal', 'sobrevivência',
+                    'barganha', 'diplomacia', 'domar', 'empatia', 'intimidação', 'liderança', 
+                    'malandragem', 'performance', 'sedução'
+                ];
+                
+                allSkills.forEach(skill => {
+                    const element = document.getElementById(`edit_skill_${skill}`);
+                    if (element) {
+                        element.value = skills[skill] || 0;
+                    }
+                });
+
+                // HABILIDADES E RECURSOS DE CLASSE
+                updateClassAbilitiesDisplay(character);
+                updateClassResourcesDisplay(character);
+
+                // COMBATE
                 document.getElementById('edit_hpCurrent').value = character.hpCurrent !== undefined ? character.hpCurrent : vitalidadeMax;
                 document.getElementById('edit_hpMax').value = vitalidadeMax;
                 document.getElementById('edit_detCurrent').value = character.detCurrent !== undefined ? character.detCurrent : determinacaoMax;
@@ -2070,39 +2188,38 @@ Exemplos:
                 document.getElementById('edit_sanCurrent').value = character.sanCurrent !== undefined ? character.sanCurrent : 80;
                 document.getElementById('edit_blindagem').value = character.blindagem || 0;
 
-                // Preencher condições
+                // CONDIÇÕES
                 displayConditions(character);
 
-                // Preencher inventário
+                // INVENTÁRIO
+                document.getElementById('edit_luns').value = character.luns || 0;
                 displayInventory(character);
 
-                // Preencher aliados
+                // ALIADOS
                 displayAllies(character);
 
-                // Preencher propriedades
+                // PROPRIEDADES
                 displayProperties(character);
 
-                // Preencher notas
+                // NOTAS
                 document.getElementById('edit_notas').value = character.notas || '';
                 document.getElementById('edit_masterNotes').value = character.masterNotes || '';
 
-                // Preencher inventário (LUNS)
-                document.getElementById('edit_luns').value = character.luns || 0;
-
-                // Preencher características
-                displayCharacteristics(character);
-
-                // Listener para atualizar vitalidade máxima quando VIG ou Tamanho mudar
+                // Listeners para atualizar valores máximos
                 ['edit_vig', 'edit_tamanho'].forEach(id => {
                     const element = document.getElementById(id);
                     element.removeEventListener('input', updateVitMax);
                     element.addEventListener('input', updateVitMax);
                 });
 
-                // Listener para atualizar determinação máxima quando AUT mudar
                 const autElement = document.getElementById('edit_aut');
                 autElement.removeEventListener('input', updateDetMax);
                 autElement.addEventListener('input', updateDetMax);
+
+                // Listener para mudança de classe
+                const classeElement = document.getElementById('edit_classe');
+                classeElement.removeEventListener('change', handleClasseChange);
+                classeElement.addEventListener('change', handleClasseChange);
 
                 document.getElementById('editModal').classList.add('active');
             } catch (error) {
@@ -2120,6 +2237,146 @@ Exemplos:
         function updateDetMax() {
             const aut = parseInt(document.getElementById('edit_aut').value) || 1;
             document.getElementById('edit_detMax').value = aut;
+        }
+
+        // ============= GERENCIAR HABILIDADES DE CLASSE =============
+        function handleClasseChange() {
+            const classe = document.getElementById('edit_classe').value;
+            if (currentEditingCharacter) {
+                currentEditingCharacter.classe = classe;
+                updateClassAbilitiesDisplay(currentEditingCharacter);
+                updateClassResourcesDisplay(currentEditingCharacter);
+            }
+        }
+
+        function updateClassAbilitiesDisplay(character) {
+            const container = document.getElementById('edit_classAbilities');
+            const classe = character.classe;
+            
+            const classAbilitiesData = {
+                'Caçador': [
+                    { id: 'erudição-ofensiva', name: 'Erudição Ofensiva' },
+                    { id: 'maceração', name: 'Maceração' },
+                    { id: 'dosagem', name: 'Dosagem' },
+                    { id: 'precisão', name: 'Precisão' },
+                    { id: 'marcar-presa', name: 'Marcar Presa' }
+                ],
+                'Druida': [
+                    { id: 'erudição-ofensiva', name: 'Erudição Ofensiva' },
+                    { id: 'erudição-defensiva', name: 'Erudição Defensiva' },
+                    { id: 'maceração', name: 'Maceração' },
+                    { id: 'dosagem', name: 'Dosagem' },
+                    { id: 'aliado-animal', name: 'Aliado Animal' },
+                    { id: 'linguagem-animal', name: 'Linguagem Animal' }
+                ],
+                'Guerreiro': [
+                    { id: 'armas-haste', name: 'Armas de Haste' },
+                    { id: 'armas-pesadas', name: 'Armas Pesadas' },
+                    { id: 'armas-uma-mao', name: 'Armas de Uma Mão' },
+                    { id: 'armas-duas-maos', name: 'Armas de Duas Mãos' },
+                    { id: 'armas-duplas', name: 'Armas Duplas' },
+                    { id: 'armas-arremessaveis', name: 'Armas Arremessáveis' },
+                    { id: 'controle', name: 'Controle' },
+                    { id: 'impeto', name: 'Ímpeto' },
+                    { id: 'guerrilha', name: 'Guerrilha' },
+                    { id: 'postura-combate', name: 'Postura de Combate' },
+                    { id: 'segunda-saude', name: 'Segunda Saúde' }
+                ],
+                'Adepto': [
+                    { id: 'talisma-profano', name: 'Talismã Profano' },
+                    { id: 'servos', name: 'Servos' },
+                    { id: 'hierarquia', name: 'Hierarquia' },
+                    { id: 'fragmentos-alma', name: 'Fragmentos da Alma' }
+                ],
+                'Ladino': [
+                    { id: 'armas-punho', name: 'Armas de Punho' },
+                    { id: 'ferramentas-crime', name: 'Ferramentas do Crime' },
+                    { id: 'precisão', name: 'Precisão' },
+                    { id: 'arrombamento', name: 'Arrombamento' },
+                    { id: 'prestidigitação', name: 'Prestidigitação' },
+                    { id: 'furtividade-ii', name: 'Furtividade II' },
+                    { id: 'malandragem-ii', name: 'Malandragem II' },
+                    { id: 'olho-brechas', name: 'Olho Para Brechas' }
+                ],
+                'Pallacerdote': [
+                    { id: 'simbolo-sagrado', name: 'Símbolo Sagrado' },
+                    { id: 'devocao-palla', name: 'Devoção em Palla' }
+                ],
+                'Ritualista': [
+                    { id: 'contato-oitavo', name: 'Contato com o Oitavo' },
+                    { id: 'selo-abissal', name: 'Selo Abissal' },
+                    { id: 'sacrificio', name: 'Sacrifício' },
+                    { id: 'resistencia-loucura', name: 'Resistência a Loucura' }
+                ]
+            };
+
+            if (!classe || !classAbilitiesData[classe]) {
+                container.innerHTML = '<p style="color: #64748b; text-align: center; padding: 20px;">Selecione uma classe</p>';
+                return;
+            }
+
+            const abilities = classAbilitiesData[classe];
+            const classAbilities = character.classAbilities || {};
+
+            container.innerHTML = abilities.map(ability => `
+                <div class="form-group">
+                    <label class="form-label">${ability.name}</label>
+                    <input type="number" 
+                        class="form-input" 
+                        id="edit_ability_${ability.id}" 
+                        value="${classAbilities[ability.id] || 0}" 
+                        min="0" 
+                        max="5">
+                </div>
+            `).join('');
+        }
+
+        function updateClassResourcesDisplay(character) {
+            const container = document.getElementById('edit_classResources');
+            const classe = character.classe;
+            
+            const classResourcesData = {
+                'Caçador': [
+                    { id: 'kits-ingredientes', name: 'Kits/Ingredientes' }
+                ],
+                'Druida': [
+                    { id: 'kits-ingredientes', name: 'Kits/Ingredientes' },
+                    { id: 'aliados-ativos', name: 'Aliados Ativos' }
+                ],
+                'Pallacerdote': [
+                    { id: 'graca', name: 'Graça' }
+                ],
+                'Ritualista': [
+                    { id: 'ruptura-venire', name: 'Ruptura Venire (RV)' }
+                ],
+                'Adepto': [
+                    { id: 'servos-permanentes', name: 'Servos Permanentes' },
+                    { id: 'fantoches-ativos', name: 'Fantoches Ativos' }
+                ],
+                'Ladino': [
+                    { id: 'kit-larapio', name: 'Kit de Larápio' }
+                ]
+            };
+
+            if (!classe || !classResourcesData[classe]) {
+                container.innerHTML = '<p style="color: #64748b; text-align: center; padding: 20px;">Nenhum recurso específico</p>';
+                return;
+            }
+
+            const resources = classResourcesData[classe];
+            const classResources = character.classResources || {};
+
+            container.innerHTML = resources.map(resource => `
+                <div class="form-group">
+                    <label class="form-label">${resource.name}</label>
+                    <input type="number" 
+                        class="form-input" 
+                        id="edit_resource_${resource.id}" 
+                        value="${classResources[resource.id] || 0}" 
+                        min="0" 
+                        max="20">
+                </div>
+            `).join('');
         }
 
         // ============= EXIBIR CONDIÇÕES =============
@@ -2314,84 +2571,106 @@ Exemplos:
         };
 
         // ============= SALVAR ALTERAÇÕES =============
-        window.saveCharacterChanges = async function() {
-            if (!currentEditingCharacter) return;
+        async function saveCharacterChanges() {
+            if (!currentEditingCharacter) {
+                showAlert('❌ Nenhum personagem selecionado', 'danger');
+                return;
+            }
 
             try {
-                const updates = {
-                    // Básico
-                    nome: document.getElementById('edit_nome').value,
-                    jogador: document.getElementById('edit_jogador').value,
-                    idade: parseInt(document.getElementById('edit_idade').value) || 0,
-                    raca: document.getElementById('edit_raca').value,
-                    classe: document.getElementById('edit_classe').value,
-                    virtude: document.getElementById('edit_virtude').value,
-                    vicio: document.getElementById('edit_vicio').value,
-                    tamanho: parseInt(document.getElementById('edit_tamanho').value) || 5,
-                    exp: parseInt(document.getElementById('edit_exp').value) || 0,
-                    auraImortalidade: parseInt(document.getElementById('edit_auraImortalidade').value) || 1,
-                    
-                    // Atributos
-                    int: parseInt(document.getElementById('edit_int').value) || 1,
-                    for: parseInt(document.getElementById('edit_for').value) || 1,
-                    pre: parseInt(document.getElementById('edit_pre').value) || 1,
-                    rac: parseInt(document.getElementById('edit_rac').value) || 1,
-                    des: parseInt(document.getElementById('edit_des').value) || 1,
-                    man: parseInt(document.getElementById('edit_man').value) || 1,
-                    prs: parseInt(document.getElementById('edit_prs').value) || 1,
-                    vig: parseInt(document.getElementById('edit_vig').value) || 1,
-                    aut: parseInt(document.getElementById('edit_aut').value) || 1,
-                    
-                    // Combate
-                    hpCurrent: parseInt(document.getElementById('edit_hpCurrent').value) || 0,
-                    detCurrent: parseInt(document.getElementById('edit_detCurrent').value) || 0,
-                    sanCurrent: parseInt(document.getElementById('edit_sanCurrent').value) || 80,
-                    blindagem: parseInt(document.getElementById('edit_blindagem').value) || 0,
-                    conditions: currentEditingCharacter.conditions || [],
-                    
-                    // Inventário
-                    luns: parseInt(document.getElementById('edit_luns').value) || 0,
-                    
-                    // Notas
-                    notas: document.getElementById('edit_notas').value,
-                    masterNotes: document.getElementById('edit_masterNotes').value,
-                    
-                    // Manter dados existentes
-                    containers: currentEditingCharacter.containers || [],
-                    allies: currentEditingCharacter.allies || [],
-                    properties: currentEditingCharacter.properties || [],
-                    skills: currentEditingCharacter.skills || {},
-                    classAbilities: currentEditingCharacter.classAbilities || {},
-                    classResources: currentEditingCharacter.classResources || {},
-                    skillInputs: currentEditingCharacter.skillInputs || {},
-                    characterImage: currentEditingCharacter.characterImage || '',
-                    
-                    // Metadados
-                    lastUpdate: new Date().toISOString(),
-                    lastUpdateBy: currentUser.email,
-                    updatedByMaster: true
-                };
+                // INFORMAÇÕES BÁSICAS
+                currentEditingCharacter.nome = document.getElementById('edit_nome').value;
+                currentEditingCharacter.jogador = document.getElementById('edit_jogador').value;
+                currentEditingCharacter.idade = parseInt(document.getElementById('edit_idade').value) || 0;
+                currentEditingCharacter.raca = document.getElementById('edit_raca').value;
+                currentEditingCharacter.classe = document.getElementById('edit_classe').value;
+                currentEditingCharacter.virtude = document.getElementById('edit_virtude').value;
+                currentEditingCharacter.vicio = document.getElementById('edit_vicio').value;
+                currentEditingCharacter.tamanho = parseInt(document.getElementById('edit_tamanho').value) || 5;
+                currentEditingCharacter.exp = parseInt(document.getElementById('edit_exp').value) || 0;
+                currentEditingCharacter.auraImortalidade = parseInt(document.getElementById('edit_auraImortalidade').value) || 1;
 
+                // ATRIBUTOS
+                currentEditingCharacter.int = parseInt(document.getElementById('edit_int').value) || 1;
+                currentEditingCharacter.for = parseInt(document.getElementById('edit_for').value) || 1;
+                currentEditingCharacter.pre = parseInt(document.getElementById('edit_pre').value) || 1;
+                currentEditingCharacter.rac = parseInt(document.getElementById('edit_rac').value) || 1;
+                currentEditingCharacter.des = parseInt(document.getElementById('edit_des').value) || 1;
+                currentEditingCharacter.man = parseInt(document.getElementById('edit_man').value) || 1;
+                currentEditingCharacter.prs = parseInt(document.getElementById('edit_prs').value) || 1;
+                currentEditingCharacter.vig = parseInt(document.getElementById('edit_vig').value) || 1;
+                currentEditingCharacter.aut = parseInt(document.getElementById('edit_aut').value) || 1;
+
+                // PERÍCIAS
+                if (!currentEditingCharacter.skills) currentEditingCharacter.skills = {};
+                const allSkills = [
+                    'abismo', 'alquimia', 'essência', 'herbalismo', 'história', 'investigação', 
+                    'ofício-intelectual', 'relíquia', 'runomancia', 'arma', 'disparo', 'atletismo', 
+                    'briga', 'agilidade', 'furtividade', 'montaria', 'ofício-braçal', 'sobrevivência',
+                    'barganha', 'diplomacia', 'domar', 'empatia', 'intimidação', 'liderança', 
+                    'malandragem', 'performance', 'sedução'
+                ];
+                
+                allSkills.forEach(skill => {
+                    const element = document.getElementById(`edit_skill_${skill}`);
+                    if (element) {
+                        currentEditingCharacter.skills[skill] = parseInt(element.value) || 0;
+                    }
+                });
+
+                // HABILIDADES DE CLASSE
+                if (!currentEditingCharacter.classAbilities) currentEditingCharacter.classAbilities = {};
+                document.querySelectorAll('[id^="edit_ability_"]').forEach(input => {
+                    const abilityId = input.id.replace('edit_ability_', '');
+                    currentEditingCharacter.classAbilities[abilityId] = parseInt(input.value) || 0;
+                });
+
+                // RECURSOS DE CLASSE
+                if (!currentEditingCharacter.classResources) currentEditingCharacter.classResources = {};
+                document.querySelectorAll('[id^="edit_resource_"]').forEach(input => {
+                    const resourceId = input.id.replace('edit_resource_', '');
+                    currentEditingCharacter.classResources[resourceId] = parseInt(input.value) || 0;
+                });
+
+                // COMBATE
+                currentEditingCharacter.hpCurrent = parseInt(document.getElementById('edit_hpCurrent').value) || 0;
+                currentEditingCharacter.detCurrent = parseInt(document.getElementById('edit_detCurrent').value) || 0;
+                currentEditingCharacter.sanCurrent = parseInt(document.getElementById('edit_sanCurrent').value) || 80;
+                currentEditingCharacter.blindagem = parseInt(document.getElementById('edit_blindagem').value) || 0;
+
+                // Recalcular máximos
+                currentEditingCharacter.hpMax = currentEditingCharacter.vig + currentEditingCharacter.tamanho;
+                currentEditingCharacter.detMax = currentEditingCharacter.aut;
+
+                // INVENTÁRIO
+                currentEditingCharacter.luns = parseInt(document.getElementById('edit_luns').value) || 0;
+
+                // NOTAS
+                currentEditingCharacter.notas = document.getElementById('edit_notas').value;
+                currentEditingCharacter.masterNotes = document.getElementById('edit_masterNotes').value;
+
+                // SALVAR NO FIREBASE
                 const characterRef = doc(db, 'characters', currentEditingCharacter.id);
-                await setDoc(characterRef, updates, { merge: true });
+                await setDoc(characterRef, currentEditingCharacter, { merge: true });
 
-                // Adicionar log
-                await addLog(
-                    currentUser.email,
-                    'Editou a ficha completa de',
-                    updates.nome,
-                    'characters'
-                );
+                // Criar log
+                await addDoc(collection(db, 'logs'), {
+                    user: currentUser.email,
+                    action: `Mestre editou personagem: ${currentEditingCharacter.nome}`,
+                    character: currentEditingCharacter.nome,
+                    type: 'master-edit',
+                    timestamp: new Date().toISOString()
+                });
 
-                showAlert('✅ Personagem atualizado com sucesso!', 'success');
+                showAlert('✅ Personagem salvo com sucesso!', 'success');
                 closeModal();
-                await loadAllCharacters();
-                await loadAllNpcs();
+                await loadCharacters();
+
             } catch (error) {
                 console.error('❌ Erro ao salvar:', error);
-                showAlert('❌ Erro ao salvar alterações', 'danger');
+                showAlert('❌ Erro ao salvar personagem', 'danger');
             }
-        };
+        }
 
         // ============= ADICIONAR EXP =============
         window.addExpToSelected = async function(amount) {
@@ -2560,15 +2839,6 @@ Exemplos:
 
             event.target.classList.add('active');
             document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
-        };
-
-        // ============= TROCAR DE ABA DO MODAL =============
-        window.switchModalTab = function(tabName) {
-            document.querySelectorAll('.modal-tab').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.modal-tab-content').forEach(content => content.classList.remove('active'));
-
-            event.target.classList.add('active');
-            document.getElementById(`modal${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
         };
 
         // ============= ALERTAS =============
