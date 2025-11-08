@@ -602,6 +602,53 @@
             box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
         }
 
+        /* Footer fixo do modal de personagem */
+        .modal-footer-sticky {
+            padding: 20px 30px;
+            background: rgba(30, 27, 75, 0.95);
+            border-top: 2px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            position: sticky;
+            bottom: 0;
+            margin-top: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-modal-save {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, var(--success), #059669);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-modal-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-modal-cancel {
+            padding: 15px 40px;
+            background: rgba(71, 85, 105, 0.8);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-modal-cancel:hover {
+            background: rgba(100, 116, 139, 0.8);
+        }
+
         .alert {
             position: fixed;
             top: 20px;
@@ -1570,7 +1617,7 @@
             <div class="form-section">
                 <div class="section-title">🎯 Recursos de Classe</div>
                 <div id="edit_classResources" class="form-row">
-                    <p style="color: #64748b; text-align: center; padding: 20px;">Selecione uma classe para ver os recursos</p>
+                    <p style="color: #64748b; text-align: center; padding: 20px;">Nenhum recurso específico</p>
                 </div>
             </div>
 
@@ -1660,10 +1707,6 @@
                     <textarea class="form-textarea" id="edit_masterNotes" style="min-height: 150px;" placeholder="Suas anotações secretas..."></textarea>
                 </div>
             </div>
-
-            <button class="btn-save" onclick="saveCharacterChanges()">
-                💾 SALVAR TODAS AS ALTERAÇÕES
-            </button>
         </div>
     </div>
 
@@ -1728,7 +1771,7 @@
                         </div>
 
                         <div class="npc-form-group">
-                            <label class="npc-form-label">Ameaça Instantânea (AI)</label>
+                            <label class="npc-form-label">AURA DE IMORTALIDADE (AI)</label>
                             <input type="number" class="npc-form-input" id="npcAI" min="0">
                         </div>
 
@@ -1755,39 +1798,39 @@
                     
                     <div class="npc-attributes-grid">
                         <div class="npc-attribute-box">
-                            <div class="npc-attribute-label">INT</div>
+                            <div class="npc-attribute-label">🧠INT</div>
                             <input type="number" class="npc-attribute-input" id="npcINT" value="0">
                         </div>
                         <div class="npc-attribute-box">
-                            <div class="npc-attribute-label">RAC</div>
+                            <div class="npc-attribute-label">⚡RAC</div>
                             <input type="number" class="npc-attribute-input" id="npcRAC" value="0">
                         </div>
                         <div class="npc-attribute-box">
-                            <div class="npc-attribute-label">PRS</div>
+                            <div class="npc-attribute-label">🤯PRS</div>
                             <input type="number" class="npc-attribute-input" id="npcPRS" value="0">
                         </div>
                         <div class="npc-attribute-box">
-                            <div class="npc-attribute-label">FOR</div>
+                            <div class="npc-attribute-label">💪FOR</div>
                             <input type="number" class="npc-attribute-input" id="npcFOR" value="0">
                         </div>
                         <div class="npc-attribute-box">
-                            <div class="npc-attribute-label">DES</div>
+                            <div class="npc-attribute-label">🤲DES</div>
                             <input type="number" class="npc-attribute-input" id="npcDES" value="0">
                         </div>
                         <div class="npc-attribute-box">
-                            <div class="npc-attribute-label">VIG</div>
+                            <div class="npc-attribute-label">❤️VIG</div>
                             <input type="number" class="npc-attribute-input" id="npcVIG" value="0">
                         </div>
                         <div class="npc-attribute-box">
-                            <div class="npc-attribute-label">PRE</div>
+                            <div class="npc-attribute-label">👤PRE</div>
                             <input type="number" class="npc-attribute-input" id="npcPRE" value="0">
                         </div>
                         <div class="npc-attribute-box">
-                            <div class="npc-attribute-label">MAN</div>
+                            <div class="npc-attribute-label">🗣️MAN</div>
                             <input type="number" class="npc-attribute-input" id="npcMAN" value="0">
                         </div>
                         <div class="npc-attribute-box">
-                            <div class="npc-attribute-label">AUT</div>
+                            <div class="npc-attribute-label">🤬AUT</div>
                             <input type="number" class="npc-attribute-input" id="npcAUT" value="0">
                         </div>
                     </div>
@@ -1942,7 +1985,7 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, collection, query, orderBy, limit, onSnapshot, doc, getDoc, getDocs, setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, collection, query, orderBy, limit, onSnapshot, doc, getDoc, getDocs, setDoc, deleteDoc, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         const firebaseConfig = {
           apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
@@ -1977,9 +2020,9 @@
                 else if (npcModal && npcModal.classList.contains('active')) {
                     saveNpc();
                 }
-                // Fechar modal de personagem
+                // Salvar e fechar modal de personagem
                 else if (editModal && editModal.classList.contains('active')) {
-                    saveCharacterChanges();
+                    saveCharacterChanges(true); // true = fecha após salvar
                 }
             }
             
@@ -2336,13 +2379,6 @@
             const classe = character.classe;
             
             const classResourcesData = {
-                'Caçador': [
-                    { id: 'kits-ingredientes', name: 'Kits/Ingredientes' }
-                ],
-                'Druida': [
-                    { id: 'kits-ingredientes', name: 'Kits/Ingredientes' },
-                    { id: 'aliados-ativos', name: 'Aliados Ativos' }
-                ],
                 'Pallacerdote': [
                     { id: 'graca', name: 'Graça' }
                 ],
@@ -2352,9 +2388,6 @@
                 'Adepto': [
                     { id: 'servos-permanentes', name: 'Servos Permanentes' },
                     { id: 'fantoches-ativos', name: 'Fantoches Ativos' }
-                ],
-                'Ladino': [
-                    { id: 'kit-larapio', name: 'Kit de Larápio' }
                 ]
             };
 
@@ -2571,7 +2604,7 @@
         };
 
         // ============= SALVAR ALTERAÇÕES =============
-        async function saveCharacterChanges() {
+        async function saveCharacterChanges(closeAfterSave = false) {
             if (!currentEditingCharacter) {
                 showAlert('❌ Nenhum personagem selecionado', 'danger');
                 return;
@@ -2662,13 +2695,26 @@
                     timestamp: new Date().toISOString()
                 });
 
+                // Atualizar array local imediatamente
+                const index = allCharacters.findIndex(c => c.id === currentEditingCharacter.id);
+                if (index !== -1) {
+                    allCharacters[index] = { ...currentEditingCharacter };
+                }
+
+                // Atualizar display
+                displayCharacters();
+                displayExpCharacters();
+
                 showAlert('✅ Personagem salvo com sucesso!', 'success');
-                closeModal();
-                await loadCharacters();
+                
+                // Só fecha se closeAfterSave for true (quando ESC é pressionado)
+                if (closeAfterSave) {
+                    closeModal();
+                }
 
             } catch (error) {
                 console.error('❌ Erro ao salvar:', error);
-                showAlert('❌ Erro ao salvar personagem', 'danger');
+                showAlert('❌ Erro ao salvar personagem: ' + error.message, 'danger');
             }
         }
 
