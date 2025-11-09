@@ -3091,6 +3091,18 @@ Agilidade 2\n
                 modalTitle.textContent = 'Editar NPC / Criatura';
                 
                 document.getElementById('npcImagem').value = npc.imagem || '';
+                // Atualizar o preview da imagem
+                const previewImg = document.getElementById('npcImagemPreviewImg');
+                const previewDiv = document.getElementById('npcImagemPreview');
+                if (npc.imagem && (npc.imagem.startsWith('http://') || npc.imagem.startsWith('https://'))) {
+                    previewImg.src = npc.imagem;
+                    previewDiv.style.display = 'block';
+                    previewImg.onerror = function() {
+                        previewDiv.style.display = 'none';
+                    };
+                } else {
+                    previewDiv.style.display = 'none';
+                }
                 document.getElementById('npcNome').value = npc.nome || '';
                 document.getElementById('npcTipo').value = npc.tipo || 'npc';
                 document.getElementById('npcRaca').value = npc.raca || '';
@@ -3154,6 +3166,9 @@ Agilidade 2\n
                 });
                 
                 document.getElementById('npcTipo').value = 'npc';
+
+                // Limpar preview da imagem ao criar novo NPC
+                document.getElementById('npcImagemPreview').style.display = 'none';
             }
             
             modal.classList.add('active');
