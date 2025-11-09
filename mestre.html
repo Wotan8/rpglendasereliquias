@@ -1490,7 +1490,7 @@
                         <input type="number" class="form-input" id="edit_tamanho" value="5" min="1" max="15">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">EXP</label>
+                        <label class="form-label">⭐EXP</label>
                         <input type="number" class="form-input" id="edit_exp" value="0">
                     </div>
                     <div class="form-group">
@@ -2276,7 +2276,7 @@ Agilidade 2\n
                     return;
                 }
 
-                currentEditingCharacter = character;
+                currentEditingCharacter = { ...character };
                 document.getElementById('modalTitle').textContent = `Editando: ${character.nome || 'Sem nome'}`;
 
                 // Calcular valores máximos
@@ -2715,31 +2715,13 @@ Agilidade 2\n
             }
 
             try {
-                // INFORMAÇÕES BÁSICAS
-                currentEditingCharacter.nome = document.getElementById('edit_nome').value;
-                currentEditingCharacter.jogador = document.getElementById('edit_jogador').value;
-                currentEditingCharacter.idade = parseInt(document.getElementById('edit_idade').value) || 0;
-                currentEditingCharacter.raca = document.getElementById('edit_raca').value;
-                currentEditingCharacter.classe = document.getElementById('edit_classe').value;
-                currentEditingCharacter.virtude = document.getElementById('edit_virtude').value;
-                currentEditingCharacter.vicio = document.getElementById('edit_vicio').value;
-                currentEditingCharacter.tamanho = parseInt(document.getElementById('edit_tamanho').value) || 5;
-                currentEditingCharacter.exp = parseInt(document.getElementById('edit_exp').value) || 0;
-                currentEditingCharacter.auraImortalidade = parseInt(document.getElementById('edit_auraImortalidade').value) || 1;
+                // Buscar dados originais do Firebase
+                const characterRef = doc(db, 'characters', currentEditingCharacter.id);
+                const originalDoc = await getDoc(characterRef);
+                const originalData = originalDoc.data();
 
-                // ATRIBUTOS
-                currentEditingCharacter.int = parseInt(document.getElementById('edit_int').value) || 1;
-                currentEditingCharacter.for = parseInt(document.getElementById('edit_for').value) || 1;
-                currentEditingCharacter.pre = parseInt(document.getElementById('edit_pre').value) || 1;
-                currentEditingCharacter.rac = parseInt(document.getElementById('edit_rac').value) || 1;
-                currentEditingCharacter.des = parseInt(document.getElementById('edit_des').value) || 1;
-                currentEditingCharacter.man = parseInt(document.getElementById('edit_man').value) || 1;
-                currentEditingCharacter.prs = parseInt(document.getElementById('edit_prs').value) || 1;
-                currentEditingCharacter.vig = parseInt(document.getElementById('edit_vig').value) || 1;
-                currentEditingCharacter.aut = parseInt(document.getElementById('edit_aut').value) || 1;
-
-                // PERÍCIAS
-                if (!currentEditingCharacter.skills) currentEditingCharacter.skills = {};
+                // Preparar perícias
+                const skillsData = {};
                 const allSkills = [
                     'abismo', 'alquimia', 'essência', 'herbalismo', 'história', 'investigação', 
                     'ofício-intelectual', 'relíquia', 'runomancia', 'arma', 'disparo', 'atletismo', 
@@ -2751,50 +2733,130 @@ Agilidade 2\n
                 allSkills.forEach(skill => {
                     const element = document.getElementById(`edit_skill_${skill}`);
                     if (element) {
-                        currentEditingCharacter.skills[skill] = parseInt(element.value) || 0;
+                        skillsData[skill] = parseInt(element.value) || 0;
                     }
                 });
 
-                // HABILIDADES DE CLASSE
-                if (!currentEditingCharacter.classAbilities) currentEditingCharacter.classAbilities = {};
+                // Preparar habilidades de classe
+                const classAbilitiesData = {};
                 document.querySelectorAll('[id^="edit_ability_"]').forEach(input => {
                     const abilityId = input.id.replace('edit_ability_', '');
-                    currentEditingCharacter.classAbilities[abilityId] = parseInt(input.value) || 0;
+                    classAbilitiesData[abilityId] = parseInt(input.value) || 0;
                 });
 
-                // RECURSOS DE CLASSE
-                if (!currentEditingCharacter.classResources) currentEditingCharacter.classResources = {};
+                // Preparar recursos de classe
+                const classResourcesData = {};
                 document.querySelectorAll('[id^="edit_resource_"]').forEach(input => {
                     const resourceId = input.id.replace('edit_resource_', '');
-                    currentEditingCharacter.classResources[resourceId] = parseInt(input.value) || 0;
+                    classResourcesData[resourceId] = parseInt(input.value) || 0;
                 });
 
-                // COMBATE
-                currentEditingCharacter.hpCurrent = parseInt(document.getElementById('edit_hpCurrent').value) || 0;
-                currentEditingCharacter.detCurrent = parseInt(document.getElementById('edit_detCurrent').value) || 0;
-                currentEditingCharacter.sanCurrent = parseInt(document.getElementById('edit_sanCurrent').value) || 80;
-                currentEditingCharacter.blindagem = parseInt(document.getElementById('edit_blindagem').value) || 0;
+                // Coletar TODOS os valores atuais do formulário
+                const formData = {
+                    // INFORMAÇÕES BÁSICAS
+                    nome: document.getElementById('edit_nome').value,
+                    jogador: document.getElementById('edit_jogador').value,
+                    idade: parseInt(document.getElementById('edit_idade').value) || 0,
+                    raca: document.getElementById('edit_raca').value,
+                    classe: document.getElementById('edit_classe').value,
+                    virtude: document.getElementById('edit_virtude').value,
+                    vicio: document.getElementById('edit_vicio').value,
+                    tamanho: parseInt(document.getElementById('edit_tamanho').value) || 5,
+                    exp: parseInt(document.getElementById('edit_exp').value) || 0,
+                    auraImortalidade: parseInt(document.getElementById('edit_auraImortalidade').value) || 1,
 
-                // Recalcular máximos
-                currentEditingCharacter.hpMax = currentEditingCharacter.vig + currentEditingCharacter.tamanho;
-                currentEditingCharacter.detMax = currentEditingCharacter.aut;
+                    // ATRIBUTOS
+                    int: parseInt(document.getElementById('edit_int').value) || 1,
+                    for: parseInt(document.getElementById('edit_for').value) || 1,
+                    pre: parseInt(document.getElementById('edit_pre').value) || 1,
+                    rac: parseInt(document.getElementById('edit_rac').value) || 1,
+                    des: parseInt(document.getElementById('edit_des').value) || 1,
+                    man: parseInt(document.getElementById('edit_man').value) || 1,
+                    prs: parseInt(document.getElementById('edit_prs').value) || 1,
+                    vig: parseInt(document.getElementById('edit_vig').value) || 1,
+                    aut: parseInt(document.getElementById('edit_aut').value) || 1,
 
-                // INVENTÁRIO
-                currentEditingCharacter.luns = parseInt(document.getElementById('edit_luns').value) || 0;
+                    // PERÍCIAS
+                    skills: skillsData,
 
-                // NOTAS
-                currentEditingCharacter.notas = document.getElementById('edit_notas').value;
-                currentEditingCharacter.masterNotes = document.getElementById('edit_masterNotes').value;
+                    // HABILIDADES DE CLASSE
+                    classAbilities: classAbilitiesData,
 
-                // SALVAR NO FIREBASE
-                const characterRef = doc(db, 'characters', currentEditingCharacter.id);
-                await setDoc(characterRef, currentEditingCharacter, { merge: true });
+                    // RECURSOS DE CLASSE
+                    classResources: classResourcesData,
+
+                    // COMBATE
+                    hpCurrent: parseInt(document.getElementById('edit_hpCurrent').value) || 0,
+                    detCurrent: parseInt(document.getElementById('edit_detCurrent').value) || 0,
+                    sanCurrent: parseInt(document.getElementById('edit_sanCurrent').value) || 80,
+                    blindagem: parseInt(document.getElementById('edit_blindagem').value) || 0,
+
+                    // VALORES DERIVADOS RECALCULADOS
+                    hpMax: (parseInt(document.getElementById('edit_vig').value) || 1) + (parseInt(document.getElementById('edit_tamanho').value) || 5),
+                    detMax: parseInt(document.getElementById('edit_aut').value) || 1,
+
+                    // INVENTÁRIO
+                    luns: parseInt(document.getElementById('edit_luns').value) || 0,
+
+                    // NOTAS
+                    notas: document.getElementById('edit_notas').value,
+                    masterNotes: document.getElementById('edit_masterNotes').value
+                };
+
+                // ========== NOVA LÓGICA: COMPARAR E SALVAR APENAS O QUE MUDOU ==========
+                const updateData = {};
+                let hasChanges = false;
+
+                // Função auxiliar para comparar valores profundamente (para objetos como skills)
+                function isDifferent(newValue, oldValue) {
+                    // Se são objetos, comparar propriedades
+                    if (typeof newValue === 'object' && newValue !== null && typeof oldValue === 'object' && oldValue !== null) {
+                        const newKeys = Object.keys(newValue);
+                        const oldKeys = Object.keys(oldValue);
+                        
+                        if (newKeys.length !== oldKeys.length) return true;
+                        
+                        for (const key of newKeys) {
+                            if (newValue[key] !== oldValue[key]) return true;
+                        }
+                        return false;
+                    }
+                    // Comparação simples
+                    return newValue !== oldValue;
+                }
+
+                // Comparar cada campo
+                for (const [key, newValue] of Object.entries(formData)) {
+                    const oldValue = originalData[key];
+                    
+                    if (isDifferent(newValue, oldValue)) {
+                        updateData[key] = newValue;
+                        hasChanges = true;
+                    }
+                }
+
+                // Se não houve mudanças, não salvar
+                if (!hasChanges) {
+                    showAlert('ℹ️ Nenhuma alteração detectada', 'warning');
+                    if (closeAfterSave) {
+                        closeModal();
+                    }
+                    return;
+                }
+
+                // Adicionar metadados apenas se houver mudanças
+                updateData.lastUpdate = new Date().toISOString();
+                updateData.lastUpdateBy = currentUser.email;
+
+                // SALVAR apenas os campos alterados usando merge: true
+                await setDoc(characterRef, updateData, { merge: true });
 
                 // Criar log
+                const changedFields = Object.keys(updateData).filter(k => k !== 'lastUpdate' && k !== 'lastUpdateBy');
                 await addDoc(collection(db, 'logs'), {
                     user: currentUser.email,
-                    action: `Mestre editou personagem: ${currentEditingCharacter.nome}`,
-                    character: currentEditingCharacter.nome,
+                    action: `Mestre editou personagem: ${formData.nome} (${changedFields.length} campos alterados)`,
+                    character: formData.nome,
                     type: 'master-edit',
                     timestamp: new Date().toISOString()
                 });
@@ -2802,14 +2864,14 @@ Agilidade 2\n
                 // Atualizar array local imediatamente
                 const index = allCharacters.findIndex(c => c.id === currentEditingCharacter.id);
                 if (index !== -1) {
-                    allCharacters[index] = { ...currentEditingCharacter };
+                    allCharacters[index] = { ...allCharacters[index], ...updateData };
                 }
 
                 // Atualizar display
                 displayCharacters();
                 displayExpCharacters();
 
-                showAlert('✅ Personagem salvo com sucesso!', 'success');
+                showAlert(`✅ Personagem salvo! ${changedFields.length} campo(s) atualizado(s)`, 'success');
                 
                 // Só fecha se closeAfterSave for true (quando ESC é pressionado)
                 if (closeAfterSave) {
