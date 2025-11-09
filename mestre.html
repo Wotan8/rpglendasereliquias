@@ -1229,6 +1229,45 @@
             background: rgba(100, 116, 139, 0.8);
         }
 
+        .btn-npc-export {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-npc-export:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-npc-import {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-npc-import:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+        }
+
+        /* Input file escondido para importação */
+        #npcImportFile {
+            display: none;
+        }
+
         .no-npcs {
             text-align: center;
             padding: 60px 20px;
@@ -2038,6 +2077,8 @@ Agilidade 2\n
             </div>
 
             <div class="npc-modal-footer">
+                <button class="btn-npc-export" onclick="exportNpc()">📥 Exportar</button>
+                <button class="btn-npc-import" onclick="importNpc()">📤 Importar</button>
                 <button class="btn-npc-cancel" onclick="closeNpcModal()">Cancelar</button>
                 <button class="btn-npc-save" onclick="saveNpc()">Salvar</button>
             </div>
@@ -3418,6 +3459,224 @@ Agilidade 2\n
                 preview.style.display = 'none';
             }
         });
+
+        // ============= EXPORTAR NPC =============
+        window.exportNpc = function() {
+            try {
+                // Coleta todos os dados do formulário
+                const npcData = {
+                    nome: document.getElementById('npcNome')?.value?.trim() || '',
+                    tipo: document.getElementById('npcTipo')?.value || 'npc',
+                    imagem: document.getElementById('npcImagem')?.value?.trim() || '',
+                    raca: document.getElementById('npcRaca')?.value?.trim() || '',
+                    porte: document.getElementById('npcPorte')?.value || '',
+                    papel: document.getElementById('npcPapel')?.value?.trim() || '',
+                    local: document.getElementById('npcLocal')?.value?.trim() || '',
+                    tribo: document.getElementById('npcTribo')?.value?.trim() || '',
+                    ai: document.getElementById('npcAI')?.value || 0,
+                    classe: document.getElementById('npcClasse')?.value?.trim() || '',
+                    tamanho: document.getElementById('npcTamanho')?.value?.trim() || '',
+                    tags: document.getElementById('npcTags')?.value?.trim() || '',
+                    
+                    atributos: {
+                        INT: parseInt(document.getElementById('npcINT')?.value) || 0,
+                        RAC: parseInt(document.getElementById('npcRAC')?.value) || 0,
+                        PRS: parseInt(document.getElementById('npcPRS')?.value) || 0,
+                        FOR: parseInt(document.getElementById('npcFOR')?.value) || 0,
+                        DES: parseInt(document.getElementById('npcDES')?.value) || 0,
+                        VIG: parseInt(document.getElementById('npcVIG')?.value) || 0,
+                        PRE: parseInt(document.getElementById('npcPRE')?.value) || 0,
+                        MAN: parseInt(document.getElementById('npcMAN')?.value) || 0,
+                        AUT: parseInt(document.getElementById('npcAUT')?.value) || 0
+                    },
+                    
+                    valoresDer: {
+                        VIT: parseInt(document.getElementById('npcVIT')?.value) || 0,
+                        PERC: parseInt(document.getElementById('npcPERC')?.value) || 0,
+                        INI: parseInt(document.getElementById('npcINI')?.value) || 0,
+                        DET: parseInt(document.getElementById('npcDET')?.value) || 0,
+                        REA: parseInt(document.getElementById('npcREA')?.value) || 0,
+                        BLD: parseInt(document.getElementById('npcBLD')?.value) || 0,
+                        DESLOCAMENTO: document.getElementById('npcDESLOCAMENTO')?.value?.trim() || '',
+                        SAN: parseInt(document.getElementById('npcSAN')?.value) || 0
+                    },
+                    
+                    ataques: document.getElementById('npcAtaques')?.value?.trim() || '',
+                    skills: document.getElementById('npcSkills')?.value?.trim() || '',
+                    
+                    rolePlay: {
+                        personalidade: [
+                            document.getElementById('npcPersonalidade1')?.value?.trim() || '',
+                            document.getElementById('npcPersonalidade2')?.value?.trim() || '',
+                            document.getElementById('npcPersonalidade3')?.value?.trim() || ''
+                        ],
+                        trejeitos: document.getElementById('npcTrejeitos')?.value?.trim() || '',
+                        motivacao: document.getElementById('npcMotivacao')?.value?.trim() || '',
+                        segredos: document.getElementById('npcSegredos')?.value?.trim() || '',
+                        relacoes: {
+                            aliado: document.getElementById('npcAliado')?.value?.trim() || '',
+                            rival: document.getElementById('npcRival')?.value?.trim() || '',
+                            devedor: document.getElementById('npcDevedor')?.value?.trim() || ''
+                        },
+                        frases: document.getElementById('npcFrases')?.value?.trim() || '',
+                        historia: document.getElementById('npcHistoria')?.value?.trim() || ''
+                    },
+                    
+                    loot: {
+                        itens: document.getElementById('npcItens')?.value?.trim() || '',
+                        luns: document.getElementById('npcLuns')?.value?.trim() || '',
+                        pistas: document.getElementById('npcPistas')?.value?.trim() || '',
+                        complicacoes: document.getElementById('npcComplicacoes')?.value?.trim() || ''
+                    },
+                    
+                    exportDate: new Date().toISOString(),
+                    exportedBy: currentUser?.email || 'Desconhecido'
+                };
+
+                // Converte para JSON formatado
+                const jsonData = JSON.stringify(npcData, null, 2);
+                
+                // Cria um blob com os dados
+                const blob = new Blob([jsonData], { type: 'application/json' });
+                
+                // Cria um link de download
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `npc_${npcData.nome.replace(/\s+/g, '_') || 'sem_nome'}_${Date.now()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showAlert('✅ NPC exportado com sucesso!', 'success');
+            } catch (error) {
+                console.error('❌ Erro ao exportar NPC:', error);
+                showAlert('❌ Erro ao exportar NPC: ' + error.message, 'danger');
+            }
+        };
+
+        // ============= IMPORTAR NPC =============
+        window.importNpc = function() {
+            // Cria um input file se não existir
+            let fileInput = document.getElementById('npcImportFile');
+            if (!fileInput) {
+                fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.id = 'npcImportFile';
+                fileInput.accept = '.json';
+                fileInput.style.display = 'none';
+                document.body.appendChild(fileInput);
+                
+                fileInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        try {
+                            const npcData = JSON.parse(event.target.result);
+                            
+                            // Preenche o formulário com os dados importados
+                            document.getElementById('npcNome').value = npcData.nome || '';
+                            document.getElementById('npcTipo').value = npcData.tipo || 'npc';
+                            document.getElementById('npcImagem').value = npcData.imagem || '';
+                            document.getElementById('npcRaca').value = npcData.raca || '';
+                            document.getElementById('npcPorte').value = npcData.porte || '';
+                            document.getElementById('npcPapel').value = npcData.papel || '';
+                            document.getElementById('npcLocal').value = npcData.local || '';
+                            document.getElementById('npcTribo').value = npcData.tribo || '';
+                            document.getElementById('npcAI').value = npcData.ai || 0;
+                            document.getElementById('npcClasse').value = npcData.classe || '';
+                            document.getElementById('npcTamanho').value = npcData.tamanho || '';
+                            document.getElementById('npcTags').value = npcData.tags || '';
+                            
+                            // Atributos
+                            if (npcData.atributos) {
+                                document.getElementById('npcINT').value = npcData.atributos.INT || 0;
+                                document.getElementById('npcRAC').value = npcData.atributos.RAC || 0;
+                                document.getElementById('npcPRS').value = npcData.atributos.PRS || 0;
+                                document.getElementById('npcFOR').value = npcData.atributos.FOR || 0;
+                                document.getElementById('npcDES').value = npcData.atributos.DES || 0;
+                                document.getElementById('npcVIG').value = npcData.atributos.VIG || 0;
+                                document.getElementById('npcPRE').value = npcData.atributos.PRE || 0;
+                                document.getElementById('npcMAN').value = npcData.atributos.MAN || 0;
+                                document.getElementById('npcAUT').value = npcData.atributos.AUT || 0;
+                            }
+                            
+                            // Valores Derivados
+                            if (npcData.valoresDer) {
+                                document.getElementById('npcVIT').value = npcData.valoresDer.VIT || 0;
+                                document.getElementById('npcPERC').value = npcData.valoresDer.PERC || 0;
+                                document.getElementById('npcINI').value = npcData.valoresDer.INI || 0;
+                                document.getElementById('npcDET').value = npcData.valoresDer.DET || 0;
+                                document.getElementById('npcREA').value = npcData.valoresDer.REA || 0;
+                                document.getElementById('npcBLD').value = npcData.valoresDer.BLD || 0;
+                                document.getElementById('npcDESLOCAMENTO').value = npcData.valoresDer.DESLOCAMENTO || '';
+                                document.getElementById('npcSAN').value = npcData.valoresDer.SAN || 0;
+                            }
+                            
+                            // Combate
+                            document.getElementById('npcAtaques').value = npcData.ataques || '';
+                            document.getElementById('npcSkills').value = npcData.skills || '';
+                            
+                            // Role-Play
+                            if (npcData.rolePlay) {
+                                if (npcData.rolePlay.personalidade) {
+                                    document.getElementById('npcPersonalidade1').value = npcData.rolePlay.personalidade[0] || '';
+                                    document.getElementById('npcPersonalidade2').value = npcData.rolePlay.personalidade[1] || '';
+                                    document.getElementById('npcPersonalidade3').value = npcData.rolePlay.personalidade[2] || '';
+                                }
+                                document.getElementById('npcTrejeitos').value = npcData.rolePlay.trejeitos || '';
+                                document.getElementById('npcMotivacao').value = npcData.rolePlay.motivacao || '';
+                                document.getElementById('npcSegredos').value = npcData.rolePlay.segredos || '';
+                                
+                                if (npcData.rolePlay.relacoes) {
+                                    document.getElementById('npcAliado').value = npcData.rolePlay.relacoes.aliado || '';
+                                    document.getElementById('npcRival').value = npcData.rolePlay.relacoes.rival || '';
+                                    document.getElementById('npcDevedor').value = npcData.rolePlay.relacoes.devedor || '';
+                                }
+                                
+                                document.getElementById('npcFrases').value = npcData.rolePlay.frases || '';
+                                document.getElementById('npcHistoria').value = npcData.rolePlay.historia || '';
+                            }
+                            
+                            // Loot
+                            if (npcData.loot) {
+                                document.getElementById('npcItens').value = npcData.loot.itens || '';
+                                document.getElementById('npcLuns').value = npcData.loot.luns || '';
+                                document.getElementById('npcPistas').value = npcData.loot.pistas || '';
+                                document.getElementById('npcComplicacoes').value = npcData.loot.complicacoes || '';
+                            }
+                            
+                            // Atualiza preview da imagem se houver
+                            if (npcData.imagem) {
+                                const preview = document.getElementById('npcImagemPreview');
+                                const img = document.getElementById('npcImagemPreviewImg');
+                                if (preview && img) {
+                                    img.src = npcData.imagem;
+                                    preview.style.display = 'block';
+                                }
+                            }
+                            
+                            showAlert('✅ NPC importado com sucesso!', 'success');
+                            
+                            // Limpa o input file para permitir reimportar o mesmo arquivo
+                            fileInput.value = '';
+                        } catch (error) {
+                            console.error('❌ Erro ao importar NPC:', error);
+                            showAlert('❌ Erro ao ler arquivo. Verifique se é um arquivo JSON válido.', 'danger');
+                            fileInput.value = '';
+                        }
+                    };
+                    
+                    reader.readAsText(file);
+                });
+            }
+            
+            // Aciona o clique no input file
+            fileInput.click();
+        };
 
 </script>
 </body>
