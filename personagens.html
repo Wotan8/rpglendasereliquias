@@ -913,49 +913,17 @@
 
         // ============= BUSCAR CP E STATS DO FIREBASE =============
         function getCharacterStats(char) {
-            // Buscar CP do Firebase
+            // Buscar tudo do Firebase, incluindo CP e os ranks (OF, DF, RS, MB)
             const cp = char.cp?.valor || 0;
             const cpLetra = char.cp?.rank || 'E';
             const cpNome = char.cp?.nome || 'CIVIL/NOVATO';
             const cpCor = getCpColor(cpLetra);
             
-            // Calcular outros stats (OF, DF, RS, MB) - mantém o cálculo original
-            const agilidade = char.skills?.['agilidade'] || 0;
-            
-            // OF (Ofensa)
-            const arma = char.skills?.['arma'] || 0;
-            const disparo = char.skills?.['disparo'] || 0;
-            const briga = char.skills?.['briga'] || 0;
-            
-            let bonusArma = 0;
-            if (char.classAbilities) {
-                const weaponSkills = ['armas-haste', 'armas-pesadas', 'armas-uma-mao', 'armas-duas-maos', 'armas-duplas', 'armas-arremessaveis', 'armas-punho'];
-                weaponSkills.forEach(skill => {
-                    const val = char.classAbilities[skill] || 0;
-                    if (val > bonusArma) bonusArma = val;
-                });
-            }
-            
-            const paradaArma = Math.max(char.for || 1, char.des || 1) + arma + bonusArma;
-            const paradaDisparo = (char.des || 1) + disparo + (char.classAbilities?.['precisão'] || 0);
-            const paradaBriga = (char.for || 1) + briga;
-            
-            const PMA = Math.max(paradaArma, paradaDisparo, paradaBriga);
-            const OF = Math.ceil(PMA / 3);
-            
-            // DF (Defesa)
-            const REA = Math.min(char.des || 1, (char.rac || 1) + agilidade);
-            const BL = char.blindagem || 0;
-            const DF = Math.ceil((REA + BL) / 3);
-            
-            // RS (Resistência)
-            const VIT = (char.vig || 1) + (char.tamanho || 5);
-            const DET = (char.prs || 1) + (char.aut || 1);
-            const RS = Math.ceil((VIT + Math.floor(DET / 2)) / 3);
-            
-            // MB (Mobilidade)
-            const DESL = (char.for || 1) + (char.des || 1) + (char.tamanho || 5) + agilidade;
-            const MB = Math.ceil(DESL / 6);
+            // Buscar OF, DF, RS, MB direto do Firebase
+            const OF = char.cp?.of || 0;
+            const DF = char.cp?.df || 0;
+            const RS = char.cp?.rs || 0;
+            const MB = char.cp?.mb || 0;
             
             return { CP: cp, letra: cpLetra, nome: cpNome, corLetra: cpCor, OF, DF, RS, MB };
         }
