@@ -6346,6 +6346,8 @@ Exemplos:
         function calculateCP() {
             const char = getChar();
             const agilidade = char.skills['agilidade'] || 0;
+            // Calcular bônus de equipamentos para incluir no CP
+            const bonusEquip = calcularBonusEquipamentos();
             
             // OF (Ofensa) - Maior Parada de Ataque
             const arma = char.skills['arma'] || 0;
@@ -6365,13 +6367,77 @@ Exemplos:
             const paradaArma = Math.max(char.for, char.des) + arma + bonusArma;
             const paradaDisparo = char.des + disparo + (char.classAbilities?.['precisão'] || 0);
             const paradaBriga = char.for + briga;
-            
-            const PMA = Math.max(paradaArma, paradaDisparo, paradaBriga);
+
+            // Calcular valores de todas as armas equipadas
+            const valoresArmasEquipadas = [];
+
+            if (char.containers) {
+                char.containers.forEach(container => {
+                    if (container.items) {
+                        container.items.forEach(item => {
+                            if (item.tipo === 'Arma' && item.equipado) {
+                                let valorTeste = 0;
+                                
+                                // Pegar skills e habilidades necessárias
+                                const precisao = char.classAbilities?.['precisão'] || 0;
+                                const armasHaste = char.classAbilities?.['armas-haste'] || 0;
+                                const armasPesadas = char.classAbilities?.['armas-pesadas'] || 0;
+                                const armasUmaMao = char.classAbilities?.['armas-uma-mao'] || 0;
+                                const armasDuasMaos = char.classAbilities?.['armas-duas-maos'] || 0;
+                                const armasDuplas = char.classAbilities?.['armas-duplas'] || 0;
+                                const armaspunho = char.classAbilities?.['armas-punho'] || 0;
+                                
+                                // Calcular valor de teste baseado no tipo de arma
+                                switch(item.tipoArma) {
+                                    case 'Manopla':
+                                        valorTeste = char.for + briga + (item.dano || 0);
+                                        break;
+                                    case 'Haste':
+                                        valorTeste = Math.max(char.for, char.des) + arma + armasHaste + (item.dano || 0);
+                                        break;
+                                    case 'Pesada':
+                                        valorTeste = char.for + arma + armasPesadas + (item.dano || 0);
+                                        break;
+                                    case 'De Uma Mão':
+                                        valorTeste = Math.max(char.for, char.des) + arma + armasUmaMao + (item.dano || 0);
+                                        break;
+                                    case 'De Duas Mãos':
+                                        valorTeste = Math.max(char.for, char.des) + arma + armasDuasMaos + (item.dano || 0);
+                                        break;
+                                    case 'Dupla':
+                                        valorTeste = char.des + arma + armasDuplas + armaspunho + (item.dano || 0);
+                                        break;
+                                    case 'Disparo Leve':
+                                    case 'Disparo Pesado':
+                                        valorTeste = char.des + disparo + precisao + (item.dano || 0);
+                                        break;
+                                    default:
+                                        valorTeste = arma + (item.dano || 0);
+                                        break;
+                                }
+                                
+                                valoresArmasEquipadas.push(valorTeste);
+                            }
+                        });
+                    }
+                });
+            }
+
+            // Encontrar o maior valor ofensivo entre TODOS os valores (Ações Ofensivas + Paradas)
+            const PMA = Math.max(
+                paradaArma, 
+                paradaDisparo, 
+                paradaBriga,
+                ...valoresArmasEquipadas  // Spread de todos os valores das armas equipadas
+            );
+
             const OF = Math.ceil(PMA / 3);
             
             // DF (Defesa)
-            const REA = Math.min(char.des, char.rac + agilidade);
-            const BL = char.blindagem || 0;
+            const blindagem = char.blindagemTotal || 0; // Usar o valor já calculado e salvo
+
+            const REA = char.reacaoTotal || Math.min(char.des, char.rac + agilidade);
+            const BL = blindagem || 0;
             const DF = Math.ceil((REA + BL) / 3);
             
             // RS (Resistência/Sustentação)
@@ -6380,7 +6446,7 @@ Exemplos:
             const RS = Math.ceil((VIT + Math.floor(DET / 2)) / 3);
             
             // MB (Mobilidade)
-            const deslocTerrestre = char.for + char.des + char.tamanho + agilidade;
+            const deslocTerrestre = char.for + char.des + char.tamanho + agilidade + bonusEquip.deslocTerrestre;
 
             // Para Picxi, calcular também o deslocamento aéreo
             let deslocAereo = 0;
@@ -6877,6 +6943,14 @@ Exemplos:
                 blindagemTotal += bonusEquip.blindagem; // Adicionar bônus de equipamentos
 
                 safeUpdate('calc-blindagem', blindagemTotal);
+
+                // 💾 SALVAR VALORES CALCULADOS NO PERSONAGEM (para persistir no Firebase)
+                // Salvar Reação calculada (com bônus de equipamentos)
+                const reacaoCalculada = Math.min(char.des, char.rac) + agilidade + bonusEquip.reacao;
+                char.reacaoTotal = reacaoCalculada; // Salvar no BD
+
+                // Salvar Blindagem calculada (já inclui Blindagem Natural + equipamentos)
+                char.blindagemTotal = blindagemTotal; // Salvar no BD
 
                 const cpData = calculateCP();
                 safeUpdate('calc-cp', cpData.CP);
