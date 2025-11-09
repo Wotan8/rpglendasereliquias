@@ -1719,6 +1719,24 @@
             </div>
             
             <div class="npc-modal-body">
+
+                <!-- Seção: Imagem do NPC/Criatura -->
+                <div class="npc-form-section">
+                    <h3 class="npc-form-section-title">🖼️ Imagem do NPC/Criatura</h3>
+                    
+                    <div class="npc-form-group">
+                        <label class="npc-form-label">URL da Imagem</label>
+                        <input type="url" class="npc-form-input" id="npcImagem" placeholder="https://exemplo.com/imagem.jpg">
+                        <small style="color: #94a3b8; margin-top: 5px; display: block;">Cole o link direto da imagem (ex: de um site de hospedagem de imagens)</small>
+                    </div>
+                    
+                    <div class="npc-form-group" style="text-align: center;">
+                        <div id="npcImagemPreview" style="display: none; margin-top: 15px;">
+                            <img id="npcImagemPreviewImg" src="" alt="Preview" style="width: 100%; max-width: 600px; height: auto; min-height: 250px; max-height: 1200px; object-fit: cover; border-radius: 12px; border: 2px solid var(--border); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Seção: Informações Básicas -->
                 <div class="npc-form-section">
                     <h3 class="npc-form-section-title">📋 Informações Básicas</h3>
@@ -1883,7 +1901,17 @@
                     <div class="npc-form-group">
                         <label class="npc-form-label">Ataques e Talentos</label>
                         <textarea class="npc-form-textarea" id="npcAtaques" rows="4" 
-                                  placeholder="Descreva os ataques, habilidades especiais e talentos..."></textarea>
+                                  placeholder="Lança (+3) = 8d10 \n
+Briga 2 = 4d10\n
+..."></textarea>
+                    </div>
+
+                    <div class="npc-form-group">
+                        <label class="npc-form-label">Talentos e Habilidades</label>
+                        <textarea class="npc-form-textarea" id="npcSkills" rows="4" 
+                                  placeholder="Intimidar 3 = 6d10 \n
+Agilidade 2\n
+..."></textarea>
                     </div>
                 </div>
 
@@ -1942,6 +1970,12 @@
                         <label class="npc-form-label">Frases Prontas</label>
                         <textarea class="npc-form-textarea" id="npcFrases" rows="3"
                                   placeholder="Frases características que o NPC costuma dizer..."></textarea>
+                    </div>
+
+                    <div class="npc-form-group">
+                        <label class="npc-form-label">História</label>
+                        <textarea class="npc-form-textarea" id="npcHistoria" rows="3"
+                                  placeholder="Sobre o NPC e seu passado..."></textarea>
                     </div>
                 </div>
 
@@ -3044,6 +3078,7 @@
                 currentEditingNpc = npc;
                 modalTitle.textContent = 'Editar NPC / Criatura';
                 
+                document.getElementById('npcImagem').value = npc.imagem || '';
                 document.getElementById('npcNome').value = npc.nome || '';
                 document.getElementById('npcTipo').value = npc.tipo || 'npc';
                 document.getElementById('npcRaca').value = npc.raca || '';
@@ -3076,6 +3111,7 @@
                 document.getElementById('npcSAN').value = npc.valoresDer?.SAN || 0;
                 
                 document.getElementById('npcAtaques').value = npc.ataques || '';
+                document.getElementById('npcSkills').value = npc.skills || '';
                 
                 document.getElementById('npcPersonalidade1').value = npc.rolePlay?.personalidade?.[0] || '';
                 document.getElementById('npcPersonalidade2').value = npc.rolePlay?.personalidade?.[1] || '';
@@ -3087,6 +3123,7 @@
                 document.getElementById('npcRival').value = npc.rolePlay?.relacoes?.rival || '';
                 document.getElementById('npcDevedor').value = npc.rolePlay?.relacoes?.devedor || '';
                 document.getElementById('npcFrases').value = npc.rolePlay?.frases || '';
+                document.getElementById('npcHistoria').value = npc.rolePlay?.historia || '';
                 
                 document.getElementById('npcItens').value = npc.loot?.itens || '';
                 document.getElementById('npcLuns').value = npc.loot?.luns || '';
@@ -3128,6 +3165,7 @@
                 const npcData = {
                     nome,
                     tipo,
+                    imagem: document.getElementById('npcImagem').value.trim(),
                     raca: document.getElementById('npcRaca').value.trim(),
                     porte: document.getElementById('npcPorte').value,
                     papel: document.getElementById('npcPapel').value.trim(),
@@ -3162,6 +3200,7 @@
                     },
                     
                     ataques: document.getElementById('npcAtaques').value.trim(),
+                    skills: document.getElementById('npcSkills').value.trim(),
                     
                     rolePlay: {
                         personalidade: [
@@ -3177,7 +3216,8 @@
                             rival: document.getElementById('npcRival').value.trim(),
                             devedor: document.getElementById('npcDevedor').value.trim()
                         },
-                        frases: document.getElementById('npcFrases').value.trim()
+                        frases: document.getElementById('npcFrases').value.trim(),
+                        historia: document.getElementById('npcHistoria').value.trim()
                     },
                     
                     loot: {
@@ -3271,6 +3311,23 @@
         document.getElementById('npcModal')?.addEventListener('click', function(e) {
             if (e.target === this) {
                 closeNpcModal();
+            }
+        });
+
+        // Preview da imagem do NPC
+        document.getElementById('npcImagem')?.addEventListener('input', function() {
+            const url = this.value.trim();
+            const preview = document.getElementById('npcImagemPreview');
+            const img = document.getElementById('npcImagemPreviewImg');
+            
+            if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                img.src = url;
+                preview.style.display = 'block';
+                img.onerror = function() {
+                    preview.style.display = 'none';
+                };
+            } else {
+                preview.style.display = 'none';
             }
         });
 
