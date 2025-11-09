@@ -6980,10 +6980,17 @@ Exemplos:
 
                 // 💾 SALVAR CP NO PERSONAGEM (Firebase)
                 char.cp = {
-                    valor: cpData.CP,
-                    nome: cpData.nome,
-                    rank: cpData.letra
+                    valor: cpData.CP || 0,
+                    nome: cpData.nome || 'CIVIL/NOVATO',
+                    rank: cpData.letra || 'E',
+                    of: cpData.OF || 0,
+                    df: cpData.DF || 0,
+                    rs: cpData.RS || 0,
+                    mb: cpData.MB || 0
                 };
+
+                // 🐛 DEBUG: Verificar se os valores estão sendo salvos corretamente
+                console.log('💾 Salvando CP no Firebase:', char.cp);
                 
                 // Ajustar valores atuais se necessário
                 if (!char.hpCurrent || char.hpCurrent > vitalidadeMax) {
