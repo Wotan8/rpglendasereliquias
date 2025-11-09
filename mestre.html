@@ -836,6 +836,16 @@
             box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
         }
 
+        .btn-npc-duplicate {
+            background: linear-gradient(135deg, var(--warning), #d97706);
+            color: white;
+        }
+
+        .btn-npc-duplicate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+        }
+
         .npc-filters {
             display: flex;
             gap: 10px;
@@ -1296,6 +1306,9 @@
         <div id="tabNpcs" class="tab-content">
             <div class="npc-controls">
                 <div class="npc-action-buttons">
+                    <button class="btn-npc btn-npc-duplicate" onclick="duplicateSelectedNpcs()">
+                        📋 Duplicar
+                    </button>
                     <button class="btn-npc btn-npc-create" onclick="openNpcModal()">
                         ➕ Criar
                     </button>
@@ -3307,6 +3320,67 @@ Agilidade 2\n
             }
         };
 
+        window.duplicateSelectedNpcs = async function() {
+            const checkboxes = document.querySelectorAll('.npc-checkbox:checked');
+            
+            if (checkboxes.length === 0) {
+                showAlert('⚠️ Selecione pelo menos um NPC/Criatura para duplicar', 'warning');
+                return;
+            }
+            
+            const npcNames = Array.from(checkboxes).map(cb => {
+                const npcId = cb.dataset.npcId;
+                const npc = allNpcs.find(n => n.id === npcId);
+                return npc?.nome || 'Sem nome';
+            });
+            
+            if (!confirm(`Tem certeza que deseja DUPLICAR ${checkboxes.length} NPC(s)/Criatura(s)?\n\n${npcNames.join('\n')}`)) {
+                return;
+            }
+            
+            try {
+                let duplicatedCount = 0;
+                
+                for (const checkbox of checkboxes) {
+                    const npcId = checkbox.dataset.npcId;
+                    const npc = allNpcs.find(n => n.id === npcId);
+                    
+                    if (npc) {
+                        // Cria uma cópia do NPC sem o ID
+                        const npcCopy = {
+                            ...npc,
+                            nome: `${npc.nome} (Cópia)`,
+                            lastUpdate: new Date().toISOString(),
+                            lastUpdateBy: currentUser.email
+                        };
+                        
+                        // Remove o ID para criar um novo documento
+                        delete npcCopy.id;
+                        
+                        // Cria um novo NPC no banco de dados
+                        const npcsRef = collection(db, 'npcs');
+                        const npcDoc = doc(npcsRef);
+                        await setDoc(npcDoc, npcCopy);
+                        
+                        // Registra no log
+                        await addLog(
+                            currentUser.email,
+                            'Duplicou o NPC/Criatura',
+                            `${npc.nome} → ${npcCopy.nome}`,
+                            'npcs'
+                        );
+                        
+                        duplicatedCount++;
+                    }
+                }
+                
+                showAlert(`✅ ${duplicatedCount} NPC(s)/Criatura(s) duplicado(s) com sucesso!`, 'success');
+                await loadAllNpcs();
+            } catch (error) {
+                console.error('❌ Erro ao duplicar NPCs:', error);
+                showAlert('❌ Erro ao duplicar NPCs/Criaturas', 'danger');
+            }
+        };
 
         document.getElementById('npcModal')?.addEventListener('click', function(e) {
             if (e.target === this) {
