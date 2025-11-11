@@ -2535,29 +2535,6 @@ Exemplos:
         let isEnsuringingEquipados = false;
 
         /**
-         * Garante que o documento do personagem tenha o ownerUid definido para o usuário atual.
-         * Sempre utiliza merge para evitar sobrescrever campos existentes.
-         * @param {import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js').DocumentReference} characterRef
-         */
-        async function ensureOwnerUid(characterRef) {
-            const user = auth.currentUser;
-            if (!user) {
-                throw new Error('Não autenticado.');
-            }
-
-            const snap = await getDoc(characterRef);
-            if (!snap.exists()) {
-                await setDoc(characterRef, { ownerUid: user.uid }, { merge: true });
-                return;
-            }
-
-            const data = snap.data() || {};
-            if (!data.ownerUid) {
-                await setDoc(characterRef, { ownerUid: user.uid }, { merge: true });
-            }
-        }
-
-        /**
          * Garante que o container Equipados existe
          */
         async function ensureEquipadosContainer(characterId) {
@@ -2634,6 +2611,7 @@ Exemplos:
 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
+                    
                     console.log('✅ Ficha carregada do Firebase:', data);
                     
                     delete data.lastUpdate;
@@ -2742,36 +2720,53 @@ Exemplos:
                 window.currentUser = user;
                 console.log('✅ Usuário logado:', user.email);
                 
-                // ADICIONAR ESTAS LINHAS:
+                // 🔒 VERIFICAÇÃO DE SEGURANÇA ANTES DE MOSTRAR QUALQUER COISA
                 try {
-                    // Limpar possíveis dados corrompidos
                     const urlParams = new URLSearchParams(window.location.search);
                     const characterId = urlParams.get('id');
                     
                     if (characterId) {
-                        console.log('🔍 Tentando carregar personagem:', characterId);
+                        console.log('🔍 Verificando permissões para personagem:', characterId);
                         
-                        // Verificar se o documento existe antes de carregar
-                        const testDoc = await getDoc(doc(db, 'characters', characterId));
-                        if (!testDoc.exists()) {
+                        // Buscar o documento do personagem
+                        const characterDoc = await getDoc(doc(db, 'characters', characterId));
+                        
+                        // Verificar se existe
+                        if (!characterDoc.exists()) {
                             console.error('❌ Personagem não encontrado:', characterId);
-                            alert('Personagem não encontrado! Redirecionando...');
+                            alert('⚠️ Personagem não encontrado!\n\nRedirecionando para seus personagens...');
                             window.location.href = 'personagens.html';
                             return;
                         }
+                        
+                        // 🔒 VERIFICAR PROPRIEDADE: Impedir acesso a personagens de outros usuários
+                        const characterData = characterDoc.data();
+                        if (characterData.ownerUid && characterData.ownerUid !== user.uid) {
+                            console.error('❌ ACESSO NEGADO: Este personagem pertence a outro usuário!');
+                            console.error('Owner:', characterData.ownerUid);
+                            console.error('Tentativa de acesso:', user.uid);
+                            
+                            // NÃO mostra NADA da ficha e redireciona imediatamente
+                            alert('🚫 ACESSO NEGADO!\n\nEste personagem não pertence a você.\n\nRedirecionando para seus personagens...');
+                            window.location.href = 'personagens.html';
+                            return;
+                        }
+                        
+                        console.log('✅ Permissão concedida para acessar personagem:', characterId);
                     }
                 } catch (error) {
                     console.error('❌ Erro ao verificar personagem:', error);
-                    alert('Erro ao carregar personagem. Tente novamente.');
+                    alert('❌ Erro ao carregar personagem.\n\nRedirecionando...');
                     window.location.href = 'personagens.html';
                     return;
                 }
 
+                // ✅ SE CHEGOU AQUI, O USUÁRIO TEM PERMISSÃO - Mostrar interface
                 document.getElementById('userEmail').textContent = user.email;
                 document.getElementById('userInfo').style.display = 'flex';
                 document.getElementById('loadingScreen').style.display = 'none';
                 document.getElementById('mainContainer').style.display = 'block';
-                
+
                 await loadFromFirebase();
                 await init();
             } else {
@@ -2813,14 +2808,19 @@ Exemplos:
                 const characterId = currentCharacterId || currentUser.uid;
                 const userDoc = doc(db, 'characters', characterId);
 
-                await ensureOwnerUid(userDoc);
-
-                await setDoc(userDoc, {
+                // 🔒 MANTER ownerUid existente ou definir apenas se novo personagem
+                const characterData = {
                     ...char,
-                    ownerUid: currentUser.uid,
                     lastUpdate: new Date().toISOString(),
                     userEmail: currentUser.email
-                }, { merge: true });
+                };
+
+                // Só define ownerUid se for um personagem novo (não tem ownerUid)
+                if (!char.ownerUid) {
+                    characterData.ownerUid = currentUser.uid;
+                }
+
+                await setDoc(userDoc, characterData, { merge: true });
                 
                 // ✅ SISTEMA DE DETECÇÃO DE MUDANÇAS
                 if (previousCharacterState) {
