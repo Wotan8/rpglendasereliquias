@@ -3024,7 +3024,8 @@ Exemplos:
                     cargaMax: item.cargaMax || 0, // Vestimenta
                     maxCapacity: item.maxCapacity || 0, // Container
                     maxSize: item.maxSize || 0, // Container
-                    equipado: item.equipado || false // Estado de equipado
+                    equipado: item.equipado || false, // Estado de equipado
+                    projetilId: item.projetilId || null // ID do projétil equipado na arma
                 }, { merge: true });
                 
                 console.log('✅ Item salvo:', item.name);
@@ -6409,7 +6410,16 @@ Exemplos:
                                         break;
                                     case 'Disparo Leve':
                                     case 'Disparo Pesado':
+                                        // Calcular valor base da arma
                                         valorTeste = char.des + disparo + precisao + (item.dano || 0);
+                                        
+                                        // ✅ ADICIONAR dano do projétil se houver um equipado
+                                        if (item.projetilId) {
+                                            const projetilEquipado = buscarProjetilPorId(item.projetilId);
+                                            if (projetilEquipado) {
+                                                valorTeste += (projetilEquipado.dano || 0);
+                                            }
+                                        }
                                         break;
                                     default:
                                         valorTeste = arma + (item.dano || 0);
@@ -6788,56 +6798,95 @@ Exemplos:
                 let valorTeste = 0;
                 let emoji = emojiPorTipo[itemArma.tipoArma] || '⚔️';
                 
+                // Verificar se há projétil equipado para esta arma
+                const projetilEquipado = itemArma.projetilId ? 
+                    buscarProjetilPorId(itemArma.projetilId) : null;
+                
                 switch(itemArma.tipoArma) {
                     case 'Manopla':
-                        // FOR + Briga + Dano da manopla
                         valorTeste = char.for + briga + (itemArma.dano || 0);
                         break;
                         
                     case 'Haste':
-                        // Maior entre FOR ou DES + Arma + Armas de Haste (se guerreiro) + Dano
                         const forOuDesHaste = Math.max(char.for, char.des);
                         valorTeste = forOuDesHaste + arma + armasHaste + (itemArma.dano || 0);
                         break;
                         
                     case 'Pesada':
-                        // FOR + Arma + Armas Pesadas (se guerreiro) + Dano
                         valorTeste = char.for + arma + armasPesadas + (itemArma.dano || 0);
                         break;
                         
                     case 'De Uma Mão':
-                        // Maior entre FOR ou DES + Arma + Armas de Uma Mão (se guerreiro) + Dano
                         const forOuDesUmaMao = Math.max(char.for, char.des);
                         valorTeste = forOuDesUmaMao + arma + armasUmaMao + (itemArma.dano || 0);
                         break;
                         
                     case 'De Duas Mãos':
-                        // Maior entre FOR ou DES + Arma + Armas de Duas Mãos (se guerreiro) + Dano
                         const forOuDesDuasMaos = Math.max(char.for, char.des);
                         valorTeste = forOuDesDuasMaos + arma + armasDuasMaos + (itemArma.dano || 0);
                         break;
                         
                     case 'Dupla':
-                        // DES + Arma + Armas Duplas (se guerreiro) + armaspunho (se Ladino) + Dano
                         valorTeste = char.des + arma + armasDuplas + armaspunho + (itemArma.dano || 0);
                         break;
                     
                     case 'Disparo Leve':
-                        // DES + Disparo + Precisão (se caçador) + Dano
-                        valorTeste = char.des + disparo + precisao + (itemArma.dano || 0);
-                        break;
-                    
                     case 'Disparo Pesado':
-                        // DES + Disparo + Precisão (se caçador) + Dano
+                        // Calcular valor base
                         valorTeste = char.des + disparo + precisao + (itemArma.dano || 0);
+                        // Adicionar dano do projétil se houver
+                        if (projetilEquipado) {
+                            valorTeste += (projetilEquipado.dano || 0);
+                        }
                         break;
 
                     default:
-                        // Para outros tipos (Escudo)
                         valorTeste = arma + (itemArma.dano || 0);
                         break;
                 }
                 
+                // Se for arma de disparo, adicionar select de projéteis
+                const isArmaDisparo = itemArma.tipoArma === 'Disparo Leve' || itemArma.tipoArma === 'Disparo Pesado';
+                
+                if (isArmaDisparo) {
+                    const projeteis = buscarTodosProjeteis();
+                    const projetilSelect = `
+                        <select 
+                            onchange="equiparProjetilNaArma('${itemArma.id}', this.value)" 
+                            style="max-width: 150px; padding: 5px 8px; border-radius: 6px; background: rgba(15, 23, 42, 0.9); color: #fbbf24; border: 1px solid #fbbf24; font-size: 0.85rem; cursor: pointer; margin-left: 8px;">
+                            <option value="">-- Sem Projétil --</option>
+                            ${projeteis.map(proj => `
+                                <option value="${proj.id}" ${projetilEquipado?.id === proj.id ? 'selected' : ''}>
+                                    ${proj.name} (${proj.quantity || 0})
+                                </option>
+                            `).join('')}
+                        </select>
+                    `;
+                    
+                    const quantidadeInput = projetilEquipado ? `
+                        <input 
+                            type="number" 
+                            value="${projetilEquipado.quantity || 0}"
+                            min="0"
+                            onchange="atualizarQuantidadeProjetil('${projetilEquipado.id}', this.value)"
+                            style="width: 70px; padding: 4px 6px; border-radius: 6px; background: rgba(15, 23, 42, 0.9); color: #10b981; border: 1px solid #10b981; font-size: 0.9rem; font-weight: 700; text-align: center; margin-left: 8px;">
+                    ` : '';
+                    
+                    return `
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(15, 23, 42, 0.6); border-radius: 8px; border-left: 4px solid var(--success); margin-top: 8px; flex-wrap: wrap; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                                <span style="font-weight: 600; color: var(--light);">${emoji} ${itemArma.name}</span>
+                                ${projetilSelect}
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                ${quantidadeInput}
+                                <span style="font-weight: 700; color: var(--success); font-size: 1.1rem;">🎲 ${valorTeste}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Para outras armas (não de disparo)
                 return `
                     <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(15, 23, 42, 0.6); border-radius: 8px; border-left: 4px solid var(--success); margin-top: 8px;">
                         <span style="font-weight: 600; color: var(--light);">${emoji} ${itemArma.name}</span>
@@ -6847,6 +6896,188 @@ Exemplos:
             }).join('');
             
             armasListElement.innerHTML = armasHTML;
+        }
+
+        /**
+         * Busca todos os projéteis no inventário (em todos os containers)
+         */
+        function buscarTodosProjeteis() {
+            const char = getChar();
+            const projeteis = [];
+            
+            if (char.containers) {
+                char.containers.forEach(container => {
+                    if (container.items) {
+                        container.items.forEach(item => {
+                            if (item.tipo === 'Projétil') {
+                                projeteis.push({
+                                    ...item,
+                                    containerId: container.id,
+                                    containerName: container.name
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+            
+            return projeteis;
+        }
+
+        /**
+         * Busca um projétil específico por ID
+         */
+        function buscarProjetilPorId(projetilId) {
+            const projeteis = buscarTodosProjeteis();
+            return projeteis.find(p => p.id === projetilId);
+        }
+
+        /**
+         * Equipa um projétil em uma arma de disparo
+         */
+        async function equiparProjetilNaArma(armaId, projetilId) {
+            try {
+                const char = getChar();
+                
+                // Encontrar a arma em QUALQUER container (não apenas "Equipados")
+                let armaEncontrada = null;
+                let containerDaArma = null;
+                
+                if (char.containers) {
+                    // Procurar em TODOS os containers
+                    for (const container of char.containers) {
+                        if (container.items) {
+                            const item = container.items.find(i => i.id === armaId && i.tipo === 'Arma');
+                            if (item) {
+                                armaEncontrada = item;
+                                containerDaArma = container;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                if (!armaEncontrada) {
+                    alert('❌ Arma não encontrada!');
+                    return;
+                }
+                
+                // Atualizar o projétil equipado na arma
+                if (projetilId === '') {
+                    // Remover projétil
+                    delete armaEncontrada.projetilId;
+                    console.log(`🔄 Removendo projétil da arma ${armaEncontrada.name}`);
+                } else {
+                    // Equipar projétil
+                    armaEncontrada.projetilId = projetilId;
+                    console.log(`✅ Equipando projétil ${projetilId} na arma ${armaEncontrada.name}`);
+                }
+                
+                // ✅ Salvar a ARMA no Firebase (não o character inteiro)
+                await window.saveItemToFirebase(armaEncontrada);
+                console.log('✅ Arma salva no Firebase com projetilId');
+                
+                // Aguardar um pouco para garantir que o Firebase salvou
+                await new Promise(resolve => setTimeout(resolve, 200));
+                
+                // Atualizar display
+                atualizarArmasEquipadas();
+                updateAllCalculations();
+                
+                console.log(`✅ Projétil ${projetilId ? 'equipado' : 'removido'} na arma ${armaEncontrada.name}`);
+            } catch (error) {
+                console.error('❌ Erro ao equipar projétil:', error);
+                alert('❌ Erro ao equipar projétil. Tente novamente.');
+            }
+        }
+
+        /**
+         * Atualiza a quantidade de um projétil
+         */
+        async function atualizarQuantidadeProjetil(projetilId, novaQuantidade) {
+            try {
+                const char = getChar();
+                novaQuantidade = parseInt(novaQuantidade) || 0;
+                
+                console.log(`🔄 Atualizando quantidade do projétil ${projetilId} para ${novaQuantidade}`);
+                
+                // Encontrar o projétil e seu container
+                let projetilEncontrado = null;
+                let containerDoProjetil = null;
+                
+                if (char.containers) {
+                    for (const container of char.containers) {
+                        if (container.items) {
+                            const item = container.items.find(i => i.id === projetilId);
+                            if (item) {
+                                projetilEncontrado = item;
+                                containerDoProjetil = container;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                if (!projetilEncontrado) {
+                    alert('❌ Projétil não encontrado!');
+                    return;
+                }
+                
+                // Se a quantidade for 0 ou negativa, remover o item
+                if (novaQuantidade <= 0) {
+                    const confirmDelete = confirm(`❌ Deseja remover "${projetilEncontrado.name}" do inventário?`);
+                    if (confirmDelete) {
+                        // 🔥 Remover o item do Firebase usando deleteItemFromFirebase
+                        try {
+                            await deleteItemFromFirebase(projetilId);
+                            console.log('✅ Item removido do Firebase');
+                            
+                            // Remover o projétil de todas as armas que o usam
+                            const containerEquipados = char.containers.find(c => c.name === 'Equipados');
+                            if (containerEquipados && containerEquipados.items) {
+                                for (const arma of containerEquipados.items) {
+                                    if (arma.projetilId === projetilId) {
+                                        delete arma.projetilId;
+                                        await window.saveItemToFirebase(arma);
+                                        console.log(`✅ Projétil removido da arma ${arma.name}`);
+                                    }
+                                }
+                            }
+                            
+                            // 🔥 Recarregar containers do Firebase
+                            await loadInventoryFromFirebase(currentCharacterId);
+                            
+                            // Atualizar display
+                            atualizarArmasEquipadas();
+                            updateContainers();
+                            alert(`✅ Projétil "${projetilEncontrado.name}" removido!`);
+                        } catch (error) {
+                            console.error('❌ Erro ao remover projétil:', error);
+                            alert('❌ Erro ao remover projétil. Tente novamente.');
+                        }
+                    } else {
+                        // Restaurar valor anterior
+                        atualizarArmasEquipadas();
+                    }
+                    return;
+                }
+                
+                // Atualizar quantidade
+                projetilEncontrado.quantity = novaQuantidade;
+                
+                // 🔥 Salvar apenas o projétil no Firebase (sem recarregar tudo)
+                await window.saveItemToFirebase(projetilEncontrado);
+                console.log('✅ Projétil salvo no Firebase');
+                
+                // ✅ Atualizar display localmente (SEM recarregar do Firebase)
+                atualizarArmasEquipadas();
+                updateContainers();
+                
+                console.log(`✅ Quantidade do projétil ${projetilEncontrado.name} atualizada para ${novaQuantidade}`);
+            } catch (error) {
+                console.error('❌ Erro ao atualizar quantidade:', error);
+                alert('❌ Erro ao atualizar quantidade. Tente novamente.');
+            }
         }
 
         function updateAllCalculations() {

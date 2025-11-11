@@ -982,6 +982,12 @@
             min-width: 80px;
         }
 
+        .npc-detail-label-light {
+            color: #ffffff;
+            font-weight: 600;
+            min-width: 80px;
+        }
+
         .npc-detail-value {
             color: var(--light);
         }
@@ -3172,6 +3178,20 @@ Agilidade 2\n
                                 <img src="${npc.imagem}" alt="${npc.nome}" class="npc-card-image">
                             </div>
                         ` : ''}
+                        ${npc.rolePlay?.personalidade?.length ? `
+                            <div class="npc-personalidades">
+                                ${[0,1,2].map(i => npc.rolePlay.personalidade[i] ? `
+                                <div class="npc-personalidade">
+                                    <label class="npc-detail-label"><strong>-</strong> ${npc.rolePlay.personalidade[i]}</label>
+                                </div>
+                                ` : '').join('')}
+                            </div>
+                            ` : '' }
+                        ${npc.rolePlay?.trejeitos ? `
+                            <div class="npc-trejeitos">
+                                <label class="npc-detail-label-light">Trejeito: ${npc.rolePlay.trejeitos}</label>
+                            </div>
+                            ` : '' }
                         ${tags.length > 0 ? `
                             <div class="npc-tags">
                                 ${tags.map(tag => `<span class="npc-tag">${tag}</span>`).join('')}
