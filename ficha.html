@@ -8031,7 +8031,7 @@ Exemplos:
                                             style="width: 60px; padding: 4px 8px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--primary); border-radius: 8px; color: white; text-align: center; font-weight: 600;"
                                             onclick="event.stopPropagation()">
                                     ` : ''}
-                                    ${!item.isContainerItem ? `<button class="btn btn-secondary btn-small" onclick="moveItemToContainer('${container.id}', '${item.id}')" style="padding: 4px 8px;">📦</button>` : ''}
+                                    ${!(item.isContainerItem && item.linkedContainerId === container.id) ? `<button class="btn btn-secondary btn-small" onclick="moveItemToContainer('${container.id}', '${item.id}')" style="padding: 4px 8px;">📦</button>` : ''}
                                     <button class="btn btn-danger btn-small" onclick="removeItemFromContainer('${container.id}', '${item.id}')" style="padding: 4px 8px;">🗑️</button>
                                 </div>
                             </div>
@@ -8283,12 +8283,6 @@ Exemplos:
                 (item.tipo === 'Arma' || item.tipo === 'Vestimenta') && 
                 item.equipado === true) {
                 alert('⚠️ Item Equipado!\n\nVocê precisa desmarcar a caixinha de equipado antes de tirar este item do container "Equipados".');
-                return;
-            }
-            
-            // Verificar se é Item de Container
-            if (item.isContainerItem) {
-                alert('❌ Não é possível mover o Item de Container!\n\nEste item representa um container físico que você carrega.');
                 return;
             }
             
