@@ -1376,6 +1376,140 @@
                 align-items: stretch;
             }
         }
+
+        /* ========== ESTILOS DA ABA COMBATE ========== */
+        .combat-header {
+            margin-bottom: 30px;
+        }
+
+        .combat-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .combat-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .combat-participant {
+            background: rgba(30, 27, 75, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .combat-participant:hover {
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .combat-initiative {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .combat-initiative-value {
+            font-size: 2rem;
+        }
+
+        .combat-initiative-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.9;
+        }
+
+        .combat-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .combat-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--light);
+        }
+
+        .combat-type {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--primary);
+            font-weight: 600;
+            text-transform: uppercase;
+            width: fit-content;
+        }
+
+        .combat-details {
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        .combat-actions {
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .combat-initiative-input {
+            width: 80px;
+            padding: 8px;
+            background: rgba(30, 27, 75, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: 1rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .combat-initiative-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+        }
+
+        .no-combat {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .combat-participant {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .combat-actions {
+                width: 100%;
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1412,6 +1546,7 @@
             <button class="tab-button" onclick="switchTab('exp')">⭐ EXP</button>
             <button class="tab-button" onclick="switchTab('aliados')">🤝 ALIADOS</button>
             <button class="tab-button" onclick="switchTab('npcs')">👥 NPCs</button>
+            <button class="tab-button" onclick="switchTab('combate')">⚔️ COMBATE</button>
         </div>
 
         <!-- ABA PERSONAGENS -->
@@ -1512,6 +1647,27 @@
             </div>
 
             <div class="npcs-list" id="npcsList"></div>
+        </div>
+
+        <!-- ABA COMBATE -->
+        <div id="tabCombate" class="tab-content">
+            <div class="combat-header">
+                <h2 style="color: var(--primary); margin-bottom: 20px;">⚔️ Gerenciador de Combate</h2>
+                
+                <div class="combat-controls">
+                    <button class="btn btn-success" onclick="addToCombat('jogador')">➕ Adicionar Jogador</button>
+                    <button class="btn btn-success" onclick="addToCombat('npc')">➕ Adicionar NPC/Criatura</button>
+                    <button class="btn btn-success" onclick="addToCombat('custom')">➕ Adicionar Inimigo Personalizado</button>
+                    <button class="btn btn-warning" onclick="sortCombatList()">🔄 Ordenar por Iniciativa</button>
+                    <button class="btn btn-danger" onclick="clearCombatList()">🗑️ Limpar Lista</button>
+                </div>
+            </div>
+
+            <div id="combatList" class="combat-list">
+                <div class="no-combat">
+                    Nenhum participante adicionado ao combate ainda.
+                </div>
+            </div>
         </div>
     </div>
 
@@ -3235,11 +3391,378 @@ Agilidade 2\n
             } else if (tabName === 'exp') {
                 loadExpCharacters();
             } else if (tabName === 'aliados') {
-                loadAllies(); // ← NOVA FUNÇÃO QUE VOCÊ VAI ADICIONAR
+                loadAllies();
             } else if (tabName === 'npcs') {
                 loadNpcs();
+            } else if (tabName === 'combate') {
+                renderCombatList();
             }
         };
+
+        // ============= COMBATE =============
+        let combatParticipants = [];
+
+        window.addToCombat = function(type) {
+            if (type === 'jogador') {
+                showCharacterSelector();
+            } else if (type === 'npc') {
+                showNpcSelector();
+            } else if (type === 'custom') {
+                showCustomEnemyInput();
+            }
+        };
+
+        async function showCharacterSelector() {
+            try {
+                const querySnapshot = await getDocs(collection(db, 'characters'));
+                const characters = [];
+                querySnapshot.forEach((doc) => {
+                    characters.push({ id: doc.id, ...doc.data() });
+                });
+                
+                if (characters.length === 0) {
+                    showAlert('❌ Nenhum personagem disponível', 'danger');
+                    return;
+                }
+                
+                const options = characters.map(char => 
+                    `<option value="${char.id}" data-name="${(char.nome || '').toLowerCase()}">${char.nome} (${char.jogador})</option>`
+                ).join('');
+                
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.style.display = 'flex';
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 500px;">
+                        <div class="modal-header">
+                            <div class="modal-title">Adicionar Jogador ao Combate</div>
+                            <button class="modal-close" onclick="this.closest('.modal').remove()">✕</button>
+                        </div>
+                        <div style="padding: 20px;">
+                            <div class="form-group">
+                                <label class="form-label">🔍 Buscar Personagem</label>
+                                <input 
+                                    type="text" 
+                                    class="form-input" 
+                                    id="searchCharacterCombat" 
+                                    placeholder="Digite o nome para filtrar..."
+                                    oninput="filterCharacterSelect()"
+                                    style="margin-bottom: 15px;">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Selecione o Personagem</label>
+                                <select class="form-select" id="selectCharacter" size="8" style="height: 200px; overflow-y: auto;">
+                                    ${options}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Iniciativa</label>
+                                <input type="number" class="form-input" id="characterInitiative" value="0" min="0">
+                            </div>
+                            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                                <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancelar</button>
+                                <button class="btn btn-success" onclick="addCharacterToCombat()">Adicionar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                // Armazenar characters globalmente para uso posterior
+                window.tempCharacters = characters;
+                
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) modal.remove();
+                });
+            } catch (error) {
+                console.error('Erro ao carregar personagens:', error);
+                showAlert('❌ Erro ao carregar personagens', 'danger');
+            }
+        }
+
+        window.filterCharacterSelect = function() {
+            const searchInput = document.getElementById('searchCharacterCombat').value.toLowerCase();
+            const selectElement = document.getElementById('selectCharacter');
+            const options = selectElement.options;
+            
+            for (let i = 0; i < options.length; i++) {
+                const optionText = options[i].text.toLowerCase();
+                const optionName = options[i].getAttribute('data-name') || '';
+                
+                if (optionText.includes(searchInput) || optionName.includes(searchInput)) {
+                    options[i].style.display = '';
+                } else {
+                    options[i].style.display = 'none';
+                }
+            }
+            
+            // Selecionar automaticamente a primeira opção visível
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].style.display !== 'none') {
+                    selectElement.selectedIndex = i;
+                    break;
+                }
+            }
+        };
+
+        window.addCharacterToCombat = function() {
+            const characterId = document.getElementById('selectCharacter').value;
+            const initiative = parseInt(document.getElementById('characterInitiative').value) || 0;
+            
+            const character = window.tempCharacters.find(c => c.id === characterId);
+            
+            if (character) {
+                combatParticipants.push({
+                    id: 'char-' + Date.now(),
+                    name: character.nome,
+                    type: 'Jogador',
+                    initiative: initiative,
+                    details: `${character.raca} - ${character.classe} | HP: ${character.hpCurrent}/${character.hpMax}`
+                });
+                
+                renderCombatList();
+                document.querySelector('.modal').remove();
+                showAlert('✅ Jogador adicionado ao combate!', 'success');
+            }
+        };
+
+        async function showNpcSelector() {
+            try {
+                const querySnapshot = await getDocs(collection(db, 'npcs'));
+                const npcs = [];
+                querySnapshot.forEach((doc) => {
+                    npcs.push({ id: doc.id, ...doc.data() });
+                });
+                
+                if (npcs.length === 0) {
+                    showAlert('❌ Nenhum NPC/Criatura disponível', 'danger');
+                    return;
+                }
+                
+                const options = npcs.map(npc => 
+                    `<option value="${npc.id}" data-name="${(npc.nome || '').toLowerCase()}">${npc.nome} (${npc.tipo || 'NPC'})</option>`
+                ).join('');
+                
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.style.display = 'flex';
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 500px;">
+                        <div class="modal-header">
+                            <div class="modal-title">Adicionar NPC/Criatura ao Combate</div>
+                            <button class="modal-close" onclick="this.closest('.modal').remove()">✕</button>
+                        </div>
+                        <div style="padding: 20px;">
+                            <div class="form-group">
+                                <label class="form-label">🔍 Buscar NPC/Criatura</label>
+                                <input 
+                                    type="text" 
+                                    class="form-input" 
+                                    id="searchNpcCombat" 
+                                    placeholder="Digite o nome para filtrar..."
+                                    oninput="filterNpcSelect()"
+                                    style="margin-bottom: 15px;">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Selecione o NPC/Criatura</label>
+                                <select class="form-select" id="selectNpc" size="8" style="height: 200px; overflow-y: auto;">
+                                    ${options}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Iniciativa</label>
+                                <input type="number" class="form-input" id="npcInitiative" value="0" min="0">
+                            </div>
+                            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                                <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancelar</button>
+                                <button class="btn btn-success" onclick="addNpcToCombat()">Adicionar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                // Armazenar npcs globalmente para uso posterior
+                window.tempNpcs = npcs;
+                
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) modal.remove();
+                });
+            } catch (error) {
+                console.error('Erro ao carregar NPCs:', error);
+                showAlert('❌ Erro ao carregar NPCs', 'danger');
+            }
+        }
+
+        window.filterNpcSelect = function() {
+            const searchInput = document.getElementById('searchNpcCombat').value.toLowerCase();
+            const selectElement = document.getElementById('selectNpc');
+            const options = selectElement.options;
+            
+            for (let i = 0; i < options.length; i++) {
+                const optionText = options[i].text.toLowerCase();
+                const optionName = options[i].getAttribute('data-name') || '';
+                
+                if (optionText.includes(searchInput) || optionName.includes(searchInput)) {
+                    options[i].style.display = '';
+                } else {
+                    options[i].style.display = 'none';
+                }
+            }
+            
+            // Selecionar automaticamente a primeira opção visível
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].style.display !== 'none') {
+                    selectElement.selectedIndex = i;
+                    break;
+                }
+            }
+        };
+
+        window.addNpcToCombat = function() {
+            const npcId = document.getElementById('selectNpc').value;
+            const initiative = parseInt(document.getElementById('npcInitiative').value) || 0;
+            
+            const npc = window.tempNpcs.find(n => n.id === npcId);
+            
+            if (npc) {
+                combatParticipants.push({
+                    id: 'npc-' + Date.now(),
+                    name: npc.nome,
+                    type: npc.tipo || 'NPC',
+                    initiative: initiative,
+                    details: `${npc.raca || 'N/A'} | HP: ${npc.hpAtual || 0}/${npc.hpMax || 0}`
+                });
+                
+                renderCombatList();
+                document.querySelector('.modal').remove();
+                showAlert('✅ NPC/Criatura adicionado ao combate!', 'success');
+            }
+        };
+
+        function showCustomEnemyInput() {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'flex';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <div class="modal-title">Adicionar Inimigo Personalizado</div>
+                        <button class="modal-close" onclick="this.closest('.modal').remove()">✕</button>
+                    </div>
+                    <div style="padding: 20px;">
+                        <div class="form-group">
+                            <label class="form-label">Nome do Inimigo</label>
+                            <input type="text" class="form-input" id="customEnemyName" placeholder="Ex: Goblin, Bandido...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Detalhes (opcional)</label>
+                            <input type="text" class="form-input" id="customEnemyDetails" placeholder="Ex: HP: 20, CA: 15">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Iniciativa</label>
+                            <input type="number" class="form-input" id="customInitiative" value="0" min="0">
+                        </div>
+                        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                            <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancelar</button>
+                            <button class="btn btn-success" onclick="addCustomEnemyToCombat()">Adicionar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) modal.remove();
+            });
+        }
+
+        window.addCustomEnemyToCombat = function() {
+            const name = document.getElementById('customEnemyName').value.trim();
+            const details = document.getElementById('customEnemyDetails').value.trim();
+            const initiative = parseInt(document.getElementById('customInitiative').value) || 0;
+            
+            if (!name) {
+                showAlert('❌ Por favor, insira um nome para o inimigo', 'danger');
+                return;
+            }
+            
+            combatParticipants.push({
+                id: 'custom-' + Date.now(),
+                name: name,
+                type: 'Inimigo',
+                initiative: initiative,
+                details: details || 'Sem detalhes'
+            });
+            
+            renderCombatList();
+            document.querySelector('.modal').remove();
+            showAlert('✅ Inimigo adicionado ao combate!', 'success');
+        };
+
+        window.sortCombatList = function() {
+            combatParticipants.sort((a, b) => b.initiative - a.initiative);
+            renderCombatList();
+            showAlert('✅ Lista ordenada por iniciativa!', 'success');
+        };
+
+        window.clearCombatList = function() {
+            if (confirm('Tem certeza que deseja limpar toda a lista de combate?')) {
+                combatParticipants = [];
+                renderCombatList();
+                showAlert('✅ Lista de combate limpa!', 'success');
+            }
+        };
+
+        window.removeFromCombat = function(id) {
+            combatParticipants = combatParticipants.filter(p => p.id !== id);
+            renderCombatList();
+            showAlert('✅ Participante removido do combate!', 'success');
+        };
+
+        window.updateInitiative = function(id, newValue) {
+            const participant = combatParticipants.find(p => p.id === id);
+            if (participant) {
+                participant.initiative = parseInt(newValue) || 0;
+            }
+        };
+
+        function renderCombatList() {
+            const combatList = document.getElementById('combatList');
+            
+            if (combatParticipants.length === 0) {
+                combatList.innerHTML = '<div class="no-combat">Nenhum participante adicionado ao combate ainda.</div>';
+                return;
+            }
+            
+            combatList.innerHTML = combatParticipants.map(participant => `
+                <div class="combat-participant">
+                    <div class="combat-initiative">
+                        <div class="combat-initiative-value">${participant.initiative}</div>
+                        <div class="combat-initiative-label">Iniciativa</div>
+                    </div>
+                    
+                    <div class="combat-info">
+                        <div class="combat-name">${participant.name}</div>
+                        <span class="combat-type">${participant.type}</span>
+                        <div class="combat-details">${participant.details}</div>
+                    </div>
+                    
+                    <div class="combat-actions">
+                        <input 
+                            type="number" 
+                            class="combat-initiative-input" 
+                            value="${participant.initiative}"
+                            onchange="updateInitiative('${participant.id}', this.value)"
+                            title="Alterar iniciativa"
+                        >
+                        <button class="btn btn-danger" onclick="removeFromCombat('${participant.id}')" style="padding: 10px 20px;">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
 
         // ============= ALERTAS =============
         function showAlert(message, type) {
