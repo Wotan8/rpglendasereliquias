@@ -17,10 +17,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Coleção de usuários (sem alterações)
+    // Coleção de usuários (ATUALIZADA - permite mestres editarem apoios)
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && request.auth.uid == userId;
+      // ✅ Usuários podem editar seus próprios dados OU mestres podem editar qualquer usuário
+      allow write: if isSignedIn() && (request.auth.uid == userId || isMaster());
     }
 
     // Coleção de personagens (CORRIGIDA)

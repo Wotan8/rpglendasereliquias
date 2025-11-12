@@ -1510,6 +1510,82 @@
                 justify-content: center;
             }
         }
+
+        /* ========== ESTILOS DA ABA APOIOS ========== */
+        .apoio-card {
+            background: rgba(30, 27, 75, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .apoio-card:hover {
+            border-color: var(--primary);
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(139, 92, 246, 0.3);
+        }
+
+        .apoio-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .apoio-nome {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .apoio-montante {
+            background: linear-gradient(135deg, var(--warning), var(--light));
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .apoio-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .apoio-field {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .apoio-field-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-bottom: 5px;
+        }
+
+        .apoio-field-value {
+            font-size: 0.9rem;
+            color: var(--light);
+            font-weight: 600;
+        }
+
+        .apoio-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .apoio-checkbox input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -1547,6 +1623,7 @@
             <button class="tab-button" onclick="switchTab('aliados')">🤝 ALIADOS</button>
             <button class="tab-button" onclick="switchTab('npcs')">👥 NPCs</button>
             <button class="tab-button" onclick="switchTab('combate')">⚔️ COMBATE</button>
+            <button class="tab-button" onclick="switchTab('apoios')">💹 APOIOS</button>
         </div>
 
         <!-- ABA PERSONAGENS -->
@@ -1666,6 +1743,33 @@
             <div id="combatList" class="combat-list">
                 <div class="no-combat">
                     Nenhum participante adicionado ao combate ainda.
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA APOIOS -->
+        <div id="tabApoios" class="tab-content">
+            <div style="margin-bottom: 25px;">
+                <h2 style="color: var(--primary); margin-bottom: 20px;">💰 Sistema de Apoios</h2>
+                
+                <!-- Barra de Pesquisa de Usuários -->
+                <div class="npc-filters" style="margin-bottom: 25px;">
+                    <div class="filter-group" style="flex: 1;">
+                        <label class="filter-label">Buscar Jogador</label>
+                        <select class="filter-select" id="apoioUserSelect" onchange="loadUserApoios()" style="padding: 12px 15px;">
+                            <option value="">Selecione um jogador...</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-success" onclick="openAddApoioModal()" id="btnAddApoio" style="margin-top: 25px; display: none;">
+                        ➕ Adicionar Apoio
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lista de Apoios do Usuário Selecionado -->
+            <div id="apoiosList" style="margin-top: 30px;">
+                <div style="text-align: center; padding: 40px; color: #64748b;">
+                    Selecione um jogador para ver seus apoios
                 </div>
             </div>
         </div>
@@ -3396,6 +3500,8 @@ Agilidade 2\n
                 loadNpcs();
             } else if (tabName === 'combate') {
                 renderCombatList();
+            } else if (tabName === 'apoios') {
+                loadApoiosTab();
             }
         };
 
@@ -4787,6 +4893,307 @@ Agilidade 2\n
 
         window.closeAllyModal = function() {
             const modal = document.getElementById('allyEditModal');
+            if (modal) modal.remove();
+        };
+
+        // ============= APOIOS =============
+        let currentSelectedUserId = null;
+
+        window.loadApoiosTab = async function() {
+            try {
+                // Carregar lista de usuários
+                const usersSnapshot = await getDocs(collection(db, 'users'));
+                const userSelect = document.getElementById('apoioUserSelect');
+                
+                userSelect.innerHTML = '<option value="">Selecione um jogador...</option>';
+                
+                usersSnapshot.forEach(doc => {
+                    const userData = doc.data();
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = userData.displayName || userData.email;
+                    userSelect.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar usuários:', error);
+                showAlert('❌ Erro ao carregar usuários', 'danger');
+            }
+        };
+
+        window.loadUserApoios = async function() {
+            const userId = document.getElementById('apoioUserSelect').value;
+            const apoiosList = document.getElementById('apoiosList');
+            const btnAddApoio = document.getElementById('btnAddApoio');
+            
+            if (!userId) {
+                apoiosList.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Selecione um jogador para ver seus apoios</div>';
+                btnAddApoio.style.display = 'none';
+                return;
+            }
+            
+            currentSelectedUserId = userId;
+            btnAddApoio.style.display = 'block';
+            
+            try {
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                if (!userDoc.exists()) {
+                    apoiosList.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Usuário não encontrado</div>';
+                    return;
+                }
+                
+                const userData = userDoc.data();
+                const apoios = userData.apoios || [];
+                
+                if (apoios.length === 0) {
+                    apoiosList.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Este jogador ainda não possui apoios</div>';
+                    return;
+                }
+                
+                // Renderizar apoios
+                let html = '';
+                apoios.forEach((apoio, index) => {
+                    html += `
+                        <div class="apoio-card">
+                            <div class="apoio-header">
+                                <div class="apoio-nome">${apoio.nome || 'Sem nome'} ${apoio.montante ? `<span class="apoio-montante">${apoio.montante}x</span>` : ''}</div>
+                                <button class="btn btn-danger" onclick="deleteApoio('${userId}', ${index})" style="padding: 5px 15px; font-size: 0.85rem;">🗑️</button>
+                            </div>
+                            
+                            <div class="apoio-info">
+                                <div class="apoio-field">
+                                    <div class="apoio-field-label">Tipo</div>
+                                    <div class="apoio-field-value">${apoio.tipo || '-'}</div>
+                                </div>
+                                <div class="apoio-field">
+                                    <div class="apoio-field-label">EXP VIP</div>
+                                    <div class="apoio-field-value">${apoio.expVip || '0'}</div>
+                                </div>
+                                <div class="apoio-field">
+                                    <div class="apoio-field-label">Sessão</div>
+                                    <div class="apoio-field-value">${apoio.sessao || '-'}</div>
+                                </div>
+                                <div class="apoio-field">
+                                    <div class="apoio-field-label">Data</div>
+                                    <div class="apoio-field-value">${apoio.data || '-'}</div>
+                                </div>
+                                <div class="apoio-field">
+                                    <div class="apoio-field-label">Meta</div>
+                                    <div class="apoio-field-value">${apoio.meta || '-'}</div>
+                                </div>
+                            </div>
+                            
+                            ${apoio.desbloquear ? `
+                                <div class="apoio-field" style="margin-top: 10px;">
+                                    <div class="apoio-field-label">Desbloquear</div>
+                                    <div class="apoio-field-value">${apoio.desbloquear}</div>
+                                </div>
+                            ` : ''}
+                            
+                            <div class="apoio-checkbox" style="margin-top: 15px;">
+                                <input type="checkbox" ${apoio.recebeu ? 'checked' : ''} onchange="toggleApoioRecebeu('${userId}', ${index})" id="apoio_check_${index}">
+                                <label for="apoio_check_${index}" style="color: #94a3b8; cursor: pointer;">Benefício Recebido/Usado</label>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                apoiosList.innerHTML = html;
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar apoios:', error);
+                showAlert('❌ Erro ao carregar apoios', 'danger');
+            }
+        };
+
+        window.openAddApoioModal = function() {
+            if (!currentSelectedUserId) {
+                showAlert('⚠️ Selecione um jogador primeiro', 'warning');
+                return;
+            }
+            
+            const modalHTML = `
+                <div id="apoioModal" class="modal" style="display: flex;">
+                    <div class="modal-content" style="max-width: 700px;">
+                        <div class="modal-header">
+                            <div class="modal-title">➕ Adicionar Novo Apoio</div>
+                            <button class="modal-close" onclick="closeApoioModal()">✕</button>
+                        </div>
+                        
+                        <div style="padding: 20px;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Nome do Apoio *</label>
+                                    <input type="text" class="form-input" id="apoio_nome" placeholder="Ex: Roleta, Pacote Premium...">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Montante</label>
+                                    <input type="number" class="form-input" id="apoio_montante" placeholder="Quantidade" value="1" min="1">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Tipo</label>
+                                    <input type="text" class="form-input" id="apoio_tipo" placeholder="Ex: Monetário, Item...">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">EXP VIP</label>
+                                    <input type="number" class="form-input" id="apoio_expVip" placeholder="0" value="0" min="0">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Sessão</label>
+                                    <input type="text" class="form-input" id="apoio_sessao" placeholder="Ex: Sessão 15">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Data</label>
+                                    <input type="date" class="form-input" id="apoio_data">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Meta</label>
+                                    <select class="form-input" id="apoio_meta">
+                                        <option value="">Selecione...</option>
+                                        <option value="Classe">Classe</option>
+                                        <option value="Raça">Raça</option>
+                                        <option value="Lore">Lore</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Desbloquear</label>
+                                <textarea class="form-input" id="apoio_desbloquear" placeholder="O que o jogador quer desbloquear..." rows="3"></textarea>
+                            </div>
+                            
+                            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                                <button class="btn btn-secondary" onclick="closeApoioModal()">Cancelar</button>
+                                <button class="btn btn-success" onclick="saveApoio()">💾 Salvar Apoio</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const existingModal = document.getElementById('apoioModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // Definir data atual
+            document.getElementById('apoio_data').valueAsDate = new Date();
+        };
+
+        window.saveApoio = async function() {
+            const nome = document.getElementById('apoio_nome').value.trim();
+            
+            if (!nome) {
+                showAlert('⚠️ O nome do apoio é obrigatório', 'warning');
+                return;
+            }
+            
+            const novoApoio = {
+                nome: nome,
+                montante: parseInt(document.getElementById('apoio_montante').value) || 1,
+                tipo: document.getElementById('apoio_tipo').value.trim(),
+                expVip: parseInt(document.getElementById('apoio_expVip').value) || 0,
+                sessao: document.getElementById('apoio_sessao').value.trim(),
+                data: document.getElementById('apoio_data').value,
+                recebeu: false,
+                meta: document.getElementById('apoio_meta').value,
+                desbloquear: document.getElementById('apoio_desbloquear').value.trim()
+            };
+            
+            try {
+                const userDoc = await getDoc(doc(db, 'users', currentSelectedUserId));
+                if (!userDoc.exists()) {
+                    showAlert('❌ Usuário não encontrado', 'danger');
+                    return;
+                }
+                
+                const userData = userDoc.data();
+                const apoios = userData.apoios || [];
+                apoios.push(novoApoio);
+                
+                await setDoc(doc(db, 'users', currentSelectedUserId), {
+                    apoios: apoios
+                }, { merge: true });
+                
+                showAlert('✅ Apoio adicionado com sucesso!', 'success');
+                closeApoioModal();
+                loadUserApoios();
+                
+                // Log da ação
+                await addLog(`adicionou apoio "${nome}" para o jogador`);
+                
+            } catch (error) {
+                console.error('❌ Erro ao salvar apoio:', error);
+                showAlert('❌ Erro ao salvar apoio: ' + error.message, 'danger');
+            }
+        };
+
+        window.toggleApoioRecebeu = async function(userId, apoioIndex) {
+            try {
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                if (!userDoc.exists()) return;
+                
+                const userData = userDoc.data();
+                const apoios = userData.apoios || [];
+                
+                if (apoioIndex >= 0 && apoioIndex < apoios.length) {
+                    apoios[apoioIndex].recebeu = !apoios[apoioIndex].recebeu;
+                    
+                    await setDoc(doc(db, 'users', userId), {
+                        apoios: apoios
+                    }, { merge: true });
+                    
+                    loadUserApoios();
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao atualizar apoio:', error);
+                showAlert('❌ Erro ao atualizar apoio', 'danger');
+            }
+        };
+
+        window.deleteApoio = async function(userId, apoioIndex) {
+            if (!confirm('Tem certeza que deseja deletar este apoio?')) return;
+            
+            try {
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                if (!userDoc.exists()) return;
+                
+                const userData = userDoc.data();
+                const apoios = userData.apoios || [];
+                
+                if (apoioIndex >= 0 && apoioIndex < apoios.length) {
+                    const apoioNome = apoios[apoioIndex].nome;
+                    apoios.splice(apoioIndex, 1);
+                    
+                    await setDoc(doc(db, 'users', userId), {
+                        apoios: apoios
+                    }, { merge: true });
+                    
+                    showAlert('✅ Apoio deletado com sucesso!', 'success');
+                    loadUserApoios();
+                    
+                    // Log da ação
+                    await addLog(`removeu apoio "${apoioNome}" do jogador`);
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao deletar apoio:', error);
+                showAlert('❌ Erro ao deletar apoio', 'danger');
+            }
+        };
+
+        window.closeApoioModal = function() {
+            const modal = document.getElementById('apoioModal');
             if (modal) modal.remove();
         };
 
