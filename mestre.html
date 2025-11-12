@@ -1764,6 +1764,30 @@
                         ➕ Adicionar Apoio
                     </button>
                 </div>
+
+                </div>
+
+                <!-- Menu de Status dos Apoios -->
+                <div id="apoiosStatusMenu" style="display: none; margin-bottom: 25px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div style="background: rgba(139, 92, 246, 0.2); border: 2px solid var(--primary); border-radius: 15px; padding: 20px; text-align: center;">
+                            <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-bottom: 8px;">⭐ EXP VIP TOTAL</div>
+                            <div id="expVipTotal" style="font-size: 2rem; font-weight: 700; color: var(--primary);">0</div>
+                        </div>
+                        <div style="background: rgba(16, 185, 129, 0.2); border: 2px solid var(--success); border-radius: 15px; padding: 20px; text-align: center;">
+                            <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-bottom: 8px;">✨ EXP VIP DISPONÍVEIS</div>
+                            <div id="expVipDisponiveis" style="font-size: 2rem; font-weight: 700; color: var(--success);">0</div>
+                        </div>
+                        <div style="background: rgba(245, 158, 11, 0.2); border: 2px solid var(--warning); border-radius: 15px; padding: 20px; text-align: center;">
+                            <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-bottom: 8px;">💰 Ka'LUNIS DISPONÍVEIS</div>
+                            <div id="lunisDisponiveis" style="font-size: 2rem; font-weight: 700; color: var(--warning);">0</div>
+                        </div>
+                        <div style="background: rgba(236, 72, 153, 0.2); border: 2px solid var(--secondary); border-radius: 15px; padding: 20px; text-align: center;">
+                            <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-bottom: 8px;">💎 TOTAL DE APOIOS</div>
+                            <div id="totalApoios" style="font-size: 2rem; font-weight: 700; color: var(--secondary);">0</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Lista de Apoios do Usuário Selecionado -->
@@ -4925,10 +4949,12 @@ Agilidade 2\n
             const userId = document.getElementById('apoioUserSelect').value;
             const apoiosList = document.getElementById('apoiosList');
             const btnAddApoio = document.getElementById('btnAddApoio');
+            const statusMenu = document.getElementById('apoiosStatusMenu');
             
             if (!userId) {
                 apoiosList.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Selecione um jogador para ver seus apoios</div>';
                 btnAddApoio.style.display = 'none';
+                statusMenu.style.display = 'none';
                 return;
             }
             
@@ -4939,11 +4965,53 @@ Agilidade 2\n
                 const userDoc = await getDoc(doc(db, 'users', userId));
                 if (!userDoc.exists()) {
                     apoiosList.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Usuário não encontrado</div>';
+                    statusMenu.style.display = 'none';
                     return;
                 }
                 
                 const userData = userDoc.data();
                 const apoios = userData.apoios || [];
+                
+                // Calcular estatísticas
+                let expVipTotal = 0;
+                let expVipDisponiveis = 0;
+                let lunisDisponiveis = 0;
+                let totalApoios = 0;
+                
+                apoios.forEach(apoio => {
+                    const expVip = parseInt(apoio.expVip) || 0;
+                    const montante = parseInt(apoio.montante) || 1;
+                    const recebeu = apoio.recebeu || false;
+                    const tipo = (apoio.tipo || '').toLowerCase();
+                    
+                    // EXP VIP Total
+                    expVipTotal += expVip;
+                    
+                    // EXP VIP Disponíveis (não recebidos)
+                    if (!recebeu) {
+                        expVipDisponiveis += expVip;
+                    }
+                    
+                    // Ka'Lunis Disponíveis (tipo "Lunis" e não recebido)
+                    if (tipo === 'lunis' && !recebeu) {
+                        lunisDisponiveis += montante;
+                    }
+                    
+                    // Total de Apoios (soma de todos os montantes)
+                    // Se for tipo "Roleta" e múltiplo de 3, divide por 3
+                    if (tipo === 'roleta' && montante % 3 === 0) {
+                        totalApoios += montante / 3;
+                    } else {
+                        totalApoios += montante;
+                    }
+                });
+                
+                // Atualizar o menu de status
+                document.getElementById('expVipTotal').textContent = expVipTotal;
+                document.getElementById('expVipDisponiveis').textContent = expVipDisponiveis;
+                document.getElementById('lunisDisponiveis').textContent = lunisDisponiveis;
+                document.getElementById('totalApoios').textContent = totalApoios;
+                statusMenu.style.display = 'block';
                 
                 if (apoios.length === 0) {
                     apoiosList.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Este jogador ainda não possui apoios</div>';
