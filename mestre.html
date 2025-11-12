@@ -1788,6 +1788,53 @@
                         </div>
                     </div>
                 </div>
+
+                </div>
+
+                <!-- Filtros de Apoios -->
+                <div id="apoiosFiltros" style="display: none; margin-bottom: 25px;">
+                    <div style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 20px;">
+                        <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-bottom: 15px;">🔍 Filtros</div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                            <!-- Filtro por Status -->
+                            <div>
+                                <label style="display: block; font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-bottom: 8px;">Status do Benefício</label>
+                                <select class="form-input" id="filtroStatus" onchange="aplicarFiltrosApoios()" style="width: 100%;">
+                                    <option value="todos">Todos</option>
+                                    <option value="nao-recebidos">Apenas Não Recebidos</option>
+                                    <option value="recebidos">Apenas Recebidos</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Filtro por Tipo -->
+                            <div>
+                                <label style="display: block; font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-bottom: 8px;">Tipo de Apoio</label>
+                                <select class="form-input" id="filtroTipo" onchange="aplicarFiltrosApoios()" style="width: 100%;">
+                                    <option value="todos">Todos os Tipos</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Filtro por Data Inicial -->
+                            <div>
+                                <label style="display: block; font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-bottom: 8px;">Data Inicial</label>
+                                <input type="date" class="form-input" id="filtroDataInicio" onchange="aplicarFiltrosApoios()" style="width: 100%;">
+                            </div>
+                            
+                            <!-- Filtro por Data Final -->
+                            <div>
+                                <label style="display: block; font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-bottom: 8px;">Data Final</label>
+                                <input type="date" class="form-input" id="filtroDataFim" onchange="aplicarFiltrosApoios()" style="width: 100%;">
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 15px; display: flex; justify-content: flex-end;">
+                            <button class="btn btn-secondary" onclick="limparFiltrosApoios()" style="padding: 8px 20px; font-size: 0.9rem;">
+                                🔄 Limpar Filtros
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Lista de Apoios do Usuário Selecionado -->
@@ -4922,6 +4969,7 @@ Agilidade 2\n
 
         // ============= APOIOS =============
         let currentSelectedUserId = null;
+        let todosApoiosCarregados = []; // Array para armazenar todos os apoios do usuário
 
         window.loadApoiosTab = async function() {
             try {
@@ -4950,11 +4998,13 @@ Agilidade 2\n
             const apoiosList = document.getElementById('apoiosList');
             const btnAddApoio = document.getElementById('btnAddApoio');
             const statusMenu = document.getElementById('apoiosStatusMenu');
+            const filtrosMenu = document.getElementById('apoiosFiltros');
             
             if (!userId) {
                 apoiosList.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Selecione um jogador para ver seus apoios</div>';
                 btnAddApoio.style.display = 'none';
                 statusMenu.style.display = 'none';
+                filtrosMenu.style.display = 'none';
                 return;
             }
             
@@ -4966,11 +5016,13 @@ Agilidade 2\n
                 if (!userDoc.exists()) {
                     apoiosList.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Usuário não encontrado</div>';
                     statusMenu.style.display = 'none';
+                    filtrosMenu.style.display = 'none';
                     return;
                 }
                 
                 const userData = userDoc.data();
                 const apoios = userData.apoios || [];
+                todosApoiosCarregados = apoios; // Armazena todos os apoios
                 
                 // Calcular estatísticas
                 let expVipTotal = 0;
@@ -5013,65 +5065,142 @@ Agilidade 2\n
                 document.getElementById('totalApoios').textContent = totalApoios;
                 statusMenu.style.display = 'block';
                 
+                // Preencher select de tipos com os tipos únicos encontrados
+                const tiposUnicos = [...new Set(apoios.map(a => a.tipo).filter(t => t))];
+                const filtroTipoSelect = document.getElementById('filtroTipo');
+                filtroTipoSelect.innerHTML = '<option value="todos">Todos os Tipos</option>';
+                tiposUnicos.forEach(tipo => {
+                    filtroTipoSelect.innerHTML += `<option value="${tipo}">${tipo}</option>`;
+                });
+                
+                // Mostrar filtros
+                filtrosMenu.style.display = 'block';
+                
                 if (apoios.length === 0) {
                     apoiosList.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Este jogador ainda não possui apoios</div>';
                     return;
                 }
                 
-                // Renderizar apoios
-                let html = '';
-                apoios.forEach((apoio, index) => {
-                    html += `
-                        <div class="apoio-card">
-                            <div class="apoio-header">
-                                <div class="apoio-nome">${apoio.nome || 'Sem nome'} ${apoio.montante ? `<span class="apoio-montante">${apoio.montante}x</span>` : ''}</div>
-                                <button class="btn btn-danger" onclick="deleteApoio('${userId}', ${index})" style="padding: 5px 15px; font-size: 0.85rem;">🗑️</button>
-                            </div>
-                            
-                            <div class="apoio-info">
-                                <div class="apoio-field">
-                                    <div class="apoio-field-label">Tipo</div>
-                                    <div class="apoio-field-value">${apoio.tipo || '-'}</div>
-                                </div>
-                                <div class="apoio-field">
-                                    <div class="apoio-field-label">EXP VIP</div>
-                                    <div class="apoio-field-value">${apoio.expVip || '0'}</div>
-                                </div>
-                                <div class="apoio-field">
-                                    <div class="apoio-field-label">Sessão</div>
-                                    <div class="apoio-field-value">${apoio.sessao || '-'}</div>
-                                </div>
-                                <div class="apoio-field">
-                                    <div class="apoio-field-label">Data</div>
-                                    <div class="apoio-field-value">${apoio.data || '-'}</div>
-                                </div>
-                                <div class="apoio-field">
-                                    <div class="apoio-field-label">Meta</div>
-                                    <div class="apoio-field-value">${apoio.meta || '-'}</div>
-                                </div>
-                            </div>
-                            
-                            ${apoio.desbloquear ? `
-                                <div class="apoio-field" style="margin-top: 10px;">
-                                    <div class="apoio-field-label">Desbloquear</div>
-                                    <div class="apoio-field-value">${apoio.desbloquear}</div>
-                                </div>
-                            ` : ''}
-                            
-                            <div class="apoio-checkbox" style="margin-top: 15px;">
-                                <input type="checkbox" ${apoio.recebeu ? 'checked' : ''} onchange="toggleApoioRecebeu('${userId}', ${index})" id="apoio_check_${index}">
-                                <label for="apoio_check_${index}" style="color: #94a3b8; cursor: pointer;">Benefício Recebido/Usado</label>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                apoiosList.innerHTML = html;
+                // Renderizar todos os apoios inicialmente
+                renderizarApoios(apoios, userId);
                 
             } catch (error) {
                 console.error('❌ Erro ao carregar apoios:', error);
                 showAlert('❌ Erro ao carregar apoios', 'danger');
             }
+        };
+
+        function renderizarApoios(apoios, userId) {
+            const apoiosList = document.getElementById('apoiosList');
+            
+            if (apoios.length === 0) {
+                apoiosList.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Nenhum apoio encontrado com os filtros aplicados</div>';
+                return;
+            }
+            
+            let html = '';
+            apoios.forEach((apoio, index) => {
+                // Encontrar o índice real no array completo
+                const indiceReal = todosApoiosCarregados.findIndex(a => 
+                    a.nome === apoio.nome && 
+                    a.data === apoio.data && 
+                    a.montante === apoio.montante
+                );
+                
+                html += `
+                    <div class="apoio-card">
+                        <div class="apoio-header">
+                            <div class="apoio-nome">${apoio.nome || 'Sem nome'} ${apoio.montante ? `<span class="apoio-montante">${apoio.montante}x</span>` : ''}</div>
+                            <button class="btn btn-danger" onclick="deleteApoio('${userId}', ${indiceReal})" style="padding: 5px 15px; font-size: 0.85rem;">🗑️</button>
+                        </div>
+                        
+                        <div class="apoio-info">
+                            <div class="apoio-field">
+                                <div class="apoio-field-label">Tipo</div>
+                                <div class="apoio-field-value">${apoio.tipo || '-'}</div>
+                            </div>
+                            <div class="apoio-field">
+                                <div class="apoio-field-label">EXP VIP</div>
+                                <div class="apoio-field-value">${apoio.expVip || '0'}</div>
+                            </div>
+                            <div class="apoio-field">
+                                <div class="apoio-field-label">Sessão</div>
+                                <div class="apoio-field-value">${apoio.sessao || '-'}</div>
+                            </div>
+                            <div class="apoio-field">
+                                <div class="apoio-field-label">Data</div>
+                                <div class="apoio-field-value">${apoio.data || '-'}</div>
+                            </div>
+                            <div class="apoio-field">
+                                <div class="apoio-field-label">Meta</div>
+                                <div class="apoio-field-value">${apoio.meta || '-'}${apoio.nomeRaca ? ` (${apoio.nomeRaca})` : ''}</div>
+                            </div>
+                        </div>
+                        
+                        ${apoio.desbloquear ? `
+                            <div class="apoio-field" style="margin-top: 10px;">
+                                <div class="apoio-field-label">Desbloquear</div>
+                                <div class="apoio-field-value">${apoio.desbloquear}</div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="apoio-checkbox" style="margin-top: 15px;">
+                            <input type="checkbox" ${apoio.recebeu ? 'checked' : ''} onchange="toggleApoioRecebeu('${userId}', ${indiceReal})" id="apoio_check_${indiceReal}">
+                            <label for="apoio_check_${indiceReal}" style="color: #94a3b8; cursor: pointer;">Benefício Recebido/Usado</label>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            apoiosList.innerHTML = html;
+        }
+
+        window.aplicarFiltrosApoios = function() {
+            const filtroStatus = document.getElementById('filtroStatus').value;
+            const filtroTipo = document.getElementById('filtroTipo').value;
+            const filtroDataInicio = document.getElementById('filtroDataInicio').value;
+            const filtroDataFim = document.getElementById('filtroDataFim').value;
+            
+            let apoiosFiltrados = [...todosApoiosCarregados];
+            
+            // Filtro por status
+            if (filtroStatus === 'nao-recebidos') {
+                apoiosFiltrados = apoiosFiltrados.filter(a => !a.recebeu);
+            } else if (filtroStatus === 'recebidos') {
+                apoiosFiltrados = apoiosFiltrados.filter(a => a.recebeu);
+            }
+            
+            // Filtro por tipo
+            if (filtroTipo !== 'todos') {
+                apoiosFiltrados = apoiosFiltrados.filter(a => a.tipo === filtroTipo);
+            }
+            
+            // Filtro por data inicial
+            if (filtroDataInicio) {
+                apoiosFiltrados = apoiosFiltrados.filter(a => {
+                    if (!a.data) return false;
+                    return a.data >= filtroDataInicio;
+                });
+            }
+            
+            // Filtro por data final
+            if (filtroDataFim) {
+                apoiosFiltrados = apoiosFiltrados.filter(a => {
+                    if (!a.data) return false;
+                    return a.data <= filtroDataFim;
+                });
+            }
+            
+            renderizarApoios(apoiosFiltrados, currentSelectedUserId);
+        };
+        
+        window.limparFiltrosApoios = function() {
+            document.getElementById('filtroStatus').value = 'todos';
+            document.getElementById('filtroTipo').value = 'todos';
+            document.getElementById('filtroDataInicio').value = '';
+            document.getElementById('filtroDataFim').value = '';
+            
+            renderizarApoios(todosApoiosCarregados, currentSelectedUserId);
         };
 
         window.openAddApoioModal = function() {
@@ -5125,12 +5254,20 @@ Agilidade 2\n
                             <div class="form-row">
                                 <div class="form-group">
                                     <label class="form-label">Meta</label>
-                                    <select class="form-input" id="apoio_meta">
+                                    <select class="form-input" id="apoio_meta" onchange="toggleRacaField()">
                                         <option value="">Selecione...</option>
                                         <option value="Classe">Classe</option>
                                         <option value="Raça">Raça</option>
                                         <option value="Lore">Lore</option>
                                     </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Campo condicional para Nome da Raça -->
+                            <div id="racaFieldContainer" style="display: none;">
+                                <div class="form-group">
+                                    <label class="form-label">Nome da Raça</label>
+                                    <input type="text" class="form-input" id="apoio_nomeRaca" placeholder="Ex: Humano, Elorin, Picxi...">
                                 </div>
                             </div>
                             
@@ -5157,6 +5294,19 @@ Agilidade 2\n
             document.getElementById('apoio_data').valueAsDate = new Date();
         };
 
+        window.toggleRacaField = function() {
+            const metaSelect = document.getElementById('apoio_meta');
+            const racaContainer = document.getElementById('racaFieldContainer');
+            const racaInput = document.getElementById('apoio_nomeRaca');
+            
+            if (metaSelect.value === 'Raça') {
+                racaContainer.style.display = 'block';
+            } else {
+                racaContainer.style.display = 'none';
+                racaInput.value = ''; // Limpa o campo quando esconder
+            }
+        };
+
         window.saveApoio = async function() {
             const nome = document.getElementById('apoio_nome').value.trim();
             
@@ -5165,6 +5315,7 @@ Agilidade 2\n
                 return;
             }
             
+            const meta = document.getElementById('apoio_meta').value;
             const novoApoio = {
                 nome: nome,
                 montante: parseInt(document.getElementById('apoio_montante').value) || 1,
@@ -5173,9 +5324,17 @@ Agilidade 2\n
                 sessao: document.getElementById('apoio_sessao').value.trim(),
                 data: document.getElementById('apoio_data').value,
                 recebeu: false,
-                meta: document.getElementById('apoio_meta').value,
+                meta: meta,
                 desbloquear: document.getElementById('apoio_desbloquear').value.trim()
             };
+            
+            // Adicionar nome da raça se a meta for "Raça"
+            if (meta === 'Raça') {
+                const nomeRaca = document.getElementById('apoio_nomeRaca').value.trim();
+                if (nomeRaca) {
+                    novoApoio.nomeRaca = nomeRaca;
+                }
+            }
             
             try {
                 const userDoc = await getDoc(doc(db, 'users', currentSelectedUserId));
