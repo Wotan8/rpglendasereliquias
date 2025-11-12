@@ -1736,6 +1736,46 @@
                 </div>
             </div>
 
+            <!-- MODIFICADORES DO MESTRE -->
+            <div class="form-section" style="background: rgba(139, 92, 246, 0.1); border: 2px solid var(--primary);">
+                <div class="section-title">🎯 Modificadores do Mestre</div>
+                <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.9rem;">
+                    Modificadores aplicados pelo mestre (podem ser positivos ou negativos)
+                </p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">⚡ Mod. Iniciativa</label>
+                        <input type="number" class="form-input" id="edit_modMestre_iniciativa" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">🛡️ Mod. Reação</label>
+                        <input type="number" class="form-input" id="edit_modMestre_reacao" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">🏃 Mod. Desloc. Terrestre</label>
+                        <input type="number" class="form-input" id="edit_modMestre_deslocterrestre" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">❤️ Mod. Vitalidade</label>
+                        <input type="number" class="form-input" id="edit_modMestre_vitalidade" value="0">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">⚡ Mod. Determinação</label>
+                        <input type="number" class="form-input" id="edit_modMestre_determinacao" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">🎒 Mod. Carga Máxima</label>
+                        <input type="number" class="form-input" id="edit_modMestre_cargamax" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">🛡️ Blindagem Extra</label>
+                        <input type="number" class="form-input" id="edit_modMestre_blindagem" value="0">
+                    </div>
+                </div>
+            </div>
+
             <!-- INVENTÁRIO -->
             <div class="form-section">
                 <div class="section-title">🎒 Inventário</div>
@@ -2341,6 +2381,24 @@ Agilidade 2\n
                 document.getElementById('edit_sanCurrent').value = character.sanCurrent !== undefined ? character.sanCurrent : 80;
                 document.getElementById('edit_blindagem').value = character.blindagem || 0;
 
+                // MODIFICADORES DO MESTRE
+                const modMestre = character.modMestre || {
+                    mod_iniciativa: 0,
+                    mod_reacao: 0,
+                    mod_deslocterrestre: 0,
+                    mod_vitalidade: 0,
+                    mod_determinacao: 0,
+                    mod_cargamax: 0,
+                    blindagem: 0
+                };
+                document.getElementById('edit_modMestre_iniciativa').value = modMestre.mod_iniciativa || 0;
+                document.getElementById('edit_modMestre_reacao').value = modMestre.mod_reacao || 0;
+                document.getElementById('edit_modMestre_deslocterrestre').value = modMestre.mod_deslocterrestre || 0;
+                document.getElementById('edit_modMestre_vitalidade').value = modMestre.mod_vitalidade || 0;
+                document.getElementById('edit_modMestre_determinacao').value = modMestre.mod_determinacao || 0;
+                document.getElementById('edit_modMestre_cargamax').value = modMestre.mod_cargamax || 0;
+                document.getElementById('edit_modMestre_blindagem').value = modMestre.blindagem || 0;
+
                 // CONDIÇÕES
                 displayConditions(character);
 
@@ -2796,6 +2854,17 @@ Agilidade 2\n
                     detCurrent: parseInt(document.getElementById('edit_detCurrent').value) || 0,
                     sanCurrent: parseInt(document.getElementById('edit_sanCurrent').value) || 80,
                     blindagem: parseInt(document.getElementById('edit_blindagem').value) || 0,
+
+                    // MODIFICADORES DO MESTRE
+                    modMestre: {
+                        mod_iniciativa: parseInt(document.getElementById('edit_modMestre_iniciativa')?.value) || 0,
+                        mod_reacao: parseInt(document.getElementById('edit_modMestre_reacao')?.value) || 0,
+                        mod_deslocterrestre: parseInt(document.getElementById('edit_modMestre_deslocterrestre')?.value) || 0,
+                        mod_vitalidade: parseInt(document.getElementById('edit_modMestre_vitalidade')?.value) || 0,
+                        mod_determinacao: parseInt(document.getElementById('edit_modMestre_determinacao')?.value) || 0,
+                        mod_cargamax: parseInt(document.getElementById('edit_modMestre_cargamax')?.value) || 0,
+                        blindagem: parseInt(document.getElementById('edit_modMestre_blindagem')?.value) || 0
+                    },
 
                     // VALORES DERIVADOS RECALCULADOS
                     hpMax: (parseInt(document.getElementById('edit_vig').value) || 1) + (parseInt(document.getElementById('edit_tamanho').value) || 5),

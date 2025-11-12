@@ -7100,14 +7100,19 @@ Exemplos:
                 // Calcular bônus de equipamentos equipados (vestimentas e armas)
                 const bonusEquip = calcularBonusEquipamentos();
 
-                safeUpdate('calc-iniciativa', char.rac + char.des + char.aut + agilidade - char.tamanho + bonusEquip.iniciativa);
-                safeUpdate('calc-reacao', Math.min(char.des, char.rac) + agilidade + bonusEquip.reacao);
-                safeUpdate('calc-deslocamento', (char.for + char.des + char.tamanho + agilidade + bonusEquip.deslocTerrestre) + 'm');
+                const modIniciativa = (char.modMestre && char.modMestre.mod_iniciativa) || 0;
+                safeUpdate('calc-iniciativa', char.rac + char.des + char.aut + agilidade - char.tamanho + bonusEquip.iniciativa + modIniciativa);
+                const modReacao = (char.modMestre && char.modMestre.mod_reacao) || 0;
+                safeUpdate('calc-reacao', Math.min(char.des, char.rac) + agilidade + bonusEquip.reacao + modReacao);
+                const modDesloc = (char.modMestre && char.modMestre.mod_deslocterrestre) || 0;
+                safeUpdate('calc-deslocamento', (char.for + char.des + char.tamanho + agilidade + bonusEquip.deslocTerrestre + modDesloc) + 'm');
                 
-                const vitalidadeMax = char.vig + char.tamanho;
+                const modVitalidade = (char.modMestre && char.modMestre.mod_vitalidade) || 0;
+                const vitalidadeMax = char.vig + char.tamanho + modVitalidade;
                 safeUpdate('calc-vitalidade-max', vitalidadeMax);
                 
-                const determinacaoMax = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0);
+                const modDeterminacao = (char.modMestre && char.modMestre.mod_determinacao) || 0;
+                const determinacaoMax = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0) + modDeterminacao;
                 safeUpdate('calc-determinacao-max', determinacaoMax);
 
                 // Cálculo de Conexão com a Natureza (Elorin)
@@ -7123,7 +7128,7 @@ Exemplos:
                 if (char.raca === 'Picxi') {
                     // Calcular Deslocamento Aéreo
                     const atletismo = char.skills['atletismo'] || 0;
-                    const deslocamentoAereo = (char.for + char.des + char.tamanho + atletismo) * 3;
+                    const deslocamentoAereo = (char.for + char.des + char.tamanho + atletismo + modDesloc) * 3;
                     safeUpdate('calc-deslocamento-aereo', deslocamentoAereo + 'm');
                     
                     // Deslocamento Flutuante é sempre 2
@@ -7143,7 +7148,7 @@ Exemplos:
                 
                 if (char.raca === 'Yotun') {
                     // Calcular Deslocamento de Viagem (Deslocamento Terrestre * 2)
-                    const deslocTerrestre = char.for + char.des + char.tamanho + agilidade;
+                    const deslocTerrestre = char.for + char.des + char.tamanho + agilidade + modDesloc;
                     const deslocViagem = deslocTerrestre * 2;
                     safeUpdate('calc-deslocamento-viagem', deslocViagem + 'm');
                     
@@ -7155,29 +7160,29 @@ Exemplos:
                 }
                 
                 // Cálculo de Carga Max (Yotun tem ALTA CARGA: dobra o valor)
+                const modCarga = (char.modMestre && char.modMestre.mod_cargamax) || 0;
                 let cargaMax = char.for + char.vig;
                 if (char.raca === 'Yotun') {
-                    cargaMax = cargaMax * 2; // Habilidade ALTA CARGA: dobra a Carga Max
+                    cargaMax = cargaMax * 2;
                 }
-                cargaMax += bonusEquip.cargaMax; // Adicionar bônus de equipamentos
+                cargaMax += bonusEquip.cargaMax + modCarga;
                 safeUpdate('calc-carga', cargaMax);
                 
                 safeUpdate('calc-sanidade', char.sanCurrent || 80);
                 
                 // Blindagem (Yotun tem BLINDAGEM NATURAL - nível variável)
+                const modBlindagem = (char.modMestre && char.modMestre.blindagem) || 0;
                 let blindagemTotal = char.blindagem || 0;
                 if (char.raca === 'Yotun') {
-                    // Pegar o nível de BLINDAGEM NATURAL do BD (padrão: 2)
                     const nivelBlindagem = (char.skillRace && char.skillRace.blindagemNatural) ? char.skillRace.blindagemNatural : 2;
-                    blindagemTotal += nivelBlindagem; // Adiciona o nível atual (2, 3, 4 ou 5)
+                    blindagemTotal += nivelBlindagem;
                 }
-                blindagemTotal += bonusEquip.blindagem; // Adicionar bônus de equipamentos
-
+                blindagemTotal += bonusEquip.blindagem + modBlindagem;
                 safeUpdate('calc-blindagem', blindagemTotal);
 
                 // 💾 SALVAR VALORES CALCULADOS NO PERSONAGEM (para persistir no Firebase)
                 // Salvar Reação calculada (com bônus de equipamentos)
-                const reacaoCalculada = Math.min(char.des, char.rac) + agilidade + bonusEquip.reacao;
+                const reacaoCalculada = Math.min(char.des, char.rac) + agilidade + bonusEquip.reacao + modReacao;
                 char.reacaoTotal = reacaoCalculada; // Salvar no BD
 
                 // Salvar Blindagem calculada (já inclui Blindagem Natural + equipamentos)
@@ -7265,9 +7270,9 @@ Exemplos:
                     // Calcular maxCapacity (Carga Max) - Yotun tem ALTA CARGA: dobra o valor
                     let maxCapacity = forca + vig;
                     if (char.raca === 'Yotun') {
-                        maxCapacity = maxCapacity * 2; // Habilidade ALTA CARGA: dobra a Carga Max
+                        maxCapacity = maxCapacity * 2;
                     }
-                    maxCapacity += bonusEquip.cargaMax; // Adicionar bônus de equipamentos
+                    maxCapacity += bonusEquip.cargaMax + modCarga; // Adicionar bônus de equipamentos
 
                     equipados.maxCapacity = maxCapacity;
                     equipados.maxSize = forca * vig * atletismo;
@@ -7293,7 +7298,8 @@ Exemplos:
 
         window.updateHPBar = function() {
             const char = getChar();
-            const max = char.vig + char.tamanho;
+            const modVitalidade = (char.modMestre && char.modMestre.mod_vitalidade) || 0;
+            const max = char.vig + char.tamanho + modVitalidade;
             const current = parseInt(document.getElementById('hp-current').value) || 0;
             char.hpCurrent = Math.max(0, Math.min(current, max));
             document.getElementById('hp-current').value = char.hpCurrent;
@@ -7305,7 +7311,8 @@ Exemplos:
 
         window.adjustHP = function(amount) {
             const char = getChar();
-            const max = char.vig + char.tamanho;
+            const modVitalidade = (char.modMestre && char.modMestre.mod_vitalidade) || 0;
+            const max = char.vig + char.tamanho + modVitalidade;
             char.hpCurrent = Math.max(0, Math.min(char.hpCurrent + amount, max));
             document.getElementById('hp-current').value = char.hpCurrent;
             updateHPBar();
@@ -7313,7 +7320,8 @@ Exemplos:
 
         window.resetHP = function() {
             const char = getChar();
-            const max = char.vig + char.tamanho;
+            const modVitalidade = (char.modMestre && char.modMestre.mod_vitalidade) || 0;
+            const max = char.vig + char.tamanho + modVitalidade;
             char.hpCurrent = max;
             document.getElementById('hp-current').value = char.hpCurrent;
             updateHPBar();
@@ -7321,7 +7329,8 @@ Exemplos:
 
         window.updateDETBar = function() {
             const char = getChar();
-            const max = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0);
+            const modDeterminacao = (char.modMestre && char.modMestre.mod_determinacao) || 0;
+            const max = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0) + modDeterminacao;
             const current = parseInt(document.getElementById('det-current').value) || 0;
             char.detCurrent = Math.max(0, Math.min(current, max));
             document.getElementById('det-current').value = char.detCurrent;
@@ -7333,7 +7342,8 @@ Exemplos:
 
         window.adjustDET = function(amount) {
             const char = getChar();
-            const max = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0);
+            const modDeterminacao = (char.modMestre && char.modMestre.mod_determinacao) || 0;
+            const max = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0) + modDeterminacao;
             char.detCurrent = Math.max(0, Math.min(char.detCurrent + amount, max));
             document.getElementById('det-current').value = char.detCurrent;
             updateDETBar();
@@ -7341,7 +7351,8 @@ Exemplos:
 
         window.resetDET = function() {
             const char = getChar();
-            const max = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0);
+            const modDeterminacao = (char.modMestre && char.modMestre.mod_determinacao) || 0;
+            const max = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0) + modDeterminacao;
             char.detCurrent = max;
             document.getElementById('det-current').value = char.detCurrent;
             updateDETBar();
@@ -8968,6 +8979,19 @@ Exemplos:
 
             const sanInput = document.getElementById('san-current');
             if (sanInput) sanInput.value = char.sanCurrent || 80;
+
+            // Carregar modificadores do mestre (se não existirem, inicializar com 0)
+            if (!char.modMestre) {
+                char.modMestre = {
+                    mod_iniciativa: 0,
+                    mod_reacao: 0,
+                    mod_deslocterrestre: 0,
+                    mod_vitalidade: 0,
+                    mod_determinacao: 0,
+                    mod_cargamax: 0,
+                    blindagem: 0
+                };
+            }
 
             const attributes = ['int', 'for', 'pre', 'rac', 'des', 'man', 'prs', 'vig', 'aut'];
             attributes.forEach(attr => updateAttributeDots(attr));
