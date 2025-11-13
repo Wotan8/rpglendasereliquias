@@ -1586,6 +1586,82 @@
             height: 20px;
             cursor: pointer;
         }
+
+        /* ========== ESTILOS DO INVENTÁRIO ========== */
+        .inventario-item-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .inventario-item-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .inventario-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+            gap: 15px;
+        }
+
+        .inventario-item-nome {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--light);
+            flex: 1;
+        }
+
+        .inventario-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .inventario-item-field {
+            margin-bottom: 10px;
+        }
+
+        .inventario-item-field-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-weight: 600;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .inventario-item-field-value {
+            color: var(--light);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .inventario-item-quantidade {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .inventario-quantidade-input {
+            width: 80px;
+            padding: 6px 10px;
+            background: rgba(30, 27, 75, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .inventario-quantidade-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
     </style>
 </head>
 <body>
@@ -1764,8 +1840,7 @@
                         ➕ Adicionar Apoio
                     </button>
                 </div>
-
-                </div>
+            </div>
 
                 <!-- Menu de Status dos Apoios -->
                 <div id="apoiosStatusMenu" style="display: none; margin-bottom: 25px;">
@@ -1789,6 +1864,22 @@
                     </div>
                 </div>
 
+                <!-- Sistema de Inventário -->
+                <div id="inventarioSection" style="display: none; margin-bottom: 25px;">
+                    <div style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary);">🎒 Inventário do Jogador</div>
+                            <button class="btn btn-success" onclick="openAddItemInventarioModal()" style="padding: 8px 20px; font-size: 0.9rem;">
+                                ➕ Adicionar Item
+                            </button>
+                        </div>
+                        
+                        <div id="inventarioList">
+                            <div style="text-align: center; padding: 40px; color: #64748b;">
+                                O inventário está vazio
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Filtros de Apoios -->
@@ -1835,7 +1926,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
             <!-- Lista de Apoios do Usuário Selecionado -->
             <div id="apoiosList" style="margin-top: 30px;">
@@ -5076,11 +5166,14 @@ Agilidade 2\n
                 // Mostrar filtros
                 filtrosMenu.style.display = 'block';
                 
+                // Carregar inventário junto com os apoios (SEMPRE, independente se tem ou não apoios)
+                loadUserInventario();
+
                 if (apoios.length === 0) {
                     apoiosList.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Este jogador ainda não possui apoios</div>';
                     return;
                 }
-                
+
                 // Renderizar todos os apoios inicialmente
                 renderizarApoios(apoios, userId);
                 
@@ -5088,6 +5181,236 @@ Agilidade 2\n
                 console.error('❌ Erro ao carregar apoios:', error);
                 showAlert('❌ Erro ao carregar apoios', 'danger');
             }
+        };
+
+        // ============= INVENTÁRIO =============
+        window.loadUserInventario = async function() {
+            const userId = currentSelectedUserId;
+            const inventarioSection = document.getElementById('inventarioSection');
+            const inventarioList = document.getElementById('inventarioList');
+            
+            if (!userId) {
+                inventarioSection.style.display = 'none';
+                return;
+            }
+            
+            inventarioSection.style.display = 'block';
+            
+            try {
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                if (!userDoc.exists()) return;
+                
+                const userData = userDoc.data();
+                const inventario = userData.inventario || [];
+                
+                if (inventario.length === 0) {
+                    inventarioList.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">O inventário está vazio</div>';
+                    return;
+                }
+                
+                let html = '';
+                inventario.forEach((item, index) => {
+                    html += `
+                        <div class="inventario-item-card">
+                            <div class="inventario-item-header">
+                                <div class="inventario-item-nome">${item.nome || 'Item sem nome'}</div>
+                                <div class="inventario-item-actions">
+                                    <button class="btn btn-danger" onclick="deleteItemInventario('${userId}', ${index})" style="padding: 5px 12px; font-size: 0.85rem;">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            ${item.descricao ? `
+                                <div class="inventario-item-field">
+                                    <div class="inventario-item-field-label">Descrição</div>
+                                    <div class="inventario-item-field-value">${item.descricao}</div>
+                                </div>
+                            ` : ''}
+                            
+                            <div class="inventario-item-field">
+                                <div class="inventario-item-field-label">Quantidade</div>
+                                <div class="inventario-item-quantidade">
+                                    <input 
+                                        type="number" 
+                                        class="inventario-quantidade-input" 
+                                        value="${item.quantidade || 1}" 
+                                        min="1"
+                                        onchange="updateQuantidadeInventario('${userId}', ${index}, this.value)"
+                                    >
+                                </div>
+                            </div>
+                            
+                            ${item.formaRecebimento ? `
+                                <div class="inventario-item-field">
+                                    <div class="inventario-item-field-label">Forma de Recebimento/Uso</div>
+                                    <div class="inventario-item-field-value">${item.formaRecebimento}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                inventarioList.innerHTML = html;
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar inventário:', error);
+                showAlert('❌ Erro ao carregar inventário', 'danger');
+            }
+        };
+
+        window.openAddItemInventarioModal = function() {
+            if (!currentSelectedUserId) {
+                showAlert('⚠️ Selecione um jogador primeiro', 'warning');
+                return;
+            }
+            
+            const modalHTML = `
+                <div id="itemInventarioModal" class="modal" style="display: flex;">
+                    <div class="modal-content" style="max-width: 600px;">
+                        <div class="modal-header">
+                            <div class="modal-title">➕ Adicionar Item ao Inventário</div>
+                            <button class="modal-close" onclick="closeItemInventarioModal()">✕</button>
+                        </div>
+                        
+                        <div style="padding: 20px;">
+                            <div class="form-group">
+                                <label class="form-label">Nome do Item *</label>
+                                <input type="text" class="form-input" id="item_nome" placeholder="Ex: Espada Lendária, Poção de Cura...">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Descrição</label>
+                                <textarea class="form-input" id="item_descricao" placeholder="Descreva o item..." rows="3"></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Quantidade *</label>
+                                <input type="number" class="form-input" id="item_quantidade" placeholder="1" value="1" min="1">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Forma de Recebimento/Uso</label>
+                                <input type="text" class="form-input" id="item_formaRecebimento" placeholder="Ex: Recompensa da Quest X, Usado em combate...">
+                            </div>
+                            
+                            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                                <button class="btn btn-secondary" onclick="closeItemInventarioModal()">Cancelar</button>
+                                <button class="btn btn-success" onclick="saveItemInventario()">💾 Salvar Item</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const existingModal = document.getElementById('itemInventarioModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        };
+
+        window.saveItemInventario = async function() {
+            const nome = document.getElementById('item_nome').value.trim();
+            const quantidade = parseInt(document.getElementById('item_quantidade').value) || 1;
+            
+            if (!nome) {
+                showAlert('⚠️ O nome do item é obrigatório', 'warning');
+                return;
+            }
+            
+            const novoItem = {
+                nome: nome,
+                descricao: document.getElementById('item_descricao').value.trim(),
+                quantidade: quantidade,
+                formaRecebimento: document.getElementById('item_formaRecebimento').value.trim()
+            };
+            
+            try {
+                const userDoc = await getDoc(doc(db, 'users', currentSelectedUserId));
+                if (!userDoc.exists()) {
+                    showAlert('❌ Usuário não encontrado', 'danger');
+                    return;
+                }
+                
+                const userData = userDoc.data();
+                const inventario = userData.inventario || [];
+                inventario.push(novoItem);
+                
+                await setDoc(doc(db, 'users', currentSelectedUserId), {
+                    inventario: inventario
+                }, { merge: true });
+                
+                showAlert('✅ Item adicionado ao inventário!', 'success');
+                closeItemInventarioModal();
+                loadUserInventario();
+                
+                // Log da ação
+                await addLog(`adicionou item "${nome}" ao inventário do jogador`);
+                
+            } catch (error) {
+                console.error('❌ Erro ao salvar item:', error);
+                showAlert('❌ Erro ao salvar item: ' + error.message, 'danger');
+            }
+        };
+
+        window.updateQuantidadeInventario = async function(userId, itemIndex, novaQuantidade) {
+            try {
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                if (!userDoc.exists()) return;
+                
+                const userData = userDoc.data();
+                const inventario = userData.inventario || [];
+                
+                if (itemIndex >= 0 && itemIndex < inventario.length) {
+                    inventario[itemIndex].quantidade = parseInt(novaQuantidade) || 1;
+                    
+                    await setDoc(doc(db, 'users', userId), {
+                        inventario: inventario
+                    }, { merge: true });
+                    
+                    showAlert('✅ Quantidade atualizada!', 'success');
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao atualizar quantidade:', error);
+                showAlert('❌ Erro ao atualizar quantidade', 'danger');
+            }
+        };
+
+        window.deleteItemInventario = async function(userId, itemIndex) {
+            if (!confirm('Tem certeza que deseja deletar este item do inventário?')) return;
+            
+            try {
+                const userDoc = await getDoc(doc(db, 'users', userId));
+                if (!userDoc.exists()) return;
+                
+                const userData = userDoc.data();
+                const inventario = userData.inventario || [];
+                
+                if (itemIndex >= 0 && itemIndex < inventario.length) {
+                    const itemNome = inventario[itemIndex].nome;
+                    inventario.splice(itemIndex, 1);
+                    
+                    await setDoc(doc(db, 'users', userId), {
+                        inventario: inventario
+                    }, { merge: true });
+                    
+                    showAlert('✅ Item deletado do inventário!', 'success');
+                    loadUserInventario();
+                    
+                    // Log da ação
+                    await addLog(`removeu item "${itemNome}" do inventário do jogador`);
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao deletar item:', error);
+                showAlert('❌ Erro ao deletar item', 'danger');
+            }
+        };
+
+        window.closeItemInventarioModal = function() {
+            const modal = document.getElementById('itemInventarioModal');
+            if (modal) modal.remove();
         };
 
         function renderizarApoios(apoios, userId) {

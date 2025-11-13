@@ -612,6 +612,122 @@
             font-size: 4rem;
             margin-bottom: 1rem;
         }
+
+        /* ===== INVENTÁRIO ===== */
+        .inventory-header {
+            background: rgba(139, 92, 246, 0.2);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .total-apoios {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .total-apoios-label {
+            font-size: 1rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .inventory-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--light);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .inventory-item {
+            background: rgba(30, 27, 75, 0.9);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .inventory-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+            border-color: var(--primary);
+        }
+
+        .inventory-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .inventory-item-name {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .inventory-item-quantity {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .inventory-item-desc {
+            color: #cbd5e1;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .inventory-item-footer {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .inventory-item-label {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+
+        .inventory-item-value {
+            color: var(--light);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .empty-inventory {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #64748b;
+        }
+
+        .empty-inventory-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
     </style>
 </head>
 <body>
@@ -641,6 +757,9 @@
             </button>
             <button class="tab-button" onclick="switchTab('rankings')">
                 🏆 Rankings
+            </button>
+            <button class="tab-button" onclick="switchTab('inventario')">
+                🎒 Inventário
             </button>
         </div>
         
@@ -722,6 +841,31 @@
     </div>
     <!-- FIM ABA RANKINGS -->
 
+    <!-- ABA INVENTÁRIO -->
+    <div id="tab-inventario" class="tab-content">
+        <!-- Total de Apoios -->
+        <div class="inventory-header">
+            <div class="total-apoios-label">Total de Apoios</div>
+            <div class="total-apoios" id="totalApoios">0</div>
+        </div>
+
+        <!-- Título do Inventário -->
+        <div class="inventory-title">🎒 Inventário de Jogador</div>
+
+        <!-- Grid de Itens -->
+        <div class="inventory-grid" id="inventoryGrid">
+            <!-- Itens serão inseridos aqui -->
+        </div>
+
+        <!-- Estado vazio -->
+        <div class="empty-inventory" id="emptyInventory" style="display: none;">
+            <div class="empty-inventory-icon">📦</div>
+            <div class="empty-text">Seu inventário está vazio</div>
+            <div class="empty-hint">Itens que você receber aparecerão aqui</div>
+        </div>
+    </div>
+    <!-- FIM ABA INVENTÁRIO -->
+
     <!-- Modal de Confirmação de Exclusão -->
 
     <div class="modal" id="deleteModal">
@@ -750,6 +894,7 @@
             query, 
             where, 
             getDocs,
+            getDoc,
             addDoc,
             deleteDoc,
             doc,
@@ -784,6 +929,7 @@
                 
                 await loadCharacters();
                 await loadAllCharactersForRankings();
+                await loadInventory();
             } else {
                 window.location.href = 'index.html';
             }
@@ -909,6 +1055,138 @@
             
             // Renderizar rankings com TODOS os personagens
             loadAllCharactersForRankings();
+        }
+
+        // ============= CARREGAR INVENTÁRIO =============
+        async function loadInventory() {
+            try {
+                console.log('🔍 Iniciando loadInventory...');
+                console.log('👤 UID do usuário:', currentUser.uid);
+                console.log('📧 Email do usuário:', currentUser.email);
+
+                // MÉTODO 1: Tentar buscar por UID (campo dentro do documento)
+                let q = query(
+                    collection(db, 'users'),
+                    where('uid', '==', currentUser.uid)
+                );
+                
+                let userSnapshot = await getDocs(q);
+                console.log('📊 Resultado busca por UID:', userSnapshot.size, 'documentos');
+
+                // MÉTODO 2: Se não encontrou, buscar por email
+                if (userSnapshot.empty) {
+                    console.log('⚠️ Não encontrou por UID, tentando por email...');
+                    q = query(
+                        collection(db, 'users'),
+                        where('email', '==', currentUser.email)
+                    );
+                    userSnapshot = await getDocs(q);
+                    console.log('📊 Resultado busca por email:', userSnapshot.size, 'documentos');
+                }
+
+                // MÉTODO 3: Se ainda não encontrou, tentar buscar documento com ID = UID
+                if (userSnapshot.empty) {
+                    console.log('⚠️ Não encontrou por email, tentando documento direto com ID = UID...');
+                    try {
+                        const docRef = doc(db, 'users', currentUser.uid);
+                        const docSnap = await getDoc(docRef);
+                        
+                        if (docSnap.exists()) {
+                            console.log('✅ Encontrou documento direto!');
+                            // Criar um array com o documento para processar igual aos outros métodos
+                            userSnapshot = { empty: false, docs: [docSnap] };
+                        }
+                    } catch (e) {
+                        console.log('❌ Erro ao buscar documento direto:', e);
+                    }
+                }
+
+                if (userSnapshot.empty) {
+                    console.error('❌ Usuário não encontrado no Firestore!');
+                    document.getElementById('totalApoios').textContent = '0';
+                    document.getElementById('inventoryGrid').innerHTML = '';
+                    document.getElementById('emptyInventory').style.display = 'block';
+                    showAlert('⚠️ Dados do usuário não encontrados. Certifique-se de que seu perfil está cadastrado.', 'danger');
+                    return;
+                }
+
+                const userData = userSnapshot.docs[0].data();
+                console.log('📦 Dados do usuário:', userData);
+                
+                const apoios = userData.apoios || [];
+                const inventario = userData.inventario || [];
+
+                console.log('💰 Total de apoios no array:', apoios.length);
+                console.log('🎒 Total de itens no inventário:', inventario.length);
+
+                // Calcular Total de Apoios
+                let totalApoios = 0;
+                apoios.forEach(apoio => {
+                    const montante = apoio.montante || 0;
+                    const tipo = (apoio.tipo || '').toLowerCase();
+                    
+                    console.log(`  Apoio: ${apoio.nome}, Tipo: ${tipo}, Montante: ${montante}`);
+                    
+                    if (tipo === 'roleta') {
+                        // Se for Roleta e múltiplo de 3, divide por 3
+                        if (montante % 3 === 0) {
+                            const valor = montante / 3;
+                            totalApoios += valor;
+                            console.log(`    ✅ Roleta (múltiplo de 3): ${montante} / 3 = ${valor}`);
+                        } else {
+                            totalApoios += montante;
+                            console.log(`    ⚠️ Roleta (NÃO múltiplo de 3): soma direto ${montante}`);
+                        }
+                    } else {
+                        totalApoios += montante;
+                        console.log(`    ✅ Normal: soma ${montante}`);
+                    }
+                });
+
+                console.log('🎯 Total de Apoios Calculado:', totalApoios);
+                document.getElementById('totalApoios').textContent = totalApoios;
+
+                // Renderizar Inventário
+                const grid = document.getElementById('inventoryGrid');
+                const emptyState = document.getElementById('emptyInventory');
+
+                if (inventario.length === 0) {
+                    console.log('📭 Inventário vazio');
+                    grid.innerHTML = '';
+                    emptyState.style.display = 'block';
+                } else {
+                    console.log('📦 Renderizando', inventario.length, 'itens do inventário');
+                    emptyState.style.display = 'none';
+                    
+                    const html = inventario.map((item, index) => {
+                        console.log(`  Item ${index + 1}:`, item);
+                        return `
+                            <div class="inventory-item">
+                                <div class="inventory-item-header">
+                                    <div class="inventory-item-name">${escapeHtml(item.nome || 'Item sem nome')}</div>
+                                    <div class="inventory-item-quantity">x${item.quantidade || 0}</div>
+                                </div>
+                                <div class="inventory-item-desc">
+                                    ${escapeHtml(item.descricao || item.descrição || 'Sem descrição')}
+                                </div>
+                                <div class="inventory-item-footer">
+                                    <div class="inventory-item-label">Forma de Recebimento/Uso</div>
+                                    <div class="inventory-item-value">${escapeHtml(item.formaRecebimento || 'Não especificado')}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    grid.innerHTML = html;
+                }
+
+                console.log('✅ Inventário carregado com sucesso!');
+
+            } catch (error) {
+                console.error('❌ ERRO ao carregar inventário:', error);
+                document.getElementById('totalApoios').textContent = 'Erro';
+                showAlert('❌ Erro ao carregar inventário: ' + error.message, 'danger');
+            }
         }
 
         // ============= BUSCAR CP E STATS DO FIREBASE =============
