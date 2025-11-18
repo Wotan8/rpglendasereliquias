@@ -1768,6 +1768,9 @@
                     <button class="btn btn-secondary" id="btnItensCriar" onclick="switchItensTab('criar')" style="flex: 1;">
                         ➕ Criar
                     </button>
+                    <button class="btn btn-secondary" id="btnItensEconomia" onclick="switchItensTab('economia')" style="flex: 1;">
+                        💰 Economia
+                    </button>
                 </div>
             </div>
 
@@ -1833,6 +1836,118 @@
             <div id="itensCriar" class="itens-subtab" style="display: none;">
                 <div style="text-align: center; padding: 40px; color: #64748b;">
                     Formulário para criar novos itens
+                </div>
+            </div>
+
+            <!-- Sub-aba: Economia -->
+            <div id="itensEconomia" class="itens-subtab" style="display: none;">
+                <!-- Calculadora de Preços -->
+                <div style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 25px; margin-bottom: 25px;">
+                    <h3 style="color: var(--primary); margin-bottom: 20px;">🧮 Calculadora de Preços</h3>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                        <!-- Seletor de Item -->
+                        <div>
+                            <label style="display: block; color: #94a3b8; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px;">Item</label>
+                            <select class="form-input" id="econItemSelect" onchange="updateEconomyPrice()">
+                                <option value="">Selecione um item...</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Localidade -->
+                        <div>
+                            <label style="display: block; color: #94a3b8; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px;">Localidade</label>
+                            <select class="form-input" id="econLocationSelect" onchange="updateEconomyPrice()">
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Evento Especial -->
+                        <div>
+                            <label style="display: block; color: #94a3b8; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px;">Evento Especial</label>
+                            <select class="form-input" id="econEventSelect" onchange="updateEconomyPrice()">
+                                <option value="">Nenhum</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Resultado -->
+                    <div style="background: linear-gradient(135deg, var(--primary), var(--secondary)); padding: 20px; border-radius: 12px; text-align: center;">
+                        <div style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 5px;">Preço Final</div>
+                        <div style="font-size: 2rem; font-weight: 700; color: white;" id="econFinalPrice">0 ⚜</div>
+                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.7); margin-top: 10px;">
+                            <span id="econPriceBreakdown">Base: 0 × Região: 1.0 × Evento: 1.0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gestão de Itens Base -->
+                <div style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 25px; margin-bottom: 25px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="color: var(--primary); margin: 0;">📦 Itens Base</h3>
+                        <button class="btn btn-success" onclick="openEconomyItemModal()">➕ Novo Item</button>
+                    </div>
+                    
+                    <!-- Filtros -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                        <select class="form-input" id="econFilterCategory" onchange="filterEconomyItems()">
+                            <option value="">Todas Categorias</option>
+                            <option value="comida">Comida & Bebida</option>
+                            <option value="hospedagem">Hospedagem</option>
+                            <option value="transporte">Transporte</option>
+                            <option value="equipamento">Equipamento</option>
+                            <option value="armas">Armas</option>
+                            <option value="armaduras">Armaduras</option>
+                            <option value="servicos">Serviços</option>
+                            <option value="magia">Runomancia & Alquimancia</option>
+                            <option value="materias">Matérias-Primas</option>
+                        </select>
+                        
+                        <select class="form-input" id="econFilterRarity" onchange="filterEconomyItems()">
+                            <option value="">Todas Raridades</option>
+                            <option value="comum">Comum</option>
+                            <option value="incomum">Incomum</option>
+                            <option value="raro">Raro</option>
+                            <option value="muito-raro">Muito Raro</option>
+                        </select>
+                        
+                        <input type="text" class="form-input" id="econSearchItem" placeholder="Buscar item..." oninput="filterEconomyItems()">
+                    </div>
+                    
+                    <!-- Lista de Itens -->
+                    <div id="economyItemsList" style="display: grid; gap: 15px;">
+                        <div style="text-align: center; padding: 40px; color: #64748b;">
+                            Nenhum item cadastrado. Clique em "Novo Item" para começar.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gestão de Localidades -->
+                <div style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 25px; margin-bottom: 25px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="color: var(--primary); margin: 0;">🏰 Localidades</h3>
+                        <button class="btn btn-success" onclick="openEconomyLocationModal()">➕ Nova Localidade</button>
+                    </div>
+                    
+                    <div id="economyLocationsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">
+                        <div style="text-align: center; padding: 40px; color: #64748b; grid-column: 1/-1;">
+                            Nenhuma localidade cadastrada.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gestão de Eventos -->
+                <div style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 25px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="color: var(--primary); margin: 0;">📅 Eventos Especiais</h3>
+                        <button class="btn btn-success" onclick="openEconomyEventModal()">➕ Novo Evento</button>
+                    </div>
+                    
+                    <div id="economyEventsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">
+                        <div style="text-align: center; padding: 40px; color: #64748b; grid-column: 1/-1;">
+                            Nenhum evento cadastrado.
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2821,6 +2936,169 @@ Agilidade 2\n
                     <button type="button" onclick="closeItemModalMestre()" style="background: var(--danger); color: white; border: none; border-radius: 8px; padding: 12px 20px; cursor: pointer; font-weight: 700;">Cancelar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal Item de Economia -->
+    <div id="economyItemModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <span class="modal-title" id="economyItemModalTitle">Novo Item</span>
+                <span class="modal-close" onclick="closeEconomyItemModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="npc-form-label">Nome do Item *</label>
+                    <input type="text" class="form-input" id="econItemName" placeholder="Ex: Espada Longa">
+                </div>
+                
+                <div class="form-group">
+                    <label class="npc-form-label">Categoria *</label>
+                    <select class="form-input" id="econItemCategory">
+                        <option value="comida">Comida & Bebida</option>
+                        <option value="hospedagem">Hospedagem</option>
+                        <option value="transporte">Transporte</option>
+                        <option value="equipamento">Equipamento</option>
+                        <option value="armas">Armas</option>
+                        <option value="armaduras">Armaduras</option>
+                        <option value="servicos">Serviços</option>
+                        <option value="magia">Runomancia & Alquimancia</option>
+                        <option value="materias">Matérias-Primas</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="npc-form-label">Raridade *</label>
+                    <select class="form-input" id="econItemRarity">
+                        <option value="comum">Comum</option>
+                        <option value="incomum">Incomum</option>
+                        <option value="raro">Raro</option>
+                        <option value="muito-raro">Muito Raro</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="npc-form-label">Preço Base (⚜ Luns) *</label>
+                    <input type="number" class="form-input" id="econItemPrice" placeholder="Ex: 250" min="0">
+                </div>
+                
+                <div class="form-group">
+                    <label class="npc-form-label">Descrição</label>
+                    <textarea class="form-input" id="econItemDesc" rows="3" placeholder="Descrição opcional..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEconomyItemModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveEconomyItem()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Localidade -->
+    <div id="economyLocationModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <span class="modal-title" id="economyLocationModalTitle">Nova Localidade</span>
+                <span class="modal-close" onclick="closeEconomyLocationModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="npc-form-label">Nome da Localidade *</label>
+                    <input type="text" class="form-input" id="econLocationName" placeholder="Ex: Sereni">
+                </div>
+                
+                <div class="form-group">
+                    <label class="npc-form-label">Tipo *</label>
+                    <select class="form-input" id="econLocationType">
+                        <option value="vila">Vila</option>
+                        <option value="cidade">Cidade</option>
+                        <option value="capital">Capital</option>
+                        <option value="porto">Porto</option>
+                        <option value="fronteira">Fronteira</option>
+                        <option value="remoto">Remoto</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="npc-form-label">Multiplicador de Preço *</label>
+                    <input type="number" class="form-input" id="econLocationMultiplier" placeholder="Ex: 1.2" step="0.1" min="0.1" max="5" value="1.0">
+                    <small style="color: #64748b; font-size: 0.8rem;">1.0 = preço normal, 1.5 = 50% mais caro, 0.8 = 20% desconto</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="npc-form-label">Descrição</label>
+                    <textarea class="form-input" id="econLocationDesc" rows="3" placeholder="Ex: Vila destruída, escassez de recursos..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEconomyLocationModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveEconomyLocation()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Evento -->
+    <div id="economyEventModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <span class="modal-title" id="economyEventModalTitle">Novo Evento</span>
+                <span class="modal-close" onclick="closeEconomyEventModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="npc-form-label">Nome do Evento *</label>
+                    <input type="text" class="form-input" id="econEventName" placeholder="Ex: Guerra em Andamento">
+                </div>
+                
+                <div class="form-group">
+                    <label class="npc-form-label">Tipo *</label>
+                    <select class="form-input" id="econEventType">
+                        <option value="guerra">Guerra</option>
+                        <option value="festival">Festival</option>
+                        <option value="seca">Seca</option>
+                        <option value="colheita">Boa Colheita</option>
+                        <option value="praga">Praga</option>
+                        <option value="outro">Outro</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="npc-form-label">Multiplicador de Preço *</label>
+                    <input type="number" class="form-input" id="econEventMultiplier" placeholder="Ex: 1.3" step="0.1" min="0.1" max="5" value="1.0">
+                </div>
+                
+                <div class="form-group">
+                    <label class="npc-form-label">Categorias Afetadas</label>
+                    <select class="form-input" id="econEventCategories" multiple style="height: 120px;">
+                        <option value="comida">Comida & Bebida</option>
+                        <option value="hospedagem">Hospedagem</option>
+                        <option value="transporte">Transporte</option>
+                        <option value="equipamento">Equipamento</option>
+                        <option value="armas">Armas</option>
+                        <option value="armaduras">Armaduras</option>
+                        <option value="servicos">Serviços</option>
+                        <option value="magia">Runomancia & Alquimancia</option>
+                        <option value="materias">Matérias-Primas</option>
+                    </select>
+                    <small style="color: #64748b; font-size: 0.8rem;">Segure Ctrl/Cmd para selecionar múltiplas</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="npc-form-label">Descrição</label>
+                    <textarea class="form-input" id="econEventDesc" rows="3" placeholder="Ex: Aumento de preços devido à guerra..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" id="econEventActive" checked style="width: 20px; height: 20px;">
+                        <span style="color: var(--light);">Evento Ativo</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEconomyEventModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveEconomyEvent()">Salvar</button>
+            </div>
         </div>
     </div>
 
@@ -3822,7 +4100,7 @@ Agilidade 2\n
             
             // Carregar dados específicos de cada aba
             if (tabName === 'personagens') {
-                loadCharacters();
+                loadAllCharacters();
             } else if (tabName === 'exp') {
                 loadExpCharacters();
             } else if (tabName === 'aliados') {
@@ -5928,6 +6206,7 @@ Agilidade 2\n
             document.getElementById('btnItensPersonagens').className = 'btn btn-secondary';
             document.getElementById('btnItensAvulsos').className = 'btn btn-secondary';
             document.getElementById('btnItensCriar').className = 'btn btn-secondary';
+            document.getElementById('btnItensEconomia').className = 'btn btn-secondary';
             
             // Mostrar a sub-aba selecionada e ativar o botão
             if (subtab === 'personagens') {
@@ -5939,6 +6218,10 @@ Agilidade 2\n
             } else if (subtab === 'criar') {
                 document.getElementById('itensCriar').style.display = 'block';
                 document.getElementById('btnItensCriar').className = 'btn btn-primary';
+            } else if (subtab === 'economia') {
+                document.getElementById('itensEconomia').style.display = 'block';
+                document.getElementById('btnItensEconomia').className = 'btn btn-primary';
+                loadEconomyData(); // Carregar dados ao abrir
             }
         };
 
@@ -6844,6 +7127,464 @@ Agilidade 2\n
             await originalLoadAllCharacters();
             populateInventarioPersonagens();
         };
+
+        // ============= SISTEMA DE ECONOMIA =============
+        let economyItems = [];
+        let economyLocations = [];
+        let economyEvents = [];
+        let currentEditingEconomyId = null;
+        let currentEditingEconomyType = null;
+
+        // Carregar dados de economia
+        async function loadEconomyData() {
+            try {
+                // Carregar Itens
+                const itemsSnapshot = await getDocs(collection(db, 'economy-items'));
+                economyItems = itemsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Carregar Localidades
+                const locationsSnapshot = await getDocs(collection(db, 'economy-locations'));
+                economyLocations = locationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Carregar Eventos
+                const eventsSnapshot = await getDocs(collection(db, 'economy-events'));
+                economyEvents = eventsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Atualizar interface
+                populateEconomySelects();
+                renderEconomyItems();
+                renderEconomyLocations();
+                renderEconomyEvents();
+            } catch (error) {
+                console.error('Erro ao carregar economia:', error);
+                alert('Erro ao carregar dados de economia');
+            }
+        }
+
+        // Populars selects da calculadora
+        function populateEconomySelects() {
+            // Popula itens
+            const itemSelect = document.getElementById('econItemSelect');
+            itemSelect.innerHTML = '<option value="">Selecione um item...</option>';
+            economyItems.forEach(item => {
+                itemSelect.innerHTML += `<option value="${item.id}">${item.name} (${item.basePrice}⚜)</option>`;
+            });
+            
+            // Popula localidades
+            const locationSelect = document.getElementById('econLocationSelect');
+            locationSelect.innerHTML = '<option value="">Selecione...</option>';
+            economyLocations.forEach(loc => {
+                locationSelect.innerHTML += `<option value="${loc.id}">${loc.name} (${loc.multiplier}x)</option>`;
+            });
+            
+            // Popula eventos
+            const eventSelect = document.getElementById('econEventSelect');
+            eventSelect.innerHTML = '<option value="">Nenhum</option>';
+            economyEvents.filter(e => e.active).forEach(evt => {
+                eventSelect.innerHTML += `<option value="${evt.id}">${evt.name} (${evt.multiplier}x)</option>`;
+            });
+        }
+
+        // Atualizar preço na calculadora
+        window.updateEconomyPrice = function() {
+            const itemId = document.getElementById('econItemSelect').value;
+            const locationId = document.getElementById('econLocationSelect').value;
+            const eventId = document.getElementById('econEventSelect').value;
+            
+            if (!itemId) {
+                document.getElementById('econFinalPrice').textContent = '0 ⚜';
+                document.getElementById('econPriceBreakdown').textContent = 'Selecione um item';
+                return;
+            }
+            
+            const item = economyItems.find(i => i.id === itemId);
+            const location = economyLocations.find(l => l.id === locationId);
+            const event = economyEvents.find(e => e.id === eventId);
+            
+            let basePrice = item.basePrice;
+            let locationMult = location ? location.multiplier : 1.0;
+            let eventMult = 1.0;
+            
+            // Verificar se evento afeta esta categoria
+            if (event && event.categories && event.categories.includes(item.category)) {
+                eventMult = event.multiplier;
+            }
+            
+            const finalPrice = Math.round(basePrice * locationMult * eventMult);
+            
+            // Variação aleatória de ±10%
+            const variance = Math.round(finalPrice * 0.1);
+            const minPrice = finalPrice - variance;
+            const maxPrice = finalPrice + variance;
+            
+            document.getElementById('econFinalPrice').innerHTML = 
+                `${finalPrice} ⚜<br><small style="font-size: 0.6em; opacity: 0.8;">(${minPrice}–${maxPrice})</small>`;
+            document.getElementById('econPriceBreakdown').textContent = 
+                `Base: ${basePrice}⚜ × Região: ${locationMult}x × Evento: ${eventMult}x`;
+        }
+
+        // ===== GESTÃO DE ITENS =====
+        window.openEconomyItemModal = function(itemId = null) {
+            currentEditingEconomyId = itemId;
+            currentEditingEconomyType = 'item';
+            const modal = document.getElementById('economyItemModal');
+            const title = document.getElementById('economyItemModalTitle');
+            
+            if (itemId) {
+                const item = economyItems.find(i => i.id === itemId);
+                title.textContent = 'Editar Item';
+                document.getElementById('econItemName').value = item.name;
+                document.getElementById('econItemCategory').value = item.category;
+                document.getElementById('econItemRarity').value = item.rarity;
+                document.getElementById('econItemPrice').value = item.basePrice;
+                document.getElementById('econItemDesc').value = item.description || '';
+            } else {
+                title.textContent = 'Novo Item';
+                document.getElementById('econItemName').value = '';
+                document.getElementById('econItemCategory').value = 'comida';
+                document.getElementById('econItemRarity').value = 'comum';
+                document.getElementById('econItemPrice').value = '';
+                document.getElementById('econItemDesc').value = '';
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        window.closeEconomyItemModal = function() {
+            document.getElementById('economyItemModal').style.display = 'none';
+            currentEditingEconomyId = null;
+        }
+
+        window.saveEconomyItem = async function() {
+            const name = document.getElementById('econItemName').value.trim();
+            const category = document.getElementById('econItemCategory').value;
+            const rarity = document.getElementById('econItemRarity').value;
+            const basePrice = parseInt(document.getElementById('econItemPrice').value);
+            const description = document.getElementById('econItemDesc').value.trim();
+            
+            if (!name || !basePrice) {
+                alert('Preencha nome e preço base!');
+                return;
+            }
+            
+            const itemData = {
+                name,
+                category,
+                rarity,
+                basePrice,
+                description,
+                updatedAt: new Date().toISOString()
+            };
+            
+            try {
+                if (currentEditingEconomyId) {
+                    await setDoc(doc(db, 'economy-items', currentEditingEconomyId), itemData);
+                } else {
+                    await addDoc(collection(db, 'economy-items'), itemData);
+                }
+                
+                closeEconomyItemModal();
+                await loadEconomyData();
+                alert('Item salvo com sucesso!');
+            } catch (error) {
+                console.error('Erro ao salvar item:', error);
+                alert('Erro ao salvar item');
+            }
+        }
+
+        function renderEconomyItems() {
+            const container = document.getElementById('economyItemsList');
+            const filtered = filterEconomyItemsArray();
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b; grid-column: 1/-1;">Nenhum item encontrado.</div>';
+                return;
+            }
+            
+            container.innerHTML = filtered.map(item => `
+                <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid var(--border); border-radius: 12px; padding: 15px; transition: all 0.3s;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                        <div>
+                            <div style="font-size: 1.1rem; font-weight: 700; color: var(--light);">${item.name}</div>
+                            <div style="font-size: 0.8rem; color: #64748b; margin-top: 5px;">
+                                <span style="background: rgba(139, 92, 246, 0.2); padding: 3px 8px; border-radius: 5px; margin-right: 5px;">${item.category}</span>
+                                <span style="background: rgba(236, 72, 153, 0.2); padding: 3px 8px; border-radius: 5px;">${item.rarity}</span>
+                            </div>
+                        </div>
+                        <div style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">${item.basePrice} ⚜</div>
+                    </div>
+                    ${item.description ? `<div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">${item.description}</div>` : ''}
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="openEconomyItemModal('${item.id}')" style="flex: 1; padding: 8px;">Editar</button>
+                        <button class="btn btn-danger" onclick="deleteEconomyItem('${item.id}')" style="flex: 1; padding: 8px;">Deletar</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterEconomyItemsArray() {
+            const category = document.getElementById('econFilterCategory').value;
+            const rarity = document.getElementById('econFilterRarity').value;
+            const search = document.getElementById('econSearchItem').value.toLowerCase();
+            
+            return economyItems.filter(item => {
+                if (category && item.category !== category) return false;
+                if (rarity && item.rarity !== rarity) return false;
+                if (search && !item.name.toLowerCase().includes(search)) return false;
+                return true;
+            });
+        }
+
+        window.filterEconomyItems = function() {
+            renderEconomyItems();
+        }
+
+        window.deleteEconomyItem = async function(itemId) {
+            if (!confirm('Deletar este item?')) return;
+            
+            try {
+                await deleteDoc(doc(db, 'economy-items', itemId));
+                await loadEconomyData();
+                alert('Item deletado!');
+            } catch (error) {
+                console.error('Erro ao deletar:', error);
+                alert('Erro ao deletar item');
+            }
+        }
+
+        // ===== GESTÃO DE LOCALIDADES =====
+        window.openEconomyLocationModal = function(locationId = null) {
+            currentEditingEconomyId = locationId;
+            currentEditingEconomyType = 'location';
+            const modal = document.getElementById('economyLocationModal');
+            const title = document.getElementById('economyLocationModalTitle');
+            
+            if (locationId) {
+                const loc = economyLocations.find(l => l.id === locationId);
+                title.textContent = 'Editar Localidade';
+                document.getElementById('econLocationName').value = loc.name;
+                document.getElementById('econLocationType').value = loc.type;
+                document.getElementById('econLocationMultiplier').value = loc.multiplier;
+                document.getElementById('econLocationDesc').value = loc.description || '';
+            } else {
+                title.textContent = 'Nova Localidade';
+                document.getElementById('econLocationName').value = '';
+                document.getElementById('econLocationType').value = 'vila';
+                document.getElementById('econLocationMultiplier').value = 1.0;
+                document.getElementById('econLocationDesc').value = '';
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        window.closeEconomyLocationModal = function() {
+            document.getElementById('economyLocationModal').style.display = 'none';
+            currentEditingEconomyId = null;
+        }
+
+        window.saveEconomyLocation = async function() {
+            const name = document.getElementById('econLocationName').value.trim();
+            const type = document.getElementById('econLocationType').value;
+            const multiplier = parseFloat(document.getElementById('econLocationMultiplier').value);
+            const description = document.getElementById('econLocationDesc').value.trim();
+            
+            if (!name || !multiplier) {
+                alert('Preencha nome e multiplicador!');
+                return;
+            }
+            
+            const locationData = {
+                name,
+                type,
+                multiplier,
+                description,
+                updatedAt: new Date().toISOString()
+            };
+            
+            try {
+                if (currentEditingEconomyId) {
+                    await setDoc(doc(db, 'economy-locations', currentEditingEconomyId), locationData);
+                } else {
+                    await addDoc(collection(db, 'economy-locations'), locationData);
+                }
+                
+                closeEconomyLocationModal();
+                await loadEconomyData();
+                alert('Localidade salva com sucesso!');
+            } catch (error) {
+                console.error('Erro ao salvar localidade:', error);
+                alert('Erro ao salvar localidade');
+            }
+        }
+
+        function renderEconomyLocations() {
+            const container = document.getElementById('economyLocationsList');
+            
+            if (economyLocations.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b; grid-column: 1/-1;">Nenhuma localidade cadastrada.</div>';
+                return;
+            }
+            
+            container.innerHTML = economyLocations.map(loc => `
+                <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid var(--border); border-radius: 12px; padding: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                        <div>
+                            <div style="font-size: 1.1rem; font-weight: 700; color: var(--light);">${loc.name}</div>
+                            <div style="font-size: 0.8rem; color: #64748b; margin-top: 5px;">
+                                <span style="background: rgba(139, 92, 246, 0.2); padding: 3px 8px; border-radius: 5px;">${loc.type}</span>
+                            </div>
+                        </div>
+                        <div style="font-size: 1.3rem; font-weight: 700; color: ${loc.multiplier > 1 ? 'var(--danger)' : 'var(--success)'};">${loc.multiplier}x</div>
+                    </div>
+                    ${loc.description ? `<div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">${loc.description}</div>` : ''}
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="openEconomyLocationModal('${loc.id}')" style="flex: 1; padding: 8px;">Editar</button>
+                        <button class="btn btn-danger" onclick="deleteEconomyLocation('${loc.id}')" style="flex: 1; padding: 8px;">Deletar</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.deleteEconomyLocation = async function(locationId) {
+            if (!confirm('Deletar esta localidade?')) return;
+            
+            try {
+                await deleteDoc(doc(db, 'economy-locations', locationId));
+                await loadEconomyData();
+                alert('Localidade deletada!');
+            } catch (error) {
+                console.error('Erro ao deletar:', error);
+                alert('Erro ao deletar localidade');
+            }
+        }
+
+        // ===== GESTÃO DE EVENTOS =====
+        window.openEconomyEventModal = function(eventId = null) {
+            currentEditingEconomyId = eventId;
+            currentEditingEconomyType = 'event';
+            const modal = document.getElementById('economyEventModal');
+            const title = document.getElementById('economyEventModalTitle');
+            
+            if (eventId) {
+                const evt = economyEvents.find(e => e.id === eventId);
+                title.textContent = 'Editar Evento';
+                document.getElementById('econEventName').value = evt.name;
+                document.getElementById('econEventType').value = evt.type;
+                document.getElementById('econEventMultiplier').value = evt.multiplier;
+                document.getElementById('econEventDesc').value = evt.description || '';
+                document.getElementById('econEventActive').checked = evt.active;
+                
+                // Selecionar categorias
+                const select = document.getElementById('econEventCategories');
+                Array.from(select.options).forEach(option => {
+                    option.selected = evt.categories && evt.categories.includes(option.value);
+                });
+            } else {
+                title.textContent = 'Novo Evento';
+                document.getElementById('econEventName').value = '';
+                document.getElementById('econEventType').value = 'guerra';
+                document.getElementById('econEventMultiplier').value = 1.0;
+                document.getElementById('econEventDesc').value = '';
+                document.getElementById('econEventActive').checked = true;
+                
+                // Limpar seleção
+                const select = document.getElementById('econEventCategories');
+                Array.from(select.options).forEach(option => option.selected = false);
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        window.closeEconomyEventModal = function() {
+            document.getElementById('economyEventModal').style.display = 'none';
+            currentEditingEconomyId = null;
+        }
+
+        window.saveEconomyEvent = async function() {
+            const name = document.getElementById('econEventName').value.trim();
+            const type = document.getElementById('econEventType').value;
+            const multiplier = parseFloat(document.getElementById('econEventMultiplier').value);
+            const description = document.getElementById('econEventDesc').value.trim();
+            const active = document.getElementById('econEventActive').checked;
+            
+            const select = document.getElementById('econEventCategories');
+            const categories = Array.from(select.selectedOptions).map(opt => opt.value);
+            
+            if (!name || !multiplier) {
+                alert('Preencha nome e multiplicador!');
+                return;
+            }
+            
+            const eventData = {
+                name,
+                type,
+                multiplier,
+                description,
+                active,
+                categories,
+                updatedAt: new Date().toISOString()
+            };
+            
+            try {
+                if (currentEditingEconomyId) {
+                    await setDoc(doc(db, 'economy-events', currentEditingEconomyId), eventData);
+                } else {
+                    await addDoc(collection(db, 'economy-events'), eventData);
+                }
+                
+                closeEconomyEventModal();
+                await loadEconomyData();
+                alert('Evento salvo com sucesso!');
+            } catch (error) {
+                console.error('Erro ao salvar evento:', error);
+                alert('Erro ao salvar evento');
+            }
+        }
+
+        function renderEconomyEvents() {
+            const container = document.getElementById('economyEventsList');
+            
+            if (economyEvents.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b; grid-column: 1/-1;">Nenhum evento cadastrado.</div>';
+                return;
+            }
+            
+            container.innerHTML = economyEvents.map(evt => `
+                <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid ${evt.active ? 'var(--success)' : 'var(--border)'}; border-radius: 12px; padding: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                        <div>
+                            <div style="font-size: 1.1rem; font-weight: 700; color: var(--light);">
+                                ${evt.name}
+                                ${evt.active ? '<span style="font-size: 0.7rem; background: var(--success); padding: 2px 6px; border-radius: 10px; margin-left: 8px;">ATIVO</span>' : ''}
+                            </div>
+                            <div style="font-size: 0.8rem; color: #64748b; margin-top: 5px;">
+                                <span style="background: rgba(139, 92, 246, 0.2); padding: 3px 8px; border-radius: 5px;">${evt.type}</span>
+                                ${evt.categories && evt.categories.length > 0 ? `<span style="margin-left: 5px;">${evt.categories.length} categoria(s)</span>` : ''}
+                            </div>
+                        </div>
+                        <div style="font-size: 1.3rem; font-weight: 700; color: ${evt.multiplier > 1 ? 'var(--danger)' : 'var(--success)'};">${evt.multiplier}x</div>
+                    </div>
+                    ${evt.description ? `<div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">${evt.description}</div>` : ''}
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="openEconomyEventModal('${evt.id}')" style="flex: 1; padding: 8px;">Editar</button>
+                        <button class="btn btn-danger" onclick="deleteEconomyEvent('${evt.id}')" style="flex: 1; padding: 8px;">Deletar</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.deleteEconomyEvent = async function(eventId) {
+            if (!confirm('Deletar este evento?')) return;
+            
+            try {
+                await deleteDoc(doc(db, 'economy-events', eventId));
+                await loadEconomyData();
+                alert('Evento deletado!');
+            } catch (error) {
+                console.error('Erro ao deletar:', error);
+                alert('Erro ao deletar evento');
+            }
+        }
 
 </script>
 </body>

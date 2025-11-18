@@ -65,9 +65,9 @@ service cloud.firestore {
       // ✅ Permitir leitura/query para usuários autenticados
       allow read: if isSignedIn();
 
-      // ✅ Criação: apenas se o usuário for o dono (ownerId = uid)
+      // ✅ Criação: dono OU mestre pode criar
       allow create: if isSignedIn() && 
-        request.resource.data.ownerId == request.auth.uid;
+        (request.resource.data.ownerId == request.auth.uid || isMaster());
 
       // ✅ Atualização: dono OU mestre
       // O dono é identificado pelo ownerId (uid do usuário)
@@ -89,9 +89,9 @@ service cloud.firestore {
       // ✅ Permitir leitura/query para usuários autenticados
       allow read: if isSignedIn();
 
-      // ✅ Criação: apenas se o usuário for o dono (ownerId = uid)
+      // ✅ Criação: dono OU mestre pode criar
       allow create: if isSignedIn() && 
-        request.resource.data.ownerId == request.auth.uid;
+        (request.resource.data.ownerId == request.auth.uid || isMaster());
 
       // ✅ Atualização: dono OU mestre
       // O dono é identificado pelo ownerId (uid do usuário)
@@ -106,6 +106,22 @@ service cloud.firestore {
         resource.data.ownerId == request.auth.uid || 
         isMaster()
       );
+    }
+
+    // ========== ADICIONADO: Coleções de Economia ==========
+    match /economy-items/{itemId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /economy-locations/{locationId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /economy-events/{eventId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
     }
   }
 }
