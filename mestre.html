@@ -1697,6 +1697,7 @@
             <button class="tab-button active" onclick="switchTab('personagens')">👥 PERSONAGENS</button>
             <button class="tab-button" onclick="switchTab('exp')">⭐ EXP</button>
             <button class="tab-button" onclick="switchTab('aliados')">🤝 ALIADOS</button>
+            <button class="tab-button" onclick="switchTab('itens')">📦 ITENS</button>
             <button class="tab-button" onclick="switchTab('npcs')">👥 NPCs</button>
             <button class="tab-button" onclick="switchTab('combate')">⚔️ COMBATE</button>
             <button class="tab-button" onclick="switchTab('apoios')">💹 APOIOS</button>
@@ -1749,6 +1750,89 @@
             <div class="npcs-list" id="alliesList">
                 <div style="text-align: center; padding: 40px; color: #64748b; grid-column: 1/-1;">
                     Carregando aliados...
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA ITENS -->
+        <div id="tabItens" class="tab-content">
+            <!-- Sub-abas de Itens -->
+            <div style="margin-bottom: 25px; border-bottom: 2px solid var(--border); padding-bottom: 15px;">
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-primary" id="btnItensPersonagens" onclick="switchItensTab('personagens')" style="flex: 1;">
+                        👤 Personagens
+                    </button>
+                    <button class="btn btn-secondary" id="btnItensAvulsos" onclick="switchItensTab('avulsos')" style="flex: 1;">
+                        📋 Avulsos
+                    </button>
+                    <button class="btn btn-secondary" id="btnItensCriar" onclick="switchItensTab('criar')" style="flex: 1;">
+                        ➕ Criar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sub-aba: Personagens -->
+            <div id="itensPersonagens" class="itens-subtab" style="display: block;">
+                <!-- Buscador de Personagem -->
+                <div style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 20px; margin-bottom: 25px;">
+                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-bottom: 15px;">🔍 Selecionar Personagem</div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <!-- Seletor Dropdown -->
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-bottom: 8px;">Selecionar por Lista</label>
+                            <select class="form-input" id="selectInventarioPersonagem" onchange="loadPersonagemInventario()">
+                                <option value="">Selecione um personagem...</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Campo de Busca -->
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-bottom: 8px;">Buscar por Nome</label>
+                            <input type="text" class="form-input" id="searchInventarioPersonagem" placeholder="Digite o nome do personagem..." oninput="filterInventarioPersonagens()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Container do Inventário -->
+                <div id="inventarioPersonagemContainer" style="display: none;">
+                    <!-- Informações do Personagem -->
+                    <div style="background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 15px; padding: 20px; margin-bottom: 25px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-size: 1.5rem; font-weight: 700; color: white;" id="invPersonagemNome">Nome do Personagem</div>
+                                <div style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-top: 5px;" id="invPersonagemInfo">Jogador • Classe • Raça</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Containers -->
+                    <div id="inventarioContainersList">
+                        <div style="text-align: center; padding: 40px; color: #64748b;">
+                            Carregando inventário...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estado Vazio -->
+                <div id="inventarioPersonagemEmpty" style="text-align: center; padding: 60px; color: #64748b;">
+                    <div style="font-size: 3rem; margin-bottom: 15px;">📦</div>
+                    <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 10px;">Nenhum personagem selecionado</div>
+                    <div>Selecione um personagem acima para gerenciar seu inventário</div>
+                </div>
+            </div>
+
+            <!-- Sub-aba: Avulsos -->
+            <div id="itensAvulsos" class="itens-subtab" style="display: none;">
+                <div style="text-align: center; padding: 40px; color: #64748b;">
+                    Conteúdo de Itens Avulsos
+                </div>
+            </div>
+
+            <!-- Sub-aba: Criar -->
+            <div id="itensCriar" class="itens-subtab" style="display: none;">
+                <div style="text-align: center; padding: 40px; color: #64748b;">
+                    Formulário para criar novos itens
                 </div>
             </div>
         </div>
@@ -2654,11 +2738,97 @@ Agilidade 2\n
         </div>
     </div>
 
+    <!-- Modal para Criar/Editar Item do Mestre -->
+    <div id="itemModalMestre" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; overflow-y: auto;">
+        <div style="max-width: 600px; margin: 20px auto; background: var(--dark); border-radius: 16px; padding: 20px; border: 2px solid var(--primary);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: var(--primary); margin: 0;" id="modalTitleMestre">Criar Item</h2>
+                <button onclick="closeItemModalMestre()" style="background: var(--danger); color: white; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-weight: 700;">✖ Fechar</button>
+            </div>
+            
+            <form id="itemFormMestre" onsubmit="return false;">
+                <!-- Campos Básicos -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Imagem do Item</label>
+                    <input type="file" id="itemImagemMestre" accept="image/*" onchange="previewItemImageMestre()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                    <div id="itemImagePreviewMestre" style="margin-top: 10px; text-align: center;"></div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Nome do Item*</label>
+                    <input type="text" id="itemNameMestre" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Descrição</label>
+                    <textarea id="itemDescriptionMestre" rows="3" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);"></textarea>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <div>
+                        <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Dureza (0-10)*</label>
+                        <input type="number" id="itemDurezaMestre" min="0" max="10" value="0" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                    </div>
+                    <div>
+                        <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Tamanho do Item (1-10)*</label>
+                        <input type="number" id="itemTamanhoMestre" min="1" max="10" value="1" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <div>
+                        <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Reforço*</label>
+                        <input type="number" id="itemReforcoMestre" min="0" value="0" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                    </div>
+                    <div>
+                        <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Integridade*</label>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="number" id="itemIntegridadeMestre" min="0" value="10" required style="flex: 1; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                            <button type="button" onclick="repairItemMestre()" title="Reparar Item" style="background: var(--success); color: white; border: none; border-radius: 8px; padding: 0 12px; cursor: pointer; font-size: 1.2rem;">🔧</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <div>
+                        <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Peso Unitário*</label>
+                        <input type="number" id="itemPesoMestre" min="0" step="0.1" value="1" required oninput="calculateTotalWeightMestre()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                    </div>
+                    <div>
+                        <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Peso Total</label>
+                        <input type="text" id="itemPesoTotalMestre" readonly value="1.00" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.5); color: #94a3b8;">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Tipo de Item*</label>
+                    <select id="itemTipoMestre" onchange="updateItemTypeFieldsMestre()" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                        <option value="">Selecione um tipo...</option>
+                        <option value="Arma">Arma</option>
+                        <option value="Vestimenta">Vestimenta</option>
+                        <option value="Projétil">Projétil</option>
+                        <option value="Objeto">Objeto</option>
+                        <option value="Container">Container</option>
+                        <option value="Lunis">Lunis</option>
+                    </select>
+                </div>
+                
+                <!-- Campos Condicionais -->
+                <div id="conditionalFieldsMestre"></div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" onclick="saveItemMestre()" style="flex: 1; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border: none; border-radius: 8px; padding: 12px; cursor: pointer; font-weight: 700; font-size: 1rem;">💾 Salvar Item</button>
+                    <button type="button" onclick="closeItemModalMestre()" style="background: var(--danger); color: white; border: none; border-radius: 8px; padding: 12px 20px; cursor: pointer; font-weight: 700;">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- FIREBASE SDK -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, collection, query, orderBy, limit, onSnapshot, doc, getDoc, getDocs, setDoc, deleteDoc, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, getDocs, setDoc, deleteDoc, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         const firebaseConfig = {
           apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
@@ -5745,6 +5915,934 @@ Agilidade 2\n
         window.closeApoioModal = function() {
             const modal = document.getElementById('apoioModal');
             if (modal) modal.remove();
+        };
+
+        // Função para trocar entre as sub-abas de Itens
+        window.switchItensTab = function(subtab) {
+            // Ocultar todas as sub-abas
+            document.querySelectorAll('.itens-subtab').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            
+            // Remover classe ativa de todos os botões
+            document.getElementById('btnItensPersonagens').className = 'btn btn-secondary';
+            document.getElementById('btnItensAvulsos').className = 'btn btn-secondary';
+            document.getElementById('btnItensCriar').className = 'btn btn-secondary';
+            
+            // Mostrar a sub-aba selecionada e ativar o botão
+            if (subtab === 'personagens') {
+                document.getElementById('itensPersonagens').style.display = 'block';
+                document.getElementById('btnItensPersonagens').className = 'btn btn-primary';
+            } else if (subtab === 'avulsos') {
+                document.getElementById('itensAvulsos').style.display = 'block';
+                document.getElementById('btnItensAvulsos').className = 'btn btn-primary';
+            } else if (subtab === 'criar') {
+                document.getElementById('itensCriar').style.display = 'block';
+                document.getElementById('btnItensCriar').className = 'btn btn-primary';
+            }
+        };
+
+        // ============= SISTEMA DE INVENTÁRIO DO MESTRE =============
+        let currentInventarioPersonagemId = null;
+        let currentInventarioContainers = [];
+        let currentInventarioItems = [];
+        let currentEditingContainerIdMestre = null;
+        let currentEditingItemIdMestre = null;
+        let currentItemImageBase64Mestre = null;
+
+        // Preencher lista de personagens no seletor
+        window.populateInventarioPersonagens = function() {
+            const selectElement = document.getElementById('selectInventarioPersonagem');
+            selectElement.innerHTML = '<option value="">Selecione um personagem...</option>';
+            
+            allCharacters.forEach(char => {
+                const option = document.createElement('option');
+                option.value = char.id;
+                option.textContent = `${char.nome || 'Sem nome'} (${char.jogador || 'Jogador'})`;
+                selectElement.appendChild(option);
+            });
+        };
+
+        // Filtrar personagens por nome no campo de busca
+        window.filterInventarioPersonagens = function() {
+            const searchTerm = document.getElementById('searchInventarioPersonagem').value.toLowerCase();
+            const selectElement = document.getElementById('selectInventarioPersonagem');
+            
+            if (!searchTerm) {
+                selectElement.value = '';
+                return;
+            }
+            
+            const matchingChar = allCharacters.find(char => 
+                (char.nome || '').toLowerCase().includes(searchTerm) ||
+                (char.jogador || '').toLowerCase().includes(searchTerm)
+            );
+            
+            if (matchingChar) {
+                selectElement.value = matchingChar.id;
+                loadPersonagemInventario();
+            }
+        };
+
+        // Carregar inventário do personagem selecionado
+        window.loadPersonagemInventario = async function() {
+            const selectedId = document.getElementById('selectInventarioPersonagem').value;
+            
+            if (!selectedId) {
+                document.getElementById('inventarioPersonagemContainer').style.display = 'none';
+                document.getElementById('inventarioPersonagemEmpty').style.display = 'block';
+                return;
+            }
+            
+            currentInventarioPersonagemId = selectedId;
+            const character = allCharacters.find(c => c.id === selectedId);
+            
+            if (!character) {
+                showAlert('❌ Personagem não encontrado', 'danger');
+                return;
+            }
+            
+            // Exibir informações do personagem
+            document.getElementById('invPersonagemNome').textContent = character.nome || 'Sem nome';
+            document.getElementById('invPersonagemInfo').textContent = `${character.jogador || 'Jogador'} • ${character.classe || 'Sem classe'} • ${character.raca || 'Sem raça'}`;
+            
+            document.getElementById('inventarioPersonagemContainer').style.display = 'block';
+            document.getElementById('inventarioPersonagemEmpty').style.display = 'none';
+            
+            // Carregar containers e items do Firebase
+            await loadInventarioFromFirebase(selectedId);
+        };
+
+        // Carregar inventário do Firebase
+        async function loadInventarioFromFirebase(characterId) {
+            try {
+                // Carregar Containers
+                const containersRef = collection(db, 'containers');
+                const containersQuery = query(containersRef, where('characterId', '==', characterId));
+                const containersSnapshot = await getDocs(containersQuery);
+                
+                currentInventarioContainers = [];
+                containersSnapshot.forEach(doc => {
+                    currentInventarioContainers.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                // Carregar Items
+                const itemsRef = collection(db, 'items');
+                const itemsQuery = query(itemsRef, where('characterId', '==', characterId));
+                const itemsSnapshot = await getDocs(itemsQuery);
+                
+                currentInventarioItems = [];
+                itemsSnapshot.forEach(doc => {
+                    currentInventarioItems.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                // Garantir que existe container "Equipados"
+                await ensureEquipadosContainerMestre(characterId);
+                
+                // Renderizar inventário
+                renderInventarioMestre();
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar inventário:', error);
+                showAlert('❌ Erro ao carregar inventário: ' + error.message, 'danger');
+            }
+        }
+
+        // Garantir que existe o container "Equipados"
+        async function ensureEquipadosContainerMestre(characterId) {
+            const equipados = currentInventarioContainers.find(c => c.name === 'Equipados');
+            
+            if (!equipados) {
+                const character = allCharacters.find(c => c.id === characterId);
+                const maxSize = (character.for || 1) * (character.vig || 1) * ((character.skills?.atletismo || 0) + 1);
+                let maxCapacity = (character.for || 1) + (character.vig || 1);
+                
+                // Yotun tem habilidade ALTA CARGA
+                if (character.raca === 'Yotun') {
+                    maxCapacity = maxCapacity * 2;
+                }
+                
+                const characterOwnerId = await getCharacterOwnerId(characterId);
+                
+                const newEquipados = {
+                    id: 'equipados-' + Date.now(),
+                    name: 'Equipados',
+                    ownerId: characterOwnerId,
+                    characterId: characterId,
+                    maxCapacity: maxCapacity,
+                    maxSize: maxSize,
+                    itemIds: []
+                };
+                
+                await setDoc(doc(db, 'containers', newEquipados.id), newEquipados);
+                currentInventarioContainers.push(newEquipados);
+            }
+        }
+
+        // Renderizar inventário completo
+        function renderInventarioMestre() {
+            const containersList = document.getElementById('inventarioContainersList');
+            
+            if (currentInventarioContainers.length === 0) {
+                containersList.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Nenhum container encontrado</div>';
+                return;
+            }
+            
+            // Ordenar: Equipados primeiro
+            const sortedContainers = [...currentInventarioContainers].sort((a, b) => {
+                if (a.name === 'Equipados') return -1;
+                if (b.name === 'Equipados') return 1;
+                return 0;
+            });
+            
+            containersList.innerHTML = sortedContainers.map(container => {
+                // Filtrar items deste container
+                const containerItems = currentInventarioItems.filter(item => {
+                    if (container.name === 'Equipados') {
+                        return item.containerId === 'está com alguém';
+                    }
+                    return item.containerId === container.id;
+                });
+                
+                // Calcular peso total
+                const pesoTotal = containerItems.reduce((sum, item) => sum + (item.totalWeight || 0), 0);
+                const pesoContainer = container.peso || 0;
+                const pesoFinal = pesoTotal + pesoContainer;
+                
+                return `
+                    <div style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 20px; margin-bottom: 20px;">
+                        <!-- Header do Container -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 2px solid var(--border);">
+                            <div>
+                                <div style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">
+                                    ${container.name === 'Equipados' ? '🎒' : '📦'} ${container.name}
+                                </div>
+                                <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">
+                                    Capacidade: ${pesoFinal.toFixed(1)} / ${container.maxCapacity || 0} | 
+                                    Tamanho Máx: ${container.maxSize || 0}
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn btn-success" onclick="addItemToContainerMestre('${container.name === 'Equipados' ? 'está com alguém' : container.id}')" style="padding: 8px 15px;">
+                                    ➕ Adicionar
+                                </button>
+                                ${container.name !== 'Equipados' ? `
+                                    <button class="btn btn-danger" onclick="deleteContainerMestre('${container.id}')" style="padding: 8px 15px;">
+                                        🗑️ Remover
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                        
+                        <!-- Items do Container -->
+                        <div style="display: grid; gap: 10px;">
+                            ${containerItems.length === 0 ? `
+                                <div style="text-align: center; padding: 30px; color: #64748b; background: rgba(15, 23, 42, 0.4); border-radius: 10px;">
+                                    Container vazio
+                                </div>
+                            ` : containerItems.map(item => {
+                                // Imagem do item
+                                const imagemHTML = item.imagem ? `<img src="${item.imagem}" style="width: 50px; height: 50px; object-fit: contain; border-radius: 8px; margin-right: 15px; background: rgba(15, 23, 42, 0.8); padding: 5px;">` : '';
+                                
+                                return `
+                                <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid var(--border); border-radius: 10px; padding: 15px; display: flex; align-items: center; gap: 15px;">
+                                    ${imagemHTML}
+                                    <div style="flex: 1;">
+                                        <div style="font-size: 1.1rem; font-weight: 600; color: var(--light);">
+                                            ${item.equipado ? '⚔️ ' : ''}${item.name || 'Item sem nome'}
+                                        </div>
+                                        <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">
+                                            ${item.tipo || 'Sem tipo'} | 
+                                            Peso: ${item.totalWeight || 0} | 
+                                            Tam: ${item.tamanho || 0} | 
+                                            Qtd: ${item.quantity || 1}
+                                            ${item.dureza !== undefined ? ` | Dur: ${item.dureza}` : ''}
+                                            ${item.integridade !== undefined ? ` | Int: ${item.integridade}` : ''}
+                                        </div>
+                                        ${item.description ? `
+                                            <div style="font-size: 0.8rem; color: #64748b; margin-top: 5px; font-style: italic;">
+                                                ${item.description}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn btn-secondary" onclick="editItemMestre('${container.name === 'Equipados' ? 'está com alguém' : container.id}', '${item.id}')" style="padding: 6px 12px; font-size: 0.85rem;">
+                                            ✏️
+                                        </button>
+                                        <button class="btn btn-danger" onclick="deleteItemMestre('${container.id}', '${item.id}')" style="padding: 6px 12px; font-size: 0.85rem;">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </div>
+                            `}).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ========== FUNÇÕES DO MODAL DE ITEM ==========
+        window.addItemToContainerMestre = function(containerId) {
+            if (!currentInventarioPersonagemId) {
+                showAlert('⚠️ Selecione um personagem primeiro', 'warning');
+                return;
+            }
+            
+            currentEditingContainerIdMestre = containerId;
+            currentEditingItemIdMestre = null;
+            document.getElementById('modalTitleMestre').textContent = 'Criar Novo Item';
+            document.getElementById('itemFormMestre').reset();
+            document.getElementById('itemImagePreviewMestre').innerHTML = '';
+            document.getElementById('conditionalFieldsMestre').innerHTML = '';
+            document.getElementById('itemPesoTotalMestre').value = '1.00';
+            currentItemImageBase64Mestre = null;
+            document.getElementById('itemTipoMestre').disabled = false;
+            document.getElementById('itemModalMestre').style.display = 'block';
+        };
+
+        window.editItemMestre = function(containerId, itemId) {
+            const item = currentInventarioItems.find(i => i.id === itemId);
+            if (!item) {
+                showAlert('❌ Item não encontrado', 'danger');
+                return;
+            }
+            
+            currentEditingContainerIdMestre = containerId;
+            currentEditingItemIdMestre = itemId;
+            document.getElementById('modalTitleMestre').textContent = item.isContainerItem ? '📦 Editar Container' : 'Editar Item';
+            
+            // Preencher campos
+            document.getElementById('itemNameMestre').value = item.name || '';
+            let description = item.description || '';
+            if (item.isContainerItem && description.startsWith('Container: ')) {
+                description = description.replace('Container: ', '');
+            }
+            document.getElementById('itemDescriptionMestre').value = description;
+            document.getElementById('itemDurezaMestre').value = item.dureza || 0;
+            document.getElementById('itemTamanhoMestre').value = item.tamanho || 1;
+            document.getElementById('itemReforcoMestre').value = item.reforco || 0;
+            document.getElementById('itemIntegridadeMestre').value = item.integridade || 10;
+            document.getElementById('itemPesoMestre').value = item.peso || 1;
+            document.getElementById('itemTipoMestre').value = item.tipo || '';
+            document.getElementById('itemTipoMestre').disabled = true;
+            
+            // Carregar imagem
+            if (item.imagem) {
+                currentItemImageBase64Mestre = item.imagem;
+                document.getElementById('itemImagePreviewMestre').innerHTML = `<img src="${item.imagem}" style="max-width: 200px; max-height: 200px; border-radius: 8px;">`;
+            } else {
+                currentItemImageBase64Mestre = null;
+                document.getElementById('itemImagePreviewMestre').innerHTML = '';
+            }
+            
+            // Atualizar campos condicionais
+            updateItemTypeFieldsMestre();
+            
+            // Preencher campos específicos por tipo
+            setTimeout(() => {
+                if (item.tipo === 'Arma') {
+                    const tipoArmaEl = document.getElementById('itemTipoArmaMestre');
+                    const arremessavelEl = document.getElementById('itemArremessavelMestre');
+                    if (tipoArmaEl) {
+                        tipoArmaEl.value = item.tipoArma || '';
+                        tipoArmaEl.disabled = true;
+                    }
+                    if (arremessavelEl) arremessavelEl.checked = item.arremessavel || false;
+                    document.getElementById('itemDanoMestre').value = item.dano || 0;
+                    document.getElementById('itemReacaoMestre').value = item.reacao || 0;
+                } else if (item.tipo === 'Vestimenta') {
+                    document.getElementById('itemBlindagemMestre').value = item.blindagem || 0;
+                    document.getElementById('itemDeslocTerrestreMestre').value = item.deslocTerrestre || 0;
+                    document.getElementById('itemReacaoVestMestre').value = item.reacaoVest || 0;
+                    document.getElementById('itemIniciativaMestre').value = item.iniciativa || 0;
+                    document.getElementById('itemCargaMaxMestre').value = item.cargaMax || 0;
+                } else if (item.tipo === 'Projétil') {
+                    document.getElementById('itemQuantidadeMestre').value = item.quantity || 1;
+                    document.getElementById('itemPackSizeMestre').value = item.packSize || 1;
+                    document.getElementById('itemDanoProjétilMestre').value = item.dano || 0;
+                } else if (item.tipo === 'Objeto') {
+                    document.getElementById('itemQuantidadeMestre').value = item.quantity || 1;
+                    document.getElementById('itemPackSizeMestre').value = item.packSize || 1;
+                } else if (item.tipo === 'Container') {
+                    document.getElementById('itemCapacidadeMaxMestre').value = item.maxCapacity || 10;
+                    document.getElementById('itemTamanhoMaxMestre').value = item.maxSize || 5;
+                } else if (item.tipo === 'Lunis') {
+                    const tipoLunEl = document.getElementById('itemTipoLunMestre');
+                    if (tipoLunEl) {
+                        tipoLunEl.value = item.tipoLun || '';
+                        tipoLunEl.disabled = true;
+                        updateLunisFieldsMestre();
+                        setTimeout(() => {
+                            document.getElementById('itemQuantidadeMestre').value = item.quantity || 1;
+                        }, 100);
+                    }
+                }
+                calculateTotalWeightMestre();
+            }, 100);
+            
+            document.getElementById('itemModalMestre').style.display = 'block';
+        };
+
+        window.closeItemModalMestre = function() {
+            document.getElementById('itemModalMestre').style.display = 'none';
+            currentEditingContainerIdMestre = null;
+            currentEditingItemIdMestre = null;
+            currentItemImageBase64Mestre = null;
+        };
+
+        window.updateItemTypeFieldsMestre = function() {
+            const tipo = document.getElementById('itemTipoMestre').value;
+            const conditionalFields = document.getElementById('conditionalFieldsMestre');
+            
+            let html = '';
+            
+            switch(tipo) {
+                case 'Arma':
+                    html = `
+                        <div style="border-top: 2px solid var(--primary); padding-top: 15px; margin-top: 15px;">
+                            <h3 style="color: var(--primary); margin-bottom: 15px;">⚔️ Atributos de Arma</h3>
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Tipo de Arma*</label>
+                                <select id="itemTipoArmaMestre" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                    <option value="">Selecione...</option>
+                                    <option value="Manopla">👊 Manopla</option>
+                                    <option value="Haste">🔱 Haste</option>
+                                    <option value="Pesada">⚒️ Pesada</option>
+                                    <option value="De Uma Mão">⚔️ De Uma Mão</option>
+                                    <option value="De Duas Mãos">🗡️ De Duas Mãos</option>
+                                    <option value="Dupla">🔪🔪 Dupla</option>
+                                    <option value="Escudo">🛡️ Escudo</option>
+                                    <option value="Disparo Leve">🏹💨 Disparo Leve</option>
+                                    <option value="Disparo Pesado">🏹🗜️ Disparo Pesado</option>
+                                </select>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: flex; align-items: center; gap: 10px; color: #cbd5e1; cursor: pointer;">
+                                    <input type="checkbox" id="itemArremessavelMestre" style="width: 20px; height: 20px; cursor: pointer;">
+                                    <span style="font-size: 0.9rem;">🎯 Arremessável?</span>
+                                </label>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Dano</label>
+                                    <input type="number" id="itemDanoMestre" min="0" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Reação (Defesa)</label>
+                                    <input type="number" id="itemReacaoMestre" min="0" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'Vestimenta':
+                    html = `
+                        <div style="border-top: 2px solid var(--primary); padding-top: 15px; margin-top: 15px;">
+                            <h3 style="color: var(--primary); margin-bottom: 15px;">🛡️ Atributos de Vestimenta</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Blindagem</label>
+                                    <input type="number" id="itemBlindagemMestre" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Desloc. Terrestre</label>
+                                    <input type="number" id="itemDeslocTerrestreMestre" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Reação</label>
+                                    <input type="number" id="itemReacaoVestMestre" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Iniciativa</label>
+                                    <input type="number" id="itemIniciativaMestre" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Carga Max</label>
+                                    <input type="number" id="itemCargaMaxMestre" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'Projétil':
+                    html = `
+                        <div style="border-top: 2px solid var(--primary); padding-top: 15px; margin-top: 15px;">
+                            <h3 style="color: var(--primary); margin-bottom: 15px;">🎯 Atributos de Projétil</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Quantidade*</label>
+                                    <input type="number" id="itemQuantidadeMestre" min="1" value="1" required oninput="calculateTotalWeightMestre()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Tamanho do Pack*</label>
+                                    <select id="itemPackSizeMestre" required onchange="calculateTotalWeightMestre()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                        <option value="1">1</option>
+                                        <option value="5">5</option>
+                                        <option value="10">10</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">+ Dano</label>
+                                    <input type="number" id="itemDanoProjétilMestre" min="0" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'Objeto':
+                    html = `
+                        <div style="border-top: 2px solid var(--primary); padding-top: 15px; margin-top: 15px;">
+                            <h3 style="color: var(--primary); margin-bottom: 15px;">📦 Atributos de Objeto</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Quantidade*</label>
+                                    <input type="number" id="itemQuantidadeMestre" min="1" value="1" required oninput="calculateTotalWeightMestre()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Tamanho do Pack*</label>
+                                    <select id="itemPackSizeMestre" required onchange="calculateTotalWeightMestre()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                        <option value="1">1</option>
+                                        <option value="5">5</option>
+                                        <option value="10">10</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'Container':
+                    html = `
+                        <div style="border-top: 2px solid var(--primary); padding-top: 15px; margin-top: 15px;">
+                            <h3 style="color: var(--primary); margin-bottom: 15px;">📦 Atributos de Container</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Capacidade Máxima*</label>
+                                    <input type="number" id="itemCapacidadeMaxMestre" min="1" value="10" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Tamanho Máximo de Itens*</label>
+                                    <input type="number" id="itemTamanhoMaxMestre" min="1" value="5" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                
+                case 'Lunis':
+                    html = `
+                        <div style="border-top: 2px solid var(--primary); padding-top: 15px; margin-top: 15px;">
+                            <h3 style="color: var(--primary); margin-bottom: 15px;">💰 Atributos de Lunis</h3>
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Tipo de Lun*</label>
+                                <select id="itemTipoLunMestre" onchange="updateLunisFieldsMestre()" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                                    <option value="">Selecione...</option>
+                                    <option value="Lunis">Lunis</option>
+                                    <option value="Ka'Lunis">Ka'Lunis</option>
+                                    <option value="Mi'Lunis">Mi'Lunis</option>
+                                </select>
+                            </div>
+                            <div id="lunisQuantityFieldMestre"></div>
+                        </div>
+                    `;
+                    break;
+            }
+            
+            conditionalFields.innerHTML = html;
+            calculateTotalWeightMestre();
+        };
+
+        window.calculateTotalWeightMestre = function() {
+            const tipo = document.getElementById('itemTipoMestre').value;
+            const peso = parseFloat(document.getElementById('itemPesoMestre').value) || 0;
+            
+            let totalWeight = peso;
+            
+            if (tipo === 'Projétil' || tipo === 'Objeto' || tipo === 'Lunis') {
+                const quantidade = parseInt(document.getElementById('itemQuantidadeMestre')?.value) || 1;
+                const packSize = parseInt(document.getElementById('itemPackSizeMestre')?.value) || 1;
+                totalWeight = Math.ceil((quantidade / packSize) * peso);
+            }
+            
+            document.getElementById('itemPesoTotalMestre').value = totalWeight.toFixed(2);
+        };
+
+        window.updateLunisFieldsMestre = function() {
+            const tipoLun = document.getElementById('itemTipoLunMestre')?.value;
+            const lunisQuantityField = document.getElementById('lunisQuantityFieldMestre');
+            
+            if (!tipoLun || !lunisQuantityField) return;
+            
+            let descricao = '';
+            let packSize = 1;
+            
+            const IMAGEM_LUN = 'https://i.imgur.com/RetxZ16.png';
+            const IMAGEM_KA_LUN = 'https://i.imgur.com/yRUSkDM.png';
+            const IMAGEM_MI_LUNIS = 'https://i.imgur.com/BTCzl1x.png';
+
+            if (tipoLun === 'Lunis') {
+                currentItemImageBase64Mestre = IMAGEM_LUN;
+                document.getElementById('itemImagePreviewMestre').innerHTML = `<img src="${IMAGEM_LUN}" style="max-width: 200px; max-height: 200px; border-radius: 8px; object-fit: contain; background: transparent;">`;
+                descricao = 'Cada Lun tem um valor unitário, comumente usado no comércio e em classe média para baixo.';
+                packSize = 50;
+                document.getElementById('itemNameMestre').value = 'Lunis';
+            } else if (tipoLun === "Ka'Lunis") {
+                currentItemImageBase64Mestre = IMAGEM_KA_LUN;
+                document.getElementById('itemImagePreviewMestre').innerHTML = `<img src="${IMAGEM_KA_LUN}" style="max-width: 200px; max-height: 200px; border-radius: 8px; object-fit: contain; background: transparent;">`;
+                descricao = "Cada Ka'Lun, equivale a 1000 unidades de Luns, pouco usada pela classe baixa, comum entre a nobreza e no comércio.";
+                packSize = 10;
+                document.getElementById('itemNameMestre').value = "Ka'Lunis";
+            } else if (tipoLun === "Mi'Lunis") {
+                currentItemImageBase64Mestre = IMAGEM_MI_LUNIS;
+                document.getElementById('itemImagePreviewMestre').innerHTML = `<img src="${IMAGEM_MI_LUNIS}" style="max-width: 200px; max-height: 200px; border-radius: 8px; object-fit: contain; background: transparent;">`;
+                descricao = 'Cada Mi\'Lun equivale a 1.000.000 (1 Milhão) de unidades de Lunis, moeda rara até entre a nobreza.';
+                packSize = 1;
+                document.getElementById('itemNameMestre').value = "Mi'Lunis";
+            }
+            
+            lunisQuantityField.innerHTML = `
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Quantidade*</label>
+                    <input type="number" id="itemQuantidadeMestre" min="1" value="1" required oninput="calculateTotalWeightMestre()" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                    <input type="hidden" id="itemPackSizeMestre" value="${packSize}">
+                </div>
+            `;
+            
+            document.getElementById('itemDescriptionMestre').value = descricao;
+            document.getElementById('itemDurezaMestre').value = 1;
+            document.getElementById('itemIntegridadeMestre').value = 2;
+            document.getElementById('itemPesoMestre').value = 1;
+            
+            calculateTotalWeightMestre();
+        };
+
+        window.repairItemMestre = function() {
+            const dureza = parseInt(document.getElementById('itemDurezaMestre').value) || 0;
+            const tamanho = parseInt(document.getElementById('itemTamanhoMestre').value) || 0;
+            const reforco = parseInt(document.getElementById('itemReforcoMestre').value) || 0;
+            
+            const integridadeMax = dureza + tamanho + reforco;
+            document.getElementById('itemIntegridadeMestre').value = integridadeMax;
+            
+            showAlert('🔧 Item reparado!', 'success');
+        };
+
+        window.previewItemImageMestre = function() {
+            const file = document.getElementById('itemImagemMestre').files[0];
+            if (!file) return;
+            
+            if (file.size > 2 * 1024 * 1024) {
+                showAlert('❌ Imagem muito grande! Máximo 2MB.', 'danger');
+                document.getElementById('itemImagemMestre').value = '';
+                return;
+            }
+            
+            if (!file.type.startsWith('image/')) {
+                showAlert('❌ Por favor, selecione uma imagem válida.', 'danger');
+                document.getElementById('itemImagemMestre').value = '';
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentItemImageBase64Mestre = e.target.result;
+                document.getElementById('itemImagePreviewMestre').innerHTML = `<img src="${e.target.result}" style="max-width: 200px; max-height: 200px; border-radius: 8px;">`;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        // Função para obter o ownerId correto do personagem
+        async function getCharacterOwnerId(characterId) {
+            try {
+                // 1. Tentar pegar de items existentes do personagem
+                const existingItem = currentInventarioItems.find(i => i.characterId === characterId && i.ownerId);
+                if (existingItem && existingItem.ownerId !== currentUser.uid) {
+                    return existingItem.ownerId;
+                }
+                
+                // 2. Tentar pegar de containers existentes do personagem
+                const existingContainer = currentInventarioContainers.find(c => c.characterId === characterId && c.ownerId && c.name !== 'Equipados');
+                if (existingContainer && existingContainer.ownerId !== currentUser.uid) {
+                    return existingContainer.ownerId;
+                }
+                
+                // 3. Buscar userId pelo nome do jogador
+                const character = allCharacters.find(c => c.id === characterId);
+                if (character && character.jogador) {
+                    const usersSnapshot = await getDocs(collection(db, 'users'));
+                    let foundUserId = null;
+                    
+                    usersSnapshot.forEach(doc => {
+                        const userData = doc.data();
+                        const displayName = userData.displayName || '';
+                        const email = userData.email || '';
+                        
+                        // Comparar nome do jogador com displayName ou email
+                        if (displayName.toLowerCase() === character.jogador.toLowerCase() || 
+                            email.toLowerCase() === character.jogador.toLowerCase()) {
+                            foundUserId = doc.id;
+                        }
+                    });
+                    
+                    if (foundUserId) {
+                        return foundUserId;
+                    }
+                }
+                
+                // 4. Se não encontrou, retornar uid do mestre
+                console.warn('⚠️ OwnerId do jogador não encontrado, usando uid do mestre');
+                return currentUser.uid;
+                
+            } catch (error) {
+                console.error('❌ Erro ao buscar ownerId:', error);
+                return currentUser.uid;
+            }
+        }
+
+        window.saveItemMestre = async function() {
+            const name = document.getElementById('itemNameMestre').value.trim();
+            const tipo = document.getElementById('itemTipoMestre').value;
+            
+            let tipoLun = null;
+            if (tipo === 'Lunis') {
+                tipoLun = document.getElementById('itemTipoLunMestre')?.value || null;
+            }
+            
+            if (!name || !tipo) {
+                showAlert('❌ Preencha todos os campos obrigatórios!', 'danger');
+                return;
+            }
+            
+            // Coletar dados básicos
+            const itemData = {
+                name,
+                tipo,
+                tipoLun,
+                description: document.getElementById('itemDescriptionMestre').value,
+                dureza: parseInt(document.getElementById('itemDurezaMestre').value) || 0,
+                tamanho: parseInt(document.getElementById('itemTamanhoMestre').value) || 1,
+                reforco: parseInt(document.getElementById('itemReforcoMestre').value) || 0,
+                integridade: parseInt(document.getElementById('itemIntegridadeMestre').value) || 10,
+                peso: parseFloat(document.getElementById('itemPesoMestre').value) || 1,
+                imagem: currentItemImageBase64Mestre || null,
+                quantity: 1,
+                packSize: 1,
+                totalWeight: parseFloat(document.getElementById('itemPesoTotalMestre').value) || 1
+            };
+            
+            // Coletar dados específicos por tipo
+            switch(tipo) {
+                case 'Arma':
+                    itemData.tipoArma = document.getElementById('itemTipoArmaMestre')?.value || '';
+                    itemData.arremessavel = document.getElementById('itemArremessavelMestre')?.checked || false;
+                    itemData.dano = parseInt(document.getElementById('itemDanoMestre').value) || 0;
+                    itemData.reacao = parseInt(document.getElementById('itemReacaoMestre').value) || 0;
+                    break;
+                case 'Vestimenta':
+                    itemData.blindagem = parseInt(document.getElementById('itemBlindagemMestre').value) || 0;
+                    itemData.deslocTerrestre = parseInt(document.getElementById('itemDeslocTerrestreMestre').value) || 0;
+                    itemData.reacaoVest = parseInt(document.getElementById('itemReacaoVestMestre').value) || 0;
+                    itemData.iniciativa = parseInt(document.getElementById('itemIniciativaMestre').value) || 0;
+                    itemData.cargaMax = parseInt(document.getElementById('itemCargaMaxMestre').value) || 0;
+                    break;
+                case 'Projétil':
+                    itemData.quantity = parseInt(document.getElementById('itemQuantidadeMestre').value) || 1;
+                    itemData.packSize = parseInt(document.getElementById('itemPackSizeMestre').value) || 1;
+                    itemData.dano = parseInt(document.getElementById('itemDanoProjétilMestre').value) || 0;
+                    itemData.totalWeight = Math.ceil((itemData.quantity / itemData.packSize) * itemData.peso);
+                    break;
+                case 'Objeto':
+                    itemData.quantity = parseInt(document.getElementById('itemQuantidadeMestre').value) || 1;
+                    itemData.packSize = parseInt(document.getElementById('itemPackSizeMestre').value) || 1;
+                    itemData.totalWeight = Math.ceil((itemData.quantity / itemData.packSize) * itemData.peso);
+                    break;
+                case 'Lunis':
+                    itemData.quantity = parseInt(document.getElementById('itemQuantidadeMestre').value) || 1;
+                    itemData.packSize = parseInt(document.getElementById('itemPackSizeMestre').value) || 1;
+                    itemData.totalWeight = Math.ceil((itemData.quantity / itemData.packSize) * itemData.peso);
+                    break;
+                case 'Container':
+                    itemData.maxCapacity = parseInt(document.getElementById('itemCapacidadeMaxMestre').value) || 10;
+                    itemData.maxSize = parseInt(document.getElementById('itemTamanhoMaxMestre').value) || 5;
+                    break;
+            }
+            
+            try {
+                if (currentEditingItemIdMestre) {
+                    // Editar item existente
+                    const item = currentInventarioItems.find(i => i.id === currentEditingItemIdMestre);
+                    Object.assign(item, itemData);
+                    
+                    if (item.isContainerItem && item.description && !item.description.startsWith('Container: ')) {
+                        item.description = 'Container: ' + item.description;
+                    }
+                    
+                    await setDoc(doc(db, 'items', item.id), item);
+                    
+                    // Se for item de container, atualizar o container vinculado
+                    if (item.isContainerItem && item.linkedContainerId) {
+                        const linkedContainer = currentInventarioContainers.find(c => c.id === item.linkedContainerId);
+                        if (linkedContainer) {
+                            linkedContainer.name = item.name;
+                            let cleanDescription = item.description || '';
+                            if (cleanDescription.startsWith('Container: ')) {
+                                cleanDescription = cleanDescription.replace('Container: ', '');
+                            }
+                            linkedContainer.description = cleanDescription;
+                            linkedContainer.dureza = item.dureza;
+                            linkedContainer.tamanho = item.tamanho;
+                            linkedContainer.integridade = item.integridade;
+                            linkedContainer.peso = item.peso;
+                            
+                            if (item.tipo === 'Container' && item.maxCapacity) {
+                                linkedContainer.maxCapacity = item.maxCapacity;
+                                linkedContainer.maxSize = item.maxSize;
+                            }
+                            
+                            await setDoc(doc(db, 'containers', linkedContainer.id), linkedContainer);
+                        }
+                    }
+                    
+                    showAlert('✅ Item atualizado!', 'success');
+                } else {
+                    // Criar novo item
+                    const characterOwnerId = await getCharacterOwnerId(currentInventarioPersonagemId);
+                    
+                    const newItem = {
+                        ...itemData,
+                        id: 'item-' + Date.now(),
+                        ownerId: characterOwnerId,
+                        characterId: currentInventarioPersonagemId,
+                        containerId: currentEditingContainerIdMestre,
+                        equipado: false,
+                        isContainerItem: false,
+                        linkedContainerId: null
+                    };
+                    
+                    await setDoc(doc(db, 'items', newItem.id), newItem);
+                    
+                    // Se for Container, criar o container correspondente
+                    if (tipo === 'Container') {
+                        const containerId = 'container-' + Date.now();
+                        const newContainer = {
+                            id: containerId,
+                            name: name,
+                            ownerId: characterOwnerId,  // ✅ USA o ownerId calculado
+                            characterId: currentInventarioPersonagemId,
+                            maxCapacity: itemData.maxCapacity,
+                            maxSize: itemData.maxSize,
+                            itemIds: [],
+                            description: itemData.description,
+                            dureza: itemData.dureza,
+                            tamanho: itemData.tamanho,
+                            integridade: itemData.integridade,
+                            peso: itemData.peso
+                        };
+                        
+                        await setDoc(doc(db, 'containers', containerId), newContainer);
+                        
+                        // Atualizar item para vincular ao container
+                        newItem.isContainerItem = true;
+                        newItem.linkedContainerId = containerId;
+                        await setDoc(doc(db, 'items', newItem.id), newItem);
+                    }
+                    
+                    showAlert('✅ Item criado!', 'success');
+                }
+                
+                // Recarregar inventário
+                await loadInventarioFromFirebase(currentInventarioPersonagemId);
+                closeItemModalMestre();
+                
+                // Log da ação
+                const character = allCharacters.find(c => c.id === currentInventarioPersonagemId);
+                await addLog(`${currentEditingItemIdMestre ? 'editou' : 'adicionou'} item "${name}" no inventário de ${character.nome}`);
+                
+            } catch (error) {
+                console.error('❌ Erro ao salvar item:', error);
+                showAlert('❌ Erro ao salvar item: ' + error.message, 'danger');
+            }
+        };
+
+        // Deletar item
+        window.deleteItemMestre = async function(containerId, itemId) {
+            if (!confirm('Tem certeza que deseja deletar este item?')) return;
+            
+            try {
+                const item = currentInventarioItems.find(i => i.id === itemId);
+                
+                // Se for item de container, remover o container também
+                if (item.isContainerItem && item.linkedContainerId) {
+                    await deleteContainerMestre(item.linkedContainerId);
+                    return;
+                }
+                
+                await deleteDoc(doc(db, 'items', itemId));
+                showAlert('✅ Item deletado com sucesso!', 'success');
+                await loadInventarioFromFirebase(currentInventarioPersonagemId);
+                
+                const character = allCharacters.find(c => c.id === currentInventarioPersonagemId);
+                await addLog(`removeu item "${item.name}" do inventário de ${character.nome}`);
+                
+            } catch (error) {
+                console.error('❌ Erro ao deletar item:', error);
+                showAlert('❌ Erro ao deletar item: ' + error.message, 'danger');
+            }
+        };
+
+        // Deletar container
+        window.deleteContainerMestre = async function(containerId) {
+            if (!confirm('Tem certeza que deseja remover este container? Os itens serão movidos para Equipados.')) return;
+            
+            try {
+                // Mover items para Equipados
+                const itemsToMove = currentInventarioItems.filter(i => i.containerId === containerId);
+                for (const item of itemsToMove) {
+                    await setDoc(doc(db, 'items', item.id), {
+                        ...item,
+                        containerId: 'está com alguém'
+                    });
+                }
+                
+                // Deletar container item (se existir)
+                const containerItem = currentInventarioItems.find(i => i.linkedContainerId === containerId);
+                if (containerItem) {
+                    await deleteDoc(doc(db, 'items', containerItem.id));
+                }
+                
+                // Deletar container
+                await deleteDoc(doc(db, 'containers', containerId));
+                
+                showAlert('✅ Container removido com sucesso!', 'success');
+                await loadInventarioFromFirebase(currentInventarioPersonagemId);
+                
+                const character = allCharacters.find(c => c.id === currentInventarioPersonagemId);
+                await addLog(`removeu um container do inventário de ${character.nome}`);
+                
+            } catch (error) {
+                console.error('❌ Erro ao deletar container:', error);
+                showAlert('❌ Erro ao deletar container: ' + error.message, 'danger');
+            }
+        };
+
+        // Atualizar lista ao carregar personagens
+        const originalLoadAllCharacters = window.loadAllCharacters;
+        window.loadAllCharacters = async function() {
+            await originalLoadAllCharacters();
+            populateInventarioPersonagens();
         };
 
 </script>
