@@ -369,6 +369,41 @@
             .character-info {
                 grid-template-columns: 1fr;
             }
+
+            /* Ranking responsivo para mobile */
+            .ranking-item {
+                flex-wrap: wrap;
+                padding: 1rem;
+                gap: 0.75rem;
+            }
+
+            .ranking-position {
+                font-size: 1.5rem;
+                min-width: 40px;
+            }
+
+            .ranking-info {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .ranking-name {
+                font-size: 1.1rem;
+                word-break: break-word;
+            }
+
+            .ranking-details {
+                font-size: 0.8rem;
+            }
+
+            .ranking-value {
+                width: 100%;
+                text-align: center;
+                font-size: 1.4rem;
+                margin-top: 0.5rem;
+                padding-top: 0.75rem;
+                border-top: 1px solid var(--border);
+            }
         }
 
         /* Modal de confirmação */
@@ -741,6 +776,151 @@
             margin-bottom: 1rem;
             opacity: 0.5;
         }
+
+        /* ===== NOTIFICAÇÕES ===== */
+        .notification-badge {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 6px;
+            min-width: 18px;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .notifications-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .notifications-info {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .notification-item {
+            background: rgba(30, 27, 75, 0.9);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.3s;
+        }
+
+        .notification-item.new {
+            border-color: var(--primary);
+            background: rgba(139, 92, 246, 0.15);
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
+        }
+
+        .notification-item:hover {
+            transform: translateX(3px);
+        }
+
+        .notification-content {
+            flex: 1;
+        }
+
+        .notification-message {
+            color: var(--light);
+            font-size: 0.95rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .notification-time {
+            color: #64748b;
+            font-size: 0.75rem;
+        }
+
+        .notification-delete {
+            background: transparent;
+            border: 2px solid var(--danger);
+            color: var(--danger);
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+
+        .notification-delete:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .notification-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .notification-icon.up {
+            color: #10b981;
+        }
+
+        .notification-icon.down {
+            color: #ef4444;
+        }
+
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .pagination-btn {
+            background: rgba(139, 92, 246, 0.2);
+            color: #94a3b8;
+            border: 2px solid var(--border);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .pagination-btn.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .empty-notifications {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+
+        .empty-notifications-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
     </style>
 </head>
 
@@ -774,6 +954,10 @@
             </button>
             <button class="tab-button" onclick="switchTab('inventario')">
                 🎒 Inventário
+            </button>
+            <button class="tab-button" onclick="switchTab('notificacoes')" id="tab-btn-notificacoes">
+                🔔 Notificações
+                <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
             </button>
         </div>
 
@@ -833,6 +1017,18 @@
                 onclick="switchSubTab('rank-apoios')" title="Rank Apoios">
                 💖
             </button>
+            <button class="sub-tab-button" style="padding: 10px 14px; font-size: 1.3rem;"
+                onclick="switchSubTab('rank-intelecto')" title="Rank Intelecto">
+                🧠
+            </button>
+            <button class="sub-tab-button" style="padding: 10px 14px; font-size: 1.3rem;"
+                onclick="switchSubTab('rank-potencia')" title="Rank Potência">
+                🔥
+            </button>
+            <button class="sub-tab-button" style="padding: 10px 14px; font-size: 1.3rem;"
+                onclick="switchSubTab('rank-influencia')" title="Rank Influência">
+                🗣️
+            </button>
         </div>
 
         <!-- SUB-ABA: RANK CP -->
@@ -883,6 +1079,33 @@
                 Apoios</h2>
             <div id="ranking-apoios" class="ranking-list"></div>
         </div>
+
+        <!-- SUB-ABA: RANK INTELECTO -->
+        <div id="subtab-rank-intelecto" class="sub-tab-content">
+            <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">🧠 Rank
+                Intelecto</h2>
+            <p style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">INT + RAC + PRS +
+                Habilidades Mentais</p>
+            <div id="ranking-intelecto" class="ranking-list"></div>
+        </div>
+
+        <!-- SUB-ABA: RANK POTÊNCIA -->
+        <div id="subtab-rank-potencia" class="sub-tab-content">
+            <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">🔥 Rank
+                Potência</h2>
+            <p style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">FOR + DES + VIG +
+                Habilidades Físicas</p>
+            <div id="ranking-potencia" class="ranking-list"></div>
+        </div>
+
+        <!-- SUB-ABA: RANK INFLUÊNCIA -->
+        <div id="subtab-rank-influencia" class="sub-tab-content">
+            <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">🗣️ Rank
+                Influência</h2>
+            <p style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">PRE + MAN + AUT +
+                Habilidades Sociais</p>
+            <div id="ranking-influencia" class="ranking-list"></div>
+        </div>
     </div>
     <!-- FIM ABA RANKINGS -->
 
@@ -910,6 +1133,28 @@
         </div>
     </div>
     <!-- FIM ABA INVENTÁRIO -->
+
+    <!-- ABA NOTIFICAÇÕES -->
+    <div id="tab-notificacoes" class="tab-content">
+        <h2 style="text-align: center; color: var(--primary); margin-bottom: 1rem; font-size: 1.5rem;">🔔 Notificações
+        </h2>
+        <p class="notifications-info">Últimas 100 notificações são armazenadas. Notificações mais antigas são removidas
+            automaticamente.</p>
+
+        <!-- Lista de Notificações -->
+        <div id="notificationsList"></div>
+
+        <!-- Paginação -->
+        <div id="paginationContainer" class="pagination-container" style="display: none;"></div>
+
+        <!-- Estado vazio -->
+        <div class="empty-notifications" id="emptyNotifications" style="display: none;">
+            <div class="empty-notifications-icon">🔔</div>
+            <div class="empty-text">Nenhuma notificação</div>
+            <div class="empty-hint">Você será notificado quando suas posições nos rankings mudarem</div>
+        </div>
+    </div>
+    <!-- FIM ABA NOTIFICAÇÕES -->
 
     <!-- Modal de Confirmação de Exclusão -->
 
@@ -942,6 +1187,7 @@
             getDoc,
             addDoc,
             deleteDoc,
+            updateDoc,
             doc,
             serverTimestamp
         } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
@@ -965,6 +1211,14 @@
         let allUsersApoios = []; // Para ranking de apoios
         let characterToDelete = null;
 
+        // Notificações
+        let userDocRef = null;
+        let userNotifications = [];
+        let previousRankPositions = {}; // Armazena posições anteriores para comparação
+        let currentNotificationPage = 1;
+        const NOTIFICATIONS_PER_PAGE = 10;
+        const MAX_NOTIFICATIONS = 100;
+
         // ============= AUTENTICAÇÃO =============
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -974,6 +1228,7 @@
                 document.getElementById('mainContainer').style.display = 'block';
 
                 await loadCharacters();
+                await loadNotifications(); // DEVE rodar ANTES de rankings para carregar posições anteriores
                 await loadAllCharactersForRankings();
                 await loadInventory();
             } else {
@@ -1321,6 +1576,11 @@
 
             event.target.classList.add('active');
             document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            // Marcar notificações como lidas quando abrir a aba
+            if (tabName === 'notificacoes') {
+                markNotificationsAsRead();
+            }
         };
 
         window.switchSubTab = function (subtabName) {
@@ -1377,7 +1637,7 @@
 
         function renderAllRankings() {
             if (allCharacters.length === 0) {
-                ['ranking-cp', 'ranking-ofensivo', 'ranking-defensivo', 'ranking-resistencia', 'ranking-mobilidade', 'ranking-riqueza'].forEach(id => {
+                ['ranking-cp', 'ranking-ofensivo', 'ranking-defensivo', 'ranking-resistencia', 'ranking-mobilidade', 'ranking-riqueza', 'ranking-intelecto', 'ranking-potencia', 'ranking-influencia'].forEach(id => {
                     const container = document.getElementById(id);
                     if (container) {
                         container.innerHTML = `
@@ -1425,36 +1685,94 @@
                 // Exibe VALOR, NOME e RANK
                 return `<span style="color: ${item.cpCor}; font-weight: 700; font-size: 1.1em;">${v}</span> • <span style="color: ${item.cpCor};">${item.cpNome}</span> <span style="color: ${item.cpCor}; font-size: 0.85em;">(${item.cpLetra})</span>`;
             });
+            checkRankChanges('cp', 'Rank Classe de Poder', rankCP);
 
             const rankOF = [...charsWithStats].sort((a, b) => b.of - a.of);
             renderRanking('ranking-ofensivo', rankOF.map(item => ({
                 char: item.char,
                 value: item.of
             })));
+            checkRankChanges('of', 'Rank Ofensivo', rankOF);
 
             const rankDF = [...charsWithStats].sort((a, b) => b.df - a.df);
             renderRanking('ranking-defensivo', rankDF.map(item => ({
                 char: item.char,
                 value: item.df
             })));
+            checkRankChanges('df', 'Rank Defensivo', rankDF);
 
             const rankRS = [...charsWithStats].sort((a, b) => b.rs - a.rs);
             renderRanking('ranking-resistencia', rankRS.map(item => ({
                 char: item.char,
                 value: item.rs
             })));
+            checkRankChanges('rs', 'Rank Resistência', rankRS);
 
             const rankMB = [...charsWithStats].sort((a, b) => b.mb - a.mb);
             renderRanking('ranking-mobilidade', rankMB.map(item => ({
                 char: item.char,
                 value: item.mb
             })));
+            checkRankChanges('mb', 'Rank Mobilidade', rankMB);
 
             const rankLuns = [...charsWithStats].sort((a, b) => b.luns - a.luns);
             renderRanking('ranking-riqueza', rankLuns.map(item => ({
                 char: item.char,
                 value: item.luns
             })), (v) => `${v} 💰`);
+            checkRankChanges('luns', 'Rank Riqueza', rankLuns);
+
+            // ============= NOVOS RANKINGS: INTELECTO, POTÊNCIA, INFLUÊNCIA =============
+
+            // Habilidades por categoria
+            const mentalSkills = ['abismo', 'alquimia', 'essência', 'herbalismo', 'história', 'investigação', 'ofício-intelectual', 'relíquia', 'runomancia'];
+            const fisicoSkills = ['arma', 'disparo', 'atletismo', 'briga', 'agilidade', 'furtividade', 'montaria', 'ofício-braçal', 'sobrevivência'];
+            const socialSkills = ['barganha', 'diplomacia', 'domar', 'empatia', 'intimidação', 'liderança', 'malandragem', 'performance', 'sedução'];
+
+            // Calcular rank de Intelecto (INT + RAC + PRS + habilidades mentais)
+            const charsWithIntelecto = allCharacters.map(char => {
+                const skills = char.skills || {};
+                const atributosmental = (char.int || 0) + (char.rac || 0) + (char.prs || 0);
+                const skillsTotal = mentalSkills.reduce((sum, skill) => sum + (skills[skill] || 0), 0);
+                return {
+                    char,
+                    value: atributosmental + skillsTotal,
+                    cpCor: getCpColor(char.cp?.rank || 'E')
+                };
+            });
+            const rankIntelecto = [...charsWithIntelecto].sort((a, b) => b.value - a.value);
+            renderRanking('ranking-intelecto', rankIntelecto, (v) => `🧠 ${v}`);
+            checkRankChanges('intelecto', 'Rank Intelecto', rankIntelecto);
+
+            // Calcular rank de Potência (FOR + DES + VIG + habilidades físicas)
+            const charsWithPotencia = allCharacters.map(char => {
+                const skills = char.skills || {};
+                const atributosFisico = (char.for || 0) + (char.des || 0) + (char.vig || 0);
+                const skillsTotal = fisicoSkills.reduce((sum, skill) => sum + (skills[skill] || 0), 0);
+                return {
+                    char,
+                    value: atributosFisico + skillsTotal,
+                    cpCor: getCpColor(char.cp?.rank || 'E')
+                };
+            });
+            const rankPotencia = [...charsWithPotencia].sort((a, b) => b.value - a.value);
+            renderRanking('ranking-potencia', rankPotencia, (v) => `🔥 ${v}`);
+            checkRankChanges('potencia', 'Rank Potência', rankPotencia);
+
+            // Calcular rank de Influência (PRE + MAN + AUT + habilidades sociais)
+            const charsWithInfluencia = allCharacters.map(char => {
+                const skills = char.skills || {};
+                const atributosSocial = (char.pre || 0) + (char.man || 0) + (char.aut || 0);
+                const skillsTotal = socialSkills.reduce((sum, skill) => sum + (skills[skill] || 0), 0);
+                return {
+                    char,
+                    value: atributosSocial + skillsTotal,
+                    cpCor: getCpColor(char.cp?.rank || 'E')
+                };
+            });
+            const rankInfluencia = [...charsWithInfluencia].sort((a, b) => b.value - a.value);
+            renderRanking('ranking-influencia', rankInfluencia, (v) => `🗣️ ${v}`);
+            checkRankChanges('influencia', 'Rank Influência', rankInfluencia);
         }
 
         // ============= RENDERIZAR RANKING DE APOIOS =============
@@ -1499,6 +1817,301 @@
             }).join('');
 
             container.innerHTML = html;
+        }
+
+        // ============= SISTEMA DE NOTIFICAÇÕES =============
+
+        async function loadNotifications() {
+            try {
+                console.log('\n📥 [DEBUG] Carregando notificações e posições de rank...');
+                console.log(`   👤 Usuário: ${currentUser.email} (${currentUser.uid})`);
+
+                // Buscar documento do usuário
+                let q = query(
+                    collection(db, 'users'),
+                    where('uid', '==', currentUser.uid)
+                );
+
+                let userSnapshot = await getDocs(q);
+                console.log(`   🔍 Busca por UID: ${userSnapshot.empty ? 'Não encontrado' : 'Encontrado!'}`);
+
+                if (userSnapshot.empty) {
+                    q = query(
+                        collection(db, 'users'),
+                        where('email', '==', currentUser.email)
+                    );
+                    userSnapshot = await getDocs(q);
+                    console.log(`   🔍 Busca por email: ${userSnapshot.empty ? 'Não encontrado' : 'Encontrado!'}`);
+                }
+
+                if (userSnapshot.empty) {
+                    try {
+                        const docRef = doc(db, 'users', currentUser.uid);
+                        const docSnap = await getDoc(docRef);
+                        if (docSnap.exists()) {
+                            userDocRef = docRef;
+                            userSnapshot = { empty: false, docs: [docSnap] };
+                            console.log(`   🔍 Busca direta por doc ID: Encontrado!`);
+                        }
+                    } catch (e) {
+                        console.log('   ❌ Usuário não encontrado para notificações');
+                    }
+                }
+
+                if (!userSnapshot.empty) {
+                    if (!userDocRef) {
+                        userDocRef = doc(db, 'users', userSnapshot.docs[0].id);
+                    }
+                    const userData = userSnapshot.docs[0].data();
+                    userNotifications = userData.notifications || [];
+
+                    console.log(`   📬 Notificações carregadas: ${userNotifications.length}`);
+                    console.log(`   🆕 Novas: ${userNotifications.filter(n => n.isNew).length}`);
+
+                    // Armazenar posições anteriores para comparação
+                    previousRankPositions = userData.rankPositions || {};
+                    const positionCount = Object.keys(previousRankPositions).length;
+                    console.log(`   📊 Posições de rank salvas: ${positionCount}`);
+                    if (positionCount > 0) {
+                        console.log(`   📊 Detalhes:`, previousRankPositions);
+                    }
+                } else {
+                    console.log(`   ⚠️ Documento do usuário não encontrado no Firebase`);
+                }
+
+                updateNotificationBadge();
+                renderNotifications();
+                console.log('   ✅ Notificações carregadas com sucesso!\n');
+
+            } catch (error) {
+                console.error('❌ Erro ao carregar notificações:', error);
+            }
+        }
+
+        async function saveNotifications() {
+            if (!userDocRef) return;
+
+            try {
+                // Limitar a 100 notificações (remover as mais antigas)
+                if (userNotifications.length > MAX_NOTIFICATIONS) {
+                    userNotifications = userNotifications.slice(0, MAX_NOTIFICATIONS);
+                }
+
+                await updateDoc(userDocRef, {
+                    notifications: userNotifications
+                });
+            } catch (error) {
+                console.error('Erro ao salvar notificações:', error);
+            }
+        }
+
+        async function saveRankPositions() {
+            if (!userDocRef) return;
+
+            try {
+                await updateDoc(userDocRef, {
+                    rankPositions: previousRankPositions
+                });
+            } catch (error) {
+                console.error('Erro ao salvar posições de rank:', error);
+            }
+        }
+
+        function addNotification(type, message, data = {}) {
+            const notification = {
+                id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                type: type,
+                message: message,
+                timestamp: new Date().toISOString(),
+                isNew: true,
+                data: data
+            };
+
+            // Adicionar no início do array
+            userNotifications.unshift(notification);
+
+            // Limitar a 100
+            if (userNotifications.length > MAX_NOTIFICATIONS) {
+                userNotifications = userNotifications.slice(0, MAX_NOTIFICATIONS);
+            }
+
+            saveNotifications();
+            updateNotificationBadge();
+            renderNotifications();
+        }
+
+        window.deleteNotification = async function (notificationId) {
+            userNotifications = userNotifications.filter(n => n.id !== notificationId);
+            await saveNotifications();
+            renderNotifications();
+        };
+
+        async function markNotificationsAsRead() {
+            const hasNew = userNotifications.some(n => n.isNew);
+            if (hasNew) {
+                userNotifications = userNotifications.map(n => ({
+                    ...n,
+                    isNew: false
+                }));
+                await saveNotifications();
+                updateNotificationBadge();
+            }
+        }
+
+        function updateNotificationBadge() {
+            const badge = document.getElementById('notificationBadge');
+            if (!badge) return;
+
+            const newCount = userNotifications.filter(n => n.isNew).length;
+
+            if (newCount > 0) {
+                badge.textContent = newCount > 99 ? '99+' : newCount;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function renderNotifications() {
+            const container = document.getElementById('notificationsList');
+            const emptyState = document.getElementById('emptyNotifications');
+            const paginationContainer = document.getElementById('paginationContainer');
+
+            if (!container) return;
+
+            if (userNotifications.length === 0) {
+                container.innerHTML = '';
+                emptyState.style.display = 'block';
+                paginationContainer.style.display = 'none';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            // Calcular paginação
+            const totalPages = Math.ceil(userNotifications.length / NOTIFICATIONS_PER_PAGE);
+            const startIndex = (currentNotificationPage - 1) * NOTIFICATIONS_PER_PAGE;
+            const endIndex = startIndex + NOTIFICATIONS_PER_PAGE;
+            const pageNotifications = userNotifications.slice(startIndex, endIndex);
+
+            // Renderizar notificações da página atual
+            const html = pageNotifications.map(notification => {
+                const isUp = notification.data?.direction === 'up';
+                const iconClass = isUp ? 'up' : 'down';
+                const icon = isUp ? '📈' : '📉';
+                const dateStr = new Date(notification.timestamp).toLocaleString('pt-BR');
+
+                return `
+                    <div class="notification-item ${notification.isNew ? 'new' : ''}">
+                        <div class="notification-icon ${iconClass}">${icon}</div>
+                        <div class="notification-content">
+                            <div class="notification-message">${escapeHtml(notification.message)}</div>
+                            <div class="notification-time">${dateStr}</div>
+                        </div>
+                        <button class="notification-delete" onclick="deleteNotification('${notification.id}')" title="Excluir notificação">
+                            🗑️
+                        </button>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+
+            // Renderizar paginação
+            if (totalPages > 1) {
+                paginationContainer.style.display = 'flex';
+                let paginationHtml = `
+                    <button class="pagination-btn" onclick="goToNotificationPage(${currentNotificationPage - 1})" ${currentNotificationPage === 1 ? 'disabled' : ''}>
+                        ◀️ Anterior
+                    </button>
+                `;
+
+                for (let i = 1; i <= totalPages; i++) {
+                    paginationHtml += `
+                        <button class="pagination-btn ${i === currentNotificationPage ? 'active' : ''}" onclick="goToNotificationPage(${i})">
+                            ${i}
+                        </button>
+                    `;
+                }
+
+                paginationHtml += `
+                    <button class="pagination-btn" onclick="goToNotificationPage(${currentNotificationPage + 1})" ${currentNotificationPage === totalPages ? 'disabled' : ''}>
+                        Próximo ▶️
+                    </button>
+                `;
+
+                paginationContainer.innerHTML = paginationHtml;
+            } else {
+                paginationContainer.style.display = 'none';
+            }
+        }
+
+        window.goToNotificationPage = function (page) {
+            const totalPages = Math.ceil(userNotifications.length / NOTIFICATIONS_PER_PAGE);
+            if (page >= 1 && page <= totalPages) {
+                currentNotificationPage = page;
+                renderNotifications();
+            }
+        };
+
+        // ============= RASTREAMENTO DE MUDANÇAS NOS RANKS =============
+
+        function checkRankChanges(rankType, rankName, sortedCharacters) {
+            const myCharacterIds = characters.map(c => c.id);
+
+            console.log(`\n🔍 [DEBUG] Verificando mudanças no ${rankName}`);
+            console.log(`   📋 Meus personagens: ${myCharacterIds.length}`);
+            console.log(`   📊 Posições anteriores salvas:`, previousRankPositions);
+
+            sortedCharacters.forEach((item, index) => {
+                const charId = item.char?.id || item.id;
+                const charName = item.char?.nome || item.nome || 'Personagem';
+                const newPosition = index + 1;
+
+                // Verificar se é um personagem do usuário atual
+                if (myCharacterIds.includes(charId)) {
+                    const positionKey = `${rankType}_${charId}`;
+                    const oldPosition = previousRankPositions[positionKey];
+
+                    console.log(`   🎭 ${charName} (${charId.substring(0, 8)}...)`);
+                    console.log(`      Key: ${positionKey}`);
+                    console.log(`      Posição anterior: ${oldPosition || 'NENHUMA (primeira vez)'}`);
+                    console.log(`      Posição atual: ${newPosition}`);
+
+                    // Se já tinha posição anterior e mudou
+                    if (oldPosition && oldPosition !== newPosition) {
+                        const direction = newPosition < oldPosition ? 'up' : 'down';
+                        const emoji = direction === 'up' ? '🎉' : '😢';
+                        const verb = direction === 'up' ? 'subiu' : 'caiu';
+
+                        const message = `${emoji} ${charName} ${verb} do ${oldPosition}º para ${newPosition}º lugar no ${rankName}!`;
+
+                        console.log(`      ✅ MUDANÇA DETECTADA! ${oldPosition} → ${newPosition}`);
+                        console.log(`      📢 Criando notificação: ${message}`);
+
+                        addNotification('rank_change', message, {
+                            rankType: rankType,
+                            rankName: rankName,
+                            oldPosition: oldPosition,
+                            newPosition: newPosition,
+                            characterName: charName,
+                            characterId: charId,
+                            direction: direction
+                        });
+                    } else if (!oldPosition) {
+                        console.log(`      ⏳ Primeira vez - salvando posição ${newPosition}`);
+                    } else {
+                        console.log(`      ✓ Sem mudança (continua ${newPosition}º)`);
+                    }
+
+                    // Atualizar posição salva
+                    previousRankPositions[positionKey] = newPosition;
+                }
+            });
+
+            // Salvar novas posições
+            console.log(`   💾 Salvando posições atualizadas no Firebase...`);
+            saveRankPositions();
         }
 
         // ============= CRIAR NOVO PERSONAGEM =============
