@@ -55,13 +55,16 @@ const terrains = {
     cave: { color: '#3E2723', name: 'Caverna', symbol: '🕳️' }
 };
 
-const canvas = document.getElementById('hexCanvas');
-const ctx = canvas.getContext('2d');
-const minimap = document.getElementById('minimap');
-const minimapCtx = minimap.getContext('2d');
+let canvas, ctx, minimap, minimapCtx;
 
-// Inicialização
+// Inicialização - chamada após autenticação
 function init() {
+    // Obter elementos do DOM
+    canvas = document.getElementById('hexCanvas');
+    ctx = canvas.getContext('2d');
+    minimap = document.getElementById('minimap');
+    minimapCtx = minimap.getContext('2d');
+
     resizeCanvas();
     initializeMap();
     loadTerrainImagesFromStorage();
@@ -100,6 +103,10 @@ function init() {
     canvas.addEventListener('click', handleClick);
     canvas.addEventListener('wheel', handleWheel, { passive: false });
 }
+
+// Expor init para ser chamado pelo HTML após autenticação
+window.initHexmap = init;
+console.log('[hexmap.js] ✅ window.initHexmap definido:', typeof window.initHexmap);
 
 function resizeCanvas() {
     const container = canvas.parentElement;
@@ -696,13 +703,24 @@ function closeModal(modalId) {
 }
 
 function createNewMap() {
+    const mapName = document.getElementById('newMapName')?.value || 'Novo Mapa';
     state.mapWidth = parseInt(document.getElementById('newMapWidth').value);
     state.mapHeight = parseInt(document.getElementById('newMapHeight').value);
+
+    // Atualizar nome do mapa no Firebase
+    if (window.setMapName) {
+        window.setMapName(mapName);
+    }
+
     initializeMap();
     drawMap();
     drawMinimap();
     updateStats();
     closeModal('newMapModal');
+
+    if (window.showAlert) {
+        window.showAlert(`✅ Novo mapa "${mapName}" criado!`, 'success');
+    }
 }
 
 function clearMap() {
@@ -734,45 +752,72 @@ function generateRandom() {
     drawMinimap();
 }
 
+// Salvar no Firebase
 function saveProject() {
-    const project = {
-        mapWidth: state.mapWidth,
-        mapHeight: state.mapHeight,
-        hexMap: state.hexMap,
-        annotations: state.annotations,
-        version: '1.0',
-        timestamp: new Date().toISOString()
-    };
-    localStorage.setItem('lendasHexmap', JSON.stringify(project));
-    alert('✅ Projeto salvo com sucesso!');
-}
-
-function loadProject() {
-    const saved = localStorage.getItem('lendasHexmap');
-    if (saved) {
-        const project = JSON.parse(saved);
-        state.mapWidth = project.mapWidth;
-        state.mapHeight = project.mapHeight;
-        state.hexMap = project.hexMap;
-        state.annotations = project.annotations || {};
-
-        state.history = [{
-            hexMap: JSON.parse(JSON.stringify(state.hexMap)),
-            annotations: JSON.parse(JSON.stringify(state.annotations))
-        }];
-        state.historyIndex = 0;
-
-        updateMapDimensions();
-        updateStats();
-        updateAnnotationList();
-        drawMap();
-        drawMinimap();
-        updateUndoRedoButtons();
-        alert('✅ Projeto carregado com sucesso!');
+    if (window.saveProjectToFirebase) {
+        window.saveProjectToFirebase({
+            mapWidth: state.mapWidth,
+            mapHeight: state.mapHeight,
+            hexMap: state.hexMap,
+            annotations: state.annotations,
+            terrainImages: state.terrainImages // Incluir imagens de terreno
+        });
     } else {
-        alert('❌ Nenhum projeto salvo encontrado!');
+        // Fallback para localStorage se Firebase não disponível
+        const project = {
+            mapWidth: state.mapWidth,
+            mapHeight: state.mapHeight,
+            hexMap: state.hexMap,
+            annotations: state.annotations,
+            version: '1.0',
+            timestamp: new Date().toISOString()
+        };
+        localStorage.setItem('lendasHexmap', JSON.stringify(project));
+        if (window.showAlert) {
+            window.showAlert('✅ Projeto salvo localmente!', 'success');
+        } else {
+            alert('✅ Projeto salvo localmente!');
+        }
     }
 }
+
+// Carregar dados de mapa (chamado pelo Firebase)
+window.loadMapData = function (data) {
+    state.mapWidth = data.mapWidth;
+    state.mapHeight = data.mapHeight;
+    state.hexMap = data.hexMap;
+    state.annotations = data.annotations || {};
+
+    // Carregar imagens de terreno do mapa
+    state.terrainImages = data.terrainImages || {};
+    state.loadedImages = {};
+
+    // Recriar os objetos Image para cada terreno com imagem
+    Object.keys(state.terrainImages).forEach(key => {
+        const img = new Image();
+        img.onload = function () {
+            state.loadedImages[key] = img;
+            drawMap();
+            drawMinimap();
+            createTerrainGrid();
+        };
+        img.src = state.terrainImages[key];
+    });
+
+    state.history = [{
+        hexMap: JSON.parse(JSON.stringify(state.hexMap)),
+        annotations: JSON.parse(JSON.stringify(state.annotations))
+    }];
+    state.historyIndex = 0;
+
+    updateMapDimensions();
+    updateStats();
+    updateAnnotationList();
+    drawMap();
+    drawMinimap();
+    createTerrainGrid();
+    updateUndoRedoButtons();
+};
 
 function exportToJSON() {
     const project = {
@@ -1115,57 +1160,85 @@ function handleTerrainImageUpload(event, terrainKey) {
 }
 
 function removeTerrainImage(terrainKey) {
-    if (confirm(`Remover imagem personalizada de ${terrains[terrainKey].name}?`)) {
+    if (confirm(`Remover imagem personalizada de ${terrains[terrainKey].name}?\\n\\n⚠️ Lembre-se de SALVAR o mapa depois!`)) {
         delete state.terrainImages[terrainKey];
         delete state.loadedImages[terrainKey];
-
-        saveTerrainImagesToStorage();
 
         drawMap();
         drawMinimap();
         createTerrainGrid();
         openTerrainEditor();
 
-        alert('✅ Imagem removida!');
+        if (window.showAlert) {
+            window.showAlert('✅ Imagem removida! Clique em SALVAR para confirmar.', 'warning');
+        } else {
+            alert('✅ Imagem removida! Clique em SALVAR para confirmar.');
+        }
     }
 }
 
 function clearAllTerrainImages() {
-    if (confirm('Remover TODAS as imagens personalizadas?')) {
+    if (confirm('Remover TODAS as imagens personalizadas?\\n\\n⚠️ Lembre-se de SALVAR o mapa depois!')) {
         state.terrainImages = {};
         state.loadedImages = {};
-
-        saveTerrainImagesToStorage();
 
         drawMap();
         drawMinimap();
         createTerrainGrid();
         closeModal('terrainEditorModal');
 
-        alert('✅ Todas as imagens foram removidas!');
+        if (window.showAlert) {
+            window.showAlert('✅ Imagens removidas! Clique em SALVAR para confirmar.', 'warning');
+        } else {
+            alert('✅ Imagens removidas! Clique em SALVAR para confirmar.');
+        }
     }
 }
 
+// As imagens de terreno agora são salvas junto com o mapa no Firebase
+// Não usamos mais localStorage para evitar limite de espaço
 function saveTerrainImagesToStorage() {
-    localStorage.setItem('lendasHexmap_terrainImages', JSON.stringify(state.terrainImages));
+    // Mostrar lembrete para salvar o mapa
+    if (window.showAlert) {
+        window.showAlert('🖼️ Imagem definida! Clique em SALVAR para guardar no servidor.', 'success');
+    }
+    console.log('[Terrain] Imagem adicionada. Total:', Object.keys(state.terrainImages).length);
 }
 
 function loadTerrainImagesFromStorage() {
-    const saved = localStorage.getItem('lendasHexmap_terrainImages');
-    if (saved) {
-        state.terrainImages = JSON.parse(saved);
+    // As imagens agora são carregadas junto com o mapa via loadMapData
+    // Tentar migrar dados antigos do localStorage se existirem
+    try {
+        const saved = localStorage.getItem('lendasHexmap_terrainImages');
+        if (saved) {
+            const oldImages = JSON.parse(saved);
+            if (Object.keys(oldImages).length > 0) {
+                console.log('[Terrain] Migrando imagens do localStorage para o mapa atual...');
+                state.terrainImages = oldImages;
 
-        Object.keys(state.terrainImages).forEach(key => {
-            const img = new Image();
-            img.onload = function () {
-                state.loadedImages[key] = img;
-                drawMap();
-                drawMinimap();
-            };
-            img.src = state.terrainImages[key];
-        });
+                // Carregar as imagens
+                Object.keys(state.terrainImages).forEach(key => {
+                    const img = new Image();
+                    img.onload = function () {
+                        state.loadedImages[key] = img;
+                        drawMap();
+                        drawMinimap();
+                        createTerrainGrid();
+                    };
+                    img.src = state.terrainImages[key];
+                });
+
+                // Limpar localStorage antigo para liberar espaço
+                localStorage.removeItem('lendasHexmap_terrainImages');
+
+                if (window.showAlert) {
+                    window.showAlert('📦 Imagens migradas do cache local. Salve o mapa para manter!', 'warning');
+                }
+            }
+        }
+    } catch (e) {
+        console.log('[Terrain] Nenhum dado antigo no localStorage');
     }
 }
 
-// Iniciar aplicação
-init();
+// Nota: init() é chamado pelo HTML após autenticação via window.initHexmap()

@@ -124,5 +124,11 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create, update, delete: if isMaster();
     }
+
+    // ========== ADICIONADO: Coleção de Hexmaps ==========
+    match /hexmaps/{mapId} {
+      allow read: if isMaster();
+      allow create, update, delete: if isMaster();
+    }
   }
 }

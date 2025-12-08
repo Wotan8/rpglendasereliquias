@@ -19,6 +19,102 @@
             overflow: hidden;
         }
 
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0e27 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(102, 126, 234, 0.2);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            color: #667eea;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .user-info {
+            display: none;
+        }
+
+        .header-user-info {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            margin-left: 20px;
+            padding-left: 20px;
+            border-left: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header-user-info.visible {
+            display: flex;
+        }
+
+        .user-email {
+            color: #cbd5e1;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .btn-logout {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-logout:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-back {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-back:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);
+        }
+
         .app-container {
             display: grid;
             grid-template-columns: 280px 1fr 320px;
@@ -77,6 +173,11 @@
             background: rgba(255, 255, 255, 0.3);
             border-color: rgba(255, 255, 255, 0.5);
             transform: translateY(-2px);
+        }
+
+        .header-btn.saving {
+            background: rgba(255, 215, 0, 0.3);
+            border-color: #ffd700;
         }
 
         .left-panel {
@@ -576,10 +677,119 @@
             font-style: italic;
             margin-top: 10px;
         }
+
+        /* Map selector styles */
+        .map-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .map-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .map-item:hover {
+            background: rgba(0, 0, 0, 0.5);
+            transform: translateX(5px);
+            border-left-color: #ffd700;
+        }
+
+        .map-item-info {
+            flex: 1;
+        }
+
+        .map-item-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #ffd700;
+        }
+
+        .map-item-details {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        .map-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-delete-map {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid #ef4444;
+            color: #ef4444;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+
+        .btn-delete-map:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        .alert {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            z-index: 10002;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .alert-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .alert-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .alert-warning {
+            background: #f59e0b;
+            color: white;
+        }
     </style>
 </head>
 
 <body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">🗺️ Carregando Hexmap...</div>
+    </div>
+
     <div class="app-container">
         <div class="header">
             <div class="header-left">
@@ -593,8 +803,16 @@
                 <button class="header-btn" onclick="toggleFullscreen()" id="fullscreenBtn">
                     🖥️ Maximizar
                 </button>
-                <button class="header-btn" onclick="saveProject()">💾 Salvar</button>
-                <button class="header-btn" onclick="loadProject()">📂 Carregar</button>
+                <button class="header-btn" onclick="saveProject()" id="saveBtn">💾 Salvar</button>
+                <button class="header-btn" onclick="showLoadModal()">📂 Carregar</button>
+
+                <!-- User Info integrado no header -->
+                <div class="header-user-info" id="headerUserInfo">
+                    <button class="btn-back" onclick="window.location.href='mestre.html'"
+                        title="Voltar ao Painel">🏠</button>
+                    <span class="user-email" id="userEmail">Carregando...</span>
+                    <button class="btn-logout" onclick="logout()">🚪 SAIR</button>
+                </div>
             </div>
         </div>
 
@@ -763,9 +981,14 @@
         </div>
     </div>
 
+    <!-- Modal Novo Mapa -->
     <div id="newMapModal" class="modal">
         <div class="modal-content">
             <h2>Criar Novo Mapa</h2>
+            <div class="input-group">
+                <label>Nome do Mapa</label>
+                <input type="text" id="newMapName" placeholder="Ex: Mapa do Reino" value="Novo Mapa">
+            </div>
             <div class="input-group">
                 <label>Largura (hexágonos)</label>
                 <input type="number" id="newMapWidth" min="5" max="40" value="15">
@@ -781,6 +1004,20 @@
         </div>
     </div>
 
+    <!-- Modal Carregar Mapa -->
+    <div id="loadMapModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <h2>📂 Carregar Mapa</h2>
+            <div class="map-list" id="mapList">
+                <p style="color: #888; text-align: center; padding: 40px;">Carregando mapas...</p>
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 25px;">
+                <button class="tool-button" onclick="closeModal('loadMapModal')">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Anotação -->
     <div id="annotationModal" class="modal">
         <div class="modal-content">
             <h2>Adicionar Anotação</h2>
@@ -812,6 +1049,7 @@
 
     <input type="file" id="jsonFileInput" accept=".json" onchange="handleJSONImport(event)">
 
+    <!-- Modal Editor de Terrenos -->
     <div id="terrainEditorModal" class="modal">
         <div class="modal-content" style="max-width: 800px;">
             <h2>✏️ Editor de Terrenos</h2>
@@ -828,7 +1066,276 @@
         </div>
     </div>
 
-    <script src="hexmap.js"></script>
+    <!-- Hexmap JS - DEVE carregar antes do Firebase para expor window.initHexmap -->
+    <script src="hexmap.js?v=20241208b"></script>
+    <script>
+        // Verificar imediatamente se hexmap.js carregou corretamente
+        if (typeof window.initHexmap === 'function') {
+            console.log('[hexmap.html] ✅ hexmap.js carregado com sucesso');
+        } else {
+            console.error('[hexmap.html] ❌ ERRO: hexmap.js não definiu window.initHexmap!');
+            console.error('[hexmap.html] Valor atual:', window.initHexmap);
+        }
+    </script>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
+            authDomain: "rpg-lendasereliquias.firebaseapp.com",
+            projectId: "rpg-lendasereliquias",
+            storageBucket: "rpg-lendasereliquias.firebasestorage.app",
+            messagingSenderId: "546994339773",
+            appId: "1:546994339773:web:0116cf7c8667f113075cd4"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let currentMapId = null;
+        let currentMapName = 'Novo Mapa';
+
+        // Verificar autenticação e se é mestre
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // Verificar se é mestre
+                const masterRef = doc(db, 'masters', user.uid);
+                const masterSnap = await getDoc(masterRef);
+
+                if (masterSnap.exists()) {
+                    currentUser = user;
+                    console.log('✅ Mestre logado:', user.email);
+
+                    document.getElementById('userEmail').textContent = user.email;
+                    document.getElementById('headerUserInfo').classList.add('visible');
+                    document.getElementById('loadingScreen').style.display = 'none';
+
+                    // Inicializar hexmap - aguardar carregamento do script
+                    let waitAttempts = 0;
+                    const maxAttempts = 100; // 5 segundos máximo
+                    const waitForHexmap = () => {
+                        waitAttempts++;
+                        console.log(`[Hexmap] Tentativa ${waitAttempts}: window.initHexmap =`, typeof window.initHexmap);
+
+                        if (typeof window.initHexmap === 'function') {
+                            try {
+                                window.initHexmap();
+                                console.log('[Hexmap] ✅ Inicializado com sucesso!');
+                            } catch (err) {
+                                console.error('[Hexmap] ❌ Erro ao inicializar:', err);
+                            }
+                        } else if (waitAttempts < maxAttempts) {
+                            setTimeout(waitForHexmap, 50);
+                        } else {
+                            console.error('[Hexmap] ❌ Timeout: hexmap.js não carregou corretamente após 5 segundos');
+                            console.error('[Hexmap] window.initHexmap atual:', window.initHexmap);
+                        }
+                    };
+
+                    // Garantir que o DOM está pronto
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', waitForHexmap);
+                    } else {
+                        waitForHexmap();
+                    }
+                } else {
+                    console.log('❌ Acesso negado: não é mestre');
+                    alert('❌ Acesso negado! Apenas mestres podem acessar o Hexmap.');
+                    window.location.href = 'index.html';
+                }
+            } else {
+                console.log('❌ Usuário não autenticado. Redirecionando...');
+                window.location.href = 'index.html';
+            }
+        });
+
+        // Logout
+        window.logout = async function () {
+            if (confirm('🚪 Tem certeza que deseja sair?')) {
+                try {
+                    await signOut(auth);
+                    window.location.href = 'index.html';
+                } catch (error) {
+                    console.error('Erro ao fazer logout:', error);
+                    showAlert('❌ Erro ao sair. Tente novamente.', 'danger');
+                }
+            }
+        };
+
+        // Salvar projeto no Firebase
+        window.saveProjectToFirebase = async function (mapData) {
+            try {
+                const saveBtn = document.getElementById('saveBtn');
+                saveBtn.classList.add('saving');
+                saveBtn.innerHTML = '⏳ Salvando...';
+
+                const mapId = currentMapId || `map_${Date.now()}`;
+                const mapRef = doc(db, 'hexmaps', mapId);
+
+                await setDoc(mapRef, {
+                    name: currentMapName,
+                    mapWidth: mapData.mapWidth,
+                    mapHeight: mapData.mapHeight,
+                    hexMapJson: JSON.stringify(mapData.hexMap),
+                    annotationsJson: JSON.stringify(mapData.annotations),
+                    terrainImagesJson: JSON.stringify(mapData.terrainImages || {}),
+                    owner: currentUser.uid,
+                    ownerEmail: currentUser.email,
+                    updatedAt: serverTimestamp()
+                });
+
+                currentMapId = mapId;
+
+                saveBtn.classList.remove('saving');
+                saveBtn.innerHTML = '💾 Salvar';
+                showAlert('✅ Mapa salvo no Firebase!', 'success');
+
+                return true;
+            } catch (error) {
+                console.error('Erro ao salvar:', error);
+                const saveBtn = document.getElementById('saveBtn');
+                saveBtn.classList.remove('saving');
+                saveBtn.innerHTML = '💾 Salvar';
+                showAlert('❌ Erro ao salvar mapa: ' + error.message, 'danger');
+                return false;
+            }
+        };
+
+        // Carregar lista de mapas
+        window.loadMapList = async function () {
+            try {
+                const mapListEl = document.getElementById('mapList');
+                mapListEl.innerHTML = '<p style="color: #888; text-align: center; padding: 20px;">Carregando...</p>';
+
+                const querySnapshot = await getDocs(collection(db, 'hexmaps'));
+
+                if (querySnapshot.empty) {
+                    mapListEl.innerHTML = '<p style="color: #888; text-align: center; padding: 40px;">Nenhum mapa salvo ainda.</p>';
+                    return;
+                }
+
+                let html = '';
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const updatedAt = data.updatedAt ? new Date(data.updatedAt.seconds * 1000).toLocaleString('pt-BR') : 'N/A';
+
+                    html += `
+                        <div class="map-item" onclick="loadMapFromFirebase('${doc.id}')">
+                            <div class="map-item-info">
+                                <div class="map-item-name">${data.name || 'Sem nome'}</div>
+                                <div class="map-item-details">
+                                    ${data.mapWidth}x${data.mapHeight} hexágonos • Atualizado: ${updatedAt}
+                                </div>
+                            </div>
+                            <div class="map-item-actions">
+                                <button class="btn-delete-map" onclick="event.stopPropagation(); deleteMap('${doc.id}', '${data.name || 'Sem nome'}')">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                mapListEl.innerHTML = html;
+            } catch (error) {
+                console.error('Erro ao carregar lista:', error);
+                document.getElementById('mapList').innerHTML = '<p style="color: #ef4444; text-align: center; padding: 40px;">Erro ao carregar mapas.</p>';
+            }
+        };
+
+        // Carregar mapa específico
+        window.loadMapFromFirebase = async function (mapId) {
+            try {
+                const mapRef = doc(db, 'hexmaps', mapId);
+                const mapSnap = await getDoc(mapRef);
+
+                if (mapSnap.exists()) {
+                    const data = mapSnap.data();
+                    currentMapId = mapId;
+                    currentMapName = data.name || 'Sem nome';
+
+                    window.loadMapData({
+                        mapWidth: data.mapWidth,
+                        mapHeight: data.mapHeight,
+                        hexMap: JSON.parse(data.hexMapJson || '[]'),
+                        annotations: JSON.parse(data.annotationsJson || '{}'),
+                        terrainImages: JSON.parse(data.terrainImagesJson || '{}')
+                    });
+
+                    closeModal('loadMapModal');
+                    showAlert(`✅ Mapa "${currentMapName}" carregado!`, 'success');
+                } else {
+                    showAlert('❌ Mapa não encontrado.', 'danger');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar mapa:', error);
+                showAlert('❌ Erro ao carregar mapa: ' + error.message, 'danger');
+            }
+        };
+
+        // Deletar mapa
+        window.deleteMap = async function (mapId, mapName) {
+            if (confirm(`🗑️ Tem certeza que deseja excluir o mapa "${mapName}"?\n\nEsta ação não pode ser desfeita!`)) {
+                try {
+                    await deleteDoc(doc(db, 'hexmaps', mapId));
+                    showAlert(`✅ Mapa "${mapName}" excluído!`, 'success');
+
+                    // Se o mapa excluído é o atual, resetar
+                    if (currentMapId === mapId) {
+                        currentMapId = null;
+                        currentMapName = 'Novo Mapa';
+                    }
+
+                    // Recarregar lista
+                    window.loadMapList();
+                } catch (error) {
+                    console.error('Erro ao excluir:', error);
+                    showAlert('❌ Erro ao excluir mapa: ' + error.message, 'danger');
+                }
+            }
+        };
+
+        // Atualizar nome do mapa e resetar ID para criar novo mapa
+        window.setMapName = function (name, isNewMap = true) {
+            currentMapName = name;
+            // Se é um novo mapa, resetar o ID para que ao salvar crie um novo documento
+            if (isNewMap) {
+                currentMapId = null;
+                console.log('[Firebase] 🗺️ Novo mapa criado:', name);
+            }
+        };
+
+        // Resetar mapa atual (para criar um novo)
+        window.resetCurrentMap = function () {
+            currentMapId = null;
+            currentMapName = 'Novo Mapa';
+        };
+
+        // Mostrar modal de carregar
+        window.showLoadModal = function () {
+            document.getElementById('loadMapModal').style.display = 'flex';
+            window.loadMapList();
+        };
+
+        // Mostrar alerta
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+
+            setTimeout(() => {
+                alertDiv.style.opacity = '0';
+                alertDiv.style.transform = 'translateX(400px)';
+                setTimeout(() => alertDiv.remove(), 300);
+            }, 3000);
+        }
+        window.showAlert = showAlert;
+    </script>
 </body>
 
 </html>
