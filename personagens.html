@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -55,8 +56,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .loading-text {
@@ -140,8 +146,15 @@
         }
 
         @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .alert-success {
@@ -730,6 +743,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- TELA DE CARREGAMENTO -->
     <div class="loading-screen" id="loadingScreen">
@@ -743,7 +757,7 @@
                 <span class="user-email" id="userEmail"></span>
                 <button class="btn-logout" onclick="logout()">🚪 SAIR</button>
             </div>
-            
+
             <h1>✨🌀RPG LeR🛡️🗡️</h1>
             <p class="subtitle">O berço e o túmulo das lendas que jamais serão esquecidas.</p>
         </div>
@@ -762,81 +776,112 @@
                 🎒 Inventário
             </button>
         </div>
-        
+
         <!-- ABA PERSONAGENS -->
         <div id="tab-personagens" class="tab-content active">
-        <!-- Card de Criar Novo Personagem -->
-        <div class="create-character-card" onclick="createNewCharacter()">
-            <div class="create-icon">➕</div>
-            <div class="create-title">Criar Novo Personagem</div>
-            <div class="create-desc">Comece uma nova aventura!</div>
-        </div>
+            <!-- Card de Criar Novo Personagem -->
+            <div class="create-character-card" onclick="createNewCharacter()">
+                <div class="create-icon">➕</div>
+                <div class="create-title">Criar Novo Personagem</div>
+                <div class="create-desc">Comece uma nova aventura!</div>
+            </div>
 
-        <!-- Grid de Personagens -->
-        <div class="characters-grid" id="charactersGrid">
-            <!-- Personagens serão inseridos aqui -->
-        </div>
+            <!-- Grid de Personagens -->
+            <div class="characters-grid" id="charactersGrid">
+                <!-- Personagens serão inseridos aqui -->
+            </div>
 
-        <div class="empty-state" id="emptyState" style="display: none;">
-            <div class="empty-icon">🎭</div>
-            <div class="empty-text">Você ainda não tem personagens</div>
-            <div class="empty-hint">Clique no card acima para criar seu primeiro personagem!</div>
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-icon">🎭</div>
+                <div class="empty-text">Você ainda não tem personagens</div>
+                <div class="empty-hint">Clique no card acima para criar seu primeiro personagem!</div>
+            </div>
         </div>
-    </div>
     </div>
     <!-- FIM ABA PERSONAGENS -->
 
     <!-- ABA RANKINGS -->
     <div id="tab-rankings" class="tab-content">
-        <div class="sub-tabs-container">
-            <button class="sub-tab-button active" onclick="switchSubTab('rank-cp')">
-                👑 Rank Classe de Poder
+        <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; text-align: center;">Clique nos ícones para
+            visualizar os outros rankings</p>
+        <div class="sub-tabs-container" style="justify-content: center;">
+            <button class="sub-tab-button" style="padding: 10px 14px; font-size: 1.3rem;"
+                onclick="switchSubTab('rank-cp')" title="Rank Classe de Poder">
+                👑
             </button>
-            <button class="sub-tab-button" onclick="switchSubTab('rank-ofensivo')">
-                ⚔️ Rank Ofensivo
+            <button class="sub-tab-button" style="padding: 10px 14px; font-size: 1.3rem;"
+                onclick="switchSubTab('rank-ofensivo')" title="Rank Ofensivo">
+                ⚔️
             </button>
-            <button class="sub-tab-button" onclick="switchSubTab('rank-defensivo')">
-                🛡️ Rank Defensivo
+            <button class="sub-tab-button" style="padding: 10px 14px; font-size: 1.3rem;"
+                onclick="switchSubTab('rank-defensivo')" title="Rank Defensivo">
+                🛡️
             </button>
-            <button class="sub-tab-button" onclick="switchSubTab('rank-resistencia')">
-                💪 Rank Resistência
+            <button class="sub-tab-button" style="padding: 10px 14px; font-size: 1.3rem;"
+                onclick="switchSubTab('rank-resistencia')" title="Rank Resistência">
+                💪
             </button>
-            <button class="sub-tab-button" onclick="switchSubTab('rank-mobilidade')">
-                💨 Rank Mobilidade
+            <button class="sub-tab-button" style="padding: 10px 14px; font-size: 1.3rem;"
+                onclick="switchSubTab('rank-mobilidade')" title="Rank Mobilidade">
+                💨
             </button>
-            <button class="sub-tab-button" onclick="switchSubTab('rank-riqueza')">
-                💰 Rank Riqueza
+            <button class="sub-tab-button" style="padding: 10px 14px; font-size: 1.3rem;"
+                onclick="switchSubTab('rank-riqueza')" title="Rank Riqueza">
+                💰
+            </button>
+            <button class="sub-tab-button" style="padding: 10px 14px; font-size: 1.3rem;"
+                onclick="switchSubTab('rank-apoios')" title="Rank Apoios">
+                💖
             </button>
         </div>
 
         <!-- SUB-ABA: RANK CP -->
         <div id="subtab-rank-cp" class="sub-tab-content active">
+            <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">👑 Rank
+                Classe de Poder</h2>
             <div id="ranking-cp" class="ranking-list"></div>
         </div>
 
         <!-- SUB-ABA: RANK OFENSIVO -->
         <div id="subtab-rank-ofensivo" class="sub-tab-content">
+            <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">⚔️ Rank
+                Ofensivo</h2>
             <div id="ranking-ofensivo" class="ranking-list"></div>
         </div>
 
         <!-- SUB-ABA: RANK DEFENSIVO -->
         <div id="subtab-rank-defensivo" class="sub-tab-content">
+            <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">🛡️ Rank
+                Defensivo</h2>
             <div id="ranking-defensivo" class="ranking-list"></div>
         </div>
 
         <!-- SUB-ABA: RANK RESISTÊNCIA -->
         <div id="subtab-rank-resistencia" class="sub-tab-content">
+            <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">💪 Rank
+                Resistência</h2>
             <div id="ranking-resistencia" class="ranking-list"></div>
         </div>
 
         <!-- SUB-ABA: RANK MOBILIDADE -->
         <div id="subtab-rank-mobilidade" class="sub-tab-content">
+            <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">💨 Rank
+                Mobilidade</h2>
             <div id="ranking-mobilidade" class="ranking-list"></div>
         </div>
 
         <!-- SUB-ABA: RANK RIQUEZA -->
         <div id="subtab-rank-riqueza" class="sub-tab-content">
+            <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">💰 Rank
+                Riqueza</h2>
             <div id="ranking-riqueza" class="ranking-list"></div>
+        </div>
+
+        <!-- SUB-ABA: RANK APOIOS -->
+        <div id="subtab-rank-apoios" class="sub-tab-content">
+            <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">💖 Rank
+                Apoios</h2>
+            <div id="ranking-apoios" class="ranking-list"></div>
         </div>
     </div>
     <!-- FIM ABA RANKINGS -->
@@ -873,7 +918,7 @@
             <div class="modal-icon">⚠️</div>
             <div class="modal-title">ATENÇÃO!</div>
             <div class="modal-text">
-                Tem certeza que deseja <strong>APAGAR PERMANENTEMENTE</strong> o personagem 
+                Tem certeza que deseja <strong>APAGAR PERMANENTEMENTE</strong> o personagem
                 <strong id="deleteCharacterName"></strong>?<br><br>
                 Esta ação <strong>NÃO PODE SER DESFEITA</strong>!
             </div>
@@ -888,11 +933,11 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { 
-            getFirestore, 
-            collection, 
-            query, 
-            where, 
+        import {
+            getFirestore,
+            collection,
+            query,
+            where,
             getDocs,
             getDoc,
             addDoc,
@@ -902,12 +947,12 @@
         } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         const firebaseConfig = {
-          apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
-          authDomain: "rpg-lendasereliquias.firebaseapp.com",
-          projectId: "rpg-lendasereliquias",
-          storageBucket: "rpg-lendasereliquias.firebasestorage.app",
-          messagingSenderId: "546994339773",
-          appId: "1:546994339773:web:0116cf7c8667f113075cd4"
+            apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
+            authDomain: "rpg-lendasereliquias.firebaseapp.com",
+            projectId: "rpg-lendasereliquias",
+            storageBucket: "rpg-lendasereliquias.firebasestorage.app",
+            messagingSenderId: "546994339773",
+            appId: "1:546994339773:web:0116cf7c8667f113075cd4"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -917,6 +962,7 @@
         let currentUser = null;
         let characters = [];
         let allCharacters = []; // Nova variável para rankings globais
+        let allUsersApoios = []; // Para ranking de apoios
         let characterToDelete = null;
 
         // ============= AUTENTICAÇÃO =============
@@ -926,7 +972,7 @@
                 document.getElementById('userEmail').textContent = user.email;
                 document.getElementById('loadingScreen').style.display = 'none';
                 document.getElementById('mainContainer').style.display = 'block';
-                
+
                 await loadCharacters();
                 await loadAllCharactersForRankings();
                 await loadInventory();
@@ -942,10 +988,10 @@
                     collection(db, 'characters'),
                     where('ownerUid', '==', currentUser.uid)
                 );
-                
+
                 const querySnapshot = await getDocs(q);
                 characters = [];
-                
+
                 querySnapshot.forEach((doc) => {
                     characters.push({
                         id: doc.id,
@@ -965,7 +1011,7 @@
             try {
                 const querySnapshot = await getDocs(collection(db, 'characters'));
                 allCharacters = [];
-                
+
                 querySnapshot.forEach((doc) => {
                     allCharacters.push({
                         id: doc.id,
@@ -973,9 +1019,51 @@
                     });
                 });
 
+                // Carregar todos os usuários para ranking de apoios
+                await loadAllUsersForApoiosRanking();
+
                 renderAllRankings();
             } catch (error) {
                 console.error('Erro ao carregar rankings:', error);
+            }
+        }
+
+        // ============= CARREGAR TODOS OS USUÁRIOS (PARA RANKING DE APOIOS) =============
+        async function loadAllUsersForApoiosRanking() {
+            try {
+                const querySnapshot = await getDocs(collection(db, 'users'));
+                allUsersApoios = [];
+
+                querySnapshot.forEach((docSnap) => {
+                    const userData = docSnap.data();
+                    const apoios = userData.apoios || [];
+
+                    // Calcular total de apoios do usuário
+                    let totalApoios = 0;
+                    apoios.forEach(apoio => {
+                        const montante = apoio.montante || 0;
+                        const tipo = (apoio.tipo || '').toLowerCase();
+
+                        if (tipo === 'roleta') {
+                            if (montante % 3 === 0) {
+                                totalApoios += montante / 3;
+                            } else {
+                                totalApoios += montante;
+                            }
+                        } else {
+                            totalApoios += montante;
+                        }
+                    });
+
+                    allUsersApoios.push({
+                        id: docSnap.id,
+                        email: userData.email || 'Jogador desconhecido',
+                        nome: userData.displayName || userData.nome || 'Jogador',
+                        totalApoios: totalApoios
+                    });
+                });
+            } catch (error) {
+                console.error('Erro ao carregar usuários para ranking de apoios:', error);
             }
         }
 
@@ -1052,7 +1140,7 @@
             }).join('');
 
             grid.innerHTML = html;
-            
+
             // Renderizar rankings com TODOS os personagens
             loadAllCharactersForRankings();
         }
@@ -1069,7 +1157,7 @@
                     collection(db, 'users'),
                     where('uid', '==', currentUser.uid)
                 );
-                
+
                 let userSnapshot = await getDocs(q);
                 console.log('📊 Resultado busca por UID:', userSnapshot.size, 'documentos');
 
@@ -1090,7 +1178,7 @@
                     try {
                         const docRef = doc(db, 'users', currentUser.uid);
                         const docSnap = await getDoc(docRef);
-                        
+
                         if (docSnap.exists()) {
                             console.log('✅ Encontrou documento direto!');
                             // Criar um array com o documento para processar igual aos outros métodos
@@ -1112,7 +1200,7 @@
 
                 const userData = userSnapshot.docs[0].data();
                 console.log('📦 Dados do usuário:', userData);
-                
+
                 const apoios = userData.apoios || [];
                 const inventario = userData.inventario || [];
 
@@ -1124,9 +1212,9 @@
                 apoios.forEach(apoio => {
                     const montante = apoio.montante || 0;
                     const tipo = (apoio.tipo || '').toLowerCase();
-                    
+
                     console.log(`  Apoio: ${apoio.nome}, Tipo: ${tipo}, Montante: ${montante}`);
-                    
+
                     if (tipo === 'roleta') {
                         // Se for Roleta e múltiplo de 3, divide por 3
                         if (montante % 3 === 0) {
@@ -1157,7 +1245,7 @@
                 } else {
                     console.log('📦 Renderizando', inventario.length, 'itens do inventário');
                     emptyState.style.display = 'none';
-                    
+
                     const html = inventario.map((item, index) => {
                         console.log(`  Item ${index + 1}:`, item);
                         return `
@@ -1196,13 +1284,13 @@
             const cpLetra = char.cp?.rank || 'E';
             const cpNome = char.cp?.nome || 'CIVIL/NOVATO';
             const cpCor = getCpColor(cpLetra);
-            
+
             // Buscar OF, DF, RS, MB direto do Firebase
             const OF = char.cp?.of || 0;
             const DF = char.cp?.df || 0;
             const RS = char.cp?.rs || 0;
             const MB = char.cp?.mb || 0;
-            
+
             return { CP: cp, letra: cpLetra, nome: cpNome, corLetra: cpCor, OF, DF, RS, MB };
         }
 
@@ -1227,18 +1315,18 @@
         }
 
         // ============= SISTEMA DE ABAS =============
-        window.switchTab = function(tabName) {
+        window.switchTab = function (tabName) {
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
+
             event.target.classList.add('active');
             document.getElementById(`tab-${tabName}`).classList.add('active');
         };
 
-        window.switchSubTab = function(subtabName) {
+        window.switchSubTab = function (subtabName) {
             document.querySelectorAll('.sub-tab-button').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.sub-tab-content').forEach(content => content.classList.remove('active'));
-            
+
             event.target.classList.add('active');
             document.getElementById(`subtab-${subtabName}`).classList.add('active');
         };
@@ -1246,7 +1334,7 @@
         // ============= RENDERIZAR RANKINGS =============
         function renderRanking(containerId, sortedChars, formatValue = (v) => v) {
             const container = document.getElementById(containerId);
-            
+
             if (sortedChars.length === 0) {
                 container.innerHTML = `
                     <div class="empty-ranking">
@@ -1256,22 +1344,22 @@
                 `;
                 return;
             }
-            
+
             const html = sortedChars.map((item, index) => {
                 const position = index + 1;
                 let positionClass = '';
                 if (position === 1) positionClass = 'gold';
                 else if (position === 2) positionClass = 'silver';
                 else if (position === 3) positionClass = 'bronze';
-                
+
                 const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : `${position}º`;
-                
+
                 return `
                     <div class="ranking-item">
-                        ${item.char.characterImage ? 
-                            `<img src="${item.char.characterImage}" alt="${escapeHtml(item.char.nome || 'Personagem')}" 
-                                style="width: 90px; height: 90px; border-radius: 30%; object-fit: cover; margin-right: 10px; border: 2px solid ${item.cpCor || 'var(--primary)'}; flex-shrink: 0;">` 
-                            : '<div style="width: 90px; height: 90px; margin-right: 10px; flex-shrink: 0;"></div>'}
+                        ${item.char.characterImage ?
+                        `<img src="${item.char.characterImage}" alt="${escapeHtml(item.char.nome || 'Personagem')}" 
+                                style="width: 90px; height: 90px; border-radius: 30%; object-fit: cover; margin-right: 10px; border: 2px solid ${item.cpCor || 'var(--primary)'}; flex-shrink: 0;">`
+                        : '<div style="width: 90px; height: 90px; margin-right: 10px; flex-shrink: 0;"></div>'}
                         <div class="ranking-position ${positionClass}">${medal}</div>
                         <div class="ranking-info">
                             <div class="ranking-name">${escapeHtml(item.char.nome || 'Sem nome')}</div>
@@ -1283,7 +1371,7 @@
                     </div>
                 `;
             }).join('');
-            
+
             container.innerHTML = html;
         }
 
@@ -1300,9 +1388,15 @@
                         `;
                     }
                 });
+            }
+
+            // Renderizar ranking de apoios separadamente (usa usuários, não personagens)
+            renderApoiosRanking();
+
+            if (allCharacters.length === 0) {
                 return;
             }
-            
+
             const charsWithStats = allCharacters.map(char => {
                 const stats = getCharacterStats(char); // Usa a nova função
                 return {
@@ -1331,31 +1425,31 @@
                 // Exibe VALOR, NOME e RANK
                 return `<span style="color: ${item.cpCor}; font-weight: 700; font-size: 1.1em;">${v}</span> • <span style="color: ${item.cpCor};">${item.cpNome}</span> <span style="color: ${item.cpCor}; font-size: 0.85em;">(${item.cpLetra})</span>`;
             });
-            
+
             const rankOF = [...charsWithStats].sort((a, b) => b.of - a.of);
             renderRanking('ranking-ofensivo', rankOF.map(item => ({
                 char: item.char,
                 value: item.of
             })));
-            
+
             const rankDF = [...charsWithStats].sort((a, b) => b.df - a.df);
             renderRanking('ranking-defensivo', rankDF.map(item => ({
                 char: item.char,
                 value: item.df
             })));
-            
+
             const rankRS = [...charsWithStats].sort((a, b) => b.rs - a.rs);
             renderRanking('ranking-resistencia', rankRS.map(item => ({
                 char: item.char,
                 value: item.rs
             })));
-            
+
             const rankMB = [...charsWithStats].sort((a, b) => b.mb - a.mb);
             renderRanking('ranking-mobilidade', rankMB.map(item => ({
                 char: item.char,
                 value: item.mb
             })));
-            
+
             const rankLuns = [...charsWithStats].sort((a, b) => b.luns - a.luns);
             renderRanking('ranking-riqueza', rankLuns.map(item => ({
                 char: item.char,
@@ -1363,8 +1457,52 @@
             })), (v) => `${v} 💰`);
         }
 
+        // ============= RENDERIZAR RANKING DE APOIOS =============
+        function renderApoiosRanking() {
+            const container = document.getElementById('ranking-apoios');
+            if (!container) return;
+
+            if (allUsersApoios.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-ranking">
+                        <div class="empty-ranking-icon">💖</div>
+                        <p>Nenhum jogador com apoios</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Ordenar por total de apoios (maior primeiro)
+            const sortedUsers = [...allUsersApoios].sort((a, b) => b.totalApoios - a.totalApoios);
+
+            const html = sortedUsers.map((user, index) => {
+                const position = index + 1;
+                let positionClass = '';
+                if (position === 1) positionClass = 'gold';
+                else if (position === 2) positionClass = 'silver';
+                else if (position === 3) positionClass = 'bronze';
+
+                const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : `${position}º`;
+
+                return `
+                    <div class="ranking-item">
+                        <div class="ranking-position ${positionClass}">${medal}</div>
+                        <div class="ranking-info">
+                            <div class="ranking-name">${escapeHtml(user.nome)}</div>
+                            <div class="ranking-details">
+                                ${escapeHtml(user.email)}
+                            </div>
+                        </div>
+                        <div class="ranking-value">${user.totalApoios} 💖</div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
         // ============= CRIAR NOVO PERSONAGEM =============
-        window.createNewCharacter = async function() {
+        window.createNewCharacter = async function () {
             try {
                 showAlert('📝 Criando novo personagem...', 'success');
 
@@ -1401,9 +1539,9 @@
                 };
 
                 const docRef = await addDoc(collection(db, 'characters'), newCharacter);
-                
+
                 showAlert('✅ Personagem criado! Redirecionando...', 'success');
-                
+
                 setTimeout(() => {
                     window.location.href = `ficha.html?id=${docRef.id}`;
                 }, 1000);
@@ -1415,33 +1553,33 @@
         };
 
         // ============= SELECIONAR PERSONAGEM =============
-        window.selectCharacter = function(characterId) {
+        window.selectCharacter = function (characterId) {
             window.location.href = `ficha.html?id=${characterId}`;
         };
 
         // ============= MODAL DE EXCLUSÃO =============
-        window.openDeleteModal = function(characterId, characterName) {
+        window.openDeleteModal = function (characterId, characterName) {
             characterToDelete = characterId;
             document.getElementById('deleteCharacterName').textContent = characterName;
             document.getElementById('deleteModal').classList.add('active');
         };
 
-        window.closeDeleteModal = function() {
+        window.closeDeleteModal = function () {
             characterToDelete = null;
             document.getElementById('deleteModal').classList.remove('active');
         };
 
-        window.confirmDelete = async function() {
+        window.confirmDelete = async function () {
             if (!characterToDelete) return;
 
             try {
                 showAlert('🗑️ Apagando personagem...', 'success');
-                
+
                 await deleteDoc(doc(db, 'characters', characterToDelete));
-                
+
                 showAlert('✅ Personagem apagado com sucesso!', 'success');
                 closeDeleteModal();
-                
+
                 await loadCharacters();
 
             } catch (error) {
@@ -1451,7 +1589,7 @@
         };
 
         // ============= LOGOUT =============
-        window.logout = async function() {
+        window.logout = async function () {
             if (confirm('🚪 Tem certeza que deseja sair?')) {
                 try {
                     await signOut(auth);
@@ -1488,4 +1626,5 @@
         window.loadCharacters = loadCharacters;
     </script>
 </body>
+
 </html>
