@@ -1726,11 +1726,13 @@
 
         <!-- ABA PERSONAGENS -->
         <div id="tabPersonagens" class="tab-content active">
-            <!-- CONTROLES DE EXP -->
+            <!-- CONTROLES DE EXP E GERENCIAMENTO -->
             <div class="exp-controls">
                 <input type="number" class="exp-input" id="expValue" placeholder="Quantidade de EXP" value="10" min="1">
-                <button class="btn btn-success" onclick="addCustomExpToSelected()">+ ADICIONAR EXP</button>
-                <button class="btn btn-danger" onclick="subtractCustomExpFromSelected()">- SUBTRAIR EXP</button>
+                <button class="btn btn-success" onclick="addCustomExpToSelected()">➕ 🌟EXP</button>
+                <button class="btn btn-danger" onclick="subtractCustomExpFromSelected()">➖ 🌟EXP</button>
+                <button class="btn btn-primary" onclick="openCreateCharacterModal()">➕ Criar Personagem</button>
+                <button class="btn btn-danger" onclick="openDeleteCharactersModal()">🗑️ Deletar Personagens</button>
             </div>
 
             <div class="characters-grid" id="charactersGrid">
@@ -3064,6 +3066,182 @@ Agilidade 2\n
         </div>
     </div>
 
+    <!-- Modal para Criar Personagem para Jogador -->
+    <div id="createCharacterModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <div class="modal-title">➕ Criar Novo Personagem</div>
+                <button class="modal-close" onclick="closeCreateCharacterModal()">✕</button>
+            </div>
+
+            <div style="padding: 20px;">
+                <div class="form-section">
+                    <div class="section-title">👤 Selecionar Jogador (Dono)</div>
+                    <div class="form-group">
+                        <label class="form-label">Jogador *</label>
+                        <select class="form-select" id="createChar_owner" required>
+                            <option value="">Selecione o jogador dono do personagem...</option>
+                        </select>
+                        <small style="color: #94a3b8; margin-top: 5px; display: block;">
+                            O personagem será criado na conta deste jogador
+                        </small>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">📋 Informações Básicas (Opcionais)</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Nome do Personagem</label>
+                            <input type="text" class="form-input" id="createChar_nome"
+                                placeholder="Deixe vazio para o jogador preencher">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Classe</label>
+                            <select class="form-select" id="createChar_classe">
+                                <option value="">Selecione...</option>
+                                <option value="Caçador">Caçador</option>
+                                <option value="Druida">Druida</option>
+                                <option value="Guerreiro">Guerreiro</option>
+                                <option value="Adepto">Adepto (Necromante)</option>
+                                <option value="Ladino">Ladino</option>
+                                <option value="Pallacerdote">Pallacerdote</option>
+                                <option value="Ritualista">Ritualista (Abismancia)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Raça</label>
+                            <select class="form-select" id="createChar_raca">
+                                <option value="">Selecione...</option>
+                                <option value="Humano">Humano</option>
+                                <option value="Elorin">Elorin</option>
+                                <option value="Karu-Selvagem">Karu-Selvagem</option>
+                                <option value="Picxi">Picxi</option>
+                                <option value="Yotun">Yotun</option>
+                                <option value="Dragau">Dragau</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 15px; justify-content: flex-end; margin-top: 25px;">
+                    <button class="btn btn-secondary" onclick="closeCreateCharacterModal()">Cancelar</button>
+                    <button class="btn btn-success" onclick="createCharacterForPlayer()">✅ CRIAR PERSONAGEM</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação de Exclusão de Personagens (Visual Exagerado) -->
+    <div id="deleteCharactersModal" class="modal">
+        <div class="modal-content"
+            style="max-width: 700px; border: 4px solid var(--danger); background: linear-gradient(135deg, #1a0a0a 0%, #2d0a0a 100%);">
+            <div class="modal-header"
+                style="background: linear-gradient(135deg, var(--danger), #dc2626); padding: 25px;">
+                <div class="modal-title"
+                    style="color: white; font-size: 1.8rem; display: flex; align-items: center; gap: 15px;">
+                    <span style="font-size: 2.5rem;">⚠️</span>
+                    ATENÇÃO: EXCLUSÃO PERMANENTE!
+                </div>
+                <button class="modal-close" onclick="closeDeleteCharactersModal()"
+                    style="background: white; color: var(--danger);">✕</button>
+            </div>
+
+            <div style="padding: 30px;">
+                <!-- Aviso Grande -->
+                <div
+                    style="background: rgba(239, 68, 68, 0.2); border: 3px solid var(--danger); border-radius: 15px; padding: 25px; margin-bottom: 25px; text-align: center;">
+                    <div style="font-size: 4rem; margin-bottom: 15px;">🗑️💀🔥</div>
+                    <div style="font-size: 1.4rem; font-weight: 700; color: var(--danger); margin-bottom: 10px;">
+                        VOCÊ ESTÁ PRESTES A DELETAR PERMANENTEMENTE:
+                    </div>
+                    <div style="font-size: 1rem; color: #f87171;">
+                        Esta ação NÃO pode ser desfeita!
+                    </div>
+                </div>
+
+                <!-- Lista de Personagens a Serem Deletados -->
+                <div
+                    style="background: rgba(30, 27, 75, 0.8); border: 2px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 25px; max-height: 300px; overflow-y: auto;">
+                    <div
+                        style="font-size: 1.1rem; font-weight: 700; color: var(--danger); margin-bottom: 15px; text-transform: uppercase;">
+                        📋 Personagens que serão EXCLUÍDOS:
+                    </div>
+                    <div id="deleteCharactersList" style="display: flex; flex-direction: column; gap: 10px;">
+                        <!-- Lista será preenchida via JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Contador de Personagens -->
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <span
+                        style="background: var(--danger); color: white; padding: 10px 25px; border-radius: 30px; font-size: 1.2rem; font-weight: 700;">
+                        Total: <span id="deleteCharactersCount">0</span> personagem(ns)
+                    </span>
+                </div>
+
+                <!-- Botões -->
+                <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+                    <button class="btn" onclick="closeDeleteCharactersModal()"
+                        style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; padding: 18px 40px; font-size: 1.1rem; min-width: 200px;">
+                        ❌ NÃO, CANCELAR
+                    </button>
+                    <button class="btn" onclick="confirmDeleteCharacters()"
+                        style="background: linear-gradient(135deg, var(--danger), #b91c1c); color: white; padding: 18px 40px; font-size: 1.1rem; min-width: 200px; animation: pulse-danger 1.5s infinite;">
+                        ✅ SIM, DELETAR TUDO
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes pulse-danger {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            50% {
+                box-shadow: 0 0 20px 10px rgba(239, 68, 68, 0.3);
+            }
+        }
+
+        .delete-char-item {
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid var(--danger);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .delete-char-icon {
+            font-size: 2rem;
+            color: var(--danger);
+        }
+
+        .delete-char-info {
+            flex: 1;
+        }
+
+        .delete-char-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 5px;
+        }
+
+        .delete-char-details {
+            font-size: 0.9rem;
+            color: #f87171;
+        }
+    </style>
+
     <!-- Modal para Criar/Editar Item do Mestre -->
     <div id="itemModalMestre"
         style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; overflow-y: auto;">
@@ -3857,6 +4035,213 @@ Agilidade 2\n
                 `;
             }).join('');
         }
+
+        // ============= CRIAR PERSONAGEM PARA JOGADOR =============
+        let charactersToDelete = [];
+
+        window.openCreateCharacterModal = async function () {
+            try {
+                // Carregar lista de usuários para o dropdown
+                const usersSnapshot = await getDocs(collection(db, 'users'));
+                const userSelect = document.getElementById('createChar_owner');
+
+                userSelect.innerHTML = '<option value="">Selecione o jogador dono do personagem...</option>';
+
+                usersSnapshot.forEach(doc => {
+                    const userData = doc.data();
+                    const userUid = userData.uid || doc.id;
+                    const displayName = userData.displayName || userData.email || 'Usuário';
+                    const email = userData.email || '';
+
+                    userSelect.innerHTML += `<option value="${userUid}" data-email="${email}" data-name="${displayName}">${displayName} (${email})</option>`;
+                });
+
+                // Limpar campos
+                document.getElementById('createChar_nome').value = '';
+                document.getElementById('createChar_classe').value = '';
+                document.getElementById('createChar_raca').value = '';
+
+                // Abrir modal
+                document.getElementById('createCharacterModal').classList.add('active');
+            } catch (error) {
+                console.error('❌ Erro ao carregar usuários:', error);
+                showAlert('❌ Erro ao carregar lista de jogadores', 'danger');
+            }
+        };
+
+        window.closeCreateCharacterModal = function () {
+            document.getElementById('createCharacterModal').classList.remove('active');
+        };
+
+        window.createCharacterForPlayer = async function () {
+            const ownerSelect = document.getElementById('createChar_owner');
+            const ownerUid = ownerSelect.value;
+            const selectedOption = ownerSelect.options[ownerSelect.selectedIndex];
+            const ownerEmail = selectedOption.dataset.email || '';
+            const ownerName = selectedOption.dataset.name || ownerEmail;
+
+            if (!ownerUid) {
+                showAlert('⚠️ Por favor, selecione um jogador para ser o dono do personagem', 'warning');
+                return;
+            }
+
+            const nome = document.getElementById('createChar_nome').value.trim();
+            const classe = document.getElementById('createChar_classe').value;
+            const raca = document.getElementById('createChar_raca').value;
+
+            try {
+                showAlert('📝 Criando personagem...', 'success');
+
+                const newCharacter = {
+                    ownerUid: ownerUid,
+                    nome: nome,
+                    jogador: ownerEmail || ownerName,
+                    idade: 0,
+                    raca: raca,
+                    classe: classe,
+                    virtude: '',
+                    vicio: '',
+                    tamanho: 5,
+                    luns: 0,
+                    int: 1, for: 1, pre: 1, rac: 1, des: 1, man: 1, prs: 1, vig: 1, aut: 1,
+                    skills: {},
+                    skillInputs: {},
+                    classAbilities: {},
+                    classResources: {},
+                    hpCurrent: 6,
+                    detCurrent: 1,
+                    sanCurrent: 100,
+                    blindagem: 0,
+                    containers: [{
+                        id: Date.now(),
+                        name: 'Mochila',
+                        maxCapacity: 6,
+                        items: []
+                    }],
+                    notas: '',
+                    exp: 0,
+                    auraImortalidade: 1,
+                    createdAt: new Date().toISOString(),
+                    createdBy: currentUser.email,
+                    lastUpdate: new Date().toISOString()
+                };
+
+                const docRef = await addDoc(collection(db, 'characters'), newCharacter);
+
+                // Registrar log
+                await addLog(
+                    currentUser.email,
+                    `Criou personagem "${nome || 'Novo Personagem'}" para`,
+                    ownerEmail || ownerName,
+                    'characters'
+                );
+
+                showAlert(`✅ Personagem criado com sucesso para ${ownerName}!`, 'success');
+                closeCreateCharacterModal();
+
+                // Recarregar lista de personagens
+                await loadAllCharacters();
+
+            } catch (error) {
+                console.error('❌ Erro ao criar personagem:', error);
+                showAlert('❌ Erro ao criar personagem: ' + error.message, 'danger');
+            }
+        };
+
+        // ============= DELETAR PERSONAGENS SELECIONADOS =============
+        window.openDeleteCharactersModal = function () {
+            const checkboxes = document.querySelectorAll('.exp-checkbox:checked');
+
+            if (checkboxes.length === 0) {
+                showAlert('⚠️ Selecione pelo menos um personagem para deletar', 'warning');
+                return;
+            }
+
+            // Coletar informações dos personagens selecionados
+            charactersToDelete = [];
+            const listContainer = document.getElementById('deleteCharactersList');
+            listContainer.innerHTML = '';
+
+            checkboxes.forEach(checkbox => {
+                const characterId = checkbox.dataset.characterId;
+                const characterName = checkbox.dataset.characterName || 'Sem nome';
+                const character = allCharacters.find(c => c.id === characterId);
+
+                charactersToDelete.push({
+                    id: characterId,
+                    name: characterName,
+                    jogador: character?.jogador || 'Desconhecido',
+                    classe: character?.classe || 'Sem classe',
+                    raca: character?.raca || 'Sem raça'
+                });
+
+                // Adicionar à lista visual
+                listContainer.innerHTML += `
+                    <div class="delete-char-item">
+                        <div class="delete-char-icon">💀</div>
+                        <div class="delete-char-info">
+                            <div class="delete-char-name">${characterName}</div>
+                            <div class="delete-char-details">
+                                👤 ${character?.jogador || 'Desconhecido'} | 
+                                ⚔️ ${character?.classe || 'Sem classe'} | 
+                                🎭 ${character?.raca || 'Sem raça'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Atualizar contador
+            document.getElementById('deleteCharactersCount').textContent = charactersToDelete.length;
+
+            // Abrir modal
+            document.getElementById('deleteCharactersModal').classList.add('active');
+        };
+
+        window.closeDeleteCharactersModal = function () {
+            document.getElementById('deleteCharactersModal').classList.remove('active');
+            charactersToDelete = [];
+        };
+
+        window.confirmDeleteCharacters = async function () {
+            if (charactersToDelete.length === 0) {
+                showAlert('⚠️ Nenhum personagem selecionado', 'warning');
+                closeDeleteCharactersModal();
+                return;
+            }
+
+            try {
+                showAlert(`🗑️ Deletando ${charactersToDelete.length} personagem(ns)...`, 'warning');
+
+                for (const char of charactersToDelete) {
+                    // Deletar o personagem do Firebase
+                    await deleteDoc(doc(db, 'characters', char.id));
+
+                    // Registrar log
+                    await addLog(
+                        currentUser.email,
+                        `Deletou permanentemente o personagem`,
+                        char.name,
+                        'characters'
+                    );
+
+                    console.log(`✅ Personagem "${char.name}" deletado`);
+                }
+
+                showAlert(`✅ ${charactersToDelete.length} personagem(ns) deletado(s) com sucesso!`, 'success');
+                closeDeleteCharactersModal();
+
+                // Desmarcar todos os checkboxes
+                document.querySelectorAll('.exp-checkbox:checked').forEach(cb => cb.checked = false);
+
+                // Recarregar lista de personagens
+                await loadAllCharacters();
+
+            } catch (error) {
+                console.error('❌ Erro ao deletar personagens:', error);
+                showAlert('❌ Erro ao deletar personagens: ' + error.message, 'danger');
+            }
+        };
 
         // ============= ABRIR PERSONAGEM PARA EDIÇÃO =============
         window.openCharacter = async function (characterId) {

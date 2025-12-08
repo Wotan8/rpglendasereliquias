@@ -30,9 +30,10 @@ service cloud.firestore {
       // (necessário para rankings públicos)
       allow read: if isSignedIn();
 
-      // ✅ Criação: apenas se definir ele mesmo como dono
-      allow create: if isSignedIn() && 
-        request.resource.data.ownerUid == request.auth.uid;
+      // ✅ Criação: usuário define ele mesmo como dono OU mestre pode criar para qualquer jogador
+      allow create: if isSignedIn() && (
+        request.resource.data.ownerUid == request.auth.uid || isMaster()
+      );
 
       // ✅ CORREÇÃO DO BUG: Atualização precisa garantir que ownerUid não mude
       allow update: if isSignedIn() && (
