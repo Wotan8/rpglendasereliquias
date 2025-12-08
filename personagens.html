@@ -921,6 +921,103 @@
             margin-bottom: 1rem;
             opacity: 0.5;
         }
+
+        /* ===== MODAL DE IMAGEM AMPLIADA ===== */
+        .image-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 20000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .image-modal.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .image-modal-content {
+            position: relative;
+            max-width: 90vw;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .image-modal-img {
+            max-width: 90vw;
+            max-height: 85vh;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: zoomIn 0.3s ease;
+        }
+
+        @keyframes zoomIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .image-modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 5px 12px;
+            border-radius: 8px;
+        }
+
+        .image-modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.1);
+        }
+
+        .image-modal-name {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-top: 1rem;
+            text-align: center;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+        }
+
+        .ranking-item img {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .ranking-item img:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 20px rgba(139, 92, 246, 0.5);
+        }
     </style>
 </head>
 
@@ -1171,6 +1268,15 @@
                 <button class="btn-modal btn-cancel" onclick="closeDeleteModal()">❌ Cancelar</button>
                 <button class="btn-modal btn-confirm" onclick="confirmDelete()">🗑️ Sim, Apagar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal de Imagem Ampliada -->
+    <div class="image-modal" id="imageModal" onclick="closeImageModal(event)">
+        <div class="image-modal-content">
+            <button class="image-modal-close" onclick="closeImageModal(event)">✕</button>
+            <img src="" alt="" class="image-modal-img" id="modalImage">
+            <div class="image-modal-name" id="modalCharName"></div>
         </div>
     </div>
 
@@ -1624,6 +1730,7 @@
                     <div class="ranking-item">
                         ${item.char.characterImage ?
                         `<img src="${item.char.characterImage}" alt="${escapeHtml(item.char.nome || 'Personagem')}" 
+                                onclick="openImageModal('${item.char.characterImage.replace(/'/g, "\\'")}', '${escapeHtml(item.char.nome || 'Personagem').replace(/'/g, "\\'")}'); event.stopPropagation();"
                                 style="width: 90px; height: 90px; border-radius: 30%; object-fit: cover; margin-right: 10px; border: 2px solid ${item.cpCor || 'var(--primary)'}; flex-shrink: 0;">`
                         : '<div style="width: 90px; height: 90px; margin-right: 10px; flex-shrink: 0;"></div>'}
                         <div class="ranking-position ${positionClass}">${medal}</div>
@@ -2240,6 +2347,41 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        // ============= MODAL DE IMAGEM AMPLIADA =============
+        window.openImageModal = function (imageSrc, charName) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            const modalName = document.getElementById('modalCharName');
+
+            modalImg.src = imageSrc;
+            modalImg.alt = charName;
+            modalName.textContent = charName;
+            modal.classList.add('active');
+
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+        };
+
+        window.closeImageModal = function (event) {
+            // Only close if clicking the background or close button
+            if (event.target.id === 'imageModal' || event.target.classList.contains('image-modal-close')) {
+                const modal = document.getElementById('imageModal');
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        };
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('imageModal');
+                if (modal.classList.contains('active')) {
+                    modal.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            }
+        });
 
         // Expor funções globalmente
         window.loadCharacters = loadCharacters;
