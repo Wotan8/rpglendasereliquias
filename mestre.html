@@ -1708,6 +1708,83 @@
             <div class="logs-title">📜 Histórico de Alterações</div>
             <button class="logs-close" onclick="toggleLogs()">✕</button>
         </div>
+
+        <!-- FILTROS DE LOGS -->
+        <div class="logs-filters"
+            style="padding: 15px; background: rgba(30, 27, 75, 0.6); border-bottom: 1px solid var(--border);">
+            <div style="margin-bottom: 10px;">
+                <label style="font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 5px;">🔍 Buscar</label>
+                <input type="text" id="logSearchFilter" placeholder="Buscar em ações..." oninput="applyLogFilters()"
+                    style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light); font-size: 0.9rem;">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <div>
+                    <label style="font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 5px;">📋
+                        Tipo</label>
+                    <select id="logTypeFilter" onchange="applyLogFilters()"
+                        style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light); font-size: 0.85rem;">
+                        <option value="">Todos os Tipos</option>
+                        <option value="master-edit">Edição do Mestre</option>
+                        <option value="player-update">Atualização de Jogador</option>
+                        <option value="characters">Personagens</option>
+                        <option value="npcs">NPCs</option>
+                        <option value="items">Itens</option>
+                        <option value="apoios">Apoios</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 5px;">👤
+                        Usuário</label>
+                    <select id="logUserFilter" onchange="applyLogFilters()"
+                        style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light); font-size: 0.85rem;">
+                        <option value="">Todos os Usuários</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 10px;">
+                <label style="font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 5px;">🎭
+                    Personagem</label>
+                <select id="logCharacterFilter" onchange="applyLogFilters()"
+                    style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light); font-size: 0.85rem;">
+                    <option value="">Todos os Personagens</option>
+                </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <div>
+                    <label style="font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 5px;">📊 Buscar
+                        Logs</label>
+                    <select id="logLimitFilter"
+                        style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light); font-size: 0.85rem;">
+                        <option value="50">Últimos 50</option>
+                        <option value="100">Últimos 100</option>
+                        <option value="250">Últimos 250</option>
+                        <option value="500" selected>Últimos 500</option>
+                        <option value="1000">Últimos 1000</option>
+                        <option value="2000">Últimos 2000</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: flex-end;">
+                    <button onclick="reloadLogsWithLimit()"
+                        style="width: 100%; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border: none; padding: 8px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; font-weight: 600;">
+                        🔄 Recarregar
+                    </button>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <button onclick="clearLogFilters()"
+                    style="background: rgba(100, 116, 139, 0.3); color: #94a3b8; border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer;">
+                    🗑️ Limpar Filtros
+                </button>
+                <span id="logFilterCount" style="font-size: 0.8rem; color: #94a3b8;">
+                    Mostrando: 0 logs
+                </span>
+            </div>
+        </div>
+
         <div class="logs-content" id="logsContent">
             <div class="no-logs">Nenhuma alteração registrada ainda...</div>
         </div>
@@ -4874,7 +4951,6 @@ Agilidade 2\n
 
                 // Atualizar display
                 displayCharacters();
-                displayExpCharacters();
 
                 showAlert(`✅ Personagem salvo! ${changedFields.length} campo(s) atualizado(s)`, 'success');
 
@@ -4994,35 +5070,164 @@ Agilidade 2\n
         };
 
         // ============= SISTEMA DE LOGS EM TEMPO REAL =============
-        function setupRealtimeLogs() {
+        let allLogs = [];
+        let currentLogLimit = 500;
+        let logsUnsubscribe = null;
+
+        function setupRealtimeLogs(logLimit = 500) {
+            currentLogLimit = logLimit;
+
+            // Cancelar listener anterior se existir
+            if (logsUnsubscribe) {
+                logsUnsubscribe();
+            }
+
             const logsRef = collection(db, 'logs');
-            const logsQuery = query(logsRef, orderBy('timestamp', 'desc'), limit(50));
+            const logsQuery = query(logsRef, orderBy('timestamp', 'desc'), limit(logLimit));
 
-            onSnapshot(logsQuery, (snapshot) => {
-                const logsContent = document.getElementById('logsContent');
-
+            logsUnsubscribe = onSnapshot(logsQuery, (snapshot) => {
                 if (snapshot.empty) {
-                    logsContent.innerHTML = '<div class="no-logs">Nenhuma alteração registrada ainda...</div>';
+                    allLogs = [];
+                    renderLogs([]);
                     return;
                 }
 
-                logsContent.innerHTML = snapshot.docs.map(doc => {
-                    const log = doc.data();
-                    const date = log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Data desconhecida';
+                // Armazenar todos os logs
+                allLogs = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
 
-                    return `
-                        <div class="log-entry">
-                            <div class="log-time">${date}</div>
-                            <div class="log-user">👤 ${log.user || 'Usuário'}</div>
-                            <div class="log-action">
-                                ${log.action || 'Realizou uma ação'} 
-                                <span class="log-character">${log.character || ''}</span>
-                            </div>
-                            ${log.type ? `<div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">Tipo: ${log.type}</div>` : ''}
-                        </div>
-                    `;
-                }).join('');
+                // Atualizar dropdowns de filtro
+                updateLogFilterOptions();
+
+                // Aplicar filtros e renderizar
+                applyLogFilters();
             });
+        }
+
+        window.reloadLogsWithLimit = function () {
+            const limitSelect = document.getElementById('logLimitFilter');
+            const newLimit = parseInt(limitSelect.value) || 500;
+
+            showAlert(`🔄 Recarregando ${newLimit} logs...`, 'success');
+            setupRealtimeLogs(newLimit);
+        };
+
+        function updateLogFilterOptions() {
+            // Atualizar dropdown de usuários
+            const userFilter = document.getElementById('logUserFilter');
+            const users = [...new Set(allLogs.map(log => log.user).filter(Boolean))];
+            const currentUserValue = userFilter.value;
+            userFilter.innerHTML = '<option value="">Todos os Usuários</option>' +
+                users.map(user => `<option value="${user}">${user}</option>`).join('');
+            userFilter.value = currentUserValue;
+
+            // Atualizar dropdown de personagens
+            const charFilter = document.getElementById('logCharacterFilter');
+            const characters = [...new Set(allLogs.map(log => log.character).filter(Boolean))];
+            const currentCharValue = charFilter.value;
+            charFilter.innerHTML = '<option value="">Todos os Personagens</option>' +
+                characters.map(char => `<option value="${char}">${char}</option>`).join('');
+            charFilter.value = currentCharValue;
+        }
+
+        window.applyLogFilters = function () {
+            const searchText = (document.getElementById('logSearchFilter')?.value || '').toLowerCase();
+            const typeFilter = document.getElementById('logTypeFilter')?.value || '';
+            const userFilter = document.getElementById('logUserFilter')?.value || '';
+            const charFilter = document.getElementById('logCharacterFilter')?.value || '';
+
+            let filteredLogs = allLogs;
+
+            // Filtrar por texto
+            if (searchText) {
+                filteredLogs = filteredLogs.filter(log =>
+                    (log.action || '').toLowerCase().includes(searchText) ||
+                    (log.character || '').toLowerCase().includes(searchText) ||
+                    (log.user || '').toLowerCase().includes(searchText)
+                );
+            }
+
+            // Filtrar por tipo
+            if (typeFilter) {
+                filteredLogs = filteredLogs.filter(log => log.type === typeFilter);
+            }
+
+            // Filtrar por usuário
+            if (userFilter) {
+                filteredLogs = filteredLogs.filter(log => log.user === userFilter);
+            }
+
+            // Filtrar por personagem
+            if (charFilter) {
+                filteredLogs = filteredLogs.filter(log => log.character === charFilter);
+            }
+
+            // Atualizar contador
+            const countEl = document.getElementById('logFilterCount');
+            if (countEl) {
+                countEl.textContent = `Mostrando: ${filteredLogs.length} de ${allLogs.length} logs`;
+            }
+
+            renderLogs(filteredLogs);
+        };
+
+        window.clearLogFilters = function () {
+            document.getElementById('logSearchFilter').value = '';
+            document.getElementById('logTypeFilter').value = '';
+            document.getElementById('logUserFilter').value = '';
+            document.getElementById('logCharacterFilter').value = '';
+            applyLogFilters();
+        };
+
+        function renderLogs(logs) {
+            const logsContent = document.getElementById('logsContent');
+
+            if (logs.length === 0) {
+                logsContent.innerHTML = '<div class="no-logs">Nenhum log encontrado com os filtros selecionados...</div>';
+                return;
+            }
+
+            logsContent.innerHTML = logs.map(log => {
+                const date = log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Data desconhecida';
+
+                // Cor do tipo
+                const typeColors = {
+                    'master-edit': '#8b5cf6',
+                    'player-update': '#10b981',
+                    'characters': '#ec4899',
+                    'npcs': '#f59e0b',
+                    'items': '#06b6d4',
+                    'apoios': '#ef4444'
+                };
+                const typeColor = typeColors[log.type] || '#64748b';
+
+                // Nome do tipo
+                const typeNames = {
+                    'master-edit': 'Edição do Mestre',
+                    'player-update': 'Jogador',
+                    'characters': 'Personagens',
+                    'npcs': 'NPCs',
+                    'items': 'Itens',
+                    'apoios': 'Apoios'
+                };
+                const typeName = typeNames[log.type] || log.type || 'Ação';
+
+                return `
+                    <div class="log-entry" style="border-left-color: ${typeColor};">
+                        <div class="log-time">${date}</div>
+                        <div class="log-user">👤 ${log.user || 'Usuário'}</div>
+                        <div class="log-action">
+                            ${log.action || 'Realizou uma ação'} 
+                            <span class="log-character">${log.character || ''}</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: ${typeColor}; margin-top: 4px; font-weight: 600;">
+                            ${typeName}
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         // ============= ADICIONAR LOG =============
@@ -5060,12 +5265,8 @@ Agilidade 2\n
             // Carregar dados específicos de cada aba
             if (tabName === 'personagens') {
                 loadAllCharacters();
-            } else if (tabName === 'exp') {
-                loadExpCharacters();
             } else if (tabName === 'aliados') {
                 loadAllies();
-            } else if (tabName === 'npcs') {
-                loadNpcs();
             } else if (tabName === 'combate') {
                 renderCombatList();
             } else if (tabName === 'apoios') {
