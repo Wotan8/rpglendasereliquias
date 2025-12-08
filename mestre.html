@@ -1948,10 +1948,51 @@
 
             <!-- Sub-aba: Avulsos -->
             <div id="itensAvulsos" class="itens-subtab" style="display: none;">
-                <div style="text-align: center; padding: 40px; color: #64748b;">
-                    Conteúdo de Itens Avulsos
+                <!-- Header da seção -->
+                <div
+                    style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(234, 88, 12, 0.2)); border: 2px solid rgba(245, 158, 11, 0.5); border-radius: 15px; padding: 20px; margin-bottom: 25px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #f59e0b;">
+                                📦 Itens Avulsos
+                            </div>
+                            <div style="font-size: 0.9rem; color: #fbbf24; margin-top: 5px;">
+                                Itens sem dono - Gerencie itens que não estão em posse de jogadores
+                            </div>
+                            <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 8px;" id="avulsosItemsCount">
+                                Carregando...
+                            </div>
+                        </div>
+                        <button class="btn btn-success" onclick="openAddAvulsoItemModal()"
+                            style="padding: 12px 25px; font-size: 1rem;">
+                            ➕ Adicionar Item Avulso
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Container de Itens Avulsos -->
+                <div id="avulsosItemsContainer"
+                    style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 20px;">
+                    <div id="avulsosItemsList" style="display: grid; gap: 12px;">
+                        <div style="text-align: center; padding: 40px; color: #64748b;">
+                            Carregando itens avulsos...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estado Vazio -->
+                <div id="avulsosItemsEmpty" style="display: none; text-align: center; padding: 60px; color: #64748b;">
+                    <div style="font-size: 4rem; margin-bottom: 15px;">📦</div>
+                    <div style="font-size: 1.3rem; font-weight: 600; margin-bottom: 10px; color: #f59e0b;">
+                        Nenhum item avulso
+                    </div>
+                    <div style="font-size: 0.95rem;">
+                        Clique em "Adicionar Item Avulso" para criar itens que não pertencem a nenhum personagem
+                    </div>
                 </div>
             </div>
+
 
             <!-- Sub-aba: Criar -->
             <div id="itensCriar" class="itens-subtab" style="display: none;">
@@ -7395,6 +7436,7 @@ Agilidade 2\n
             } else if (subtab === 'avulsos') {
                 document.getElementById('itensAvulsos').style.display = 'block';
                 document.getElementById('btnItensAvulsos').className = 'btn btn-primary';
+                loadAvulsosItems(); // Carregar itens avulsos ao abrir
             } else if (subtab === 'criar') {
                 document.getElementById('itensCriar').style.display = 'block';
                 document.getElementById('btnItensCriar').className = 'btn btn-primary';
@@ -7412,6 +7454,307 @@ Agilidade 2\n
         let currentEditingContainerIdMestre = null;
         let currentEditingItemIdMestre = null;
         let currentItemImageBase64Mestre = null;
+
+        // ============= SISTEMA DE ITENS AVULSOS =============
+        let avulsosItems = [];
+        let currentEditingAvulsoItemId = null;
+        let isAvulsoMode = false;
+
+        // Carregar itens avulsos do Firebase (itens sem characterId)
+        async function loadAvulsosItems() {
+            try {
+                const itemsRef = collection(db, 'items');
+                const itemsSnapshot = await getDocs(itemsRef);
+
+                avulsosItems = [];
+                itemsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    // Itens avulsos são aqueles sem characterId ou com characterId null/vazio
+                    if (!data.characterId || data.characterId === null || data.characterId === '') {
+                        avulsosItems.push({
+                            id: doc.id,
+                            ...data
+                        });
+                    }
+                });
+
+                console.log('📦 Itens avulsos carregados:', avulsosItems.length);
+                renderAvulsosItems();
+
+            } catch (error) {
+                console.error('❌ Erro ao carregar itens avulsos:', error);
+                showAlert('❌ Erro ao carregar itens avulsos: ' + error.message, 'danger');
+            }
+        }
+
+        // Renderizar lista de itens avulsos
+        function renderAvulsosItems() {
+            const listContainer = document.getElementById('avulsosItemsList');
+            const emptyContainer = document.getElementById('avulsosItemsEmpty');
+            const mainContainer = document.getElementById('avulsosItemsContainer');
+            const countElement = document.getElementById('avulsosItemsCount');
+
+            // Atualizar contagem
+            countElement.textContent = `${avulsosItems.length} item(s) avulso(s) encontrado(s)`;
+
+            if (avulsosItems.length === 0) {
+                mainContainer.style.display = 'none';
+                emptyContainer.style.display = 'block';
+                return;
+            }
+
+            mainContainer.style.display = 'block';
+            emptyContainer.style.display = 'none';
+
+            // Ordenar itens por nome
+            const sortedItems = [...avulsosItems].sort((a, b) =>
+                (a.name || '').localeCompare(b.name || '')
+            );
+
+            listContainer.innerHTML = sortedItems.map(item => {
+                const imagemHTML = item.imagem ?
+                    `<img src="${item.imagem}" style="width: 60px; height: 60px; object-fit: contain; border-radius: 10px; margin-right: 15px; background: rgba(15, 23, 42, 0.8); padding: 5px; border: 2px solid var(--border);">` :
+                    `<div style="width: 60px; height: 60px; background: rgba(245, 158, 11, 0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 1.5rem; border: 2px solid rgba(245, 158, 11, 0.4);">📦</div>`;
+
+                return `
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid var(--border); border-radius: 12px; padding: 18px; display: flex; align-items: center; gap: 15px; transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(245, 158, 11, 0.6)'" onmouseout="this.style.borderColor='var(--border)'">
+                        ${imagemHTML}
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                <div style="font-size: 1.2rem; font-weight: 700; color: var(--light);">
+                                    ${item.name || 'Item sem nome'}
+                                </div>
+                                <span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;">
+                                    ${item.tipo || 'Sem tipo'}
+                                </span>
+                            </div>
+                            <div style="font-size: 0.9rem; color: #94a3b8; margin-top: 8px;">
+                                Peso: ${item.totalWeight || item.peso || 0} | 
+                                Tamanho: ${item.tamanho || 0} | 
+                                Quantidade: ${item.quantity || 1}
+                                ${item.dureza !== undefined ? ` | Dureza: ${item.dureza}` : ''}
+                                ${item.integridade !== undefined ? ` | Integridade: ${item.integridade}` : ''}
+                            </div>
+                            ${item.description ? `
+                                <div style="font-size: 0.85rem; color: #64748b; margin-top: 8px; font-style: italic; max-width: 100%; overflow: hidden; text-overflow: ellipsis;">
+                                    ${item.description.length > 150 ? item.description.substring(0, 150) + '...' : item.description}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <button class="btn btn-secondary" onclick="editAvulsoItem('${item.id}')" style="padding: 10px 16px; font-size: 0.9rem;">
+                                ✏️
+                            </button>
+                            <button class="btn btn-danger" onclick="deleteAvulsoItem('${item.id}')" style="padding: 10px 16px; font-size: 0.9rem;">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Abrir modal para adicionar item avulso
+        window.openAddAvulsoItemModal = function () {
+            isAvulsoMode = true;
+            currentEditingAvulsoItemId = null;
+            currentEditingItemIdMestre = null;
+            currentEditingContainerIdMestre = 'avulso';
+
+            document.getElementById('modalTitleMestre').textContent = '📦 Criar Item Avulso';
+            document.getElementById('itemFormMestre').reset();
+            document.getElementById('itemImagePreviewMestre').innerHTML = '';
+            document.getElementById('conditionalFieldsMestre').innerHTML = '';
+            document.getElementById('itemPesoTotalMestre').value = '1.00';
+            currentItemImageBase64Mestre = null;
+            document.getElementById('itemTipoMestre').disabled = false;
+            document.getElementById('itemModalMestre').style.display = 'block';
+        };
+
+        // Editar item avulso existente
+        window.editAvulsoItem = function (itemId) {
+            const item = avulsosItems.find(i => i.id === itemId);
+            if (!item) {
+                showAlert('❌ Item não encontrado', 'danger');
+                return;
+            }
+
+            isAvulsoMode = true;
+            currentEditingAvulsoItemId = itemId;
+            currentEditingItemIdMestre = itemId;
+            currentEditingContainerIdMestre = 'avulso';
+
+            document.getElementById('modalTitleMestre').textContent = '📦 Editar Item Avulso';
+
+            // Preencher formulário com dados do item
+            document.getElementById('itemNameMestre').value = item.name || '';
+            document.getElementById('itemTipoMestre').value = item.tipo || 'Objeto';
+            document.getElementById('itemDescriptionMestre').value = item.description || '';
+            document.getElementById('itemDurezaMestre').value = item.dureza || 0;
+            document.getElementById('itemTamanhoMestre').value = item.tamanho || 1;
+            document.getElementById('itemReforcoMestre').value = item.reforco || 0;
+            document.getElementById('itemIntegridadeMestre').value = item.integridade || 10;
+            document.getElementById('itemPesoMestre').value = item.peso || 1;
+            document.getElementById('itemPesoTotalMestre').value = item.totalWeight || item.peso || 1;
+
+            // Imagem
+            if (item.imagem) {
+                currentItemImageBase64Mestre = item.imagem;
+                document.getElementById('itemImagePreviewMestre').innerHTML = `<img src="${item.imagem}" style="max-width: 200px; max-height: 200px; border-radius: 8px;">`;
+            } else {
+                currentItemImageBase64Mestre = null;
+                document.getElementById('itemImagePreviewMestre').innerHTML = '';
+            }
+
+            // Mostrar campos condicionais baseado no tipo
+            updateItemTypeFieldsMestre();
+
+            // Preencher campos específicos por tipo (após mostrar campos condicionais)
+            setTimeout(() => {
+                if (item.tipo === 'Arma') {
+                    if (document.getElementById('itemTipoArmaMestre')) document.getElementById('itemTipoArmaMestre').value = item.tipoArma || '';
+                    if (document.getElementById('itemArremessavelMestre')) document.getElementById('itemArremessavelMestre').checked = item.arremessavel || false;
+                    if (document.getElementById('itemDanoMestre')) document.getElementById('itemDanoMestre').value = item.dano || 0;
+                    if (document.getElementById('itemReacaoMestre')) document.getElementById('itemReacaoMestre').value = item.reacao || 0;
+                } else if (item.tipo === 'Vestimenta') {
+                    if (document.getElementById('itemBlindagemMestre')) document.getElementById('itemBlindagemMestre').value = item.blindagem || 0;
+                    if (document.getElementById('itemDeslocTerrestreMestre')) document.getElementById('itemDeslocTerrestreMestre').value = item.deslocTerrestre || 0;
+                    if (document.getElementById('itemReacaoVestMestre')) document.getElementById('itemReacaoVestMestre').value = item.reacaoVest || 0;
+                    if (document.getElementById('itemIniciativaMestre')) document.getElementById('itemIniciativaMestre').value = item.iniciativa || 0;
+                    if (document.getElementById('itemCargaMaxMestre')) document.getElementById('itemCargaMaxMestre').value = item.cargaMax || 0;
+                } else if (item.tipo === 'Projétil' || item.tipo === 'Objeto' || item.tipo === 'Lunis') {
+                    if (document.getElementById('itemQuantidadeMestre')) document.getElementById('itemQuantidadeMestre').value = item.quantity || 1;
+                    if (document.getElementById('itemPackSizeMestre')) document.getElementById('itemPackSizeMestre').value = item.packSize || 1;
+                    if (item.tipo === 'Projétil' && document.getElementById('itemDanoProjétilMestre')) {
+                        document.getElementById('itemDanoProjétilMestre').value = item.dano || 0;
+                    }
+                } else if (item.tipo === 'Container') {
+                    if (document.getElementById('itemCapacidadeMaxMestre')) document.getElementById('itemCapacidadeMaxMestre').value = item.maxCapacity || 10;
+                    if (document.getElementById('itemTamanhoMaxMestre')) document.getElementById('itemTamanhoMaxMestre').value = item.maxSize || 5;
+                }
+            }, 100);
+
+            document.getElementById('itemTipoMestre').disabled = true; // Não permitir mudar tipo ao editar
+            document.getElementById('itemModalMestre').style.display = 'block';
+        };
+
+        // Deletar item avulso
+        window.deleteAvulsoItem = async function (itemId) {
+            const item = avulsosItems.find(i => i.id === itemId);
+            if (!item) return;
+
+            if (!confirm(`⚠️ Tem certeza que deseja excluir o item "${item.name}"?\n\nEsta ação não pode ser desfeita.`)) return;
+
+            try {
+                await deleteDoc(doc(db, 'items', itemId));
+                showAlert('✅ Item avulso deletado com sucesso!', 'success');
+                await addLog(`excluiu item avulso "${item.name}"`);
+                await loadAvulsosItems();
+            } catch (error) {
+                console.error('❌ Erro ao deletar item avulso:', error);
+                showAlert('❌ Erro ao deletar item: ' + error.message, 'danger');
+            }
+        };
+
+        // Handler para salvar item avulso - chamado por saveItemMestre quando isAvulsoMode = true
+        async function saveAvulsoItemHandler() {
+            const name = document.getElementById('itemNameMestre').value.trim();
+            const tipo = document.getElementById('itemTipoMestre').value;
+
+            let tipoLun = null;
+            if (tipo === 'Lunis') {
+                tipoLun = document.getElementById('itemTipoLunMestre')?.value || null;
+            }
+
+            if (!name || !tipo) {
+                showAlert('❌ Preencha todos os campos obrigatórios!', 'danger');
+                return;
+            }
+
+            // Coletar dados básicos
+            const itemData = {
+                name,
+                tipo,
+                tipoLun,
+                description: document.getElementById('itemDescriptionMestre').value,
+                dureza: parseInt(document.getElementById('itemDurezaMestre').value) || 0,
+                tamanho: parseInt(document.getElementById('itemTamanhoMestre').value) || 1,
+                reforco: parseInt(document.getElementById('itemReforcoMestre').value) || 0,
+                integridade: parseInt(document.getElementById('itemIntegridadeMestre').value) || 10,
+                peso: parseFloat(document.getElementById('itemPesoMestre').value) || 1,
+                imagem: currentItemImageBase64Mestre || null,
+                quantity: 1,
+                packSize: 1,
+                totalWeight: parseFloat(document.getElementById('itemPesoTotalMestre').value) || 1,
+                // IMPORTANTE: Item avulso não tem personagem
+                characterId: null,
+                ownerId: currentUser.uid,
+                containerId: null,
+                equipado: false,
+                isContainerItem: false,
+                linkedContainerId: null
+            };
+
+            // Coletar dados específicos por tipo
+            switch (tipo) {
+                case 'Arma':
+                    itemData.tipoArma = document.getElementById('itemTipoArmaMestre')?.value || '';
+                    itemData.arremessavel = document.getElementById('itemArremessavelMestre')?.checked || false;
+                    itemData.dano = parseInt(document.getElementById('itemDanoMestre').value) || 0;
+                    itemData.reacao = parseInt(document.getElementById('itemReacaoMestre').value) || 0;
+                    break;
+                case 'Vestimenta':
+                    itemData.blindagem = parseInt(document.getElementById('itemBlindagemMestre').value) || 0;
+                    itemData.deslocTerrestre = parseInt(document.getElementById('itemDeslocTerrestreMestre').value) || 0;
+                    itemData.reacaoVest = parseInt(document.getElementById('itemReacaoVestMestre').value) || 0;
+                    itemData.iniciativa = parseInt(document.getElementById('itemIniciativaMestre').value) || 0;
+                    itemData.cargaMax = parseInt(document.getElementById('itemCargaMaxMestre').value) || 0;
+                    break;
+                case 'Projétil':
+                    itemData.quantity = parseInt(document.getElementById('itemQuantidadeMestre').value) || 1;
+                    itemData.packSize = parseInt(document.getElementById('itemPackSizeMestre').value) || 1;
+                    itemData.dano = parseInt(document.getElementById('itemDanoProjétilMestre').value) || 0;
+                    itemData.totalWeight = Math.ceil((itemData.quantity / itemData.packSize) * itemData.peso);
+                    break;
+                case 'Objeto':
+                case 'Lunis':
+                    itemData.quantity = parseInt(document.getElementById('itemQuantidadeMestre').value) || 1;
+                    itemData.packSize = parseInt(document.getElementById('itemPackSizeMestre').value) || 1;
+                    itemData.totalWeight = Math.ceil((itemData.quantity / itemData.packSize) * itemData.peso);
+                    break;
+                case 'Container':
+                    itemData.maxCapacity = parseInt(document.getElementById('itemCapacidadeMaxMestre').value) || 10;
+                    itemData.maxSize = parseInt(document.getElementById('itemTamanhoMaxMestre').value) || 5;
+                    break;
+            }
+
+            try {
+                if (currentEditingAvulsoItemId) {
+                    // Editar item avulso existente
+                    await setDoc(doc(db, 'items', currentEditingAvulsoItemId), itemData);
+                    showAlert('✅ Item avulso atualizado!', 'success');
+                    await addLog(`editou item avulso "${name}"`);
+                } else {
+                    // Criar novo item avulso
+                    const newItemId = 'avulso-' + Date.now();
+                    itemData.id = newItemId;
+                    await setDoc(doc(db, 'items', newItemId), itemData);
+                    showAlert('✅ Item avulso criado!', 'success');
+                    await addLog(`criou item avulso "${name}"`);
+                }
+
+                // Resetar modo e recarregar avulsos
+                isAvulsoMode = false;
+                currentEditingAvulsoItemId = null;
+                document.getElementById('itemModalMestre').style.display = 'none';
+                await loadAvulsosItems();
+
+            } catch (error) {
+                console.error('❌ Erro ao salvar item avulso:', error);
+                showAlert('❌ Erro ao salvar item: ' + error.message, 'danger');
+            }
+        }
+
 
         // Preencher lista de personagens no seletor
         window.populateInventarioPersonagens = function () {
@@ -8076,6 +8419,11 @@ Agilidade 2\n
         }
 
         window.saveItemMestre = async function () {
+            // Verificar se está no modo avulso (item sem personagem)
+            if (isAvulsoMode) {
+                return saveAvulsoItemHandler();
+            }
+
             const name = document.getElementById('itemNameMestre').value.trim();
             const tipo = document.getElementById('itemTipoMestre').value;
 
