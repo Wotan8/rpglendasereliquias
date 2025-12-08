@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lendas Hexmap - Editor de Mapas Hexagonais para RPG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0a0e27;
+            color: #eee;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 280px 1fr 320px;
+            grid-template-rows: 70px 1fr 50px;
+            height: 100vh;
+            gap: 0;
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            font-size: 2.5em;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .header-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .left-panel {
+            background: #16213e;
+            padding: 25px;
+            overflow-y: auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .panel-section {
+            margin-bottom: 30px;
+        }
+
+        .panel-section h3 {
+            color: #ffd700;
+            margin-bottom: 15px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+        }
+
+        .terrain-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .terrain-item {
+            aspect-ratio: 1;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            position: relative;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+        }
+
+        .terrain-item:hover {
+            transform: scale(1.1);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+
+        .terrain-item.active {
+            border-color: #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+            transform: scale(1.1);
+        }
+
+        .terrain-name {
+            font-size: 9px;
+            margin-top: 5px;
+            text-align: center;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .canvas-container {
+            background: #0a0e27;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #hexCanvas {
+            cursor: crosshair;
+            display: block;
+        }
+
+        .canvas-overlay {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 13px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .overlay-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #ffd700;
+            font-size: 14px;
+        }
+
+        .overlay-item {
+            margin: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .right-panel {
+            background: #16213e;
+            padding: 25px;
+            overflow-y: auto;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tool-button {
+            width: 100%;
+            padding: 14px;
+            margin: 6px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .tool-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .tool-button.danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .tool-button.success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .input-group {
+            margin: 18px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #ffd700;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .input-group input,
+        .input-group select,
+        .input-group textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 2px solid #667eea;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus,
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #ffd700;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .input-group textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: inherit;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+        }
+
+        .slider-value {
+            background: #667eea;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 700;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .footer {
+            grid-column: 1 / -1;
+            background: #0f0f1e;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            font-size: 13px;
+            color: #888;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .zoom-display {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .zoom-button {
+            width: 36px;
+            height: 36px;
+            background: #667eea;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+
+        .zoom-button:hover {
+            background: #764ba2;
+            transform: scale(1.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content h2 {
+            color: #ffd700;
+            margin-bottom: 25px;
+            font-size: 26px;
+        }
+
+        .hex-info-card {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 18px;
+            border-radius: 10px;
+            margin: 12px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .annotation-list {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .annotation-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #ffd700;
+            transition: all 0.3s;
+        }
+
+        .annotation-item:hover {
+            background: rgba(0, 0, 0, 0.5);
+            transform: translateX(5px);
+        }
+
+        .layer-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin: 10px 0;
+            transition: all 0.3s;
+        }
+
+        .layer-toggle:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: #555;
+            border-radius: 26px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #4CAF50;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+            transition: 0.3s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle-switch.active::after {
+            left: 27px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .stat-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            transition: all 0.3s;
+        }
+
+        .stat-box:hover {
+            border-color: rgba(102, 126, 234, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .minimap {
+            width: 100%;
+            height: 180px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 3px solid #667eea;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        @media (max-width: 1200px) {
+            .app-container {
+                grid-template-columns: 250px 1fr 280px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr auto auto auto;
+            }
+
+            .left-panel,
+            .right-panel {
+                border: none;
+            }
+        }
+
+        .app-container.fullscreen {
+            grid-template-columns: 1fr 320px;
+        }
+
+        .app-container.fullscreen .left-panel {
+            display: none;
+        }
+
+        .app-container.fullscreen .footer {
+            grid-column: 1 / -1;
+        }
+
+        .app-container.view-mode .left-panel {
+            display: none !important;
+        }
+
+        .app-container.view-mode {
+            grid-template-columns: 1fr 350px;
+        }
+
+        .measurement-panel {
+            position: absolute;
+            top: 80px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 2px solid #ffd700;
+            min-width: 280px;
+            display: none;
+        }
+
+        .measurement-panel.active {
+            display: block;
+        }
+
+        .measurement-title {
+            font-weight: 700;
+            color: #ffd700;
+            font-size: 16px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .measurement-info {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid #ffd700;
+        }
+
+        .measurement-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffd700;
+            margin: 5px 0;
+        }
+
+        .measurement-label {
+            font-size: 12px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .measurement-instruction {
+            font-size: 13px;
+            color: #aaa;
+            font-style: italic;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <div class="header">
+            <div class="header-left">
+                <div class="logo">🗺️</div>
+                <h1>Lendas Hexmap</h1>
+            </div>
+            <div class="header-actions">
+                <button class="header-btn" onclick="toggleViewMode()" id="viewModeBtn">
+                    <span id="viewModeIcon">👁️</span> <span id="viewModeText">Modo Exibição</span>
+                </button>
+                <button class="header-btn" onclick="toggleFullscreen()" id="fullscreenBtn">
+                    🖥️ Maximizar
+                </button>
+                <button class="header-btn" onclick="saveProject()">💾 Salvar</button>
+                <button class="header-btn" onclick="loadProject()">📂 Carregar</button>
+            </div>
+        </div>
+
+        <div class="left-panel">
+            <div class="panel-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0;">🎨 Terrenos</h3>
+                    <button onclick="openTerrainEditor()"
+                        style="background: rgba(255,215,0,0.2); border: 2px solid #ffd700; border-radius: 6px; padding: 6px 12px; color: #ffd700; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.3s;"
+                        onmouseover="this.style.background='rgba(255,215,0,0.3)'"
+                        onmouseout="this.style.background='rgba(255,215,0,0.2)'">
+                        ✏️ Editar
+                    </button>
+                </div>
+                <div class="terrain-grid" id="terrainGrid"></div>
+            </div>
+
+            <div class="panel-section">
+                <h3>🛠️ Ferramentas</h3>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px;">
+                    <button class="tool-button" onclick="undo()" id="undoBtn" style="padding: 10px; margin: 0;">
+                        ↶ Desfazer
+                    </button>
+                    <button class="tool-button" onclick="redo()" id="redoBtn" style="padding: 10px; margin: 0;">
+                        ↷ Refazer
+                    </button>
+                </div>
+
+                <div class="input-group">
+                    <label>Modo de Edição</label>
+                    <select id="editMode" onchange="changeEditMode()">
+                        <option value="paint">🎨 Pintar Terreno</option>
+                        <option value="annotate">📝 Adicionar Nota</option>
+                        <option value="erase">🗑️ Apagar</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Tamanho do Pincel</label>
+                    <div class="slider-container">
+                        <input type="range" id="brushSize" min="1" max="5" value="1" oninput="updateBrushSize()">
+                        <span class="slider-value" id="brushSizeDisplay">1</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>⚙️ Camadas</h3>
+                <div class="layer-toggle">
+                    <div class="toggle-switch active" id="terrainToggle" onclick="toggleLayer('terrain')"></div>
+                    <span>Terreno</span>
+                </div>
+                <div class="layer-toggle">
+                    <div class="toggle-switch active" id="annotationsToggle" onclick="toggleLayer('annotations')"></div>
+                    <span>Anotações</span>
+                </div>
+                <div class="layer-toggle">
+                    <div class="toggle-switch active" id="gridToggle" onclick="toggleLayer('grid')"></div>
+                    <span>Grade</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="hexCanvas"></canvas>
+            <div class="canvas-overlay">
+                <div class="overlay-title">Controles</div>
+                <div class="overlay-item">🖱️ Clique: Editar hex</div>
+                <div class="overlay-item">🖱️ Arrastar: Mover mapa</div>
+                <div class="overlay-item">🖱️ Scroll: Zoom</div>
+                <div class="overlay-item">⌨️ Setas: Navegar hexs</div>
+                <div class="overlay-item">⌨️ Ctrl+Z: Desfazer</div>
+                <div class="overlay-item">⌨️ Ctrl+Y: Refazer</div>
+                <div class="overlay-item" id="mouseCoords">Mouse: -</div>
+            </div>
+
+            <div class="measurement-panel" id="measurementPanel">
+                <div class="measurement-title">
+                    📏 Medição de Distância
+                </div>
+                <div class="measurement-info">
+                    <div class="measurement-label">Distância</div>
+                    <div class="measurement-value" id="measurementDistance">0 km</div>
+                </div>
+                <div class="measurement-info">
+                    <div class="measurement-label">Tempo de Viagem</div>
+                    <div class="measurement-value" id="measurementTime">0 dias</div>
+                </div>
+                <div class="measurement-instruction">
+                    Clique no hex inicial, depois no hex final
+                </div>
+                <button class="tool-button" onclick="clearMeasurement()" style="margin-top: 15px; width: 100%;">
+                    🗑️ Limpar Medição
+                </button>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="panel-section">
+                <h3>📊 Estatísticas</h3>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-value" id="statTotal">0</div>
+                        <div class="stat-label">Total Hexes</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="statAnnotations">0</div>
+                        <div class="stat-label">Anotações</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section" id="measurementConfigSection" style="display: none;">
+                <h3>📏 Configuração de Medição</h3>
+                <div class="input-group">
+                    <label>KM por Hexágono</label>
+                    <input type="number" id="kmPerHexInput" min="1" max="100" value="10"
+                        onchange="updateMeasurementConfig()" style="background: rgba(255,255,255,0.1);">
+                </div>
+                <div class="input-group">
+                    <label>Horas por Hexágono</label>
+                    <input type="number" id="hoursPerHexInput" min="0.5" max="24" step="0.5" value="3"
+                        onchange="updateMeasurementConfig()" style="background: rgba(255,255,255,0.1);">
+                </div>
+                <div style="font-size: 12px; color: #888; margin-top: 10px;">
+                    💡 Ajuste baseado na velocidade de viagem e tamanho dos hexágonos
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>ℹ️ Hex Selecionado</h3>
+                <div class="hex-info-card" id="hexInfo">
+                    <p style="color: #888; text-align: center;">Clique em um hexágono</p>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>📝 Anotações Recentes</h3>
+                <div class="annotation-list" id="annotationList">
+                    <p style="color: #888; text-align: center; font-size: 12px;">Nenhuma anotação</p>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>🎬 Ações Rápidas</h3>
+                <button class="tool-button" onclick="showNewMapDialog()">🆕 Novo Mapa</button>
+                <button class="tool-button success" onclick="exportToJSON()">📥 Exportar JSON</button>
+                <button class="tool-button success" onclick="importFromJSON()">📤 Importar JSON</button>
+                <button class="tool-button" onclick="generateRandom()">🎲 Gerar Aleatório</button>
+                <button class="tool-button danger" onclick="clearMap()">🗑️ Limpar Tudo</button>
+            </div>
+
+            <canvas class="minimap" id="minimap"></canvas>
+        </div>
+
+        <div class="footer">
+            <div>Tamanho: <span id="mapDimensions">15x12</span></div>
+            <div class="zoom-display">
+                <button class="zoom-button" onclick="zoomOut()">-</button>
+                <span id="zoomLevel">100%</span>
+                <button class="zoom-button" onclick="zoomIn()">+</button>
+                <button class="zoom-button" onclick="resetView()">⟲</button>
+            </div>
+            <div>Hex: <span id="selectedHex">-</span></div>
+        </div>
+    </div>
+
+    <div id="newMapModal" class="modal">
+        <div class="modal-content">
+            <h2>Criar Novo Mapa</h2>
+            <div class="input-group">
+                <label>Largura (hexágonos)</label>
+                <input type="number" id="newMapWidth" min="5" max="40" value="15">
+            </div>
+            <div class="input-group">
+                <label>Altura (hexágonos)</label>
+                <input type="number" id="newMapHeight" min="5" max="40" value="12">
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 25px;">
+                <button class="tool-button success" onclick="createNewMap()">Criar Mapa</button>
+                <button class="tool-button" onclick="closeModal('newMapModal')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="annotationModal" class="modal">
+        <div class="modal-content">
+            <h2>Adicionar Anotação</h2>
+            <div class="input-group">
+                <label>Título</label>
+                <input type="text" id="annotationTitle" placeholder="Ex: Vila do Norte">
+            </div>
+            <div class="input-group">
+                <label>Descrição</label>
+                <textarea id="annotationText" placeholder="Descreva este local..."></textarea>
+            </div>
+            <div class="input-group">
+                <label>Tipo</label>
+                <select id="annotationType">
+                    <option value="location">🏰 Localização</option>
+                    <option value="encounter">⚔️ Encontro</option>
+                    <option value="treasure">💎 Tesouro</option>
+                    <option value="danger">☠️ Perigo</option>
+                    <option value="quest">📜 Missão</option>
+                    <option value="note">📝 Nota</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 25px;">
+                <button class="tool-button success" onclick="saveAnnotation()">Salvar</button>
+                <button class="tool-button" onclick="closeModal('annotationModal')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="jsonFileInput" accept=".json" onchange="handleJSONImport(event)">
+
+    <div id="terrainEditorModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <h2>✏️ Editor de Terrenos</h2>
+            <p style="color: #aaa; margin-bottom: 20px;">Personalize cada terreno com imagens próprias.</p>
+
+            <div style="max-height: 60vh; overflow-y: auto;">
+                <div id="terrainEditorList"></div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 25px;">
+                <button class="tool-button danger" onclick="clearAllTerrainImages()">🗑️ Limpar Todas</button>
+                <button class="tool-button success" onclick="closeModal('terrainEditorModal')">✓ Concluído</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="hexmap.js"></script>
+</body>
+
+</html>
