@@ -1702,6 +1702,141 @@
             outline: none;
             border-color: var(--primary);
         }
+
+        /* ========== ESTILOS DO VISUALIZADOR DE CONTAINER AVULSO ========== */
+        .container-viewer-section {
+            margin-top: 25px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 95, 70, 0.2));
+            border: 2px solid rgba(16, 185, 129, 0.5);
+            border-radius: 15px;
+            padding: 20px;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .container-viewer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .container-viewer-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #10b981;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .container-viewer-close {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid var(--danger);
+            color: var(--danger);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .container-viewer-close:hover {
+            background: var(--danger);
+            color: white;
+            transform: rotate(90deg);
+        }
+
+        .container-viewer-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .container-stat {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 12px 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .container-stat-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+
+        .container-stat-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #10b981;
+        }
+
+        .container-viewer-items {
+            display: grid;
+            gap: 12px;
+        }
+
+        .container-item-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .container-item-card:hover {
+            border-color: rgba(16, 185, 129, 0.6);
+            transform: translateX(5px);
+        }
+
+        .container-viewer-empty {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+
+        .container-viewer-actions {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 2px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-move-to-container {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-move-to-container:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
     </style>
 </head>
 
@@ -1989,6 +2124,48 @@
                     </div>
                     <div style="font-size: 0.95rem;">
                         Clique em "Adicionar Item Avulso" para criar itens que não pertencem a nenhum personagem
+                    </div>
+                </div>
+
+                <!-- Visualizador de Container Aberto -->
+                <div id="avulsoContainerViewer" class="container-viewer-section" style="display: none;">
+                    <div class="container-viewer-header">
+                        <div class="container-viewer-title">
+                            <span>📂</span>
+                            <span id="avulsoContainerName">Container</span>
+                        </div>
+                        <button class="container-viewer-close" onclick="closeAvulsoContainerViewer()">✕</button>
+                    </div>
+
+                    <!-- Stats do Container -->
+                    <div class="container-viewer-stats">
+                        <div class="container-stat">
+                            <div class="container-stat-label">Capacidade</div>
+                            <div class="container-stat-value" id="containerCapacityUsed">0 / 10</div>
+                        </div>
+                        <div class="container-stat">
+                            <div class="container-stat-label">Tamanho Máx. Item</div>
+                            <div class="container-stat-value" id="containerMaxSize">5</div>
+                        </div>
+                        <div class="container-stat">
+                            <div class="container-stat-label">Itens</div>
+                            <div class="container-stat-value" id="containerItemCount">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Itens dentro do Container -->
+                    <div id="avulsoContainerItems" class="container-viewer-items">
+                        <div class="container-viewer-empty">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">📭</div>
+                            <div>Este container está vazio</div>
+                        </div>
+                    </div>
+
+                    <!-- Ações do Container -->
+                    <div class="container-viewer-actions">
+                        <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 10px;">
+                            💡 Para adicionar itens, clique no botão "📥" nos itens avulsos acima
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3660,6 +3837,52 @@ Agilidade 2\n
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeEconomyEventModal()">Cancelar</button>
                 <button class="btn btn-primary" onclick="saveEconomyEvent()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Transferir Item -->
+    <div id="transferItemModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <span class="modal-title">🔄 Transferir Item</span>
+                <span class="modal-close" onclick="closeTransferItemModal()">&times;</span>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label class="npc-form-label">Item a transferir:</label>
+                    <div id="transferItemName"
+                        style="background: rgba(139, 92, 246, 0.2); border: 2px solid var(--primary); border-radius: 10px; padding: 12px; font-weight: 700; color: var(--light); font-size: 1.1rem;">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label class="npc-form-label">🔍 Buscar Personagem</label>
+                    <input type="text" class="form-input" id="transferSearchCharacter"
+                        placeholder="Digite o nome do personagem..." oninput="filterTransferCharacters()">
+                </div>
+
+                <div class="form-group">
+                    <label class="npc-form-label">Selecione o personagem de destino:</label>
+                    <div id="transferCharactersList"
+                        style="max-height: 350px; overflow-y: auto; display: grid; gap: 10px; padding: 5px;">
+                        <div style="text-align: center; padding: 40px; color: #64748b;">Carregando personagens...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"
+                style="padding: 15px 20px; border-top: 2px solid var(--border); display: flex; justify-content: space-between; gap: 10px;">
+                <button class="btn btn-warning" onclick="transferItemToAvulsoFromModal()" id="btnTransferToAvulso"
+                    style="display: none;">
+                    📦 Avulso
+                </button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-success" onclick="confirmTransferItem()" id="btnConfirmTransfer"
+                        style="display: none;">
+                        ✅ Transferir
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeTransferItemModal()">❌</button>
+                </div>
             </div>
         </div>
     </div>
@@ -7459,6 +7682,7 @@ Agilidade 2\n
         let avulsosItems = [];
         let currentEditingAvulsoItemId = null;
         let isAvulsoMode = false;
+        let currentOpenContainerId = null; // ID do container avulso atualmente aberto
 
         // Carregar itens avulsos do Firebase (itens sem characterId)
         async function loadAvulsosItems() {
@@ -7494,10 +7718,13 @@ Agilidade 2\n
             const mainContainer = document.getElementById('avulsosItemsContainer');
             const countElement = document.getElementById('avulsosItemsCount');
 
-            // Atualizar contagem
-            countElement.textContent = `${avulsosItems.length} item(s) avulso(s) encontrado(s)`;
+            // Filtrar itens que NÃO estão dentro de um container (não têm parentItemId)
+            const topLevelItems = avulsosItems.filter(item => !item.parentItemId);
 
-            if (avulsosItems.length === 0) {
+            // Atualizar contagem
+            countElement.textContent = `${topLevelItems.length} item(s) avulso(s) encontrado(s)`;
+
+            if (topLevelItems.length === 0) {
                 mainContainer.style.display = 'none';
                 emptyContainer.style.display = 'block';
                 return;
@@ -7507,7 +7734,7 @@ Agilidade 2\n
             emptyContainer.style.display = 'none';
 
             // Ordenar itens por nome
-            const sortedItems = [...avulsosItems].sort((a, b) =>
+            const sortedItems = [...topLevelItems].sort((a, b) =>
                 (a.name || '').localeCompare(b.name || '')
             );
 
@@ -7516,8 +7743,26 @@ Agilidade 2\n
                     `<img src="${item.imagem}" style="width: 60px; height: 60px; object-fit: contain; border-radius: 10px; margin-right: 15px; background: rgba(15, 23, 42, 0.8); padding: 5px; border: 2px solid var(--border);">` :
                     `<div style="width: 60px; height: 60px; background: rgba(245, 158, 11, 0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 1.5rem; border: 2px solid rgba(245, 158, 11, 0.4);">📦</div>`;
 
+                // Verificar se é um container
+                const isContainer = item.tipo === 'Container';
+                const isContainerOpen = currentOpenContainerId === item.id;
+
+                // Botão de abrir container (só para itens do tipo Container)
+                const openContainerBtn = isContainer ? `
+                    <button class="btn ${isContainerOpen ? 'btn-success' : 'btn-warning'}" onclick="openAvulsoContainer('${item.id}')" style="padding: 10px 16px; font-size: 0.9rem;" title="${isContainerOpen ? 'Container aberto' : 'Abrir Container'}">
+                        ${isContainerOpen ? '📂' : '📁'}
+                    </button>
+                ` : '';
+
+                // Botão de mover para container (só aparece quando um container está aberto e o item não é um container)
+                const moveToContainerBtn = (currentOpenContainerId && !isContainer) ? `
+                    <button class="btn-move-to-container" onclick="moveItemToContainer('${item.id}')" style="padding: 10px 16px; font-size: 0.9rem;" title="Mover para o container aberto">
+                        📥
+                    </button>
+                ` : '';
+
                 return `
-                    <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid var(--border); border-radius: 12px; padding: 18px; display: flex; align-items: center; gap: 15px; transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(245, 158, 11, 0.6)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid ${isContainerOpen ? 'rgba(16, 185, 129, 0.6)' : 'var(--border)'}; border-radius: 12px; padding: 18px; display: flex; align-items: center; gap: 15px; transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(245, 158, 11, 0.6)'" onmouseout="this.style.borderColor='${isContainerOpen ? 'rgba(16, 185, 129, 0.6)' : 'var(--border)'}'" id="avulso-item-${item.id}">
                         ${imagemHTML}
                         <div style="flex: 1; min-width: 0;">
                             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -7527,6 +7772,7 @@ Agilidade 2\n
                                 <span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;">
                                     ${item.tipo || 'Sem tipo'}
                                 </span>
+                                ${isContainer ? `<span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;">📦 Cap: ${item.maxCapacity || 10}</span>` : ''}
                             </div>
                             <div style="font-size: 0.9rem; color: #94a3b8; margin-top: 8px;">
                                 Peso: ${item.totalWeight || item.peso || 0} | 
@@ -7541,7 +7787,12 @@ Agilidade 2\n
                                 </div>
                             ` : ''}
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; align-items: center;">
+                            ${openContainerBtn}
+                            ${moveToContainerBtn}
+                            <button class="btn btn-primary" onclick="openTransferItemModal('${item.id}', true)" style="padding: 10px 16px; font-size: 0.9rem;" title="Transferir Item">
+                                🔄
+                            </button>
                             <button class="btn btn-secondary" onclick="editAvulsoItem('${item.id}')" style="padding: 10px 16px; font-size: 0.9rem;">
                                 ✏️
                             </button>
@@ -7656,6 +7907,203 @@ Agilidade 2\n
             }
         };
 
+        // ============= SISTEMA DE VISUALIZAÇÃO DE CONTAINER AVULSO =============
+
+        // Abrir container avulso para visualizar/gerenciar itens dentro
+        window.openAvulsoContainer = async function (containerId) {
+            const container = avulsosItems.find(i => i.id === containerId);
+            if (!container || container.tipo !== 'Container') {
+                showAlert('❌ Container não encontrado', 'danger');
+                return;
+            }
+
+            // Se clicar no mesmo container, fechar
+            if (currentOpenContainerId === containerId) {
+                closeAvulsoContainerViewer();
+                return;
+            }
+
+            currentOpenContainerId = containerId;
+
+            // Atualizar UI
+            document.getElementById('avulsoContainerName').textContent = container.name || 'Container';
+            document.getElementById('containerMaxSize').textContent = container.maxSize || 5;
+
+            // Mostrar viewer
+            document.getElementById('avulsoContainerViewer').style.display = 'block';
+
+            // Scroll suave até o viewer
+            document.getElementById('avulsoContainerViewer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Renderizar itens dentro do container
+            renderContainerItems();
+
+            // Re-renderizar lista de avulsos para atualizar botões
+            renderAvulsosItems();
+        };
+
+        // Fechar visualizador de container
+        window.closeAvulsoContainerViewer = function () {
+            currentOpenContainerId = null;
+            document.getElementById('avulsoContainerViewer').style.display = 'none';
+
+            // Re-renderizar lista para atualizar botões
+            renderAvulsosItems();
+        };
+
+        // Renderizar itens dentro do container aberto
+        function renderContainerItems() {
+            const container = avulsosItems.find(i => i.id === currentOpenContainerId);
+            if (!container) return;
+
+            const containerItemsDiv = document.getElementById('avulsoContainerItems');
+
+            // Encontrar itens que estão dentro deste container
+            const itemsInContainer = avulsosItems.filter(item => item.parentItemId === currentOpenContainerId);
+
+            // Calcular capacidade usada (soma dos tamanhos)
+            const usedCapacity = itemsInContainer.reduce((sum, item) => sum + (item.tamanho || 1), 0);
+            const maxCapacity = container.maxCapacity || 10;
+
+            // Atualizar stats
+            document.getElementById('containerCapacityUsed').textContent = `${usedCapacity} / ${maxCapacity}`;
+            document.getElementById('containerItemCount').textContent = itemsInContainer.length;
+
+            if (itemsInContainer.length === 0) {
+                containerItemsDiv.innerHTML = `
+                    <div class="container-viewer-empty">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">📭</div>
+                        <div>Este container está vazio</div>
+                    </div>
+                `;
+                return;
+            }
+
+            containerItemsDiv.innerHTML = itemsInContainer.map(item => {
+                const imagemHTML = item.imagem ?
+                    `<img src="${item.imagem}" style="width: 50px; height: 50px; object-fit: contain; border-radius: 8px; background: rgba(15, 23, 42, 0.8); padding: 3px; border: 1px solid var(--border);">` :
+                    `<div style="width: 50px; height: 50px; background: rgba(16, 185, 129, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border: 1px solid rgba(16, 185, 129, 0.4);">📄</div>`;
+
+                return `
+                    <div class="container-item-card">
+                        ${imagemHTML}
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                <div style="font-size: 1rem; font-weight: 700; color: var(--light);">
+                                    ${item.name || 'Item sem nome'}
+                                </div>
+                                <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">
+                                    ${item.tipo || 'Sem tipo'}
+                                </span>
+                            </div>
+                            <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">
+                                Peso: ${item.totalWeight || item.peso || 0} | Tamanho: ${item.tamanho || 0} | Qtd: ${item.quantity || 1}
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-warning" onclick="removeItemFromContainer('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Remover do container">
+                                📤
+                            </button>
+                            <button class="btn btn-primary" onclick="openTransferItemModal('${item.id}', true)" style="padding: 8px 14px; font-size: 0.85rem;" title="Transferir">
+                                🔄
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Mover item avulso para dentro do container aberto
+        window.moveItemToContainer = async function (itemId) {
+            if (!currentOpenContainerId) {
+                showAlert('❌ Nenhum container aberto', 'danger');
+                return;
+            }
+
+            const item = avulsosItems.find(i => i.id === itemId);
+            const container = avulsosItems.find(i => i.id === currentOpenContainerId);
+
+            if (!item || !container) {
+                showAlert('❌ Item ou container não encontrado', 'danger');
+                return;
+            }
+
+            // Verificar se o item cabe no container (tamanho)
+            if ((item.tamanho || 1) > (container.maxSize || 5)) {
+                showAlert(`❌ Item muito grande para este container! Tamanho do item: ${item.tamanho || 1}, Máx. permitido: ${container.maxSize || 5}`, 'warning');
+                return;
+            }
+
+            // Verificar capacidade
+            const itemsInContainer = avulsosItems.filter(i => i.parentItemId === currentOpenContainerId);
+            const usedCapacity = itemsInContainer.reduce((sum, i) => sum + (i.tamanho || 1), 0);
+            const remainingCapacity = (container.maxCapacity || 10) - usedCapacity;
+
+            if ((item.tamanho || 1) > remainingCapacity) {
+                showAlert(`❌ Container cheio! Capacidade restante: ${remainingCapacity}, Tamanho do item: ${item.tamanho || 1}`, 'warning');
+                return;
+            }
+
+            try {
+                // Atualizar item no Firebase - definir parentItemId
+                await setDoc(doc(db, 'items', itemId), {
+                    parentItemId: currentOpenContainerId
+                }, { merge: true });
+
+                showAlert(`✅ "${item.name}" movido para "${container.name}"!`, 'success');
+                await addLog(currentUser.email || 'Mestre', `moveu item "${item.name}" para container "${container.name}"`, 'Avulso', 'items');
+
+                // Recarregar itens e re-renderizar
+                await loadAvulsosItems();
+
+                // Re-abrir o container viewer (loadAvulsosItems reseta tudo)
+                currentOpenContainerId = container.id;
+                document.getElementById('avulsoContainerViewer').style.display = 'block';
+                renderContainerItems();
+
+            } catch (error) {
+                console.error('❌ Erro ao mover item para container:', error);
+                showAlert('❌ Erro ao mover item: ' + error.message, 'danger');
+            }
+        };
+
+        // Remover item de dentro do container (devolver para avulsos)
+        window.removeItemFromContainer = async function (itemId) {
+            const item = avulsosItems.find(i => i.id === itemId);
+            if (!item) {
+                showAlert('❌ Item não encontrado', 'danger');
+                return;
+            }
+
+            const container = avulsosItems.find(i => i.id === item.parentItemId);
+            const containerName = container ? container.name : 'container';
+
+            try {
+                // Atualizar item no Firebase - remover parentItemId
+                await setDoc(doc(db, 'items', itemId), {
+                    parentItemId: null
+                }, { merge: true });
+
+                showAlert(`✅ "${item.name}" removido do container!`, 'success');
+                await addLog(currentUser.email || 'Mestre', `removeu item "${item.name}" do container "${containerName}"`, 'Avulso', 'items');
+
+                // Recarregar itens
+                await loadAvulsosItems();
+
+                // Re-abrir o container viewer se ainda estiver aberto
+                if (currentOpenContainerId) {
+                    const containerId = currentOpenContainerId;
+                    currentOpenContainerId = containerId; // Manter aberto
+                    document.getElementById('avulsoContainerViewer').style.display = 'block';
+                    renderContainerItems();
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao remover item do container:', error);
+                showAlert('❌ Erro ao remover item: ' + error.message, 'danger');
+            }
+        };
+
         // Handler para salvar item avulso - chamado por saveItemMestre quando isAvulsoMode = true
         async function saveAvulsoItemHandler() {
             const name = document.getElementById('itemNameMestre').value.trim();
@@ -7733,14 +8181,13 @@ Agilidade 2\n
                     // Editar item avulso existente
                     await setDoc(doc(db, 'items', currentEditingAvulsoItemId), itemData);
                     showAlert('✅ Item avulso atualizado!', 'success');
-                    await addLog(`editou item avulso "${name}"`);
+                    await addLog(currentUser.email || 'Mestre', `editou item avulso "${name}"`, 'Avulso', 'items');
                 } else {
-                    // Criar novo item avulso
                     const newItemId = 'avulso-' + Date.now();
                     itemData.id = newItemId;
                     await setDoc(doc(db, 'items', newItemId), itemData);
                     showAlert('✅ Item avulso criado!', 'success');
-                    await addLog(`criou item avulso "${name}"`);
+                    await addLog(currentUser.email || 'Mestre', `criou item avulso "${name}"`, 'Avulso', 'items');
                 }
 
                 // Resetar modo e recarregar avulsos
@@ -7755,6 +8202,397 @@ Agilidade 2\n
             }
         }
 
+        // ============= SISTEMA DE TRANSFERÊNCIA DE ITENS =============
+        let currentTransferItemId = null;
+        let currentTransferIsAvulso = false;
+        let selectedTargetCharacterId = null; // Personagem selecionado para receber o item
+
+        // Abrir modal de transferência de item
+        window.openTransferItemModal = function (itemId, isAvulso) {
+            currentTransferItemId = itemId;
+            currentTransferIsAvulso = isAvulso;
+            selectedTargetCharacterId = null; // Limpar seleção anterior
+
+            // Buscar dados do item
+            let item = null;
+            if (isAvulso) {
+                item = avulsosItems.find(i => i.id === itemId);
+            } else {
+                item = currentInventarioItems.find(i => i.id === itemId);
+            }
+
+            if (!item) {
+                showAlert('❌ Item não encontrado', 'danger');
+                return;
+            }
+
+            // Preencher nome do item no modal
+            document.getElementById('transferItemName').textContent = `${item.name || 'Item sem nome'} (${item.tipo || 'Sem tipo'})`;
+            document.getElementById('transferSearchCharacter').value = '';
+
+            // Renderizar lista de personagens
+            renderTransferCharactersList(allCharacters);
+
+            // Mostrar/esconder botão "Tornar Avulso" - só aparece se item é de um personagem (não é avulso)
+            const btnAvulso = document.getElementById('btnTransferToAvulso');
+            if (btnAvulso) {
+                btnAvulso.style.display = isAvulso ? 'none' : 'block';
+            }
+
+            // Esconder botão de confirmar até selecionar um personagem
+            const btnConfirm = document.getElementById('btnConfirmTransfer');
+            if (btnConfirm) {
+                btnConfirm.style.display = 'none';
+            }
+
+            // Mostrar modal
+            document.getElementById('transferItemModal').style.display = 'flex';
+        };
+
+        // Fechar modal de transferência
+        window.closeTransferItemModal = function () {
+            document.getElementById('transferItemModal').style.display = 'none';
+            currentTransferItemId = null;
+            currentTransferIsAvulso = false;
+            selectedTargetCharacterId = null;
+        };
+
+        // Filtrar personagens na lista de transferência
+        window.filterTransferCharacters = function () {
+            const searchTerm = document.getElementById('transferSearchCharacter').value.toLowerCase().trim();
+
+            if (!searchTerm) {
+                renderTransferCharactersList(allCharacters);
+                return;
+            }
+
+            const filtered = allCharacters.filter(char =>
+                (char.nome || '').toLowerCase().includes(searchTerm) ||
+                (char.jogador || '').toLowerCase().includes(searchTerm)
+            );
+
+            renderTransferCharactersList(filtered);
+        };
+
+        // Renderizar lista de personagens para transferência
+        function renderTransferCharactersList(characters) {
+            const listContainer = document.getElementById('transferCharactersList');
+
+            if (characters.length === 0) {
+                listContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Nenhum personagem encontrado</div>';
+                return;
+            }
+
+            listContainer.innerHTML = characters.map(char => {
+                const isSelected = selectedTargetCharacterId === char.id;
+                const borderColor = isSelected ? 'var(--success)' : 'var(--border)';
+                const bgColor = isSelected ? 'rgba(16, 185, 129, 0.2)' : 'rgba(15, 23, 42, 0.6)';
+                const checkIcon = isSelected ? '✅' : '➡️';
+
+                return `
+                <div onclick="selectTransferTarget('${char.id}')" 
+                     id="transfer-char-${char.id}"
+                     style="background: ${bgColor}; border: 2px solid ${borderColor}; border-radius: 10px; padding: 15px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 15px;"
+                     onmouseover="if(!this.classList.contains('selected')) { this.style.borderColor='var(--primary)'; this.style.background='rgba(139, 92, 246, 0.1)'; }"
+                     onmouseout="if(!this.classList.contains('selected')) { this.style.borderColor='var(--border)'; this.style.background='rgba(15, 23, 42, 0.6)'; }"
+                     class="${isSelected ? 'selected' : ''}">
+                    <div style="width: 45px; height: 45px; background: linear-gradient(135deg, ${isSelected ? 'var(--success)' : 'var(--primary)'}, ${isSelected ? '#059669' : 'var(--secondary)'}); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: white; font-weight: 700;">
+                        ${(char.nome || '?')[0].toUpperCase()}
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 700; color: var(--light); font-size: 1.1rem;">${char.nome || 'Sem nome'}</div>
+                        <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 3px;">
+                            ${char.jogador || 'Jogador'} • ${char.classe || 'Sem classe'} • ${char.raca || 'Sem raça'}
+                        </div>
+                    </div>
+                    <div style="color: ${isSelected ? 'var(--success)' : 'var(--primary)'}; font-size: 1.2rem;">${checkIcon}</div>
+                </div>
+            `}).join('');
+        }
+
+        // Selecionar personagem de destino para transferência
+        window.selectTransferTarget = function (characterId) {
+            selectedTargetCharacterId = characterId;
+
+            // Re-renderizar lista para mostrar seleção
+            renderTransferCharactersList(allCharacters);
+
+            // Mostrar botão de confirmar
+            const btnConfirm = document.getElementById('btnConfirmTransfer');
+            if (btnConfirm) {
+                btnConfirm.style.display = 'block';
+            }
+        };
+
+        // Confirmar transferência para o personagem selecionado
+        window.confirmTransferItem = async function () {
+            if (!selectedTargetCharacterId) {
+                showAlert('❌ Selecione um personagem de destino', 'danger');
+                return;
+            }
+
+            // Executar a transferência
+            await transferItemToCharacter(selectedTargetCharacterId);
+        };
+
+        // Transferir item para personagem selecionado (função interna)
+        async function transferItemToCharacter(targetCharacterId) {
+            if (!currentTransferItemId) {
+                showAlert('❌ Nenhum item selecionado para transferência', 'danger');
+                return;
+            }
+
+            const targetCharacter = allCharacters.find(c => c.id === targetCharacterId);
+            if (!targetCharacter) {
+                showAlert('❌ Personagem de destino não encontrado', 'danger');
+                return;
+            }
+
+            // Buscar o item para obter o nome e tipo
+            let item = null;
+            let itemName = 'Item';
+            if (currentTransferIsAvulso) {
+                item = avulsosItems.find(i => i.id === currentTransferItemId);
+                if (item) itemName = item.name || 'Item';
+            } else {
+                item = currentInventarioItems.find(i => i.id === currentTransferItemId);
+                if (item) itemName = item.name || 'Item';
+            }
+
+            try {
+                // Buscar o documento do personagem de destino para obter o ownerId correto
+                const targetCharDoc = await getDoc(doc(db, 'characters', targetCharacterId));
+                let targetOwnerId = currentUser.uid; // fallback
+
+                if (targetCharDoc.exists()) {
+                    const charData = targetCharDoc.data();
+                    // ✅ CORREÇÃO: Usar ownerUid que é o campo correto em characters
+                    targetOwnerId = charData.ownerUid || currentUser.uid;
+                }
+
+                // Buscar container "Equipados" do personagem de destino
+                const containersRef = collection(db, 'containers');
+                const containersQuery = query(containersRef, where('characterId', '==', targetCharacterId), where('name', '==', 'Equipados'));
+                const containersSnapshot = await getDocs(containersQuery);
+
+                let equipadosContainerId = 'está com alguém';
+
+                if (containersSnapshot.empty) {
+                    // Criar container Equipados para o personagem se não existir
+                    const maxSize = (targetCharacter.for || 1) * (targetCharacter.vig || 1) * ((targetCharacter.skills?.atletismo || 0) + 1);
+                    let maxCapacity = (targetCharacter.for || 1) + (targetCharacter.vig || 1);
+                    if (targetCharacter.raca === 'Yotun') maxCapacity = maxCapacity * 2;
+
+                    const newEquipadosId = 'equipados-' + Date.now();
+                    const newEquipados = {
+                        id: newEquipadosId,
+                        name: 'Equipados',
+                        ownerId: targetOwnerId,
+                        characterId: targetCharacterId,
+                        maxCapacity: maxCapacity,
+                        maxSize: maxSize,
+                        itemIds: []
+                    };
+
+                    await setDoc(doc(db, 'containers', newEquipadosId), newEquipados);
+                    equipadosContainerId = 'está com alguém';
+                }
+
+                // Atualizar o item principal no Firebase
+                await setDoc(doc(db, 'items', currentTransferItemId), {
+                    characterId: targetCharacterId,
+                    ownerId: targetOwnerId,
+                    containerId: equipadosContainerId,
+                    equipado: false,
+                    parentItemId: null // Remover parentItemId se estiver em outro container
+                }, { merge: true });
+
+                // ✅ Se o item é um Container, criar o documento de container E transferir itens dentro
+                let itemsTransferred = 0;
+                if (item && item.tipo === 'Container') {
+                    // CRIAR documento na coleção 'containers' para o item aparecer como bloco
+                    const newContainerId = 'container-' + Date.now();
+                    const newContainerDoc = {
+                        id: newContainerId,
+                        name: item.name,
+                        ownerId: targetOwnerId,
+                        characterId: targetCharacterId,
+                        maxCapacity: item.maxCapacity || 10,
+                        maxSize: item.maxSize || 5,
+                        itemIds: [],
+                        description: item.description || '',
+                        dureza: item.dureza || 0,
+                        tamanho: item.tamanho || 1,
+                        integridade: item.integridade || 0,
+                        peso: item.peso || 0
+                    };
+                    await setDoc(doc(db, 'containers', newContainerId), newContainerDoc);
+                    console.log(`📦 Container document created: ${newContainerId}`);
+
+                    // ATUALIZAR o item para ser um "Item de Container" vinculado
+                    await setDoc(doc(db, 'items', currentTransferItemId), {
+                        isContainerItem: true,
+                        linkedContainerId: newContainerId
+                    }, { merge: true });
+
+                    // Buscar todos os itens que estão dentro deste container (parentItemId === item.id)
+                    const itemsInsideContainer = avulsosItems.filter(i => i.parentItemId === currentTransferItemId);
+
+                    for (const childItem of itemsInsideContainer) {
+                        // Mover os itens para DENTRO do novo container (não para Equipados)
+                        await setDoc(doc(db, 'items', childItem.id), {
+                            characterId: targetCharacterId,
+                            ownerId: targetOwnerId,
+                            containerId: newContainerId, // Agora vai para o container criado!
+                            equipado: false,
+                            parentItemId: null // Remover parentItemId pois agora usa containerId
+                        }, { merge: true });
+                        itemsTransferred++;
+                    }
+
+                    console.log(`📦 Transferidos ${itemsTransferred} itens para dentro do container "${itemName}"`);
+                }
+
+                // Log da transferência - usando os 4 parâmetros corretos
+                const logMessage = itemsTransferred > 0
+                    ? `transferiu container "${itemName}" (com ${itemsTransferred} item(s)) para o personagem`
+                    : `transferiu item "${itemName}" para o personagem`;
+
+                await addLog(
+                    currentUser.email || 'Mestre',
+                    logMessage,
+                    targetCharacter.nome || 'Sem nome',
+                    'items'
+                );
+
+                const successMessage = itemsTransferred > 0
+                    ? `✅ Container "${itemName}" e ${itemsTransferred} item(s) transferidos para ${targetCharacter.nome}!`
+                    : `✅ Item transferido com sucesso para ${targetCharacter.nome || 'o personagem'}!`;
+
+                showAlert(successMessage, 'success');
+                closeTransferItemModal();
+
+                // Fechar container viewer se estiver aberto
+                if (currentOpenContainerId) {
+                    closeAvulsoContainerViewer();
+                }
+
+                // Recarregar listas
+                if (currentTransferIsAvulso) {
+                    await loadAvulsosItems();
+                } else {
+                    if (currentInventarioPersonagemId) {
+                        await loadInventarioFromFirebase(currentInventarioPersonagemId);
+                    }
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao transferir item:', error);
+                showAlert('❌ Erro ao transferir item: ' + error.message, 'danger');
+            }
+        };
+
+        // Transferir item de um personagem para Avulso (sem dono)
+        window.transferItemToAvulso = async function (itemId) {
+            const item = currentInventarioItems.find(i => i.id === itemId);
+            if (!item) {
+                showAlert('❌ Item não encontrado', 'danger');
+                return;
+            }
+
+            const character = allCharacters.find(c => c.id === currentInventarioPersonagemId);
+            const characterName = character ? character.nome : 'Personagem';
+
+            try {
+                // ✅ Se o item é um Container vinculado, precisamos deletar o documento do container E transferir itens
+                let itemsTransferred = 0;
+                let linkedContainerId = item.linkedContainerId;
+
+                if (item.tipo === 'Container' || item.isContainerItem) {
+                    // Buscar itens que estão dentro deste container (por containerId OU parentItemId)
+                    const itemsInsideContainer = currentInventarioItems.filter(i =>
+                        i.containerId === linkedContainerId || i.parentItemId === itemId
+                    );
+
+                    for (const childItem of itemsInsideContainer) {
+                        await setDoc(doc(db, 'items', childItem.id), {
+                            characterId: null,
+                            ownerId: currentUser.uid,
+                            containerId: null,
+                            equipado: false,
+                            parentItemId: itemId // Usar parentItemId para manter dentro do container avulso
+                        }, { merge: true });
+                        itemsTransferred++;
+                    }
+
+                    // DELETAR o documento do container da coleção 'containers'
+                    if (linkedContainerId) {
+                        try {
+                            await deleteDoc(doc(db, 'containers', linkedContainerId));
+                            console.log(`🗑️ Container document deleted: ${linkedContainerId}`);
+                        } catch (e) {
+                            console.warn('⚠️ Não foi possível deletar documento do container:', e);
+                        }
+                    }
+
+                    console.log(`📦 Transferidos ${itemsTransferred} itens junto com o container "${item.name}" para avulso`);
+                }
+
+                // Atualizar o item principal no Firebase - remover characterId e definir como avulso
+                await setDoc(doc(db, 'items', itemId), {
+                    characterId: null,
+                    ownerId: currentUser.uid,
+                    containerId: null,
+                    equipado: false,
+                    isContainerItem: false, // Remover vínculo de container
+                    linkedContainerId: null  // Remover vínculo de container
+                }, { merge: true });
+
+                // Log da transferência
+                const logMessage = itemsTransferred > 0
+                    ? `transformou container "${item.name || 'Item'}" (com ${itemsTransferred} item(s)) em avulso`
+                    : `transformou item "${item.name || 'Item'}" em avulso`;
+
+                await addLog(
+                    currentUser.email || 'Mestre',
+                    logMessage,
+                    characterName,
+                    'items'
+                );
+
+                const successMessage = itemsTransferred > 0
+                    ? `✅ Container "${item.name}" e ${itemsTransferred} item(s) agora são avulsos!`
+                    : `✅ Item "${item.name || 'Item'}" agora é um item avulso!`;
+
+                showAlert(successMessage, 'success');
+
+                // Recarregar inventário do personagem
+                if (currentInventarioPersonagemId) {
+                    await loadInventarioFromFirebase(currentInventarioPersonagemId);
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao transferir item para avulso:', error);
+                showAlert('❌ Erro ao transferir item: ' + error.message, 'danger');
+            }
+        };
+
+        // Transferir item para Avulso a partir do modal de transferência
+        window.transferItemToAvulsoFromModal = async function () {
+            if (!currentTransferItemId) {
+                showAlert('❌ Nenhum item selecionado', 'danger');
+                return;
+            }
+
+            // Salvar o ID antes de fechar o modal (closeTransferItemModal limpa as variáveis)
+            const itemIdToTransfer = currentTransferItemId;
+
+            // Fecha o modal
+            closeTransferItemModal();
+
+            // Chama a função existente de transferência para avulso
+            await transferItemToAvulso(itemIdToTransfer);
+        };
 
         // Preencher lista de personagens no seletor
         window.populateInventarioPersonagens = function () {
@@ -7909,7 +8747,11 @@ Agilidade 2\n
 
             containersList.innerHTML = sortedContainers.map(container => {
                 // Filtrar items deste container
+                // IMPORTANTE: Excluir itens que estão DENTRO de um Container-item (têm parentItemId)
                 const containerItems = currentInventarioItems.filter(item => {
+                    // Se o item está dentro de um Container-item, não mostrar na lista normal
+                    if (item.parentItemId) return false;
+
                     if (container.name === 'Equipados') {
                         return item.containerId === 'está com alguém';
                     }
@@ -7978,6 +8820,9 @@ Agilidade 2\n
                                         ` : ''}
                                     </div>
                                     <div style="display: flex; gap: 8px;">
+                                        <button class="btn btn-primary" onclick="openTransferItemModal('${item.id}', false)" style="padding: 6px 12px; font-size: 0.85rem;" title="Transferir Item">
+                                            🔄
+                                        </button>
                                         <button class="btn btn-secondary" onclick="editItemMestre('${container.name === 'Equipados' ? 'está com alguém' : container.id}', '${item.id}')" style="padding: 6px 12px; font-size: 0.85rem;">
                                             ✏️
                                         </button>
