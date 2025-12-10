@@ -4518,9 +4518,10 @@ Agilidade 2\n
                     lore: metasData.lore,
                     desbloquear: desbloquearMetas
                 });
-                console.log('✅ Metas salvas');
+                console.log('✅ Metas salvas no Firebase');
             } catch (error) {
                 console.error('❌ Erro ao salvar metas:', error);
+                showAlert('❌ Erro ao salvar metas no Firebase: ' + error.message, 'danger');
             }
         }
 
@@ -4528,28 +4529,41 @@ Agilidade 2\n
         let listaProducao = [];
         let draggedRow = null;
 
-        function carregarListaProducao() {
+        async function carregarListaProducao() {
             try {
-                const saved = localStorage.getItem('listaProducao');
-                if (saved) {
-                    listaProducao = JSON.parse(saved);
+                const producaoDoc = await getDoc(doc(db, 'config', 'listaProducao'));
+                if (producaoDoc.exists()) {
+                    const data = producaoDoc.data();
+                    listaProducao = data.items || [];
+                    console.log('✅ Lista de produção carregada do Firebase:', listaProducao.length, 'itens');
                 } else {
-                    // Itens de exemplo
+                    // Primeira vez - criar com itens de exemplo
                     listaProducao = [
                         { nome: 'Item 1', progresso: 'Em andamento' },
                         { nome: 'Item 2', progresso: 'Pendente' }
                     ];
+                    await salvarListaProducao();
+                    console.log('✅ Lista de produção criada no Firebase');
                 }
                 renderizarListaProducao();
             } catch (error) {
-                console.error('Erro ao carregar lista de produção:', error);
+                console.error('❌ Erro ao carregar lista de produção:', error);
                 listaProducao = [];
                 renderizarListaProducao();
             }
         }
 
-        function salvarListaProducao() {
-            localStorage.setItem('listaProducao', JSON.stringify(listaProducao));
+        async function salvarListaProducao() {
+            try {
+                await setDoc(doc(db, 'config', 'listaProducao'), {
+                    items: listaProducao,
+                    updatedAt: new Date().toISOString()
+                });
+                console.log('✅ Lista de produção salva no Firebase');
+            } catch (error) {
+                console.error('❌ Erro ao salvar lista de produção:', error);
+                showAlert('❌ Erro ao salvar lista de produção', 'danger');
+            }
         }
 
         function renderizarListaProducao() {
@@ -4583,27 +4597,27 @@ Agilidade 2\n
             `).join('');
         }
 
-        window.adicionarItemProducao = function () {
+        window.adicionarItemProducao = async function () {
             listaProducao.push({ nome: 'Novo Item', progresso: '' });
-            salvarListaProducao();
+            await salvarListaProducao();
             renderizarListaProducao();
         };
 
-        window.removerItemProducao = function (index) {
+        window.removerItemProducao = async function (index) {
             if (confirm('Remover este item?')) {
                 listaProducao.splice(index, 1);
-                salvarListaProducao();
+                await salvarListaProducao();
                 renderizarListaProducao();
             }
         };
 
-        window.editarCelulaProducao = function (index, campo) {
+        window.editarCelulaProducao = async function (index, campo) {
             const valorAtual = listaProducao[index][campo] || '';
             const novoValor = prompt(`Editar ${campo}:`, valorAtual);
 
             if (novoValor !== null) {
                 listaProducao[index][campo] = novoValor;
-                salvarListaProducao();
+                await salvarListaProducao();
                 renderizarListaProducao();
             }
         };
@@ -4620,7 +4634,7 @@ Agilidade 2\n
             e.dataTransfer.dropEffect = 'move';
         };
 
-        window.soltar = function (e, targetIndex) {
+        window.soltar = async function (e, targetIndex) {
             e.preventDefault();
             if (draggedRow === null || draggedRow === targetIndex) return;
 
@@ -4628,7 +4642,7 @@ Agilidade 2\n
             const item = listaProducao.splice(draggedRow, 1)[0];
             listaProducao.splice(targetIndex, 0, item);
 
-            salvarListaProducao();
+            await salvarListaProducao();
             renderizarListaProducao();
         };
 
