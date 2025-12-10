@@ -860,6 +860,56 @@
             color: white;
         }
 
+        .notification-item.importante {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.15);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+        }
+
+        .notification-item.urgente {
+            border-color: var(--danger);
+            background: rgba(239, 68, 68, 0.15);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+            animation: pulse-urgent 1.5s ease infinite;
+        }
+
+        @keyframes pulse-urgent {
+
+            0%,
+            100% {
+                box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+            }
+
+            50% {
+                box-shadow: 0 0 25px rgba(239, 68, 68, 0.4);
+            }
+        }
+
+        .notification-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .notification-icon.up {
+            color: var(--success);
+        }
+
+        .notification-icon.down {
+            color: var(--danger);
+        }
+
+        .notification-icon.master {
+            color: var(--primary);
+        }
+
+        .notification-icon.importante {
+            color: #f59e0b;
+        }
+
+        .notification-icon.urgente {
+            color: var(--danger);
+        }
+
         .notification-icon {
             font-size: 1.5rem;
             flex-shrink: 0;
@@ -2109,13 +2159,40 @@
 
             // Renderizar notificações da página atual
             const html = pageNotifications.map(notification => {
-                const isUp = notification.data?.direction === 'up';
-                const iconClass = isUp ? 'up' : 'down';
-                const icon = isUp ? '📈' : '📉';
+                // Definir ícone e classe baseado no tipo de notificação
+                let icon = '📬';
+                let iconClass = 'master';
+                let highlightClass = '';
+
+                if (notification.type === 'master_message') {
+                    // Notificação enviada pelo mestre
+                    const highlight = notification.data?.highlight || 'normal';
+                    highlightClass = highlight !== 'normal' ? highlight : '';
+
+                    if (highlight === 'urgente') {
+                        icon = '🚨';
+                        iconClass = 'urgente';
+                    } else if (highlight === 'importante') {
+                        icon = '⚠️';
+                        iconClass = 'importante';
+                    } else {
+                        icon = '📬';
+                        iconClass = 'master';
+                    }
+                } else {
+                    // Notificação de mudança de rank
+                    const isUp = notification.data?.direction === 'up';
+                    iconClass = isUp ? 'up' : 'down';
+                    icon = isUp ? '📈' : '📉';
+                }
+
                 const dateStr = new Date(notification.timestamp).toLocaleString('pt-BR');
+                const itemClasses = ['notification-item'];
+                if (notification.isNew) itemClasses.push('new');
+                if (highlightClass) itemClasses.push(highlightClass);
 
                 return `
-                    <div class="notification-item ${notification.isNew ? 'new' : ''}">
+                    <div class="${itemClasses.join(' ')}">
                         <div class="notification-icon ${iconClass}">${icon}</div>
                         <div class="notification-content">
                             <div class="notification-message">${escapeHtml(notification.message)}</div>

@@ -107,6 +107,25 @@
             box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);
         }
 
+        .btn-notification {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-notification:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
         .user-email {
             color: #cbd5e1;
             font-size: 0.85rem;
@@ -1980,6 +1999,46 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
         }
+
+        /* ========== ESTILOS DE DRAG AND DROP PARA ITENS ========== */
+        .item-draggable {
+            cursor: grab;
+            user-select: none;
+        }
+
+        .item-draggable:active {
+            cursor: grabbing;
+        }
+
+        .item-dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .item-drag-over {
+            border-color: var(--primary) !important;
+            background: rgba(139, 92, 246, 0.15) !important;
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+        }
+
+        .item-drop-merge {
+            border-color: var(--success) !important;
+            background: rgba(16, 185, 129, 0.2) !important;
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.5);
+            animation: pulse-merge 0.5s ease infinite alternate;
+        }
+
+        @keyframes pulse-merge {
+            from {
+                box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+            }
+
+            to {
+                box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+            }
+        }
     </style>
 </head>
 
@@ -1992,9 +2051,71 @@
 
     <!-- INFORMAÇÕES DO USUÁRIO -->
     <div class="user-info" id="userInfo" style="display: none;">
+        <button class="btn-notification" onclick="openSendNotificationModal()"
+            title="Enviar Notificação aos Jogadores">📧</button>
         <button class="btn-map" onclick="window.location.href='hexmap.html'" title="Abrir Hexmap">🗺️</button>
         <span class="user-email" id="userEmail">Carregando...</span>
         <button class="btn-logout" onclick="logout()">🚪 SAIR</button>
+    </div>
+
+    <!-- MODAL DE ENVIO DE NOTIFICAÇÃO -->
+    <div class="modal" id="sendNotificationModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 class="modal-title">📧 Enviar Notificação</h2>
+                <button class="modal-close" onclick="closeSendNotificationModal()">✕</button>
+            </div>
+
+            <div class="form-section">
+                <h3 class="section-title">Mensagem</h3>
+                <textarea class="form-textarea" id="notificationMessage"
+                    placeholder="Digite a mensagem da notificação..." rows="4"></textarea>
+            </div>
+
+            <div class="form-section">
+                <h3 class="section-title">Destinatários</h3>
+                <label
+                    style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer; padding: 10px; background: rgba(139, 92, 246, 0.1); border-radius: 8px; border: 2px solid var(--primary);">
+                    <input type="checkbox" id="selectAllPlayers" onchange="toggleAllPlayersSelection()"
+                        style="width: 20px; height: 20px;">
+                    <span style="font-weight: 700; color: var(--primary);">📋 Selecionar Todos</span>
+                </label>
+                <div id="playerCheckboxList"
+                    style="max-height: 200px; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div style="text-align: center; padding: 20px; color: #64748b; grid-column: 1/-1;">Carregando
+                        jogadores...</div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3 class="section-title">Nível de Destaque</h3>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <label
+                        style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px 20px; background: rgba(100, 116, 139, 0.2); border-radius: 10px; border: 2px solid var(--border); transition: all 0.3s;">
+                        <input type="radio" name="notificationHighlight" value="normal" checked
+                            style="width: 18px; height: 18px;">
+                        <span>📬 Normal</span>
+                    </label>
+                    <label
+                        style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px 20px; background: rgba(245, 158, 11, 0.1); border-radius: 10px; border: 2px solid #f59e0b; transition: all 0.3s;">
+                        <input type="radio" name="notificationHighlight" value="importante"
+                            style="width: 18px; height: 18px;">
+                        <span style="color: #f59e0b;">⚠️ Importante</span>
+                    </label>
+                    <label
+                        style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px 20px; background: rgba(239, 68, 68, 0.1); border-radius: 10px; border: 2px solid var(--danger); transition: all 0.3s;">
+                        <input type="radio" name="notificationHighlight" value="urgente"
+                            style="width: 18px; height: 18px;">
+                        <span style="color: var(--danger);">🚨 Urgente</span>
+                    </label>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 15px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="closeSendNotificationModal()">Cancelar</button>
+                <button class="btn btn-success" onclick="sendMasterNotification()">📤 Enviar Notificação</button>
+            </div>
+        </div>
     </div>
 
     <!-- BOTÃO DE LOGS -->
@@ -4091,7 +4212,7 @@ Agilidade 2\n
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, getDocs, setDoc, deleteDoc, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, getDocs, setDoc, deleteDoc, addDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
@@ -8181,6 +8302,336 @@ Agilidade 2\n
         let isAvulsoMode = false;
         let currentOpenContainerId = null; // ID do container avulso atualmente aberto
 
+        // ============= SISTEMA DE DRAG AND DROP PARA ITENS =============
+        let draggedItemId = null;
+        let dragSourceType = null; // 'avulso' ou 'personagem'
+        let avulsosDisplayOrder = []; // Ordem de exibição customizada para avulsos
+        let personagensDisplayOrder = []; // Ordem de exibição customizada para personagens
+
+        // Verificar se dois itens são idênticos (podem ser combinados)
+        function areItemsIdentical(item1, item2) {
+            if (!item1 || !item2) return false;
+            if (item1.id === item2.id) return false; // Mesmo item
+            if (item1.name !== item2.name) return false;
+            if (item1.tipo !== item2.tipo) return false;
+            if (item1.tipoArma !== item2.tipoArma) return false;
+            if (item1.tipoLun !== item2.tipoLun) return false;
+            // Containers não podem ser combinados
+            if (item1.tipo === 'Container' || item2.tipo === 'Container') return false;
+            return true;
+        }
+
+        // Handler: Início do drag (Avulsos)
+        window.handleAvulsoDragStart = function (e, itemId) {
+            draggedItemId = itemId;
+            dragSourceType = 'avulso';
+            e.target.classList.add('item-dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', itemId);
+        };
+
+        // Handler: Drag sobre outro item (Avulsos)
+        window.handleAvulsoDragOver = function (e, targetItemId) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            if (!draggedItemId || draggedItemId === targetItemId) return;
+
+            const sourceItem = avulsosItems.find(i => i.id === draggedItemId);
+            const targetItem = avulsosItems.find(i => i.id === targetItemId);
+
+            const targetElement = document.getElementById('avulso-item-' + targetItemId);
+            if (!targetElement) return;
+
+            // Limpar classes anteriores
+            targetElement.classList.remove('item-drag-over', 'item-drop-merge');
+
+            // Verificar se pode combinar
+            if (areItemsIdentical(sourceItem, targetItem)) {
+                targetElement.classList.add('item-drop-merge');
+            } else {
+                targetElement.classList.add('item-drag-over');
+            }
+        };
+
+        // Handler: Sair do drag de um item (Avulsos)
+        window.handleAvulsoDragLeave = function (e) {
+            const element = e.target.closest('.item-draggable');
+            if (element) {
+                element.classList.remove('item-drag-over', 'item-drop-merge');
+            }
+        };
+
+        // Handler: Fim do drag (Avulsos)
+        window.handleAvulsoDragEnd = function (e) {
+            e.target.classList.remove('item-dragging');
+            draggedItemId = null;
+            dragSourceType = null;
+
+            // Limpar todas as classes de drag
+            document.querySelectorAll('.item-drag-over, .item-drop-merge').forEach(el => {
+                el.classList.remove('item-drag-over', 'item-drop-merge');
+            });
+        };
+
+        // Handler: Drop (Avulsos) - Reordenar ou Combinar
+        window.handleAvulsoDrop = async function (e, targetItemId) {
+            e.preventDefault();
+
+            const targetElement = document.getElementById('avulso-item-' + targetItemId);
+            if (targetElement) {
+                targetElement.classList.remove('item-drag-over', 'item-drop-merge');
+            }
+
+            if (!draggedItemId || draggedItemId === targetItemId) return;
+
+            const sourceItem = avulsosItems.find(i => i.id === draggedItemId);
+            const targetItem = avulsosItems.find(i => i.id === targetItemId);
+
+            if (!sourceItem || !targetItem) return;
+
+            // Verificar se pode combinar (itens idênticos)
+            if (areItemsIdentical(sourceItem, targetItem)) {
+                // COMBINAR: Somar quantidades
+                await mergeAvulsosItems(draggedItemId, targetItemId);
+            } else {
+                // REORDENAR: Trocar posições
+                reorderAvulsosItems(draggedItemId, targetItemId);
+            }
+
+            draggedItemId = null;
+            dragSourceType = null;
+        };
+
+        // Combinar dois itens avulsos (somar quantidades)
+        async function mergeAvulsosItems(sourceId, targetId) {
+            const sourceItem = avulsosItems.find(i => i.id === sourceId);
+            const targetItem = avulsosItems.find(i => i.id === targetId);
+
+            if (!sourceItem || !targetItem) return;
+
+            const sourceQty = sourceItem.quantity || 1;
+            const targetQty = targetItem.quantity || 1;
+            const newQuantity = sourceQty + targetQty;
+
+            // Recalcular peso total
+            const packSize = targetItem.packSize || 1;
+            const pesoUnitario = targetItem.peso || 1;
+            const newTotalWeight = Math.ceil((newQuantity / packSize) * pesoUnitario);
+
+            try {
+                // Atualizar item de destino com nova quantidade
+                await setDoc(doc(db, 'items', targetId), {
+                    quantity: newQuantity,
+                    totalWeight: newTotalWeight
+                }, { merge: true });
+
+                // Deletar item de origem
+                await deleteDoc(doc(db, 'items', sourceId));
+
+                showAlert(`✅ Itens combinados! "${targetItem.name}" agora tem ${newQuantity} unidades.`, 'success');
+                await addLog(`combinou ${sourceQty}x "${sourceItem.name}" com ${targetQty}x, total: ${newQuantity}`);
+
+                // Recarregar lista
+                await loadAvulsosItems();
+
+            } catch (error) {
+                console.error('❌ Erro ao combinar itens:', error);
+                showAlert('❌ Erro ao combinar itens: ' + error.message, 'danger');
+            }
+        }
+
+        // Reordenar itens avulsos (trocar posições)
+        function reorderAvulsosItems(sourceId, targetId) {
+            // Obter itens top-level
+            const topLevelItems = avulsosItems.filter(item => !item.parentItemId);
+
+            // Inicializar ordem de exibição se não existir
+            if (!avulsosDisplayOrder || avulsosDisplayOrder.length === 0) {
+                avulsosDisplayOrder = topLevelItems.sort((a, b) =>
+                    (a.name || '').localeCompare(b.name || '')
+                ).map(item => item.id);
+            }
+
+            const sourceIndex = avulsosDisplayOrder.indexOf(sourceId);
+            const targetIndex = avulsosDisplayOrder.indexOf(targetId);
+
+            if (sourceIndex === -1 || targetIndex === -1) {
+                // Item não está na ordem, adicionar
+                if (sourceIndex === -1) avulsosDisplayOrder.push(sourceId);
+                if (targetIndex === -1) avulsosDisplayOrder.push(targetId);
+            }
+
+            // Remover source da posição atual
+            avulsosDisplayOrder.splice(avulsosDisplayOrder.indexOf(sourceId), 1);
+
+            // Inserir source na nova posição (onde estava o target)
+            const newTargetIndex = avulsosDisplayOrder.indexOf(targetId);
+            avulsosDisplayOrder.splice(newTargetIndex, 0, sourceId);
+
+            // Re-renderizar lista
+            renderAvulsosItems();
+
+            showAlert('🔄 Ordem dos itens atualizada!', 'success');
+        }
+
+        // ============= DRAG AND DROP PARA PERSONAGENS =============
+
+        // Handler: Início do drag (Personagens)
+        window.handlePersonagemDragStart = function (e, itemId) {
+            draggedItemId = itemId;
+            dragSourceType = 'personagem';
+            e.target.classList.add('item-dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', itemId);
+        };
+
+        // Handler: Drag sobre outro item (Personagens)
+        window.handlePersonagemDragOver = function (e, targetItemId) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            if (!draggedItemId || draggedItemId === targetItemId) return;
+
+            const sourceItem = currentInventarioItems.find(i => i.id === draggedItemId);
+            const targetItem = currentInventarioItems.find(i => i.id === targetItemId);
+
+            const targetElement = document.getElementById('personagem-item-' + targetItemId);
+            if (!targetElement) return;
+
+            // Limpar classes anteriores
+            targetElement.classList.remove('item-drag-over', 'item-drop-merge');
+
+            // Verificar se pode combinar
+            if (areItemsIdentical(sourceItem, targetItem)) {
+                targetElement.classList.add('item-drop-merge');
+            } else {
+                targetElement.classList.add('item-drag-over');
+            }
+        };
+
+        // Handler: Sair do drag de um item (Personagens)
+        window.handlePersonagemDragLeave = function (e) {
+            const element = e.target.closest('.item-draggable');
+            if (element) {
+                element.classList.remove('item-drag-over', 'item-drop-merge');
+            }
+        };
+
+        // Handler: Fim do drag (Personagens)
+        window.handlePersonagemDragEnd = function (e) {
+            e.target.classList.remove('item-dragging');
+            draggedItemId = null;
+            dragSourceType = null;
+
+            // Limpar todas as classes de drag
+            document.querySelectorAll('.item-drag-over, .item-drop-merge').forEach(el => {
+                el.classList.remove('item-drag-over', 'item-drop-merge');
+            });
+        };
+
+        // Handler: Drop (Personagens) - Reordenar ou Combinar
+        window.handlePersonagemDrop = async function (e, targetItemId) {
+            e.preventDefault();
+
+            const targetElement = document.getElementById('personagem-item-' + targetItemId);
+            if (targetElement) {
+                targetElement.classList.remove('item-drag-over', 'item-drop-merge');
+            }
+
+            if (!draggedItemId || draggedItemId === targetItemId) return;
+
+            const sourceItem = currentInventarioItems.find(i => i.id === draggedItemId);
+            const targetItem = currentInventarioItems.find(i => i.id === targetItemId);
+
+            if (!sourceItem || !targetItem) return;
+
+            // Verificar se pode combinar (itens idênticos)
+            if (areItemsIdentical(sourceItem, targetItem)) {
+                // COMBINAR: Somar quantidades
+                await mergePersonagemItems(draggedItemId, targetItemId);
+            } else {
+                // REORDENAR: Trocar posições
+                reorderPersonagemItems(draggedItemId, targetItemId);
+            }
+
+            draggedItemId = null;
+            dragSourceType = null;
+        };
+
+        // Combinar dois itens do personagem (somar quantidades)
+        async function mergePersonagemItems(sourceId, targetId) {
+            const sourceItem = currentInventarioItems.find(i => i.id === sourceId);
+            const targetItem = currentInventarioItems.find(i => i.id === targetId);
+
+            if (!sourceItem || !targetItem) return;
+
+            const sourceQty = sourceItem.quantity || 1;
+            const targetQty = targetItem.quantity || 1;
+            const newQuantity = sourceQty + targetQty;
+
+            // Recalcular peso total
+            const packSize = targetItem.packSize || 1;
+            const pesoUnitario = targetItem.peso || 1;
+            const newTotalWeight = Math.ceil((newQuantity / packSize) * pesoUnitario);
+
+            try {
+                // Atualizar item de destino com nova quantidade
+                await setDoc(doc(db, 'items', targetId), {
+                    quantity: newQuantity,
+                    totalWeight: newTotalWeight
+                }, { merge: true });
+
+                // Deletar item de origem
+                await deleteDoc(doc(db, 'items', sourceId));
+
+                showAlert(`✅ Itens combinados! "${targetItem.name}" agora tem ${newQuantity} unidades.`, 'success');
+                await addLog(`combinou ${sourceQty}x "${sourceItem.name}" com ${targetQty}x, total: ${newQuantity}`);
+
+                // Recarregar inventário
+                if (currentInventarioPersonagemId) {
+                    await loadInventarioFromFirebase(currentInventarioPersonagemId);
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao combinar itens:', error);
+                showAlert('❌ Erro ao combinar itens: ' + error.message, 'danger');
+            }
+        }
+
+        // Reordenar itens do personagem (trocar posições)
+        function reorderPersonagemItems(sourceId, targetId) {
+            // Obter itens top-level (excluindo itens dentro de containers)
+            const topLevelItems = currentInventarioItems.filter(item => !item.parentItemId);
+
+            // Inicializar ordem de exibição se não existir
+            if (!personagensDisplayOrder || personagensDisplayOrder.length === 0) {
+                personagensDisplayOrder = topLevelItems.map(item => item.id);
+            }
+
+            const sourceIndex = personagensDisplayOrder.indexOf(sourceId);
+            const targetIndex = personagensDisplayOrder.indexOf(targetId);
+
+            if (sourceIndex === -1 || targetIndex === -1) {
+                // Item não está na ordem, adicionar
+                if (sourceIndex === -1) personagensDisplayOrder.push(sourceId);
+                if (targetIndex === -1) personagensDisplayOrder.push(targetId);
+            }
+
+            // Remover source da posição atual
+            personagensDisplayOrder.splice(personagensDisplayOrder.indexOf(sourceId), 1);
+
+            // Inserir source na nova posição (onde estava o target)
+            const newTargetIndex = personagensDisplayOrder.indexOf(targetId);
+            personagensDisplayOrder.splice(newTargetIndex, 0, sourceId);
+
+            // Re-renderizar lista
+            renderInventarioMestre();
+
+            showAlert('🔄 Ordem dos itens atualizada!', 'success');
+        }
+
+
         // Carregar itens avulsos do Firebase (itens sem characterId)
         async function loadAvulsosItems() {
             try {
@@ -8230,10 +8681,23 @@ Agilidade 2\n
             mainContainer.style.display = 'block';
             emptyContainer.style.display = 'none';
 
-            // Ordenar itens por nome
-            const sortedItems = [...topLevelItems].sort((a, b) =>
-                (a.name || '').localeCompare(b.name || '')
-            );
+            // Usar ordem de exibição se disponível, senão ordenar por nome
+            let sortedItems;
+            if (avulsosDisplayOrder && avulsosDisplayOrder.length > 0) {
+                // Ordenar baseado na ordem de exibição salva
+                sortedItems = [...topLevelItems].sort((a, b) => {
+                    const indexA = avulsosDisplayOrder.indexOf(a.id);
+                    const indexB = avulsosDisplayOrder.indexOf(b.id);
+                    // Se não está na ordem, colocar no final
+                    const orderA = indexA === -1 ? 9999 : indexA;
+                    const orderB = indexB === -1 ? 9999 : indexB;
+                    return orderA - orderB;
+                });
+            } else {
+                sortedItems = [...topLevelItems].sort((a, b) =>
+                    (a.name || '').localeCompare(b.name || '')
+                );
+            }
 
             listContainer.innerHTML = sortedItems.map(item => {
                 const imagemHTML = item.imagem ?
@@ -8246,20 +8710,30 @@ Agilidade 2\n
 
                 // Botão de abrir container (só para itens do tipo Container)
                 const openContainerBtn = isContainer ? `
-                    <button class="btn ${isContainerOpen ? 'btn-success' : 'btn-warning'}" onclick="openAvulsoContainer('${item.id}')" style="padding: 10px 16px; font-size: 0.9rem;" title="${isContainerOpen ? 'Container aberto' : 'Abrir Container'}">
+                    <button class="btn ${isContainerOpen ? 'btn-success' : 'btn-warning'}" onclick="event.stopPropagation(); openAvulsoContainer('${item.id}')" style="padding: 10px 16px; font-size: 0.9rem;" title="${isContainerOpen ? 'Container aberto' : 'Abrir Container'}">
                         ${isContainerOpen ? '📂' : '📁'}
                     </button>
                 ` : '';
 
                 // Botão de mover para container (só aparece quando um container está aberto e o item não é um container)
                 const moveToContainerBtn = (currentOpenContainerId && !isContainer) ? `
-                    <button class="btn-move-to-container" onclick="moveItemToContainer('${item.id}')" style="padding: 10px 16px; font-size: 0.9rem;" title="Mover para o container aberto">
+                    <button class="btn-move-to-container" onclick="event.stopPropagation(); moveItemToContainer('${item.id}')" style="padding: 10px 16px; font-size: 0.9rem;" title="Mover para o container aberto">
                         📥
                     </button>
                 ` : '';
 
                 return `
-                    <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid ${isContainerOpen ? 'rgba(16, 185, 129, 0.6)' : 'var(--border)'}; border-radius: 12px; padding: 18px; display: flex; align-items: center; gap: 15px; transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(245, 158, 11, 0.6)'" onmouseout="this.style.borderColor='${isContainerOpen ? 'rgba(16, 185, 129, 0.6)' : 'var(--border)'}'" id="avulso-item-${item.id}">
+                    <div class="item-draggable" 
+                         draggable="true" 
+                         data-item-id="${item.id}"
+                         data-item-type="avulso"
+                         ondragstart="handleAvulsoDragStart(event, '${item.id}')"
+                         ondragover="handleAvulsoDragOver(event, '${item.id}')"
+                         ondragleave="handleAvulsoDragLeave(event)"
+                         ondragend="handleAvulsoDragEnd(event)"
+                         ondrop="handleAvulsoDrop(event, '${item.id}')"
+                         style="background: rgba(15, 23, 42, 0.6); border: 2px solid ${isContainerOpen ? 'rgba(16, 185, 129, 0.6)' : 'var(--border)'}; border-radius: 12px; padding: 18px; display: flex; align-items: center; gap: 15px; transition: all 0.3s;" 
+                         id="avulso-item-${item.id}">
                         ${imagemHTML}
                         <div style="flex: 1; min-width: 0;">
                             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -8287,13 +8761,13 @@ Agilidade 2\n
                         <div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; align-items: center;">
                             ${openContainerBtn}
                             ${moveToContainerBtn}
-                            <button class="btn btn-primary" onclick="openTransferItemModal('${item.id}', true)" style="padding: 10px 16px; font-size: 0.9rem;" title="Transferir Item">
+                            <button class="btn btn-primary" onclick="event.stopPropagation(); openTransferItemModal('${item.id}', true)" style="padding: 10px 16px; font-size: 0.9rem;" title="Transferir Item">
                                 🔄
                             </button>
-                            <button class="btn btn-secondary" onclick="editAvulsoItem('${item.id}')" style="padding: 10px 16px; font-size: 0.9rem;">
+                            <button class="btn btn-secondary" onclick="event.stopPropagation(); editAvulsoItem('${item.id}')" style="padding: 10px 16px; font-size: 0.9rem;">
                                 ✏️
                             </button>
-                            <button class="btn btn-danger" onclick="deleteAvulsoItem('${item.id}')" style="padding: 10px 16px; font-size: 0.9rem;">
+                            <button class="btn btn-danger" onclick="event.stopPropagation(); deleteAvulsoItem('${item.id}')" style="padding: 10px 16px; font-size: 0.9rem;">
                                 🗑️
                             </button>
                         </div>
@@ -9505,7 +9979,17 @@ Agilidade 2\n
                         );
 
                     return `
-                                <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid ${isContainerOpen ? 'rgba(16, 185, 129, 0.6)' : 'var(--border)'}; border-radius: 10px; padding: 15px; display: flex; align-items: center; gap: 15px; transition: all 0.3s;" id="${isContainer ? 'personagem-container-' + item.id : ''}">
+                                <div class="item-draggable" 
+                                     draggable="true" 
+                                     data-item-id="${item.id}"
+                                     data-item-type="personagem"
+                                     ondragstart="handlePersonagemDragStart(event, '${item.id}')"
+                                     ondragover="handlePersonagemDragOver(event, '${item.id}')"
+                                     ondragleave="handlePersonagemDragLeave(event)"
+                                     ondragend="handlePersonagemDragEnd(event)"
+                                     ondrop="handlePersonagemDrop(event, '${item.id}')"
+                                     style="background: rgba(15, 23, 42, 0.6); border: 2px solid ${isContainerOpen ? 'rgba(16, 185, 129, 0.6)' : 'var(--border)'}; border-radius: 10px; padding: 15px; display: flex; align-items: center; gap: 15px; transition: all 0.3s;" 
+                                     id="personagem-item-${item.id}">
                                     ${imagemHTML}
                                     <div style="flex: 1;">
                                         <div style="display: flex; align-items: center; flex-wrap: wrap;">
@@ -10972,6 +11456,159 @@ Agilidade 2\n
                 alert('Erro ao deletar evento');
             }
         }
+
+        // ============= UTILIDADE: ESCAPE HTML =============
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ============= SISTEMA DE NOTIFICAÇÕES DO MESTRE =============
+        let notificationUsersCache = [];
+
+        window.openSendNotificationModal = async function () {
+            try {
+                // Abrir modal
+                document.getElementById('sendNotificationModal').classList.add('active');
+
+                // Resetar campos
+                document.getElementById('notificationMessage').value = '';
+                document.getElementById('selectAllPlayers').checked = false;
+                document.querySelector('input[name="notificationHighlight"][value="normal"]').checked = true;
+
+                // Carregar lista de jogadores
+                const playerList = document.getElementById('playerCheckboxList');
+                playerList.innerHTML = '<div style="text-align: center; padding: 20px; color: #64748b; grid-column: 1/-1;">Carregando jogadores...</div>';
+
+                const usersSnapshot = await getDocs(collection(db, 'users'));
+                notificationUsersCache = [];
+
+                usersSnapshot.forEach(docSnap => {
+                    const userData = docSnap.data();
+                    notificationUsersCache.push({
+                        id: docSnap.id,
+                        uid: userData.uid || docSnap.id,
+                        email: userData.email || 'Sem email',
+                        displayName: userData.displayName || userData.nome || userData.email || 'Jogador'
+                    });
+                });
+
+                if (notificationUsersCache.length === 0) {
+                    playerList.innerHTML = '<div style="text-align: center; padding: 20px; color: #64748b; grid-column: 1/-1;">Nenhum jogador encontrado</div>';
+                    return;
+                }
+
+                // Renderizar checkboxes
+                playerList.innerHTML = notificationUsersCache.map(user => `
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(15, 23, 42, 0.6); border-radius: 8px; border: 2px solid var(--border); transition: all 0.3s;">
+                        <input type="checkbox" class="player-checkbox" value="${user.id}" style="width: 18px; height: 18px;">
+                        <div style="overflow: hidden;">
+                            <div style="font-weight: 600; color: var(--light); font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(user.displayName)}</div>
+                            <div style="font-size: 0.75rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(user.email)}</div>
+                        </div>
+                    </label>
+                `).join('');
+
+            } catch (error) {
+                console.error('❌ Erro ao carregar jogadores:', error);
+                showAlert('❌ Erro ao carregar lista de jogadores', 'danger');
+            }
+        };
+
+        window.closeSendNotificationModal = function () {
+            document.getElementById('sendNotificationModal').classList.remove('active');
+        };
+
+        window.toggleAllPlayersSelection = function () {
+            const selectAll = document.getElementById('selectAllPlayers').checked;
+            const checkboxes = document.querySelectorAll('.player-checkbox');
+            checkboxes.forEach(cb => cb.checked = selectAll);
+        };
+
+        window.sendMasterNotification = async function () {
+            const message = document.getElementById('notificationMessage').value.trim();
+
+            if (!message) {
+                showAlert('⚠️ Digite uma mensagem para enviar', 'warning');
+                return;
+            }
+
+            // Pegar jogadores selecionados
+            const selectedPlayers = [];
+            document.querySelectorAll('.player-checkbox:checked').forEach(cb => {
+                selectedPlayers.push(cb.value);
+            });
+
+            if (selectedPlayers.length === 0) {
+                showAlert('⚠️ Selecione pelo menos um jogador', 'warning');
+                return;
+            }
+
+            // Pegar nível de destaque
+            const highlight = document.querySelector('input[name="notificationHighlight"]:checked').value;
+
+            try {
+                showAlert('📤 Enviando notificações...', 'success');
+
+                // Criar objeto de notificação
+                const notification = {
+                    id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    type: 'master_message',
+                    message: message,
+                    timestamp: new Date().toISOString(),
+                    isNew: true,
+                    data: {
+                        highlight: highlight,
+                        sentBy: currentUser.email || 'Mestre',
+                        direction: highlight === 'urgente' ? 'down' : 'up' // Para ícone/cor
+                    }
+                };
+
+                // Enviar para cada jogador selecionado
+                let successCount = 0;
+                for (const userId of selectedPlayers) {
+                    try {
+                        const userDocRef = doc(db, 'users', userId);
+                        const userDoc = await getDoc(userDocRef);
+
+                        if (userDoc.exists()) {
+                            const userData = userDoc.data();
+                            let notifications = userData.notifications || [];
+
+                            // Adicionar nova notificação no início
+                            notifications.unshift(notification);
+
+                            // Limitar a 100 notificações
+                            if (notifications.length > 100) {
+                                notifications = notifications.slice(0, 100);
+                            }
+
+                            await updateDoc(userDocRef, { notifications: notifications });
+                            successCount++;
+                        }
+                    } catch (userError) {
+                        console.error(`Erro ao enviar para ${userId}:`, userError);
+                    }
+                }
+
+                closeSendNotificationModal();
+                showAlert(`✅ Notificação enviada para ${successCount} jogador(es)!`, 'success');
+
+                // Registrar log
+                await addLog(
+                    currentUser.email || 'Mestre',
+                    `enviou notificação "${message.substring(0, 50)}${message.length > 50 ? '...' : ''}" para ${successCount} jogador(es)`,
+                    `Destaque: ${highlight}`,
+                    'notifications'
+                );
+
+            } catch (error) {
+                console.error('❌ Erro ao enviar notificações:', error);
+                showAlert('❌ Erro ao enviar notificações: ' + error.message, 'danger');
+            }
+        };
 
     </script>
 </body>
