@@ -1182,6 +1182,9 @@
         <div id="subtab-rank-cp" class="sub-tab-content active">
             <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">👑 Rank
                 Classe de Poder</h2>
+            <p style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">⌈2·Ofensivo +
+                Defensivo + Resistência +
+                Mobilidade⌉ × Aura de Imortalidade</p>
             <div id="ranking-cp" class="ranking-list"></div>
         </div>
 
@@ -1189,6 +1192,8 @@
         <div id="subtab-rank-ofensivo" class="sub-tab-content">
             <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">⚔️ Rank
                 Ofensivo</h2>
+            <p style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">Maior Parada de
+                Ataque (Arma, Disparo ou Briga)</p>
             <div id="ranking-ofensivo" class="ranking-list"></div>
         </div>
 
@@ -1196,6 +1201,8 @@
         <div id="subtab-rank-defensivo" class="sub-tab-content">
             <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">🛡️ Rank
                 Defensivo</h2>
+            <p style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">Reação + Blindagem
+            </p>
             <div id="ranking-defensivo" class="ranking-list"></div>
         </div>
 
@@ -1203,6 +1210,7 @@
         <div id="subtab-rank-resistencia" class="sub-tab-content">
             <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">💪 Rank
                 Resistência</h2>
+            <p style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">VIT + DET + SAN</p>
             <div id="ranking-resistencia" class="ranking-list"></div>
         </div>
 
@@ -1210,6 +1218,8 @@
         <div id="subtab-rank-mobilidade" class="sub-tab-content">
             <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">💨 Rank
                 Mobilidade</h2>
+            <p style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">Deslocamento +
+                Iniciativa</p>
             <div id="ranking-mobilidade" class="ranking-list"></div>
         </div>
 
@@ -1217,6 +1227,7 @@
         <div id="subtab-rank-riqueza" class="sub-tab-content">
             <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">💰 Rank
                 Riqueza</h2>
+            <p style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">Total de Luns</p>
             <div id="ranking-riqueza" class="ranking-list"></div>
         </div>
 
@@ -1224,6 +1235,8 @@
         <div id="subtab-rank-apoios" class="sub-tab-content">
             <h2 style="text-align: center; color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">💖 Rank
                 Apoios</h2>
+            <p style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">Total de Apoios
+                feitos.</p>
             <div id="ranking-apoios" class="ranking-list"></div>
         </div>
 
@@ -1786,9 +1799,6 @@
                         <div class="ranking-position ${positionClass}">${medal}</div>
                         <div class="ranking-info">
                             <div class="ranking-name">${escapeHtml(item.char.nome || 'Sem nome')}</div>
-                            <div class="ranking-details">
-                                ${escapeHtml(item.char.classe || '—')} • ${escapeHtml(item.char.raca || '—')}
-                            </div>
                         </div>
                         <div class="ranking-value">${formatValue(item.value, item)}</div>
                     </div>
@@ -1845,8 +1855,8 @@
                 cpNome: item.cpNome,
                 cpCor: item.cpCor
             })), (v, item) => {
-                // Exibe VALOR, NOME e RANK
-                return `<span style="color: ${item.cpCor}; font-weight: 700; font-size: 1.1em;">${v}</span> • <span style="color: ${item.cpCor};">${item.cpNome}</span> <span style="color: ${item.cpCor}; font-size: 0.85em;">(${item.cpLetra})</span>`;
+                // Exibe apenas o NOME do Rank (Classe de Poder)
+                return `<span style="color: ${item.cpCor}; font-weight: 700; font-size: 1em;">${item.cpNome}</span>`;
             });
             checkRankChanges('cp', 'Rank Classe de Poder', rankCP);
 
@@ -1854,35 +1864,35 @@
             renderRanking('ranking-ofensivo', rankOF.map(item => ({
                 char: item.char,
                 value: item.of
-            })));
+            })), () => '');
             checkRankChanges('of', 'Rank Ofensivo', rankOF);
 
             const rankDF = [...charsWithStats].sort((a, b) => b.df - a.df);
             renderRanking('ranking-defensivo', rankDF.map(item => ({
                 char: item.char,
                 value: item.df
-            })));
+            })), () => '');
             checkRankChanges('df', 'Rank Defensivo', rankDF);
 
             const rankRS = [...charsWithStats].sort((a, b) => b.rs - a.rs);
             renderRanking('ranking-resistencia', rankRS.map(item => ({
                 char: item.char,
                 value: item.rs
-            })));
+            })), () => '');
             checkRankChanges('rs', 'Rank Resistência', rankRS);
 
             const rankMB = [...charsWithStats].sort((a, b) => b.mb - a.mb);
             renderRanking('ranking-mobilidade', rankMB.map(item => ({
                 char: item.char,
                 value: item.mb
-            })));
+            })), () => '');
             checkRankChanges('mb', 'Rank Mobilidade', rankMB);
 
             const rankLuns = [...charsWithStats].sort((a, b) => b.luns - a.luns);
             renderRanking('ranking-riqueza', rankLuns.map(item => ({
                 char: item.char,
                 value: item.luns
-            })), (v) => `${v} 💰`);
+            })), () => '');
             checkRankChanges('luns', 'Rank Riqueza', rankLuns);
 
             // ============= NOVOS RANKINGS: INTELECTO, POTÊNCIA, INFLUÊNCIA =============
@@ -1904,7 +1914,7 @@
                 };
             });
             const rankIntelecto = [...charsWithIntelecto].sort((a, b) => b.value - a.value);
-            renderRanking('ranking-intelecto', rankIntelecto, (v) => `🧠 ${v}`);
+            renderRanking('ranking-intelecto', rankIntelecto, () => '');
             checkRankChanges('intelecto', 'Rank Intelecto', rankIntelecto);
 
             // Calcular rank de Potência (FOR + DES + VIG + habilidades físicas)
@@ -1919,7 +1929,7 @@
                 };
             });
             const rankPotencia = [...charsWithPotencia].sort((a, b) => b.value - a.value);
-            renderRanking('ranking-potencia', rankPotencia, (v) => `🔥 ${v}`);
+            renderRanking('ranking-potencia', rankPotencia, () => '');
             checkRankChanges('potencia', 'Rank Potência', rankPotencia);
 
             // Calcular rank de Influência (PRE + MAN + AUT + habilidades sociais)
@@ -1934,7 +1944,7 @@
                 };
             });
             const rankInfluencia = [...charsWithInfluencia].sort((a, b) => b.value - a.value);
-            renderRanking('ranking-influencia', rankInfluencia, (v) => `🗣️ ${v}`);
+            renderRanking('ranking-influencia', rankInfluencia, () => '');
             checkRankChanges('influencia', 'Rank Influência', rankInfluencia);
         }
 
