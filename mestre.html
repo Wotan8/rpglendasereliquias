@@ -8987,6 +8987,11 @@ Agilidade 2\n
                     );
 
                     showAlert(`✅ ${transferQuantity}x "${itemName}" transferido para ${targetCharacter.nome}! (${remainingQuantity} restantes)`, 'success');
+
+                    // Salvar flag antes de fechar modal (closeTransferItemModal limpa as variáveis)
+                    const wasAvulsoTransfer = currentTransferIsAvulso;
+                    const partialTransferItemId = currentTransferItemId;
+
                     closeTransferItemModal();
 
                     // Fechar container viewer se estiver aberto
@@ -8995,8 +9000,12 @@ Agilidade 2\n
                     }
 
                     // Recarregar listas
-                    if (currentTransferIsAvulso) {
+                    if (wasAvulsoTransfer) {
+                        // Remover imediatamente do DOM para feedback visual instantâneo (transferência parcial)
+                        // Na verdade, para transferência parcial, o item ORIGINAL permanece com quantidade reduzida
+                        // Então apenas recarregamos a lista para atualizar a quantidade exibida
                         await loadAvulsosItems();
+                        renderAvulsosItems();
                     } else {
                         if (currentInventarioPersonagemId) {
                             await loadInventarioFromFirebase(currentInventarioPersonagemId);
@@ -9042,8 +9051,22 @@ Agilidade 2\n
                             linkedContainerId: newContainerId
                         }, { merge: true });
 
-                        // Buscar todos os itens que estão dentro deste container (parentItemId === item.id)
-                        const itemsInsideContainer = avulsosItems.filter(i => i.parentItemId === currentTransferItemId);
+                        // Buscar todos os itens que estão dentro deste container
+                        // Se vem de Avulsos: itens têm parentItemId === container.id
+                        // Se vem de Personagem: itens têm parentItemId === container.id OU containerId === container.linkedContainerId
+                        let itemsInsideContainer = [];
+
+                        if (currentTransferIsAvulso) {
+                            // Container vem de Avulsos - buscar por parentItemId
+                            itemsInsideContainer = avulsosItems.filter(i => i.parentItemId === currentTransferItemId);
+                        } else {
+                            // Container vem de Personagem - buscar por parentItemId OU containerId do container vinculado
+                            const linkedContainerId = item.linkedContainerId;
+                            itemsInsideContainer = currentInventarioItems.filter(i =>
+                                i.parentItemId === currentTransferItemId ||
+                                (linkedContainerId && i.containerId === linkedContainerId)
+                            );
+                        }
 
                         for (const childItem of itemsInsideContainer) {
                             // Mover os itens para DENTRO do novo container (não para Equipados)
@@ -9052,7 +9075,7 @@ Agilidade 2\n
                                 ownerId: targetOwnerId,
                                 containerId: newContainerId, // Agora vai para o container criado!
                                 equipado: false,
-                                parentItemId: null // Remover parentItemId pois agora usa containerId
+                                parentItemId: item.id // Manter referência ao item container pai
                             }, { merge: true });
                             itemsTransferred++;
                         }
@@ -9077,15 +9100,57 @@ Agilidade 2\n
                         : `✅ Item transferido com sucesso para ${targetCharacter.nome || 'o personagem'}!`;
 
                     showAlert(successMessage, 'success');
+
+                    // Salvar ID e flag antes de fechar o modal (closeTransferItemModal limpa as variáveis)
+                    const transferredItemId = currentTransferItemId;
+                    const wasAvulsoTransfer = currentTransferIsAvulso;
+
                     closeTransferItemModal();
 
-                    // Fechar container viewer se estiver aberto
-                    if (currentOpenContainerId) {
-                        closeAvulsoContainerViewer();
+                    // Fechar container viewer se o container transferido estiver aberto
+                    if (item && item.tipo === 'Container') {
+                        // Fechar viewer de avulsos se o container transferido estiver aberto
+                        if (currentOpenContainerId === transferredItemId) {
+                            closeAvulsoContainerViewer();
+                        }
+                        // Fechar viewer de personagem se o container transferido estiver aberto
+                        if (currentOpenPersonagemContainerId === transferredItemId) {
+                            closePersonagemContainerViewer();
+                        }
                     }
 
                     // Recarregar listas
-                    if (currentTransferIsAvulso) {
+                    if (wasAvulsoTransfer) {
+                        // Remover imediatamente do DOM para feedback visual instantâneo
+                        const itemElement = document.getElementById('avulso-item-' + transferredItemId);
+                        if (itemElement) {
+                            itemElement.remove();
+                        }
+
+                        // Se é um container, também remover os itens que estavam dentro dele do DOM
+                        if (item && item.tipo === 'Container') {
+                            avulsosItems.forEach(i => {
+                                if (i.parentItemId === transferredItemId) {
+                                    const childElement = document.getElementById('avulso-item-' + i.id);
+                                    if (childElement) {
+                                        childElement.remove();
+                                    }
+                                }
+                            });
+                        }
+
+                        // Remover da lista local também
+                        const itemsToRemove = [transferredItemId];
+                        if (item && item.tipo === 'Container') {
+                            avulsosItems.forEach(i => {
+                                if (i.parentItemId === transferredItemId) {
+                                    itemsToRemove.push(i.id);
+                                }
+                            });
+                        }
+                        avulsosItems = avulsosItems.filter(i => !itemsToRemove.includes(i.id));
+
+                        // Recarregar do Firebase para garantir sincronização
                         await loadAvulsosItems();
                     } else {
                         if (currentInventarioPersonagemId) {
@@ -9175,6 +9240,11 @@ Agilidade 2\n
                     : `✅ Item "${item.name || 'Item'}" agora é um item avulso!`;
 
                 showAlert(successMessage, 'success');
+
+                // Fechar container viewer do personagem se o container transferido estiver aberto
+                if ((item.tipo === 'Container' || item.isContainerItem) && currentOpenPersonagemContainerId === itemId) {
+                    closePersonagemContainerViewer();
+                }
 
                 // Recarregar inventário do personagem
                 if (currentInventarioPersonagemId) {
