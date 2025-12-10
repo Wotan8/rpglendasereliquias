@@ -1549,6 +1549,149 @@
                 width: 100%;
                 justify-content: center;
             }
+
+            .combat-stats {
+                flex-direction: column;
+            }
+        }
+
+        /* ========== ESTILOS DO COMBAT STATS (VIT/DET/SAN) ========== */
+        .combat-stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .combat-stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            min-width: 140px;
+        }
+
+        .combat-stat-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #94a3b8;
+            min-width: 55px;
+        }
+
+        .combat-stat-bar {
+            flex: 1;
+            height: 10px;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 5px;
+            overflow: hidden;
+            min-width: 60px;
+        }
+
+        .combat-stat-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.5s ease, background 0.3s ease;
+        }
+
+        .combat-stat-value {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--light);
+            min-width: 45px;
+            text-align: right;
+        }
+
+        /* NPC Combat Stats with +/- buttons */
+        .combat-stat-npc {
+            gap: 4px !important;
+        }
+
+        .combat-stat-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            border-radius: 6px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .combat-stat-btn:hover {
+            transform: scale(1.15);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+
+        .combat-stat-btn:active {
+            transform: scale(0.95);
+        }
+
+        .combat-participant-npc {
+            border-color: rgba(245, 158, 11, 0.5);
+        }
+
+        .combat-participant-npc:hover {
+            border-color: var(--warning);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);
+        }
+
+        .combat-participant-custom {
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        .combat-participant-custom:hover {
+            border-color: var(--danger);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+        }
+
+        /* Combat Abilities for Custom Enemies */
+        .combat-abilities-container {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .combat-abilities-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #94a3b8;
+            margin-bottom: 6px;
+        }
+
+        .combat-abilities-input {
+            width: 100%;
+            min-height: 60px;
+            padding: 10px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: 0.85rem;
+            font-family: inherit;
+            line-height: 1.4;
+            resize: vertical;
+            transition: all 0.2s ease;
+        }
+
+        .combat-abilities-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+        }
+
+        .combat-abilities-input::placeholder {
+            color: #64748b;
+            font-style: italic;
         }
 
         /* ========== ESTILOS DA ABA APOIOS ========== */
@@ -2068,6 +2211,49 @@
                     <div id="inventarioContainersList">
                         <div style="text-align: center; padding: 40px; color: #64748b;">
                             Carregando inventário...
+                        </div>
+                    </div>
+
+                    <!-- Visualizador de Container Aberto (Personagens) -->
+                    <div id="personagemContainerViewer" class="container-viewer-section" style="display: none;">
+                        <div class="container-viewer-header">
+                            <div class="container-viewer-title">
+                                <span>📂</span>
+                                <span id="personagemContainerName">Container</span>
+                            </div>
+                            <button class="container-viewer-close" onclick="closePersonagemContainerViewer()">✕</button>
+                        </div>
+
+                        <!-- Stats do Container -->
+                        <div class="container-viewer-stats">
+                            <div class="container-stat">
+                                <div class="container-stat-label">Capacidade</div>
+                                <div class="container-stat-value" id="personagemContainerCapacity">0 / 10</div>
+                            </div>
+                            <div class="container-stat">
+                                <div class="container-stat-label">Tamanho Máx. Item</div>
+                                <div class="container-stat-value" id="personagemContainerMaxSize">5</div>
+                            </div>
+                            <div class="container-stat">
+                                <div class="container-stat-label">Itens</div>
+                                <div class="container-stat-value" id="personagemContainerItemCount">0</div>
+                            </div>
+                        </div>
+
+                        <!-- Lista de Itens dentro do Container -->
+                        <div id="personagemContainerItems" class="container-viewer-items">
+                            <div class="container-viewer-empty">
+                                <div style="font-size: 2rem; margin-bottom: 10px;">📭</div>
+                                <div>Este container está vazio</div>
+                            </div>
+                        </div>
+
+                        <!-- Ações do Container -->
+                        <div class="container-viewer-actions">
+                            <button class="btn btn-success" onclick="addItemToOpenContainerMestre()"
+                                style="padding: 10px 20px;">
+                                ➕ Adicionar Item ao Container
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -3855,6 +4041,21 @@ Agilidade 2\n
                     </div>
                 </div>
 
+                <!-- Campo de Quantidade a Transferir (exibido apenas para itens com quantity > 1) -->
+                <div class="form-group" style="margin-bottom: 20px; display: none;" id="transferQuantitySection">
+                    <label class="npc-form-label">📦 Quantidade a transferir:</label>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <input type="number" class="form-input" id="transferQuantityInput" min="1" value="1"
+                            style="width: 120px; text-align: center; font-size: 1.2rem; font-weight: 700;">
+                        <div style="color: #94a3b8; font-size: 0.9rem;">
+                            de <strong id="transferMaxQuantity" style="color: var(--primary);">1</strong> disponíveis
+                        </div>
+                    </div>
+                    <small style="color: #64748b; margin-top: 8px; display: block;">
+                        💡 Transfira apenas uma parte ou todo o estoque deste item
+                    </small>
+                </div>
+
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label class="npc-form-label">🔍 Buscar Personagem</label>
                     <input type="text" class="form-input" id="transferSearchCharacter"
@@ -5559,6 +5760,7 @@ Agilidade 2\n
 
         // ============= COMBATE =============
         let combatParticipants = [];
+        let combatListeners = {}; // Mapa de listeners para atualização em tempo real
 
         window.addToCombat = function (type) {
             if (type === 'jogador') {
@@ -5670,19 +5872,108 @@ Agilidade 2\n
             const character = window.tempCharacters.find(c => c.id === characterId);
 
             if (character) {
+                // Calcular valores máximos
+                const vitalidadeMax = (character.vig || 1) + (character.tamanho || 5);
+                const determinacaoMax = (character.prs || 1) + (character.aut || 1);
+                const sanidadeMax = 100;
+
+                const participantId = 'char-' + Date.now();
+
                 combatParticipants.push({
-                    id: 'char-' + Date.now(),
+                    id: participantId,
+                    characterId: characterId, // ID do Firebase para listener
                     name: character.nome,
                     type: 'Jogador',
                     initiative: initiative,
-                    details: `${character.raca} - ${character.classe} | HP: ${character.hpCurrent}/${character.hpMax}`
+                    details: `${character.raca} - ${character.classe}`,
+                    // Stats em tempo real
+                    hpCurrent: character.hpCurrent !== undefined ? character.hpCurrent : vitalidadeMax,
+                    hpMax: vitalidadeMax,
+                    detCurrent: character.detCurrent !== undefined ? character.detCurrent : determinacaoMax,
+                    detMax: determinacaoMax,
+                    sanCurrent: character.sanCurrent !== undefined ? character.sanCurrent : 80,
+                    sanMax: sanidadeMax
                 });
+
+                // Configurar listener em tempo real
+                setupCombatListener(characterId, participantId);
 
                 renderCombatList();
                 document.querySelector('.modal').remove();
                 showAlert('✅ Jogador adicionado ao combate!', 'success');
             }
         };
+
+        // Configurar listener em tempo real para um participante
+        function setupCombatListener(characterId, participantId) {
+            const charRef = doc(db, 'characters', characterId);
+
+            const unsubscribe = onSnapshot(charRef, (docSnapshot) => {
+                if (docSnapshot.exists()) {
+                    const data = docSnapshot.data();
+                    const participant = combatParticipants.find(p => p.id === participantId);
+
+                    if (participant) {
+                        // Recalcular máximos (podem mudar se atributos mudarem)
+                        const vitalidadeMax = (data.vig || 1) + (data.tamanho || 5);
+                        const determinacaoMax = (data.prs || 1) + (data.aut || 1);
+
+                        // Atualizar valores
+                        participant.hpCurrent = data.hpCurrent !== undefined ? data.hpCurrent : vitalidadeMax;
+                        participant.hpMax = vitalidadeMax;
+                        participant.detCurrent = data.detCurrent !== undefined ? data.detCurrent : determinacaoMax;
+                        participant.detMax = determinacaoMax;
+                        participant.sanCurrent = data.sanCurrent !== undefined ? data.sanCurrent : 80;
+                        participant.name = data.nome || participant.name;
+
+                        // Atualizar apenas o elemento específico (sem re-renderizar tudo)
+                        updateParticipantStats(participantId);
+                    }
+                }
+            }, (error) => {
+                console.error('❌ Erro no listener de combate:', error);
+            });
+
+            // Armazenar função de cancelamento
+            combatListeners[participantId] = unsubscribe;
+        }
+
+        // Atualizar stats de um participante específico (sem re-renderizar toda a lista)
+        function updateParticipantStats(participantId) {
+            const participant = combatParticipants.find(p => p.id === participantId);
+            if (!participant) return;
+
+            // Atualizar elementos VIT
+            const vitEl = document.getElementById(`combat-vit-${participantId}`);
+            const vitFillEl = document.getElementById(`combat-vit-fill-${participantId}`);
+            if (vitEl && vitFillEl) {
+                vitEl.textContent = `${participant.hpCurrent}/${participant.hpMax}`;
+                const vitPercent = participant.hpMax > 0 ? (participant.hpCurrent / participant.hpMax) * 100 : 0;
+                vitFillEl.style.width = vitPercent + '%';
+                // Mudar cor se HP baixo
+                vitFillEl.style.background = vitPercent <= 25 ? 'linear-gradient(90deg, #dc2626, #ef4444)' : 'linear-gradient(90deg, #10b981, #34d399)';
+            }
+
+            // Atualizar elementos DET
+            const detEl = document.getElementById(`combat-det-${participantId}`);
+            const detFillEl = document.getElementById(`combat-det-fill-${participantId}`);
+            if (detEl && detFillEl) {
+                detEl.textContent = `${participant.detCurrent}/${participant.detMax}`;
+                const detPercent = participant.detMax > 0 ? (participant.detCurrent / participant.detMax) * 100 : 0;
+                detFillEl.style.width = detPercent + '%';
+            }
+
+            // Atualizar elementos SAN
+            const sanEl = document.getElementById(`combat-san-${participantId}`);
+            const sanFillEl = document.getElementById(`combat-san-fill-${participantId}`);
+            if (sanEl && sanFillEl) {
+                sanEl.textContent = `${participant.sanCurrent}/${participant.sanMax}`;
+                const sanPercent = participant.sanMax > 0 ? (participant.sanCurrent / participant.sanMax) * 100 : 0;
+                sanFillEl.style.width = sanPercent + '%';
+                // Mudar cor se SAN baixa
+                sanFillEl.style.background = sanPercent <= 25 ? 'linear-gradient(90deg, #dc2626, #ef4444)' : 'linear-gradient(90deg, #6366f1, #8b5cf6)';
+            }
+        }
 
         async function showNpcSelector() {
             try {
@@ -5784,12 +6075,26 @@ Agilidade 2\n
             const npc = window.tempNpcs.find(n => n.id === npcId);
 
             if (npc) {
+                // Obter valores de VIT/DET/SAN do NPC
+                const vitMax = npc.valoresDer?.VIT || 10;
+                const detMax = npc.valoresDer?.DET || 5;
+                const sanMax = npc.valoresDer?.SAN || 100;
+
                 combatParticipants.push({
                     id: 'npc-' + Date.now(),
+                    npcId: npcId, // ID do Firebase para abrir modal de edição
                     name: npc.nome,
-                    type: npc.tipo || 'NPC',
+                    type: npc.tipo === 'criatura' ? 'Criatura' : 'NPC',
                     initiative: initiative,
-                    details: `${npc.raca || 'N/A'} | HP: ${npc.hpAtual || 0}/${npc.hpMax || 0}`
+                    details: `${npc.raca || 'N/A'} | ${npc.papel || 'Sem papel'}`,
+                    // Stats editáveis no combate
+                    hpCurrent: vitMax,
+                    hpMax: vitMax,
+                    detCurrent: detMax,
+                    detMax: detMax,
+                    sanCurrent: sanMax,
+                    sanMax: sanMax,
+                    isNpc: true
                 });
 
                 renderCombatList();
@@ -5798,29 +6103,80 @@ Agilidade 2\n
             }
         };
 
+        // Função para ajustar stats de NPC no combate
+        window.adjustCombatStat = function (participantId, stat, amount, event) {
+            // Parar propagação para não abrir o modal do NPC
+            if (event) event.stopPropagation();
+
+            const participant = combatParticipants.find(p => p.id === participantId);
+            if (!participant) return;
+
+            if (stat === 'vit') {
+                participant.hpCurrent = Math.max(0, Math.min(participant.hpCurrent + amount, participant.hpMax));
+            } else if (stat === 'det') {
+                participant.detCurrent = Math.max(0, Math.min(participant.detCurrent + amount, participant.detMax));
+            } else if (stat === 'san') {
+                participant.sanCurrent = Math.max(0, Math.min(participant.sanCurrent + amount, participant.sanMax));
+            }
+
+            // Atualizar display
+            updateParticipantStats(participantId);
+        };
+
+        // Função para abrir modal de edição de NPC a partir do combate
+        window.openCombatNpcModal = function (participantId) {
+            const participant = combatParticipants.find(p => p.id === participantId);
+            if (!participant || !participant.npcId) return;
+
+            openNpcModal(participant.npcId);
+        };
+
         function showCustomEnemyInput() {
             const modal = document.createElement('div');
             modal.className = 'modal';
             modal.style.display = 'flex';
             modal.innerHTML = `
-                <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-content" style="max-width: 700px;">
                     <div class="modal-header">
                         <div class="modal-title">Adicionar Inimigo Personalizado</div>
                         <button class="modal-close" onclick="this.closest('.modal').remove()">✕</button>
                     </div>
                     <div style="padding: 20px;">
                         <div class="form-group">
-                            <label class="form-label">Nome do Inimigo</label>
+                            <label class="form-label">Nome do Inimigo *</label>
                             <input type="text" class="form-input" id="customEnemyName" placeholder="Ex: Goblin, Bandido...">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Detalhes (opcional)</label>
-                            <input type="text" class="form-input" id="customEnemyDetails" placeholder="Ex: HP: 20, CA: 15">
+                            <input type="text" class="form-input" id="customEnemyDetails" placeholder="Ex: Raça, Tipo, Papel...">
                         </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">⚔️ Iniciativa</label>
+                                <input type="number" class="form-input" id="customInitiative" value="0" min="0" style="text-align: center;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">❤️ VIT</label>
+                                <input type="number" class="form-input" id="customEnemyVIT" value="10" min="1" style="text-align: center;">
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">🔥 DET</label>
+                                <input type="number" class="form-input" id="customEnemyDET" value="5" min="0" style="text-align: center;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">🧠 SAN</label>
+                                <input type="number" class="form-input" id="customEnemySAN" value="50" min="0" style="text-align: center;">
+                            </div>
+                        </div>
+                        
                         <div class="form-group">
-                            <label class="form-label">Iniciativa</label>
-                            <input type="number" class="form-input" id="customInitiative" value="0" min="0">
+                            <label class="form-label">⚔️ Habilidades de Combate</label>
+                            <textarea class="form-input" id="customEnemyAbilities" rows="3" placeholder="Ex: Ataque Corpo a Corpo 3d10&#10;Mordida Venenosa 2d10 + Veneno&#10;Resistência a Fogo"></textarea>
                         </div>
+                        
                         <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
                             <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancelar</button>
                             <button class="btn btn-success" onclick="addCustomEnemyToCombat()">Adicionar</button>
@@ -5839,6 +6195,10 @@ Agilidade 2\n
             const name = document.getElementById('customEnemyName').value.trim();
             const details = document.getElementById('customEnemyDetails').value.trim();
             const initiative = parseInt(document.getElementById('customInitiative').value) || 0;
+            const vit = parseInt(document.getElementById('customEnemyVIT').value) || 10;
+            const det = parseInt(document.getElementById('customEnemyDET').value) || 5;
+            const san = parseInt(document.getElementById('customEnemySAN').value) || 50;
+            const abilities = document.getElementById('customEnemyAbilities').value.trim();
 
             if (!name) {
                 showAlert('❌ Por favor, insira um nome para o inimigo', 'danger');
@@ -5850,12 +6210,29 @@ Agilidade 2\n
                 name: name,
                 type: 'Inimigo',
                 initiative: initiative,
-                details: details || 'Sem detalhes'
+                details: details || 'Inimigo Personalizado',
+                // Stats editáveis
+                hpCurrent: vit,
+                hpMax: vit,
+                detCurrent: det,
+                detMax: det,
+                sanCurrent: san,
+                sanMax: san,
+                combatAbilities: abilities,
+                isCustom: true
             });
 
             renderCombatList();
             document.querySelector('.modal').remove();
             showAlert('✅ Inimigo adicionado ao combate!', 'success');
+        };
+
+        // Função para atualizar habilidades de combate de inimigo customizado
+        window.updateCustomAbilities = function (participantId, newValue) {
+            const participant = combatParticipants.find(p => p.id === participantId);
+            if (participant) {
+                participant.combatAbilities = newValue;
+            }
         };
 
         window.sortCombatList = function () {
@@ -5866,6 +6243,14 @@ Agilidade 2\n
 
         window.clearCombatList = function () {
             if (confirm('Tem certeza que deseja limpar toda a lista de combate?')) {
+                // Cancelar todos os listeners
+                Object.values(combatListeners).forEach(unsubscribe => {
+                    if (typeof unsubscribe === 'function') {
+                        unsubscribe();
+                    }
+                });
+                combatListeners = {};
+
                 combatParticipants = [];
                 renderCombatList();
                 showAlert('✅ Lista de combate limpa!', 'success');
@@ -5873,6 +6258,12 @@ Agilidade 2\n
         };
 
         window.removeFromCombat = function (id) {
+            // Cancelar listener se existir
+            if (combatListeners[id]) {
+                combatListeners[id]();
+                delete combatListeners[id];
+            }
+
             combatParticipants = combatParticipants.filter(p => p.id !== id);
             renderCombatList();
             showAlert('✅ Participante removido do combate!', 'success');
@@ -5893,33 +6284,139 @@ Agilidade 2\n
                 return;
             }
 
-            combatList.innerHTML = combatParticipants.map(participant => `
-                <div class="combat-participant">
-                    <div class="combat-initiative">
-                        <div class="combat-initiative-value">${participant.initiative}</div>
-                        <div class="combat-initiative-label">Iniciativa</div>
+            combatList.innerHTML = combatParticipants.map(participant => {
+                // Verificar tipo de participante
+                const isPlayer = participant.type === 'Jogador' && participant.hpMax !== undefined;
+                const isNpc = participant.isNpc === true;
+                const isCustom = participant.isCustom === true;
+                const hasStats = isPlayer || isNpc || isCustom;
+                const hasControls = isNpc || isCustom; // NPCs e Custom têm botões +/-
+
+                let statsHtml = '';
+                let abilitiesHtml = '';
+
+                if (hasStats) {
+                    const vitPercent = participant.hpMax > 0 ? (participant.hpCurrent / participant.hpMax) * 100 : 0;
+                    const detPercent = participant.detMax > 0 ? (participant.detCurrent / participant.detMax) * 100 : 0;
+                    const sanPercent = participant.sanMax > 0 ? (participant.sanCurrent / participant.sanMax) * 100 : 0;
+
+                    const vitColor = vitPercent <= 25 ? 'linear-gradient(90deg, #dc2626, #ef4444)' : 'linear-gradient(90deg, #10b981, #34d399)';
+                    const sanColor = sanPercent <= 25 ? 'linear-gradient(90deg, #dc2626, #ef4444)' : 'linear-gradient(90deg, #6366f1, #8b5cf6)';
+
+                    if (hasControls) {
+                        // NPC/Criatura/Custom: Com botões +/-
+                        statsHtml = `
+                            <div class="combat-stats">
+                                <div class="combat-stat-item combat-stat-npc">
+                                    <button class="combat-stat-btn" onclick="adjustCombatStat('${participant.id}', 'vit', -1, event)">−</button>
+                                    <span class="combat-stat-label">❤️ VIT</span>
+                                    <div class="combat-stat-bar">
+                                        <div class="combat-stat-fill" id="combat-vit-fill-${participant.id}" style="width: ${vitPercent}%; background: ${vitColor};"></div>
+                                    </div>
+                                    <span class="combat-stat-value" id="combat-vit-${participant.id}">${participant.hpCurrent}/${participant.hpMax}</span>
+                                    <button class="combat-stat-btn" onclick="adjustCombatStat('${participant.id}', 'vit', 1, event)">+</button>
+                                </div>
+                                <div class="combat-stat-item combat-stat-npc">
+                                    <button class="combat-stat-btn" onclick="adjustCombatStat('${participant.id}', 'det', -1, event)">−</button>
+                                    <span class="combat-stat-label">🔥 DET</span>
+                                    <div class="combat-stat-bar">
+                                        <div class="combat-stat-fill" id="combat-det-fill-${participant.id}" style="width: ${detPercent}%; background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div>
+                                    </div>
+                                    <span class="combat-stat-value" id="combat-det-${participant.id}">${participant.detCurrent}/${participant.detMax}</span>
+                                    <button class="combat-stat-btn" onclick="adjustCombatStat('${participant.id}', 'det', 1, event)">+</button>
+                                </div>
+                                <div class="combat-stat-item combat-stat-npc">
+                                    <button class="combat-stat-btn" onclick="adjustCombatStat('${participant.id}', 'san', -1, event)">−</button>
+                                    <span class="combat-stat-label">🧠 SAN</span>
+                                    <div class="combat-stat-bar">
+                                        <div class="combat-stat-fill" id="combat-san-fill-${participant.id}" style="width: ${sanPercent}%; background: ${sanColor};"></div>
+                                    </div>
+                                    <span class="combat-stat-value" id="combat-san-${participant.id}">${participant.sanCurrent}/${participant.sanMax}</span>
+                                    <button class="combat-stat-btn" onclick="adjustCombatStat('${participant.id}', 'san', 1, event)">+</button>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // Jogador: Sem botões (apenas visualização, valores vêm da ficha)
+                        statsHtml = `
+                            <div class="combat-stats">
+                                <div class="combat-stat-item">
+                                    <span class="combat-stat-label">❤️ VIT</span>
+                                    <div class="combat-stat-bar">
+                                        <div class="combat-stat-fill" id="combat-vit-fill-${participant.id}" style="width: ${vitPercent}%; background: ${vitColor};"></div>
+                                    </div>
+                                    <span class="combat-stat-value" id="combat-vit-${participant.id}">${participant.hpCurrent}/${participant.hpMax}</span>
+                                </div>
+                                <div class="combat-stat-item">
+                                    <span class="combat-stat-label">🔥 DET</span>
+                                    <div class="combat-stat-bar">
+                                        <div class="combat-stat-fill" id="combat-det-fill-${participant.id}" style="width: ${detPercent}%; background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div>
+                                    </div>
+                                    <span class="combat-stat-value" id="combat-det-${participant.id}">${participant.detCurrent}/${participant.detMax}</span>
+                                </div>
+                                <div class="combat-stat-item">
+                                    <span class="combat-stat-label">🧠 SAN</span>
+                                    <div class="combat-stat-bar">
+                                        <div class="combat-stat-fill" id="combat-san-fill-${participant.id}" style="width: ${sanPercent}%; background: ${sanColor};"></div>
+                                    </div>
+                                    <span class="combat-stat-value" id="combat-san-${participant.id}">${participant.sanCurrent}/${participant.sanMax}</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                // Habilidades de combate editáveis (apenas para custom)
+                if (isCustom) {
+                    const escapedAbilities = (participant.combatAbilities || '').replace(/"/g, '&quot;').replace(/\n/g, '&#10;');
+                    abilitiesHtml = `
+                        <div class="combat-abilities-container" onclick="event.stopPropagation()">
+                            <label class="combat-abilities-label">⚔️ Habilidades de Combate:</label>
+                            <textarea 
+                                class="combat-abilities-input" 
+                                id="abilities-${participant.id}"
+                                placeholder="Clique para adicionar habilidades..."
+                                onchange="updateCustomAbilities('${participant.id}', this.value)"
+                            >${participant.combatAbilities || ''}</textarea>
+                        </div>
+                    `;
+                }
+
+                // NPC clicável para abrir modal
+                const clickHandler = isNpc ? `onclick="openCombatNpcModal('${participant.id}')" style="cursor: pointer;"` : '';
+                const npcIndicator = isNpc ? '<span style="font-size: 0.7rem; color: #94a3b8; margin-left: 5px;">📋 clique para detalhes</span>' : '';
+                const customClass = isCustom ? 'combat-participant-custom' : (isNpc ? 'combat-participant-npc' : '');
+
+                return `
+                    <div class="combat-participant ${customClass}" ${clickHandler}>
+                        <div class="combat-initiative">
+                            <div class="combat-initiative-value">${participant.initiative}</div>
+                            <div class="combat-initiative-label">Iniciativa</div>
+                        </div>
+                        
+                        <div class="combat-info" style="flex: 1;">
+                            <div class="combat-name">${participant.name}${npcIndicator}</div>
+                            <span class="combat-type">${participant.type}</span>
+                            <div class="combat-details">${participant.details}</div>
+                            ${statsHtml}
+                            ${abilitiesHtml}
+                        </div>
+                        
+                        <div class="combat-actions" onclick="event.stopPropagation()">
+                            <input 
+                                type="number" 
+                                class="combat-initiative-input" 
+                                value="${participant.initiative}"
+                                onchange="updateInitiative('${participant.id}', this.value)"
+                                title="Alterar iniciativa"
+                            >
+                            <button class="btn btn-danger" onclick="removeFromCombat('${participant.id}')" style="padding: 10px 20px;">
+                                🗑️
+                            </button>
+                        </div>
                     </div>
-                    
-                    <div class="combat-info">
-                        <div class="combat-name">${participant.name}</div>
-                        <span class="combat-type">${participant.type}</span>
-                        <div class="combat-details">${participant.details}</div>
-                    </div>
-                    
-                    <div class="combat-actions">
-                        <input 
-                            type="number" 
-                            class="combat-initiative-input" 
-                            value="${participant.initiative}"
-                            onchange="updateInitiative('${participant.id}', this.value)"
-                            title="Alterar iniciativa"
-                        >
-                        <button class="btn btn-danger" onclick="removeFromCombat('${participant.id}')" style="padding: 10px 20px;">
-                            🗑️
-                        </button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         // ============= ALERTAS =============
@@ -7676,6 +8173,7 @@ Agilidade 2\n
         let currentEditingContainerIdMestre = null;
         let currentEditingItemIdMestre = null;
         let currentItemImageBase64Mestre = null;
+        let currentOpenPersonagemContainerId = null; // ID do container atualmente aberto na aba Personagens
 
         // ============= SISTEMA DE ITENS AVULSOS =============
         let avulsosItems = [];
@@ -7896,10 +8394,20 @@ Agilidade 2\n
             if (!confirm(`⚠️ Tem certeza que deseja excluir o item "${item.name}"?\n\nEsta ação não pode ser desfeita.`)) return;
 
             try {
+                // Guardar referência ao container aberto antes de recarregar
+                const wasContainerOpen = currentOpenContainerId;
+
                 await deleteDoc(doc(db, 'items', itemId));
                 showAlert('✅ Item avulso deletado com sucesso!', 'success');
                 await addLog(`excluiu item avulso "${item.name}"`);
                 await loadAvulsosItems();
+
+                // Re-renderizar container se estava aberto
+                if (wasContainerOpen) {
+                    currentOpenContainerId = wasContainerOpen;
+                    document.getElementById('avulsoContainerViewer').style.display = 'block';
+                    renderContainerItems();
+                }
             } catch (error) {
                 console.error('❌ Erro ao deletar item avulso:', error);
                 showAlert('❌ Erro ao deletar item: ' + error.message, 'danger');
@@ -8005,6 +8513,12 @@ Agilidade 2\n
                             </button>
                             <button class="btn btn-primary" onclick="openTransferItemModal('${item.id}', true)" style="padding: 8px 14px; font-size: 0.85rem;" title="Transferir">
                                 🔄
+                            </button>
+                            <button class="btn btn-secondary" onclick="editAvulsoItem('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Editar item">
+                                ✏️
+                            </button>
+                            <button class="btn btn-danger" onclick="deleteAvulsoItem('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Deletar item">
+                                🗑️
                             </button>
                         </div>
                     </div>
@@ -8229,6 +8743,29 @@ Agilidade 2\n
             document.getElementById('transferItemName').textContent = `${item.name || 'Item sem nome'} (${item.tipo || 'Sem tipo'})`;
             document.getElementById('transferSearchCharacter').value = '';
 
+            // Verificar se o item tem quantidade > 1 para exibir campo de quantidade
+            const quantitySection = document.getElementById('transferQuantitySection');
+            const quantityInput = document.getElementById('transferQuantityInput');
+            const maxQuantitySpan = document.getElementById('transferMaxQuantity');
+            const itemQuantity = item.quantity || 1;
+
+            if (itemQuantity > 1) {
+                quantitySection.style.display = 'block';
+                quantityInput.value = itemQuantity; // Padrão: transferir tudo
+                quantityInput.max = itemQuantity;
+                maxQuantitySpan.textContent = itemQuantity;
+
+                // Adicionar validação em tempo real
+                quantityInput.oninput = function () {
+                    const val = parseInt(this.value) || 1;
+                    if (val < 1) this.value = 1;
+                    if (val > itemQuantity) this.value = itemQuantity;
+                };
+            } else {
+                quantitySection.style.display = 'none';
+                quantityInput.value = 1;
+            }
+
             // Renderizar lista de personagens
             renderTransferCharactersList(allCharacters);
 
@@ -8247,6 +8784,7 @@ Agilidade 2\n
             // Mostrar modal
             document.getElementById('transferItemModal').style.display = 'flex';
         };
+
 
         // Fechar modal de transferência
         window.closeTransferItemModal = function () {
@@ -8358,6 +8896,17 @@ Agilidade 2\n
                 if (item) itemName = item.name || 'Item';
             }
 
+            // Verificar quantidade a transferir
+            const quantityInput = document.getElementById('transferQuantityInput');
+            const totalQuantity = item.quantity || 1;
+            let transferQuantity = parseInt(quantityInput.value) || totalQuantity;
+
+            // Validar quantidade
+            if (transferQuantity < 1) transferQuantity = 1;
+            if (transferQuantity > totalQuantity) transferQuantity = totalQuantity;
+
+            const isPartialTransfer = transferQuantity < totalQuantity;
+
             try {
                 // Buscar o documento do personagem de destino para obter o ownerId correto
                 const targetCharDoc = await getDoc(doc(db, 'characters', targetCharacterId));
@@ -8397,99 +8946,161 @@ Agilidade 2\n
                     equipadosContainerId = 'está com alguém';
                 }
 
-                // Atualizar o item principal no Firebase
-                await setDoc(doc(db, 'items', currentTransferItemId), {
-                    characterId: targetCharacterId,
-                    ownerId: targetOwnerId,
-                    containerId: equipadosContainerId,
-                    equipado: false,
-                    parentItemId: null // Remover parentItemId se estiver em outro container
-                }, { merge: true });
+                // Se é transferência parcial, criar novo item e atualizar quantidade do original
+                if (isPartialTransfer) {
+                    // Calcular novo peso total para quantidade transferida
+                    const packSize = item.packSize || 1;
+                    const pesoUnitario = item.peso || 1;
+                    const newTotalWeight = Math.ceil((transferQuantity / packSize) * pesoUnitario);
 
-                // ✅ Se o item é um Container, criar o documento de container E transferir itens dentro
-                let itemsTransferred = 0;
-                if (item && item.tipo === 'Container') {
-                    // CRIAR documento na coleção 'containers' para o item aparecer como bloco
-                    const newContainerId = 'container-' + Date.now();
-                    const newContainerDoc = {
-                        id: newContainerId,
-                        name: item.name,
-                        ownerId: targetOwnerId,
+                    // Criar novo item com quantidade transferida
+                    const newItemId = 'item-' + Date.now();
+                    const newItemData = {
+                        ...item,
+                        id: newItemId,
+                        quantity: transferQuantity,
+                        totalWeight: newTotalWeight,
                         characterId: targetCharacterId,
-                        maxCapacity: item.maxCapacity || 10,
-                        maxSize: item.maxSize || 5,
-                        itemIds: [],
-                        description: item.description || '',
-                        dureza: item.dureza || 0,
-                        tamanho: item.tamanho || 1,
-                        integridade: item.integridade || 0,
-                        peso: item.peso || 0
+                        ownerId: targetOwnerId,
+                        containerId: equipadosContainerId,
+                        equipado: false,
+                        parentItemId: null
                     };
-                    await setDoc(doc(db, 'containers', newContainerId), newContainerDoc);
-                    console.log(`📦 Container document created: ${newContainerId}`);
 
-                    // ATUALIZAR o item para ser um "Item de Container" vinculado
+                    await setDoc(doc(db, 'items', newItemId), newItemData);
+
+                    // Atualizar quantidade do item original
+                    const remainingQuantity = totalQuantity - transferQuantity;
+                    const remainingTotalWeight = Math.ceil((remainingQuantity / packSize) * pesoUnitario);
+
                     await setDoc(doc(db, 'items', currentTransferItemId), {
-                        isContainerItem: true,
-                        linkedContainerId: newContainerId
+                        quantity: remainingQuantity,
+                        totalWeight: remainingTotalWeight
                     }, { merge: true });
 
-                    // Buscar todos os itens que estão dentro deste container (parentItemId === item.id)
-                    const itemsInsideContainer = avulsosItems.filter(i => i.parentItemId === currentTransferItemId);
+                    // Log da transferência parcial
+                    await addLog(
+                        currentUser.email || 'Mestre',
+                        `transferiu ${transferQuantity}x "${itemName}" para o personagem (restante: ${remainingQuantity})`,
+                        targetCharacter.nome || 'Sem nome',
+                        'items'
+                    );
 
-                    for (const childItem of itemsInsideContainer) {
-                        // Mover os itens para DENTRO do novo container (não para Equipados)
-                        await setDoc(doc(db, 'items', childItem.id), {
-                            characterId: targetCharacterId,
-                            ownerId: targetOwnerId,
-                            containerId: newContainerId, // Agora vai para o container criado!
-                            equipado: false,
-                            parentItemId: null // Remover parentItemId pois agora usa containerId
-                        }, { merge: true });
-                        itemsTransferred++;
+                    showAlert(`✅ ${transferQuantity}x "${itemName}" transferido para ${targetCharacter.nome}! (${remainingQuantity} restantes)`, 'success');
+                    closeTransferItemModal();
+
+                    // Fechar container viewer se estiver aberto
+                    if (currentOpenContainerId) {
+                        closeAvulsoContainerViewer();
                     }
 
-                    console.log(`📦 Transferidos ${itemsTransferred} itens para dentro do container "${itemName}"`);
-                }
+                    // Recarregar listas
+                    if (currentTransferIsAvulso) {
+                        await loadAvulsosItems();
+                    } else {
+                        if (currentInventarioPersonagemId) {
+                            await loadInventarioFromFirebase(currentInventarioPersonagemId);
+                        }
+                    }
 
-                // Log da transferência - usando os 4 parâmetros corretos
-                const logMessage = itemsTransferred > 0
-                    ? `transferiu container "${itemName}" (com ${itemsTransferred} item(s)) para o personagem`
-                    : `transferiu item "${itemName}" para o personagem`;
-
-                await addLog(
-                    currentUser.email || 'Mestre',
-                    logMessage,
-                    targetCharacter.nome || 'Sem nome',
-                    'items'
-                );
-
-                const successMessage = itemsTransferred > 0
-                    ? `✅ Container "${itemName}" e ${itemsTransferred} item(s) transferidos para ${targetCharacter.nome}!`
-                    : `✅ Item transferido com sucesso para ${targetCharacter.nome || 'o personagem'}!`;
-
-                showAlert(successMessage, 'success');
-                closeTransferItemModal();
-
-                // Fechar container viewer se estiver aberto
-                if (currentOpenContainerId) {
-                    closeAvulsoContainerViewer();
-                }
-
-                // Recarregar listas
-                if (currentTransferIsAvulso) {
-                    await loadAvulsosItems();
                 } else {
-                    if (currentInventarioPersonagemId) {
-                        await loadInventarioFromFirebase(currentInventarioPersonagemId);
+                    // Transferência total do item - lógica original
+                    await setDoc(doc(db, 'items', currentTransferItemId), {
+                        characterId: targetCharacterId,
+                        ownerId: targetOwnerId,
+                        containerId: equipadosContainerId,
+                        equipado: false,
+                        parentItemId: null // Remover parentItemId se estiver em outro container
+                    }, { merge: true });
+
+
+                    // ✅ Se o item é um Container, criar o documento de container E transferir itens dentro
+                    let itemsTransferred = 0;
+                    if (item && item.tipo === 'Container') {
+                        // CRIAR documento na coleção 'containers' para o item aparecer como bloco
+                        const newContainerId = 'container-' + Date.now();
+                        const newContainerDoc = {
+                            id: newContainerId,
+                            name: item.name,
+                            ownerId: targetOwnerId,
+                            characterId: targetCharacterId,
+                            maxCapacity: item.maxCapacity || 10,
+                            maxSize: item.maxSize || 5,
+                            itemIds: [],
+                            description: item.description || '',
+                            dureza: item.dureza || 0,
+                            tamanho: item.tamanho || 1,
+                            integridade: item.integridade || 0,
+                            peso: item.peso || 0
+                        };
+                        await setDoc(doc(db, 'containers', newContainerId), newContainerDoc);
+                        console.log(`📦 Container document created: ${newContainerId}`);
+
+                        // ATUALIZAR o item para ser um "Item de Container" vinculado
+                        await setDoc(doc(db, 'items', currentTransferItemId), {
+                            isContainerItem: true,
+                            linkedContainerId: newContainerId
+                        }, { merge: true });
+
+                        // Buscar todos os itens que estão dentro deste container (parentItemId === item.id)
+                        const itemsInsideContainer = avulsosItems.filter(i => i.parentItemId === currentTransferItemId);
+
+                        for (const childItem of itemsInsideContainer) {
+                            // Mover os itens para DENTRO do novo container (não para Equipados)
+                            await setDoc(doc(db, 'items', childItem.id), {
+                                characterId: targetCharacterId,
+                                ownerId: targetOwnerId,
+                                containerId: newContainerId, // Agora vai para o container criado!
+                                equipado: false,
+                                parentItemId: null // Remover parentItemId pois agora usa containerId
+                            }, { merge: true });
+                            itemsTransferred++;
+                        }
+
+                        console.log(`📦 Transferidos ${itemsTransferred} itens para dentro do container "${itemName}"`);
                     }
-                }
+
+                    // Log da transferência - usando os 4 parâmetros corretos
+                    const logMessage = itemsTransferred > 0
+                        ? `transferiu container "${itemName}" (com ${itemsTransferred} item(s)) para o personagem`
+                        : `transferiu item "${itemName}" para o personagem`;
+
+                    await addLog(
+                        currentUser.email || 'Mestre',
+                        logMessage,
+                        targetCharacter.nome || 'Sem nome',
+                        'items'
+                    );
+
+                    const successMessage = itemsTransferred > 0
+                        ? `✅ Container "${itemName}" e ${itemsTransferred} item(s) transferidos para ${targetCharacter.nome}!`
+                        : `✅ Item transferido com sucesso para ${targetCharacter.nome || 'o personagem'}!`;
+
+                    showAlert(successMessage, 'success');
+                    closeTransferItemModal();
+
+                    // Fechar container viewer se estiver aberto
+                    if (currentOpenContainerId) {
+                        closeAvulsoContainerViewer();
+                    }
+
+                    // Recarregar listas
+                    if (currentTransferIsAvulso) {
+                        await loadAvulsosItems();
+                    } else {
+                        if (currentInventarioPersonagemId) {
+                            await loadInventarioFromFirebase(currentInventarioPersonagemId);
+                        }
+                    }
+
+                } // Fecha o else da transferência total
 
             } catch (error) {
                 console.error('❌ Erro ao transferir item:', error);
                 showAlert('❌ Erro ao transferir item: ' + error.message, 'danger');
             }
         };
+
 
         // Transferir item de um personagem para Avulso (sem dono)
         window.transferItemToAvulso = async function (itemId) {
@@ -8737,72 +9348,101 @@ Agilidade 2\n
                 return;
             }
 
-            // Ordenar: Equipados primeiro
-            const sortedContainers = [...currentInventarioContainers].sort((a, b) => {
-                if (a.name === 'Equipados') return -1;
-                if (b.name === 'Equipados') return 1;
-                return 0;
+            // Encontrar o container "Equipados"
+            const equipadosContainer = currentInventarioContainers.find(c => c.name === 'Equipados');
+
+            // Filtrar items do Equipados (excluindo itens dentro de containers)
+            const equipadosItems = currentInventarioItems.filter(item => {
+                // Se o item está dentro de um Container-item, não mostrar na lista principal
+                if (item.parentItemId) return false;
+                // Só mostrar itens no Equipados
+                return item.containerId === 'está com alguém';
             });
 
-            containersList.innerHTML = sortedContainers.map(container => {
-                // Filtrar items deste container
-                // IMPORTANTE: Excluir itens que estão DENTRO de um Container-item (têm parentItemId)
-                const containerItems = currentInventarioItems.filter(item => {
-                    // Se o item está dentro de um Container-item, não mostrar na lista normal
-                    if (item.parentItemId) return false;
+            let html = '';
 
-                    if (container.name === 'Equipados') {
-                        return item.containerId === 'está com alguém';
-                    }
-                    return item.containerId === container.id;
-                });
+            // ===== SEÇÃO: EQUIPADOS =====
+            if (equipadosContainer) {
+                const pesoTotal = equipadosItems.reduce((sum, item) => sum + (item.totalWeight || 0), 0);
 
-                // Calcular peso total
-                const pesoTotal = containerItems.reduce((sum, item) => sum + (item.totalWeight || 0), 0);
-                const pesoContainer = container.peso || 0;
-                const pesoFinal = pesoTotal + pesoContainer;
-
-                return `
+                html += `
                     <div style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 20px; margin-bottom: 20px;">
-                        <!-- Header do Container -->
+                        <!-- Header do Equipados -->
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 2px solid var(--border);">
                             <div>
                                 <div style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">
-                                    ${container.name === 'Equipados' ? '🎒' : '📦'} ${container.name}
+                                    🎒 Equipados
                                 </div>
                                 <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">
-                                    Capacidade: ${pesoFinal.toFixed(1)} / ${container.maxCapacity || 0} | 
-                                    Tamanho Máx: ${container.maxSize || 0}
+                                    Capacidade: ${pesoTotal.toFixed(1)} / ${equipadosContainer.maxCapacity || 0} | 
+                                    Tamanho Máx: ${equipadosContainer.maxSize || 0}
                                 </div>
                             </div>
                             <div style="display: flex; gap: 10px;">
-                                <button class="btn btn-success" onclick="addItemToContainerMestre('${container.name === 'Equipados' ? 'está com alguém' : container.id}')" style="padding: 8px 15px;">
+                                <button class="btn btn-success" onclick="addItemToContainerMestre('está com alguém')" style="padding: 8px 15px;">
                                     ➕ Adicionar
                                 </button>
-                                ${container.name !== 'Equipados' ? `
-                                    <button class="btn btn-danger" onclick="deleteContainerMestre('${container.id}')" style="padding: 8px 15px;">
-                                        🗑️ Remover
-                                    </button>
-                                ` : ''}
                             </div>
                         </div>
                         
-                        <!-- Items do Container -->
+                        <!-- Items do Equipados -->
                         <div style="display: grid; gap: 10px;">
-                            ${containerItems.length === 0 ? `
+                            ${equipadosItems.length === 0 ? `
                                 <div style="text-align: center; padding: 30px; color: #64748b; background: rgba(15, 23, 42, 0.4); border-radius: 10px;">
-                                    Container vazio
+                                    Nenhum item equipado
                                 </div>
-                            ` : containerItems.map(item => {
-                    // Imagem do item
-                    const imagemHTML = item.imagem ? `<img src="${item.imagem}" style="width: 50px; height: 50px; object-fit: contain; border-radius: 8px; margin-right: 15px; background: rgba(15, 23, 42, 0.8); padding: 5px;">` : '';
+                            ` : equipadosItems.map(item => {
+                    const isContainer = item.tipo === 'Container';
+                    const isContainerOpen = currentOpenPersonagemContainerId === item.id;
+
+                    // Para containers, obter dados adicionais
+                    let containerBadges = '';
+                    let openContainerBtn = '';
+
+                    if (isContainer) {
+                        const linkedContainer = currentInventarioContainers.find(c => c.id === item.linkedContainerId);
+                        const maxCapacity = linkedContainer?.maxCapacity || item.maxCapacity || 10;
+                        const itemsInside = currentInventarioItems.filter(i => i.parentItemId === item.id).length;
+
+                        containerBadges = `
+                                        <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; margin-left: 8px;">
+                                            📦 Cap: ${maxCapacity}
+                                        </span>
+                                        <span style="background: rgba(139, 92, 246, 0.2); color: var(--primary); padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; margin-left: 5px;">
+                                            ${itemsInside} item(s)
+                                        </span>
+                                    `;
+
+                        openContainerBtn = `
+                                        <button class="btn ${isContainerOpen ? 'btn-success' : 'btn-warning'}" onclick="openPersonagemContainer('${item.id}')" style="padding: 6px 12px; font-size: 0.85rem;" title="${isContainerOpen ? 'Container aberto' : 'Abrir Container'}">
+                                            ${isContainerOpen ? '📂' : '📁'}
+                                        </button>
+                                    `;
+                    }
+
+                    // Botão de mover para container (só aparece quando um container está aberto e o item não é um container)
+                    const moveToContainerBtn = (currentOpenPersonagemContainerId && !isContainer) ? `
+                        <button class="btn-move-to-container" onclick="moveItemToPersonagemContainer('${item.id}')" style="padding: 6px 12px; font-size: 0.85rem;" title="Mover para o container aberto">
+                            📥
+                        </button>
+                    ` : '';
+
+                    const imagemHTML = item.imagem ?
+                        `<img src="${item.imagem}" style="width: 50px; height: 50px; object-fit: contain; border-radius: 8px; margin-right: 15px; background: rgba(15, 23, 42, 0.8); padding: 5px; border: 2px solid ${isContainerOpen ? 'rgba(16, 185, 129, 0.6)' : 'var(--border)'};">` :
+                        (isContainer ?
+                            `<div style="width: 50px; height: 50px; background: rgba(16, 185, 129, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 1.3rem; border: 2px solid ${isContainerOpen ? 'rgba(16, 185, 129, 0.6)' : 'rgba(16, 185, 129, 0.4)'};">📦</div>` :
+                            ''
+                        );
 
                     return `
-                                <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid var(--border); border-radius: 10px; padding: 15px; display: flex; align-items: center; gap: 15px;">
+                                <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid ${isContainerOpen ? 'rgba(16, 185, 129, 0.6)' : 'var(--border)'}; border-radius: 10px; padding: 15px; display: flex; align-items: center; gap: 15px; transition: all 0.3s;" id="${isContainer ? 'personagem-container-' + item.id : ''}">
                                     ${imagemHTML}
                                     <div style="flex: 1;">
-                                        <div style="font-size: 1.1rem; font-weight: 600; color: var(--light);">
-                                            ${item.equipado ? '⚔️ ' : ''}${item.name || 'Item sem nome'}
+                                        <div style="display: flex; align-items: center; flex-wrap: wrap;">
+                                            <div style="font-size: 1.1rem; font-weight: 600; color: var(--light);">
+                                                ${item.equipado ? '⚔️ ' : ''}${item.name || 'Item sem nome'}
+                                            </div>
+                                            ${containerBadges}
                                         </div>
                                         <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">
                                             ${item.tipo || 'Sem tipo'} | 
@@ -8814,18 +9454,20 @@ Agilidade 2\n
                                         </div>
                                         ${item.description ? `
                                             <div style="font-size: 0.8rem; color: #64748b; margin-top: 5px; font-style: italic;">
-                                                ${item.description}
+                                                ${item.description.length > 100 ? item.description.substring(0, 100) + '...' : item.description}
                                             </div>
                                         ` : ''}
                                     </div>
-                                    <div style="display: flex; gap: 8px;">
+                                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                        ${openContainerBtn}
+                                        ${moveToContainerBtn}
                                         <button class="btn btn-primary" onclick="openTransferItemModal('${item.id}', false)" style="padding: 6px 12px; font-size: 0.85rem;" title="Transferir Item">
                                             🔄
                                         </button>
-                                        <button class="btn btn-secondary" onclick="editItemMestre('${container.name === 'Equipados' ? 'está com alguém' : container.id}', '${item.id}')" style="padding: 6px 12px; font-size: 0.85rem;">
+                                        <button class="btn btn-secondary" onclick="editItemMestre('está com alguém', '${item.id}')" style="padding: 6px 12px; font-size: 0.85rem;">
                                             ✏️
                                         </button>
-                                        <button class="btn btn-danger" onclick="deleteItemMestre('${container.id}', '${item.id}')" style="padding: 6px 12px; font-size: 0.85rem;">
+                                        <button class="btn btn-danger" onclick="deleteItemMestre('${equipadosContainer.id}', '${item.id}')" style="padding: 6px 12px; font-size: 0.85rem;">
                                             🗑️
                                         </button>
                                     </div>
@@ -8834,7 +9476,11 @@ Agilidade 2\n
                         </div>
                     </div>
                 `;
-            }).join('');
+            }
+
+
+
+            containersList.innerHTML = html;
         }
 
         // ========== FUNÇÕES DO MODAL DE ITEM ==========
@@ -8944,6 +9590,284 @@ Agilidade 2\n
             currentEditingContainerIdMestre = null;
             currentEditingItemIdMestre = null;
             currentItemImageBase64Mestre = null;
+        };
+
+        // ============= SISTEMA DE VISUALIZAÇÃO DE CONTAINER (PERSONAGENS) =============
+
+        // Abrir container para visualizar/gerenciar itens dentro
+        window.openPersonagemContainer = function (containerItemId) {
+            const containerItem = currentInventarioItems.find(i => i.id === containerItemId);
+            if (!containerItem || containerItem.tipo !== 'Container') {
+                showAlert('❌ Container não encontrado', 'danger');
+                return;
+            }
+
+            // Se clicar no mesmo container, fechar
+            if (currentOpenPersonagemContainerId === containerItemId) {
+                closePersonagemContainerViewer();
+                return;
+            }
+
+            currentOpenPersonagemContainerId = containerItemId;
+
+            // Obter dados do container vinculado
+            const linkedContainer = currentInventarioContainers.find(c => c.id === containerItem.linkedContainerId);
+            const maxCapacity = linkedContainer?.maxCapacity || containerItem.maxCapacity || 10;
+            const maxSize = linkedContainer?.maxSize || containerItem.maxSize || 5;
+
+            // Atualizar UI
+            document.getElementById('personagemContainerName').textContent = containerItem.name || 'Container';
+            document.getElementById('personagemContainerMaxSize').textContent = maxSize;
+
+            // Mostrar viewer
+            document.getElementById('personagemContainerViewer').style.display = 'block';
+
+            // Scroll suave até o viewer
+            document.getElementById('personagemContainerViewer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Renderizar itens dentro do container
+            renderPersonagemContainerItems();
+
+            // Re-renderizar lista para atualizar botões de abrir/fechar
+            renderInventarioMestre();
+        };
+
+        // Fechar visualizador de container
+        window.closePersonagemContainerViewer = function () {
+            currentOpenPersonagemContainerId = null;
+            document.getElementById('personagemContainerViewer').style.display = 'none';
+
+            // Re-renderizar lista para atualizar botões
+            renderInventarioMestre();
+        };
+
+        // Renderizar itens dentro do container aberto
+        function renderPersonagemContainerItems() {
+            const containerItem = currentInventarioItems.find(i => i.id === currentOpenPersonagemContainerId);
+            if (!containerItem) return;
+
+            const containerItemsDiv = document.getElementById('personagemContainerItems');
+
+            // Obter dados do container vinculado
+            const linkedContainer = currentInventarioContainers.find(c => c.id === containerItem.linkedContainerId);
+            const maxCapacity = linkedContainer?.maxCapacity || containerItem.maxCapacity || 10;
+
+            // Encontrar itens que estão dentro deste container
+            const itemsInContainer = currentInventarioItems.filter(item => item.parentItemId === currentOpenPersonagemContainerId);
+
+            // Calcular capacidade usada (soma dos tamanhos)
+            const usedCapacity = itemsInContainer.reduce((sum, item) => sum + (item.tamanho || 1), 0);
+
+            // Atualizar stats
+            document.getElementById('personagemContainerCapacity').textContent = `${usedCapacity} / ${maxCapacity}`;
+            document.getElementById('personagemContainerItemCount').textContent = itemsInContainer.length;
+
+            if (itemsInContainer.length === 0) {
+                containerItemsDiv.innerHTML = `
+                    <div class="container-viewer-empty">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">📭</div>
+                        <div>Este container está vazio</div>
+                    </div>
+                `;
+                return;
+            }
+
+            containerItemsDiv.innerHTML = itemsInContainer.map(item => {
+                const imagemHTML = item.imagem ?
+                    `<img src="${item.imagem}" style="width: 50px; height: 50px; object-fit: contain; border-radius: 8px; background: rgba(15, 23, 42, 0.8); padding: 3px; border: 1px solid var(--border);">` :
+                    `<div style="width: 50px; height: 50px; background: rgba(16, 185, 129, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border: 1px solid rgba(16, 185, 129, 0.4);">📄</div>`;
+
+                return `
+                    <div class="container-item-card">
+                        ${imagemHTML}
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                <div style="font-size: 1rem; font-weight: 700; color: var(--light);">
+                                    ${item.name || 'Item sem nome'}
+                                </div>
+                                <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">
+                                    ${item.tipo || 'Sem tipo'}
+                                </span>
+                            </div>
+                            <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">
+                                Peso: ${item.totalWeight || item.peso || 0} | Tamanho: ${item.tamanho || 0} | Qtd: ${item.quantity || 1}
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-warning" onclick="removeItemFromPersonagemContainer('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Remover do container">
+                                📤
+                            </button>
+                            <button class="btn btn-primary" onclick="openTransferItemModal('${item.id}', false)" style="padding: 8px 14px; font-size: 0.85rem;" title="Transferir">
+                                🔄
+                            </button>
+                            <button class="btn btn-secondary" onclick="editPersonagemContainerItem('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Editar item">
+                                ✏️
+                            </button>
+                            <button class="btn btn-danger" onclick="deletePersonagemContainerItem('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Deletar item">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Adicionar item ao container aberto
+        window.addItemToOpenContainerMestre = function () {
+            if (!currentOpenPersonagemContainerId) {
+                showAlert('⚠️ Nenhum container aberto', 'warning');
+                return;
+            }
+
+            // Usar o modal de criar item normal, mas com o containerId especial
+            currentEditingContainerIdMestre = 'container-item-' + currentOpenPersonagemContainerId;
+            currentEditingItemIdMestre = null;
+            document.getElementById('modalTitleMestre').textContent = 'Criar Item para Container';
+            document.getElementById('itemFormMestre').reset();
+            document.getElementById('itemImagePreviewMestre').innerHTML = '';
+            document.getElementById('conditionalFieldsMestre').innerHTML = '';
+            document.getElementById('itemPesoTotalMestre').value = '1.00';
+            currentItemImageBase64Mestre = null;
+            document.getElementById('itemTipoMestre').disabled = false;
+            document.getElementById('itemModalMestre').style.display = 'block';
+        };
+
+        // Mover item para dentro do container aberto
+        window.moveItemToPersonagemContainer = async function (itemId) {
+            if (!currentOpenPersonagemContainerId) {
+                showAlert('⚠️ Nenhum container aberto', 'warning');
+                return;
+            }
+
+            const item = currentInventarioItems.find(i => i.id === itemId);
+            const containerItem = currentInventarioItems.find(i => i.id === currentOpenPersonagemContainerId);
+
+            if (!item || !containerItem) {
+                showAlert('❌ Item ou container não encontrado', 'danger');
+                return;
+            }
+
+            // Verificar capacidade do container
+            const linkedContainer = currentInventarioContainers.find(c => c.id === containerItem.linkedContainerId);
+            const maxCapacity = linkedContainer?.maxCapacity || containerItem.maxCapacity || 10;
+            const maxSize = linkedContainer?.maxSize || containerItem.maxSize || 5;
+
+            // Calcular capacidade atual
+            const itemsInContainer = currentInventarioItems.filter(i => i.parentItemId === currentOpenPersonagemContainerId);
+            const usedCapacity = itemsInContainer.reduce((sum, i) => sum + (i.tamanho || 1), 0);
+
+            // Verificar se o item cabe no container
+            const itemSize = item.tamanho || 1;
+            if (itemSize > maxSize) {
+                showAlert(`❌ Item muito grande! Tamanho ${itemSize} excede o máximo permitido (${maxSize})`, 'danger');
+                return;
+            }
+
+            if (usedCapacity + itemSize > maxCapacity) {
+                showAlert(`❌ Container cheio! Capacidade: ${usedCapacity}/${maxCapacity}, Item: ${itemSize}`, 'danger');
+                return;
+            }
+
+            try {
+                // Atualizar item no Firebase - adicionar parentItemId
+                await setDoc(doc(db, 'items', itemId), {
+                    parentItemId: currentOpenPersonagemContainerId
+                }, { merge: true });
+
+                showAlert(`✅ "${item.name}" movido para "${containerItem.name}"!`, 'success');
+
+                const character = allCharacters.find(c => c.id === currentInventarioPersonagemId);
+                await addLog(`moveu item "${item.name}" para container "${containerItem.name}"`);
+
+                // Recarregar inventário
+                await loadInventarioFromFirebase(currentInventarioPersonagemId);
+
+                // Re-abrir o container viewer
+                if (currentOpenPersonagemContainerId) {
+                    document.getElementById('personagemContainerViewer').style.display = 'block';
+                    renderPersonagemContainerItems();
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao mover item para container:', error);
+                showAlert('❌ Erro ao mover item: ' + error.message, 'danger');
+            }
+        };
+
+        // Remover item de dentro do container (devolver para Equipados)
+        window.removeItemFromPersonagemContainer = async function (itemId) {
+            const item = currentInventarioItems.find(i => i.id === itemId);
+            if (!item) {
+                showAlert('❌ Item não encontrado', 'danger');
+                return;
+            }
+
+            try {
+                // Atualizar item no Firebase - remover parentItemId
+                await setDoc(doc(db, 'items', itemId), {
+                    parentItemId: null
+                }, { merge: true });
+
+                showAlert(`✅ "${item.name}" removido do container!`, 'success');
+
+                const character = allCharacters.find(c => c.id === currentInventarioPersonagemId);
+                await addLog(`removeu item "${item.name}" do container`);
+
+                // Recarregar inventário
+                await loadInventarioFromFirebase(currentInventarioPersonagemId);
+
+                // Re-abrir o container viewer se ainda estiver aberto
+                if (currentOpenPersonagemContainerId) {
+                    document.getElementById('personagemContainerViewer').style.display = 'block';
+                    renderPersonagemContainerItems();
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao remover item do container:', error);
+                showAlert('❌ Erro ao remover item: ' + error.message, 'danger');
+            }
+        };
+
+        // Editar item dentro do container
+        window.editPersonagemContainerItem = function (itemId) {
+            const item = currentInventarioItems.find(i => i.id === itemId);
+            if (!item) {
+                showAlert('❌ Item não encontrado', 'danger');
+                return;
+            }
+
+            // Usar a função de editar item existente
+            currentEditingContainerIdMestre = 'container-item-' + currentOpenPersonagemContainerId;
+            editItemMestre(currentEditingContainerIdMestre, itemId);
+        };
+
+        // Deletar item dentro do container
+        window.deletePersonagemContainerItem = async function (itemId) {
+            const item = currentInventarioItems.find(i => i.id === itemId);
+            if (!item) return;
+
+            if (!confirm(`⚠️ Tem certeza que deseja excluir o item "${item.name}"?\n\nEsta ação não pode ser desfeita.`)) return;
+
+            try {
+                await deleteDoc(doc(db, 'items', itemId));
+                showAlert('✅ Item deletado com sucesso!', 'success');
+
+                const character = allCharacters.find(c => c.id === currentInventarioPersonagemId);
+                await addLog(`removeu item "${item.name}" do inventário de ${character?.nome || 'personagem'}`);
+
+                // Recarregar inventário
+                await loadInventarioFromFirebase(currentInventarioPersonagemId);
+
+                // Re-abrir o container viewer se ainda estiver aberto
+                if (currentOpenPersonagemContainerId) {
+                    document.getElementById('personagemContainerViewer').style.display = 'block';
+                    renderPersonagemContainerItems();
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao deletar item:', error);
+                showAlert('❌ Erro ao deletar item: ' + error.message, 'danger');
+            }
         };
 
         window.updateItemTypeFieldsMestre = function () {
@@ -9376,12 +10300,23 @@ Agilidade 2\n
                     // Criar novo item
                     const characterOwnerId = await getCharacterOwnerId(currentInventarioPersonagemId);
 
+                    // Verificar se está adicionando a um container aberto
+                    let containerId = currentEditingContainerIdMestre;
+                    let parentItemId = null;
+
+                    if (containerId && containerId.startsWith('container-item-')) {
+                        // Está adicionando dentro de um container-item
+                        parentItemId = containerId.replace('container-item-', '');
+                        containerId = 'está com alguém'; // O item tecnicamente está no Equipados, mas dentro do container
+                    }
+
                     const newItem = {
                         ...itemData,
                         id: 'item-' + Date.now(),
                         ownerId: characterOwnerId,
                         characterId: currentInventarioPersonagemId,
-                        containerId: currentEditingContainerIdMestre,
+                        containerId: containerId,
+                        parentItemId: parentItemId,
                         equipado: false,
                         isContainerItem: false,
                         linkedContainerId: null
@@ -9391,9 +10326,9 @@ Agilidade 2\n
 
                     // Se for Container, criar o container correspondente
                     if (tipo === 'Container') {
-                        const containerId = 'container-' + Date.now();
+                        const containerDocId = 'container-' + Date.now();
                         const newContainer = {
-                            id: containerId,
+                            id: containerDocId,
                             name: name,
                             ownerId: characterOwnerId,  // ✅ USA o ownerId calculado
                             characterId: currentInventarioPersonagemId,
@@ -9407,20 +10342,30 @@ Agilidade 2\n
                             peso: itemData.peso
                         };
 
-                        await setDoc(doc(db, 'containers', containerId), newContainer);
+                        await setDoc(doc(db, 'containers', containerDocId), newContainer);
 
                         // Atualizar item para vincular ao container
                         newItem.isContainerItem = true;
-                        newItem.linkedContainerId = containerId;
+                        newItem.linkedContainerId = containerDocId;
                         await setDoc(doc(db, 'items', newItem.id), newItem);
                     }
 
                     showAlert('✅ Item criado!', 'success');
                 }
 
+                // Guardar referência do container aberto antes de recarregar
+                const wasContainerOpen = currentOpenPersonagemContainerId;
+
                 // Recarregar inventário
                 await loadInventarioFromFirebase(currentInventarioPersonagemId);
                 closeItemModalMestre();
+
+                // Re-abrir o container viewer se estava aberto
+                if (wasContainerOpen) {
+                    currentOpenPersonagemContainerId = wasContainerOpen;
+                    document.getElementById('personagemContainerViewer').style.display = 'block';
+                    renderPersonagemContainerItems();
+                }
 
                 // Log da ação
                 const character = allCharacters.find(c => c.id === currentInventarioPersonagemId);
