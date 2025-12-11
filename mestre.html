@@ -8745,8 +8745,10 @@ Agilidade 2\n
                     </button>
                 ` : '';
 
-                // Botão de mover para container (só aparece quando um container está aberto e o item não é um container)
-                const moveToContainerBtn = (currentOpenContainerId && !isContainer) ? `
+                // Botão de mover para container (aparece quando um container está aberto)
+                // Permite mover também containers para dentro de outros (nesting)
+                // Não aparece se o item é o próprio container aberto
+                const moveToContainerBtn = (currentOpenContainerId && item.id !== currentOpenContainerId) ? `
                     <button class="btn-move-to-container" onclick="event.stopPropagation(); moveItemToContainer('${item.id}')" style="padding: 10px 16px; font-size: 0.9rem;" title="Mover para o container aberto">
                         📥
                     </button>
@@ -8956,10 +8958,221 @@ Agilidade 2\n
         // Fechar visualizador de container
         window.closeAvulsoContainerViewer = function () {
             currentOpenContainerId = null;
+            openAvulsoContainerStack = []; // Limpar containers aninhados também
             document.getElementById('avulsoContainerViewer').style.display = 'none';
+
+            // Remover viewers de containers aninhados
+            document.querySelectorAll('.nested-container-viewer-avulso').forEach(el => el.remove());
 
             // Re-renderizar lista para atualizar botões
             renderAvulsosItems();
+        };
+
+        // ============= SISTEMA DE CONTAINERS ANINHADOS (AVULSOS) =============
+        let openAvulsoContainerStack = []; // Pilha de containers aninhados abertos
+
+        // Abrir container aninhado (dentro de outro container)
+        window.openNestedAvulsoContainer = function (containerId) {
+            const container = avulsosItems.find(i => i.id === containerId);
+            if (!container || container.tipo !== 'Container') {
+                showAlert('❌ Container não encontrado', 'danger');
+                return;
+            }
+
+            // Se clicar no mesmo container que já está aberto, fechar ele e todos abaixo
+            const existingIndex = openAvulsoContainerStack.indexOf(containerId);
+            if (existingIndex !== -1) {
+                // Fechar este e todos os containers aninhados abaixo dele
+                openAvulsoContainerStack = openAvulsoContainerStack.slice(0, existingIndex);
+                renderContainerItems(); // Re-renderizar para atualizar botões e viewers
+                return;
+            }
+
+            // Adicionar à pilha de containers abertos
+            openAvulsoContainerStack.push(containerId);
+
+            // Re-renderizar para mostrar o viewer do container aninhado
+            renderContainerItems();
+
+            // Scroll suave até o novo viewer
+            setTimeout(() => {
+                const nestedViewer = document.getElementById('nested-viewer-avulso-' + containerId);
+                if (nestedViewer) {
+                    nestedViewer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
+        };
+
+        // Fechar um container aninhado específico e todos abaixo dele
+        window.closeNestedAvulsoContainer = function (containerId) {
+            const index = openAvulsoContainerStack.indexOf(containerId);
+            if (index !== -1) {
+                // Fechar este e todos os containers aninhados abaixo dele
+                openAvulsoContainerStack = openAvulsoContainerStack.slice(0, index);
+            }
+            renderContainerItems();
+        };
+
+        // Renderizar viewers de containers aninhados
+        function renderNestedAvulsoContainerViewers() {
+            // Remover viewers anteriores
+            document.querySelectorAll('.nested-container-viewer-avulso').forEach(el => el.remove());
+
+            if (!openAvulsoContainerStack || openAvulsoContainerStack.length === 0) return;
+
+            const mainViewer = document.getElementById('avulsoContainerViewer');
+            if (!mainViewer) return;
+
+            let insertAfterElement = mainViewer;
+
+            // Criar viewer para cada container aninhado na pilha
+            openAvulsoContainerStack.forEach((containerId, index) => {
+                const container = avulsosItems.find(i => i.id === containerId);
+                if (!container) return;
+
+                // Encontrar itens dentro deste container aninhado
+                // Verificar por parentItemId OU por linkedContainerId+containerId para compatibilidade
+                const linkedContainerId = container.linkedContainerId;
+                const itemsInNestedContainer = avulsosItems.filter(item =>
+                    item.parentItemId === containerId ||
+                    (linkedContainerId && item.containerId === linkedContainerId)
+                );
+                const usedCapacity = itemsInNestedContainer.reduce((sum, item) => sum + (item.tamanho || 1), 0);
+                const maxCapacity = container.maxCapacity || 10;
+                const maxSize = container.maxSize || 5;
+
+                // Gerar HTML dos itens dentro do container aninhado
+                let itemsHTML = '';
+                if (itemsInNestedContainer.length === 0) {
+                    itemsHTML = `
+                        <div class="container-viewer-empty">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">📭</div>
+                            <div>Este container está vazio</div>
+                        </div>
+                    `;
+                } else {
+                    itemsHTML = itemsInNestedContainer.map(item => {
+                        const imagemHTML = item.imagem ?
+                            `<img src="${item.imagem}" style="width: 50px; height: 50px; object-fit: contain; border-radius: 8px; background: rgba(15, 23, 42, 0.8); padding: 3px; border: 1px solid var(--border);">` :
+                            `<div style="width: 50px; height: 50px; background: rgba(16, 185, 129, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border: 1px solid rgba(16, 185, 129, 0.4);">📄</div>`;
+
+                        const isDeepNestedContainer = item.tipo === 'Container';
+                        const isDeepNestedOpen = openAvulsoContainerStack.includes(item.id);
+
+                        const openDeepNestedBtn = isDeepNestedContainer ? `
+                            <button class="btn ${isDeepNestedOpen ? 'btn-success' : 'btn-warning'}" onclick="openNestedAvulsoContainer('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="${isDeepNestedOpen ? 'Container aberto' : 'Abrir Container'}">
+                                ${isDeepNestedOpen ? '📂' : '📁'}
+                            </button>
+                        ` : '';
+
+                        return `
+                            <div class="container-item-card" style="${isDeepNestedOpen ? 'border-color: rgba(16, 185, 129, 0.6);' : ''}">
+                                ${imagemHTML}
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                        <div style="font-size: 1rem; font-weight: 700; color: var(--light);">
+                                            ${item.name || 'Item sem nome'}
+                                        </div>
+                                        <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">
+                                            ${item.tipo || 'Sem tipo'}
+                                        </span>
+                                        ${isDeepNestedContainer ? `<span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">📦 Cap: ${item.maxCapacity || 10}</span>` : ''}
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">
+                                        Peso: ${item.totalWeight || item.peso || 0} | Tamanho: ${item.tamanho || 0} | Qtd: ${item.quantity || 1}
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    ${openDeepNestedBtn}
+                                    <button class="btn btn-warning" onclick="removeNestedItemFromContainer('${item.id}', '${containerId}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Remover do container">
+                                        📤
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="editAvulsoItem('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Editar item">
+                                        ✏️
+                                    </button>
+                                    <button class="btn btn-danger" onclick="deleteAvulsoItem('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Deletar item">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // Criar o viewer do container aninhado
+                const nestedViewer = document.createElement('div');
+                nestedViewer.id = 'nested-viewer-avulso-' + containerId;
+                nestedViewer.className = 'container-viewer-section nested-container-viewer-avulso';
+                nestedViewer.style.marginLeft = `${(index + 1) * 20}px`; // Indentação progressiva
+                nestedViewer.innerHTML = `
+                    <div class="container-viewer-header">
+                        <div class="container-viewer-title">
+                            <span>📂</span>
+                            <span>${container.name || 'Container'}</span>
+                            <span style="font-size: 0.8rem; color: #94a3b8; font-weight: 400;">(aninhado nível ${index + 1})</span>
+                        </div>
+                        <button class="container-viewer-close" onclick="closeNestedAvulsoContainer('${containerId}')">✕</button>
+                    </div>
+
+                    <div class="container-viewer-stats">
+                        <div class="container-stat">
+                            <div class="container-stat-label">Capacidade</div>
+                            <div class="container-stat-value">${usedCapacity} / ${maxCapacity}</div>
+                        </div>
+                        <div class="container-stat">
+                            <div class="container-stat-label">Tamanho Máx. Item</div>
+                            <div class="container-stat-value">${maxSize}</div>
+                        </div>
+                        <div class="container-stat">
+                            <div class="container-stat-label">Itens</div>
+                            <div class="container-stat-value">${itemsInNestedContainer.length}</div>
+                        </div>
+                    </div>
+
+                    <div class="container-viewer-items">
+                        ${itemsHTML}
+                    </div>
+                `;
+
+                // Inserir após o elemento anterior
+                insertAfterElement.parentNode.insertBefore(nestedViewer, insertAfterElement.nextSibling);
+                insertAfterElement = nestedViewer;
+            });
+        }
+
+        // Remover item de container aninhado
+        window.removeNestedItemFromContainer = async function (itemId, containerId) {
+            const item = avulsosItems.find(i => i.id === itemId);
+            if (!item) {
+                showAlert('❌ Item não encontrado', 'danger');
+                return;
+            }
+
+            const container = avulsosItems.find(i => i.id === containerId);
+            const containerName = container ? container.name : 'container';
+
+            try {
+                // Atualizar item no Firebase - remover parentItemId
+                await setDoc(doc(db, 'items', itemId), {
+                    parentItemId: null
+                }, { merge: true });
+
+                showAlert(`✅ "${item.name}" removido do container!`, 'success');
+                await addLog(currentUser.email || 'Mestre', `removeu item "${item.name}" do container "${containerName}"`, 'Avulso', 'items');
+
+                // Recarregar itens
+                await loadAvulsosItems();
+
+                // Re-abrir o container viewer principal se ainda estiver aberto
+                if (currentOpenContainerId) {
+                    document.getElementById('avulsoContainerViewer').style.display = 'block';
+                    renderContainerItems();
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao remover item do container:', error);
+                showAlert('❌ Erro ao remover item: ' + error.message, 'danger');
+            }
         };
 
         // Renderizar itens dentro do container aberto
@@ -8995,8 +9208,19 @@ Agilidade 2\n
                     `<img src="${item.imagem}" style="width: 50px; height: 50px; object-fit: contain; border-radius: 8px; background: rgba(15, 23, 42, 0.8); padding: 3px; border: 1px solid var(--border);">` :
                     `<div style="width: 50px; height: 50px; background: rgba(16, 185, 129, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border: 1px solid rgba(16, 185, 129, 0.4);">📄</div>`;
 
+                // Verificar se este item é um container aninhado
+                const isNestedContainer = item.tipo === 'Container';
+                const isNestedContainerOpen = openAvulsoContainerStack && openAvulsoContainerStack.includes(item.id);
+
+                // Botão para abrir container aninhado
+                const openNestedContainerBtn = isNestedContainer ? `
+                    <button class="btn ${isNestedContainerOpen ? 'btn-success' : 'btn-warning'}" onclick="openNestedAvulsoContainer('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="${isNestedContainerOpen ? 'Container aberto' : 'Abrir Container'}">
+                        ${isNestedContainerOpen ? '📂' : '📁'}
+                    </button>
+                ` : '';
+
                 return `
-                    <div class="container-item-card">
+                    <div class="container-item-card" id="nested-avulso-${item.id}" style="${isNestedContainerOpen ? 'border-color: rgba(16, 185, 129, 0.6);' : ''}">
                         ${imagemHTML}
                         <div style="flex: 1; min-width: 0;">
                             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -9006,12 +9230,14 @@ Agilidade 2\n
                                 <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">
                                     ${item.tipo || 'Sem tipo'}
                                 </span>
+                                ${isNestedContainer ? `<span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">📦 Cap: ${item.maxCapacity || 10}</span>` : ''}
                             </div>
                             <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">
                                 Peso: ${item.totalWeight || item.peso || 0} | Tamanho: ${item.tamanho || 0} | Qtd: ${item.quantity || 1}
                             </div>
                         </div>
                         <div style="display: flex; gap: 8px;">
+                            ${openNestedContainerBtn}
                             <button class="btn btn-warning" onclick="removeItemFromContainer('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Remover do container">
                                 📤
                             </button>
@@ -9028,17 +9254,32 @@ Agilidade 2\n
                     </div>
                 `;
             }).join('');
+
+            // Renderizar viewers de containers aninhados abertos
+            renderNestedAvulsoContainerViewers();
         }
 
         // Mover item avulso para dentro do container aberto
-        window.moveItemToContainer = async function (itemId) {
+        window.moveItemToContainer = async function (itemId, targetContainerId = null) {
             if (!currentOpenContainerId) {
                 showAlert('❌ Nenhum container aberto', 'danger');
                 return;
             }
 
+            // Obter lista de todos os containers abertos (principal + aninhados)
+            const allOpenContainers = [currentOpenContainerId, ...(openAvulsoContainerStack || [])];
+
+            // Se há mais de um container aberto e não foi especificado o destino, perguntar
+            if (allOpenContainers.length > 1 && !targetContainerId) {
+                showContainerSelectionModal(itemId, allOpenContainers);
+                return;
+            }
+
+            // Usar o container especificado ou o único aberto
+            const selectedContainerId = targetContainerId || currentOpenContainerId;
+
             const item = avulsosItems.find(i => i.id === itemId);
-            const container = avulsosItems.find(i => i.id === currentOpenContainerId);
+            const container = avulsosItems.find(i => i.id === selectedContainerId);
 
             if (!item || !container) {
                 showAlert('❌ Item ou container não encontrado', 'danger');
@@ -9052,7 +9293,7 @@ Agilidade 2\n
             }
 
             // Verificar capacidade
-            const itemsInContainer = avulsosItems.filter(i => i.parentItemId === currentOpenContainerId);
+            const itemsInContainer = avulsosItems.filter(i => i.parentItemId === selectedContainerId);
             const usedCapacity = itemsInContainer.reduce((sum, i) => sum + (i.tamanho || 1), 0);
             const remainingCapacity = (container.maxCapacity || 10) - usedCapacity;
 
@@ -9064,7 +9305,7 @@ Agilidade 2\n
             try {
                 // Atualizar item no Firebase - definir parentItemId
                 await setDoc(doc(db, 'items', itemId), {
-                    parentItemId: currentOpenContainerId
+                    parentItemId: selectedContainerId
                 }, { merge: true });
 
                 showAlert(`✅ "${item.name}" movido para "${container.name}"!`, 'success');
@@ -9074,7 +9315,7 @@ Agilidade 2\n
                 await loadAvulsosItems();
 
                 // Re-abrir o container viewer (loadAvulsosItems reseta tudo)
-                currentOpenContainerId = container.id;
+                currentOpenContainerId = currentOpenContainerId; // Manter o principal aberto
                 document.getElementById('avulsoContainerViewer').style.display = 'block';
                 renderContainerItems();
 
@@ -9082,6 +9323,74 @@ Agilidade 2\n
                 console.error('❌ Erro ao mover item para container:', error);
                 showAlert('❌ Erro ao mover item: ' + error.message, 'danger');
             }
+        };
+
+        // Modal para selecionar container de destino quando há múltiplos abertos
+        function showContainerSelectionModal(itemId, containerIds) {
+            const item = avulsosItems.find(i => i.id === itemId);
+            if (!item) return;
+
+            // Criar lista de containers para seleção
+            const containerOptions = containerIds.map((containerId, index) => {
+                const container = avulsosItems.find(i => i.id === containerId);
+                if (!container) return '';
+
+                const isMainContainer = index === 0;
+                const levelLabel = isMainContainer ? '(principal)' : `(nível ${index})`;
+
+                return `
+                    <div onclick="selectContainerAndMove('${itemId}', '${containerId}')" 
+                         style="background: rgba(15, 23, 42, 0.6); border: 2px solid var(--border); border-radius: 10px; padding: 15px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 15px; margin-bottom: 10px;"
+                         onmouseover="this.style.borderColor='var(--success)'; this.style.background='rgba(16, 185, 129, 0.1)';"
+                         onmouseout="this.style.borderColor='var(--border)'; this.style.background='rgba(15, 23, 42, 0.6)';">
+                        <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                            📦
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700; color: var(--light); font-size: 1.1rem;">${container.name || 'Container'}</div>
+                            <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 3px;">
+                                ${levelLabel} • Capacidade: ${container.maxCapacity || 10} • Tam. Máx: ${container.maxSize || 5}
+                            </div>
+                        </div>
+                        <div style="color: var(--success); font-size: 1.2rem;">➡️</div>
+                    </div>
+                `;
+            }).join('');
+
+            // Criar modal
+            const modalHTML = `
+                <div id="containerSelectionModal" class="modal" style="display: flex;">
+                    <div class="modal-content" style="max-width: 500px;">
+                        <div class="modal-header">
+                            <h2 class="modal-title">📦 Selecionar Container de Destino</h2>
+                            <button class="modal-close" onclick="closeContainerSelectionModal()">✕</button>
+                        </div>
+                        <div style="padding: 20px;">
+                            <div style="margin-bottom: 15px; color: #94a3b8; font-size: 0.95rem;">
+                                Mover "<strong style="color: var(--light);">${item.name}</strong>" para qual container?
+                            </div>
+                            <div id="containerSelectionList" style="max-height: 300px; overflow-y: auto;">
+                                ${containerOptions}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Inserir modal no DOM
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        // Fechar modal de seleção de container
+        window.closeContainerSelectionModal = function () {
+            const modal = document.getElementById('containerSelectionModal');
+            if (modal) modal.remove();
+        };
+
+        // Selecionar container e mover item
+        window.selectContainerAndMove = function (itemId, containerId) {
+            closeContainerSelectionModal();
+            moveItemToContainer(itemId, containerId);
         };
 
         // Remover item de dentro do container (devolver para avulsos)
@@ -10327,10 +10636,223 @@ Agilidade 2\n
         // Fechar visualizador de container
         window.closePersonagemContainerViewer = function () {
             currentOpenPersonagemContainerId = null;
+            openPersonagemContainerStack = []; // Limpar containers aninhados também
             document.getElementById('personagemContainerViewer').style.display = 'none';
+
+            // Remover viewers de containers aninhados
+            document.querySelectorAll('.nested-container-viewer-personagem').forEach(el => el.remove());
 
             // Re-renderizar lista para atualizar botões
             renderInventarioMestre();
+        };
+
+        // ============= SISTEMA DE CONTAINERS ANINHADOS (PERSONAGENS) =============
+        let openPersonagemContainerStack = []; // Pilha de containers aninhados abertos
+
+        // Abrir container aninhado (dentro de outro container)
+        window.openNestedPersonagemContainer = function (containerId) {
+            const container = currentInventarioItems.find(i => i.id === containerId);
+            if (!container || container.tipo !== 'Container') {
+                showAlert('❌ Container não encontrado', 'danger');
+                return;
+            }
+
+            // Se clicar no mesmo container que já está aberto, fechar ele e todos abaixo
+            const existingIndex = openPersonagemContainerStack.indexOf(containerId);
+            if (existingIndex !== -1) {
+                // Fechar este e todos os containers aninhados abaixo dele
+                openPersonagemContainerStack = openPersonagemContainerStack.slice(0, existingIndex);
+                renderPersonagemContainerItems(); // Re-renderizar para atualizar botões e viewers
+                return;
+            }
+
+            // Adicionar à pilha de containers abertos
+            openPersonagemContainerStack.push(containerId);
+
+            // Re-renderizar para mostrar o viewer do container aninhado
+            renderPersonagemContainerItems();
+
+            // Scroll suave até o novo viewer
+            setTimeout(() => {
+                const nestedViewer = document.getElementById('nested-viewer-personagem-' + containerId);
+                if (nestedViewer) {
+                    nestedViewer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
+        };
+
+        // Fechar um container aninhado específico e todos abaixo dele
+        window.closeNestedPersonagemContainer = function (containerId) {
+            const index = openPersonagemContainerStack.indexOf(containerId);
+            if (index !== -1) {
+                // Fechar este e todos os containers aninhados abaixo dele
+                openPersonagemContainerStack = openPersonagemContainerStack.slice(0, index);
+            }
+            renderPersonagemContainerItems();
+        };
+
+        // Renderizar viewers de containers aninhados
+        function renderNestedPersonagemContainerViewers() {
+            // Remover viewers anteriores
+            document.querySelectorAll('.nested-container-viewer-personagem').forEach(el => el.remove());
+
+            if (!openPersonagemContainerStack || openPersonagemContainerStack.length === 0) return;
+
+            const mainViewer = document.getElementById('personagemContainerViewer');
+            if (!mainViewer) return;
+
+            let insertAfterElement = mainViewer;
+
+            // Criar viewer para cada container aninhado na pilha
+            openPersonagemContainerStack.forEach((containerId, index) => {
+                const container = currentInventarioItems.find(i => i.id === containerId);
+                if (!container) return;
+
+                // Encontrar itens dentro deste container aninhado
+                // Verificar por parentItemId OU por linkedContainerId+containerId para compatibilidade
+                const linkedContainerId = container.linkedContainerId;
+                const itemsInNestedContainer = currentInventarioItems.filter(item =>
+                    item.parentItemId === containerId ||
+                    (linkedContainerId && item.containerId === linkedContainerId)
+                );
+                const usedCapacity = itemsInNestedContainer.reduce((sum, item) => sum + (item.tamanho || 1), 0);
+                const maxCapacity = container.maxCapacity || 10;
+                const maxSize = container.maxSize || 5;
+
+                // Gerar HTML dos itens dentro do container aninhado
+                let itemsHTML = '';
+                if (itemsInNestedContainer.length === 0) {
+                    itemsHTML = `
+                        <div class="container-viewer-empty">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">📭</div>
+                            <div>Este container está vazio</div>
+                        </div>
+                    `;
+                } else {
+                    itemsHTML = itemsInNestedContainer.map(item => {
+                        const imagemHTML = item.imagem ?
+                            `<img src="${item.imagem}" style="width: 50px; height: 50px; object-fit: contain; border-radius: 8px; background: rgba(15, 23, 42, 0.8); padding: 3px; border: 1px solid var(--border);">` :
+                            `<div style="width: 50px; height: 50px; background: rgba(16, 185, 129, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border: 1px solid rgba(16, 185, 129, 0.4);">📄</div>`;
+
+                        const isDeepNestedContainer = item.tipo === 'Container';
+                        const isDeepNestedOpen = openPersonagemContainerStack.includes(item.id);
+
+                        const openDeepNestedBtn = isDeepNestedContainer ? `
+                            <button class="btn ${isDeepNestedOpen ? 'btn-success' : 'btn-warning'}" onclick="openNestedPersonagemContainer('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="${isDeepNestedOpen ? 'Container aberto' : 'Abrir Container'}">
+                                ${isDeepNestedOpen ? '📂' : '📁'}
+                            </button>
+                        ` : '';
+
+                        return `
+                            <div class="container-item-card" style="${isDeepNestedOpen ? 'border-color: rgba(16, 185, 129, 0.6);' : ''}">
+                                ${imagemHTML}
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                        <div style="font-size: 1rem; font-weight: 700; color: var(--light);">
+                                            ${item.name || 'Item sem nome'}
+                                        </div>
+                                        <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">
+                                            ${item.tipo || 'Sem tipo'}
+                                        </span>
+                                        ${isDeepNestedContainer ? `<span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">📦 Cap: ${item.maxCapacity || 10}</span>` : ''}
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">
+                                        Peso: ${item.totalWeight || item.peso || 0} | Tamanho: ${item.tamanho || 0} | Qtd: ${item.quantity || 1}
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    ${openDeepNestedBtn}
+                                    <button class="btn btn-warning" onclick="removeNestedItemFromPersonagemContainer('${item.id}', '${containerId}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Remover do container">
+                                        📤
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="editPersonagemContainerItem('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Editar item">
+                                        ✏️
+                                    </button>
+                                    <button class="btn btn-danger" onclick="deletePersonagemContainerItem('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Deletar item">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // Criar o viewer do container aninhado
+                const nestedViewer = document.createElement('div');
+                nestedViewer.id = 'nested-viewer-personagem-' + containerId;
+                nestedViewer.className = 'container-viewer-section nested-container-viewer-personagem';
+                nestedViewer.style.marginLeft = `${(index + 1) * 20}px`; // Indentação progressiva
+                nestedViewer.innerHTML = `
+                    <div class="container-viewer-header">
+                        <div class="container-viewer-title">
+                            <span>📂</span>
+                            <span>${container.name || 'Container'}</span>
+                            <span style="font-size: 0.8rem; color: #94a3b8; font-weight: 400;">(aninhado nível ${index + 1})</span>
+                        </div>
+                        <button class="container-viewer-close" onclick="closeNestedPersonagemContainer('${containerId}')">✕</button>
+                    </div>
+
+                    <div class="container-viewer-stats">
+                        <div class="container-stat">
+                            <div class="container-stat-label">Capacidade</div>
+                            <div class="container-stat-value">${usedCapacity} / ${maxCapacity}</div>
+                        </div>
+                        <div class="container-stat">
+                            <div class="container-stat-label">Tamanho Máx. Item</div>
+                            <div class="container-stat-value">${maxSize}</div>
+                        </div>
+                        <div class="container-stat">
+                            <div class="container-stat-label">Itens</div>
+                            <div class="container-stat-value">${itemsInNestedContainer.length}</div>
+                        </div>
+                    </div>
+
+                    <div class="container-viewer-items">
+                        ${itemsHTML}
+                    </div>
+                `;
+
+                // Inserir após o elemento anterior
+                insertAfterElement.parentNode.insertBefore(nestedViewer, insertAfterElement.nextSibling);
+                insertAfterElement = nestedViewer;
+            });
+        }
+
+        // Remover item de container aninhado (Personagem)
+        window.removeNestedItemFromPersonagemContainer = async function (itemId, containerId) {
+            const item = currentInventarioItems.find(i => i.id === itemId);
+            if (!item) {
+                showAlert('❌ Item não encontrado', 'danger');
+                return;
+            }
+
+            const container = currentInventarioItems.find(i => i.id === containerId);
+            const containerName = container ? container.name : 'container';
+
+            try {
+                // Atualizar item no Firebase - remover parentItemId
+                await setDoc(doc(db, 'items', itemId), {
+                    parentItemId: null
+                }, { merge: true });
+
+                showAlert(`✅ "${item.name}" removido do container!`, 'success');
+
+                const character = allCharacters.find(c => c.id === currentInventarioPersonagemId);
+                await addLog(`removeu item "${item.name}" do container "${containerName}"`);
+
+                // Recarregar inventário
+                await loadInventarioFromFirebase(currentInventarioPersonagemId);
+
+                // Re-abrir o container viewer principal se ainda estiver aberto
+                if (currentOpenPersonagemContainerId) {
+                    document.getElementById('personagemContainerViewer').style.display = 'block';
+                    renderPersonagemContainerItems();
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao remover item do container:', error);
+                showAlert('❌ Erro ao remover item: ' + error.message, 'danger');
+            }
         };
 
         // Renderizar itens dentro do container aberto
@@ -10374,8 +10896,19 @@ Agilidade 2\n
                     `<img src="${item.imagem}" style="width: 50px; height: 50px; object-fit: contain; border-radius: 8px; background: rgba(15, 23, 42, 0.8); padding: 3px; border: 1px solid var(--border);">` :
                     `<div style="width: 50px; height: 50px; background: rgba(16, 185, 129, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border: 1px solid rgba(16, 185, 129, 0.4);">📄</div>`;
 
+                // Verificar se este item é um container aninhado
+                const isNestedContainer = item.tipo === 'Container';
+                const isNestedContainerOpen = openPersonagemContainerStack && openPersonagemContainerStack.includes(item.id);
+
+                // Botão para abrir container aninhado
+                const openNestedContainerBtn = isNestedContainer ? `
+                    <button class="btn ${isNestedContainerOpen ? 'btn-success' : 'btn-warning'}" onclick="openNestedPersonagemContainer('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="${isNestedContainerOpen ? 'Container aberto' : 'Abrir Container'}">
+                        ${isNestedContainerOpen ? '📂' : '📁'}
+                    </button>
+                ` : '';
+
                 return `
-                    <div class="container-item-card">
+                    <div class="container-item-card" id="nested-personagem-${item.id}" style="${isNestedContainerOpen ? 'border-color: rgba(16, 185, 129, 0.6);' : ''}">
                         ${imagemHTML}
                         <div style="flex: 1; min-width: 0;">
                             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -10385,12 +10918,14 @@ Agilidade 2\n
                                 <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">
                                     ${item.tipo || 'Sem tipo'}
                                 </span>
+                                ${isNestedContainer ? `<span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">📦 Cap: ${item.maxCapacity || 10}</span>` : ''}
                             </div>
                             <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">
                                 Peso: ${item.totalWeight || item.peso || 0} | Tamanho: ${item.tamanho || 0} | Qtd: ${item.quantity || 1}
                             </div>
                         </div>
                         <div style="display: flex; gap: 8px;">
+                            ${openNestedContainerBtn}
                             <button class="btn btn-warning" onclick="removeItemFromPersonagemContainer('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Remover do container">
                                 📤
                             </button>
@@ -10407,6 +10942,9 @@ Agilidade 2\n
                     </div>
                 `;
             }).join('');
+
+            // Renderizar viewers de containers aninhados abertos
+            renderNestedPersonagemContainerViewers();
         }
 
         // Adicionar item ao container aberto
