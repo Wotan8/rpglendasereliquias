@@ -2535,49 +2535,9 @@
                     </div>
                 </div>
 
-                <!-- Gestão de Itens Base -->
-                <div
-                    style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 25px; margin-bottom: 25px;">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h3 style="color: var(--primary); margin: 0;">📦 Itens Base</h3>
-                        <button class="btn btn-success" onclick="openEconomyItemModal()">➕ Novo Item</button>
-                    </div>
 
-                    <!-- Filtros -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-                        <select class="form-input" id="econFilterCategory" onchange="filterEconomyItems()">
-                            <option value="">Todas Categorias</option>
-                            <option value="comida">Comida & Bebida</option>
-                            <option value="hospedagem">Hospedagem</option>
-                            <option value="transporte">Transporte</option>
-                            <option value="equipamento">Equipamento</option>
-                            <option value="armas">Armas</option>
-                            <option value="armaduras">Armaduras</option>
-                            <option value="servicos">Serviços</option>
-                            <option value="magia">Runomancia & Alquimancia</option>
-                            <option value="materias">Matérias-Primas</option>
-                        </select>
 
-                        <select class="form-input" id="econFilterRarity" onchange="filterEconomyItems()">
-                            <option value="">Todas Raridades</option>
-                            <option value="comum">Comum</option>
-                            <option value="incomum">Incomum</option>
-                            <option value="raro">Raro</option>
-                            <option value="muito-raro">Muito Raro</option>
-                        </select>
-
-                        <input type="text" class="form-input" id="econSearchItem" placeholder="Buscar item..."
-                            oninput="filterEconomyItems()">
-                    </div>
-
-                    <!-- Lista de Itens -->
-                    <div id="economyItemsList" style="display: grid; gap: 15px;">
-                        <div style="text-align: center; padding: 40px; color: #64748b;">
-                            Nenhum item cadastrado. Clique em "Novo Item" para começar.
-                        </div>
-                    </div>
-                </div>
+                <!-- Itens Base removido - usar items Avulsos na Calculadora -->
 
                 <!-- Gestão de Localidades -->
                 <div
@@ -2714,11 +2674,14 @@
                                         style="padding: 12px; text-align: center; font-weight: 700; font-size: 1.2rem;">
                                         0</td>
                                     <td id="metaAtualClasse"
-                                        style="padding: 12px; text-align: center; font-weight: 600;">10</td>
+                                        style="padding: 12px; text-align: center; font-weight: 600;">10
+                                    </td>
                                     <td id="progressoClasse"
-                                        style="padding: 12px; text-align: center; font-weight: 600;">0%</td>
+                                        style="padding: 12px; text-align: center; font-weight: 600;">0%
+                                    </td>
                                     <td id="desbloquearClasse"
-                                        style="padding: 12px; color: #94a3b8; font-size: 0.9rem;">-</td>
+                                        style="padding: 12px; color: #94a3b8; font-size: 0.9rem;">-
+                                    </td>
                                 </tr>
                                 <tr style="border-bottom: 1px solid var(--border);">
                                     <td style="padding: 12px; font-weight: 700; color: #b91c1c;">Raça</td>
@@ -3946,6 +3909,33 @@ Agilidade 2\n
                             Total</label>
                         <input type="text" id="itemPesoTotalMestre" readonly value="1.00"
                             style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.5); color: #94a3b8;">
+                    </div>
+                </div>
+
+                <!-- Categoria e Preço Base para Economia -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <div>
+                        <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Categoria
+                            (Economia)</label>
+                        <select id="itemCategoriaMestre"
+                            style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
+                            <option value="">Sem categoria</option>
+                            <option value="comida">Comida & Bebida</option>
+                            <option value="hospedagem">Hospedagem</option>
+                            <option value="transporte">Transporte</option>
+                            <option value="equipamento">Equipamento</option>
+                            <option value="armas">Armas</option>
+                            <option value="armaduras">Armaduras</option>
+                            <option value="servicos">Serviços</option>
+                            <option value="magia">Runomancia & Alquimancia</option>
+                            <option value="materias">Matérias-Primas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px;">Preço Base
+                            (⚜ Luns)</label>
+                        <input type="number" id="itemPrecoBaseMestre" min="0" value="" placeholder="Ex: 100"
+                            style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light);">
                     </div>
                 </div>
 
@@ -8683,6 +8673,11 @@ Agilidade 2\n
                 console.log('📦 Itens avulsos carregados:', avulsosItems.length);
                 renderAvulsosItems();
 
+                // Atualizar calculadora de preços com os itens avulsos
+                if (typeof populateEconomySelects === 'function') {
+                    populateEconomySelects();
+                }
+
             } catch (error) {
                 console.error('❌ Erro ao carregar itens avulsos:', error);
                 showAlert('❌ Erro ao carregar itens avulsos: ' + error.message, 'danger');
@@ -8850,6 +8845,10 @@ Agilidade 2\n
             document.getElementById('itemIntegridadeMestre').value = item.integridade || 10;
             document.getElementById('itemPesoMestre').value = item.peso || 1;
             document.getElementById('itemPesoTotalMestre').value = item.totalWeight || item.peso || 1;
+
+            // Categoria e Preço Base (para Economia)
+            document.getElementById('itemCategoriaMestre').value = item.category || '';
+            document.getElementById('itemPrecoBaseMestre').value = item.basePrice || '';
 
             // Imagem
             if (item.imagem) {
@@ -9460,6 +9459,9 @@ Agilidade 2\n
                 quantity: 1,
                 packSize: 1,
                 totalWeight: parseFloat(document.getElementById('itemPesoTotalMestre').value) || 1,
+                // Categoria e Preço Base para Economia
+                category: document.getElementById('itemCategoriaMestre').value || null,
+                basePrice: parseInt(document.getElementById('itemPrecoBaseMestre').value) || null,
                 // IMPORTANTE: Item avulso não tem personagem
                 characterId: null,
                 ownerId: currentUser.uid,
@@ -11454,7 +11456,10 @@ Agilidade 2\n
                 imagem: currentItemImageBase64Mestre || null,
                 quantity: 1,
                 packSize: 1,
-                totalWeight: parseFloat(document.getElementById('itemPesoTotalMestre').value) || 1
+                totalWeight: parseFloat(document.getElementById('itemPesoTotalMestre').value) || 1,
+                // Categoria e Preço Base para Economia
+                category: document.getElementById('itemCategoriaMestre').value || null,
+                basePrice: parseInt(document.getElementById('itemPrecoBaseMestre').value) || null
             };
 
             // Coletar dados específicos por tipo
@@ -11687,13 +11692,9 @@ Agilidade 2\n
         let currentEditingEconomyId = null;
         let currentEditingEconomyType = null;
 
-        // Carregar dados de economia
+        // Carregar dados de economia (localidades e eventos apenas - itens vêm de avulsos)
         async function loadEconomyData() {
             try {
-                // Carregar Itens
-                const itemsSnapshot = await getDocs(collection(db, 'economy-items'));
-                economyItems = itemsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
                 // Carregar Localidades
                 const locationsSnapshot = await getDocs(collection(db, 'economy-locations'));
                 economyLocations = locationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -11704,7 +11705,6 @@ Agilidade 2\n
 
                 // Atualizar interface
                 populateEconomySelects();
-                renderEconomyItems();
                 renderEconomyLocations();
                 renderEconomyEvents();
             } catch (error) {
@@ -11715,11 +11715,29 @@ Agilidade 2\n
 
         // Populars selects da calculadora
         function populateEconomySelects() {
-            // Popula itens
+            // Popula itens - usando avulsosItems que têm categoria e preço base definidos
             const itemSelect = document.getElementById('econItemSelect');
             itemSelect.innerHTML = '<option value="">Selecione um item...</option>';
-            economyItems.forEach(item => {
-                itemSelect.innerHTML += `<option value="${item.id}">${item.name} (${item.basePrice}⚜)</option>`;
+
+            // Filtrar apenas itens avulsos que têm categoria e preço base definidos
+            const itemsWithPrice = avulsosItems.filter(item => item.category && item.basePrice);
+
+            // Organizar por categoria
+            const categorias = {
+                'comida': 'Comida & Bebida',
+                'hospedagem': 'Hospedagem',
+                'transporte': 'Transporte',
+                'equipamento': 'Equipamento',
+                'armas': 'Armas',
+                'armaduras': 'Armaduras',
+                'servicos': 'Serviços',
+                'magia': 'Runomancia & Alquimancia',
+                'materias': 'Matérias-Primas'
+            };
+
+            itemsWithPrice.forEach(item => {
+                const categoriaNome = categorias[item.category] || item.category;
+                itemSelect.innerHTML += `<option value="${item.id}">${item.name} - ${categoriaNome} (${item.basePrice}⚜)</option>`;
             });
 
             // Popula localidades
@@ -11749,7 +11767,7 @@ Agilidade 2\n
                 return;
             }
 
-            const item = economyItems.find(i => i.id === itemId);
+            const item = avulsosItems.find(i => i.id === itemId);
             const location = economyLocations.find(l => l.id === locationId);
             const event = economyEvents.find(e => e.id === eventId);
 
