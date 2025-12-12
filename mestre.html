@@ -510,8 +510,36 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 25px;
-            padding-bottom: 15px;
+            padding: 20px 30px 15px 30px;
+            margin: -30px -30px 25px -30px;
             border-bottom: 2px solid var(--border);
+            position: sticky;
+            top: -30px;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            z-index: 100;
+        }
+
+        .modal-header-buttons {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-save {
+            background: linear-gradient(135deg, var(--success), #059669);
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .modal-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
         }
 
         .modal-title {
@@ -3016,7 +3044,10 @@
         <div class="modal-content" style="max-width: 1400px; max-height: 90vh; overflow-y: auto;">
             <div class="modal-header">
                 <div class="modal-title" id="modalTitle">Editar Personagem</div>
-                <button class="modal-close" onclick="closeModal()">✕</button>
+                <div class="modal-header-buttons">
+                    <button class="modal-save" onclick="saveCharacterChanges()">💾 Salvar</button>
+                    <button class="modal-close" onclick="closeModal()">✕</button>
+                </div>
             </div>
 
             <!-- INFORMAÇÕES BÁSICAS -->
@@ -5557,7 +5588,7 @@ Agilidade 2\n
         };
 
         // ============= SALVAR ALTERAÇÕES =============
-        async function saveCharacterChanges(closeAfterSave = false) {
+        window.saveCharacterChanges = async function (closeAfterSave = false) {
             if (!currentEditingCharacter) {
                 showAlert('❌ Nenhum personagem selecionado', 'danger');
                 return;
