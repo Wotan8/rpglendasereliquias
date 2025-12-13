@@ -1100,6 +1100,7 @@
         let currentUser = null;
         let currentMapId = null;
         let currentMapName = 'Novo Mapa';
+        let defaultMapId = null;
 
         // Verificar autenticação e se é mestre
         onAuthStateChanged(auth, async (user) => {
@@ -1119,7 +1120,7 @@
                     // Inicializar hexmap - aguardar carregamento do script
                     let waitAttempts = 0;
                     const maxAttempts = 100; // 5 segundos máximo
-                    const waitForHexmap = () => {
+                    const waitForHexmap = async () => {
                         waitAttempts++;
                         console.log(`[Hexmap] Tentativa ${waitAttempts}: window.initHexmap =`, typeof window.initHexmap);
 
@@ -1127,6 +1128,9 @@
                             try {
                                 window.initHexmap();
                                 console.log('[Hexmap] ✅ Inicializado com sucesso!');
+
+                                // Carregar mapa padrão se existir
+                                await loadDefaultMap();
                             } catch (err) {
                                 console.error('[Hexmap] ❌ Erro ao inicializar:', err);
                             }
@@ -1155,6 +1159,42 @@
             }
         });
 
+        // Carregar mapa padrão
+        async function loadDefaultMap() {
+            try {
+                const settingsRef = doc(db, 'hexmap-settings', 'default');
+                const settingsSnap = await getDoc(settingsRef);
+
+                if (settingsSnap.exists()) {
+                    const data = settingsSnap.data();
+                    defaultMapId = data.defaultMapId;
+
+                    if (defaultMapId) {
+                        console.log('[Hexmap] 🗺️ Carregando mapa padrão:', defaultMapId);
+                        await window.loadMapFromFirebase(defaultMapId, true); // true = silent mode
+                    }
+                }
+            } catch (error) {
+                console.log('[Hexmap] Nenhum mapa padrão definido');
+            }
+        }
+
+        // Definir mapa como padrão
+        window.setDefaultMap = async function (mapId, mapName) {
+            try {
+                await setDoc(doc(db, 'hexmap-settings', 'default'), {
+                    defaultMapId: mapId,
+                    updatedAt: serverTimestamp()
+                });
+                defaultMapId = mapId;
+                showAlert(`⭐ "${mapName}" definido como mapa principal!`, 'success');
+                window.loadMapList(); // Refresh list
+            } catch (error) {
+                console.error('Erro ao definir mapa padrão:', error);
+                showAlert('❌ Erro ao definir mapa padrão', 'danger');
+            }
+        };
+
         // Logout
         window.logout = async function () {
             if (confirm('🚪 Tem certeza que deseja sair?')) {
@@ -1168,6 +1208,57 @@
             }
         };
 
+        // Comprimir imagem para caber no limite do Firestore
+        // Redimensiona para max 200x200 e usa JPEG com qualidade 0.6
+        function compressImage(base64Data, maxSize = 200, quality = 0.6) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Redimensionar mantendo proporção
+                    if (width > height) {
+                        if (width > maxSize) {
+                            height = Math.round(height * maxSize / width);
+                            width = maxSize;
+                        }
+                    } else {
+                        if (height > maxSize) {
+                            width = Math.round(width * maxSize / height);
+                            height = maxSize;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Converter para JPEG com compressão
+                    const compressed = canvas.toDataURL('image/jpeg', quality);
+                    console.log(`[Compress] ${(base64Data.length / 1024).toFixed(1)}KB → ${(compressed.length / 1024).toFixed(1)}KB`);
+                    resolve(compressed);
+                };
+                img.src = base64Data;
+            });
+        }
+
+        // Comprimir todas as imagens de terreno
+        async function compressTerrainImages(terrainImages) {
+            const compressed = {};
+            for (const [key, data] of Object.entries(terrainImages)) {
+                if (data && data.startsWith('data:')) {
+                    compressed[key] = await compressImage(data);
+                } else {
+                    compressed[key] = data;
+                }
+            }
+            return compressed;
+        }
+
         // Salvar projeto no Firebase
         window.saveProjectToFirebase = async function (mapData) {
             try {
@@ -1178,13 +1269,27 @@
                 const mapId = currentMapId || `map_${Date.now()}`;
                 const mapRef = doc(db, 'hexmaps', mapId);
 
+                // Comprimir imagens antes de salvar
+                let compressedImages = {};
+                if (mapData.terrainImages && Object.keys(mapData.terrainImages).length > 0) {
+                    saveBtn.innerHTML = '🗜️ Comprimindo imagens...';
+                    compressedImages = await compressTerrainImages(mapData.terrainImages);
+                }
+
+                const terrainImagesJson = JSON.stringify(compressedImages);
+
+                // Verificar tamanho
+                if (terrainImagesJson.length > 900000) { // 900KB para margem de segurança
+                    throw new Error('Imagens muito grandes mesmo após compressão. Tente usar imagens menores.');
+                }
+
                 await setDoc(mapRef, {
                     name: currentMapName,
                     mapWidth: mapData.mapWidth,
                     mapHeight: mapData.mapHeight,
                     hexMapJson: JSON.stringify(mapData.hexMap),
                     annotationsJson: JSON.stringify(mapData.annotations),
-                    terrainImagesJson: JSON.stringify(mapData.terrainImages || {}),
+                    terrainImagesJson: terrainImagesJson,
                     owner: currentUser.uid,
                     ownerEmail: currentUser.email,
                     updatedAt: serverTimestamp()
@@ -1208,6 +1313,8 @@
         };
 
         // Carregar lista de mapas
+
+
         window.loadMapList = async function () {
             try {
                 const mapListEl = document.getElementById('mapList');
@@ -1224,17 +1331,23 @@
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     const updatedAt = data.updatedAt ? new Date(data.updatedAt.seconds * 1000).toLocaleString('pt-BR') : 'N/A';
+                    const isDefault = doc.id === defaultMapId;
 
                     html += `
                         <div class="map-item" onclick="loadMapFromFirebase('${doc.id}')">
                             <div class="map-item-info">
-                                <div class="map-item-name">${data.name || 'Sem nome'}</div>
+                                <div class="map-item-name">
+                                    ${isDefault ? '⭐ ' : ''}${data.name || 'Sem nome'}
+                                </div>
                                 <div class="map-item-details">
                                     ${data.mapWidth}x${data.mapHeight} hexágonos • Atualizado: ${updatedAt}
                                 </div>
                             </div>
                             <div class="map-item-actions">
-                                <button class="btn-delete-map" onclick="event.stopPropagation(); deleteMap('${doc.id}', '${data.name || 'Sem nome'}')">🗑️</button>
+                                <button class="btn-delete-map" style="background: ${isDefault ? 'rgba(255,215,0,0.3)' : 'rgba(255,215,0,0.1)'}; border-color: #ffd700; color: #ffd700;" 
+                                    onclick="event.stopPropagation(); setDefaultMap('${doc.id}', '${(data.name || 'Sem nome').replace(/'/g, "\\'")}')"
+                                    title="Definir como mapa principal">${isDefault ? '⭐' : '☆'}</button>
+                                <button class="btn-delete-map" onclick="event.stopPropagation(); deleteMap('${doc.id}', '${(data.name || 'Sem nome').replace(/'/g, "\\'")}')" title="Excluir mapa">🗑️</button>
                             </div>
                         </div>
                     `;
@@ -1248,7 +1361,7 @@
         };
 
         // Carregar mapa específico
-        window.loadMapFromFirebase = async function (mapId) {
+        window.loadMapFromFirebase = async function (mapId, silentMode = false) {
             try {
                 const mapRef = doc(db, 'hexmaps', mapId);
                 const mapSnap = await getDoc(mapRef);
@@ -1258,22 +1371,38 @@
                     currentMapId = mapId;
                     currentMapName = data.name || 'Sem nome';
 
+                    // Suporte a ambos os formatos: novo (URLs) e antigo (JSON base64)
+                    let terrainImages = {};
+                    if (data.terrainImageUrls && Object.keys(data.terrainImageUrls).length > 0) {
+                        // Novo formato: URLs diretas
+                        terrainImages = data.terrainImageUrls;
+                    } else if (data.terrainImagesJson) {
+                        // Formato antigo: JSON base64 (retrocompatibilidade)
+                        terrainImages = JSON.parse(data.terrainImagesJson);
+                    }
+
                     window.loadMapData({
                         mapWidth: data.mapWidth,
                         mapHeight: data.mapHeight,
                         hexMap: JSON.parse(data.hexMapJson || '[]'),
                         annotations: JSON.parse(data.annotationsJson || '{}'),
-                        terrainImages: JSON.parse(data.terrainImagesJson || '{}')
+                        terrainImages: terrainImages
                     });
 
                     closeModal('loadMapModal');
-                    showAlert(`✅ Mapa "${currentMapName}" carregado!`, 'success');
+                    if (!silentMode) {
+                        showAlert(`✅ Mapa "${currentMapName}" carregado!`, 'success');
+                    }
                 } else {
-                    showAlert('❌ Mapa não encontrado.', 'danger');
+                    if (!silentMode) {
+                        showAlert('❌ Mapa não encontrado.', 'danger');
+                    }
                 }
             } catch (error) {
                 console.error('Erro ao carregar mapa:', error);
-                showAlert('❌ Erro ao carregar mapa: ' + error.message, 'danger');
+                if (!silentMode) {
+                    showAlert('❌ Erro ao carregar mapa: ' + error.message, 'danger');
+                }
             }
         };
 

@@ -795,6 +795,7 @@ window.loadMapData = function (data) {
     // Recriar os objetos Image para cada terreno com imagem
     Object.keys(state.terrainImages).forEach(key => {
         const img = new Image();
+        img.crossOrigin = 'anonymous'; // Permite CORS para imagens do Firebase Storage
         img.onload = function () {
             state.loadedImages[key] = img;
             drawMap();
@@ -803,6 +804,7 @@ window.loadMapData = function (data) {
         };
         img.src = state.terrainImages[key];
     });
+
 
     state.history = [{
         hexMap: JSON.parse(JSON.stringify(state.hexMap)),
@@ -820,6 +822,8 @@ window.loadMapData = function (data) {
 };
 
 function exportToJSON() {
+
+
     const project = {
         mapWidth: state.mapWidth,
         mapHeight: state.mapHeight,
