@@ -910,6 +910,32 @@
             color: var(--danger);
         }
 
+        /* Notificação de item do inventário */
+        .notification-item.inventory {
+            border-color: #d97706;
+            background: linear-gradient(135deg, rgba(217, 119, 6, 0.15), rgba(245, 158, 11, 0.08));
+            box-shadow: 0 0 20px rgba(217, 119, 6, 0.25);
+            animation: pulse-inventory 2s ease infinite;
+        }
+
+        @keyframes pulse-inventory {
+
+            0%,
+            100% {
+                box-shadow: 0 0 15px rgba(217, 119, 6, 0.2);
+            }
+
+            50% {
+                box-shadow: 0 0 25px rgba(245, 158, 11, 0.4);
+            }
+        }
+
+        .notification-icon.inventory {
+            color: #d97706;
+            font-size: 1.8rem;
+            text-shadow: 0 0 10px rgba(217, 119, 6, 0.5);
+        }
+
         .notification-icon {
             font-size: 1.5rem;
             flex-shrink: 0;
@@ -1685,7 +1711,7 @@
                                     <div class="inventory-item-quantity">x${item.quantidade || 0}</div>
                                 </div>
                                 <div class="inventory-item-desc">
-                                    ${escapeHtml(item.descricao || item.descrição || 'Sem descrição')}
+                                    ${escapeHtmlWithBreaks(item.descricao || item.descrição || 'Sem descrição')}
                                 </div>
                                 <div class="inventory-item-footer">
                                     <div class="inventory-item-label">Forma de Recebimento/Uso</div>
@@ -2174,7 +2200,12 @@
                 let iconClass = 'master';
                 let highlightClass = '';
 
-                if (notification.type === 'master_message') {
+                if (notification.type === 'inventory_item_received') {
+                    // Notificação de item recebido no inventário do jogador
+                    icon = '🎒';
+                    iconClass = 'inventory';
+                    highlightClass = 'inventory';
+                } else if (notification.type === 'master_message') {
                     // Notificação enviada pelo mestre
                     const highlight = notification.data?.highlight || 'normal';
                     highlightClass = highlight !== 'normal' ? highlight : '';
@@ -2388,6 +2419,13 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // Escapa HTML e preserva quebras de linha convertendo \n para <br>
+        function escapeHtmlWithBreaks(text) {
+            if (!text) return '';
+            const escaped = escapeHtml(text);
+            return escaped.replace(/\n/g, '<br>');
         }
 
         // ============= MODAL DE IMAGEM AMPLIADA =============

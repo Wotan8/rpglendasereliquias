@@ -8161,6 +8161,54 @@ Agilidade 2\n
                 // Log da ação
                 await addLog(`adicionou item "${nome}" ao inventário do jogador`);
 
+                // 📬 Enviar notificação ao jogador
+                try {
+                    const notificationUserDoc = await getDoc(doc(db, 'users', currentSelectedUserId));
+                    if (notificationUserDoc.exists()) {
+                        const notifUserData = notificationUserDoc.data();
+                        let notifications = notifUserData.notifications || [];
+
+                        // Criar mensagem da notificação
+                        let message = quantidade > 1
+                            ? `🎒 Você recebeu ${quantidade}x "${nome}" no seu Inventário do Jogador!`
+                            : `🎒 Você recebeu "${nome}" no seu Inventário do Jogador!`;
+
+                        if (novoItem.formaRecebimento) {
+                            message += ` (${novoItem.formaRecebimento})`;
+                        }
+
+                        // Criar objeto de notificação
+                        const notification = {
+                            id: `inventory_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                            type: 'inventory_item_received',
+                            message: message,
+                            timestamp: new Date().toISOString(),
+                            isNew: true,
+                            data: {
+                                itemName: nome,
+                                quantity: quantidade,
+                                description: novoItem.descricao || '',
+                                formaRecebimento: novoItem.formaRecebimento || '',
+                                highlight: 'normal',
+                                sentBy: currentUser.email || 'Mestre'
+                            }
+                        };
+
+                        // Adicionar nova notificação no início
+                        notifications.unshift(notification);
+
+                        // Limitar a 100 notificações
+                        if (notifications.length > 100) {
+                            notifications = notifications.slice(0, 100);
+                        }
+
+                        await updateDoc(doc(db, 'users', currentSelectedUserId), { notifications: notifications });
+                        console.log(`📬 Notificação de item enviada para o jogador: ${message}`);
+                    }
+                } catch (notifError) {
+                    console.error('❌ Erro ao enviar notificação (não afeta o salvamento):', notifError);
+                }
+
             } catch (error) {
                 console.error('❌ Erro ao salvar item:', error);
                 showAlert('❌ Erro ao salvar item: ' + error.message, 'danger');
@@ -8176,13 +8224,54 @@ Agilidade 2\n
                 const inventario = userData.inventario || [];
 
                 if (itemIndex >= 0 && itemIndex < inventario.length) {
-                    inventario[itemIndex].quantidade = parseInt(novaQuantidade) || 1;
+                    const item = inventario[itemIndex];
+                    const quantidadeAnterior = item.quantidade || 1;
+                    const quantidadeNova = parseInt(novaQuantidade) || 1;
+                    const diferenca = quantidadeNova - quantidadeAnterior;
+
+                    inventario[itemIndex].quantidade = quantidadeNova;
 
                     await setDoc(doc(db, 'users', userId), {
                         inventario: inventario
                     }, { merge: true });
 
                     showAlert('✅ Quantidade atualizada!', 'success');
+
+                    // 📬 Enviar notificação se a quantidade aumentou
+                    if (diferenca > 0) {
+                        try {
+                            let notifications = userData.notifications || [];
+
+                            const message = diferenca > 1
+                                ? `🎒 Foram adicionados +${diferenca} "${item.nome}" ao seu Inventário do Jogador!`
+                                : `🎒 Foi adicionado +1 "${item.nome}" ao seu Inventário do Jogador!`;
+
+                            const notification = {
+                                id: `inventory_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                                type: 'inventory_item_received',
+                                message: message,
+                                timestamp: new Date().toISOString(),
+                                isNew: true,
+                                data: {
+                                    itemName: item.nome,
+                                    quantityAdded: diferenca,
+                                    newTotal: quantidadeNova,
+                                    highlight: 'normal',
+                                    sentBy: currentUser.email || 'Mestre'
+                                }
+                            };
+
+                            notifications.unshift(notification);
+                            if (notifications.length > 100) {
+                                notifications = notifications.slice(0, 100);
+                            }
+
+                            await updateDoc(doc(db, 'users', userId), { notifications: notifications });
+                            console.log(`📬 Notificação de quantidade enviada: ${message}`);
+                        } catch (notifError) {
+                            console.error('❌ Erro ao enviar notificação:', notifError);
+                        }
+                    }
                 }
 
             } catch (error) {
