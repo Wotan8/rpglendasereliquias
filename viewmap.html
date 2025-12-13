@@ -5,6 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lendas e Relíquias - Navegador de Mapa</title>
+    <!-- Google Font for RPG-style token names -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -521,17 +525,45 @@
         .map-token {
             position: absolute;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-end;
             cursor: pointer;
             transition: transform 0.2s;
         }
 
-        .map-token.emoji-token {
-            width: 30px;
-            height: 30px;
+        .map-token .token-name {
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            font-size: 12px;
+            color: #f8fafc;
+            text-shadow:
+                1px 1px 2px rgba(0, 0, 0, 0.9),
+                -1px -1px 2px rgba(0, 0, 0, 0.9),
+                0 0 8px rgba(20, 184, 166, 0.6);
+            white-space: nowrap;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+
+        .map-token .token-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-token.emoji-token .token-icon {
             border-radius: 50%;
-            font-size: 16px;
             border: 2px solid white;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
         }
@@ -829,6 +861,14 @@
                 <button class="modal-close" onclick="closeTokenModal()">✕</button>
             </div>
             <div class="form-group">
+                <label class="form-label">📍 Vincular Geografia</label>
+                <select class="form-select" id="tokenGeographyId" onchange="onTokenGeographyChange()">
+                    <option value="">-- Nenhuma (Manual) --</option>
+                </select>
+                <small style="color:#64748b;font-size:0.75rem;">Selecione uma entrada de Geografia do
+                    Worldbuilding</small>
+            </div>
+            <div class="form-group">
                 <label class="form-label">Nome</label>
                 <input type="text" class="form-input" id="tokenName">
             </div>
@@ -849,7 +889,8 @@
             <div class="form-group">
                 <label class="form-label">Tamanho (px)</label>
                 <input type="number" class="form-input" id="tokenSize" value="40" min="20" max="200">
-                <small style="color:#64748b;font-size:0.75rem;">Largura e altura do token no mapa (20-200px)</small>
+                <small style="color:#64748b;font-size:0.75rem;">Largura/altura do token (relativo ao tile do
+                    mapa)</small>
             </div>
             <div class="form-group">
                 <label class="form-label">Descrição</label>
@@ -910,6 +951,14 @@
                 <button class="modal-close" onclick="closePlaceTokenModal()">✕</button>
             </div>
             <div class="form-group">
+                <label class="form-label">📍 Vincular Geografia</label>
+                <select class="form-select" id="placeTokenGeographyId" onchange="onPlaceTokenGeographyChange()">
+                    <option value="">-- Nenhuma (Manual) --</option>
+                </select>
+                <small style="color:#64748b;font-size:0.75rem;">Selecione uma entrada de Geografia do
+                    Worldbuilding</small>
+            </div>
+            <div class="form-group">
                 <label class="form-label">Nome</label>
                 <input type="text" class="form-input" id="placeTokenName" placeholder="Ex: João, o Mercador">
             </div>
@@ -925,6 +974,24 @@
             <div class="btn-row">
                 <button class="btn btn-secondary" onclick="closePlaceTokenModal()">Cancelar</button>
                 <button class="btn btn-primary" onclick="confirmPlaceToken()">📍 Colocar no Mapa</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Geography Info Modal (Master Mode) -->
+    <div class="modal" id="geographyInfoModal">
+        <div class="modal-content" style="max-width:600px;">
+            <div class="modal-header">
+                <span class="modal-title" id="geoInfoTitle" style="font-family:'Cinzel',serif;">📍 Local</span>
+                <button class="modal-close" onclick="closeGeographyInfoModal()">✕</button>
+            </div>
+            <div id="geoInfoBody" style="max-height:60vh;overflow-y:auto;">
+                <!-- Content will be dynamically populated -->
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-secondary" onclick="closeGeographyInfoModal()">Fechar</button>
+                <button class="btn btn-primary" id="geoInfoEditBtn" onclick="editGeographyToken()"
+                    style="display:none;">✏️ Editar Token</button>
             </div>
         </div>
     </div>
@@ -1008,6 +1075,11 @@
         let canvas, ctx, container;
         let loadedImages = {};
 
+        // Geography data from Worldbuilding
+        let geographyEntries = [];
+        let currentViewingTokenId = null; // Token being viewed in master mode
+        const TILE_SIZE = 500; // Tile size in pixels (used for relative token sizing)
+
         // Auth check - same logic as mestre.html
         onAuthStateChanged(auth, user => {
             if (user) {
@@ -1028,9 +1100,71 @@
             setupCanvasEvents();
             updateTileGrid();
             renderTemplatesList();
+            loadGeographyEntries(); // Load geography data for selectors
             loadFavoriteMap();
             document.getElementById('loadingScreen').style.display = 'none';
         }
+
+        // Load geography entries from Worldbuilding for linking
+        async function loadGeographyEntries() {
+            try {
+                const snapshot = await getDocs(collection(db, 'worldbuilding-geography'));
+                geographyEntries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log(`✅ Carregadas ${geographyEntries.length} entradas de Geografia`);
+                populateGeographySelectors();
+            } catch (err) {
+                console.log('Erro ao carregar entradas de Geografia:', err);
+                geographyEntries = [];
+            }
+        }
+
+        // Populate all geography selector dropdowns
+        function populateGeographySelectors() {
+            const selectors = ['tokenGeographyId', 'placeTokenGeographyId'];
+            selectors.forEach(id => {
+                const select = document.getElementById(id);
+                if (!select) return;
+                // Keep the first option, remove others
+                select.innerHTML = '<option value="">-- Nenhuma (Manual) --</option>';
+                geographyEntries.forEach(geo => {
+                    const opt = document.createElement('option');
+                    opt.value = geo.id;
+                    opt.textContent = `📍 ${geo.nome || 'Sem nome'} (${geo.tipo || 'Local'})`;
+                    select.appendChild(opt);
+                });
+            });
+        }
+
+        // When geography is selected in token modal, auto-fill fields
+        function onTokenGeographyChange() {
+            const geoId = document.getElementById('tokenGeographyId').value;
+            if (!geoId) return;
+            const geo = geographyEntries.find(g => g.id === geoId);
+            if (geo) {
+                document.getElementById('tokenName').value = geo.nome || '';
+                document.getElementById('tokenDescription').value = geo.descricao || '';
+                // Set type based on geography type
+                const typeMap = { 'Cidade': 'cidade', 'Vila': 'vila', 'Ponto de Interesse': 'ponto' };
+                const tokenType = typeMap[geo.tipo] || 'ponto';
+                document.getElementById('tokenType').value = tokenType;
+                if (geo.imagem) {
+                    document.getElementById('tokenImageUrl').value = geo.imagem;
+                }
+            }
+        }
+        window.onTokenGeographyChange = onTokenGeographyChange;
+
+        // When geography is selected in place token modal, auto-fill fields
+        function onPlaceTokenGeographyChange() {
+            const geoId = document.getElementById('placeTokenGeographyId').value;
+            if (!geoId) return;
+            const geo = geographyEntries.find(g => g.id === geoId);
+            if (geo) {
+                document.getElementById('placeTokenName').value = geo.nome || '';
+                document.getElementById('placeTokenDescription').value = geo.descricao || '';
+            }
+        }
+        window.onPlaceTokenGeographyChange = onPlaceTokenGeographyChange;
 
         function resizeCanvas() {
             canvas.width = container.clientWidth * 2;
@@ -1205,7 +1339,7 @@
             const sections = ['mapSettingsSection', 'tilesSection', 'layersSection', 'tokensSection', 'routesSection'];
             sections.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = mode === 'editor' ? 'block' : 'none'; });
             document.getElementById('sidePanel').classList.toggle('collapsed', mode !== 'editor');
-            renderMap(); updateTokensVisibility();
+            renderMap(); renderTokens(); // Re-render tokens to update click handlers for current mode
         }
 
         function toggleSidePanel() { document.getElementById('sidePanel').classList.toggle('collapsed'); }
@@ -1238,21 +1372,37 @@
             mapData.tokens.forEach(token => {
                 if (currentMode === 'jogador' && token.masterOnly) return;
                 const el = document.createElement('div');
-                const size = token.size || 40;
+                // Size is now relative to tile - scale with zoom
+                const baseSize = token.size || 40;
+                const scaledSize = baseSize * zoom;
+
+                // Create name label
+                const nameLabel = document.createElement('div');
+                nameLabel.className = 'token-name';
+                nameLabel.textContent = token.name || '';
+                nameLabel.style.fontSize = Math.max(8, Math.min(14, 10 * zoom)) + 'px';
 
                 if (token.imageUrl) {
                     // Image token
                     el.className = `map-token image-token ${token.type}`;
-                    el.style.width = size + 'px';
-                    el.style.height = size + 'px';
-                    el.innerHTML = `<img src="${token.imageUrl}" alt="${token.name}" onerror="this.style.display='none';this.parentNode.innerHTML='📍';" draggable="false">`;
+                    el.style.width = scaledSize + 'px';
+                    el.style.height = scaledSize + 'px';
+                    const iconDiv = document.createElement('div');
+                    iconDiv.className = 'token-icon';
+                    iconDiv.innerHTML = `<img src="${token.imageUrl}" alt="${token.name}" onerror="this.style.display='none';this.parentNode.innerHTML='📍';" draggable="false">`;
+                    el.appendChild(nameLabel);
+                    el.appendChild(iconDiv);
                 } else {
                     // Emoji token
                     el.className = `map-token emoji-token ${token.type}`;
-                    el.style.width = size + 'px';
-                    el.style.height = size + 'px';
-                    el.style.fontSize = Math.max(12, size * 0.5) + 'px';
-                    el.innerHTML = { cidade: '🏰', vila: '🏘️', masmorra: '⚔️', ponto: '📌' }[token.type] || '📍';
+                    el.style.width = scaledSize + 'px';
+                    el.style.height = scaledSize + 'px';
+                    const iconDiv = document.createElement('div');
+                    iconDiv.className = 'token-icon';
+                    iconDiv.style.fontSize = Math.max(12, scaledSize * 0.5) + 'px';
+                    iconDiv.innerHTML = { cidade: '🏰', vila: '🏘️', masmorra: '⚔️', ponto: '📌' }[token.type] || '📍';
+                    el.appendChild(nameLabel);
+                    el.appendChild(iconDiv);
                 }
 
                 el.id = `token-${token.id}`;
@@ -1262,6 +1412,9 @@
                 if (currentMode === 'editor') {
                     el.style.cursor = 'grab';
                     setupTokenDrag(el, token);
+                } else if (currentMode === 'mestre') {
+                    // Master mode: show geography info if linked, otherwise edit
+                    el.onclick = () => openGeographyInfoForToken(token.id);
                 } else {
                     el.onclick = () => openTokenModalForEdit(token.id);
                 }
@@ -1350,10 +1503,24 @@
             mapData.tokens.forEach(token => {
                 const el = document.getElementById(`token-${token.id}`);
                 if (el) {
-                    const size = token.size || 40;
-                    const halfSize = size / 2;
+                    // Size now scales with zoom
+                    const baseSize = token.size || 40;
+                    const scaledSize = baseSize * zoom;
+                    const halfSize = scaledSize / 2;
                     el.style.left = (token.x * zoom + panX - halfSize) + 'px';
                     el.style.top = (token.y * zoom + panY - halfSize) + 'px';
+                    el.style.width = scaledSize + 'px';
+                    el.style.height = scaledSize + 'px';
+                    // Update name font size based on zoom
+                    const nameEl = el.querySelector('.token-name');
+                    if (nameEl) {
+                        nameEl.style.fontSize = Math.max(8, Math.min(14, 10 * zoom)) + 'px';
+                    }
+                    // Update icon font size for emoji tokens
+                    const iconEl = el.querySelector('.token-icon');
+                    if (iconEl && el.classList.contains('emoji-token')) {
+                        iconEl.style.fontSize = Math.max(12, scaledSize * 0.5) + 'px';
+                    }
                 }
             });
         }
@@ -1370,6 +1537,7 @@
             if (currentMode !== 'editor') return;
             editingTokenId = 'new';
             document.getElementById('tokenModalTitle').textContent = 'Novo Token';
+            document.getElementById('tokenGeographyId').value = '';
             document.getElementById('tokenName').value = '';
             document.getElementById('tokenType').value = 'ponto';
             document.getElementById('tokenImageUrl').value = '';
@@ -1383,6 +1551,7 @@
             editingTokenId = id;
             const token = mapData.tokens.find(t => t.id === id); if (!token) return;
             document.getElementById('tokenModalTitle').textContent = token.name || 'Local';
+            document.getElementById('tokenGeographyId').value = token.geographyId || '';
             document.getElementById('tokenName').value = token.name || '';
             document.getElementById('tokenType').value = token.type;
             document.getElementById('tokenImageUrl').value = token.imageUrl || '';
@@ -1395,6 +1564,7 @@
         function closeTokenModal() { document.getElementById('tokenModal').classList.remove('active'); editingTokenId = null; }
 
         function saveToken() {
+            const geographyId = document.getElementById('tokenGeographyId').value;
             const name = document.getElementById('tokenName').value.trim();
             const type = document.getElementById('tokenType').value;
             const imageUrl = document.getElementById('tokenImageUrl').value.trim();
@@ -1413,7 +1583,8 @@
                     name: name || 'Novo Local',
                     description,
                     imageUrl: imageUrl || null,
-                    size
+                    size,
+                    geographyId: geographyId || null
                 };
                 mapData.tokens.push(token);
                 showAlert('Token criado! Arraste-o para a posição desejada.', 'success');
@@ -1426,6 +1597,7 @@
                     token.imageUrl = imageUrl || null;
                     token.size = size;
                     token.description = description;
+                    token.geographyId = geographyId || null;
                 }
             }
 
@@ -1438,6 +1610,182 @@
             mapData.tokens = mapData.tokens.filter(t => t.id !== editingTokenId);
             closeTokenModal(); renderTokens();
         }
+
+        // ==================== GEOGRAPHY INFO MODAL (Master Mode) ====================
+
+        // Open Geography Info Modal for Master mode
+        function openGeographyInfoForToken(tokenId) {
+            const token = mapData.tokens.find(t => t.id === tokenId);
+            if (!token) return;
+
+            currentViewingTokenId = tokenId;
+
+            // Check if token has a linked geography
+            if (token.geographyId) {
+                const geo = geographyEntries.find(g => g.id === token.geographyId);
+                if (geo) {
+                    showGeographyInfoModal(token, geo);
+                    return;
+                }
+            }
+
+            // No linked geography - show basic token info
+            showBasicTokenInfoModal(token);
+        }
+
+        function showGeographyInfoModal(token, geo) {
+            document.getElementById('geoInfoTitle').textContent = `📍 ${geo.nome || token.name || 'Local'}`;
+
+            let html = '';
+
+            // Image
+            if (geo.imagem || token.imageUrl) {
+                html += `<div style="text-align:center;margin-bottom:20px;">
+                    <img src="${geo.imagem || token.imageUrl}" style="max-width:100%;max-height:200px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);" onerror="this.style.display='none';">
+                </div>`;
+            }
+
+            // Type badge
+            html += `<div style="margin-bottom:15px;">
+                <span style="background:linear-gradient(135deg,var(--teal),#0891b2);padding:4px 12px;border-radius:20px;font-size:0.8rem;font-weight:600;">${geo.tipo || 'Local'}</span>
+            </div>`;
+
+            // Description
+            if (geo.descricao) {
+                html += `<div style="margin-bottom:15px;">
+                    <div style="font-weight:700;color:var(--teal);margin-bottom:5px;">Descrição</div>
+                    <div style="line-height:1.6;">${geo.descricao.replace(/\n/g, '<br>')}</div>
+                </div>`;
+            }
+
+            // Grid of info
+            const infoFields = [
+                { label: 'Clima', value: geo.clima },
+                { label: 'População', value: geo.populacao },
+                { label: 'Recursos', value: geo.recursos },
+                { label: 'Governo', value: geo.governo }
+            ].filter(f => f.value);
+
+            if (infoFields.length) {
+                html += `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:15px;">`;
+                infoFields.forEach(f => {
+                    html += `<div style="background:rgba(30,27,75,0.4);padding:10px;border-radius:8px;">
+                        <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:3px;">${f.label}</div>
+                        <div style="font-weight:600;">${f.value}</div>
+                    </div>`;
+                });
+                html += `</div>`;
+            }
+
+            // Landmarks
+            if (geo.landmarks) {
+                html += `<div style="margin-bottom:15px;">
+                    <div style="font-weight:700;color:var(--teal);margin-bottom:5px;">🏛️ Pontos de Referência</div>
+                    <div style="line-height:1.6;">${geo.landmarks.replace(/\n/g, '<br>')}</div>
+                </div>`;
+            }
+
+            // Dangers
+            if (geo.perigos) {
+                html += `<div style="margin-bottom:15px;">
+                    <div style="font-weight:700;color:var(--danger);margin-bottom:5px;">⚠️ Perigos</div>
+                    <div style="line-height:1.6;">${geo.perigos.replace(/\n/g, '<br>')}</div>
+                </div>`;
+            }
+
+            // History
+            if (geo.historiaLocal) {
+                html += `<div style="margin-bottom:15px;">
+                    <div style="font-weight:700;color:var(--warning);margin-bottom:5px;">📜 História</div>
+                    <div style="line-height:1.6;">${geo.historiaLocal.replace(/\n/g, '<br>')}</div>
+                </div>`;
+            }
+
+            // Linked NPCs
+            if (geo.linkedNpcs && geo.linkedNpcs.length) {
+                html += `<div style="margin-bottom:15px;">
+                    <div style="font-weight:700;color:var(--primary);margin-bottom:8px;">👥 NPCs/Criaturas</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;">`;
+                geo.linkedNpcs.forEach(npc => {
+                    html += `<span style="background:rgba(139,92,246,0.2);border:1px solid var(--primary);padding:4px 10px;border-radius:20px;font-size:0.85rem;">
+                        ${npc.name}${npc.title ? ` - <em>${npc.title}</em>` : ''}
+                    </span>`;
+                });
+                html += `</div></div>`;
+            }
+
+            // Linked Tribes
+            if (geo.linkedTribos && geo.linkedTribos.length) {
+                html += `<div style="margin-bottom:15px;">
+                    <div style="font-weight:700;color:var(--secondary);margin-bottom:8px;">🏕️ Tribos</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;">`;
+                geo.linkedTribos.forEach(tribo => {
+                    html += `<span style="background:rgba(236,72,153,0.2);border:1px solid var(--secondary);padding:4px 10px;border-radius:20px;font-size:0.85rem;">
+                        ${tribo.name}${tribo.title ? ` - <em>${tribo.title}</em>` : ''}
+                    </span>`;
+                });
+                html += `</div></div>`;
+            }
+
+            // Private notes (only for master)
+            if (geo.notas) {
+                html += `<div style="margin-bottom:15px;background:rgba(245,158,11,0.1);border:1px solid var(--warning);border-radius:8px;padding:12px;">
+                    <div style="font-weight:700;color:var(--warning);margin-bottom:5px;">🔒 Notas Privadas</div>
+                    <div style="line-height:1.6;font-style:italic;">${geo.notas.replace(/\n/g, '<br>')}</div>
+                </div>`;
+            }
+
+            document.getElementById('geoInfoBody').innerHTML = html;
+            document.getElementById('geoInfoEditBtn').style.display = 'block';
+            document.getElementById('geographyInfoModal').classList.add('active');
+        }
+
+        function showBasicTokenInfoModal(token) {
+            document.getElementById('geoInfoTitle').textContent = `📍 ${token.name || 'Local'}`;
+
+            let html = '';
+
+            // Image
+            if (token.imageUrl) {
+                html += `<div style="text-align:center;margin-bottom:20px;">
+                    <img src="${token.imageUrl}" style="max-width:100%;max-height:200px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);" onerror="this.style.display='none';">
+                </div>`;
+            }
+
+            // Type badge
+            const typeLabels = { cidade: '🏰 Cidade', vila: '🏘️ Vila', masmorra: '⚔️ Masmorra', ponto: '📌 Ponto de Interesse' };
+            html += `<div style="margin-bottom:15px;">
+                <span style="background:linear-gradient(135deg,var(--teal),#0891b2);padding:4px 12px;border-radius:20px;font-size:0.8rem;font-weight:600;">${typeLabels[token.type] || token.type}</span>
+            </div>`;
+
+            // Description
+            if (token.description) {
+                html += `<div style="margin-bottom:15px;">
+                    <div style="font-weight:700;color:var(--teal);margin-bottom:5px;">Descrição</div>
+                    <div style="line-height:1.6;">${token.description.replace(/\n/g, '<br>')}</div>
+                </div>`;
+            }
+
+            html += `<div style="text-align:center;color:#64748b;font-style:italic;margin-top:20px;">Este token não está vinculado a uma entrada de Geografia do Worldbuilding.</div>`;
+
+            document.getElementById('geoInfoBody').innerHTML = html;
+            document.getElementById('geoInfoEditBtn').style.display = 'block';
+            document.getElementById('geographyInfoModal').classList.add('active');
+        }
+
+        function closeGeographyInfoModal() {
+            document.getElementById('geographyInfoModal').classList.remove('active');
+            currentViewingTokenId = null;
+        }
+        window.closeGeographyInfoModal = closeGeographyInfoModal;
+
+        function editGeographyToken() {
+            if (currentViewingTokenId) {
+                closeGeographyInfoModal();
+                openTokenModalForEdit(currentViewingTokenId);
+            }
+        }
+        window.editGeographyToken = editGeographyToken;
 
         // ==================== TOKEN TEMPLATES ====================
 
@@ -1596,6 +1944,7 @@
             }
 
             document.getElementById('placeTokenModalTitle').textContent = `Adicionar ${template.name}`;
+            document.getElementById('placeTokenGeographyId').value = '';
             document.getElementById('placeTokenName').value = '';
             document.getElementById('placeTokenDescription').value = '';
             document.getElementById('placeTokenSize').value = template.size || 40;
@@ -1615,6 +1964,7 @@
                 return;
             }
 
+            const geographyId = document.getElementById('placeTokenGeographyId').value;
             const name = document.getElementById('placeTokenName').value.trim();
             const description = document.getElementById('placeTokenDescription').value;
             const size = Math.min(200, Math.max(20, parseInt(document.getElementById('placeTokenSize').value) || template.size || 40));
@@ -1628,7 +1978,8 @@
                 name: name || template.name,
                 description,
                 imageUrl: template.imageUrl || null,
-                size
+                size,
+                geographyId: geographyId || null
             };
 
             mapData.tokens.push(token);
