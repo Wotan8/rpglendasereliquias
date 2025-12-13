@@ -66,6 +66,18 @@
             }
         }
 
+        @keyframes pulse-red {
+
+            0%,
+            100% {
+                box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 25px rgba(239, 68, 68, 0.8);
+            }
+        }
+
         .loading-text {
             margin-top: 20px;
             color: var(--primary);
@@ -3055,6 +3067,10 @@
                 <div class="section-title">📋 Informações Básicas</div>
                 <div class="form-row">
                     <div class="form-group">
+                        <label class="form-label">Imagem (URL)</label>
+                        <input type="text" class="form-input" id="edit_imagem" placeholder="https://...">
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">Nome do Personagem</label>
                         <input type="text" class="form-input" id="edit_nome">
                     </div>
@@ -4864,6 +4880,28 @@ Agilidade 2\n
                     });
                 });
 
+                // Calcular carga de cada personagem a partir dos itens 'Equipados'
+                const itemsRef = collection(db, 'items');
+                const itemsSnapshot = await getDocs(itemsRef);
+
+                // Criar mapa de carga por personagem
+                const loadByCharacter = {};
+                itemsSnapshot.forEach(doc => {
+                    const item = doc.data();
+                    // Itens "Equipados" têm containerId == 'está com alguém' e characterId definido
+                    if (item.containerId === 'está com alguém' && item.characterId && !item.parentItemId) {
+                        if (!loadByCharacter[item.characterId]) {
+                            loadByCharacter[item.characterId] = 0;
+                        }
+                        loadByCharacter[item.characterId] += (item.totalWeight || 0);
+                    }
+                });
+
+                // Atribuir carga calculada a cada personagem
+                allCharacters.forEach(char => {
+                    char.currentLoad = loadByCharacter[char.id] || 0;
+                });
+
                 console.log(`✅ ${allCharacters.length} personagens carregados`);
                 displayCharacters();
             } catch (error) {
@@ -4885,36 +4923,57 @@ Agilidade 2\n
                 const vitalidadeMax = (char.vig || 1) + (char.tamanho || 5);
                 const determinacaoMax = char.aut || 1;
 
+                // Cálculo de carga (mesmo do Itens > Personagens)
+                let maxLoad = (char.for || 1) + (char.vig || 1);
+                if (char.raca === 'Yotun') maxLoad = maxLoad * 2;
+                maxLoad += (char.modMestre?.mod_cargamax || 0);
+                const currentLoad = char.currentLoad || 0;
+                const isOverloaded = currentLoad > maxLoad;
+
+                // Usar characterImage (campo correto do Firebase)
+                const hasImage = char.characterImage && char.characterImage.length > 0;
+                const imagemHTML = hasImage ?
+                    `<div style="width: 100%; height: 160px; background-image: url('${char.characterImage}'); background-size: cover; background-position: center; border-radius: 8px 8px 0 0; margin-bottom: 0px; border-bottom: 1px solid var(--border);"></div>` : '';
+
                 return `
-                    <div class="character-card" onclick="openCharacter('${char.id}')">
-                        <div class="character-header">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <input type="checkbox" class="exp-checkbox" data-character-id="${char.id}" data-character-name="${char.nome || 'Sem nome'}" onclick="event.stopPropagation()">
-                                <div class="character-name">${char.nome || 'Sem nome'}</div>
+                    <div class="character-card" onclick="openCharacter('${char.id}')" style="padding-top: ${hasImage ? '0' : '15px'}; overflow: hidden; ${isOverloaded ? 'border-color: #ef4444; box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); animation: pulse-red 2s infinite;' : ''}">
+                        ${imagemHTML}
+                        <div style="${hasImage ? 'padding: 15px;' : ''}">
+                            <div class="character-header">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" class="exp-checkbox" data-character-id="${char.id}" data-character-name="${char.nome || 'Sem nome'}" onclick="event.stopPropagation()">
+                                    <div class="character-name">${char.nome || 'Sem nome'}</div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    ${isOverloaded ? '<span style="color: #ef4444; font-size: 0.9rem; font-weight: bold;" title="Inventário Cheio">⚠️</span>' : ''}
+                                    <div class="character-level">${char.auraImortalidade || 1}</div>
+                                </div>
                             </div>
-                            <div class="character-level">AI ${char.auraImortalidade || 1}</div>
-                        </div>
-                        <div class="character-info">
-                            👤 ${char.jogador || 'Jogador'} | 
-                            ⚔️ ${char.classe || 'Sem classe'} | 
-                            🎭 ${char.raca || 'Sem raça'}
-                        </div>
-                        <div class="character-stats">
-                            <div class="stat-box">
-                                <div class="stat-label">❤️ Vitalidade</div>
-                                <div class="stat-value">${char.hpCurrent || vitalidadeMax} / ${vitalidadeMax}</div>
+                            <div class="character-info">
+                                👤 ${char.jogador || 'Jogador'} | 
+                                ⚔️ ${char.classe || 'Sem classe'} | 
+                                🎭 ${char.raca || 'Sem raça'}
                             </div>
-                            <div class="stat-box">
-                                <div class="stat-label">⚡ Determinação</div>
-                                <div class="stat-value">${char.detCurrent || determinacaoMax} / ${determinacaoMax}</div>
+                            <div class="character-stats">
+                                <div class="stat-box">
+                                    <div class="stat-label">❤️ Vitalidade</div>
+                                    <div class="stat-value">${char.hpCurrent || vitalidadeMax} / ${vitalidadeMax}</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">⚡ Determinação</div>
+                                    <div class="stat-value">${char.detCurrent || determinacaoMax} / ${determinacaoMax}</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">🧠 Sanidade</div>
+                                    <div class="stat-value">${char.sanCurrent || 80} / 100</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">⭐ EXP</div>
+                                    <div class="stat-value">${char.exp || 0}</div>
+                                </div>
                             </div>
-                            <div class="stat-box">
-                                <div class="stat-label">🧠 Sanidade</div>
-                                <div class="stat-value">${char.sanCurrent || 80} / 100</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-label">⭐ EXP</div>
-                                <div class="stat-value">${char.exp || 0}</div>
+                            <div style="margin-top: 10px; font-size: 0.85rem; text-align: right; padding: 8px 12px; border-radius: 8px; ${isOverloaded ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; font-weight: 600;' : 'color: #10b981;'}">
+                                ⚖️ Carga: ${currentLoad.toFixed(1)}/${maxLoad} ${isOverloaded ? '(⚠️ Sobrecarregado!)' : ''}
                             </div>
                         </div>
                     </div>
@@ -5147,6 +5206,8 @@ Agilidade 2\n
 
                 // INFORMAÇÕES BÁSICAS
                 document.getElementById('edit_nome').value = character.nome || '';
+                document.getElementById('edit_imagem').value = character.imagem || '';
+                document.getElementById('edit_imagem').value = character.imagem || '';
                 document.getElementById('edit_jogador').value = character.jogador || '';
                 document.getElementById('edit_idade').value = character.idade || 0;
                 document.getElementById('edit_raca').value = character.raca || '';
@@ -5275,6 +5336,41 @@ Agilidade 2\n
                 updateClassResourcesDisplay(currentEditingCharacter);
             }
         }
+
+        // ============= ATUALIZAR CARGA DO PERSONAGEM =============
+        window.updateCharacterLoad = async function (characterId) {
+            if (!characterId) return;
+            try {
+                // Buscar itens para garantir consistência
+                const itemsRef = collection(db, 'items');
+                // Itens no topo da hierarquia ('Equipados')
+                const q = query(itemsRef, where('characterId', '==', characterId), where('containerId', '==', 'está com alguém'));
+                const snapshot = await getDocs(q);
+
+                // Calcular tamanho total (ignorando itens que estão dentro de containers)
+                // Se parentItemId existe, o item está dentro de algo (container) que já conta peso/tamanho
+                const totalSize = snapshot.docs.reduce((acc, doc) => {
+                    const d = doc.data();
+                    if (d.parentItemId) return acc;
+                    return acc + ((d.tamanho || 1) * (d.quantity || 1));
+                }, 0);
+
+                // Atualizar documento do personagem
+                const charRef = doc(db, 'characters', characterId);
+                await setDoc(charRef, { currentLoad: totalSize }, { merge: true });
+
+                // Atualizar array local
+                const charIndex = allCharacters.findIndex(c => c.id === characterId);
+                if (charIndex !== -1) {
+                    allCharacters[charIndex].currentLoad = totalSize;
+                    displayCharacters(); // Atualizar UI
+                }
+
+                console.log(`⚖️ Carga de ${characterId} atualizada para ${totalSize}`);
+            } catch (e) {
+                console.error("❌ Erro ao atualizar carga do personagem:", e);
+            }
+        };
 
         function updateClassAbilitiesDisplay(character) {
             const container = document.getElementById('edit_classAbilities');
@@ -5635,6 +5731,7 @@ Agilidade 2\n
                 const formData = {
                     // INFORMAÇÕES BÁSICAS
                     nome: document.getElementById('edit_nome').value,
+                    imagem: document.getElementById('edit_imagem').value,
                     jogador: document.getElementById('edit_jogador').value,
                     idade: parseInt(document.getElementById('edit_idade').value) || 0,
                     raca: document.getElementById('edit_raca').value,
@@ -10003,6 +10100,12 @@ Agilidade 2\n
 
                     showAlert(`✅ ${transferQuantity}x "${itemName}" transferido para ${targetCharacter.nome}! (${remainingQuantity} restantes)`, 'success');
 
+                    // Atualizar carga do personagem destino e origem (se for o caso)
+                    await updateCharacterLoad(targetCharacterId);
+                    if (!wasAvulsoTransfer && currentInventarioPersonagemId) {
+                        await updateCharacterLoad(currentInventarioPersonagemId);
+                    }
+
                     // Salvar flag antes de fechar modal (closeTransferItemModal limpa as variáveis)
                     const wasAvulsoTransfer = currentTransferIsAvulso;
                     const partialTransferItemId = currentTransferItemId;
@@ -10207,6 +10310,9 @@ Agilidade 2\n
 
                     showAlert(successMessage, 'success');
 
+                    // Atualizar carga do personagem de destino
+                    await updateCharacterLoad(targetCharacterId);
+
                     // Salvar ID e flag antes de fechar o modal (closeTransferItemModal limpa as variáveis)
                     const transferredItemId = currentTransferItemId;
                     const wasAvulsoTransfer = currentTransferIsAvulso;
@@ -10341,6 +10447,11 @@ Agilidade 2\n
                     'items'
                 );
 
+                // Atualizar carga do personagem que PERDEU o item
+                if (item.characterId) {
+                    await updateCharacterLoad(item.characterId);
+                }
+
                 const successMessage = itemsTransferred > 0
                     ? `✅ Container "${item.name}" e ${itemsTransferred} item(s) agora são avulsos!`
                     : `✅ Item "${item.name || 'Item'}" agora é um item avulso!`;
@@ -10370,14 +10481,21 @@ Agilidade 2\n
                 return;
             }
 
-            // Salvar o ID antes de fechar o modal (closeTransferItemModal limpa as variáveis)
+            // Salvar o ID antes de fechar o modal
             const itemIdToTransfer = currentTransferItemId;
+            const itemToTransfer = currentInventarioItems.find(i => i.id === itemIdToTransfer);
+            const charId = itemToTransfer?.characterId; // Guardar char ID antigo
 
             // Fecha o modal
             closeTransferItemModal();
 
             // Chama a função existente de transferência para avulso
             await transferItemToAvulso(itemIdToTransfer);
+
+            // Atualizar carga do personagem que perdeu o item
+            if (charId) {
+                await updateCharacterLoad(charId);
+            }
         };
 
         // Preencher lista de personagens no seletor
@@ -11204,6 +11322,9 @@ Agilidade 2\n
                 const character = allCharacters.find(c => c.id === currentInventarioPersonagemId);
                 await addLog(`moveu item "${item.name}" para container "${containerItem.name}"`);
 
+                // Atualizar carga do personagem
+                await updateCharacterLoad(currentInventarioPersonagemId);
+
                 // Recarregar inventário
                 await loadInventarioFromFirebase(currentInventarioPersonagemId);
 
@@ -11237,6 +11358,9 @@ Agilidade 2\n
 
                 const character = allCharacters.find(c => c.id === currentInventarioPersonagemId);
                 await addLog(`removeu item "${item.name}" do container`);
+
+                // Atualizar carga do personagem
+                await updateCharacterLoad(currentInventarioPersonagemId);
 
                 // Recarregar inventário
                 await loadInventarioFromFirebase(currentInventarioPersonagemId);
@@ -11279,6 +11403,9 @@ Agilidade 2\n
 
                 const character = allCharacters.find(c => c.id === currentInventarioPersonagemId);
                 await addLog(`removeu item "${item.name}" do inventário de ${character?.nome || 'personagem'}`);
+
+                // Atualizar carga do personagem
+                await updateCharacterLoad(currentInventarioPersonagemId);
 
                 // Recarregar inventário
                 await loadInventarioFromFirebase(currentInventarioPersonagemId);
@@ -11784,7 +11911,8 @@ Agilidade 2\n
                 // Guardar referência do container aberto antes de recarregar
                 const wasContainerOpen = currentOpenPersonagemContainerId;
 
-                // Recarregar inventário
+                // Atualizar carga e recarregar
+                await updateCharacterLoad(currentInventarioPersonagemId);
                 await loadInventarioFromFirebase(currentInventarioPersonagemId);
                 closeItemModalMestre();
 
@@ -11820,6 +11948,8 @@ Agilidade 2\n
 
                 await deleteDoc(doc(db, 'items', itemId));
                 showAlert('✅ Item deletado com sucesso!', 'success');
+
+                await updateCharacterLoad(currentInventarioPersonagemId);
                 await loadInventarioFromFirebase(currentInventarioPersonagemId);
 
                 const character = allCharacters.find(c => c.id === currentInventarioPersonagemId);
