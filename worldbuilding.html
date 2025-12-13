@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lendas e Relíquias - Worldbuilding</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #8b5cf6;
+            --secondary: #ec4899;
+            --dark: #1e1b4b;
+            --darker: #0f172a;
+            --light: #f8fafc;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border: #334155;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            color: var(--light);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(139, 92, 246, 0.2);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            color: var(--primary);
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            min-width: 280px;
+            background: rgba(15, 23, 42, 0.95);
+            border-right: 2px solid var(--border);
+            height: 100vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sidebar-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .sidebar-search {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 15px;
+            background: rgba(30, 27, 75, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: 0.9rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 10px 0;
+        }
+
+        .nav-category {
+            padding: 12px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-category:hover {
+            background: rgba(139, 92, 246, 0.1);
+            border-left-color: var(--primary);
+        }
+
+        .nav-category.active {
+            background: rgba(139, 92, 246, 0.2);
+            border-left-color: var(--primary);
+        }
+
+        .nav-icon {
+            font-size: 1.2rem;
+        }
+
+        .nav-label {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .btn-new-entry {
+            margin: 15px;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--success), #059669);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-new-entry:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-back {
+            margin: 15px;
+            padding: 10px;
+            background: rgba(100, 116, 139, 0.3);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            color: var(--light);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .btn-back:hover {
+            background: rgba(100, 116, 139, 0.5);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .content-header {
+            padding: 20px 30px;
+            background: rgba(30, 27, 75, 0.6);
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .content-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        /* Dashboard */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(30, 27, 75, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-3px);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        /* Entries Grid */
+        .entries-section {
+            margin-top: 30px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--light);
+        }
+
+        .entries-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .entry-card {
+            background: rgba(30, 27, 75, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .entry-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.2);
+        }
+
+        .entry-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .entry-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .entry-type {
+            display: inline-block;
+            padding: 4px 10px;
+            background: var(--primary);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .entry-desc {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .entry-status {
+            margin-top: 10px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .status-rascunho {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .status-desenvolvimento {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+
+        .status-finalizado {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .no-entries {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+
+        .no-entries-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        /* Filters */
+        .filters-bar {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .filter-select {
+            padding: 10px 15px;
+            background: rgba(30, 27, 75, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: 0.9rem;
+            min-width: 150px;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 10001;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            border: 2px solid var(--primary);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 20px 30px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .form-section {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .form-section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            padding: 12px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .modal-footer {
+            padding: 20px 30px;
+            border-top: 2px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #059669);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(100, 116, 139, 0.5);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Alert */
+        .alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 12px;
+            font-weight: 700;
+            z-index: 10002;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .alert-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .alert-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .alert-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        /* Image Gallery */
+        .image-gallery {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .gallery-item {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 2px solid var(--border);
+            cursor: pointer;
+        }
+
+        .gallery-item:hover {
+            border-color: var(--primary);
+        }
+
+        .add-image-btn {
+            width: 80px;
+            height: 80px;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #64748b;
+            transition: all 0.3s;
+        }
+
+        .add-image-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* Tags */
+        .tags-container {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .tag {
+            padding: 4px 12px;
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tag-remove {
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+        .tag-remove:hover {
+            opacity: 1;
+        }
+
+        /* Connections */
+        .connections-list {
+            margin-top: 15px;
+        }
+
+        .connection-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(30, 27, 75, 0.4);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .connection-type {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            background: var(--secondary);
+            border-radius: 4px;
+        }
+
+        .connection-name {
+            flex: 1;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">🌐 Carregando Worldbuilding...</div>
+    </div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <span style="font-size: 1.5rem;">🌐</span>
+            <span class="sidebar-title">Worldbuilding</span>
+        </div>
+        <div class="sidebar-search">
+            <input type="text" class="search-input" id="globalSearch" placeholder="🔍 Buscar em tudo...">
+        </div>
+        <nav class="sidebar-nav" id="sidebarNav">
+            <div class="nav-category active" data-category="dashboard">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Dashboard</span>
+            </div>
+            <div class="nav-category" data-category="geography">
+                <span class="nav-icon">📍</span>
+                <span class="nav-label">Geografia</span>
+            </div>
+            <div class="nav-category" data-category="npcs">
+                <span class="nav-icon">👥</span>
+                <span class="nav-label">NPCs</span>
+            </div>
+            <div class="nav-category" data-category="factions">
+                <span class="nav-icon">⚔️</span>
+                <span class="nav-label">Facções</span>
+            </div>
+            <div class="nav-category" data-category="history">
+                <span class="nav-icon">📜</span>
+                <span class="nav-label">História</span>
+            </div>
+            <div class="nav-category" data-category="cultures">
+                <span class="nav-icon">🎭</span>
+                <span class="nav-label">Culturas</span>
+            </div>
+            <div class="nav-category" data-category="magic">
+                <span class="nav-icon">✨</span>
+                <span class="nav-label">Magia/Tecnologia</span>
+            </div>
+            <div class="nav-category" data-category="religion">
+                <span class="nav-icon">🏛️</span>
+                <span class="nav-label">Religião</span>
+            </div>
+        </nav>
+        <button class="btn-new-entry" id="btnNewEntry">➕ Nova Entrada</button>
+        <button class="btn-back" onclick="window.location.href='mestre.html'">← Voltar ao Painel</button>
+    </div>
+
+    <main class="main-content">
+        <div class="content-header">
+            <h1 class="content-title" id="contentTitle">Dashboard</h1>
+            <span id="userEmail" style="color: #94a3b8;"></span>
+        </div>
+        <div class="content-body" id="contentBody"></div>
+    </main>
+
+    <!-- Entry Modal -->
+    <div class="modal" id="entryModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="entryModalTitle">Nova Entrada</h2>
+                <button class="modal-close" onclick="closeEntryModal()">✕</button>
+            </div>
+            <div class="modal-body" id="entryModalBody"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEntryModal()">Cancelar</button>
+                <button class="btn btn-danger" id="btnDeleteEntry" style="display:none;"
+                    onclick="deleteCurrentEntry()">🗑️ Excluir</button>
+                <button class="btn btn-success" onclick="saveEntry()">💾 Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
+            authDomain: "rpg-lendasereliquias.firebaseapp.com",
+            projectId: "rpg-lendasereliquias",
+            storageBucket: "rpg-lendasereliquias.firebasestorage.app",
+            messagingSenderId: "546994339773",
+            appId: "1:546994339773:web:0116cf7c8667f113075cd4"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let currentCategory = 'dashboard';
+        let currentEditingEntry = null;
+        let allData = { geography: [], npcs: [], factions: [], history: [], cultures: [], magic: [], religion: [] };
+
+        const categoryConfig = {
+            geography: { collection: 'worldbuilding-geography', icon: '📍', title: 'Geografia', types: ['Continente', 'Região', 'Cidade', 'Vila', 'Ponto de Interesse'] },
+            npcs: { collection: 'npcs', icon: '👥', title: 'NPCs', types: ['NPC', 'Criatura'] },
+            factions: { collection: 'worldbuilding-factions', icon: '⚔️', title: 'Facções', types: ['Tribo', 'Facção', 'Organização'] },
+            history: { collection: 'worldbuilding-history', icon: '📜', title: 'História', types: ['Era', 'Evento', 'Período'] },
+            cultures: { collection: 'worldbuilding-cultures', icon: '🎭', title: 'Culturas', types: ['Cultura', 'Sociedade', 'Tradição'] },
+            magic: { collection: 'worldbuilding-magic', icon: '✨', title: 'Magia/Tecnologia', types: ['Escola de Magia', 'Tecnologia', 'Artefato'] },
+            religion: { collection: 'worldbuilding-religion', icon: '🏛️', title: 'Religião', types: ['Divindade', 'Culto', 'Templo', 'Mito'] }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('userEmail').textContent = user.email;
+                await loadAllData();
+                document.getElementById('loadingScreen').style.display = 'none';
+                renderDashboard();
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        async function loadAllData() {
+            for (const [key, config] of Object.entries(categoryConfig)) {
+                try {
+                    const snapshot = await getDocs(collection(db, config.collection));
+                    allData[key] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                } catch (e) { console.log(`Error loading ${key}:`, e); allData[key] = []; }
+            }
+        }
+
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            document.body.appendChild(alert);
+            setTimeout(() => alert.remove(), 3000);
+        }
+
+        // Navigation
+        document.querySelectorAll('.nav-category').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.nav-category').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                currentCategory = item.dataset.category;
+                if (currentCategory === 'dashboard') {
+                    document.getElementById('contentTitle').textContent = 'Dashboard';
+                    renderDashboard();
+                } else {
+                    document.getElementById('contentTitle').textContent = categoryConfig[currentCategory].title;
+                    renderCategoryList(currentCategory);
+                }
+            });
+        });
+
+        // Dashboard
+        function renderDashboard() {
+            const body = document.getElementById('contentBody');
+            const stats = Object.entries(categoryConfig).map(([key, config]) => `
+                <div class="stat-card" onclick="navigateToCategory('${key}')">
+                    <div class="stat-icon">${config.icon}</div>
+                    <div class="stat-value">${allData[key]?.length || 0}</div>
+                    <div class="stat-label">${config.title}</div>
+                </div>
+            `).join('');
+
+            const recentEntries = Object.entries(allData)
+                .flatMap(([cat, entries]) => entries.map(e => ({ ...e, category: cat })))
+                .sort((a, b) => new Date(b.lastUpdate || 0) - new Date(a.lastUpdate || 0))
+                .slice(0, 6);
+
+            body.innerHTML = `
+                <div class="dashboard-grid">${stats}</div>
+                <div class="entries-section">
+                    <div class="section-header">
+                        <h2 class="section-title">📝 Entradas Recentes</h2>
+                    </div>
+                    <div class="entries-grid" id="recentEntries">
+                        ${recentEntries.length ? recentEntries.map(e => renderEntryCard(e, e.category)).join('') :
+                    '<div class="no-entries"><div class="no-entries-icon">📝</div><p>Nenhuma entrada ainda. Clique em "Nova Entrada" para começar!</p></div>'}
+                    </div>
+                </div>
+            `;
+        }
+        window.navigateToCategory = (cat) => {
+            document.querySelector(`[data-category="${cat}"]`).click();
+        };
+
+        function renderEntryCard(entry, category) {
+            const config = categoryConfig[category];
+            const statusClass = entry.status === 'finalizado' ? 'status-finalizado' : entry.status === 'desenvolvimento' ? 'status-desenvolvimento' : 'status-rascunho';
+            return `
+                <div class="entry-card" onclick="openEntry('${category}', '${entry.id}')">
+                    ${entry.imagem ? `<img src="${entry.imagem}" class="entry-image" onerror="this.style.display='none'">` : ''}
+                    <span class="entry-type">${config.icon} ${entry.tipo || config.types[0]}</span>
+                    <div class="entry-name">${entry.nome || entry.titulo || 'Sem nome'}</div>
+                    <div class="entry-desc">${entry.descricao || entry.historia || ''}</div>
+                    ${entry.status ? `<span class="entry-status ${statusClass}">${entry.status}</span>` : ''}
+                </div>
+            `;
+        }
+
+        function renderCategoryList(category) {
+            const config = categoryConfig[category];
+            const entries = allData[category] || [];
+            const body = document.getElementById('contentBody');
+
+            body.innerHTML = `
+                <div class="filters-bar">
+                    <select class="filter-select" id="filterType" onchange="filterEntries()">
+                        <option value="">Todos os tipos</option>
+                        ${config.types.map(t => `<option value="${t}">${t}</option>`).join('')}
+                    </select>
+                    <select class="filter-select" id="filterStatus" onchange="filterEntries()">
+                        <option value="">Todos os status</option>
+                        <option value="rascunho">Rascunho</option>
+                        <option value="desenvolvimento">Em Desenvolvimento</option>
+                        <option value="finalizado">Finalizado</option>
+                    </select>
+                </div>
+                <div class="entries-grid" id="entriesGrid">
+                    ${entries.length ? entries.map(e => renderEntryCard(e, category)).join('') :
+                    `<div class="no-entries"><div class="no-entries-icon">${config.icon}</div><p>Nenhuma entrada em ${config.title}. Clique em "Nova Entrada" para criar!</p></div>`}
+                </div>
+            `;
+        }
+
+        window.filterEntries = function () {
+            const typeFilter = document.getElementById('filterType').value.toLowerCase();
+            const statusFilter = document.getElementById('filterStatus').value;
+            let entries = allData[currentCategory] || [];
+            if (typeFilter) entries = entries.filter(e => (e.tipo || '').toLowerCase() === typeFilter);
+            if (statusFilter) entries = entries.filter(e => e.status === statusFilter);
+            document.getElementById('entriesGrid').innerHTML = entries.length ?
+                entries.map(e => renderEntryCard(e, currentCategory)).join('') :
+                '<div class="no-entries"><p>Nenhuma entrada encontrada com esses filtros.</p></div>';
+        };
+
+        // Modal & CRUD
+        document.getElementById('btnNewEntry').addEventListener('click', () => openEntryModal());
+
+        function openEntryModal(entry = null) {
+            currentEditingEntry = entry;
+            const modal = document.getElementById('entryModal');
+            const title = document.getElementById('entryModalTitle');
+            const body = document.getElementById('entryModalBody');
+            const deleteBtn = document.getElementById('btnDeleteEntry');
+
+            const cat = currentCategory === 'dashboard' ? 'geography' : currentCategory;
+            const config = categoryConfig[cat];
+
+            title.textContent = entry ? `Editar ${config.title}` : `Nova Entrada - ${config.title}`;
+            deleteBtn.style.display = entry ? 'block' : 'none';
+
+            let extraFields = '';
+            if (cat === 'geography') {
+                extraFields = `
+                    <div class="form-group"><label class="form-label">Clima</label><input type="text" class="form-input" id="entryClima" value="${entry?.clima || ''}"></div>
+                    <div class="form-group"><label class="form-label">População</label><input type="text" class="form-input" id="entryPopulacao" value="${entry?.populacao || ''}"></div>
+                    <div class="form-group"><label class="form-label">Recursos</label><input type="text" class="form-input" id="entryRecursos" value="${entry?.recursos || ''}"></div>
+                `;
+            } else if (cat === 'factions') {
+                extraFields = `
+                    <div class="form-group"><label class="form-label">Liderança</label><input type="text" class="form-input" id="entryLideranca" value="${entry?.lideranca || ''}"></div>
+                    <div class="form-group"><label class="form-label">Ideologia</label><input type="text" class="form-input" id="entryIdeologia" value="${entry?.ideologia || ''}"></div>
+                    <div class="form-group"><label class="form-label">Territórios</label><input type="text" class="form-input" id="entryTerritorios" value="${entry?.territorios || ''}"></div>
+                    <div class="form-group"><label class="form-label">Aliados</label><input type="text" class="form-input" id="entryAliados" value="${entry?.aliados || ''}"></div>
+                    <div class="form-group"><label class="form-label">Inimigos</label><input type="text" class="form-input" id="entryInimigos" value="${entry?.inimigos || ''}"></div>
+                `;
+            } else if (cat === 'history') {
+                extraFields = `
+                    <div class="form-group"><label class="form-label">Era/Período</label><input type="text" class="form-input" id="entryEra" value="${entry?.era || ''}"></div>
+                    <div class="form-group"><label class="form-label">Data Início</label><input type="text" class="form-input" id="entryDataInicio" value="${entry?.dataInicio || ''}"></div>
+                    <div class="form-group"><label class="form-label">Data Fim</label><input type="text" class="form-input" id="entryDataFim" value="${entry?.dataFim || ''}"></div>
+                    <div class="form-group"><label class="form-label">Participantes</label><input type="text" class="form-input" id="entryParticipantes" value="${entry?.participantes || ''}"></div>
+                    <div class="form-group"><label class="form-label">Consequências</label><textarea class="form-textarea" id="entryConsequencias">${entry?.consequencias || ''}</textarea></div>
+                `;
+            } else if (cat === 'cultures') {
+                extraFields = `
+                    <div class="form-group"><label class="form-label">Costumes</label><textarea class="form-textarea" id="entryCostumes">${entry?.costumes || ''}</textarea></div>
+                    <div class="form-group"><label class="form-label">Tradições</label><textarea class="form-textarea" id="entryTradicoes">${entry?.tradicoes || ''}</textarea></div>
+                    <div class="form-group"><label class="form-label">Estrutura Social</label><input type="text" class="form-input" id="entryEstruturaSocial" value="${entry?.estruturaSocial || ''}"></div>
+                    <div class="form-group"><label class="form-label">Idiomas</label><input type="text" class="form-input" id="entryIdiomas" value="${entry?.idiomas || ''}"></div>
+                `;
+            } else if (cat === 'magic') {
+                extraFields = `
+                    <div class="form-group"><label class="form-label">Regras</label><textarea class="form-textarea" id="entryRegras">${entry?.regras || ''}</textarea></div>
+                    <div class="form-group"><label class="form-label">Limitações</label><textarea class="form-textarea" id="entryLimitacoes">${entry?.limitacoes || ''}</textarea></div>
+                `;
+            } else if (cat === 'religion') {
+                extraFields = `
+                    <div class="form-group"><label class="form-label">Domínios</label><input type="text" class="form-input" id="entryDominios" value="${entry?.dominios || ''}"></div>
+                    <div class="form-group"><label class="form-label">Símbolos</label><input type="text" class="form-input" id="entrySimbolos" value="${entry?.simbolos || ''}"></div>
+                    <div class="form-group"><label class="form-label">Rituais</label><textarea class="form-textarea" id="entryRituais">${entry?.rituais || ''}</textarea></div>
+                `;
+            }
+
+            body.innerHTML = `
+                <div class="form-section">
+                    <h3 class="form-section-title">📋 Informações Básicas</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Nome *</label>
+                            <input type="text" class="form-input" id="entryNome" value="${entry?.nome || entry?.titulo || ''}" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Tipo</label>
+                            <select class="form-select" id="entryTipo">
+                                ${config.types.map(t => `<option value="${t}" ${(entry?.tipo || '') === t ? 'selected' : ''}>${t}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" id="entryStatus">
+                                <option value="rascunho" ${entry?.status === 'rascunho' ? 'selected' : ''}>Rascunho</option>
+                                <option value="desenvolvimento" ${entry?.status === 'desenvolvimento' ? 'selected' : ''}>Em Desenvolvimento</option>
+                                <option value="finalizado" ${entry?.status === 'finalizado' ? 'selected' : ''}>Finalizado</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-section">
+                    <h3 class="form-section-title">🖼️ Imagem</h3>
+                    <div class="form-group">
+                        <label class="form-label">URL da Imagem</label>
+                        <input type="url" class="form-input" id="entryImagem" value="${entry?.imagem || ''}" placeholder="https://...">
+                    </div>
+                </div>
+                <div class="form-section">
+                    <h3 class="form-section-title">📝 Descrição</h3>
+                    <div class="form-group">
+                        <textarea class="form-textarea" id="entryDescricao" rows="6" placeholder="Descreva esta entrada...">${entry?.descricao || entry?.historia || ''}</textarea>
+                    </div>
+                </div>
+                ${extraFields ? `<div class="form-section"><h3 class="form-section-title">🔧 Campos Específicos</h3><div class="form-grid">${extraFields}</div></div>` : ''}
+                <div class="form-section">
+                    <h3 class="form-section-title">🏷️ Tags</h3>
+                    <div class="form-group">
+                        <input type="text" class="form-input" id="entryTags" value="${entry?.tags || ''}" placeholder="tag1, tag2, tag3">
+                    </div>
+                </div>
+                <div class="form-section">
+                    <h3 class="form-section-title">🔒 Notas Privadas</h3>
+                    <div class="form-group">
+                        <textarea class="form-textarea" id="entryNotas" rows="3" placeholder="Suas anotações secretas...">${entry?.notas || ''}</textarea>
+                    </div>
+                </div>
+            `;
+            modal.classList.add('active');
+        }
+        window.openEntry = (cat, id) => {
+            currentCategory = cat;
+            const entry = allData[cat].find(e => e.id === id);
+            if (entry) openEntryModal(entry);
+        };
+        window.closeEntryModal = () => {
+            document.getElementById('entryModal').classList.remove('active');
+            currentEditingEntry = null;
+        };
+
+        window.saveEntry = async function () {
+            const cat = currentCategory === 'dashboard' ? 'geography' : currentCategory;
+            const config = categoryConfig[cat];
+            const nome = document.getElementById('entryNome').value.trim();
+            if (!nome) { showAlert('⚠️ O nome é obrigatório!', 'warning'); return; }
+
+            const data = {
+                nome,
+                tipo: document.getElementById('entryTipo').value,
+                status: document.getElementById('entryStatus').value,
+                imagem: document.getElementById('entryImagem').value.trim(),
+                descricao: document.getElementById('entryDescricao').value.trim(),
+                tags: document.getElementById('entryTags').value.trim(),
+                notas: document.getElementById('entryNotas').value.trim(),
+                lastUpdate: new Date().toISOString(),
+                lastUpdateBy: currentUser.email
+            };
+
+            // Category-specific fields
+            if (cat === 'geography') {
+                data.clima = document.getElementById('entryClima')?.value?.trim() || '';
+                data.populacao = document.getElementById('entryPopulacao')?.value?.trim() || '';
+                data.recursos = document.getElementById('entryRecursos')?.value?.trim() || '';
+            } else if (cat === 'factions') {
+                data.lideranca = document.getElementById('entryLideranca')?.value?.trim() || '';
+                data.ideologia = document.getElementById('entryIdeologia')?.value?.trim() || '';
+                data.territorios = document.getElementById('entryTerritorios')?.value?.trim() || '';
+                data.aliados = document.getElementById('entryAliados')?.value?.trim() || '';
+                data.inimigos = document.getElementById('entryInimigos')?.value?.trim() || '';
+            } else if (cat === 'history') {
+                data.era = document.getElementById('entryEra')?.value?.trim() || '';
+                data.dataInicio = document.getElementById('entryDataInicio')?.value?.trim() || '';
+                data.dataFim = document.getElementById('entryDataFim')?.value?.trim() || '';
+                data.participantes = document.getElementById('entryParticipantes')?.value?.trim() || '';
+                data.consequencias = document.getElementById('entryConsequencias')?.value?.trim() || '';
+            } else if (cat === 'cultures') {
+                data.costumes = document.getElementById('entryCostumes')?.value?.trim() || '';
+                data.tradicoes = document.getElementById('entryTradicoes')?.value?.trim() || '';
+                data.estruturaSocial = document.getElementById('entryEstruturaSocial')?.value?.trim() || '';
+                data.idiomas = document.getElementById('entryIdiomas')?.value?.trim() || '';
+            } else if (cat === 'magic') {
+                data.regras = document.getElementById('entryRegras')?.value?.trim() || '';
+                data.limitacoes = document.getElementById('entryLimitacoes')?.value?.trim() || '';
+            } else if (cat === 'religion') {
+                data.dominios = document.getElementById('entryDominios')?.value?.trim() || '';
+                data.simbolos = document.getElementById('entrySimbolos')?.value?.trim() || '';
+                data.rituais = document.getElementById('entryRituais')?.value?.trim() || '';
+            }
+
+            try {
+                const colRef = collection(db, config.collection);
+                const docRef = currentEditingEntry ? doc(db, config.collection, currentEditingEntry.id) : doc(colRef);
+                await setDoc(docRef, data, { merge: true });
+                showAlert(currentEditingEntry ? '✅ Entrada atualizada!' : '✅ Entrada criada!', 'success');
+                closeEntryModal();
+                await loadAllData();
+                if (currentCategory === 'dashboard') renderDashboard();
+                else renderCategoryList(currentCategory);
+            } catch (e) {
+                console.error(e);
+                showAlert('❌ Erro ao salvar entrada', 'danger');
+            }
+        };
+
+        window.deleteCurrentEntry = async function () {
+            if (!currentEditingEntry || !confirm('Tem certeza que deseja excluir esta entrada?')) return;
+            const cat = currentCategory === 'dashboard' ? 'geography' : currentCategory;
+            try {
+                await deleteDoc(doc(db, categoryConfig[cat].collection, currentEditingEntry.id));
+                showAlert('✅ Entrada excluída!', 'success');
+                closeEntryModal();
+                await loadAllData();
+                if (currentCategory === 'dashboard') renderDashboard();
+                else renderCategoryList(currentCategory);
+            } catch (e) {
+                console.error(e);
+                showAlert('❌ Erro ao excluir', 'danger');
+            }
+        };
+
+        // Global Search
+        document.getElementById('globalSearch').addEventListener('input', function () {
+            const query = this.value.toLowerCase().trim();
+            if (!query) { if (currentCategory === 'dashboard') renderDashboard(); else renderCategoryList(currentCategory); return; }
+            const results = Object.entries(allData).flatMap(([cat, entries]) =>
+                entries.filter(e =>
+                    (e.nome || '').toLowerCase().includes(query) ||
+                    (e.descricao || '').toLowerCase().includes(query) ||
+                    (e.tags || '').toLowerCase().includes(query)
+                ).map(e => ({ ...e, category: cat }))
+            );
+            document.getElementById('contentTitle').textContent = `Busca: "${this.value}"`;
+            document.getElementById('contentBody').innerHTML = `
+                <div class="entries-grid">
+                    ${results.length ? results.map(e => renderEntryCard(e, e.category)).join('') :
+                    '<div class="no-entries"><p>Nenhum resultado encontrado.</p></div>'}
+                </div>
+            `;
+        });
+    </script>
+</body>
+
+</html>

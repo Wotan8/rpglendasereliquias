@@ -157,6 +157,25 @@
             box-shadow: 0 4px 12px rgba(20, 184, 166, 0.4);
         }
 
+        .btn-worldbuilding {
+            background: linear-gradient(135deg, #a855f7, #6366f1);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-worldbuilding:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+        }
+
         .user-email {
             color: #cbd5e1;
             font-size: 0.85rem;
@@ -2110,6 +2129,8 @@
 
     <!-- INFORMAÇÕES DO USUÁRIO -->
     <div class="user-info" id="userInfo" style="display: none;">
+        <button class="btn-worldbuilding" onclick="window.location.href='worldbuilding.html'"
+            title="Painel de Worldbuilding">🌐</button>
         <button class="btn-notification" onclick="openSendNotificationModal()"
             title="Enviar Notificação aos Jogadores">📧</button>
         <button class="btn-viewmap" onclick="window.location.href='viewmap.html'" title="Navegador de Mapa">🌍</button>
@@ -3598,6 +3619,40 @@
                     <div class="npc-form-group">
                         <label class="npc-form-label">Tags (separadas por vírgula)</label>
                         <input type="text" class="npc-form-input" id="npcTags" placeholder="mago, hostil, líder">
+                    </div>
+
+                    <!-- Campos específicos para Criaturas -->
+                    <div id="creatureFieldsSection" style="display: none;">
+                        <h4 style="color: var(--secondary); margin: 20px 0 15px; font-size: 1rem;">🐉 Campos de Criatura
+                        </h4>
+                        <div class="npc-form-grid">
+                            <div class="npc-form-group">
+                                <label class="npc-form-label">Habitat</label>
+                                <input type="text" class="npc-form-input" id="npcHabitat"
+                                    placeholder="Floresta, Cavernas, Montanhas...">
+                            </div>
+                            <div class="npc-form-group">
+                                <label class="npc-form-label">Comportamento</label>
+                                <input type="text" class="npc-form-input" id="npcComportamento"
+                                    placeholder="Territorial, Pacífico, Agressivo...">
+                            </div>
+                            <div class="npc-form-group">
+                                <label class="npc-form-label">Dieta</label>
+                                <input type="text" class="npc-form-input" id="npcDieta"
+                                    placeholder="Carnívoro, Herbívoro, Onívoro...">
+                            </div>
+                            <div class="npc-form-group">
+                                <label class="npc-form-label">Nível de Ameaça</label>
+                                <select class="npc-form-select" id="npcNivelAmeaca">
+                                    <option value="">Selecione...</option>
+                                    <option value="inofensivo">Inofensivo</option>
+                                    <option value="baixo">Baixo</option>
+                                    <option value="medio">Médio</option>
+                                    <option value="alto">Alto</option>
+                                    <option value="letal">Letal</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -7082,6 +7137,18 @@ Agilidade 2\n
                 document.getElementById('npcLuns').value = npc.loot?.luns || '';
                 document.getElementById('npcPistas').value = npc.loot?.pistas || '';
                 document.getElementById('npcComplicacoes').value = npc.loot?.complicacoes || '';
+
+                // Carregar campos de criatura
+                document.getElementById('npcHabitat').value = npc.criatura?.habitat || '';
+                document.getElementById('npcComportamento').value = npc.criatura?.comportamento || '';
+                document.getElementById('npcDieta').value = npc.criatura?.dieta || '';
+                document.getElementById('npcNivelAmeaca').value = npc.criatura?.nivelAmeaca || '';
+
+                // Mostrar/esconder seção de criatura baseado no tipo
+                const creatureSection = document.getElementById('creatureFieldsSection');
+                if (creatureSection) {
+                    creatureSection.style.display = npc.tipo === 'criatura' ? 'block' : 'none';
+                }
             } else {
                 currentEditingNpc = null;
                 modalTitle.textContent = 'Criar NPC / Criatura';
@@ -7098,6 +7165,12 @@ Agilidade 2\n
 
                 // Limpar preview da imagem ao criar novo NPC
                 document.getElementById('npcImagemPreview').style.display = 'none';
+
+                // Esconder seção de criatura para novo NPC
+                const creatureSection = document.getElementById('creatureFieldsSection');
+                if (creatureSection) {
+                    creatureSection.style.display = 'none';
+                }
             }
 
             modal.classList.add('active');
@@ -7182,6 +7255,14 @@ Agilidade 2\n
                         pistas: document.getElementById('npcPistas').value.trim(),
                         complicacoes: document.getElementById('npcComplicacoes').value.trim()
                     },
+
+                    // Campos específicos para criaturas
+                    criatura: tipo === 'criatura' ? {
+                        habitat: document.getElementById('npcHabitat')?.value?.trim() || '',
+                        comportamento: document.getElementById('npcComportamento')?.value?.trim() || '',
+                        dieta: document.getElementById('npcDieta')?.value?.trim() || '',
+                        nivelAmeaca: document.getElementById('npcNivelAmeaca')?.value || ''
+                    } : null,
 
                     lastUpdate: new Date().toISOString(),
                     lastUpdateBy: currentUser.email
@@ -7347,6 +7428,22 @@ Agilidade 2\n
                 preview.style.display = 'none';
             }
         });
+
+        // Toggle para campos de criatura baseado no tipo selecionado
+        document.getElementById('npcTipo')?.addEventListener('change', function () {
+            const creatureSection = document.getElementById('creatureFieldsSection');
+            if (creatureSection) {
+                creatureSection.style.display = this.value === 'criatura' ? 'block' : 'none';
+            }
+        });
+
+        // Função para atualizar campos de criatura quando abrir modal de edição
+        function updateCreatureFieldsVisibility(tipo) {
+            const creatureSection = document.getElementById('creatureFieldsSection');
+            if (creatureSection) {
+                creatureSection.style.display = tipo === 'criatura' ? 'block' : 'none';
+            }
+        }
 
         // ============= EXPORTAR NPC =============
         window.exportNpc = function () {

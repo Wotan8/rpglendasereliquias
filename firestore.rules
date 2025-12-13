@@ -160,5 +160,36 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create, update, delete: if isMaster();
     }
+
+    // ========== ADICIONADO: Coleções de Worldbuilding ==========
+    match /worldbuilding-geography/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /worldbuilding-factions/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /worldbuilding-history/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /worldbuilding-cultures/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /worldbuilding-magic/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /worldbuilding-religion/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
   }
 }
