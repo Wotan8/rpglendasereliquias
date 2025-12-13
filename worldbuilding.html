@@ -328,27 +328,119 @@
             overflow: hidden;
         }
 
-        .entry-status {
+        /* Linked Entities */
+        .linked-entities-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
             margin-top: 10px;
-            padding: 4px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .linked-entity-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: rgba(30, 27, 75, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .linked-entity-item:hover {
+            border-color: var(--primary);
+        }
+
+        .linked-entity-name {
+            font-weight: 600;
+            color: var(--light);
+            min-width: 150px;
+        }
+
+        .linked-entity-title {
+            flex: 1;
+            padding: 6px 10px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--light);
+            font-size: 0.85rem;
+        }
+
+        .linked-entity-title:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .linked-entity-remove {
+            background: rgba(239, 68, 68, 0.2);
+            border: none;
+            color: var(--danger);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .linked-entity-remove:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .add-linked-entity {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .add-linked-entity select {
+            flex: 1;
+        }
+
+        .add-linked-entity button {
+            padding: 8px 16px;
+            background: var(--primary);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .add-linked-entity button:hover {
+            background: var(--secondary);
+        }
+
+        .entity-type-badge {
+            padding: 2px 8px;
+            background: rgba(139, 92, 246, 0.3);
             border-radius: 4px;
             font-size: 0.7rem;
             font-weight: 600;
+            color: var(--primary);
         }
 
-        .status-rascunho {
-            background: rgba(245, 158, 11, 0.2);
-            color: var(--warning);
+        /* Image Preview */
+        .image-preview-container {
+            margin-top: 10px;
         }
 
-        .status-desenvolvimento {
-            background: rgba(59, 130, 246, 0.2);
-            color: #3b82f6;
+        .image-preview {
+            max-width: 200px;
+            max-height: 150px;
+            border-radius: 8px;
+            border: 2px solid var(--border);
+            object-fit: cover;
+            display: none;
         }
 
-        .status-finalizado {
-            background: rgba(16, 185, 129, 0.2);
-            color: var(--success);
+        .image-preview.visible {
+            display: block;
         }
 
         .no-entries {
@@ -721,7 +813,7 @@
             </div>
             <div class="nav-category" data-category="factions">
                 <span class="nav-icon">⚔️</span>
-                <span class="nav-label">Facções</span>
+                <span class="nav-label">Tribos</span>
             </div>
             <div class="nav-category" data-category="history">
                 <span class="nav-icon">📜</span>
@@ -791,11 +883,14 @@
         let currentCategory = 'dashboard';
         let currentEditingEntry = null;
         let allData = { geography: [], npcs: [], factions: [], history: [], cultures: [], magic: [], religion: [] };
+        let linkedNpcs = []; // For Geography - NPCs/Creatures with titles
+        let linkedTribos = []; // For Geography (Vila, Cidade, Região) - Tribes with titles
+        let linkedCulturas = []; // For Factions/Tribes - Cultures with titles
 
         const categoryConfig = {
             geography: { collection: 'worldbuilding-geography', icon: '📍', title: 'Geografia', types: ['Continente', 'Região', 'Cidade', 'Vila', 'Ponto de Interesse'] },
             npcs: { collection: 'npcs', icon: '👥', title: 'NPCs', types: ['NPC', 'Criatura'] },
-            factions: { collection: 'worldbuilding-factions', icon: '⚔️', title: 'Facções', types: ['Tribo', 'Facção', 'Organização'] },
+            factions: { collection: 'worldbuilding-factions', icon: '⚔️', title: 'Tribos', types: ['Tribo', 'Facção', 'Organização'] },
             history: { collection: 'worldbuilding-history', icon: '📜', title: 'História', types: ['Era', 'Evento', 'Período'] },
             cultures: { collection: 'worldbuilding-cultures', icon: '🎭', title: 'Culturas', types: ['Cultura', 'Sociedade', 'Tradição'] },
             magic: { collection: 'worldbuilding-magic', icon: '✨', title: 'Magia/Tecnologia', types: ['Escola de Magia', 'Tecnologia', 'Artefato'] },
@@ -882,14 +977,12 @@
 
         function renderEntryCard(entry, category) {
             const config = categoryConfig[category];
-            const statusClass = entry.status === 'finalizado' ? 'status-finalizado' : entry.status === 'desenvolvimento' ? 'status-desenvolvimento' : 'status-rascunho';
             return `
                 <div class="entry-card" onclick="openEntry('${category}', '${entry.id}')">
                     ${entry.imagem ? `<img src="${entry.imagem}" class="entry-image" onerror="this.style.display='none'">` : ''}
                     <span class="entry-type">${config.icon} ${entry.tipo || config.types[0]}</span>
                     <div class="entry-name">${entry.nome || entry.titulo || 'Sem nome'}</div>
                     <div class="entry-desc">${entry.descricao || entry.historia || ''}</div>
-                    ${entry.status ? `<span class="entry-status ${statusClass}">${entry.status}</span>` : ''}
                 </div>
             `;
         }
@@ -905,12 +998,6 @@
                         <option value="">Todos os tipos</option>
                         ${config.types.map(t => `<option value="${t}">${t}</option>`).join('')}
                     </select>
-                    <select class="filter-select" id="filterStatus" onchange="filterEntries()">
-                        <option value="">Todos os status</option>
-                        <option value="rascunho">Rascunho</option>
-                        <option value="desenvolvimento">Em Desenvolvimento</option>
-                        <option value="finalizado">Finalizado</option>
-                    </select>
                 </div>
                 <div class="entries-grid" id="entriesGrid">
                     ${entries.length ? entries.map(e => renderEntryCard(e, category)).join('') :
@@ -921,10 +1008,8 @@
 
         window.filterEntries = function () {
             const typeFilter = document.getElementById('filterType').value.toLowerCase();
-            const statusFilter = document.getElementById('filterStatus').value;
             let entries = allData[currentCategory] || [];
             if (typeFilter) entries = entries.filter(e => (e.tipo || '').toLowerCase() === typeFilter);
-            if (statusFilter) entries = entries.filter(e => e.status === statusFilter);
             document.getElementById('entriesGrid').innerHTML = entries.length ?
                 entries.map(e => renderEntryCard(e, currentCategory)).join('') :
                 '<div class="no-entries"><p>Nenhuma entrada encontrada com esses filtros.</p></div>';
@@ -946,20 +1031,88 @@
             title.textContent = entry ? `Editar ${config.title}` : `Nova Entrada - ${config.title}`;
             deleteBtn.style.display = entry ? 'block' : 'none';
 
+            // Initialize linked entities from entry
+            linkedNpcs = entry?.linkedNpcs || [];
+            linkedTribos = entry?.linkedTribos || [];
+            linkedCulturas = entry?.linkedCulturas || [];
+
             let extraFields = '';
+            let geographySections = '';
+            let factionsSections = '';
+
             if (cat === 'geography') {
+                // Get available NPCs from data
+                const availableNpcs = allData.npcs || [];
+                // Get tribes from factions (type === 'Tribo')
+                const availableTribos = (allData.factions || []).filter(f => f.tipo === 'Tribo');
+
                 extraFields = `
-                    <div class="form-group"><label class="form-label">Clima</label><input type="text" class="form-input" id="entryClima" value="${entry?.clima || ''}"></div>
-                    <div class="form-group"><label class="form-label">População</label><input type="text" class="form-input" id="entryPopulacao" value="${entry?.populacao || ''}"></div>
-                    <div class="form-group"><label class="form-label">Recursos</label><input type="text" class="form-input" id="entryRecursos" value="${entry?.recursos || ''}"></div>
+                    <div class="form-group"><label class="form-label">Clima</label><input type="text" class="form-input" id="entryClima" value="${entry?.clima || ''}" placeholder="Ex: Tropical, Árido, Temperado..."></div>
+                    <div class="form-group"><label class="form-label">População</label><input type="text" class="form-input" id="entryPopulacao" value="${entry?.populacao || ''}" placeholder="Ex: ~5.000 habitantes"></div>
+                    <div class="form-group"><label class="form-label">Recursos</label><input type="text" class="form-input" id="entryRecursos" value="${entry?.recursos || ''}" placeholder="Ex: Minérios, Agricultura..."></div>
+                    <div class="form-group"><label class="form-label">Governo</label><input type="text" class="form-input" id="entryGoverno" value="${entry?.governo || ''}" placeholder="Ex: Monarquia, Conselho de Anciões..."></div>
+                    <div class="form-group" style="grid-column: 1/-1;"><label class="form-label">Pontos de Referência</label><textarea class="form-textarea" id="entryLandmarks" rows="2" placeholder="Locais notáveis, construções famosas...">${entry?.landmarks || ''}</textarea></div>
+                    <div class="form-group" style="grid-column: 1/-1;"><label class="form-label">Perigos</label><textarea class="form-textarea" id="entryPerigos" rows="2" placeholder="Ameaças conhecidas, áreas perigosas...">${entry?.perigos || ''}</textarea></div>
+                    <div class="form-group" style="grid-column: 1/-1;"><label class="form-label">História do Local</label><textarea class="form-textarea" id="entryHistoriaLocal" rows="3" placeholder="Eventos passados relevantes...">${entry?.historiaLocal || ''}</textarea></div>
                 `;
+
+                // NPC/Creature linking section (for all geography types)
+                geographySections = `
+                <div class="form-section">
+                    <h3 class="form-section-title">👥 NPCs/Criaturas neste Local</h3>
+                    <div class="linked-entities-list" id="linkedNpcsList"></div>
+                    <div class="add-linked-entity">
+                        <select class="form-select" id="selectNpcToLink">
+                            <option value="">Selecionar NPC/Criatura...</option>
+                            ${availableNpcs.map(n => `<option value="${n.id}" data-name="${n.nome}" data-type="${n.tipo || 'NPC'}">${n.nome} (${n.tipo || 'NPC'})</option>`).join('')}
+                        </select>
+                        <button type="button" onclick="addLinkedNpc()">+ Adicionar</button>
+                    </div>
+                </div>
+                `;
+
+                // Tribe linking section (only for Vila, Cidade, Região)
+                const entryTipo = entry?.tipo || config.types[0];
+                if (['Vila', 'Cidade', 'Região'].includes(entryTipo)) {
+                    geographySections += `
+                    <div class="form-section" id="tribosSectionContainer">
+                        <h3 class="form-section-title">🏕️ Tribos Presentes</h3>
+                        <div class="linked-entities-list" id="linkedTribosList"></div>
+                        <div class="add-linked-entity">
+                            <select class="form-select" id="selectTriboToLink">
+                                <option value="">Selecionar Tribo...</option>
+                                ${availableTribos.map(t => `<option value="${t.id}" data-name="${t.nome}">${t.nome}</option>`).join('')}
+                            </select>
+                            <button type="button" onclick="addLinkedTribo()">+ Adicionar</button>
+                        </div>
+                    </div>
+                    `;
+                }
             } else if (cat === 'factions') {
+                // Get available cultures from data
+                const availableCulturas = allData.cultures || [];
+
                 extraFields = `
-                    <div class="form-group"><label class="form-label">Liderança</label><input type="text" class="form-input" id="entryLideranca" value="${entry?.lideranca || ''}"></div>
-                    <div class="form-group"><label class="form-label">Ideologia</label><input type="text" class="form-input" id="entryIdeologia" value="${entry?.ideologia || ''}"></div>
-                    <div class="form-group"><label class="form-label">Territórios</label><input type="text" class="form-input" id="entryTerritorios" value="${entry?.territorios || ''}"></div>
-                    <div class="form-group"><label class="form-label">Aliados</label><input type="text" class="form-input" id="entryAliados" value="${entry?.aliados || ''}"></div>
-                    <div class="form-group"><label class="form-label">Inimigos</label><input type="text" class="form-input" id="entryInimigos" value="${entry?.inimigos || ''}"></div>
+                    <div class="form-group"><label class="form-label">Liderança</label><input type="text" class="form-input" id="entryLideranca" value="${entry?.lideranca || ''}" placeholder="Ex: Chefe Guerreiro, Conselho de Anciões..."></div>
+                    <div class="form-group"><label class="form-label">Ideologia</label><input type="text" class="form-input" id="entryIdeologia" value="${entry?.ideologia || ''}" placeholder="Ex: Honra em batalha, Proteção da natureza..."></div>
+                    <div class="form-group"><label class="form-label">Territórios</label><input type="text" class="form-input" id="entryTerritorios" value="${entry?.territorios || ''}" placeholder="Ex: Montanhas do Norte, Floresta Sombria..."></div>
+                    <div class="form-group"><label class="form-label">Aliados</label><input type="text" class="form-input" id="entryAliados" value="${entry?.aliados || ''}" placeholder="Ex: Tribo das Águias, Reino de Eldor..."></div>
+                    <div class="form-group"><label class="form-label">Inimigos</label><input type="text" class="form-input" id="entryInimigos" value="${entry?.inimigos || ''}" placeholder="Ex: Tribo dos Lobos, Império Sombrio..."></div>
+                `;
+
+                // Culture linking section for factions
+                factionsSections = `
+                <div class="form-section">
+                    <h3 class="form-section-title">🎭 Culturas da Tribo</h3>
+                    <div class="linked-entities-list" id="linkedCulturasList"></div>
+                    <div class="add-linked-entity">
+                        <select class="form-select" id="selectCulturaToLink">
+                            <option value="">Selecionar Cultura...</option>
+                            ${availableCulturas.map(c => `<option value="${c.id}" data-name="${c.nome}" data-type="${c.tipo || 'Cultura'}">${c.nome} (${c.tipo || 'Cultura'})</option>`).join('')}
+                        </select>
+                        <button type="button" onclick="addLinkedCultura()">+ Adicionar</button>
+                    </div>
+                </div>
                 `;
             } else if (cat === 'history') {
                 extraFields = `
@@ -999,16 +1152,8 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Tipo</label>
-                            <select class="form-select" id="entryTipo">
+                            <select class="form-select" id="entryTipo" ${cat === 'geography' ? 'onchange="onGeographyTypeChange()"' : ''}>
                                 ${config.types.map(t => `<option value="${t}" ${(entry?.tipo || '') === t ? 'selected' : ''}>${t}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Status</label>
-                            <select class="form-select" id="entryStatus">
-                                <option value="rascunho" ${entry?.status === 'rascunho' ? 'selected' : ''}>Rascunho</option>
-                                <option value="desenvolvimento" ${entry?.status === 'desenvolvimento' ? 'selected' : ''}>Em Desenvolvimento</option>
-                                <option value="finalizado" ${entry?.status === 'finalizado' ? 'selected' : ''}>Finalizado</option>
                             </select>
                         </div>
                     </div>
@@ -1017,7 +1162,10 @@
                     <h3 class="form-section-title">🖼️ Imagem</h3>
                     <div class="form-group">
                         <label class="form-label">URL da Imagem</label>
-                        <input type="url" class="form-input" id="entryImagem" value="${entry?.imagem || ''}" placeholder="https://...">
+                        <input type="url" class="form-input" id="entryImagem" value="${entry?.imagem || ''}" placeholder="https://..." oninput="updateImagePreview()">
+                        <div class="image-preview-container">
+                            <img src="${entry?.imagem || ''}" class="image-preview ${entry?.imagem ? 'visible' : ''}" id="imagePreview" onerror="this.classList.remove('visible')" onload="this.classList.add('visible')">
+                        </div>
                     </div>
                 </div>
                 <div class="form-section">
@@ -1027,6 +1175,8 @@
                     </div>
                 </div>
                 ${extraFields ? `<div class="form-section"><h3 class="form-section-title">🔧 Campos Específicos</h3><div class="form-grid">${extraFields}</div></div>` : ''}
+                ${geographySections}
+                ${factionsSections}
                 <div class="form-section">
                     <h3 class="form-section-title">🏷️ Tags</h3>
                     <div class="form-group">
@@ -1041,7 +1191,201 @@
                 </div>
             `;
             modal.classList.add('active');
+
+            // Render linked entities if Geography
+            if (cat === 'geography') {
+                renderLinkedNpcs();
+                if (['Vila', 'Cidade', 'Região'].includes(entry?.tipo || config.types[0])) {
+                    renderLinkedTribos();
+                }
+            }
+
+            // Render linked cultures if Factions/Tribes
+            if (cat === 'factions') {
+                renderLinkedCulturas();
+            }
         }
+
+        // Image preview function
+        window.updateImagePreview = function () {
+            const input = document.getElementById('entryImagem');
+            const preview = document.getElementById('imagePreview');
+            if (input && preview) {
+                preview.src = input.value;
+                if (input.value) {
+                    preview.classList.add('visible');
+                } else {
+                    preview.classList.remove('visible');
+                }
+            }
+        };
+
+        // Linked NPCs management
+        function renderLinkedNpcs() {
+            const container = document.getElementById('linkedNpcsList');
+            if (!container) return;
+            container.innerHTML = linkedNpcs.length ? linkedNpcs.map((npc, idx) => `
+                <div class="linked-entity-item">
+                    <span class="entity-type-badge">${npc.type || 'NPC'}</span>
+                    <span class="linked-entity-name">${npc.name}</span>
+                    <input type="text" class="linked-entity-title" value="${npc.title || ''}" placeholder="Título (ex: Ferreiro, Mora aqui...)" onchange="updateLinkedNpcTitle(${idx}, this.value)">
+                    <button class="linked-entity-remove" onclick="removeLinkedNpc(${idx})">✕</button>
+                </div>
+            `).join('') : '<p style="color: #64748b; font-size: 0.85rem;">Nenhum NPC vinculado a este local.</p>';
+        }
+        window.renderLinkedNpcs = renderLinkedNpcs;
+
+        window.addLinkedNpc = function () {
+            const select = document.getElementById('selectNpcToLink');
+            if (!select.value) return;
+            const option = select.options[select.selectedIndex];
+            const npcId = option.value;
+            const npcName = option.dataset.name;
+            const npcType = option.dataset.type;
+
+            // Check if already linked
+            if (linkedNpcs.find(n => n.id === npcId)) {
+                showAlert('⚠️ Este NPC já está vinculado!', 'warning');
+                return;
+            }
+
+            linkedNpcs.push({ id: npcId, name: npcName, type: npcType, title: '' });
+            select.value = '';
+            renderLinkedNpcs();
+        };
+
+        window.updateLinkedNpcTitle = function (idx, title) {
+            if (linkedNpcs[idx]) linkedNpcs[idx].title = title;
+        };
+
+        window.removeLinkedNpc = function (idx) {
+            linkedNpcs.splice(idx, 1);
+            renderLinkedNpcs();
+        };
+
+        // Linked Tribes management
+        function renderLinkedTribos() {
+            const container = document.getElementById('linkedTribosList');
+            if (!container) return;
+            container.innerHTML = linkedTribos.length ? linkedTribos.map((tribo, idx) => `
+                <div class="linked-entity-item">
+                    <span class="entity-type-badge">Tribo</span>
+                    <span class="linked-entity-name">${tribo.name}</span>
+                    <input type="text" class="linked-entity-title" value="${tribo.title || ''}" placeholder="Título (ex: Dominante, Aliada...)" onchange="updateLinkedTriboTitle(${idx}, this.value)">
+                    <button class="linked-entity-remove" onclick="removeLinkedTribo(${idx})">✕</button>
+                </div>
+            `).join('') : '<p style="color: #64748b; font-size: 0.85rem;">Nenhuma tribo vinculada a este local.</p>';
+        }
+        window.renderLinkedTribos = renderLinkedTribos;
+
+        window.addLinkedTribo = function () {
+            const select = document.getElementById('selectTriboToLink');
+            if (!select.value) return;
+            const option = select.options[select.selectedIndex];
+            const triboId = option.value;
+            const triboName = option.dataset.name;
+
+            if (linkedTribos.find(t => t.id === triboId)) {
+                showAlert('⚠️ Esta tribo já está vinculada!', 'warning');
+                return;
+            }
+
+            linkedTribos.push({ id: triboId, name: triboName, title: '' });
+            select.value = '';
+            renderLinkedTribos();
+        };
+
+        window.updateLinkedTriboTitle = function (idx, title) {
+            if (linkedTribos[idx]) linkedTribos[idx].title = title;
+        };
+
+        window.removeLinkedTribo = function (idx) {
+            linkedTribos.splice(idx, 1);
+            renderLinkedTribos();
+        };
+
+        // Handle Geography type change to show/hide Tribes section
+        window.onGeographyTypeChange = function () {
+            const tipo = document.getElementById('entryTipo').value;
+            const tribosSection = document.getElementById('tribosSectionContainer');
+
+            // Get tribes for the select
+            const availableTribos = (allData.factions || []).filter(f => f.tipo === 'Tribo');
+
+            if (['Vila', 'Cidade', 'Região'].includes(tipo)) {
+                // Add the section if it doesn't exist
+                if (!tribosSection) {
+                    const npcsSection = document.querySelector('.form-section:has(#linkedNpcsList)');
+                    if (npcsSection) {
+                        const newSection = document.createElement('div');
+                        newSection.className = 'form-section';
+                        newSection.id = 'tribosSectionContainer';
+                        newSection.innerHTML = `
+                            <h3 class="form-section-title">🏕️ Tribos Presentes</h3>
+                            <div class="linked-entities-list" id="linkedTribosList"></div>
+                            <div class="add-linked-entity">
+                                <select class="form-select" id="selectTriboToLink">
+                                    <option value="">Selecionar Tribo...</option>
+                                    ${availableTribos.map(t => `<option value="${t.id}" data-name="${t.nome}">${t.nome}</option>`).join('')}
+                                </select>
+                                <button type="button" onclick="addLinkedTribo()">+ Adicionar</button>
+                            </div>
+                        `;
+                        npcsSection.after(newSection);
+                        renderLinkedTribos();
+                    }
+                }
+            } else {
+                // Remove the section if it exists
+                if (tribosSection) {
+                    tribosSection.remove();
+                    linkedTribos = []; // Clear linked tribes
+                }
+            }
+        };
+
+        // Linked Cultures management (for Tribes/Factions)
+        function renderLinkedCulturas() {
+            const container = document.getElementById('linkedCulturasList');
+            if (!container) return;
+            container.innerHTML = linkedCulturas.length ? linkedCulturas.map((cultura, idx) => `
+                <div class="linked-entity-item">
+                    <span class="entity-type-badge">${cultura.type || 'Cultura'}</span>
+                    <span class="linked-entity-name">${cultura.name}</span>
+                    <input type="text" class="linked-entity-title" value="${cultura.title || ''}" placeholder="Título (ex: Predominante, Herdada...)" onchange="updateLinkedCulturaTitle(${idx}, this.value)">
+                    <button class="linked-entity-remove" onclick="removeLinkedCultura(${idx})">✕</button>
+                </div>
+            `).join('') : '<p style="color: #64748b; font-size: 0.85rem;">Nenhuma cultura vinculada a esta tribo.</p>';
+        }
+        window.renderLinkedCulturas = renderLinkedCulturas;
+
+        window.addLinkedCultura = function () {
+            const select = document.getElementById('selectCulturaToLink');
+            if (!select.value) return;
+            const option = select.options[select.selectedIndex];
+            const culturaId = option.value;
+            const culturaName = option.dataset.name;
+            const culturaType = option.dataset.type;
+
+            if (linkedCulturas.find(c => c.id === culturaId)) {
+                showAlert('⚠️ Esta cultura já está vinculada!', 'warning');
+                return;
+            }
+
+            linkedCulturas.push({ id: culturaId, name: culturaName, type: culturaType, title: '' });
+            select.value = '';
+            renderLinkedCulturas();
+        };
+
+        window.updateLinkedCulturaTitle = function (idx, title) {
+            if (linkedCulturas[idx]) linkedCulturas[idx].title = title;
+        };
+
+        window.removeLinkedCultura = function (idx) {
+            linkedCulturas.splice(idx, 1);
+            renderLinkedCulturas();
+        };
+
         window.openEntry = (cat, id) => {
             currentCategory = cat;
             const entry = allData[cat].find(e => e.id === id);
@@ -1061,7 +1405,6 @@
             const data = {
                 nome,
                 tipo: document.getElementById('entryTipo').value,
-                status: document.getElementById('entryStatus').value,
                 imagem: document.getElementById('entryImagem').value.trim(),
                 descricao: document.getElementById('entryDescricao').value.trim(),
                 tags: document.getElementById('entryTags').value.trim(),
@@ -1075,12 +1418,21 @@
                 data.clima = document.getElementById('entryClima')?.value?.trim() || '';
                 data.populacao = document.getElementById('entryPopulacao')?.value?.trim() || '';
                 data.recursos = document.getElementById('entryRecursos')?.value?.trim() || '';
+                data.governo = document.getElementById('entryGoverno')?.value?.trim() || '';
+                data.landmarks = document.getElementById('entryLandmarks')?.value?.trim() || '';
+                data.perigos = document.getElementById('entryPerigos')?.value?.trim() || '';
+                data.historiaLocal = document.getElementById('entryHistoriaLocal')?.value?.trim() || '';
+                // Save linked NPCs and Tribos
+                data.linkedNpcs = linkedNpcs;
+                data.linkedTribos = linkedTribos;
             } else if (cat === 'factions') {
                 data.lideranca = document.getElementById('entryLideranca')?.value?.trim() || '';
                 data.ideologia = document.getElementById('entryIdeologia')?.value?.trim() || '';
                 data.territorios = document.getElementById('entryTerritorios')?.value?.trim() || '';
                 data.aliados = document.getElementById('entryAliados')?.value?.trim() || '';
                 data.inimigos = document.getElementById('entryInimigos')?.value?.trim() || '';
+                // Save linked Cultures
+                data.linkedCulturas = linkedCulturas;
             } else if (cat === 'history') {
                 data.era = document.getElementById('entryEra')?.value?.trim() || '';
                 data.dataInicio = document.getElementById('entryDataInicio')?.value?.trim() || '';
