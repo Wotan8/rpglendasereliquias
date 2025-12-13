@@ -664,6 +664,58 @@
             font-size: 0.8rem;
             color: #94a3b8;
         }
+
+        /* Template item active state */
+        .layer-item.placing {
+            border-color: var(--teal);
+            background: rgba(20, 184, 166, 0.2);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        /* Placing mode cursor indicator */
+        .canvas-container.placing-mode {
+            cursor: crosshair !important;
+        }
+
+        .canvas-container.placing-mode::after {
+            content: '📍 Clique para posicionar';
+            position: absolute;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 184, 166, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            pointer-events: none;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: translateX(-50%) translateY(0);
+            }
+
+            50% {
+                transform: translateX(-50%) translateY(-5px);
+            }
+        }
     </style>
 </head>
 
@@ -718,11 +770,13 @@
                 <button class="panel-btn secondary" onclick="clearAllTiles()">🗑️ Limpar Tiles</button>
             </div>
 
-            <!-- Tokens -->
+            <!-- Token Templates -->
             <div class="panel-section" id="tokensSection">
-                <div class="panel-title">📍 Tokens</div>
-                <button class="panel-btn" onclick="openCreateTokenModal()">➕ Novo Token</button>
-                <div id="tokensList" style="margin-top:10px;"></div>
+                <div class="panel-title">🎭 Templates de Tokens</div>
+                <button class="panel-btn" onclick="openCreateTemplateModal()">➕ Novo Template</button>
+                <div id="templatesList" style="margin-top:10px;"></div>
+                <div class="panel-title" style="margin-top:15px;">📍 Tokens no Mapa</div>
+                <div id="tokensList"></div>
             </div>
 
             <!-- Routes -->
@@ -810,7 +864,70 @@
         </div>
     </div>
 
+    <!-- Template Creation Modal -->
+    <div class="modal" id="templateModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="templateModalTitle">Novo Template</span>
+                <button class="modal-close" onclick="closeTemplateModal()">✕</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Nome do Template</label>
+                <input type="text" class="form-input" id="templateName" placeholder="Ex: Mercador, Ferreiro...">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tipo</label>
+                <select class="form-select" id="templateType">
+                    <option value="cidade">🏰 Cidade</option>
+                    <option value="vila">🏘️ Vila</option>
+                    <option value="masmorra">⚔️ Masmorra</option>
+                    <option value="ponto">📌 Ponto de Interesse</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Imagem (URL) - Opcional</label>
+                <input type="text" class="form-input" id="templateImageUrl" placeholder="https://...">
+                <small style="color:#64748b;font-size:0.75rem;">Deixe vazio para usar o ícone padrão do tipo</small>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tamanho Padrão (px)</label>
+                <input type="number" class="form-input" id="templateSize" value="40" min="20" max="200">
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-secondary" onclick="closeTemplateModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveTemplate()">💾 Salvar</button>
+                <button class="btn" style="background:var(--danger);color:white;" onclick="deleteTemplate()"
+                    id="deleteTemplateBtn">🗑️</button>
+            </div>
+        </div>
+    </div>
 
+    <!-- Token Placement Modal (when placing a token from template) -->
+    <div class="modal" id="placeTokenModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="placeTokenModalTitle">Adicionar Token</span>
+                <button class="modal-close" onclick="closePlaceTokenModal()">✕</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Nome</label>
+                <input type="text" class="form-input" id="placeTokenName" placeholder="Ex: João, o Mercador">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Descrição</label>
+                <textarea class="form-textarea" id="placeTokenDescription"
+                    placeholder="Descreva este local/personagem..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tamanho (px)</label>
+                <input type="number" class="form-input" id="placeTokenSize" value="40" min="20" max="200">
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-secondary" onclick="closePlaceTokenModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="confirmPlaceToken()">📍 Colocar no Mapa</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Map List Modal -->
     <div class="modal" id="mapListModal">
@@ -877,12 +994,17 @@
         let currentMapId = null;
         let mapData = {
             name: 'Novo Mapa', widthKm: 100, heightKm: 100, travelSpeed: 20,
-            tileGridSize: '2x2', tiles: {}, layers: [], tokens: [], routes: []
+            tileGridSize: '2x2', tiles: {}, layers: [], tokens: [], routes: [],
+            tokenTemplates: [] // Templates reutilizáveis
         };
         let zoom = 1, panX = 0, panY = 0;
         let isDragging = false, lastMouseX = 0, lastMouseY = 0;
         let isDrawingRoute = false, routePoints = [];
         let currentTileIndex = null, editingTokenId = null, selectedRouteId = null;
+        let editingTemplateId = null; // Template sendo editado
+        let placingTemplateId = null; // Template sendo colocado no mapa
+        let isPlacingToken = false; // Modo colocação de token
+        let pendingTokenPosition = null; // Posição onde o token será colocado
         let canvas, ctx, container;
         let loadedImages = {};
 
@@ -905,6 +1027,7 @@
             window.addEventListener('resize', resizeCanvas);
             setupCanvasEvents();
             updateTileGrid();
+            renderTemplatesList();
             loadFavoriteMap();
             document.getElementById('loadingScreen').style.display = 'none';
         }
@@ -919,6 +1042,15 @@
 
         function setupCanvasEvents() {
             container.addEventListener('mousedown', e => {
+                // Se estiver em modo colocação de token, posicionar e abrir modal
+                if (isPlacingToken && placingTemplateId) {
+                    const rect = container.getBoundingClientRect();
+                    const x = (e.clientX - rect.left - panX) / zoom;
+                    const y = (e.clientY - rect.top - panY) / zoom;
+                    pendingTokenPosition = { x, y };
+                    openPlaceTokenModal();
+                    return;
+                }
                 if (isDrawingRoute) { addRoutePoint(e); return; }
                 isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY;
                 container.style.cursor = 'grabbing';
@@ -931,7 +1063,7 @@
             });
             container.addEventListener('mouseup', () => {
                 isDragging = false;
-                container.style.cursor = isDrawingRoute ? 'crosshair' : 'grab';
+                updateCanvasCursor();
             });
             container.addEventListener('mouseleave', () => { isDragging = false; });
             container.addEventListener('wheel', e => {
@@ -939,6 +1071,19 @@
                 zoom = Math.max(0.1, Math.min(5, zoom + (e.deltaY > 0 ? -0.1 : 0.1)));
                 updateZoomDisplay(); renderMap();
             });
+        }
+
+        function updateCanvasCursor() {
+            if (isPlacingToken) {
+                container.style.cursor = 'crosshair';
+                container.classList.add('placing-mode');
+            } else if (isDrawingRoute) {
+                container.style.cursor = 'crosshair';
+                container.classList.remove('placing-mode');
+            } else {
+                container.style.cursor = 'grab';
+                container.classList.remove('placing-mode');
+            }
         }
 
         function renderMap() {
@@ -1294,6 +1439,207 @@
             closeTokenModal(); renderTokens();
         }
 
+        // ==================== TOKEN TEMPLATES ====================
+
+        // Render templates list in side panel
+        function renderTemplatesList() {
+            const list = document.getElementById('templatesList');
+            if (!list) return;
+            list.innerHTML = '';
+
+            // Ensure tokenTemplates exists
+            if (!mapData.tokenTemplates) mapData.tokenTemplates = [];
+
+            if (mapData.tokenTemplates.length === 0) {
+                list.innerHTML = '<div style="color:#64748b;font-size:0.8rem;text-align:center;padding:10px;">Nenhum template criado</div>';
+                return;
+            }
+
+            mapData.tokenTemplates.forEach(template => {
+                const item = document.createElement('div');
+                item.className = 'layer-item';
+                item.style.display = 'flex';
+                item.style.alignItems = 'center';
+                item.style.gap = '8px';
+
+                const icon = template.imageUrl
+                    ? `<img src="${template.imageUrl}" style="width:24px;height:24px;object-fit:contain;border-radius:4px;" onerror="this.outerHTML='📍'">`
+                    : { cidade: '🏰', vila: '🏘️', masmorra: '⚔️', ponto: '📌' }[template.type] || '📍';
+
+                item.innerHTML = `
+                    <span style="min-width:24px;text-align:center;">${icon}</span>
+                    <span class="layer-name" style="flex:1;">${template.name || 'Sem nome'}</span>
+                    <div class="layer-actions">
+                        <button class="layer-action-btn" title="Colocar no mapa" onclick="event.stopPropagation(); startPlaceToken('${template.id}')">📍</button>
+                        <button class="layer-action-btn" title="Editar" onclick="event.stopPropagation(); openEditTemplateModal('${template.id}')">✏️</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+
+            // If in placing mode, show helper
+            if (isPlacingToken && placingTemplateId) {
+                const helper = document.createElement('div');
+                helper.style.cssText = 'margin-top:10px;padding:8px;background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.3);border-radius:6px;font-size:0.75rem;color:#94a3b8;';
+                const template = mapData.tokenTemplates.find(t => t.id === placingTemplateId);
+                helper.innerHTML = `💡 Clique no mapa para colocar: <strong>${template?.name || 'Token'}</strong><br><button onclick="cancelPlaceToken()" style="margin-top:5px;padding:4px 8px;background:var(--danger);border:none;border-radius:4px;color:white;cursor:pointer;font-size:0.75rem;">❌ Cancelar</button>`;
+                list.appendChild(helper);
+            }
+        }
+
+        // Open modal to create a new template
+        function openCreateTemplateModal() {
+            if (currentMode !== 'editor') return;
+            editingTemplateId = 'new';
+            document.getElementById('templateModalTitle').textContent = 'Novo Template';
+            document.getElementById('templateName').value = '';
+            document.getElementById('templateType').value = 'ponto';
+            document.getElementById('templateImageUrl').value = '';
+            document.getElementById('templateSize').value = '40';
+            document.getElementById('deleteTemplateBtn').style.display = 'none';
+            document.getElementById('templateModal').classList.add('active');
+        }
+
+        // Open modal to edit an existing template
+        function openEditTemplateModal(id) {
+            if (currentMode !== 'editor') return;
+            const template = mapData.tokenTemplates.find(t => t.id === id);
+            if (!template) return;
+
+            editingTemplateId = id;
+            document.getElementById('templateModalTitle').textContent = 'Editar Template';
+            document.getElementById('templateName').value = template.name || '';
+            document.getElementById('templateType').value = template.type || 'ponto';
+            document.getElementById('templateImageUrl').value = template.imageUrl || '';
+            document.getElementById('templateSize').value = template.size || 40;
+            document.getElementById('deleteTemplateBtn').style.display = 'block';
+            document.getElementById('templateModal').classList.add('active');
+        }
+
+        function closeTemplateModal() {
+            document.getElementById('templateModal').classList.remove('active');
+            editingTemplateId = null;
+        }
+
+        function saveTemplate() {
+            const name = document.getElementById('templateName').value.trim();
+            if (!name) {
+                showAlert('Nome do template é obrigatório!', 'danger');
+                return;
+            }
+
+            const type = document.getElementById('templateType').value;
+            const imageUrl = document.getElementById('templateImageUrl').value.trim();
+            const size = Math.min(200, Math.max(20, parseInt(document.getElementById('templateSize').value) || 40));
+
+            if (!mapData.tokenTemplates) mapData.tokenTemplates = [];
+
+            if (editingTemplateId === 'new') {
+                const template = {
+                    id: Date.now().toString(),
+                    name,
+                    type,
+                    imageUrl: imageUrl || null,
+                    size
+                };
+                mapData.tokenTemplates.push(template);
+                showAlert('Template criado! Clique em 📍 para usar.', 'success');
+            } else {
+                const template = mapData.tokenTemplates.find(t => t.id === editingTemplateId);
+                if (template) {
+                    template.name = name;
+                    template.type = type;
+                    template.imageUrl = imageUrl || null;
+                    template.size = size;
+                }
+                showAlert('Template atualizado!', 'success');
+            }
+
+            closeTemplateModal();
+            renderTemplatesList();
+        }
+
+        function deleteTemplate() {
+            if (!editingTemplateId || editingTemplateId === 'new' || !confirm('Excluir este template?')) return;
+            mapData.tokenTemplates = mapData.tokenTemplates.filter(t => t.id !== editingTemplateId);
+            closeTemplateModal();
+            renderTemplatesList();
+            showAlert('Template excluído!', 'success');
+        }
+
+        // Start placing a token from a template - user will click on map
+        function startPlaceToken(templateId) {
+            if (currentMode !== 'editor') return;
+            placingTemplateId = templateId;
+            isPlacingToken = true;
+            updateCanvasCursor();
+            renderTemplatesList(); // Show helper
+
+            const template = mapData.tokenTemplates.find(t => t.id === templateId);
+            showAlert(`Clique no mapa para posicionar: ${template?.name || 'Token'}`, 'success');
+        }
+
+        function cancelPlaceToken() {
+            placingTemplateId = null;
+            isPlacingToken = false;
+            pendingTokenPosition = null;
+            updateCanvasCursor();
+            renderTemplatesList();
+        }
+
+        // Open modal to enter specific information for the token being placed
+        function openPlaceTokenModal() {
+            const template = mapData.tokenTemplates.find(t => t.id === placingTemplateId);
+            if (!template) {
+                cancelPlaceToken();
+                return;
+            }
+
+            document.getElementById('placeTokenModalTitle').textContent = `Adicionar ${template.name}`;
+            document.getElementById('placeTokenName').value = '';
+            document.getElementById('placeTokenDescription').value = '';
+            document.getElementById('placeTokenSize').value = template.size || 40;
+            document.getElementById('placeTokenModal').classList.add('active');
+        }
+
+        function closePlaceTokenModal() {
+            document.getElementById('placeTokenModal').classList.remove('active');
+            // Don't cancel placing mode, user might want to place more
+        }
+
+        function confirmPlaceToken() {
+            const template = mapData.tokenTemplates.find(t => t.id === placingTemplateId);
+            if (!template || !pendingTokenPosition) {
+                closePlaceTokenModal();
+                cancelPlaceToken();
+                return;
+            }
+
+            const name = document.getElementById('placeTokenName').value.trim();
+            const description = document.getElementById('placeTokenDescription').value;
+            const size = Math.min(200, Math.max(20, parseInt(document.getElementById('placeTokenSize').value) || template.size || 40));
+
+            const token = {
+                id: Date.now().toString(),
+                templateId: template.id,
+                type: template.type,
+                x: pendingTokenPosition.x,
+                y: pendingTokenPosition.y,
+                name: name || template.name,
+                description,
+                imageUrl: template.imageUrl || null,
+                size
+            };
+
+            mapData.tokens.push(token);
+            closePlaceTokenModal();
+            renderTokens();
+            showAlert(`${template.name} adicionado ao mapa!`, 'success');
+
+            // Keep placing mode active for placing more of the same template
+            pendingTokenPosition = null;
+        }
+
         // Routes - Freeform drawing (click and drag to draw curved routes)
         let isDrawingRouteActive = false; // Track if currently dragging to draw
 
@@ -1584,12 +1930,14 @@
                 const docSnap = await getDoc(doc(db, 'viewmaps', id));
                 if (!docSnap.exists()) return alert('Mapa não encontrado');
                 currentMapId = id; mapData = { ...mapData, ...docSnap.data() }; loadedImages = {};
+                // Ensure tokenTemplates exists
+                if (!mapData.tokenTemplates) mapData.tokenTemplates = [];
                 document.getElementById('mapName').value = mapData.name || '';
                 document.getElementById('mapWidthKm').value = mapData.widthKm || 100;
                 document.getElementById('mapHeightKm').value = mapData.heightKm || 100;
                 document.getElementById('travelSpeed').value = mapData.travelSpeed || 20;
                 document.getElementById('tileGridSize').value = mapData.tileGridSize || '2x2';
-                updateTileGrid(); renderTokens(); renderRoutes(); updateInfoPanel(); closeMapListModal(); fitToScreen();
+                updateTileGrid(); renderTokens(); renderTemplatesList(); renderRoutes(); updateInfoPanel(); closeMapListModal(); fitToScreen();
             } catch (err) { console.error(err); alert('Erro ao carregar mapa'); }
         }
 
@@ -1620,13 +1968,13 @@
         function createNewMap() {
             if (!confirm('Criar novo mapa? Alterações não salvas serão perdidas.')) return;
             currentMapId = null; loadedImages = {};
-            mapData = { name: 'Novo Mapa', widthKm: 100, heightKm: 100, travelSpeed: 20, tileGridSize: '2x2', tiles: {}, layers: [], tokens: [], routes: [] };
+            mapData = { name: 'Novo Mapa', widthKm: 100, heightKm: 100, travelSpeed: 20, tileGridSize: '2x2', tiles: {}, layers: [], tokens: [], routes: [], tokenTemplates: [] };
             document.getElementById('mapName').value = mapData.name;
             document.getElementById('mapWidthKm').value = mapData.widthKm;
             document.getElementById('mapHeightKm').value = mapData.heightKm;
             document.getElementById('travelSpeed').value = mapData.travelSpeed;
             document.getElementById('tileGridSize').value = mapData.tileGridSize;
-            updateTileGrid(); renderTokens(); renderRoutes(); closeMapListModal(); resetView();
+            updateTileGrid(); renderTokens(); renderTemplatesList(); renderRoutes(); closeMapListModal(); resetView();
         }
 
         function updateInfoPanel() {
@@ -1662,6 +2010,16 @@
         window.zoomOut = zoomOut;
         window.resetView = resetView;
         window.fitToScreen = fitToScreen;
+        // Template functions
+        window.openCreateTemplateModal = openCreateTemplateModal;
+        window.openEditTemplateModal = openEditTemplateModal;
+        window.closeTemplateModal = closeTemplateModal;
+        window.saveTemplate = saveTemplate;
+        window.deleteTemplate = deleteTemplate;
+        window.startPlaceToken = startPlaceToken;
+        window.cancelPlaceToken = cancelPlaceToken;
+        window.closePlaceTokenModal = closePlaceTokenModal;
+        window.confirmPlaceToken = confirmPlaceToken;
     </script>
 </body>
 
