@@ -936,6 +936,32 @@
             text-shadow: 0 0 10px rgba(217, 119, 6, 0.5);
         }
 
+        /* Notificação de EXP recebido */
+        .notification-item.exp {
+            border-color: #fbbf24;
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.08));
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.25);
+            animation: pulse-exp 2s ease infinite;
+        }
+
+        @keyframes pulse-exp {
+
+            0%,
+            100% {
+                box-shadow: 0 0 15px rgba(251, 191, 36, 0.2);
+            }
+
+            50% {
+                box-shadow: 0 0 25px rgba(251, 191, 36, 0.4);
+            }
+        }
+
+        .notification-icon.exp {
+            color: #fbbf24;
+            font-size: 1.8rem;
+            text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+        }
+
         .notification-icon {
             font-size: 1.5rem;
             flex-shrink: 0;
@@ -2205,6 +2231,11 @@
                     icon = '🎒';
                     iconClass = 'inventory';
                     highlightClass = 'inventory';
+                } else if (notification.type === 'exp_received') {
+                    // Notificação de EXP recebido
+                    icon = '⭐';
+                    iconClass = 'exp';
+                    highlightClass = 'exp';
                 } else if (notification.type === 'master_message') {
                     // Notificação enviada pelo mestre
                     const highlight = notification.data?.highlight || 'normal';

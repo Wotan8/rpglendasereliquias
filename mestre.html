@@ -4582,7 +4582,7 @@ Agilidade 2\n
             lore: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110]
         };
         let desbloquearMetas = {
-            classe: 'Bardo',
+            classe: 'Monge',
             raca: '',
             lore: 'Conto Canônico: referente a algo da Campanha atual'
         };
@@ -5977,6 +5977,44 @@ Agilidade 2\n
                             characterName,
                             'characters'
                         );
+
+                        // ====== ENVIAR NOTIFICAÇÃO AO JOGADOR ======
+                        const ownerUid = character.ownerUid;
+                        if (ownerUid) {
+                            try {
+                                const userDocRef = doc(db, 'users', ownerUid);
+                                const userDoc = await getDoc(userDocRef);
+
+                                if (userDoc.exists()) {
+                                    const currentNotifications = userDoc.data().notifications || [];
+                                    const newNotification = {
+                                        id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                                        type: 'exp_received',
+                                        message: `⭐ Seu personagem ${characterName} recebeu +${amount} EXP!`,
+                                        timestamp: new Date().toISOString(),
+                                        isNew: true,
+                                        data: {
+                                            characterId: characterId,
+                                            characterName: characterName,
+                                            amount: amount,
+                                            giver: currentUser.email
+                                        }
+                                    };
+
+                                    // Adicionar no início e limitar a 100
+                                    currentNotifications.unshift(newNotification);
+                                    if (currentNotifications.length > 100) {
+                                        currentNotifications.length = 100;
+                                    }
+
+                                    await setDoc(userDocRef, { notifications: currentNotifications }, { merge: true });
+                                    console.log(`✅ Notificação de EXP enviada para ${ownerUid}`);
+                                }
+                            } catch (notifError) {
+                                console.error('⚠️ Erro ao enviar notificação de EXP:', notifError);
+                                // Não interrompe o fluxo principal se a notificação falhar
+                            }
+                        }
                     }
                 }
 
