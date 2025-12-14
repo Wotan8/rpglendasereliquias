@@ -3571,8 +3571,8 @@ Exemplos:
                     console.log(`🔍 [loadInventoryFromFirebase] Processando container:`, container.name, `(ID: ${container.id})`);
 
                     const items = allItems.filter(item => {
-                        // IMPORTANTE: Excluir itens que estão DENTRO de um Container-item (têm parentItemId)
-                        if (item.parentItemId) return false;
+                        // NOTA: Items com parentItemId ainda podem ser exibidos se tiverem containerId correto
+                        // O parentItemId é apenas uma referência ao item container pai, não deve excluir o item
 
                         if (container.name === 'Equipados') {
                             const match = item.containerId === 'está com alguém';

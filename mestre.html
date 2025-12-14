@@ -10517,6 +10517,11 @@ Agilidade 2\n
                         // Então apenas recarregamos a lista para atualizar a quantidade exibida
                         await loadAvulsosItems();
                         renderAvulsosItems();
+
+                        // ✅ CORREÇÃO: Se o personagem alvo é o que está sendo visualizado, recarregar seu inventário
+                        if (targetCharacterId === currentInventarioPersonagemId) {
+                            await loadInventarioFromFirebase(currentInventarioPersonagemId);
+                        }
                     } else {
                         if (currentInventarioPersonagemId) {
                             await loadInventarioFromFirebase(currentInventarioPersonagemId);
@@ -10611,8 +10616,13 @@ Agilidade 2\n
                     closeTransferItemModal();
 
                     // NÃO remover do DOM - o item original permanece nos Avulsos
-                    // Apenas recarregar para garantir sincronização
+                    // Recarregar para garantir sincronização
                     await loadAvulsosItems();
+
+                    // ✅ CORREÇÃO: Se o personagem alvo é o que está sendo visualizado, recarregar seu inventário
+                    if (targetCharacterId === currentInventarioPersonagemId) {
+                        await loadInventarioFromFirebase(currentInventarioPersonagemId);
+                    }
 
                 } else {
                     // Transferência total do item - lógica original (mover item)
@@ -10757,6 +10767,11 @@ Agilidade 2\n
 
                         // Recarregar do Firebase para garantir sincronização
                         await loadAvulsosItems();
+
+                        // ✅ CORREÇÃO: Se o personagem alvo é o que está sendo visualizado, recarregar seu inventário
+                        if (targetCharacterId === currentInventarioPersonagemId) {
+                            await loadInventarioFromFirebase(currentInventarioPersonagemId);
+                        }
                     } else {
                         if (currentInventarioPersonagemId) {
                             await loadInventarioFromFirebase(currentInventarioPersonagemId);
@@ -11531,9 +11546,10 @@ Agilidade 2\n
             const containerName = container ? container.name : 'container';
 
             try {
-                // Atualizar item no Firebase - remover parentItemId
+                // Atualizar item no Firebase - remover parentItemId e mover para Equipados
                 await setDoc(doc(db, 'items', itemId), {
-                    parentItemId: null
+                    parentItemId: null,
+                    containerId: 'está com alguém' // Mover para Equipados
                 }, { merge: true });
 
                 showAlert(`✅ "${item.name}" removido do container!`, 'success');
@@ -11742,9 +11758,10 @@ Agilidade 2\n
             }
 
             try {
-                // Atualizar item no Firebase - remover parentItemId
+                // Atualizar item no Firebase - remover parentItemId e mover para Equipados
                 await setDoc(doc(db, 'items', itemId), {
-                    parentItemId: null
+                    parentItemId: null,
+                    containerId: 'está com alguém' // Mover para Equipados
                 }, { merge: true });
 
                 showAlert(`✅ "${item.name}" removido do container!`, 'success');
