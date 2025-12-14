@@ -1773,14 +1773,17 @@
             editingTokenId = id;
             const token = mapData.tokens.find(t => t.id === id); if (!token) return;
             document.getElementById('tokenModalTitle').textContent = token.name || 'Local';
-            document.getElementById('tokenGeographyId').value = token.geographyId || '';
             document.getElementById('tokenName').value = token.name || '';
             document.getElementById('tokenType').value = token.type;
             document.getElementById('tokenImageUrl').value = token.imageUrl || '';
             document.getElementById('tokenSize').value = token.size || 40;
             document.getElementById('tokenDescription').value = token.description || '';
+            // Populate selectors FIRST, then set their values
+            populateLinkedMapSelectors();
+            populateGeographySelectors();
+            // Now set the dropdown values AFTER options are populated
+            document.getElementById('tokenGeographyId').value = token.geographyId || '';
             document.getElementById('tokenLinkedMapId').value = token.linkedMapId || '';
-            populateLinkedMapSelectors(); // Refresh available maps
             document.getElementById('deleteTokenBtn').style.display = currentMode === 'editor' ? 'block' : 'none';
             document.getElementById('tokenModal').classList.add('active');
         }
