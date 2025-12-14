@@ -3093,9 +3093,14 @@ Exemplos:
                 const characterId = currentCharacterId || currentUser.uid;
                 const userDoc = doc(db, 'characters', characterId);
 
+                // ⚠️ IMPORTANTE: Não salvar containers no documento do personagem
+                // Os containers e items são salvos em coleções separadas (containers/ e items/)
+                // Isso evita duplicação de dados e mantém o documento abaixo do limite de 1MB
+                const { containers, ...charWithoutContainers } = char;
+
                 // 🔒 MANTER ownerUid existente ou definir apenas se novo personagem
                 const characterData = {
-                    ...char,
+                    ...charWithoutContainers,
                     lastUpdate: new Date().toISOString(),
                     userEmail: currentUser.email
                 };
@@ -7645,7 +7650,10 @@ Exemplos:
                     const characterId = window.currentCharacterId || (window.currentUser || currentUser)?.uid;
                     if (characterId && (window.currentUser || currentUser)) {
                         equipados.characterId = characterId;  // Garantir que tem characterId
-                        equipados.ownerId = (window.currentUser || currentUser)?.uid;  // Garantir que tem ownerId
+                        // ⚠️ Preservar ownerId existente - não sobrescrever!
+                        if (!equipados.ownerId) {
+                            equipados.ownerId = (window.currentUser || currentUser)?.uid;
+                        }
                         window.saveContainerToFirebase(equipados).catch(err =>
                             console.error('Erro ao atualizar Equipados:', err)
                         );
