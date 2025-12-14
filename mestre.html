@@ -2494,6 +2494,69 @@
                     </div>
                 </div>
 
+                <!-- Filtros de Avulsos -->
+                <div
+                    style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 20px; margin-bottom: 20px;">
+                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-bottom: 15px;">🔍
+                        Filtros</div>
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end;">
+                        <!-- Filtro por Tipo -->
+                        <div>
+                            <label
+                                style="display: block; font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-bottom: 8px;">Tipo
+                                de Item</label>
+                            <select class="form-input" id="avulsosFilterTipo" onchange="applyAvulsosFilters()"
+                                style="width: 100%;">
+                                <option value="">Todos os Tipos</option>
+                                <option value="Arma">⚔️ Arma</option>
+                                <option value="Vestimenta">🧥 Vestimenta</option>
+                                <option value="Projétil">🎯 Projétil</option>
+                                <option value="Objeto">📦 Objeto</option>
+                                <option value="Container">🗃️ Container</option>
+                                <option value="Lunis">💰 Lunis</option>
+                            </select>
+                        </div>
+
+                        <!-- Filtro por Categoria -->
+                        <div>
+                            <label
+                                style="display: block; font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-bottom: 8px;">Categoria</label>
+                            <select class="form-input" id="avulsosFilterCategoria" onchange="applyAvulsosFilters()"
+                                style="width: 100%;">
+                                <option value="">Todas as Categorias</option>
+                                <option value="comida">🍖 Comida & Bebida</option>
+                                <option value="hospedagem">🏨 Hospedagem</option>
+                                <option value="transporte">🐴 Transporte</option>
+                                <option value="equipamento">🛠️ Equipamento</option>
+                                <option value="armas">⚔️ Armas</option>
+                                <option value="armaduras">🛡️ Armaduras</option>
+                                <option value="servicos">🔧 Serviços</option>
+                                <option value="magia">✨ Runomancia & Alquimancia</option>
+                                <option value="materias">🪨 Matérias-Primas</option>
+                            </select>
+                        </div>
+
+                        <!-- Busca por Nome -->
+                        <div>
+                            <label
+                                style="display: block; font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-bottom: 8px;">Buscar
+                                por Nome</label>
+                            <input type="text" class="form-input" id="avulsosFilterSearch"
+                                placeholder="Digite o nome do item..." oninput="applyAvulsosFilters()"
+                                style="width: 100%;">
+                        </div>
+
+                        <!-- Botão Limpar Filtros -->
+                        <div>
+                            <button class="btn btn-secondary" onclick="clearAvulsosFilters()"
+                                style="width: 100%; padding: 10px;">
+                                🗑️ Limpar Filtros
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Container de Itens Avulsos -->
                 <div id="avulsosItemsContainer"
                     style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 20px;">
@@ -8825,6 +8888,7 @@ Agilidade 2\n
             } else if (subtab === 'avulsos') {
                 document.getElementById('itensAvulsos').style.display = 'block';
                 document.getElementById('btnItensAvulsos').className = 'btn btn-primary';
+                loadAvulsosFiltersFromStorage(); // Restaurar filtros salvos
                 loadAvulsosItems(); // Carregar itens avulsos ao abrir
             } else if (subtab === 'criar') {
                 document.getElementById('itensCriar').style.display = 'block';
@@ -9213,6 +9277,61 @@ Agilidade 2\n
             }
         }
 
+        // ============= FILTROS DE AVULSOS COM localStorage =============
+
+        // Carregar filtros de avulsos do localStorage
+        function loadAvulsosFiltersFromStorage() {
+            try {
+                const savedFilters = localStorage.getItem('avulsosFilters');
+                if (savedFilters) {
+                    const filters = JSON.parse(savedFilters);
+                    const tipoEl = document.getElementById('avulsosFilterTipo');
+                    const categoriaEl = document.getElementById('avulsosFilterCategoria');
+                    const searchEl = document.getElementById('avulsosFilterSearch');
+
+                    if (tipoEl && filters.tipo) tipoEl.value = filters.tipo;
+                    if (categoriaEl && filters.categoria) categoriaEl.value = filters.categoria;
+                    if (searchEl && filters.search) searchEl.value = filters.search;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar filtros de avulsos:', error);
+            }
+        }
+
+        // Salvar filtros de avulsos no localStorage
+        function saveAvulsosFiltersToStorage() {
+            try {
+                const filters = {
+                    tipo: document.getElementById('avulsosFilterTipo')?.value || '',
+                    categoria: document.getElementById('avulsosFilterCategoria')?.value || '',
+                    search: document.getElementById('avulsosFilterSearch')?.value || ''
+                };
+                localStorage.setItem('avulsosFilters', JSON.stringify(filters));
+            } catch (error) {
+                console.error('Erro ao salvar filtros de avulsos:', error);
+            }
+        }
+
+        // Aplicar filtros de avulsos (chamado pelos inputs)
+        window.applyAvulsosFilters = function () {
+            saveAvulsosFiltersToStorage();
+            renderAvulsosItems();
+        };
+
+        // Limpar filtros de avulsos
+        window.clearAvulsosFilters = function () {
+            const tipoEl = document.getElementById('avulsosFilterTipo');
+            const categoriaEl = document.getElementById('avulsosFilterCategoria');
+            const searchEl = document.getElementById('avulsosFilterSearch');
+
+            if (tipoEl) tipoEl.value = '';
+            if (categoriaEl) categoriaEl.value = '';
+            if (searchEl) searchEl.value = '';
+
+            saveAvulsosFiltersToStorage();
+            renderAvulsosItems();
+        };
+
         // Renderizar lista de itens avulsos
         function renderAvulsosItems() {
             const listContainer = document.getElementById('avulsosItemsList');
@@ -9221,16 +9340,46 @@ Agilidade 2\n
             const countElement = document.getElementById('avulsosItemsCount');
 
             // Filtrar itens que NÃO estão dentro de um container (não têm parentItemId)
-            const topLevelItems = avulsosItems.filter(item => !item.parentItemId);
+            let topLevelItems = avulsosItems.filter(item => !item.parentItemId);
 
-            // Atualizar contagem
-            countElement.textContent = `${topLevelItems.length} item(s) avulso(s) encontrado(s)`;
+            // Aplicar filtros
+            const filterTipo = document.getElementById('avulsosFilterTipo')?.value || '';
+            const filterCategoria = document.getElementById('avulsosFilterCategoria')?.value || '';
+            const filterSearch = (document.getElementById('avulsosFilterSearch')?.value || '').toLowerCase().trim();
+
+            // Filtro por Tipo
+            if (filterTipo) {
+                topLevelItems = topLevelItems.filter(item => item.tipo === filterTipo);
+            }
+
+            // Filtro por Categoria
+            if (filterCategoria) {
+                topLevelItems = topLevelItems.filter(item => item.category === filterCategoria);
+            }
+
+            // Filtro por Nome (busca)
+            if (filterSearch) {
+                topLevelItems = topLevelItems.filter(item => {
+                    const nome = (item.name || '').toLowerCase();
+                    const descricao = (item.description || '').toLowerCase();
+                    return nome.includes(filterSearch) || descricao.includes(filterSearch);
+                });
+            }
+
+            // Atualizar contagem (mostrando total e filtrado se diferente)
+            const totalItems = avulsosItems.filter(item => !item.parentItemId).length;
+            if (topLevelItems.length !== totalItems) {
+                countElement.textContent = `${topLevelItems.length} de ${totalItems} item(s) avulso(s) encontrado(s)`;
+            } else {
+                countElement.textContent = `${topLevelItems.length} item(s) avulso(s) encontrado(s)`;
+            }
 
             if (topLevelItems.length === 0) {
                 mainContainer.style.display = 'none';
                 emptyContainer.style.display = 'block';
                 return;
             }
+
 
             mainContainer.style.display = 'block';
             emptyContainer.style.display = 'none';
