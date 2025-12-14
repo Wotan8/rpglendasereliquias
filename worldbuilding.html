@@ -891,6 +891,8 @@
         let linkedTribos = []; // For Geography (Vila, Cidade, Região) - Tribes with titles
         let linkedCulturas = []; // For Factions/Tribes - Cultures with titles
         let linkedNpcsProperty = []; // For Properties - NPCs with titles
+        let linkedItems = []; // For Properties - Items with titles (location/sale status)
+        let allItems = []; // All available loose items from Firebase
 
         const categoryConfig = {
             geography: { collection: 'worldbuilding-geography', icon: '📍', title: 'Geografia', types: ['Continente', 'Região', 'Cidade', 'Vila', 'Ponto de Interesse'] },
@@ -922,6 +924,14 @@
                     allData[key] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 } catch (e) { console.log(`Error loading ${key}:`, e); allData[key] = []; }
             }
+            // Load items for property linking (only loose items - not assigned to characters)
+            try {
+                const itemsSnapshot = await getDocs(collection(db, 'items'));
+                allItems = itemsSnapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .filter(item => !item.characterId); // Only loose items
+                console.log(`Loaded ${allItems.length} loose items for property linking`);
+            } catch (e) { console.log('Error loading items:', e); allItems = []; }
         }
 
         function showAlert(message, type) {
@@ -1042,6 +1052,7 @@
             linkedTribos = entry?.linkedTribos || [];
             linkedCulturas = entry?.linkedCulturas || [];
             linkedNpcsProperty = entry?.linkedNpcsProperty || [];
+            linkedItems = entry?.linkedItems || [];
 
             let extraFields = '';
             let geographySections = '';
@@ -1183,6 +1194,17 @@
                         <button type="button" onclick="addLinkedNpcProperty()">+ Adicionar</button>
                     </div>
                 </div>
+                <div class="form-section">
+                    <h3 class="form-section-title">📦 Itens Disponíveis</h3>
+                    <div class="linked-entities-list" id="linkedItemsList"></div>
+                    <div class="add-linked-entity">
+                        <select class="form-select" id="selectItemToLink">
+                            <option value="">Selecionar Item...</option>
+                            ${allItems.map(item => `<option value="${item.id}" data-name="${item.name || 'Item'}">${item.name || 'Item'} (${item.type || 'Item'})</option>`).join('')}
+                        </select>
+                        <button type="button" onclick="addLinkedItem()">+ Adicionar</button>
+                    </div>
+                </div>
                 `;
             }
 
@@ -1249,9 +1271,10 @@
                 renderLinkedCulturas();
             }
 
-            // Render linked NPCs if Properties
+            // Render linked NPCs and Items if Properties
             if (cat === 'properties') {
                 renderLinkedNpcsProperty();
+                renderLinkedItems();
             }
         }
 
@@ -1478,6 +1501,48 @@
             renderLinkedNpcsProperty();
         };
 
+        // Linked Items management for Properties
+        function renderLinkedItems() {
+            const container = document.getElementById('linkedItemsList');
+            if (!container) return;
+            container.innerHTML = linkedItems.length ? linkedItems.map((item, idx) => `
+                <div class="linked-entity-item">
+                    <span class="entity-type-badge">📦 Item</span>
+                    <span class="linked-entity-name">${item.name}</span>
+                    <input type="text" class="linked-entity-title" value="${item.title || ''}" placeholder="Título (ex: À venda, No balcão, Escondido...)" onchange="updateLinkedItemTitle(${idx}, this.value)">
+                    <button class="linked-entity-remove" onclick="removeLinkedItem(${idx})">✕</button>
+                </div>
+            `).join('') : '<p style="color: #64748b; font-size: 0.85rem;">Nenhum item vinculado a esta propriedade.</p>';
+        }
+        window.renderLinkedItems = renderLinkedItems;
+
+        window.addLinkedItem = function () {
+            const select = document.getElementById('selectItemToLink');
+            if (!select.value) return;
+            const option = select.options[select.selectedIndex];
+            const itemId = option.value;
+            const itemName = option.dataset.name;
+
+            // Check if already linked
+            if (linkedItems.find(i => i.id === itemId)) {
+                showAlert('⚠️ Este item já está vinculado!', 'warning');
+                return;
+            }
+
+            linkedItems.push({ id: itemId, name: itemName, title: '' });
+            select.value = '';
+            renderLinkedItems();
+        };
+
+        window.updateLinkedItemTitle = function (idx, title) {
+            if (linkedItems[idx]) linkedItems[idx].title = title;
+        };
+
+        window.removeLinkedItem = function (idx) {
+            linkedItems.splice(idx, 1);
+            renderLinkedItems();
+        };
+
         window.openEntry = (cat, id) => {
             currentCategory = cat;
             const entry = allData[cat].find(e => e.id === id);
@@ -1554,6 +1619,8 @@
                 data.segredos = document.getElementById('entrySegredos')?.value?.trim() || '';
                 // Save linked NPCs for Property
                 data.linkedNpcsProperty = linkedNpcsProperty;
+                // Save linked Items for Property
+                data.linkedItems = linkedItems;
             }
 
             try {

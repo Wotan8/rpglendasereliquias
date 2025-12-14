@@ -2066,6 +2066,20 @@
                 html += `</div></div>`;
             }
 
+            // Linked Items
+            if (prop.linkedItems && prop.linkedItems.length) {
+                html += `<div style="margin-bottom:15px;">
+                    <div style="font-weight:700;color:var(--teal);margin-bottom:8px;">📦 Itens Disponíveis</div>
+                    <div style="display:flex;flex-direction:column;gap:8px;">`;
+                prop.linkedItems.forEach(item => {
+                    html += `<div style="background:rgba(20,184,166,0.15);border:1px solid var(--teal);padding:8px 12px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-weight:600;">${item.name}</span>
+                        ${item.title ? `<span style="color:#94a3b8;font-style:italic;font-size:0.85rem;">${item.title}</span>` : ''}
+                    </div>`;
+                });
+                html += `</div></div>`;
+            }
+
             // Private notes (only for master)
             if (prop.notas) {
                 html += `<div style="margin-bottom:15px;background:rgba(245,158,11,0.1);border:1px solid var(--warning);border-radius:8px;padding:12px;">
