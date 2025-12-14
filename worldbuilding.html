@@ -807,6 +807,10 @@
                 <span class="nav-icon">📍</span>
                 <span class="nav-label">Geografia</span>
             </div>
+            <div class="nav-category" data-category="properties">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">Propriedades</span>
+            </div>
             <div class="nav-category" data-category="npcs">
                 <span class="nav-icon">👥</span>
                 <span class="nav-label">NPCs</span>
@@ -882,13 +886,15 @@
         let currentUser = null;
         let currentCategory = 'dashboard';
         let currentEditingEntry = null;
-        let allData = { geography: [], npcs: [], factions: [], history: [], cultures: [], magic: [], religion: [] };
+        let allData = { geography: [], npcs: [], factions: [], history: [], cultures: [], magic: [], religion: [], properties: [] };
         let linkedNpcs = []; // For Geography - NPCs/Creatures with titles
         let linkedTribos = []; // For Geography (Vila, Cidade, Região) - Tribes with titles
         let linkedCulturas = []; // For Factions/Tribes - Cultures with titles
+        let linkedNpcsProperty = []; // For Properties - NPCs with titles
 
         const categoryConfig = {
             geography: { collection: 'worldbuilding-geography', icon: '📍', title: 'Geografia', types: ['Continente', 'Região', 'Cidade', 'Vila', 'Ponto de Interesse'] },
+            properties: { collection: 'worldbuilding-properties', icon: '🏠', title: 'Propriedades', types: ['Castelo', 'Taverna', 'Choupana', 'Loja', 'Templo', 'Fortaleza', 'Mansão', 'Fazenda', 'Outro'] },
             npcs: { collection: 'npcs', icon: '👥', title: 'NPCs', types: ['NPC', 'Criatura'] },
             factions: { collection: 'worldbuilding-factions', icon: '⚔️', title: 'Tribos', types: ['Tribo', 'Facção', 'Organização'] },
             history: { collection: 'worldbuilding-history', icon: '📜', title: 'História', types: ['Era', 'Evento', 'Período'] },
@@ -1035,6 +1041,7 @@
             linkedNpcs = entry?.linkedNpcs || [];
             linkedTribos = entry?.linkedTribos || [];
             linkedCulturas = entry?.linkedCulturas || [];
+            linkedNpcsProperty = entry?.linkedNpcsProperty || [];
 
             let extraFields = '';
             let geographySections = '';
@@ -1140,6 +1147,43 @@
                     <div class="form-group"><label class="form-label">Símbolos</label><input type="text" class="form-input" id="entrySimbolos" value="${entry?.simbolos || ''}"></div>
                     <div class="form-group"><label class="form-label">Rituais</label><textarea class="form-textarea" id="entryRituais">${entry?.rituais || ''}</textarea></div>
                 `;
+            } else if (cat === 'properties') {
+                // Get available NPCs from data
+                const availableNpcs = allData.npcs || [];
+
+                extraFields = `
+                    <div class="form-group"><label class="form-label">Título da Propriedade</label><input type="text" class="form-input" id="entryTitulo" value="${entry?.titulo || ''}" placeholder="Ex: Taverna do Dragão Bêbado, Castelo das Sombras..."></div>
+                    <div class="form-group"><label class="form-label">Localização</label><input type="text" class="form-input" id="entryLocalizacao" value="${entry?.localizacao || ''}" placeholder="Ex: Centro da cidade, Floresta Negra..."></div>
+                    <div class="form-group"><label class="form-label">Proprietário</label><input type="text" class="form-input" id="entryProprietario" value="${entry?.proprietario || ''}" placeholder="Ex: Lorde Aldric, Família Stoneheart..."></div>
+                    <div class="form-group"><label class="form-label">Valor Estimado</label><input type="text" class="form-input" id="entryValor" value="${entry?.valor || ''}" placeholder="Ex: 5.000 moedas de ouro..."></div>
+                    <div class="form-group">
+                        <label class="form-label">Estado de Conservação</label>
+                        <select class="form-select" id="entryEstado">
+                            <option value="Conservada" ${(entry?.estado || '') === 'Conservada' ? 'selected' : ''}>Conservada</option>
+                            <option value="Deteriorada" ${(entry?.estado || '') === 'Deteriorada' ? 'selected' : ''}>Deteriorada</option>
+                            <option value="Abandonada" ${(entry?.estado || '') === 'Abandonada' ? 'selected' : ''}>Abandonada</option>
+                            <option value="Em Ruínas" ${(entry?.estado || '') === 'Em Ruínas' ? 'selected' : ''}>Em Ruínas</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label class="form-label">Tamanho</label><input type="text" class="form-input" id="entryTamanho" value="${entry?.tamanho || ''}" placeholder="Ex: Grande, 200m², 3 andares..."></div>
+                    <div class="form-group" style="grid-column: 1/-1;"><label class="form-label">Cômodos/Áreas</label><textarea class="form-textarea" id="entryComodos" rows="3" placeholder="Descrição dos ambientes internos...">${entry?.comodos || ''}</textarea></div>
+                    <div class="form-group" style="grid-column: 1/-1;"><label class="form-label">Segredos</label><textarea class="form-textarea" id="entrySegredos" rows="3" placeholder="Passagens secretas, tesouros escondidos...">${entry?.segredos || ''}</textarea></div>
+                `;
+
+                // NPC linking section for properties
+                geographySections = `
+                <div class="form-section">
+                    <h3 class="form-section-title">👥 NPCs nesta Propriedade</h3>
+                    <div class="linked-entities-list" id="linkedNpcsPropertyList"></div>
+                    <div class="add-linked-entity">
+                        <select class="form-select" id="selectNpcToLinkProperty">
+                            <option value="">Selecionar NPC...</option>
+                            ${availableNpcs.map(n => `<option value="${n.id}" data-name="${n.nome}" data-type="${n.tipo || 'NPC'}">${n.nome} (${n.tipo || 'NPC'})</option>`).join('')}
+                        </select>
+                        <button type="button" onclick="addLinkedNpcProperty()">+ Adicionar</button>
+                    </div>
+                </div>
+                `;
             }
 
             body.innerHTML = `
@@ -1203,6 +1247,11 @@
             // Render linked cultures if Factions/Tribes
             if (cat === 'factions') {
                 renderLinkedCulturas();
+            }
+
+            // Render linked NPCs if Properties
+            if (cat === 'properties') {
+                renderLinkedNpcsProperty();
             }
         }
 
@@ -1386,6 +1435,49 @@
             renderLinkedCulturas();
         };
 
+        // Linked NPCs management for Properties
+        function renderLinkedNpcsProperty() {
+            const container = document.getElementById('linkedNpcsPropertyList');
+            if (!container) return;
+            container.innerHTML = linkedNpcsProperty.length ? linkedNpcsProperty.map((npc, idx) => `
+                <div class="linked-entity-item">
+                    <span class="entity-type-badge">${npc.type || 'NPC'}</span>
+                    <span class="linked-entity-name">${npc.name}</span>
+                    <input type="text" class="linked-entity-title" value="${npc.title || ''}" placeholder="Título (ex: Proprietário, Empregado, Mora aqui...)" onchange="updateLinkedNpcPropertyTitle(${idx}, this.value)">
+                    <button class="linked-entity-remove" onclick="removeLinkedNpcProperty(${idx})">✕</button>
+                </div>
+            `).join('') : '<p style="color: #64748b; font-size: 0.85rem;">Nenhum NPC vinculado a esta propriedade.</p>';
+        }
+        window.renderLinkedNpcsProperty = renderLinkedNpcsProperty;
+
+        window.addLinkedNpcProperty = function () {
+            const select = document.getElementById('selectNpcToLinkProperty');
+            if (!select.value) return;
+            const option = select.options[select.selectedIndex];
+            const npcId = option.value;
+            const npcName = option.dataset.name;
+            const npcType = option.dataset.type;
+
+            // Check if already linked
+            if (linkedNpcsProperty.find(n => n.id === npcId)) {
+                showAlert('⚠️ Este NPC já está vinculado!', 'warning');
+                return;
+            }
+
+            linkedNpcsProperty.push({ id: npcId, name: npcName, type: npcType, title: '' });
+            select.value = '';
+            renderLinkedNpcsProperty();
+        };
+
+        window.updateLinkedNpcPropertyTitle = function (idx, title) {
+            if (linkedNpcsProperty[idx]) linkedNpcsProperty[idx].title = title;
+        };
+
+        window.removeLinkedNpcProperty = function (idx) {
+            linkedNpcsProperty.splice(idx, 1);
+            renderLinkedNpcsProperty();
+        };
+
         window.openEntry = (cat, id) => {
             currentCategory = cat;
             const entry = allData[cat].find(e => e.id === id);
@@ -1451,6 +1543,17 @@
                 data.dominios = document.getElementById('entryDominios')?.value?.trim() || '';
                 data.simbolos = document.getElementById('entrySimbolos')?.value?.trim() || '';
                 data.rituais = document.getElementById('entryRituais')?.value?.trim() || '';
+            } else if (cat === 'properties') {
+                data.titulo = document.getElementById('entryTitulo')?.value?.trim() || '';
+                data.localizacao = document.getElementById('entryLocalizacao')?.value?.trim() || '';
+                data.proprietario = document.getElementById('entryProprietario')?.value?.trim() || '';
+                data.valor = document.getElementById('entryValor')?.value?.trim() || '';
+                data.estado = document.getElementById('entryEstado')?.value || 'Conservada';
+                data.tamanho = document.getElementById('entryTamanho')?.value?.trim() || '';
+                data.comodos = document.getElementById('entryComodos')?.value?.trim() || '';
+                data.segredos = document.getElementById('entrySegredos')?.value?.trim() || '';
+                // Save linked NPCs for Property
+                data.linkedNpcsProperty = linkedNpcsProperty;
             }
 
             try {

@@ -191,5 +191,11 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create, update, delete: if isMaster();
     }
+
+    // ========== ADICIONADO: Coleção de Propriedades do Worldbuilding ==========
+    match /worldbuilding-properties/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
   }
 }

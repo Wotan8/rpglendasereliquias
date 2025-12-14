@@ -748,6 +748,90 @@
                 transform: translateX(-50%) translateY(-5px);
             }
         }
+
+        /* Token hover buttons (Master mode) */
+        .token-hover-buttons {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 6px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 10;
+        }
+
+        .map-token:hover .token-hover-buttons {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .token-hover-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            background: rgba(15, 23, 42, 0.95);
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .token-hover-btn:hover {
+            transform: scale(1.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .token-hover-btn.info-btn {
+            background: linear-gradient(135deg, var(--teal), #0891b2);
+        }
+
+        .token-hover-btn.map-btn {
+            background: linear-gradient(135deg, var(--warning), #d97706);
+        }
+
+        .token-hover-btn.map-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Map navigation back button */
+        .map-nav-back {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .map-nav-back:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(139, 92, 246, 0.5);
+        }
+
+        .map-nav-back.visible {
+            display: flex;
+        }
     </style>
 </head>
 
@@ -831,6 +915,11 @@
             <svg id="routesSvg"
                 style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></svg>
 
+            <!-- Map Navigation Back Button -->
+            <button class="map-nav-back" id="mapNavBack" onclick="navigateBack()">
+                ← Voltar ao Mapa Regional
+            </button>
+
             <div class="info-panel" id="infoPanel">
                 <div class="info-row"><span class="info-label">Modo:</span><span class="info-value"
                         id="infoMode">Editor</span></div>
@@ -861,11 +950,11 @@
                 <button class="modal-close" onclick="closeTokenModal()">✕</button>
             </div>
             <div class="form-group">
-                <label class="form-label">📍 Vincular Geografia</label>
+                <label class="form-label">📍 Vincular Geografia ou Propriedade</label>
                 <select class="form-select" id="tokenGeographyId" onchange="onTokenGeographyChange()">
                     <option value="">-- Nenhuma (Manual) --</option>
                 </select>
-                <small style="color:#64748b;font-size:0.75rem;">Selecione uma entrada de Geografia do
+                <small style="color:#64748b;font-size:0.75rem;">Selecione uma entrada de Geografia ou Propriedade do
                     Worldbuilding</small>
             </div>
             <div class="form-group">
@@ -888,13 +977,21 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Tamanho (px)</label>
-                <input type="number" class="form-input" id="tokenSize" value="40" min="20" max="200">
+                <input type="number" class="form-input" id="tokenSize" value="40" min="5" max="200">
                 <small style="color:#64748b;font-size:0.75rem;">Largura/altura do token (relativo ao tile do
                     mapa)</small>
             </div>
             <div class="form-group">
                 <label class="form-label">Descrição</label>
                 <textarea class="form-textarea" id="tokenDescription"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">🗺️ Mapa Vinculado</label>
+                <select class="form-select" id="tokenLinkedMapId">
+                    <option value="">-- Nenhum --</option>
+                </select>
+                <small style="color:#64748b;font-size:0.75rem;">Selecione um mapa para abrir ao clicar neste token (modo
+                    Mestre)</small>
             </div>
             <div class="btn-row">
                 <button class="btn btn-secondary" onclick="closeTokenModal()">Cancelar</button>
@@ -932,7 +1029,7 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Tamanho Padrão (px)</label>
-                <input type="number" class="form-input" id="templateSize" value="40" min="20" max="200">
+                <input type="number" class="form-input" id="templateSize" value="40" min="5" max="200">
             </div>
             <div class="btn-row">
                 <button class="btn btn-secondary" onclick="closeTemplateModal()">Cancelar</button>
@@ -951,11 +1048,11 @@
                 <button class="modal-close" onclick="closePlaceTokenModal()">✕</button>
             </div>
             <div class="form-group">
-                <label class="form-label">📍 Vincular Geografia</label>
+                <label class="form-label">📍 Vincular Geografia ou Propriedade</label>
                 <select class="form-select" id="placeTokenGeographyId" onchange="onPlaceTokenGeographyChange()">
                     <option value="">-- Nenhuma (Manual) --</option>
                 </select>
-                <small style="color:#64748b;font-size:0.75rem;">Selecione uma entrada de Geografia do
+                <small style="color:#64748b;font-size:0.75rem;">Selecione uma entrada de Geografia ou Propriedade do
                     Worldbuilding</small>
             </div>
             <div class="form-group">
@@ -969,7 +1066,15 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Tamanho (px)</label>
-                <input type="number" class="form-input" id="placeTokenSize" value="40" min="20" max="200">
+                <input type="number" class="form-input" id="placeTokenSize" value="40" min="5" max="200">
+            </div>
+            <div class="form-group">
+                <label class="form-label">🗺️ Mapa Vinculado</label>
+                <select class="form-select" id="placeTokenLinkedMapId">
+                    <option value="">-- Nenhum --</option>
+                </select>
+                <small style="color:#64748b;font-size:0.75rem;">Selecione um mapa para abrir ao clicar neste token (modo
+                    Mestre)</small>
             </div>
             <div class="btn-row">
                 <button class="btn btn-secondary" onclick="closePlaceTokenModal()">Cancelar</button>
@@ -1075,10 +1180,15 @@
         let canvas, ctx, container;
         let loadedImages = {};
 
-        // Geography data from Worldbuilding
+        // Geography and Property data from Worldbuilding
         let geographyEntries = [];
+        let propertyEntries = [];
         let currentViewingTokenId = null; // Token being viewed in master mode
         const TILE_SIZE = 500; // Tile size in pixels (used for relative token sizing)
+
+        // Map navigation for linked maps
+        let mapNavigationStack = []; // Stack of {mapId, mapName} for back navigation
+        let availableMaps = []; // List of all maps for linking dropdown
 
         // Auth check - same logic as mestre.html
         onAuthStateChanged(auth, user => {
@@ -1101,67 +1211,147 @@
             updateTileGrid();
             renderTemplatesList();
             loadGeographyEntries(); // Load geography data for selectors
+            loadAvailableMaps(); // Load maps for linked map selectors
             loadFavoriteMap();
             document.getElementById('loadingScreen').style.display = 'none';
         }
 
-        // Load geography entries from Worldbuilding for linking
+        // Load geography and property entries from Worldbuilding for linking
         async function loadGeographyEntries() {
             try {
-                const snapshot = await getDocs(collection(db, 'worldbuilding-geography'));
-                geographyEntries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const geoSnapshot = await getDocs(collection(db, 'worldbuilding-geography'));
+                geographyEntries = geoSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 console.log(`✅ Carregadas ${geographyEntries.length} entradas de Geografia`);
-                populateGeographySelectors();
             } catch (err) {
                 console.log('Erro ao carregar entradas de Geografia:', err);
                 geographyEntries = [];
             }
+
+            try {
+                const propSnapshot = await getDocs(collection(db, 'worldbuilding-properties'));
+                propertyEntries = propSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log(`✅ Carregadas ${propertyEntries.length} entradas de Propriedade`);
+            } catch (err) {
+                console.log('Erro ao carregar entradas de Propriedade:', err);
+                propertyEntries = [];
+            }
+
+            populateGeographySelectors();
         }
 
-        // Populate all geography selector dropdowns
+        // Populate all geography/property selector dropdowns
         function populateGeographySelectors() {
             const selectors = ['tokenGeographyId', 'placeTokenGeographyId'];
             selectors.forEach(id => {
                 const select = document.getElementById(id);
                 if (!select) return;
-                // Keep the first option, remove others
+                // Reset with default option
                 select.innerHTML = '<option value="">-- Nenhuma (Manual) --</option>';
-                geographyEntries.forEach(geo => {
+
+                // Geography group
+                if (geographyEntries.length) {
+                    const geoGroup = document.createElement('optgroup');
+                    geoGroup.label = '📍 Geografia';
+                    geographyEntries.forEach(geo => {
+                        const opt = document.createElement('option');
+                        opt.value = `geo:${geo.id}`;
+                        opt.textContent = `${geo.nome || 'Sem nome'} (${geo.tipo || 'Local'})`;
+                        geoGroup.appendChild(opt);
+                    });
+                    select.appendChild(geoGroup);
+                }
+
+                // Properties group
+                if (propertyEntries.length) {
+                    const propGroup = document.createElement('optgroup');
+                    propGroup.label = '🏠 Propriedades';
+                    propertyEntries.forEach(prop => {
+                        const opt = document.createElement('option');
+                        opt.value = `prop:${prop.id}`;
+                        opt.textContent = `${prop.nome || 'Sem nome'} (${prop.tipo || 'Propriedade'})`;
+                        propGroup.appendChild(opt);
+                    });
+                    select.appendChild(propGroup);
+                }
+            });
+        }
+
+        // Load available maps for linked map selectors
+        async function loadAvailableMaps() {
+            try {
+                const snapshot = await getDocs(collection(db, 'viewmaps'));
+                availableMaps = snapshot.docs.map(docSnap => ({ id: docSnap.id, name: docSnap.data().name || 'Sem nome' }));
+                console.log(`✅ Carregados ${availableMaps.length} mapas para vinculação`);
+                populateLinkedMapSelectors();
+            } catch (err) {
+                console.log('Erro ao carregar mapas disponíveis:', err);
+                availableMaps = [];
+            }
+        }
+
+        // Populate linked map selector dropdowns
+        function populateLinkedMapSelectors() {
+            const selectors = ['tokenLinkedMapId', 'placeTokenLinkedMapId'];
+            selectors.forEach(id => {
+                const select = document.getElementById(id);
+                if (!select) return;
+                select.innerHTML = '<option value="">-- Nenhum --</option>';
+                availableMaps.forEach(map => {
+                    // Don't show current map as option to avoid circular links
+                    if (map.id === currentMapId) return;
                     const opt = document.createElement('option');
-                    opt.value = geo.id;
-                    opt.textContent = `📍 ${geo.nome || 'Sem nome'} (${geo.tipo || 'Local'})`;
+                    opt.value = map.id;
+                    opt.textContent = `🗺️ ${map.name}`;
                     select.appendChild(opt);
                 });
             });
         }
 
-        // When geography is selected in token modal, auto-fill fields
+        // When geography/property is selected in token modal, auto-fill fields
         function onTokenGeographyChange() {
-            const geoId = document.getElementById('tokenGeographyId').value;
-            if (!geoId) return;
-            const geo = geographyEntries.find(g => g.id === geoId);
-            if (geo) {
-                document.getElementById('tokenName').value = geo.nome || '';
-                document.getElementById('tokenDescription').value = geo.descricao || '';
-                // Set type based on geography type
-                const typeMap = { 'Cidade': 'cidade', 'Vila': 'vila', 'Ponto de Interesse': 'ponto' };
-                const tokenType = typeMap[geo.tipo] || 'ponto';
+            const value = document.getElementById('tokenGeographyId').value;
+            if (!value) return;
+
+            let entry = null;
+            if (value.startsWith('geo:')) {
+                const id = value.replace('geo:', '');
+                entry = geographyEntries.find(g => g.id === id);
+            } else if (value.startsWith('prop:')) {
+                const id = value.replace('prop:', '');
+                entry = propertyEntries.find(p => p.id === id);
+            }
+
+            if (entry) {
+                document.getElementById('tokenName').value = entry.nome || entry.titulo || '';
+                document.getElementById('tokenDescription').value = entry.descricao || '';
+                // Set type based on entry type
+                const typeMap = { 'Cidade': 'cidade', 'Vila': 'vila', 'Ponto de Interesse': 'ponto', 'Castelo': 'cidade', 'Taverna': 'ponto', 'Choupana': 'vila', 'Loja': 'ponto', 'Templo': 'ponto', 'Fortaleza': 'cidade', 'Mansão': 'cidade', 'Fazenda': 'vila' };
+                const tokenType = typeMap[entry.tipo] || 'ponto';
                 document.getElementById('tokenType').value = tokenType;
-                if (geo.imagem) {
-                    document.getElementById('tokenImageUrl').value = geo.imagem;
+                if (entry.imagem) {
+                    document.getElementById('tokenImageUrl').value = entry.imagem;
                 }
             }
         }
         window.onTokenGeographyChange = onTokenGeographyChange;
 
-        // When geography is selected in place token modal, auto-fill fields
+        // When geography/property is selected in place token modal, auto-fill fields
         function onPlaceTokenGeographyChange() {
-            const geoId = document.getElementById('placeTokenGeographyId').value;
-            if (!geoId) return;
-            const geo = geographyEntries.find(g => g.id === geoId);
-            if (geo) {
-                document.getElementById('placeTokenName').value = geo.nome || '';
-                document.getElementById('placeTokenDescription').value = geo.descricao || '';
+            const value = document.getElementById('placeTokenGeographyId').value;
+            if (!value) return;
+
+            let entry = null;
+            if (value.startsWith('geo:')) {
+                const id = value.replace('geo:', '');
+                entry = geographyEntries.find(g => g.id === id);
+            } else if (value.startsWith('prop:')) {
+                const id = value.replace('prop:', '');
+                entry = propertyEntries.find(p => p.id === id);
+            }
+
+            if (entry) {
+                document.getElementById('placeTokenName').value = entry.nome || entry.titulo || '';
+                document.getElementById('placeTokenDescription').value = entry.descricao || '';
             }
         }
         window.onPlaceTokenGeographyChange = onPlaceTokenGeographyChange;
@@ -1413,8 +1603,38 @@
                     el.style.cursor = 'grab';
                     setupTokenDrag(el, token);
                 } else if (currentMode === 'mestre') {
-                    // Master mode: show geography info if linked, otherwise edit
-                    el.onclick = () => openGeographyInfoForToken(token.id);
+                    // Master mode: show hover buttons for info and linked map
+                    el.style.cursor = 'default';
+                    const hoverButtons = document.createElement('div');
+                    hoverButtons.className = 'token-hover-buttons';
+
+                    // Info button
+                    const infoBtn = document.createElement('button');
+                    infoBtn.className = 'token-hover-btn info-btn';
+                    infoBtn.innerHTML = 'ℹ️';
+                    infoBtn.title = 'Ver Informações';
+                    infoBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        openGeographyInfoForToken(token.id);
+                    };
+                    hoverButtons.appendChild(infoBtn);
+
+                    // Map button (only if token has linkedMapId)
+                    const mapBtn = document.createElement('button');
+                    mapBtn.className = 'token-hover-btn map-btn';
+                    mapBtn.innerHTML = '🗺️';
+                    mapBtn.title = token.linkedMapId ? 'Abrir Mapa Local' : 'Sem Mapa Vinculado';
+                    if (token.linkedMapId) {
+                        mapBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            navigateToLinkedMap(token.linkedMapId);
+                        };
+                    } else {
+                        mapBtn.disabled = true;
+                    }
+                    hoverButtons.appendChild(mapBtn);
+
+                    el.appendChild(hoverButtons);
                 } else {
                     el.onclick = () => openTokenModalForEdit(token.id);
                 }
@@ -1543,6 +1763,8 @@
             document.getElementById('tokenImageUrl').value = '';
             document.getElementById('tokenSize').value = '40';
             document.getElementById('tokenDescription').value = '';
+            document.getElementById('tokenLinkedMapId').value = '';
+            populateLinkedMapSelectors(); // Refresh available maps
             document.getElementById('deleteTokenBtn').style.display = 'none';
             document.getElementById('tokenModal').classList.add('active');
         }
@@ -1557,6 +1779,8 @@
             document.getElementById('tokenImageUrl').value = token.imageUrl || '';
             document.getElementById('tokenSize').value = token.size || 40;
             document.getElementById('tokenDescription').value = token.description || '';
+            document.getElementById('tokenLinkedMapId').value = token.linkedMapId || '';
+            populateLinkedMapSelectors(); // Refresh available maps
             document.getElementById('deleteTokenBtn').style.display = currentMode === 'editor' ? 'block' : 'none';
             document.getElementById('tokenModal').classList.add('active');
         }
@@ -1568,8 +1792,9 @@
             const name = document.getElementById('tokenName').value.trim();
             const type = document.getElementById('tokenType').value;
             const imageUrl = document.getElementById('tokenImageUrl').value.trim();
-            const size = Math.min(200, Math.max(20, parseInt(document.getElementById('tokenSize').value) || 40));
+            const size = Math.min(200, Math.max(5, parseInt(document.getElementById('tokenSize').value) || 40));
             const description = document.getElementById('tokenDescription').value;
+            const linkedMapId = document.getElementById('tokenLinkedMapId').value;
 
             if (editingTokenId === 'new') {
                 // Create new token - place at center of current view
@@ -1584,7 +1809,8 @@
                     description,
                     imageUrl: imageUrl || null,
                     size,
-                    geographyId: geographyId || null
+                    geographyId: geographyId || null,
+                    linkedMapId: linkedMapId || null
                 };
                 mapData.tokens.push(token);
                 showAlert('Token criado! Arraste-o para a posição desejada.', 'success');
@@ -1598,6 +1824,7 @@
                     token.size = size;
                     token.description = description;
                     token.geographyId = geographyId || null;
+                    token.linkedMapId = linkedMapId || null;
                 }
             }
 
@@ -1611,25 +1838,42 @@
             closeTokenModal(); renderTokens();
         }
 
-        // ==================== GEOGRAPHY INFO MODAL (Master Mode) ====================
+        // ==================== GEOGRAPHY/PROPERTY INFO MODAL (Master Mode) ====================
 
-        // Open Geography Info Modal for Master mode
+        // Open Geography/Property Info Modal for Master mode
         function openGeographyInfoForToken(tokenId) {
             const token = mapData.tokens.find(t => t.id === tokenId);
             if (!token) return;
 
             currentViewingTokenId = tokenId;
 
-            // Check if token has a linked geography
+            // Check if token has a linked geography or property
             if (token.geographyId) {
-                const geo = geographyEntries.find(g => g.id === token.geographyId);
-                if (geo) {
-                    showGeographyInfoModal(token, geo);
-                    return;
+                if (token.geographyId.startsWith('geo:')) {
+                    const id = token.geographyId.replace('geo:', '');
+                    const geo = geographyEntries.find(g => g.id === id);
+                    if (geo) {
+                        showGeographyInfoModal(token, geo);
+                        return;
+                    }
+                } else if (token.geographyId.startsWith('prop:')) {
+                    const id = token.geographyId.replace('prop:', '');
+                    const prop = propertyEntries.find(p => p.id === id);
+                    if (prop) {
+                        showPropertyInfoModal(token, prop);
+                        return;
+                    }
+                } else {
+                    // Legacy format - try to find by ID directly (geography)
+                    const geo = geographyEntries.find(g => g.id === token.geographyId);
+                    if (geo) {
+                        showGeographyInfoModal(token, geo);
+                        return;
+                    }
                 }
             }
 
-            // No linked geography - show basic token info
+            // No linked geography/property - show basic token info
             showBasicTokenInfoModal(token);
         }
 
@@ -1740,6 +1984,101 @@
             document.getElementById('geographyInfoModal').classList.add('active');
         }
 
+        function showPropertyInfoModal(token, prop) {
+            document.getElementById('geoInfoTitle').textContent = `🏠 ${prop.nome || prop.titulo || token.name || 'Propriedade'}`;
+
+            let html = '';
+
+            // Image
+            if (prop.imagem || token.imageUrl) {
+                html += `<div style="text-align:center;margin-bottom:20px;">
+                    <img src="${prop.imagem || token.imageUrl}" style="max-width:100%;max-height:200px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);" onerror="this.style.display='none';">
+                </div>`;
+            }
+
+            // Type and State badges
+            html += `<div style="margin-bottom:15px;display:flex;gap:8px;flex-wrap:wrap;">
+                <span style="background:linear-gradient(135deg,var(--primary),var(--secondary));padding:4px 12px;border-radius:20px;font-size:0.8rem;font-weight:600;">🏠 ${prop.tipo || 'Propriedade'}</span>`;
+            if (prop.estado) {
+                const estadoColors = { 'Conservada': '#10b981', 'Deteriorada': '#f59e0b', 'Abandonada': '#94a3b8', 'Em Ruínas': '#ef4444' };
+                html += `<span style="background:${estadoColors[prop.estado] || '#64748b'};padding:4px 12px;border-radius:20px;font-size:0.8rem;font-weight:600;">${prop.estado}</span>`;
+            }
+            html += `</div>`;
+
+            // Title
+            if (prop.titulo && prop.titulo !== prop.nome) {
+                html += `<div style="font-style:italic;color:#94a3b8;margin-bottom:15px;">"${prop.titulo}"</div>`;
+            }
+
+            // Description
+            if (prop.descricao) {
+                html += `<div style="margin-bottom:15px;">
+                    <div style="font-weight:700;color:var(--teal);margin-bottom:5px;">Descrição</div>
+                    <div style="line-height:1.6;">${prop.descricao.replace(/\n/g, '<br>')}</div>
+                </div>`;
+            }
+
+            // Grid of info
+            const infoFields = [
+                { label: 'Localização', value: prop.localizacao },
+                { label: 'Proprietário', value: prop.proprietario },
+                { label: 'Valor Estimado', value: prop.valor },
+                { label: 'Tamanho', value: prop.tamanho }
+            ].filter(f => f.value);
+
+            if (infoFields.length) {
+                html += `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:15px;">`;
+                infoFields.forEach(f => {
+                    html += `<div style="background:rgba(30,27,75,0.4);padding:10px;border-radius:8px;">
+                        <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:3px;">${f.label}</div>
+                        <div style="font-weight:600;">${f.value}</div>
+                    </div>`;
+                });
+                html += `</div>`;
+            }
+
+            // Rooms/Areas
+            if (prop.comodos) {
+                html += `<div style="margin-bottom:15px;">
+                    <div style="font-weight:700;color:var(--teal);margin-bottom:5px;">🚪 Cômodos/Áreas</div>
+                    <div style="line-height:1.6;">${prop.comodos.replace(/\n/g, '<br>')}</div>
+                </div>`;
+            }
+
+            // Secrets
+            if (prop.segredos) {
+                html += `<div style="margin-bottom:15px;background:rgba(139,92,246,0.1);border:1px solid var(--primary);border-radius:8px;padding:12px;">
+                    <div style="font-weight:700;color:var(--primary);margin-bottom:5px;">🔮 Segredos</div>
+                    <div style="line-height:1.6;font-style:italic;">${prop.segredos.replace(/\n/g, '<br>')}</div>
+                </div>`;
+            }
+
+            // Linked NPCs
+            if (prop.linkedNpcsProperty && prop.linkedNpcsProperty.length) {
+                html += `<div style="margin-bottom:15px;">
+                    <div style="font-weight:700;color:var(--success);margin-bottom:8px;">👥 NPCs nesta Propriedade</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;">`;
+                prop.linkedNpcsProperty.forEach(npc => {
+                    html += `<span style="background:rgba(16,185,129,0.2);border:1px solid var(--success);padding:4px 10px;border-radius:20px;font-size:0.85rem;">
+                        ${npc.name}${npc.title ? ` - <em>${npc.title}</em>` : ''}
+                    </span>`;
+                });
+                html += `</div></div>`;
+            }
+
+            // Private notes (only for master)
+            if (prop.notas) {
+                html += `<div style="margin-bottom:15px;background:rgba(245,158,11,0.1);border:1px solid var(--warning);border-radius:8px;padding:12px;">
+                    <div style="font-weight:700;color:var(--warning);margin-bottom:5px;">🔒 Notas Privadas</div>
+                    <div style="line-height:1.6;font-style:italic;">${prop.notas.replace(/\n/g, '<br>')}</div>
+                </div>`;
+            }
+
+            document.getElementById('geoInfoBody').innerHTML = html;
+            document.getElementById('geoInfoEditBtn').style.display = 'block';
+            document.getElementById('geographyInfoModal').classList.add('active');
+        }
+
         function showBasicTokenInfoModal(token) {
             document.getElementById('geoInfoTitle').textContent = `📍 ${token.name || 'Local'}`;
 
@@ -1766,7 +2105,7 @@
                 </div>`;
             }
 
-            html += `<div style="text-align:center;color:#64748b;font-style:italic;margin-top:20px;">Este token não está vinculado a uma entrada de Geografia do Worldbuilding.</div>`;
+            html += `<div style="text-align:center;color:#64748b;font-style:italic;margin-top:20px;">Este token não está vinculado a uma entrada de Geografia ou Propriedade do Worldbuilding.</div>`;
 
             document.getElementById('geoInfoBody').innerHTML = html;
             document.getElementById('geoInfoEditBtn').style.display = 'block';
@@ -1878,7 +2217,7 @@
 
             const type = document.getElementById('templateType').value;
             const imageUrl = document.getElementById('templateImageUrl').value.trim();
-            const size = Math.min(200, Math.max(20, parseInt(document.getElementById('templateSize').value) || 40));
+            const size = Math.min(200, Math.max(5, parseInt(document.getElementById('templateSize').value) || 40));
 
             if (!mapData.tokenTemplates) mapData.tokenTemplates = [];
 
@@ -1948,6 +2287,8 @@
             document.getElementById('placeTokenName').value = '';
             document.getElementById('placeTokenDescription').value = '';
             document.getElementById('placeTokenSize').value = template.size || 40;
+            document.getElementById('placeTokenLinkedMapId').value = '';
+            populateLinkedMapSelectors(); // Refresh available maps
             document.getElementById('placeTokenModal').classList.add('active');
         }
 
@@ -1967,7 +2308,8 @@
             const geographyId = document.getElementById('placeTokenGeographyId').value;
             const name = document.getElementById('placeTokenName').value.trim();
             const description = document.getElementById('placeTokenDescription').value;
-            const size = Math.min(200, Math.max(20, parseInt(document.getElementById('placeTokenSize').value) || template.size || 40));
+            const size = Math.min(200, Math.max(5, parseInt(document.getElementById('placeTokenSize').value) || template.size || 40));
+            const linkedMapId = document.getElementById('placeTokenLinkedMapId').value;
 
             const token = {
                 id: Date.now().toString(),
@@ -1979,7 +2321,8 @@
                 description,
                 imageUrl: template.imageUrl || null,
                 size,
-                geographyId: geographyId || null
+                geographyId: geographyId || null,
+                linkedMapId: linkedMapId || null
             };
 
             mapData.tokens.push(token);
@@ -1989,6 +2332,57 @@
 
             // Keep placing mode active for placing more of the same template
             pendingTokenPosition = null;
+        }
+
+        // ==================== MAP NAVIGATION ====================
+
+        // Navigate to a linked map (push current map to stack)
+        async function navigateToLinkedMap(targetMapId) {
+            if (!targetMapId) return;
+
+            // Push current map to navigation stack
+            if (currentMapId) {
+                mapNavigationStack.push({
+                    mapId: currentMapId,
+                    mapName: mapData.name || 'Mapa'
+                });
+            }
+
+            // Load the target map
+            await loadMap(targetMapId);
+
+            // Update back button visibility
+            updateNavBackButton();
+
+            showAlert('Mapa local carregado!', 'success');
+        }
+
+        // Navigate back to previous map in stack
+        async function navigateBack() {
+            if (mapNavigationStack.length === 0) return;
+
+            const previousMap = mapNavigationStack.pop();
+
+            // Load the previous map
+            await loadMap(previousMap.mapId);
+
+            // Update back button visibility
+            updateNavBackButton();
+
+            showAlert(`Voltando para: ${previousMap.mapName}`, 'success');
+        }
+        window.navigateBack = navigateBack;
+
+        // Update visibility and text of navigation back button
+        function updateNavBackButton() {
+            const backBtn = document.getElementById('mapNavBack');
+            if (mapNavigationStack.length > 0) {
+                const previousMap = mapNavigationStack[mapNavigationStack.length - 1];
+                backBtn.innerHTML = `← Voltar: ${previousMap.mapName}`;
+                backBtn.classList.add('visible');
+            } else {
+                backBtn.classList.remove('visible');
+            }
         }
 
         // Routes - Freeform drawing (click and drag to draw curved routes)
