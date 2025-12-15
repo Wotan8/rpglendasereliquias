@@ -1918,8 +1918,7 @@
         <div class="alert alert-danger" id="alertError"></div>
 
         <div class="tabs" id="tabContainer">
-            <button class="tab active" onclick="switchTab('basico')">📋 Básico</button>
-            <button class="tab" onclick="switchTab('atributos')">💪 Atributos</button>
+            <button class="tab active" onclick="switchTab('atributos')">💪 Atributos</button>
             <button class="tab" onclick="switchTab('caracteristicas')">📊 Características</button>
             <button class="tab" onclick="switchTab('classe')">⭐ Classe</button>
             <button class="tab" onclick="switchTab('combate')">⚔️ Combate</button>
@@ -1930,7 +1929,7 @@
         </div>
 
         <!-- ABA BÁSICO -->
-        <div id="basico" class="tab-content active">
+        <div id="basico" class="tab-content" style="display: none !important;">
             <div class="section">
                 <h2 class="section-title">Imagem do Personagem</h2>
                 <div class="character-image-section">
@@ -2790,7 +2789,7 @@
         </div>
 
         <!-- ABA ATRIBUTOS -->
-        <div id="atributos" class="tab-content">
+        <div id="atributos" class="tab-content active">
             <div class="section">
                 <h2 class="section-title">⚡ Atributos</h2>
                 <p style="color: #94a3b8; margin-bottom: 12px; font-size: 0.8rem;">Toque nas bolinhas para
