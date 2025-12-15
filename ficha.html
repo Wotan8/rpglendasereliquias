@@ -1249,6 +1249,612 @@
             color: white;
             transform: scale(1.05);
         }
+
+        /* ========== PAINEL DE INFORMAÇÕES BÁSICAS ========== */
+        .character-info-btn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 9997;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .character-info-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6);
+        }
+
+        .character-info-btn:active {
+            transform: scale(0.95);
+        }
+
+        .race-info-btn {
+            position: fixed;
+            top: 70px;
+            left: 10px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 9997;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .race-info-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.6);
+        }
+
+        .race-info-btn:active {
+            transform: scale(0.95);
+        }
+
+        .race-info-panel {
+            position: fixed;
+            top: 0;
+            left: -380px;
+            width: 350px;
+            height: 100vh;
+            background: linear-gradient(180deg, var(--darker) 0%, var(--dark) 100%);
+            border-right: 3px solid #22c55e;
+            z-index: 10001;
+            transition: left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 5px 0 30px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .race-info-panel.open {
+            left: 0;
+        }
+
+        .race-info-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #22c55e;
+        }
+
+        .race-info-panel-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #22c55e;
+        }
+
+        .race-info-panel-close {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid var(--danger);
+            color: var(--danger);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .race-info-panel-close:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .race-info-section {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            border-left: 3px solid #22c55e;
+        }
+
+        .race-info-section-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #22c55e;
+            margin-bottom: 5px;
+        }
+
+        .race-info-section-content {
+            font-size: 0.85rem;
+            color: var(--light);
+            line-height: 1.4;
+        }
+
+        .race-ability-item {
+            background: rgba(34, 197, 94, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #22c55e;
+            margin-bottom: 6px;
+        }
+
+        .race-ability-item.negative {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--danger);
+        }
+
+        .race-ability-name {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #22c55e;
+        }
+
+        .race-ability-item.negative .race-ability-name {
+            color: var(--danger);
+        }
+
+        .race-ability-desc {
+            font-size: 0.75rem;
+            color: #cbd5e1;
+            margin-top: 3px;
+            line-height: 1.3;
+        }
+
+        .race-no-selection {
+            text-align: center;
+            padding: 40px 20px;
+            color: #94a3b8;
+        }
+
+        @media (max-width: 639px) {
+            .race-info-btn {
+                width: 44px;
+                height: 44px;
+                font-size: 1.3rem;
+                top: 55px;
+                left: 5px;
+            }
+
+            .race-info-panel {
+                width: 300px;
+                left: -320px;
+            }
+        }
+
+        .character-info-panel {
+            position: fixed;
+            top: 0;
+            left: -350px;
+            width: 320px;
+            height: 100vh;
+            background: linear-gradient(180deg, var(--darker) 0%, var(--dark) 100%);
+            border-right: 3px solid var(--primary);
+            z-index: 10001;
+            transition: left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 5px 0 30px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .character-info-panel.open {
+            left: 0;
+        }
+
+        .character-info-overlay {
+            display: none;
+            /* Overlay desativado para permitir interação com a página */
+        }
+
+        .character-info-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .character-info-panel-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .character-info-panel-close {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid var(--danger);
+            color: var(--danger);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .character-info-panel-close:hover {
+            background: var(--danger);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .character-info-item {
+            background: none;
+            border: none;
+            border-radius: 0;
+            padding: 6px 0;
+            margin-bottom: 4px;
+            transition: none;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .character-info-item:hover {
+            border-color: transparent;
+            transform: none;
+        }
+
+        .character-info-label {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+            font-weight: 600;
+        }
+
+        .character-info-value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--light);
+            word-break: break-word;
+        }
+
+        .character-info-item.exp {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.15));
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .character-info-item.exp .character-info-label {
+            color: #fbbf24;
+            margin-bottom: 0;
+            font-size: 0.85rem;
+        }
+
+        .character-info-item.exp .character-info-value {
+            color: #fbbf24;
+            font-size: 1.2rem;
+            font-weight: 800;
+        }
+
+        .character-info-item.editable {
+            padding: 6px 0;
+        }
+
+        .character-info-item.editable:hover {
+            transform: none;
+        }
+
+        .character-info-input {
+            width: 100%;
+            padding: 8px 10px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--light);
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .character-info-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
+
+        .character-info-select {
+            width: 100%;
+            padding: 8px 10px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--light);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .character-info-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
+
+        .character-info-select.locked {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .panel-image-container {
+            position: relative;
+            width: 100%;
+            margin-bottom: 12px;
+
+        }
+
+        .panel-image-preview {
+            width: 100%;
+            max-height: 400px;
+            object-fit: cover;
+            object-position: top center;
+            border-radius: 8px;
+            border: 2px solid var(--border);
+            display: block;
+
+        }
+
+        .panel-image-remove {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            width: 24px;
+            height: 24px;
+            background: rgba(239, 68, 68, 0.9);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+
+        }
+
+        .panel-image-remove:hover {
+            background: var(--danger);
+            transform: scale(1.1);
+
+        }
+
+        .panel-image-upload {
+            width: 100%;
+            padding: 15px;
+            background: rgba(139, 92, 246, 0.1);
+            border: 2px dashed var(--primary);
+            border-radius: 8px;
+            color: var(--primary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            margin-bottom: 16px;
+            display: block;
+
+        }
+
+        .panel-image-upload:hover {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: var(--secondary);
+
+        }
+
+        @media (max-width: 639px) {
+            .character-info-btn {
+                width: 44px;
+                height: 44px;
+                font-size: 1.3rem;
+                top: 5px;
+                left: 5px;
+            }
+
+            .character-info-panel {
+                width: 280px;
+                left: -300px;
+            }
+        }
+
+        /* ========== ESTILOS PARA ATRIBUTOS COMPACTOS ========== */
+        .attributes-compact-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        @media (max-width: 767px) {
+            .attributes-compact-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .attributes-compact-grid {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+        }
+
+        .attribute-compact-card {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.05));
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .attribute-compact-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+        }
+
+        .attribute-compact-card .attr-category {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .attribute-compact-card .attr-name {
+            font-weight: 700;
+            color: var(--light);
+            font-size: 0.9rem;
+            margin-bottom: 2px;
+        }
+
+        .attribute-compact-card .attr-code {
+            font-size: 0.75rem;
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .attribute-compact-card .dots {
+            justify-content: center;
+            flex-wrap: nowrap;
+        }
+
+        /* ========== ESTILOS PARA HABILIDADES COMPACTAS ========== */
+        .skills-compact-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        @media (max-width: 1023px) {
+            .skills-compact-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 639px) {
+            .skills-compact-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .skills-compact-group {
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 10px;
+            padding: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .skills-compact-group .attribute-header {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        /* ========== ESTILOS PARA AURAS ========== */
+        .aura-item {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1));
+            border: 2px solid #f59e0b;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .aura-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .aura-name {
+            font-weight: 700;
+            color: #fbbf24;
+            font-size: 1.1rem;
+        }
+
+        .aura-value {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #1e1b4b;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 900;
+            font-size: 1.3rem;
+            min-width: 50px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+        }
+
+        .aura-info {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
+            padding: 15px;
+            border-left: 3px solid #f59e0b;
+        }
+
+        .aura-info p {
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .aura-info p:first-child {
+            margin-bottom: 8px;
+        }
+
+        .aura-info strong {
+            color: #fbbf24;
+        }
+
+        @media (max-width: 639px) {
+            .aura-item {
+                padding: 12px;
+            }
+
+            .aura-name {
+                font-size: 1rem;
+            }
+
+            .aura-value {
+                font-size: 1.1rem;
+                padding: 6px 16px;
+            }
+
+            .aura-info p {
+                font-size: 0.85rem;
+            }
+        }
     </style>
 </head>
 
@@ -1257,6 +1863,42 @@
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-spinner"></div>
         <div class="loading-text">⚔️ Carregando Ficha...</div>
+    </div>
+
+    <!-- BOTÃO DE INFORMAÇÕES DO PERSONAGEM -->
+    <button class="character-info-btn" id="characterInfoBtn" onclick="toggleCharacterInfoPanel()"
+        title="Informações Básicas">
+        📋
+    </button>
+
+    <!-- OVERLAY DO PAINEL -->
+    <div class="character-info-overlay" id="characterInfoOverlay" onclick="toggleCharacterInfoPanel()"></div>
+
+    <!-- PAINEL DE INFORMAÇÕES DO PERSONAGEM -->
+    <div class="character-info-panel" id="characterInfoPanel">
+        <div class="character-info-panel-header">
+            <div class="character-info-panel-title">📋 Básico</div>
+            <button class="character-info-panel-close" onclick="toggleCharacterInfoPanel()" title="Fechar">✕</button>
+        </div>
+        <div id="characterInfoContent">
+            <!-- Conteúdo será preenchido via JavaScript -->
+        </div>
+    </div>
+
+    <!-- BOTÃO DE RAÇA DO PERSONAGEM -->
+    <button class="race-info-btn" id="raceInfoBtn" onclick="toggleRaceInfoPanel()" title="Raça">
+        🧬
+    </button>
+
+    <!-- PAINEL DE RAÇA DO PERSONAGEM -->
+    <div class="race-info-panel" id="raceInfoPanel">
+        <div class="race-info-panel-header">
+            <div class="race-info-panel-title">🧬 Raça</div>
+            <button class="race-info-panel-close" onclick="toggleRaceInfoPanel()" title="Fechar">✕</button>
+        </div>
+        <div id="raceInfoContent">
+            <!-- Conteúdo será preenchido via JavaScript -->
+        </div>
     </div>
 
     <!-- INFORMAÇÕES DO USUÁRIO -->
@@ -2150,152 +2792,116 @@
         <!-- ABA ATRIBUTOS -->
         <div id="atributos" class="tab-content">
             <div class="section">
-                <h2 class="section-title">Atributos do Personagem</h2>
-                <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">Toque nas bolinhas para
+                <h2 class="section-title">⚡ Atributos</h2>
+                <p style="color: #94a3b8; margin-bottom: 12px; font-size: 0.8rem;">Toque nas bolinhas para
                     preencher/esvaziar.</p>
 
-                <div style="overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                        <thead>
-                            <tr>
-                                <th
-                                    style="padding: 12px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--border); font-size: 1.1rem;">
-                                </th>
-                                <th
-                                    style="padding: 12px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--border); font-size: 1.1rem;">
-                                    ⚡ Poder</th>
-                                <th
-                                    style="padding: 12px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--border); font-size: 1.1rem;">
-                                    🎯 Refinamento</th>
-                                <th
-                                    style="padding: 12px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--border); font-size: 1.1rem;">
-                                    🛡️ Resistência</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td
-                                    style="padding: 12px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--border); font-weight: 700; font-size: 1rem;">
-                                    🧠 Mental</td>
-                                <td style="padding: 12px; border: 1px solid var(--border);">
-                                    <div class="attribute-item" style="flex-direction: column; gap: 8px;">
-                                        <div style="text-align: center;">
-                                            <span class="attribute-name">Inteligência</span><br>
-                                            <span class="attribute-code">[INT]</span>
-                                        </div>
-                                        <div class="dots" id="dots-int" style="justify-content: center;"></div>
-                                    </div>
-                                </td>
-                                <td style="padding: 12px; border: 1px solid var(--border);">
-                                    <div class="attribute-item" style="flex-direction: column; gap: 8px;">
-                                        <div style="text-align: center;">
-                                            <span class="attribute-name">Raciocínio</span><br>
-                                            <span class="attribute-code">[RAC]</span>
-                                        </div>
-                                        <div class="dots" id="dots-rac" style="justify-content: center;"></div>
-                                    </div>
-                                </td>
-                                <td style="padding: 12px; border: 1px solid var(--border);">
-                                    <div class="attribute-item" style="flex-direction: column; gap: 8px;">
-                                        <div style="text-align: center;">
-                                            <span class="attribute-name">Perseverança</span><br>
-                                            <span class="attribute-code">[PRS]</span>
-                                        </div>
-                                        <div class="dots" id="dots-prs" style="justify-content: center;"></div>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td
-                                    style="padding: 12px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--border); font-weight: 700; font-size: 1rem;">
-                                    💪 Físico</td>
-                                <td style="padding: 12px; border: 1px solid var(--border);">
-                                    <div class="attribute-item" style="flex-direction: column; gap: 8px;">
-                                        <div style="text-align: center;">
-                                            <span class="attribute-name">Força</span><br>
-                                            <span class="attribute-code">[FOR]</span>
-                                        </div>
-                                        <div class="dots" id="dots-for" style="justify-content: center;"></div>
-                                    </div>
-                                </td>
-                                <td style="padding: 12px; border: 1px solid var(--border);">
-                                    <div class="attribute-item" style="flex-direction: column; gap: 8px;">
-                                        <div style="text-align: center;">
-                                            <span class="attribute-name">Destreza</span><br>
-                                            <span class="attribute-code">[DES]</span>
-                                        </div>
-                                        <div class="dots" id="dots-des" style="justify-content: center;"></div>
-                                    </div>
-                                </td>
-                                <td style="padding: 12px; border: 1px solid var(--border);">
-                                    <div class="attribute-item" style="flex-direction: column; gap: 8px;">
-                                        <div style="text-align: center;">
-                                            <span class="attribute-name">Vigor</span><br>
-                                            <span class="attribute-code">[VIG]</span>
-                                        </div>
-                                        <div class="dots" id="dots-vig" style="justify-content: center;"></div>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td
-                                    style="padding: 12px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--border); font-weight: 700; font-size: 1rem;">
-                                    💬 Social</td>
-                                <td style="padding: 12px; border: 1px solid var(--border);">
-                                    <div class="attribute-item" style="flex-direction: column; gap: 8px;">
-                                        <div style="text-align: center;">
-                                            <span class="attribute-name">Presença</span><br>
-                                            <span class="attribute-code">[PRE]</span>
-                                        </div>
-                                        <div class="dots" id="dots-pre" style="justify-content: center;"></div>
-                                    </div>
-                                </td>
-                                <td style="padding: 12px; border: 1px solid var(--border);">
-                                    <div class="attribute-item" style="flex-direction: column; gap: 8px;">
-                                        <div style="text-align: center;">
-                                            <span class="attribute-name">Manipulação</span><br>
-                                            <span class="attribute-code">[MAN]</span>
-                                        </div>
-                                        <div class="dots" id="dots-man" style="justify-content: center;"></div>
-                                    </div>
-                                </td>
-                                <td style="padding: 12px; border: 1px solid var(--border);">
-                                    <div class="attribute-item" style="flex-direction: column; gap: 8px;">
-                                        <div style="text-align: center;">
-                                            <span class="attribute-name">Autocontrole</span><br>
-                                            <span class="attribute-code">[AUT]</span>
-                                        </div>
-                                        <div class="dots" id="dots-aut" style="justify-content: center;"></div>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div class="attributes-compact-grid">
+                    <!-- Mental -->
+                    <div class="attribute-compact-card">
+                        <div class="attr-category">🧠 Mental • Poder</div>
+                        <div class="attr-name">Inteligência</div>
+                        <div class="attr-code">[INT]</div>
+                        <div class="dots" id="dots-int"></div>
+                    </div>
+                    <div class="attribute-compact-card">
+                        <div class="attr-category">🧠 Mental • Refinamento</div>
+                        <div class="attr-name">Raciocínio</div>
+                        <div class="attr-code">[RAC]</div>
+                        <div class="dots" id="dots-rac"></div>
+                    </div>
+                    <div class="attribute-compact-card">
+                        <div class="attr-category">🧠 Mental • Resistência</div>
+                        <div class="attr-name">Perseverança</div>
+                        <div class="attr-code">[PRS]</div>
+                        <div class="dots" id="dots-prs"></div>
+                    </div>
+
+                    <!-- Físico -->
+                    <div class="attribute-compact-card">
+                        <div class="attr-category">💪 Físico • Poder</div>
+                        <div class="attr-name">Força</div>
+                        <div class="attr-code">[FOR]</div>
+                        <div class="dots" id="dots-for"></div>
+                    </div>
+                    <div class="attribute-compact-card">
+                        <div class="attr-category">💪 Físico • Refinamento</div>
+                        <div class="attr-name">Destreza</div>
+                        <div class="attr-code">[DES]</div>
+                        <div class="dots" id="dots-des"></div>
+                    </div>
+                    <div class="attribute-compact-card">
+                        <div class="attr-category">💪 Físico • Resistência</div>
+                        <div class="attr-name">Vigor</div>
+                        <div class="attr-code">[VIG]</div>
+                        <div class="dots" id="dots-vig"></div>
+                    </div>
+
+                    <!-- Social -->
+                    <div class="attribute-compact-card">
+                        <div class="attr-category">💬 Social • Poder</div>
+                        <div class="attr-name">Presença</div>
+                        <div class="attr-code">[PRE]</div>
+                        <div class="dots" id="dots-pre"></div>
+                    </div>
+                    <div class="attribute-compact-card">
+                        <div class="attr-category">💬 Social • Refinamento</div>
+                        <div class="attr-name">Manipulação</div>
+                        <div class="attr-code">[MAN]</div>
+                        <div class="dots" id="dots-man"></div>
+                    </div>
+                    <div class="attribute-compact-card">
+                        <div class="attr-category">💬 Social • Resistência</div>
+                        <div class="attr-name">Autocontrole</div>
+                        <div class="attr-code">[AUT]</div>
+                        <div class="dots" id="dots-aut"></div>
+                    </div>
                 </div>
             </div>
+
             <div class="section">
-                <h2 class="section-title">Habilidades</h2>
-                <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">Cada habilidade tem 5 níveis. Toque
+                <h2 class="section-title">🎯 Habilidades</h2>
+                <p style="color: #94a3b8; margin-bottom: 10px; font-size: 0.8rem;">Cada habilidade tem 5 níveis. Toque
                     nas bolinhas.</p>
 
-                <div class="grid grid-3">
-                    <div class="attribute-group">
+                <div class="skills-compact-grid">
+                    <div class="skills-compact-group">
                         <div class="attribute-header">🧠 Mental <span class="penalty">(-3 se inapto)</span></div>
                         <div id="skills-mental"></div>
                     </div>
 
-                    <div class="attribute-group">
+                    <div class="skills-compact-group">
                         <div class="attribute-header">💪 Físico <span class="penalty">(-1 se inapto)</span></div>
                         <div id="skills-fisico"></div>
                     </div>
 
-                    <div class="attribute-group">
+                    <div class="skills-compact-group">
                         <div class="attribute-header">💬 Social <span class="penalty">(-1 se inapto)</span></div>
                         <div id="skills-social"></div>
                     </div>
                 </div>
             </div>
+
+            <!-- BLOCO AURAS -->
+            <div class="section">
+                <h2 class="section-title">✨ Auras</h2>
+
+                <div class="aura-item">
+                    <div class="aura-header">
+                        <span class="aura-name">Aura de Imortalidade (AI)</span>
+                        <span class="aura-value" id="aura-imortalidade-value">1</span>
+                    </div>
+                </div>
+
+                <div class="aura-info">
+                    <p>📖 <strong>Sobre Aura de Imortalidade:</strong></p>
+                    <p>Criaturas com um grau de aura superior causam o dobro de dano e recebem metade. Com dois graus ou
+                        mais de diferença, a criatura superior torna-se completamente imortal aos ataques da inferior.
+                    </p>
+                </div>
+            </div>
         </div>
+
 
         <!-- ABA CARACTERÍSTICAS -->
         <div id="caracteristicas" class="tab-content">
@@ -3019,7 +3625,7 @@ Exemplos:
                         // Verificar se existe
                         if (!characterDoc.exists()) {
                             console.error('❌ Personagem não encontrado:', characterId);
-                            alert('⚠️ Personagem não encontrado!\n\nRedirecionando para seus personagens...');
+                            alert('⚠️ Personagem não encontrado!Redirecionando para seus personagens...');
                             window.location.href = 'personagens.html';
                             return;
                         }
@@ -3032,7 +3638,7 @@ Exemplos:
                             console.error('Tentativa de acesso:', user.uid);
 
                             // NÃO mostra NADA da ficha e redireciona imediatamente
-                            alert('🚫 ACESSO NEGADO!\n\nEste personagem não pertence a você.\n\nRedirecionando para seus personagens...');
+                            alert('🚫 ACESSO NEGADO!Este personagem não pertence a você.Redirecionando para seus personagens...');
                             window.location.href = 'personagens.html';
                             return;
                         }
@@ -3041,7 +3647,7 @@ Exemplos:
                     }
                 } catch (error) {
                     console.error('❌ Erro ao verificar personagem:', error);
-                    alert('❌ Erro ao carregar personagem.\n\nRedirecionando...');
+                    alert('❌ Erro ao carregar personagem.Redirecionando...');
                     window.location.href = 'personagens.html';
                     return;
                 }
@@ -5598,7 +6204,7 @@ Exemplos:
                         nome: 'Cólera',
                         calculo: 'Vários efeitos especiais',
                         requisito: { tipo: 'class', nome: 'impeto', nivel: 4 },
-                        descricao: 'Se um aliado NPC cair: ative 1x. Se um jogador cair: ative pelo resto do combate.\n • Se matar um inimigo: recebe +1 ação.\n • Se for atingido: causa o mesmo dano de volta.\n • Se o inimigo errar: ganha 1 ação para ataque (com + Ímpeto) sem reação do inimigo.',
+                        descricao: 'Se um aliado NPC cair: ative 1x. Se um jogador cair: ative pelo resto do combate.• Se matar um inimigo: recebe +1 ação.• Se for atingido: causa o mesmo dano de volta.• Se o inimigo errar: ganha 1 ação para ataque (com + Ímpeto) sem reação do inimigo.',
                         calcular: (char) => 0
                     }
                 ];
@@ -6103,7 +6709,7 @@ Exemplos:
                             // Se selecionou uma classe válida
                             if (newClasse && CLASS_ABILITIES[newClasse]) {
                                 // Pergunta se tem certeza
-                                const confirmacao = confirm(`⚠️ ATENÇÃO! ⚠️\n\nVocê deseja escolher a classe: ${newClasse}?\n\nApós confirmar, você NÃO PODERÁ MAIS MUDAR sua classe!\n\nTem certeza?`);
+                                const confirmacao = confirm(`⚠️ ATENÇÃO! ⚠️Você deseja escolher a classe: ${newClasse}?Após confirmar, você NÃO PODERÁ MAIS MUDAR sua classe!Tem certeza?`);
 
                                 if (confirmacao) {
                                     // Confirma a escolha
@@ -6220,9 +6826,9 @@ Exemplos:
             // Se está mudando de uma raça vazia para uma raça válida, pede confirmação
             if (novRaca && novRaca !== '') {
                 const confirmacao = confirm(
-                    `🔒 CONFIRMAÇÃO DE RAÇA\n\n` +
-                    `Você está escolhendo: ${novRaca}\n\n` +
-                    `⚠️ ATENÇÃO: Após confirmar, você NÃO poderá mais mudar de raça!\n\n` +
+                    `🔒 CONFIRMAÇÃO DE RAÇA` +
+                    `Você está escolhendo: ${novRaca}` +
+                    `⚠️ ATENÇÃO: Após confirmar, você NÃO poderá mais mudar de raça!` +
                     `Deseja confirmar esta escolha?`
                 );
 
@@ -6289,7 +6895,7 @@ Exemplos:
                 this.style.cursor = 'not-allowed';
 
                 // Mostrar feedback visual
-                alert(`✅ Raça "${novRaca}" confirmada e bloqueada!\n\nAgora você não poderá mais alterar sua raça.`);
+                alert(`✅ Raça "${novRaca}" confirmada e bloqueada!Agora você não poderá mais alterar sua raça.`);
             } else {
                 // Se está limpando a raça (voltando para vazio)
                 char.raca = novRaca;
@@ -6543,7 +7149,7 @@ Exemplos:
             // Verificar EXP
             const currentEXP = char.exp || 0;
             if (currentEXP < totalCost) {
-                alert(`❌ EXP Insuficiente!\n\nPrecisa de: ${totalCost} EXP\nVocê tem: ${currentEXP} EXP\nFaltam: ${totalCost - currentEXP} EXP`);
+                alert(`❌ EXP Insuficiente!Precisa de: ${totalCost} EXPVocê tem: ${currentEXP} EXPFaltam: ${totalCost - currentEXP} EXP`);
                 return;
             }
 
@@ -6551,8 +7157,8 @@ Exemplos:
             const levelDiff = targetLevel - currentLevel;
             const abilityName = abilityId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             const message = levelDiff === 1
-                ? `Deseja aumentar ${abilityName} de ${currentLevel} para ${targetLevel}?\n\nCusto: ${totalCost} EXP (×${multiplier})`
-                : `Deseja aumentar ${abilityName} de ${currentLevel} para ${targetLevel} (+${levelDiff} níveis)?\n\nCusto total: ${totalCost} EXP (×${multiplier})`;
+                ? `Deseja aumentar ${abilityName} de ${currentLevel} para ${targetLevel}?Custo: ${totalCost} EXP (×${multiplier})`
+                : `Deseja aumentar ${abilityName} de ${currentLevel} para ${targetLevel} (+${levelDiff} níveis)?Custo total: ${totalCost} EXP (×${multiplier})`;
 
             if (confirm(message)) {
                 char.classAbilities[abilityId] = targetLevel;
@@ -6627,7 +7233,7 @@ Exemplos:
             // Verificar EXP
             const currentEXP = char.exp || 0;
             if (currentEXP < totalCost) {
-                alert(`❌ EXP Insuficiente!\n\nPrecisa de: ${totalCost} EXP\nVocê tem: ${currentEXP} EXP\nFaltam: ${totalCost - currentEXP} EXP`);
+                alert(`❌ EXP Insuficiente!Precisa de: ${totalCost} EXPVocê tem: ${currentEXP} EXPFaltam: ${totalCost - currentEXP} EXP`);
                 return;
             }
 
@@ -6635,8 +7241,8 @@ Exemplos:
             const levelDiff = targetLevel - currentLevel;
             const skillName = skillId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             const message = levelDiff === 1
-                ? `Deseja aumentar ${skillName} de ${currentLevel} para ${targetLevel}?\n\nCusto: ${totalCost} EXP`
-                : `Deseja aumentar ${skillName} de ${currentLevel} para ${targetLevel} (+${levelDiff} níveis)?\n\nCusto total: ${totalCost} EXP`;
+                ? `Deseja aumentar ${skillName} de ${currentLevel} para ${targetLevel}?Custo: ${totalCost} EXP`
+                : `Deseja aumentar ${skillName} de ${currentLevel} para ${targetLevel} (+${levelDiff} níveis)?Custo total: ${totalCost} EXP`;
 
             if (confirm(message)) {
                 char.skills[skillId] = targetLevel;
@@ -8086,7 +8692,7 @@ Exemplos:
                 return;
             }
 
-            if (!confirm(`⚠️🗑️⚠️ Remover "${container.name}"? ⚠️🗑️⚠️\n\nTodos os itens dentro serão movidos para Equipados.`)) return;
+            if (!confirm(`⚠️🗑️⚠️ Remover "${container.name}"? ⚠️🗑️⚠️Todos os itens dentro serão movidos para Equipados.`)) return;
 
             try {
                 const characterId = window.currentCharacterId || (window.currentUser || currentUser)?.uid;
@@ -8161,7 +8767,7 @@ Exemplos:
 
             // Verificar se é Item de Container
             if (item.isContainerItem && item.linkedContainerId) {
-                if (!confirm(`⚠️🗑️⚠️ Este item representa o container "${item.name}"! ⚠️🗑️⚠️\n\nRemover este item também removerá o container e moverá todos os itens dentro dele para Equipados.\n\nContinuar?`)) {
+                if (!confirm(`⚠️🗑️⚠️ Este item representa o container "${item.name}"! ⚠️🗑️⚠️Remover este item também removerá o container e moverá todos os itens dentro dele para Equipados.Continuar?`)) {
                     return;
                 }
 
@@ -8662,7 +9268,7 @@ Exemplos:
             if (fromContainer.name === 'Equipados' &&
                 (item.tipo === 'Arma' || item.tipo === 'Vestimenta') &&
                 item.equipado === true) {
-                alert('⚠️ Item Equipado!\n\nVocê precisa desmarcar a caixinha de equipado antes de tirar este item do container "Equipados".');
+                alert('⚠️ Item Equipado!Você precisa desmarcar a caixinha de equipado antes de tirar este item do container "Equipados".');
                 return;
             }
 
@@ -8687,14 +9293,14 @@ Exemplos:
                     }
                 })
                 .map((c, index) => `${index + 1}. ${c.name} (Tam máx: ${c.maxSize || 'N/A'})`)
-                .join('\n');
+                .join('');
 
             if (!containerOptions) {
-                alert('❌ Nenhum container disponível!\n\nO item pode ser muito grande ou não há outros containers.');
+                alert('❌ Nenhum container disponível!O item pode ser muito grande ou não há outros containers.');
                 return;
             }
 
-            const choice = prompt(`Para qual container mover "${item.name}"?\n\n${containerOptions}\n\nDigite o número:`);
+            const choice = prompt(`Para qual container mover "${item.name}"?${containerOptions}Digite o número:`);
             if (!choice) return;
 
             const targetIndex = parseInt(choice) - 1;
@@ -9171,11 +9777,11 @@ Exemplos:
                 const atletismo = char.skills['atletismo'] || 1;
                 const maxSize = char.for * char.vig * atletismo;
                 if (itemData.tamanho > maxSize) {
-                    alert(`❌ Item muito grande!\n\nTamanho máximo permitido: ${maxSize}\nTamanho do item: ${itemData.tamanho}`);
+                    alert(`❌ Item muito grande!Tamanho máximo permitido: ${maxSize}Tamanho do item: ${itemData.tamanho}`);
                     return;
                 }
             } else if (itemData.tamanho > container.maxSize) {
-                alert(`❌ Item muito grande para este container!\n\nTamanho máximo: ${container.maxSize}\nTamanho do item: ${itemData.tamanho}`);
+                alert(`❌ Item muito grande para este container!Tamanho máximo: ${container.maxSize}Tamanho do item: ${itemData.tamanho}`);
                 return;
             }
 
@@ -9460,14 +10066,14 @@ Exemplos:
 
             const currentEXP = char.exp || 0;
             if (currentEXP < totalCost) {
-                alert(`❌ EXP Insuficiente!\n\nPrecisa: ${totalCost} EXP\nTem: ${currentEXP} EXP\nFalta: ${totalCost - currentEXP} EXP`);
+                alert(`❌ EXP Insuficiente!Precisa: ${totalCost} EXPTem: ${currentEXP} EXPFalta: ${totalCost - currentEXP} EXP`);
                 return;
             }
 
             const levelDiff = targetLevel - currentLevel;
             const msg = levelDiff === 1
-                ? `Aumentar ${attr.toUpperCase()} de ${currentLevel} → ${targetLevel}?\n\nCusto: ${totalCost} EXP`
-                : `Aumentar ${attr.toUpperCase()} de ${currentLevel} → ${targetLevel} (+${levelDiff})?\n\nCusto: ${totalCost} EXP`;
+                ? `Aumentar ${attr.toUpperCase()} de ${currentLevel} → ${targetLevel}?Custo: ${totalCost} EXP`
+                : `Aumentar ${attr.toUpperCase()} de ${currentLevel} → ${targetLevel} (+${levelDiff})?Custo: ${totalCost} EXP`;
 
             if (confirm(msg)) {
                 char[attr] = targetLevel;
@@ -9496,15 +10102,15 @@ Exemplos:
 
             const currentEXP = char.exp || 0;
             if (currentEXP < totalCost) {
-                alert(`❌ EXP Insuficiente!\n\nPrecisa: ${totalCost} EXP\nTem: ${currentEXP} EXP\nFalta: ${totalCost - currentEXP} EXP`);
+                alert(`❌ EXP Insuficiente!Precisa: ${totalCost} EXPTem: ${currentEXP} EXPFalta: ${totalCost - currentEXP} EXP`);
                 return;
             }
 
             const levelDiff = targetLevel - currentLevel;
             const skillName = skillId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             const msg = levelDiff === 1
-                ? `Aumentar ${skillName} de ${currentLevel} → ${targetLevel}?\n\nCusto: ${totalCost} EXP`
-                : `Aumentar ${skillName} de ${currentLevel} → ${targetLevel} (+${levelDiff})?\n\nCusto: ${totalCost} EXP`;
+                ? `Aumentar ${skillName} de ${currentLevel} → ${targetLevel}?Custo: ${totalCost} EXP`
+                : `Aumentar ${skillName} de ${currentLevel} → ${targetLevel} (+${levelDiff})?Custo: ${totalCost} EXP`;
 
             if (confirm(msg)) {
                 char.skills[skillId] = targetLevel;
@@ -9541,15 +10147,15 @@ Exemplos:
 
             const currentEXP = char.exp || 0;
             if (currentEXP < totalCost) {
-                alert(`❌ EXP Insuficiente!\n\nPrecisa: ${totalCost} EXP\nTem: ${currentEXP} EXP\nFalta: ${totalCost - currentEXP} EXP`);
+                alert(`❌ EXP Insuficiente!Precisa: ${totalCost} EXPTem: ${currentEXP} EXPFalta: ${totalCost - currentEXP} EXP`);
                 return;
             }
 
             const levelDiff = targetLevel - currentLevel;
             const abilityName = abilityId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             const msg = levelDiff === 1
-                ? `Aumentar ${abilityName} de ${currentLevel} → ${targetLevel}?\n\nCusto: ${totalCost} EXP (×${multiplier})`
-                : `Aumentar ${abilityName} de ${currentLevel} → ${targetLevel} (+${levelDiff})?\n\nCusto: ${totalCost} EXP (×${multiplier})`;
+                ? `Aumentar ${abilityName} de ${currentLevel} → ${targetLevel}?Custo: ${totalCost} EXP (×${multiplier})`
+                : `Aumentar ${abilityName} de ${currentLevel} → ${targetLevel} (+${levelDiff})?Custo: ${totalCost} EXP (×${multiplier})`;
 
             if (confirm(msg)) {
                 char.classAbilities[abilityId] = targetLevel;
@@ -9614,7 +10220,7 @@ Exemplos:
             // Verificar se tem EXP
             const currentEXP = char.exp || 0;
             if (currentEXP < 1) {
-                alert('❌ EXP Insuficiente!\n\nPrecisa: 1 EXP\nTem: ' + currentEXP + ' EXP');
+                alert('❌ EXP Insuficiente!Precisa: 1 EXPTem: ' + currentEXP + ' EXP');
                 return;
             }
 
@@ -9632,7 +10238,7 @@ Exemplos:
             }
 
             // Confirmar
-            if (!confirm(`Aprender a receita "${name}"?\n\nCusto: 1 EXP\nEXP atual: ${currentEXP}`)) {
+            if (!confirm(`Aprender a receita "${name}"?Custo: 1 EXPEXP atual: ${currentEXP}`)) {
                 return;
             }
 
@@ -9745,7 +10351,7 @@ Exemplos:
             // Verificar se tem EXP
             const currentEXP = char.exp || 0;
             if (currentEXP < 1) {
-                alert('❌ EXP Insuficiente!\n\nPrecisa: 1 EXP\nTem: ' + currentEXP + ' EXP');
+                alert('❌ EXP Insuficiente!Precisa: 1 EXPTem: ' + currentEXP + ' EXP');
                 return;
             }
 
@@ -9764,7 +10370,7 @@ Exemplos:
             }
 
             // Confirmar
-            if (!confirm(`Aprender o rito "${name}"?\n\nCusto: 1 EXP\nEXP atual: ${currentEXP}`)) {
+            if (!confirm(`Aprender o rito "${name}"?Custo: 1 EXPEXP atual: ${currentEXP}`)) {
                 return;
             }
 
@@ -10136,7 +10742,7 @@ Exemplos:
                 }
 
                 // Mostrar confirmação
-                const confirmacao = confirm(`🆙 Deseja fazer upgrade de GUARDIÃO IMPONENTE?\n\nNível ${nivelAtual} → Nível ${proximoNivel}\nCusto: ${custoUpgrade} EXP\nEXP atual: ${expAtual}\nEXP após upgrade: ${expAtual - custoUpgrade}\n\nConfirmar?`);
+                const confirmacao = confirm(`🆙 Deseja fazer upgrade de GUARDIÃO IMPONENTE?Nível ${nivelAtual} → Nível ${proximoNivel}Custo: ${custoUpgrade} EXPEXP atual: ${expAtual}EXP após upgrade: ${expAtual - custoUpgrade}Confirmar?`);
 
                 if (confirmacao) {
                     // Subtrair o EXP
@@ -10246,7 +10852,7 @@ Exemplos:
                 }
 
                 // Mostrar confirmação
-                const confirmacao = confirm(`🆙 Deseja fazer upgrade de GOLPE TITÂNICO?\n\nNível ${nivelAtual} → Nível ${proximoNivel}\nNovo Raio: ${proximoRaio}\nCusto: ${custoUpgrade} EXP\nEXP atual: ${expAtual}\nEXP após upgrade: ${expAtual - custoUpgrade}\n\nConfirmar?`);
+                const confirmacao = confirm(`🆙 Deseja fazer upgrade de GOLPE TITÂNICO?Nível ${nivelAtual} → Nível ${proximoNivel}Novo Raio: ${proximoRaio}Custo: ${custoUpgrade} EXPEXP atual: ${expAtual}EXP após upgrade: ${expAtual - custoUpgrade}Confirmar?`);
 
                 if (confirmacao) {
                     // Subtrair o EXP
@@ -10355,7 +10961,7 @@ Exemplos:
                 }
 
                 // Mostrar confirmação
-                const confirmacao = confirm(`🆙 Deseja fazer upgrade de BLINDAGEM NATURAL?\n\nNível ${nivelAtual} → Nível ${proximoNivel}\nBlindagem atual: +${nivelAtual} → Nova Blindagem: +${proximoNivel}\nCusto: ${custoUpgrade} EXP\nEXP atual: ${expAtual}\nEXP após upgrade: ${expAtual - custoUpgrade}\n\nConfirmar?`);
+                const confirmacao = confirm(`🆙 Deseja fazer upgrade de BLINDAGEM NATURAL?Nível ${nivelAtual} → Nível ${proximoNivel}Blindagem atual: +${nivelAtual} → Nova Blindagem: +${proximoNivel}Custo: ${custoUpgrade} EXPEXP atual: ${expAtual}EXP após upgrade: ${expAtual - custoUpgrade}Confirmar?`);
 
                 if (confirmacao) {
                     // Subtrair o EXP
@@ -10428,6 +11034,542 @@ Exemplos:
                 carregarBlingagemNatural(); // Carregar nível de Blindagem Natural do BD
             }, 1500); // Aguardar 1.5s para garantir que o character foi carregado
         });
+
+        // ========== PAINEL DE INFORMAÇÕES BÁSICAS DO PERSONAGEM ==========
+
+        // Função para abrir/fechar o painel de informações
+        window.toggleCharacterInfoPanel = function () {
+            const panel = document.getElementById('characterInfoPanel');
+            const overlay = document.getElementById('characterInfoOverlay');
+
+            if (panel && overlay) {
+                const isOpen = panel.classList.contains('open');
+
+                if (isOpen) {
+                    // Fechar o painel
+                    panel.classList.remove('open');
+                    overlay.classList.remove('open');
+                } else {
+                    // Abrir o painel e atualizar conteúdo
+                    updateCharacterInfoPanel();
+                    panel.classList.add('open');
+                    overlay.classList.add('open');
+                }
+            }
+        };
+
+        // Função para atualizar o conteúdo do painel
+        function updateCharacterInfoPanel() {
+            const container = document.getElementById('characterInfoContent');
+            if (!container) return;
+
+            const char = getChar();
+
+            let html = '';
+
+            // Imagem do Personagem (PRIMEIRO - antes de tudo)
+            if (char.characterImage) {
+                html += `
+                    <div class="panel-image-container">
+                        <img src="${char.characterImage}" alt="Personagem" class="panel-image-preview">
+                        <button class="panel-image-remove" onclick="removePanelCharacterImage()" title="Remover imagem">✕</button>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <label class="panel-image-upload" for="panelCharacterImageInput">
+                        📷 Escolher Imagem
+                    </label>
+                    <input type="file" id="panelCharacterImageInput" accept="image/*" style="display: none;" onchange="uploadPanelCharacterImage(this)">
+                `;
+            }
+
+            // EXP com destaque especial (PRIMEIRO - no topo)
+            const expValue = char.exp !== undefined && char.exp !== null ? char.exp : 0;
+            html += `
+                <div class="character-info-item exp">
+                    <div class="character-info-label">⭐ EXP</div>
+                    <div class="character-info-value">${expValue}</div>
+                </div>
+            `;
+
+            // Nome do Personagem (editável)
+            html += `
+                <div class="character-info-item editable">
+                    <div class="character-info-label">👤 Nome</div>
+                    <input type="text" class="character-info-input" id="panel-nome" 
+                        value="${char.nome || ''}" 
+                        placeholder="Digite o nome..."
+                        onchange="updatePanelField('nome', this.value)"
+                        oninput="updatePanelField('nome', this.value)">
+                </div>
+            `;
+
+            // Idade (editável)
+            html += `
+                <div class="character-info-item editable">
+                    <div class="character-info-label">🎂 Idade</div>
+                    <input type="number" class="character-info-input" id="panel-idade" 
+                        value="${char.idade || ''}" 
+                        placeholder="Ex: 25"
+                        min="0"
+                        onchange="updatePanelField('idade', parseInt(this.value) || 0)"
+                        oninput="updatePanelField('idade', parseInt(this.value) || 0)">
+                </div>
+            `;
+
+            // Raça (selecionável se não bloqueada)
+            const racaLocked = char.racaLocked || false;
+            const racaOptions = ['Humano', 'Elorin', 'Karu-Selvagem', 'Picxi', 'Yotun'];
+
+            if (racaLocked) {
+                html += `
+                    <div class="character-info-item">
+                        <div class="character-info-label">🧬 Raça 🔒</div>
+                        <div class="character-info-value">${char.raca || '—'}</div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="character-info-item editable">
+                        <div class="character-info-label">🧬 Raça</div>
+                        <select class="character-info-select" id="panel-raca" onchange="selectPanelRaca(this.value)">
+                            <option value="">Selecione...</option>
+                            ${racaOptions.map(raca =>
+                    `<option value="${raca}" ${char.raca === raca ? 'selected' : ''}>${raca}</option>`
+                ).join('')}
+                        </select>
+                    </div>
+                `;
+            }
+
+            // Classe (selecionável se não bloqueada)
+            const classeLocked = char.classeLocked || false;
+            const classeOptions = ['Caçador', 'Druida', 'Guerreiro', 'Adepto', 'Ladino', 'Pallacerdote', 'Ritualista'];
+
+            if (classeLocked) {
+                html += `
+                    <div class="character-info-item">
+                        <div class="character-info-label">⚔️ Classe 🔒</div>
+                        <div class="character-info-value">${char.classe || '—'}</div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="character-info-item editable">
+                        <div class="character-info-label">⚔️ Classe</div>
+                        <select class="character-info-select" id="panel-classe" onchange="selectPanelClasse(this.value)">
+                            <option value="">Selecione...</option>
+                            ${classeOptions.map(classe =>
+                    `<option value="${classe}" ${char.classe === classe ? 'selected' : ''}>${classe}</option>`
+                ).join('')}
+                        </select>
+                    </div>
+                `;
+            }
+
+            // Virtude, Vício, Tamanho, Altura (apenas exibição)
+            html += `
+                <div class="character-info-item">
+                    <div class="character-info-label">✨ Virtude</div>
+                    <div class="character-info-value">${char.virtude || '—'}</div>
+                </div>
+                <div class="character-info-item">
+                    <div class="character-info-label">💀 Vício</div>
+                    <div class="character-info-value">${char.vicio || '—'}</div>
+                </div>
+                <div class="character-info-item">
+                    <div class="character-info-label">📏 Tamanho</div>
+                    <div class="character-info-value">${char.tamanho ? char.tamanho : '—'}</div>
+                </div>
+                <div class="character-info-item">
+                    <div class="character-info-label">📐 Altura (metros)</div>
+                    <div class="character-info-value">${char.altura ? parseFloat(char.altura).toFixed(2) + 'm' : '—'}</div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Função para atualizar campo do painel (Nome, Idade)
+        window.updatePanelField = function (field, value) {
+            const char = getChar();
+            char[field] = value;
+            const mainInput = document.getElementById(field);
+            if (mainInput) mainInput.value = value;
+            autoSave();
+        };
+
+        // Função para selecionar raça pelo painel
+        window.selectPanelRaca = function (raca) {
+            if (!raca) return;
+            const char = getChar();
+            if (char.racaLocked) {
+                alert('⚠️ A raça já foi definida e não pode mais ser alterada!');
+                updateCharacterInfoPanel();
+                return;
+            }
+            if (!confirm('🔒 CONFIRMAÇÃO DE RAÇAVocê está escolhendo: ' + raca + '⚠️ ATENÇÃO: Após confirmar, você NÃO poderá mais mudar de raça!Deseja confirmar esta escolha?')) {
+                updateCharacterInfoPanel();
+                return;
+            }
+            char.raca = raca;
+            char.racaLocked = true;
+            if (raca === 'Picxi') { char.tamanho = 3; char.altura = 1.10; char.skills['herbalismo'] = (char.skills['herbalismo'] || 0) + 1; updateSkillDots('herbalismo'); }
+            else if (raca === 'Yotun') { char.tamanho = 10; char.altura = 4.50; }
+            else { char.tamanho = 5; char.altura = 1.70; if (raca === 'Karu-Selvagem') { char.skills['briga'] = (char.skills['briga'] || 0) + 1; char.skills['agilidade'] = (char.skills['agilidade'] || 0) + 1; updateSkillDots('briga'); updateSkillDots('agilidade'); } }
+            const racaSelect = document.getElementById('raca');
+            if (racaSelect) { racaSelect.value = raca; racaSelect.disabled = true; racaSelect.style.opacity = '0.6'; }
+            document.getElementById('tamanho').value = char.tamanho;
+            document.getElementById('altura').value = char.altura;
+            updateAllCalculations(); updateClassTests(); autoSave(); updateCharacterInfoPanel();
+            alert('✅ Raça "' + raca + '" confirmada e bloqueada!');
+        };
+
+        // Função para selecionar classe pelo painel
+        window.selectPanelClasse = function (classe) {
+            if (!classe) return;
+            const char = getChar();
+            if (char.classeLocked) { alert('❌ Você já escolheu sua classe!'); updateCharacterInfoPanel(); return; }
+            if (classe && CLASS_ABILITIES[classe]) {
+                if (!confirm('⚠️ ATENÇÃO! ⚠️Você deseja escolher a classe: ' + classe + '?Após confirmar, você NÃO PODERÁ MAIS MUDAR sua classe!Tem certeza?')) {
+                    updateCharacterInfoPanel();
+                    return;
+                }
+                char.classe = classe;
+                char.classeLocked = true;
+                const classeSelect = document.getElementById('classe');
+                if (classeSelect) { classeSelect.value = classe; classeSelect.disabled = true; classeSelect.style.opacity = '0.6'; }
+                renderClassContent(classe);
+                autoSave(); updateCharacterInfoPanel();
+                alert('✅ Classe ' + classe + ' selecionada e bloqueada!');
+            }
+        };
+
+        // Função para upload de imagem pelo painel
+        window.uploadPanelCharacterImage = function (input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // Verificar tamanho (max 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                alert('❌ A imagem deve ter no máximo 2MB!');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const char = getChar();
+                char.characterImage = e.target.result;
+
+                // Atualizar também a preview na aba Básico
+                const mainPreview = document.getElementById('characterImagePreview');
+                if (mainPreview) {
+                    mainPreview.innerHTML = `<img src=\"${e.target.result}\" alt=\"Personagem\" style=\"width: 100%; height: 100%; object-fit: cover;\">`;
+                }
+                const removeBtn = document.getElementById('removeImageBtn');
+                if (removeBtn) removeBtn.style.display = 'inline-block';
+
+                autoSave();
+                updateCharacterInfoPanel();
+            };
+            reader.readAsDataURL(file);
+        };
+
+        // Função para remover imagem pelo painel
+        window.removePanelCharacterImage = function () {
+            const char = getChar();
+            char.characterImage = null;
+
+            // Atualizar também a preview na aba Básico
+            const mainPreview = document.getElementById('characterImagePreview');
+            if (mainPreview) {
+                mainPreview.innerHTML = '<div class=\"character-image-placeholder\">🎭</div>';
+            }
+            const removeBtn = document.getElementById('removeImageBtn');
+            if (removeBtn) removeBtn.style.display = 'none';
+
+            autoSave();
+            updateCharacterInfoPanel();
+        };
+
+        // ========== PAINEL DE INFORMAÇÕES RACIAIS ==========
+
+        // Dados das raças
+        const RACE_DATA = {
+            'Humano': {
+                emoji: '👤',
+                color: '#8b5cf6',
+                tamanho: '(5) 1,50~1,90m',
+                expectativa: '80 anos',
+                tendencia: 'Ambiciosos – Adaptáveis – Contraditórios',
+                aparencia: 'Pele em tons variados (claro a escuro), traços físicos diversos, variando por região.',
+                habitat: 'Áreas Urbanas, Rurais, Regiões Polares, Desertos, Subterrâneos e de Grandes Altitudes',
+                habilidades: [
+                    { nome: 'APRENDIZADO ACELERADO IV', desc: '+4 nível para distribuir em qualquer Habilidade na criação do personagem. (Não pode ser na mesma habilidade)', positivo: true },
+                    { nome: 'FORÇA DE VONTADE NATURAL I', desc: '+1 ponto de Determinação Máxima na criação de personagem.', positivo: true },
+                    { nome: 'EXPECTATIVA DE VIDA CURTA I', desc: 'Envelhecem mais rápido, limitados por linhas temporais curtas.', positivo: false },
+                    { nome: 'NATUREZA AUTODESTRUTIVA I', desc: '-1 em testes de interação com o Abismo e resistir as suas tendências naturais.', positivo: false }
+                ],
+                historia: 'Os humanos não foram os primeiros, mas estão entre os mais numerosos povos de Reliera. Expandiram-se pelas planícies e costas, formando cidades, reinos e impérios.',
+                imagem: 'https://imgur.com/IJNkW9U.png',
+                curiosidades: ['Humanos podem se adaptar a qualquer ambiente', 'Sua força está na diversidade cultural', 'Podem ser tanto santos quanto tiranos']
+            },
+            'Elorin': {
+                emoji: '🧝',
+                color: '#22c55e',
+                tamanho: '(5) 1,70~1,90m',
+                expectativa: 'Cerca de 180 anos',
+                tendencia: 'Sábios – Reflexivos – Reservados',
+                aparencia: 'Orelhas pontudas, pele verde, olhos esmeraldas.',
+                habitat: 'Florestas, regiões densamente vegetadas e ambientes naturais preservados',
+                habilidades: [
+                    { nome: 'RESISTÊNCIA A VENENOS NATURAIS I', desc: '+1 em testes contra Venenos Naturais.', positivo: true },
+                    { nome: 'VISÃO DE ESSÊNCIA', desc: 'Pode enxergar as essências externalizadas de um corpo ou objeto.', positivo: true },
+                    { nome: 'CONEXÃO COM A NATUREZA I', desc: '(Destreza + Autocontrole). Permite controlar pequenas porções de essência verde.', positivo: true },
+                    { nome: 'SATURAÇÃO VERDE I', desc: 'Reduz necessidade de alimentação oral em meio à natureza.', positivo: true },
+                    { nome: 'FRAQUEZA URBANA I', desc: '-1 em testes físicos ou de percepção em ambientes urbanos.', positivo: false }
+                ],
+                historia: 'Filhos da Floresta, os Elorins nasceram da fusão entre a Essência Verde e a luz do amanhecer.',
+                imagem: 'https://i.imgur.com/3C3aRaS.png',
+                curiosidades: ['Caçadores e Druidas treinados para proteger suas florestas', 'Possuem grande maestria com arcos', 'Alguns nascem com vínculo especial com a floresta']
+            },
+            'Karu-Selvagem': {
+                emoji: '🔥',
+                color: '#ef4444',
+                tamanho: '(5) 1,60~1,90m',
+                expectativa: 'Cerca de 150 anos',
+                tendencia: 'Impulsivos – Agressivos – Orgulhosos – Territorialistas',
+                aparencia: 'Humanoides de aparência bestial, cabelos vermelhos que podem incendiar, pernas peludas com joelhos invertidos e pés virados para trás.',
+                habitat: 'Regiões selvagens, montanhas, estepes e florestas isoladas',
+                habilidades: [
+                    { nome: 'CABEÇA QUENTE', desc: 'Pode incendiar os cabelos. Exige teste de AUT por cena; se sucesso, +1 bônus em RAC, FOR, DES, VIG e PRE.', positivo: true },
+                    { nome: 'PÉS INVERTIDOS I', desc: '+1 nível em Briga e Agilidade.', positivo: true },
+                    { nome: 'SANGUE IMPURO I', desc: 'Sofrem discriminação em ambientes religiosos.', positivo: false },
+                    { nome: 'REBELDE', desc: '-1 em testes para seguir comandos ou funcionar em equipe.', positivo: false },
+                    { nome: 'ÓDIO DOS KARU-REAIS', desc: 'Conflitos automáticos com Karu-Reais.', positivo: false }
+                ],
+                historia: 'Os Karu-Selvagens são descendentes renegados dos Karu Originais, amaldiçoados por desafiarem a ordem divina.',
+                imagem: 'https://i.imgur.com/U4Gldd1.png',
+                curiosidades: ['Dominam táticas de emboscada e caça tribal', 'Sua mutação pode ter sido reforçada com magia rúnica proibida', 'O idioma Velikár é passado de geração a geração']
+            },
+            'Picxi': {
+                emoji: '🧚',
+                color: '#fbbf24',
+                tamanho: '("3") 1,00~1,20m',
+                expectativa: 'Cerca de 150 anos',
+                tendencia: 'Determinadas – Corajosas – Intuitivas',
+                aparencia: 'Pele com brilho sutil, olhos grandes e expressivos, asas translúcidas de libélula, aura dourada etérea.',
+                habitat: 'Entre os humanos ou em Florestas sob a proteção da Rainha das Luxis',
+                habilidades: [
+                    { nome: 'DESCENDÊNCIA LUXIANA', desc: 'Asas Luxianas fornecem mais Deslocamento Aéreo. Flutuação lenta passiva.', positivo: true },
+                    { nome: 'AURA DE LEVITAÇÃO', desc: 'Podem fazer objetos/pessoas flutuarem. Teste de Manipulação.', positivo: true },
+                    { nome: 'HERBALISMO +1', desc: 'Começa com Herbalismo +1.', positivo: true },
+                    { nome: 'FRÁGIL E PEQUENA', desc: '+1 de dano recebido em ataques físicos. +1 de peso para carregar.', positivo: false },
+                    { nome: 'AURA DENUNCIADORA', desc: 'Facilmente detectadas, penalidades em furtividade.', positivo: false }
+                ],
+                historia: 'Criadas pela Rainha das Luxis, as Picxis são fadas humanoides ligadas à essência natural da floresta.',
+                imagem: 'https://i.imgur.com/J2C976w.png',
+                curiosidades: ['Carregam uma aura dourada que permite interferir no mundo físico', 'Sua beleza sutil as torna figuras lendárias e misteriosas', 'Possuem conexão natural com plantas medicinais']
+            },
+            'Yotun': {
+                emoji: '🗿',
+                color: '#6b7280',
+                tamanho: '("10") 3,00~6,00m',
+                expectativa: 'Cerca de 200 anos',
+                tendencia: 'Protetores – Honrados – Vigilantes',
+                aparencia: 'Corpo colossal, mandíbula avantajada com presas, pele robusta, pernas longas e tronco largo.',
+                habitat: 'Regiões elevadas de Vasteluna, principalmente na tribo Ogo',
+                habilidades: [
+                    { nome: 'GUARDIÃO IMPONENTE I', desc: '+1 em Intimidação e Proteção territorial.', positivo: true },
+                    { nome: 'FORÇA COLOSSAL', desc: 'Permite alocar mais de 3 pontos em FOR e VIG na criação.', positivo: true },
+                    { nome: 'PASSOS DE GIGANTE', desc: 'Dobra Deslocamento Terrestre para viagens.', positivo: true },
+                    { nome: 'ALTA CARGA', desc: 'Dobra o valor de Carga Máxima.', positivo: true },
+                    { nome: 'GOLPE TITÂNICO I', desc: 'Ataques afetam área em torno do alvo.', positivo: true },
+                    { nome: 'BLINDAGEM NATURAL II', desc: '+2 de Blindagem.', positivo: true },
+                    { nome: 'VULNERABILIDADE A PROJÉTEIS III', desc: 'Dano extra de ataques à distância.', positivo: false },
+                    { nome: 'VULNERABILIDADE PSÍQUICA I', desc: '-1 em resistência à influência mágica/psíquica.', positivo: false }
+                ],
+                historia: 'Os Yotuns são uma raça ancestral de gigantes criados para proteger os caminhos dos deuses.',
+                imagem: 'https://i.imgur.com/J5BIkkR.png',
+                curiosidades: ['A maioria vive na tribo Ogo', 'Alguns possuem placas ósseas tão densas que parecem armaduras', 'Suas marcas são usadas como marcos sagrados', 'Podem usar escudos de pedra e armas enormes']
+            }
+        };
+
+        // Função para abrir/fechar o painel de raça
+        window.toggleRaceInfoPanel = function () {
+            const panel = document.getElementById('raceInfoPanel');
+
+            if (panel) {
+                const isOpen = panel.classList.contains('open');
+
+                if (isOpen) {
+                    panel.classList.remove('open');
+                } else {
+                    updateRaceInfoPanel();
+                    panel.classList.add('open');
+                }
+            }
+        };
+
+        // Função para atualizar o conteúdo do painel de raça
+        function updateRaceInfoPanel() {
+            const container = document.getElementById('raceInfoContent');
+            if (!container) return;
+
+            const char = getChar();
+            const raca = char.raca;
+
+            if (!raca || !RACE_DATA[raca]) {
+                container.innerHTML = `
+                    <div class="race-no-selection">
+                        <div style="font-size: 3rem; margin-bottom: 15px;">🧬</div>
+                        <div style="font-size: 1rem; font-weight: 600; margin-bottom: 10px;">Nenhuma raça selecionada</div>
+                        <div style="font-size: 0.85rem;">Selecione uma raça na aba Básico ou no painel 📋</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const data = RACE_DATA[raca];
+            let html = '';
+
+            // Imagem da Raça (se disponível)
+            if (data.imagem) {
+                html += `<div style="margin-bottom: 12px;">
+                    <img src="${data.imagem}" alt="${raca}" style="width: 100%; max-height: 400px; object-fit: cover; object-position: top center; border-radius: 8px; border: 2px solid ${data.color}; display: block;" onerror="this.style.display='none';">
+                </div>`;
+            }
+
+            // Nome da raça
+            html += `<div style="text-align: center; margin-bottom: 12px;">
+                <div style="font-size: 1.8rem;">${data.emoji}</div>
+                <div style="font-size: 1.2rem; font-weight: 700; color: ${data.color};">${raca}</div>
+            </div>`;
+
+            // Características básicas
+            html += `<div class="race-info-section" style="border-color: ${data.color};">
+                <div class="race-info-section-title" style="color: ${data.color};">📏 Tamanho</div>
+                <div class="race-info-section-content">${data.tamanho}</div>
+            </div>`;
+
+            html += `<div class="race-info-section" style="border-color: ${data.color};">
+                <div class="race-info-section-title" style="color: ${data.color};">⏳ Expectativa de Vida</div>
+                <div class="race-info-section-content">${data.expectativa}</div>
+            </div>`;
+
+            html += `<div class="race-info-section" style="border-color: ${data.color};">
+                <div class="race-info-section-title" style="color: ${data.color};">🎭 Tendência</div>
+                <div class="race-info-section-content">${data.tendencia}</div>
+            </div>`;
+
+            html += `<div class="race-info-section" style="border-color: ${data.color};">
+                <div class="race-info-section-title" style="color: ${data.color};">👤 Aparência</div>
+                <div class="race-info-section-content">${data.aparencia}</div>
+            </div>`;
+
+            html += `<div class="race-info-section" style="border-color: ${data.color};">
+                <div class="race-info-section-title" style="color: ${data.color};">🏞️ Habitat</div>
+                <div class="race-info-section-content">${data.habitat}</div>
+            </div>`;
+
+            // Habilidades raciais COM BOTÕES DE UPGRADE
+            html += `<div style="margin-top: 15px; margin-bottom: 10px;">
+                <div style="font-size: 0.95rem; font-weight: 700; color: ${data.color};">⚔️ Peculiaridades</div>
+            </div>`;
+
+            // Para Yotun - habilidades com upgrade
+            if (raca === 'Yotun') {
+                const guardiaoNivel = (char.skillRace && char.skillRace.guardiaoImponente) || 1;
+                const golpeNivel = (char.skillRace && char.skillRace.golpeTitanico) || 1;
+                const blindagemNivel = (char.skillRace && char.skillRace.blindagemNatural) || 2;
+                const golpeRaios = { 1: '1,50m', 2: '2m', 3: '3m', 4: '4,5m', 5: '6m' };
+
+                // Guardião Imponente (upgradeable)
+                html += `<div class="race-ability-item" style="border-color: ${data.color};">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="race-ability-name" style="color: ${data.color};">🛡️ GUARDIÃO IMPONENTE ${guardiaoNivel}</div>
+                        ${guardiaoNivel < 5 ? `<button onclick="upgradeGuardiaoImponente(); updateRaceInfoPanel();" style="background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none; color: white; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">⭐</button>` : '<span style="color: #22c55e; font-size: 0.7rem;">MAX</span>'}
+                    </div>
+                    <div class="race-ability-desc">Usam seu tamanho e imponência para intimidar invasores.<br><span style="color: var(--success);">+${guardiaoNivel} em Intimidação e Proteção territorial</span><br><span style="color: #fbbf24; font-size: 0.7rem;">Níveis: II (+2, 5 EXP), III (+3, 10 EXP), IV (+4, 25 EXP), V (+5, 40 EXP)</span></div>
+                </div>`;
+
+                // Força Colossal (fixed)
+                html += `<div class="race-ability-item" style="border-color: ${data.color};">
+                    <div class="race-ability-name" style="color: ${data.color};">💪 FORÇA COLOSSAL</div>
+                    <div class="race-ability-desc">Capaz de levantar e arremessar objetos enormes.<br><span style="color: var(--success);">Permite alocar mais de 3 pontos em FOR e VIG</span></div>
+                </div>`;
+
+                // Passos de Gigante (fixed)
+                html += `<div class="race-ability-item" style="border-color: ${data.color};">
+                    <div class="race-ability-name" style="color: ${data.color};">👣 PASSOS DE GIGANTE</div>
+                    <div class="race-ability-desc">Pode atravessar grandes distâncias com poucas passadas.<br><span style="color: var(--success);">Dobra Deslocamento Terrestre para viagens</span></div>
+                </div>`;
+
+                // Alta Carga (fixed)
+                html += `<div class="race-ability-item" style="border-color: ${data.color};">
+                    <div class="race-ability-name" style="color: ${data.color};">🎒 ALTA CARGA</div>
+                    <div class="race-ability-desc">Pode carregar muito peso sem se incomodar.<br><span style="color: var(--success);">Dobra o valor de Carga Máxima</span></div>
+                </div>`;
+
+                // Golpe Titânico (upgradeable)
+                html += `<div class="race-ability-item" style="border-color: ${data.color};">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="race-ability-name" style="color: ${data.color};">💥 GOLPE TITÂNICO ${golpeNivel}</div>
+                        ${golpeNivel < 5 ? `<button onclick="upgradeGolpeTitanico(); updateRaceInfoPanel();" style="background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none; color: white; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">⭐</button>` : '<span style="color: #22c55e; font-size: 0.7rem;">MAX</span>'}
+                    </div>
+                    <div class="race-ability-desc">Todo ataque físico afeta área em torno do alvo.<br><span style="color: var(--success);">Raio de até ${golpeRaios[golpeNivel]}</span><br><span style="color: #fbbf24; font-size: 0.7rem;">Níveis: II (2m, 5 EXP), III (3m, 10 EXP), IV (4,5m, 25 EXP), V (6m, 40 EXP)</span></div>
+                </div>`;
+
+                // Blindagem Natural (upgradeable)
+                html += `<div class="race-ability-item" style="border-color: ${data.color};">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="race-ability-name" style="color: ${data.color};">🛡️ BLINDAGEM NATURAL ${blindagemNivel}</div>
+                        ${blindagemNivel < 5 ? `<button onclick="upgradeBlindagemNatural(); updateRaceInfoPanel();" style="background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none; color: white; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">⭐</button>` : '<span style="color: #22c55e; font-size: 0.7rem;">MAX</span>'}
+                    </div>
+                    <div class="race-ability-desc">Sua pele é dura como pedra.<br><span style="color: var(--success);">+${blindagemNivel} de Blindagem</span><br><span style="color: #fbbf24; font-size: 0.7rem;">Níveis: III (+3, 10 EXP), IV (+4, 25 EXP), V (+5, 40 EXP)</span></div>
+                </div>`;
+
+                // Vulnerabilidades (negativas)
+                html += `<div class="race-ability-item negative">
+                    <div class="race-ability-name">🎯 VULNERABILIDADE A PROJÉTEIS III</div>
+                    <div class="race-ability-desc">Ataques à distância causam dano acrescido.<br><span style="color: var(--danger);">+1 a +3 dano extra de ataques à distância</span></div>
+                </div>`;
+
+                html += `<div class="race-ability-item negative">
+                    <div class="race-ability-name">🧠 VULNERABILIDADE PSÍQUICA I</div>
+                    <div class="race-ability-desc">Influências mágicas e psíquicas afetam mais.<br><span style="color: var(--danger);">-1 em resistência a influência mágica/mental</span></div>
+                </div>`;
+
+            } else {
+                // Outras raças - habilidades normais
+                data.habilidades.forEach(hab => {
+                    const itemClass = hab.positivo ? 'race-ability-item' : 'race-ability-item negative';
+                    html += `<div class="${itemClass}" style="${hab.positivo ? 'border-color: ' + data.color : ''}">
+                        <div class="race-ability-name" style="${hab.positivo ? 'color: ' + data.color : ''}">${hab.positivo ? '✅' : '❌'} ${hab.nome}</div>
+                        <div class="race-ability-desc">${hab.desc}</div>
+                    </div>`;
+                });
+            }
+
+            // História
+            html += `<div class="race-info-section" style="border-color: ${data.color}; margin-top: 15px;">
+                <div class="race-info-section-title" style="color: ${data.color};">📜 História</div>
+                <div class="race-info-section-content">${data.historia}</div>
+            </div>`;
+
+            // Curiosidades (se disponível)
+            if (data.curiosidades && data.curiosidades.length > 0) {
+                html += `<div class="race-info-section" style="border-color: #06b6d4; margin-top: 10px;">
+                    <div class="race-info-section-title" style="color: #06b6d4;">💡 Curiosidades</div>
+                    <ul style="margin: 0; padding-left: 16px; font-size: 0.8rem; color: #cbd5e1;">
+                        ${data.curiosidades.map(c => `<li>${c}</li>`).join('')}
+                    </ul>
+                </div>`;
+            }
+
+            container.innerHTML = html;
+        }
 
     </script>
 
