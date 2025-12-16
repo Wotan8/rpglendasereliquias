@@ -146,6 +146,17 @@
             }
         }
 
+        /* Margem para evitar sobreposição com botões flutuantes */
+        .container {
+            margin-left: 60px;
+        }
+
+        @media (max-width: 639px) {
+            .container {
+                margin-left: 45px;
+            }
+        }
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -350,6 +361,45 @@
             flex-shrink: 0;
         }
 
+        /* ========== SEÇÕES RECOLHÍVEIS ========== */
+        .section.collapsible .section-title {
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.3s ease;
+        }
+
+        .section.collapsible .section-title:hover {
+            color: var(--secondary);
+        }
+
+        .section.collapsible .section-title::after {
+            content: '▼';
+            font-size: 0.8rem;
+            margin-left: auto;
+            transition: transform 0.3s ease;
+            color: #94a3b8;
+        }
+
+        .section.collapsible.collapsed .section-title::after {
+            transform: rotate(-90deg);
+        }
+
+        .section.collapsible .section-content {
+            overflow: hidden;
+            max-height: 5000px;
+            transition: max-height 0.4s ease-out, opacity 0.3s ease;
+            opacity: 1;
+        }
+
+        .section.collapsible.collapsed .section-content {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .section.collapsible.collapsed .section-title {
+            margin-bottom: 0;
+        }
+
         .grid {
             display: grid;
             gap: 12px;
@@ -483,16 +533,16 @@
 
         .dots {
             display: flex;
-            gap: 4px;
+            gap: 3px;
             flex-shrink: 0;
             flex-wrap: nowrap;
         }
 
         .dot {
-            width: 28px;
-            height: 28px;
-            min-width: 28px;
-            min-height: 28px;
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            min-height: 20px;
             border-radius: 50%;
             border: 2px solid var(--primary);
             cursor: pointer;
@@ -507,7 +557,7 @@
 
         .dot.filled {
             background: linear-gradient(135deg, var(--primary), var(--secondary));
-            box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
+            box-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
         }
 
         .skill-item {
@@ -1054,14 +1104,14 @@
             }
 
             .dots {
-                gap: 3px;
+                gap: 2px;
             }
 
             .dot {
-                width: 26px;
-                height: 26px;
-                min-width: 26px;
-                min-height: 26px;
+                width: 18px;
+                height: 18px;
+                min-width: 18px;
+                min-height: 18px;
                 border-width: 2px;
             }
 
@@ -1112,14 +1162,14 @@
             }
 
             .dots {
-                gap: 5px;
+                gap: 3px;
             }
 
             .dot {
-                width: 30px;
-                height: 30px;
-                min-width: 30px;
-                min-height: 30px;
+                width: 22px;
+                height: 22px;
+                min-width: 22px;
+                min-height: 22px;
             }
         }
 
@@ -1139,15 +1189,15 @@
             }
 
             .dot {
-                width: 32px;
-                height: 32px;
-                min-width: 32px;
-                min-height: 32px;
-                border-width: 3px;
+                width: 24px;
+                height: 24px;
+                min-width: 24px;
+                min-height: 24px;
+                border-width: 2px;
             }
 
             .dots {
-                gap: 6px;
+                gap: 4px;
             }
         }
 
@@ -1255,13 +1305,13 @@
             position: fixed;
             top: 10px;
             left: 10px;
-            width: 50px;
-            height: 50px;
+            width: 45px;
+            height: 45px;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             border: none;
             border-radius: 50%;
             color: white;
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             cursor: pointer;
             z-index: 9997;
             box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
@@ -1282,15 +1332,15 @@
 
         .race-info-btn {
             position: fixed;
-            top: 70px;
+            top: 60px;
             left: 10px;
-            width: 50px;
-            height: 50px;
+            width: 45px;
+            height: 45px;
             background: linear-gradient(135deg, #22c55e, #16a34a);
             border: none;
             border-radius: 50%;
             color: white;
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             cursor: pointer;
             z-index: 9997;
             box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
@@ -1421,11 +1471,19 @@
         }
 
         @media (max-width: 639px) {
+            .character-info-btn {
+                width: 36px;
+                height: 36px;
+                font-size: 1.1rem;
+                top: 8px;
+                left: 5px;
+            }
+
             .race-info-btn {
-                width: 44px;
-                height: 44px;
-                font-size: 1.3rem;
-                top: 55px;
+                width: 36px;
+                height: 36px;
+                font-size: 1.1rem;
+                top: 50px;
                 left: 5px;
             }
 
@@ -1438,15 +1496,15 @@
         /* ========== BOTÃO E PAINEL DE CARACTERÍSTICAS ========== */
         .char-stats-btn {
             position: fixed;
-            top: 130px;
+            top: 110px;
             left: 10px;
-            width: 50px;
-            height: 50px;
+            width: 45px;
+            height: 45px;
             background: linear-gradient(135deg, #f59e0b, #d97706);
             border: none;
             border-radius: 50%;
             color: white;
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             cursor: pointer;
             z-index: 9997;
             box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
@@ -1517,6 +1575,248 @@
         .char-stats-panel-close:hover {
             background: var(--danger);
             color: white;
+        }
+
+        /* ========== PAINEL DE CLASSE ========== */
+        .class-info-btn {
+            position: fixed;
+            top: 160px;
+            left: 10px;
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #a855f7, #7c3aed);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.3rem;
+            cursor: pointer;
+            z-index: 9997;
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .class-info-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(168, 85, 247, 0.6);
+        }
+
+        .class-info-btn:active {
+            transform: scale(0.95);
+        }
+
+        .class-info-panel {
+            position: fixed;
+            top: 0;
+            left: -380px;
+            width: 350px;
+            height: 100vh;
+            background: linear-gradient(180deg, var(--darker) 0%, var(--dark) 100%);
+            border-right: 3px solid #a855f7;
+            z-index: 10001;
+            transition: left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 5px 0 30px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .class-info-panel.open {
+            left: 0;
+        }
+
+        .class-info-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #a855f7;
+        }
+
+        .class-info-panel-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #a855f7;
+        }
+
+        .class-info-panel-close {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid var(--danger);
+            color: var(--danger);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .class-info-panel-close:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Collapsible Section for Class Info */
+        .class-collapsible {
+            background: rgba(168, 85, 247, 0.1);
+            border: 2px solid rgba(168, 85, 247, 0.3);
+            border-radius: 12px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .class-collapsible-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .class-collapsible-header:hover {
+            background: rgba(168, 85, 247, 0.15);
+        }
+
+        .class-collapsible-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #a855f7;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .class-collapsible-arrow {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            transition: transform 0.3s ease;
+        }
+
+        .class-collapsible.collapsed .class-collapsible-arrow {
+            transform: rotate(-90deg);
+        }
+
+        .class-collapsible-content {
+            max-height: 5000px;
+            opacity: 1;
+            transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.3s ease;
+            padding: 0 15px 15px 15px;
+        }
+
+        .class-collapsible.collapsed .class-collapsible-content {
+            max-height: 0;
+            opacity: 0;
+            padding: 0 15px;
+            overflow: hidden;
+        }
+
+        /* Class Mini Cards */
+        .class-mini-section {
+            margin-bottom: 12px;
+        }
+
+        .class-mini-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #f59e0b;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .class-mini-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 0.8rem;
+        }
+
+        .class-mini-item-name {
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        .class-mini-item-value {
+            color: #a855f7;
+            font-weight: 700;
+        }
+
+        .class-mini-dots {
+            display: flex;
+            gap: 3px;
+        }
+
+        .class-mini-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 1.5px solid #a855f7;
+        }
+
+        .class-mini-dot.filled {
+            background: linear-gradient(135deg, #a855f7, #ec4899);
+        }
+
+        .class-info-box {
+            background: rgba(168, 85, 247, 0.08);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+            line-height: 1.5;
+        }
+
+        .class-info-box strong {
+            color: #a855f7;
+        }
+
+        .class-resource-mini {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 6px;
+            margin-bottom: 6px;
+        }
+
+        .class-resource-name {
+            color: #10b981;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .class-resource-value {
+            color: #e2e8f0;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 639px) {
+            .class-info-btn {
+                width: 38px;
+                height: 38px;
+                font-size: 1.1rem;
+                top: 145px;
+            }
+
+            .class-info-panel {
+                width: 320px;
+                left: -340px;
+            }
         }
 
         .char-stats-item {
@@ -1592,10 +1892,10 @@
 
         @media (max-width: 639px) {
             .char-stats-btn {
-                width: 44px;
-                height: 44px;
-                font-size: 1.3rem;
-                top: 110px;
+                width: 36px;
+                height: 36px;
+                font-size: 1.1rem;
+                top: 92px;
                 left: 5px;
             }
 
@@ -2130,7 +2430,8 @@
             /* Ajustar painéis para não ficarem com sombra quando desktop */
             body.panel-open-desktop .character-info-panel.open,
             body.panel-open-desktop .race-info-panel.open,
-            body.panel-open-desktop .char-stats-panel.open {
+            body.panel-open-desktop .char-stats-panel.open,
+            body.panel-open-desktop .class-info-panel.open {
                 box-shadow: 2px 0 15px rgba(0, 0, 0, 0.3);
             }
         }
@@ -2140,7 +2441,8 @@
 
             .character-info-panel,
             .race-info-panel,
-            .char-stats-panel {
+            .char-stats-panel,
+            .class-info-panel {
                 transition: left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
                     transform 0.2s ease;
                 will-change: transform;
@@ -2220,6 +2522,22 @@
             <button class="char-stats-panel-close" onclick="toggleCharStatsPanel()" title="Fechar">✕</button>
         </div>
         <div id="charStatsContent">
+            <!-- Conteúdo será preenchido via JavaScript -->
+        </div>
+    </div>
+
+    <!-- BOTÃO DE CLASSE DO PERSONAGEM -->
+    <button class="class-info-btn" id="classInfoBtn" onclick="toggleClassInfoPanel()" title="Classes">
+        🧙‍♂️
+    </button>
+
+    <!-- PAINEL DE CLASSE DO PERSONAGEM -->
+    <div class="class-info-panel" id="classInfoPanel">
+        <div class="class-info-panel-header">
+            <div class="class-info-panel-title">🧙‍♂️ Classes</div>
+            <button class="class-info-panel-close" onclick="toggleClassInfoPanel()" title="Fechar">✕</button>
+        </div>
+        <div id="classInfoContent">
             <!-- Conteúdo será preenchido via JavaScript -->
         </div>
     </div>
@@ -3114,136 +3432,139 @@
 
         <!-- ABA ATRIBUTOS -->
         <div id="atributos" class="tab-content active">
-            <div class="section">
-                <h2 class="section-title">📜 Atributos</h2>
-                <p style="color: #94a3b8; margin-bottom: 12px; font-size: 0.8rem;">Toque nas bolinhas para
-                    preencher/esvaziar.</p>
+            <div class="section collapsible" id="section-atributos">
+                <h2 class="section-title" onclick="toggleSection('section-atributos')">📜 Atributos</h2>
+                <div class="section-content">
+                    <p style="color: #94a3b8; margin-bottom: 12px; font-size: 0.8rem;">Toque nas bolinhas para
+                        preencher/esvaziar.</p>
 
-                <div class="attributes-group-grid">
-                    <!-- Mental -->
-                    <div class="attribute-group-card">
-                        <div class="group-title mental">🧠 Mental</div>
-                        <div class="attr-row">
-                            <div class="attr-info">
-                                <div class="attr-name">Inteligência <span style="color: var(--primary);">[INT]</span>
+                    <div class="attributes-group-grid">
+                        <!-- Mental -->
+                        <div class="attribute-group-card">
+                            <div class="group-title mental">🧠 Mental</div>
+                            <div class="attr-row">
+                                <div class="attr-info">
+                                    <div class="attr-name">Inteligência <span
+                                            style="color: var(--primary);">[INT]</span>
+                                    </div>
+                                    <div class="attr-sub">Poder</div>
                                 </div>
-                                <div class="attr-sub">Poder</div>
+                                <div class="dots" id="dots-int"></div>
                             </div>
-                            <div class="dots" id="dots-int"></div>
-                        </div>
-                        <div class="attr-row">
-                            <div class="attr-info">
-                                <div class="attr-name">Raciocínio <span style="color: var(--primary);">[RAC]</span>
+                            <div class="attr-row">
+                                <div class="attr-info">
+                                    <div class="attr-name">Raciocínio <span style="color: var(--primary);">[RAC]</span>
+                                    </div>
+                                    <div class="attr-sub">Refinamento</div>
                                 </div>
-                                <div class="attr-sub">Refinamento</div>
+                                <div class="dots" id="dots-rac"></div>
                             </div>
-                            <div class="dots" id="dots-rac"></div>
-                        </div>
-                        <div class="attr-row">
-                            <div class="attr-info">
-                                <div class="attr-name">Perseverança <span style="color: var(--primary);">[PRS]</span>
+                            <div class="attr-row">
+                                <div class="attr-info">
+                                    <div class="attr-name">Perseverança <span
+                                            style="color: var(--primary);">[PRS]</span>
+                                    </div>
+                                    <div class="attr-sub">Resistência</div>
                                 </div>
-                                <div class="attr-sub">Resistência</div>
+                                <div class="dots" id="dots-prs"></div>
                             </div>
-                            <div class="dots" id="dots-prs"></div>
                         </div>
-                    </div>
 
-                    <!-- Físico -->
-                    <div class="attribute-group-card">
-                        <div class="group-title fisico">💪 Físico</div>
-                        <div class="attr-row">
-                            <div class="attr-info">
-                                <div class="attr-name">Força <span style="color: var(--primary);">[FOR]</span></div>
-                                <div class="attr-sub">Poder</div>
+                        <!-- Físico -->
+                        <div class="attribute-group-card">
+                            <div class="group-title fisico">💪 Físico</div>
+                            <div class="attr-row">
+                                <div class="attr-info">
+                                    <div class="attr-name">Força <span style="color: var(--primary);">[FOR]</span></div>
+                                    <div class="attr-sub">Poder</div>
+                                </div>
+                                <div class="dots" id="dots-for"></div>
                             </div>
-                            <div class="dots" id="dots-for"></div>
-                        </div>
-                        <div class="attr-row">
-                            <div class="attr-info">
-                                <div class="attr-name">Destreza <span style="color: var(--primary);">[DES]</span></div>
-                                <div class="attr-sub">Refinamento</div>
+                            <div class="attr-row">
+                                <div class="attr-info">
+                                    <div class="attr-name">Destreza <span style="color: var(--primary);">[DES]</span>
+                                    </div>
+                                    <div class="attr-sub">Refinamento</div>
+                                </div>
+                                <div class="dots" id="dots-des"></div>
                             </div>
-                            <div class="dots" id="dots-des"></div>
-                        </div>
-                        <div class="attr-row">
-                            <div class="attr-info">
-                                <div class="attr-name">Vigor <span style="color: var(--primary);">[VIG]</span></div>
-                                <div class="attr-sub">Resistência</div>
+                            <div class="attr-row">
+                                <div class="attr-info">
+                                    <div class="attr-name">Vigor <span style="color: var(--primary);">[VIG]</span></div>
+                                    <div class="attr-sub">Resistência</div>
+                                </div>
+                                <div class="dots" id="dots-vig"></div>
                             </div>
-                            <div class="dots" id="dots-vig"></div>
                         </div>
-                    </div>
 
-                    <!-- Social -->
-                    <div class="attribute-group-card">
-                        <div class="group-title social">💬 Social</div>
-                        <div class="attr-row">
-                            <div class="attr-info">
-                                <div class="attr-name">Presença <span style="color: var(--primary);">[PRE]</span></div>
-                                <div class="attr-sub">Poder</div>
-                            </div>
-                            <div class="dots" id="dots-pre"></div>
-                        </div>
-                        <div class="attr-row">
-                            <div class="attr-info">
-                                <div class="attr-name">Manipulação <span style="color: var(--primary);">[MAN]</span>
+                        <!-- Social -->
+                        <div class="attribute-group-card">
+                            <div class="group-title social">💬 Social</div>
+                            <div class="attr-row">
+                                <div class="attr-info">
+                                    <div class="attr-name">Presença <span style="color: var(--primary);">[PRE]</span>
+                                    </div>
+                                    <div class="attr-sub">Poder</div>
                                 </div>
-                                <div class="attr-sub">Refinamento</div>
+                                <div class="dots" id="dots-pre"></div>
                             </div>
-                            <div class="dots" id="dots-man"></div>
-                        </div>
-                        <div class="attr-row">
-                            <div class="attr-info">
-                                <div class="attr-name">Autocontrole <span style="color: var(--primary);">[AUT]</span>
+                            <div class="attr-row">
+                                <div class="attr-info">
+                                    <div class="attr-name">Manipulação <span style="color: var(--primary);">[MAN]</span>
+                                    </div>
+                                    <div class="attr-sub">Refinamento</div>
                                 </div>
-                                <div class="attr-sub">Resistência</div>
+                                <div class="dots" id="dots-man"></div>
                             </div>
-                            <div class="dots" id="dots-aut"></div>
+                            <div class="attr-row">
+                                <div class="attr-info">
+                                    <div class="attr-name">Autocontrole <span
+                                            style="color: var(--primary);">[AUT]</span>
+                                    </div>
+                                    <div class="attr-sub">Resistência</div>
+                                </div>
+                                <div class="dots" id="dots-aut"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="section">
-                <h2 class="section-title">🎯 Habilidades</h2>
-                <p style="color: #94a3b8; margin-bottom: 10px; font-size: 0.8rem;">Cada habilidade tem 5 níveis. Toque
-                    nas bolinhas.</p>
+            <div class="section collapsible" id="section-habilidades">
+                <h2 class="section-title" onclick="toggleSection('section-habilidades')">🎯 Habilidades</h2>
+                <div class="section-content">
+                    <p style="color: #94a3b8; margin-bottom: 10px; font-size: 0.8rem;">Cada habilidade tem 5 níveis.
+                        Toque
+                        nas bolinhas.</p>
 
-                <div class="skills-compact-grid">
-                    <div class="skills-compact-group">
-                        <div class="attribute-header">🧠 Mental <span class="penalty">(-3 se inapto)</span></div>
-                        <div id="skills-mental"></div>
-                    </div>
+                    <div class="skills-compact-grid">
+                        <div class="skills-compact-group">
+                            <div class="attribute-header">🧠 Mental <span class="penalty">(-3 se inapto)</span></div>
+                            <div id="skills-mental"></div>
+                        </div>
 
-                    <div class="skills-compact-group">
-                        <div class="attribute-header">💪 Físico <span class="penalty">(-1 se inapto)</span></div>
-                        <div id="skills-fisico"></div>
-                    </div>
+                        <div class="skills-compact-group">
+                            <div class="attribute-header">💪 Físico <span class="penalty">(-1 se inapto)</span></div>
+                            <div id="skills-fisico"></div>
+                        </div>
 
-                    <div class="skills-compact-group">
-                        <div class="attribute-header">💬 Social <span class="penalty">(-1 se inapto)</span></div>
-                        <div id="skills-social"></div>
+                        <div class="skills-compact-group">
+                            <div class="attribute-header">💬 Social <span class="penalty">(-1 se inapto)</span></div>
+                            <div id="skills-social"></div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- BLOCO AURAS -->
-            <div class="section">
-                <h2 class="section-title">✨ Auras</h2>
-
-                <div class="aura-item">
-                    <div class="aura-header">
-                        <span class="aura-name">Aura de Imortalidade (AI)</span>
-                        <span class="aura-value" id="aura-imortalidade-value">1</span>
-                    </div>
-                </div>
-
-                <div class="aura-info">
-                    <p>📖 <strong>Sobre Aura de Imortalidade:</strong></p>
-                    <p>Criaturas com um grau de aura superior causam o dobro de dano e recebem metade. Com dois graus ou
-                        mais de diferença, a criatura superior torna-se completamente imortal aos ataques da inferior.
+            <!-- BLOCO HABILIDADES DE CLASSE (movido da aba Classe) -->
+            <div class="section collapsible" id="class-abilities-atributos-section" style="display: none;">
+                <h2 class="section-title" onclick="toggleSection('class-abilities-atributos-section')">⭐ Habilidades de
+                    Classe</h2>
+                <div class="section-content">
+                    <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">
+                        Clique nas bolinhas para aumentar o nível.
                     </p>
+                    <div id="class-abilities-atributos-content"></div>
                 </div>
             </div>
         </div>
@@ -3348,7 +3669,8 @@
                     <div class="characteristic-item"
                         style="grid-column: 1 / -1; border: 3px solid var(--warning); background: rgba(245, 158, 11, 0.1);">
                         <div>
-                            <div class="char-label" style="font-size: 1.3rem; color: var(--warning);">👑 Classe de Poder
+                            <div class="char-label" style="font-size: 1.3rem; color: var(--warning);">👑 Classe de
+                                Poder
                                 (CP)</div>
                             <div class="char-formula" style="font-size: 0.8rem;">⌈2·OF + DF + RS + MB⌉ × AI</div>
                         </div>
@@ -3493,7 +3815,8 @@
                 </p>
 
                 <div class="hp-bar-container">
-                    <label style="margin-bottom: 10px; display: block; font-weight: 700;">🧟 Fantoches Ativos</label>
+                    <label style="margin-bottom: 10px; display: block; font-weight: 700;">🧟 Fantoches
+                        Ativos</label>
                     <div class="hp-bar">
                         <div class="hp-fill" id="fantoches-fill"
                             style="width: 0%; background: linear-gradient(90deg, #800080, #a020f0);">
@@ -3519,14 +3842,16 @@
 
             <div class="combat-helper">
                 <h3 style="color: var(--danger); margin-bottom: 12px; font-size: 1.1rem;">🎲 Rolador de Dados</h3>
-                <p style="color: #94a3b8; margin-bottom: 12px; font-size: 0.85rem;">Sucessos: 8, 9, 10. Falha: 1.</p>
+                <p style="color: #94a3b8; margin-bottom: 12px; font-size: 0.85rem;">Sucessos: 8, 9, 10. Falha: 1.
+                </p>
                 <div class="dice-roller">
                     <div class="form-group" style="width: auto;">
                         <label>Dados</label>
                         <input type="number" id="dice-count" class="dice-input" value="1" min="1" max="20"
                             inputmode="numeric">
                     </div>
-                    <button class="btn btn-primary btn-small" onclick="rollDice()" style="flex: 1;">🎲 ROLAR</button>
+                    <button class="btn btn-primary btn-small" onclick="rollDice()" style="flex: 1;">🎲
+                        ROLAR</button>
                     <div class="roll-result" id="roll-result">—</div>
                 </div>
                 <div id="roll-details" style="margin-top: 12px; color: #94a3b8; font-size: 0.85rem;"></div>
@@ -3549,7 +3874,8 @@
 
                     <div style="border-top: 1px solid rgba(245, 158, 11, 0.3); padding-top: 15px; margin-top: 15px;">
                         <p style="color: #cbd5e1; font-size: 0.85rem; text-align: center; font-style: italic;">
-                            💡 Sua riqueza é calculada automaticamente baseada nos itens tipo "Lunis" em seu inventário.
+                            💡 Sua riqueza é calculada automaticamente baseada nos itens tipo "Lunis" em seu
+                            inventário.
                         </p>
                     </div>
                 </div>
@@ -3689,7 +4015,8 @@
             <div class="section">
                 <h2 class="section-title">👥 Aliados</h2>
                 <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">
-                    Gerencie seus aliados, companheiros e montarias. Clique em um aliado para editar sua ficha completa.
+                    Gerencie seus aliados, companheiros e montarias. Clique em um aliado para editar sua ficha
+                    completa.
                 </p>
 
                 <div style="margin-bottom: 20px;">
@@ -3722,7 +4049,8 @@
             <div class="section">
                 <h2 class="section-title">Notas do Personagem</h2>
                 <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">
-                    Escreva suas anotações, histórias, objetivos ou qualquer informação importante sobre seu personagem.
+                    Escreva suas anotações, histórias, objetivos ou qualquer informação importante sobre seu
+                    personagem.
                     Suas notas são salvas automaticamente na nuvem e exportadas junto com a ficha.
                 </p>
 
@@ -7000,6 +7328,106 @@ Exemplos:
             }
         }
 
+        // ========== RENDERIZAR HABILIDADES DE CLASSE NA ABA ATRIBUTOS (MINIMALISTA) ==========
+        function renderClassAbilitiesInAtributos(classe) {
+            const char = getChar();
+            const classData = CLASS_ABILITIES[classe];
+            const section = document.getElementById('class-abilities-atributos-section');
+            const container = document.getElementById('class-abilities-atributos-content');
+
+            if (!section || !container || !classData) {
+                if (section) section.style.display = 'none';
+                return;
+            }
+
+            // Mostrar a seção
+            section.style.display = 'block';
+
+            // Atualizar o título com o custo de EXP
+            const title = section.querySelector('.section-title');
+            if (title) {
+                title.innerHTML = `⭐ Habilidades de ${classe}`;
+            }
+
+            const costInfo = section.querySelector('p');
+            if (costInfo) {
+                costInfo.innerHTML = `Clique nas bolinhas para aumentar o nível. ${classe === 'Pallacerdote' || classe === 'Ritualista' ? 'Custo: Nível × 4 EXP' : 'Custo: Nível × 2 EXP'}`;
+            }
+
+            // Criar HTML minimalista para as habilidades
+            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;">';
+
+            classData.abilities.forEach(ability => {
+                if (!char.classAbilities[ability.id]) {
+                    char.classAbilities[ability.id] = 0;
+                }
+
+                html += `
+                    <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600; color: #e2e8f0; font-size: 0.85rem;">${ability.name}</span>
+                        <div class="dots" id="dots-atrib-${ability.id}"></div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+
+            // Criar dots para cada habilidade
+            classData.abilities.forEach(ability => {
+                createClassAbilityDotsAtributos(ability.id, ability.maxLevel);
+            });
+        }
+
+        // Criar dots específicos para a aba Atributos
+        function createClassAbilityDotsAtributos(abilityId, maxLevel) {
+            const container = document.getElementById(`dots-atrib-${abilityId}`);
+            if (!container) return;
+
+            container.innerHTML = '';
+            container.style.display = 'flex';
+            container.style.gap = '4px';
+
+            const char = getChar();
+            for (let i = 1; i <= maxLevel; i++) {
+                const dot = document.createElement('div');
+                dot.style.cssText = 'width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--primary); background: transparent; cursor: pointer; transition: all 0.2s;';
+
+                if (i <= (char.classAbilities[abilityId] || 0)) {
+                    dot.style.background = 'linear-gradient(135deg, var(--primary), var(--secondary))';
+                    dot.style.boxShadow = '0 0 8px rgba(139, 92, 246, 0.5)';
+                }
+
+                dot.addEventListener('click', () => {
+                    upgradeClassAbility(abilityId, i);
+                    // Atualizar ambos os locais
+                    updateClassAbilityDots(abilityId);
+                    updateClassAbilityDotsAtributos(abilityId);
+                });
+
+                container.appendChild(dot);
+            }
+        }
+
+        // Atualizar dots na aba Atributos
+        function updateClassAbilityDotsAtributos(abilityId) {
+            const container = document.getElementById(`dots-atrib-${abilityId}`);
+            if (!container) return;
+
+            const char = getChar();
+            const dots = container.querySelectorAll('div');
+
+            dots.forEach((dot, index) => {
+                if (index + 1 <= (char.classAbilities[abilityId] || 0)) {
+                    dot.style.background = 'linear-gradient(135deg, var(--primary), var(--secondary))';
+                    dot.style.boxShadow = '0 0 8px rgba(139, 92, 246, 0.5)';
+                } else {
+                    dot.style.background = 'transparent';
+                    dot.style.boxShadow = 'none';
+                }
+            });
+        }
+
         function setupEventListeners() {
             const inputs = {
                 'nome': 'nome',
@@ -7468,6 +7896,7 @@ Exemplos:
                 if (confirm(`⚠️ Tem certeza que deseja DIMINUIR esta habilidade de ${currentLevel} para ${targetLevel}?`)) {
                     char.classAbilities[abilityId] = targetLevel;
                     updateClassAbilityDots(abilityId);
+                    updateClassAbilityDotsAtributos(abilityId);
                     updateClassTests();
                     updateClassResourcesDisplay();
                     updateAllCalculations();
@@ -7510,6 +7939,7 @@ Exemplos:
                 char.classAbilities[abilityId] = targetLevel;
                 char.exp = currentEXP - totalCost;
                 updateClassAbilityDots(abilityId);
+                updateClassAbilityDotsAtributos(abilityId);
                 updateClassTests();
                 updateClassResourcesDisplay();
                 updateAllCalculations();
@@ -10366,6 +10796,7 @@ Exemplos:
 
             if (char.classe && CLASS_ABILITIES[char.classe]) {
                 renderClassContent(char.classe);
+                renderClassAbilitiesInAtributos(char.classe);
 
                 // Se a classe está bloqueada, desabilita o select
                 if (char.classeLocked) {
@@ -11589,6 +12020,7 @@ Exemplos:
                 const classeSelect = document.getElementById('classe');
                 if (classeSelect) { classeSelect.value = classe; classeSelect.disabled = true; classeSelect.style.opacity = '0.6'; }
                 renderClassContent(classe);
+                renderClassAbilitiesInAtributos(classe);
                 autoSave(); updateCharacterInfoPanel();
                 alert('✅ Classe ' + classe + ' selecionada e bloqueada!');
             }
@@ -12092,14 +12524,39 @@ Exemplos:
                 </div>`;
             }
 
+            // ========== BLOCO 6: AURAS (Aura de Imortalidade) ==========
+            const auraImortalidade = char.auraImortalidade || 1;
+            html += `<div style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1)); border: 2px solid #f59e0b; border-radius: 10px; padding: 12px; margin-top: 10px;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #fbbf24; margin-bottom: 8px; text-transform: uppercase;">✨ Auras</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.5); padding: 10px; border-radius: 8px;">
+                    <div>
+                        <div style="font-size: 0.9rem; font-weight: 700; color: #fbbf24;">Aura de Imortalidade (AI)</div>
+                        <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 2px;">Determina poder em combate</div>
+                    </div>
+                    <div style="font-size: 1.5rem; font-weight: 900; color: #fbbf24; background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; padding: 4px 12px;">${auraImortalidade}</div>
+                </div>
+                <div style="margin-top: 10px; padding: 10px; background: rgba(15, 23, 42, 0.4); border-radius: 6px; border-left: 3px solid #f59e0b;">
+                    <div style="font-size: 0.7rem; color: #94a3b8;">📖 <strong style="color: #fbbf24;">Sobre Auras:</strong></div>
+                    <div style="font-size: 0.7rem; color: #cbd5e1; margin-top: 4px; line-height: 1.4;">Criaturas com aura superior causam dobro de dano e recebem metade. Com 2+ graus de diferença, torna-se imortal aos ataques inferiores.</div>
+                </div>
+            </div>`;
+
             container.innerHTML = html;
         }
+
+        // ========== SEÇÕES RECOLHÍVEIS (ATRIBUTOS TAB) ==========
+        window.toggleSection = function (sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.classList.toggle('collapsed');
+            }
+        };
 
         // ========== SISTEMA DE GERENCIAMENTO DE PAINÉIS ==========
 
         // Fechar outros painéis (para evitar sobreposição)
         function closeOtherPanels(exceptPanelId) {
-            const panels = ['characterInfoPanel', 'raceInfoPanel', 'charStatsPanel'];
+            const panels = ['characterInfoPanel', 'raceInfoPanel', 'charStatsPanel', 'classInfoPanel'];
             panels.forEach(panelId => {
                 if (panelId !== exceptPanelId) {
                     const panel = document.getElementById(panelId);
@@ -12112,7 +12569,7 @@ Exemplos:
 
         // Fechar todos os painéis laterais (chamado pelo overlay mobile)
         window.closeAllSidePanels = function () {
-            const panels = ['characterInfoPanel', 'raceInfoPanel', 'charStatsPanel'];
+            const panels = ['characterInfoPanel', 'raceInfoPanel', 'charStatsPanel', 'classInfoPanel'];
             panels.forEach(panelId => {
                 const panel = document.getElementById(panelId);
                 if (panel) {
@@ -12128,12 +12585,14 @@ Exemplos:
             const characterInfoPanel = document.getElementById('characterInfoPanel');
             const raceInfoPanel = document.getElementById('raceInfoPanel');
             const charStatsPanel = document.getElementById('charStatsPanel');
+            const classInfoPanel = document.getElementById('classInfoPanel');
             const overlay = document.getElementById('panelOverlayMobile');
 
             const anyPanelOpen =
                 (characterInfoPanel && characterInfoPanel.classList.contains('open')) ||
                 (raceInfoPanel && raceInfoPanel.classList.contains('open')) ||
-                (charStatsPanel && charStatsPanel.classList.contains('open'));
+                (charStatsPanel && charStatsPanel.classList.contains('open')) ||
+                (classInfoPanel && classInfoPanel.classList.contains('open'));
 
             // Mobile: Controlar overlay
             if (window.innerWidth < 640) {
@@ -12153,6 +12612,306 @@ Exemplos:
                     document.body.classList.remove('panel-open-desktop');
                 }
             }
+        }
+
+        // Função para abrir/fechar o painel de classe
+        window.toggleClassInfoPanel = function () {
+            const panel = document.getElementById('classInfoPanel');
+
+            if (panel) {
+                const isOpen = panel.classList.contains('open');
+
+                if (isOpen) {
+                    panel.classList.remove('open');
+                } else {
+                    // Fechar outros painéis primeiro
+                    closeOtherPanels('classInfoPanel');
+                    updateClassInfoPanel();
+                    panel.classList.add('open');
+                }
+
+                // Atualizar estado geral dos painéis
+                updatePanelState();
+            }
+        };
+
+        // Função para atualizar o conteúdo do painel de classe
+        function updateClassInfoPanel() {
+            const container = document.getElementById('classInfoContent');
+            if (!container) return;
+
+            const char = getChar();
+            const classe = char.classe;
+
+            if (!classe || !CLASS_ABILITIES[classe]) {
+                container.innerHTML = `
+            <div style="text-align: center; padding: 40px 20px; color: #64748b;">
+                <div style="font-size: 3rem; margin-bottom: 15px;">🧙‍♂️</div>
+                <div style="font-size: 1rem; font-weight: 600; margin-bottom: 10px;">Nenhuma classe selecionada</div>
+                <div style="font-size: 0.85rem;">Selecione uma classe na aba "⭐ Classe" para ver informações.</div>
+            </div>
+        `;
+                return;
+            }
+
+            const classData = CLASS_ABILITIES[classe];
+            let html = '';
+
+            // Collapsible section with class name as title
+            html += `
+        <div class="class-collapsible" id="classCollapsible">
+            <div class="class-collapsible-header" onclick="toggleClassCollapsible()">
+                <div class="class-collapsible-title">
+                    ${getClassEmoji(classe)} ${classe}
+                </div>
+                <span class="class-collapsible-arrow">▼</span>
+            </div>
+            <div class="class-collapsible-content">
+    `;
+
+            // Habilidades de Classe
+            if (classData.abilities && classData.abilities.length > 0) {
+                html += `
+            <div class="class-mini-section">
+                <div class="class-mini-title">⭐ Habilidades</div>
+        `;
+                classData.abilities.forEach(ability => {
+                    const currentLevel = char.classAbilities?.[ability.id] || 0;
+                    let dotsHtml = '';
+                    for (let i = 1; i <= ability.maxLevel; i++) {
+                        dotsHtml += `<div class="class-mini-dot ${i <= currentLevel ? 'filled' : ''}"></div>`;
+                    }
+                    html += `
+                <div class="class-mini-item">
+                    <span class="class-mini-item-name">${ability.name}</span>
+                    <div class="class-mini-dots">${dotsHtml}</div>
+                </div>
+            `;
+                });
+                html += `</div>`;
+            }
+
+            // Manobras/Mecânicas específicas de cada classe
+            html += renderClassMechanicsForPanel(classe, char);
+
+            // Info da Classe
+            if (classData.info) {
+                html += `
+            <div class="class-mini-section">
+                <div class="class-mini-title">📚 Informações</div>
+                <div class="class-info-box">${classData.info}</div>
+            </div>
+        `;
+            }
+
+            html += `
+            </div>
+        </div>
+    `;
+
+            container.innerHTML = html;
+        }
+
+        // Função para renderizar mecânicas específicas de classe no painel
+        function renderClassMechanicsForPanel(classe, char) {
+            let html = '';
+
+            // Verificar requisito genérico
+            const verificarRequisito = (req) => {
+                if (!req || req.tipo === 'nenhum') return true;
+                if (req.tipo === 'multi') {
+                    return req.reqs.every(r => verificarRequisito(r));
+                }
+                if (req.tipo === 'atributo') {
+                    const atributos = { 'FOR': char.for, 'DES': char.des, 'VIG': char.vig, 'RAC': char.rac, 'PRE': char.pre, 'PRS': char.prs, 'INT': char.int, 'MAN': char.man };
+                    return atributos[req.nome] >= req.nivel;
+                }
+                if (req.tipo === 'skill') {
+                    return (char.skills?.[req.nome] || 0) >= req.nivel;
+                }
+                if (req.tipo === 'class') {
+                    return (char.classAbilities?.[req.nome] || 0) >= req.nivel;
+                }
+                if (req.tipo === 'custom' && req.verificar) {
+                    return req.verificar(char);
+                }
+                return true;
+            };
+
+            // GUERREIRO - Manobras
+            if (classe === 'Guerreiro') {
+                const manobras = [
+                    { nome: 'Postura Ofensiva', calculo: 'Postura de Combate', requisito: { tipo: 'atributo', nome: 'RAC', nivel: 3 }, descricao: 'Aumenta ataque, perde reação.', calcular: () => char.classAbilities?.['postura-combate'] || 0 },
+                    { nome: 'Postura Defensiva', calculo: 'Reação + Postura', requisito: { tipo: 'atributo', nome: 'PRS', nivel: 3 }, descricao: 'Aumenta reação, limita ações.', calcular: () => { const agilidade = char.skills?.['agilidade'] || 0; const reacao = Math.min(char.des, char.rac) + agilidade; return reacao + (char.classAbilities?.['postura-combate'] || 0); } },
+                    { nome: 'Investida', calculo: 'Ímpeto', requisito: { tipo: 'nenhum' }, descricao: 'Avança metade do deslocamento e ataca.', calcular: () => char.classAbilities?.['ímpeto'] || 0 },
+                    { nome: 'Combate em Movimento', calculo: 'Guerrilha', requisito: { tipo: 'nenhum' }, descricao: 'Ataca e move DES metros.', calcular: () => char.classAbilities?.['guerrilha'] || 0 },
+                    { nome: 'Contra-Ataque', calculo: 'Contra-Ataque', requisito: { tipo: 'class', nome: 'contra-ataque', nivel: 1 }, descricao: 'Ataque grátis ao receber ataque falho.', calcular: () => char.classAbilities?.['contra-ataque'] || 0 },
+                    { nome: 'Comando de Unidade', calculo: 'MAN + Liderança + Guerrilha', requisito: { tipo: 'class', nome: 'guerrilha', nivel: 1 }, descricao: 'Aliados ficam com iniciativa.', calcular: () => { const lideranca = char.skills?.['liderança'] || 0; return char.man + lideranca + (char.classAbilities?.['guerrilha'] || 0); } }
+                ];
+                html += renderManobrasSection(manobras, verificarRequisito);
+            }
+
+            // LADINO - Manobras
+            if (classe === 'Ladino') {
+                const manobras = [
+                    { nome: 'Acrobacia', calculo: 'DES + Agilidade + Atletismo', requisito: { tipo: 'nenhum' }, descricao: 'Move sem contra-ataque e ataca com punhal.', calcular: () => { const agilidade = char.skills?.['agilidade'] || 0; const atletismo = char.skills?.['atletismo'] || 0; return char.des + agilidade + atletismo; } },
+                    { nome: 'Golpe Pelas Costas', calculo: 'DES + Arma + Punho + Furt', requisito: { tipo: 'nenhum' }, descricao: 'Furtivo: ignora Blindagem, +dano.', calcular: () => { const arma = char.skills?.['arma'] || 0; const punho = char.classAbilities?.['armas-punho'] || 0; const furt = char.skills?.['furtividade'] || 0; const furtII = char.classAbilities?.['furtividade-ii'] || 0; return char.des + arma + punho + furt + furtII; } },
+                    { nome: 'Golpe Preciso', calculo: 'DES + Punhal + Precisão', requisito: { tipo: 'nenhum' }, descricao: 'Ignora Blindagem do alvo.', calcular: () => { const arma = char.skills?.['arma'] || 0; const punho = char.classAbilities?.['armas-punho'] || 0; const precisao = char.classAbilities?.['precisão'] || 0; return char.des + arma + punho + precisao; } },
+                    { nome: 'Troca De Mãos', calculo: 'DES + Prestidigitação', requisito: { tipo: 'nenhum' }, descricao: 'Furto após ataque com punhal.', calcular: () => char.des + (char.classAbilities?.['prestidigitação'] || 0) },
+                    { nome: 'Retirada Ágil', calculo: 'DES + Agilidade', requisito: { tipo: 'nenhum' }, descricao: 'Move 3m após atacar.', calcular: () => char.des + (char.skills?.['agilidade'] || 0) },
+                    { nome: 'Desarme', calculo: 'DES + Arma + Punho', requisito: { tipo: 'class', nome: 'arrombamento', nivel: 1 }, descricao: 'Desarma o alvo.', calcular: () => { const arma = char.skills?.['arma'] || 0; const punho = char.classAbilities?.['armas-punho'] || 0; return char.des + arma + punho; } },
+                    { nome: 'Engodo', calculo: 'MAN + Malandragem', requisito: { tipo: 'class', nome: 'malandragem-ii', nivel: 1 }, descricao: 'Aliado ignora reação do alvo.', calcular: () => char.man + (char.skills?.['malandragem'] || 0) + (char.classAbilities?.['malandragem-ii'] || 0) },
+                    { nome: 'Ataque Mudo', calculo: 'DES + Furtividade', requisito: { tipo: 'class', nome: 'olho-brechas', nivel: 1 }, descricao: 'Permanece furtivo após ataque.', calcular: () => char.des + (char.skills?.['furtividade'] || 0) + (char.classAbilities?.['furtividade-ii'] || 0) }
+                ];
+                html += renderManobrasSection(manobras, verificarRequisito);
+            }
+
+            // CAÇADOR - Marca de Caça
+            if (classe === 'Caçador') {
+                const marcarPresa = char.classAbilities?.['marcar-presa'] || 0;
+                const bonus = 1 + marcarPresa;
+                html += `
+                <div class="class-mini-section">
+                    <div class="class-mini-title">🎯 Marca de Caça</div>
+                    <div class="class-info-box">
+                        <strong>Bônus:</strong> +${bonus} em rastreamento e ataques contra alvo marcado.<br>
+                        <small>Cálculo: 1 + Marcar Presa (${marcarPresa})</small>
+                    </div>
+                </div>
+                `;
+            }
+
+            // DRUIDA - Aliado Animal
+            if (classe === 'Druida') {
+                const aliadoAnimal = char.classAbilities?.['aliado-animal'] || 0;
+                const linguagem = char.classAbilities?.['linguagem-animal'] || 0;
+                html += `
+                <div class="class-mini-section">
+                    <div class="class-mini-title">🐾 Comunhão Animal</div>
+                    <div class="class-info-box">
+                        <strong>Aliado Animal:</strong> Nível ${aliadoAnimal}<br>
+                        <strong>Linguagem Animal:</strong> Nível ${linguagem}<br>
+                        <small>Comanda animais e se comunica com a natureza.</small>
+                    </div>
+                </div>
+                `;
+            }
+
+            // ADEPTO - Necromancia
+            if (classe === 'Adepto') {
+                const maxServos = char.classAbilities?.['servos'] || 0;
+                const servosAtuais = (char.allies || []).filter(ally => (ally.funcao || '').toLowerCase().includes('servo zumbi')).length;
+                const lideranca = char.skills?.['liderança'] || 0;
+                const servosHabilidade = char.classAbilities?.['servos'] || 0;
+                const maxFantoches = char.int + lideranca + servosHabilidade;
+                const fantochesAtuais = char.fantochesAtivos || 0;
+
+                html += `
+                <div class="class-mini-section">
+                    <div class="class-mini-title">🧟 Necromancia</div>
+                    <div class="class-info-box">
+                        <strong>⚰️ Servos:</strong> ${servosAtuais} / ${maxServos}<br>
+                        <strong>🧟 Fantoches:</strong> ${fantochesAtuais} / ${maxFantoches}<br>
+                        <small>Cálculo Fantoches: INT + Liderança + Servos</small>
+                    </div>
+                </div>
+                `;
+            }
+
+            // PALLACERDOTE - Círculo e Graça
+            if (classe === 'Pallacerdote') {
+                const essencia = char.skills?.['essência'] || 0;
+                const maxGraca = char.pre + essencia;
+                const gracaAtual = char.gracaAtual || 0;
+                const circuloAtual = char.circuloPalla || 'Diácono da Luz';
+
+                html += `
+                <div class="class-mini-section">
+                    <div class="class-mini-title">✨ Círculo e Graça</div>
+                    <div class="class-info-box">
+                        <strong>🌟 Círculo:</strong> ${circuloAtual}<br>
+                        <strong>💎 Graça:</strong> ${gracaAtual} / ${maxGraca}<br>
+                        <small>Cálculo: PRE (${char.pre}) + Essência (${essencia})</small>
+                    </div>
+                </div>
+                `;
+            }
+
+            // RITUALISTA - Ruptura Venire
+            if (classe === 'Ritualista') {
+                const rv = char.rupturaVenire || 0;
+                html += `
+                <div class="class-mini-section">
+                    <div class="class-mini-title">🔮 Ruptura Venire</div>
+                    <div class="class-info-box">
+                        <strong>RV Atual:</strong> ${rv} / 10<br>
+                        <small>⚠️ RV alto = maior risco de consequências ao falhar Despertar.</small>
+                    </div>
+                </div>
+                `;
+            }
+
+            return html;
+        }
+
+        // Renderiza seção de manobras para o painel
+        function renderManobrasSection(manobras, verificarRequisito) {
+            const disponíveis = manobras.filter(m => verificarRequisito(m.requisito));
+            const bloqueadas = manobras.filter(m => !verificarRequisito(m.requisito));
+
+            let html = `<div class="class-mini-section"><div class="class-mini-title">⚔️ Manobras</div>`;
+
+            if (disponíveis.length > 0) {
+                html += `<div style="margin-bottom: 8px; font-size: 0.75rem; color: var(--success);">✅ Disponíveis</div>`;
+                disponíveis.forEach(m => {
+                    const valor = m.calcular();
+                    html += `
+                    <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--success); padding: 8px 10px; border-radius: 6px; margin-bottom: 6px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; color: var(--success); font-size: 0.85rem;">${m.nome}</span>
+                            ${valor > 0 ? `<span style="background: var(--success); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 700;">+${valor}</span>` : ''}
+                        </div>
+                        <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 2px;">${m.descricao}</div>
+                    </div>
+                    `;
+                });
+            }
+
+            if (bloqueadas.length > 0) {
+                html += `<div style="margin: 10px 0 8px 0; font-size: 0.75rem; color: #64748b;">🔒 Bloqueadas</div>`;
+                bloqueadas.forEach(m => {
+                    html += `
+                    <div style="background: rgba(100, 116, 139, 0.1); border-left: 3px solid #64748b; padding: 6px 10px; border-radius: 6px; margin-bottom: 4px; opacity: 0.6;">
+                        <span style="font-weight: 600; color: #64748b; font-size: 0.8rem;">🔒 ${m.nome}</span>
+                    </div>
+                    `;
+                });
+            }
+
+            html += `</div>`;
+            return html;
+        }
+
+        // Toggle class collapsible section
+        window.toggleClassCollapsible = function () {
+            const collapsible = document.getElementById('classCollapsible');
+            if (collapsible) {
+                collapsible.classList.toggle('collapsed');
+            }
+        };
+
+        // Helper function to get class emoji
+        function getClassEmoji(classe) {
+            const emojis = {
+                'Caçador': '🏹',
+                'Druida': '🌿',
+                'Guerreiro': '⚔️',
+                'Adepto': '💀',
+                'Ladino': '🗡️',
+                'Pallacerdote': '✨',
+                'Ritualista': '🔮'
+            };
+            return emojis[classe] || '🧙‍♂️';
         }
 
         // ========== MOBILE: SWIPE TO CLOSE ==========
@@ -12232,6 +12991,10 @@ Exemplos:
             });
             setupPanelSwipe('charStatsPanel', () => {
                 document.getElementById('charStatsPanel')?.classList.remove('open');
+                updatePanelState();
+            });
+            setupPanelSwipe('classInfoPanel', () => {
+                document.getElementById('classInfoPanel')?.classList.remove('open');
                 updatePanelState();
             });
 
@@ -12342,7 +13105,8 @@ Exemplos:
             </div>
 
             <div style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 5px; color: #fde047; font-weight: 700;">Se Falha:</label>
+                <label style="display: block; margin-bottom: 5px; color: #fde047; font-weight: 700;">Se
+                    Falha:</label>
                 <textarea id="rito-falha" rows="2" placeholder="O que acontece se falhar no teste..."
                     style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #fbbf24; background: rgba(15, 23, 42, 0.8); color: white; font-size: 1rem; resize: vertical;"></textarea>
             </div>
