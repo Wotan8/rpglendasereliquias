@@ -1435,6 +1435,176 @@
             }
         }
 
+        /* ========== BOTÃO E PAINEL DE CARACTERÍSTICAS ========== */
+        .char-stats-btn {
+            position: fixed;
+            top: 130px;
+            left: 10px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 9997;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .char-stats-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
+        }
+
+        .char-stats-btn:active {
+            transform: scale(0.95);
+        }
+
+        .char-stats-panel {
+            position: fixed;
+            top: 0;
+            left: -380px;
+            width: 350px;
+            height: 100vh;
+            background: linear-gradient(180deg, var(--darker) 0%, var(--dark) 100%);
+            border-right: 3px solid #f59e0b;
+            z-index: 10001;
+            transition: left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 5px 0 30px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .char-stats-panel.open {
+            left: 0;
+        }
+
+        .char-stats-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f59e0b;
+        }
+
+        .char-stats-panel-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #f59e0b;
+        }
+
+        .char-stats-panel-close {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid var(--danger);
+            color: var(--danger);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .char-stats-panel-close:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .char-stats-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(245, 158, 11, 0.1);
+            border-radius: 10px;
+            border: 2px solid rgba(245, 158, 11, 0.3);
+            margin-bottom: 10px;
+        }
+
+        .char-stats-item.special {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+
+        .char-stats-item.highlight {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(236, 72, 153, 0.2));
+            border: 3px solid #f59e0b;
+        }
+
+        .char-stats-label {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .char-stats-name {
+            font-weight: 700;
+            color: #e2e8f0;
+            font-size: 0.95rem;
+        }
+
+        .char-stats-formula {
+            font-size: 0.7rem;
+            color: #64748b;
+        }
+
+        .char-stats-value {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #f59e0b;
+            text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+        }
+
+        .char-stats-cp-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+
+        .char-stats-cp-rank {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .char-stats-cp-letter {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #f59e0b;
+        }
+
+        .char-stats-cp-name {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #f59e0b;
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 639px) {
+            .char-stats-btn {
+                width: 44px;
+                height: 44px;
+                font-size: 1.3rem;
+                top: 110px;
+                left: 5px;
+            }
+
+            .char-stats-panel {
+                width: 300px;
+                left: -320px;
+            }
+        }
+
         .character-info-panel {
             position: fixed;
             top: 0;
@@ -1747,6 +1917,76 @@
             flex-wrap: nowrap;
         }
 
+        /* ========== GRUPO DE ATRIBUTOS ========== */
+        .attribute-group-card {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .attribute-group-card .group-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .attribute-group-card .group-title.mental {
+            color: #a78bfa;
+        }
+
+        .attribute-group-card .group-title.fisico {
+            color: #f472b6;
+        }
+
+        .attribute-group-card .group-title.social {
+            color: #38bdf8;
+        }
+
+        .attribute-group-card .attr-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+        }
+
+        .attribute-group-card .attr-row:last-child {
+            border-bottom: none;
+        }
+
+        .attribute-group-card .attr-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .attribute-group-card .attr-name {
+            font-weight: 600;
+            color: var(--light);
+            font-size: 0.9rem;
+        }
+
+        .attribute-group-card .attr-sub {
+            font-size: 0.7rem;
+            color: #94a3b8;
+        }
+
+        .attributes-group-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        @media (max-width: 900px) {
+            .attributes-group-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+        }
+
         /* ========== ESTILOS PARA HABILIDADES COMPACTAS ========== */
         .skills-compact-grid {
             display: grid;
@@ -1855,6 +2095,73 @@
                 font-size: 0.85rem;
             }
         }
+
+        /* ========== OVERLAY PARA MOBILE (clique fora fecha) ========== */
+        .panel-overlay-mobile {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .panel-overlay-mobile.active {
+            display: block;
+            opacity: 1;
+        }
+
+        /* ========== DESKTOP SPLIT-SCREEN LAYOUT ========== */
+        @media (min-width: 640px) {
+            .container {
+                transition: margin-left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+                    max-width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            }
+
+            body.panel-open-desktop .container {
+                margin-left: 370px;
+                max-width: calc(100% - 380px);
+            }
+
+            /* Ajustar painéis para não ficarem com sombra quando desktop */
+            body.panel-open-desktop .character-info-panel.open,
+            body.panel-open-desktop .race-info-panel.open,
+            body.panel-open-desktop .char-stats-panel.open {
+                box-shadow: 2px 0 15px rgba(0, 0, 0, 0.3);
+            }
+        }
+
+        /* ========== MOBILE: TRANSIÇÕES PARA SWIPE ========== */
+        @media (max-width: 639px) {
+
+            .character-info-panel,
+            .race-info-panel,
+            .char-stats-panel {
+                transition: left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+                    transform 0.2s ease;
+                will-change: transform;
+            }
+
+            /* Garantir que o overlay só apareça no mobile */
+            .panel-overlay-mobile {
+                display: none;
+            }
+
+            .panel-overlay-mobile.active {
+                display: block;
+            }
+        }
+
+        /* Esconder overlay no desktop */
+        @media (min-width: 640px) {
+            .panel-overlay-mobile {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 
@@ -1871,8 +2178,8 @@
         📋
     </button>
 
-    <!-- OVERLAY DO PAINEL -->
-    <div class="character-info-overlay" id="characterInfoOverlay" onclick="toggleCharacterInfoPanel()"></div>
+    <!-- OVERLAY DO PAINEL (Mobile) -->
+    <div class="panel-overlay-mobile" id="panelOverlayMobile" onclick="closeAllSidePanels()"></div>
 
     <!-- PAINEL DE INFORMAÇÕES DO PERSONAGEM -->
     <div class="character-info-panel" id="characterInfoPanel">
@@ -1901,6 +2208,22 @@
         </div>
     </div>
 
+    <!-- BOTÃO DE CARACTERÍSTICAS DO PERSONAGEM -->
+    <button class="char-stats-btn" id="charStatsBtn" onclick="toggleCharStatsPanel()" title="Características">
+        📊
+    </button>
+
+    <!-- PAINEL DE CARACTERÍSTICAS DO PERSONAGEM -->
+    <div class="char-stats-panel" id="charStatsPanel">
+        <div class="char-stats-panel-header">
+            <div class="char-stats-panel-title">📊 Características</div>
+            <button class="char-stats-panel-close" onclick="toggleCharStatsPanel()" title="Fechar">✕</button>
+        </div>
+        <div id="charStatsContent">
+            <!-- Conteúdo será preenchido via JavaScript -->
+        </div>
+    </div>
+
     <!-- INFORMAÇÕES DO USUÁRIO -->
     <div class="user-info" id="userInfo" style="display: none;">
         <span class="user-email" id="userEmail">Carregando...</span>
@@ -1918,8 +2241,9 @@
         <div class="alert alert-danger" id="alertError"></div>
 
         <div class="tabs" id="tabContainer">
-            <button class="tab active" onclick="switchTab('atributos')">💪 Atributos</button>
-            <button class="tab" onclick="switchTab('caracteristicas')">📊 Características</button>
+            <button class="tab active" onclick="switchTab('atributos')">📜 Atributos</button>
+            <button class="tab" onclick="switchTab('caracteristicas')" style="display: none;">📊
+                Características</button>
             <button class="tab" onclick="switchTab('classe')">⭐ Classe</button>
             <button class="tab" onclick="switchTab('combate')">⚔️ Combate</button>
             <button class="tab" onclick="switchTab('inventario')">🎒 Inventário</button>
@@ -2791,69 +3115,92 @@
         <!-- ABA ATRIBUTOS -->
         <div id="atributos" class="tab-content active">
             <div class="section">
-                <h2 class="section-title">⚡ Atributos</h2>
+                <h2 class="section-title">📜 Atributos</h2>
                 <p style="color: #94a3b8; margin-bottom: 12px; font-size: 0.8rem;">Toque nas bolinhas para
                     preencher/esvaziar.</p>
 
-                <div class="attributes-compact-grid">
+                <div class="attributes-group-grid">
                     <!-- Mental -->
-                    <div class="attribute-compact-card">
-                        <div class="attr-category">🧠 Mental • Poder</div>
-                        <div class="attr-name">Inteligência</div>
-                        <div class="attr-code">[INT]</div>
-                        <div class="dots" id="dots-int"></div>
-                    </div>
-                    <div class="attribute-compact-card">
-                        <div class="attr-category">🧠 Mental • Refinamento</div>
-                        <div class="attr-name">Raciocínio</div>
-                        <div class="attr-code">[RAC]</div>
-                        <div class="dots" id="dots-rac"></div>
-                    </div>
-                    <div class="attribute-compact-card">
-                        <div class="attr-category">🧠 Mental • Resistência</div>
-                        <div class="attr-name">Perseverança</div>
-                        <div class="attr-code">[PRS]</div>
-                        <div class="dots" id="dots-prs"></div>
+                    <div class="attribute-group-card">
+                        <div class="group-title mental">🧠 Mental</div>
+                        <div class="attr-row">
+                            <div class="attr-info">
+                                <div class="attr-name">Inteligência <span style="color: var(--primary);">[INT]</span>
+                                </div>
+                                <div class="attr-sub">Poder</div>
+                            </div>
+                            <div class="dots" id="dots-int"></div>
+                        </div>
+                        <div class="attr-row">
+                            <div class="attr-info">
+                                <div class="attr-name">Raciocínio <span style="color: var(--primary);">[RAC]</span>
+                                </div>
+                                <div class="attr-sub">Refinamento</div>
+                            </div>
+                            <div class="dots" id="dots-rac"></div>
+                        </div>
+                        <div class="attr-row">
+                            <div class="attr-info">
+                                <div class="attr-name">Perseverança <span style="color: var(--primary);">[PRS]</span>
+                                </div>
+                                <div class="attr-sub">Resistência</div>
+                            </div>
+                            <div class="dots" id="dots-prs"></div>
+                        </div>
                     </div>
 
                     <!-- Físico -->
-                    <div class="attribute-compact-card">
-                        <div class="attr-category">💪 Físico • Poder</div>
-                        <div class="attr-name">Força</div>
-                        <div class="attr-code">[FOR]</div>
-                        <div class="dots" id="dots-for"></div>
-                    </div>
-                    <div class="attribute-compact-card">
-                        <div class="attr-category">💪 Físico • Refinamento</div>
-                        <div class="attr-name">Destreza</div>
-                        <div class="attr-code">[DES]</div>
-                        <div class="dots" id="dots-des"></div>
-                    </div>
-                    <div class="attribute-compact-card">
-                        <div class="attr-category">💪 Físico • Resistência</div>
-                        <div class="attr-name">Vigor</div>
-                        <div class="attr-code">[VIG]</div>
-                        <div class="dots" id="dots-vig"></div>
+                    <div class="attribute-group-card">
+                        <div class="group-title fisico">💪 Físico</div>
+                        <div class="attr-row">
+                            <div class="attr-info">
+                                <div class="attr-name">Força <span style="color: var(--primary);">[FOR]</span></div>
+                                <div class="attr-sub">Poder</div>
+                            </div>
+                            <div class="dots" id="dots-for"></div>
+                        </div>
+                        <div class="attr-row">
+                            <div class="attr-info">
+                                <div class="attr-name">Destreza <span style="color: var(--primary);">[DES]</span></div>
+                                <div class="attr-sub">Refinamento</div>
+                            </div>
+                            <div class="dots" id="dots-des"></div>
+                        </div>
+                        <div class="attr-row">
+                            <div class="attr-info">
+                                <div class="attr-name">Vigor <span style="color: var(--primary);">[VIG]</span></div>
+                                <div class="attr-sub">Resistência</div>
+                            </div>
+                            <div class="dots" id="dots-vig"></div>
+                        </div>
                     </div>
 
                     <!-- Social -->
-                    <div class="attribute-compact-card">
-                        <div class="attr-category">💬 Social • Poder</div>
-                        <div class="attr-name">Presença</div>
-                        <div class="attr-code">[PRE]</div>
-                        <div class="dots" id="dots-pre"></div>
-                    </div>
-                    <div class="attribute-compact-card">
-                        <div class="attr-category">💬 Social • Refinamento</div>
-                        <div class="attr-name">Manipulação</div>
-                        <div class="attr-code">[MAN]</div>
-                        <div class="dots" id="dots-man"></div>
-                    </div>
-                    <div class="attribute-compact-card">
-                        <div class="attr-category">💬 Social • Resistência</div>
-                        <div class="attr-name">Autocontrole</div>
-                        <div class="attr-code">[AUT]</div>
-                        <div class="dots" id="dots-aut"></div>
+                    <div class="attribute-group-card">
+                        <div class="group-title social">💬 Social</div>
+                        <div class="attr-row">
+                            <div class="attr-info">
+                                <div class="attr-name">Presença <span style="color: var(--primary);">[PRE]</span></div>
+                                <div class="attr-sub">Poder</div>
+                            </div>
+                            <div class="dots" id="dots-pre"></div>
+                        </div>
+                        <div class="attr-row">
+                            <div class="attr-info">
+                                <div class="attr-name">Manipulação <span style="color: var(--primary);">[MAN]</span>
+                                </div>
+                                <div class="attr-sub">Refinamento</div>
+                            </div>
+                            <div class="dots" id="dots-man"></div>
+                        </div>
+                        <div class="attr-row">
+                            <div class="attr-info">
+                                <div class="attr-name">Autocontrole <span style="color: var(--primary);">[AUT]</span>
+                                </div>
+                                <div class="attr-sub">Resistência</div>
+                            </div>
+                            <div class="dots" id="dots-aut"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2903,7 +3250,7 @@
 
 
         <!-- ABA CARACTERÍSTICAS -->
-        <div id="caracteristicas" class="tab-content">
+        <div id="caracteristicas" class="tab-content" style="display: none !important;">
             <div class="section">
                 <h2 class="section-title">Características</h2>
                 <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">Calculadas automaticamente.</p>
@@ -11039,21 +11386,23 @@ Exemplos:
         // Função para abrir/fechar o painel de informações
         window.toggleCharacterInfoPanel = function () {
             const panel = document.getElementById('characterInfoPanel');
-            const overlay = document.getElementById('characterInfoOverlay');
 
-            if (panel && overlay) {
+            if (panel) {
                 const isOpen = panel.classList.contains('open');
 
                 if (isOpen) {
                     // Fechar o painel
                     panel.classList.remove('open');
-                    overlay.classList.remove('open');
                 } else {
+                    // Fechar outros painéis primeiro
+                    closeOtherPanels('characterInfoPanel');
                     // Abrir o painel e atualizar conteúdo
                     updateCharacterInfoPanel();
                     panel.classList.add('open');
-                    overlay.classList.add('open');
                 }
+
+                // Atualizar estado geral dos painéis
+                updatePanelState();
             }
         };
 
@@ -11277,6 +11626,10 @@ Exemplos:
 
         // Função para remover imagem pelo painel
         window.removePanelCharacterImage = function () {
+            if (!confirm('⚠️ Deseja realmente remover a imagem do personagem?')) {
+                return;
+            }
+
             const char = getChar();
             char.characterImage = null;
 
@@ -11405,9 +11758,14 @@ Exemplos:
                 if (isOpen) {
                     panel.classList.remove('open');
                 } else {
+                    // Fechar outros painéis primeiro
+                    closeOtherPanels('raceInfoPanel');
                     updateRaceInfoPanel();
                     panel.classList.add('open');
                 }
+
+                // Atualizar estado geral dos painéis
+                updatePanelState();
             }
         };
 
@@ -11569,6 +11927,317 @@ Exemplos:
 
             container.innerHTML = html;
         }
+
+        // Função para abrir/fechar o painel de características
+        window.toggleCharStatsPanel = function () {
+            const panel = document.getElementById('charStatsPanel');
+
+            if (panel) {
+                const isOpen = panel.classList.contains('open');
+
+                if (isOpen) {
+                    panel.classList.remove('open');
+                } else {
+                    // Fechar outros painéis primeiro
+                    closeOtherPanels('charStatsPanel');
+                    updateCharStatsPanel();
+                    panel.classList.add('open');
+                }
+
+                // Atualizar estado geral dos painéis
+                updatePanelState();
+            }
+        };
+
+        // Função para atualizar o conteúdo do painel de características
+        function updateCharStatsPanel() {
+            const container = document.getElementById('charStatsContent');
+            if (!container) return;
+
+            const char = getChar();
+
+            // Obter valores calculados dos elementos existentes
+            const iniciativa = document.getElementById('calc-iniciativa')?.textContent || '0';
+            const reacao = document.getElementById('calc-reacao')?.textContent || '0';
+            const deslocamento = document.getElementById('calc-deslocamento')?.textContent || '0';
+            const deslocViagem = document.getElementById('calc-deslocamento-viagem')?.textContent || '0m';
+            const deslocAereo = document.getElementById('calc-deslocamento-aereo')?.textContent || '0m';
+            const deslocFlutuante = document.getElementById('calc-deslocamento-flutuante')?.textContent || '2m';
+            const vitMax = document.getElementById('calc-vitalidade-max')?.textContent || '0';
+            const detMax = document.getElementById('calc-determinacao-max')?.textContent || '0';
+            const cargaMax = document.getElementById('calc-carga')?.textContent || '0';
+            const sanidade = document.getElementById('calc-sanidade')?.textContent || '80';
+            const blindagem = document.getElementById('calc-blindagem')?.textContent || '0';
+            const cp = document.getElementById('calc-cp')?.textContent || '0';
+            const cpLetra = document.getElementById('calc-cp-letra')?.textContent || 'E';
+            const cpNome = document.getElementById('calc-cp-nome')?.textContent || 'CIVIL/NOVATO';
+
+            const isPicxi = char.raca === 'Picxi';
+            const isYotun = char.raca === 'Yotun';
+
+            let html = '';
+
+            // ========== BLOCO 1: CLASSE DE PODER (TOPO) ==========
+            html += `<div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(236, 72, 153, 0.1)); border: 2px solid #f59e0b; border-radius: 10px; padding: 12px; margin-bottom: 15px;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #f59e0b; margin-bottom: 8px; text-transform: uppercase;">👑 Classe de Poder</div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 0.7rem; color: #94a3b8;">⌈2·OF + DF + RS + MB⌉ × AI</div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="font-size: 1.8rem; font-weight: 900; color: #f59e0b;">${cp}</div>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <div style="font-size: 1.3rem; font-weight: 900; color: #f59e0b;">${cpLetra}</div>
+                            <div style="font-size: 0.65rem; font-weight: 700; color: #f59e0b; text-transform: uppercase;">${cpNome}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+            // ========== BLOCO 2: COMBATE (Iniciativa, Reação, Blindagem) ==========
+            html += `<div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; padding: 12px; margin-bottom: 10px;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #ef4444; margin-bottom: 8px; text-transform: uppercase;">⚔️ Combate</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;">
+                    <div>
+                        <div style="font-size: 0.7rem; color: #94a3b8;">Iniciativa</div>
+                        <div style="font-size: 1.3rem; font-weight: 900; color: #f59e0b;">${iniciativa}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.7rem; color: #94a3b8;">Reação</div>
+                        <div style="font-size: 1.3rem; font-weight: 900; color: #f59e0b;">${reacao}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.7rem; color: #94a3b8;">Blindagem</div>
+                        <div style="font-size: 1.3rem; font-weight: 900; color: #f59e0b;">${blindagem}</div>
+                    </div>
+                </div>
+            </div>`;
+
+            // ========== BLOCO 3: STATUS (VIT Max, DET Max, Sanidade) ==========
+            html += `<div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 10px; padding: 12px; margin-bottom: 10px;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #8b5cf6; margin-bottom: 8px; text-transform: uppercase;">❤️ Status</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;">
+                    <div>
+                        <div style="font-size: 0.7rem; color: #94a3b8;">VIT Max</div>
+                        <div style="font-size: 1.3rem; font-weight: 900; color: #f59e0b;">${vitMax}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.7rem; color: #94a3b8;">DET Max</div>
+                        <div style="font-size: 1.3rem; font-weight: 900; color: #f59e0b;">${detMax}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.7rem; color: #94a3b8;">Sanidade</div>
+                        <div style="font-size: 1.3rem; font-weight: 900; color: #f59e0b;">${sanidade}</div>
+                    </div>
+                </div>
+            </div>`;
+
+            // ========== BLOCO 4: MOBILIDADE (Carga + Deslocamentos) ==========
+            let mobilidadeItems = `
+                <div>
+                    <div style="font-size: 0.7rem; color: #94a3b8;">Carga Max</div>
+                    <div style="font-size: 1.2rem; font-weight: 900; color: #f59e0b;">${cargaMax}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.7rem; color: #94a3b8;">Desloc. Terrestre</div>
+                    <div style="font-size: 1.2rem; font-weight: 900; color: #f59e0b;">${deslocamento}</div>
+                </div>`;
+
+            if (isYotun) {
+                mobilidadeItems += `
+                <div>
+                    <div style="font-size: 0.7rem; color: #94a3b8;">Desloc. Viagem</div>
+                    <div style="font-size: 1.2rem; font-weight: 900; color: #6b7280;">${deslocViagem}</div>
+                </div>`;
+            }
+
+            if (isPicxi) {
+                mobilidadeItems += `
+                <div>
+                    <div style="font-size: 0.7rem; color: #94a3b8;">Desloc. Aéreo</div>
+                    <div style="font-size: 1.2rem; font-weight: 900; color: #fbbf24;">${deslocAereo}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.7rem; color: #94a3b8;">Desloc. Flutuante</div>
+                    <div style="font-size: 1.2rem; font-weight: 900; color: #fbbf24;">${deslocFlutuante}</div>
+                </div>`;
+            }
+
+            html += `<div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 10px; padding: 12px;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #22c55e; margin-bottom: 8px; text-transform: uppercase;">🏃 Mobilidade</div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; text-align: center;">
+                    ${mobilidadeItems}
+                </div>
+            </div>`;
+
+            // ========== BLOCO 5: TESTES RÁPIDOS (Classe) ==========
+            const classe = char.classe;
+            if (classe && CLASS_ABILITIES[classe] && CLASS_ABILITIES[classe].quickTests) {
+                const quickTests = CLASS_ABILITIES[classe].quickTests;
+                let testsItems = '';
+
+                quickTests.forEach(test => {
+                    const result = test.calculate ? test.calculate(char) : (test.calcular ? test.calcular(char) : 0);
+                    testsItems += `
+                    <div style="background: rgba(15, 23, 42, 0.5); padding: 8px; border-radius: 6px; border-left: 2px solid #06b6d4;">
+                        <div style="font-size: 0.75rem; font-weight: 700; color: #e2e8f0;">${test.name}</div>
+                        <div style="font-size: 0.6rem; color: #64748b; margin-top: 2px;">${test.formula}</div>
+                        <div style="font-size: 1.1rem; font-weight: 900; color: #06b6d4; margin-top: 4px;">${result} dados</div>
+                    </div>`;
+                });
+
+                html += `<div style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 10px; padding: 12px; margin-top: 10px;">
+                    <div style="font-size: 0.75rem; font-weight: 700; color: #06b6d4; margin-bottom: 8px; text-transform: uppercase;">⚡ Testes Rápidos (${classe})</div>
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 6px;">
+                        ${testsItems}
+                    </div>
+                </div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // ========== SISTEMA DE GERENCIAMENTO DE PAINÉIS ==========
+
+        // Fechar outros painéis (para evitar sobreposição)
+        function closeOtherPanels(exceptPanelId) {
+            const panels = ['characterInfoPanel', 'raceInfoPanel', 'charStatsPanel'];
+            panels.forEach(panelId => {
+                if (panelId !== exceptPanelId) {
+                    const panel = document.getElementById(panelId);
+                    if (panel && panel.classList.contains('open')) {
+                        panel.classList.remove('open');
+                    }
+                }
+            });
+        }
+
+        // Fechar todos os painéis laterais (chamado pelo overlay mobile)
+        window.closeAllSidePanels = function () {
+            const panels = ['characterInfoPanel', 'raceInfoPanel', 'charStatsPanel'];
+            panels.forEach(panelId => {
+                const panel = document.getElementById(panelId);
+                if (panel) {
+                    panel.classList.remove('open');
+                    panel.style.transform = ''; // Reset swipe transform
+                }
+            });
+            updatePanelState();
+        };
+
+        // Atualizar estado geral dos painéis (overlay mobile + desktop split-screen)
+        function updatePanelState() {
+            const characterInfoPanel = document.getElementById('characterInfoPanel');
+            const raceInfoPanel = document.getElementById('raceInfoPanel');
+            const charStatsPanel = document.getElementById('charStatsPanel');
+            const overlay = document.getElementById('panelOverlayMobile');
+
+            const anyPanelOpen =
+                (characterInfoPanel && characterInfoPanel.classList.contains('open')) ||
+                (raceInfoPanel && raceInfoPanel.classList.contains('open')) ||
+                (charStatsPanel && charStatsPanel.classList.contains('open'));
+
+            // Mobile: Controlar overlay
+            if (window.innerWidth < 640) {
+                if (anyPanelOpen) {
+                    overlay?.classList.add('active');
+                } else {
+                    overlay?.classList.remove('active');
+                }
+                // Remover classe de desktop se estiver no mobile
+                document.body.classList.remove('panel-open-desktop');
+            } else {
+                // Desktop: Controlar split-screen
+                overlay?.classList.remove('active');
+                if (anyPanelOpen) {
+                    document.body.classList.add('panel-open-desktop');
+                } else {
+                    document.body.classList.remove('panel-open-desktop');
+                }
+            }
+        }
+
+        // ========== MOBILE: SWIPE TO CLOSE ==========
+        let swipeTouchStartX = 0;
+        let swipeTouchCurrentX = 0;
+        let isSwipingPanel = false;
+        let currentSwipingPanel = null;
+        const SWIPE_THRESHOLD = 80; // pixels para considerar swipe
+
+        function setupPanelSwipe(panelId, closeFn) {
+            const panel = document.getElementById(panelId);
+            if (!panel) return;
+
+            panel.addEventListener('touchstart', (e) => {
+                // Só permitir swipe no mobile
+                if (window.innerWidth >= 640) return;
+
+                swipeTouchStartX = e.touches[0].clientX;
+                swipeTouchCurrentX = swipeTouchStartX;
+                isSwipingPanel = true;
+                currentSwipingPanel = panel;
+            }, { passive: true });
+
+            panel.addEventListener('touchmove', (e) => {
+                if (!isSwipingPanel || currentSwipingPanel !== panel) return;
+                if (window.innerWidth >= 640) return;
+
+                swipeTouchCurrentX = e.touches[0].clientX;
+                const diff = swipeTouchStartX - swipeTouchCurrentX;
+
+                // Se arrastando para esquerda, mover o painel visualmente
+                if (diff > 0) {
+                    panel.style.transform = `translateX(-${Math.min(diff, panel.offsetWidth)}px)`;
+                }
+            }, { passive: true });
+
+            panel.addEventListener('touchend', () => {
+                if (!isSwipingPanel || currentSwipingPanel !== panel) return;
+                if (window.innerWidth >= 640) return;
+
+                const diff = swipeTouchStartX - swipeTouchCurrentX;
+
+                if (diff > SWIPE_THRESHOLD) {
+                    // Swipe para esquerda - fechar
+                    panel.style.transition = 'transform 0.2s ease';
+                    panel.style.transform = `translateX(-${panel.offsetWidth}px)`;
+
+                    setTimeout(() => {
+                        closeFn();
+                        panel.style.transform = '';
+                        panel.style.transition = '';
+                    }, 200);
+                } else {
+                    // Voltar ao lugar original
+                    panel.style.transition = 'transform 0.2s ease';
+                    panel.style.transform = '';
+                    setTimeout(() => {
+                        panel.style.transition = '';
+                    }, 200);
+                }
+
+                // Reset
+                isSwipingPanel = false;
+                currentSwipingPanel = null;
+            });
+        }
+
+        // Configurar swipe para todos os painéis ao carregar
+        document.addEventListener('DOMContentLoaded', function () {
+            setupPanelSwipe('characterInfoPanel', () => {
+                document.getElementById('characterInfoPanel')?.classList.remove('open');
+                updatePanelState();
+            });
+            setupPanelSwipe('raceInfoPanel', () => {
+                document.getElementById('raceInfoPanel')?.classList.remove('open');
+                updatePanelState();
+            });
+            setupPanelSwipe('charStatsPanel', () => {
+                document.getElementById('charStatsPanel')?.classList.remove('open');
+                updatePanelState();
+            });
+
+            // Atualizar estado quando a janela for redimensionada
+            window.addEventListener('resize', updatePanelState);
+        });
 
     </script>
 
