@@ -262,6 +262,143 @@
             }
         }
 
+        /* ========== CONDITIONS INDICATOR BAR ========== */
+        .conditions-indicator {
+            position: fixed;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 25px;
+            border: 2px solid var(--border);
+            z-index: 9997;
+            max-width: calc(100vw - 300px);
+            overflow-x: auto;
+            overflow-y: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+            scrollbar-width: none;
+        }
+
+        .conditions-indicator::-webkit-scrollbar {
+            display: none;
+        }
+
+        .conditions-indicator.has-conditions {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .conditions-indicator-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #94a3b8;
+            white-space: nowrap;
+            margin-right: 4px;
+        }
+
+        #conditionsIndicatorContent {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .condition-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            height: 28px;
+            padding: 0 8px;
+            border-radius: 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .condition-badge.positive {
+            background: rgba(34, 197, 94, 0.2);
+            border: 2px solid #22c55e;
+            color: #22c55e;
+        }
+
+        .condition-badge.neutral {
+            background: rgba(99, 102, 241, 0.2);
+            border: 2px solid #6366f1;
+            color: #6366f1;
+        }
+
+        .condition-badge.negative {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid #ef4444;
+            color: #ef4444;
+        }
+
+        .condition-badge:hover {
+            transform: scale(1.1);
+        }
+
+        .condition-badge.positive:hover {
+            background: #22c55e;
+            color: white;
+        }
+
+        .condition-badge.neutral:hover {
+            background: #6366f1;
+            color: white;
+        }
+
+        .condition-badge.negative:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        .condition-badge .condition-name {
+            display: none;
+            margin-left: 4px;
+            font-size: 0.75rem;
+        }
+
+        .condition-badge:hover .condition-name {
+            display: inline;
+        }
+
+        .condition-badge .condition-icon {
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 639px) {
+            .conditions-indicator {
+                top: 55px;
+                max-width: calc(100vw - 20px);
+                padding: 6px 12px;
+                gap: 4px;
+            }
+
+            .conditions-indicator-label {
+                font-size: 0.65rem;
+            }
+
+            .condition-badge {
+                min-width: 24px;
+                height: 24px;
+                padding: 0 6px;
+                font-size: 0.75rem;
+            }
+        }
+
+
         .tabs {
             display: flex;
             gap: 6px;
@@ -817,15 +954,16 @@
             color: var(--primary);
         }
 
+        /* ========== COMPACT COMBAT TAB STYLES ========== */
         .hp-bar-container {
-            margin: 15px 0;
+            margin: 8px 0;
         }
 
         .hp-bar {
             width: 100%;
-            height: 40px;
+            height: 24px;
             background: rgba(15, 23, 42, 0.8);
-            border-radius: 20px;
+            border-radius: 12px;
             overflow: hidden;
             border: 2px solid var(--border);
             position: relative;
@@ -839,53 +977,140 @@
             align-items: center;
             justify-content: center;
             font-weight: 900;
-            font-size: clamp(1rem, 3.5vw, 1.2rem);
+            font-size: clamp(0.75rem, 2.5vw, 0.9rem);
             color: white;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
         }
 
         .hp-controls {
             display: flex;
-            gap: 8px;
-            margin-top: 10px;
+            gap: 4px;
+            margin-top: 6px;
             justify-content: center;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
         }
 
         .hp-controls input {
-            width: 80px;
+            width: 55px;
             text-align: center;
-            padding: 10px 8px;
+            padding: 6px 4px;
+            font-size: 0.85rem;
+        }
+
+        .hp-controls .btn-small {
+            padding: 6px 10px;
+            font-size: 0.75rem;
+            min-width: auto;
+        }
+
+        /* Compact combat section styles */
+        .combat-section-compact {
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .combat-section-compact .section-title {
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+        }
+
+        .combat-status-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 8px;
+        }
+
+        .combat-status-row label {
+            min-width: 80px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .combat-status-row .hp-bar-container {
+            flex: 1;
+            margin: 0;
+        }
+
+        .combat-status-row .hp-controls {
+            margin-top: 0;
+            flex-shrink: 0;
         }
 
         .combat-helper {
             background: rgba(239, 68, 68, 0.1);
             border: 2px solid var(--danger);
-            border-radius: 12px;
-            padding: 15px;
-            margin-top: 20px;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .combat-helper h3 {
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+        }
+
+        .combat-helper p {
+            font-size: 0.75rem;
+            margin-bottom: 8px;
         }
 
         .dice-roller {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             align-items: center;
-            margin-top: 15px;
-            flex-wrap: wrap;
+            margin-top: 0;
+            flex-wrap: nowrap;
             justify-content: center;
         }
 
         .dice-input {
-            width: 80px;
+            width: 50px;
+            padding: 6px;
+            font-size: 0.85rem;
         }
 
         .roll-result {
-            font-size: clamp(1.8rem, 6vw, 2rem);
+            font-size: clamp(1.2rem, 4vw, 1.5rem);
             font-weight: 900;
             color: var(--danger);
-            text-shadow: 0 0 20px rgba(239, 68, 68, 0.7);
-            min-width: 80px;
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.7);
+            min-width: 50px;
             text-align: center;
+        }
+
+        /* Compact offensive actions */
+        .offensive-actions-compact {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .offensive-action-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 6px;
+            border-left: 3px solid var(--primary);
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .offensive-action-item span:first-child {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .offensive-action-item span:last-child {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--primary);
         }
 
         .container-card {
@@ -1302,11 +1527,15 @@
 
         /* ========== PAINEL DE INFORMAÇÕES BÁSICAS ========== */
         .character-info-btn {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            width: 45px;
-            height: 45px;
+            position: fixed !important;
+            top: 30px !important;
+            left: 10px !important;
+            width: 45px !important;
+            height: 45px !important;
+            min-width: 45px !important;
+            min-height: 45px !important;
+            max-width: 45px !important;
+            max-height: 45px !important;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             border: none;
             border-radius: 50%;
@@ -1316,9 +1545,11 @@
             z-index: 9997;
             box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
             transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 !important;
+            margin: 0 !important;
         }
 
         .character-info-btn:hover {
@@ -1331,11 +1562,15 @@
         }
 
         .race-info-btn {
-            position: fixed;
-            top: 60px;
-            left: 10px;
-            width: 45px;
-            height: 45px;
+            position: fixed !important;
+            top: 80px !important;
+            left: 10px !important;
+            width: 45px !important;
+            height: 45px !important;
+            min-width: 45px !important;
+            min-height: 45px !important;
+            max-width: 45px !important;
+            max-height: 45px !important;
             background: linear-gradient(135deg, #22c55e, #16a34a);
             border: none;
             border-radius: 50%;
@@ -1345,9 +1580,11 @@
             z-index: 9997;
             box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
             transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 !important;
+            margin: 0 !important;
         }
 
         .race-info-btn:hover {
@@ -1471,22 +1708,6 @@
         }
 
         @media (max-width: 639px) {
-            .character-info-btn {
-                width: 36px;
-                height: 36px;
-                font-size: 1.1rem;
-                top: 8px;
-                left: 5px;
-            }
-
-            .race-info-btn {
-                width: 36px;
-                height: 36px;
-                font-size: 1.1rem;
-                top: 50px;
-                left: 5px;
-            }
-
             .race-info-panel {
                 width: 300px;
                 left: -320px;
@@ -1495,11 +1716,15 @@
 
         /* ========== BOTÃO E PAINEL DE CARACTERÍSTICAS ========== */
         .char-stats-btn {
-            position: fixed;
-            top: 110px;
-            left: 10px;
-            width: 45px;
-            height: 45px;
+            position: fixed !important;
+            top: 130px !important;
+            left: 10px !important;
+            width: 45px !important;
+            height: 45px !important;
+            min-width: 45px !important;
+            min-height: 45px !important;
+            max-width: 45px !important;
+            max-height: 45px !important;
             background: linear-gradient(135deg, #f59e0b, #d97706);
             border: none;
             border-radius: 50%;
@@ -1509,9 +1734,11 @@
             z-index: 9997;
             box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
             transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 !important;
+            margin: 0 !important;
         }
 
         .char-stats-btn:hover {
@@ -1579,11 +1806,15 @@
 
         /* ========== PAINEL DE CLASSE ========== */
         .class-info-btn {
-            position: fixed;
-            top: 160px;
-            left: 10px;
-            width: 45px;
-            height: 45px;
+            position: fixed !important;
+            top: 180px !important;
+            left: 10px !important;
+            width: 45px !important;
+            height: 45px !important;
+            min-width: 45px !important;
+            min-height: 45px !important;
+            max-width: 45px !important;
+            max-height: 45px !important;
             background: linear-gradient(135deg, #a855f7, #7c3aed);
             border: none;
             border-radius: 50%;
@@ -1593,9 +1824,11 @@
             z-index: 9997;
             box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
             transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 !important;
+            margin: 0 !important;
         }
 
         .class-info-btn:hover {
@@ -1606,6 +1839,8 @@
         .class-info-btn:active {
             transform: scale(0.95);
         }
+
+        /* Estilos mobile para botões laterais já consolidados acima */
 
         .class-info-panel {
             position: fixed;
@@ -2496,13 +2731,13 @@
 
     <!-- BOTÃO DE RAÇA DO PERSONAGEM -->
     <button class="race-info-btn" id="raceInfoBtn" onclick="toggleRaceInfoPanel()" title="Raça">
-        🧬
+        🧝
     </button>
 
     <!-- PAINEL DE RAÇA DO PERSONAGEM -->
     <div class="race-info-panel" id="raceInfoPanel">
         <div class="race-info-panel-header">
-            <div class="race-info-panel-title">🧬 Raça</div>
+            <div class="race-info-panel-title">🧝 Raça</div>
             <button class="race-info-panel-close" onclick="toggleRaceInfoPanel()" title="Fechar">✕</button>
         </div>
         <div id="raceInfoContent">
@@ -2551,6 +2786,12 @@
 
     <div class="autosave-indicator" id="autosaveIndicator">💾 Salvando na nuvem...</div>
 
+    <!-- Conditions Indicator Bar -->
+    <div class="conditions-indicator" id="conditionsIndicator" onclick="switchTab('combate')">
+        <span class="conditions-indicator-label">⚠️ Condições:</span>
+        <div id="conditionsIndicatorContent"></div>
+    </div>
+
     <div class="container" id="mainContainer" style="display: none;">
         <h1>⚔️ LENDAS E RELÍQUIAS ⚔️</h1>
         <p class="subtitle">Sistema de Ficha Digital com Firebase - Auto-Save na Nuvem ☁️</p>
@@ -2562,7 +2803,7 @@
             <button class="tab active" onclick="switchTab('atributos')">📜 Atributos</button>
             <button class="tab" onclick="switchTab('caracteristicas')" style="display: none;">📊
                 Características</button>
-            <button class="tab" onclick="switchTab('classe')">⭐ Classe</button>
+            <button class="tab" onclick="switchTab('classe')" style="display: none;">⭐ Classe</button>
             <button class="tab" onclick="switchTab('combate')">⚔️ Combate</button>
             <button class="tab" onclick="switchTab('inventario')">🎒 Inventário</button>
             <button class="tab" onclick="switchTab('aliados')">👥 Aliados</button>
@@ -3698,25 +3939,23 @@
         <div id="combate" class="tab-content">
 
             <!-- Ações Ofensivas -->
-            <div class="section" style="margin-bottom: 20px;">
+            <div class="section combat-section-compact">
                 <h2 class="section-title">⚔️ Ações Ofensivas</h2>
-                <div style="background: rgba(139, 92, 246, 0.1); border-radius: 12px; padding: 12px;">
-                    <div
-                        style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(15, 23, 42, 0.6); border-radius: 8px; border-left: 4px solid var(--primary);">
-                        <span style="font-weight: 600; color: var(--light);">👊 Golpe Desarmado</span>
-                        <span style="font-weight: 700; color: var(--primary); font-size: 1.1rem;">🎲 <span
-                                id="golpe-desarmado-valor">0</span></span>
+                <div class="offensive-actions-compact">
+                    <div class="offensive-action-item">
+                        <span>👊 Golpe Desarmado</span>
+                        <span>🎲 <span id="golpe-desarmado-valor">0</span></span>
                     </div>
-                    <!-- Lista de armas equipadas será inserida aqui -->
-                    <div id="armas-equipadas-list"></div>
                 </div>
+                <!-- Lista de armas equipadas será inserida aqui -->
+                <div id="armas-equipadas-list" style="margin-top: 8px;"></div>
             </div>
 
-            <div class="section">
-                <h2 class="section-title">Status de Combate</h2>
+            <div class="section combat-section-compact">
+                <h2 class="section-title">📊 Status de Combate</h2>
 
                 <div class="hp-bar-container">
-                    <label style="margin-bottom: 10px; display: block; font-weight: 700;">❤️ Vitalidade</label>
+                    <label>❤️ Vitalidade</label>
                     <div class="hp-bar">
                         <div class="hp-fill" id="hp-fill" style="width: 100%;">
                             <span id="hp-text">5 / 5</span>
@@ -3724,16 +3963,14 @@
                     </div>
                     <div class="hp-controls">
                         <button class="btn btn-secondary btn-small" onclick="adjustHP(-1)">-1</button>
-                        <button class="btn btn-secondary btn-small" onclick="adjustHP(-5)">-5</button>
                         <input type="number" id="hp-current" value="5" onchange="updateHPBar()" inputmode="numeric">
                         <button class="btn btn-primary btn-small" onclick="adjustHP(1)">+1</button>
-                        <button class="btn btn-primary btn-small" onclick="adjustHP(5)">+5</button>
                         <button class="btn btn-secondary btn-small" onclick="resetHP()">Max</button>
                     </div>
                 </div>
 
                 <div class="hp-bar-container">
-                    <label style="margin-bottom: 10px; display: block; font-weight: 700;">⚡ Determinação</label>
+                    <label>⚡ Determinação</label>
                     <div class="hp-bar">
                         <div class="hp-fill" id="det-fill"
                             style="width: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary));">
@@ -3749,7 +3986,7 @@
                 </div>
 
                 <div class="hp-bar-container">
-                    <label style="margin-bottom: 10px; display: block; font-weight: 700;">🧠 Sanidade</label>
+                    <label>🧠 Sanidade</label>
                     <div class="hp-bar">
                         <div class="hp-fill" id="san-fill"
                             style="width: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6);">
@@ -3758,41 +3995,124 @@
                     </div>
                     <div class="hp-controls">
                         <button class="btn btn-secondary btn-small" onclick="adjustSAN(-1)">-1</button>
-                        <button class="btn btn-secondary btn-small" onclick="adjustSAN(-5)">-5</button>
                         <input type="number" id="san-current" onchange="updateSANBar()" inputmode="numeric">
                         <button class="btn btn-primary btn-small" onclick="adjustSAN(1)">+1</button>
-                        <button class="btn btn-primary btn-small" onclick="adjustSAN(5)">+5</button>
                         <button class="btn btn-secondary btn-small" onclick="resetSAN()">Max</button>
                     </div>
                 </div>
             </div>
 
-            <div class="section" style="margin-top: 20px;">
-                <h2 class="section-title">⚠️ Condições</h2>
-                <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">
-                    Adicione condições que afetam seu personagem (Ex: Fadiga, Fratura, Envenenado, etc.)
-                </p>
-
-                <div style="margin-bottom: 20px;">
-                    <button class="btn btn-primary" onclick="addCondition()">➕ Adicionar Condição</button>
+            <div class="section combat-section-compact collapsible" id="section-conditions">
+                <h2 class="section-title" onclick="toggleSection('section-conditions')">⚠️ Condições</h2>
+                <div class="section-content">
+                    <div style="margin-bottom: 10px;">
+                        <button class="btn btn-primary btn-small" onclick="addCondition()">➕ Adicionar</button>
+                    </div>
+                    <div id="conditions-list"></div>
                 </div>
+            </div>
 
-                <div id="conditions-list"></div>
+            <!-- Modal para Adicionar Condição -->
+            <div id="conditionModal"
+                style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; overflow-y: auto; backdrop-filter: blur(5px);">
+                <div
+                    style="max-width: 500px; margin: 50px auto; background: linear-gradient(135deg, #1e1b4b, #0f172a); border-radius: 16px; padding: 25px; border: 2px solid var(--warning); box-shadow: 0 25px 50px rgba(245, 158, 11, 0.2);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid rgba(245, 158, 11, 0.3);">
+                        <h2 style="color: var(--warning); margin: 0; font-size: 1.4rem;">⚠️ Nova Condição</h2>
+                        <button onclick="closeConditionModal()"
+                            style="background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 2px solid var(--danger); border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 1.2rem; font-weight: 700; transition: all 0.3s;"
+                            onmouseover="this.style.background='var(--danger)'; this.style.color='white';"
+                            onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'; this.style.color='var(--danger)';">✕</button>
+                    </div>
+
+                    <form id="conditionForm" onsubmit="return false;">
+                        <div style="margin-bottom: 20px;">
+                            <label
+                                style="display: block; color: var(--warning); font-size: 0.95rem; margin-bottom: 8px; font-weight: 600;">
+                                📌 Nome da Condição *
+                            </label>
+                            <input type="text" id="conditionName" required
+                                placeholder="Ex: Fadiga, Fratura, Envenenado..."
+                                style="width: 100%; padding: 14px; border-radius: 10px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light); font-size: 1rem; transition: border-color 0.3s;"
+                                onfocus="this.style.borderColor='var(--warning)'"
+                                onblur="this.style.borderColor='var(--border)'">
+                        </div>
+
+                        <div style="margin-bottom: 25px;">
+                            <label
+                                style="display: block; color: #cbd5e1; font-size: 0.95rem; margin-bottom: 8px; font-weight: 600;">
+                                📝 Descrição / Efeitos Mecânicos
+                            </label>
+                            <textarea id="conditionDescription" rows="4"
+                                placeholder="Descreva os efeitos mecânicos desta condição..."
+                                style="width: 100%; padding: 14px; border-radius: 10px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light); font-size: 0.95rem; resize: vertical; min-height: 100px; transition: border-color 0.3s; font-family: inherit; line-height: 1.5;"
+                                onfocus="this.style.borderColor='var(--warning)'"
+                                onblur="this.style.borderColor='var(--border)'"></textarea>
+                        </div>
+
+                        <div style="margin-bottom: 25px;">
+                            <label
+                                style="display: block; color: #cbd5e1; font-size: 0.95rem; margin-bottom: 12px; font-weight: 600;">
+                                🎭 Tipo da Condição *
+                            </label>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <label style="flex: 1; min-width: 100px; cursor: pointer;">
+                                    <input type="radio" name="conditionType" value="positive" id="conditionTypePositive"
+                                        style="display: none;">
+                                    <div id="conditionTypeLabelPositive"
+                                        style="padding: 12px 16px; border-radius: 10px; border: 2px solid #22c55e; background: rgba(34, 197, 94, 0.1); color: #22c55e; text-align: center; font-weight: 600; transition: all 0.3s;"
+                                        onclick="selectConditionType('positive')">
+                                        ✨ Positiva
+                                    </div>
+                                </label>
+                                <label style="flex: 1; min-width: 100px; cursor: pointer;">
+                                    <input type="radio" name="conditionType" value="neutral" id="conditionTypeNeutral"
+                                        style="display: none;">
+                                    <div id="conditionTypeLabelNeutral"
+                                        style="padding: 12px 16px; border-radius: 10px; border: 2px solid #6366f1; background: rgba(99, 102, 241, 0.1); color: #6366f1; text-align: center; font-weight: 600; transition: all 0.3s;"
+                                        onclick="selectConditionType('neutral')">
+                                        ⚖️ Neutra
+                                    </div>
+                                </label>
+                                <label style="flex: 1; min-width: 100px; cursor: pointer;">
+                                    <input type="radio" name="conditionType" value="negative" id="conditionTypeNegative"
+                                        checked style="display: none;">
+                                    <div id="conditionTypeLabelNegative"
+                                        style="padding: 12px 16px; border-radius: 10px; border: 2px solid #ef4444; background: #ef4444; color: white; text-align: center; font-weight: 600; transition: all 0.3s;"
+                                        onclick="selectConditionType('negative')">
+                                        ⚠️ Negativa
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 12px;">
+                            <button type="button" onclick="saveCondition()"
+                                style="flex: 1; background: linear-gradient(135deg, var(--warning), #d97706); color: #1e1b4b; border: none; border-radius: 10px; padding: 14px; cursor: pointer; font-weight: 700; font-size: 1rem; transition: all 0.3s; text-transform: uppercase; letter-spacing: 0.5px;"
+                                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(245, 158, 11, 0.4)';"
+                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                                ✅ Adicionar Condição
+                            </button>
+                            <button type="button" onclick="closeConditionModal()"
+                                style="background: rgba(100, 116, 139, 0.3); color: #94a3b8; border: 2px solid #64748b; border-radius: 10px; padding: 14px 20px; cursor: pointer; font-weight: 700; transition: all 0.3s;"
+                                onmouseover="this.style.background='rgba(100, 116, 139, 0.5)';"
+                                onmouseout="this.style.background='rgba(100, 116, 139, 0.3)';">
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             <!-- Bloco de Graça de Palla (apenas para Pallacerdote) -->
-            <div class="section" id="graca-section" style="display: none; margin-top: 20px;">
+            <div class="section combat-section-compact" id="graca-section" style="display: none;">
                 <h2 class="section-title"
                     style="background: linear-gradient(135deg, #fbbf24, #fde047); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
                     💎 Graça de Palla
                 </h2>
-                <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">
-                    Ajuste sua Graça atual durante o combate. Máximo baseado em PRE + Essência.
-                </p>
-
                 <div class="hp-bar-container">
-                    <label style="margin-bottom: 10px; display: block; font-weight: 700; color: #fde047;">💎 Graça
-                        Atual</label>
+                    <label style="color: #fde047;">💎 Graça Atual</label>
                     <div class="hp-bar" style="border: 2px solid #fbbf24;">
                         <div class="hp-fill" id="graca-combate-fill"
                             style="width: 0%; background: linear-gradient(90deg, #fbbf24, #fde047);">
@@ -3808,15 +4128,10 @@
             </div>
 
             <!-- Bloco de Fantoches (apenas para Adepto) -->
-            <div class="section" id="fantoches-section" style="display: none; margin-top: 20px;">
+            <div class="section combat-section-compact" id="fantoches-section" style="display: none;">
                 <h2 class="section-title">🧟 Fantoches</h2>
-                <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem;">
-                    Controle seus fantoches ativos durante o combate. Máximo baseado em INT + Liderança + Servos.
-                </p>
-
                 <div class="hp-bar-container">
-                    <label style="margin-bottom: 10px; display: block; font-weight: 700;">🧟 Fantoches
-                        Ativos</label>
+                    <label>🧟 Fantoches Ativos</label>
                     <div class="hp-bar">
                         <div class="hp-fill" id="fantoches-fill"
                             style="width: 0%; background: linear-gradient(90deg, #800080, #a020f0);">
@@ -3825,17 +4140,15 @@
                     </div>
                     <div class="hp-controls">
                         <button class="btn btn-secondary btn-small" onclick="adjustFantoches(-1)">-1</button>
-                        <button class="btn btn-secondary btn-small" onclick="adjustFantoches(-5)">-5</button>
                         <input type="number" id="fantoches-current" value="0" onchange="updateFantochesBar()"
                             inputmode="numeric">
                         <button class="btn btn-primary btn-small" onclick="adjustFantoches(1)">+1</button>
-                        <button class="btn btn-primary btn-small" onclick="adjustFantoches(5)">+5</button>
                         <button class="btn btn-secondary btn-small" onclick="resetFantoches()">Max</button>
                     </div>
                 </div>
             </div>
 
-            <div class="section" id="alliesCombatSection" style="display: none; margin-top: 20px;">
+            <div class="section combat-section-compact" id="alliesCombatSection" style="display: none;">
                 <h2 class="section-title">👥 Status dos Aliados</h2>
                 <div id="allies-combat-list"></div>
             </div>
@@ -5064,10 +5377,8 @@ Exemplos:
                             </div>
                             <div class="hp-controls">
                                 <button class="btn btn-secondary btn-small" onclick="adjustAllyHP('${ally.id}', -1)">-1</button>
-                                <button class="btn btn-secondary btn-small" onclick="adjustAllyHP('${ally.id}', -5)">-5</button>
                                 <input type="number" id="ally-hp-${ally.id}" value="${ally.hpCurrent}" onchange="updateAllyHPBar('${ally.id}')" inputmode="numeric" style="width: 80px; text-align: center; padding: 8px;">
                                 <button class="btn btn-primary btn-small" onclick="adjustAllyHP('${ally.id}', 1)">+1</button>
-                                <button class="btn btn-primary btn-small" onclick="adjustAllyHP('${ally.id}', 5)">+5</button>
                                 <button class="btn btn-secondary btn-small" onclick="resetAllyHP('${ally.id}')">Max</button>
                             </div>
                         </div>
@@ -5082,10 +5393,8 @@ Exemplos:
                             </div>
                             <div class="hp-controls">
                                 <button class="btn btn-secondary btn-small" onclick="adjustAllySAN('${ally.id}', -1)">-1</button>
-                                <button class="btn btn-secondary btn-small" onclick="adjustAllySAN('${ally.id}', -5)">-5</button>
                                 <input type="number" id="ally-san-${ally.id}" value="${ally.sanCurrent}" onchange="updateAllySANBar('${ally.id}')" inputmode="numeric" style="width: 80px; text-align: center; padding: 8px;">
                                 <button class="btn btn-primary btn-small" onclick="adjustAllySAN('${ally.id}', 1)">+1</button>
-                                <button class="btn btn-primary btn-small" onclick="adjustAllySAN('${ally.id}', 5)">+5</button>
                                 <button class="btn btn-secondary btn-small" onclick="resetAllySAN('${ally.id}')">Max</button>
                             </div>
                         </div>
@@ -5484,6 +5793,27 @@ Exemplos:
                             const aliadoAnimal = char.classAbilities?.['aliado-animal'] || 0;
                             const linguagemAnimal = char.classAbilities?.['linguagem-animal'] || 0;
                             return char.pre + aliadoAnimal + linguagemAnimal;
+                        }
+                    },
+                    {
+                        name: '⚡ Preparar Loção Rápida', formula: 'DES + AUT + Herbalismo + Maceração − 2', calculate: (char) => {
+                            const herbalismo = char.skills['herbalismo'] || 0;
+                            const maceracao = char.classAbilities?.['maceração'] || 0;
+                            return char.des + char.aut + herbalismo + maceracao - 2;
+                        }
+                    },
+                    {
+                        name: '🧪 Preparar Loção', formula: 'RAC + Herbalismo + Maceração + Ferramenta', calculate: (char) => {
+                            const herbalismo = char.skills['herbalismo'] || 0;
+                            const maceracao = char.classAbilities?.['maceração'] || 0;
+                            return char.rac + herbalismo + maceracao;
+                        }
+                    },
+                    {
+                        name: '💉 Dosagem', formula: 'INT + Herbalismo + Dosagem', calculate: (char) => {
+                            const herbalismo = char.skills['herbalismo'] || 0;
+                            const dosagem = char.classAbilities?.['dosagem'] || 0;
+                            return char.int + herbalismo + dosagem;
                         }
                     },
                     { name: '👁️ Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
@@ -9331,25 +9661,129 @@ Exemplos:
         }
 
         // ============= FUNÇÕES DE CONDIÇÕES =============
+
+        // Abre o modal para adicionar uma nova condição
         window.addCondition = function () {
+            openConditionModal();
+        };
+
+        function openConditionModal() {
+            // Limpar campos
+            document.getElementById('conditionName').value = '';
+            document.getElementById('conditionDescription').value = '';
+
+            // Resetar tipo para 'negative' (padrão)
+            selectConditionType('negative');
+
+            // Mostrar modal
+            document.getElementById('conditionModal').style.display = 'block';
+
+            // Focar no campo de nome
+            setTimeout(() => {
+                document.getElementById('conditionName').focus();
+            }, 100);
+        }
+        window.openConditionModal = openConditionModal;
+
+        // Função para selecionar o tipo de condição visualmente
+        function selectConditionType(type) {
+            const types = ['positive', 'neutral', 'negative'];
+            const colors = {
+                positive: { border: '#22c55e', bg: '#22c55e', text: 'white' },
+                neutral: { border: '#6366f1', bg: '#6366f1', text: 'white' },
+                negative: { border: '#ef4444', bg: '#ef4444', text: 'white' }
+            };
+            const defaultColors = {
+                positive: { border: '#22c55e', bg: 'rgba(34, 197, 94, 0.1)', text: '#22c55e' },
+                neutral: { border: '#6366f1', bg: 'rgba(99, 102, 241, 0.1)', text: '#6366f1' },
+                negative: { border: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444' }
+            };
+
+            types.forEach(t => {
+                const radio = document.getElementById('conditionType' + t.charAt(0).toUpperCase() + t.slice(1));
+                const label = document.getElementById('conditionTypeLabel' + t.charAt(0).toUpperCase() + t.slice(1));
+
+                if (t === type) {
+                    radio.checked = true;
+                    label.style.background = colors[t].bg;
+                    label.style.color = colors[t].text;
+                    label.style.borderColor = colors[t].border;
+                } else {
+                    radio.checked = false;
+                    label.style.background = defaultColors[t].bg;
+                    label.style.color = defaultColors[t].text;
+                    label.style.borderColor = defaultColors[t].border;
+                }
+            });
+        }
+        window.selectConditionType = selectConditionType;
+
+        function closeConditionModal() {
+            document.getElementById('conditionModal').style.display = 'none';
+        }
+        window.closeConditionModal = closeConditionModal;
+
+        function saveCondition() {
+            const name = document.getElementById('conditionName').value.trim();
+            const description = document.getElementById('conditionDescription').value.trim();
+
+            // Obter o tipo selecionado
+            const typeRadio = document.querySelector('input[name="conditionType"]:checked');
+            const type = typeRadio ? typeRadio.value : 'negative';
+
+            if (!name) {
+                showAlert('⚠️ Por favor, insira o nome da condição!', 'warning');
+                document.getElementById('conditionName').focus();
+                return;
+            }
+
             const char = getChar();
-            const name = prompt('Nome da Condição (ex: Fadiga, Fratura, Envenenado):');
-            if (!name) return;
-
-            const description = prompt('Descrição da Condição (efeitos mecânicos):') || '';
-
             if (!char.conditions) char.conditions = [];
 
             const newCondition = {
                 id: Date.now(),
                 name,
-                description
+                description,
+                type // 'positive', 'neutral', or 'negative'
             };
 
             char.conditions.push(newCondition);
+
+            // Fechar modal
+            closeConditionModal();
+
+            // Atualizar lista de condições
             updateConditions();
+
+            // Salvar no Firebase
             autoSave();
-        };
+
+            showAlert(`✅ Condição "${name}" adicionada!`, 'success');
+        }
+        window.saveCondition = saveCondition;
+
+        // Event listener para tecla Enter no campo de nome e Escape para fechar
+        document.addEventListener('keydown', function (e) {
+            const modal = document.getElementById('conditionModal');
+            if (modal && modal.style.display === 'block') {
+                if (e.key === 'Escape') {
+                    closeConditionModal();
+                } else if (e.key === 'Enter' && e.target.id === 'conditionName') {
+                    e.preventDefault();
+                    document.getElementById('conditionDescription').focus();
+                } else if (e.key === 'Enter' && e.ctrlKey) {
+                    e.preventDefault();
+                    saveCondition();
+                }
+            }
+        });
+
+        // Fechar modal ao clicar fora do conteúdo
+        document.getElementById('conditionModal')?.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeConditionModal();
+            }
+        });
 
         window.removeCondition = function (conditionId) {
             if (!confirm('⚠️🗑️⚠️ Remover esta condição? ⚠️🗑️⚠️')) return;
@@ -9366,6 +9800,34 @@ Exemplos:
             if (!char.conditions) char.conditions = [];
 
             const conditionsList = document.getElementById('conditions-list');
+            const indicatorBar = document.getElementById('conditionsIndicator');
+            const indicatorContent = document.getElementById('conditionsIndicatorContent');
+
+            // Atualizar a barra de indicadores no topo
+            if (indicatorBar && indicatorContent) {
+                if (char.conditions.length > 0) {
+                    indicatorBar.classList.add('has-conditions');
+                    indicatorContent.innerHTML = char.conditions.map(condition => {
+                        const typeConfig = {
+                            positive: { icon: '✨', class: 'positive' },
+                            neutral: { icon: '⚖️', class: 'neutral' },
+                            negative: { icon: '⚠️', class: 'negative' }
+                        };
+                        const config = typeConfig[condition.type] || typeConfig.negative;
+                        return `
+                            <div class="condition-badge ${config.class}" title="${condition.name}: ${condition.description || 'Sem descrição'}">
+                                <span class="condition-icon">${config.icon}</span>
+                                <span class="condition-name">${condition.name}</span>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    indicatorBar.classList.remove('has-conditions');
+                    indicatorContent.innerHTML = '';
+                }
+            }
+
+            // Atualizar a lista de condições na aba Combate
             if (!conditionsList) return;
 
             if (char.conditions.length === 0) {
@@ -9373,18 +9835,30 @@ Exemplos:
                 return;
             }
 
-            conditionsList.innerHTML = char.conditions.map(condition => `
-                <div class="container-card" style="border-left: 4px solid var(--warning);">
-                    <div class="container-header">
-                        <div class="container-name">⚠️ ${condition.name}</div>
+            conditionsList.innerHTML = char.conditions.map(condition => {
+                // Definir cores e ícones baseados no tipo
+                const typeConfig = {
+                    positive: { color: '#22c55e', icon: '✨', label: 'Positiva' },
+                    neutral: { color: '#6366f1', icon: '⚖️', label: 'Neutra' },
+                    negative: { color: '#ef4444', icon: '⚠️', label: 'Negativa' }
+                };
+                const config = typeConfig[condition.type] || typeConfig.negative;
+
+                return `
+                    <div class="container-card" style="border-left: 4px solid ${config.color}; background: linear-gradient(135deg, rgba(15, 23, 42, 0.6), rgba(${condition.type === 'positive' ? '34, 197, 94' : condition.type === 'neutral' ? '99, 102, 241' : '239, 68, 68'}, 0.05));">
+                        <div class="container-header" style="border-bottom-color: ${config.color}40;">
+                            <div class="container-name" style="color: ${config.color};">${config.icon} ${condition.name}</div>
+                            <span style="font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; background: ${config.color}20; color: ${config.color}; font-weight: 600;">${config.label}</span>
+                        </div>
+                        <div style="padding: 10px; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 10px;">
+                            ${condition.description || 'Sem descrição'}
+                        </div>
+                        <button class="btn btn-danger btn-small" onclick="removeCondition(${condition.id})">🗑️</button>
                     </div>
-                    <div style="padding: 10px; color: #cbd5e1; font-size: 0.9rem; margin-bottom: 10px;">
-                        ${condition.description || 'Sem descrição'}
-                    </div>
-                    <button class="btn btn-danger btn-small" onclick="removeCondition(${condition.id})">🗑️</button>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
+
 
         window.addContainer = async function () {
             const char = getChar();
@@ -11904,14 +12378,14 @@ Exemplos:
             if (racaLocked) {
                 html += `
                     <div class="character-info-item">
-                        <div class="character-info-label">🧬 Raça 🔒</div>
+                        <div class="character-info-label">🧝 Raça 🔒</div>
                         <div class="character-info-value">${char.raca || '—'}</div>
                     </div>
                 `;
             } else {
                 html += `
                     <div class="character-info-item editable">
-                        <div class="character-info-label">🧬 Raça</div>
+                        <div class="character-info-label">🧝 Raça</div>
                         <select class="character-info-select" id="panel-raca" onchange="selectPanelRaca(this.value)">
                             <option value="">Selecione...</option>
                             ${racaOptions.map(raca =>
@@ -12212,7 +12686,7 @@ Exemplos:
             if (!raca || !RACE_DATA[raca]) {
                 container.innerHTML = `
                     <div class="race-no-selection">
-                        <div style="font-size: 3rem; margin-bottom: 15px;">🧬</div>
+                        <div style="font-size: 3rem; margin-bottom: 15px;">🧝</div>
                         <div style="font-size: 1rem; font-weight: 600; margin-bottom: 10px;">Nenhuma raça selecionada</div>
                         <div style="font-size: 0.85rem;">Selecione uma raça na aba Básico ou no painel 📋</div>
                     </div>
@@ -12759,23 +13233,75 @@ Exemplos:
                     { nome: 'Golpe Preciso', calculo: 'DES + Punhal + Precisão', requisito: { tipo: 'nenhum' }, descricao: 'Ignora Blindagem do alvo.', calcular: () => { const arma = char.skills?.['arma'] || 0; const punho = char.classAbilities?.['armas-punho'] || 0; const precisao = char.classAbilities?.['precisão'] || 0; return char.des + arma + punho + precisao; } },
                     { nome: 'Troca De Mãos', calculo: 'DES + Prestidigitação', requisito: { tipo: 'nenhum' }, descricao: 'Furto após ataque com punhal.', calcular: () => char.des + (char.classAbilities?.['prestidigitação'] || 0) },
                     { nome: 'Retirada Ágil', calculo: 'DES + Agilidade', requisito: { tipo: 'nenhum' }, descricao: 'Move 3m após atacar.', calcular: () => char.des + (char.skills?.['agilidade'] || 0) },
-                    { nome: 'Desarme', calculo: 'DES + Arma + Punho', requisito: { tipo: 'class', nome: 'arrombamento', nivel: 1 }, descricao: 'Desarma o alvo.', calcular: () => { const arma = char.skills?.['arma'] || 0; const punho = char.classAbilities?.['armas-punho'] || 0; return char.des + arma + punho; } },
-                    { nome: 'Engodo', calculo: 'MAN + Malandragem', requisito: { tipo: 'class', nome: 'malandragem-ii', nivel: 1 }, descricao: 'Aliado ignora reação do alvo.', calcular: () => char.man + (char.skills?.['malandragem'] || 0) + (char.classAbilities?.['malandragem-ii'] || 0) },
-                    { nome: 'Ataque Mudo', calculo: 'DES + Furtividade', requisito: { tipo: 'class', nome: 'olho-brechas', nivel: 1 }, descricao: 'Permanece furtivo após ataque.', calcular: () => char.des + (char.skills?.['furtividade'] || 0) + (char.classAbilities?.['furtividade-ii'] || 0) }
+                    { nome: 'Desarme', calculo: 'DES + Arma + Precisão', requisito: { tipo: 'nenhum' }, descricao: 'Desarma o alvo.', calcular: () => { const arma = char.skills?.['arma'] || 0; const precisao = char.classAbilities?.['precisão'] || 0; return char.des + arma + precisao; } },
+                    { nome: 'Passos Sombrio', calculo: 'DES + Furtividade I + II', requisito: { tipo: 'nenhum' }, descricao: 'Entra em modo furtivo ao mover.', calcular: () => { const furt = char.skills?.['furtividade'] || 0; const furtII = char.classAbilities?.['furtividade-ii'] || 0; return char.des + furt + furtII; } },
+                    { nome: 'Engodo', calculo: 'MAN + Malandragem + Performance', requisito: { tipo: 'nenhum' }, descricao: 'Ignora Reação do alvo no próximo ataque.', calcular: () => { const malan = char.skills?.['malandragem'] || 0; const performance = char.skills?.['performance'] || 0; return char.man + malan + performance; } },
+                    { nome: 'Sombra Acelerada', calculo: 'Sem bônus', requisito: { tipo: 'nenhum' }, descricao: 'Abdica Reação para ganhar ação extra.', calcular: () => 0 },
+                    { nome: 'Ataque Mudo', calculo: 'DES + Arma + Punhal + Precisão', requisito: { tipo: 'custom', verificar: () => { const malan = char.skills?.['malandragem'] || 0; const agilidade = char.skills?.['agilidade'] || 0; return malan >= 2 && agilidade >= 2; }, texto: 'Malandragem 2 e Agilidade 2' }, descricao: 'Ignora Reação e Blindagem, dano à Vitalidade.', calcular: () => { const arma = char.skills?.['arma'] || 0; const punho = char.classAbilities?.['armas-punho'] || 0; const precisao = char.classAbilities?.['precisão'] || 0; return char.des + arma + punho + precisao; } }
                 ];
                 html += renderManobrasSection(manobras, verificarRequisito);
             }
 
-            // CAÇADOR - Marca de Caça
+            // CAÇADOR - Marca de Caça e Receitas
             if (classe === 'Caçador') {
                 const marcarPresa = char.classAbilities?.['marcar-presa'] || 0;
                 const bonus = 1 + marcarPresa;
+                const alvoMarca = char.marcaCaca?.alvo || '';
+                const sobreMarca = char.marcaCaca?.sobre || '';
+                const recipes = char.recipes || [];
+
                 html += `
                 <div class="class-mini-section">
                     <div class="class-mini-title">🎯 Marca de Caça</div>
                     <div class="class-info-box">
-                        <strong>Bônus:</strong> +${bonus} em rastreamento e ataques contra alvo marcado.<br>
-                        <small>Cálculo: 1 + Marcar Presa (${marcarPresa})</small>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <strong>Bônus:</strong>
+                            <span style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 10px; font-weight: 900; font-size: 1.1rem;">+${bonus}</span>
+                        </div>
+                        <small style="display: block; color: #94a3b8; margin-bottom: 10px;">Cálculo: 1 + Marcar Presa (${marcarPresa})</small>
+                        
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: block; color: #cbd5e1; font-size: 0.75rem; margin-bottom: 4px;">🎯 Alvo Marcado:</label>
+                            <input type="text" id="panel-marca-alvo" value="${alvoMarca}" 
+                                placeholder="Nome do alvo..."
+                                onchange="updateMarcaCacaFromPanel('alvo', this.value)"
+                                style="width: 100%; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light); font-size: 0.85rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; color: #cbd5e1; font-size: 0.75rem; margin-bottom: 4px;">📝 Sobre o Alvo:</label>
+                            <textarea id="panel-marca-sobre" 
+                                placeholder="Fraquezas, comportamento..."
+                                onchange="updateMarcaCacaFromPanel('sobre', this.value)"
+                                style="width: 100%; min-height: 60px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light); font-size: 0.8rem; resize: vertical;">${sobreMarca}</textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="class-mini-section">
+                    <div class="class-mini-title">🧪 Receitas de Loção Ofensiva</div>
+                    <button onclick="openRecipeModal()" 
+                        style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 8px; border: 2px solid var(--primary); background: rgba(139, 92, 246, 0.2); color: var(--primary); font-weight: 700; cursor: pointer; font-size: 0.85rem;">
+                        ➕ Adicionar Receita
+                    </button>
+                    <div id="panel-recipes-list">
+                        ${recipes.length === 0 ? '<div style="text-align: center; color: #94a3b8; font-size: 0.8rem; padding: 10px;">Nenhuma receita aprendida ainda.</div>' :
+                        recipes.map(recipe => `
+                            <div style="background: rgba(139, 92, 246, 0.1); border-left: 3px solid var(--primary); padding: 10px; border-radius: 6px; margin-bottom: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div>
+                                        <div style="font-weight: 700; color: var(--primary); font-size: 0.9rem;">🧪 ${recipe.name}</div>
+                                        <div style="font-size: 0.7rem; color: #f59e0b; margin-top: 2px;">${recipe.tipo === 'Ofensivo' ? '⚔️ Ofensivo' : '🛡️ Defensivo'}</div>
+                                    </div>
+                                    <button onclick="deleteRecipeFromPanel(${recipe.id})" 
+                                        style="padding: 2px 8px; border-radius: 4px; border: none; background: rgba(239, 68, 68, 0.3); color: #fca5a5; cursor: pointer; font-size: 0.7rem;">🗑️</button>
+                                </div>
+                                <div style="font-size: 0.75rem; color: #cbd5e1; margin-top: 6px;">
+                                    <strong>Macerar:</strong> ${recipe.macerar || 0} | <strong>Variedade Mín:</strong> ${recipe.variedadeMinima || 0}<br>
+                                    <strong>Repetir:</strong> ${recipe.repetir ? '✅ Sim' : '❌ Não'}
+                                </div>
+                                ${recipe.propriedades ? `<div style="font-size: 0.7rem; color: #94a3b8; margin-top: 4px; padding: 6px; background: rgba(15, 23, 42, 0.4); border-radius: 4px;"><strong>Propriedades:</strong> ${recipe.propriedades}</div>` : ''}
+                            </div>
+                        `).join('')}
                     </div>
                 </div>
                 `;
@@ -12795,9 +13321,41 @@ Exemplos:
                     </div>
                 </div>
                 `;
+
+                // DRUIDA - Receitas
+                const recipes = char.recipes || [];
+                html += `
+                <div class="class-mini-section">
+                    <div class="class-mini-title">🧪 Receitas de Loções</div>
+                    <button onclick="openRecipeModal()" 
+                        style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 8px; border: 2px solid #22c55e; background: rgba(34, 197, 94, 0.2); color: #22c55e; font-weight: 700; cursor: pointer; font-size: 0.85rem;">
+                        ➕ Adicionar Receita
+                    </button>
+                    <div id="panel-recipes-list">
+                        ${recipes.length === 0 ? '<div style="text-align: center; color: #94a3b8; font-size: 0.8rem; padding: 10px;">Nenhuma receita aprendida ainda.</div>' :
+                        recipes.map(recipe => `
+                            <div style="background: rgba(34, 197, 94, 0.1); border-left: 3px solid #22c55e; padding: 10px; border-radius: 6px; margin-bottom: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div>
+                                        <div style="font-weight: 700; color: #22c55e; font-size: 0.9rem;">🧪 ${recipe.name}</div>
+                                        <div style="font-size: 0.7rem; color: ${recipe.tipo === 'Ofensivo' ? '#f59e0b' : '#22c55e'}; margin-top: 2px;">${recipe.tipo === 'Ofensivo' ? '⚔️ Ofensivo' : '🛡️ Defensivo'}</div>
+                                    </div>
+                                    <button onclick="deleteRecipeFromPanel(${recipe.id})" 
+                                        style="padding: 2px 8px; border-radius: 4px; border: none; background: rgba(239, 68, 68, 0.3); color: #fca5a5; cursor: pointer; font-size: 0.7rem;">🗑️</button>
+                                </div>
+                                <div style="font-size: 0.75rem; color: #cbd5e1; margin-top: 6px;">
+                                    <strong>Macerar:</strong> ${recipe.macerar || 0} | <strong>Variedade Mín:</strong> ${recipe.variedadeMinima || 0}<br>
+                                    <strong>Repetir:</strong> ${recipe.repetir ? '✅ Sim' : '❌ Não'}
+                                </div>
+                                ${recipe.propriedades ? `<div style="font-size: 0.7rem; color: #94a3b8; margin-top: 4px; padding: 6px; background: rgba(15, 23, 42, 0.4); border-radius: 4px;"><strong>Propriedades:</strong> ${recipe.propriedades}</div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                `;
             }
 
-            // ADEPTO - Necromancia
+            // ADEPTO - Necromancia (INTERATIVO)
             if (classe === 'Adepto') {
                 const maxServos = char.classAbilities?.['servos'] || 0;
                 const servosAtuais = (char.allies || []).filter(ally => (ally.funcao || '').toLowerCase().includes('servo zumbi')).length;
@@ -12810,15 +13368,24 @@ Exemplos:
                 <div class="class-mini-section">
                     <div class="class-mini-title">🧟 Necromancia</div>
                     <div class="class-info-box">
-                        <strong>⚰️ Servos:</strong> ${servosAtuais} / ${maxServos}<br>
-                        <strong>🧟 Fantoches:</strong> ${fantochesAtuais} / ${maxFantoches}<br>
-                        <small>Cálculo Fantoches: INT + Liderança + Servos</small>
+                        <div style="margin-bottom: 10px;">
+                            <strong>⚰️ Servos:</strong> ${servosAtuais} / ${maxServos}
+                            <small style="display: block; color: #94a3b8;">(Contado dos Aliados com função "Servo Zumbi")</small>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <strong>🧟 Fantoches:</strong>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <button onclick="adjustFantochesFromPanel(-1)" style="width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--danger); color: white; cursor: pointer; font-weight: 900;">-</button>
+                                <span style="font-weight: 700; min-width: 50px; text-align: center;">${fantochesAtuais} / ${maxFantoches}</span>
+                                <button onclick="adjustFantochesFromPanel(1)" style="width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--success); color: white; cursor: pointer; font-weight: 900;">+</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 `;
             }
 
-            // PALLACERDOTE - Círculo e Graça
+            // PALLACERDOTE - Círculo e Graça (INTERATIVO)
             if (classe === 'Pallacerdote') {
                 const essencia = char.skills?.['essência'] || 0;
                 const maxGraca = char.pre + essencia;
@@ -12829,23 +13396,103 @@ Exemplos:
                 <div class="class-mini-section">
                     <div class="class-mini-title">✨ Círculo e Graça</div>
                     <div class="class-info-box">
-                        <strong>🌟 Círculo:</strong> ${circuloAtual}<br>
-                        <strong>💎 Graça:</strong> ${gracaAtual} / ${maxGraca}<br>
-                        <small>Cálculo: PRE (${char.pre}) + Essência (${essencia})</small>
+                        <div style="margin-bottom: 12px;">
+                            <strong>🌟 Círculo:</strong>
+                            <select id="panel-circulo-select" onchange="updateCirculoFromPanel(this.value)" 
+                                style="margin-left: 8px; padding: 4px 8px; border-radius: 6px; border: 1px solid #fbbf24; background: rgba(15, 23, 42, 0.9); color: #fde047; font-size: 0.85rem; cursor: pointer;">
+                                <option value="Diácono da Luz" ${circuloAtual === 'Diácono da Luz' ? 'selected' : ''}>⭐ Diácono da Luz</option>
+                                <option value="Sábio da Luz" ${circuloAtual === 'Sábio da Luz' ? 'selected' : ''}>✨ Sábio da Luz</option>
+                                <option value="Bispo da Luz" ${circuloAtual === 'Bispo da Luz' ? 'selected' : ''}>🌟 Bispo da Luz</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <strong>💎 Graça:</strong>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <button onclick="adjustGracaFromPanel(-1)" style="width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--danger); color: white; cursor: pointer; font-weight: 900;">-</button>
+                                <span style="font-weight: 700; min-width: 50px; text-align: center; color: #fde047;">${gracaAtual} / ${maxGraca}</span>
+                                <button onclick="adjustGracaFromPanel(1)" style="width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--success); color: white; cursor: pointer; font-weight: 900;">+</button>
+                                <button onclick="resetGracaFromPanel()" style="padding: 2px 8px; border-radius: 6px; border: none; background: #fbbf24; color: #1e1b4b; cursor: pointer; font-size: 0.7rem; font-weight: 700;">MAX</button>
+                            </div>
+                        </div>
+                        <small style="display: block; margin-top: 6px; color: #94a3b8;">Cálculo: PRE (${char.pre}) + Essência (${essencia})</small>
+                    </div>
+                </div>
+                `;
+
+                // PALLACERDOTE - Preces e Ritos
+                const ritos = char.ritos || [];
+                html += `
+                <div class="class-mini-section">
+                    <div class="class-mini-title">✨ Preces e Liturgia</div>
+                    <button onclick="openRitoModal()" 
+                        style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 8px; border: 2px solid #fbbf24; background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(253, 224, 71, 0.2)); color: #fde047; font-weight: 700; cursor: pointer; font-size: 0.85rem;">
+                        ➕ Adicionar Rito
+                    </button>
+                    <div id="panel-ritos-list">
+                        ${ritos.length === 0 ? '<div style="text-align: center; color: #94a3b8; font-size: 0.8rem; padding: 10px;">Nenhum rito aprendido ainda.</div>' :
+                        ritos.map(rito => `
+                            <div style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(253, 224, 71, 0.1)); border-left: 3px solid #fbbf24; padding: 10px; border-radius: 6px; margin-bottom: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div>
+                                        <div style="font-weight: 700; color: #fde047; font-size: 0.9rem;">✨ ${rito.name}</div>
+                                        <div style="font-size: 0.7rem; color: #fbbf24; margin-top: 2px;">Círculo: ${rito.circulo || 'N/A'}</div>
+                                    </div>
+                                    <button onclick="deleteRitoFromPanel(${rito.id})" 
+                                        style="padding: 2px 8px; border-radius: 4px; border: none; background: rgba(239, 68, 68, 0.3); color: #fca5a5; cursor: pointer; font-size: 0.7rem;">🗑️</button>
+                                </div>
+                                <div style="font-size: 0.75rem; color: #cbd5e1; margin-top: 6px;">
+                                    <strong>Teste:</strong> ${rito.teste || 'N/A'}<br>
+                                    <strong>Custo:</strong> ${rito.custo || 'N/A'}
+                                </div>
+                                <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 4px; padding: 6px; background: rgba(15, 23, 42, 0.4); border-radius: 4px;">
+                                    <strong>Efeito:</strong> ${rito.efeito || 'Nenhum efeito descrito'}
+                                </div>
+                                ${rito.falha ? `<div style="font-size: 0.7rem; color: #fca5a5; margin-top: 4px;"><strong>❌ Se Falha:</strong> ${rito.falha}</div>` : ''}
+                            </div>
+                        `).join('')}
                     </div>
                 </div>
                 `;
             }
 
-            // RITUALISTA - Ruptura Venire
+            // RITUALISTA - Ruptura Venire (INTERATIVO)
             if (classe === 'Ritualista') {
-                const rv = char.rupturaVenire || 0;
+                const rv = char.classResources?.['ruptura-venire'] || 0;
+                const sanidadeAtual = char.sanCurrent || 0;
+                const ca = Math.max(0, (100 - sanidadeAtual) / 10);
+                const caFormatado = ca.toFixed(1);
+
                 html += `
+                <div class="class-mini-section">
+                    <div class="class-mini-title">🌀 Contato Abissal</div>
+                    <div class="class-info-box">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <strong>CA Atual:</strong>
+                            <span style="background: linear-gradient(135deg, #1a1a1a, #000); color: white; padding: 6px 16px; border-radius: 10px; font-weight: 900; font-size: 1.3rem; border: 2px solid #333;">${caFormatado}</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #94a3b8;">
+                            <strong>Cálculo:</strong> (100 - Sanidade) / 10<br>
+                            (100 - ${sanidadeAtual}) / 10 = ${caFormatado}
+                        </div>
+                        <div style="font-size: 0.7rem; color: #f59e0b; margin-top: 6px; padding: 6px; background: rgba(15, 23, 42, 0.4); border-radius: 4px;">
+                            ⚠️ CA define poder dos rituais, requisitos de tamanho e dificuldade do Despertar.
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="class-mini-section">
                     <div class="class-mini-title">🔮 Ruptura Venire</div>
                     <div class="class-info-box">
-                        <strong>RV Atual:</strong> ${rv} / 10<br>
-                        <small>⚠️ RV alto = maior risco de consequências ao falhar Despertar.</small>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <strong>RV:</strong>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <button onclick="adjustRVFromPanel(-1)" style="width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--danger); color: white; cursor: pointer; font-weight: 900;">-</button>
+                                <span style="font-weight: 700; min-width: 50px; text-align: center;">${rv} / 10</span>
+                                <button onclick="adjustRVFromPanel(1)" style="width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--success); color: white; cursor: pointer; font-weight: 900;">+</button>
+                                <button onclick="resetRVFromPanel()" style="padding: 2px 8px; border-radius: 6px; border: none; background: #64748b; color: white; cursor: pointer; font-size: 0.7rem; font-weight: 700;">ZERAR</button>
+                            </div>
+                        </div>
+                        <small style="display: block; margin-top: 6px; color: #f59e0b;">⚠️ RV alto = maior risco ao falhar Despertar.</small>
                     </div>
                 </div>
                 `;
@@ -12913,6 +13560,205 @@ Exemplos:
             };
             return emojis[classe] || '🧙‍♂️';
         }
+
+        // Função para upgrade de habilidade a partir do painel (wrapper que atualiza o painel)
+        window.upgradeClassAbilityFromPanel = function (abilityId, targetLevel) {
+            const char = getChar();
+            const currentLevel = char.classAbilities?.[abilityId] || 0;
+
+            // Se está diminuindo, permite sem custo
+            if (targetLevel < currentLevel) {
+                if (confirm(`⚠️ Tem certeza que deseja DIMINUIR esta habilidade de ${currentLevel} para ${targetLevel}?`)) {
+                    char.classAbilities[abilityId] = targetLevel;
+                    updateClassInfoPanel(); // Atualizar o painel
+                    updateClassAbilityDots(abilityId);
+                    updateClassAbilityDotsAtributos(abilityId);
+                    updateClassTests();
+                    updateClassResourcesDisplay();
+                    updateAllCalculations();
+                    autoSave();
+                }
+                return;
+            }
+
+            // Se está no mesmo nível, ignora
+            if (targetLevel === currentLevel) return;
+
+            // Determinar multiplicador baseado na classe
+            const classe = char.classe;
+            let multiplier = 2;
+            if (classe === 'Pallacerdote' || classe === 'Ritualista') {
+                multiplier = 4;
+            }
+
+            // Calcular custo total
+            let totalCost = 0;
+            for (let level = currentLevel + 1; level <= targetLevel; level++) {
+                totalCost += level * multiplier;
+            }
+
+            // Verificar EXP
+            const currentEXP = char.exp || 0;
+            if (currentEXP < totalCost) {
+                alert(`❌ EXP Insuficiente!\n\nPrecisa de: ${totalCost} EXP\nVocê tem: ${currentEXP} EXP\nFaltam: ${totalCost - currentEXP} EXP`);
+                return;
+            }
+
+            // Confirmar
+            const levelDiff = targetLevel - currentLevel;
+            const abilityName = abilityId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            const message = levelDiff === 1
+                ? `Deseja aumentar ${abilityName} de ${currentLevel} para ${targetLevel}?\n\nCusto: ${totalCost} EXP (×${multiplier})`
+                : `Deseja aumentar ${abilityName} de ${currentLevel} para ${targetLevel} (+${levelDiff} níveis)?\n\nCusto total: ${totalCost} EXP (×${multiplier})`;
+
+            if (confirm(message)) {
+                char.classAbilities[abilityId] = targetLevel;
+                char.exp = currentEXP - totalCost;
+                updateClassInfoPanel(); // Atualizar o painel
+                updateClassAbilityDots(abilityId);
+                updateClassAbilityDotsAtributos(abilityId);
+                updateClassTests();
+                updateClassResourcesDisplay();
+                updateAllCalculations();
+                updateEXPDisplay();
+                showAlert(`✅ ${abilityName} aumentado para ${targetLevel}! (-${totalCost} EXP)`, 'success');
+                autoSave();
+            }
+        };
+
+        // Funções auxiliares para controles interativos do painel de classe
+        window.adjustFantochesFromPanel = function (amount) {
+            const char = getChar();
+            const lideranca = char.skills?.['liderança'] || 0;
+            const servosHabilidade = char.classAbilities?.['servos'] || 0;
+            const maxFantoches = char.int + lideranca + servosHabilidade;
+            const current = char.fantochesAtivos || 0;
+            char.fantochesAtivos = Math.max(0, Math.min(current + amount, maxFantoches));
+
+            // Atualizar input na aba Combate
+            const fantochesInput = document.getElementById('fantoches-current');
+            if (fantochesInput) fantochesInput.value = char.fantochesAtivos;
+
+            // Chamar funções de atualização existentes
+            if (typeof updateFantochesBar === 'function') updateFantochesBar();
+            if (typeof updateServosFantochesDisplay === 'function') updateServosFantochesDisplay();
+
+            updateClassInfoPanel();
+            autoSave();
+        };
+
+        window.adjustGracaFromPanel = function (amount) {
+            const char = getChar();
+            const essencia = char.skills?.['essência'] || 0;
+            const maxGraca = char.pre + essencia;
+            const current = char.gracaAtual || 0;
+            char.gracaAtual = Math.max(0, Math.min(current + amount, maxGraca));
+
+            // Chamar funções de atualização existentes
+            if (typeof updateGracaCombate === 'function') updateGracaCombate();
+            if (typeof updateGracaClasse === 'function') updateGracaClasse();
+
+            updateClassInfoPanel();
+            autoSave();
+        };
+
+        window.resetGracaFromPanel = function () {
+            const char = getChar();
+            const essencia = char.skills?.['essência'] || 0;
+            const maxGraca = char.pre + essencia;
+            char.gracaAtual = maxGraca;
+
+            // Chamar funções de atualização existentes
+            if (typeof updateGracaCombate === 'function') updateGracaCombate();
+            if (typeof updateGracaClasse === 'function') updateGracaClasse();
+
+            updateClassInfoPanel();
+            autoSave();
+        };
+
+        window.adjustRVFromPanel = function (amount) {
+            const char = getChar();
+            if (!char.classResources) char.classResources = {};
+
+            const current = char.classResources['ruptura-venire'] || 0;
+            char.classResources['ruptura-venire'] = Math.max(0, Math.min(current + amount, 10));
+
+            // Atualizar display na aba Classe
+            const rvDisplay = document.getElementById('rv-display');
+            if (rvDisplay) rvDisplay.textContent = char.classResources['ruptura-venire'];
+
+            updateClassInfoPanel();
+            autoSave();
+        };
+
+        window.resetRVFromPanel = function () {
+            const char = getChar();
+            if (!char.classResources) char.classResources = {};
+
+            char.classResources['ruptura-venire'] = 0;
+
+            // Atualizar display na aba Classe
+            const rvDisplay = document.getElementById('rv-display');
+            if (rvDisplay) rvDisplay.textContent = 0;
+
+            updateClassInfoPanel();
+            autoSave();
+        };
+
+        window.updateCirculoFromPanel = function (value) {
+            const char = getChar();
+            char.circuloPalla = value;
+            // Atualizar select na aba Classe se existir
+            const mainSelect = document.getElementById('circulo-palla-select');
+            if (mainSelect && mainSelect.value !== value) mainSelect.value = value;
+            autoSave();
+        };
+
+        // Função para deletar rito do painel
+        window.deleteRitoFromPanel = function (ritoId) {
+            const char = getChar();
+            if (!char.ritos) return;
+
+            if (confirm('❌ Tem certeza que deseja remover este rito?')) {
+                char.ritos = char.ritos.filter(r => r.id !== ritoId);
+                updateClassInfoPanel();
+                if (typeof updateRitosList === 'function') updateRitosList();
+                autoSave();
+                showAlert('🗑️ Rito removido!', 'warning');
+            }
+        };
+
+        // Função para deletar receita do painel
+        window.deleteRecipeFromPanel = function (recipeId) {
+            const char = getChar();
+            if (!char.recipes) return;
+
+            if (confirm('❌ Tem certeza que deseja remover esta receita?')) {
+                char.recipes = char.recipes.filter(r => r.id !== recipeId);
+                updateClassInfoPanel();
+                if (typeof updateRecipesList === 'function') updateRecipesList();
+                autoSave();
+                showAlert('🗑️ Receita removida!', 'warning');
+            }
+        };
+
+        // Função para atualizar Marca de Caça do painel
+        window.updateMarcaCacaFromPanel = function (field, value) {
+            const char = getChar();
+            if (!char.marcaCaca) char.marcaCaca = {};
+            char.marcaCaca[field] = value;
+
+            // Sincronizar com inputs na aba Classe se existirem
+            if (field === 'alvo') {
+                const mainInput = document.getElementById('marca-alvo');
+                if (mainInput && mainInput.value !== value) mainInput.value = value;
+            } else if (field === 'sobre') {
+                const mainTextarea = document.getElementById('marca-sobre');
+                if (mainTextarea && mainTextarea.value !== value) mainTextarea.value = value;
+            }
+
+            autoSave();
+        };
 
         // ========== MOBILE: SWIPE TO CLOSE ==========
         let swipeTouchStartX = 0;
