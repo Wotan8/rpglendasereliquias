@@ -1178,6 +1178,219 @@
             word-wrap: break-word;
         }
 
+        /* ========== DRAG & DROP SYSTEM ========== */
+        .inventory-item[draggable="true"] {
+            cursor: grab;
+            transition: all 0.2s ease;
+        }
+
+        .inventory-item[draggable="true"]:active {
+            cursor: grabbing;
+        }
+
+        .inventory-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+        }
+
+        .inventory-item.drag-over {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.15);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .inventory-item.drag-merge {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.15);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+        }
+
+        .inventory-item.container-item-clickable {
+            cursor: pointer;
+            border-left: 3px solid var(--primary);
+        }
+
+        .inventory-item.container-item-clickable:hover {
+            background: rgba(139, 92, 246, 0.15);
+        }
+
+        /* ========== CONTAINER MODAL SYSTEM ========== */
+        .container-modal-overlay {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 350px;
+            max-width: 90vw;
+            height: 100vh;
+            z-index: 9500;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 70px 10px 10px 10px;
+            overflow-y: auto;
+        }
+
+        .container-modal {
+            background: rgba(15, 23, 42, 0.98);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+            pointer-events: auto;
+            max-height: 45vh;
+            display: flex;
+            flex-direction: column;
+            animation: slideInRight 0.3s ease;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .container-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 2px solid var(--border);
+            background: rgba(139, 92, 246, 0.15);
+            border-radius: 10px 10px 0 0;
+            cursor: move;
+            user-select: none;
+        }
+
+        .container-modal.dragging-modal {
+            opacity: 0.9;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6);
+            z-index: 9999;
+        }
+
+        .container-modal-title {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .container-modal-close {
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .container-modal-close:hover {
+            transform: scale(1.1);
+            background: #dc2626;
+        }
+
+        .container-modal-info {
+            padding: 8px 15px;
+            background: rgba(15, 23, 42, 0.6);
+            font-size: 0.8rem;
+            color: #94a3b8;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .container-modal-items {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .container-modal-item {
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: grab;
+            transition: all 0.2s;
+        }
+
+        .container-modal-item:active {
+            cursor: grabbing;
+        }
+
+        .container-modal-item.dragging {
+            opacity: 0.5;
+        }
+
+        .container-modal-item.drag-over {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.15);
+        }
+
+        .container-modal-item-img {
+            width: 35px;
+            height: 35px;
+            object-fit: contain;
+            border-radius: 6px;
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        .container-modal-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .container-modal-item-name {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .container-modal-item-details {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .container-modal-empty {
+            text-align: center;
+            padding: 20px;
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 639px) {
+            .container-modal-overlay {
+                width: 280px;
+            }
+
+            .container-modal {
+                max-height: 40vh;
+            }
+        }
+
         .class-ability-item {
             display: flex;
             justify-content: space-between;
@@ -4173,26 +4386,21 @@
 
         <!-- ABA INVENTÁRIO -->
         <div id="inventario" class="tab-content">
-            <div class="section">
-                <h2 class="section-title">💰 LUNS (DINHEIRO)</h2>
-
+            <div class="section" style="padding-bottom: 10px;">
                 <div
-                    style="background: rgba(245, 158, 11, 0.1); border: 2px solid #f59e0b; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-                    <div style="text-align: center;">
-                        <div style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 8px;">RIQUEZA TOTAL</div>
-                        <div style="font-size: 2.5rem; font-weight: 900; color: #f59e0b; text-shadow: 0 2px 10px rgba(245, 158, 11, 0.3);"
-                            id="luns-display">0</div>
-                        <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 5px;">Luns</div>
+                    style="background: rgba(245, 158, 11, 0.15); border: 2px solid #f59e0b; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(245, 158, 11, 0.15);">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.5rem;">💰</span>
+                        <span
+                            style="color: #f59e0b; font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Riqueza</span>
                     </div>
-
-                    <div style="border-top: 1px solid rgba(245, 158, 11, 0.3); padding-top: 15px; margin-top: 15px;">
-                        <p style="color: #cbd5e1; font-size: 0.85rem; text-align: center; font-style: italic;">
-                            💡 Sua riqueza é calculada automaticamente baseada nos itens tipo "Lunis" em seu
-                            inventário.
-                        </p>
+                    <div style="display: flex; align-items: baseline; gap: 6px;">
+                        <span
+                            style="font-size: 1.6rem; font-weight: 900; color: #f59e0b; text-shadow: 0 1px 8px rgba(245, 158, 11, 0.4);"
+                            id="luns-display">0</span>
+                        <span style="color: #94a3b8; font-size: 0.8rem; font-weight: 600;">Luns</span>
                     </div>
                 </div>
-
                 <!-- Campo oculto para manter compatibilidade -->
                 <input type="number" id="luns" value="0" min="0" style="display: none;">
             </div>
@@ -10163,138 +10371,162 @@ Exemplos:
                 return;
             }
 
-            containersList.innerHTML = char.containers.map(container => {
-                const currentLoad = container.items.reduce((sum, item) =>
-                    sum + (item.totalWeight || ((item.quantity / (item.packSize || 1)) * item.peso)), 0
-                );
+            // Encontrar apenas o container Equipados
+            const equipadosContainer = char.containers.find(c => c.name === 'Equipados');
 
-                const isOverload = currentLoad > container.maxCapacity;
+            if (!equipadosContainer) {
+                containersList.innerHTML = '<p style="color: #64748b; text-align: center; padding: 20px; font-size: 0.9rem;">Container Equipados não encontrado...</p>';
+                return;
+            }
 
-                // Calcular tamanho máximo para Equipados
-                let sizeInfo = '';
-                if (container.name === 'Equipados') {
-                    const atletismo = char.skills['atletismo'] || 1;
-                    const vig = char.vig || 1;
-                    const forca = char.for || 1;
+            const container = equipadosContainer;
+            const currentLoad = container.items.reduce((sum, item) =>
+                sum + (item.totalWeight || ((item.quantity / (item.packSize || 1)) * item.peso)), 0
+            );
 
-                    const maxSize = forca * vig * atletismo;
+            const isOverload = currentLoad > container.maxCapacity;
 
-                    sizeInfo = `<span style="color: #94a3b8; font-size: 0.85rem; margin-right: 10px;">
-                        📏 Tamanho Max: ${maxSize} <span style="color: #64748b; font-size: 0.75rem;">(FOR × VIG × Atletismo)</span>
-                    </span>`;
-                } else {
-                    // Exibir tamanho do container para containers normais
-                    sizeInfo = `<span style="color: #ef4444; font-size: 0.85rem; margin-right: 15px; font-weight: 600;">
-                        Tamanho: ${container.maxSize || container.tamanho || 0}
-                    </span><span style="color: #475569; margin-right: 15px;">|</span>`;
-                }
+            // Calcular tamanho máximo para Equipados
+            const atletismo = char.skills['atletismo'] || 1;
+            const vig = char.vig || 1;
+            const forca = char.for || 1;
+            const maxSize = forca * vig * atletismo;
 
-                const itemsHTML = container.items.length === 0
-                    ? '<p style="color: #64748b; text-align: center; padding: 10px; font-size: 0.85rem;">Vazio</p>'
-                    : container.items.map((item, index) => {
+            const sizeInfo = `<span style="color: #94a3b8; font-size: 0.85rem; margin-right: 10px;">
+                📏 Tamanho Max: ${maxSize} <span style="color: #64748b; font-size: 0.75rem;">(FOR × VIG × Atletismo)</span>
+            </span>`;
 
-                        // Exibir imagem se existir
-                        // URLs das imagens dos Lunis
-                        const IMAGEM_LUN = 'https://i.imgur.com/RetxZ16.png'; // Cole a URL do Lun.png aqui
-                        const IMAGEM_KA_LUN = 'https://i.imgur.com/yRUSkDM.png'; // Cole a URL do Ka_Lun.png aqui
-                        const IMAGEM_MI_LUNIS = 'https://i.imgur.com/BTCzl1x.png'; // Cole a URL do Mi_Lunis.png aqui
+            const itemsHTML = container.items.length === 0
+                ? '<p style="color: #64748b; text-align: center; padding: 10px; font-size: 0.85rem;">Vazio - Arraste itens aqui</p>'
+                : container.items.map((item, index) => {
 
-                        // Definir imagem baseada no tipo de Lun
-                        let imagemSrc = item.imagem;
-                        if (item.tipo === 'Lunis' && !item.imagem) {
-                            if (item.tipoLun === 'Lunis') {
-                                imagemSrc = IMAGEM_LUN;
-                            } else if (item.tipoLun === "Ka'Lunis") {
-                                imagemSrc = IMAGEM_KA_LUN;
-                            } else if (item.tipoLun === "Mi'Lunis") {
-                                imagemSrc = IMAGEM_MI_LUNIS;
-                            }
+                    // URLs das imagens dos Lunis
+                    const IMAGEM_LUN = 'https://i.imgur.com/RetxZ16.png';
+                    const IMAGEM_KA_LUN = 'https://i.imgur.com/yRUSkDM.png';
+                    const IMAGEM_MI_LUNIS = 'https://i.imgur.com/BTCzl1x.png';
+
+                    // Definir imagem baseada no tipo de Lun
+                    let imagemSrc = item.imagem;
+                    if (item.tipo === 'Lunis' && !item.imagem) {
+                        if (item.tipoLun === 'Lunis') {
+                            imagemSrc = IMAGEM_LUN;
+                        } else if (item.tipoLun === "Ka'Lunis") {
+                            imagemSrc = IMAGEM_KA_LUN;
+                        } else if (item.tipoLun === "Mi'Lunis") {
+                            imagemSrc = IMAGEM_MI_LUNIS;
                         }
-                        const imagemHTML = imagemSrc ? `<img src="${imagemSrc}" style="width: 40px; height: 40px; object-fit: contain; border-radius: 6px; margin-right: 10px; background: transparent;">` : '';
+                    }
+                    const imagemHTML = imagemSrc ? `<img src="${imagemSrc}" style="width: 40px; height: 40px; object-fit: contain; border-radius: 6px; margin-right: 10px; background: transparent;">` : '';
 
-                        // Detalhes do item
-                        let detalhes = `Peso: ${item.peso} | Tam: ${item.tamanho} | Int: ${item.integridade}/${item.dureza + item.tamanho + (item.reforco || 0)} | Total: ${item.totalWeight || (item.peso * item.quantity)}`;
+                    // Detalhes do item
+                    let detalhes = `Peso: ${item.peso} | Tam: ${item.tamanho} | Int: ${item.integridade}/${item.dureza + item.tamanho + (item.reforco || 0)} | Total: ${item.totalWeight || (item.peso * item.quantity)}`;
 
-                        if (item.tipo === 'Arma') {
-                            detalhes += ` | Dano: +${item.dano || 0} | Reação: +${item.reacao || 0}`;
-                        } else if (item.tipo === 'Vestimenta') {
-                            const stats = [];
-                            if (item.blindagem) stats.push(`Blind: ${item.blindagem > 0 ? '+' : ''}${item.blindagem}`);
-                            if (item.deslocTerrestre) stats.push(`Desloc: ${item.deslocTerrestre > 0 ? '+' : ''}${item.deslocTerrestre}`);
-                            if (item.reacaoVest) stats.push(`Reação: ${item.reacaoVest > 0 ? '+' : ''}${item.reacaoVest}`);
-                            if (item.iniciativa) stats.push(`Inic: ${item.iniciativa > 0 ? '+' : ''}${item.iniciativa}`);
-                            if (item.cargaMax) stats.push(`Carga: ${item.cargaMax > 0 ? '+' : ''}${item.cargaMax}`);
-                            if (stats.length > 0) detalhes += ` | ${stats.join(' | ')}`;
-                        } else if (item.tipo === 'Projétil') {
-                            detalhes += ` | Dano: +${item.dano || 0}`;
-                        } else if (item.tipo === 'Container') {
-                            detalhes += ` | Cap: ${item.maxCapacity} | TamMax: ${item.maxSize}`;
-                        }
+                    if (item.tipo === 'Arma') {
+                        detalhes += ` | Dano: +${item.dano || 0} | Reação: +${item.reacao || 0}`;
+                    } else if (item.tipo === 'Vestimenta') {
+                        const stats = [];
+                        if (item.blindagem) stats.push(`Blind: ${item.blindagem > 0 ? '+' : ''}${item.blindagem}`);
+                        if (item.deslocTerrestre) stats.push(`Desloc: ${item.deslocTerrestre > 0 ? '+' : ''}${item.deslocTerrestre}`);
+                        if (item.reacaoVest) stats.push(`Reação: ${item.reacaoVest > 0 ? '+' : ''}${item.reacaoVest}`);
+                        if (item.iniciativa) stats.push(`Inic: ${item.iniciativa > 0 ? '+' : ''}${item.iniciativa}`);
+                        if (item.cargaMax) stats.push(`Carga: ${item.cargaMax > 0 ? '+' : ''}${item.cargaMax}`);
+                        if (stats.length > 0) detalhes += ` | ${stats.join(' | ')}`;
+                    } else if (item.tipo === 'Projétil') {
+                        detalhes += ` | Dano: +${item.dano || 0}`;
+                    } else if (item.tipo === 'Container') {
+                        detalhes += ` | Cap: ${item.maxCapacity} | TamMax: ${item.maxSize}`;
+                    }
 
-                        return `
-                            <div class="inventory-item" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; ${item.isContainerItem ? 'background: rgba(139, 92, 246, 0.1); border-left: 3px solid var(--primary);' :
-                                item.tipo === 'Lunis' && item.tipoLun === 'Lunis' ? 'background: rgba(255, 255, 255, 0.1);' :
-                                    item.tipo === 'Lunis' && item.tipoLun === "Ka'Lunis" ? 'background: rgba(255, 255, 255, 0.1); border: 2px solid #FFD700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);' :
-                                        item.tipo === 'Lunis' && item.tipoLun === "Mi'Lunis" ? 'background: rgba(255, 224, 66, 0.2); border: 6px solid #FFD700; box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);' :
-                                            ''
-                            }">
-                                <div class="item-info" onclick="editItem('${container.id}', '${item.id}')" style="cursor: pointer; flex: 1; display: flex; align-items: center;">
-                                    ${imagemHTML}
-                                    <div style="flex: 1;">
-                                        <div class="item-name" style="display: flex; align-items: center; gap: 8px;">
-                                            ${container.name === 'Equipados' && (item.tipo === 'Arma' || item.tipo === 'Vestimenta') ? `
-                                                <input type="checkbox" 
-                                                    ${item.equipado ? 'checked' : ''} 
-                                                    onchange="toggleEquipado('${container.id}', '${item.id}')"
-                                                    style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); flex-shrink: 0;"
-                                                    title="${item.tipo === 'Arma' ? 'Arma empunhada' : 'Vestido'}"
-                                                    onclick="event.stopPropagation()">
-                                            ` : ''}
-                                            <span>${item.isContainerItem ? '📦 ' : ''}${item.name} ${item.packSize > 1 ? `[Pack ${item.packSize}]` : ''} (x${item.quantity})${item.isContainerItem ? ' [CONTAINER]' : ''}</span>
-                                        </div>
-                                        <div class="item-details">
-                                            ${detalhes}
-                                            ${item.description ? `<br>${item.description}` : ''}
-                                        </div>
+                    // Estilo especial para containers e Lunis
+                    let itemStyle = '';
+                    if (item.isContainerItem) {
+                        itemStyle = 'background: rgba(139, 92, 246, 0.1); border-left: 3px solid var(--primary);';
+                    } else if (item.tipo === 'Lunis' && item.tipoLun === 'Lunis') {
+                        itemStyle = 'background: rgba(255, 255, 255, 0.1);';
+                    } else if (item.tipo === 'Lunis' && item.tipoLun === "Ka'Lunis") {
+                        itemStyle = 'background: rgba(255, 255, 255, 0.1); border: 2px solid #FFD700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);';
+                    } else if (item.tipo === 'Lunis' && item.tipoLun === "Mi'Lunis") {
+                        itemStyle = 'background: rgba(255, 224, 66, 0.2); border: 6px solid #FFD700; box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);';
+                    }
+
+                    // Se for container item, é clicável para abrir modal
+                    const containerClickHandler = item.isContainerItem
+                        ? `onclick="openContainerModal('${item.linkedContainerId}')" style="cursor: pointer;"`
+                        : '';
+                    const containerClass = item.isContainerItem ? ' container-item-clickable' : '';
+
+                    return `
+                        <div class="inventory-item${containerClass}" 
+                             id="inv-item-${item.id}"
+                             draggable="true"
+                             data-item-id="${item.id}"
+                             data-container-id="${container.id}"
+                             ondragstart="handleItemDragStart(event, '${container.id}', '${item.id}')"
+                             ondragover="handleItemDragOver(event, '${container.id}', '${item.id}')"
+                             ondragleave="handleItemDragLeave(event)"
+                             ondragend="handleItemDragEnd(event)"
+                             ondrop="handleItemDrop(event, '${container.id}', '${item.id}')"
+                             style="display: flex; justify-content: space-between; align-items: center; gap: 10px; ${itemStyle}">
+                            <div class="item-info" ${!item.isContainerItem ? `onclick="editItem('${container.id}', '${item.id}')"` : containerClickHandler} style="cursor: pointer; flex: 1; display: flex; align-items: center;">
+                                ${imagemHTML}
+                                <div style="flex: 1;">
+                                    <div class="item-name" style="display: flex; align-items: center; gap: 8px;">
+                                        ${(item.tipo === 'Arma' || item.tipo === 'Vestimenta') ? `
+                                            <input type="checkbox" 
+                                                ${item.equipado ? 'checked' : ''} 
+                                                onchange="toggleEquipado('${container.id}', '${item.id}')"
+                                                style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); flex-shrink: 0;"
+                                                title="${item.tipo === 'Arma' ? 'Arma empunhada' : 'Vestido'}"
+                                                onclick="event.stopPropagation()">
+                                        ` : ''}
+                                        <span>${item.isContainerItem ? '📦 ' : ''}${item.name} ${item.packSize > 1 ? `[Pack ${item.packSize}]` : ''} (x${item.quantity})${item.isContainerItem ? ' 👆' : ''}</span>
+                                    </div>
+                                    <div class="item-details">
+                                        ${detalhes}
+                                        ${item.description ? `<br>${item.description}` : ''}
                                     </div>
                                 </div>
-                                <div style="display: flex; gap: 4px; align-items: center;">
-                                    ${index > 0 ? `<button class="btn btn-secondary btn-small" onclick="moveItemUp('${container.id}', '${item.id}')" style="padding: 4px 8px;">▲</button>` : ''}
-                                    ${index < container.items.length - 1 ? `<button class="btn btn-secondary btn-small" onclick="moveItemDown('${container.id}', '${item.id}')" style="padding: 4px 8px;">▼</button>` : ''}
-                                    ${(item.tipo === 'Projétil' || item.tipo === 'Objeto' || item.tipo === 'Lunis') ? `
-                                        <input type="number" min="1" value="${item.quantity}" 
-                                            onchange="updateItemQuantity('${container.id}', '${item.id}', this.value)"
-                                            style="width: 60px; padding: 4px 8px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--primary); border-radius: 8px; color: white; text-align: center; font-weight: 600;"
-                                            onclick="event.stopPropagation()">
-                                    ` : ''}
-                                    ${!(item.isContainerItem && item.linkedContainerId === container.id) ? `<button class="btn btn-secondary btn-small" onclick="moveItemToContainer('${container.id}', '${item.id}')" style="padding: 4px 8px;">📦</button>` : ''}
-                                    <button class="btn btn-danger btn-small" onclick="removeItemFromContainer('${container.id}', '${item.id}')" style="padding: 4px 8px;">🗑️</button>
-                                </div>
                             </div>
-                        `;
-                    }).join('');
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                ${(item.tipo === 'Projétil' || item.tipo === 'Objeto' || item.tipo === 'Lunis') ? `
+                                    <input type="number" min="1" value="${item.quantity}" 
+                                        onchange="updateItemQuantity('${container.id}', '${item.id}', this.value)"
+                                        style="width: 60px; padding: 4px 8px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--primary); border-radius: 8px; color: white; text-align: center; font-weight: 600;"
+                                        onclick="event.stopPropagation()">
+                                ` : ''}
+                                <button class="btn btn-danger btn-small" onclick="removeItemFromContainer('${container.id}', '${item.id}')" style="padding: 4px 8px;">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
 
-                return `
-                    <div class="container-card">
-                        <div class="container-header">
-                            <div class="container-name">
-                                ${container.name === 'Equipados' ? '⚔️' : '📦'} ${container.name}
-                                ${container.name !== 'Equipados' ? ` <button class="btn btn-secondary btn-small" onclick="editContainerItem('${container.id}')" style="padding: 2px 8px; font-size: 0.7rem;">✏️</button>` : ''}
-                            </div>
-                            <div style="display: flex; align-items: center;">
-                                ${sizeInfo}
-                                <div class="container-capacity ${isOverload ? 'overload' : ''}">
-                                    ${currentLoad} / ${container.maxCapacity} ${isOverload ? '⚠️ SOBRECARGA!' : ''}
-                                </div>
+            containersList.innerHTML = `
+                <div class="container-card" 
+                     id="container-equipados"
+                     ondragover="handleContainerDragOver(event, '${container.id}')"
+                     ondragleave="handleContainerDragLeave(event)"
+                     ondrop="handleContainerDrop(event, '${container.id}')">
+                    <div class="container-header">
+                        <div class="container-name">
+                            ⚔️ ${container.name}
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            ${sizeInfo}
+                            <div class="container-capacity ${isOverload ? 'overload' : ''}">
+                                ${currentLoad.toFixed(1)} / ${container.maxCapacity} ${isOverload ? '⚠️ SOBRECARGA!' : ''}
                             </div>
                         </div>
-                        <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
-                            <button class="btn btn-primary btn-small" onclick="addItemToContainer('${container.id}')" style="flex: 1; min-width: 120px;">➕ Item</button>
-                        </div>
-                        ${itemsHTML}
                     </div>
-                `;
-            }).join('');
+                    <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                        <button class="btn btn-primary btn-small" onclick="addItemToContainer('${container.id}')" style="flex: 1; min-width: 120px;">➕ Item</button>
+                        <button class="btn btn-secondary btn-small" onclick="addContainer()" style="min-width: 120px;">📦 Novo Container</button>
+                    </div>
+                    <p style="color: #64748b; font-size: 0.75rem; text-align: center; margin-bottom: 10px; font-style: italic;">
+                        💡 Arraste itens para reorganizar. Solte sobre outro igual para combinar. Clique em 📦 para abrir.
+                    </p>
+                    ${itemsHTML}
+                </div>
+            `;
 
             // Atualizar display de Luns
             updateLunsDisplay();
@@ -10615,6 +10847,587 @@ Exemplos:
                 updateContainers();
                 // Não salva no Firebase, apenas reorganiza localmente
             }
+        };
+
+        // ========== SISTEMA DE DRAG & DROP PARA INVENTÁRIO ==========
+        let draggedItemData = null;
+        let openContainerModals = []; // Array de IDs de modais abertos
+
+        // Verificar se dois itens podem ser combinados (são "iguais")
+        function canMergeItems(item1, item2) {
+            // Itens devem ter mesmo nome, tipo, tipoLun (se aplicável), e não ser containers
+            if (item1.id === item2.id) return false;
+            if (item1.isContainerItem || item2.isContainerItem) return false;
+            if (item1.name !== item2.name) return false;
+            if (item1.tipo !== item2.tipo) return false;
+            if (item1.tipo === 'Lunis' && item1.tipoLun !== item2.tipoLun) return false;
+            // Só projéteis, objetos e lunis podem ser combinados
+            if (!['Projétil', 'Objeto', 'Lunis'].includes(item1.tipo)) return false;
+            return true;
+        }
+
+        // Handlers de Drag & Drop
+        window.handleItemDragStart = function (event, containerId, itemId) {
+            const char = getChar();
+            const container = char.containers.find(c => c.id === containerId);
+            if (!container) return;
+
+            const item = container.items.find(i => i.id === itemId);
+            if (!item) return;
+
+            draggedItemData = { containerId, itemId, item };
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', JSON.stringify({ containerId, itemId }));
+
+            const element = document.getElementById('inv-item-' + itemId);
+            if (element) {
+                element.classList.add('dragging');
+            }
+        };
+
+        window.handleItemDragOver = function (event, containerId, targetItemId) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+
+            if (!draggedItemData || draggedItemData.itemId === targetItemId) return;
+
+            const char = getChar();
+            const container = char.containers.find(c => c.id === containerId);
+            if (!container) return;
+
+            const targetItem = container.items.find(i => i.id === targetItemId);
+            if (!targetItem) return;
+
+            const targetElement = document.getElementById('inv-item-' + targetItemId);
+            if (!targetElement) return;
+
+            // Limpar classes anteriores
+            targetElement.classList.remove('drag-over', 'drag-merge');
+
+            // Verificar se pode combinar ou se é um container
+            if (canMergeItems(draggedItemData.item, targetItem)) {
+                targetElement.classList.add('drag-merge');
+            } else if (targetItem.isContainerItem) {
+                targetElement.classList.add('drag-over');
+            } else {
+                targetElement.classList.add('drag-over');
+            }
+        };
+
+        window.handleItemDragLeave = function (event) {
+            const element = event.target.closest('.inventory-item, .container-modal-item');
+            if (element) {
+                element.classList.remove('drag-over', 'drag-merge');
+            }
+        };
+
+        window.handleItemDragEnd = function (event) {
+            // Limpar todas as classes de drag
+            document.querySelectorAll('.dragging, .drag-over, .drag-merge').forEach(el => {
+                el.classList.remove('dragging', 'drag-over', 'drag-merge');
+            });
+            draggedItemData = null;
+        };
+
+        window.handleItemDrop = async function (event, containerId, targetItemId) {
+            event.preventDefault();
+
+            const targetElement = document.getElementById('inv-item-' + targetItemId);
+            if (targetElement) {
+                targetElement.classList.remove('drag-over', 'drag-merge');
+            }
+
+            if (!draggedItemData || draggedItemData.itemId === targetItemId) {
+                draggedItemData = null;
+                return;
+            }
+
+            const char = getChar();
+            const sourceContainer = char.containers.find(c => c.id === draggedItemData.containerId);
+            const targetContainer = char.containers.find(c => c.id === containerId);
+
+            if (!sourceContainer || !targetContainer) {
+                draggedItemData = null;
+                return;
+            }
+
+            const sourceItem = sourceContainer.items.find(i => i.id === draggedItemData.itemId);
+            const targetItem = targetContainer.items.find(i => i.id === targetItemId);
+
+            if (!sourceItem || !targetItem) {
+                draggedItemData = null;
+                return;
+            }
+
+            try {
+                // Caso 1: Combinar itens iguais
+                if (canMergeItems(sourceItem, targetItem)) {
+                    targetItem.quantity = (targetItem.quantity || 1) + (sourceItem.quantity || 1);
+                    targetItem.totalWeight = ((targetItem.quantity / (targetItem.packSize || 1)) * targetItem.peso);
+
+                    await window.saveItemToFirebase(targetItem);
+                    await window.deleteItemFromFirebase(sourceItem.id);
+
+                    const characterId = window.currentCharacterId || (window.currentUser)?.uid;
+                    await window.loadInventoryFromFirebase(characterId);
+                    updateContainers();
+                    updateOpenContainerModals();
+                    showAlert(`✅ Itens combinados! Total: x${targetItem.quantity}`, 'success');
+                }
+                // Caso 2: Mover para dentro de um container
+                else if (targetItem.isContainerItem && targetItem.linkedContainerId) {
+                    const linkedContainer = char.containers.find(c => c.id === targetItem.linkedContainerId);
+                    if (!linkedContainer) {
+                        showAlert('❌ Container não encontrado!', 'danger');
+                        draggedItemData = null;
+                        return;
+                    }
+
+                    // Verificar se o item está equipado
+                    if ((sourceItem.tipo === 'Arma' || sourceItem.tipo === 'Vestimenta') && sourceItem.equipado) {
+                        showAlert('⚠️ Desequipe o item antes de mover!', 'warning');
+                        draggedItemData = null;
+                        return;
+                    }
+
+                    // Verificar tamanho
+                    if ((sourceItem.tamanho || 1) > (linkedContainer.maxSize || 5)) {
+                        showAlert(`❌ Item muito grande! Tamanho: ${sourceItem.tamanho || 1}, Máx: ${linkedContainer.maxSize || 5}`, 'warning');
+                        draggedItemData = null;
+                        return;
+                    }
+
+                    // Verificar capacidade
+                    const currentLoad = linkedContainer.items.reduce((sum, i) =>
+                        sum + (i.totalWeight || ((i.quantity / (i.packSize || 1)) * i.peso)), 0);
+                    const itemWeight = sourceItem.totalWeight || ((sourceItem.quantity / (sourceItem.packSize || 1)) * sourceItem.peso);
+
+                    if (currentLoad + itemWeight > linkedContainer.maxCapacity) {
+                        showAlert(`❌ Container cheio! Carga: ${currentLoad.toFixed(1)}/${linkedContainer.maxCapacity}`, 'warning');
+                        draggedItemData = null;
+                        return;
+                    }
+
+                    // Mover item
+                    sourceItem.containerId = linkedContainer.id;
+                    await window.saveItemToFirebase(sourceItem);
+
+                    const characterId = window.currentCharacterId || (window.currentUser)?.uid;
+                    await window.loadInventoryFromFirebase(characterId);
+                    updateContainers();
+                    updateOpenContainerModals();
+                    showAlert(`✅ Item movido para ${linkedContainer.name}!`, 'success');
+                }
+                // Caso 3: Reordenar itens no mesmo container
+                else if (draggedItemData.containerId === containerId) {
+                    const sourceIndex = targetContainer.items.findIndex(i => i.id === draggedItemData.itemId);
+                    const targetIndex = targetContainer.items.findIndex(i => i.id === targetItemId);
+
+                    if (sourceIndex !== -1 && targetIndex !== -1) {
+                        // Remover da posição atual
+                        const [movedItem] = targetContainer.items.splice(sourceIndex, 1);
+                        // Inserir na nova posição
+                        const newTargetIndex = sourceIndex < targetIndex ? targetIndex : targetIndex;
+                        targetContainer.items.splice(newTargetIndex, 0, movedItem);
+
+                        updateContainers();
+                        updateOpenContainerModals();
+                    }
+                }
+            } catch (error) {
+                console.error('Erro no drop:', error);
+                showAlert('❌ Erro ao processar: ' + error.message, 'danger');
+            }
+
+            draggedItemData = null;
+        };
+
+        // Handlers para drop no container (área vazia)
+        window.handleContainerDragOver = function (event, containerId) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+        };
+
+        window.handleContainerDragLeave = function (event) {
+            // Limpa estado se necessário
+        };
+
+        window.handleContainerDrop = async function (event, containerId) {
+            event.preventDefault();
+
+            if (!draggedItemData) return;
+
+            // Se está dropando no mesmo container, apenas ignora (reordenação só funciona entre itens)
+            if (draggedItemData.containerId === containerId) {
+                draggedItemData = null;
+                return;
+            }
+
+            const char = getChar();
+            const sourceContainer = char.containers.find(c => c.id === draggedItemData.containerId);
+            const targetContainer = char.containers.find(c => c.id === containerId);
+
+            if (!sourceContainer || !targetContainer) {
+                draggedItemData = null;
+                return;
+            }
+
+            const sourceItem = sourceContainer.items.find(i => i.id === draggedItemData.itemId);
+            if (!sourceItem) {
+                draggedItemData = null;
+                return;
+            }
+
+            try {
+                // Verificar se o item está equipado
+                if ((sourceItem.tipo === 'Arma' || sourceItem.tipo === 'Vestimenta') && sourceItem.equipado) {
+                    showAlert('⚠️ Desequipe o item antes de mover!', 'warning');
+                    draggedItemData = null;
+                    return;
+                }
+
+                // Verificar tamanho para container alvo
+                const maxSizeTarget = targetContainer.name === 'Equipados'
+                    ? (char.for * char.vig * (char.skills['atletismo'] || 1))
+                    : (targetContainer.maxSize || 5);
+
+                if ((sourceItem.tamanho || 1) > maxSizeTarget) {
+                    showAlert(`❌ Item muito grande! Tamanho: ${sourceItem.tamanho || 1}, Máx: ${maxSizeTarget}`, 'warning');
+                    draggedItemData = null;
+                    return;
+                }
+
+                // Verificar capacidade
+                const currentLoad = targetContainer.items.reduce((sum, i) =>
+                    sum + (i.totalWeight || ((i.quantity / (i.packSize || 1)) * i.peso)), 0);
+                const itemWeight = sourceItem.totalWeight || ((sourceItem.quantity / (sourceItem.packSize || 1)) * sourceItem.peso);
+
+                if (currentLoad + itemWeight > targetContainer.maxCapacity) {
+                    showAlert(`❌ Container cheio! Carga: ${currentLoad.toFixed(1)}/${targetContainer.maxCapacity}`, 'warning');
+                    draggedItemData = null;
+                    return;
+                }
+
+                // Mover item
+                sourceItem.containerId = targetContainer.name === 'Equipados' ? 'está com alguém' : targetContainer.id;
+                await window.saveItemToFirebase(sourceItem);
+
+                const characterId = window.currentCharacterId || (window.currentUser)?.uid;
+                await window.loadInventoryFromFirebase(characterId);
+                updateContainers();
+                updateOpenContainerModals();
+                showAlert(`✅ Item movido para ${targetContainer.name}!`, 'success');
+            } catch (error) {
+                console.error('Erro ao mover item:', error);
+                showAlert('❌ Erro ao mover: ' + error.message, 'danger');
+            }
+
+            draggedItemData = null;
+        };
+
+        // ========== SISTEMA DE MODAIS DE CONTAINER ==========
+
+        // Criar overlay para modais se não existir
+        function ensureContainerModalOverlay() {
+            let overlay = document.getElementById('container-modal-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'container-modal-overlay';
+                overlay.className = 'container-modal-overlay';
+                document.body.appendChild(overlay);
+            }
+            return overlay;
+        }
+
+        // Abrir modal de container
+        window.openContainerModal = function (containerId) {
+            const char = getChar();
+            const container = char.containers.find(c => c.id === containerId);
+
+            if (!container) {
+                showAlert('❌ Container não encontrado!', 'danger');
+                return;
+            }
+
+            // Verificar se já está aberto
+            if (openContainerModals.includes(containerId)) {
+                // Fechar se já estiver aberto
+                closeContainerModal(containerId);
+                return;
+            }
+
+            // Limitar a 3 modais abertos
+            if (openContainerModals.length >= 3) {
+                closeContainerModal(openContainerModals[0]);
+            }
+
+            openContainerModals.push(containerId);
+            renderContainerModals();
+        };
+
+        // Fechar modal de container
+        window.closeContainerModal = function (containerId) {
+            openContainerModals = openContainerModals.filter(id => id !== containerId);
+            renderContainerModals();
+        };
+
+        // Atualizar modais abertos (após mudanças no inventário)
+        function updateOpenContainerModals() {
+            if (openContainerModals.length > 0) {
+                renderContainerModals();
+            }
+        }
+
+        // Renderizar todos os modais abertos
+        function renderContainerModals() {
+            const overlay = ensureContainerModalOverlay();
+            const char = getChar();
+
+            // Limpar modais "detached" do body antes de re-renderizar
+            document.querySelectorAll('.container-modal[data-detached="true"]').forEach(modal => {
+                modal.remove();
+            });
+            // Limpar posições salvas de modais que não estão mais abertos
+            Object.keys(modalPositions).forEach(id => {
+                if (!openContainerModals.includes(id)) {
+                    delete modalPositions[id];
+                }
+            });
+
+            if (openContainerModals.length === 0) {
+                overlay.innerHTML = '';
+                return;
+            }
+
+            overlay.innerHTML = openContainerModals.map(containerId => {
+                const container = char.containers.find(c => c.id === containerId);
+                if (!container) return '';
+
+                const currentLoad = container.items.reduce((sum, item) =>
+                    sum + (item.totalWeight || ((item.quantity / (item.packSize || 1)) * item.peso)), 0
+                );
+                const isOverload = currentLoad > container.maxCapacity;
+
+                const IMAGEM_LUN = 'https://i.imgur.com/RetxZ16.png';
+                const IMAGEM_KA_LUN = 'https://i.imgur.com/yRUSkDM.png';
+                const IMAGEM_MI_LUNIS = 'https://i.imgur.com/BTCzl1x.png';
+
+                const itemsHTML = container.items.length === 0
+                    ? '<div class="container-modal-empty">📭 Container vazio</div>'
+                    : container.items.map(item => {
+                        let imagemSrc = item.imagem;
+                        if (item.tipo === 'Lunis' && !item.imagem) {
+                            if (item.tipoLun === 'Lunis') imagemSrc = IMAGEM_LUN;
+                            else if (item.tipoLun === "Ka'Lunis") imagemSrc = IMAGEM_KA_LUN;
+                            else if (item.tipoLun === "Mi'Lunis") imagemSrc = IMAGEM_MI_LUNIS;
+                        }
+
+                        const imgHTML = imagemSrc
+                            ? `<img src="${imagemSrc}" class="container-modal-item-img">`
+                            : `<div class="container-modal-item-img" style="display: flex; align-items: center; justify-content: center; font-size: 1.2rem; background: rgba(139, 92, 246, 0.2);">📦</div>`;
+
+                        return `
+                            <div class="container-modal-item"
+                                 id="modal-item-${item.id}"
+                                 draggable="true"
+                                 data-item-id="${item.id}"
+                                 data-container-id="${container.id}"
+                                 ondragstart="handleModalItemDragStart(event, '${container.id}', '${item.id}')"
+                                 ondragover="handleModalItemDragOver(event, '${container.id}', '${item.id}')"
+                                 ondragleave="handleItemDragLeave(event)"
+                                 ondragend="handleItemDragEnd(event)"
+                                 ondrop="handleModalItemDrop(event, '${container.id}', '${item.id}')"
+                                 onclick="editItemFromModal('${container.id}', '${item.id}')">
+                                ${imgHTML}
+                                <div class="container-modal-item-info">
+                                    <div class="container-modal-item-name">${item.name} (x${item.quantity})</div>
+                                    <div class="container-modal-item-details">Peso: ${item.totalWeight || item.peso} | Tam: ${item.tamanho}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                return `
+                    <div class="container-modal" id="container-modal-${containerId}"
+                         ondragover="handleContainerDragOver(event, '${containerId}')"
+                         ondrop="handleContainerDrop(event, '${containerId}')"
+                         style="position: relative;">
+                        <div class="container-modal-header"
+                             onmousedown="startModalDrag(event, '${containerId}')"
+                             ontouchstart="startModalDrag(event, '${containerId}')">
+                            <div class="container-modal-title">
+                                📦 ${container.name}
+                            </div>
+                            <button class="container-modal-close" onclick="closeContainerModal('${containerId}')" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">✕</button>
+                        </div>
+                        <div class="container-modal-info">
+                            <span>📏 Tam. Máx: ${container.maxSize || 5}</span>
+                            <span class="${isOverload ? 'overload' : ''}">${currentLoad.toFixed(1)} / ${container.maxCapacity}</span>
+                        </div>
+                        <div class="container-modal-items">
+                            ${itemsHTML}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ========== SISTEMA DE ARRASTAR MODAL ========== 
+        let modalDragState = null;
+        let modalPositions = {}; // Armazena posições personalizadas dos modais
+
+        window.startModalDrag = function (event, containerId) {
+            event.preventDefault();
+
+            const modal = document.getElementById('container-modal-' + containerId);
+            if (!modal) return;
+
+            // Obter posição inicial do mouse/touch
+            const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+            const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+
+            // Obter posição atual do modal
+            const rect = modal.getBoundingClientRect();
+
+            // Configurar estado do drag
+            modalDragState = {
+                containerId: containerId,
+                modal: modal,
+                startX: clientX,
+                startY: clientY,
+                initialLeft: rect.left,
+                initialTop: rect.top
+            };
+
+            // Adicionar classe visual
+            modal.classList.add('dragging-modal');
+
+            // Remover do overlay e adicionar ao body diretamente
+            if (!modal.dataset.detached) {
+                modal.style.position = 'fixed';
+                modal.style.left = rect.left + 'px';
+                modal.style.top = rect.top + 'px';
+                modal.style.width = rect.width + 'px';
+                modal.style.margin = '0';
+                modal.dataset.detached = 'true';
+                document.body.appendChild(modal);
+            }
+
+            // Adicionar listeners globais
+            document.addEventListener('mousemove', handleModalMove);
+            document.addEventListener('mouseup', stopModalDrag);
+            document.addEventListener('touchmove', handleModalMove, { passive: false });
+            document.addEventListener('touchend', stopModalDrag);
+        };
+
+        function handleModalMove(event) {
+            if (!modalDragState) return;
+
+            event.preventDefault();
+
+            const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+            const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+
+            // Calcular nova posição
+            const deltaX = clientX - modalDragState.startX;
+            const deltaY = clientY - modalDragState.startY;
+
+            let newLeft = modalDragState.initialLeft + deltaX;
+            let newTop = modalDragState.initialTop + deltaY;
+
+            // Limitar dentro da viewport
+            const modal = modalDragState.modal;
+            const maxLeft = window.innerWidth - modal.offsetWidth;
+            const maxTop = window.innerHeight - modal.offsetHeight;
+
+            newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+            newTop = Math.max(0, Math.min(newTop, maxTop));
+
+            // Aplicar posição
+            modal.style.left = newLeft + 'px';
+            modal.style.top = newTop + 'px';
+        }
+
+        function stopModalDrag(event) {
+            if (!modalDragState) return;
+
+            const modal = modalDragState.modal;
+            modal.classList.remove('dragging-modal');
+
+            // Salvar posição
+            modalPositions[modalDragState.containerId] = {
+                left: modal.style.left,
+                top: modal.style.top
+            };
+
+            modalDragState = null;
+
+            // Remover listeners
+            document.removeEventListener('mousemove', handleModalMove);
+            document.removeEventListener('mouseup', stopModalDrag);
+            document.removeEventListener('touchmove', handleModalMove);
+            document.removeEventListener('touchend', stopModalDrag);
+        }
+
+        // Handlers de drag para itens dentro do modal
+        window.handleModalItemDragStart = function (event, containerId, itemId) {
+            const char = getChar();
+            const container = char.containers.find(c => c.id === containerId);
+            if (!container) return;
+
+            const item = container.items.find(i => i.id === itemId);
+            if (!item) return;
+
+            draggedItemData = { containerId, itemId, item };
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', JSON.stringify({ containerId, itemId }));
+
+            const element = document.getElementById('modal-item-' + itemId);
+            if (element) {
+                element.classList.add('dragging');
+            }
+        };
+
+        window.handleModalItemDragOver = function (event, containerId, targetItemId) {
+            event.preventDefault();
+
+            if (!draggedItemData || draggedItemData.itemId === targetItemId) return;
+
+            const char = getChar();
+            const container = char.containers.find(c => c.id === containerId);
+            if (!container) return;
+
+            const targetItem = container.items.find(i => i.id === targetItemId);
+            if (!targetItem) return;
+
+            const targetElement = document.getElementById('modal-item-' + targetItemId);
+            if (!targetElement) return;
+
+            targetElement.classList.remove('drag-over', 'drag-merge');
+
+            if (canMergeItems(draggedItemData.item, targetItem)) {
+                targetElement.classList.add('drag-merge');
+            } else {
+                targetElement.classList.add('drag-over');
+            }
+        };
+
+        window.handleModalItemDrop = async function (event, containerId, targetItemId) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const targetElement = document.getElementById('modal-item-' + targetItemId);
+            if (targetElement) {
+                targetElement.classList.remove('drag-over', 'drag-merge');
+            }
+
+            // Reutilizar a lógica do handleItemDrop
+            await handleItemDrop(event, containerId, targetItemId);
+        };
+
+        // Editar item a partir do modal
+        window.editItemFromModal = function (containerId, itemId) {
+            editItem(containerId, itemId);
         };
 
         // ========== FUNÇÕES DO MODAL DE ITEM ==========
