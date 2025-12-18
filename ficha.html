@@ -835,6 +835,18 @@
             box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
         }
 
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+            color: white !important;
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3) !important;
+        }
+
+        .btn-blood-red {
+            background: linear-gradient(135deg, #8b0000, #5c0000) !important;
+            color: white !important;
+            box-shadow: 0 8px 25px rgba(139, 0, 0, 0.3) !important;
+        }
+
         .btn-small {
             padding: 10px 14px;
             font-size: clamp(0.8rem, 2.5vw, 0.85rem);
@@ -1936,14 +1948,14 @@
             min-height: 45px !important;
             max-width: 45px !important;
             max-height: 45px !important;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            background: linear-gradient(135deg, #f59e0b, #d97706);
             border: none;
             border-radius: 50%;
             color: white;
             font-size: 1.3rem;
             cursor: pointer;
             z-index: 9997;
-            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
             transition: all 0.3s ease;
             display: flex !important;
             align-items: center !important;
@@ -1954,7 +1966,7 @@
 
         .character-info-btn:hover {
             transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
         }
 
         .character-info-btn:active {
@@ -1971,14 +1983,14 @@
             min-height: 45px !important;
             max-width: 45px !important;
             max-height: 45px !important;
-            background: linear-gradient(135deg, #22c55e, #16a34a);
+            background: linear-gradient(135deg, #f59e0b, #d97706);
             border: none;
             border-radius: 50%;
             color: white;
             font-size: 1.3rem;
             cursor: pointer;
             z-index: 9997;
-            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
             transition: all 0.3s ease;
             display: flex !important;
             align-items: center !important;
@@ -1989,7 +2001,7 @@
 
         .race-info-btn:hover {
             transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.6);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
         }
 
         .race-info-btn:active {
@@ -2215,14 +2227,14 @@
             min-height: 45px !important;
             max-width: 45px !important;
             max-height: 45px !important;
-            background: linear-gradient(135deg, #a855f7, #7c3aed);
+            background: linear-gradient(135deg, #f59e0b, #d97706);
             border: none;
             border-radius: 50%;
             color: white;
             font-size: 1.3rem;
             cursor: pointer;
             z-index: 9997;
-            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
             transition: all 0.3s ease;
             display: flex !important;
             align-items: center !important;
@@ -2233,7 +2245,7 @@
 
         .class-info-btn:hover {
             transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(168, 85, 247, 0.6);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
         }
 
         .class-info-btn:active {
@@ -4362,9 +4374,9 @@
                         </div>
                     </div>
                     <div class="hp-controls">
-                        <button class="btn btn-secondary btn-small" onclick="adjustHP(-1)">-1</button>
+                        <button class="btn btn-blood-red btn-small" onclick="adjustHP(-1)">-1</button>
                         <input type="number" id="hp-current" value="5" onchange="updateHPBar()" inputmode="numeric">
-                        <button class="btn btn-primary btn-small" onclick="adjustHP(1)">+1</button>
+                        <button class="btn btn-warning btn-small" onclick="adjustHP(1)">+1</button>
                         <button class="btn btn-secondary btn-small" onclick="resetHP()">Max</button>
                     </div>
                 </div>
@@ -4378,9 +4390,9 @@
                         </div>
                     </div>
                     <div class="hp-controls">
-                        <button class="btn btn-secondary btn-small" onclick="adjustDET(-1)">-1</button>
+                        <button class="btn btn-blood-red btn-small" onclick="adjustDET(-1)">-1</button>
                         <input type="number" id="det-current" value="3" onchange="updateDETBar()" inputmode="numeric">
-                        <button class="btn btn-primary btn-small" onclick="adjustDET(1)">+1</button>
+                        <button class="btn btn-warning btn-small" onclick="adjustDET(1)">+1</button>
                         <button class="btn btn-secondary btn-small" onclick="resetDET()">Max</button>
                     </div>
                 </div>
@@ -4394,9 +4406,9 @@
                         </div>
                     </div>
                     <div class="hp-controls">
-                        <button class="btn btn-secondary btn-small" onclick="adjustSAN(-1)">-1</button>
+                        <button class="btn btn-blood-red btn-small" onclick="adjustSAN(-1)">-1</button>
                         <input type="number" id="san-current" onchange="updateSANBar()" inputmode="numeric">
-                        <button class="btn btn-primary btn-small" onclick="adjustSAN(1)">+1</button>
+                        <button class="btn btn-warning btn-small" onclick="adjustSAN(1)">+1</button>
                         <button class="btn btn-secondary btn-small" onclick="resetSAN()">Max</button>
                     </div>
                 </div>
@@ -4406,7 +4418,7 @@
                 <h2 class="section-title" onclick="toggleSection('section-conditions')">⚠️ Condições</h2>
                 <div class="section-content">
                     <div style="margin-bottom: 10px;">
-                        <button class="btn btn-primary btn-small" onclick="addCondition()">➕ Adicionar</button>
+                        <button class="btn btn-warning btn-small" onclick="addCondition()">➕ Adicionar</button>
                     </div>
                     <div id="conditions-list"></div>
                 </div>
@@ -4539,10 +4551,10 @@
                         </div>
                     </div>
                     <div class="hp-controls">
-                        <button class="btn btn-secondary btn-small" onclick="adjustFantoches(-1)">-1</button>
+                        <button class="btn btn-blood-red btn-small" onclick="adjustFantoches(-1)">-1</button>
                         <input type="number" id="fantoches-current" value="0" onchange="updateFantochesBar()"
                             inputmode="numeric">
-                        <button class="btn btn-primary btn-small" onclick="adjustFantoches(1)">+1</button>
+                        <button class="btn btn-warning btn-small" onclick="adjustFantoches(1)">+1</button>
                         <button class="btn btn-secondary btn-small" onclick="resetFantoches()">Max</button>
                     </div>
                 </div>
@@ -4563,7 +4575,7 @@
                         <input type="number" id="dice-count" class="dice-input" value="1" min="1" max="20"
                             inputmode="numeric">
                     </div>
-                    <button class="btn btn-primary btn-small" onclick="rollDice()" style="flex: 1;">🎲
+                    <button class="btn btn-warning btn-small" onclick="rollDice()" style="flex: 1;">🎲
                         ROLAR</button>
                     <div class="roll-result" id="roll-result">—</div>
                 </div>
@@ -5771,9 +5783,9 @@ Exemplos:
                                 </div>
                             </div>
                             <div class="hp-controls">
-                                <button class="btn btn-secondary btn-small" onclick="adjustAllyHP('${ally.id}', -1)">-1</button>
+                                <button class="btn btn-blood-red btn-small" onclick="adjustAllyHP('${ally.id}', -1)">-1</button>
                                 <input type="number" id="ally-hp-${ally.id}" value="${ally.hpCurrent}" onchange="updateAllyHPBar('${ally.id}')" inputmode="numeric" style="width: 80px; text-align: center; padding: 8px;">
-                                <button class="btn btn-primary btn-small" onclick="adjustAllyHP('${ally.id}', 1)">+1</button>
+                                <button class="btn btn-warning btn-small" onclick="adjustAllyHP('${ally.id}', 1)">+1</button>
                                 <button class="btn btn-secondary btn-small" onclick="resetAllyHP('${ally.id}')">Max</button>
                             </div>
                         </div>
@@ -5787,9 +5799,9 @@ Exemplos:
                                 </div>
                             </div>
                             <div class="hp-controls">
-                                <button class="btn btn-secondary btn-small" onclick="adjustAllySAN('${ally.id}', -1)">-1</button>
+                                <button class="btn btn-blood-red btn-small" onclick="adjustAllySAN('${ally.id}', -1)">-1</button>
                                 <input type="number" id="ally-san-${ally.id}" value="${ally.sanCurrent}" onchange="updateAllySANBar('${ally.id}')" inputmode="numeric" style="width: 80px; text-align: center; padding: 8px;">
-                                <button class="btn btn-primary btn-small" onclick="adjustAllySAN('${ally.id}', 1)">+1</button>
+                                <button class="btn btn-warning btn-small" onclick="adjustAllySAN('${ally.id}', 1)">+1</button>
                                 <button class="btn btn-secondary btn-small" onclick="resetAllySAN('${ally.id}')">Max</button>
                             </div>
                         </div>
@@ -9781,7 +9793,17 @@ Exemplos:
             char.hpCurrent = Math.max(0, Math.min(current, max));
             document.getElementById('hp-current').value = char.hpCurrent;
             const percent = (char.hpCurrent / max) * 100;
-            document.getElementById('hp-fill').style.width = percent + '%';
+
+            // Dynamic color: light red (full) → dark red (empty)
+            const ratio = percent / 100;
+            const r = Math.round(255 - (255 - 139) * (1 - ratio)); // 255 → 139
+            const g = Math.round(107 * ratio); // 107 → 0
+            const b = Math.round(107 * ratio); // 107 → 0
+            const hpColor = `rgb(${r}, ${g}, ${b})`;
+
+            const hpFill = document.getElementById('hp-fill');
+            hpFill.style.width = percent + '%';
+            hpFill.style.background = hpColor;
             document.getElementById('hp-text').textContent = `${char.hpCurrent} / ${max}`;
             autoSave();
         };
@@ -9812,7 +9834,17 @@ Exemplos:
             char.detCurrent = Math.max(0, Math.min(current, max));
             document.getElementById('det-current').value = char.detCurrent;
             const percent = (char.detCurrent / max) * 100;
-            document.getElementById('det-fill').style.width = percent + '%';
+
+            // Dynamic color: yellow (full) → brown (empty)
+            const ratio = percent / 100;
+            const r = Math.round(251 - (251 - 92) * (1 - ratio)); // 251 → 92
+            const g = Math.round(191 - (191 - 61) * (1 - ratio)); // 191 → 61
+            const b = Math.round(36 * ratio); // 36 → 0
+            const detColor = `rgb(${r}, ${g}, ${b})`;
+
+            const detFill = document.getElementById('det-fill');
+            detFill.style.width = percent + '%';
+            detFill.style.background = detColor;
             document.getElementById('det-text').textContent = `${char.detCurrent} / ${max}`;
             autoSave();
         };
@@ -9842,7 +9874,17 @@ Exemplos:
             char.sanCurrent = Math.max(0, Math.min(current, max));
             document.getElementById('san-current').value = char.sanCurrent;
             const percent = (char.sanCurrent / max) * 100;
-            document.getElementById('san-fill').style.width = percent + '%';
+
+            // Dynamic color: blue (full) → dark/black (empty)
+            const ratio = percent / 100;
+            const r = Math.round(59 * ratio); // 59 → 0
+            const g = Math.round(130 * ratio); // 130 → 0
+            const b = Math.round(246 - (246 - 46) * (1 - ratio)); // 246 → 46
+            const sanColor = `rgb(${r}, ${g}, ${b})`;
+
+            const sanFill = document.getElementById('san-fill');
+            sanFill.style.width = percent + '%';
+            sanFill.style.background = sanColor;
             document.getElementById('san-text').textContent = `${char.sanCurrent} / ${max}`;
 
             // ADICIONAR: Atualizar exibição na aba Características
