@@ -1391,6 +1391,193 @@
             }
         }
 
+        /* ========== MODAL DE TRANSFERÊNCIA DE ITEM ========== */
+        .transfer-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .transfer-modal {
+            background: linear-gradient(135deg, var(--darker), var(--dark));
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            max-width: 450px;
+            width: 100%;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-30px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .transfer-modal-header {
+            padding: 18px 20px;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .transfer-modal-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--primary);
+        }
+
+        .transfer-modal-close {
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .transfer-modal-close:hover {
+            transform: scale(1.1);
+        }
+
+        .transfer-modal-body {
+            padding: 15px 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .transfer-search {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            color: white;
+            font-size: 0.95rem;
+            margin-bottom: 15px;
+        }
+
+        .transfer-search:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .transfer-qty-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 8px;
+        }
+
+        .transfer-qty-row label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .transfer-qty-input {
+            width: 80px;
+            padding: 8px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .transfer-character-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .transfer-option {
+            padding: 12px 15px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .transfer-option:hover {
+            border-color: var(--primary);
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .transfer-option.master-option {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: #f59e0b;
+        }
+
+        .transfer-option.master-option:hover {
+            background: rgba(245, 158, 11, 0.25);
+        }
+
+        .transfer-option-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: rgba(139, 92, 246, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .transfer-option-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .transfer-option-name {
+            font-weight: 600;
+            color: #e2e8f0;
+            font-size: 0.95rem;
+        }
+
+        .transfer-option-detail {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .transfer-no-results {
+            text-align: center;
+            padding: 30px;
+            color: #64748b;
+        }
+
         .class-ability-item {
             display: flex;
             justify-content: space-between;
@@ -10396,9 +10583,12 @@ Exemplos:
                 📏 Tamanho Max: ${maxSize} <span style="color: #64748b; font-size: 0.75rem;">(FOR × VIG × Atletismo)</span>
             </span>`;
 
-            const itemsHTML = container.items.length === 0
+            // ✅ ORDENAR ITENS pelo campo 'order' (para manter ordem salva)
+            const sortedItems = [...container.items].sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+
+            const itemsHTML = sortedItems.length === 0
                 ? '<p style="color: #64748b; text-align: center; padding: 10px; font-size: 0.85rem;">Vazio - Arraste itens aqui</p>'
-                : container.items.map((item, index) => {
+                : sortedItems.map((item, index) => {
 
                     // URLs das imagens dos Lunis
                     const IMAGEM_LUN = 'https://i.imgur.com/RetxZ16.png';
@@ -10416,25 +10606,21 @@ Exemplos:
                             imagemSrc = IMAGEM_MI_LUNIS;
                         }
                     }
-                    const imagemHTML = imagemSrc ? `<img src="${imagemSrc}" style="width: 40px; height: 40px; object-fit: contain; border-radius: 6px; margin-right: 10px; background: transparent;">` : '';
+                    const imagemHTML = imagemSrc
+                        ? `<img src="${imagemSrc}" style="width: 100px; height: 100px; object-fit: contain; border-radius: 10px; background: rgba(15, 23, 42, 0.6); padding: 4px; border: 2px solid var(--border); flex-shrink: 0;">`
+                        : `<div style="width: 100px; height: 100px; border-radius: 10px; background: rgba(139, 92, 246, 0.2); display: flex; align-items: center; justify-content: center; font-size: 2rem; flex-shrink: 0; border: 2px solid var(--border);">📦</div>`;
 
-                    // Detalhes do item
-                    let detalhes = `Peso: ${item.peso} | Tam: ${item.tamanho} | Int: ${item.integridade}/${item.dureza + item.tamanho + (item.reforco || 0)} | Total: ${item.totalWeight || (item.peso * item.quantity)}`;
+                    // Detalhes do item - versão minimalista
+                    let detalhes = `⚖️ ${item.totalWeight || (item.peso * item.quantity)} | 📐 ${item.tamanho}`;
 
                     if (item.tipo === 'Arma') {
-                        detalhes += ` | Dano: +${item.dano || 0} | Reação: +${item.reacao || 0}`;
+                        detalhes += ` | ⚔️ +${item.dano || 0}`;
                     } else if (item.tipo === 'Vestimenta') {
-                        const stats = [];
-                        if (item.blindagem) stats.push(`Blind: ${item.blindagem > 0 ? '+' : ''}${item.blindagem}`);
-                        if (item.deslocTerrestre) stats.push(`Desloc: ${item.deslocTerrestre > 0 ? '+' : ''}${item.deslocTerrestre}`);
-                        if (item.reacaoVest) stats.push(`Reação: ${item.reacaoVest > 0 ? '+' : ''}${item.reacaoVest}`);
-                        if (item.iniciativa) stats.push(`Inic: ${item.iniciativa > 0 ? '+' : ''}${item.iniciativa}`);
-                        if (item.cargaMax) stats.push(`Carga: ${item.cargaMax > 0 ? '+' : ''}${item.cargaMax}`);
-                        if (stats.length > 0) detalhes += ` | ${stats.join(' | ')}`;
+                        if (item.blindagem) detalhes += ` | 🛡️ ${item.blindagem > 0 ? '+' : ''}${item.blindagem}`;
                     } else if (item.tipo === 'Projétil') {
-                        detalhes += ` | Dano: +${item.dano || 0}`;
+                        detalhes += ` | ⚔️ +${item.dano || 0}`;
                     } else if (item.tipo === 'Container') {
-                        detalhes += ` | Cap: ${item.maxCapacity} | TamMax: ${item.maxSize}`;
+                        detalhes += ` | 📦 ${item.maxCapacity}`;
                     }
 
                     // Estilo especial para containers e Lunis
@@ -10455,6 +10641,11 @@ Exemplos:
                         : '';
                     const containerClass = item.isContainerItem ? ' container-item-clickable' : '';
 
+                    // Preparar descrição do item (com quebras de linha)
+                    const descricaoHTML = item.description
+                        ? `<div style="font-size: 0.65rem; color: #64748b; margin-top: 4px; line-height: 1.3; max-height: 2.6em; overflow: hidden; white-space: pre-line;">${item.description}</div>`
+                        : '';
+
                     return `
                         <div class="inventory-item${containerClass}" 
                              id="inv-item-${item.id}"
@@ -10466,35 +10657,51 @@ Exemplos:
                              ondragleave="handleItemDragLeave(event)"
                              ondragend="handleItemDragEnd(event)"
                              ondrop="handleItemDrop(event, '${container.id}', '${item.id}')"
-                             style="display: flex; justify-content: space-between; align-items: center; gap: 10px; ${itemStyle}">
-                            <div class="item-info" ${!item.isContainerItem ? `onclick="editItem('${container.id}', '${item.id}')"` : containerClickHandler} style="cursor: pointer; flex: 1; display: flex; align-items: center;">
-                                ${imagemHTML}
-                                <div style="flex: 1;">
-                                    <div class="item-name" style="display: flex; align-items: center; gap: 8px;">
-                                        ${(item.tipo === 'Arma' || item.tipo === 'Vestimenta') ? `
-                                            <input type="checkbox" 
-                                                ${item.equipado ? 'checked' : ''} 
-                                                onchange="toggleEquipado('${container.id}', '${item.id}')"
-                                                style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); flex-shrink: 0;"
-                                                title="${item.tipo === 'Arma' ? 'Arma empunhada' : 'Vestido'}"
-                                                onclick="event.stopPropagation()">
-                                        ` : ''}
-                                        <span>${item.isContainerItem ? '📦 ' : ''}${item.name} ${item.packSize > 1 ? `[Pack ${item.packSize}]` : ''} (x${item.quantity})${item.isContainerItem ? ' 👆' : ''}</span>
-                                    </div>
-                                    <div class="item-details">
-                                        ${detalhes}
-                                        ${item.description ? `<br>${item.description}` : ''}
-                                    </div>
-                                </div>
-                            </div>
-                            <div style="display: flex; gap: 4px; align-items: center;">
-                                ${(item.tipo === 'Projétil' || item.tipo === 'Objeto' || item.tipo === 'Lunis') ? `
-                                    <input type="number" min="1" value="${item.quantity}" 
-                                        onchange="updateItemQuantity('${container.id}', '${item.id}', this.value)"
-                                        style="width: 60px; padding: 4px 8px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--primary); border-radius: 8px; color: white; text-align: center; font-weight: 600;"
+                             style="display: flex; flex-direction: column; gap: 8px; padding: 12px; ${itemStyle}">
+                            
+                            <!-- Nome do item no TOPO, ocupando toda largura, ALINHADO À ESQUERDA -->
+                            <div class="item-name" ${!item.isContainerItem ? `onclick="editItem('${container.id}', '${item.id}')"` : containerClickHandler} style="display: flex; align-items: center; justify-content: flex-start; gap: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; width: 100%; text-align: left;">
+                                ${(item.tipo === 'Arma' || item.tipo === 'Vestimenta') ? `
+                                    <span style="font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; ${item.equipado ? 'background: rgba(34, 197, 94, 0.3); color: #22c55e;' : 'background: rgba(239, 68, 68, 0.3); color: #ef4444;'}">${item.equipado ? 'Equip.' : 'Deseq.'}</span>
+                                    <input type="checkbox" 
+                                        ${item.equipado ? 'checked' : ''} 
+                                        onchange="toggleEquipado('${container.id}', '${item.id}')"
+                                        style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); flex-shrink: 0;"
+                                        title="${item.tipo === 'Arma' ? 'Arma empunhada' : 'Vestido'}"
                                         onclick="event.stopPropagation()">
                                 ` : ''}
-                                <button class="btn btn-danger btn-small" onclick="removeItemFromContainer('${container.id}', '${item.id}')" style="padding: 4px 8px;">🗑️</button>
+                                <span style="text-align: left; overflow: hidden; text-overflow: ellipsis;">${item.isContainerItem ? '📦 ' : ''}${item.name}${item.quantity > 1 ? ` (x${item.quantity})` : ''}</span>
+                            </div>
+                            
+                            <!-- Conteúdo: Imagem (ESQUERDA) + Info (CENTRO) + Botões (DIREITA) -->
+                            <div style="display: flex; align-items: stretch; justify-content: space-between; gap: 12px; width: 100%;">
+                                <!-- Coluna Esquerda: Imagem -->
+                                <div style="flex-shrink: 0; display: flex; align-items: flex-start;">
+                                    ${imagemHTML}
+                                </div>
+                                
+                                <!-- Coluna Central: Info + Descrição -->
+                                <div ${!item.isContainerItem ? `onclick="editItem('${container.id}', '${item.id}')"` : containerClickHandler} style="flex: 1; min-width: 0; cursor: pointer; display: flex; flex-direction: column; justify-content: center;">
+                                    <!-- Detalhes minimalistas -->
+                                    <div class="item-details" style="font-size: 0.8rem; color: #94a3b8; text-align: left;">
+                                        ${detalhes}
+                                    </div>
+                                    
+                                    <!-- Descrição do item -->
+                                    ${descricaoHTML}
+                                </div>
+                                
+                                <!-- Coluna Direita: Botões na vertical -->
+                                <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-end; flex-shrink: 0; justify-content: center; margin-left: auto;">
+                                    <button class="btn btn-danger btn-small" onclick="event.stopPropagation(); removeItemFromContainer('${container.id}', '${item.id}')" style="padding: 8px 10px;" title="Remover">🗑️</button>
+                                    <button class="btn btn-warning btn-small" onclick="event.stopPropagation(); openTransferModal('${container.id}', '${item.id}')" style="padding: 8px 10px;" title="Transferir">↗️</button>
+                                    ${(item.tipo === 'Projétil' || item.tipo === 'Objeto' || item.tipo === 'Lunis') ? `
+                                        <input type="number" min="1" value="${item.quantity}" 
+                                            onchange="updateItemQuantity('${container.id}', '${item.id}', this.value)"
+                                            style="width: 55px; padding: 6px; background: rgba(139, 92, 246, 0.2); border: 2px solid var(--primary); border-radius: 8px; color: white; text-align: center; font-weight: 700; font-size: 0.9rem;"
+                                            onclick="event.stopPropagation()">
+                                    ` : ''}
+                                </div>
                             </div>
                         </div>
                     `;
@@ -10517,12 +10724,8 @@ Exemplos:
                             </div>
                         </div>
                     </div>
-                    <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
-                        <button class="btn btn-primary btn-small" onclick="addItemToContainer('${container.id}')" style="flex: 1; min-width: 120px;">➕ Item</button>
-                        <button class="btn btn-secondary btn-small" onclick="addContainer()" style="min-width: 120px;">📦 Novo Container</button>
-                    </div>
                     <p style="color: #64748b; font-size: 0.75rem; text-align: center; margin-bottom: 10px; font-style: italic;">
-                        💡 Arraste itens para reorganizar. Solte sobre outro igual para combinar. Clique em 📦 para abrir.
+                        💡 Arraste para reorganizar. Solte sobre igual para combinar. Clique em 📦 para abrir.
                     </p>
                     ${itemsHTML}
                 </div>
@@ -11030,8 +11233,16 @@ Exemplos:
                         const newTargetIndex = sourceIndex < targetIndex ? targetIndex : targetIndex;
                         targetContainer.items.splice(newTargetIndex, 0, movedItem);
 
+                        // ✅ SALVAR ORDEM NO FIREBASE
+                        // Atualizar o campo 'order' de todos os itens no container
+                        for (let i = 0; i < targetContainer.items.length; i++) {
+                            targetContainer.items[i].order = i;
+                            await window.saveItemToFirebase(targetContainer.items[i]);
+                        }
+
                         updateContainers();
                         updateOpenContainerModals();
+                        showAlert('✅ Ordem salva!', 'success');
                     }
                 }
             } catch (error) {
@@ -11428,6 +11639,246 @@ Exemplos:
         // Editar item a partir do modal
         window.editItemFromModal = function (containerId, itemId) {
             editItem(containerId, itemId);
+        };
+
+        // ========== SISTEMA DE TRANSFERÊNCIA DE ITEM ==========
+        let transferItemData = null;
+        let allCharactersForTransfer = [];
+
+        // Abrir modal de transferência
+        window.openTransferModal = async function (containerId, itemId) {
+            const char = getChar();
+            const container = char.containers.find(c => c.id === containerId);
+            if (!container) return;
+
+            const item = container.items.find(i => i.id === itemId);
+            if (!item) {
+                showAlert('❌ Item não encontrado!', 'danger');
+                return;
+            }
+
+            // Salvar dados do item para transferir
+            transferItemData = { containerId, itemId, item };
+
+            // Carregar personagens
+            try {
+                const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+                const charactersRef = collection(db, 'characters');
+                const snapshot = await getDocs(charactersRef);
+
+                allCharactersForTransfer = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    // Excluir o próprio personagem atual
+                    if (doc.id !== currentCharacterId) {
+                        allCharactersForTransfer.push({
+                            id: doc.id,
+                            name: data.nome || 'Personagem',
+                            race: data.raca || '',
+                            class: data.classe || '',
+                            image: data.characterImage || data.imagem || null,
+                            userId: data.ownerUid || null
+                        });
+                    }
+                });
+
+                // Ordenar por nome
+                allCharactersForTransfer.sort((a, b) => a.name.localeCompare(b.name));
+
+                renderTransferModal();
+            } catch (error) {
+                console.error('Erro ao carregar personagens:', error);
+                showAlert('❌ Erro ao carregar personagens: ' + error.message, 'danger');
+            }
+        };
+
+        function renderTransferModal(searchTerm = '') {
+            if (!transferItemData) return;
+
+            const item = transferItemData.item;
+            const maxQty = item.quantity || 1;
+            const canTransferPartial = ['Projétil', 'Objeto', 'Lunis'].includes(item.tipo);
+
+            // Filtrar personagens pela busca
+            const filteredChars = searchTerm
+                ? allCharactersForTransfer.filter(c =>
+                    c.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                : allCharactersForTransfer;
+
+            const charactersHTML = filteredChars.length === 0
+                ? '<div class="transfer-no-results">Nenhum personagem encontrado</div>'
+                : filteredChars.map(char => {
+                    const avatarHTML = char.image
+                        ? `<img src="${char.image}" class="transfer-option-avatar">`
+                        : `<div class="transfer-option-avatar">👤</div>`;
+
+                    return `
+                        <div class="transfer-option" onclick="executeTransfer('${char.id}')">
+                            ${avatarHTML}
+                            <div class="transfer-option-info">
+                                <div class="transfer-option-name">${char.name}</div>
+                                <div class="transfer-option-detail">${char.race}${char.class ? ' • ' + char.class : ''}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            // Remover modal anterior se existir
+            const existingModal = document.getElementById('transferModalOverlay');
+            if (existingModal) existingModal.remove();
+
+            const modalHTML = `
+                <div class="transfer-modal-overlay" id="transferModalOverlay" onclick="if(event.target === this) closeTransferModal()">
+                    <div class="transfer-modal">
+                        <div class="transfer-modal-header">
+                            <div class="transfer-modal-title">↗️ Transferir: ${item.name}</div>
+                            <button class="transfer-modal-close" onclick="closeTransferModal()">✕</button>
+                        </div>
+                        <div class="transfer-modal-body">
+                            <input type="text" 
+                                   class="transfer-search" 
+                                   placeholder="🔍 Buscar personagem..." 
+                                   id="transferSearch"
+                                   oninput="filterTransferCharacters(this.value)">
+                            
+                            ${canTransferPartial ? `
+                                <div class="transfer-qty-row">
+                                    <label>Quantidade:</label>
+                                    <input type="number" 
+                                           class="transfer-qty-input" 
+                                           id="transferQty" 
+                                           min="1" 
+                                           max="${maxQty}" 
+                                           value="${maxQty}">
+                                    <span style="color: #64748b; font-size: 0.85rem;">/ ${maxQty}</span>
+                                </div>
+                            ` : ''}
+
+                            <div class="transfer-character-list">
+                                <!-- Opção Para o Mestre -->
+                                <div class="transfer-option master-option" onclick="executeTransfer('mestre')">
+                                    <div class="transfer-option-avatar" style="background: rgba(245, 158, 11, 0.3);">👑</div>
+                                    <div class="transfer-option-info">
+                                        <div class="transfer-option-name" style="color: #f59e0b;">Para o Mestre</div>
+                                        <div class="transfer-option-detail">Enviar para itens avulsos</div>
+                                    </div>
+                                </div>
+
+                                ${charactersHTML}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        // Filtrar personagens pela busca
+        window.filterTransferCharacters = function (searchTerm) {
+            renderTransferModal(searchTerm);
+            // Restaurar valor da busca após re-render
+            const searchInput = document.getElementById('transferSearch');
+            if (searchInput) {
+                searchInput.value = searchTerm;
+                searchInput.focus();
+            }
+        };
+
+        // Fechar modal de transferência
+        window.closeTransferModal = function () {
+            const modal = document.getElementById('transferModalOverlay');
+            if (modal) modal.remove();
+            transferItemData = null;
+        };
+
+        // Executar transferência
+        window.executeTransfer = async function (targetId) {
+            if (!transferItemData) return;
+
+            const { containerId, itemId, item } = transferItemData;
+            const qtyInput = document.getElementById('transferQty');
+            const transferQty = qtyInput ? parseInt(qtyInput.value) || item.quantity : item.quantity;
+
+            if (transferQty < 1 || transferQty > item.quantity) {
+                showAlert('⚠️ Quantidade inválida!', 'warning');
+                return;
+            }
+
+            // Determinar nome do destino para confirmação
+            let destinoNome = 'Mestre (Avulsos)';
+            if (targetId !== 'mestre') {
+                const targetChar = allCharactersForTransfer.find(c => c.id === targetId);
+                destinoNome = targetChar ? targetChar.name : 'outro personagem';
+            }
+
+            // Confirmação antes de transferir
+            const confirmMsg = `⚠️ Confirmar Transferência?\n\n📦 Item: ${item.name}\n📊 Quantidade: ${transferQty}x\n👤 Destino: ${destinoNome}\n\nDeseja continuar?`;
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            try {
+                const { doc, setDoc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+
+                // Se transferir tudo
+                if (transferQty >= item.quantity) {
+                    if (targetId === 'mestre') {
+                        // Enviar para Avulsos (remover characterId e containerId)
+                        await setDoc(doc(db, 'items', itemId), {
+                            characterId: null,
+                            containerId: null
+                        }, { merge: true });
+                    } else {
+                        // Enviar para outro personagem
+                        await setDoc(doc(db, 'items', itemId), {
+                            characterId: targetId,
+                            containerId: 'está com alguém'
+                        }, { merge: true });
+                    }
+                } else {
+                    // Transferência parcial - criar novo item com quantidade parcial
+                    const newItemId = 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+                    const newItem = { ...item };
+                    newItem.id = newItemId;
+                    newItem.quantity = transferQty;
+                    newItem.totalWeight = ((transferQty / (item.packSize || 1)) * item.peso);
+
+                    if (targetId === 'mestre') {
+                        newItem.characterId = null;
+                        newItem.containerId = null;
+                    } else {
+                        newItem.characterId = targetId;
+                        newItem.containerId = 'está com alguém';
+                    }
+
+                    // Criar novo item
+                    await setDoc(doc(db, 'items', newItemId), newItem);
+
+                    // Atualizar item original com quantidade reduzida
+                    const remainingQty = item.quantity - transferQty;
+                    await setDoc(doc(db, 'items', itemId), {
+                        quantity: remainingQty,
+                        totalWeight: ((remainingQty / (item.packSize || 1)) * item.peso)
+                    }, { merge: true });
+                }
+
+                closeTransferModal();
+
+                // Recarregar inventário
+                const characterId = currentCharacterId || currentUser.uid;
+                await window.loadInventoryFromFirebase(characterId);
+                updateContainers();
+                updateOpenContainerModals();
+
+                const destino = targetId === 'mestre' ? 'Mestre (Avulsos)' : 'outro personagem';
+                showAlert(`✅ ${transferQty}x ${item.name} transferido para ${destino}!`, 'success');
+
+            } catch (error) {
+                console.error('Erro ao transferir item:', error);
+                showAlert('❌ Erro ao transferir: ' + error.message, 'danger');
+            }
         };
 
         // ========== FUNÇÕES DO MODAL DE ITEM ==========
