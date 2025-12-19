@@ -206,6 +206,22 @@
             border-radius: 20px;
             border: 2px solid var(--border);
             overflow: hidden;
+            transition: margin-right 0.4s ease;
+        }
+
+        /* Quando o painel de logs está aberto (apenas desktop) */
+        body.logs-panel-open .tabs-container {
+            margin-right: 470px;
+        }
+
+        /* Ajustar user-info quando painel está aberto */
+        body.logs-panel-open .user-info {
+            right: 470px;
+            transition: right 0.4s ease;
+        }
+
+        .user-info {
+            transition: right 0.4s ease;
         }
 
         .tabs-header {
@@ -936,6 +952,15 @@
             .logs-panel {
                 width: 100%;
                 right: -100%;
+            }
+
+            /* No mobile, manter comportamento de overlay (não ajustar margens) */
+            body.logs-panel-open .tabs-container {
+                margin-right: 20px;
+            }
+
+            body.logs-panel-open .user-info {
+                right: 10px;
             }
 
             .modal-content {
@@ -2230,6 +2255,7 @@
                         <option value="characters">Personagens</option>
                         <option value="npcs">NPCs</option>
                         <option value="items">Itens</option>
+                        <option value="item-transfer">📦 Transferência de Item</option>
                         <option value="apoios">Apoios</option>
                     </select>
                 </div>
@@ -5537,17 +5563,20 @@ Agilidade 2\n
                     { id: 'armas-duas-maos', name: 'Armas de Duas Mãos' },
                     { id: 'armas-duplas', name: 'Armas Duplas' },
                     { id: 'armas-arremessaveis', name: 'Armas Arremessáveis' },
-                    { id: 'controle', name: 'Controle' },
+                    { id: 'escudo', name: 'Escudo' },
+                    { id: 'postura-combate', name: 'Postura de Combate' },
+                    { id: 'contra-ataque', name: 'Contra-Ataque' },
                     { id: 'impeto', name: 'Ímpeto' },
                     { id: 'guerrilha', name: 'Guerrilha' },
-                    { id: 'postura-combate', name: 'Postura de Combate' },
-                    { id: 'segunda-saude', name: 'Segunda Saúde' }
+                    { id: 'controle', name: 'Controle' }
                 ],
                 'Adepto': [
+                    { id: 'contato-setimo', name: 'Contato com o Sétimo' },
+                    { id: 'selo-profano', name: 'Selo do Profano' },
                     { id: 'talisma-profano', name: 'Talismã Profano' },
+                    { id: 'fragmento-identidade', name: 'Fragmento de Identidade' },
                     { id: 'servos', name: 'Servos' },
-                    { id: 'hierarquia', name: 'Hierarquia' },
-                    { id: 'fragmentos-alma', name: 'Fragmentos da Alma' }
+                    { id: 'vozes-tumulo', name: 'Vozes do Túmulo' }
                 ],
                 'Ladino': [
                     { id: 'armas-punho', name: 'Armas de Punho' },
@@ -5640,25 +5669,160 @@ Agilidade 2\n
                 return;
             }
 
-            container.innerHTML = conditions.map((condition, index) => `
-                <div class="condition-item">
-                    <span class="condition-name">${condition}</span>
-                    <button class="btn-remove" onclick="removeConditionFromCharacter(${index})">🗑️ Remover</button>
-                </div>
-            `).join('');
+            // Definir cores e ícones para cada tipo de condição
+            const typeConfig = {
+                positive: { color: '#22c55e', bgColor: 'rgba(34, 197, 94, 0.15)', icon: '✨', label: 'Positiva' },
+                neutral: { color: '#6366f1', bgColor: 'rgba(99, 102, 241, 0.15)', icon: '⚖️', label: 'Neutra' },
+                negative: { color: '#ef4444', bgColor: 'rgba(239, 68, 68, 0.15)', icon: '⚠️', label: 'Negativa' }
+            };
+
+            container.innerHTML = conditions.map((condition, index) => {
+                // Suportar tanto strings (legado) quanto objetos (novo formato)
+                const isObject = typeof condition === 'object' && condition !== null;
+                const conditionName = isObject ? condition.name : condition;
+                const conditionType = isObject ? (condition.type || 'negative') : 'negative';
+                const conditionDesc = isObject ? (condition.description || '') : '';
+                const conditionId = isObject ? condition.id : index;
+
+                const config = typeConfig[conditionType] || typeConfig.negative;
+
+                return `
+                    <div class="condition-item" style="background: ${config.bgColor}; border-left: 4px solid ${config.color}; padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                <span style="font-size: 1.1rem;">${config.icon}</span>
+                                <span style="color: ${config.color}; font-weight: 700; font-size: 1rem;">${conditionName}</span>
+                                <span style="font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; background: ${config.color}30; color: ${config.color}; font-weight: 600;">${config.label}</span>
+                            </div>
+                            ${conditionDesc ? `<div style="color: #94a3b8; font-size: 0.85rem; margin-top: 4px; padding-left: 28px;">${conditionDesc}</div>` : ''}
+                        </div>
+                        <button class="btn btn-danger btn-small" style="padding: 6px 12px; font-size: 0.8rem;" onclick="removeConditionFromCharacter(${index})">🗑️</button>
+                    </div>
+                `;
+            }).join('');
         }
 
         // ============= ADICIONAR CONDIÇÃO =============
         window.addConditionToCharacter = function () {
-            const conditionName = prompt('Digite o nome da condição (Ex: Fadiga, Fratura, Envenenado):');
-            if (!conditionName) return;
+            // Criar modal para adicionar condição com tipo
+            const modalHTML = `
+                <div id="addConditionModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 10001; display: flex; align-items: center; justify-content: center;">
+                    <div style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 2px solid var(--primary); border-radius: 16px; padding: 25px; width: 90%; max-width: 450px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);">
+                        <h3 style="color: var(--primary); margin-bottom: 20px; text-align: center;">➕ Adicionar Condição</h3>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px; display: block;">Nome da Condição*</label>
+                            <input type="text" id="newConditionName" placeholder="Ex: Fadiga, Fratura, Abençoado..." style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light); font-size: 1rem;">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: #cbd5e1; font-size: 0.9rem; margin-bottom: 8px; display: block;">Tipo da Condição</label>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <label style="flex: 1; min-width: 100px; cursor: pointer;">
+                                    <input type="radio" name="conditionTypeRadio" value="positive" style="display: none;">
+                                    <div id="typeBtn_positive" onclick="selectConditionTypeBtn('positive')" style="padding: 10px; text-align: center; border-radius: 8px; border: 2px solid #22c55e; background: rgba(34, 197, 94, 0.1); color: #22c55e; font-weight: 600; transition: all 0.2s;">
+                                        ✨ Positiva
+                                    </div>
+                                </label>
+                                <label style="flex: 1; min-width: 100px; cursor: pointer;">
+                                    <input type="radio" name="conditionTypeRadio" value="neutral" style="display: none;">
+                                    <div id="typeBtn_neutral" onclick="selectConditionTypeBtn('neutral')" style="padding: 10px; text-align: center; border-radius: 8px; border: 2px solid #6366f1; background: rgba(99, 102, 241, 0.1); color: #6366f1; font-weight: 600; transition: all 0.2s;">
+                                        ⚖️ Neutra
+                                    </div>
+                                </label>
+                                <label style="flex: 1; min-width: 100px; cursor: pointer;">
+                                    <input type="radio" name="conditionTypeRadio" value="negative" checked style="display: none;">
+                                    <div id="typeBtn_negative" onclick="selectConditionTypeBtn('negative')" style="padding: 10px; text-align: center; border-radius: 8px; border: 2px solid #ef4444; background: #ef4444; color: white; font-weight: 600; transition: all 0.2s;">
+                                        ⚠️ Negativa
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <label style="color: #cbd5e1; font-size: 0.9rem; margin-bottom: 5px; display: block;">Descrição (opcional)</label>
+                            <textarea id="newConditionDesc" placeholder="Descreva os efeitos da condição..." rows="2" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid var(--border); background: rgba(15, 23, 42, 0.8); color: var(--light); font-size: 0.9rem; resize: vertical;"></textarea>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                            <button onclick="closeAddConditionModal()" class="btn" style="background: rgba(100, 116, 139, 0.3); border: 1px solid #64748b;">Cancelar</button>
+                            <button onclick="confirmAddCondition()" class="btn btn-primary">✅ Adicionar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            // Focar no campo de nome
+            setTimeout(() => document.getElementById('newConditionName').focus(), 100);
+        };
+
+        // Selecionar tipo de condição visualmente
+        window.selectConditionTypeBtn = function (type) {
+            const types = ['positive', 'neutral', 'negative'];
+            const colors = {
+                positive: { border: '#22c55e', bg: '#22c55e', text: 'white' },
+                neutral: { border: '#6366f1', bg: '#6366f1', text: 'white' },
+                negative: { border: '#ef4444', bg: '#ef4444', text: 'white' }
+            };
+            const defaultColors = {
+                positive: { border: '#22c55e', bg: 'rgba(34, 197, 94, 0.1)', text: '#22c55e' },
+                neutral: { border: '#6366f1', bg: 'rgba(99, 102, 241, 0.1)', text: '#6366f1' },
+                negative: { border: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444' }
+            };
+
+            types.forEach(t => {
+                const radio = document.querySelector(`input[name="conditionTypeRadio"][value="${t}"]`);
+                const btn = document.getElementById(`typeBtn_${t}`);
+
+                if (t === type) {
+                    radio.checked = true;
+                    btn.style.background = colors[t].bg;
+                    btn.style.color = colors[t].text;
+                    btn.style.borderColor = colors[t].border;
+                } else {
+                    radio.checked = false;
+                    btn.style.background = defaultColors[t].bg;
+                    btn.style.color = defaultColors[t].text;
+                    btn.style.borderColor = defaultColors[t].border;
+                }
+            });
+        };
+
+        window.closeAddConditionModal = function () {
+            const modal = document.getElementById('addConditionModal');
+            if (modal) modal.remove();
+        };
+
+        window.confirmAddCondition = function () {
+            const name = document.getElementById('newConditionName').value.trim();
+            const description = document.getElementById('newConditionDesc').value.trim();
+            const typeRadio = document.querySelector('input[name="conditionTypeRadio"]:checked');
+            const type = typeRadio ? typeRadio.value : 'negative';
+
+            if (!name) {
+                showAlert('⚠️ Digite o nome da condição!', 'warning');
+                return;
+            }
 
             if (!currentEditingCharacter.conditions) {
                 currentEditingCharacter.conditions = [];
             }
 
-            currentEditingCharacter.conditions.push(conditionName.trim());
+            // Adicionar condição como objeto com id, name, description, type
+            const newCondition = {
+                id: Date.now(),
+                name: name,
+                description: description,
+                type: type
+            };
+
+            currentEditingCharacter.conditions.push(newCondition);
             displayConditions(currentEditingCharacter);
+            closeAddConditionModal();
+
+            showAlert(`✅ Condição "${name}" adicionada!`, 'success');
         };
 
         // ============= REMOVER CONDIÇÃO =============
@@ -5926,26 +6090,25 @@ Agilidade 2\n
 
                     // NOTAS
                     notas: document.getElementById('edit_notas').value,
-                    masterNotes: document.getElementById('edit_masterNotes').value
+                    masterNotes: document.getElementById('edit_masterNotes').value,
+
+                    // CONDIÇÕES (do currentEditingCharacter, pois são editadas dinamicamente)
+                    conditions: currentEditingCharacter.conditions || []
                 };
 
                 // ========== NOVA LÓGICA: COMPARAR E SALVAR APENAS O QUE MUDOU ==========
                 const updateData = {};
                 let hasChanges = false;
 
-                // Função auxiliar para comparar valores profundamente (para objetos como skills)
+                // Função auxiliar para comparar valores profundamente (para objetos e arrays como skills e conditions)
                 function isDifferent(newValue, oldValue) {
-                    // Se são objetos, comparar propriedades
-                    if (typeof newValue === 'object' && newValue !== null && typeof oldValue === 'object' && oldValue !== null) {
-                        const newKeys = Object.keys(newValue);
-                        const oldKeys = Object.keys(oldValue);
+                    // Se um é undefined/null e o outro não
+                    if (newValue == null && oldValue == null) return false;
+                    if (newValue == null || oldValue == null) return true;
 
-                        if (newKeys.length !== oldKeys.length) return true;
-
-                        for (const key of newKeys) {
-                            if (newValue[key] !== oldValue[key]) return true;
-                        }
-                        return false;
+                    // Se são objetos ou arrays, comparar via JSON
+                    if (typeof newValue === 'object' && typeof oldValue === 'object') {
+                        return JSON.stringify(newValue) !== JSON.stringify(oldValue);
                     }
                     // Comparação simples
                     return newValue !== oldValue;
@@ -6281,6 +6444,7 @@ Agilidade 2\n
                     'characters': '#ec4899',
                     'npcs': '#f59e0b',
                     'items': '#06b6d4',
+                    'item-transfer': '#3b82f6',
                     'apoios': '#ef4444'
                 };
                 const typeColor = typeColors[log.type] || '#64748b';
@@ -6292,6 +6456,7 @@ Agilidade 2\n
                     'characters': 'Personagens',
                     'npcs': 'NPCs',
                     'items': 'Itens',
+                    'item-transfer': '📦 Transferência de Item',
                     'apoios': 'Apoios'
                 };
                 const typeName = typeNames[log.type] || log.type || 'Ação';
@@ -6334,6 +6499,8 @@ Agilidade 2\n
         window.toggleLogs = function () {
             const panel = document.getElementById('logsPanel');
             panel.classList.toggle('open');
+            // Adicionar/remover classe no body para ajustar layout da tela
+            document.body.classList.toggle('logs-panel-open');
         };
 
         // ============= TROCAR DE ABA PRINCIPAL =============

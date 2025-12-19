@@ -4907,7 +4907,8 @@ Exemplos:
                         ...window.character,
                         ...data,
                         allies: data.allies || [],
-                        properties: data.properties || []
+                        properties: data.properties || [],
+                        conditions: data.conditions || []
                     };
 
                     // Carregar containers e itens das coleções
@@ -5504,15 +5505,23 @@ Exemplos:
             const oldConditions = oldChar.conditions || [];
             const newConditions = newChar.conditions || [];
 
+            // Helper para obter ID/nome da condição (suporta strings e objetos)
+            const getConditionKey = (c) => typeof c === 'object' && c !== null ? c.id : c;
+            const getConditionName = (c) => typeof c === 'object' && c !== null ? c.name : c;
+
             newConditions.forEach(cond => {
-                if (!oldConditions.includes(cond)) {
-                    changes.push(`⚠️ Adicionou condição: ${cond}`);
+                const condKey = getConditionKey(cond);
+                const exists = oldConditions.some(c => getConditionKey(c) === condKey);
+                if (!exists) {
+                    changes.push(`⚠️ Adicionou condição: ${getConditionName(cond)}`);
                 }
             });
 
             oldConditions.forEach(cond => {
-                if (!newConditions.includes(cond)) {
-                    changes.push(`✅ Removeu condição: ${cond}`);
+                const condKey = getConditionKey(cond);
+                const exists = newConditions.some(c => getConditionKey(c) === condKey);
+                if (!exists) {
+                    changes.push(`✅ Removeu condição: ${getConditionName(cond)}`);
                 }
             });
 
@@ -11861,7 +11870,7 @@ Exemplos:
             }
 
             try {
-                const { doc, setDoc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+                const { doc, setDoc, deleteDoc, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
                 // Se transferir tudo
                 if (transferQty >= item.quantity) {
@@ -11916,6 +11925,34 @@ Exemplos:
 
                 const destino = targetId === 'mestre' ? 'Mestre (Avulsos)' : 'outro personagem';
                 showAlert(`✅ ${transferQty}x ${item.name} transferido para ${destino}!`, 'success');
+
+                // 📜 CRIAR LOG DE TRANSFERÊNCIA PARA O MESTRE
+                try {
+                    const char = getChar();
+                    const remetente = char.nome || 'Personagem';
+                    const actionText = `transferiu ${transferQty}x "${item.name}" para ${destinoNome}`;
+
+                    const logsRef = collection(db, 'logs');
+                    const logDoc = doc(logsRef);
+
+                    await setDoc(logDoc, {
+                        user: currentUser.email || 'Jogador',
+                        action: actionText,
+                        character: remetente,
+                        type: 'item-transfer',
+                        timestamp: new Date().toISOString(),
+                        // Dados adicionais para referência
+                        itemName: item.name,
+                        quantity: transferQty,
+                        fromCharacterId: characterId,
+                        toCharacterId: targetId === 'mestre' ? null : targetId,
+                        toCharacterName: destinoNome
+                    });
+
+                    console.log('📜 Log de transferência criado com sucesso');
+                } catch (logError) {
+                    console.error('⚠️ Erro ao criar log de transferência (não afeta a transferência):', logError);
+                }
 
             } catch (error) {
                 console.error('Erro ao transferir item:', error);
