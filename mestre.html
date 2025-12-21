@@ -2650,8 +2650,138 @@
 
             <!-- Sub-aba: Criar -->
             <div id="itensCriar" class="itens-subtab" style="display: none;">
-                <div style="text-align: center; padding: 40px; color: #64748b;">
-                    Formulário para criar novos itens
+                <!-- Header da seção -->
+                <div
+                    style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2)); border: 2px solid rgba(16, 185, 129, 0.5); border-radius: 15px; padding: 20px; margin-bottom: 25px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #10b981;">
+                                📥 Importar Itens via JSON
+                            </div>
+                            <div style="font-size: 0.9rem; color: #34d399; margin-top: 5px;">
+                                Importe múltiplos itens de uma só vez usando um arquivo JSON
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Área de importação -->
+                <div
+                    style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 25px; margin-bottom: 25px;">
+
+                    <!-- Opções de entrada -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <!-- Upload de Arquivo -->
+                        <div>
+                            <div
+                                style="font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-bottom: 15px;">
+                                📁 Upload de Arquivo JSON
+                            </div>
+                            <input type="file" id="jsonFileInput" accept=".json" onchange="handleJsonFileUpload(event)"
+                                style="display: none;">
+                            <button class="btn btn-primary" onclick="document.getElementById('jsonFileInput').click()"
+                                style="width: 100%; padding: 15px;">
+                                📂 Selecionar Arquivo JSON
+                            </button>
+                            <div id="selectedFileName"
+                                style="font-size: 0.85rem; color: #94a3b8; margin-top: 10px; text-align: center;">
+                                Nenhum arquivo selecionado
+                            </div>
+                        </div>
+
+                        <!-- Formato esperado + Download Template -->
+                        <div>
+                            <div
+                                style="font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-bottom: 15px;">
+                                📋 Formato Esperado
+                            </div>
+                            <div
+                                style="background: rgba(15, 23, 42, 0.8); padding: 15px; border-radius: 10px; font-family: monospace; font-size: 0.8rem; color: #94a3b8; overflow-x: auto; margin-bottom: 15px;">
+                                <pre style="margin: 0; white-space: pre-wrap;">[
+  {
+    "name": "Nome do Item",
+    "tipo": "Objeto",
+    "description": "Descrição",
+    "peso": 1,
+    "tamanho": 1,
+    "quantity": 1
+  }
+]</pre>
+                            </div>
+                            <button class="btn btn-success" onclick="downloadItemTemplate()"
+                                style="width: 100%; padding: 12px;">
+                                📥 Baixar Template Completo
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Área de texto para colar JSON -->
+                    <div style="margin-bottom: 20px;">
+                        <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-bottom: 10px;">
+                            ✏️ Ou cole o JSON diretamente aqui:
+                        </div>
+                        <textarea id="jsonTextInput" class="form-textarea"
+                            placeholder='Cole aqui o JSON com os itens...'
+                            style="width: 100%; min-height: 200px; font-family: monospace; font-size: 0.9rem; resize: vertical;"></textarea>
+                    </div>
+
+                    <!-- Botões de ação -->
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary" onclick="previewJsonItems()"
+                            style="flex: 1; min-width: 150px;">
+                            👁️ Pré-visualizar Itens
+                        </button>
+                        <button class="btn btn-success" onclick="importJsonItemsToAvulso()"
+                            style="flex: 1; min-width: 150px;">
+                            ✅ Importar para Avulsos
+                        </button>
+                        <button class="btn btn-warning" onclick="clearJsonInput()" style="padding: 12px 24px;">
+                            🗑️ Limpar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Área de Pré-visualização -->
+                <div id="jsonPreviewArea" style="display: none;">
+                    <div
+                        style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 25px;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <div style="font-size: 1.3rem; font-weight: 700; color: var(--secondary);">
+                                👁️ Pré-visualização dos Itens
+                            </div>
+                            <div id="jsonPreviewCount" style="font-size: 0.9rem; color: #94a3b8;">
+                                0 item(s) encontrado(s)
+                            </div>
+                        </div>
+                        <div id="jsonPreviewList"
+                            style="display: grid; gap: 12px; max-height: 400px; overflow-y: auto;">
+                            <!-- Itens serão renderizados aqui -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mensagem de ajuda -->
+                <div
+                    style="background: rgba(245, 158, 11, 0.1); border: 2px solid rgba(245, 158, 11, 0.4); border-radius: 15px; padding: 20px; margin-top: 25px;">
+                    <div style="font-size: 1.1rem; font-weight: 700; color: #f59e0b; margin-bottom: 10px;">
+                        💡 Dicas para Importação
+                    </div>
+                    <ul style="color: #fbbf24; font-size: 0.9rem; margin: 0; padding-left: 20px; line-height: 1.8;">
+                        <li><strong>name</strong>: Nome do item (obrigatório)</li>
+                        <li><strong>tipo</strong>: Arma, Vestimenta, Projétil, Objeto, Container ou Lunis</li>
+                        <li><strong>description</strong>: Descrição do item</li>
+                        <li><strong>peso</strong>: Peso unitário do item</li>
+                        <li><strong>tamanho</strong>: Tamanho do item (1-15)</li>
+                        <li><strong>quantity</strong>: Quantidade de itens</li>
+                        <li><strong>dureza, integridade, reforco</strong>: Propriedades físicas</li>
+                        <li><strong>category</strong>: Categoria econômica (comida, armas, equipamento, etc.)</li>
+                        <li><strong>basePrice</strong>: Preço base para economia</li>
+                        <li><strong>imagem</strong>: URL da imagem ou string base64 (data:image/...)</li>
+                        <li>Campos específicos por tipo: <strong>dano, reacao, blindagem, maxCapacity, maxSize</strong>,
+                            etc.</li>
+                    </ul>
                 </div>
             </div>
 
@@ -9768,7 +9898,435 @@ Agilidade 2\n
             }
         };
 
+        // ============= SISTEMA DE IMPORTAÇÃO JSON DE ITENS =============
+
+        let parsedJsonItems = []; // Armazena os itens parseados do JSON
+
+        // Handler para upload de arquivo JSON
+        window.handleJsonFileUpload = function (event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('selectedFileName').textContent = `📄 ${file.name}`;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const content = e.target.result;
+                    document.getElementById('jsonTextInput').value = content;
+                    showAlert('✅ Arquivo JSON carregado! Clique em "Pré-visualizar" para ver os itens.', 'success');
+                } catch (error) {
+                    console.error('❌ Erro ao ler arquivo:', error);
+                    showAlert('❌ Erro ao ler arquivo: ' + error.message, 'danger');
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        // Pré-visualizar itens do JSON
+        window.previewJsonItems = function () {
+            const jsonText = document.getElementById('jsonTextInput').value.trim();
+
+            if (!jsonText) {
+                showAlert('⚠️ Cole ou carregue um JSON primeiro!', 'warning');
+                return;
+            }
+
+            try {
+                let parsed = JSON.parse(jsonText);
+                let items = [];
+
+                // Extrair array de itens do JSON
+                if (Array.isArray(parsed)) {
+                    // JSON já é um array de itens
+                    items = parsed;
+                } else if (parsed.itens && Array.isArray(parsed.itens)) {
+                    // JSON tem propriedade "itens" (português)
+                    items = parsed.itens;
+                } else if (parsed.items && Array.isArray(parsed.items)) {
+                    // JSON tem propriedade "items" (inglês)
+                    items = parsed.items;
+                } else if (parsed.name || parsed.nome) {
+                    // JSON é um único item
+                    items = [parsed];
+                } else {
+                    // Tentar encontrar qualquer array no objeto
+                    for (const key of Object.keys(parsed)) {
+                        if (Array.isArray(parsed[key]) && parsed[key].length > 0) {
+                            const firstItem = parsed[key][0];
+                            if (firstItem && (firstItem.name || firstItem.nome)) {
+                                items = parsed[key];
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // Validar que todos os itens têm nome
+                const validItems = items.filter(item => item.name || item.nome);
+                const invalidCount = items.length - validItems.length;
+
+                if (validItems.length === 0) {
+                    showAlert('❌ Nenhum item válido encontrado. Certifique-se de que cada item tem um "name" ou "nome".', 'danger');
+                    return;
+                }
+
+                parsedJsonItems = validItems.map(item => ({
+                    name: item.name || item.nome || 'Item sem nome',
+                    tipo: item.tipo || item.type || 'Objeto',
+                    description: item.description || item.descricao || '',
+                    peso: parseFloat(item.peso) || parseFloat(item.weight) || 1,
+                    tamanho: parseInt(item.tamanho) || parseInt(item.size) || 1,
+                    quantity: parseInt(item.quantity) || parseInt(item.quantidade) || 1,
+                    dureza: parseInt(item.dureza) || 0,
+                    integridade: parseInt(item.integridade) || 10,
+                    reforco: parseInt(item.reforco) || 0,
+                    category: item.category || item.categoria || '',
+                    basePrice: parseInt(item.basePrice) || parseInt(item.precoBase) || 0,
+                    imagem: item.imagem || item.image || '',
+                    // Campos específicos por tipo
+                    dano: parseInt(item.dano) || parseInt(item.damage) || 0,
+                    reacao: parseInt(item.reacao) || 0,
+                    tipoArma: item.tipoArma || item.weaponType || '',
+                    arremessavel: item.arremessavel || item.throwable || false,
+                    blindagem: parseInt(item.blindagem) || parseInt(item.armor) || 0,
+                    deslocTerrestre: parseInt(item.deslocTerrestre) || 0,
+                    iniciativa: parseInt(item.iniciativa) || 0,
+                    cargaMax: parseInt(item.cargaMax) || 0,
+                    maxCapacity: parseInt(item.maxCapacity) || parseInt(item.capacidadeMax) || 10,
+                    maxSize: parseInt(item.maxSize) || parseInt(item.tamanhoMax) || 5,
+                    packSize: parseInt(item.packSize) || 1
+                }));
+
+                // Renderizar preview
+                const previewArea = document.getElementById('jsonPreviewArea');
+                const previewList = document.getElementById('jsonPreviewList');
+                const previewCount = document.getElementById('jsonPreviewCount');
+
+                previewCount.textContent = `${parsedJsonItems.length} item(s) válido(s) encontrado(s)${invalidCount > 0 ? ` (${invalidCount} ignorado(s))` : ''}`;
+
+                previewList.innerHTML = parsedJsonItems.map((item, index) => {
+                    const tipoIcons = {
+                        'Arma': '⚔️',
+                        'Vestimenta': '🧥',
+                        'Projétil': '🎯',
+                        'Objeto': '📦',
+                        'Container': '🗃️',
+                        'Lunis': '💰'
+                    };
+                    const icon = tipoIcons[item.tipo] || '📦';
+
+                    return `
+                        <div style="background: rgba(15, 23, 42, 0.6); border: 2px solid var(--border); border-radius: 12px; padding: 15px; display: flex; align-items: center; gap: 15px;">
+                            <div style="width: 50px; height: 50px; background: rgba(16, 185, 129, 0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                                ${icon}
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-size: 1.1rem; font-weight: 700; color: var(--light);">
+                                    ${index + 1}. ${item.name}
+                                </div>
+                                <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">
+                                    <span style="background: rgba(139, 92, 246, 0.2); padding: 2px 8px; border-radius: 6px; margin-right: 8px;">${item.tipo}</span>
+                                    Peso: ${item.peso} | Tam: ${item.tamanho} | Qtd: ${item.quantity}
+                                    ${item.category ? ` | Cat: ${item.category}` : ''}
+                                </div>
+                                ${item.description ? `<div style="font-size: 0.8rem; color: #64748b; margin-top: 5px; font-style: italic;">${item.description.substring(0, 100)}${item.description.length > 100 ? '...' : ''}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                previewArea.style.display = 'block';
+                showAlert(`✅ ${parsedJsonItems.length} item(s) carregado(s) para pré-visualização!`, 'success');
+
+            } catch (error) {
+                console.error('❌ Erro ao parsear JSON:', error);
+                showAlert('❌ Erro ao parsear JSON: ' + error.message + '. Verifique a sintaxe do JSON.', 'danger');
+                parsedJsonItems = [];
+            }
+        };
+
+        // Importar itens do JSON para Avulsos
+        window.importJsonItemsToAvulso = async function () {
+            if (parsedJsonItems.length === 0) {
+                // Tentar parsear primeiro se não tiver preview
+                previewJsonItems();
+                if (parsedJsonItems.length === 0) {
+                    showAlert('⚠️ Nenhum item para importar. Faça a pré-visualização primeiro.', 'warning');
+                    return;
+                }
+            }
+
+            if (!confirm(`📥 Importar ${parsedJsonItems.length} item(s) para Avulsos?\n\nEsta ação criará todos os itens no banco de dados.`)) {
+                return;
+            }
+
+            try {
+                let successCount = 0;
+                let errorCount = 0;
+
+                showAlert('⏳ Importando itens... Aguarde.', 'warning');
+
+                for (const item of parsedJsonItems) {
+                    try {
+                        // Calcular peso total baseado na quantidade
+                        const packSize = item.packSize || 1;
+                        const pesoUnitario = item.peso || 1;
+                        const quantity = item.quantity || 1;
+                        const totalWeight = Math.ceil((quantity / packSize) * pesoUnitario);
+
+                        // Criar objeto do item para Firebase
+                        const itemData = {
+                            name: item.name,
+                            tipo: item.tipo,
+                            description: item.description,
+                            peso: item.peso,
+                            tamanho: item.tamanho,
+                            quantity: item.quantity,
+                            totalWeight: totalWeight,
+                            dureza: item.dureza,
+                            integridade: item.integridade,
+                            reforco: item.reforco,
+                            category: item.category,
+                            basePrice: item.basePrice,
+                            imagem: item.imagem,
+                            packSize: item.packSize,
+                            // Campos específicos por tipo
+                            dano: item.dano,
+                            reacao: item.reacao,
+                            tipoArma: item.tipoArma,
+                            arremessavel: item.arremessavel,
+                            blindagem: item.blindagem,
+                            deslocTerrestre: item.deslocTerrestre,
+                            iniciativa: item.iniciativa,
+                            cargaMax: item.cargaMax,
+                            maxCapacity: item.maxCapacity,
+                            maxSize: item.maxSize,
+                            // Item avulso não tem characterId
+                            characterId: null,
+                            // Metadados
+                            createdAt: new Date().toISOString(),
+                            createdBy: currentUser?.email || 'Mestre',
+                            importedFromJson: true
+                        };
+
+                        // Limpar campos undefined/null vazios
+                        Object.keys(itemData).forEach(key => {
+                            if (itemData[key] === undefined || itemData[key] === '' || itemData[key] === 0) {
+                                // Manter characterId como null explicitamente
+                                if (key !== 'characterId') {
+                                    delete itemData[key];
+                                }
+                            }
+                        });
+
+                        // Garantir que characterId seja null para itens avulsos
+                        itemData.characterId = null;
+
+                        // Salvar no Firebase
+                        const itemsRef = collection(db, 'items');
+                        await addDoc(itemsRef, itemData);
+
+                        successCount++;
+                    } catch (itemError) {
+                        console.error(`❌ Erro ao importar item "${item.name}":`, itemError);
+                        errorCount++;
+                    }
+                }
+
+                // Limpar e recarregar
+                clearJsonInput();
+                await loadAvulsosItems();
+
+                // Registrar log
+                await addLog(`importou ${successCount} item(s) avulso(s) via JSON`);
+
+                if (errorCount === 0) {
+                    showAlert(`✅ ${successCount} item(s) importado(s) com sucesso!`, 'success');
+                } else {
+                    showAlert(`⚠️ ${successCount} item(s) importado(s), ${errorCount} erro(s).`, 'warning');
+                }
+
+                // Mudar para aba Avulsos para ver os itens
+                switchItensTab('avulsos');
+
+            } catch (error) {
+                console.error('❌ Erro ao importar itens:', error);
+                showAlert('❌ Erro ao importar itens: ' + error.message, 'danger');
+            }
+        };
+
+        // Limpar input JSON
+        window.clearJsonInput = function () {
+            document.getElementById('jsonTextInput').value = '';
+            document.getElementById('selectedFileName').textContent = 'Nenhum arquivo selecionado';
+            document.getElementById('jsonFileInput').value = '';
+            document.getElementById('jsonPreviewArea').style.display = 'none';
+            document.getElementById('jsonPreviewList').innerHTML = '';
+            parsedJsonItems = [];
+        };
+
+        // Baixar template de itens JSON
+        window.downloadItemTemplate = function () {
+            const template = {
+                "_instrucoes": {
+                    "descricao": "Template para importação de itens em lote para o sistema Lendas e Relíquias",
+                    "como_usar": [
+                        "1. Apague este objeto '_instrucoes' antes de importar",
+                        "2. Mantenha apenas o array 'itens' ou copie os objetos diretamente",
+                        "3. Preencha os campos necessários para cada item",
+                        "4. Campos obrigatórios: 'name' ou 'nome'",
+                        "5. O sistema aceita tanto nomes em português quanto inglês"
+                    ],
+                    "tipos_disponiveis": ["Arma", "Vestimenta", "Projétil", "Objeto", "Container", "Lunis"],
+                    "categorias_economia": ["comida", "hospedagem", "transporte", "equipamento", "armas", "armaduras", "servicos", "magia", "materias"]
+                },
+                "itens": [
+                    {
+                        "_comentario": "Exemplo de OBJETO simples",
+                        "name": "Poção de Cura",
+                        "tipo": "Objeto",
+                        "description": "Uma poção mágica que restaura vitalidade",
+                        "peso": 0.5,
+                        "tamanho": 1,
+                        "quantity": 5,
+                        "dureza": 1,
+                        "integridade": 5,
+                        "category": "magia",
+                        "basePrice": 50,
+                        "imagem": ""
+                    },
+                    {
+                        "_comentario": "Exemplo de ARMA",
+                        "name": "Espada Longa",
+                        "tipo": "Arma",
+                        "description": "Uma espada de aço forjado",
+                        "peso": 3,
+                        "tamanho": 4,
+                        "quantity": 1,
+                        "dureza": 8,
+                        "integridade": 30,
+                        "dano": 4,
+                        "reacao": 0,
+                        "tipoArma": "Lâmina Longa",
+                        "arremessavel": false,
+                        "category": "armas",
+                        "basePrice": 150
+                    },
+                    {
+                        "_comentario": "Exemplo de VESTIMENTA (armadura)",
+                        "name": "Cota de Malha",
+                        "tipo": "Vestimenta",
+                        "description": "Armadura de anéis de metal entrelaçados",
+                        "peso": 15,
+                        "tamanho": 6,
+                        "quantity": 1,
+                        "dureza": 6,
+                        "integridade": 40,
+                        "blindagem": 4,
+                        "deslocTerrestre": -1,
+                        "iniciativa": -1,
+                        "cargaMax": 0,
+                        "category": "armaduras",
+                        "basePrice": 300
+                    },
+                    {
+                        "_comentario": "Exemplo de PROJÉTIL",
+                        "name": "Flechas",
+                        "tipo": "Projétil",
+                        "description": "Flechas de madeira com ponta de ferro",
+                        "peso": 1,
+                        "tamanho": 2,
+                        "quantity": 20,
+                        "packSize": 10,
+                        "dano": 2,
+                        "category": "armas",
+                        "basePrice": 10
+                    },
+                    {
+                        "_comentario": "Exemplo de CONTAINER (bolsa, mochila)",
+                        "name": "Mochila de Viagem",
+                        "tipo": "Container",
+                        "description": "Uma mochila resistente para carregar itens",
+                        "peso": 2,
+                        "tamanho": 5,
+                        "quantity": 1,
+                        "maxCapacity": 30,
+                        "maxSize": 5,
+                        "category": "equipamento",
+                        "basePrice": 25
+                    },
+                    {
+                        "_comentario": "Exemplo de LUNIS (moeda)",
+                        "name": "Lunis de Ouro",
+                        "tipo": "Lunis",
+                        "description": "Moedas de ouro do reino",
+                        "peso": 0.1,
+                        "tamanho": 0,
+                        "quantity": 100,
+                        "packSize": 100
+                    }
+                ],
+                "_campos_por_tipo": {
+                    "todos": {
+                        "name": "Nome do item (obrigatório)",
+                        "tipo": "Tipo: Arma, Vestimenta, Projétil, Objeto, Container, Lunis",
+                        "description": "Descrição do item",
+                        "peso": "Peso unitário em kg",
+                        "tamanho": "Tamanho do item (1-15)",
+                        "quantity": "Quantidade de itens",
+                        "dureza": "Resistência do item",
+                        "integridade": "Pontos de vida do item",
+                        "reforco": "Bônus de reforço",
+                        "category": "Categoria para economia",
+                        "basePrice": "Preço base em Lunis",
+                        "imagem": "URL da imagem ou string base64 (data:image/png;base64,...)"
+                    },
+                    "Arma": {
+                        "dano": "Valor de dano da arma",
+                        "reacao": "Modificador de reação",
+                        "tipoArma": "Ex: Lâmina Curta, Lâmina Longa, Contundente, etc.",
+                        "arremessavel": "true/false se pode ser arremessada"
+                    },
+                    "Vestimenta": {
+                        "blindagem": "Valor de blindagem",
+                        "deslocTerrestre": "Modificador de deslocamento",
+                        "iniciativa": "Modificador de iniciativa",
+                        "cargaMax": "Carga máxima adicional"
+                    },
+                    "Projétil": {
+                        "dano": "Valor de dano do projétil",
+                        "packSize": "Quantidade por unidade de peso"
+                    },
+                    "Container": {
+                        "maxCapacity": "Capacidade máxima em unidades de tamanho",
+                        "maxSize": "Tamanho máximo de item que cabe"
+                    },
+                    "Lunis": {
+                        "packSize": "Quantidade por unidade de peso"
+                    }
+                }
+            };
+
+            // Converter para JSON formatado
+            const jsonContent = JSON.stringify(template, null, 2);
+
+            // Criar blob e fazer download
+            const blob = new Blob([jsonContent], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `template_itens_lendas_reliquia_${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showAlert('✅ Template baixado! Edite o arquivo e remova o objeto "_instrucoes" antes de importar.', 'success');
+        };
+
         // ============= SISTEMA DE VISUALIZAÇÃO DE CONTAINER AVULSO =============
+
 
         // Abrir container avulso para visualizar/gerenciar itens dentro
         window.openAvulsoContainer = async function (containerId) {
