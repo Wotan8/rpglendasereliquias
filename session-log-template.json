@@ -1,0 +1,115 @@
+{
+  "sessionNumber": 1,
+  "date": "2024-01-15",
+  "duration": "4h30min",
+  "playersPresent": [
+    {
+      "characterId": "abc123",
+      "nome": "Thorin Escudo-de-Ferro",
+      "jogador": "João",
+      "expGained": 450
+    },
+    {
+      "characterId": "def456",
+      "nome": "Lyra Sombra-Lunar",
+      "jogador": "Maria",
+      "expGained": 450
+    }
+  ],
+  "summary": "Os aventureiros chegaram na vila de Thornwood, onde descobriram que moradores estavam desaparecendo misteriosamente durante a noite. Após investigar a taverna local e conversar com o taberneiro nervoso, encontraram pistas que levavam às ruínas de uma torre abandonada ao norte.",
+  "importantNpcs": [
+    {
+      "id": "npc001",
+      "name": "Eldric, o Taberneiro",
+      "role": "Informante"
+    },
+    {
+      "id": "npc002",
+      "name": "Prefeito Gareth",
+      "role": "Quest Giver"
+    },
+    {
+      "name": "Sombra Negra",
+      "role": "Antagonista"
+    }
+  ],
+  "locationsVisited": [
+    {
+      "id": "loc001",
+      "name": "Vila de Thornwood",
+      "type": "Vila"
+    },
+    {
+      "id": "loc002",
+      "name": "Taverna do Javali Dourado",
+      "type": "Estabelecimento"
+    },
+    {
+      "name": "Torre Abandonada (exterior)",
+      "type": "Ruínas"
+    }
+  ],
+  "combats": [
+    {
+      "enemies": "4 Lobos Amaldiçoados",
+      "outcome": "Vitória"
+    }
+  ],
+  "lootAndRewards": {
+    "selectedItems": [
+      {
+        "id": "item001",
+        "name": "Chave de Osso"
+      },
+      {
+        "id": "item002",
+        "name": "Poção de Cura Menor"
+      }
+    ],
+    "items": [
+      {
+        "name": "50 moedas de ouro"
+      }
+    ]
+  },
+  "quests": [
+    {
+      "name": "Os Desaparecidos de Thornwood",
+      "status": "Em Progresso"
+    },
+    {
+      "name": "O Segredo do Taberneiro",
+      "status": "Iniciada"
+    }
+  ],
+  "memorableMoments": [
+    {
+      "type": "funny",
+      "description": "\"Eu não sou diplomatico, eu sou um anão com um machado. A diplomacia é o machado.\""
+    },
+    {
+      "type": "epic",
+      "description": "Lyra conseguiu um natural 20 para escalar a torre e avistar a Sombra Negra fugindo"
+    },
+    {
+      "type": "dramatic",
+      "description": "Momento tenso quando descobriram que uma das vítimas era uma criança"
+    }
+  ],
+  "images": [
+    {
+      "url": "https://exemplo.com/imagem-da-sessao.jpg",
+      "label": "Mapa da Vila de Thornwood"
+    }
+  ],
+  "nextSessionHooks": [
+    "Explorar o interior da Torre Abandonada",
+    "Usar a Chave de Osso para abrir o que quer que ela abra",
+    "Descobrir a identidade da Sombra Negra",
+    "Decidir se confrontam Eldric sobre seu comportamento suspeito"
+  ],
+  "dmNotes": {
+    "private": true,
+    "content": "A Sombra Negra é na verdade o irmão do prefeito que foi corrompido por um artefato. Eldric sabe disso mas está sendo chantageado para ficar quieto."
+  }
+}

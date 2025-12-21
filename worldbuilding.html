@@ -781,6 +781,1175 @@
             flex: 1;
             font-weight: 600;
         }
+
+        /* Session Logs Styles */
+        .campaign-selector-container {
+            background: rgba(30, 27, 75, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .campaign-selector-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .campaign-selector-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .campaign-select {
+            flex: 1;
+            max-width: 400px;
+            padding: 12px 16px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            color: var(--light);
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .campaign-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn-favorite {
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #64748b;
+        }
+
+        .btn-favorite:hover:not(:disabled) {
+            border-color: var(--secondary);
+            color: var(--secondary);
+            transform: scale(1.1);
+        }
+
+        .btn-favorite.active {
+            color: #fbbf24;
+            border-color: #fbbf24;
+            background: rgba(251, 191, 36, 0.1);
+        }
+
+        .btn-favorite:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .campaign-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+        }
+
+        .campaign-info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .campaign-info-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .campaign-info-value {
+            font-weight: 600;
+            color: var(--light);
+        }
+
+        /* Character Checkbox Grid for Campaign Modal */
+        .character-checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 5px;
+        }
+
+        .character-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .character-checkbox-item:hover {
+            border-color: var(--primary);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        .character-checkbox-item.selected {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .character-checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--success);
+        }
+
+        .character-checkbox-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+        }
+
+        .character-checkbox-name {
+            font-weight: 600;
+            color: var(--light);
+            font-size: 0.9rem;
+        }
+
+        .character-checkbox-player {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        /* Player Checkbox Info in Notification Panel */
+        .player-checkbox-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .player-checkbox-char {
+            font-weight: 600;
+            color: var(--light);
+            font-size: 0.85rem;
+        }
+
+        .player-checkbox-name {
+            font-size: 0.7rem;
+            color: #64748b;
+        }
+
+        .player-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .player-checkbox-item:hover {
+            border-color: var(--primary);
+        }
+
+        .player-checkbox-item:has(input:checked) {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .sessions-list-container {
+            margin-top: 20px;
+        }
+
+        .sessions-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .sessions-search-bar {
+            display: flex;
+            gap: 10px;
+            flex: 1;
+            max-width: 500px;
+        }
+
+        .sessions-search-input {
+            flex: 1;
+            padding: 10px 15px;
+            background: rgba(30, 27, 75, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: 0.9rem;
+        }
+
+        .sessions-search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .session-card {
+            background: rgba(30, 27, 75, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .session-card:hover {
+            border-color: var(--primary);
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(139, 92, 246, 0.2);
+        }
+
+        .session-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .session-number {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .session-date {
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .session-meta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .session-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .session-badge.duration {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--primary);
+        }
+
+        .session-badge.players {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .session-badge.xp {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .session-summary {
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .session-highlights {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .highlight-tag {
+            padding: 3px 8px;
+            background: rgba(100, 116, 139, 0.3);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .highlight-tag.npc {
+            background: rgba(236, 72, 153, 0.2);
+            color: var(--secondary);
+        }
+
+        .highlight-tag.location {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--primary);
+        }
+
+        .highlight-tag.quest {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        /* Session Detail Modal Sections */
+        .session-detail-section {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .session-detail-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .session-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .detail-item {
+            background: rgba(30, 27, 75, 0.5);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .detail-item-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+
+        .detail-item-value {
+            font-weight: 600;
+            color: var(--light);
+        }
+
+        .player-presence-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .player-tag {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .player-tag.present {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .player-tag.absent {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .npc-card,
+        .location-card,
+        .combat-card,
+        .quest-card,
+        .moment-card {
+            background: rgba(30, 27, 75, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            margin-bottom: 10px;
+        }
+
+        .npc-card-header,
+        .location-card-header,
+        .combat-card-header,
+        .quest-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .npc-name,
+        .location-name,
+        .combat-title,
+        .quest-name {
+            font-weight: 700;
+            color: var(--light);
+        }
+
+        .npc-role,
+        .location-type {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            background: var(--secondary);
+            border-radius: 4px;
+            color: white;
+        }
+
+        .quest-status {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .quest-status.started {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--primary);
+        }
+
+        .quest-status.in-progress {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .quest-status.completed {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .moment-type {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .moment-type.funny {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .moment-type.epic {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--primary);
+        }
+
+        .moment-type.dramatic {
+            background: rgba(236, 72, 153, 0.2);
+            color: var(--secondary);
+        }
+
+        .loot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .loot-item {
+            background: rgba(30, 27, 75, 0.5);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .loot-item-icon {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .loot-item-name {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--light);
+        }
+
+        .loot-item-qty {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .next-session-hooks {
+            list-style: none;
+        }
+
+        .next-session-hooks li {
+            padding: 10px 15px;
+            background: rgba(30, 27, 75, 0.5);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid var(--primary);
+            color: #cbd5e1;
+        }
+
+        /* Import/Export Buttons */
+        .import-export-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-import,
+        .btn-export {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-import {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .btn-export {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .btn-import:hover,
+        .btn-export:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Player EXP Cards */
+        .player-exp-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+        }
+
+        .player-exp-card {
+            background: rgba(30, 27, 75, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s;
+        }
+
+        .player-exp-card.present {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .player-exp-card .player-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .player-exp-card .player-name {
+            font-weight: 700;
+            color: var(--light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .player-exp-card .player-character {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .player-exp-card .exp-input-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .player-exp-card .exp-input {
+            width: 70px;
+            padding: 6px 10px;
+            background: rgba(30, 27, 75, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            color: var(--light);
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .player-exp-card .exp-label {
+            font-size: 0.75rem;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Search Select Container */
+        .search-select-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .search-select-row select {
+            flex: 1;
+        }
+
+        .search-select-row .btn-add-from-select {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s;
+        }
+
+        .search-select-row .btn-add-from-select:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+
+        /* Searchable Autocomplete Dropdown */
+        .autocomplete-container {
+            position: relative;
+            flex: 1;
+        }
+
+        .autocomplete-input {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(30, 27, 75, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+
+        .autocomplete-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            max-height: 250px;
+            overflow-y: auto;
+            background: rgba(30, 27, 75, 0.98);
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .autocomplete-dropdown.show {
+            display: block;
+        }
+
+        .autocomplete-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover,
+        .autocomplete-item.selected {
+            background: rgba(139, 92, 246, 0.3);
+        }
+
+        .autocomplete-item .item-name {
+            font-weight: 600;
+            color: var(--light);
+        }
+
+        .autocomplete-item .item-type {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .autocomplete-no-results {
+            padding: 12px 14px;
+            color: #64748b;
+            text-align: center;
+            font-style: italic;
+        }
+
+        /* Session Item Tags */
+        .session-item-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .session-item-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            color: var(--light);
+            font-size: 0.85rem;
+        }
+
+        .session-item-tag .remove-tag {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .session-item-tag .remove-tag:hover {
+            color: #ff6b6b;
+        }
+
+        /* Session Gallery */
+        .session-gallery-container {
+            margin-top: 12px;
+        }
+
+        .session-gallery-input-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .session-gallery-input-row input {
+            flex: 1;
+        }
+
+        .session-gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+        }
+
+        .session-gallery-item {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid var(--border);
+            aspect-ratio: 1;
+        }
+
+        .session-gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .session-gallery-item .gallery-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-size: 0.7rem;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .session-gallery-item .remove-gallery-item {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: var(--danger);
+            border: none;
+            color: white;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .session-gallery-item:hover .remove-gallery-item {
+            opacity: 1;
+        }
+
+        /* Timeline */
+        .campaign-timeline {
+            position: relative;
+            padding-left: 30px;
+            margin-top: 20px;
+        }
+
+        .campaign-timeline::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, var(--primary), var(--secondary));
+        }
+
+        .timeline-item {
+            position: relative;
+            padding: 15px 20px;
+            background: rgba(30, 27, 75, 0.6);
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .timeline-item:hover {
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -24px;
+            top: 20px;
+            width: 12px;
+            height: 12px;
+            background: var(--primary);
+            border-radius: 50%;
+            border: 2px solid var(--darker);
+        }
+
+        .timeline-date {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+
+        .timeline-title {
+            font-weight: 700;
+            color: var(--light);
+        }
+
+        /* Wiki/Glossary */
+        .wiki-section {
+            margin-top: 30px;
+        }
+
+        .wiki-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        .wiki-tab {
+            padding: 10px 20px;
+            background: rgba(30, 27, 75, 0.6);
+            border: none;
+            border-radius: 8px 8px 0 0;
+            color: #94a3b8;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .wiki-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .wiki-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .wiki-card {
+            background: rgba(30, 27, 75, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .wiki-card:hover {
+            border-color: var(--primary);
+        }
+
+        .wiki-card-name {
+            font-weight: 700;
+            color: var(--light);
+            margin-bottom: 5px;
+        }
+
+        .wiki-card-count {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        /* Image Gallery */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .gallery-item-card {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid var(--border);
+            transition: all 0.3s;
+        }
+
+        .gallery-item-card:hover {
+            border-color: var(--primary);
+            transform: scale(1.05);
+        }
+
+        .gallery-item-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .gallery-item-card .gallery-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Notification Panel */
+        .notification-panel {
+            background: rgba(30, 27, 75, 0.8);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .notification-panel-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .notification-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .player-select-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .player-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .player-checkbox-item input {
+            accent-color: var(--primary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-state-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--light);
+            margin-bottom: 10px;
+        }
+
+        .empty-state-desc {
+            color: #94a3b8;
+            margin-bottom: 20px;
+        }
+
+        /* Session Form Specific Styles */
+        .array-input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .array-item-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .array-item-row input {
+            flex: 1;
+        }
+
+        .btn-add-array-item {
+            padding: 8px 16px;
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid var(--primary);
+            border-radius: 6px;
+            color: var(--primary);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-add-array-item:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-remove-array-item {
+            padding: 6px 10px;
+            background: rgba(239, 68, 68, 0.2);
+            border: none;
+            border-radius: 6px;
+            color: var(--danger);
+            cursor: pointer;
+        }
+
+        .collapsible-section {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .collapsible-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: rgba(30, 27, 75, 0.6);
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .collapsible-header:hover {
+            background: rgba(30, 27, 75, 0.8);
+        }
+
+        .collapsible-title {
+            font-weight: 700;
+            color: var(--light);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .collapsible-toggle {
+            transition: transform 0.3s;
+        }
+
+        .collapsible-section.open .collapsible-toggle {
+            transform: rotate(180deg);
+        }
+
+        .collapsible-content {
+            padding: 15px;
+            display: none;
+            background: rgba(15, 23, 42, 0.4);
+        }
+
+        .collapsible-section.open .collapsible-content {
+            display: block;
+        }
+
+        /* View Mode Tabs */
+        .view-mode-tabs {
+            display: flex;
+            gap: 5px;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 5px;
+            border-radius: 10px;
+        }
+
+        .view-mode-tab {
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            color: #94a3b8;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .view-mode-tab.active {
+            background: var(--primary);
+            color: white;
+        }
     </style>
 </head>
 
@@ -799,6 +1968,10 @@
             <input type="text" class="search-input" id="globalSearch" placeholder="🔍 Buscar em tudo...">
         </div>
         <nav class="sidebar-nav" id="sidebarNav">
+            <div class="nav-category" data-category="session-logs">
+                <span class="nav-icon">📋</span>
+                <span class="nav-label">Logs de Sessão</span>
+            </div>
             <div class="nav-category active" data-category="dashboard">
                 <span class="nav-icon">📊</span>
                 <span class="nav-label">Dashboard</span>
@@ -868,7 +2041,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
@@ -893,6 +2066,17 @@
         let linkedNpcsProperty = []; // For Properties - NPCs with titles
         let linkedItems = []; // For Properties - Items with titles (location/sale status)
         let allItems = []; // All available loose items from Firebase
+
+        // Session Logs variables
+        let allCampaigns = [];
+        let allSessions = [];
+        let allCharacters = []; // Characters for campaign player selection
+        let currentCampaign = null;
+        let currentSession = null;
+        let currentViewMode = 'list'; // 'list', 'timeline', 'wiki', 'gallery'
+        let favoriteCampaignId = null; // Favorite campaign ID
+        let sessionSelectedItems = []; // Selected items for session (with IDs)
+        let sessionGalleryImages = []; // Gallery images for session
 
         const categoryConfig = {
             geography: { collection: 'worldbuilding-geography', icon: '📍', title: 'Geografia', types: ['Continente', 'Região', 'Cidade', 'Vila', 'Ponto de Interesse'] },
@@ -932,6 +2116,38 @@
                     .filter(item => !item.characterId); // Only loose items
                 console.log(`Loaded ${allItems.length} loose items for property linking`);
             } catch (e) { console.log('Error loading items:', e); allItems = []; }
+
+            // Load campaigns
+            try {
+                const campaignsSnapshot = await getDocs(collection(db, 'campaigns'));
+                allCampaigns = campaignsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log(`Loaded ${allCampaigns.length} campaigns`);
+            } catch (e) { console.log('Error loading campaigns:', e); allCampaigns = []; }
+
+            // Load session logs
+            try {
+                const sessionsSnapshot = await getDocs(collection(db, 'session-logs'));
+                allSessions = sessionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log(`Loaded ${allSessions.length} session logs`);
+            } catch (e) { console.log('Error loading sessions:', e); allSessions = []; }
+
+            // Load characters for campaign player selection
+            try {
+                const charactersSnapshot = await getDocs(collection(db, 'characters'));
+                allCharacters = charactersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log(`Loaded ${allCharacters.length} characters for campaigns`);
+            } catch (e) { console.log('Error loading characters:', e); allCharacters = []; }
+
+            // Load favorite campaign setting
+            try {
+                const settingsDoc = await getDoc(doc(db, 'worldbuilding-settings', 'session-logs'));
+                if (settingsDoc.exists() && settingsDoc.data().favoriteCampaignId) {
+                    favoriteCampaignId = settingsDoc.data().favoriteCampaignId;
+                    // Auto-select favorite campaign
+                    currentCampaign = allCampaigns.find(c => c.id === favoriteCampaignId) || null;
+                    console.log(`Favorite campaign loaded: ${favoriteCampaignId}`);
+                }
+            } catch (e) { console.log('Error loading favorite campaign:', e); }
         }
 
         function showAlert(message, type) {
@@ -951,6 +2167,13 @@
                 if (currentCategory === 'dashboard') {
                     document.getElementById('contentTitle').textContent = 'Dashboard';
                     renderDashboard();
+                } else if (currentCategory === 'session-logs') {
+                    document.getElementById('contentTitle').textContent = 'Logs de Sessão';
+                    // Auto-select favorite campaign when navigating to session logs
+                    if (favoriteCampaignId) {
+                        currentCampaign = allCampaigns.find(c => c.id === favoriteCampaignId) || currentCampaign;
+                    }
+                    renderSessionLogs();
                 } else {
                     document.getElementById('contentTitle').textContent = categoryConfig[currentCategory].title;
                     renderCategoryList(currentCategory);
@@ -1673,6 +2896,1378 @@
                 </div>
             `;
         });
+
+        // ==================== SESSION LOGS FUNCTIONS ====================
+
+        function renderSessionLogs() {
+            const body = document.getElementById('contentBody');
+
+            // Campaign selector
+            const campaignOptions = allCampaigns.map(c =>
+                `<option value="${c.id}" ${currentCampaign?.id === c.id ? 'selected' : ''}>${c.nome}</option>`
+            ).join('');
+
+            // Get sessions for current campaign
+            const campaignSessions = currentCampaign
+                ? allSessions.filter(s => s.campaignId === currentCampaign.id).sort((a, b) => new Date(b.date) - new Date(a.date))
+                : [];
+
+            body.innerHTML = `
+                <div class="campaign-selector-container">
+                    <div class="campaign-selector-header">
+                        <span class="campaign-selector-title">🎲 Selecionar Campanha</span>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <select class="campaign-select" id="campaignSelect" onchange="selectCampaign(this.value)">
+                                <option value="">Selecione uma campanha...</option>
+                                ${campaignOptions}
+                            </select>
+                            <button class="btn-favorite ${currentCampaign && favoriteCampaignId === currentCampaign.id ? 'active' : ''}" 
+                                    onclick="toggleFavoriteCampaign()" 
+                                    title="${currentCampaign && favoriteCampaignId === currentCampaign.id ? 'Remover dos favoritos' : 'Marcar como favorita'}"
+                                    ${!currentCampaign ? 'disabled' : ''}>
+                                ${currentCampaign && favoriteCampaignId === currentCampaign.id ? '⭐' : '☆'}
+                            </button>
+                            <button class="btn btn-success" onclick="openCampaignModal()">➕ Nova Campanha</button>
+                        </div>
+                    </div>
+                    ${currentCampaign ? `
+                        <div class="campaign-info" id="campaignInfo">
+                            <div class="campaign-info-item">
+                                <span class="campaign-info-label">Sistema</span>
+                                <span class="campaign-info-value">${currentCampaign.sistema || 'Não definido'}</span>
+                            </div>
+                            <div class="campaign-info-item">
+                                <span class="campaign-info-label">Mestre</span>
+                                <span class="campaign-info-value">${currentCampaign.mestre || 'Não definido'}</span>
+                            </div>
+                            <div class="campaign-info-item">
+                                <span class="campaign-info-label">Personagens</span>
+                                <span class="campaign-info-value">${(currentCampaign.personagens || []).map(p => p.nome).join(', ') || 'Nenhum'}</span>
+                            </div>
+                            <div class="campaign-info-item">
+                                <span class="campaign-info-label">Total de Sessões</span>
+                                <span class="campaign-info-value">${campaignSessions.length > 0 ? Math.max(...campaignSessions.map(s => s.sessionNumber || 0)) : 0}</span>
+                            </div>
+                        </div>
+                        <div class="import-export-container">
+                            <button class="btn-import" onclick="triggerImportSession()">📥 Importar JSON</button>
+                            <button class="btn-export" onclick="downloadTemplate()">📄 Baixar Template</button>
+                            <button class="btn btn-primary" onclick="editCurrentCampaign()">✏️ Editar Campanha</button>
+                            <input type="file" id="importSessionFile" accept=".json" style="display:none;" onchange="importSessionJSON(this)">
+                        </div>
+                    ` : ''}
+                </div>
+                
+                ${currentCampaign ? `
+                    <div class="sessions-list-container">
+                        <div class="sessions-list-header">
+                            <div class="sessions-search-bar">
+                                <input type="text" class="sessions-search-input" id="sessionSearchInput" 
+                                    placeholder="🔍 Buscar por NPC, localização, quest..." 
+                                    oninput="filterSessions()">
+                            </div>
+                            <div class="view-mode-tabs">
+                                <button class="view-mode-tab ${currentViewMode === 'list' ? 'active' : ''}" onclick="setViewMode('list')">📋 Lista</button>
+                                <button class="view-mode-tab ${currentViewMode === 'timeline' ? 'active' : ''}" onclick="setViewMode('timeline')">📅 Timeline</button>
+                                <button class="view-mode-tab ${currentViewMode === 'wiki' ? 'active' : ''}" onclick="setViewMode('wiki')">📖 Wiki</button>
+                                <button class="view-mode-tab ${currentViewMode === 'gallery' ? 'active' : ''}" onclick="setViewMode('gallery')">🖼️ Galeria</button>
+                            </div>
+                            <button class="btn btn-success" onclick="openSessionModal()">➕ Nova Sessão</button>
+                        </div>
+                        <div id="sessionsContent">
+                            ${renderSessionsContent(campaignSessions)}
+                        </div>
+                    </div>
+                    
+                    <div class="notification-panel">
+                        <div class="notification-panel-title">📬 Notificar Jogadores</div>
+                        <div class="notification-form">
+                            <div class="player-select-grid" id="playerSelectGrid">
+                                ${(currentCampaign.personagens || []).map(p => `
+                                    <label class="player-checkbox-item">
+                                        <input type="checkbox" class="notification-checkbox" 
+                                               value="${p.ownerUid || ''}" 
+                                               data-charname="${p.nome || ''}"
+                                               data-playername="${p.jogador || ''}"
+                                               checked>
+                                        <div class="player-checkbox-info">
+                                            <span class="player-checkbox-char">${p.nome || 'Personagem'}</span>
+                                            <span class="player-checkbox-name">👤 ${p.jogador || 'Jogador'}</span>
+                                        </div>
+                                    </label>
+                                `).join('') || '<p style="color: #64748b; font-size: 0.85rem;">Nenhum personagem na campanha. Edite a campanha para adicionar personagens.</p>'}
+                            </div>
+                            <textarea class="form-textarea" id="notificationMessage" rows="3" 
+                                placeholder="Escreva sua mensagem para os jogadores..."></textarea>
+                            <button class="btn btn-primary" onclick="sendPlayerNotification()">📤 Enviar Notificação</button>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <div class="empty-state-title">Nenhuma campanha selecionada</div>
+                        <div class="empty-state-desc">Selecione uma campanha existente ou crie uma nova para começar a registrar suas sessões.</div>
+                        <button class="btn btn-success" onclick="openCampaignModal()">➕ Criar Primeira Campanha</button>
+                    </div>
+                `}
+            `;
+        }
+
+        function renderSessionsContent(sessions) {
+            if (currentViewMode === 'list') {
+                return renderSessionsList(sessions);
+            } else if (currentViewMode === 'timeline') {
+                return renderTimelineView(sessions);
+            } else if (currentViewMode === 'wiki') {
+                return renderWikiView(sessions);
+            } else if (currentViewMode === 'gallery') {
+                return renderGalleryView(sessions);
+            }
+            return renderSessionsList(sessions);
+        }
+
+        function renderSessionsList(sessions) {
+            if (!sessions.length) {
+                return `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📝</div>
+                        <div class="empty-state-title">Nenhuma sessão registrada</div>
+                        <div class="empty-state-desc">Clique em "Nova Sessão" para documentar sua primeira aventura!</div>
+                    </div>
+                `;
+            }
+
+            return sessions.map(s => `
+                <div class="session-card" onclick="openSessionModal(${JSON.stringify(s).replace(/"/g, '&quot;')})">
+                    <div class="session-card-header">
+                        <div>
+                            <div class="session-number">Sessão ${s.sessionNumber || '?'}</div>
+                            <div class="session-date">${formatDate(s.date)}</div>
+                        </div>
+                        <div class="session-meta">
+                            ${s.duration ? `<span class="session-badge duration">⏱️ ${s.duration}</span>` : ''}
+                            ${s.playersPresent ? `<span class="session-badge players">👥 ${s.playersPresent.length} presentes</span>` : ''}
+                            ${s.lootAndRewards?.xp ? `<span class="session-badge xp">⭐ ${s.lootAndRewards.xp} XP</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="session-summary">${s.summary || 'Sem resumo'}</div>
+                    <div class="session-highlights">
+                        ${(s.importantNpcs || []).slice(0, 3).map(n => `<span class="highlight-tag npc">👤 ${n.name || n}</span>`).join('')}
+                        ${(s.locationsVisited || []).slice(0, 2).map(l => `<span class="highlight-tag location">📍 ${l.name || l}</span>`).join('')}
+                        ${(s.quests || []).slice(0, 2).map(q => `<span class="highlight-tag quest">📜 ${q.name || q}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderTimelineView(sessions) {
+            if (!sessions.length) {
+                return `<div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-title">Timeline vazia</div></div>`;
+            }
+
+            return `
+                <div class="campaign-timeline">
+                    ${sessions.map(s => `
+                        <div class="timeline-item" onclick="openSessionModal(${JSON.stringify(s).replace(/"/g, '&quot;')})">
+                            <div class="timeline-date">${formatDate(s.date)}</div>
+                            <div class="timeline-title">Sessão ${s.sessionNumber}: ${(s.summary || '').substring(0, 50)}...</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderWikiView(sessions) {
+            // Extract all NPCs and Locations from all sessions
+            const allNpcs = {};
+            const allLocations = {};
+
+            sessions.forEach(s => {
+                (s.importantNpcs || []).forEach(n => {
+                    const name = n.name || n;
+                    if (!allNpcs[name]) allNpcs[name] = { count: 0, sessions: [] };
+                    allNpcs[name].count++;
+                    allNpcs[name].sessions.push(s.sessionNumber);
+                });
+                (s.locationsVisited || []).forEach(l => {
+                    const name = l.name || l;
+                    if (!allLocations[name]) allLocations[name] = { count: 0, sessions: [] };
+                    allLocations[name].count++;
+                    allLocations[name].sessions.push(s.sessionNumber);
+                });
+            });
+
+            return `
+                <div class="wiki-section">
+                    <div class="wiki-tabs">
+                        <button class="wiki-tab active" onclick="switchWikiTab('npcs', this)">👥 NPCs (${Object.keys(allNpcs).length})</button>
+                        <button class="wiki-tab" onclick="switchWikiTab('locations', this)">📍 Localizações (${Object.keys(allLocations).length})</button>
+                    </div>
+                    <div class="wiki-grid" id="wikiNpcsGrid">
+                        ${Object.entries(allNpcs).map(([name, data]) => `
+                            <div class="wiki-card" onclick="searchSessionsByTerm('${name}')">
+                                <div class="wiki-card-name">${name}</div>
+                                <div class="wiki-card-count">Mencionado em ${data.count} sessões</div>
+                            </div>
+                        `).join('') || '<p style="color:#64748b;">Nenhum NPC registrado.</p>'}
+                    </div>
+                    <div class="wiki-grid" id="wikiLocationsGrid" style="display: none;">
+                        ${Object.entries(allLocations).map(([name, data]) => `
+                            <div class="wiki-card" onclick="searchSessionsByTerm('${name}')">
+                                <div class="wiki-card-name">${name}</div>
+                                <div class="wiki-card-count">Visitado em ${data.count} sessões</div>
+                            </div>
+                        `).join('') || '<p style="color:#64748b;">Nenhuma localização registrada.</p>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderGalleryView(sessions) {
+            // Collect all images from sessions
+            const allImages = [];
+            sessions.forEach(s => {
+                if (s.images && s.images.length) {
+                    s.images.forEach(img => {
+                        allImages.push({ ...img, sessionNumber: s.sessionNumber });
+                    });
+                }
+            });
+
+            if (!allImages.length) {
+                return `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🖼️</div>
+                        <div class="empty-state-title">Galeria vazia</div>
+                        <div class="empty-state-desc">Adicione imagens às suas sessões para visualizá-las aqui.</div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="gallery-grid">
+                    ${allImages.map(img => `
+                        <div class="gallery-item-card" onclick="viewFullImage('${img.url}')">
+                            <img src="${img.url}" alt="${img.label || 'Imagem'}" onerror="this.parentElement.style.display='none'">
+                            <div class="gallery-label">${img.label || 'Sessão ' + img.sessionNumber}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        window.setViewMode = function (mode) {
+            currentViewMode = mode;
+            const campaignSessions = currentCampaign
+                ? allSessions.filter(s => s.campaignId === currentCampaign.id).sort((a, b) => new Date(b.date) - new Date(a.date))
+                : [];
+            document.getElementById('sessionsContent').innerHTML = renderSessionsContent(campaignSessions);
+            document.querySelectorAll('.view-mode-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.view-mode-tab:nth-child(${mode === 'list' ? 1 : mode === 'timeline' ? 2 : mode === 'wiki' ? 3 : 4})`).classList.add('active');
+        };
+
+        window.switchWikiTab = function (tab, btn) {
+            document.querySelectorAll('.wiki-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('wikiNpcsGrid').style.display = tab === 'npcs' ? 'grid' : 'none';
+            document.getElementById('wikiLocationsGrid').style.display = tab === 'locations' ? 'grid' : 'none';
+        };
+
+        window.searchSessionsByTerm = function (term) {
+            document.getElementById('sessionSearchInput').value = term;
+            filterSessions();
+            setViewMode('list');
+        };
+
+        window.viewFullImage = function (url) {
+            window.open(url, '_blank');
+        };
+
+        window.selectCampaign = function (campaignId) {
+            currentCampaign = allCampaigns.find(c => c.id === campaignId) || null;
+            renderSessionLogs();
+        };
+
+        window.toggleFavoriteCampaign = async function () {
+            if (!currentCampaign) return;
+
+            try {
+                if (favoriteCampaignId === currentCampaign.id) {
+                    // Remove favorite
+                    favoriteCampaignId = null;
+                    await setDoc(doc(db, 'worldbuilding-settings', 'session-logs'), { favoriteCampaignId: null }, { merge: true });
+                    showAlert('☆ Campanha removida dos favoritos', 'success');
+                } else {
+                    // Set as favorite
+                    favoriteCampaignId = currentCampaign.id;
+                    await setDoc(doc(db, 'worldbuilding-settings', 'session-logs'), { favoriteCampaignId: currentCampaign.id }, { merge: true });
+                    showAlert('⭐ Campanha marcada como favorita!', 'success');
+                }
+                renderSessionLogs();
+            } catch (e) {
+                console.error('Error toggling favorite campaign:', e);
+                showAlert('❌ Erro ao atualizar favorito', 'danger');
+            }
+        };
+
+        window.filterSessions = function () {
+            const query = document.getElementById('sessionSearchInput').value.toLowerCase().trim();
+            let sessions = allSessions.filter(s => s.campaignId === currentCampaign?.id);
+
+            if (query) {
+                sessions = sessions.filter(s => {
+                    const summary = (s.summary || '').toLowerCase();
+                    const npcs = (s.importantNpcs || []).map(n => (n.name || n).toLowerCase()).join(' ');
+                    const locations = (s.locationsVisited || []).map(l => (l.name || l).toLowerCase()).join(' ');
+                    const quests = (s.quests || []).map(q => (q.name || q).toLowerCase()).join(' ');
+                    return summary.includes(query) || npcs.includes(query) || locations.includes(query) || quests.includes(query);
+                });
+            }
+
+            sessions.sort((a, b) => new Date(b.date) - new Date(a.date));
+            document.getElementById('sessionsContent').innerHTML = renderSessionsContent(sessions);
+        };
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'Data não informada';
+            try {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            } catch {
+                return dateStr;
+            }
+        }
+
+        // Campaign Modal
+        window.editCurrentCampaign = function () {
+            if (currentCampaign) {
+                openCampaignModal(currentCampaign);
+            } else {
+                showAlert('⚠️ Nenhuma campanha selecionada!', 'warning');
+            }
+        };
+
+        window.openCampaignModal = function (campaign = null) {
+            const modal = document.getElementById('entryModal');
+            const title = document.getElementById('entryModalTitle');
+            const body = document.getElementById('entryModalBody');
+            const deleteBtn = document.getElementById('btnDeleteEntry');
+
+            currentEditingEntry = campaign;
+            title.textContent = campaign ? 'Editar Campanha' : 'Nova Campanha';
+            deleteBtn.style.display = campaign ? 'block' : 'none';
+            deleteBtn.onclick = () => deleteCampaign(campaign?.id);
+
+            // Get selected character IDs from campaign (for editing)
+            const selectedCharacterIds = (campaign?.personagens || []).map(p => p.id);
+
+            body.innerHTML = `
+                <div class="form-section">
+                    <h3 class="form-section-title">🎲 Informações da Campanha</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Nome da Campanha *</label>
+                            <input type="text" class="form-input" id="campaignNome" value="${campaign?.nome || ''}" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sistema</label>
+                            <select class="form-select" id="campaignSistema">
+                                <option value="L&R" ${(campaign?.sistema || 'L&R') === 'L&R' ? 'selected' : ''}>L&R</option>
+                                <option value="D&D 5e" ${(campaign?.sistema || '') === 'D&D 5e' ? 'selected' : ''}>D&D 5e</option>
+                                <option value="D&D 3.5" ${(campaign?.sistema || '') === 'D&D 3.5' ? 'selected' : ''}>D&D 3.5</option>
+                                <option value="Pathfinder 2e" ${(campaign?.sistema || '') === 'Pathfinder 2e' ? 'selected' : ''}>Pathfinder 2e</option>
+                                <option value="Pathfinder 1e" ${(campaign?.sistema || '') === 'Pathfinder 1e' ? 'selected' : ''}>Pathfinder 1e</option>
+                                <option value="Call of Cthulhu" ${(campaign?.sistema || '') === 'Call of Cthulhu' ? 'selected' : ''}>Call of Cthulhu</option>
+                                <option value="Vampiro: A Máscara" ${(campaign?.sistema || '') === 'Vampiro: A Máscara' ? 'selected' : ''}>Vampiro: A Máscara</option>
+                                <option value="Tormenta20" ${(campaign?.sistema || '') === 'Tormenta20' ? 'selected' : ''}>Tormenta20</option>
+                                <option value="Outro" ${(campaign?.sistema || '') === 'Outro' ? 'selected' : ''}>Outro</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Mestre</label>
+                            <input type="text" class="form-input" id="campaignMestre" value="${campaign?.mestre || ''}">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-section">
+                    <h3 class="form-section-title">👥 Personagens da Campanha</h3>
+                    <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 15px;">Selecione os personagens que participam desta campanha:</p>
+                    <div class="character-checkbox-grid" id="characterCheckboxGrid">
+                        ${allCharacters.length ? allCharacters.map(char => `
+                            <label class="character-checkbox-item ${selectedCharacterIds.includes(char.id) ? 'selected' : ''}">
+                                <input type="checkbox" class="character-checkbox" 
+                                       value="${char.id}" 
+                                       data-nome="${char.nome || ''}"
+                                       data-jogador="${char.jogador || ''}"
+                                       data-owneruid="${char.ownerUid || ''}"
+                                       ${selectedCharacterIds.includes(char.id) ? 'checked' : ''}
+                                       onchange="this.parentElement.classList.toggle('selected', this.checked)">
+                                <div class="character-checkbox-info">
+                                    <span class="character-checkbox-name">${char.nome || 'Sem nome'}</span>
+                                    <span class="character-checkbox-player">👤 ${char.jogador || 'Jogador desconhecido'}</span>
+                                </div>
+                            </label>
+                        `).join('') : '<p style="color: #64748b;">Nenhum personagem disponível.</p>'}
+                    </div>
+                </div>
+                <div class="form-section">
+                    <h3 class="form-section-title">📝 Descrição</h3>
+                    <div class="form-group">
+                        <textarea class="form-textarea" id="campaignDescricao" rows="4" placeholder="Descreva sua campanha...">${campaign?.descricao || ''}</textarea>
+                    </div>
+                </div>
+            `;
+
+            // Override save button for campaign
+            document.querySelector('.modal-footer .btn-success').onclick = saveCampaign;
+            modal.classList.add('active');
+        };
+
+        async function saveCampaign() {
+            const nome = document.getElementById('campaignNome').value.trim();
+            if (!nome) { showAlert('⚠️ O nome da campanha é obrigatório!', 'warning'); return; }
+
+            // Collect selected characters with their data
+            const personagens = Array.from(document.querySelectorAll('.character-checkbox:checked'))
+                .map(cb => ({
+                    id: cb.value,
+                    nome: cb.dataset.nome,
+                    jogador: cb.dataset.jogador,
+                    ownerUid: cb.dataset.owneruid
+                }));
+
+            const data = {
+                nome,
+                sistema: document.getElementById('campaignSistema').value,
+                mestre: document.getElementById('campaignMestre').value.trim(),
+                personagens, // Store character objects instead of player names
+                descricao: document.getElementById('campaignDescricao').value.trim(),
+                lastUpdate: new Date().toISOString(),
+                lastUpdateBy: currentUser.email
+            };
+
+            try {
+                const colRef = collection(db, 'campaigns');
+                const docRef = currentEditingEntry ? doc(db, 'campaigns', currentEditingEntry.id) : doc(colRef);
+                await setDoc(docRef, data, { merge: true });
+                showAlert(currentEditingEntry ? '✅ Campanha atualizada!' : '✅ Campanha criada!', 'success');
+                closeEntryModal();
+                await loadAllData();
+                currentCampaign = allCampaigns.find(c => c.nome === nome) || currentCampaign;
+                renderSessionLogs();
+            } catch (e) {
+                console.error(e);
+                showAlert('❌ Erro ao salvar campanha', 'danger');
+            }
+        }
+
+        async function deleteCampaign(campaignId) {
+            if (!campaignId || !confirm('Tem certeza? Isso também excluirá todas as sessões desta campanha!')) return;
+            try {
+                // Delete all sessions for this campaign
+                const sessionsToDelete = allSessions.filter(s => s.campaignId === campaignId);
+                for (const s of sessionsToDelete) {
+                    await deleteDoc(doc(db, 'session-logs', s.id));
+                }
+                // Delete campaign
+                await deleteDoc(doc(db, 'campaigns', campaignId));
+                showAlert('✅ Campanha excluída!', 'success');
+                closeEntryModal();
+                currentCampaign = null;
+                await loadAllData();
+                renderSessionLogs();
+            } catch (e) {
+                console.error(e);
+                showAlert('❌ Erro ao excluir campanha', 'danger');
+            }
+        }
+
+        // Session Modal
+        window.openSessionModal = function (session = null) {
+            if (typeof session === 'string') {
+                try { session = JSON.parse(session); } catch { session = null; }
+            }
+
+            const modal = document.getElementById('entryModal');
+            const title = document.getElementById('entryModalTitle');
+            const body = document.getElementById('entryModalBody');
+            const deleteBtn = document.getElementById('btnDeleteEntry');
+
+            currentSession = session;
+            currentEditingEntry = session;
+            title.textContent = session ? `Editando Sessão ${session.sessionNumber || ''}` : 'Nova Sessão';
+            deleteBtn.style.display = session ? 'block' : 'none';
+            deleteBtn.onclick = () => deleteSession(session?.id);
+
+            const nextSessionNumber = session?.sessionNumber || (
+                allSessions.filter(s => s.campaignId === currentCampaign?.id).length + 1
+            );
+
+            // Initialize state from session data
+            sessionSelectedItems = (session?.lootAndRewards?.selectedItems || []).slice();
+            sessionGalleryImages = (session?.images || []).slice();
+
+            // Get available NPCs, locations, and items
+            const availableNpcs = allData.npcs || [];
+            const availableLocations = allData.geography || [];
+
+            // Get campaign personagens (characters) for player presence
+            const campaignPersonagens = currentCampaign?.personagens || [];
+
+            // Build player presence/EXP data from session or default
+            const getPlayerExp = (charId) => {
+                if (!session?.playersPresent) return 0;
+                const player = session.playersPresent.find(p => p.characterId === charId);
+                return player?.expGained || 0;
+            };
+            const isPlayerPresent = (charId) => {
+                if (!session?.playersPresent) return true; // Default all present for new sessions
+                return session.playersPresent.some(p => p.characterId === charId);
+            };
+
+            body.innerHTML = `
+                <div class="form-section">
+                    <h3 class="form-section-title">📋 Informações Básicas</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Número da Sessão</label>
+                            <input type="number" class="form-input" id="sessionNumber" value="${nextSessionNumber}" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Data</label>
+                            <input type="date" class="form-input" id="sessionDate" value="${session?.date || new Date().toISOString().split('T')[0]}">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Duração</label>
+                            <input type="text" class="form-input" id="sessionDuration" value="${session?.duration || ''}" placeholder="Ex: 4h30min">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="collapsible-section open">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                        <span class="collapsible-title">👥 Presença dos Jogadores</span>
+                        <span class="collapsible-toggle">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <p style="color:#94a3b8; font-size:0.85rem; margin-bottom:12px;">Marque os jogadores presentes e informe o EXP individual ganho:</p>
+                        <div class="player-exp-grid">
+                            ${campaignPersonagens.length ? campaignPersonagens.map(p => `
+                                <div class="player-exp-card ${isPlayerPresent(p.id) ? 'present' : ''}" data-char-id="${p.id}">
+                                    <input type="checkbox" class="player-presence-check" 
+                                           data-char-id="${p.id}"
+                                           data-char-nome="${p.nome || ''}"
+                                           data-player-nome="${p.jogador || ''}"
+                                           ${isPlayerPresent(p.id) ? 'checked' : ''}
+                                           onchange="this.closest('.player-exp-card').classList.toggle('present', this.checked)">
+                                    <div class="player-info">
+                                        <div class="player-name">${p.nome || 'Personagem'}</div>
+                                        <div class="player-character">👤 ${p.jogador || 'Jogador'}</div>
+                                    </div>
+                                    <div class="exp-input-group">
+                                        <input type="number" class="exp-input player-exp-input" 
+                                               data-char-id="${p.id}"
+                                               value="${getPlayerExp(p.id)}" min="0" placeholder="0">
+                                        <span class="exp-label">EXP</span>
+                                    </div>
+                                </div>
+                            `).join('') : '<p style="color:#64748b;">Nenhum personagem cadastrado na campanha.</p>'}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="collapsible-section open">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                        <span class="collapsible-title">📝 Resumo da Sessão</span>
+                        <span class="collapsible-toggle">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <textarea class="form-textarea" id="sessionSummary" rows="8" style="width: 100%;" placeholder="Descreva o que aconteceu nesta sessão...">${session?.summary || ''}</textarea>
+                    </div>
+                </div>
+                
+                <div class="collapsible-section">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                        <span class="collapsible-title">👤 NPCs Importantes</span>
+                        <span class="collapsible-toggle">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="search-select-row">
+                            <div class="autocomplete-container" id="npcAutocomplete">
+                                <input type="text" class="autocomplete-input" id="searchNpcInput" placeholder="🔍 Buscar NPC cadastrado..." oninput="filterAutocomplete('npc')" onfocus="showAutocomplete('npc')">
+                                <div class="autocomplete-dropdown" id="npcDropdown"></div>
+                            </div>
+                            <button type="button" class="btn-add-from-select" onclick="addSelectedNpc()">+ Adicionar</button>
+                        </div>
+                        <div class="array-input-container" id="npcsContainer">
+                            ${(session?.importantNpcs || []).map((n, i) => `
+                                <div class="array-item-row" data-npc-id="${n.id || ''}">
+                                    <input type="text" class="form-input npc-name-input" value="${n.name || n}" placeholder="Nome do NPC">
+                                    <input type="text" class="form-input npc-role-input" value="${n.role || ''}" placeholder="Papel (ex: Antagonista)">
+                                    <button type="button" class="btn-remove-array-item" onclick="this.closest('.array-item-row').remove()">✕</button>
+                                </div>
+                            `).join('') || ''}
+                        </div>
+                        <button type="button" class="btn-add-array-item" onclick="addNpcRow()">+ Adicionar Manualmente</button>
+                    </div>
+                </div>
+                
+                <div class="collapsible-section">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                        <span class="collapsible-title">📍 Localizações Visitadas</span>
+                        <span class="collapsible-toggle">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="search-select-row">
+                            <div class="autocomplete-container" id="locationAutocomplete">
+                                <input type="text" class="autocomplete-input" id="searchLocationInput" placeholder="🔍 Buscar local cadastrado..." oninput="filterAutocomplete('location')" onfocus="showAutocomplete('location')">
+                                <div class="autocomplete-dropdown" id="locationDropdown"></div>
+                            </div>
+                            <button type="button" class="btn-add-from-select" onclick="addSelectedLocation()">+ Adicionar</button>
+                        </div>
+                        <div class="array-input-container" id="locationsContainer">
+                            ${(session?.locationsVisited || []).map((l, i) => `
+                                <div class="array-item-row" data-location-id="${l.id || ''}">
+                                    <input type="text" class="form-input location-name-input" value="${l.name || l}" placeholder="Nome do local">
+                                    <input type="text" class="form-input location-type-input" value="${l.type || ''}" placeholder="Tipo (ex: Cidade)">
+                                    <button type="button" class="btn-remove-array-item" onclick="this.closest('.array-item-row').remove()">✕</button>
+                                </div>
+                            `).join('') || ''}
+                        </div>
+                        <button type="button" class="btn-add-array-item" onclick="addLocationRow()">+ Adicionar Manualmente</button>
+                    </div>
+                </div>
+                
+                <div class="collapsible-section">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                        <span class="collapsible-title">⚔️ Combates/Encontros</span>
+                        <span class="collapsible-toggle">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="array-input-container" id="combatsContainer">
+                            ${(session?.combats || []).map((c, i) => `
+                                <div class="array-item-row" style="flex-wrap: wrap;">
+                                    <input type="text" class="form-input combat-enemies-input" value="${c.enemies || ''}" placeholder="Inimigos">
+                                    <input type="text" class="form-input combat-outcome-input" value="${c.outcome || ''}" placeholder="Resultado">
+                                    <button type="button" class="btn-remove-array-item" onclick="this.closest('.array-item-row').remove()">✕</button>
+                                </div>
+                            `).join('') || ''}
+                        </div>
+                        <button type="button" class="btn-add-array-item" onclick="addCombatRow()">+ Adicionar Combate</button>
+                    </div>
+                </div>
+                
+                <div class="collapsible-section">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                        <span class="collapsible-title">🎁 Itens/Recompensas</span>
+                        <span class="collapsible-toggle">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="search-select-row">
+                            <div class="autocomplete-container" id="itemAutocomplete">
+                                <input type="text" class="autocomplete-input" id="searchItemInput" placeholder="🔍 Buscar item cadastrado..." oninput="filterAutocomplete('item')" onfocus="showAutocomplete('item')">
+                                <div class="autocomplete-dropdown" id="itemDropdown"></div>
+                            </div>
+                            <button type="button" class="btn-add-from-select" onclick="addSelectedItem()">+ Adicionar</button>
+                        </div>
+                        <div class="session-item-list" id="sessionItemsList">
+                            ${sessionSelectedItems.map((item, idx) => `
+                                <span class="session-item-tag">
+                                    📦 ${item.name}
+                                    <button class="remove-tag" onclick="removeSessionItem(${idx})">✕</button>
+                                </span>
+                            `).join('')}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Itens Obtidos (manual)</label>
+                            <textarea class="form-textarea" id="lootItems" rows="3" placeholder="Liste os itens obtidos, um por linha...">${(session?.lootAndRewards?.items || []).filter(i => !i.id).map(i => i.name || i).join('\n')}</textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="collapsible-section">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                        <span class="collapsible-title">📜 Quests</span>
+                        <span class="collapsible-toggle">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="array-input-container" id="questsContainer">
+                            ${(session?.quests || []).map((q, i) => `
+                                <div class="array-item-row" style="flex-wrap: wrap;">
+                                    <input type="text" class="form-input quest-name-input" value="${q.name || q}" placeholder="Nome da quest" style="flex: 2;">
+                                    <select class="form-select quest-status-input" style="flex: 1;">
+                                        <option value="Iniciada" ${q.status === 'Iniciada' ? 'selected' : ''}>Iniciada</option>
+                                        <option value="Em Progresso" ${q.status === 'Em Progresso' ? 'selected' : ''}>Em Progresso</option>
+                                        <option value="Completada" ${q.status === 'Completada' ? 'selected' : ''}>Completada</option>
+                                        <option value="Fracassada" ${q.status === 'Fracassada' ? 'selected' : ''}>Fracassada</option>
+                                    </select>
+                                    <button type="button" class="btn-remove-array-item" onclick="this.closest('.array-item-row').remove()">✕</button>
+                                </div>
+                            `).join('') || ''}
+                        </div>
+                        <button type="button" class="btn-add-array-item" onclick="addQuestRow()">+ Adicionar Quest</button>
+                    </div>
+                </div>
+                
+                <div class="collapsible-section">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                        <span class="collapsible-title">⭐ Momentos Marcantes</span>
+                        <span class="collapsible-toggle">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="array-input-container" id="momentsContainer">
+                            ${(session?.memorableMoments || []).map((m, i) => `
+                                <div class="array-item-row" style="flex-wrap: wrap;">
+                                    <select class="form-select moment-type-input" style="flex: 0 0 120px;">
+                                        <option value="funny" ${m.type === 'funny' ? 'selected' : ''}>😂 Engraçado</option>
+                                        <option value="epic" ${m.type === 'epic' ? 'selected' : ''}>⚡ Épico</option>
+                                        <option value="dramatic" ${m.type === 'dramatic' ? 'selected' : ''}>🎭 Dramático</option>
+                                    </select>
+                                    <input type="text" class="form-input moment-desc-input" value="${m.description || m}" placeholder="Descrição do momento" style="flex: 2;">
+                                    <button type="button" class="btn-remove-array-item" onclick="this.closest('.array-item-row').remove()">✕</button>
+                                </div>
+                            `).join('') || ''}
+                        </div>
+                        <button type="button" class="btn-add-array-item" onclick="addMomentRow()">+ Adicionar Momento</button>
+                    </div>
+                </div>
+                
+                <div class="collapsible-section">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                        <span class="collapsible-title">🖼️ Galeria de Imagens</span>
+                        <span class="collapsible-toggle">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="session-gallery-container">
+                            <div class="session-gallery-input-row">
+                                <input type="text" class="form-input" id="galleryImageUrl" placeholder="URL da imagem...">
+                                <input type="text" class="form-input" id="galleryImageLabel" placeholder="Legenda (opcional)" style="max-width: 200px;">
+                                <button type="button" class="btn-add-from-select" onclick="addSessionImage()">+ Adicionar</button>
+                            </div>
+                            <div class="session-gallery-grid" id="sessionGalleryGrid">
+                                ${sessionGalleryImages.map((img, idx) => `
+                                    <div class="session-gallery-item">
+                                        <img src="${img.url}" alt="${img.label || 'Imagem'}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text x=%2250%25%22 y=%2250%25%22 fill=%22%23999%22 text-anchor=%22middle%22 dy=%22.3em%22>Erro</text></svg>'">
+                                        ${img.label ? `<div class="gallery-label">${img.label}</div>` : ''}
+                                        <button class="remove-gallery-item" onclick="removeSessionImage(${idx})">✕</button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="collapsible-section">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                        <span class="collapsible-title">🔮 Ganchos para Próxima Sessão</span>
+                        <span class="collapsible-toggle">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <textarea class="form-textarea" id="nextSessionHooks" rows="6" style="width: 100%;" placeholder="Liste os ganchos para a próxima sessão, um por linha...">${(session?.nextSessionHooks || []).join('\n')}</textarea>
+                    </div>
+                </div>
+                
+                <div class="collapsible-section">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                        <span class="collapsible-title">🔒 Notas do Mestre (Privadas)</span>
+                        <span class="collapsible-toggle">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <textarea class="form-textarea" id="dmNotes" rows="6" style="width: 100%;" placeholder="Notas secretas apenas para o mestre...">${session?.dmNotes?.content || ''}</textarea>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button class="btn-export" onclick="exportCurrentSession()">📤 Exportar JSON</button>
+                </div>
+            `;
+
+            // Override save button for session
+            document.querySelector('.modal-footer .btn-success').onclick = saveSession;
+            modal.classList.add('active');
+        };
+
+        window.toggleCollapsible = function (header) {
+            header.closest('.collapsible-section').classList.toggle('open');
+        };
+
+        // Row adders for session modal
+        window.addNpcRow = function () {
+            const container = document.getElementById('npcsContainer');
+            container.insertAdjacentHTML('beforeend', `
+                <div class="array-item-row">
+                    <input type="text" class="form-input npc-name-input" placeholder="Nome do NPC">
+                    <input type="text" class="form-input npc-role-input" placeholder="Papel (ex: Antagonista)">
+                    <button type="button" class="btn-remove-array-item" onclick="this.closest('.array-item-row').remove()">✕</button>
+                </div>
+            `);
+        };
+
+        window.addLocationRow = function () {
+            const container = document.getElementById('locationsContainer');
+            container.insertAdjacentHTML('beforeend', `
+                <div class="array-item-row">
+                    <input type="text" class="form-input location-name-input" placeholder="Nome do local">
+                    <input type="text" class="form-input location-type-input" placeholder="Tipo (ex: Cidade)">
+                    <button type="button" class="btn-remove-array-item" onclick="this.closest('.array-item-row').remove()">✕</button>
+                </div>
+            `);
+        };
+
+        window.addCombatRow = function () {
+            const container = document.getElementById('combatsContainer');
+            container.insertAdjacentHTML('beforeend', `
+                <div class="array-item-row" style="flex-wrap: wrap;">
+                    <input type="text" class="form-input combat-enemies-input" placeholder="Inimigos">
+                    <input type="text" class="form-input combat-outcome-input" placeholder="Resultado">
+                    <button type="button" class="btn-remove-array-item" onclick="this.closest('.array-item-row').remove()">✕</button>
+                </div>
+            `);
+        };
+
+        window.addQuestRow = function () {
+            const container = document.getElementById('questsContainer');
+            container.insertAdjacentHTML('beforeend', `
+                <div class="array-item-row" style="flex-wrap: wrap;">
+                    <input type="text" class="form-input quest-name-input" placeholder="Nome da quest" style="flex: 2;">
+                    <select class="form-select quest-status-input" style="flex: 1;">
+                        <option value="Iniciada">Iniciada</option>
+                        <option value="Em Progresso">Em Progresso</option>
+                        <option value="Completada">Completada</option>
+                        <option value="Fracassada">Fracassada</option>
+                    </select>
+                    <button type="button" class="btn-remove-array-item" onclick="this.closest('.array-item-row').remove()">✕</button>
+                </div>
+            `);
+        };
+
+        window.addMomentRow = function () {
+            const container = document.getElementById('momentsContainer');
+            container.insertAdjacentHTML('beforeend', `
+                <div class="array-item-row" style="flex-wrap: wrap;">
+                    <select class="form-select moment-type-input" style="flex: 0 0 120px;">
+                        <option value="funny">😂 Engraçado</option>
+                        <option value="epic">⚡ Épico</option>
+                        <option value="dramatic">🎭 Dramático</option>
+                    </select>
+                    <input type="text" class="form-input moment-desc-input" placeholder="Descrição do momento" style="flex: 2;">
+                    <button type="button" class="btn-remove-array-item" onclick="this.closest('.array-item-row').remove()">✕</button>
+                </div>
+            `);
+        };
+
+        // Autocomplete state
+        let selectedNpc = null;
+        let selectedLocation = null;
+        let selectedItem = null;
+
+        // Show autocomplete dropdown
+        window.showAutocomplete = function (type) {
+            filterAutocomplete(type);
+            const dropdown = document.getElementById(`${type}Dropdown`);
+            if (dropdown) dropdown.classList.add('show');
+        };
+
+        // Hide all autocomplete dropdowns
+        window.hideAllAutocomplete = function () {
+            ['npc', 'location', 'item'].forEach(type => {
+                const dropdown = document.getElementById(`${type}Dropdown`);
+                if (dropdown) dropdown.classList.remove('show');
+            });
+        };
+
+        // Filter autocomplete based on search input
+        window.filterAutocomplete = function (type) {
+            const inputId = type === 'npc' ? 'searchNpcInput' : type === 'location' ? 'searchLocationInput' : 'searchItemInput';
+            const dropdownId = `${type}Dropdown`;
+            const input = document.getElementById(inputId);
+            const dropdown = document.getElementById(dropdownId);
+            if (!input || !dropdown) return;
+
+            const query = input.value.toLowerCase().trim();
+            let items = [];
+
+            if (type === 'npc') {
+                items = (allData.npcs || []).filter(n =>
+                    (n.nome || '').toLowerCase().includes(query) ||
+                    (n.tipo || '').toLowerCase().includes(query)
+                ).slice(0, 20);
+            } else if (type === 'location') {
+                items = (allData.geography || []).filter(l =>
+                    (l.nome || '').toLowerCase().includes(query) ||
+                    (l.tipo || '').toLowerCase().includes(query)
+                ).slice(0, 20);
+            } else if (type === 'item') {
+                items = (allItems || []).filter(i =>
+                    (i.name || '').toLowerCase().includes(query) ||
+                    (i.type || '').toLowerCase().includes(query)
+                ).slice(0, 20);
+            }
+
+            if (items.length === 0) {
+                dropdown.innerHTML = '<div class="autocomplete-no-results">Nenhum resultado encontrado</div>';
+            } else {
+                dropdown.innerHTML = items.map(item => {
+                    const name = type === 'item' ? (item.name || 'Item') : (item.nome || 'Sem nome');
+                    const itemType = type === 'item' ? (item.type || 'Item') : (item.tipo || type.toUpperCase());
+                    const escapedName = name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    const escapedType = itemType.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    return `
+                        <div class="autocomplete-item" data-id="${item.id}" onclick="selectAutocompleteItem('${type}', '${item.id}', '${escapedName}', '${escapedType}')">
+                            <div class="item-name">${name}</div>
+                            <div class="item-type">${itemType}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            dropdown.classList.add('show');
+        };
+
+        // Select item from autocomplete
+        window.selectAutocompleteItem = function (type, id, name, itemType) {
+            const inputId = type === 'npc' ? 'searchNpcInput' : type === 'location' ? 'searchLocationInput' : 'searchItemInput';
+            const input = document.getElementById(inputId);
+            if (input) input.value = name;
+
+            if (type === 'npc') {
+                selectedNpc = { id, name, type: itemType };
+            } else if (type === 'location') {
+                selectedLocation = { id, name, type: itemType };
+            } else if (type === 'item') {
+                selectedItem = { id, name };
+            }
+
+            hideAllAutocomplete();
+        };
+
+        // Add selected NPC
+        window.addSelectedNpc = function () {
+            if (!selectedNpc) {
+                showAlert('⚠️ Selecione um NPC primeiro!', 'warning');
+                return;
+            }
+
+            const container = document.getElementById('npcsContainer');
+            container.insertAdjacentHTML('beforeend', `
+                <div class="array-item-row" data-npc-id="${selectedNpc.id}">
+                    <input type="text" class="form-input npc-name-input" value="${selectedNpc.name}" placeholder="Nome do NPC">
+                    <input type="text" class="form-input npc-role-input" value="${selectedNpc.type}" placeholder="Papel (ex: Antagonista)">
+                    <button type="button" class="btn-remove-array-item" onclick="this.closest('.array-item-row').remove()">✕</button>
+                </div>
+            `);
+
+            selectedNpc = null;
+            document.getElementById('searchNpcInput').value = '';
+        };
+
+        // Add selected Location
+        window.addSelectedLocation = function () {
+            if (!selectedLocation) {
+                showAlert('⚠️ Selecione uma localização primeiro!', 'warning');
+                return;
+            }
+
+            const container = document.getElementById('locationsContainer');
+            container.insertAdjacentHTML('beforeend', `
+                <div class="array-item-row" data-location-id="${selectedLocation.id}">
+                    <input type="text" class="form-input location-name-input" value="${selectedLocation.name}" placeholder="Nome do local">
+                    <input type="text" class="form-input location-type-input" value="${selectedLocation.type}" placeholder="Tipo (ex: Cidade)">
+                    <button type="button" class="btn-remove-array-item" onclick="this.closest('.array-item-row').remove()">✕</button>
+                </div>
+            `);
+
+            selectedLocation = null;
+            document.getElementById('searchLocationInput').value = '';
+        };
+
+        // Add selected Item
+        window.addSelectedItem = function () {
+            if (!selectedItem) {
+                showAlert('⚠️ Selecione um item primeiro!', 'warning');
+                return;
+            }
+
+            if (sessionSelectedItems.some(i => i.id === selectedItem.id)) {
+                showAlert('⚠️ Este item já foi adicionado!', 'warning');
+                selectedItem = null;
+                document.getElementById('searchItemInput').value = '';
+                return;
+            }
+
+            sessionSelectedItems.push({ id: selectedItem.id, name: selectedItem.name });
+            renderSessionItems();
+
+            selectedItem = null;
+            document.getElementById('searchItemInput').value = '';
+        };
+
+        // Close autocomplete when clicking outside
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('.autocomplete-container')) {
+                hideAllAutocomplete();
+            }
+        });
+
+        // Remove session item
+        window.removeSessionItem = function (idx) {
+            sessionSelectedItems.splice(idx, 1);
+            renderSessionItems();
+        };
+
+        // Render session items list
+        function renderSessionItems() {
+            const container = document.getElementById('sessionItemsList');
+            if (!container) return;
+            container.innerHTML = sessionSelectedItems.map((item, idx) => `
+                <span class="session-item-tag">
+                    📦 ${item.name}
+                    <button class="remove-tag" onclick="removeSessionItem(${idx})">✕</button>
+                </span>
+            `).join('');
+        }
+
+        // Add session gallery image
+        window.addSessionImage = function () {
+            const urlInput = document.getElementById('galleryImageUrl');
+            const labelInput = document.getElementById('galleryImageLabel');
+            const url = urlInput.value.trim();
+            const label = labelInput.value.trim();
+
+            if (!url) { showAlert('⚠️ Insira uma URL de imagem!', 'warning'); return; }
+
+            sessionGalleryImages.push({ url, label });
+            renderSessionGallery();
+            urlInput.value = '';
+            labelInput.value = '';
+        };
+
+        // Remove session gallery image
+        window.removeSessionImage = function (idx) {
+            sessionGalleryImages.splice(idx, 1);
+            renderSessionGallery();
+        };
+
+        // Render session gallery
+        function renderSessionGallery() {
+            const container = document.getElementById('sessionGalleryGrid');
+            if (!container) return;
+            container.innerHTML = sessionGalleryImages.map((img, idx) => `
+                <div class="session-gallery-item">
+                    <img src="${img.url}" alt="${img.label || 'Imagem'}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><rect fill=%22%23333%22 width=%22100%22 height=%22100%22/><text x=%2250%25%22 y=%2250%25%22 fill=%22%23999%22 text-anchor=%22middle%22 dy=%22.3em%22>Erro</text></svg>'">
+                    ${img.label ? `<div class="gallery-label">${img.label}</div>` : ''}
+                    <button class="remove-gallery-item" onclick="removeSessionImage(${idx})">✕</button>
+                </div>
+            `).join('');
+        }
+
+        async function saveSession() {
+            if (!currentCampaign) { showAlert('⚠️ Selecione uma campanha primeiro!', 'warning'); return; }
+
+            // Collect player presence with EXP
+            const playersPresent = Array.from(document.querySelectorAll('.player-presence-check:checked')).map(checkbox => {
+                const charId = checkbox.dataset.charId;
+                const charNome = checkbox.dataset.charNome;
+                const playerNome = checkbox.dataset.playerNome;
+                const expInput = document.querySelector(`.player-exp-input[data-char-id="${charId}"]`);
+                const expGained = parseInt(expInput?.value) || 0;
+                return { characterId: charId, characterName: charNome, playerName: playerNome, expGained };
+            });
+
+            // Get all personagens and find those absent
+            const allPersonagens = currentCampaign?.personagens || [];
+            const presentIds = playersPresent.map(p => p.characterId);
+            const playersAbsent = allPersonagens.filter(p => !presentIds.includes(p.id)).map(p => ({
+                characterId: p.id,
+                characterName: p.nome,
+                playerName: p.jogador
+            }));
+
+            const npcs = Array.from(document.querySelectorAll('#npcsContainer .array-item-row')).map(row => ({
+                id: row.dataset.npcId || null,
+                name: row.querySelector('.npc-name-input')?.value?.trim() || '',
+                role: row.querySelector('.npc-role-input')?.value?.trim() || ''
+            })).filter(n => n.name);
+
+            const locations = Array.from(document.querySelectorAll('#locationsContainer .array-item-row')).map(row => ({
+                id: row.dataset.locationId || null,
+                name: row.querySelector('.location-name-input')?.value?.trim() || '',
+                type: row.querySelector('.location-type-input')?.value?.trim() || ''
+            })).filter(l => l.name);
+
+            const combats = Array.from(document.querySelectorAll('#combatsContainer .array-item-row')).map(row => ({
+                enemies: row.querySelector('.combat-enemies-input')?.value?.trim() || '',
+                outcome: row.querySelector('.combat-outcome-input')?.value?.trim() || ''
+            })).filter(c => c.enemies);
+
+            const quests = Array.from(document.querySelectorAll('#questsContainer .array-item-row')).map(row => ({
+                name: row.querySelector('.quest-name-input')?.value?.trim() || '',
+                status: row.querySelector('.quest-status-input')?.value || 'Iniciada'
+            })).filter(q => q.name);
+
+            const moments = Array.from(document.querySelectorAll('#momentsContainer .array-item-row')).map(row => ({
+                type: row.querySelector('.moment-type-input')?.value || 'funny',
+                description: row.querySelector('.moment-desc-input')?.value?.trim() || ''
+            })).filter(m => m.description);
+
+            // Manual items from textarea
+            const manualItems = document.getElementById('lootItems').value.trim().split('\n').filter(i => i.trim()).map(i => ({ name: i.trim() }));
+            const nextHooks = document.getElementById('nextSessionHooks').value.trim().split('\n').filter(h => h.trim());
+
+            const data = {
+                campaignId: currentCampaign.id,
+                sessionNumber: parseInt(document.getElementById('sessionNumber').value) || 1,
+                date: document.getElementById('sessionDate').value,
+                duration: document.getElementById('sessionDuration').value.trim(),
+                playersPresent,
+                playersAbsent,
+                summary: document.getElementById('sessionSummary').value.trim(),
+                importantNpcs: npcs,
+                locationsVisited: locations,
+                combats,
+                lootAndRewards: {
+                    items: manualItems,
+                    selectedItems: sessionSelectedItems
+                },
+                images: sessionGalleryImages,
+                quests,
+                memorableMoments: moments,
+                nextSessionHooks: nextHooks,
+                dmNotes: {
+                    private: true,
+                    content: document.getElementById('dmNotes').value.trim()
+                },
+                lastUpdate: new Date().toISOString(),
+                lastUpdateBy: currentUser.email
+            };
+
+            try {
+                const colRef = collection(db, 'session-logs');
+                const docRef = currentSession ? doc(db, 'session-logs', currentSession.id) : doc(colRef);
+                await setDoc(docRef, data, { merge: true });
+                showAlert(currentSession ? '✅ Sessão atualizada!' : '✅ Sessão criada!', 'success');
+                closeEntryModal();
+                await loadAllData();
+                renderSessionLogs();
+            } catch (e) {
+                console.error(e);
+                showAlert('❌ Erro ao salvar sessão', 'danger');
+            }
+        }
+
+        async function deleteSession(sessionId) {
+            if (!sessionId || !confirm('Tem certeza que deseja excluir esta sessão?')) return;
+            try {
+                await deleteDoc(doc(db, 'session-logs', sessionId));
+                showAlert('✅ Sessão excluída!', 'success');
+                closeEntryModal();
+                await loadAllData();
+                renderSessionLogs();
+            } catch (e) {
+                console.error(e);
+                showAlert('❌ Erro ao excluir sessão', 'danger');
+            }
+        }
+
+        // Import/Export Functions
+        window.triggerImportSession = function () {
+            document.getElementById('importSessionFile').click();
+        };
+
+        window.importSessionJSON = async function (input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+
+                // Validate basic structure
+                if (!data.sessionNumber || !data.summary) {
+                    showAlert('⚠️ JSON inválido! Faltam campos obrigatórios.', 'warning');
+                    return;
+                }
+
+                // Add campaign reference
+                data.campaignId = currentCampaign.id;
+                data.lastUpdate = new Date().toISOString();
+                data.lastUpdateBy = currentUser.email;
+                data.metadata = {
+                    importedAt: new Date().toISOString(),
+                    lastModified: new Date().toISOString(),
+                    createdBy: currentUser.email
+                };
+
+                // Save to Firebase
+                const colRef = collection(db, 'session-logs');
+                await setDoc(doc(colRef), data);
+
+                showAlert('✅ Sessão importada com sucesso!', 'success');
+                await loadAllData();
+                renderSessionLogs();
+            } catch (e) {
+                console.error(e);
+                showAlert('❌ Erro ao importar JSON. Verifique o formato.', 'danger');
+            }
+
+            input.value = ''; // Reset file input
+        };
+
+        window.exportCurrentSession = function () {
+            const sessionData = buildCurrentSessionData();
+            const dataStr = JSON.stringify(sessionData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sessao-${sessionData.sessionNumber || 'nova'}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showAlert('✅ Sessão exportada!', 'success');
+        };
+
+        function buildCurrentSessionData() {
+            const playersPresent = Array.from(document.querySelectorAll('.player-presence-check:checked')).map(c => c.value);
+
+            return {
+                sessionNumber: parseInt(document.getElementById('sessionNumber')?.value) || 1,
+                date: document.getElementById('sessionDate')?.value || '',
+                duration: document.getElementById('sessionDuration')?.value || '',
+                playersPresent,
+                summary: document.getElementById('sessionSummary')?.value || '',
+                importantNpcs: Array.from(document.querySelectorAll('#npcsContainer .array-item-row')).map(row => ({
+                    name: row.querySelector('.npc-name-input')?.value || '',
+                    role: row.querySelector('.npc-role-input')?.value || ''
+                })).filter(n => n.name),
+                locationsVisited: Array.from(document.querySelectorAll('#locationsContainer .array-item-row')).map(row => ({
+                    name: row.querySelector('.location-name-input')?.value || '',
+                    type: row.querySelector('.location-type-input')?.value || ''
+                })).filter(l => l.name),
+                combats: Array.from(document.querySelectorAll('#combatsContainer .array-item-row')).map(row => ({
+                    enemies: row.querySelector('.combat-enemies-input')?.value || '',
+                    outcome: row.querySelector('.combat-outcome-input')?.value || ''
+                })).filter(c => c.enemies),
+                lootAndRewards: {
+                    items: (document.getElementById('lootItems')?.value || '').split('\n').filter(i => i.trim()).map(i => ({ name: i.trim() })),
+                    gold: parseInt(document.getElementById('lootGold')?.value) || 0,
+                    xp: parseInt(document.getElementById('lootXP')?.value) || 0
+                },
+                quests: Array.from(document.querySelectorAll('#questsContainer .array-item-row')).map(row => ({
+                    name: row.querySelector('.quest-name-input')?.value || '',
+                    status: row.querySelector('.quest-status-input')?.value || 'Iniciada'
+                })).filter(q => q.name),
+                memorableMoments: Array.from(document.querySelectorAll('#momentsContainer .array-item-row')).map(row => ({
+                    type: row.querySelector('.moment-type-input')?.value || 'funny',
+                    description: row.querySelector('.moment-desc-input')?.value || ''
+                })).filter(m => m.description),
+                nextSessionHooks: (document.getElementById('nextSessionHooks')?.value || '').split('\n').filter(h => h.trim()),
+                dmNotes: {
+                    private: true,
+                    content: document.getElementById('dmNotes')?.value || ''
+                }
+            };
+        }
+
+        window.downloadTemplate = function () {
+            fetch('session-log-template.json')
+                .then(r => r.json())
+                .then(data => {
+                    const dataStr = JSON.stringify(data, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'session-log-template.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showAlert('✅ Template baixado!', 'success');
+                })
+                .catch(e => {
+                    console.error(e);
+                    showAlert('❌ Erro ao baixar template', 'danger');
+                });
+        };
+
+        // Notification
+        window.sendPlayerNotification = async function () {
+            const message = document.getElementById('notificationMessage').value.trim();
+            if (!message) {
+                showAlert('⚠️ Digite uma mensagem!', 'warning');
+                return;
+            }
+
+            // Get selected players with their ownerUid
+            const selectedCheckboxes = Array.from(document.querySelectorAll('#playerSelectGrid .notification-checkbox:checked'));
+
+            if (!selectedCheckboxes.length) {
+                showAlert('⚠️ Selecione pelo menos um jogador!', 'warning');
+                return;
+            }
+
+            // Filter out entries without valid ownerUid and group by ownerUid to avoid duplicate sends
+            const uniqueOwnerUids = [...new Set(selectedCheckboxes
+                .map(cb => cb.value)
+                .filter(uid => uid && uid.trim() !== ''))];
+
+            if (!uniqueOwnerUids.length) {
+                showAlert('⚠️ Os personagens selecionados não possuem jogadores vinculados!', 'warning');
+                return;
+            }
+
+            try {
+                showAlert('📤 Enviando notificações...', 'success');
+
+                // Create notification object
+                const notification = {
+                    id: `campaign_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    type: 'master_message',
+                    message: `📋 [${currentCampaign.nome}] ${message}`,
+                    timestamp: new Date().toISOString(),
+                    isNew: true,
+                    data: {
+                        campaignId: currentCampaign.id,
+                        campaignName: currentCampaign.nome,
+                        highlight: 'normal',
+                        sentBy: currentUser.email || 'Mestre'
+                    }
+                };
+
+                let successCount = 0;
+
+                // Send to each player's user account
+                for (const ownerUid of uniqueOwnerUids) {
+                    try {
+                        const userDocRef = doc(db, 'users', ownerUid);
+                        const userDoc = await getDoc(userDocRef);
+
+                        if (userDoc.exists()) {
+                            const userData = userDoc.data();
+                            let notifications = userData.notifications || [];
+
+                            // Add new notification at the beginning
+                            notifications.unshift(notification);
+
+                            // Limit to 100 notifications
+                            if (notifications.length > 100) {
+                                notifications = notifications.slice(0, 100);
+                            }
+
+                            await updateDoc(userDocRef, { notifications: notifications });
+                            successCount++;
+                        }
+                    } catch (userError) {
+                        console.error(`Erro ao enviar para ${ownerUid}:`, userError);
+                    }
+                }
+
+                showAlert(`✅ Notificação enviada para ${successCount} jogador(es)!`, 'success');
+                document.getElementById('notificationMessage').value = '';
+            } catch (e) {
+                console.error(e);
+                showAlert('❌ Erro ao enviar notificação', 'danger');
+            }
+        };
+
+        // ==================== END SESSION LOGS FUNCTIONS ====================
     </script>
 </body>
 

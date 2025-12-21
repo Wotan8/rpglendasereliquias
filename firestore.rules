@@ -209,5 +209,27 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create, update, delete: if isMaster();
     }
+
+    // ========== ADICIONADO: Coleções de Session Logs ==========
+    match /campaigns/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /session-logs/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    // ========== ADICIONADO: Configurações do Worldbuilding (campanha favorita) ==========
+    match /worldbuilding-settings/{settingId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /notifications/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
   }
 }

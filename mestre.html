@@ -8340,7 +8340,11 @@ Agilidade 2\n
 
                     // Total de Apoios (soma de todos os montantes)
                     // Se for tipo "Roleta" e múltiplo de 3, divide por 3
-                    if (tipo === 'roleta' && montante % 3 === 0) {
+                    // Se for tipo "Re-rolagem", cada 5 conta como 1 (menos de 5 não conta)
+                    if (tipo === 're-rolagem') {
+                        // Cada 5 Re-rolagem conta como 1 apoio, menos de 5 não conta
+                        totalApoios += Math.floor(montante / 5);
+                    } else if (tipo === 'roleta' && montante % 3 === 0) {
                         totalApoios += montante / 3;
                     } else {
                         totalApoios += montante;
