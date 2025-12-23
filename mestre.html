@@ -9738,7 +9738,8 @@ Agilidade 2\n
                          ondragleave="handleAvulsoDragLeave(event)"
                          ondragend="handleAvulsoDragEnd(event)"
                          ondrop="handleAvulsoDrop(event, '${item.id}')"
-                         style="background: rgba(15, 23, 42, 0.6); border: 2px solid ${isContainerOpen ? 'rgba(16, 185, 129, 0.6)' : 'var(--border)'}; border-radius: 12px; padding: 18px; display: flex; align-items: center; gap: 15px; transition: all 0.3s;" 
+                         onclick="editAvulsoItem('${item.id}')"
+                         style="background: rgba(15, 23, 42, 0.6); border: 2px solid ${isContainerOpen ? 'rgba(16, 185, 129, 0.6)' : 'var(--border)'}; border-radius: 12px; padding: 18px; display: flex; align-items: center; gap: 15px; transition: all 0.3s; cursor: pointer;" 
                          id="avulso-item-${item.id}">
                         ${imagemHTML}
                         <div style="flex: 1; min-width: 0;">
@@ -9769,9 +9770,6 @@ Agilidade 2\n
                             ${moveToContainerBtn}
                             <button class="btn btn-primary" onclick="event.stopPropagation(); openTransferItemModal('${item.id}', true)" style="padding: 10px 16px; font-size: 0.9rem;" title="Transferir Item">
                                 🔄
-                            </button>
-                            <button class="btn btn-secondary" onclick="event.stopPropagation(); editAvulsoItem('${item.id}')" style="padding: 10px 16px; font-size: 0.9rem;">
-                                ✏️
                             </button>
                             <button class="btn btn-danger" onclick="event.stopPropagation(); deleteAvulsoItem('${item.id}')" style="padding: 10px 16px; font-size: 0.9rem;">
                                 🗑️
@@ -10472,7 +10470,7 @@ Agilidade 2\n
                         ` : '';
 
                         return `
-                            <div class="container-item-card" style="${isDeepNestedOpen ? 'border-color: rgba(16, 185, 129, 0.6);' : ''}">
+                            <div class="container-item-card" style="${isDeepNestedOpen ? 'border-color: rgba(16, 185, 129, 0.6);' : ''} cursor: pointer;" onclick="editAvulsoItem('${item.id}')">
                                 ${imagemHTML}
                                 <div style="flex: 1; min-width: 0;">
                                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -10488,13 +10486,10 @@ Agilidade 2\n
                                         Peso: ${item.totalWeight || item.peso || 0} | Tamanho: ${item.tamanho || 0} | Qtd: ${item.quantity || 1}
                                     </div>
                                 </div>
-                                <div style="display: flex; gap: 8px;">
+                                <div style="display: flex; gap: 8px;" onclick="event.stopPropagation()">
                                     ${openDeepNestedBtn}
                                     <button class="btn btn-warning" onclick="removeNestedItemFromContainer('${item.id}', '${containerId}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Remover do container">
                                         📤
-                                    </button>
-                                    <button class="btn btn-secondary" onclick="editAvulsoItem('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Editar item">
-                                        ✏️
                                     </button>
                                     <button class="btn btn-danger" onclick="deleteAvulsoItem('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Deletar item">
                                         🗑️
@@ -10626,7 +10621,7 @@ Agilidade 2\n
                 ` : '';
 
                 return `
-                    <div class="container-item-card" id="nested-avulso-${item.id}" style="${isNestedContainerOpen ? 'border-color: rgba(16, 185, 129, 0.6);' : ''}">
+                    <div class="container-item-card" id="nested-avulso-${item.id}" style="${isNestedContainerOpen ? 'border-color: rgba(16, 185, 129, 0.6);' : ''} cursor: pointer;" onclick="editAvulsoItem('${item.id}')">
                         ${imagemHTML}
                         <div style="flex: 1; min-width: 0;">
                             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -10642,16 +10637,13 @@ Agilidade 2\n
                                 Peso: ${item.totalWeight || item.peso || 0} | Tamanho: ${item.tamanho || 0} | Qtd: ${item.quantity || 1}
                             </div>
                         </div>
-                        <div style="display: flex; gap: 8px;">
+                        <div style="display: flex; gap: 8px;" onclick="event.stopPropagation()">
                             ${openNestedContainerBtn}
                             <button class="btn btn-warning" onclick="removeItemFromContainer('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Remover do container">
                                 📤
                             </button>
                             <button class="btn btn-primary" onclick="openTransferItemModal('${item.id}', true)" style="padding: 8px 14px; font-size: 0.85rem;" title="Transferir">
                                 🔄
-                            </button>
-                            <button class="btn btn-secondary" onclick="editAvulsoItem('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Editar item">
-                                ✏️
                             </button>
                             <button class="btn btn-danger" onclick="deleteAvulsoItem('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Deletar item">
                                 🗑️
@@ -11880,7 +11872,8 @@ Agilidade 2\n
                                      ondragleave="handlePersonagemDragLeave(event)"
                                      ondragend="handlePersonagemDragEnd(event)"
                                      ondrop="handlePersonagemDrop(event, '${item.id}')"
-                                     style="background: rgba(15, 23, 42, 0.6); border: 2px solid ${isContainerOpen ? 'rgba(16, 185, 129, 0.6)' : 'var(--border)'}; border-radius: 10px; padding: 15px; display: flex; align-items: center; gap: 15px; transition: all 0.3s;" 
+                                     onclick="editItemMestre('está com alguém', '${item.id}')"
+                                     style="background: rgba(15, 23, 42, 0.6); border: 2px solid ${isContainerOpen ? 'rgba(16, 185, 129, 0.6)' : 'var(--border)'}; border-radius: 10px; padding: 15px; display: flex; align-items: center; gap: 15px; transition: all 0.3s; cursor: pointer;" 
                                      id="personagem-item-${item.id}">
                                     ${imagemHTML}
                                     <div style="flex: 1;">
@@ -11904,14 +11897,11 @@ Agilidade 2\n
                                             </div>
                                         ` : ''}
                                     </div>
-                                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <div style="display: flex; gap: 8px; flex-wrap: wrap;" onclick="event.stopPropagation()">
                                         ${openContainerBtn}
                                         ${moveToContainerBtn}
                                         <button class="btn btn-primary" onclick="openTransferItemModal('${item.id}', false)" style="padding: 6px 12px; font-size: 0.85rem;" title="Transferir Item">
                                             🔄
-                                        </button>
-                                        <button class="btn btn-secondary" onclick="editItemMestre('está com alguém', '${item.id}')" style="padding: 6px 12px; font-size: 0.85rem;">
-                                            ✏️
                                         </button>
                                         <button class="btn btn-danger" onclick="deleteItemMestre('${equipadosContainer.id}', '${item.id}')" style="padding: 6px 12px; font-size: 0.85rem;">
                                             🗑️
@@ -11936,6 +11926,7 @@ Agilidade 2\n
                 return;
             }
 
+            isAvulsoMode = false; // Reset to ensure we save to character inventory, not avulsos
             currentEditingContainerIdMestre = containerId;
             currentEditingItemIdMestre = null;
             document.getElementById('modalTitleMestre').textContent = 'Criar Novo Item';
@@ -11955,6 +11946,7 @@ Agilidade 2\n
                 return;
             }
 
+            isAvulsoMode = false; // Reset to ensure we save to character inventory, not avulsos
             currentEditingContainerIdMestre = containerId;
             currentEditingItemIdMestre = itemId;
             document.getElementById('modalTitleMestre').textContent = item.isContainerItem ? '📦 Editar Container' : 'Editar Item';
@@ -12189,7 +12181,7 @@ Agilidade 2\n
                         ` : '';
 
                         return `
-                            <div class="container-item-card" style="${isDeepNestedOpen ? 'border-color: rgba(16, 185, 129, 0.6);' : ''}">
+                            <div class="container-item-card" style="${isDeepNestedOpen ? 'border-color: rgba(16, 185, 129, 0.6);' : ''} cursor: pointer;" onclick="editPersonagemContainerItem('${item.id}')">
                                 ${imagemHTML}
                                 <div style="flex: 1; min-width: 0;">
                                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -12205,13 +12197,10 @@ Agilidade 2\n
                                         Peso: ${item.totalWeight || item.peso || 0} | Tamanho: ${item.tamanho || 0} | Qtd: ${item.quantity || 1}
                                     </div>
                                 </div>
-                                <div style="display: flex; gap: 8px;">
+                                <div style="display: flex; gap: 8px;" onclick="event.stopPropagation()">
                                     ${openDeepNestedBtn}
                                     <button class="btn btn-warning" onclick="removeNestedItemFromPersonagemContainer('${item.id}', '${containerId}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Remover do container">
                                         📤
-                                    </button>
-                                    <button class="btn btn-secondary" onclick="editPersonagemContainerItem('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Editar item">
-                                        ✏️
                                     </button>
                                     <button class="btn btn-danger" onclick="deletePersonagemContainerItem('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Deletar item">
                                         🗑️
@@ -12354,7 +12343,7 @@ Agilidade 2\n
                 ` : '';
 
                 return `
-                    <div class="container-item-card" id="nested-personagem-${item.id}" style="${isNestedContainerOpen ? 'border-color: rgba(16, 185, 129, 0.6);' : ''}">
+                    <div class="container-item-card" id="nested-personagem-${item.id}" style="${isNestedContainerOpen ? 'border-color: rgba(16, 185, 129, 0.6);' : ''} cursor: pointer;" onclick="editPersonagemContainerItem('${item.id}')">
                         ${imagemHTML}
                         <div style="flex: 1; min-width: 0;">
                             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -12370,16 +12359,13 @@ Agilidade 2\n
                                 Peso: ${item.totalWeight || item.peso || 0} | Tamanho: ${item.tamanho || 0} | Qtd: ${item.quantity || 1}
                             </div>
                         </div>
-                        <div style="display: flex; gap: 8px;">
+                        <div style="display: flex; gap: 8px;" onclick="event.stopPropagation()">
                             ${openNestedContainerBtn}
                             <button class="btn btn-warning" onclick="removeItemFromPersonagemContainer('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Remover do container">
                                 📤
                             </button>
                             <button class="btn btn-primary" onclick="openTransferItemModal('${item.id}', false)" style="padding: 8px 14px; font-size: 0.85rem;" title="Transferir">
                                 🔄
-                            </button>
-                            <button class="btn btn-secondary" onclick="editPersonagemContainerItem('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Editar item">
-                                ✏️
                             </button>
                             <button class="btn btn-danger" onclick="deletePersonagemContainerItem('${item.id}')" style="padding: 8px 14px; font-size: 0.85rem;" title="Deletar item">
                                 🗑️
