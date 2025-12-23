@@ -200,6 +200,79 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-mestre {
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-mestre:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-viewmap {
+            background: linear-gradient(135deg, #14b8a6, #0891b2);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-viewmap:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(20, 184, 166, 0.4);
+        }
+
+        .btn-logout {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-logout:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .user-display-name {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: default;
         }
 
         .content-title {
@@ -506,6 +579,16 @@
             max-width: 900px;
             max-height: 90vh;
             overflow-y: auto;
+        }
+
+        /* Session Logs Modal - Larger and more compact */
+        .modal-content.session-modal {
+            max-width: 1200px;
+            max-height: 95vh;
+        }
+
+        .modal-content.session-modal .modal-body {
+            padding: 20px 25px;
         }
 
         .modal-header {
@@ -1882,7 +1965,7 @@
         .collapsible-section {
             border: 1px solid var(--border);
             border-radius: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             overflow: hidden;
         }
 
@@ -1890,7 +1973,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px;
+            padding: 12px 16px;
             background: rgba(30, 27, 75, 0.6);
             cursor: pointer;
             transition: background 0.3s;
@@ -1902,6 +1985,7 @@
 
         .collapsible-title {
             font-weight: 700;
+            font-size: 1rem;
             color: var(--light);
             display: flex;
             align-items: center;
@@ -1917,13 +2001,103 @@
         }
 
         .collapsible-content {
-            padding: 15px;
+            padding: 16px 18px;
             display: none;
             background: rgba(15, 23, 42, 0.4);
         }
 
         .collapsible-section.open .collapsible-content {
             display: block;
+        }
+
+        /* Session Modal Enhanced Styles */
+        .session-modal .form-section {
+            padding: 16px;
+            margin-bottom: 15px;
+        }
+
+        .session-modal .form-grid {
+            gap: 12px;
+        }
+
+        .session-modal .form-group {
+            gap: 6px;
+        }
+
+        .session-modal .form-label {
+            font-size: 0.85rem;
+        }
+
+        .session-modal .form-input,
+        .session-modal .form-select {
+            padding: 10px 12px;
+        }
+
+        .session-modal .form-textarea {
+            min-height: 100px;
+        }
+
+        .session-modal .collapsible-section {
+            margin-bottom: 8px;
+        }
+
+        .session-modal .collapsible-header {
+            padding: 10px 14px;
+        }
+
+        .session-modal .collapsible-content {
+            padding: 14px 16px;
+        }
+
+        .session-modal .array-input-container {
+            gap: 8px;
+        }
+
+        .session-modal .array-item-row {
+            gap: 8px;
+            padding: 8px;
+            background: rgba(30, 27, 75, 0.3);
+            border-radius: 8px;
+        }
+
+        .session-modal .array-item-row input {
+            padding: 8px 10px;
+        }
+
+        .session-modal .btn-add-array-item {
+            margin-top: 8px;
+            padding: 8px 14px;
+        }
+
+        .session-modal .search-select-row {
+            margin-bottom: 10px;
+        }
+
+        .session-modal .player-exp-grid {
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 10px;
+        }
+
+        .session-modal .player-exp-card {
+            padding: 10px 14px;
+        }
+
+        .session-modal .session-gallery-grid {
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+        }
+
+        /* Session Form Two-Column Layout for Larger Modals */
+        @media (min-width: 900px) {
+            .session-modal .session-form-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+            }
+
+            .session-modal .session-form-grid .full-width {
+                grid-column: 1 / -1;
+            }
         }
 
         /* View Mode Tabs */
@@ -2010,13 +2184,19 @@
             </div>
         </nav>
         <button class="btn-new-entry" id="btnNewEntry">➕ Nova Entrada</button>
-        <button class="btn-back" onclick="window.location.href='mestre.html'">← Voltar ao Painel</button>
     </div>
 
     <main class="main-content">
         <div class="content-header">
             <h1 class="content-title" id="contentTitle">Dashboard</h1>
-            <span id="userEmail" style="color: #94a3b8;"></span>
+            <div class="header-actions">
+                <button class="btn-mestre" onclick="window.location.href='mestre.html'"
+                    title="Painel do Mestre">🎭</button>
+                <button class="btn-viewmap" onclick="window.location.href='viewmap.html'"
+                    title="Navegador de Mapa">🌍</button>
+                <span class="user-display-name" id="userDisplayName" title=""></span>
+                <button class="btn-logout" onclick="logout()">🚪 SAIR</button>
+            </div>
         </div>
         <div class="content-body" id="contentBody"></div>
     </main>
@@ -2092,7 +2272,9 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
-                document.getElementById('userEmail').textContent = user.email;
+                const displayNameEl = document.getElementById('userDisplayName');
+                displayNameEl.textContent = user.displayName || user.email;
+                displayNameEl.title = user.email;
                 await loadAllData();
                 document.getElementById('loadingScreen').style.display = 'none';
                 renderDashboard();
@@ -2100,6 +2282,19 @@
                 window.location.href = 'index.html';
             }
         });
+
+        // Logout function
+        window.logout = async function () {
+            if (confirm('🚪 Tem certeza que deseja sair?')) {
+                try {
+                    await signOut(auth);
+                    window.location.href = 'index.html';
+                } catch (error) {
+                    console.error('Erro ao fazer logout:', error);
+                    showAlert('❌ Erro ao sair. Tente novamente.', 'danger');
+                }
+            }
+        };
 
         async function loadAllData() {
             for (const [key, config] of Object.entries(categoryConfig)) {
@@ -2772,7 +2967,9 @@
             if (entry) openEntryModal(entry);
         };
         window.closeEntryModal = () => {
-            document.getElementById('entryModal').classList.remove('active');
+            const modal = document.getElementById('entryModal');
+            modal.classList.remove('active');
+            modal.querySelector('.modal-content').classList.remove('session-modal');
             currentEditingEntry = null;
         };
 
@@ -2953,6 +3150,7 @@
                             <button class="btn-import" onclick="triggerImportSession()">📥 Importar JSON</button>
                             <button class="btn-export" onclick="downloadTemplate()">📄 Baixar Template</button>
                             <button class="btn btn-primary" onclick="editCurrentCampaign()">✏️ Editar Campanha</button>
+                            <button class="btn btn-primary" onclick="openNotificationModal()">📬 Notificar Jogadores</button>
                             <input type="file" id="importSessionFile" accept=".json" style="display:none;" onchange="importSessionJSON(this)">
                         </div>
                     ` : ''}
@@ -2978,30 +3176,7 @@
                             ${renderSessionsContent(campaignSessions)}
                         </div>
                     </div>
-                    
-                    <div class="notification-panel">
-                        <div class="notification-panel-title">📬 Notificar Jogadores</div>
-                        <div class="notification-form">
-                            <div class="player-select-grid" id="playerSelectGrid">
-                                ${(currentCampaign.personagens || []).map(p => `
-                                    <label class="player-checkbox-item">
-                                        <input type="checkbox" class="notification-checkbox" 
-                                               value="${p.ownerUid || ''}" 
-                                               data-charname="${p.nome || ''}"
-                                               data-playername="${p.jogador || ''}"
-                                               checked>
-                                        <div class="player-checkbox-info">
-                                            <span class="player-checkbox-char">${p.nome || 'Personagem'}</span>
-                                            <span class="player-checkbox-name">👤 ${p.jogador || 'Jogador'}</span>
-                                        </div>
-                                    </label>
-                                `).join('') || '<p style="color: #64748b; font-size: 0.85rem;">Nenhum personagem na campanha. Edite a campanha para adicionar personagens.</p>'}
-                            </div>
-                            <textarea class="form-textarea" id="notificationMessage" rows="3" 
-                                placeholder="Escreva sua mensagem para os jogadores..."></textarea>
-                            <button class="btn btn-primary" onclick="sendPlayerNotification()">📤 Enviar Notificação</button>
-                        </div>
-                    </div>
+
                 ` : `
                     <div class="empty-state">
                         <div class="empty-state-icon">📋</div>
@@ -3171,6 +3346,65 @@
             btn.classList.add('active');
             document.getElementById('wikiNpcsGrid').style.display = tab === 'npcs' ? 'grid' : 'none';
             document.getElementById('wikiLocationsGrid').style.display = tab === 'locations' ? 'grid' : 'none';
+        };
+
+        window.filterSessions = function () {
+            const query = document.getElementById('sessionSearchInput')?.value?.toLowerCase().trim() || '';
+            const campaignSessions = currentCampaign
+                ? allSessions.filter(s => s.campaignId === currentCampaign.id)
+                : [];
+
+            if (!query) {
+                // No search query, show all sessions
+                document.getElementById('sessionsContent').innerHTML = renderSessionsContent(
+                    campaignSessions.sort((a, b) => new Date(b.date) - new Date(a.date))
+                );
+                return;
+            }
+
+            // Filter sessions by query
+            const filteredSessions = campaignSessions.filter(s => {
+                // Search in summary
+                if ((s.summary || '').toLowerCase().includes(query)) return true;
+
+                // Search in NPCs
+                if ((s.importantNpcs || []).some(n =>
+                    (n.name || n || '').toLowerCase().includes(query) ||
+                    (n.role || '').toLowerCase().includes(query)
+                )) return true;
+
+                // Search in locations
+                if ((s.locationsVisited || []).some(l =>
+                    (l.name || l || '').toLowerCase().includes(query) ||
+                    (l.type || '').toLowerCase().includes(query)
+                )) return true;
+
+                // Search in quests
+                if ((s.quests || []).some(q =>
+                    (q.name || q || '').toLowerCase().includes(query) ||
+                    (q.status || '').toLowerCase().includes(query)
+                )) return true;
+
+                // Search in combats
+                if ((s.combats || []).some(c =>
+                    (c.enemies || '').toLowerCase().includes(query) ||
+                    (c.outcome || '').toLowerCase().includes(query)
+                )) return true;
+
+                // Search in memorable moments
+                if ((s.memorableMoments || []).some(m =>
+                    (m.description || m || '').toLowerCase().includes(query)
+                )) return true;
+
+                // Search in session number
+                if (String(s.sessionNumber || '').includes(query)) return true;
+
+                return false;
+            });
+
+            document.getElementById('sessionsContent').innerHTML = renderSessionsContent(
+                filteredSessions.sort((a, b) => new Date(b.date) - new Date(a.date))
+            );
         };
 
         window.searchSessionsByTerm = function (term) {
@@ -3398,6 +3632,9 @@
             title.textContent = session ? `Editando Sessão ${session.sessionNumber || ''}` : 'Nova Sessão';
             deleteBtn.style.display = session ? 'block' : 'none';
             deleteBtn.onclick = () => deleteSession(session?.id);
+
+            // Add session-modal class for larger, more compact modal
+            modal.querySelector('.modal-content').classList.add('session-modal');
 
             const nextSessionNumber = session?.sessionNumber || (
                 allSessions.filter(s => s.campaignId === currentCampaign?.id).length + 1
@@ -4187,6 +4424,54 @@
                 });
         };
 
+        // Notification Modal
+        window.openNotificationModal = function () {
+            if (!currentCampaign) {
+                showAlert('⚠️ Selecione uma campanha primeiro!', 'warning');
+                return;
+            }
+
+            const modal = document.getElementById('entryModal');
+            const title = document.getElementById('entryModalTitle');
+            const body = document.getElementById('entryModalBody');
+            const deleteBtn = document.getElementById('btnDeleteEntry');
+
+            title.textContent = '📬 Notificar Jogadores';
+            deleteBtn.style.display = 'none';
+
+            body.innerHTML = `
+                <div class="form-group">
+                    <label class="form-label">Selecionar Jogadores</label>
+                    <div class="player-select-grid" id="playerSelectGrid">
+                        ${(currentCampaign.personagens || []).map(p => `
+                            <label class="player-checkbox-item">
+                                <input type="checkbox" class="notification-checkbox" 
+                                       value="${p.ownerUid || ''}" 
+                                       data-charname="${p.nome || ''}"
+                                       data-playername="${p.jogador || ''}"
+                                       checked>
+                                <div class="player-checkbox-info">
+                                    <span class="player-checkbox-char">${p.nome || 'Personagem'}</span>
+                                    <span class="player-checkbox-name">👤 ${p.jogador || 'Jogador'}</span>
+                                </div>
+                            </label>
+                        `).join('') || '<p style="color: #64748b; font-size: 0.85rem;">Nenhum personagem na campanha. Edite a campanha para adicionar personagens.</p>'}
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mensagem</label>
+                    <textarea class="form-textarea" id="notificationMessage" rows="4" 
+                        placeholder="Escreva sua mensagem para os jogadores..." style="width: 100%;"></textarea>
+                </div>
+            `;
+
+            // Override save button for notification
+            const saveBtn = document.querySelector('.modal-footer .btn-success');
+            saveBtn.textContent = '📤 Enviar Notificação';
+            saveBtn.onclick = sendPlayerNotification;
+            modal.classList.add('active');
+        };
+
         // Notification
         window.sendPlayerNotification = async function () {
             const message = document.getElementById('notificationMessage').value.trim();
@@ -4260,7 +4545,7 @@
                 }
 
                 showAlert(`✅ Notificação enviada para ${successCount} jogador(es)!`, 'success');
-                document.getElementById('notificationMessage').value = '';
+                closeEntryModal();
             } catch (e) {
                 console.error(e);
                 showAlert('❌ Erro ao enviar notificação', 'danger');

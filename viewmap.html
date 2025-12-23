@@ -126,6 +126,70 @@
             border-color: white;
         }
 
+        .header-menu {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-mestre {
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-mestre:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-worldbuilding {
+            background: linear-gradient(135deg, #a855f7, #6366f1);
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-worldbuilding:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+        }
+
+        .btn-logout {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-logout:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .user-display-name {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: default;
+        }
+
         .mode-selector {
             display: flex;
             gap: 5px;
@@ -843,7 +907,6 @@
 
     <div class="header">
         <div class="header-left">
-            <button class="header-btn" onclick="window.location.href='mestre.html'">← Voltar</button>
             <span class="header-title">🌍 Navegador de Mapa</span>
         </div>
         <div class="mode-selector">
@@ -855,6 +918,14 @@
             <button class="header-btn" onclick="openMapListModal()">📂 Mapas</button>
             <button class="header-btn" onclick="saveCurrentMap()">💾 Salvar</button>
             <button class="header-btn" id="togglePanelBtn" onclick="toggleSidePanel()">📋</button>
+            <div class="header-menu">
+                <button class="btn-mestre" onclick="window.location.href='mestre.html'"
+                    title="Painel do Mestre">🎭</button>
+                <button class="btn-worldbuilding" onclick="window.location.href='worldbuilding.html'"
+                    title="Worldbuilding">🌐</button>
+                <span class="user-display-name" id="userDisplayName" title=""></span>
+                <button class="btn-logout" onclick="logout()">🚪 SAIR</button>
+            </div>
         </div>
     </div>
 
@@ -1142,7 +1213,7 @@
     <!-- Firebase SDK (modular - same as other files) -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
@@ -1194,12 +1265,31 @@
         onAuthStateChanged(auth, user => {
             if (user) {
                 console.log('✅ Mestre logado:', user.email);
+                // Update display name in header
+                const displayNameEl = document.getElementById('userDisplayName');
+                if (displayNameEl) {
+                    displayNameEl.textContent = user.displayName || user.email;
+                    displayNameEl.title = user.email;
+                }
                 init();
             } else {
                 console.log('❌ Usuário não autenticado. Redirecionando...');
                 window.location.href = 'index.html';
             }
         });
+
+        // Logout function
+        window.logout = async function () {
+            if (confirm('🚪 Tem certeza que deseja sair?')) {
+                try {
+                    await signOut(auth);
+                    window.location.href = 'index.html';
+                } catch (error) {
+                    console.error('Erro ao fazer logout:', error);
+                    alert('❌ Erro ao sair. Tente novamente.');
+                }
+            }
+        };
 
         function init() {
             canvas = document.getElementById('mapCanvas');

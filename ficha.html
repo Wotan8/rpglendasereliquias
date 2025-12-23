@@ -3191,7 +3191,7 @@
 
     <!-- INFORMAÇÕES DO USUÁRIO -->
     <div class="user-info" id="userInfo" style="display: none;">
-        <span class="user-email" id="userEmail">Carregando...</span>
+        <span class="user-email" id="userDisplayName" style="cursor: default;" title="">Carregando...</span>
         <button class="btn-menu" onclick="voltarMenu()">📋 MENU</button>
         <button class="btn-logout" onclick="logout()">🚪 SAIR</button>
     </div>
@@ -5048,7 +5048,9 @@ Exemplos:
                 }
 
                 // ✅ SE CHEGOU AQUI, O USUÁRIO TEM PERMISSÃO - Mostrar interface
-                document.getElementById('userEmail').textContent = user.email;
+                const displayNameEl = document.getElementById('userDisplayName');
+                displayNameEl.textContent = user.displayName || user.email;
+                displayNameEl.title = user.email;
                 document.getElementById('userInfo').style.display = 'flex';
                 document.getElementById('loadingScreen').style.display = 'none';
                 document.getElementById('mainContainer').style.display = 'block';

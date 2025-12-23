@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -58,8 +59,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .loading-text {
@@ -212,21 +218,48 @@
             gap: 12px;
         }
 
-        .grid-2 { grid-template-columns: 1fr; }
-        .grid-3 { grid-template-columns: 1fr; }
-        .grid-4 { grid-template-columns: 1fr; }
+        .grid-2 {
+            grid-template-columns: 1fr;
+        }
+
+        .grid-3 {
+            grid-template-columns: 1fr;
+        }
+
+        .grid-4 {
+            grid-template-columns: 1fr;
+        }
 
         @media (min-width: 640px) {
-            .grid-2 { grid-template-columns: repeat(2, 1fr); }
-            .grid-3 { grid-template-columns: repeat(2, 1fr); }
-            .grid-4 { grid-template-columns: repeat(2, 1fr); }
+            .grid-2 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .grid-3 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
         @media (min-width: 1024px) {
-            .grid-3 { grid-template-columns: repeat(3, 1fr); }
-            .grid-4 { grid-template-columns: repeat(4, 1fr); }
-            .container { padding: 30px; }
-            .section { padding: 20px; }
+            .grid-3 {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .grid-4 {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .container {
+                padding: 30px;
+            }
+
+            .section {
+                padding: 20px;
+            }
         }
 
         .form-group {
@@ -241,7 +274,9 @@
             color: #cbd5e1;
         }
 
-        input, select, textarea {
+        input,
+        select,
+        textarea {
             padding: 14px 12px;
             background: rgba(15, 23, 42, 0.8);
             border: 2px solid var(--border);
@@ -252,7 +287,9 @@
             width: 100%;
         }
 
-        input:focus, select:focus, textarea:focus {
+        input:focus,
+        select:focus,
+        textarea:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
@@ -298,7 +335,8 @@
             border-collapse: collapse;
         }
 
-        th, td {
+        th,
+        td {
             padding: 10px;
             text-align: left;
             border-bottom: 1px solid var(--border);
@@ -356,8 +394,15 @@
         }
 
         @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .alert-success {
@@ -387,6 +432,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-spinner"></div>
@@ -394,7 +440,7 @@
     </div>
 
     <div class="user-info" id="userInfo" style="display: none;">
-        <span class="user-email" id="userEmail">Carregando...</span>
+        <span class="user-email" id="userDisplayName" style="cursor: default;" title="">Carregando...</span>
         <button class="btn-top" onclick="voltarFicha()">◀️ VOLTAR</button>
         <button class="btn-top" onclick="voltarMenu()">📋 MENU</button>
         <button class="btn-top btn-logout" onclick="logout()">🚪 SAIR</button>
@@ -565,7 +611,8 @@
             </div>
             <div class="form-group">
                 <label>Sobre os Módulos</label>
-                <textarea id="modulosSobre" placeholder="Descreva os módulos ativos e suas funcionalidades..."></textarea>
+                <textarea id="modulosSobre"
+                    placeholder="Descreva os módulos ativos e suas funcionalidades..."></textarea>
             </div>
         </div>
 
@@ -574,7 +621,8 @@
             <h2 class="section-title">👥 Pessoal / Funcionamento</h2>
             <div class="form-group">
                 <label>Protocolos e Comandos</label>
-                <textarea id="protocolos" placeholder="Abrir/fechar, toque de recolher, emergência, prioridade de defesa..."></textarea>
+                <textarea id="protocolos"
+                    placeholder="Abrir/fechar, toque de recolher, emergência, prioridade de defesa..."></textarea>
             </div>
             <div class="form-group">
                 <label>Horário de Operação</label>
@@ -637,7 +685,8 @@
             </div>
             <div class="form-group">
                 <label>Pendências Atuais</label>
-                <textarea id="pendenciasAtuais" placeholder="Ex: Dívida com fornecedor, reparo no telhado..."></textarea>
+                <textarea id="pendenciasAtuais"
+                    placeholder="Ex: Dívida com fornecedor, reparo no telhado..."></textarea>
             </div>
             <div class="form-group">
                 <label>Reputação com Vizinhos/Autoridades</label>
@@ -654,11 +703,13 @@
             </div>
             <div class="form-group">
                 <label>Proprietários Anteriores</label>
-                <textarea id="proprietariosAnteriores" placeholder="Ex: Família Albuquerque por 3 gerações..."></textarea>
+                <textarea id="proprietariosAnteriores"
+                    placeholder="Ex: Família Albuquerque por 3 gerações..."></textarea>
             </div>
             <div class="form-group">
                 <label>Ocorrências Marcantes</label>
-                <textarea id="ocorrenciasMarcantes" placeholder="Ex: Sobreviveu ao grande incêndio de 1420..."></textarea>
+                <textarea id="ocorrenciasMarcantes"
+                    placeholder="Ex: Sobreviveu ao grande incêndio de 1420..."></textarea>
             </div>
         </div>
 
@@ -673,7 +724,8 @@
         <div class="section">
             <h2 class="section-title">📝 Notas Adicionais</h2>
             <div class="form-group">
-                <textarea id="notas" style="min-height: 200px;" placeholder="Anotações gerais sobre a propriedade..."></textarea>
+                <textarea id="notas" style="min-height: 200px;"
+                    placeholder="Anotações gerais sobre a propriedade..."></textarea>
             </div>
         </div>
     </div>
@@ -684,12 +736,12 @@
         import { getFirestore, doc, getDoc, setDoc, collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         const firebaseConfig = {
-          apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
-          authDomain: "rpg-lendasereliquias.firebaseapp.com",
-          projectId: "rpg-lendasereliquias",
-          storageBucket: "rpg-lendasereliquias.firebasestorage.app",
-          messagingSenderId: "546994339773",
-          appId: "1:546994339773:web:0116cf7c8667f113075cd4"
+            apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
+            authDomain: "rpg-lendasereliquias.firebaseapp.com",
+            projectId: "rpg-lendasereliquias",
+            storageBucket: "rpg-lendasereliquias.firebasestorage.app",
+            messagingSenderId: "546994339773",
+            appId: "1:546994339773:web:0116cf7c8667f113075cd4"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -754,23 +806,25 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
-                document.getElementById('userEmail').textContent = user.email;
+                const displayNameEl = document.getElementById('userDisplayName');
+                displayNameEl.textContent = user.displayName || user.email;
+                displayNameEl.title = user.email;
                 document.getElementById('userInfo').style.display = 'flex';
-                
+
                 const urlParams = new URLSearchParams(window.location.search);
                 characterId = urlParams.get('characterId');
                 propertyId = urlParams.get('propertyId');
-                
+
                 if (!characterId || !propertyId) {
                     showAlert('❌ Parâmetros inválidos!', 'danger');
                     setTimeout(() => window.location.href = 'personagens.html', 2000);
                     return;
                 }
-                
+
                 await loadProperty();
                 document.getElementById('loadingScreen').style.display = 'none';
                 document.getElementById('mainContainer').style.display = 'block';
-                
+
             } else {
                 window.location.href = 'index.html';
             }
@@ -779,13 +833,13 @@
         async function loadProperty() {
             try {
                 const charDoc = await getDoc(doc(db, 'characters', characterId));
-                
+
                 if (charDoc.exists()) {
                     const charData = charDoc.data();
-                    
+
                     if (charData.properties && Array.isArray(charData.properties)) {
                         const property = charData.properties.find(p => p.id === propertyId);
-                        
+
                         if (property) {
                             propertyData = { ...propertyData, ...property };
                             loadFormData();
@@ -795,7 +849,7 @@
                         }
                     }
                 }
-                
+
             } catch (error) {
                 console.error('Erro ao carregar propriedade:', error);
                 showAlert('❌ Erro ao carregar: ' + error.message, 'danger');
@@ -805,19 +859,19 @@
         function loadFormData() {
             // Campos simples
             const fields = ['nome', 'tipo', 'categoria', 'localizacao', 'tamanho', 'estado', 'material', 'qualidade',
-                          'integridade', 'blindagem', 'conforto', 'saneamento', 'seguranca', 'capPessoas', 'capCarga',
-                          'notoriedade', 'receita', 'despesas', 'impostos', 'modulosSobre', 'protocolos', 'horarioOperacao',
-                          'capacidadeAtual', 'capacidadeMax', 'portas', 'janelas', 'passagensSecretas', 'trancas', 'alarmes',
-                          'riscosLocais', 'pendenciasAtuais', 'reputacao', 'dataAquisicao', 'proprietariosAnteriores',
-                          'ocorrenciasMarcantes', 'notas'];
-            
+                'integridade', 'blindagem', 'conforto', 'saneamento', 'seguranca', 'capPessoas', 'capCarga',
+                'notoriedade', 'receita', 'despesas', 'impostos', 'modulosSobre', 'protocolos', 'horarioOperacao',
+                'capacidadeAtual', 'capacidadeMax', 'portas', 'janelas', 'passagensSecretas', 'trancas', 'alarmes',
+                'riscosLocais', 'pendenciasAtuais', 'reputacao', 'dataAquisicao', 'proprietariosAnteriores',
+                'ocorrenciasMarcantes', 'notas'];
+
             fields.forEach(field => {
                 const el = document.getElementById(field);
                 if (el && propertyData[field] !== undefined) {
                     el.value = propertyData[field];
                 }
             });
-            
+
             // Módulos (checkboxes)
             if (propertyData.modulos) {
                 document.getElementById('modResidencia').checked = propertyData.modulos.residencia || false;
@@ -828,7 +882,7 @@
                 document.getElementById('modInfra').checked = propertyData.modulos.infra || false;
                 document.getElementById('modTransporte').checked = propertyData.modulos.transporte || false;
             }
-            
+
             renderFuncionarios();
             renderItems();
             renderUpgrades();
@@ -837,25 +891,25 @@
         function saveFormData() {
             // Campos simples
             const fields = ['nome', 'tipo', 'categoria', 'localizacao', 'tamanho', 'estado', 'material', 'qualidade',
-                          'modulosSobre', 'protocolos', 'horarioOperacao', 'trancas', 'alarmes',
-                          'riscosLocais', 'pendenciasAtuais', 'reputacao', 'dataAquisicao', 'proprietariosAnteriores',
-                          'ocorrenciasMarcantes', 'notas'];
-            
+                'modulosSobre', 'protocolos', 'horarioOperacao', 'trancas', 'alarmes',
+                'riscosLocais', 'pendenciasAtuais', 'reputacao', 'dataAquisicao', 'proprietariosAnteriores',
+                'ocorrenciasMarcantes', 'notas'];
+
             fields.forEach(field => {
                 const el = document.getElementById(field);
                 if (el) propertyData[field] = el.value;
             });
-            
+
             // Campos numéricos
             const numFields = ['integridade', 'blindagem', 'conforto', 'saneamento', 'seguranca', 'capPessoas', 'capCarga',
-                             'notoriedade', 'receita', 'despesas', 'impostos', 'capacidadeAtual', 'capacidadeMax',
-                             'portas', 'janelas', 'passagensSecretas'];
-            
+                'notoriedade', 'receita', 'despesas', 'impostos', 'capacidadeAtual', 'capacidadeMax',
+                'portas', 'janelas', 'passagensSecretas'];
+
             numFields.forEach(field => {
                 const el = document.getElementById(field);
                 if (el) propertyData[field] = parseInt(el.value) || 0;
             });
-            
+
             // Módulos
             propertyData.modulos = {
                 residencia: document.getElementById('modResidencia').checked,
@@ -866,7 +920,7 @@
                 infra: document.getElementById('modInfra').checked,
                 transporte: document.getElementById('modTransporte').checked
             };
-            
+
             propertyData.id = propertyId;
         }
 
@@ -874,17 +928,17 @@
             const indicator = document.getElementById('autosaveIndicator');
             indicator.textContent = '💾 Salvando...';
             indicator.classList.add('show', 'saving');
-            
+
             try {
                 saveFormData();
-                
+
                 const charDoc = await getDoc(doc(db, 'characters', characterId));
                 let properties = [];
-                
+
                 if (charDoc.exists()) {
                     const charData = charDoc.data();
                     properties = charData.properties || [];
-                    
+
                     const index = properties.findIndex(p => p.id === propertyId);
                     if (index >= 0) {
                         properties[index] = propertyData;
@@ -892,7 +946,7 @@
                         properties.push(propertyData);
                     }
                 }
-                
+
                 await setDoc(doc(db, 'characters', characterId), {
                     properties: properties,
                     lastUpdate: new Date().toISOString()
@@ -903,7 +957,7 @@
                     const charDoc = await getDoc(doc(db, 'characters', characterId));
                     const charData = charDoc.data();
                     const logsRef = collection(db, 'logs');
-                    
+
                     await addDoc(logsRef, {
                         user: auth.currentUser.email,
                         action: 'Atualizou a propriedade',
@@ -919,17 +973,17 @@
 
                 indicator.textContent = '✅ Salvo!';
                 indicator.classList.remove('saving', 'error');
-                
+
                 setTimeout(() => {
                     indicator.classList.remove('show');
                 }, 2000);
-                
+
             } catch (error) {
                 console.error('Erro ao salvar:', error);
                 indicator.textContent = '❌ Erro!';
                 indicator.classList.remove('saving');
                 indicator.classList.add('error');
-                
+
                 setTimeout(() => {
                     indicator.classList.remove('show');
                 }, 3000);
@@ -954,15 +1008,15 @@
         });
 
         // Funcionários
-        window.addFuncionario = function() {
+        window.addFuncionario = function () {
             const nome = prompt('Nome do funcionário:');
             if (!nome) return;
-            
+
             const funcao = prompt('Função:') || '';
             const turno = prompt('Turno:') || '';
             const salario = parseInt(prompt('Salário (por ciclo):') || '0');
             const obs = prompt('Observações:') || '';
-            
+
             propertyData.funcionarios.push({
                 id: Date.now(),
                 nome,
@@ -971,12 +1025,12 @@
                 salario,
                 obs
             });
-            
+
             renderFuncionarios();
             triggerAutoSave();
         };
 
-        window.removeFuncionario = function(id) {
+        window.removeFuncionario = function (id) {
             if (confirm('Remover este funcionário?')) {
                 propertyData.funcionarios = propertyData.funcionarios.filter(f => f.id !== id);
                 renderFuncionarios();
@@ -986,12 +1040,12 @@
 
         function renderFuncionarios() {
             const list = document.getElementById('funcionariosList');
-            
+
             if (!propertyData.funcionarios || propertyData.funcionarios.length === 0) {
                 list.innerHTML = '<p style="color: #64748b; text-align: center; padding: 10px;">Nenhum funcionário cadastrado</p>';
                 return;
             }
-            
+
             list.innerHTML = propertyData.funcionarios.map(f => `
                 <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: start;">
@@ -1011,14 +1065,14 @@
         }
 
         // Items do Inventário
-        window.addItem = function() {
+        window.addItem = function () {
             const nome = prompt('Nome do item:');
             if (!nome) return;
-            
+
             const qnt = parseInt(prompt('Quantidade:') || '1');
             const peso = parseInt(prompt('Peso por unidade:') || '1');
             const sobre = prompt('Descrição:') || '';
-            
+
             propertyData.inventario.push({
                 id: Date.now(),
                 nome,
@@ -1026,13 +1080,13 @@
                 peso,
                 sobre
             });
-            
+
             updateCapacidade();
             renderItems();
             triggerAutoSave();
         };
 
-        window.removeItem = function(id) {
+        window.removeItem = function (id) {
             if (confirm('Remover este item?')) {
                 propertyData.inventario = propertyData.inventario.filter(i => i.id !== id);
                 updateCapacidade();
@@ -1049,12 +1103,12 @@
 
         function renderItems() {
             const list = document.getElementById('itemsList');
-            
+
             if (!propertyData.inventario || propertyData.inventario.length === 0) {
                 list.innerHTML = '<p style="color: #64748b; text-align: center; padding: 10px;">Inventário vazio</p>';
                 return;
             }
-            
+
             list.innerHTML = propertyData.inventario.map(item => `
                 <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: start;">
@@ -1075,15 +1129,15 @@
         }
 
         // Upgrades
-        window.addUpgrade = function() {
+        window.addUpgrade = function () {
             const descricao = prompt('Descrição do upgrade/manutenção:');
             if (!descricao) return;
-            
+
             const data = prompt('Data:') || '';
             const custo = parseInt(prompt('Custo:') || '0');
             const tempo = prompt('Tempo:') || '';
             const efeito = prompt('Efeito mecânico:') || '';
-            
+
             propertyData.upgrades.push({
                 id: Date.now(),
                 data,
@@ -1092,12 +1146,12 @@
                 tempo,
                 efeito
             });
-            
+
             renderUpgrades();
             triggerAutoSave();
         };
 
-        window.removeUpgrade = function(id) {
+        window.removeUpgrade = function (id) {
             if (confirm('Remover este registro?')) {
                 propertyData.upgrades = propertyData.upgrades.filter(u => u.id !== id);
                 renderUpgrades();
@@ -1107,12 +1161,12 @@
 
         function renderUpgrades() {
             const list = document.getElementById('upgradesList');
-            
+
             if (!propertyData.upgrades || propertyData.upgrades.length === 0) {
                 list.innerHTML = '<p style="color: #64748b; text-align: center; padding: 10px;">Nenhum upgrade/manutenção registrado</p>';
                 return;
             }
-            
+
             list.innerHTML = propertyData.upgrades.map(u => `
                 <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: start;">
@@ -1132,17 +1186,17 @@
         }
 
         // Navegação
-        window.voltarFicha = function() {
+        window.voltarFicha = function () {
             window.location.href = `ficha.html?id=${characterId}`;
         };
 
-        window.voltarMenu = function() {
+        window.voltarMenu = function () {
             if (confirm('Voltar para o menu de personagens?')) {
                 window.location.href = 'personagens.html';
             }
         };
 
-        window.logout = async function() {
+        window.logout = async function () {
             if (confirm('Deseja sair?')) {
                 try {
                     await signOut(auth);
@@ -1154,17 +1208,18 @@
         };
 
         function showAlert(message, type) {
-            const alert = type === 'success' 
+            const alert = type === 'success'
                 ? document.getElementById('alertSuccess')
                 : document.getElementById('alertError');
-            
+
             alert.textContent = message;
             alert.style.display = 'block';
-            
+
             setTimeout(() => {
                 alert.style.display = 'none';
             }, 3000);
         }
     </script>
 </body>
+
 </html>

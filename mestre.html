@@ -2160,7 +2160,7 @@
             title="Enviar Notificação aos Jogadores">📧</button>
         <button class="btn-viewmap" onclick="window.location.href='viewmap.html'" title="Navegador de Mapa">🌍</button>
         <button class="btn-map" onclick="window.location.href='hexmap.html'" title="Abrir Hexmap">🗺️</button>
-        <span class="user-email" id="userEmail">Carregando...</span>
+        <span class="user-email" id="userDisplayName" style="cursor: default;" title="">Carregando...</span>
         <button class="btn-logout" onclick="logout()">🚪 SAIR</button>
     </div>
 
@@ -4766,7 +4766,9 @@ Agilidade 2\n
                 currentUser = user;
                 console.log('✅ Mestre logado:', user.email);
 
-                document.getElementById('userEmail').textContent = user.email;
+                const displayNameEl = document.getElementById('userDisplayName');
+                displayNameEl.textContent = user.displayName || user.email;
+                displayNameEl.title = user.email;
                 document.getElementById('userInfo').style.display = 'flex';
                 document.getElementById('loadingScreen').style.display = 'none';
 

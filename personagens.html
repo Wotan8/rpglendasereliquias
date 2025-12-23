@@ -1133,7 +1133,7 @@
     <div class="container" id="mainContainer" style="display: none;">
         <div class="header">
             <div class="user-info" id="userInfo">
-                <span class="user-email" id="userEmail"></span>
+                <span class="user-email" id="userDisplayName" style="cursor: default;" title=""></span>
                 <button class="btn-logout" onclick="logout()">🚪 SAIR</button>
             </div>
 
@@ -1444,7 +1444,9 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
-                document.getElementById('userEmail').textContent = user.email;
+                const displayNameEl = document.getElementById('userDisplayName');
+                displayNameEl.textContent = user.displayName || user.email;
+                displayNameEl.title = user.email;
                 document.getElementById('loadingScreen').style.display = 'none';
                 document.getElementById('mainContainer').style.display = 'block';
 
