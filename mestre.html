@@ -1146,36 +1146,36 @@
 
         .npcs-list {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 12px;
         }
 
         .npc-card {
             background: rgba(30, 27, 75, 0.6);
-            border: 2px solid var(--border);
-            border-radius: 15px;
-            padding: 20px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px;
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
         }
 
         .npc-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-2px);
             border-color: var(--primary);
-            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+            box-shadow: 0 6px 18px rgba(139, 92, 246, 0.25);
         }
 
         .npc-card-header {
             display: flex;
             align-items: flex-start;
-            gap: 12px;
-            margin-bottom: 15px;
+            gap: 8px;
+            margin-bottom: 8px;
         }
 
         .npc-checkbox {
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             cursor: pointer;
             accent-color: var(--primary);
             flex-shrink: 0;
@@ -1187,21 +1187,22 @@
         }
 
         .npc-name {
-            font-size: 1.2rem;
+            font-size: 0.95rem;
             font-weight: 700;
             color: var(--primary);
-            margin-bottom: 5px;
+            margin-bottom: 3px;
+            line-height: 1.2;
         }
 
         .npc-type-badge {
             display: inline-block;
-            padding: 4px 12px;
+            padding: 2px 8px;
             background: rgba(139, 92, 246, 0.2);
             border: 1px solid var(--primary);
-            border-radius: 20px;
-            font-size: 0.75rem;
+            border-radius: 12px;
+            font-size: 0.65rem;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         .npc-details {
@@ -1218,33 +1219,80 @@
         .npc-detail-label {
             color: #94a3b8;
             font-weight: 600;
-            min-width: 80px;
+            min-width: 60px;
+            font-size: 0.75rem;
         }
 
         .npc-detail-label-light {
-            color: #ffffff;
-            font-weight: 600;
-            min-width: 80px;
+            color: #e2e8f0;
+            font-weight: 500;
+            font-size: 0.75rem;
         }
 
         .npc-detail-value {
             color: var(--light);
+            font-size: 0.8rem;
         }
 
         .npc-tags {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 12px;
+            gap: 4px;
+            margin-top: 6px;
         }
 
         .npc-tag {
-            padding: 3px 10px;
+            padding: 2px 6px;
             background: rgba(236, 72, 153, 0.2);
             border: 1px solid var(--secondary);
-            border-radius: 12px;
-            font-size: 0.7rem;
+            border-radius: 8px;
+            font-size: 0.6rem;
             font-weight: 600;
+        }
+
+        .npc-image-container {
+            width: 100%;
+            max-height: 120px;
+            overflow: hidden;
+            border-radius: 6px;
+            margin-bottom: 6px;
+        }
+
+        .npc-image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .npc-personalidades {
+            margin-bottom: 4px;
+        }
+
+        .npc-personalidade {
+            font-size: 0.72rem;
+            color: #94a3b8;
+            margin-bottom: 2px;
+        }
+
+        .npc-trejeitos {
+            background: rgba(139, 92, 246, 0.1);
+            padding: 4px 6px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+        }
+
+        .npc-frases {
+            background: rgba(236, 72, 153, 0.1);
+            padding: 4px 6px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+        }
+
+        .npc-frases-label {
+            color: #f472b6;
+            font-weight: 500;
+            font-size: 0.72rem;
+            font-style: italic;
         }
 
         .npc-modal {
@@ -2320,7 +2368,6 @@
     <div class="tabs-container">
         <div class="tabs-header">
             <button class="tab-button active" onclick="switchTab('personagens')">👥 PERSONAGENS</button>
-            <button class="tab-button" onclick="switchTab('aliados')">🤝 ALIADOS</button>
             <button class="tab-button" onclick="switchTab('itens')">📦 ITENS</button>
             <button class="tab-button" onclick="switchTab('npcs')">👥 NPCs</button>
             <button class="tab-button" onclick="switchTab('combate')">⚔️ COMBATE</button>
@@ -2329,41 +2376,84 @@
 
         <!-- ABA PERSONAGENS -->
         <div id="tabPersonagens" class="tab-content active">
-            <!-- CONTROLES DE EXP E GERENCIAMENTO -->
-            <div class="exp-controls">
-                <input type="number" class="exp-input" id="expValue" placeholder="Quantidade de EXP" value="10" min="1">
-                <button class="btn btn-success" onclick="addCustomExpToSelected()">➕ 🌟EXP</button>
-                <button class="btn btn-danger" onclick="subtractCustomExpFromSelected()">➖ 🌟EXP</button>
-                <button class="btn btn-primary" onclick="openCreateCharacterModal()">➕ Criar Personagem</button>
-                <button class="btn btn-danger" onclick="openDeleteCharactersModal()">🗑️ Deletar Personagens</button>
-            </div>
-
-            <div class="characters-grid" id="charactersGrid">
-                <div style="text-align: center; padding: 40px; color: #64748b; grid-column: 1/-1;">
-                    Carregando personagens...
+            <!-- Sub-abas de Personagens -->
+            <div style="margin-bottom: 25px; border-bottom: 2px solid var(--border); padding-bottom: 15px;">
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-primary" id="btnPersonagensPersonagens"
+                        onclick="switchPersonagensSubTab('personagens')" style="flex: 1;">
+                        👥 Personagens
+                    </button>
+                    <button class="btn btn-secondary" id="btnPersonagensAliados"
+                        onclick="switchPersonagensSubTab('aliados')" style="flex: 1;">
+                        🤝 Aliados
+                    </button>
+                    <button class="btn btn-secondary" id="btnPersonagensPropriedades"
+                        onclick="switchPersonagensSubTab('propriedades')" style="flex: 1;">
+                        🏠 Propriedades
+                    </button>
                 </div>
             </div>
-        </div>
 
-        <!-- ABA ALIADOS -->
-        <div id="tabAliados" class="tab-content">
-            <div class="npc-controls" style="margin-bottom: 25px;">
-                <div class="npc-filters" style="width: 100%;">
-                    <div class="filter-group" style="flex: 1;">
-                        <label class="filter-label">Pesquisar Aliado ou Personagem</label>
-                        <input type="text" class="filter-select" id="searchAllies"
-                            placeholder="Nome do aliado ou do personagem..." oninput="filterAllies()"
-                            style="padding: 12px 15px; width: 100%;">
+            <!-- Sub-aba: Personagens -->
+            <div id="personagensPersonagens" class="personagens-subtab" style="display: block;">
+                <!-- CONTROLES DE EXP E GERENCIAMENTO -->
+                <div class="exp-controls">
+                    <input type="number" class="exp-input" id="expValue" placeholder="Quantidade de EXP" value="10"
+                        min="1">
+                    <button class="btn btn-success" onclick="addCustomExpToSelected()">➕ 🌟EXP</button>
+                    <button class="btn btn-danger" onclick="subtractCustomExpFromSelected()">➖ 🌟EXP</button>
+                    <button class="btn btn-primary" onclick="openCreateCharacterModal()">➕ Criar Personagem</button>
+                    <button class="btn btn-danger" onclick="openDeleteCharactersModal()">🗑️ Deletar
+                        Personagens</button>
+                </div>
+
+                <div class="characters-grid" id="charactersGrid">
+                    <div style="text-align: center; padding: 40px; color: #64748b; grid-column: 1/-1;">
+                        Carregando personagens...
                     </div>
                 </div>
             </div>
 
-            <div class="npcs-list" id="alliesList">
-                <div style="text-align: center; padding: 40px; color: #64748b; grid-column: 1/-1;">
-                    Carregando aliados...
+            <!-- Sub-aba: Aliados -->
+            <div id="personagensAliados" class="personagens-subtab" style="display: none;">
+                <div class="npc-controls" style="margin-bottom: 25px;">
+                    <div class="npc-action-buttons" style="margin-bottom: 15px;">
+                        <button class="btn-npc btn-npc-create" onclick="openAddAllyModal()">
+                            ➕ Adicionar Aliado
+                        </button>
+                    </div>
+                    <div class="npc-filters" style="width: 100%;">
+                        <div class="filter-group" style="flex: 1;">
+                            <label class="filter-label">Pesquisar Aliado ou Personagem</label>
+                            <input type="text" class="filter-select" id="searchAllies"
+                                placeholder="Nome do aliado ou do personagem..." oninput="filterAllies()"
+                                style="padding: 12px 15px; width: 100%;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="npcs-list" id="alliesList">
+                    <div style="text-align: center; padding: 40px; color: #64748b; grid-column: 1/-1;">
+                        Carregando aliados...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub-aba: Propriedades -->
+            <div id="personagensPropriedades" class="personagens-subtab" style="display: none;">
+                <div style="text-align: center; padding: 60px; color: #64748b;">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">🏠</div>
+                    <div style="font-size: 1.2rem; font-weight: 600; color: #94a3b8;">
+                        Propriedades
+                    </div>
+                    <div style="font-size: 0.95rem; margin-top: 10px;">
+                        Em breve você poderá gerenciar propriedades dos personagens aqui.
+                    </div>
                 </div>
             </div>
         </div>
+
+
 
         <!-- ABA ITENS -->
         <div id="tabItens" class="tab-content">
@@ -6650,12 +6740,35 @@ Agilidade 2\n
             // Carregar dados específicos de cada aba
             if (tabName === 'personagens') {
                 loadAllCharacters();
-            } else if (tabName === 'aliados') {
-                loadAllies();
             } else if (tabName === 'combate') {
                 renderCombatList();
             } else if (tabName === 'apoios') {
                 loadApoiosTab();
+            }
+        };
+
+        // ============= TROCAR DE SUB-ABA PERSONAGENS =============
+        window.switchPersonagensSubTab = function (subTabName) {
+            // Esconder todas as sub-abas
+            document.querySelectorAll('.personagens-subtab').forEach(tab => tab.style.display = 'none');
+
+            // Resetar estilos de todos os botões de sub-aba
+            document.getElementById('btnPersonagensPersonagens').className = 'btn btn-secondary';
+            document.getElementById('btnPersonagensAliados').className = 'btn btn-secondary';
+            document.getElementById('btnPersonagensPropriedades').className = 'btn btn-secondary';
+
+            // Mostrar a sub-aba selecionada e ativar o botão correspondente
+            if (subTabName === 'personagens') {
+                document.getElementById('personagensPersonagens').style.display = 'block';
+                document.getElementById('btnPersonagensPersonagens').className = 'btn btn-primary';
+                loadAllCharacters();
+            } else if (subTabName === 'aliados') {
+                document.getElementById('personagensAliados').style.display = 'block';
+                document.getElementById('btnPersonagensAliados').className = 'btn btn-primary';
+                loadAllies();
+            } else if (subTabName === 'propriedades') {
+                document.getElementById('personagensPropriedades').style.display = 'block';
+                document.getElementById('btnPersonagensPropriedades').className = 'btn btn-primary';
             }
         };
 
@@ -7450,7 +7563,12 @@ Agilidade 2\n
                             ` : ''}
                         ${npc.rolePlay?.trejeitos ? `
                             <div class="npc-trejeitos">
-                                <label class="npc-detail-label-light">Trejeito: ${npc.rolePlay.trejeitos}</label>
+                                <label class="npc-detail-label-light">🎭 ${npc.rolePlay.trejeitos}</label>
+                            </div>
+                            ` : ''}
+                        ${npc.rolePlay?.frases ? `
+                            <div class="npc-frases">
+                                <label class="npc-frases-label">💬 "${npc.rolePlay.frases}"</label>
                             </div>
                             ` : ''}
                         ${tags.length > 0 ? `
@@ -8186,129 +8304,234 @@ Agilidade 2\n
                 }
 
                 // Criar modal
+                // Calcular características
+                const vitalidadeMax = (ally.vig || 1) + (ally.tamanho || 5);
+                const determinacaoMax = ally.aut || 1;
+                const iniciativa = (ally.rac || 0) + (ally.des || 0) + (ally.aut || 0) - (ally.tamanho || 5);
+                const reacao = (ally.rac || 0) + (ally.des || 0);
+                const deslocamento = (ally.for || 0) + (ally.des || 0) + 5;
+                const cargaMax = (ally.for || 0) + (ally.vig || 0);
+
                 const modalHTML = `
                     <div id="allyEditModal" class="modal active ally-modal">
-                        <div class="modal-content">
+                        <div class="modal-content" style="max-width: 900px;">
                             <div class="modal-header">
                                 <div class="modal-title">✏️ Editar Aliado: ${ally.nome || 'Sem nome'}</div>
                                 <button class="modal-close" onclick="closeAllyModal()">✕</button>
                             </div>
                             
-                            <div class="ally-form-section">
-                                <div class="ally-form-title">📋 Informações Básicas</div>
-                                <div class="ally-form-row cols-3">
-                                    <div class="ally-form-group">
-                                        <label class="ally-form-label">Nome</label>
-                                        <input type="text" class="ally-form-input" id="ally_nome" value="${ally.nome || ''}">
+                            <div style="max-height: 70vh; overflow-y: auto; padding: 20px;">
+                                <div class="ally-form-section">
+                                    <div class="ally-form-title">📋 Informações Básicas</div>
+                                    <div class="ally-form-row cols-3">
+                                        <div class="ally-form-group">
+                                            <label class="ally-form-label">Nome</label>
+                                            <input type="text" class="ally-form-input" id="ally_nome" value="${ally.nome || ''}">
+                                        </div>
+                                        <div class="ally-form-group">
+                                            <label class="ally-form-label">Tipo/Raça</label>
+                                            <input type="text" class="ally-form-input" id="ally_tipoRaca" value="${ally.tipoRaca || ally.raca || ''}">
+                                        </div>
+                                        <div class="ally-form-group">
+                                            <label class="ally-form-label">Função</label>
+                                            <input type="text" class="ally-form-input" id="ally_funcao" value="${ally.funcao || ally.papel || ''}">
+                                        </div>
                                     </div>
-                                    <div class="ally-form-group">
-                                        <label class="ally-form-label">Raça</label>
-                                        <input type="text" class="ally-form-input" id="ally_raca" value="${ally.raca || ''}">
+                                    <div class="ally-form-row cols-3">
+                                        <div class="ally-form-group">
+                                            <label class="ally-form-label">Idade</label>
+                                            <input type="number" class="ally-form-input" id="ally_idade" value="${ally.idade || 0}" min="0">
+                                        </div>
+                                        <div class="ally-form-group">
+                                            <label class="ally-form-label">Virtude</label>
+                                            <select class="ally-form-input" id="ally_virtude" style="padding: 10px;">
+                                                <option value="">Selecione...</option>
+                                                <option value="Caridade" ${ally.virtude === 'Caridade' ? 'selected' : ''}>Caridade</option>
+                                                <option value="Esperança" ${ally.virtude === 'Esperança' ? 'selected' : ''}>Esperança</option>
+                                                <option value="Fé" ${ally.virtude === 'Fé' ? 'selected' : ''}>Fé</option>
+                                                <option value="Fortaleza" ${ally.virtude === 'Fortaleza' ? 'selected' : ''}>Fortaleza</option>
+                                                <option value="Justiça" ${ally.virtude === 'Justiça' ? 'selected' : ''}>Justiça</option>
+                                                <option value="Prudência" ${ally.virtude === 'Prudência' ? 'selected' : ''}>Prudência</option>
+                                                <option value="Temperança" ${ally.virtude === 'Temperança' ? 'selected' : ''}>Temperança</option>
+                                            </select>
+                                        </div>
+                                        <div class="ally-form-group">
+                                            <label class="ally-form-label">Vício</label>
+                                            <select class="ally-form-input" id="ally_vicio" style="padding: 10px;">
+                                                <option value="">Selecione...</option>
+                                                <option value="Avareza" ${ally.vicio === 'Avareza' ? 'selected' : ''}>Avareza</option>
+                                                <option value="Gula" ${ally.vicio === 'Gula' ? 'selected' : ''}>Gula</option>
+                                                <option value="Inveja" ${ally.vicio === 'Inveja' ? 'selected' : ''}>Inveja</option>
+                                                <option value="Ira" ${ally.vicio === 'Ira' ? 'selected' : ''}>Ira</option>
+                                                <option value="Luxúria" ${ally.vicio === 'Luxúria' ? 'selected' : ''}>Luxúria</option>
+                                                <option value="Orgulho" ${ally.vicio === 'Orgulho' ? 'selected' : ''}>Orgulho</option>
+                                                <option value="Preguiça" ${ally.vicio === 'Preguiça' ? 'selected' : ''}>Preguiça</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div class="ally-form-group">
-                                        <label class="ally-form-label">Papel</label>
-                                        <input type="text" class="ally-form-input" id="ally_papel" value="${ally.papel || ''}">
+                                    <div class="ally-form-row cols-3">
+                                        <div class="ally-form-group">
+                                            <label class="ally-form-label">Lealdade (0-5)</label>
+                                            <input type="number" class="ally-form-input" id="ally_lealdade" value="${ally.lealdade || 3}" min="0" max="5">
+                                        </div>
+                                        <div class="ally-form-group">
+                                            <label class="ally-form-label">Aura Imortalidade (0-5)</label>
+                                            <input type="number" class="ally-form-input" id="ally_auraImortalidade" value="${ally.auraImortalidade || 0}" min="0" max="5">
+                                        </div>
+                                        <div class="ally-form-group">
+                                            <label class="ally-form-label">Tamanho</label>
+                                            <input type="number" class="ally-form-input" id="ally_tamanho" value="${ally.tamanho || 5}" min="1" max="15">
+                                        </div>
+                                    </div>
+                                    <div class="ally-form-row">
+                                        <div class="ally-form-group">
+                                            <label class="ally-form-label">Imagem (URL)</label>
+                                            <input type="text" class="ally-form-input" id="ally_imagem" value="${ally.imagem || ''}">
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="ally-form-row">
+                                
+                                <div class="ally-form-section">
+                                    <div class="ally-form-title">⚡ Atributos</div>
+                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                                        <div style="background: rgba(139, 92, 246, 0.1); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+                                            <div style="color: var(--primary); font-weight: 700; margin-bottom: 10px; text-align: center;">🧠 Mental</div>
+                                            <div class="ally-form-row cols-3">
+                                                <div class="ally-form-group">
+                                                    <label class="ally-form-label" style="text-align: center;">INT</label>
+                                                    <input type="number" class="ally-form-input" id="ally_int" value="${ally.int || 1}" min="0" max="9" style="text-align: center;">
+                                                </div>
+                                                <div class="ally-form-group">
+                                                    <label class="ally-form-label" style="text-align: center;">RAC</label>
+                                                    <input type="number" class="ally-form-input" id="ally_rac" value="${ally.rac || 1}" min="0" max="9" style="text-align: center;">
+                                                </div>
+                                                <div class="ally-form-group">
+                                                    <label class="ally-form-label" style="text-align: center;">PRS</label>
+                                                    <input type="number" class="ally-form-input" id="ally_prs" value="${ally.prs || 1}" min="0" max="9" style="text-align: center;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div style="background: rgba(236, 72, 153, 0.1); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+                                            <div style="color: var(--secondary); font-weight: 700; margin-bottom: 10px; text-align: center;">💪 Físico</div>
+                                            <div class="ally-form-row cols-3">
+                                                <div class="ally-form-group">
+                                                    <label class="ally-form-label" style="text-align: center;">FOR</label>
+                                                    <input type="number" class="ally-form-input" id="ally_for" value="${ally.for || 1}" min="0" max="9" style="text-align: center;">
+                                                </div>
+                                                <div class="ally-form-group">
+                                                    <label class="ally-form-label" style="text-align: center;">DES</label>
+                                                    <input type="number" class="ally-form-input" id="ally_des" value="${ally.des || 1}" min="0" max="9" style="text-align: center;">
+                                                </div>
+                                                <div class="ally-form-group">
+                                                    <label class="ally-form-label" style="text-align: center;">VIG</label>
+                                                    <input type="number" class="ally-form-input" id="ally_vig" value="${ally.vig || 1}" min="0" max="9" style="text-align: center;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div style="background: rgba(59, 130, 246, 0.1); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+                                            <div style="color: #3b82f6; font-weight: 700; margin-bottom: 10px; text-align: center;">💬 Social</div>
+                                            <div class="ally-form-row cols-3">
+                                                <div class="ally-form-group">
+                                                    <label class="ally-form-label" style="text-align: center;">PRE</label>
+                                                    <input type="number" class="ally-form-input" id="ally_pre" value="${ally.pre || 1}" min="0" max="9" style="text-align: center;">
+                                                </div>
+                                                <div class="ally-form-group">
+                                                    <label class="ally-form-label" style="text-align: center;">MAN</label>
+                                                    <input type="number" class="ally-form-input" id="ally_man" value="${ally.man || 1}" min="0" max="9" style="text-align: center;">
+                                                </div>
+                                                <div class="ally-form-group">
+                                                    <label class="ally-form-label" style="text-align: center;">AUT</label>
+                                                    <input type="number" class="ally-form-input" id="ally_aut" value="${ally.aut || 1}" min="0" max="9" style="text-align: center;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="ally-form-section">
+                                    <div class="ally-form-title">📊 Características (Calculadas)</div>
+                                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                                        <div style="background: rgba(139, 92, 246, 0.15); padding: 12px; border-radius: 8px; text-align: center; border: 2px solid var(--primary);">
+                                            <div style="color: #94a3b8; font-size: 0.85rem;">Iniciativa</div>
+                                            <div style="color: var(--primary); font-size: 1.4rem; font-weight: 900;">${iniciativa}</div>
+                                        </div>
+                                        <div style="background: rgba(139, 92, 246, 0.15); padding: 12px; border-radius: 8px; text-align: center; border: 2px solid var(--primary);">
+                                            <div style="color: #94a3b8; font-size: 0.85rem;">Reação</div>
+                                            <div style="color: var(--primary); font-size: 1.4rem; font-weight: 900;">${reacao}</div>
+                                        </div>
+                                        <div style="background: rgba(139, 92, 246, 0.15); padding: 12px; border-radius: 8px; text-align: center; border: 2px solid var(--primary);">
+                                            <div style="color: #94a3b8; font-size: 0.85rem;">Deslocamento</div>
+                                            <div style="color: var(--primary); font-size: 1.4rem; font-weight: 900;">${deslocamento}</div>
+                                        </div>
+                                        <div style="background: rgba(139, 92, 246, 0.15); padding: 12px; border-radius: 8px; text-align: center; border: 2px solid var(--primary);">
+                                            <div style="color: #94a3b8; font-size: 0.85rem;">Carga Max</div>
+                                            <div style="color: var(--primary); font-size: 1.4rem; font-weight: 900;">${cargaMax}</div>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px;">
+                                        <div style="background: rgba(239, 68, 68, 0.15); padding: 12px; border-radius: 8px; text-align: center; border: 2px solid var(--danger);">
+                                            <div style="color: #94a3b8; font-size: 0.85rem;">VIT Max</div>
+                                            <div style="color: var(--danger); font-size: 1.4rem; font-weight: 900;">${vitalidadeMax}</div>
+                                        </div>
+                                        <div style="background: rgba(245, 158, 11, 0.15); padding: 12px; border-radius: 8px; text-align: center; border: 2px solid var(--warning);">
+                                            <div style="color: #94a3b8; font-size: 0.85rem;">DET Max</div>
+                                            <div style="color: var(--warning); font-size: 1.4rem; font-weight: 900;">${determinacaoMax}</div>
+                                        </div>
+                                        <div style="background: rgba(99, 102, 241, 0.15); padding: 12px; border-radius: 8px; text-align: center; border: 2px solid #6366f1;">
+                                            <div style="color: #94a3b8; font-size: 0.85rem;">SAN Max</div>
+                                            <div style="color: #6366f1; font-size: 1.4rem; font-weight: 900;">100</div>
+                                        </div>
+                                        <div class="ally-form-group" style="margin: 0;">
+                                            <label class="ally-form-label" style="text-align: center;">Blindagem</label>
+                                            <input type="number" class="ally-form-input" id="ally_blindagem" value="${ally.blindagem || 0}" min="0" style="text-align: center;">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="ally-form-section">
+                                    <div class="ally-form-title">⚔️ Status de Combate</div>
+                                    <div class="ally-form-row cols-3">
+                                        <div class="ally-form-group">
+                                            <label class="ally-form-label">❤️ Vitalidade Atual</label>
+                                            <input type="number" class="ally-form-input" id="ally_hpCurrent" value="${ally.hpCurrent !== undefined ? ally.hpCurrent : vitalidadeMax}">
+                                        </div>
+                                        <div class="ally-form-group">
+                                            <label class="ally-form-label">🧠 Sanidade Atual</label>
+                                            <input type="number" class="ally-form-input" id="ally_sanCurrent" value="${ally.sanCurrent !== undefined ? ally.sanCurrent : 80}" min="0" max="100">
+                                        </div>
+                                        <div class="ally-form-group">
+                                            <label class="ally-form-label">⚖️ Peso Atual</label>
+                                            <input type="number" class="ally-form-input" id="ally_pesoAtual" value="${ally.pesoAtual || 0}" min="0">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="ally-form-section">
+                                    <div class="ally-form-title">⚔️ Ataques e Talentos</div>
                                     <div class="ally-form-group">
-                                        <label class="ally-form-label">Imagem (URL)</label>
-                                        <input type="text" class="ally-form-input" id="ally_imagem" value="${ally.imagem || ''}">
+                                        <textarea class="ally-form-textarea" id="ally_ataquesTalentos" placeholder="Ex: Mordida +3d10, Garras +2d10, Voo..." style="min-height: 100px;">${ally.ataquesTalentos || ''}</textarea>
+                                    </div>
+                                </div>
+                                
+                                <div class="ally-form-section">
+                                    <div class="ally-form-title">📝 Informações Adicionais</div>
+                                    <div class="ally-form-group">
+                                        <label class="ally-form-label">Skills</label>
+                                        <textarea class="ally-form-textarea" id="ally_skills" placeholder="Ex: Furtividade 3, Sobrevivência 2...">${ally.skills || ''}</textarea>
                                     </div>
                                     <div class="ally-form-group">
-                                        <label class="ally-form-label">Tamanho</label>
-                                        <input type="number" class="ally-form-input" id="ally_tamanho" value="${ally.tamanho || 0}">
+                                        <label class="ally-form-label">Notas</label>
+                                        <textarea class="ally-form-textarea" id="ally_notas" placeholder="Anotações sobre o aliado..." style="min-height: 100px;">${ally.notas || ally.sobre || ''}</textarea>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div class="ally-form-section">
-                                <div class="ally-form-title">⚔️ Atributos Físicos</div>
-                                <div class="ally-form-row cols-3">
-                                    <div class="ally-form-group">
-                                        <label class="ally-form-label">FOR</label>
-                                        <input type="number" class="ally-form-input" id="ally_for" value="${ally.for || 0}" min="0" max="9">
-                                    </div>
-                                    <div class="ally-form-group">
-                                        <label class="ally-form-label">DES</label>
-                                        <input type="number" class="ally-form-input" id="ally_des" value="${ally.des || 0}" min="0" max="9">
-                                    </div>
-                                    <div class="ally-form-group">
-                                        <label class="ally-form-label">VIG</label>
-                                        <input type="number" class="ally-form-input" id="ally_vig" value="${ally.vig || 0}" min="0" max="9">
-                                    </div>
+                            <div style="display: flex; gap: 10px; justify-content: space-between; padding: 15px 20px; border-top: 2px solid var(--border);">
+                                <button class="btn btn-danger" onclick="deleteAlly('${characterId}', '${allyId}')">🗑️ Deletar</button>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="btn btn-secondary" onclick="closeAllyModal()">Cancelar</button>
+                                    <button class="btn btn-success" onclick="saveAllyChanges('${characterId}', '${allyId}')">💾 Salvar</button>
                                 </div>
-                            </div>
-                            
-                            <div class="ally-form-section">
-                                <div class="ally-form-title">🧠 Atributos Mentais</div>
-                                <div class="ally-form-row cols-3">
-                                    <div class="ally-form-group">
-                                        <label class="ally-form-label">INT</label>
-                                        <input type="number" class="ally-form-input" id="ally_int" value="${ally.int || 0}" min="0" max="9">
-                                    </div>
-                                    <div class="ally-form-group">
-                                        <label class="ally-form-label">RAC</label>
-                                        <input type="number" class="ally-form-input" id="ally_rac" value="${ally.rac || 0}" min="0" max="9">
-                                    </div>
-                                    <div class="ally-form-group">
-                                        <label class="ally-form-label">PRS</label>
-                                        <input type="number" class="ally-form-input" id="ally_prs" value="${ally.prs || 0}" min="0" max="9">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="ally-form-section">
-                                <div class="ally-form-title">🗣️ Atributos Sociais</div>
-                                <div class="ally-form-row cols-3">
-                                    <div class="ally-form-group">
-                                        <label class="ally-form-label">PRE</label>
-                                        <input type="number" class="ally-form-input" id="ally_pre" value="${ally.pre || 0}" min="0" max="9">
-                                    </div>
-                                    <div class="ally-form-group">
-                                        <label class="ally-form-label">MAN</label>
-                                        <input type="number" class="ally-form-input" id="ally_man" value="${ally.man || 0}" min="0" max="9">
-                                    </div>
-                                    <div class="ally-form-group">
-                                        <label class="ally-form-label">AUT</label>
-                                        <input type="number" class="ally-form-input" id="ally_aut" value="${ally.aut || 0}" min="0" max="9">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="ally-form-section">
-                                <div class="ally-form-title">❤️ Status</div>
-                                <div class="ally-form-row cols-3">
-                                    <div class="ally-form-group">
-                                        <label class="ally-form-label">HP Atual</label>
-                                        <input type="number" class="ally-form-input" id="ally_hpCurrent" value="${ally.hpCurrent || 0}">
-                                    </div>
-                                    <div class="ally-form-group">
-                                        <label class="ally-form-label">Sanidade Atual</label>
-                                        <input type="number" class="ally-form-input" id="ally_sanCurrent" value="${ally.sanCurrent || 80}" min="0" max="100">
-                                    </div>
-                                    <div class="ally-form-group">
-                                        <label class="ally-form-label">Peso Atual</label>
-                                        <input type="number" class="ally-form-input" id="ally_pesoAtual" value="${ally.pesoAtual || 0}">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="ally-form-section">
-                                <div class="ally-form-title">📝 Informações Adicionais</div>
-                                <div class="ally-form-group">
-                                    <label class="ally-form-label">Skills</label>
-                                    <textarea class="ally-form-textarea" id="ally_skills">${ally.skills || ''}</textarea>
-                                </div>
-                                <div class="ally-form-group">
-                                    <label class="ally-form-label">Sobre</label>
-                                    <textarea class="ally-form-textarea" id="ally_sobre">${ally.sobre || ''}</textarea>
-                                </div>
-                            </div>
-                            
-                            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
-                                <button class="btn btn-secondary" onclick="closeAllyModal()">Cancelar</button>
-                                <button class="btn btn-success" onclick="saveAllyChanges('${characterId}', '${allyId}')">💾 Salvar</button>
                             </div>
                         </div>
                     </div>
@@ -8348,24 +8571,34 @@ Agilidade 2\n
                 allies[allyIndex] = {
                     ...allies[allyIndex],
                     nome: document.getElementById('ally_nome').value,
-                    raca: document.getElementById('ally_raca').value,
-                    papel: document.getElementById('ally_papel').value,
+                    tipoRaca: document.getElementById('ally_tipoRaca').value,
+                    raca: document.getElementById('ally_tipoRaca').value, // compatibilidade
+                    funcao: document.getElementById('ally_funcao').value,
+                    papel: document.getElementById('ally_funcao').value, // compatibilidade
+                    idade: parseInt(document.getElementById('ally_idade').value) || 0,
+                    virtude: document.getElementById('ally_virtude').value,
+                    vicio: document.getElementById('ally_vicio').value,
+                    lealdade: parseInt(document.getElementById('ally_lealdade').value) || 3,
+                    auraImortalidade: parseInt(document.getElementById('ally_auraImortalidade').value) || 0,
                     imagem: document.getElementById('ally_imagem').value,
-                    tamanho: parseInt(document.getElementById('ally_tamanho').value) || 0,
-                    for: parseInt(document.getElementById('ally_for').value) || 0,
-                    des: parseInt(document.getElementById('ally_des').value) || 0,
-                    vig: parseInt(document.getElementById('ally_vig').value) || 0,
-                    int: parseInt(document.getElementById('ally_int').value) || 0,
-                    rac: parseInt(document.getElementById('ally_rac').value) || 0,
-                    prs: parseInt(document.getElementById('ally_prs').value) || 0,
-                    pre: parseInt(document.getElementById('ally_pre').value) || 0,
-                    man: parseInt(document.getElementById('ally_man').value) || 0,
-                    aut: parseInt(document.getElementById('ally_aut').value) || 0,
+                    tamanho: parseInt(document.getElementById('ally_tamanho').value) || 5,
+                    for: parseInt(document.getElementById('ally_for').value) || 1,
+                    des: parseInt(document.getElementById('ally_des').value) || 1,
+                    vig: parseInt(document.getElementById('ally_vig').value) || 1,
+                    int: parseInt(document.getElementById('ally_int').value) || 1,
+                    rac: parseInt(document.getElementById('ally_rac').value) || 1,
+                    prs: parseInt(document.getElementById('ally_prs').value) || 1,
+                    pre: parseInt(document.getElementById('ally_pre').value) || 1,
+                    man: parseInt(document.getElementById('ally_man').value) || 1,
+                    aut: parseInt(document.getElementById('ally_aut').value) || 1,
+                    blindagem: parseInt(document.getElementById('ally_blindagem').value) || 0,
                     hpCurrent: parseInt(document.getElementById('ally_hpCurrent').value) || 0,
                     sanCurrent: parseInt(document.getElementById('ally_sanCurrent').value) || 80,
                     pesoAtual: parseInt(document.getElementById('ally_pesoAtual').value) || 0,
+                    ataquesTalentos: document.getElementById('ally_ataquesTalentos').value,
                     skills: document.getElementById('ally_skills').value,
-                    sobre: document.getElementById('ally_sobre').value
+                    notas: document.getElementById('ally_notas').value,
+                    sobre: document.getElementById('ally_notas').value // compatibilidade
                 };
 
                 await setDoc(doc(db, 'characters', characterId), {
@@ -8386,6 +8619,298 @@ Agilidade 2\n
         window.closeAllyModal = function () {
             const modal = document.getElementById('allyEditModal');
             if (modal) modal.remove();
+        };
+
+        // ============= ADICIONAR ALIADO =============
+        window.openAddAllyModal = async function () {
+            try {
+                // Carregar lista de personagens para o dropdown
+                const charactersSnapshot = await getDocs(collection(db, 'characters'));
+                const characterOptions = [];
+
+                charactersSnapshot.forEach(doc => {
+                    const charData = doc.data();
+                    characterOptions.push({
+                        id: doc.id,
+                        nome: charData.nome || 'Personagem sem nome',
+                        jogador: charData.jogador || ''
+                    });
+                });
+
+                if (characterOptions.length === 0) {
+                    showAlert('⚠️ Nenhum personagem encontrado para associar o aliado', 'warning');
+                    return;
+                }
+
+                const optionsHTML = characterOptions.map(char =>
+                    `<option value="${char.id}">${char.nome} (${char.jogador})</option>`
+                ).join('');
+
+                // Criar modal de adicionar aliado
+                const modalHTML = `
+                    <div id="addAllyModal" class="modal active ally-modal">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <div class="modal-title">➕ Adicionar Novo Aliado</div>
+                                <button class="modal-close" onclick="closeAddAllyModal()">✕</button>
+                            </div>
+                            
+                            <div class="ally-form-section">
+                                <div class="ally-form-title">👤 Associar a Personagem</div>
+                                <div class="ally-form-group">
+                                    <label class="ally-form-label">Selecione o personagem dono deste aliado</label>
+                                    <select class="form-select" id="newAlly_characterId" style="width: 100%; padding: 12px;">
+                                        <option value="">Selecione um personagem...</option>
+                                        ${optionsHTML}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="ally-form-section">
+                                <div class="ally-form-title">📋 Informações Básicas</div>
+                                <div class="ally-form-row cols-3">
+                                    <div class="ally-form-group">
+                                        <label class="ally-form-label">Nome</label>
+                                        <input type="text" class="ally-form-input" id="newAlly_nome" placeholder="Nome do aliado">
+                                    </div>
+                                    <div class="ally-form-group">
+                                        <label class="ally-form-label">Raça/Tipo</label>
+                                        <input type="text" class="ally-form-input" id="newAlly_raca" placeholder="Ex: Lobo, Cavalo, Humano">
+                                    </div>
+                                    <div class="ally-form-group">
+                                        <label class="ally-form-label">Papel/Função</label>
+                                        <input type="text" class="ally-form-input" id="newAlly_papel" placeholder="Ex: Montaria, Guardião">
+                                    </div>
+                                </div>
+                                <div class="ally-form-row">
+                                    <div class="ally-form-group">
+                                        <label class="ally-form-label">Imagem (URL)</label>
+                                        <input type="text" class="ally-form-input" id="newAlly_imagem" placeholder="https://...">
+                                    </div>
+                                    <div class="ally-form-group">
+                                        <label class="ally-form-label">Tamanho</label>
+                                        <input type="number" class="ally-form-input" id="newAlly_tamanho" value="5" min="1" max="15">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="ally-form-section">
+                                <div class="ally-form-title">⚔️ Atributos Físicos</div>
+                                <div class="ally-form-row cols-3">
+                                    <div class="ally-form-group">
+                                        <label class="ally-form-label">FOR</label>
+                                        <input type="number" class="ally-form-input" id="newAlly_for" value="1" min="0" max="9">
+                                    </div>
+                                    <div class="ally-form-group">
+                                        <label class="ally-form-label">DES</label>
+                                        <input type="number" class="ally-form-input" id="newAlly_des" value="1" min="0" max="9">
+                                    </div>
+                                    <div class="ally-form-group">
+                                        <label class="ally-form-label">VIG</label>
+                                        <input type="number" class="ally-form-input" id="newAlly_vig" value="1" min="0" max="9">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="ally-form-section">
+                                <div class="ally-form-title">🧠 Atributos Mentais</div>
+                                <div class="ally-form-row cols-3">
+                                    <div class="ally-form-group">
+                                        <label class="ally-form-label">INT</label>
+                                        <input type="number" class="ally-form-input" id="newAlly_int" value="1" min="0" max="9">
+                                    </div>
+                                    <div class="ally-form-group">
+                                        <label class="ally-form-label">RAC</label>
+                                        <input type="number" class="ally-form-input" id="newAlly_rac" value="1" min="0" max="9">
+                                    </div>
+                                    <div class="ally-form-group">
+                                        <label class="ally-form-label">PRS</label>
+                                        <input type="number" class="ally-form-input" id="newAlly_prs" value="1" min="0" max="9">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="ally-form-section">
+                                <div class="ally-form-title">🗣️ Atributos Sociais</div>
+                                <div class="ally-form-row cols-3">
+                                    <div class="ally-form-group">
+                                        <label class="ally-form-label">PRE</label>
+                                        <input type="number" class="ally-form-input" id="newAlly_pre" value="1" min="0" max="9">
+                                    </div>
+                                    <div class="ally-form-group">
+                                        <label class="ally-form-label">MAN</label>
+                                        <input type="number" class="ally-form-input" id="newAlly_man" value="1" min="0" max="9">
+                                    </div>
+                                    <div class="ally-form-group">
+                                        <label class="ally-form-label">AUT</label>
+                                        <input type="number" class="ally-form-input" id="newAlly_aut" value="1" min="0" max="9">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="ally-form-section">
+                                <div class="ally-form-title">📝 Informações Adicionais</div>
+                                <div class="ally-form-group">
+                                    <label class="ally-form-label">Skills</label>
+                                    <textarea class="ally-form-textarea" id="newAlly_skills" placeholder="Ex: Furtividade 3, Sobrevivência 2"></textarea>
+                                </div>
+                                <div class="ally-form-group">
+                                    <label class="ally-form-label">Sobre</label>
+                                    <textarea class="ally-form-textarea" id="newAlly_sobre" placeholder="Descrição, história, personalidade..."></textarea>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                                <button class="btn btn-secondary" onclick="closeAddAllyModal()">Cancelar</button>
+                                <button class="btn btn-success" onclick="saveNewAlly()">💾 Criar Aliado</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Remover modal existente se houver
+                const existingModal = document.getElementById('addAllyModal');
+                if (existingModal) existingModal.remove();
+
+                // Adicionar novo modal
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            } catch (error) {
+                console.error('❌ Erro ao abrir modal de adicionar aliado:', error);
+                showAlert('❌ Erro ao abrir modal: ' + error.message, 'danger');
+            }
+        };
+
+        window.closeAddAllyModal = function () {
+            const modal = document.getElementById('addAllyModal');
+            if (modal) modal.remove();
+        };
+
+        window.saveNewAlly = async function () {
+            const characterId = document.getElementById('newAlly_characterId').value;
+
+            if (!characterId) {
+                showAlert('⚠️ Selecione um personagem para associar o aliado', 'warning');
+                return;
+            }
+
+            const nome = document.getElementById('newAlly_nome').value.trim();
+            if (!nome) {
+                showAlert('⚠️ O nome do aliado é obrigatório', 'warning');
+                return;
+            }
+
+            try {
+                const charDoc = await getDoc(doc(db, 'characters', characterId));
+                if (!charDoc.exists()) {
+                    showAlert('❌ Personagem não encontrado', 'danger');
+                    return;
+                }
+
+                const charData = charDoc.data();
+                let allies = charData.allies || [];
+
+                const tamanho = parseInt(document.getElementById('newAlly_tamanho').value) || 5;
+                const vig = parseInt(document.getElementById('newAlly_vig').value) || 1;
+
+                // Criar novo aliado
+                const newAlly = {
+                    id: `ally_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    nome: nome,
+                    raca: document.getElementById('newAlly_raca').value,
+                    papel: document.getElementById('newAlly_papel').value,
+                    imagem: document.getElementById('newAlly_imagem').value,
+                    tamanho: tamanho,
+                    for: parseInt(document.getElementById('newAlly_for').value) || 1,
+                    des: parseInt(document.getElementById('newAlly_des').value) || 1,
+                    vig: vig,
+                    int: parseInt(document.getElementById('newAlly_int').value) || 1,
+                    rac: parseInt(document.getElementById('newAlly_rac').value) || 1,
+                    prs: parseInt(document.getElementById('newAlly_prs').value) || 1,
+                    pre: parseInt(document.getElementById('newAlly_pre').value) || 1,
+                    man: parseInt(document.getElementById('newAlly_man').value) || 1,
+                    aut: parseInt(document.getElementById('newAlly_aut').value) || 1,
+                    hpCurrent: tamanho + vig,
+                    sanCurrent: 80,
+                    pesoAtual: 0,
+                    skills: document.getElementById('newAlly_skills').value,
+                    sobre: document.getElementById('newAlly_sobre').value,
+                    createdAt: new Date().toISOString()
+                };
+
+                allies.push(newAlly);
+
+                await setDoc(doc(db, 'characters', characterId), {
+                    allies: allies,
+                    lastModified: new Date().toISOString()
+                }, { merge: true });
+
+                // Registrar log
+                await addLog(
+                    currentUser.email,
+                    `Adicionou aliado "${nome}" ao personagem`,
+                    charData.nome || 'Personagem sem nome',
+                    'characters'
+                );
+
+                showAlert('✅ Aliado criado com sucesso!', 'success');
+                closeAddAllyModal();
+                loadAllies();
+
+            } catch (error) {
+                console.error('❌ Erro ao criar aliado:', error);
+                showAlert('❌ Erro ao criar aliado: ' + error.message, 'danger');
+            }
+        };
+
+        // ============= DELETAR ALIADO =============
+        window.deleteAlly = async function (characterId, allyId) {
+            if (!confirm('⚠️ Tem certeza que deseja DELETAR este aliado? Esta ação não pode ser desfeita.')) {
+                return;
+            }
+
+            try {
+                const charDoc = await getDoc(doc(db, 'characters', characterId));
+                if (!charDoc.exists()) {
+                    showAlert('❌ Personagem não encontrado', 'danger');
+                    return;
+                }
+
+                const charData = charDoc.data();
+                let allies = charData.allies || [];
+
+                const allyIndex = allies.findIndex(a => a.id === allyId);
+                if (allyIndex === -1) {
+                    showAlert('❌ Aliado não encontrado', 'danger');
+                    return;
+                }
+
+                const allyName = allies[allyIndex].nome || 'Sem nome';
+
+                // Remover o aliado do array
+                allies.splice(allyIndex, 1);
+
+                await setDoc(doc(db, 'characters', characterId), {
+                    allies: allies,
+                    lastModified: new Date().toISOString()
+                }, { merge: true });
+
+                // Registrar log
+                await addLog(
+                    currentUser.email,
+                    `Deletou aliado "${allyName}" do personagem`,
+                    charData.nome || 'Personagem sem nome',
+                    'characters'
+                );
+
+                showAlert('✅ Aliado deletado com sucesso!', 'success');
+                closeAllyModal();
+                loadAllies();
+
+            } catch (error) {
+                console.error('❌ Erro ao deletar aliado:', error);
+                showAlert('❌ Erro ao deletar aliado: ' + error.message, 'danger');
+            }
         };
 
         // ============= APOIOS =============

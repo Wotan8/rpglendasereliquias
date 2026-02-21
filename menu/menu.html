@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meus Personagens — Lendas e Relíquias</title>
+    <link rel="stylesheet" href="css/menu.css">
+</head>
+
+<body>
+
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">⚔️ Carregando personagens...</div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar" style="display:none">
+        <button id="btnThemeToggle" onclick="toggleTheme()">🌙</button>
+        <div class="spacer"></div>
+        <span class="hint-toolbar">Lendas e Relíquias — Menu de Personagens</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:12px">
+            <span id="userDisplayName"
+                style="color:#94a3b8;font-size:.8rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                title=""></span>
+            <button onclick="logout()"
+                style="background:#ef4444;color:#fff;border:none;padding:4px 10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:.75rem">🚪</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="wrap" style="display:none">
+        <div class="sheet">
+
+            <!-- Header -->
+            <div class="menu-header">
+                <h1>✨🌀RPG LeR🛡️🗡️</h1>
+                <p class="subtitle">O berço e o túmulo das lendas que jamais serão esquecidas.</p>
+            </div>
+
+            <div id="alertArea"></div>
+
+            <!-- Tabs -->
+            <div class="tabs" id="tabBar">
+                <button class="tab active" onclick="switchTab('personagens')">👥 Personagens</button>
+                <button class="tab" onclick="switchTab('inventario')">🎒 Inventário</button>
+                <button class="tab" onclick="switchTab('notificacoes')" style="position:relative">
+                    🔔 Notificações
+                    <span class="badge" id="notificationBadge" style="display:none">0</span>
+                </button>
+            </div>
+
+            <!-- ======== ABA PERSONAGENS ======== -->
+            <div class="tab-content active" id="tab-personagens">
+
+                <!-- Card Criar Personagem -->
+                <div class="create-card" onclick="createNewCharacter()">
+                    <div class="icon">➕</div>
+                    <div class="title">Criar Novo Personagem</div>
+                    <div class="desc">Comece uma nova aventura!</div>
+                </div>
+
+                <!-- Grid de Personagens -->
+                <div class="characters-grid" id="charactersGrid"></div>
+
+                <!-- Estado vazio -->
+                <div class="empty-state" id="emptyState" style="display:none">
+                    <div class="icon">🎭</div>
+                    <div class="text">Você ainda não tem personagens</div>
+                    <div class="hint">Clique no card acima para criar seu primeiro personagem!</div>
+                </div>
+            </div>
+
+            <!-- ======== ABA INVENTÁRIO ======== -->
+            <div class="tab-content" id="tab-inventario">
+                <div class="inventory-header">
+                    <div class="total-apoios-label">Total de Apoios</div>
+                    <div class="total-apoios" id="totalApoios">0</div>
+                </div>
+
+                <div class="inventory-title">🎒 Inventário de Jogador</div>
+
+                <div class="inventory-grid" id="inventoryGrid"></div>
+
+                <div class="empty-state" id="emptyInventory" style="display:none">
+                    <div class="icon">📦</div>
+                    <div class="text">Seu inventário está vazio</div>
+                    <div class="hint">Itens que você receber aparecerão aqui</div>
+                </div>
+            </div>
+
+            <!-- ======== ABA NOTIFICAÇÕES ======== -->
+            <div class="tab-content" id="tab-notificacoes">
+                <div class="menu-header" style="margin-bottom:10px">
+                    <h1 style="font-size:1.2rem">🔔 Notificações</h1>
+                </div>
+                <p class="notifications-info">Últimas 100 notificações são armazenadas. Notificações mais antigas são
+                    removidas automaticamente.</p>
+
+                <div id="notificationsList"></div>
+
+                <div id="paginationContainer" class="pagination-container" style="display:none"></div>
+
+                <div class="empty-state" id="emptyNotifications" style="display:none">
+                    <div class="icon">🔔</div>
+                    <div class="text">Nenhuma notificação</div>
+                    <div class="hint">Você será notificado quando houver novidades</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal de Exclusão -->
+    <div class="modal" id="deleteModal">
+        <div class="modal-content">
+            <div class="modal-icon">⚠️</div>
+            <div class="modal-title">ATENÇÃO!</div>
+            <div class="modal-text">
+                Tem certeza que deseja <strong>APAGAR PERMANENTEMENTE</strong> o personagem
+                <strong id="deleteCharacterName"></strong>?<br><br>
+                Esta ação <strong>NÃO PODE SER DESFEITA</strong>!
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-modal btn-cancel" onclick="closeDeleteModal()">❌ Cancelar</button>
+                <button class="btn-modal btn-confirm" onclick="confirmDelete()">🗑️ Sim, Apagar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Module -->
+    <script type="module" src="js/menu-firebase.js"></script>
+
+</body>
+
+</html>

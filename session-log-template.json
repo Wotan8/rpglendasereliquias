@@ -2,57 +2,113 @@
   "sessionNumber": 1,
   "date": "2024-01-15",
   "duration": "4h30min",
+  "gameTime": {
+    "day": "15",
+    "month": "Aura",
+    "year": "10",
+    "era": "EBA",
+    "duration": "2 dias"
+  },
   "playersPresent": [
     {
       "characterId": "abc123",
-      "nome": "Thorin Escudo-de-Ferro",
-      "jogador": "João",
+      "characterName": "Thorin Escudo-de-Ferro",
+      "playerName": "João",
       "expGained": 450
     },
     {
       "characterId": "def456",
-      "nome": "Lyra Sombra-Lunar",
-      "jogador": "Maria",
+      "characterName": "Lyra Sombra-Lunar",
+      "playerName": "Maria",
       "expGained": 450
     }
   ],
+  "playersAbsent": [
+    {
+      "characterId": "ghi789",
+      "characterName": "Kael Vento-Norte",
+      "playerName": "Pedro"
+    }
+  ],
   "summary": "Os aventureiros chegaram na vila de Thornwood, onde descobriram que moradores estavam desaparecendo misteriosamente durante a noite. Após investigar a taverna local e conversar com o taberneiro nervoso, encontraram pistas que levavam às ruínas de uma torre abandonada ao norte.",
+  "playerSummaries": [
+    {
+      "characterId": "abc123",
+      "characterName": "Thorin Escudo-de-Ferro",
+      "playerName": "João",
+      "content": "Thorin ficou desconfiado do taberneiro desde o início. Sua experiência como guardião da montanha lhe disse que algo estava errado. Quando encontraram os lobos amaldiçoados, foi a primeira pista real de que magia negra estava envolvida."
+    },
+    {
+      "characterId": "def456",
+      "characterName": "Lyra Sombra-Lunar",
+      "playerName": "Maria",
+      "content": "Lyra sentiu uma conexão estranha com a energia que emanava da torre. Como elfa, ela podia perceber a corrupção no ar. O momento em que avistou a Sombra Negra foi crucial - agora ela sabe que o inimigo é real."
+    }
+  ],
   "importantNpcs": [
     {
       "id": "npc001",
       "name": "Eldric, o Taberneiro",
-      "role": "Informante"
+      "role": "Informante",
+      "dayOffset": 0,
+      "endDayOffset": 0,
+      "startHour": 10,
+      "endHour": 12
     },
     {
       "id": "npc002",
       "name": "Prefeito Gareth",
-      "role": "Quest Giver"
+      "role": "Quest Giver",
+      "dayOffset": 0,
+      "endDayOffset": 0,
+      "startHour": 14,
+      "endHour": 15
     },
     {
       "name": "Sombra Negra",
-      "role": "Antagonista"
+      "role": "Antagonista",
+      "dayOffset": 1,
+      "endDayOffset": 1,
+      "startHour": 22,
+      "endHour": 23
     }
   ],
   "locationsVisited": [
     {
       "id": "loc001",
       "name": "Vila de Thornwood",
-      "type": "Vila"
+      "type": "Vila",
+      "dayOffset": 0,
+      "endDayOffset": 1,
+      "startHour": 8,
+      "endHour": 20
     },
     {
       "id": "loc002",
       "name": "Taverna do Javali Dourado",
-      "type": "Estabelecimento"
+      "type": "Estabelecimento",
+      "dayOffset": 0,
+      "endDayOffset": 0,
+      "startHour": 10,
+      "endHour": 14
     },
     {
       "name": "Torre Abandonada (exterior)",
-      "type": "Ruínas"
+      "type": "Ruínas",
+      "dayOffset": 1,
+      "endDayOffset": 1,
+      "startHour": 18,
+      "endHour": 22
     }
   ],
   "combats": [
     {
       "enemies": "4 Lobos Amaldiçoados",
-      "outcome": "Vitória"
+      "outcome": "Vitória",
+      "dayOffset": 1,
+      "endDayOffset": 1,
+      "startHour": 19,
+      "endHour": 20
     }
   ],
   "lootAndRewards": {
@@ -75,25 +131,45 @@
   "quests": [
     {
       "name": "Os Desaparecidos de Thornwood",
-      "status": "Em Progresso"
+      "status": "Em Progresso",
+      "dayOffset": 0,
+      "endDayOffset": 0,
+      "startHour": 14,
+      "endHour": 15
     },
     {
       "name": "O Segredo do Taberneiro",
-      "status": "Iniciada"
+      "status": "Iniciada",
+      "dayOffset": 0,
+      "endDayOffset": 0,
+      "startHour": 11,
+      "endHour": 12
     }
   ],
   "memorableMoments": [
     {
       "type": "funny",
-      "description": "\"Eu não sou diplomatico, eu sou um anão com um machado. A diplomacia é o machado.\""
+      "description": "\"Eu não sou diplomatico, eu sou um anão com um machado. A diplomacia é o machado.\"",
+      "dayOffset": 0,
+      "endDayOffset": 0,
+      "startHour": 11,
+      "endHour": 11.25
     },
     {
       "type": "epic",
-      "description": "Lyra conseguiu um natural 20 para escalar a torre e avistar a Sombra Negra fugindo"
+      "description": "Lyra conseguiu um natural 20 para escalar a torre e avistar a Sombra Negra fugindo",
+      "dayOffset": 1,
+      "endDayOffset": 1,
+      "startHour": 22,
+      "endHour": 22.5
     },
     {
       "type": "dramatic",
-      "description": "Momento tenso quando descobriram que uma das vítimas era uma criança"
+      "description": "Momento tenso quando descobriram que uma das vítimas era uma criança",
+      "dayOffset": 0,
+      "endDayOffset": 0,
+      "startHour": 16,
+      "endHour": 16.5
     }
   ],
   "images": [

@@ -13,6 +13,11 @@ service firebase.storage {
       allow write: if request.auth != null;
     }
     
+    // Character images - authenticated users can read/write
+    match /char-images/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
     // Default: deny all other paths
     match /{allPaths=**} {
       allow read, write: if false;

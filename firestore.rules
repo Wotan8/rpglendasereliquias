@@ -48,6 +48,29 @@ service cloud.firestore {
       );
     }
 
+    // ========== ADICIONADO: Coleção 'char' (ficha-v1.7_1) ==========
+    match /char/{charId} {
+      // Leitura: qualquer usuário autenticado (para listagens e rankings)
+      allow read: if isSignedIn();
+
+      // Criação: usuário define ele mesmo como dono OU mestre
+      allow create: if isSignedIn() && (
+        request.resource.data.ownerUid == request.auth.uid || isMaster()
+      );
+
+      // Atualização: dono (sem mudar ownerUid) OU mestre
+      allow update: if isSignedIn() && (
+        (resource.data.ownerUid == request.auth.uid && 
+         request.resource.data.ownerUid == resource.data.ownerUid) || 
+        isMaster()
+      );
+      
+      // Exclusão: dono OU mestre
+      allow delete: if isSignedIn() && (
+        resource.data.ownerUid == request.auth.uid || isMaster()
+      );
+    }
+
     // Coleção de logs (sem alterações)
     match /logs/{logId} {
       allow create: if isSignedIn();
@@ -228,6 +251,22 @@ service cloud.firestore {
     }
 
     match /notifications/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    // ========== ADICIONADO: Coleções do Submundo ==========
+    match /worldbuilding-submundo-feiras/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /worldbuilding-submundo-reputacoes/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /worldbuilding-rumors/{docId} {
       allow read: if isSignedIn();
       allow create, update, delete: if isMaster();
     }

@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ficha — Lendas e Relíquias v1.7</title>
+    <link rel="stylesheet" href="css/styles_v2.css?v=1.7.9">
+    <link rel="stylesheet" href="css/print.css?v=1.7.9">
+</head>
+
+<body>
+
+    <!-- Loading Screen (enquanto verifica autenticação) -->
+    <div id="loadingScreen"
+        style="position:fixed;inset:0;z-index:99999;background:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+        <div
+            style="width:48px;height:48px;border:4px solid rgba(139,92,246,0.2);border-top:4px solid #8b5cf6;border-radius:50%;animation:spin 1s linear infinite">
+        </div>
+        <span style="color:#94a3b8;font-family:sans-serif;font-size:0.95rem">Verificando autenticação...</span>
+    </div>
+    <style>
+        @keyframes spin {
+            0% {
+                transform: rotate(0)
+            }
+
+            100% {
+                transform: rotate(360deg)
+            }
+        }
+    </style>
+
+    <!-- Indicador de save Firebase -->
+    <div id="firebaseSaveIndicator" class="firebase-save-indicator"></div>
+
+    <div class="toolbar no-print" style="display:none">
+        <button onclick="openPrintModal()">🖨️</button>
+        <button id="btnThemeToggle" onclick="toggleTheme()">🌙</button>
+        <div class="spacer"></div>
+        <span class="hint-toolbar">Lendas e Relíquias v1.7 — Ficha online</span>
+        <div id="userInfo" style="display:none;align-items:center;gap:8px;margin-left:12px">
+            <span id="userDisplayName"
+                style="color:#94a3b8;font-size:0.8rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                title=""></span>
+            <button onclick="window.location.href='../menu/menu.html'"
+                style="background: #334155; color: #fff; border: none; padding: 4px 10px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.75rem">Menu</button>
+            <button onclick="logout()"
+                style="background:#ef4444;color:#fff;border:none;padding:4px 10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.75rem">🚪</button>
+        </div>
+    </div>
+
+    <div class="wrap" style="display:none">
+        <div class="sheet">
+
+            <div class="tabs no-print" id="tabBar">
+                <button class="tab active" data-tab="tabPrincipal">Principal</button>
+                <button class="tab" data-tab="tabCombate">Combate</button>
+                <button class="tab" data-tab="tabInventario">Inventário</button>
+                <button class="tab" data-tab="tabPeculiaridades">Peculiaridades</button>
+                <button class="tab" data-tab="tabNotas">📝 Notas</button>
+            </div>
+
+            <!-- ======== PRINCIPAL ======== -->
+            <div class="tab-content active" id="tabPrincipal">
+
+                <div class="section">
+                    <div class="section-title">Identificação</div>
+                    <div class="id-wrapper">
+                        <div class="id-fields">
+                            <div class="row" style="grid-template-columns: 1.5fr 1fr 60px;">
+                                <div class="field"><label>Nome</label><input type="text" data-key="nome"
+                                        placeholder="Nome do personagem"></div>
+                                <div class="field"><label>Jogador</label><input type="text" data-key="jogador"
+                                        placeholder="Nome do jogador"></div>
+                                <div class="field"><label>Sessões</label><input type="text" data-key="sessoes"
+                                        placeholder="0" maxlength="3" style="text-align: center;"></div>
+                            </div>
+                            <div class="row">
+                                <div class="field"><label>Raça</label><select id="selRaca" data-key="raca">
+                                        <option value="">— Selecione —</option>
+                                        <option>Humano</option>
+                                        <option>Elorin</option>
+                                        <option>Karu-Real</option>
+                                        <option>Karu-Selvagem</option>
+                                        <option>Picxi</option>
+                                        <option>Pogo</option>
+                                        <option>Tamano</option>
+                                        <option>Yotun</option>
+                                    </select></div>
+                                <div class="field"><label>Classe</label><select data-key="classe" id="selClasse">
+                                        <option value="">— Selecione —</option>
+                                        <option>Guerreiro</option>
+                                        <option>Ladino</option>
+                                        <option>Caçador</option>
+                                        <option>Adepto</option>
+                                        <option>Invocador</option>
+                                        <option>Druida</option>
+                                        <option>Pallacerdote</option>
+                                        <option>Runimago</option>
+                                        <option>Sangral</option>
+                                        <option>Xamã</option>
+                                        <option>Bardo</option>
+                                    </select></div>
+                            </div>
+                            <div class="row r3">
+                                <div class="field"><label>⭐ Experiência</label>
+                                    <div style="display:flex;gap:4px">
+                                        <input type="text" data-key="exp" placeholder="Rest." style="flex:1">
+                                        <input type="text" data-key="exp_total" placeholder="Total" style="flex:1">
+                                    </div>
+                                </div>
+                                <div class="field"><label>Virtude</label><input type="text" data-key="virtude"
+                                        placeholder="Ex: Coragem"></div>
+                                <div class="field"><label>Vício</label><input type="text" data-key="vicio"
+                                        placeholder="Ex: Ganância"></div>
+                            </div>
+                        </div>
+                        <div class="char-img-box" onclick="document.getElementById('charImgInput').click()">
+                            <div class="placeholder" id="charImgPlaceholder"><span>📷</span>Adicionar<br>Foto</div>
+                            <img id="charImgPreview" style="display:none">
+                            <input type="file" id="charImgInput" accept="image/*">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Status Vitais</div>
+                    <div class="vitals">
+                        <div class="vital-box"><label>❤️ Vitalidade</label>
+                            <div class="vital-inputs"><input type="text" data-key="vit_atual" placeholder="0"><span
+                                    class="sep">/</span><input type="text" id="vit_max_display" class="derived-field"
+                                    title="(VIG + Tamanho) × 3" value="0"></div>
+                        </div>
+                        <div class="vital-box"><label>🧠 Sanidade</label>
+                            <div class="vital-inputs"><input type="text" data-key="san_atual" placeholder="0"><span
+                                    class="sep">/</span><input type="text" id="san_max_display" class="derived-field"
+                                    title="(INT + AUT + PRS) × 2 − (Abismo × 2)" value="0"></div>
+                        </div>
+                        <div class="vital-box"><label>⚡ Determ.</label>
+                            <div class="vital-inputs"><input type="text" data-key="det_atual" placeholder="0"><span
+                                    class="sep">/</span><input type="text" id="det_max_display" class="derived-field"
+                                    title="PRS + AUT" value="0"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Valores de Combate</div>
+                    <div class="combat-grid">
+                        <div class="mini-field"><label>👁️ PER</label><input type="text" id="perc_display"
+                                class="derived-field" title="RAC + PRE" value="0"></div>
+                        <div class="mini-field"><label>🔝 INI</label><input type="text" id="ini_display"
+                                class="derived-field" title="RAC + DES + AUT + Agilidade − Tamanho" value="0">
+                        </div>
+                        <div class="mini-field"><label>⚡ REA</label><input type="text" id="rea_display"
+                                class="derived-field" title="min(DES, RAC + Agilidade)" value="0"></div>
+                        <div class="mini-field"><label>🛡️ BLD</label><input type="text" data-key="blindagem"
+                                placeholder="0"></div>
+                        <div class="mini-field"><label>📏 TAM.</label><input type="text" data-key="tamanho"
+                                placeholder="0"></div>
+                    </div>
+                    <div class="combat-grid" style="margin-top:var(--gap)">
+                        <div class="mini-field"><label>🏃 D.TERR.</label><input type="text" id="desloc_t_display"
+                                class="derived-field" title="FOR + DES + Tamanho + Agilidade" value="0"></div>
+                        <div class="mini-field"><label>🏊 D.AQUA.</label><input type="text" id="desloc_a_display"
+                                class="derived-field" title="FOR + DES + Tamanho + Atletismo" value="0"></div>
+                        <div class="mini-field"><label>🦅 D.AÉREO</label><input type="text" id="desloc_ar_display"
+                                class="derived-field" title="FOR + DES + Tamanho + Atletismo" value="0"></div>
+                        <div class="mini-field"><label>🎒 CARGA</label><input type="text" id="carga_display"
+                                class="derived-field" title="FOR + VIG" value="0"></div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Atributos <span class="exp-cost">5 EXP por nível</span></div>
+                    <div class="attrs">
+                        <div class="attr-block">
+                            <div class="attr-block-title">Físico</div>
+                            <div class="attr-item"><span class="abbr">FOR</span>
+                                <div class="dots5" data-attr="attr_for"></div>
+                            </div>
+                            <div class="attr-item"><span class="abbr">DES</span>
+                                <div class="dots5" data-attr="attr_des"></div>
+                            </div>
+                            <div class="attr-item"><span class="abbr">VIG</span>
+                                <div class="dots5" data-attr="attr_vig"></div>
+                            </div>
+                        </div>
+                        <div class="attr-block">
+                            <div class="attr-block-title">Mental</div>
+                            <div class="attr-item"><span class="abbr">INT</span>
+                                <div class="dots5" data-attr="attr_int"></div>
+                            </div>
+                            <div class="attr-item"><span class="abbr">RAC</span>
+                                <div class="dots5" data-attr="attr_rac"></div>
+                            </div>
+                            <div class="attr-item"><span class="abbr">PRS</span>
+                                <div class="dots5" data-attr="attr_prs"></div>
+                            </div>
+                        </div>
+                        <div class="attr-block">
+                            <div class="attr-block-title">Social</div>
+                            <div class="attr-item"><span class="abbr">PRE</span>
+                                <div class="dots5" data-attr="attr_pre"></div>
+                            </div>
+                            <div class="attr-item"><span class="abbr">MAN</span>
+                                <div class="dots5" data-attr="attr_man"></div>
+                            </div>
+                            <div class="attr-item"><span class="abbr">AUT</span>
+                                <div class="dots5" data-attr="attr_aut"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5 BLOCOS DE PERÍCIAS LADO A LADO -->
+                <div class="section">
+                    <div class="section-title">Perícias <span class="exp-cost">Nível × 4 EXP · Classe: Nível × 4
+                            EXP</span></div>
+                    <div class="skills-row">
+                        <div class="skill-block">
+                            <div class="skill-block-title">Mental</div>
+                            <div id="skillsMental"></div>
+                        </div>
+                        <div class="skill-block">
+                            <div class="skill-block-title">Físico</div>
+                            <div id="skillsFisico"></div>
+                        </div>
+                        <div class="skill-block">
+                            <div class="skill-block-title">Social</div>
+                            <div id="skillsSocial"></div>
+                        </div>
+                        <div class="skill-block">
+                            <div class="skill-block-title">Combate</div>
+                            <div id="skillsCombate"></div>
+                        </div>
+                        <div class="skill-block" id="classSkillBlock">
+                            <div class="skill-block-title" id="classSkillBlockTitle">Classe</div>
+                            <div id="classSkillsGrid"></div>
+                            <p id="classSkillsHint"
+                                style="font-size:8px;color:var(--muted);font-weight:600;text-align:center;margin:4px 0 0;">
+                                Selecione uma classe</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ESPECIALIZAÇÕES -->
+                <div class="section">
+                    <div class="section-title">Especializações <span class="exp-cost">Nível × 2 EXP · Limite: ≤ Perícia
+                            ou Atributo vinculado</span></div>
+                    <div class="spec-grid" id="specContainer"></div>
+                    <button class="add-btn no-print" onclick="addSpec()" style="margin-top:8px">+ Adicionar
+                        Especialização</button>
+                </div>
+
+                <!-- TESTES PRINCIPAIS -->
+                <div class="section">
+                    <div class="section-title">Testes Principais <button class="no-print" id="btnToggleColorMode"
+                            onclick="toggleGlobalColorMode()" title="Personalizar Cores"
+                            style="background:none;border:none;cursor:pointer;font-size:1.2rem;margin-left:8px">🎨</button>
+                    </div>
+                    <div class="test-head">
+                        <span>Nome</span><span>Fórmula</span><span>Total</span><span></span>
+                    </div>
+                    <div id="mainTestsContainer" class="main-tests-list"></div>
+                    <button class="add-btn no-print" onclick="addTest()" style="margin-top:8px">+ Adicionar
+                        Teste</button>
+                </div>
+            </div>
+
+            <!-- ======== COMBATE ======== -->
+            <div class="tab-content" id="tabCombate">
+                <div class="section">
+                    <div class="section-title">Armas Equipadas</div>
+                    <div class="equip-head weapons">
+                        <span>Nome</span><span>Tam</span><span>Dano</span><span>Integridade</span><span></span>
+                    </div>
+                    <div id="weaponsContainer"></div><button class="add-btn no-print" onclick="addWeapon()">+ Adicionar
+                        Arma</button>
+                </div>
+                <div class="section">
+                    <div class="section-title">Vestimentas</div>
+                    <div class="equip-head armor">
+                        <span>Nome</span><span>Rea</span><span>Bld</span><span>Integridade</span><span></span>
+                    </div>
+                    <div id="armorContainer"></div><button class="add-btn no-print" onclick="addArmor()">+ Adicionar
+                        Vestimenta</button>
+                </div>
+                <div class="section">
+                    <div class="section-title">Projéteis</div>
+                    <div class="equip-head projectiles"><span>Nome</span><span>Dano</span><span>Qtd</span><span></span>
+                    </div>
+                    <div id="projectilesContainer"></div><button class="add-btn no-print" onclick="addProjectile()">+
+                        Adicionar Projétil</button>
+                </div>
+                <div class="section">
+                    <div class="section-title">Condições e Estados</div>
+                    <div class="equip-head conditions">
+                        <span>Nome</span><span>Tipo</span><span>Descrição</span><span>Tempo</span><span></span>
+                    </div>
+                    <div id="conditionsContainer"></div><button class="add-btn no-print" onclick="addCondition()">+
+                        Adicionar Condição</button>
+                </div>
+                <div class="section" id="classResourcesSection" style="display:none">
+                    <div class="section-title">Recursos de Classe</div>
+                    <div class="class-resources" id="classResourcesGrid"></div>
+                    <div id="classExtraResources"></div>
+                </div>
+                <div class="section" id="rituaisSection" style="display:none">
+                    <div class="section-title">⚗️ Rituais</div>
+                    <div id="rituaisContainer"></div>
+                    <button class="add-btn no-print" onclick="addRitual()">+ Adicionar Ritual</button>
+                </div>
+                <div class="section" id="runimagoSection" style="display:none">
+                    <div class="section-title">📜 Recursos do Runimago</div>
+                    <div id="runimagoContent"></div>
+                </div>
+            </div>
+
+            <!-- ======== INVENTÁRIO ======== -->
+            <div class="tab-content" id="tabInventario">
+                <div class="section">
+                    <div class="section-title">Inventário</div>
+                    <div class="inv-head"><span>Nome do Item</span><span>Descrição</span><span>Qtd</span><span></span>
+                    </div>
+                    <div id="inventoryContainer"></div><button class="add-btn no-print" onclick="addInventoryItem()">+
+                        Adicionar Item</button>
+                </div>
+                <div class="section">
+                    <div class="section-title">💰 Luns — Moedas</div>
+                    <div class="money-grid">
+                        <div class="field"><label>Luni (L$)</label><input type="text" data-key="money_luni"
+                                placeholder="0"></div>
+                        <div class="field"><label>Ka'Luni (kL$)</label><input type="text" data-key="money_kaluni"
+                                placeholder="0"></div>
+                        <div class="field"><label>Mi'Luni (mL$)</label><input type="text" data-key="money_miluni"
+                                placeholder="0"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== PECULIARIDADES ======== -->
+            <div class="tab-content" id="tabPeculiaridades">
+                <div class="section">
+                    <div class="section-title">
+                        <span id="raceTitle">Raça</span>
+                        <span id="raceSubtitle" class="race-subtitle"></span>
+                    </div>
+                    <div id="raceHint" style="font-size:12px;color:var(--muted);text-align:center;padding:20px;">
+                        Selecione uma raça para ver suas peculiaridades.
+                    </div>
+                    <div id="peculiaridadesGrid" class="peculiaridades-grid"></div>
+                </div>
+            </div>
+
+            <!-- ======== NOTAS ======== -->
+            <div class="tab-content" id="tabNotas">
+                <div class="section">
+                    <div class="section-title">📝 Minhas Notas <button class="no-print" onclick="createNote()"
+                            style="font-size:11px;padding:6px 12px;">+ Nova Nota</button></div>
+                    <div id="notesContainer">
+                        <p style="font-size:12px;color:var(--muted);text-align:center;padding:20px 0;">Nenhuma nota
+                            ainda.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- NOTE MODAL -->
+    <div class="note-editor-modal hidden" id="noteModal">
+        <div class="note-editor">
+            <div class="note-editor-header">
+                <button onclick="closeNoteEditor()" style="font-size:11px;padding:6px 12px;">← Voltar</button>
+                <input type="text" id="noteEditorTitle" placeholder="Título da nota">
+                <button onclick="saveNote()" style="font-size:11px;padding:6px 12px;">💾 Salvar</button>
+            </div>
+            <div class="note-editor-toolbar">
+                <button onclick="execCmd('bold')"><b>B</b></button>
+                <button onclick="execCmd('italic')"><i>I</i></button>
+                <button onclick="execCmd('underline')"><u>U</u></button>
+                <button onclick="execCmd('strikeThrough')"><s>S</s></button>
+                <button onclick="execCmd('insertUnorderedList')">• Lista</button>
+                <button onclick="execCmd('insertOrderedList')">1. Num</button>
+                <button onclick="execCmd('insertHorizontalRule')">— Linha</button>
+            </div>
+            <div class="note-editor-content">
+                <div contenteditable="true" id="noteEditorBody"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts externos -->
+    <script src="js/data.js?v=1.8.1"></script>
+    <script src="js/race-data.js"></script>
+    <script src="js/race-peculiarities.js"></script>
+    <script src="js/class-tests-data.js"></script>
+    <script src="js/class-tests.js?v=1.7.6"></script>
+    <script src="js/derived-values.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/core.js"></script>
+    <script src="js/class-resources.js"></script>
+    <script src="js/equipment.js"></script>
+    <script src="js/notes.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/drag-drop.js"></script>
+    <script src="js/print.js"></script>
+    <script type="module" src="js/firebase.js?v=1.2"></script>
+</body>
+
+</html>
