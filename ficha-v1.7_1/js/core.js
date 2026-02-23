@@ -2,18 +2,91 @@
 
 function initTabs() { document.querySelectorAll('.tab').forEach(b => { b.addEventListener('click', () => { document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); b.classList.add('active'); document.getElementById(b.dataset.tab).classList.add('active'); }); }); }
 
+/**
+ * Handler centralizado para clicks de dots com EXP.
+ * @param {HTMLElement} container - o .dots5
+ * @param {string} k - dotKey
+ * @param {number} clickedVal - nível clicado (1-5)
+ * @param {string} [specName] - nome da especialização (se for spec)
+ */
+function handleDotUpgrade(container, k, clickedVal, specName) {
+    const current = state.dots[k] || 0;
+
+    // Se click ≤ nível atual → nada acontece
+    if (clickedVal <= current) return;
+
+    // Só permite subir 1 nível por vez
+    const newLevel = current + 1;
+    if (clickedVal !== newLevel) {
+        if (typeof showUpgradeBlocked === 'function')
+            showUpgradeBlocked(`Só é possível subir 1 nível por vez! Nível atual: ${current}, próximo: ${newLevel}.`);
+        return;
+    }
+
+    const type = typeof detectDotType === 'function' ? detectDotType(k) : null;
+    if (!type) {
+        // Fallback: sem tipo detectado, permite livremente (não deveria acontecer)
+        state.dots[k] = newLevel;
+        refreshDots(container, k); scheduleAutosave();
+        if (typeof recalcAll === 'function') recalcAll();
+        if (typeof recalcMainTests === 'function') recalcMainTests();
+        return;
+    }
+
+    const check = canUpgrade(k, newLevel, type, specName);
+    if (!check.allowed) {
+        showUpgradeBlocked(check.reason);
+        return;
+    }
+
+    // Obter label legível para a confirmação
+    const label = getDotLabel(k, container, specName);
+
+    showUpgradeConfirm(label, newLevel, check.cost, () => {
+        spendExp(check.cost);
+        state.dots[k] = newLevel;
+        refreshDots(container, k);
+        scheduleAutosave();
+        if (typeof recalcAll === 'function') recalcAll();
+        if (typeof recalcMainTests === 'function') recalcMainTests();
+        showUpgradeSuccess(label, newLevel, check.cost);
+    });
+}
+
+/** Obtém nome legível do parâmetro pela UI */
+function getDotLabel(k, container, specName) {
+    if (specName) return specName || 'Especialização';
+    // Tenta achar label no sk-row pai ou attr-item pai
+    const parent = container.closest('.sk-row, .attr-item, .spec-item');
+    if (parent) {
+        const nameEl = parent.querySelector('.sk-name, .abbr');
+        if (nameEl) return nameEl.textContent.trim();
+        const inp = parent.querySelector('input[data-key]');
+        if (inp && inp.value) return inp.value;
+    }
+    return k.replace(/^(attr_|sk_\w+_|spec_)/, '').replace(/_/g, ' ');
+}
+
 function initDots() {
     document.querySelectorAll('.dots5[data-attr]').forEach(c => {
         const k = c.dataset.attr; state.dots[k] = state.dots[k] || 0;
-        for (let i = 1; i <= 5; i++) { const d = document.createElement('button'); d.className = 'dot'; d.dataset.val = i; d.title = 'Nível ' + i; d.addEventListener('click', () => { state.dots[k] = (state.dots[k] === i) ? i - 1 : i; refreshDots(c, k); scheduleAutosave(); if (typeof recalcAll === 'function') recalcAll(); if (typeof recalcMainTests === 'function') recalcMainTests(); }); c.appendChild(d); }
+        for (let i = 1; i <= 5; i++) {
+            const d = document.createElement('button'); d.className = 'dot'; d.dataset.val = i; d.title = 'Nível ' + i;
+            d.addEventListener('click', () => handleDotUpgrade(c, k, i));
+            c.appendChild(d);
+        }
         refreshDots(c, k);
     });
 }
 function refreshDots(c, k) { const v = state.dots[k] || 0; c.querySelectorAll('.dot').forEach(d => { d.classList.toggle('filled', +d.dataset.val <= v); }); }
-function createDotsHTML(k) {
+function createDotsHTML(k, specName) {
     state.dots[k] = state.dots[k] || 0;
     const div = document.createElement('div'); div.className = 'dots5'; div.dataset.attr = k;
-    for (let i = 1; i <= 5; i++) { const d = document.createElement('button'); d.className = 'dot'; d.dataset.val = i; d.title = 'Nível ' + i; d.addEventListener('click', () => { state.dots[k] = (state.dots[k] === i) ? i - 1 : i; refreshDots(div, k); scheduleAutosave(); if (typeof recalcAll === 'function') recalcAll(); if (typeof recalcMainTests === 'function') recalcMainTests(); }); div.appendChild(d); }
+    for (let i = 1; i <= 5; i++) {
+        const d = document.createElement('button'); d.className = 'dot'; d.dataset.val = i; d.title = 'Nível ' + i;
+        d.addEventListener('click', () => handleDotUpgrade(div, k, i, specName));
+        div.appendChild(d);
+    }
     refreshDots(div, k); return div;
 }
 
@@ -129,7 +202,18 @@ function addSpec(name, dotsKey) {
     if (name) inp.value = name;
     inp.addEventListener('input', scheduleAutosave);
     item.appendChild(inp);
-    item.appendChild(createDotsHTML(dk));
+
+    // Criar dots com referência dinâmica ao nome da especialização
+    state.dots[dk] = state.dots[dk] || 0;
+    const dotsDiv = document.createElement('div'); dotsDiv.className = 'dots5'; dotsDiv.dataset.attr = dk;
+    for (let lvl = 1; lvl <= 5; lvl++) {
+        const d = document.createElement('button'); d.className = 'dot'; d.dataset.val = lvl; d.title = 'Nível ' + lvl;
+        d.addEventListener('click', () => handleDotUpgrade(dotsDiv, dk, lvl, inp.value));
+        dotsDiv.appendChild(d);
+    }
+    refreshDots(dotsDiv, dk);
+    item.appendChild(dotsDiv);
+
     const rm = document.createElement('button'); rm.className = 'rm-spec no-print'; rm.textContent = '✕';
     rm.addEventListener('click', () => { item.remove(); scheduleAutosave(); });
     item.appendChild(rm);

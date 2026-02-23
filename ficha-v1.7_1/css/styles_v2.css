@@ -2329,3 +2329,124 @@ html.dark .bg-orange input {
     border-color: #7c2d12 !important;
     color: #fed7aa !important;
 }
+
+/* ===== EXP UPGRADE TOAST ===== */
+.exp-toast-container {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 99998;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.exp-toast {
+    pointer-events: all;
+    background: #1e293b;
+    color: #f1f5f9;
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, .4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    min-width: 300px;
+    max-width: 480px;
+    animation: expToastIn .3s ease-out;
+    border: 2px solid #334155;
+}
+
+.exp-toast-exit {
+    animation: expToastOut .3s ease-in forwards;
+}
+
+.exp-toast-confirm {
+    border-color: #3b82f6;
+    background: #1e293b;
+}
+
+.exp-toast-error {
+    border-color: #ef4444;
+    background: #1c1917;
+    color: #fca5a5;
+}
+
+.exp-toast-success {
+    border-color: #22c55e;
+    background: #052e16;
+    color: #86efac;
+}
+
+.exp-toast-msg {
+    text-align: center;
+    line-height: 1.4;
+}
+
+.exp-toast-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.exp-toast-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: all .15s;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+}
+
+.exp-btn-ok {
+    background: #3b82f6;
+    color: #fff;
+}
+
+.exp-btn-ok:hover {
+    background: #2563eb;
+}
+
+.exp-btn-cancel {
+    background: #374151;
+    color: #9ca3af;
+}
+
+.exp-btn-cancel:hover {
+    background: #4b5563;
+    color: #e5e7eb;
+}
+
+@keyframes expToastIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes expToastOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+}

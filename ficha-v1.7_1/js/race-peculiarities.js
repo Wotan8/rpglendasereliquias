@@ -149,23 +149,56 @@ function renderEvolutableDots(dotsDiv, raceKey, pec, minLevel, maxLevel) {
 
         dot.addEventListener('click', () => {
             if (dot.disabled) return;
-            const current = state.dots[dotKey];
+            const current = state.dots[dotKey] || minLevel;
 
-            // Toggle modificado: respeitar o minLevel
-            if (current === i && i > minLevel) {
-                state.dots[dotKey] = i - 1 >= minLevel ? i - 1 : minLevel;
-            } else {
-                state.dots[dotKey] = i;
+            // Click ≤ nível atual → nada acontece
+            if (i <= current) return;
+
+            // Só permite subir 1 nível por vez
+            const newLevel = current + 1;
+            if (i !== newLevel) {
+                if (typeof showUpgradeBlocked === 'function')
+                    showUpgradeBlocked(`Só é possível subir 1 nível por vez! Nível atual: ${current}, próximo: ${newLevel}.`);
+                return;
             }
 
-            // Garantir que não pode ficar abaixo do mínimo
-            if (state.dots[dotKey] < minLevel) {
-                state.dots[dotKey] = minLevel;
+            // Verificar se o nível está disponível
+            if (!pec.niveis[newLevel]) return;
+
+            // Parsear custo do nível
+            const custoStr = pec.niveis[newLevel].custo || '—';
+            const custoMatch = custoStr.match(/(\d+)/);
+            const custo = custoMatch ? parseInt(custoMatch[1], 10) : 0;
+
+            // Se custo é 0 ou '—' (nível base), permite sem gastar
+            if (custo === 0) {
+                state.dots[dotKey] = newLevel;
+                refreshPecDots(dotsDiv, dotKey, minLevel);
+                updatePeculiaridadeLevel(raceKey, pec.key, newLevel, pec);
+                scheduleAutosave();
+                return;
             }
 
-            refreshPecDots(dotsDiv, dotKey, minLevel);
-            updatePeculiaridadeLevel(raceKey, pec.key, state.dots[dotKey], pec);
-            scheduleAutosave();
+            // Verificar EXP
+            const currentExp = typeof getCurrentExp === 'function' ? getCurrentExp() : 0;
+            if (custo > currentExp) {
+                if (typeof showUpgradeBlocked === 'function')
+                    showUpgradeBlocked(`EXP insuficiente! Precisa de ${custo} EXP, mas só tem ${currentExp}.`);
+                return;
+            }
+
+            // Confirmação
+            if (typeof showUpgradeConfirm === 'function') {
+                showUpgradeConfirm(pec.nome, newLevel, custo, () => {
+                    spendExp(custo);
+                    state.dots[dotKey] = newLevel;
+                    refreshPecDots(dotsDiv, dotKey, minLevel);
+                    updatePeculiaridadeLevel(raceKey, pec.key, newLevel, pec);
+                    scheduleAutosave();
+                    if (typeof showUpgradeSuccess === 'function')
+                        showUpgradeSuccess(pec.nome, newLevel, custo);
+                });
+            }
         });
 
         dotsDiv.appendChild(dot);
