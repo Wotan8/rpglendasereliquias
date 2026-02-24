@@ -345,4 +345,74 @@
     }
 
     /* Fix for "Identificação" row specifically removed as we use flex now */
+
+    /* TESTES PRINCIPAIS COMPACT PRINT LAYOUT */
+    .print-only {
+        display: inline !important;
+    }
+
+    .test-head {
+        display: none !important;
+    }
+
+    .test-row {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 6px !important;
+        padding: 4px 6px !important;
+        margin-bottom: 2px !important;
+        border-radius: 4px !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        page-break-inside: avoid !important;
+    }
+
+    .test-row input {
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        color: var(--ink, #000) !important;
+        text-align: left !important;
+    }
+
+    .test-row .test-total-field {
+        order: 1 !important;
+        flex: 0 0 20px !important;
+        text-align: center !important;
+        font-weight: 900 !important;
+        font-size: 13px !important;
+    }
+
+    .test-row input:nth-of-type(1) {
+        /* Name */
+        order: 2 !important;
+        flex: 0 0 auto !important;
+        width: auto !important;
+        font-weight: 800 !important;
+        font-size: 11px !important;
+    }
+
+    .test-row .formula-paren:nth-of-type(1) {
+        order: 3 !important;
+        font-size: 10px !important;
+        color: var(--ink, #000) !important;
+    }
+
+    .test-row input:nth-of-type(2) {
+        /* Formula */
+        order: 4 !important;
+        flex: 1 !important;
+        font-size: 10px !important;
+        font-weight: normal !important;
+    }
+
+    .test-row .formula-paren:nth-of-type(2) {
+        order: 5 !important;
+        font-size: 10px !important;
+        color: var(--ink, #000) !important;
+    }
+
 }

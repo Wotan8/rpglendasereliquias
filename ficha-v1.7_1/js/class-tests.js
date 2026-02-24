@@ -206,8 +206,19 @@ function renderMainTests(classeKey) {
             });
         }
 
+        const parenStart = document.createElement('span');
+        parenStart.textContent = ' (';
+        parenStart.className = 'formula-paren print-only';
+
+        const parenEnd = document.createElement('span');
+        parenEnd.textContent = ')';
+        parenEnd.className = 'formula-paren print-only';
+
+        row.appendChild(colorBtn);
         row.appendChild(nameInput);
+        row.appendChild(parenStart);
         row.appendChild(formulaInput);
+        row.appendChild(parenEnd);
         row.appendChild(totalInput);
 
         // Remove button for custom tests

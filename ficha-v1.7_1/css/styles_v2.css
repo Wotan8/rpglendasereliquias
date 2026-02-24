@@ -2450,3 +2450,7 @@ html.dark .bg-orange input {
         transform: translateY(20px);
     }
 }
+
+.print-only {
+    display: none;
+}
