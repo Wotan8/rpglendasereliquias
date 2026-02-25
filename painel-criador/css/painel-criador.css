@@ -537,6 +537,11 @@ body {
     color: #fff
 }
 
+.btn-edit[style*="warning"]:hover {
+    background: var(--warning);
+    color: #fff !important;
+}
+
 /* ===== TOGGLE PUBLISH ===== */
 .toggle-publish {
     position: relative;
@@ -1149,4 +1154,553 @@ html.dark ::-webkit-scrollbar-thumb {
 
 html.dark ::-webkit-scrollbar-thumb:hover {
     background: var(--muted)
+}
+
+/* =============================================
+   VISUAL MECHANICS EDITOR — New Styles
+   ============================================= */
+
+/* -- Type Colors -- */
+:root {
+    --type-modificar: #4F6EF7;
+    --type-limitar: #F59E0B;
+    --type-conceder: #10B981;
+    --type-condicional: #EC4899;
+    --type-narrativo: #6B7280;
+    --fonte-raca: #10B981;
+    --fonte-classe: #4F6EF7;
+    --fonte-tribo: #F59E0B;
+    --fonte-peculiaridade: #a78bfa;
+    --fonte-item: #8B5CF6;
+    --fonte-condicao: #EF4444;
+    --fonte-manobra: #EC4899;
+    --fonte-magia: #06B6D4;
+    --fonte-generica: #6B7280;
+}
+
+/* -- Inline Editor Layout -- */
+.mech-editor-wrap {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    animation: fadeIn .3s;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.mech-editor-form {
+    min-width: 0;
+}
+
+.mech-editor-back {
+    background: transparent;
+    border: 2px solid var(--soft);
+    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: .78rem;
+    font-family: var(--font);
+    transition: all .15s;
+    margin-bottom: 12px;
+}
+
+.mech-editor-back:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.mech-editor-title {
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--soft);
+}
+
+.mech-form-section {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--soft);
+}
+
+.mech-form-section:last-child {
+    border-bottom: none;
+}
+
+.mech-section-label {
+    font-size: .68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mech-config-area {
+    min-height: 60px;
+    transition: all .25s ease;
+}
+
+/* -- Preview Panel -- */
+.mech-preview-panel {
+    position: sticky;
+    top: 20px;
+    background: var(--chip);
+    border: 2px solid var(--soft);
+    border-radius: var(--radius);
+    padding: 16px;
+    height: fit-content;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+html.dark .mech-preview-panel {
+    background: #0f1120;
+    border-color: var(--line);
+}
+
+.mech-preview-header {
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mech-preview-text {
+    font-size: .95rem;
+    font-weight: 700;
+    font-style: italic;
+    color: var(--ink);
+    line-height: 1.5;
+    padding: 12px;
+    background: rgba(79, 110, 247, .06);
+    border: 1px solid var(--primary);
+    border-radius: 8px;
+    margin-bottom: 14px;
+    min-height: 40px;
+    word-break: break-word;
+}
+
+.mech-preview-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: .78rem;
+    color: var(--muted);
+}
+
+.mech-preview-meta span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mech-preview-meta strong {
+    color: var(--ink);
+    font-weight: 700;
+}
+
+/* -- Mechanic Cards (list) -- */
+.mech-card {
+    background: var(--chip);
+    border: 2px solid var(--soft);
+    border-left: 5px solid var(--type-modificar);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    transition: all .2s;
+    cursor: pointer;
+}
+
+html.dark .mech-card {
+    background: #151829;
+    border-color: var(--line);
+}
+
+.mech-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .12);
+}
+
+.mech-card[data-type="modificar"] {
+    border-left-color: var(--type-modificar);
+}
+
+.mech-card[data-type="limitar"] {
+    border-left-color: var(--type-limitar);
+}
+
+.mech-card[data-type="conceder"] {
+    border-left-color: var(--type-conceder);
+}
+
+.mech-card[data-type="condicional"] {
+    border-left-color: var(--type-condicional);
+}
+
+.mech-card[data-type="narrativo"] {
+    border-left-color: var(--type-narrativo);
+}
+
+.mech-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.mech-card-name {
+    font-size: .9rem;
+    font-weight: 900;
+    color: var(--ink);
+}
+
+.mech-card-badges {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.badge-fonte,
+.badge-tipo {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: .62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    color: #fff;
+}
+
+.badge-fonte {
+    background: var(--fonte-generica);
+}
+
+.badge-tipo {
+    background: var(--type-modificar);
+}
+
+.mech-card-preview {
+    font-size: .78rem;
+    font-style: italic;
+    color: var(--muted);
+    line-height: 1.4;
+    margin: 6px 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.mech-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 6px;
+    border-top: 1px solid var(--soft);
+    margin-top: 6px;
+}
+
+/* -- Extra Filters -- */
+.mech-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.mech-filters select {
+    padding: 6px 10px;
+    border: 2px solid var(--soft);
+    border-radius: 8px;
+    font-size: .78rem;
+    font-weight: 700;
+    font-family: var(--font);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+}
+
+html.dark .mech-filters select {
+    background: #0f1120;
+    border-color: var(--line);
+    color: var(--ink);
+}
+
+/* -- MechanicSelector Component -- */
+.mechsel-wrap {
+    margin-bottom: 12px;
+}
+
+.mechsel-label {
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    display: block;
+}
+
+.mechsel-chips {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.mechsel-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: var(--chip);
+    border: 1px solid var(--soft);
+    border-left: 4px solid var(--type-modificar);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: .78rem;
+    transition: all .15s;
+}
+
+html.dark .mechsel-chip {
+    background: #0f1120;
+    border-color: var(--line);
+}
+
+.mechsel-chip-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.mechsel-chip-name {
+    font-weight: 800;
+    color: var(--ink);
+    font-size: .8rem;
+}
+
+.mechsel-chip-preview {
+    color: var(--muted);
+    font-style: italic;
+    font-size: .72rem;
+    margin-top: 2px;
+}
+
+.mechsel-chip-remove {
+    background: transparent;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: .7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all .15s;
+}
+
+.mechsel-chip-remove:hover {
+    background: var(--danger);
+    color: #fff;
+}
+
+.mechsel-add-btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: .72rem;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: var(--font);
+    text-transform: uppercase;
+    transition: background .15s;
+}
+
+.mechsel-add-btn:hover {
+    background: #3b5ae6;
+}
+
+.mechsel-search {
+    margin-top: 8px;
+    border: 2px solid var(--soft);
+    border-radius: 8px;
+    padding: 10px;
+    max-height: 280px;
+    overflow-y: auto;
+    display: none;
+}
+
+.mechsel-search.open {
+    display: block;
+}
+
+html.dark .mechsel-search {
+    background: #0f1120;
+    border-color: var(--line);
+}
+
+.mechsel-search-bar {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.mechsel-search-bar input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 2px solid var(--soft);
+    border-radius: 6px;
+    font-size: .78rem;
+    font-family: var(--font);
+    background: #fff;
+    color: var(--ink);
+}
+
+html.dark .mechsel-search-bar input {
+    background: #151829;
+    border-color: var(--line);
+    color: var(--ink);
+}
+
+.mechsel-search-bar select {
+    padding: 6px 8px;
+    border: 2px solid var(--soft);
+    border-radius: 6px;
+    font-size: .72rem;
+    font-weight: 700;
+    font-family: var(--font);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+}
+
+html.dark .mechsel-search-bar select {
+    background: #151829;
+    border-color: var(--line);
+    color: var(--ink);
+}
+
+.mechsel-results {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mechsel-result {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background .1s;
+    font-size: .78rem;
+}
+
+.mechsel-result:hover {
+    background: rgba(79, 110, 247, .08);
+}
+
+.mechsel-result input[type="checkbox"] {
+    accent-color: var(--primary);
+    flex-shrink: 0;
+}
+
+.mechsel-result-name {
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.mechsel-result-preview {
+    font-size: .68rem;
+    color: var(--muted);
+    font-style: italic;
+    margin-left: auto;
+}
+
+.mechsel-confirm {
+    margin-top: 8px;
+    background: var(--success);
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: .72rem;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: var(--font);
+    text-transform: uppercase;
+    width: 100%;
+    transition: background .15s;
+}
+
+.mechsel-confirm:hover {
+    background: #059669;
+}
+
+/* -- Grouped Select styling -- */
+.mech-form-section select optgroup {
+    font-weight: 800;
+    font-style: normal;
+    color: var(--muted);
+    font-size: .8rem;
+}
+
+.mech-form-section select option {
+    font-weight: 500;
+    color: var(--ink);
+    padding: 4px;
+}
+
+/* -- Form Actions in Inline Editor -- */
+.mech-form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 16px;
+    margin-top: 12px;
+    border-top: 2px solid var(--soft);
+}
+
+/* -- Responsive -- */
+@media (max-width: 900px) {
+    .mech-editor-wrap {
+        grid-template-columns: 1fr;
+    }
+
+    .mech-preview-panel {
+        position: static;
+    }
 }

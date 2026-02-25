@@ -3,6 +3,8 @@
 // Lendas e Relíquias (ficha-v1.7_1 style)
 // =============================================
 
+import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js';
+
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
@@ -29,6 +31,8 @@ let currentModule = 'races';
 let allItems = [];
 let itemToDelete = null;
 let editingItemId = null;
+let mechanicsCache = [];
+let peculiaritiesCache = [];
 
 // ====================================================================
 // MODULE DEFINITIONS — each module defines its fields and Firestore path
@@ -45,13 +49,7 @@ const MODULE_DEFS = {
             { key: 'tendencia', label: 'Tendência', type: 'text', required: true, placeholder: 'Ex: Ambiciosos — Adaptáveis' },
             { key: 'aparencia', label: 'Aparência', type: 'textarea', required: true, placeholder: 'Descrição física típica da raça' },
             { key: 'habitat', label: 'Habitat', type: 'text', required: true, placeholder: 'Ex: Regiões temperadas, cidades' },
-            {
-                key: 'peculiaridades', label: 'Peculiaridades Raciais', type: 'array', arrayFields: [
-                    { key: 'nome', label: 'Nome', type: 'text', required: true },
-                    { key: 'descricao', label: 'Descrição', type: 'textarea' },
-                    { key: 'mecanicas', label: 'Mecânicas (JSON)', type: 'json' }
-                ]
-            },
+            { key: 'peculiaridadeIds', label: 'Peculiaridades Raciais', type: 'mechanic_selector', selectorTarget: 'peculiarities', fontePreFilter: 'raca' },
             { key: 'historia', label: 'História / Lore', type: 'textarea', placeholder: 'Lore da raça em Vasteluna' },
             { key: 'curiosidades', label: 'Curiosidades', type: 'tags', placeholder: 'Digite e pressione Enter' },
             { key: 'imagemUrl', label: 'URL da Imagem', type: 'text', placeholder: 'https://...' },
@@ -108,6 +106,7 @@ const MODULE_DEFS = {
                 ]
             },
             { key: 'manobras', label: 'IDs de Manobras (referências)', type: 'tags', placeholder: 'ID da manobra e Enter' },
+            { key: 'mecanicaIds', label: 'Mecânicas da Classe', type: 'mechanic_selector', fontePreFilter: 'classe' },
             { key: 'imagemUrl', label: 'URL da Imagem', type: 'text', placeholder: 'https://...' },
         ]
     },
@@ -147,7 +146,7 @@ const MODULE_DEFS = {
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
             {
                 key: 'fonte', label: 'Fonte', type: 'select', required: true, options: [
-                    { value: 'racial', label: 'Racial' },
+                    { value: 'raca', label: 'Raça' },
                     { value: 'classe', label: 'Classe' },
                     { value: 'tribo', label: 'Tribo' },
                     { value: 'condicao', label: 'Condição' },
@@ -156,7 +155,7 @@ const MODULE_DEFS = {
             },
             { key: 'fonteRef', label: 'Referência da Fonte (ID)', type: 'text', placeholder: 'ID do registro de origem' },
             { key: 'nivel', label: 'Nível (I=1, II=2...)', type: 'number', placeholder: '1' },
-            { key: 'mecanicas', label: 'Mecânicas', type: 'json', placeholder: '[\n  {\n    "tipo": "modificar",\n    "alvo": "...",\n    "operacao": "+",\n    "valor": 1\n  }\n]' },
+            { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: '' },
             { key: 'custo', label: 'Custo em EXP', type: 'text', placeholder: 'Ex: 10 EXP' },
             { key: 'tags', label: 'Tags', type: 'tags', placeholder: 'Ex: bônus, racial' },
         ]
@@ -232,7 +231,7 @@ const MODULE_DEFS = {
             { key: 'propriedades', label: 'Propriedades', type: 'tags', placeholder: 'Ex: Versátil, Pesado' },
             { key: 'preco', label: 'Preço (Luns)', type: 'number', placeholder: '100' },
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
-            { key: 'mecanicas', label: 'Mecânicas Especiais (JSON)', type: 'json', placeholder: 'Para itens mágicos/relíquias' },
+            { key: 'mecanicaIds', label: 'Mecânicas Especiais', type: 'mechanic_selector', fontePreFilter: 'item' },
         ]
     },
     conditions: {
@@ -241,7 +240,7 @@ const MODULE_DEFS = {
         fields: [
             { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Atordoado, Cego' },
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
-            { key: 'efeitosMecanicos', label: 'Efeitos Mecânicos (JSON)', type: 'json', required: true, placeholder: '[\n  { "tipo": "modificar", "alvo": "reacao", "op": "-", "valor": 2 }\n]' },
+            { key: 'efeitoMecanicaIds', label: 'Efeitos Mecânicos', type: 'mechanic_selector', fontePreFilter: 'condicao' },
             { key: 'duracao', label: 'Duração', type: 'text', placeholder: 'Ex: 1 turno, permanente' },
             { key: 'removivel', label: 'Removível?', type: 'boolean' },
             { key: 'icone', label: 'Ícone / Emoji', type: 'text', placeholder: 'Ex: 💫' },
@@ -250,57 +249,8 @@ const MODULE_DEFS = {
     mechanics: {
         name: 'Mecânica', namePlural: 'Mecânicas', icon: '🔧',
         collection: 'system/data/mechanics',
-        fields: [
-            { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Nome da mecânica' },
-            { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
-            {
-                key: 'fonte', label: 'Fonte', type: 'select', options: [
-                    { value: 'raca', label: 'Raça' }, { value: 'classe', label: 'Classe' },
-                    { value: 'tribo', label: 'Tribo' }, { value: 'item', label: 'Item' },
-                    { value: 'condicao', label: 'Condição' }, { value: 'especializacao', label: 'Especialização' },
-                    { value: 'manobra', label: 'Manobra' }, { value: 'universal', label: 'Universal' }
-                ]
-            },
-            { key: 'alvo', label: 'Alvo(s)', type: 'tags', placeholder: 'Ex: FOR, DES, reacao' },
-            {
-                key: 'operacao', label: 'Operação', type: 'select', options: [
-                    { value: 'somar', label: 'Somar (+)' }, { value: 'subtrair', label: 'Subtrair (-)' },
-                    { value: 'multiplicar', label: 'Multiplicar (×)' }, { value: 'dividir', label: 'Dividir (÷)' },
-                    { value: 'definir_fixo', label: 'Definir Fixo' }, { value: 'dado_extra', label: 'Dado Extra' },
-                    { value: 'teto', label: 'Teto (máx)' }, { value: 'piso', label: 'Piso (mín)' },
-                    { value: 'clamp', label: 'Clamp' }, { value: 'bloqueio', label: 'Bloqueio' },
-                    { value: 'override', label: 'Override' }, { value: 'formula_alt', label: 'Fórmula Alternativa' },
-                    { value: 'troca_atributo', label: 'Troca de Atributo' },
-                    { value: 'dar_acesso', label: 'Dar Acesso' }, { value: 'remover_acesso', label: 'Remover Acesso' },
-                    { value: 'imunidade', label: 'Imunidade' }, { value: 'vulnerabilidade', label: 'Vulnerabilidade' },
-                    { value: 'conceder', label: 'Conceder Efeito' },
-                    { value: 'por_nivel', label: 'Escalar por Nível' }, { value: 'por_atributo', label: 'Escalar por Atributo' },
-                    { value: 'por_tier', label: 'Escalar por Tier' },
-                ]
-            },
-            { key: 'valor', label: 'Valor / Fórmula', type: 'text', placeholder: 'Ex: 2, PRS + Nível' },
-            { key: 'condicao', label: 'Condição de Ativação (JSON)', type: 'json', placeholder: '{ "tipo": "sempre" }' },
-            {
-                key: 'duracao', label: 'Duração', type: 'select', options: [
-                    { value: 'permanente', label: 'Permanente' }, { value: 'cena', label: 'Cena' },
-                    { value: 'turno', label: 'Turno' }, { value: 'ate_remover', label: 'Até Remover' }
-                ]
-            },
-            {
-                key: 'empilhamento', label: 'Empilhamento', type: 'select', options: [
-                    { value: 'soma', label: 'Soma' }, { value: 'maior', label: 'Maior Valor' },
-                    { value: 'nao_empilha', label: 'Não Empilha' }, { value: 'exclusivo', label: 'Exclusivo' }
-                ]
-            },
-            {
-                key: 'escopo', label: 'Escopo', type: 'select', options: [
-                    { value: 'proprio', label: 'Próprio' }, { value: 'aliado', label: 'Aliado' },
-                    { value: 'inimigo', label: 'Inimigo' }, { value: 'area', label: 'Área' },
-                    { value: 'grupo', label: 'Grupo' }
-                ]
-            },
-            { key: 'tags', label: 'Tags', type: 'tags', placeholder: 'Tags de busca' },
-        ]
+        useCustomEditor: true,
+        fields: []
     },
     maneuvers: {
         name: 'Manobra', namePlural: 'Manobras', icon: '💥',
@@ -311,7 +261,7 @@ const MODULE_DEFS = {
             { key: 'custo', label: 'Custo (Determinação)', type: 'text', required: true, placeholder: 'Ex: 1 DET' },
             { key: 'efeito', label: 'Efeito', type: 'textarea', required: true },
             { key: 'requisitos', label: 'Requisitos', type: 'tags', placeholder: 'Ex: RAC 3, Performance 3' },
-            { key: 'mecanicas', label: 'Mecânicas (JSON)', type: 'json', placeholder: '[\n  { "tipo": "modificar", "alvo": "alvo_ataque", "op": "+", "valor": 3 }\n]' },
+            { key: 'mecanicaIds', label: 'Mecânicas', type: 'mechanic_selector', fontePreFilter: 'manobra' },
             { key: 'falhaCritica', label: 'Falha Crítica', type: 'text', placeholder: 'O que acontece em Falha Crítica' },
         ]
     },
@@ -336,7 +286,7 @@ const MODULE_DEFS = {
             { key: 'alcance', label: 'Alcance', type: 'text', required: true, placeholder: 'Ex: Toque, 9m' },
             { key: 'duracao', label: 'Duração', type: 'text', required: true, placeholder: 'Ex: Instantâneo, 1 cena' },
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
-            { key: 'mecanicas', label: 'Mecânicas (JSON)', type: 'json', placeholder: 'Mecânicas automáticas da magia' },
+            { key: 'mecanicaIds', label: 'Mecânicas', type: 'mechanic_selector', fontePreFilter: 'magia' },
             { key: 'classeRequerida', label: 'Classe Requerida', type: 'text', placeholder: 'Ex: Pallacerdote' },
         ]
     },
@@ -449,13 +399,45 @@ window.switchModule = function (moduleName, btnEl) {
     const titleEl = document.getElementById('createCardTitle');
     if (titleEl) titleEl.textContent = `Criar ${modDef.name}`;
 
+    // Hide mechanics editor when switching away
+    const mechArea = document.getElementById('mechanicsEditorArea');
+    if (mechArea) mechArea.style.display = 'none';
+    document.getElementById('moduleContent').style.display = '';
+
+    // Remove/add mechanic extra filters
+    const oldFilters = document.getElementById('mechFiltersExtra');
+    if (oldFilters) oldFilters.remove();
+    if (moduleName === 'mechanics') renderMechExtraFilters();
+
     loadModule(moduleName);
 };
+
+function renderMechExtraFilters() {
+    const filterBar = document.getElementById('filterBar');
+    if (!filterBar || document.getElementById('mechFiltersExtra')) return;
+    const div = document.createElement('div');
+    div.className = 'mech-filters';
+    div.id = 'mechFiltersExtra';
+    div.innerHTML = `
+        <select id="mechFilterFonte" onchange="filterItems()">
+            <option value="">📌 Fonte: Todas</option>
+            ${Object.entries(FONTE_LABELS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}
+        </select>
+        <select id="mechFilterTipo" onchange="filterItems()">
+            <option value="">🔧 Tipo: Todos</option>
+            ${Object.entries(TIPO_LABELS).map(([k, v]) => `<option value="${k}">${TIPO_ICONS[k]} ${v}</option>`).join('')}
+        </select>`;
+    filterBar.after(div);
+}
 
 // ===== LOAD MODULE DATA =====
 async function loadModule(moduleName) {
     const modDef = MODULE_DEFS[moduleName];
     if (!modDef) return;
+
+    // Always refresh mechanics cache (needed for selectors in all modules)
+    await refreshMechanicsCache();
+    if (moduleName === 'races') await refreshPeculiaritiesCache();
 
     const grid = document.getElementById('itemsGrid');
     const emptyState = document.getElementById('emptyState');
@@ -484,6 +466,25 @@ async function loadModule(moduleName) {
     }
 }
 
+async function refreshMechanicsCache() {
+    try {
+        const snap = await getDocs(collection(db, 'system/data/mechanics'));
+        mechanicsCache = [];
+        snap.forEach(d => mechanicsCache.push({ id: d.id, ...d.data() }));
+        mechanicsCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        window._mechCache = mechanicsCache;
+    } catch (e) { console.error('Erro cache mecânicas:', e); }
+}
+
+async function refreshPeculiaritiesCache() {
+    try {
+        const snap = await getDocs(collection(db, 'system/data/peculiarities'));
+        peculiaritiesCache = [];
+        snap.forEach(d => peculiaritiesCache.push({ id: d.id, ...d.data() }));
+        peculiaritiesCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+    } catch (e) { console.error('Erro cache peculiaridades:', e); }
+}
+
 // ===== RENDER ITEMS =====
 function renderItems() {
     const grid = document.getElementById('itemsGrid');
@@ -495,6 +496,13 @@ function renderItems() {
         const name = (item.nome || item.titulo || '').toLowerCase();
         if (searchVal && !name.includes(searchVal)) return false;
         if (onlyPublished && !item.publicado) return false;
+        // Extra mechanic filters
+        if (currentModule === 'mechanics') {
+            const fonteF = document.getElementById('mechFilterFonte')?.value || '';
+            const tipoF = document.getElementById('mechFilterTipo')?.value || '';
+            if (fonteF && item.fonte !== fonteF) return false;
+            if (tipoF && item.tipo !== tipoF) return false;
+        }
         return true;
     });
 
@@ -505,6 +513,13 @@ function renderItems() {
     }
 
     emptyState.style.display = 'none';
+
+    // Use custom card renderer for mechanics
+    if (currentModule === 'mechanics') {
+        grid.innerHTML = filtered.map(item => renderMechanicCard(item)).join('');
+        return;
+    }
+
     const modDef = MODULE_DEFS[currentModule];
 
     grid.innerHTML = filtered.map(item => {
@@ -526,6 +541,7 @@ function renderItems() {
                 <div class="item-card-footer">
                     <div class="item-card-actions">
                         <button class="btn-edit" onclick="event.stopPropagation(); openForm('${item.id}')" title="Editar">✏️</button>
+                        <button class="btn-edit" onclick="event.stopPropagation(); duplicateItem('${item.id}')" title="Duplicar" style="border-color:var(--warning);color:var(--warning)">📋</button>
                         <button class="btn-delete-card" onclick="event.stopPropagation(); openDeleteModal('${item.id}', '${escapeHtml(name).replace(/'/g, "\\'")}')" title="Excluir">🗑️</button>
                     </div>
                     <label onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:6px;cursor:pointer">
@@ -586,6 +602,13 @@ window.confirmDelete = async function () {
 // ===== FORM MODAL =====
 window.openForm = function (itemId) {
     const modDef = MODULE_DEFS[currentModule];
+
+    // Redirect to visual editor for mechanics
+    if (modDef.useCustomEditor) {
+        _openMechEditor(itemId);
+        return;
+    }
+
     editingItemId = itemId || null;
     const isEditing = !!itemId;
     const existingData = isEditing ? allItems.find(i => i.id === itemId) : null;
@@ -633,8 +656,18 @@ window.closeForm = function () {
 function buildField(field, value) {
     const wrap = document.createElement('div');
     wrap.className = 'form-group' + (
-        ['textarea', 'array', 'json', 'tags'].includes(field.type) ? ' full-width' : ''
+        ['textarea', 'array', 'json', 'tags', 'mechanic_selector'].includes(field.type) ? ' full-width' : ''
     );
+
+    if (field.type === 'mechanic_selector') {
+        const ids = Array.isArray(value) ? value : [];
+        if (field.selectorTarget === 'peculiarities') {
+            wrap.innerHTML = buildPecSelectorHTML(field.key, field.label, ids, peculiaritiesCache, field.fontePreFilter);
+        } else {
+            wrap.innerHTML = buildMechanicSelectorHTML(field.key, field.label, ids, mechanicsCache, field.fontePreFilter);
+        }
+        return wrap;
+    }
 
     if (field.type === 'array') {
         wrap.innerHTML = buildArrayEditor(field, value || []);
@@ -832,6 +865,12 @@ window.handleFormSubmit = async function (e) {
                 try { data[field.key] = JSON.parse(el.value); }
                 catch { data[field.key] = el.value; }
             }
+        } else if (field.type === 'mechanic_selector') {
+            const el = document.getElementById(`field_${field.key}`);
+            if (el) {
+                try { data[field.key] = JSON.parse(el.value || '[]'); }
+                catch { data[field.key] = []; }
+            } else { data[field.key] = []; }
         } else if (field.type === 'boolean') {
             const el = document.getElementById(`field_${field.key}`);
             data[field.key] = el ? el.checked : false;
@@ -916,6 +955,100 @@ function collectArrayData(field) {
     });
     return items;
 }
+
+// ===== MECHANICS EDITOR BRIDGE =====
+function _openMechEditor(itemId) {
+    openMechanicEditor(itemId, allItems, mechanicsCache, {
+        db, collection, addDoc, updateDoc, doc, Timestamp,
+        currentUser, showAlert, loadModule, escapeHtml
+    });
+}
+window.openMechanicEditor = function (itemId) { _openMechEditor(itemId); };
+
+// ===== DUPLICATE ITEM =====
+window.duplicateItem = async function (itemId) {
+    const modDef = MODULE_DEFS[currentModule];
+    const source = allItems.find(i => i.id === itemId);
+    if (!source) { showAlert('❌ Item não encontrado', 'danger'); return; }
+
+    // Clone data, strip metadata
+    const clone = JSON.parse(JSON.stringify(source));
+    delete clone.id;
+    delete clone.criadoEm;
+    delete clone.criadoPor;
+    delete clone.atualizadoEm;
+    delete clone.versao;
+    clone.publicado = false;
+    if (clone.nome) clone.nome = clone.nome + ' (cópia)';
+    else if (clone.titulo) clone.titulo = clone.titulo + ' (cópia)';
+
+    // For mechanics, open visual editor with cloned data
+    if (modDef.useCustomEditor) {
+        // Open editor as "new" (no id), pre-fill after render
+        openMechanicEditor(null, allItems, mechanicsCache, {
+            db, collection, addDoc, updateDoc, doc, Timestamp,
+            currentUser, showAlert, loadModule, escapeHtml
+        });
+        setTimeout(() => {
+            // Pre-fill basic fields
+            const nomeEl = document.getElementById('mech_nome');
+            if (nomeEl) nomeEl.value = clone.nome || '';
+            const descEl = document.getElementById('mech_descricao');
+            if (descEl) descEl.value = clone.descricao || '';
+            const fonteEl = document.getElementById('mech_fonte');
+            if (fonteEl) fonteEl.value = clone.fonte || '';
+            const tipoEl = document.getElementById('mech_tipo');
+            if (tipoEl && clone.tipo) tipoEl.value = clone.tipo;
+            // Re-render config for the type
+            window._mechEditingId = null;
+            window._mechTipoChange();
+            setTimeout(() => {
+                const cfg = clone.config || {};
+                if (clone.tipo === 'modificar') {
+                    const a = document.getElementById('mech_config_alvo'); if (a) a.value = cfg.alvo || '';
+                    const o = document.getElementById('mech_config_operacao'); if (o) o.value = cfg.operacao || '+';
+                    const v = document.getElementById('mech_config_valor'); if (v) v.value = cfg.valor ?? '';
+                } else if (clone.tipo === 'limitar') {
+                    const a = document.getElementById('mech_config_alvo'); if (a) a.value = cfg.alvo || '';
+                    const t = document.getElementById('mech_config_tipoLimite'); if (t) { t.value = cfg.tipoLimite || ''; window._mechLimitChange(); }
+                    const mx = document.getElementById('mech_config_valorMaximo'); if (mx && cfg.valorMaximo != null) mx.value = cfg.valorMaximo;
+                    const mn = document.getElementById('mech_config_valorMinimo'); if (mn && cfg.valorMinimo != null) mn.value = cfg.valorMinimo;
+                } else if (clone.tipo === 'conceder') {
+                    const tc = document.getElementById('mech_config_tipoConcessao'); if (tc) tc.value = cfg.tipoConcessao || '';
+                    const dc = document.getElementById('mech_config_descricaoConcessao'); if (dc) dc.value = cfg.descricaoConcessao || '';
+                } else if (clone.tipo === 'condicional') {
+                    const g = document.getElementById('mech_config_gatilho'); if (g) g.value = cfg.gatilho || '';
+                } else if (clone.tipo === 'narrativo') {
+                    const t = document.getElementById('mech_config_textoEfeito'); if (t) t.value = cfg.textoEfeito || '';
+                }
+                // Duration/scope
+                const durEl = document.getElementById('mech_duracao'); if (durEl && clone.duracao) { durEl.value = clone.duracao; window._mechDuracaoChange(); }
+                const dtEl = document.getElementById('mech_duracaoTurnos'); if (dtEl && clone.duracaoTurnos) dtEl.value = clone.duracaoTurnos;
+                const deEl = document.getElementById('mech_duracaoEspecial'); if (deEl && clone.duracaoEspecial) deEl.value = clone.duracaoEspecial;
+                const escEl = document.getElementById('mech_escopo'); if (escEl && clone.escopo) escEl.value = clone.escopo;
+                const condEl = document.getElementById('mech_condicaoAplicacao'); if (condEl && clone.condicaoAplicacao) condEl.value = clone.condicaoAplicacao;
+                const empEl = document.getElementById('mech_empilhamento'); if (empEl && clone.empilhamento) empEl.value = clone.empilhamento;
+                window._mechUpdatePreview();
+            }, 100);
+        }, 50);
+        showAlert('📋 Duplicado! Edite e salve como novo registro.', 'success');
+        return;
+    }
+
+    // For standard modules: save directly
+    try {
+        clone.criadoPor = currentUser.uid;
+        clone.criadoEm = Timestamp.now();
+        clone.atualizadoEm = Timestamp.now();
+        clone.versao = 1;
+        await addDoc(collection(db, modDef.collection), clone);
+        showAlert('📋 Registro duplicado com sucesso!', 'success');
+        await loadModule(currentModule);
+    } catch (e) {
+        console.error('Erro ao duplicar:', e);
+        showAlert('❌ Erro ao duplicar: ' + e.message, 'danger');
+    }
+};
 
 // ===== HELPERS =====
 function showAlert(message, type) {
