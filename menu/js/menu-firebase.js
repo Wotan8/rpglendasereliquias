@@ -89,6 +89,15 @@ onAuthStateChanged(auth, async (user) => {
         await loadNotifications();
         await loadInventory();
 
+        // Check for criador role and show Painel Criador button
+        try {
+            const userDoc = await findUserDoc();
+            if (userDoc && userDoc.data().role === 'criador') {
+                const btnCriador = document.getElementById('btnPainelCriador');
+                if (btnCriador) btnCriador.style.display = '';
+            }
+        } catch (e) { /* ignore */ }
+
         // Esconder loading, mostrar conteúdo
         if (loadingScreen) loadingScreen.style.display = 'none';
         if (toolbar) toolbar.style.display = '';

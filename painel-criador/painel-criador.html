@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Criador — Lendas e Relíquias</title>
+    <meta name="description" content="Painel de Criador — Onde o mundo de Vasteluna é forjado.">
+    <link rel="stylesheet" href="css/painel-criador.css">
+</head>
+
+<body>
+
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">🔧 Carregando Painel de Criador...</div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar" style="display:none">
+        <button onclick="goToMenu()">← Menu</button>
+        <button id="btnThemeToggle" onclick="toggleTheme()">🌙</button>
+        <div class="spacer"></div>
+        <span class="hint-toolbar">Lendas e Relíquias — Painel de Criador</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:12px">
+            <span id="userDisplayName"
+                style="color:#94a3b8;font-size:.8rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                title=""></span>
+            <button onclick="logout()"
+                style="background:#ef4444;color:#fff;border:none;padding:4px 10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:.75rem">🚪</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="wrap" style="display:none">
+        <div class="sheet">
+
+            <!-- Header -->
+            <div class="menu-header">
+                <h1>✨🔧 Painel de Criador 🛡️⚙️</h1>
+                <p class="subtitle">Onde o mundo de Vasteluna é forjado.</p>
+            </div>
+
+            <div id="alertArea"></div>
+
+            <!-- Tabs -->
+            <div class="tabs" id="tabBar">
+                <button class="tab active" data-module="races" onclick="switchModule('races', this)">🧬 Raças</button>
+                <button class="tab" data-module="classes" onclick="switchModule('classes', this)">⚔️ Classes</button>
+                <button class="tab" data-module="tribes" onclick="switchModule('tribes', this)">🏕️ Tribos</button>
+                <button class="tab" data-module="peculiarities" onclick="switchModule('peculiarities', this)">✨
+                    Peculiaridades</button>
+                <button class="tab" data-module="specializations" onclick="switchModule('specializations', this)">🎯
+                    Especializações</button>
+                <button class="tab" data-module="skills" onclick="switchModule('skills', this)">📚 Perícias</button>
+                <button class="tab" data-module="equipment" onclick="switchModule('equipment', this)">🗡️
+                    Equipamentos</button>
+                <button class="tab" data-module="conditions" onclick="switchModule('conditions', this)">💀
+                    Condições</button>
+                <button class="tab" data-module="mechanics" onclick="switchModule('mechanics', this)">🔧
+                    Mecânicas</button>
+                <button class="tab" data-module="maneuvers" onclick="switchModule('maneuvers', this)">💥
+                    Manobras</button>
+                <button class="tab" data-module="spells" onclick="switchModule('spells', this)">🔮 Magias</button>
+                <button class="tab" data-module="lore" onclick="switchModule('lore', this)">🌍 Lore</button>
+            </div>
+
+            <!-- Module Content Area -->
+            <div id="moduleContent">
+                <!-- Filter Bar -->
+                <div class="filter-bar" id="filterBar">
+                    <input type="text" id="searchInput" placeholder="🔍 Buscar por nome..." oninput="filterItems()">
+                    <label>
+                        <input type="checkbox" id="filterPublished" onchange="filterItems()">
+                        Apenas publicados
+                    </label>
+                </div>
+
+                <!-- Create Card -->
+                <div class="create-card" id="createCard" onclick="openForm()">
+                    <div class="icon">➕</div>
+                    <div class="title" id="createCardTitle">Criar Novo Registro</div>
+                    <div class="desc">Adicione um novo item ao cenário</div>
+                </div>
+
+                <!-- Items Grid -->
+                <div class="items-grid" id="itemsGrid"></div>
+
+                <!-- Empty State -->
+                <div class="empty-state" id="emptyState" style="display:none">
+                    <div class="icon">📭</div>
+                    <div class="text">Nenhum registro encontrado</div>
+                    <div class="hint">Clique no card acima para criar o primeiro!</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div class="modal" id="deleteModal">
+        <div class="modal-content">
+            <div class="modal-icon">⚠️</div>
+            <div class="modal-title">ATENÇÃO!</div>
+            <div class="modal-text">
+                Tem certeza que deseja <strong>APAGAR PERMANENTEMENTE</strong> o registro
+                <strong id="deleteItemName"></strong>?<br><br>
+                Esta ação <strong>NÃO PODE SER DESFEITA</strong>!
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-modal btn-cancel" onclick="closeDeleteModal()">❌ Cancelar</button>
+                <button class="btn-modal btn-confirm" onclick="confirmDelete()">🗑️ Sim, Apagar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Modal -->
+    <div class="modal form-modal" id="formModal">
+        <div class="modal-content">
+            <div class="form-header">
+                <h2 id="formTitle">Novo Registro</h2>
+                <button class="btn-close-form" onclick="closeForm()">✕</button>
+            </div>
+            <form id="dynamicForm" onsubmit="handleFormSubmit(event)">
+                <div id="formFields"></div>
+                <div class="form-actions">
+                    <button type="button" class="btn-modal btn-cancel" onclick="closeForm()">Cancelar</button>
+                    <button type="submit" class="btn-save" id="btnSave">💾 Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase Module -->
+    <script type="module" src="js/painel-firebase.js"></script>
+
+</body>
+
+</html>

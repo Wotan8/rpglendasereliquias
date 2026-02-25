@@ -11,6 +11,18 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/masters/$(request.auth.uid));
     }
 
+    function isCriador() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid))
+          .data.role == 'criador';
+    }
+
+    // ========== Coleções do Painel de Criador (system/data/*) ==========
+    match /system/data/{collection}/{document} {
+      allow read: if isSignedIn();
+      allow write: if isCriador();
+    }
+
     // Coleção de mestres (sem alterações)
     match /masters/{uid} {
       allow read: if isMaster();
