@@ -1,9 +1,15 @@
 /* ===== LÓGICA DE PECULIARIDADES RACIAIS ===== */
 
+/* Guarda a raça anterior para poder reverter bônus corretamente */
+let _previousRace = '';
+
 function onRaceChange() {
     const selRaca = document.getElementById('selRaca');
     if (!selRaca) return;
     const racaNome = selRaca.value;
+
+    // --- Limpar bônus da raça anterior ANTES de tudo ---
+    clearRaceBonuses(_previousRace);
 
     // Atualizar subtitulo da raça
     const subtitleEl = document.getElementById('raceSubtitle');
@@ -21,6 +27,10 @@ function onRaceChange() {
         hint.id = 'raceHint';
         hint.textContent = 'Selecione uma raça para visualizar suas peculiaridades.';
         grid.appendChild(hint);
+        updateYotunForcaUI('');
+        updateDaereoVisibility('');
+        _previousRace = '';
+        if (typeof recalcAll === 'function') recalcAll();
         scheduleAutosave();
         return;
     }
@@ -37,7 +47,170 @@ function onRaceChange() {
         renderPeculiaridadeCard(pec, racaNome, grid);
     });
 
+    updateYotunForcaUI(racaNome);
+    updateDaereoVisibility(racaNome);
+
+    // --- Aplicar bônus da nova raça ---
+    applyRaceBonuses(racaNome);
+    _previousRace = racaNome;
+
+    if (typeof recalcAll === 'function') recalcAll();
     scheduleAutosave();
+}
+
+function updateDaereoVisibility(racaNome) {
+    const deslocArDisplay = document.getElementById('desloc_ar_display');
+    if (!deslocArDisplay) return;
+    const parent = deslocArDisplay.parentElement;
+    if (racaNome === 'Picxi') {
+        parent.style.display = '';
+    } else {
+        parent.style.display = 'none';
+    }
+}
+
+function updateYotunForcaUI(racaNome) {
+    const forcaDotsContainer = document.querySelector('.dots5[data-attr="attr_for"]');
+    if (!forcaDotsContainer) return;
+
+    let dot6 = forcaDotsContainer.querySelector('.dot[data-val="6"]');
+
+    if (racaNome === 'Yotun') {
+        if (!dot6) {
+            dot6 = document.createElement('button');
+            dot6.className = 'dot';
+            dot6.dataset.val = '6';
+            dot6.title = 'Nível 6';
+            dot6.addEventListener('click', () => {
+                if (typeof handleDotUpgrade === 'function') {
+                    handleDotUpgrade(forcaDotsContainer, 'attr_for', 6);
+                }
+            });
+            forcaDotsContainer.appendChild(dot6);
+        }
+    } else {
+        if (dot6) {
+            dot6.remove();
+            if (state.dots['attr_for'] === 6) {
+                state.dots['attr_for'] = 5;
+                if (typeof recalcAll === 'function') recalcAll();
+                if (typeof recalcMainTests === 'function') recalcMainTests();
+            }
+        }
+    }
+
+    if (typeof refreshDots === 'function') {
+        refreshDots(forcaDotsContainer, 'attr_for');
+    }
+}
+
+/* ===== BÔNUS RACIAIS — CLEAR / APPLY ===== */
+
+/**
+ * Reseta TODOS os bônus raciais para valores neutros e reverte dots alterados.
+ */
+function clearRaceBonuses(oldRace) {
+    const rb = window._raceBonuses;
+    rb.det_max = 0;
+    rb.vit_max = 0;
+    rb.perc = 0;
+    rb.is_yotun = false;
+    rb.carga_mult = 1;
+    rb.desloc_ar_override = false;
+
+    // Karu-Selvagem: reverter +1 em Briga e Esquiva
+    if (oldRace === 'Karu-Selvagem') {
+        if (state.dots['sk_fisico_briga'] && state.dots['sk_fisico_briga'] > 0)
+            state.dots['sk_fisico_briga'] = Math.max(0, (state.dots['sk_fisico_briga'] || 0) - 1);
+        if (state.dots['sk_combate_esquiva'] && state.dots['sk_combate_esquiva'] > 0)
+            state.dots['sk_combate_esquiva'] = Math.max(0, (state.dots['sk_combate_esquiva'] || 0) - 1);
+        // Refresh visual dos dots
+        const brigaCont = document.querySelector('.dots5[data-attr="sk_fisico_briga"]');
+        const esquivaCont = document.querySelector('.dots5[data-attr="sk_combate_esquiva"]');
+        if (brigaCont && typeof refreshDots === 'function') refreshDots(brigaCont, 'sk_fisico_briga');
+        if (esquivaCont && typeof refreshDots === 'function') refreshDots(esquivaCont, 'sk_combate_esquiva');
+    }
+
+    // Pogo: restaurar dots 4 e 5 de FOR
+    if (oldRace === 'Pogo') {
+        updatePogoForUI(false);
+    }
+}
+
+/**
+ * Aplica os bônus da raça selecionada.
+ */
+function applyRaceBonuses(racaNome) {
+    const rb = window._raceBonuses;
+
+    switch (racaNome) {
+        case 'Humano':
+            // Força de Vontade Natural: +1 DET Máxima
+            rb.det_max = 1;
+            break;
+
+        case 'Karu-Selvagem':
+            // Pés Invertidos: +1 Briga, +1 Esquiva
+            state.dots['sk_fisico_briga'] = (state.dots['sk_fisico_briga'] || 0) + 1;
+            state.dots['sk_combate_esquiva'] = (state.dots['sk_combate_esquiva'] || 0) + 1;
+            const brigaCont = document.querySelector('.dots5[data-attr="sk_fisico_briga"]');
+            const esquivaCont = document.querySelector('.dots5[data-attr="sk_combate_esquiva"]');
+            if (brigaCont && typeof refreshDots === 'function') refreshDots(brigaCont, 'sk_fisico_briga');
+            if (esquivaCont && typeof refreshDots === 'function') refreshDots(esquivaCont, 'sk_combate_esquiva');
+            break;
+
+        case 'Picxi':
+            // Descendência Luxiana: D.Aéreo = (FOR+DES+Tam+Atletismo)*3
+            rb.desloc_ar_override = true;
+            // Fragilidade Física: −1 VIT Máxima
+            rb.vit_max = -1;
+            break;
+
+        case 'Pogo':
+            // Corpo Frágil: limita FOR a no máximo 3
+            updatePogoForUI(true);
+            break;
+
+        case 'Tamano': {
+            // Olfato Excepcional: somar nível+1 à Percepção
+            const olfatoLevel = state.dots['pec_olfato_excepcional'] || 1;
+            rb.perc = olfatoLevel + 1; // nv1→+2, nv2→+3, nv3→+4
+            break;
+        }
+
+        case 'Yotun': {
+            // Passos de Gigante: dobrar desloc terrestre se tamanho >= 10 (verificado dinamicamente no recalcAll)
+            rb.is_yotun = true;
+            // Alta Carga: dobrar carga
+            rb.carga_mult = 2;
+            break;
+        }
+    }
+}
+
+/**
+ * Pogo: esconde/mostra dots 4 e 5 de FOR e capeia o valor em 3.
+ */
+function updatePogoForUI(isPogo) {
+    const forcaDotsContainer = document.querySelector('.dots5[data-attr="attr_for"]');
+    if (!forcaDotsContainer) return;
+
+    const dot4 = forcaDotsContainer.querySelector('.dot[data-val="4"]');
+    const dot5 = forcaDotsContainer.querySelector('.dot[data-val="5"]');
+
+    if (isPogo) {
+        if (dot4) dot4.style.display = 'none';
+        if (dot5) dot5.style.display = 'none';
+        // Capear valor atual de FOR em 3
+        if ((state.dots['attr_for'] || 0) > 3) {
+            state.dots['attr_for'] = 3;
+        }
+    } else {
+        if (dot4) dot4.style.display = '';
+        if (dot5) dot5.style.display = '';
+    }
+
+    if (typeof refreshDots === 'function') refreshDots(forcaDotsContainer, 'attr_for');
 }
 
 function renderPeculiaridadeCard(pec, raceKey, container) {
@@ -227,5 +400,11 @@ function updatePeculiaridadeLevel(raceKey, pecKey, newLevel, pecData) {
     if (pecKey === 'blindagem_natural') {
         const bldField = document.querySelector('[data-key="blindagem"]');
         if (bldField) bldField.value = newLevel;
+    }
+
+    // Auto-update Percepção para Tamano: Olfato Excepcional
+    if (pecKey === 'olfato_excepcional') {
+        window._raceBonuses.perc = newLevel + 1; // nv1→+2, nv2→+3, nv3→+4
+        if (typeof recalcAll === 'function') recalcAll();
     }
 }

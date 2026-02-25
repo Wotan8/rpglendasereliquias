@@ -1,14 +1,25 @@
 /* ===== DERIVED VALUES — Cálculo Automático de Valores Derivados ===== */
 
+/* --- Modificadores raciais aplicados pelo sistema de peculiaridades --- */
+window._raceBonuses = {
+    det_max: 0,       // somado à DET_MAX
+    vit_max: 0,       // somado à VIT_MAX (negativo para Picxi)
+    perc: 0,          // somado à PERC (Tamano: Olfato Excepcional)
+    is_yotun: false,  // se true, verifica tamanho >=10 para dobrar desloc terrestre
+    carga_mult: 1,    // multiplicador da Carga (Yotun: ×2)
+    desloc_ar_override: false, // true = fórmula Picxi: (FOR+DES+Tam+Atletismo)*3
+};
+
 const DERIVED_FORMULAS = {
     VIT_MAX: (a, s, f) => (a.VIG + f.tamanho) * 3,
     PERC: (a, s, f) => a.RAC + a.PRE,
     INI: (a, s, f) => a.RAC + a.DES + a.AUT + s.agilidade - f.tamanho,
     DET_MAX: (a, s, f) => a.PRS + a.AUT,
-    REA: (a, s, f) => Math.min(a.DES, a.RAC + s.agilidade),
+    REA: (a, s, f) => Math.min(a.DES, a.RAC) + s.agilidade,
     DESLOC_T: (a, s, f) => a.FOR + a.DES + f.tamanho + s.agilidade,
-    DESLOC_A: (a, s, f) => a.FOR + a.DES + f.tamanho + s.atletismo,
+    DESLOC_A: (a, s, f) => Math.floor((a.FOR + a.DES + f.tamanho + s.atletismo) / 3),
     DESLOC_AR: (a, s, f) => a.FOR + a.DES + f.tamanho + s.atletismo,
+    DESLOC_V: (a, s, f) => Math.min(a.FOR, s.atletismo),
     SAN_MAX: (a, s, f) => (a.INT + a.AUT + a.PRS) * 2 - (s.abismo * 2),
     CARGA: (a, s, f) => a.FOR + a.VIG,
 };
@@ -24,6 +35,7 @@ const DERIVED_FIELDS_MAP = {
     DESLOC_T: { display: 'desloc_t_display' },
     DESLOC_A: { display: 'desloc_a_display' },
     DESLOC_AR: { display: 'desloc_ar_display' },
+    DESLOC_V: { display: 'desloc_v_display' },
     CARGA: { display: 'carga_display' },
 };
 
@@ -60,9 +72,27 @@ function recalcAll() {
     const attrs = gatherAttributes();
     const skills = gatherDerivedSkills();
     const fields = gatherDerivedFields();
+    const rb = window._raceBonuses;
 
     for (const [key, formula] of Object.entries(DERIVED_FORMULAS)) {
-        const value = formula(attrs, skills, fields);
+        let value = formula(attrs, skills, fields);
+
+        // Aplicar modificadores raciais
+        switch (key) {
+            case 'VIT_MAX': value += rb.vit_max; break;
+            case 'DET_MAX': value += rb.det_max; break;
+            case 'PERC': value += rb.perc; break;
+            case 'DESLOC_T':
+                if (rb.is_yotun && fields.tamanho >= 10) value = value * 2;
+                break;
+            case 'CARGA': value = Math.floor(value * rb.carga_mult); break;
+            case 'DESLOC_AR':
+                if (rb.desloc_ar_override) {
+                    value = (attrs.FOR + attrs.DES + fields.tamanho + skills.atletismo) * 3;
+                }
+                break;
+        }
+
         updateDerivedField(key, value);
     }
 }
