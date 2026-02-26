@@ -150,6 +150,7 @@ const MODULE_DEFS = {
                     { value: 'classe', label: 'Classe' },
                     { value: 'tribo', label: 'Tribo' },
                     { value: 'condicao', label: 'Condição' },
+                    { value: 'individual', label: 'Individual' },
                     { value: 'generica', label: 'Genérica' }
                 ]
             },
@@ -1020,6 +1021,28 @@ window.duplicateItem = async function (itemId) {
                     const g = document.getElementById('mech_config_gatilho'); if (g) g.value = cfg.gatilho || '';
                 } else if (clone.tipo === 'narrativo') {
                     const t = document.getElementById('mech_config_textoEfeito'); if (t) t.value = cfg.textoEfeito || '';
+                } else if (clone.tipo === 'distribuir') {
+                    const p = document.getElementById('mech_config_pool');
+                    if (p) p.value = cfg.pool || '';
+                    const q = document.getElementById('mech_config_quantidadeAlvos');
+                    if (q) q.value = cfg.quantidadeAlvos || '';
+                    const v = document.getElementById('mech_config_valorPorAlvo');
+                    if (v) v.value = cfg.valorPorAlvo || '';
+                    const od = document.getElementById('mech_config_operacao_dist');
+                    if (od) od.value = cfg.operacao || '+';
+                    const r = document.getElementById('mech_config_restricao');
+                    if (r) r.value = cfg.restricao || 'diferentes';
+                    // Trigger pool change to show/hide custom
+                    window._mechPoolChange?.();
+                    // Check custom pool checkboxes
+                    if (cfg.pool === 'Personalizado' && Array.isArray(cfg.poolPersonalizado)) {
+                        const poolEl = document.getElementById('mech_config_poolPersonalizado');
+                        if (poolEl) {
+                            poolEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                                cb.checked = cfg.poolPersonalizado.includes(cb.value);
+                            });
+                        }
+                    }
                 }
                 // Duration/scope
                 const durEl = document.getElementById('mech_duracao'); if (durEl && clone.duracao) { durEl.value = clone.duracao; window._mechDuracaoChange(); }

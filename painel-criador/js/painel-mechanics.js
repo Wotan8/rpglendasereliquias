@@ -61,9 +61,9 @@ const MECHANIC_TARGETS_HTML = `
 <option value="EXP Necessária">EXP Necessária</option>
 </optgroup>`;
 
-export const FONTE_LABELS = { raca: '🧬 Raça', classe: '⚔️ Classe', tribo: '🏕️ Tribo', peculiaridade: '✨ Pecul.', item: '🗡️ Item', condicao: '💀 Condição', manobra: '💥 Manobra', magia: '🔮 Magia', generica: '⚙️ Genérica' };
-export const TIPO_ICONS = { modificar: '➕', limitar: '🔒', conceder: '🎁', condicional: '⚡', narrativo: '📝' };
-export const TIPO_LABELS = { modificar: 'Modificar', limitar: 'Limitar', conceder: 'Conceder', condicional: 'Condicional', narrativo: 'Narrativo' };
+export const FONTE_LABELS = { raca: '🧬 Raça', classe: '⚔️ Classe', tribo: '🏕️ Tribo', peculiaridade: '✨ Pecul.', item: '🗡️ Item', condicao: '💀 Condição', manobra: '💥 Manobra', magia: '🔮 Magia', individual: '👤 Individual', generica: '⚙️ Genérica' };
+export const TIPO_ICONS = { modificar: '➕', limitar: '🔒', conceder: '🎁', condicional: '⚡', narrativo: '📝', distribuir: '🎲' };
+export const TIPO_LABELS = { modificar: 'Modificar', limitar: 'Limitar', conceder: 'Conceder', condicional: 'Condicional', narrativo: 'Narrativo', distribuir: 'Distribuir' };
 
 function esc(text) {
     if (text === null || text === undefined) return '';
@@ -98,6 +98,15 @@ export function generatePreviewText(data) {
     } else if (tipo === 'narrativo') {
         const t = config.textoEfeito || '';
         text = `Narrativo: ${t.length > 60 ? t.substring(0, 60) + '...' : t}`;
+    } else if (tipo === 'distribuir') {
+        const pool = config.pool || '?';
+        const qty = config.quantidadeAlvos || '?';
+        const val = config.valorPorAlvo || '?';
+        const op = config.operacao || '+';
+        const rest = config.restricao === 'diferentes' ? ' (diferentes)' : '';
+        const poolLabel = pool === 'Personalizado' && Array.isArray(config.poolPersonalizado) && config.poolPersonalizado.length
+            ? `Personalizado: ${config.poolPersonalizado.join(', ')}` : pool;
+        text = `Distribuir: ${op}${val} em ${qty} alvos${rest} de [${poolLabel}]`;
     }
     return text + cond + dur || 'Efeito não definido';
 }
@@ -228,6 +237,74 @@ function renderConfigNarrativo(config) {
         <textarea id="mech_config_textoEfeito" placeholder="Texto livre descrevendo o efeito qualitativo" oninput="window._mechUpdatePreview()">${esc(config?.textoEfeito || '')}</textarea></div>`;
 }
 
+function renderConfigDistribuir(config) {
+    const poolVal = config?.pool || '';
+    const qtyVal = config?.quantidadeAlvos ?? '';
+    const valVal = config?.valorPorAlvo ?? '';
+    const opVal = config?.operacao || '+';
+    const restVal = config?.restricao || 'diferentes';
+    const poolCustom = Array.isArray(config?.poolPersonalizado) ? config.poolPersonalizado : [];
+
+    // Build checkboxes from MECHANIC_TARGETS_HTML by extracting option values
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = `<select>${MECHANIC_TARGETS_HTML}</select>`;
+    const allOptions = Array.from(tempDiv.querySelectorAll('option'));
+    const checkboxesHtml = allOptions.map(opt => {
+        const v = opt.value;
+        const checked = poolCustom.includes(v) ? 'checked' : '';
+        return `<label class="mechsel-result" style="padding:4px 6px"><input type="checkbox" value="${esc(v)}" ${checked} onchange="window._mechUpdatePreview()"><span class="mechsel-result-name">${esc(opt.textContent)}</span></label>`;
+    }).join('');
+
+    return `
+    <div class="form-grid">
+        <div class="form-group full-width"><label>Pool de Alvos <span class="required">*</span></label>
+            <select id="mech_config_pool" onchange="window._mechPoolChange(); window._mechUpdatePreview()">
+                <option value="" ${!poolVal ? 'selected' : ''}>— Selecionar pool —</option>
+                <option value="Perícias (qualquer)" ${poolVal === 'Perícias (qualquer)' ? 'selected' : ''}>Perícias (qualquer)</option>
+                <option value="Perícias Mentais (qualquer)" ${poolVal === 'Perícias Mentais (qualquer)' ? 'selected' : ''}>Perícias Mentais (qualquer)</option>
+                <option value="Perícias Físicas (qualquer)" ${poolVal === 'Perícias Físicas (qualquer)' ? 'selected' : ''}>Perícias Físicas (qualquer)</option>
+                <option value="Perícias Sociais (qualquer)" ${poolVal === 'Perícias Sociais (qualquer)' ? 'selected' : ''}>Perícias Sociais (qualquer)</option>
+                <option value="Atributos (qualquer)" ${poolVal === 'Atributos (qualquer)' ? 'selected' : ''}>Atributos (qualquer)</option>
+                <option value="Atributos Mentais" ${poolVal === 'Atributos Mentais' ? 'selected' : ''}>Atributos Mentais</option>
+                <option value="Atributos Físicos" ${poolVal === 'Atributos Físicos' ? 'selected' : ''}>Atributos Físicos</option>
+                <option value="Atributos Sociais" ${poolVal === 'Atributos Sociais' ? 'selected' : ''}>Atributos Sociais</option>
+                <option value="Personalizado" ${poolVal === 'Personalizado' ? 'selected' : ''}>Personalizado</option>
+            </select>
+        </div>
+        <div class="form-group"><label>Quantos alvos diferentes? <span class="required">*</span></label>
+            <input type="number" id="mech_config_quantidadeAlvos" value="${esc(String(qtyVal))}" placeholder="Ex: 4" min="1" oninput="window._mechUpdatePreview()">
+        </div>
+        <div class="form-group"><label>Valor por alvo <span class="required">*</span></label>
+            <input type="text" id="mech_config_valorPorAlvo" value="${esc(String(valVal))}" placeholder="Ex: 1" oninput="window._mechUpdatePreview()">
+        </div>
+        <div class="form-group"><label>Operação <span class="required">*</span></label>
+            <select id="mech_config_operacao_dist" onchange="window._mechUpdatePreview()">
+                <option value="+" ${opVal === '+' ? 'selected' : ''}>+ Somar</option>
+                <option value="-" ${opVal === '-' ? 'selected' : ''}>− Subtrair</option>
+                <option value="=" ${opVal === '=' ? 'selected' : ''}>= Definir</option>
+            </select>
+        </div>
+        <div class="form-group"><label>Restrição</label>
+            <select id="mech_config_restricao" onchange="window._mechUpdatePreview()">
+                <option value="diferentes" ${restVal === 'diferentes' ? 'selected' : ''}>Alvos devem ser diferentes</option>
+                <option value="livre" ${restVal === 'livre' ? 'selected' : ''}>Pode repetir alvos</option>
+            </select>
+        </div>
+        <div class="form-group full-width" id="mech_config_poolCustomWrap" style="display:${poolVal === 'Personalizado' ? '' : 'none'}">
+            <label>Pool Personalizado — Selecione os alvos permitidos</label>
+            <div id="mech_config_poolPersonalizado" style="max-height:200px;overflow-y:auto;border:2px solid var(--soft);border-radius:8px;padding:8px;display:flex;flex-wrap:wrap;gap:2px">
+                ${checkboxesHtml}
+            </div>
+        </div>
+    </div>`;
+}
+
+window._mechPoolChange = function () {
+    const pool = document.getElementById('mech_config_pool')?.value || '';
+    const wrap = document.getElementById('mech_config_poolCustomWrap');
+    if (wrap) wrap.style.display = pool === 'Personalizado' ? '' : 'none';
+};
+
 // ===== INLINE MECH SELECTOR (for condicional sub-effects) =====
 function buildInlineMechSelector(id, label, currentIds, cache, excludeCondicional) {
     const filtered = excludeCondicional ? cache.filter(m => m.tipo !== 'condicional' && m.publicado) : cache.filter(m => m.publicado);
@@ -299,6 +376,7 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks) 
                         <option value="conceder" ${tipo === 'conceder' ? 'selected' : ''}>🎁 Conceder (dá ou remove capacidade)</option>
                         <option value="condicional" ${tipo === 'condicional' ? 'selected' : ''}>⚡ Condicional (efeito com gatilho)</option>
                         <option value="narrativo" ${tipo === 'narrativo' ? 'selected' : ''}>📝 Narrativo (efeito descritivo)</option>
+                        <option value="distribuir" ${tipo === 'distribuir' ? 'selected' : ''}>🎲 Distribuir (distribui pontos entre múltiplos alvos)</option>
                     </select>
                 </div>
                 <div class="mech-config-area" id="mechConfigArea"></div>
@@ -405,6 +483,7 @@ window._mechTipoChange = function () {
     else if (tipo === 'conceder') area.innerHTML = renderConfigConceder(config);
     else if (tipo === 'condicional') area.innerHTML = renderConfigCondicional(config, window._mechCache || []);
     else if (tipo === 'narrativo') area.innerHTML = renderConfigNarrativo(config);
+    else if (tipo === 'distribuir') area.innerHTML = renderConfigDistribuir(config);
 
     // Re-set alvo if editing same type
     if ((tipo === 'modificar' || tipo === 'limitar') && config.alvo) {
@@ -508,6 +587,22 @@ function collectMechFormData() {
         };
     } else if (tipo === 'narrativo') {
         data.config = { textoEfeito: document.getElementById('mech_config_textoEfeito')?.value || '' };
+    } else if (tipo === 'distribuir') {
+        const poolCustomEl = document.getElementById('mech_config_poolPersonalizado');
+        let poolPersonalizado = [];
+        if (poolCustomEl) {
+            poolPersonalizado = Array.from(
+                poolCustomEl.querySelectorAll('input[type="checkbox"]:checked')
+            ).map(cb => cb.value);
+        }
+        data.config = {
+            pool: document.getElementById('mech_config_pool')?.value || '',
+            quantidadeAlvos: Number(document.getElementById('mech_config_quantidadeAlvos')?.value) || 1,
+            valorPorAlvo: Number(document.getElementById('mech_config_valorPorAlvo')?.value) || 1,
+            operacao: document.getElementById('mech_config_operacao_dist')?.value || '+',
+            restricao: document.getElementById('mech_config_restricao')?.value || 'diferentes',
+            poolPersonalizado
+        };
     }
     return data;
 }

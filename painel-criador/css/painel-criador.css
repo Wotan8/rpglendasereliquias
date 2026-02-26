@@ -1167,6 +1167,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     --type-conceder: #10B981;
     --type-condicional: #EC4899;
     --type-narrativo: #6B7280;
+    --type-distribuir: #8B5CF6;
     --fonte-raca: #10B981;
     --fonte-classe: #4F6EF7;
     --fonte-tribo: #F59E0B;
@@ -1175,6 +1176,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     --fonte-condicao: #EF4444;
     --fonte-manobra: #EC4899;
     --fonte-magia: #06B6D4;
+    --fonte-individual: #F97316;
     --fonte-generica: #6B7280;
 }
 
@@ -1362,6 +1364,10 @@ html.dark .mech-card {
 
 .mech-card[data-type="narrativo"] {
     border-left-color: var(--type-narrativo);
+}
+
+.mech-card[data-type="distribuir"] {
+    border-left-color: var(--type-distribuir);
 }
 
 .mech-card-header {
