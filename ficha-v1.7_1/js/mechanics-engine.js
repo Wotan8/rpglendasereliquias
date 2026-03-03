@@ -184,7 +184,9 @@ function applyMechanicToSheet(mech, parentPec) {
                 if (config.valorMaximo !== undefined) config.valorMaximo = prog.valor;
                 if (config.valorMinimo !== undefined) config.valorMinimo = prog.valor;
             } else if (tipo === 'distribuir') {
-                config.valorPorAlvo = prog.valor;
+                if (prog.valor !== undefined) config.valorPorAlvo = prog.valor;
+                if (prog.valorPorAlvo !== undefined) config.valorPorAlvo = prog.valorPorAlvo;
+                if (prog.quantidadeAlvos !== undefined) config.quantidadeAlvos = prog.quantidadeAlvos;
             }
             // narrativo e conceder não alteram cálculos, só exibição
         }
@@ -242,21 +244,22 @@ function applyMechanicToSheet(mech, parentPec) {
 
     // === TIPO: DISTRIBUIR ===
     if (tipo === 'distribuir' && (isCreation || isPermanent)) {
-        const jaAplicada = state.mecanicasAplicadas?.[mech.id]?.aplicada;
-        if (!jaAplicada) {
-            // Marcar como pendente — a UI de distribuição será mostrada
-            state.mecanicasPendentes.push(mech);
-        } else {
-            // Já aplicada — restaurar os bônus salvos
-            const dados = state.mecanicasAplicadas[mech.id];
-            if (dados.alvosEscolhidos) {
-                for (const alvo of dados.alvosEscolhidos) {
-                    const field = TARGET_MAP[alvo.nome];
-                    if (field) {
-                        state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) + alvo.valor;
-                    }
+        const dados = state.mecanicasAplicadas?.[mech.id];
+        const jaAplicada = dados?.aplicada;
+
+        // Restaurar bônus de alvos já escolhidos (parcial ou completo)
+        if (dados?.alvosEscolhidos) {
+            for (const alvo of dados.alvosEscolhidos) {
+                const field = TARGET_MAP[alvo.nome];
+                if (field) {
+                    state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) + alvo.valor;
                 }
             }
+        }
+
+        // Se não totalmente aplicada, marcar como pendente para mostrar slots restantes
+        if (!jaAplicada) {
+            state.mecanicasPendentes.push(mech);
         }
     }
 
@@ -296,27 +299,78 @@ function generatePreviewText(mech) {
 }
 
 /* ===== UI DE DISTRIBUIÇÃO ===== */
-function renderDistribuirUI(container, mech) {
-    const config = mech.config || {};
+
+/**
+ * Resolve a config de distribuição considerando nível evoluível.
+ */
+function _resolveDistribuirConfig(mech, parentPec) {
+    let config = mech.config ? JSON.parse(JSON.stringify(mech.config)) : {};
+
+    if (mech.evoluivel && mech.progressao && parentPec) {
+        const dotKey = 'pec_' + (parentPec.key || parentPec.id);
+        const currentLevel = state.dots[dotKey] || parentPec.nivelAtual || 1;
+        const prog = mech.progressao[String(currentLevel)];
+        if (prog) {
+            if (prog.valor !== undefined) config.valorPorAlvo = prog.valor;
+            if (prog.valorPorAlvo !== undefined) config.valorPorAlvo = prog.valorPorAlvo;
+            if (prog.quantidadeAlvos !== undefined) config.quantidadeAlvos = prog.quantidadeAlvos;
+        }
+    }
+    return config;
+}
+
+/**
+ * Renderiza a UI de distribuição.
+ * Se já houver alvos confirmados parcialmente, mostra-os travados e oferece os slots restantes.
+ * Se todos os slots estiverem preenchidos, mostra apenas o resumo.
+ */
+function renderDistribuirUI(container, mech, parentPec) {
+    const config = _resolveDistribuirConfig(mech, parentPec);
+
     const pool = getDistribuirPool(config.pool);
-    const qty = config.quantidadeAlvos || 1;
+    const totalQty = config.quantidadeAlvos || 1;
     const valorPorAlvo = config.valorPorAlvo || 1;
     const restricao = config.restricao || '';
+
+    // Buscar alvos já confirmados
+    const dados = state.mecanicasAplicadas?.[mech.id];
+    const jaEscolhidos = dados?.alvosEscolhidos || [];
+    const remaining = totalQty - jaEscolhidos.length;
 
     const wrapper = document.createElement('div');
     wrapper.className = 'distribuir-ui';
     wrapper.dataset.mechId = mech.id;
 
+    // --- Resumo do que já foi escolhido ---
+    if (jaEscolhidos.length > 0) {
+        const resumo = document.createElement('div');
+        resumo.className = 'distribuir-resumo';
+        const linhas = jaEscolhidos.map(a => `${a.nome} (+${a.valor})`).join(', ');
+        resumo.innerHTML = `<strong>✅ Distribuído:</strong> ${linhas}`;
+        wrapper.appendChild(resumo);
+    }
+
+    // Se todos os slots foram preenchidos, não mostrar mais selects
+    if (remaining <= 0) {
+        container.appendChild(wrapper);
+        return;
+    }
+
+    // --- Título ---
     const titulo = document.createElement('div');
     titulo.className = 'distribuir-titulo';
     titulo.innerHTML = `⚠️ <strong>DISTRIBUIÇÃO PENDENTE</strong><br>
-        Escolha ${qty} ${restricao === 'diferentes' ? 'perícias diferentes' : 'alvos'} para receber +${valorPorAlvo}:`;
+        Escolha até ${remaining} ${restricao === 'diferentes' ? 'perícias diferentes' : 'alvos'} para receber +${valorPorAlvo} (${jaEscolhidos.length}/${totalQty} distribuído${jaEscolhidos.length !== 1 ? 's' : ''}):`;
     wrapper.appendChild(titulo);
 
+    // --- Selects apenas para os slots restantes ---
     const selectsContainer = document.createElement('div');
     selectsContainer.className = 'distribuir-selects';
 
-    for (let i = 0; i < qty; i++) {
+    // Nomes já escolhidos (para desabilitar em restricao="diferentes")
+    const nomesJaEscolhidos = jaEscolhidos.map(a => a.nome);
+
+    for (let i = 0; i < remaining; i++) {
         const sel = document.createElement('select');
         sel.className = 'distribuir-select';
         sel.dataset.slotIndex = i;
@@ -325,13 +379,16 @@ function renderDistribuirUI(container, mech) {
             const opt = document.createElement('option');
             opt.value = alvoName;
             opt.textContent = alvoName;
+            // Desabilitar nomes que já foram confirmados anteriormente
+            if (restricao === 'diferentes' && nomesJaEscolhidos.includes(alvoName)) {
+                opt.disabled = true;
+            }
             sel.appendChild(opt);
         });
 
-        // Se restricao="diferentes", desabilitar opções já selecionadas
         sel.addEventListener('change', () => {
             if (restricao === 'diferentes') {
-                updateDistribuirOptions(wrapper, pool);
+                updateDistribuirOptions(wrapper, pool, nomesJaEscolhidos);
             }
         });
 
@@ -339,84 +396,129 @@ function renderDistribuirUI(container, mech) {
     }
     wrapper.appendChild(selectsContainer);
 
+    // --- Botão de confirmar ---
     const btnConfirmar = document.createElement('button');
     btnConfirmar.className = 'btn-distribuir-confirmar';
     btnConfirmar.textContent = '✅ Confirmar Distribuição';
-    btnConfirmar.addEventListener('click', () => confirmarDistribuicao(mech, wrapper));
+    btnConfirmar.addEventListener('click', () => confirmarDistribuicao(mech, wrapper, parentPec));
     wrapper.appendChild(btnConfirmar);
 
     container.appendChild(wrapper);
 }
 
-function updateDistribuirOptions(wrapper, pool) {
+function updateDistribuirOptions(wrapper, pool, nomesJaEscolhidos) {
     const selects = wrapper.querySelectorAll('.distribuir-select');
     const selectedValues = Array.from(selects).map(s => s.value).filter(Boolean);
+    const allUsed = [...(nomesJaEscolhidos || []), ...selectedValues];
 
     selects.forEach(sel => {
         const currentVal = sel.value;
         sel.querySelectorAll('option').forEach(opt => {
             if (!opt.value) return; // skip placeholder
-            opt.disabled = selectedValues.includes(opt.value) && opt.value !== currentVal;
+            opt.disabled = allUsed.includes(opt.value) && opt.value !== currentVal;
         });
     });
 }
 
-function confirmarDistribuicao(mech, wrapper) {
+function confirmarDistribuicao(mech, wrapper, parentPec) {
     const selects = wrapper.querySelectorAll('.distribuir-select');
-    const config = mech.config || {};
+    const config = _resolveDistribuirConfig(mech, parentPec);
     const valorPorAlvo = config.valorPorAlvo || 1;
-    const qty = config.quantidadeAlvos || 1;
 
-    const alvosEscolhidos = [];
+    // Coletar apenas os novos alvos selecionados (não vazios)
+    const novosAlvos = [];
     for (const sel of selects) {
-        if (!sel.value) {
-            alert('Preencha todos os campos antes de confirmar.');
-            return;
+        if (sel.value) {
+            novosAlvos.push({ nome: sel.value, valor: valorPorAlvo });
         }
-        alvosEscolhidos.push({ nome: sel.value, valor: valorPorAlvo });
     }
 
-    if (alvosEscolhidos.length !== qty) {
-        alert(`Selecione exatamente ${qty} alvos.`);
+    if (novosAlvos.length === 0) {
+        alert('Selecione pelo menos 1 alvo antes de confirmar.');
         return;
     }
 
-    // Salvar no state
+    // Mesclar com alvos já confirmados anteriormente
+    const dados = state.mecanicasAplicadas?.[mech.id];
+    const jaEscolhidos = dados?.alvosEscolhidos || [];
+    const todosAlvos = [...jaEscolhidos, ...novosAlvos];
+    const totalQty = config.quantidadeAlvos || 1;
+    const todosPreenchidos = todosAlvos.length >= totalQty;
+
+    // Salvar no state (aplicada=true apenas quando todos preenchidos)
     state.mecanicasAplicadas[mech.id] = {
-        aplicada: true,
+        aplicada: todosPreenchidos,
         timestamp: new Date().toISOString(),
         fonte: mech.fonte || '',
-        alvosEscolhidos: alvosEscolhidos
+        alvosEscolhidos: todosAlvos
     };
 
-    // Aplicar bônus
-    for (const alvo of alvosEscolhidos) {
+    // Aplicar bônus dos NOVOS alvos apenas
+    for (const alvo of novosAlvos) {
         const field = TARGET_MAP[alvo.nome];
         if (field) {
             state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) + alvo.valor;
         }
     }
 
-    // Remover da lista de pendentes
-    state.mecanicasPendentes = state.mecanicasPendentes.filter(m => m.id !== mech.id);
+    // Se todos preenchidos, remover da lista de pendentes
+    if (todosPreenchidos) {
+        state.mecanicasPendentes = state.mecanicasPendentes.filter(m => m.id !== mech.id);
+    }
 
     // Recalcular e salvar
     if (typeof recalcAll === 'function') recalcAll();
     if (typeof recalcMainTests === 'function') recalcMainTests();
     if (typeof scheduleAutosave === 'function') scheduleAutosave();
 
-    // Re-renderizar peculiaridades
-    if (typeof onRaceChange === 'function') {
-        // Re-render the peculiaridades to show the confirmed state
-        const grid = document.getElementById('peculiaridadesGrid');
-        const racaNome = document.getElementById('selRaca')?.value;
-        if (grid && racaNome && window.RACES?.[racaNome]) {
-            grid.innerHTML = '';
-            window.RACES[racaNome].peculiaridades.forEach(pec => {
+    // Re-renderizar peculiaridades para atualizar a UI
+    _reRenderPeculiaridades();
+}
+
+/**
+ * Re-renderiza toda a grid de peculiaridades para refletir mudanças.
+ */
+function _reRenderPeculiaridades() {
+    const grid = document.getElementById('peculiaridadesGrid');
+    const racaNome = document.getElementById('selRaca')?.value;
+    if (grid && racaNome && window.RACES?.[racaNome]) {
+        grid.innerHTML = '';
+        window.RACES[racaNome].peculiaridades.forEach(pec => {
+            if (typeof renderPeculiaridadeCard === 'function') {
                 renderPeculiaridadeCard(pec, racaNome, grid);
-            });
-        }
+            }
+        });
     }
 }
 
+/**
+ * Verifica se uma mecânica distribuir evoluível precisa reabrir a UI
+ * porque o novo nível tem mais alvos disponíveis.
+ * Chamada após level-up de peculiaridade.
+ */
+function checkDistribuirOnLevelUp(pec) {
+    if (!pec.mecanicas) return;
+    for (const mech of pec.mecanicas) {
+        if (mech.tipo !== 'distribuir') continue;
+        if (!mech.evoluivel || !mech.progressao) continue;
 
+        const config = _resolveDistribuirConfig(mech, pec);
+        const totalQty = config.quantidadeAlvos || 1;
+        const dados = state.mecanicasAplicadas?.[mech.id];
+        const jaEscolhidos = dados?.alvosEscolhidos || [];
+
+        // Se o novo nível oferece mais slots do que os já preenchidos, reabrir
+        if (jaEscolhidos.length < totalQty) {
+            // Garantir que não está marcado como totalmente aplicada
+            if (dados) {
+                dados.aplicada = false;
+            }
+            // Adicionar de volta aos pendentes se não estiver lá
+            if (!state.mecanicasPendentes.some(m => m.id === mech.id)) {
+                state.mecanicasPendentes.push(mech);
+            }
+        }
+    }
+    // Re-renderizar para mostrar a UI
+    _reRenderPeculiaridades();
+}

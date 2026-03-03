@@ -314,7 +314,7 @@ function renderPeculiaridadeCard(pec, raceKey, container) {
         card.appendChild(efeitoContainer);
     }
 
-    // Renderizar UI de distribuição para mecânicas pendentes
+    // Renderizar UI de distribuição (pendente, parcial ou completa)
     if (pec.mecanicas && typeof renderDistribuirUI === 'function') {
         for (const mech of pec.mecanicas) {
             if (mech.tipo !== 'distribuir') continue;
@@ -322,10 +322,8 @@ function renderPeculiaridadeCard(pec, raceKey, container) {
             const isCreation = mech.duracao === 'criacao';
             if (!isPermanent && !isCreation) continue;
 
-            const jaAplicada = state.mecanicasAplicadas?.[mech.id]?.aplicada;
-            if (!jaAplicada) {
-                renderDistribuirUI(card, mech);
-            }
+            // Sempre renderizar — a função decide se mostra selects ou apenas resumo
+            renderDistribuirUI(card, mech, pec);
         }
     }
 
@@ -396,6 +394,7 @@ function renderEvolutableDots(dotsDiv, raceKey, pec, minLevel, maxLevel) {
                 state.dots[dotKey] = newLevel;
                 refreshPecDots(dotsDiv, dotKey, minLevel);
                 updatePeculiaridadeLevel(raceKey, pec.key, newLevel, pec);
+                if (typeof checkDistribuirOnLevelUp === 'function') checkDistribuirOnLevelUp(pec);
                 scheduleAutosave();
                 return;
             }
@@ -408,6 +407,7 @@ function renderEvolutableDots(dotsDiv, raceKey, pec, minLevel, maxLevel) {
                         state.dots[dotKey] = newLevel;
                         refreshPecDots(dotsDiv, dotKey, minLevel);
                         updatePeculiaridadeLevel(raceKey, pec.key, newLevel, pec);
+                        if (typeof checkDistribuirOnLevelUp === 'function') checkDistribuirOnLevelUp(pec);
                         scheduleAutosave();
                         if (typeof showUpgradeSuccess === 'function')
                             showExpToast(`✅ ${pec.nome} subiu para nível ${newLevel}! (+${custo} EXP)`, 'success');
@@ -431,6 +431,7 @@ function renderEvolutableDots(dotsDiv, raceKey, pec, minLevel, maxLevel) {
                         state.dots[dotKey] = newLevel;
                         refreshPecDots(dotsDiv, dotKey, minLevel);
                         updatePeculiaridadeLevel(raceKey, pec.key, newLevel, pec);
+                        if (typeof checkDistribuirOnLevelUp === 'function') checkDistribuirOnLevelUp(pec);
                         scheduleAutosave();
                         if (typeof showUpgradeSuccess === 'function')
                             showUpgradeSuccess(pec.nome, newLevel, custo);
