@@ -188,6 +188,16 @@ function setCurrentExp(val) {
 function spendExp(amount) {
     const current = getCurrentExp();
     setCurrentExp(current - amount);
+
+    // Se estiver ganhando EXP (amount negativo), adiciona também ao Total
+    if (amount < 0) {
+        const totalEl = document.querySelector('[data-key="exp_total"]');
+        if (totalEl) {
+            const currentTotal = parseInt(totalEl.value || '0', 10) || 0;
+            totalEl.value = currentTotal + Math.abs(amount);
+        }
+    }
+
     scheduleAutosave();
 }
 

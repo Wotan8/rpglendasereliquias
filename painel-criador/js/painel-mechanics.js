@@ -301,11 +301,12 @@ function renderConfigDistribuir(config) {
 }
 
 // ===== PROGRESSION / LEVEL TABLE =====
-function _getProgressaoHeaders(tipo) {
-    if (tipo === 'modificar') return ['Nível', 'Custo EXP', 'Valor'];
-    if (tipo === 'limitar') return ['Nível', 'Custo EXP', 'Valor do Limite'];
-    if (tipo === 'distribuir') return ['Nível', 'Custo EXP', 'Qtd Alvos', 'Valor por Alvo'];
-    return ['Nível', 'Custo EXP', 'Descrição do Efeito'];
+function _getProgressaoHeaders(tipo, tipoExp) {
+    const expLabel = tipoExp === 'ganho' ? 'Ganho EXP' : 'Custo EXP';
+    if (tipo === 'modificar') return ['Nível', expLabel, 'Valor'];
+    if (tipo === 'limitar') return ['Nível', expLabel, 'Valor do Limite'];
+    if (tipo === 'distribuir') return ['Nível', expLabel, 'Qtd Alvos', 'Valor por Alvo'];
+    return ['Nível', expLabel, 'Descrição do Efeito'];
 }
 
 function _renderProgressaoRow(i, p, tipo) {
@@ -328,9 +329,10 @@ function renderConfigProgressao(data, tipo) {
     const nivelMax = data?.nivelMaximo || 3;
     const progressao = data?.progressao || {};
     const apenasCriacao = data?.progressaoApenasCriacao || false;
+    const tipoExp = data?.progressaoTipoExp || 'custo';
     tipo = tipo || data?.tipo || 'modificar';
 
-    const headers = _getProgressaoHeaders(tipo);
+    const headers = _getProgressaoHeaders(tipo, tipoExp);
     let tabelaRows = '';
     if (evoluivel) {
         for (let i = 1; i <= nivelMax; i++) {
@@ -354,6 +356,13 @@ function renderConfigProgressao(data, tipo) {
                     <label class="toggle-publish"><input type="checkbox" id="mech_progressaoApenasCriacao" ${apenasCriacao ? 'checked' : ''}><span class="toggle-slider"></span></label>
                     <span class="toggle-label">🏗️ Apenas na Criação (não pode upar depois)</span>
                 </div>
+            </div>
+            <div class="form-group" id="mech_tipoExpWrap" style="display:${evoluivel ? '' : 'none'}">
+                <label>Tipo de EXP na Progressão</label>
+                <select id="mech_progressaoTipoExp" onchange="window._mechTipoExpChange()">
+                    <option value="custo" ${tipoExp === 'custo' ? 'selected' : ''}>💰 Custo de EXP (mecânica benéfica — subtrai EXP)</option>
+                    <option value="ganho" ${tipoExp === 'ganho' ? 'selected' : ''}>🎁 Ganho de EXP (mecânica prejudicial — adiciona EXP)</option>
+                </select>
             </div>
             <div class="form-group" id="mech_nivelMaxWrap" style="display:${evoluivel ? '' : 'none'}">
                 <label>Nível Máximo <span class="required">*</span></label>
@@ -593,15 +602,26 @@ window._mechEvoluivelChange = function () {
     const maxWrap = document.getElementById('mech_nivelMaxWrap');
     const tabelaWrap = document.getElementById('mech_progressaoTabela');
     const criacaoWrap = document.getElementById('mech_apenasCriacaoWrap');
+    const tipoExpWrap = document.getElementById('mech_tipoExpWrap');
     if (maxWrap) maxWrap.style.display = checked ? '' : 'none';
     if (tabelaWrap) tabelaWrap.style.display = checked ? '' : 'none';
     if (criacaoWrap) criacaoWrap.style.display = checked ? '' : 'none';
+    if (tipoExpWrap) tipoExpWrap.style.display = checked ? '' : 'none';
     if (checked) window._mechNivelMaxChange();
+};
+
+window._mechTipoExpChange = function () {
+    // Refresh table headers with new EXP type label
+    const evoluivel = document.getElementById('mech_evoluivel')?.checked || false;
+    if (!evoluivel) return;
+    window._mechNivelMaxChange();
+    window._mechUpdatePreview();
 };
 
 window._mechNivelMaxChange = function () {
     const max = parseInt(document.getElementById('mech_nivelMaximo')?.value) || 3;
     const tipo = document.getElementById('mech_tipo')?.value || 'modificar';
+    const tipoExp = document.getElementById('mech_progressaoTipoExp')?.value || 'custo';
     const tbody = document.getElementById('mech_progressaoBody');
     const thead = document.getElementById('mech_progressaoHead');
     if (!tbody) return;
@@ -622,7 +642,7 @@ window._mechNivelMaxChange = function () {
     });
     // Update headers
     if (thead) {
-        const headers = _getProgressaoHeaders(tipo);
+        const headers = _getProgressaoHeaders(tipo, tipoExp);
         thead.innerHTML = `<tr style="background:var(--bg-secondary);color:var(--text-secondary)">${headers.map(h => `<th style="padding:6px 8px${h === 'Nível' ? ';width:60px' : ''}">${h}</th>`).join('')}</tr>`;
     }
     let html = '';
@@ -738,6 +758,7 @@ function collectMechFormData() {
     if (data.evoluivel) {
         data.nivelMaximo = parseInt(document.getElementById('mech_nivelMaximo')?.value) || 3;
         data.progressaoApenasCriacao = document.getElementById('mech_progressaoApenasCriacao')?.checked || false;
+        data.progressaoTipoExp = document.getElementById('mech_progressaoTipoExp')?.value || 'custo';
         const progressao = {};
         const tbody = document.getElementById('mech_progressaoBody');
         if (tbody) {
@@ -769,6 +790,7 @@ function collectMechFormData() {
         data.nivelMaximo = null;
         data.progressao = null;
         data.progressaoApenasCriacao = false;
+        data.progressaoTipoExp = 'custo';
     }
 
     return data;

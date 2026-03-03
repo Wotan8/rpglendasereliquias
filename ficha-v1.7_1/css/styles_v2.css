@@ -1926,7 +1926,7 @@ button:hover {
 .pec-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 8px;
     margin-bottom: 6px;
 }

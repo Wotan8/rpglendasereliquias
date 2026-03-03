@@ -208,6 +208,9 @@ function buildRacesFromFirebase() {
                 // Usar o maior nivelMaximo entre todas as mecânicas evoluíveis
                 nivelMax = Math.max(...evoluiveis.map(m => m.nivelMaximo || 3));
 
+                // Detectar se alguma mecânica evoluível é do tipo "ganho" de EXP
+                const isGanhoExp = evoluiveis.some(m => m.progressaoTipoExp === 'ganho');
+
                 // Construir niveis{} a partir das progressões das mecânicas
                 niveis = {};
                 for (let i = 1; i <= nivelMax; i++) {
@@ -218,12 +221,30 @@ function buildRacesFromFirebase() {
                         const prog = m.progressao?.[String(i)];
                         if (prog) {
                             custoTotal += (prog.custoExp || 0);
-                            efeitosNivel.push(`${m.nome}: ${prog.valor}`);
+                            // Gerar preview do efeito com config ajustada ao nível
+                            const adjustedMech = JSON.parse(JSON.stringify(m));
+                            delete adjustedMech.previewTexto; // Forçar geração dinâmica
+                            if (m.tipo === 'modificar' && prog.valor !== undefined) {
+                                adjustedMech.config = { ...adjustedMech.config, valor: prog.valor };
+                            } else if (m.tipo === 'limitar' && prog.valorLimite !== undefined) {
+                                if (adjustedMech.config.valorMaximo !== undefined) adjustedMech.config.valorMaximo = prog.valorLimite;
+                                if (adjustedMech.config.valorMinimo !== undefined) adjustedMech.config.valorMinimo = prog.valorLimite;
+                            } else if (m.tipo === 'distribuir') {
+                                if (prog.valorPorAlvo !== undefined) adjustedMech.config = { ...adjustedMech.config, valorPorAlvo: prog.valorPorAlvo };
+                                if (prog.quantidadeAlvos !== undefined) adjustedMech.config = { ...adjustedMech.config, quantidadeAlvos: prog.quantidadeAlvos };
+                            } else if (prog.descricao) {
+                                // Narrativo/conceder: usar descrição do nível diretamente
+                                efeitosNivel.push(prog.descricao);
+                                continue;
+                            }
+                            efeitosNivel.push(typeof generatePreviewText === 'function' ? generatePreviewText(adjustedMech) : `${prog.valor}`);
                         }
                     }
+                    const expLabel = isGanhoExp ? 'Ganho' : 'Custo';
                     niveis[i] = {
-                        custo: custoTotal > 0 ? `${custoTotal} EXP` : 'Grátis',
+                        custo: custoTotal > 0 ? `${expLabel}: ${custoTotal} EXP` : 'Grátis',
                         custoExp: custoTotal,
+                        tipoExp: isGanhoExp ? 'ganho' : 'custo',
                         efeito: efeitosNivel.join('; '),
                         // Guardar progressão individual de cada mecânica para este nível
                         mechProgressao: evoluiveis.reduce((acc, m) => {
@@ -235,11 +256,26 @@ function buildRacesFromFirebase() {
                 }
             }
 
+            // Gerar efeito a partir das mecânicas (para peculiaridades não-evolutivas)
+            let efeito = '';
+            if (tipo !== 'evolutivo') {
+                const efeitoTexts = mecanicas.map(m => {
+                    if (typeof generatePreviewText === 'function') {
+                        return generatePreviewText(m);
+                    }
+                    // Fallback
+                    if (m.tipo === 'narrativo') return m.config?.textoEfeito || m.descricao || '';
+                    return m.descricao || '';
+                }).filter(Boolean);
+                efeito = efeitoTexts.join('; ') || pec.descricao || '';
+            }
+
             return {
                 id: pec.id,
                 key: pec.id,
                 nome: pec.nome,
                 descricao: pec.descricao || '',
+                efeito: efeito,
                 nivel: pec.nivel || null,
                 fonte: pec.fonte,
                 mecanicas: mecanicas,

@@ -62,6 +62,8 @@ function onRaceChange() {
 
     // --- Aplicar bônus da nova raça ---
     applyRaceBonuses(racaNome);
+    // Aplicar mecânicas dinâmicas do Firebase (painel criador)
+    if (typeof applyAllRaceMechanics === 'function') applyAllRaceMechanics(racaNome);
     _previousRace = racaNome;
 
     if (typeof recalcAll === 'function') recalcAll();
@@ -120,6 +122,8 @@ function updateYotunForcaUI(racaNome) {
  * Reseta TODOS os bônus raciais para valores neutros e reverte dots alterados.
  */
 function clearRaceBonuses(oldRace) {
+    // Limpar bônus dinâmicos das mecânicas do Firebase
+    if (typeof clearMechanicBonuses === 'function') clearMechanicBonuses();
     const rb = window._raceBonuses;
     rb.det_max = 0;
     rb.vit_max = 0;
@@ -237,14 +241,20 @@ function renderPeculiaridadeCard(pec, raceKey, container) {
     nomeEl.className = 'pec-nome';
     nomeEl.innerHTML = `${pec.icone} ${pec.nome}`;
 
-    header.appendChild(nomeEl);
+    // Badge de Nível (antes do nome) — funciona para fixo e evolutivo
+    const nivelDisplay = pec.tipo === 'evolutivo'
+        ? (state.dots['pec_' + pec.key] || pec.nivelAtual || 1)
+        : pec.nivel;
 
-    if (pec.tipo === 'fixo' && pec.nivel !== null) {
+    if (nivelDisplay !== null && nivelDisplay !== undefined) {
         const badge = document.createElement('div');
         badge.className = 'pec-nivel-badge';
-        badge.textContent = `Nível ${pec.nivel}`;
+        badge.id = `pec_badge_${pec.key}`;
+        badge.textContent = `Nível ${nivelDisplay}`;
         header.appendChild(badge);
     }
+
+    header.appendChild(nomeEl);
     card.appendChild(header);
 
     // Descrição
@@ -304,11 +314,30 @@ function renderPeculiaridadeCard(pec, raceKey, container) {
         card.appendChild(efeitoContainer);
     }
 
+    // Renderizar UI de distribuição para mecânicas pendentes
+    if (pec.mecanicas && typeof renderDistribuirUI === 'function') {
+        for (const mech of pec.mecanicas) {
+            if (mech.tipo !== 'distribuir') continue;
+            const isPermanent = !mech.duracao || mech.duracao === 'permanente';
+            const isCreation = mech.duracao === 'criacao';
+            if (!isPermanent && !isCreation) continue;
+
+            const jaAplicada = state.mecanicasAplicadas?.[mech.id]?.aplicada;
+            if (!jaAplicada) {
+                renderDistribuirUI(card, mech);
+            }
+        }
+    }
+
     container.appendChild(card);
 }
 
 function renderEvolutableDots(dotsDiv, raceKey, pec, minLevel, maxLevel) {
     const dotKey = 'pec_' + pec.key;
+
+    // Verificar se alguma mecânica é "Apenas na Criação"
+    const isCreationOnly = pec.mecanicas &&
+        pec.mecanicas.some(m => m.progressaoApenasCriacao === true);
 
     for (let i = 1; i <= maxLevel; i++) {
         const dot = document.createElement('button');
@@ -321,6 +350,14 @@ function renderEvolutableDots(dotsDiv, raceKey, pec, minLevel, maxLevel) {
             dot.disabled = true;
             dot.style.opacity = '0.3';
             dot.style.cursor = 'not-allowed';
+        }
+
+        // Se é "Apenas na Criação", desabilitar todos os dots acima do nível atual
+        if (isCreationOnly && i > minLevel) {
+            dot.disabled = true;
+            dot.style.opacity = '0.3';
+            dot.style.cursor = 'not-allowed';
+            dot.title = '🏗️ Apenas na Criação (não pode upar depois)';
         }
 
         // Verificar se o nível existe nos dados
@@ -352,6 +389,7 @@ function renderEvolutableDots(dotsDiv, raceKey, pec, minLevel, maxLevel) {
             const custoStr = pec.niveis[newLevel].custo || '—';
             const custoMatch = custoStr.match(/(\d+)/);
             const custo = custoMatch ? parseInt(custoMatch[1], 10) : 0;
+            const isGanho = pec.niveis[newLevel].tipoExp === 'ganho';
 
             // Se custo é 0 ou '—' (nível base), permite sem gastar
             if (custo === 0) {
@@ -362,25 +400,42 @@ function renderEvolutableDots(dotsDiv, raceKey, pec, minLevel, maxLevel) {
                 return;
             }
 
-            // Verificar EXP
-            const currentExp = typeof getCurrentExp === 'function' ? getCurrentExp() : 0;
-            if (custo > currentExp) {
-                if (typeof showUpgradeBlocked === 'function')
-                    showUpgradeBlocked(`EXP insuficiente! Precisa de ${custo} EXP, mas só tem ${currentExp}.`);
-                return;
-            }
+            if (isGanho) {
+                // Mecânica prejudicial: GANHA EXP ao subir de nível
+                if (typeof showUpgradeConfirm === 'function') {
+                    showUpgradeConfirm(`${pec.nome} (🎁 +${custo} EXP)`, newLevel, custo, () => {
+                        spendExp(-custo); // Negativo = adiciona EXP
+                        state.dots[dotKey] = newLevel;
+                        refreshPecDots(dotsDiv, dotKey, minLevel);
+                        updatePeculiaridadeLevel(raceKey, pec.key, newLevel, pec);
+                        scheduleAutosave();
+                        if (typeof showUpgradeSuccess === 'function')
+                            showExpToast(`✅ ${pec.nome} subiu para nível ${newLevel}! (+${custo} EXP)`, 'success');
+                        setTimeout(dismissExpToast, 2000);
+                    });
+                }
+            } else {
+                // Mecânica benéfica: CUSTA EXP ao subir de nível
+                // Verificar EXP
+                const currentExp = typeof getCurrentExp === 'function' ? getCurrentExp() : 0;
+                if (custo > currentExp) {
+                    if (typeof showUpgradeBlocked === 'function')
+                        showUpgradeBlocked(`EXP insuficiente! Precisa de ${custo} EXP, mas só tem ${currentExp}.`);
+                    return;
+                }
 
-            // Confirmação
-            if (typeof showUpgradeConfirm === 'function') {
-                showUpgradeConfirm(pec.nome, newLevel, custo, () => {
-                    spendExp(custo);
-                    state.dots[dotKey] = newLevel;
-                    refreshPecDots(dotsDiv, dotKey, minLevel);
-                    updatePeculiaridadeLevel(raceKey, pec.key, newLevel, pec);
-                    scheduleAutosave();
-                    if (typeof showUpgradeSuccess === 'function')
-                        showUpgradeSuccess(pec.nome, newLevel, custo);
-                });
+                // Confirmação
+                if (typeof showUpgradeConfirm === 'function') {
+                    showUpgradeConfirm(pec.nome, newLevel, custo, () => {
+                        spendExp(custo);
+                        state.dots[dotKey] = newLevel;
+                        refreshPecDots(dotsDiv, dotKey, minLevel);
+                        updatePeculiaridadeLevel(raceKey, pec.key, newLevel, pec);
+                        scheduleAutosave();
+                        if (typeof showUpgradeSuccess === 'function')
+                            showUpgradeSuccess(pec.nome, newLevel, custo);
+                    });
+                }
             }
         });
 
@@ -398,6 +453,12 @@ function refreshPecDots(container, dotKey, minLevel) {
 function updatePeculiaridadeLevel(raceKey, pecKey, newLevel, pecData) {
     const efeitoEl = document.getElementById(`pec_efeito_${pecKey}`);
     const custoEl = document.getElementById(`pec_custo_${pecKey}`);
+
+    // Atualizar badge de nível no header
+    const badgeEl = document.getElementById(`pec_badge_${pecKey}`);
+    if (badgeEl) {
+        badgeEl.textContent = `Nível ${newLevel}`;
+    }
 
     if (efeitoEl && pecData.niveis && pecData.niveis[newLevel]) {
         efeitoEl.querySelector('.efeito-text').textContent = pecData.niveis[newLevel].efeito;
