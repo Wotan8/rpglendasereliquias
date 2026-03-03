@@ -3,6 +3,16 @@
 /* Guarda a raça anterior para poder reverter bônus corretamente */
 let _previousRace = '';
 
+// Default fallback to prevent crash if not initialized elsewhere
+window._raceBonuses = window._raceBonuses || {
+    det_max: 0,
+    vit_max: 0,
+    perc: 0,
+    is_yotun: false,
+    carga_mult: 1,
+    desloc_ar_override: false
+};
+
 function onRaceChange() {
     const selRaca = document.getElementById('selRaca');
     if (!selRaca) return;

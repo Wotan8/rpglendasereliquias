@@ -7,31 +7,8 @@ const SKILLS = {
     combate: [{ key: 'esquiva', name: 'Esquiva', sub: 'DES' }, { key: 'aparar', name: 'Aparar', sub: 'DES/FOR' }, { key: 'bloquear', name: 'Bloquear', sub: 'FOR' }, { key: 'desviar', name: 'Desviar', sub: 'DES' }, { key: 'evadir', name: 'Evadir', sub: 'DES' }, { key: 'cobertura', name: 'Cobertura', sub: 'RAC' }, { key: 'proteger', name: 'Proteger', sub: 'VIG' }, { key: 'reflexo', name: 'Reflexo', sub: 'RAC/DES' }, { key: 'contra_ataque', name: 'Contra-Ataq.', sub: 'DES' }, { key: 'ambidestria', name: 'Ambidestria', sub: 'DES' }]
 };
 
-const CLASS_SKILLS = {
-    'Guerreiro': ['Postura de Combate', 'Ímpeto', 'Guerrilha', 'Controle'],
-    'Ladino': ['Precisão', 'Arrombamento', 'Prestidigitação', 'Submundo', 'Subterfúgio'],
-    'Caçador': ['Erudição Ofensiva', 'Maceração', 'Dosagem', 'Precisão', 'Marcar Presa'],
-    'Adepto': ['Contato c/ o Sétimo', 'Selo do Profano', 'Servos', 'Sacrifício', 'Fragmento de Identidade'],
-    'Invocador': ['Contato c/ o Oitavo', 'Selo Abissal', 'Sacrifício'],
-    'Druida': ['Erudição Ofensiva', 'Erudição Defensiva', 'Maceração', 'Dosagem', 'Aliado Animal', 'Linguagem Animal'],
-    'Pallacerdote': ['Símbolo Sagrado', 'Devoção em Palla'],
-    'Runimago': ['Gravação Rúnica', 'Mentalização', 'Erudição Rúnica', 'Diagnóstico'],
-    'Sangral': ['Manip. de Sangue', 'Solidif. Hemática', 'Empatia Sanguínea'],
-    'Xamã': ['Totemismo', 'Comunhão c/ Ecos', 'Transcendência', 'Exorcismo', 'Visão do Véu'],
-    'Bardo': ['Composição', 'Afinação Essencial', 'Presença Sonoral', 'Contracanto', 'Leitura de Público'],
-};
-
-const CLASS_RESOURCES = {
-    'Guerreiro': [], 'Ladino': [],
-    'Caçador': [],
-    'Druida': [],
-    'Adepto': [{ label: '⚰️ Servos', keys: ['cr_servos_atual', 'cr_servos_max'] }, { label: '🎭 Fantoches', keys: ['cr_fant_atual', 'cr_fant_max'] }],
-    'Invocador': [{ label: '🌀 CA', keys: ['cr_ca'], single: true }, { label: '⚡ RV', keys: ['cr_rv_atual', 'cr_rv_max'] }],
-    'Pallacerdote': [{ label: '🌟 Círculo', keys: ['cr_circulo'], single: true, placeholder: 'Ex: Diácono da Luz' }, { label: '💎 Graça', keys: ['cr_graca_atual', 'cr_graca_max'] }],
-    'Runimago': [], 'Sangral': [{ label: '🩸 Bolha Sang.', keys: ['cr_bolha_atual', 'cr_bolha_max'] }],
-    'Xamã': [{ label: '🪶 Totens Ativos', keys: ['cr_totens_atual', 'cr_totens_max'] }],
-    'Bardo': [{ label: '🎵 Dissonância', keys: ['cr_dissonancia'], single: true }],
-};
+/* CLASS_SKILLS e CLASS_RESOURCES agora vêm do Firebase (system-data-loader.js)
+   Inicializados como {} em window.CLASS_SKILLS / window.CLASS_RESOURCES */
 
 /* ===== RUNIMAGO DATA ===== */
 const ARTUS = [

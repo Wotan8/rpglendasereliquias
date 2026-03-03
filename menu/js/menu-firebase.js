@@ -447,6 +447,8 @@ window.confirmDelete = async function () {
     try {
         showAlert('🗑️ Apagando personagem...', 'success');
         await deleteDoc(doc(db, 'char', characterToDelete));
+        // Clean up localStorage for deleted character
+        try { localStorage.removeItem('lr_ficha_v17_' + characterToDelete); } catch (e) { }
         showAlert('✅ Personagem apagado com sucesso!', 'success');
         closeDeleteModal();
         await loadCharacters();

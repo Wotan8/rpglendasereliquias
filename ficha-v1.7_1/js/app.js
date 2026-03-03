@@ -1,6 +1,10 @@
 /* ===== ESTADO GLOBAL E INICIALIZAÇÃO ===== */
 
-let state = { dots: {}, notes: [], charImg: '', specs: [], customTests: [], mainTestsOrder: [] };
+let state = {
+    dots: {}, notes: [], charImg: '', specs: [], customTests: [], mainTestsOrder: [],
+    mechanicBonuses: {}, mechanicLimits: {}, mecanicasAplicadas: {},
+    mecanicasPendentes: [], capacidades: []
+};
 let editingNoteId = null, testCount = 3, specCount = 0;
 
 /* Contadores de recursos de classe */

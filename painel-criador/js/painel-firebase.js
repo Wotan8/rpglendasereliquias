@@ -155,9 +155,7 @@ const MODULE_DEFS = {
                 ]
             },
             { key: 'fonteRef', label: 'Referência da Fonte (ID)', type: 'text', placeholder: 'ID do registro de origem' },
-            { key: 'nivel', label: 'Nível (I=1, II=2...)', type: 'number', placeholder: '1' },
             { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: '' },
-            { key: 'custo', label: 'Custo em EXP', type: 'text', placeholder: 'Ex: 10 EXP' },
             { key: 'tags', label: 'Tags', type: 'tags', placeholder: 'Ex: bônus, racial' },
         ]
     },
@@ -531,6 +529,8 @@ function renderItems() {
         const badgeClass = isPublished ? 'badge-published' : 'badge-draft';
         const badgeText = isPublished ? '✅ Publicado' : '📝 Rascunho';
 
+        const imageUrl = item.imagemUrl || '';
+
         return `
             <div class="item-card" onclick="openForm('${item.id}')">
                 <div class="item-card-header">
@@ -538,6 +538,7 @@ function renderItems() {
                     <span class="badge-status ${badgeClass}">${badgeText}</span>
                 </div>
                 ${subtitle ? `<div class="item-card-subtitle">${escapeHtml(subtitle)}</div>` : ''}
+                ${imageUrl ? `<div class="item-card-image" style="margin-top:8px; border-radius:4px; overflow:hidden; height:150px; background:#000;"><img src="${escapeHtml(imageUrl)}" alt="Preview" style="width:100%; height:100%; object-fit:cover; object-position:top;"></div>` : ''}
                 ${desc ? `<div class="item-card-desc">${escapeHtml(truncate(desc, 100))}</div>` : ''}
                 <div class="item-card-footer">
                     <div class="item-card-actions">
@@ -724,7 +725,12 @@ function buildField(field, value) {
     } else if (field.type === 'textarea') {
         wrap.innerHTML = `${labelHtml}<textarea id="field_${field.key}" placeholder="${escapeHtml(field.placeholder || '')}" ${field.required ? 'required' : ''}>${value || ''}</textarea>`;
     } else {
-        wrap.innerHTML = `${labelHtml}<input type="${field.type}" id="field_${field.key}" value="${escapeHtml(value ?? '')}" placeholder="${escapeHtml(field.placeholder || '')}" ${field.required ? 'required' : ''}>`;
+        if (field.key === 'imagemUrl') {
+            wrap.innerHTML = `${labelHtml}<input type="${field.type}" id="field_${field.key}" value="${escapeHtml(value ?? '')}" placeholder="${escapeHtml(field.placeholder || '')}" ${field.required ? 'required' : ''} oninput="document.getElementById('img_preview_${field.key}').src = this.value; document.getElementById('img_preview_${field.key}').style.display = this.value ? 'block' : 'none';">
+            <img id="img_preview_${field.key}" src="${escapeHtml(value ?? '')}" style="display: ${value ? 'block' : 'none'}; width: 100%; height: 260px; margin-top: 8px; border-radius: 4px; object-fit: cover; object-position: top;">`;
+        } else {
+            wrap.innerHTML = `${labelHtml}<input type="${field.type}" id="field_${field.key}" value="${escapeHtml(value ?? '')}" placeholder="${escapeHtml(field.placeholder || '')}" ${field.required ? 'required' : ''}>`;
+        }
     }
 
     return wrap;
@@ -1043,6 +1049,34 @@ window.duplicateItem = async function (itemId) {
                             });
                         }
                     }
+                }
+                // Progression / evoluível
+                if (clone.evoluivel) {
+                    const evoEl = document.getElementById('mech_evoluivel');
+                    if (evoEl) { evoEl.checked = true; window._mechEvoluivelChange(); }
+                    setTimeout(() => {
+                        const maxEl = document.getElementById('mech_nivelMaximo');
+                        if (maxEl && clone.nivelMaximo) { maxEl.value = clone.nivelMaximo; window._mechNivelMaxChange(); }
+                        // Pre-fill progression values
+                        setTimeout(() => {
+                            const progressao = clone.progressao || {};
+                            const tbody = document.getElementById('mech_progressaoBody');
+                            if (tbody) {
+                                tbody.querySelectorAll('tr').forEach(row => {
+                                    const custoEl = row.querySelector('.prog-custo');
+                                    const valorEl = row.querySelector('.prog-valor');
+                                    if (custoEl && valorEl) {
+                                        const nv = custoEl.dataset.nivel;
+                                        const p = progressao[nv];
+                                        if (p) {
+                                            custoEl.value = p.custoExp ?? '';
+                                            valorEl.value = p.valor ?? '';
+                                        }
+                                    }
+                                });
+                            }
+                        }, 50);
+                    }, 50);
                 }
                 // Duration/scope
                 const durEl = document.getElementById('mech_duracao'); if (durEl && clone.duracao) { durEl.value = clone.duracao; window._mechDuracaoChange(); }

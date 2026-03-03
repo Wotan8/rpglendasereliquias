@@ -332,6 +332,32 @@ function canUpgrade(dotKey, newLevel, type, specName) {
         }
     }
 
+    // Verificar se é uma peculiaridade "Apenas na Criação"
+    if (type === 'pec') {
+        const pecKey = dotKey.replace('pec_', '');
+        // Buscar a peculiaridade na raça atual do state ou na global
+        let pecData = null;
+        if (window.RACES) {
+            const racaNome = document.getElementById('selRaca') ? document.getElementById('selRaca').value : null;
+            if (racaNome && window.RACES[racaNome]) {
+                pecData = window.RACES[racaNome].peculiaridades.find(p => p.key === pecKey || p.id === pecKey);
+            } else {
+                // Tentar buscar em todas as raças como fallback
+                for (const rKey in window.RACES) {
+                    pecData = window.RACES[rKey].peculiaridades.find(p => p.key === pecKey || p.id === pecKey);
+                    if (pecData) break;
+                }
+            }
+        }
+
+        if (pecData && pecData.mecanicas) {
+            const isCreationOnly = pecData.mecanicas.some(m => m.progressaoApenasCriacao === true);
+            if (isCreationOnly) {
+                return { allowed: false, reason: `🏗️ "${pecData.nome}" só pode ser upado na criação de personagem!`, cost: 0 };
+            }
+        }
+    }
+
     return { allowed: true, reason: '', cost };
 }
 

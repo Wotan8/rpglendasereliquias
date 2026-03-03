@@ -4,7 +4,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getStorage, ref, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 // ===== CONFIG (mesma do projeto rpg-lendasereliquias) =====
@@ -167,7 +167,17 @@ onAuthStateChanged(auth, async (user) => {
 
         // Determinar ID do personagem
         const urlParams = new URLSearchParams(window.location.search);
-        const charId = urlParams.get('id') || user.uid;
+        let charId = urlParams.get('id');
+        if (!charId) {
+            // New character — generate unique ID
+            charId = crypto.randomUUID
+                ? crypto.randomUUID()
+                : 'char_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            // Update URL so refresh keeps this character
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('id', charId);
+            history.replaceState(null, '', newUrl);
+        }
         window.currentCharacterId = charId;
 
         // Verificar ownership
@@ -194,7 +204,30 @@ onAuthStateChanged(auth, async (user) => {
         }
         if (userInfo) userInfo.style.display = 'flex';
 
-        // Carregar dados do Firebase
+        // === CARREGAR DADOS DO SISTEMA (system/data/*) ===
+        const loadingText = loadingScreen?.querySelector('span');
+        if (loadingText) loadingText.textContent = '🔧 Carregando regras do sistema...';
+
+        try {
+            await loadSystemData(db, collection, getDocs);
+
+            // Construir dados dinâmicos
+            window.RACES = buildRacesFromFirebase();
+            populateRaceSelect();
+            populateClassSelect();
+
+            console.log('✅ RACES construído do Firebase:', Object.keys(window.RACES));
+        } catch (err) {
+            console.error('❌ Falha ao carregar dados do sistema:', err);
+            if (loadingText) {
+                loadingText.innerHTML = '❌ Erro ao carregar regras do sistema.<br><small style="color:#94a3b8">Verifique sua conexão e recarregue a página.</small>';
+            }
+            return; // Não prosseguir sem dados do sistema
+        }
+
+        // === CARREGAR DADOS DO PERSONAGEM ===
+        if (loadingText) loadingText.textContent = '🔧 Carregando ficha...';
+
         const loaded = await loadFromFirebase(charId);
 
         // Se não carregou do Firebase, inicializar normalmente (com localStorage)

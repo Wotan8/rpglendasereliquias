@@ -78,6 +78,12 @@ html.dark .dot.filled {
     background: #4f6ef7
 }
 
+html.dark .dot.bonus.filled {
+    background: #f59e0b;
+    border-color: #f59e0b;
+    box-shadow: 0 0 4px rgba(245, 158, 11, 0.5)
+}
+
 html.dark .attr-item,
 html.dark .sk-row,
 html.dark .spec-item {
@@ -466,6 +472,12 @@ body {
 
 .dot.filled {
     background: var(--ink)
+}
+
+.dot.bonus.filled {
+    background: #4f6ef7;
+    border-color: #4f6ef7;
+    box-shadow: 0 0 4px rgba(79, 110, 247, 0.4)
 }
 
 .dot:hover {
@@ -1994,6 +2006,18 @@ button:hover {
     font-weight: 600;
 }
 
+.pec-nivel-info {
+    display: inline-block;
+    background: linear-gradient(135deg, #4f6ef7, #7c3aed);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 8px;
+    margin-left: 8px;
+    white-space: nowrap;
+}
+
 /* Dark mode overrides for peculiaridades */
 html.dark .peculiaridade-card {
     background: var(--chip);
@@ -2453,4 +2477,158 @@ html.dark .bg-orange input {
 
 .print-only {
     display: none;
+}
+
+/* ===== MECHANICS ENGINE — Distribuir UI ===== */
+.distribuir-ui {
+    margin-top: 10px;
+    padding: 10px;
+    border: 2px dashed #f59e0b;
+    border-radius: 8px;
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.distribuir-titulo {
+    font-size: 12px;
+    font-weight: 700;
+    color: #92400e;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.distribuir-selects {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.distribuir-select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 2px solid var(--soft);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font);
+    outline: none;
+}
+
+.distribuir-select:focus {
+    border-color: #f59e0b;
+}
+
+.btn-distribuir-confirmar {
+    width: 100%;
+    padding: 8px 16px;
+    background: #059669;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-distribuir-confirmar:hover {
+    background: #047857;
+}
+
+.btn-redistribuir {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 3px 10px;
+    background: var(--chip);
+    border: 1px solid var(--soft);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--muted);
+    transition: background 0.15s;
+}
+
+.btn-redistribuir:hover {
+    background: var(--soft);
+    color: var(--ink);
+}
+
+/* Efeito negativo em text */
+.efeito-text.negativo {
+    color: #dc2626;
+}
+
+/* Condição badge */
+.pec-condicao {
+    margin-top: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-style: italic;
+    color: var(--muted);
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.pec-condicao.sucesso {
+    color: #059669;
+    background: rgba(5, 150, 105, 0.05);
+}
+
+.pec-condicao.falha {
+    color: #dc2626;
+    background: rgba(220, 38, 38, 0.05);
+}
+
+/* Capacidades concedidas */
+.pec-capacidades {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--soft);
+}
+
+.pec-capacidade {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6366f1;
+    padding: 2px 0;
+}
+
+/* Efeito container - spacing */
+.pec-efeito-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Dark mode overrides */
+html.dark .distribuir-ui {
+    border-color: #b45309;
+    background: rgba(180, 83, 9, 0.1);
+}
+
+html.dark .distribuir-titulo {
+    color: #fbbf24;
+}
+
+html.dark .distribuir-select {
+    background: var(--chip);
+    color: var(--ink);
+    border-color: #374151;
+}
+
+html.dark .btn-redistribuir {
+    background: #1e293b;
+    border-color: #374151;
+    color: #94a3b8;
+}
+
+html.dark .pec-condicao {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+html.dark .pec-capacidade {
+    color: #818cf8;
 }

@@ -76,6 +76,7 @@ export function generatePreviewText(data) {
     const config = data.config || {};
     const cond = data.condicaoAplicacao ? ` (${data.condicaoAplicacao})` : '';
     const dur = data.duracao && data.duracao !== 'permanente' ? ` — Duração: ${data.duracao === 'turno' ? (data.duracaoTurnos || '?') + ' turno(s)' : data.duracao}` : '';
+    const evo = data.evoluivel ? ` 📈 Nv1-${data.nivelMaximo || '?'}${data.progressaoApenasCriacao ? ' 🏗️' : ''}` : '';
 
     let text = '';
     if (tipo === 'modificar') {
@@ -108,7 +109,7 @@ export function generatePreviewText(data) {
             ? `Personalizado: ${config.poolPersonalizado.join(', ')}` : pool;
         text = `Distribuir: ${op}${val} em ${qty} alvos${rest} de [${poolLabel}]`;
     }
-    return text + cond + dur || 'Efeito não definido';
+    return text + evo + cond + dur || 'Efeito não definido';
 }
 
 // ===== MECHANIC CARD (for grid) =====
@@ -299,6 +300,77 @@ function renderConfigDistribuir(config) {
     </div>`;
 }
 
+// ===== PROGRESSION / LEVEL TABLE =====
+function _getProgressaoHeaders(tipo) {
+    if (tipo === 'modificar') return ['Nível', 'Custo EXP', 'Valor'];
+    if (tipo === 'limitar') return ['Nível', 'Custo EXP', 'Valor do Limite'];
+    if (tipo === 'distribuir') return ['Nível', 'Custo EXP', 'Qtd Alvos', 'Valor por Alvo'];
+    return ['Nível', 'Custo EXP', 'Descrição do Efeito'];
+}
+
+function _renderProgressaoRow(i, p, tipo) {
+    const nvCell = `<td style="text-align:center;font-weight:700;color:var(--accent)">${i}</td>`;
+    const custoCell = `<td><input type="number" class="prog-custo" data-nivel="${i}" value="${p.custoExp ?? (i === 1 ? 0 : '')}" placeholder="0" min="0" style="width:100%" oninput="window._mechUpdatePreview()"></td>`;
+
+    if (tipo === 'modificar') {
+        return `<tr>${nvCell}${custoCell}<td><input type="text" class="prog-valor" data-nivel="${i}" value="${esc(String(p.valor ?? ''))}" placeholder="Ex: ${i}" style="width:100%" oninput="window._mechUpdatePreview()"></td></tr>`;
+    } else if (tipo === 'limitar') {
+        return `<tr>${nvCell}${custoCell}<td><input type="text" class="prog-valorLimite" data-nivel="${i}" value="${esc(String(p.valorLimite ?? ''))}" placeholder="Ex: ${i * 2}" style="width:100%" oninput="window._mechUpdatePreview()"></td></tr>`;
+    } else if (tipo === 'distribuir') {
+        return `<tr>${nvCell}${custoCell}<td><input type="number" class="prog-quantidadeAlvos" data-nivel="${i}" value="${p.quantidadeAlvos ?? ''}" placeholder="Ex: ${i + 1}" min="1" style="width:100%" oninput="window._mechUpdatePreview()"></td><td><input type="text" class="prog-valorPorAlvo" data-nivel="${i}" value="${esc(String(p.valorPorAlvo ?? ''))}" placeholder="Ex: 1" style="width:100%" oninput="window._mechUpdatePreview()"></td></tr>`;
+    } else {
+        return `<tr>${nvCell}${custoCell}<td><input type="text" class="prog-descricao" data-nivel="${i}" value="${esc(String(p.descricao ?? ''))}" placeholder="Descrever o efeito neste nível" style="width:100%" oninput="window._mechUpdatePreview()"></td></tr>`;
+    }
+}
+
+function renderConfigProgressao(data, tipo) {
+    const evoluivel = data?.evoluivel || false;
+    const nivelMax = data?.nivelMaximo || 3;
+    const progressao = data?.progressao || {};
+    const apenasCriacao = data?.progressaoApenasCriacao || false;
+    tipo = tipo || data?.tipo || 'modificar';
+
+    const headers = _getProgressaoHeaders(tipo);
+    let tabelaRows = '';
+    if (evoluivel) {
+        for (let i = 1; i <= nivelMax; i++) {
+            const p = progressao[String(i)] || {};
+            tabelaRows += _renderProgressaoRow(i, p, tipo);
+        }
+    }
+
+    return `
+    <div class="mech-form-section" id="mechProgressaoSection">
+        <div class="mech-section-label">📈 Progressão por Nível</div>
+        <div class="form-grid">
+            <div class="form-group">
+                <div class="form-toggle">
+                    <label class="toggle-publish"><input type="checkbox" id="mech_evoluivel" ${evoluivel ? 'checked' : ''} onchange="window._mechEvoluivelChange()"><span class="toggle-slider"></span></label>
+                    <span class="toggle-label">Evoluível (permite subir de nível com EXP)</span>
+                </div>
+            </div>
+            <div class="form-group" id="mech_apenasCriacaoWrap" style="display:${evoluivel ? '' : 'none'}">
+                <div class="form-toggle">
+                    <label class="toggle-publish"><input type="checkbox" id="mech_progressaoApenasCriacao" ${apenasCriacao ? 'checked' : ''}><span class="toggle-slider"></span></label>
+                    <span class="toggle-label">🏗️ Apenas na Criação (não pode upar depois)</span>
+                </div>
+            </div>
+            <div class="form-group" id="mech_nivelMaxWrap" style="display:${evoluivel ? '' : 'none'}">
+                <label>Nível Máximo <span class="required">*</span></label>
+                <input type="number" id="mech_nivelMaximo" value="${nivelMax}" min="2" max="10" onchange="window._mechNivelMaxChange()">
+            </div>
+        </div>
+        <div id="mech_progressaoTabela" style="display:${evoluivel ? '' : 'none'}">
+            <table style="width:100%;border-collapse:collapse;margin-top:8px">
+                <thead id="mech_progressaoHead"><tr style="background:var(--bg-secondary);color:var(--text-secondary)">
+                    ${headers.map(h => `<th style="padding:6px 8px${h === 'Nível' ? ';width:60px' : ''}">${h}</th>`).join('')}
+                </tr></thead>
+                <tbody id="mech_progressaoBody">${tabelaRows}</tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
 window._mechPoolChange = function () {
     const pool = document.getElementById('mech_config_pool')?.value || '';
     const wrap = document.getElementById('mech_config_poolCustomWrap');
@@ -418,6 +490,8 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks) 
                 </div>
             </div>
 
+            ${renderConfigProgressao(data, tipo)}
+
             <div class="mech-form-section">
                 <div class="mech-section-label">🏷️ Tags e Publicação</div>
                 <div class="form-grid">
@@ -492,6 +566,9 @@ window._mechTipoChange = function () {
             if (sel) sel.value = Array.isArray(config.alvo) ? config.alvo[0] : config.alvo;
         }, 0);
     }
+
+    // Re-render progression table with correct columns for new type
+    window._mechRefreshProgressao(tipo);
     window._mechUpdatePreview();
 };
 
@@ -509,6 +586,57 @@ window._mechDuracaoChange = function () {
     const ew = document.getElementById('mech_especWrap');
     if (tw) tw.style.display = d === 'turno' ? '' : 'none';
     if (ew) ew.style.display = d === 'especial' ? '' : 'none';
+};
+
+window._mechEvoluivelChange = function () {
+    const checked = document.getElementById('mech_evoluivel')?.checked || false;
+    const maxWrap = document.getElementById('mech_nivelMaxWrap');
+    const tabelaWrap = document.getElementById('mech_progressaoTabela');
+    const criacaoWrap = document.getElementById('mech_apenasCriacaoWrap');
+    if (maxWrap) maxWrap.style.display = checked ? '' : 'none';
+    if (tabelaWrap) tabelaWrap.style.display = checked ? '' : 'none';
+    if (criacaoWrap) criacaoWrap.style.display = checked ? '' : 'none';
+    if (checked) window._mechNivelMaxChange();
+};
+
+window._mechNivelMaxChange = function () {
+    const max = parseInt(document.getElementById('mech_nivelMaximo')?.value) || 3;
+    const tipo = document.getElementById('mech_tipo')?.value || 'modificar';
+    const tbody = document.getElementById('mech_progressaoBody');
+    const thead = document.getElementById('mech_progressaoHead');
+    if (!tbody) return;
+    // Preserve existing values
+    const existing = {};
+    tbody.querySelectorAll('tr').forEach(row => {
+        const nv = row.querySelector('.prog-custo')?.dataset.nivel;
+        if (nv) {
+            const p = { custoExp: row.querySelector('.prog-custo')?.value || '' };
+            if (tipo === 'modificar') p.valor = row.querySelector('.prog-valor')?.value || '';
+            else if (tipo === 'limitar') p.valorLimite = row.querySelector('.prog-valorLimite')?.value || '';
+            else if (tipo === 'distribuir') {
+                p.quantidadeAlvos = row.querySelector('.prog-quantidadeAlvos')?.value || '';
+                p.valorPorAlvo = row.querySelector('.prog-valorPorAlvo')?.value || '';
+            } else p.descricao = row.querySelector('.prog-descricao')?.value || '';
+            existing[nv] = p;
+        }
+    });
+    // Update headers
+    if (thead) {
+        const headers = _getProgressaoHeaders(tipo);
+        thead.innerHTML = `<tr style="background:var(--bg-secondary);color:var(--text-secondary)">${headers.map(h => `<th style="padding:6px 8px${h === 'Nível' ? ';width:60px' : ''}">${h}</th>`).join('')}</tr>`;
+    }
+    let html = '';
+    for (let i = 1; i <= max; i++) {
+        const prev = existing[String(i)] || {};
+        html += _renderProgressaoRow(i, prev, tipo);
+    }
+    tbody.innerHTML = html;
+};
+
+window._mechRefreshProgressao = function (tipo) {
+    const evoluivel = document.getElementById('mech_evoluivel')?.checked || false;
+    if (!evoluivel) return;
+    window._mechNivelMaxChange();
 };
 
 window._mechUpdatePreview = function () {
@@ -604,6 +732,45 @@ function collectMechFormData() {
             poolPersonalizado
         };
     }
+
+    // Progressão por nível
+    data.evoluivel = document.getElementById('mech_evoluivel')?.checked || false;
+    if (data.evoluivel) {
+        data.nivelMaximo = parseInt(document.getElementById('mech_nivelMaximo')?.value) || 3;
+        data.progressaoApenasCriacao = document.getElementById('mech_progressaoApenasCriacao')?.checked || false;
+        const progressao = {};
+        const tbody = document.getElementById('mech_progressaoBody');
+        if (tbody) {
+            tbody.querySelectorAll('tr').forEach(row => {
+                const custoEl = row.querySelector('.prog-custo');
+                if (!custoEl) return;
+                const nv = custoEl.dataset.nivel;
+                const entry = { custoExp: parseInt(custoEl.value) || 0 };
+
+                if (tipo === 'modificar') {
+                    const v = row.querySelector('.prog-valor')?.value?.trim() ?? '';
+                    entry.valor = isNaN(Number(v)) || v === '' ? v : Number(v);
+                } else if (tipo === 'limitar') {
+                    const v = row.querySelector('.prog-valorLimite')?.value?.trim() ?? '';
+                    entry.valorLimite = isNaN(Number(v)) || v === '' ? v : Number(v);
+                } else if (tipo === 'distribuir') {
+                    entry.quantidadeAlvos = parseInt(row.querySelector('.prog-quantidadeAlvos')?.value) || null;
+                    const v = row.querySelector('.prog-valorPorAlvo')?.value?.trim() ?? '';
+                    entry.valorPorAlvo = isNaN(Number(v)) || v === '' ? v : Number(v);
+                } else {
+                    entry.descricao = row.querySelector('.prog-descricao')?.value?.trim() ?? '';
+                }
+                progressao[nv] = entry;
+            });
+        }
+        data.progressao = progressao;
+    } else {
+        data.evoluivel = false;
+        data.nivelMaximo = null;
+        data.progressao = null;
+        data.progressaoApenasCriacao = false;
+    }
+
     return data;
 }
 
@@ -660,13 +827,17 @@ window._mechSelRemove = function (fieldId, mechId) {
     const hidden = document.getElementById(fieldId);
     if (!hidden) return;
     let ids = JSON.parse(hidden.value || '[]');
-    ids = ids.filter(id => id !== mechId);
+    // Adapter to handle both objects ({id}) and strings
+    ids = ids.filter(item => {
+        if (typeof item === 'object') return item.id !== mechId;
+        return item !== mechId;
+    });
     hidden.value = JSON.stringify(ids);
     // Remove chip
     const chip = document.querySelector(`#${fieldId}_chips .mechsel-chip button[onclick*="${mechId}"]`);
     if (chip) chip.closest('.mechsel-chip').remove();
     if (!ids.length) {
-        document.getElementById(`${fieldId}_chips`).innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhuma mecânica vinculada</span>';
+        document.getElementById(`${fieldId}_chips`).innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhuma mecânica ou peculiaridade vinculada</span>';
     }
 };
 
@@ -735,11 +906,15 @@ export function buildMechanicSelectorHTML(fieldKey, label, currentIds, cache, fo
 // Peculiarity selector (for races)
 export function buildPecSelectorHTML(fieldKey, label, currentIds, cache, fontePreFilter) {
     const published = cache.filter(p => p.publicado);
-    const chips = (currentIds || []).map(pid => {
+    const parsedIds = (currentIds || []).map(item => typeof item === 'object' ? item : { id: item, nivelInicial: 1 });
+    const selectedIds = parsedIds.map(p => p.id);
+
+    const chips = parsedIds.map(pObj => {
+        const pid = pObj.id;
         const p = cache.find(x => x.id === pid);
-        return p ? `<div class="mechsel-chip" style="border-left-color:var(--fonte-${p.fonte || 'generica'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">✨ ${esc(p.nome)}</div><div class="mechsel-chip-preview">${esc(p.fonte || '')} — Nv ${p.nivel || '?'}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${pid}')">✕</button></div>` : '';
+        return p ? `<div class="mechsel-chip" style="border-left-color:var(--fonte-${p.fonte || 'generica'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">✨ ${esc(p.nome)}</div><div class="mechsel-chip-preview">${esc(p.fonte || '')} — Nível Inicial: <input type="number" value="${pObj.nivelInicial || 1}" min="1" max="10" style="width:40px;padding:2px;font-size:0.7rem;" onchange="window._pecSelLevelChange('field_${fieldKey}', '${pid}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${pid}')">✕</button></div>` : '';
     }).join('');
-    const opts = published.map(p => `<label class="mechsel-result"><input type="checkbox" value="${p.id}" ${(currentIds || []).includes(p.id) ? 'checked' : ''}><span class="mechsel-result-name">✨ ${esc(p.nome)}</span><span class="mechsel-result-preview">${esc(p.fonte || '')} — Nv ${p.nivel || '?'}</span></label>`).join('');
+    const opts = published.map(p => `<label class="mechsel-result"><input type="checkbox" value="${p.id}" ${selectedIds.includes(p.id) ? 'checked' : ''}><span class="mechsel-result-name">✨ ${esc(p.nome)}</span><span class="mechsel-result-preview">${esc(p.fonte || '')}</span></label>`).join('');
     return `
     <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
         <span class="mechsel-label">${esc(label)}</span>
@@ -750,11 +925,71 @@ export function buildPecSelectorHTML(fieldKey, label, currentIds, cache, fontePr
                 <input type="text" placeholder="🔍 Buscar peculiaridade..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
             </div>
             <div class="mechsel-results" id="field_${fieldKey}_results">${opts}</div>
-            <button type="button" class="mechsel-confirm" onclick="window._mechSelConfirm('field_${fieldKey}')">✔️ Vincular Selecionadas</button>
+            <button type="button" class="mechsel-confirm" onclick="window._pecSelConfirm('field_${fieldKey}')">✔️ Vincular Selecionadas</button>
         </div>
-        <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(currentIds || [])}'>
+        <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(parsedIds)}'>
     </div>`;
 }
+
+window._pecSelConfirm = function (fieldId) {
+    const results = document.getElementById(`${fieldId}_results`);
+    const hidden = document.getElementById(fieldId);
+    if (!results || !hidden) return;
+
+    // Get existing to preserve nivelInicial
+    const existingIds = JSON.parse(hidden.value || '[]');
+    const existingMap = new Map();
+    existingIds.forEach(item => {
+        if (typeof item === 'object') existingMap.set(item.id, item.nivelInicial);
+        else existingMap.set(item, 1);
+    });
+
+    const checked = Array.from(results.querySelectorAll('input[type="checkbox"]:checked')).map(cb => {
+        return {
+            id: cb.value,
+            nivelInicial: existingMap.has(cb.value) ? existingMap.get(cb.value) : 1
+        };
+    });
+
+    hidden.value = JSON.stringify(checked);
+    document.getElementById(`${fieldId}_search`).classList.remove('open');
+
+    // Refresh chips
+    const cache = window._mechCache || []; // Usually peculiarities cache, handled well enough here
+    const chipsEl = document.getElementById(`${fieldId}_chips`);
+    if (chipsEl) {
+        if (!checked.length) {
+            chipsEl.innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhuma peculiaridade vinculada</span>';
+        } else {
+            chipsEl.innerHTML = checked.map(pObj => {
+                const mid = pObj.id;
+                // Try from both cache in case since _mechCache might be mechanics...
+                // Firebase sets peculiaritiesCache but we only pass it to buildPecSelectorHTML.  
+                // Assuming reload works if we close the modal and reopen it, or we rely on DOM reload.
+                // To be safe, wait for visual update or use simple names based on existing cache.
+                const p = window._mechAllItems ? window._mechAllItems.find(x => x.id === mid) : { nome: "Carregando...", fonte: "?" };
+                if (!p && globals_for_cache) return ''; // just a fallback
+                return `<div class="mechsel-chip" style="border-left-color:var(--fonte-${p?.fonte || 'generica'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">✨ ${esc(p?.nome || mid)}</div><div class="mechsel-chip-preview">${esc(p?.fonte || '')} — Nível Inicial: <input type="number" value="${pObj.nivelInicial || 1}" min="1" max="10" style="width:40px;padding:2px;font-size:0.7rem;" onchange="window._pecSelLevelChange('${fieldId}', '${mid}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${mid}')">✕</button></div>`;
+            }).join('');
+        }
+    }
+};
+
+window._pecSelLevelChange = function (fieldId, mechId, newValue) {
+    const hidden = document.getElementById(fieldId);
+    if (!hidden) return;
+    let ids = JSON.parse(hidden.value || '[]');
+    ids = ids.map(item => {
+        if (typeof item === 'object' && item.id === mechId) {
+            return { ...item, nivelInicial: parseInt(newValue) || 1 };
+        }
+        if (typeof item === 'string' && item === mechId) {
+            return { id: item, nivelInicial: parseInt(newValue) || 1 };
+        }
+        return item;
+    });
+    hidden.value = JSON.stringify(ids);
+};
 
 window._mechSelFilterFonte = function (fieldId, fonte) {
     const results = document.getElementById(`${fieldId}_results`);

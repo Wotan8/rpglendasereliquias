@@ -1,15 +1,5 @@
 /* ===== DERIVED VALUES — Cálculo Automático de Valores Derivados ===== */
 
-/* --- Modificadores raciais aplicados pelo sistema de peculiaridades --- */
-window._raceBonuses = {
-    det_max: 0,       // somado à DET_MAX
-    vit_max: 0,       // somado à VIT_MAX (negativo para Picxi)
-    perc: 0,          // somado à PERC (Tamano: Olfato Excepcional)
-    is_yotun: false,  // se true, verifica tamanho >=10 para dobrar desloc terrestre
-    carga_mult: 1,    // multiplicador da Carga (Yotun: ×2)
-    desloc_ar_override: false, // true = fórmula Picxi: (FOR+DES+Tam+Atletismo)*3
-};
-
 const DERIVED_FORMULAS = {
     VIT_MAX: (a, s, f) => (a.VIG + f.tamanho) * 3,
     PERC: (a, s, f) => a.RAC + a.PRE,
@@ -39,25 +29,29 @@ const DERIVED_FIELDS_MAP = {
     CARGA: { display: 'carga_display' },
 };
 
+function getEffectiveDotValue(key) {
+    return (state.dots[key] || 0) + (state.mechanicBonuses?.[key] || 0);
+}
+
 function gatherAttributes() {
     return {
-        FOR: state.dots['attr_for'] || 0,
-        DES: state.dots['attr_des'] || 0,
-        VIG: state.dots['attr_vig'] || 0,
-        INT: state.dots['attr_int'] || 0,
-        RAC: state.dots['attr_rac'] || 0,
-        PRS: state.dots['attr_prs'] || 0,
-        PRE: state.dots['attr_pre'] || 0,
-        MAN: state.dots['attr_man'] || 0,
-        AUT: state.dots['attr_aut'] || 0,
+        FOR: getEffectiveDotValue('attr_for'),
+        DES: getEffectiveDotValue('attr_des'),
+        VIG: getEffectiveDotValue('attr_vig'),
+        INT: getEffectiveDotValue('attr_int'),
+        RAC: getEffectiveDotValue('attr_rac'),
+        PRS: getEffectiveDotValue('attr_prs'),
+        PRE: getEffectiveDotValue('attr_pre'),
+        MAN: getEffectiveDotValue('attr_man'),
+        AUT: getEffectiveDotValue('attr_aut'),
     };
 }
 
 function gatherDerivedSkills() {
     return {
-        agilidade: state.dots['sk_fisico_agilidade'] || 0,
-        atletismo: state.dots['sk_fisico_atletismo'] || 0,
-        abismo: state.dots['sk_mental_abismo'] || 0,
+        agilidade: getEffectiveDotValue('sk_fisico_agilidade'),
+        atletismo: getEffectiveDotValue('sk_fisico_atletismo'),
+        abismo: getEffectiveDotValue('sk_mental_abismo'),
     };
 }
 
@@ -72,30 +66,80 @@ function recalcAll() {
     const attrs = gatherAttributes();
     const skills = gatherDerivedSkills();
     const fields = gatherDerivedFields();
-    const rb = window._raceBonuses;
+    const bonuses = state.mechanicBonuses || {};
+    const limits = state.mechanicLimits || {};
 
     for (const [key, formula] of Object.entries(DERIVED_FORMULAS)) {
         let value = formula(attrs, skills, fields);
 
-        // Aplicar modificadores raciais
-        switch (key) {
-            case 'VIT_MAX': value += rb.vit_max; break;
-            case 'DET_MAX': value += rb.det_max; break;
-            case 'PERC': value += rb.perc; break;
-            case 'DESLOC_T':
-                if (rb.is_yotun && fields.tamanho >= 10) value = value * 2;
-                break;
-            case 'CARGA': value = Math.floor(value * rb.carga_mult); break;
-            case 'DESLOC_AR':
-                if (rb.desloc_ar_override) {
-                    value = (attrs.FOR + attrs.DES + fields.tamanho + skills.atletismo) * 3;
-                }
-                break;
+        // Aplicar bônus de mecânicas para este derivado
+        const bonusKey = `DERIVED:${key}`;
+        value += (bonuses[bonusKey] || 0);
+
+        // Aplicar multiplicadores de mecânicas (ex: Yotun dobra carga)
+        const multKey = `MULT:DERIVED:${key}`;
+        if (bonuses[multKey]) {
+            value = Math.floor(value * bonuses[multKey]);
+        }
+
+        // Aplicar limites de mecânicas
+        const limit = limits[bonusKey];
+        if (limit) {
+            if (limit.tipo === 'bloqueio') value = 0;
+            if (limit.tipo === 'maximo' && limit.max != null) value = Math.min(value, limit.max);
+            if (limit.tipo === 'minimo' && limit.min != null) value = Math.max(value, limit.min);
         }
 
         updateDerivedField(key, value);
     }
+
+    // Aplicar limites em atributos (ex: Pogo FOR max 3)
+    for (const [field, limit] of Object.entries(limits)) {
+        if (field.startsWith('attr_')) {
+            const currentVal = state.dots[field] || 0;
+            if (limit.tipo === 'maximo' && limit.max != null && currentVal > limit.max) {
+                state.dots[field] = limit.max;
+                const dotsEl = document.querySelector(`.dots5[data-attr="${field}"]`);
+                if (dotsEl && typeof refreshDots === 'function') refreshDots(dotsEl, field);
+            }
+        }
+    }
+
+    // Aplicar bônus de mecânicas visualmente nos dots (sk_* e attr_*)
+    applyMechanicBonusesToDots();
 }
+
+/**
+ * Aplica visualmente os bônus de mecânicas (sk_* e attr_*) nos dots.
+ * Dots de bônus recebem a classe 'bonus' para destaque visual.
+ */
+function applyMechanicBonusesToDots() {
+    const bonuses = state.mechanicBonuses || {};
+
+    for (const [key, bonus] of Object.entries(bonuses)) {
+        if (!key.startsWith('sk_') && !key.startsWith('attr_')) continue;
+        if (!bonus || bonus === 0) continue;
+
+        const container = document.querySelector(`.dots5[data-attr="${key}"]`);
+        if (!container) continue;
+
+        const baseVal = state.dots[key] || 0;
+        const effectiveVal = baseVal + bonus;
+
+        container.querySelectorAll('.dot').forEach(d => {
+            const val = +d.dataset.val;
+            if (val <= baseVal) {
+                d.classList.add('filled');
+                d.classList.remove('bonus');
+            } else if (val <= effectiveVal) {
+                d.classList.add('filled', 'bonus');
+            } else {
+                d.classList.remove('filled', 'bonus');
+            }
+        });
+    }
+}
+
 
 function updateDerivedField(key, value) {
     const mapping = DERIVED_FIELDS_MAP[key];

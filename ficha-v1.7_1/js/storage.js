@@ -11,7 +11,7 @@ function scheduleAutosave() {
 document.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.key) scheduleAutosave(); });
 
 function gatherData() {
-    const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, specs: [], locacoes: [], rituais: [], ritos: [] };
+    const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, specs: [], locacoes: [], rituais: [], ritos: [], mecanicasAplicadas: state.mecanicasAplicadas || {} };
     document.querySelectorAll('[data-key]').forEach(el => { d.fields[el.dataset.key] = el.value || ''; });
     document.querySelectorAll('.spec-item').forEach(item => {
         const inp = item.querySelector('input[data-key]');
@@ -118,8 +118,8 @@ function gatherData() {
     // Gather peculiaridade levels
     d.peculiaridadeLevels = {};
     const raca = document.getElementById('selRaca').value;
-    if (raca && RACES[raca]) {
-        RACES[raca].peculiaridades.forEach(pec => {
+    if (raca && window.RACES && window.RACES[raca]) {
+        window.RACES[raca].peculiaridades.forEach(pec => {
             if (pec.tipo === 'evolutivo') {
                 const savedLevel = state.dots['pec_' + pec.key] || pec.nivelAtual;
                 d.peculiaridadeLevels[pec.key] = savedLevel;
@@ -136,7 +136,7 @@ function gatherData() {
     return d;
 }
 
-function saveToStorage() { const d = gatherData(); try { localStorage.setItem('lr_ficha_v17', JSON.stringify(d)); document.querySelectorAll('#classResourcesGrid [data-key]').forEach(el => { localStorage.setItem('lr_' + el.dataset.key, el.value); }); } catch (e) { } }
+function saveToStorage() { const d = gatherData(); try { const storageKey = 'lr_ficha_v17_' + (window.currentCharacterId || 'default'); localStorage.setItem(storageKey, JSON.stringify(d)); document.querySelectorAll('#classResourcesGrid [data-key]').forEach(el => { localStorage.setItem('lr_' + el.dataset.key, el.value); }); } catch (e) { } }
 
 /* ===== LOAD FROM DATA (reusável: chamada do localStorage e do Firebase) ===== */
 function loadFromData(d) {
@@ -163,6 +163,9 @@ function loadFromData(d) {
                 state.dots['pec_' + key] = level;
             });
         }
+        // Restore mecanicasAplicadas
+        if (d.mecanicasAplicadas) state.mecanicasAplicadas = d.mecanicasAplicadas;
+
         onClassChange();
         onRaceChange();
 
@@ -179,7 +182,7 @@ function loadFromData(d) {
 
 function loadFromStorage() {
     try {
-        const raw = localStorage.getItem('lr_ficha_v17'); if (!raw) return;
+        const raw = localStorage.getItem('lr_ficha_v17_' + (window.currentCharacterId || 'default')); if (!raw) return;
         const d = JSON.parse(raw);
         loadFromData(d);
     } catch (e) { console.error(e); }
