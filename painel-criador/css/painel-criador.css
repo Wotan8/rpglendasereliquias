@@ -1433,6 +1433,63 @@ html.dark .mech-card {
     margin-top: 6px;
 }
 
+/* -- Tag Filter Chips -- */
+.tag-filter-area {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 8px 0;
+}
+
+.tag-filter-label {
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--muted);
+    margin-right: 4px;
+}
+
+.tag-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 2px solid var(--soft);
+    background: transparent;
+    color: var(--muted);
+    font-size: .72rem;
+    font-weight: 700;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: all .2s;
+    text-transform: capitalize;
+}
+
+.tag-filter-chip:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(79, 110, 247, .06);
+}
+
+.tag-filter-chip.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(79, 110, 247, .3);
+}
+
+html.dark .tag-filter-chip {
+    border-color: var(--line);
+}
+
+html.dark .tag-filter-chip:hover {
+    border-color: var(--primary);
+}
+
 /* -- Extra Filters -- */
 .mech-filters {
     display: flex;

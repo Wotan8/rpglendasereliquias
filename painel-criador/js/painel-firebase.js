@@ -408,6 +408,10 @@ window.switchModule = function (moduleName, btnEl) {
     if (oldFilters) oldFilters.remove();
     if (moduleName === 'mechanics') renderMechExtraFilters();
 
+    // Remove/add tag filter for modules that have tags
+    const oldTagFilter = document.getElementById('tagFilterArea');
+    if (oldTagFilter) oldTagFilter.remove();
+
     loadModule(moduleName);
 };
 
@@ -428,6 +432,52 @@ function renderMechExtraFilters() {
         </select>`;
     filterBar.after(div);
 }
+
+// Modules that support tag filtering
+const TAG_MODULES = ['peculiarities', 'mechanics'];
+const selectedTagsMap = {};  // per-module tag selections
+function getSelectedTags() { return selectedTagsMap[currentModule] || (selectedTagsMap[currentModule] = new Set()); }
+
+function renderTagFilter() {
+    const old = document.getElementById('tagFilterArea');
+    if (old) old.remove();
+    if (!TAG_MODULES.includes(currentModule)) return;
+
+    const allTags = new Set();
+    allItems.forEach(item => {
+        if (Array.isArray(item.tags)) item.tags.forEach(t => allTags.add(t));
+    });
+    if (allTags.size === 0) return;
+
+    const selected = getSelectedTags();
+    const sorted = [...allTags].sort((a, b) => a.localeCompare(b));
+    const div = document.createElement('div');
+    div.className = 'tag-filter-area';
+    div.id = 'tagFilterArea';
+    div.innerHTML = `<span class="tag-filter-label">🏷️ Tags:</span>` +
+        sorted.map(t => {
+            const active = selected.has(t) ? ' active' : '';
+            return `<button class="tag-filter-chip${active}" data-tag="${escapeHtml(t)}" onclick="toggleTagFilter(this)">${escapeHtml(t)}</button>`;
+        }).join('');
+
+    // Insert after mechFiltersExtra if exists, otherwise after filterBar
+    const mechFilters = document.getElementById('mechFiltersExtra');
+    const filterBar = document.getElementById('filterBar');
+    (mechFilters || filterBar).after(div);
+}
+
+window.toggleTagFilter = function (btn) {
+    const tag = btn.dataset.tag;
+    const selected = getSelectedTags();
+    if (selected.has(tag)) {
+        selected.delete(tag);
+        btn.classList.remove('active');
+    } else {
+        selected.add(tag);
+        btn.classList.add('active');
+    }
+    renderItems();
+};
 
 // ===== LOAD MODULE DATA =====
 async function loadModule(moduleName) {
@@ -456,6 +506,9 @@ async function loadModule(moduleName) {
             const nameB = (b.nome || b.titulo || '').toLowerCase();
             return nameA.localeCompare(nameB);
         });
+
+        // Render tag filter chips (preserve existing selections)
+        renderTagFilter();
 
         renderItems();
     } catch (error) {
@@ -501,6 +554,12 @@ function renderItems() {
             const tipoF = document.getElementById('mechFilterTipo')?.value || '';
             if (fonteF && item.fonte !== fonteF) return false;
             if (tipoF && item.tipo !== tipoF) return false;
+        }
+        // Tag filter
+        const selTags = getSelectedTags();
+        if (selTags.size > 0) {
+            const itemTags = Array.isArray(item.tags) ? item.tags : [];
+            if (!itemTags.some(t => selTags.has(t))) return false;
         }
         return true;
     });

@@ -12,7 +12,13 @@ document.addEventListener('input', e => { if (e.target.dataset && e.target.datas
 
 function gatherData() {
     const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, specs: [], locacoes: [], rituais: [], ritos: [], mecanicasAplicadas: state.mecanicasAplicadas || {} };
-    document.querySelectorAll('[data-key]').forEach(el => { d.fields[el.dataset.key] = el.value || ''; });
+    document.querySelectorAll('[data-key]').forEach(el => {
+        // Se este campo tem bônus de mecânica aplicado, salvar o valor BASE (sem bônus)
+        // para evitar que o bônus seja dobrado ao recarregar
+        const hasMechanicBonus = el.hasAttribute('data-mechanic-field-bonus');
+        const baseValue = el.dataset.baseValue;
+        d.fields[el.dataset.key] = (hasMechanicBonus && baseValue !== undefined) ? baseValue : (el.value || '');
+    });
     document.querySelectorAll('.spec-item').forEach(item => {
         const inp = item.querySelector('input[data-key]');
         const dotsEl = item.querySelector('.dots5');

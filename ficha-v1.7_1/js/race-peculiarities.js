@@ -280,7 +280,7 @@ function renderPeculiaridadeCard(pec, raceKey, container) {
         custo.className = 'pec-custo';
         custo.id = `pec_custo_${pec.key}`;
         if (pec.niveis && pec.niveis[pec.nivelAtual]) {
-            custo.textContent = `Custo: ${pec.niveis[pec.nivelAtual].custo}`;
+            custo.textContent = pec.niveis[pec.nivelAtual].custo;
             efeito.querySelector('.efeito-text').textContent = pec.niveis[pec.nivelAtual].efeito;
         }
         efeitoContainer.appendChild(custo);
@@ -394,6 +394,9 @@ function renderEvolutableDots(dotsDiv, raceKey, pec, minLevel, maxLevel) {
                 state.dots[dotKey] = newLevel;
                 refreshPecDots(dotsDiv, dotKey, minLevel);
                 updatePeculiaridadeLevel(raceKey, pec.key, newLevel, pec);
+                if (typeof applyAllRaceMechanics === 'function') applyAllRaceMechanics(raceKey);
+                if (typeof recalcAll === 'function') recalcAll();
+                if (typeof recalcMainTests === 'function') recalcMainTests();
                 if (typeof checkDistribuirOnLevelUp === 'function') checkDistribuirOnLevelUp(pec);
                 scheduleAutosave();
                 return;
@@ -407,6 +410,9 @@ function renderEvolutableDots(dotsDiv, raceKey, pec, minLevel, maxLevel) {
                         state.dots[dotKey] = newLevel;
                         refreshPecDots(dotsDiv, dotKey, minLevel);
                         updatePeculiaridadeLevel(raceKey, pec.key, newLevel, pec);
+                        if (typeof applyAllRaceMechanics === 'function') applyAllRaceMechanics(raceKey);
+                        if (typeof recalcAll === 'function') recalcAll();
+                        if (typeof recalcMainTests === 'function') recalcMainTests();
                         if (typeof checkDistribuirOnLevelUp === 'function') checkDistribuirOnLevelUp(pec);
                         scheduleAutosave();
                         if (typeof showUpgradeSuccess === 'function')
@@ -431,6 +437,9 @@ function renderEvolutableDots(dotsDiv, raceKey, pec, minLevel, maxLevel) {
                         state.dots[dotKey] = newLevel;
                         refreshPecDots(dotsDiv, dotKey, minLevel);
                         updatePeculiaridadeLevel(raceKey, pec.key, newLevel, pec);
+                        if (typeof applyAllRaceMechanics === 'function') applyAllRaceMechanics(raceKey);
+                        if (typeof recalcAll === 'function') recalcAll();
+                        if (typeof recalcMainTests === 'function') recalcMainTests();
                         if (typeof checkDistribuirOnLevelUp === 'function') checkDistribuirOnLevelUp(pec);
                         scheduleAutosave();
                         if (typeof showUpgradeSuccess === 'function')
@@ -464,14 +473,17 @@ function updatePeculiaridadeLevel(raceKey, pecKey, newLevel, pecData) {
     if (efeitoEl && pecData.niveis && pecData.niveis[newLevel]) {
         efeitoEl.querySelector('.efeito-text').textContent = pecData.niveis[newLevel].efeito;
         if (custoEl) {
-            custoEl.textContent = `Custo: ${pecData.niveis[newLevel].custo}`;
+            custoEl.textContent = pecData.niveis[newLevel].custo;
         }
     }
 
     // Auto-update blindagem if "blindagem_natural" is upgraded
     if (pecKey === 'blindagem_natural') {
         const bldField = document.querySelector('[data-key="blindagem"]');
-        if (bldField) bldField.value = newLevel;
+        if (bldField) {
+            bldField.value = newLevel;
+            bldField.dataset.baseValue = String(newLevel);
+        }
     }
 
     // Auto-update Percepção para Tamano: Olfato Excepcional

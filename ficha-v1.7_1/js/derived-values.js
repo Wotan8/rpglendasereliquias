@@ -105,6 +105,32 @@ function recalcAll() {
         }
     }
 
+    // Aplicar bônus de mecânicas em campos DOM (field:xxx, ex: blindagem, tamanho)
+    // Primeiro: resetar campos que foram previamente modificados por bônus de field:*
+    document.querySelectorAll('[data-mechanic-field-bonus]').forEach(el => {
+        const baseVal = parseFloat(el.dataset.baseValue) || 0;
+        el.value = baseVal;
+        el.removeAttribute('data-mechanic-field-bonus');
+    });
+
+    // Depois: aplicar bônus atuais
+    for (const [bonusKey, bonusVal] of Object.entries(bonuses)) {
+        if (!bonusKey.startsWith('field:')) continue;
+        if (!bonusVal || bonusVal === 0) continue;
+
+        const dataKey = bonusKey.slice(6); // remove "field:" prefix
+        const el = document.querySelector(`[data-key="${dataKey}"]`);
+        if (!el) continue;
+
+        // Guardar o valor base original se ainda não foi salvo
+        if (el.dataset.baseValue === undefined || !el.hasAttribute('data-base-value')) {
+            el.dataset.baseValue = String(parseFloat(el.value) || 0);
+        }
+        const baseVal = parseFloat(el.dataset.baseValue) || 0;
+        el.value = baseVal + bonusVal;
+        el.setAttribute('data-mechanic-field-bonus', 'true');
+    }
+
     // Aplicar bônus de mecânicas visualmente nos dots (sk_* e attr_*)
     applyMechanicBonusesToDots();
 }
@@ -191,5 +217,15 @@ function initDerivedListeners() {
     if (tamEl) {
         tamEl.addEventListener('input', recalcAll);
         tamEl.addEventListener('change', recalcAll);
+    }
+
+    // Listener no campo Blindagem: quando o usuário editar manualmente,
+    // atualizar data-base-value com o valor digitado, para que o bônus de
+    // mecânica seja somado POR CIMA do valor base do usuário no próximo recalcAll.
+    const bldEl = document.querySelector('[data-key="blindagem"]');
+    if (bldEl) {
+        bldEl.addEventListener('input', () => {
+            bldEl.dataset.baseValue = String(parseFloat(bldEl.value) || 0);
+        });
     }
 }
