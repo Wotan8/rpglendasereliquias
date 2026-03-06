@@ -11,13 +11,11 @@ function scheduleAutosave() {
 document.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.key) scheduleAutosave(); });
 
 function gatherData() {
-    const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, specs: [], locacoes: [], rituais: [], ritos: [], mecanicasAplicadas: state.mecanicasAplicadas || {} };
+    const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, specs: [], locacoes: [], rituais: [], ritos: [], mecanicasAplicadas: state.mecanicasAplicadas || {}, fieldBaseValues: state.fieldBaseValues || {}, appliedFieldBonuses: state.appliedFieldBonuses || {} };
     document.querySelectorAll('[data-key]').forEach(el => {
-        // Se este campo tem bônus de mecânica aplicado, salvar o valor BASE (sem bônus)
-        // para evitar que o bônus seja dobrado ao recarregar
-        const hasMechanicBonus = el.hasAttribute('data-mechanic-field-bonus');
-        const baseValue = el.dataset.baseValue;
-        d.fields[el.dataset.key] = (hasMechanicBonus && baseValue !== undefined) ? baseValue : (el.value || '');
+        // Salvar o valor do DOM como está (incluindo edições manuais do usuário).
+        // O sistema de appliedFieldBonuses garante que o bônus não será re-aplicado no reload.
+        d.fields[el.dataset.key] = el.value || '';
     });
     document.querySelectorAll('.spec-item').forEach(item => {
         const inp = item.querySelector('input[data-key]');
@@ -171,6 +169,11 @@ function loadFromData(d) {
         }
         // Restore mecanicasAplicadas
         if (d.mecanicasAplicadas) state.mecanicasAplicadas = d.mecanicasAplicadas;
+        // Restore fieldBaseValues e appliedFieldBonuses
+        if (d.fieldBaseValues) state.fieldBaseValues = d.fieldBaseValues;
+        else state.fieldBaseValues = {};
+        if (d.appliedFieldBonuses) state.appliedFieldBonuses = d.appliedFieldBonuses;
+        else state.appliedFieldBonuses = {};
 
         onClassChange();
         onRaceChange();

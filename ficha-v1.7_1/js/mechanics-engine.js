@@ -175,20 +175,23 @@ function applyMechanicToSheet(mech, parentPec) {
         const dotKey = 'pec_' + (parentPec.key || parentPec.id);
         const currentLevel = state.dots[dotKey] || parentPec.nivelAtual || parentPec.nivel || 1;
         const prog = mech.progressao[String(currentLevel)];
-        if (prog && prog.valor !== undefined) {
+        if (prog) {
             // Criar config ajustada ao nível
             config = JSON.parse(JSON.stringify(config));
             if (tipo === 'modificar') {
-                config.valor = prog.valor;
+                if (prog.valor !== undefined) config.valor = prog.valor;
             } else if (tipo === 'limitar') {
-                if (config.valorMaximo !== undefined) config.valorMaximo = prog.valor;
-                if (config.valorMinimo !== undefined) config.valorMinimo = prog.valor;
+                const limVal = prog.valorLimite !== undefined ? prog.valorLimite : prog.valor;
+                if (limVal !== undefined) {
+                    if (config.valorMaximo !== undefined) config.valorMaximo = limVal;
+                    if (config.valorMinimo !== undefined) config.valorMinimo = limVal;
+                }
             } else if (tipo === 'distribuir') {
                 if (prog.valor !== undefined) config.valorPorAlvo = prog.valor;
                 if (prog.valorPorAlvo !== undefined) config.valorPorAlvo = prog.valorPorAlvo;
                 if (prog.quantidadeAlvos !== undefined) config.quantidadeAlvos = prog.quantidadeAlvos;
             }
-            // narrativo e conceder não alteram cálculos, só exibição
+            // narrativo, conceder e condicional não alteram cálculos, só exibição
         }
     }
 

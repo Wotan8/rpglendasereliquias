@@ -279,9 +279,10 @@ function renderPeculiaridadeCard(pec, raceKey, container) {
         const custo = document.createElement('div');
         custo.className = 'pec-custo';
         custo.id = `pec_custo_${pec.key}`;
-        if (pec.niveis && pec.niveis[pec.nivelAtual]) {
-            custo.textContent = pec.niveis[pec.nivelAtual].custo;
-            efeito.querySelector('.efeito-text').textContent = pec.niveis[pec.nivelAtual].efeito;
+        const currentLvl = state.dots['pec_' + pec.key] || pec.nivelAtual || 1;
+        if (pec.niveis && pec.niveis[currentLvl]) {
+            custo.textContent = pec.niveis[currentLvl].custo;
+            efeito.querySelector('.efeito-text').textContent = pec.niveis[currentLvl].efeito;
         }
         efeitoContainer.appendChild(custo);
 
@@ -308,7 +309,6 @@ function renderPeculiaridadeCard(pec, raceKey, container) {
             state.dots[dotKey] = pec.nivelAtual;
         }
         refreshPecDots(dotsDiv, dotKey, pec.nivelAtual);
-        updatePeculiaridadeLevel(raceKey, pec.key, state.dots[dotKey], pec);
 
     } else {
         card.appendChild(efeitoContainer);
@@ -328,6 +328,12 @@ function renderPeculiaridadeCard(pec, raceKey, container) {
     }
 
     container.appendChild(card);
+
+    // Chamar DEPOIS do appendChild para que document.getElementById funcione
+    if (pec.tipo === 'evolutivo') {
+        const dotKey = 'pec_' + pec.key;
+        updatePeculiaridadeLevel(raceKey, pec.key, state.dots[dotKey] || pec.nivelAtual || 1, pec);
+    }
 }
 
 function renderEvolutableDots(dotsDiv, raceKey, pec, minLevel, maxLevel) {
@@ -471,7 +477,95 @@ function updatePeculiaridadeLevel(raceKey, pecKey, newLevel, pecData) {
     }
 
     if (efeitoEl && pecData.niveis && pecData.niveis[newLevel]) {
-        efeitoEl.querySelector('.efeito-text').textContent = pecData.niveis[newLevel].efeito;
+        // Regenerar efeito dinamicamente a partir de TODAS as mecânicas
+        let efeitoTexto = '';
+        if (pecData.mecanicas && typeof generatePreviewText === 'function') {
+            const efeitosNivel = [];
+            for (const m of pecData.mecanicas) {
+                // --- Mecânica evoluível: ajustar config com valores da progressão ---
+                if (m.evoluivel === true && m.progressao) {
+                    const prog = m.progressao[String(newLevel)];
+                    if (prog) {
+                        const adjustedMech = JSON.parse(JSON.stringify(m));
+                        delete adjustedMech.previewTexto; // Forçar geração dinâmica
+
+                        if (m.tipo === 'modificar') {
+                            if (prog.valor !== undefined) {
+                                adjustedMech.config = { ...adjustedMech.config, valor: prog.valor };
+                            }
+                        } else if (m.tipo === 'limitar') {
+                            // Aplicar valorLimite/valor diretamente sem depender do campo base existir
+                            const limVal = prog.valorLimite !== undefined ? prog.valorLimite : prog.valor;
+                            if (limVal !== undefined) {
+                                if (!adjustedMech.config) adjustedMech.config = {};
+                                // Detectar tipo do limite para atribuir ao campo correto
+                                const tipoLim = adjustedMech.config.tipoLimite;
+                                if (tipoLim === 'maximo' || adjustedMech.config.valorMaximo !== undefined) {
+                                    adjustedMech.config.valorMaximo = limVal;
+                                }
+                                if (tipoLim === 'minimo' || adjustedMech.config.valorMinimo !== undefined) {
+                                    adjustedMech.config.valorMinimo = limVal;
+                                }
+                                // Fallback: se nenhum campo foi setado, definir ambos
+                                if (adjustedMech.config.valorMaximo === undefined && adjustedMech.config.valorMinimo === undefined) {
+                                    adjustedMech.config.valorMaximo = limVal;
+                                }
+                            }
+                        } else if (m.tipo === 'distribuir') {
+                            if (prog.valorPorAlvo !== undefined) adjustedMech.config = { ...adjustedMech.config, valorPorAlvo: prog.valorPorAlvo };
+                            if (prog.quantidadeAlvos !== undefined) adjustedMech.config = { ...adjustedMech.config, quantidadeAlvos: prog.quantidadeAlvos };
+                            if (prog.valor !== undefined && prog.valorPorAlvo === undefined) adjustedMech.config = { ...adjustedMech.config, valorPorAlvo: prog.valor };
+                        } else if (m.tipo === 'narrativo') {
+                            // Narrativo: usar descricao ou textoEfeito da progressão
+                            if (prog.descricao) {
+                                efeitosNivel.push(prog.descricao);
+                                continue;
+                            }
+                            if (prog.textoEfeito) {
+                                adjustedMech.config = { ...adjustedMech.config, textoEfeito: prog.textoEfeito };
+                            }
+                        } else if (m.tipo === 'conceder') {
+                            // Conceder: usar descrição/tipo da progressão
+                            if (prog.descricaoConcessao !== undefined) {
+                                adjustedMech.config = { ...adjustedMech.config, descricaoConcessao: prog.descricaoConcessao };
+                            }
+                            if (prog.tipoConcessao !== undefined) {
+                                adjustedMech.config = { ...adjustedMech.config, tipoConcessao: prog.tipoConcessao };
+                            }
+                            if (prog.descricao) {
+                                efeitosNivel.push(prog.descricao);
+                                continue;
+                            }
+                        } else if (m.tipo === 'condicional') {
+                            // Condicional: usar gatilho da progressão
+                            if (prog.gatilho !== undefined) {
+                                adjustedMech.config = { ...adjustedMech.config, gatilho: prog.gatilho };
+                            }
+                            if (prog.descricao) {
+                                efeitosNivel.push(prog.descricao);
+                                continue;
+                            }
+                        } else if (prog.descricao) {
+                            // Tipo desconhecido com descrição: usar direto
+                            efeitosNivel.push(prog.descricao);
+                            continue;
+                        }
+                        efeitosNivel.push(generatePreviewText(adjustedMech));
+                    }
+                } else {
+                    // --- Mecânica NÃO-evoluível: incluir texto estático ---
+                    efeitosNivel.push(generatePreviewText(m));
+                }
+            }
+            if (efeitosNivel.length > 0) {
+                efeitoTexto = efeitosNivel.join('; ');
+            }
+        }
+        // Fallback: usar texto pré-computado se não conseguiu gerar dinamicamente
+        if (!efeitoTexto) {
+            efeitoTexto = pecData.niveis[newLevel].efeito;
+        }
+        efeitoEl.querySelector('.efeito-text').textContent = efeitoTexto;
         if (custoEl) {
             custoEl.textContent = pecData.niveis[newLevel].custo;
         }
@@ -479,10 +573,12 @@ function updatePeculiaridadeLevel(raceKey, pecKey, newLevel, pecData) {
 
     // Auto-update blindagem if "blindagem_natural" is upgraded
     if (pecKey === 'blindagem_natural') {
+        // Atualizar o valor base no state — recalcAll() aplicará bônus por cima
+        if (!state.fieldBaseValues) state.fieldBaseValues = {};
+        state.fieldBaseValues['blindagem'] = newLevel;
         const bldField = document.querySelector('[data-key="blindagem"]');
         if (bldField) {
             bldField.value = newLevel;
-            bldField.dataset.baseValue = String(newLevel);
         }
     }
 

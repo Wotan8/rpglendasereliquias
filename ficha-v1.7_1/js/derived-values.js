@@ -106,29 +106,61 @@ function recalcAll() {
     }
 
     // Aplicar bônus de mecânicas em campos DOM (field:xxx, ex: blindagem, tamanho)
-    // Primeiro: resetar campos que foram previamente modificados por bônus de field:*
-    document.querySelectorAll('[data-mechanic-field-bonus]').forEach(el => {
-        const baseVal = parseFloat(el.dataset.baseValue) || 0;
-        el.value = baseVal;
-        el.removeAttribute('data-mechanic-field-bonus');
-    });
+    // Usa state.appliedFieldBonuses para rastrear bônus já aplicados.
+    // Só atualiza o campo quando o bônus de mecânica MUDA (ex: level-up).
+    // Se o bônus é o mesmo, o campo não é tocado — preservando edições manuais do usuário.
+    if (!state.fieldBaseValues) state.fieldBaseValues = {};
+    if (!state.appliedFieldBonuses) state.appliedFieldBonuses = {};
 
-    // Depois: aplicar bônus atuais
+    // Coletar bônus agrupados por campo
+    const fieldBonuses = {};
     for (const [bonusKey, bonusVal] of Object.entries(bonuses)) {
         if (!bonusKey.startsWith('field:')) continue;
         if (!bonusVal || bonusVal === 0) continue;
+        const dataKey = bonusKey.slice(6);
+        fieldBonuses[dataKey] = (fieldBonuses[dataKey] || 0) + bonusVal;
+    }
 
-        const dataKey = bonusKey.slice(6); // remove "field:" prefix
+    // Resetar campos que tinham bônus mas agora não têm mais
+    document.querySelectorAll('[data-mechanic-field-bonus]').forEach(el => {
+        const dk = el.dataset.key;
+        if (!dk || fieldBonuses[dk] !== undefined) return; // ainda tem bônus, será tratado abaixo
+        // Bônus removido: restaurar valor base
+        if (state.fieldBaseValues[dk] !== undefined) {
+            el.value = state.fieldBaseValues[dk];
+        }
+        el.removeAttribute('data-mechanic-field-bonus');
+        delete state.appliedFieldBonuses[dk];
+    });
+
+    // Aplicar bônus atuais — MAS só se o bônus mudou
+    for (const [dataKey, bonus] of Object.entries(fieldBonuses)) {
         const el = document.querySelector(`[data-key="${dataKey}"]`);
         if (!el) continue;
 
-        // Guardar o valor base original se ainda não foi salvo
-        if (el.dataset.baseValue === undefined || !el.hasAttribute('data-base-value')) {
-            el.dataset.baseValue = String(parseFloat(el.value) || 0);
+        const previousBonus = state.appliedFieldBonuses[dataKey];
+
+        // Se o bônus é idêntico ao já aplicado, NÃO tocar no campo
+        // → preserva edições manuais do usuário
+        if (previousBonus !== undefined && previousBonus === bonus) {
+            el.setAttribute('data-mechanic-field-bonus', 'true');
+            continue;
         }
-        const baseVal = parseFloat(el.dataset.baseValue) || 0;
-        el.value = baseVal + bonusVal;
+
+        // Bônus mudou (ou é novo): capturar base e recalcular
+        if (state.fieldBaseValues[dataKey] === undefined) {
+            // Se tinha bônus anterior, subtrair para achar o base
+            if (previousBonus !== undefined) {
+                state.fieldBaseValues[dataKey] = (parseFloat(el.value) || 0) - previousBonus;
+            } else {
+                state.fieldBaseValues[dataKey] = parseFloat(el.value) || 0;
+            }
+        }
+
+        const baseVal = state.fieldBaseValues[dataKey];
+        el.value = baseVal + bonus;
         el.setAttribute('data-mechanic-field-bonus', 'true');
+        state.appliedFieldBonuses[dataKey] = bonus;
     }
 
     // Aplicar bônus de mecânicas visualmente nos dots (sk_* e attr_*)
@@ -220,12 +252,7 @@ function initDerivedListeners() {
     }
 
     // Listener no campo Blindagem: quando o usuário editar manualmente,
-    // atualizar data-base-value com o valor digitado, para que o bônus de
-    // mecânica seja somado POR CIMA do valor base do usuário no próximo recalcAll.
-    const bldEl = document.querySelector('[data-key="blindagem"]');
-    if (bldEl) {
-        bldEl.addEventListener('input', () => {
-            bldEl.dataset.baseValue = String(parseFloat(bldEl.value) || 0);
-        });
-    }
+    // NÃO atualizar fieldBaseValues — o valor manual será preservado até
+    // que uma mecânica force recálculo (level-up de peculiaridade).
+    // A edição manual do usuário é salva diretamente pelo autosave normal.
 }

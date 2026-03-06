@@ -224,16 +224,57 @@ function buildRacesFromFirebase() {
                             // Gerar preview do efeito com config ajustada ao nível
                             const adjustedMech = JSON.parse(JSON.stringify(m));
                             delete adjustedMech.previewTexto; // Forçar geração dinâmica
-                            if (m.tipo === 'modificar' && prog.valor !== undefined) {
-                                adjustedMech.config = { ...adjustedMech.config, valor: prog.valor };
-                            } else if (m.tipo === 'limitar' && prog.valorLimite !== undefined) {
-                                if (adjustedMech.config.valorMaximo !== undefined) adjustedMech.config.valorMaximo = prog.valorLimite;
-                                if (adjustedMech.config.valorMinimo !== undefined) adjustedMech.config.valorMinimo = prog.valorLimite;
+
+                            if (m.tipo === 'modificar') {
+                                if (prog.valor !== undefined) {
+                                    adjustedMech.config = { ...adjustedMech.config, valor: prog.valor };
+                                }
+                            } else if (m.tipo === 'limitar') {
+                                const limVal = prog.valorLimite !== undefined ? prog.valorLimite : prog.valor;
+                                if (limVal !== undefined) {
+                                    if (!adjustedMech.config) adjustedMech.config = {};
+                                    const tipoLim = adjustedMech.config.tipoLimite;
+                                    if (tipoLim === 'maximo' || adjustedMech.config.valorMaximo !== undefined) {
+                                        adjustedMech.config.valorMaximo = limVal;
+                                    }
+                                    if (tipoLim === 'minimo' || adjustedMech.config.valorMinimo !== undefined) {
+                                        adjustedMech.config.valorMinimo = limVal;
+                                    }
+                                    if (adjustedMech.config.valorMaximo === undefined && adjustedMech.config.valorMinimo === undefined) {
+                                        adjustedMech.config.valorMaximo = limVal;
+                                    }
+                                }
                             } else if (m.tipo === 'distribuir') {
                                 if (prog.valorPorAlvo !== undefined) adjustedMech.config = { ...adjustedMech.config, valorPorAlvo: prog.valorPorAlvo };
                                 if (prog.quantidadeAlvos !== undefined) adjustedMech.config = { ...adjustedMech.config, quantidadeAlvos: prog.quantidadeAlvos };
+                            } else if (m.tipo === 'narrativo') {
+                                if (prog.descricao) {
+                                    efeitosNivel.push(prog.descricao);
+                                    continue;
+                                }
+                                if (prog.textoEfeito) {
+                                    adjustedMech.config = { ...adjustedMech.config, textoEfeito: prog.textoEfeito };
+                                }
+                            } else if (m.tipo === 'conceder') {
+                                if (prog.descricaoConcessao !== undefined) {
+                                    adjustedMech.config = { ...adjustedMech.config, descricaoConcessao: prog.descricaoConcessao };
+                                }
+                                if (prog.tipoConcessao !== undefined) {
+                                    adjustedMech.config = { ...adjustedMech.config, tipoConcessao: prog.tipoConcessao };
+                                }
+                                if (prog.descricao) {
+                                    efeitosNivel.push(prog.descricao);
+                                    continue;
+                                }
+                            } else if (m.tipo === 'condicional') {
+                                if (prog.gatilho !== undefined) {
+                                    adjustedMech.config = { ...adjustedMech.config, gatilho: prog.gatilho };
+                                }
+                                if (prog.descricao) {
+                                    efeitosNivel.push(prog.descricao);
+                                    continue;
+                                }
                             } else if (prog.descricao) {
-                                // Narrativo/conceder: usar descrição do nível diretamente
                                 efeitosNivel.push(prog.descricao);
                                 continue;
                             }
