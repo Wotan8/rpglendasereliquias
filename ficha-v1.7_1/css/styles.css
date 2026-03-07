@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     --bg: #0b0c10;
     --bg-gradient: linear-gradient(180deg, #0b0c10, #111827);
     --paper: #ffffff;
@@ -277,6 +277,7 @@ body {
     color: var(--muted);
     white-space: nowrap
 }
+
 
 .id-wrapper {
     display: grid;
@@ -630,6 +631,14 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis
+}
+
+.sk-name.has-tooltip {
+    cursor: help;
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--muted);
+    text-underline-offset: 2px;
 }
 
 .sk-attr {

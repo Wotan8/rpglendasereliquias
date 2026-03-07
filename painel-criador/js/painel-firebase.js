@@ -3,7 +3,7 @@
 // Lendas e Relíquias (ficha-v1.7_1 style)
 // =============================================
 
-import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js';
+import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js';
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -33,6 +33,7 @@ let itemToDelete = null;
 let editingItemId = null;
 let mechanicsCache = [];
 let peculiaritiesCache = [];
+let skillsCache = [];
 
 // ====================================================================
 // MODULE DEFINITIONS — each module defines its fields and Firestore path
@@ -65,20 +66,7 @@ const MODULE_DEFS = {
             { key: 'especialidade', label: 'Especialidade', type: 'text', required: true, placeholder: 'Resumo da especialidade' },
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
             { key: 'citacao', label: 'Citação Icônica', type: 'text', placeholder: 'Frase emblemática da classe' },
-            {
-                key: 'pericIniciais', label: 'Perícias Iniciais', type: 'array', arrayFields: [
-                    { key: 'nome', label: 'Perícia', type: 'text', required: true },
-                    { key: 'nivel', label: 'Nível', type: 'number' },
-                    { key: 'opcao', label: 'Opção alternativa', type: 'text' }
-                ]
-            },
-            {
-                key: 'especIniciais', label: 'Especializações Iniciais', type: 'array', arrayFields: [
-                    { key: 'nome', label: 'Especialização', type: 'text', required: true },
-                    { key: 'nivel', label: 'Nível', type: 'number' },
-                    { key: 'opcao', label: 'Opção alternativa', type: 'text' }
-                ]
-            },
+            { key: 'bonusIniciais', label: 'Bônus Iniciais', type: 'mechanic_selector', selectorTarget: 'peculiarities', fontePreFilter: 'classe' },
             {
                 key: 'papelEmCena', label: 'Papel em Cena', type: 'array', arrayFields: [
                     { key: 'combate', label: 'Em Combate', type: 'textarea' },
@@ -92,13 +80,7 @@ const MODULE_DEFS = {
                     { key: 'risco', label: 'Recurso de Risco', type: 'text' }
                 ], maxItems: 1
             },
-            {
-                key: 'pericClasse', label: 'Perícias de Classe', type: 'array', arrayFields: [
-                    { key: 'nome', label: 'Nome', type: 'text', required: true },
-                    { key: 'descricao', label: 'Descrição', type: 'textarea' },
-                    { key: 'efeito', label: 'Efeito', type: 'textarea' }
-                ]
-            },
+            { key: 'pericClasse', label: 'Perícias de Classe', type: 'mechanic_selector', selectorTarget: 'skills' },
             {
                 key: 'especExclusivas', label: 'Especializações Exclusivas', type: 'array', arrayFields: [
                     { key: 'nome', label: 'Nome', type: 'text', required: true },
@@ -189,18 +171,27 @@ const MODULE_DEFS = {
             {
                 key: 'categoria', label: 'Categoria', type: 'select', required: true, options: [
                     { value: 'mental', label: 'Mental' },
-                    { value: 'fisica', label: 'Física' },
+                    { value: 'fisico', label: 'Físico' },
                     { value: 'social', label: 'Social' },
-                    { value: 'defensiva', label: 'Defensiva' },
-                    { value: 'classe', label: 'Classe' }
+                    { value: 'combate', label: 'Combate' },
+                    { value: 'exclusivo', label: 'Exclusivo' }
                 ]
             },
-            { key: 'atributoBase', label: 'Atributo Base', type: 'text', required: true, placeholder: 'Ex: DES, INT/RAC' },
+            {
+                key: 'atributoBase', label: 'Atributo Base', type: 'multi_select', required: true, options: [
+                    { value: 'FOR', label: 'FOR — Força' },
+                    { value: 'DES', label: 'DES — Destreza' },
+                    { value: 'VIG', label: 'VIG — Vigor' },
+                    { value: 'INT', label: 'INT — Inteligência' },
+                    { value: 'RAC', label: 'RAC — Raciocínio' },
+                    { value: 'PRS', label: 'PRS — Perseverança' },
+                    { value: 'PRE', label: 'PRE — Presença' },
+                    { value: 'MAN', label: 'MAN — Manipulação' },
+                    { value: 'AUT', label: 'AUT — Autocontrole' }
+                ]
+            },
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
-            { key: 'usarPara', label: 'Usar Para', type: 'textarea', required: true, placeholder: 'Exemplos de uso em jogo' },
-            { key: 'semTreino', label: 'Pode ser usada sem treino?', type: 'boolean' },
-            { key: 'classeExclusiva', label: 'Classe Exclusiva', type: 'text', placeholder: 'Deixe vazio se for genérica' },
-            { key: 'custoEvolucao', label: 'Custo de Evolução', type: 'text', required: true, placeholder: 'Ex: Novo Nível × 4 EXP' },
+            { key: 'custoEvolucao', label: 'Custo de Evolução (EXP por nível)', type: 'number', placeholder: '4' },
         ]
     },
     equipment: {
@@ -486,7 +477,8 @@ async function loadModule(moduleName) {
 
     // Always refresh mechanics cache (needed for selectors in all modules)
     await refreshMechanicsCache();
-    if (moduleName === 'races') await refreshPeculiaritiesCache();
+    if (moduleName === 'races' || moduleName === 'classes') await refreshPeculiaritiesCache();
+    if (moduleName === 'classes') await refreshSkillsCache();
 
     const grid = document.getElementById('itemsGrid');
     const emptyState = document.getElementById('emptyState');
@@ -535,6 +527,16 @@ async function refreshPeculiaritiesCache() {
         snap.forEach(d => peculiaritiesCache.push({ id: d.id, ...d.data() }));
         peculiaritiesCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
     } catch (e) { console.error('Erro cache peculiaridades:', e); }
+}
+
+async function refreshSkillsCache() {
+    try {
+        const snap = await getDocs(collection(db, 'system/data/skills'));
+        skillsCache = [];
+        snap.forEach(d => skillsCache.push({ id: d.id, ...d.data() }));
+        skillsCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        window._skillsCache = skillsCache;
+    } catch (e) { console.error('Erro cache skills:', e); }
 }
 
 // ===== RENDER ITEMS =====
@@ -724,9 +726,35 @@ function buildField(field, value) {
         const ids = Array.isArray(value) ? value : [];
         if (field.selectorTarget === 'peculiarities') {
             wrap.innerHTML = buildPecSelectorHTML(field.key, field.label, ids, peculiaritiesCache, field.fontePreFilter);
+        } else if (field.selectorTarget === 'skills') {
+            wrap.innerHTML = buildSkillSelectorHTML(field.key, field.label, ids, skillsCache);
         } else {
             wrap.innerHTML = buildMechanicSelectorHTML(field.key, field.label, ids, mechanicsCache, field.fontePreFilter);
         }
+        return wrap;
+    }
+
+    if (field.type === 'multi_select') {
+        const selected = Array.isArray(value) ? value : (typeof value === 'string' && value ? value.split('/') : []);
+        const checkboxes = (field.options || []).map(o => {
+            const checked = selected.includes(o.value) ? 'checked' : '';
+            return `<label class="multi-select-option"><input type="checkbox" value="${o.value}" ${checked} data-multiselect="${field.key}"> ${escapeHtml(o.label)}</label>`;
+        }).join('');
+        wrap.innerHTML = `
+            <label>${escapeHtml(field.label)} ${field.required ? '<span class="required">*</span>' : ''}</label>
+            <div class="multi-select-container" id="multisel_${field.key}">${checkboxes}</div>
+            <input type="hidden" id="field_${field.key}" value="${escapeHtml(JSON.stringify(selected))}">
+        `;
+        // Sync hidden input on change
+        setTimeout(() => {
+            const container = document.getElementById(`multisel_${field.key}`);
+            if (container) {
+                container.addEventListener('change', () => {
+                    const vals = Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value);
+                    document.getElementById(`field_${field.key}`).value = JSON.stringify(vals);
+                });
+            }
+        }, 0);
         return wrap;
     }
 
@@ -932,6 +960,12 @@ window.handleFormSubmit = async function (e) {
                 catch { data[field.key] = el.value; }
             }
         } else if (field.type === 'mechanic_selector') {
+            const el = document.getElementById(`field_${field.key}`);
+            if (el) {
+                try { data[field.key] = JSON.parse(el.value || '[]'); }
+                catch { data[field.key] = []; }
+            } else { data[field.key] = []; }
+        } else if (field.type === 'multi_select') {
             const el = document.getElementById(`field_${field.key}`);
             if (el) {
                 try { data[field.key] = JSON.parse(el.value || '[]'); }

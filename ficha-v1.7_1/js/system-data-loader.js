@@ -125,9 +125,15 @@ function buildClassDataFromFirebase() {
     for (const cls of window._systemData.classes) {
         if (cls.publicado === false) continue;
 
-        // Perícias de classe
+        // Perícias de classe (agora são IDs de skills)
         if (cls.pericClasse && Array.isArray(cls.pericClasse)) {
-            window.CLASS_SKILLS[cls.nome] = cls.pericClasse.map(p => p.nome || p);
+            window.CLASS_SKILLS[cls.nome] = cls.pericClasse.map(skillId => {
+                // Pode ser um ID string ou um objeto antigo {nome}
+                if (typeof skillId === 'object' && skillId.nome) return skillId.nome;
+                // Buscar nome da perícia por ID
+                const skill = window._systemData.skills.find(s => s.id === skillId);
+                return skill ? skill.nome : skillId;
+            });
         }
 
         // Recursos de classe
@@ -143,6 +149,85 @@ function buildClassDataFromFirebase() {
             window.CLASS_RESOURCES[cls.nome] = [];
         }
     }
+}
+
+/**
+ * Constrói o objeto SKILLS e SKILL_LIMITERS a partir dos dados do Firebase.
+ * Substitui os dados hardcoded em data.js e exp-upgrade.js.
+ */
+function buildSkillsFromFirebase() {
+    const ATTR_KEY_MAP = {
+        'FOR': 'attr_for', 'DES': 'attr_des', 'VIG': 'attr_vig',
+        'INT': 'attr_int', 'RAC': 'attr_rac', 'PRS': 'attr_prs',
+        'PRE': 'attr_pre', 'MAN': 'attr_man', 'AUT': 'attr_aut'
+    };
+    const CATEGORY_MAP = {
+        'mental': 'mental', 'fisico': 'fisico', 'social': 'social',
+        'combate': 'combate', 'exclusivo': 'exclusivo',
+        // Legacy mappings
+        'fisica': 'fisico', 'defensiva': 'combate', 'classe': 'exclusivo'
+    };
+    const CATEGORY_PREFIX = {
+        'mental': 'sk_mental_', 'fisico': 'sk_fisico_',
+        'social': 'sk_social_', 'combate': 'sk_combate_',
+        'exclusivo': 'sk_exclusivo_'
+    };
+
+    window.SKILLS = { mental: [], fisico: [], social: [], combate: [], exclusivo: [] };
+    window.SKILL_LIMITERS = {};
+    window.SKILL_COSTS = {};
+
+    const skills = window._systemData.skills.filter(s => s.publicado !== false);
+
+    for (const s of skills) {
+        const rawCat = (s.categoria || 'mental').toLowerCase();
+        const cat = CATEGORY_MAP[rawCat] || 'mental';
+        const prefix = CATEGORY_PREFIX[cat] || 'sk_mental_';
+        const key = s.nome.toLowerCase().replace(/[^a-z0-9áàâãéèêíïóôõúüçñ]/g, '_').replace(/__+/g, '_');
+
+        // Build atributo display string
+        const attrs = Array.isArray(s.atributoBase) ? s.atributoBase : (typeof s.atributoBase === 'string' && s.atributoBase ? s.atributoBase.split('/') : []);
+        const sub = attrs.length > 0 ? attrs.join('/') : '—';
+
+        // Add to SKILLS
+        if (!window.SKILLS[cat]) window.SKILLS[cat] = [];
+        window.SKILLS[cat].push({
+            key: key,
+            name: s.nome,
+            sub: sub,
+            descricao: s.descricao || '',
+            custoEvolucao: s.custoEvolucao || 4,
+            id: s.id
+        });
+
+        // Build SKILL_LIMITERS
+        const fullKey = prefix + key;
+        if (attrs.length > 0) {
+            const attrKeys = attrs.map(a => ATTR_KEY_MAP[a.trim().toUpperCase()]).filter(Boolean);
+            if (attrKeys.length > 0) {
+                window.SKILL_LIMITERS[fullKey] = {
+                    keys: attrKeys,
+                    mode: attrKeys.length > 1 ? 'min' : undefined
+                };
+            }
+        }
+
+        // Build SKILL_COSTS
+        window.SKILL_COSTS[fullKey] = s.custoEvolucao || 4;
+    }
+
+    // Sort each category alphabetically
+    for (const cat of Object.keys(window.SKILLS)) {
+        window.SKILLS[cat].sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    console.log('✅ Perícias carregadas do Firebase:', {
+        mental: window.SKILLS.mental.length,
+        fisico: window.SKILLS.fisico.length,
+        social: window.SKILLS.social.length,
+        combate: window.SKILLS.combate.length,
+        exclusivo: window.SKILLS.exclusivo.length
+    });
 }
 
 /**

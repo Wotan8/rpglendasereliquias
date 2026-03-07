@@ -4,7 +4,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getStorage, ref, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 // ===== CONFIG (mesma do projeto rpg-lendasereliquias) =====
@@ -26,6 +26,39 @@ window.db = db;
 window.storage = storage;
 window.currentUser = null;
 window.currentCharacterId = null;
+window.isCreator = false;
+
+// ===== VERIFICAR ROLE DO USUÁRIO =====
+async function checkCreatorRole(user) {
+    try {
+        // Método 1: por UID field
+        let q = query(collection(db, 'users'), where('uid', '==', user.uid));
+        let snap = await getDocs(q);
+        if (!snap.empty && snap.docs[0].data().role === 'criador') return true;
+
+        // Método 2: por email
+        q = query(collection(db, 'users'), where('email', '==', user.email));
+        snap = await getDocs(q);
+        if (!snap.empty && snap.docs[0].data().role === 'criador') return true;
+
+        // Método 3: doc ID = UID
+        const docRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().role === 'criador') return true;
+    } catch (e) { console.warn('Erro ao verificar role:', e); }
+    return false;
+}
+
+function enableCreatorExpEditing() {
+    const expEl = document.querySelector('[data-key="exp"]');
+    const expTotalEl = document.querySelector('[data-key="exp_total"]');
+    [expEl, expTotalEl].forEach(el => {
+        if (!el) return;
+        el.style.border = '2px solid #f59e0b';
+        el.title = '🛡️ Modo Criador: edição livre de EXP';
+    });
+    console.log('🛡️ Modo Criador: edição livre de EXP habilitada');
+}
 
 // ===== INDICADOR DE SAVE =====
 function showSaveIndicator(text, type) {
@@ -212,6 +245,7 @@ onAuthStateChanged(auth, async (user) => {
             await loadSystemData(db, collection, getDocs);
 
             // Construir dados dinâmicos
+            buildSkillsFromFirebase();
             window.RACES = buildRacesFromFirebase();
             populateRaceSelect();
             populateClassSelect();
@@ -239,6 +273,12 @@ onAuthStateChanged(auth, async (user) => {
         if (loadingScreen) loadingScreen.style.display = 'none';
         if (mainWrap) mainWrap.style.display = '';
         if (toolbar) toolbar.style.display = '';
+
+        // Verificar se é criador (após tudo carregado)
+        try {
+            window.isCreator = await checkCreatorRole(user);
+            if (window.isCreator) enableCreatorExpEditing();
+        } catch (e) { /* ignore */ }
     } else {
         // Não logado → redirecionar
         console.log('❌ Não autenticado. Redirecionando...');

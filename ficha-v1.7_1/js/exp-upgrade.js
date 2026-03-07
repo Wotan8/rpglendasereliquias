@@ -1,57 +1,9 @@
-/* ===== EXP UPGRADE SYSTEM ===== */
-
 /**
- * Mapeamento de Limitadores: para cada perícia/especialização, qual(is) atributo(s)/perícia(s) a limita(m).
- * Formato: dotKey → { type: 'attr'|'skill', keys: [...dotKeys], mode: 'min'|'single' }
- * mode 'min' = pega o menor valor entre as keys
+ * Mapeamento de Limitadores: agora construído DINAMICAMENTE pelo buildSkillsFromFirebase()
+ * em system-data-loader.js → window.SKILL_LIMITERS
+ * Formato: dotKey → { keys: [...attrKeys], mode: 'min'|undefined }
  */
-const SKILL_LIMITERS = {
-    /* MENTAIS */
-    'sk_mental_abismo': { keys: ['attr_prs'] },
-    'sk_mental_alquimia': { keys: ['attr_rac'] },
-    'sk_mental_essencia': { keys: ['attr_int', 'attr_rac', 'attr_prs'], mode: 'min' },
-    'sk_mental_herbalismo': { keys: ['attr_int', 'attr_prs'], mode: 'min' },
-    'sk_mental_historia': { keys: ['attr_int'] },
-    'sk_mental_investigacao': { keys: ['attr_rac', 'attr_int'], mode: 'min' },
-    'sk_mental_medicina': { keys: ['attr_int'] },
-    'sk_mental_oficio_int': null, // sem atributo fixo
-    'sk_mental_percepcao': { keys: ['attr_rac', 'attr_pre'], mode: 'min' },
-    'sk_mental_reliquia': { keys: ['attr_int'] },
-    'sk_mental_runomancia': { keys: ['attr_int', 'attr_rac'], mode: 'min' },
-    /* FÍSICAS */
-    'sk_fisico_agilidade': { keys: ['attr_des'] },
-    'sk_fisico_arma': { keys: ['attr_for', 'attr_des'], mode: 'min' },
-    'sk_fisico_arremessar': { keys: ['attr_for', 'attr_des'], mode: 'min' },
-    'sk_fisico_atletismo': { keys: ['attr_vig'] },
-    'sk_fisico_briga': { keys: ['attr_for'] },
-    'sk_fisico_disparo': { keys: ['attr_des'] },
-    'sk_fisico_furtividade': { keys: ['attr_des'] },
-    'sk_fisico_montaria': { keys: ['attr_des'] },
-    'sk_fisico_oficio_brac': null, // sem atributo fixo
-    'sk_fisico_sobrevivencia': { keys: ['attr_vig'] },
-    /* SOCIAIS */
-    'sk_social_barganha': { keys: ['attr_man'] },
-    'sk_social_diplomacia': { keys: ['attr_man'] },
-    'sk_social_domar': { keys: ['attr_aut'] },
-    'sk_social_empatia': { keys: ['attr_aut'] },
-    'sk_social_intimidacao': { keys: ['attr_pre'] },
-    'sk_social_lideranca': { keys: ['attr_pre'] },
-    'sk_social_malandragem': { keys: ['attr_aut'] },
-    'sk_social_observacao': { keys: ['attr_pre'] },
-    'sk_social_performance': { keys: ['attr_pre'] },
-    'sk_social_seducao': { keys: ['attr_man'] },
-    /* COMBATE */
-    'sk_combate_aparar': { keys: ['attr_des', 'attr_for'], mode: 'min' },
-    'sk_combate_bloquear': { keys: ['attr_for'] },
-    'sk_combate_desviar': { keys: ['attr_des'] },
-    'sk_combate_esquiva': { keys: ['attr_des'] },
-    'sk_combate_evadir': { keys: ['attr_des'] },
-    'sk_combate_cobertura': { keys: ['attr_rac'] },
-    'sk_combate_proteger': { keys: ['attr_vig'] },
-    'sk_combate_reflexo': { keys: ['attr_rac', 'attr_des'], mode: 'min' },
-    'sk_combate_contra_ataque': { keys: ['attr_des'] },
-    'sk_combate_ambidestria': { keys: ['attr_des'] },
-};
+// SKILL_LIMITERS is now dynamic: window.SKILL_LIMITERS (set by buildSkillsFromFirebase)
 
 /**
  * Mapeamento de Limitadores de ESPECIALIZAÇÕES.
@@ -168,9 +120,14 @@ const SPEC_LIMITERS = {
 
 /* ===== FUNÇÕES DE CUSTO ===== */
 
-function getExpCost(type, newLevel) {
+function getExpCost(type, newLevel, dotKey) {
     if (type === 'attr') return newLevel * 5;
-    if (type === 'skill') return newLevel * 4;
+    if (type === 'skill') {
+        // Use custom cost from window.SKILL_COSTS if available
+        const customCost = window.SKILL_COSTS && window.SKILL_COSTS[dotKey];
+        const costPerLevel = customCost || 4;
+        return newLevel * costPerLevel;
+    }
     if (type === 'spec') return newLevel * 2;
     return 0;
 }
@@ -210,7 +167,7 @@ function detectDotType(dotKey) {
     if (dotKey.startsWith('attr_')) return 'attr';
     if (dotKey.startsWith('sk_mental_') || dotKey.startsWith('sk_fisico_') ||
         dotKey.startsWith('sk_social_') || dotKey.startsWith('sk_combate_') ||
-        dotKey.startsWith('sk_classe_')) return 'skill';
+        dotKey.startsWith('sk_exclusivo_') || dotKey.startsWith('sk_classe_')) return 'skill';
     if (dotKey.startsWith('spec_')) return 'spec';
     if (dotKey.startsWith('pec_')) return 'pec';
     return null;
@@ -221,7 +178,8 @@ function detectDotType(dotKey) {
  * Retorna o nível do limitador (ou Infinity se não há limitador).
  */
 function getSkillLimiterLevel(dotKey) {
-    const limiter = SKILL_LIMITERS[dotKey];
+    const limiters = window.SKILL_LIMITERS || {};
+    const limiter = limiters[dotKey];
     if (!limiter) return Infinity; // sem limitador
     if (limiter.mode === 'min') {
         return Math.min(...limiter.keys.map(k => state.dots[k] || 0));
@@ -286,7 +244,8 @@ function getLimiterName(dotKey, specName) {
     const type = detectDotType(dotKey);
 
     if (type === 'skill') {
-        const limiter = SKILL_LIMITERS[dotKey];
+        const limiters = window.SKILL_LIMITERS || {};
+        const limiter = limiters[dotKey];
         if (!limiter) return null;
         const names = limiter.keys.map(k => k.replace('attr_', '').toUpperCase());
         return limiter.mode === 'min' ? `menor entre ${names.join('/')}` : names[0];
@@ -316,7 +275,7 @@ function getLimiterName(dotKey, specName) {
  * @returns {{ allowed: boolean, reason: string, cost: number }}
  */
 function canUpgrade(dotKey, newLevel, type, specName) {
-    const cost = getExpCost(type, newLevel);
+    const cost = getExpCost(type, newLevel, dotKey);
     const currentExp = getCurrentExp();
 
     // Verificar EXP suficiente

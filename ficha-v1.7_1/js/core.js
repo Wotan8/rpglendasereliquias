@@ -91,70 +91,83 @@ function createDotsHTML(k, specName) {
 }
 
 function initSkills() {
-    renderBlock('skillsMental', SKILLS.mental, 'sk_mental_');
-    renderBlock('skillsFisico', SKILLS.fisico, 'sk_fisico_');
-    renderBlock('skillsSocial', SKILLS.social, 'sk_social_');
-    renderBlock('skillsCombate', SKILLS.combate, 'sk_combate_');
+    renderBlock('skillsMental', SKILLS.mental || [], 'sk_mental_');
+    renderBlock('skillsFisico', SKILLS.fisico || [], 'sk_fisico_');
+    renderBlock('skillsSocial', SKILLS.social || [], 'sk_social_');
+    renderBlock('skillsCombate', SKILLS.combate || [], 'sk_combate_');
+    renderBlock('skillsExclusivo', SKILLS.exclusivo || [], 'sk_exclusivo_');
 }
 function renderBlock(id, skills, pfx) {
     const c = document.getElementById(id);
+    if (!c) return;
     skills.forEach(s => {
         const row = document.createElement('div'); row.className = 'sk-row';
         const lbl = document.createElement('div'); lbl.className = 'sk-label';
-        lbl.innerHTML = `<div class="sk-name">${s.name}</div><div class="sk-attr">${s.sub}</div>`;
+        const nameSpan = document.createElement('div'); nameSpan.className = 'sk-name'; nameSpan.textContent = s.name;
+        const attrSpan = document.createElement('div'); attrSpan.className = 'sk-attr'; attrSpan.textContent = s.sub;
+
+        // Tooltip com descrição
+        if (s.descricao) {
+            nameSpan.title = s.descricao;
+            nameSpan.style.cursor = 'help';
+            nameSpan.classList.add('has-tooltip');
+        }
+
+        lbl.appendChild(nameSpan);
+        lbl.appendChild(attrSpan);
         row.appendChild(lbl); row.appendChild(createDotsHTML(pfx + s.key)); c.appendChild(row);
     });
 }
 
 function onClassChange() {
     const cl = document.getElementById('selClasse').value;
-    const g = document.getElementById('classSkillsGrid'), h = document.getElementById('classSkillsHint');
-    const title = document.getElementById('classSkillBlockTitle');
-    g.innerHTML = '';
+    const g = document.getElementById('skillsExclusivo');
+
+    // Remove only class-injected skill rows (preserve Firebase-loaded exclusive skills)
+    if (g) g.querySelectorAll('.sk-row[data-class-skill]').forEach(r => r.remove());
+
     if (cl && CLASS_SKILLS[cl]) {
-        h.style.display = 'none';
-        title.textContent = cl;
         CLASS_SKILLS[cl].forEach(sk => {
             const key = 'sk_classe_' + sk.toLowerCase().replace(/[^a-z0-9]/g, '_');
-            const row = document.createElement('div'); row.className = 'sk-row';
+            const row = document.createElement('div'); row.className = 'sk-row'; row.dataset.classSkill = '1';
             const lbl = document.createElement('div'); lbl.className = 'sk-label';
             lbl.innerHTML = `<div class="sk-name">${sk}</div><div class="sk-attr">Classe</div>`;
             row.appendChild(lbl); row.appendChild(createDotsHTML(key)); g.appendChild(row);
         });
-    } else {
-        h.style.display = '';
-        title.textContent = 'Classe';
     }
 
     /* Resources */
     const resSection = document.getElementById('classResourcesSection');
     const resGrid = document.getElementById('classResourcesGrid');
     const extraRes = document.getElementById('classExtraResources');
-    resGrid.innerHTML = ''; extraRes.innerHTML = '';
+    if (resGrid) resGrid.innerHTML = '';
+    if (extraRes) extraRes.innerHTML = '';
 
     const res = (cl && CLASS_RESOURCES[cl]) ? CLASS_RESOURCES[cl] : [];
     if (res.length > 0 || (cl === 'Caçador') || (cl === 'Druida') || (cl === 'Adepto') || (cl === 'Invocador') || (cl === 'Pallacerdote') || (cl === 'Runimago')) {
-        resSection.style.display = '';
+        if (resSection) resSection.style.display = '';
     } else {
-        resSection.style.display = 'none';
+        if (resSection) resSection.style.display = 'none';
     }
 
-    res.forEach(r => {
-        const box = document.createElement('div'); box.className = 'vital-box';
-        if (r.single) {
-            box.innerHTML = `<label>${r.label}</label><div class="vital-inputs"><input type="text" data-key="${r.keys[0]}" placeholder="${r.placeholder || '0'}"></div>`;
-        } else {
-            box.innerHTML = `<label>${r.label}</label><div class="vital-inputs"><input type="text" data-key="${r.keys[0]}" placeholder="0"><span class="sep">/</span><input type="text" data-key="${r.keys[1]}" placeholder="0"></div>`;
-        }
-        resGrid.appendChild(box);
-    });
+    if (resGrid) {
+        res.forEach(r => {
+            const box = document.createElement('div'); box.className = 'vital-box';
+            if (r.single) {
+                box.innerHTML = `<label>${r.label}</label><div class="vital-inputs"><input type="text" data-key="${r.keys[0]}" placeholder="${r.placeholder || '0'}"></div>`;
+            } else {
+                box.innerHTML = `<label>${r.label}</label><div class="vital-inputs"><input type="text" data-key="${r.keys[0]}" placeholder="0"><span class="sep">/</span><input type="text" data-key="${r.keys[1]}" placeholder="0"></div>`;
+            }
+            resGrid.appendChild(box);
+        });
 
-    // Load saved values for class resources
-    resGrid.querySelectorAll('[data-key]').forEach(el => {
-        const sv = localStorage.getItem('lr_' + el.dataset.key);
-        if (sv) el.value = sv;
-        el.addEventListener('input', scheduleAutosave);
-    });
+        // Load saved values for class resources
+        resGrid.querySelectorAll('[data-key]').forEach(el => {
+            const sv = localStorage.getItem('lr_' + el.dataset.key);
+            if (sv) el.value = sv;
+            el.addEventListener('input', scheduleAutosave);
+        });
+    }
 
     // Extra resources per class
     if (cl === 'Caçador' || cl === 'Druida') {
