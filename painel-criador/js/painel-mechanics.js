@@ -7,7 +7,8 @@
 // --- Shared state (set by painel-firebase.js) ---
 // window._mechState = { db, collection, getDocs, addDoc, updateDoc, doc, Timestamp, currentUser, ... }
 
-const MECHANIC_TARGETS_HTML = `
+function getMechanicTargetsHTML() {
+    let html = `
 <optgroup label="Atributos">
 <option value="INT">INT</option><option value="RAC">RAC</option><option value="PRS">PRS</option>
 <option value="FOR">FOR</option><option value="DES">DES</option><option value="VIG">VIG</option>
@@ -19,35 +20,33 @@ const MECHANIC_TARGETS_HTML = `
 <option value="Iniciativa">Iniciativa</option><option value="Reação">Reação</option>
 <option value="Blindagem">Blindagem</option><option value="Deslocamento Terrestre">Desl. Terrestre</option>
 <option value="Deslocamento Aquático">Desl. Aquático</option><option value="Deslocamento Aéreo">Desl. Aéreo</option>
+<option value="Deslocamento Vertical">Desl. Vertical</option>
 <option value="Tamanho">Tamanho</option><option value="Carga Máxima">Carga Máxima</option>
-</optgroup>
-<optgroup label="Perícias Mentais">
-<option value="Abismo">Abismo</option><option value="Alquimancia">Alquimancia</option>
-<option value="Essência">Essência</option><option value="Erudição">Erudição</option>
-<option value="Fluxomancia">Fluxomancia</option><option value="História">História</option>
-<option value="Investigação">Investigação</option><option value="Medicina">Medicina</option>
-<option value="Ofícios">Ofícios</option><option value="Religião">Religião</option>
-<option value="Runomancia">Runomancia</option>
-</optgroup>
-<optgroup label="Perícias Físicas">
-<option value="Agilidade">Agilidade</option><option value="Arma">Arma</option>
-<option value="Atletismo">Atletismo</option><option value="Briga">Briga</option>
-<option value="Disparo">Disparo</option><option value="Furtividade">Furtividade</option>
-<option value="Montaria">Montaria</option><option value="Sobrevivência">Sobrevivência</option>
-</optgroup>
-<optgroup label="Perícias Sociais">
-<option value="Diplomacia">Diplomacia</option><option value="Empatia">Empatia</option>
-<option value="Intimidação">Intimidação</option><option value="Liderança">Liderança</option>
-<option value="Malandragem">Malandragem</option><option value="Performance">Performance</option>
-<option value="Sedução">Sedução</option>
-</optgroup>
-<optgroup label="Perícias Defensivas">
-<option value="Esquiva">Esquiva</option><option value="Aparar">Aparar</option>
-<option value="Bloquear">Bloquear</option><option value="Desviar">Desviar</option>
-<option value="Evadir">Evadir</option><option value="Cobertura">Cobertura</option>
-<option value="Proteger">Proteger</option><option value="Reflexo">Reflexo</option>
-<option value="Contra-Ataque">Contra-Ataque</option><option value="Ambidestria">Ambidestria</option>
-</optgroup>
+</optgroup>`;
+
+    // Build skill options dynamically from skills cache
+    const cache = window._skillsCache || [];
+    if (cache.length > 0) {
+        const byCategory = {};
+        for (const sk of cache) {
+            const cat = (sk.categoria || 'mental').toLowerCase();
+            if (!byCategory[cat]) byCategory[cat] = [];
+            byCategory[cat].push(sk.nome);
+        }
+        for (const cat of ['mental', 'fisico', 'social', 'combate', 'exclusivo']) {
+            const skills = byCategory[cat];
+            if (!skills || skills.length === 0) continue;
+            skills.sort((a, b) => a.localeCompare(b));
+            const label = CATEGORY_LABELS[cat] || cat;
+            html += `\n<optgroup label="${label}">`;
+            for (const nome of skills) {
+                html += `\n<option value="${esc(nome)}">${esc(nome)}</option>`;
+            }
+            html += `\n</optgroup>`;
+        }
+    }
+
+    html += `
 <optgroup label="Propriedades de Combate">
 <option value="Alvo de Ataque">Alvo de Ataque</option><option value="Alvo de Defesa">Alvo de Defesa</option>
 <option value="Dano">Dano</option><option value="Dano Crítico">Dano Crítico</option>
@@ -61,6 +60,9 @@ const MECHANIC_TARGETS_HTML = `
 <option value="EXP Necessária">EXP Necessária</option>
 </optgroup>`;
 
+    return html;
+}
+
 export const FONTE_LABELS = { raca: '🧬 Raça', classe: '⚔️ Classe', tribo: '🏕️ Tribo', peculiaridade: '✨ Pecul.', item: '🗡️ Item', condicao: '💀 Condição', manobra: '💥 Manobra', magia: '🔮 Magia', individual: '👤 Individual', generica: '⚙️ Genérica' };
 export const TIPO_ICONS = { modificar: '➕', limitar: '🔒', conceder: '🎁', condicional: '⚡', narrativo: '📝', distribuir: '🎲' };
 export const TIPO_LABELS = { modificar: 'Modificar', limitar: 'Limitar', conceder: 'Conceder', condicional: 'Condicional', narrativo: 'Narrativo', distribuir: 'Distribuir' };
@@ -68,6 +70,44 @@ export const TIPO_LABELS = { modificar: 'Modificar', limitar: 'Limitar', concede
 function esc(text) {
     if (text === null || text === undefined) return '';
     const d = document.createElement('div'); d.textContent = String(text); return d.innerHTML;
+}
+
+// ===== HELPER: Format a single calc value for display =====
+function _formatCalcValue(calc) {
+    if (!calc) return '?';
+    // New equation format
+    if (Array.isArray(calc.equacao) && calc.equacao.length > 0) {
+        return _formatEquation(calc.equacao);
+    }
+    // Legacy format
+    if (calc.valorTipo === 'ficha') {
+        const ref = calc.valorRef || '?';
+        const mult = calc.valorMultiplicador && calc.valorMultiplicador !== 1 ? ` × ${calc.valorMultiplicador}` : '';
+        return `[${ref}${mult}]`;
+    }
+    return calc.valor ?? '?';
+}
+
+function _formatEquation(equacao) {
+    if (!Array.isArray(equacao) || equacao.length === 0) return '?';
+    // Check if any term uses min/max — if so, format as min(A, B, ...) or max(A, B, ...)
+    const hasMinMax = equacao.some(t => t.op === 'min' || t.op === 'max');
+    if (hasMinMax && equacao.length > 1) {
+        const fnName = equacao[1].op === 'min' ? 'menor' : 'maior';
+        const parts = equacao.map(t => {
+            if (t.tipo === 'ficha') return `[${t.ref || '?'}]`;
+            return (t.valor ?? '?');
+        });
+        return `${fnName}(${parts.join(', ')})`;
+    }
+    let str = '';
+    for (let i = 0; i < equacao.length; i++) {
+        const t = equacao[i];
+        if (i > 0 && t.op) str += ` ${t.op} `;
+        if (t.tipo === 'ficha') str += `[${t.ref || '?'}]`;
+        else str += (t.valor ?? '?');
+    }
+    return equacao.length > 1 ? `(${str})` : str;
 }
 
 // ===== PREVIEW TEXT GENERATOR =====
@@ -80,17 +120,39 @@ export function generatePreviewText(data) {
 
     let text = '';
     if (tipo === 'modificar') {
-        const alvo = Array.isArray(config.alvo) ? config.alvo.join(', ') : (config.alvo || '?');
-        const op = config.operacao || '+';
-        const val = config.valor ?? '?';
-        text = `${op}${val} em ${alvo}`;
+        // Support new multi-calc format
+        if (Array.isArray(config.calculos) && config.calculos.length > 0) {
+            text = config.calculos.map(c => {
+                const op = c.operacao || '+';
+                const val = _formatCalcValue(c);
+                return `${op}${val} em ${c.alvo || '?'}`;
+            }).join('; ');
+        } else {
+            // Backward compatible: old single-calc format
+            const alvo = Array.isArray(config.alvo) ? config.alvo.join(', ') : (config.alvo || '?');
+            const op = config.operacao || '+';
+            const val = config.valor ?? '?';
+            text = `${op}${val} em ${alvo}`;
+        }
     } else if (tipo === 'limitar') {
-        const alvo = config.alvo || '?';
-        if (config.tipoLimite === 'bloqueio') text = `${alvo}: bloqueado (= 0)`;
-        else if (config.tipoLimite === 'maximo') text = `${alvo}: máximo ${config.valorMaximo ?? '?'}`;
-        else if (config.tipoLimite === 'minimo') text = `${alvo}: mínimo ${config.valorMinimo ?? '?'}`;
-        else if (config.tipoLimite === 'clamp') text = `${alvo}: min ${config.valorMinimo ?? '?'}, max ${config.valorMaximo ?? '?'}`;
-        else text = `${alvo}: limite`;
+        if (Array.isArray(config.calculos) && config.calculos.length > 0) {
+            text = config.calculos.map(c => {
+                const alvo = c.alvo || '?';
+                if (c.tipoLimite === 'bloqueio') return `${alvo}: bloqueado (= 0)`;
+                const valStr = _formatCalcValue(c);
+                if (c.tipoLimite === 'maximo') return `${alvo}: máximo ${valStr}`;
+                if (c.tipoLimite === 'minimo') return `${alvo}: mínimo ${valStr}`;
+                if (c.tipoLimite === 'clamp') return `${alvo}: min ${_formatCalcValue({...c, valor: c.valorMinimo, valorRef: c.valorRefMin})}, max ${valStr}`;
+                return `${alvo}: limite`;
+            }).join('; ');
+        } else {
+            const alvo = config.alvo || '?';
+            if (config.tipoLimite === 'bloqueio') text = `${alvo}: bloqueado (= 0)`;
+            else if (config.tipoLimite === 'maximo') text = `${alvo}: máximo ${config.valorMaximo ?? '?'}`;
+            else if (config.tipoLimite === 'minimo') text = `${alvo}: mínimo ${config.valorMinimo ?? '?'}`;
+            else if (config.tipoLimite === 'clamp') text = `${alvo}: min ${config.valorMinimo ?? '?'}, max ${config.valorMaximo ?? '?'}`;
+            else text = `${alvo}: limite`;
+        }
     } else if (tipo === 'conceder') {
         const label = { capacidade: 'Concede', imunidade: 'Imunidade', vulnerabilidade: 'Vulnerabilidade', resistencia: 'Resistência', vantagem: 'Vantagem', desvantagem: 'Desvantagem', acesso: 'Acesso', remover_acesso: 'Remove acesso' };
         text = `${label[config.tipoConcessao] || 'Concede'}: ${config.descricaoConcessao || '?'}`;
@@ -140,57 +202,237 @@ export function renderMechanicCard(item) {
         </div>`;
 }
 
-// ===== CONFIG SECTION RENDERERS =====
-function renderConfigModificar(config) {
-    const alvoVal = config?.alvo || '';
-    const opVal = config?.operacao || '+';
-    const valVal = config?.valor ?? '';
+// ===== VALUE SOURCE OPTIONS (dynamic from skills cache) =====
+const CATEGORY_LABELS = {
+    'mental': 'Perícias Mentais',
+    'fisico': 'Perícias Físicas',
+    'social': 'Perícias Sociais',
+    'combate': 'Perícias Defensivas',
+    'exclusivo': 'Perícias Exclusivas'
+};
+
+function getValueSourceHTML() {
+    let html = `
+<optgroup label="Atributos">
+<option value="INT">INT</option><option value="RAC">RAC</option><option value="PRS">PRS</option>
+<option value="FOR">FOR</option><option value="DES">DES</option><option value="VIG">VIG</option>
+<option value="PRE">PRE</option><option value="MAN">MAN</option><option value="AUT">AUT</option>
+</optgroup>
+<optgroup label="Valores Derivados">
+<option value="Vitalidade Máxima">Vitalidade Máxima</option><option value="Determinação Máxima">Determinação Máxima</option>
+<option value="Sanidade Máxima">Sanidade Máxima</option><option value="Percepção">Percepção</option>
+<option value="Iniciativa">Iniciativa</option><option value="Reação">Reação</option>
+<option value="Blindagem">Blindagem</option><option value="Deslocamento Terrestre">Desl. Terrestre</option>
+<option value="Deslocamento Aquático">Desl. Aquático</option><option value="Deslocamento Aéreo">Desl. Aéreo</option>
+<option value="Deslocamento Vertical">Desl. Vertical</option>
+<option value="Tamanho">Tamanho</option><option value="Carga Máxima">Carga Máxima</option>
+</optgroup>`;
+
+    // Build skill options dynamically from skills cache
+    const cache = window._skillsCache || [];
+    if (cache.length > 0) {
+        const byCategory = {};
+        for (const sk of cache) {
+            const cat = (sk.categoria || 'mental').toLowerCase();
+            if (!byCategory[cat]) byCategory[cat] = [];
+            byCategory[cat].push(sk.nome);
+        }
+        // Render in preferred order
+        for (const cat of ['mental', 'fisico', 'social', 'combate', 'exclusivo']) {
+            const skills = byCategory[cat];
+            if (!skills || skills.length === 0) continue;
+            skills.sort((a, b) => a.localeCompare(b));
+            const label = CATEGORY_LABELS[cat] || cat;
+            html += `\n<optgroup label="${label}">`;
+            for (const nome of skills) {
+                html += `\n<option value="${esc(nome)}">${esc(nome)}</option>`;
+            }
+            html += `\n</optgroup>`;
+        }
+    }
+
+    html += `\n<optgroup label="Outros">\n<option value="Nível">Nível</option>\n</optgroup>`;
+    return html;
+}
+
+// ===== MIGRATE OLD CALC FORMAT TO EQUATION =====
+function _migrateCalcToEquacao(c) {
+    if (Array.isArray(c.equacao) && c.equacao.length > 0) return c.equacao;
+    // Convert old format to equation
+    if (c.valorTipo === 'ficha') {
+        const terms = [{ tipo: 'ficha', ref: c.valorRef || '' }];
+        if (c.valorMultiplicador && c.valorMultiplicador !== 1) {
+            terms.push({ op: '×', tipo: 'fixo', valor: c.valorMultiplicador });
+        }
+        return terms;
+    }
+    return [{ tipo: 'fixo', valor: c.valor ?? '' }];
+}
+
+// ===== RENDER A SINGLE EQUATION TERM =====
+function _renderEquationTerm(term, calcIndex, termIndex) {
+    const t = term || { tipo: 'fixo', valor: '' };
+    const showOp = termIndex > 0;
+    const opHtml = showOp ? `
+        <select class="eq-term-op" onchange="window._mechUpdatePreview()">
+            <optgroup label="Aritméticos">
+            <option value="+" ${t.op === '+' ? 'selected' : ''}>+</option>
+            <option value="-" ${t.op === '-' ? 'selected' : ''}>−</option>
+            <option value="×" ${t.op === '×' ? 'selected' : ''}>×</option>
+            <option value="÷" ${t.op === '÷' ? 'selected' : ''}>÷</option>
+            </optgroup>
+            <optgroup label="Lógicos">
+            <option value="min" ${t.op === 'min' ? 'selected' : ''}>↓ Menor entre</option>
+            <option value="max" ${t.op === 'max' ? 'selected' : ''}>↑ Maior entre</option>
+            </optgroup>
+        </select>` : '';
+
     return `
-    <div class="form-grid">
-        <div class="form-group full-width"><label>O que é afetado? <span class="required">*</span></label>
-            <select id="mech_config_alvo" onchange="window._mechUpdatePreview()">
-                <option value="">— Selecionar alvo —</option>${MECHANIC_TARGETS_HTML}
+    <div class="eq-term" data-term-index="${termIndex}">
+        ${opHtml}
+        <select class="eq-term-tipo" onchange="window._mechTermTipoChange(${calcIndex}, ${termIndex}); window._mechUpdatePreview()">
+            <option value="fixo" ${t.tipo !== 'ficha' ? 'selected' : ''}>🔢 Fixo</option>
+            <option value="ficha" ${t.tipo === 'ficha' ? 'selected' : ''}>📋 Ficha</option>
+        </select>
+        <div class="eq-term-fixo-wrap" style="display:${t.tipo !== 'ficha' ? '' : 'none'}">
+            <input type="text" class="eq-term-valor" value="${esc(String(t.valor ?? ''))}" placeholder="Valor" oninput="window._mechUpdatePreview()">
+        </div>
+        <div class="eq-term-ficha-wrap" style="display:${t.tipo === 'ficha' ? '' : 'none'}">
+            <select class="eq-term-ref" onchange="window._mechUpdatePreview()">
+                <option value="">— Ref —</option>${getValueSourceHTML()}
             </select>
         </div>
-        <div class="form-group"><label>Operação <span class="required">*</span></label>
-            <select id="mech_config_operacao" onchange="window._mechUpdatePreview()">
-                <option value="+" ${opVal === '+' ? 'selected' : ''}>+ Somar</option>
-                <option value="-" ${opVal === '-' ? 'selected' : ''}>− Subtrair</option>
-                <option value="×" ${opVal === '×' ? 'selected' : ''}>× Multiplicar</option>
-                <option value="÷" ${opVal === '÷' ? 'selected' : ''}>÷ Dividir</option>
-                <option value="=" ${opVal === '=' ? 'selected' : ''}>= Definir fixo</option>
-            </select>
+        ${termIndex > 0 ? `<button type="button" class="eq-term-remove" onclick="window._mechRemoveTerm(${calcIndex}, ${termIndex})" title="Remover termo">✕</button>` : ''}
+    </div>`;
+}
+
+// ===== RENDER A SINGLE CALC ROW (Modificar) =====
+function _renderCalcRowModificar(calc, index) {
+    const c = calc || { alvo: '', operacao: '+', equacao: [{ tipo: 'fixo', valor: '' }] };
+    const equacao = _migrateCalcToEquacao(c);
+    const termsHtml = equacao.map((t, ti) => _renderEquationTerm(t, index, ti)).join('');
+    return `
+    <div class="calc-row" data-calc-index="${index}">
+        <div class="calc-row-header">
+            <span class="calc-row-num">#${index + 1}</span>
+            <button type="button" class="calc-row-remove" onclick="window._mechRemoveCalc(${index})" title="Remover cálculo">🗑️</button>
         </div>
-        <div class="form-group"><label>Valor <span class="required">*</span></label>
-            <input type="text" id="mech_config_valor" value="${esc(String(valVal))}" placeholder="Ex: 2, PRS + Nível" oninput="window._mechUpdatePreview()">
+        <div class="form-grid">
+            <div class="form-group full-width"><label>O que é afetado? <span class="required">*</span></label>
+                <select class="calc-alvo" onchange="window._mechUpdatePreview()">
+                    <option value="">— Selecionar alvo —</option>${getMechanicTargetsHTML()}
+                </select>
+            </div>
+            <div class="form-group"><label>Operação <span class="required">*</span></label>
+                <select class="calc-operacao" onchange="window._mechUpdatePreview()">
+                    <option value="+" ${c.operacao === '+' ? 'selected' : ''}>+ Somar</option>
+                    <option value="-" ${c.operacao === '-' ? 'selected' : ''}>− Subtrair</option>
+                    <option value="×" ${c.operacao === '×' ? 'selected' : ''}>× Multiplicar</option>
+                    <option value="÷" ${c.operacao === '÷' ? 'selected' : ''}>÷ Dividir</option>
+                    <option value="=" ${c.operacao === '=' ? 'selected' : ''}>=  Definir fixo</option>
+                </select>
+            </div>
+        </div>
+        <div class="eq-builder-section">
+            <label class="eq-builder-label">Equação de Valor <span class="required">*</span></label>
+            <div class="eq-terms-container" data-calc-index="${index}">
+                ${termsHtml}
+            </div>
+            <button type="button" class="eq-add-term-btn" onclick="window._mechAddTerm(${index})">➕ Adicionar Termo</button>
         </div>
     </div>`;
 }
 
-function renderConfigLimitar(config) {
-    const tipoL = config?.tipoLimite || '';
+// ===== RENDER A SINGLE CALC ROW (Limitar) =====
+function _renderCalcRowLimitar(calc, index) {
+    const c = calc || { alvo: '', tipoLimite: '', equacao: [{ tipo: 'fixo', valor: '' }] };
+    const tl = c.tipoLimite || '';
+    const showValor = tl && tl !== 'bloqueio';
+    const equacao = _migrateCalcToEquacao(c);
+    const termsHtml = equacao.map((t, ti) => _renderEquationTerm(t, index, ti)).join('');
     return `
-    <div class="form-grid">
-        <div class="form-group full-width"><label>O que é limitado? <span class="required">*</span></label>
-            <select id="mech_config_alvo" onchange="window._mechUpdatePreview()">${MECHANIC_TARGETS_HTML}</select>
+    <div class="calc-row" data-calc-index="${index}">
+        <div class="calc-row-header">
+            <span class="calc-row-num">#${index + 1}</span>
+            <button type="button" class="calc-row-remove" onclick="window._mechRemoveCalc(${index})" title="Remover cálculo">🗑️</button>
         </div>
-        <div class="form-group"><label>Tipo de Limite <span class="required">*</span></label>
-            <select id="mech_config_tipoLimite" onchange="window._mechLimitChange(); window._mechUpdatePreview()">
-                <option value="">— Selecionar —</option>
-                <option value="maximo" ${tipoL === 'maximo' ? 'selected' : ''}>Teto (máximo)</option>
-                <option value="minimo" ${tipoL === 'minimo' ? 'selected' : ''}>Piso (mínimo)</option>
-                <option value="clamp" ${tipoL === 'clamp' ? 'selected' : ''}>Ambos (clamp)</option>
-                <option value="bloqueio" ${tipoL === 'bloqueio' ? 'selected' : ''}>Bloqueio (= 0)</option>
-            </select>
+        <div class="form-grid">
+            <div class="form-group full-width"><label>O que é limitado? <span class="required">*</span></label>
+                <select class="calc-alvo" onchange="window._mechUpdatePreview()">
+                    <option value="">— Selecionar alvo —</option>${getMechanicTargetsHTML()}
+                </select>
+            </div>
+            <div class="form-group"><label>Tipo de Limite <span class="required">*</span></label>
+                <select class="calc-tipoLimite" onchange="window._mechCalcLimitChange(${index}); window._mechUpdatePreview()">
+                    <option value="">— Selecionar —</option>
+                    <option value="maximo" ${tl === 'maximo' ? 'selected' : ''}>Teto (máximo)</option>
+                    <option value="minimo" ${tl === 'minimo' ? 'selected' : ''}>Piso (mínimo)</option>
+                    <option value="clamp" ${tl === 'clamp' ? 'selected' : ''}>Ambos (clamp)</option>
+                    <option value="bloqueio" ${tl === 'bloqueio' ? 'selected' : ''}>Bloqueio (= 0)</option>
+                </select>
+            </div>
         </div>
-        <div class="form-group" id="mech_maxWrap" style="display:${['maximo', 'clamp'].includes(tipoL) ? '' : 'none'}"><label>Valor Máximo</label>
-            <input type="number" id="mech_config_valorMaximo" value="${config?.valorMaximo ?? ''}" oninput="window._mechUpdatePreview()">
+        <div class="calc-limit-valor-area" style="display:${showValor ? '' : 'none'}">
+            <div class="eq-builder-section">
+                <label class="eq-builder-label">Equação de Valor do Limite</label>
+                <div class="eq-terms-container" data-calc-index="${index}">
+                    ${termsHtml}
+                </div>
+                <button type="button" class="eq-add-term-btn" onclick="window._mechAddTerm(${index})">➕ Adicionar Termo</button>
+            </div>
         </div>
-        <div class="form-group" id="mech_minWrap" style="display:${['minimo', 'clamp'].includes(tipoL) ? '' : 'none'}"><label>Valor Mínimo</label>
-            <input type="number" id="mech_config_valorMinimo" value="${config?.valorMinimo ?? ''}" oninput="window._mechUpdatePreview()">
-        </div>
-    </div>`;
+    </div>`
 }
+
+// ===== CONFIG SECTION RENDERERS =====
+function renderConfigModificar(config) {
+    let calculos = config?.calculos;
+    if (!Array.isArray(calculos) || calculos.length === 0) {
+        if (config?.alvo) {
+            calculos = [{
+                alvo: Array.isArray(config.alvo) ? config.alvo[0] : config.alvo,
+                operacao: config.operacao || '+',
+                valorTipo: 'fixo',
+                valor: config.valor ?? '',
+                valorRef: '',
+                valorMultiplicador: 1
+            }];
+        } else {
+            calculos = [{ alvo: '', operacao: '+', valorTipo: 'fixo', valor: '', valorRef: '', valorMultiplicador: 1 }];
+        }
+    }
+    const rows = calculos.map((c, i) => _renderCalcRowModificar(c, i)).join('');
+    return `
+    <div id="mechCalcList" data-calc-type="modificar">
+        ${rows}
+    </div>
+    <button type="button" class="calc-add-btn" onclick="window._mechAddCalc('modificar')">➕ Adicionar Cálculo</button>`;
+}
+
+function renderConfigLimitar(config) {
+    let calculos = config?.calculos;
+    if (!Array.isArray(calculos) || calculos.length === 0) {
+        if (config?.alvo) {
+            calculos = [{
+                alvo: config.alvo,
+                tipoLimite: config.tipoLimite || '',
+                valorTipo: 'fixo',
+                valor: config.valorMaximo ?? config.valorMinimo ?? '',
+                valorRef: '',
+                valorMultiplicador: 1
+            }];
+        } else {
+            calculos = [{ alvo: '', tipoLimite: '', valorTipo: 'fixo', valor: '', valorRef: '', valorMultiplicador: 1 }];
+        }
+    }
+    const rows = calculos.map((c, i) => _renderCalcRowLimitar(c, i)).join('');
+    return `
+    <div id="mechCalcList" data-calc-type="limitar">
+        ${rows}
+    </div>
+    <button type="button" class="calc-add-btn" onclick="window._mechAddCalc('limitar')">➕ Adicionar Cálculo</button>`;
+}
+
 
 function renderConfigConceder(config) {
     const tc = config?.tipoConcessao || '';
@@ -246,9 +488,9 @@ function renderConfigDistribuir(config) {
     const restVal = config?.restricao || 'diferentes';
     const poolCustom = Array.isArray(config?.poolPersonalizado) ? config.poolPersonalizado : [];
 
-    // Build checkboxes from MECHANIC_TARGETS_HTML by extracting option values
+    // Build checkboxes from getMechanicTargetsHTML() by extracting option values
     const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = `<select>${MECHANIC_TARGETS_HTML}</select>`;
+    tempDiv.innerHTML = `<select>${getMechanicTargetsHTML()}</select>`;
     const allOptions = Array.from(tempDiv.querySelectorAll('option'));
     const checkboxesHtml = allOptions.map(opt => {
         const v = opt.value;
@@ -301,22 +543,57 @@ function renderConfigDistribuir(config) {
 }
 
 // ===== PROGRESSION / LEVEL TABLE =====
-function _getProgressaoHeaders(tipo, tipoExp) {
+
+// Returns indices and labels of fixo terms across all calc rows for progression columns
+function _getEquacaoFixoTerms() {
+    const list = document.getElementById('mechCalcList');
+    if (!list) return [];
+    const fixoTerms = [];
+    const calcRows = list.querySelectorAll('.calc-row');
+    calcRows.forEach((row, ci) => {
+        const terms = row.querySelectorAll('.eq-term');
+        terms.forEach((term, ti) => {
+            const tipo = term.querySelector('.eq-term-tipo')?.value || 'fixo';
+            if (tipo === 'fixo') {
+                const calcNum = calcRows.length > 1 ? `C${ci + 1}.` : '';
+                fixoTerms.push({ calcIndex: ci, termIndex: ti, label: `${calcNum}Termo ${fixoTerms.length + 1}` });
+            }
+        });
+    });
+    return fixoTerms;
+}
+
+function _getProgressaoHeaders(tipo, tipoExp, fixoTerms) {
     const expLabel = tipoExp === 'ganho' ? 'Ganho EXP' : 'Custo EXP';
-    if (tipo === 'modificar') return ['Nível', expLabel, 'Valor'];
-    if (tipo === 'limitar') return ['Nível', expLabel, 'Valor do Limite'];
+    if (tipo === 'modificar' || tipo === 'limitar') {
+        if (fixoTerms && fixoTerms.length > 0) {
+            return ['Nível', expLabel, ...fixoTerms.map(ft => ft.label)];
+        }
+        // Fallback: single valor column
+        return ['Nível', expLabel, tipo === 'limitar' ? 'Valor do Limite' : 'Valor'];
+    }
     if (tipo === 'distribuir') return ['Nível', expLabel, 'Qtd Alvos', 'Valor por Alvo'];
     return ['Nível', expLabel, 'Descrição do Efeito'];
 }
 
-function _renderProgressaoRow(i, p, tipo) {
+function _renderProgressaoRow(i, p, tipo, fixoTerms) {
     const nvCell = `<td style="text-align:center;font-weight:700;color:var(--accent)">${i}</td>`;
     const custoCell = `<td><input type="number" class="prog-custo" data-nivel="${i}" value="${p.custoExp ?? (i === 1 ? 0 : '')}" placeholder="0" min="0" style="width:100%" oninput="window._mechUpdatePreview()"></td>`;
 
-    if (tipo === 'modificar') {
+    if (tipo === 'modificar' || tipo === 'limitar') {
+        if (fixoTerms && fixoTerms.length > 0) {
+            const termCells = fixoTerms.map((ft, ftIdx) => {
+                const termValues = p.termos || {};
+                const val = termValues[String(ftIdx)] ?? '';
+                return `<td><input type="text" class="prog-termo" data-nivel="${i}" data-termo-index="${ftIdx}" value="${esc(String(val))}" placeholder="Ex: ${i + ftIdx}" style="width:100%" oninput="window._mechUpdatePreview()"></td>`;
+            }).join('');
+            return `<tr>${nvCell}${custoCell}${termCells}</tr>`;
+        }
+        // Fallback: single valor column (backward compat)
+        if (tipo === 'limitar') {
+            return `<tr>${nvCell}${custoCell}<td><input type="text" class="prog-valorLimite" data-nivel="${i}" value="${esc(String(p.valorLimite ?? ''))}" placeholder="Ex: ${i * 2}" style="width:100%" oninput="window._mechUpdatePreview()"></td></tr>`;
+        }
         return `<tr>${nvCell}${custoCell}<td><input type="text" class="prog-valor" data-nivel="${i}" value="${esc(String(p.valor ?? ''))}" placeholder="Ex: ${i}" style="width:100%" oninput="window._mechUpdatePreview()"></td></tr>`;
-    } else if (tipo === 'limitar') {
-        return `<tr>${nvCell}${custoCell}<td><input type="text" class="prog-valorLimite" data-nivel="${i}" value="${esc(String(p.valorLimite ?? ''))}" placeholder="Ex: ${i * 2}" style="width:100%" oninput="window._mechUpdatePreview()"></td></tr>`;
     } else if (tipo === 'distribuir') {
         return `<tr>${nvCell}${custoCell}<td><input type="number" class="prog-quantidadeAlvos" data-nivel="${i}" value="${p.quantidadeAlvos ?? ''}" placeholder="Ex: ${i + 1}" min="1" style="width:100%" oninput="window._mechUpdatePreview()"></td><td><input type="text" class="prog-valorPorAlvo" data-nivel="${i}" value="${esc(String(p.valorPorAlvo ?? ''))}" placeholder="Ex: 1" style="width:100%" oninput="window._mechUpdatePreview()"></td></tr>`;
     } else {
@@ -332,12 +609,15 @@ function renderConfigProgressao(data, tipo) {
     const tipoExp = data?.progressaoTipoExp || 'custo';
     tipo = tipo || data?.tipo || 'modificar';
 
-    const headers = _getProgressaoHeaders(tipo, tipoExp);
+    // fixoTerms will be empty on initial render (calc rows not in DOM yet)
+    // _mechRefreshProgressao will re-render with correct terms later
+    const fixoTerms = _getEquacaoFixoTerms();
+    const headers = _getProgressaoHeaders(tipo, tipoExp, fixoTerms);
     let tabelaRows = '';
     if (evoluivel) {
         for (let i = 1; i <= nivelMax; i++) {
             const p = progressao[String(i)] || {};
-            tabelaRows += _renderProgressaoRow(i, p, tipo);
+            tabelaRows += _renderProgressaoRow(i, p, tipo, fixoTerms);
         }
     }
 
@@ -530,14 +810,6 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks) 
         </div>
     </div>`;
 
-    // Set alvo value after DOM is ready (for optgroup selects)
-    if (tipo === 'modificar' || tipo === 'limitar') {
-        setTimeout(() => {
-            const sel = document.getElementById('mech_config_alvo');
-            if (sel && config.alvo) sel.value = Array.isArray(config.alvo) ? config.alvo[0] : config.alvo;
-        }, 0);
-    }
-
     // Store editing state
     window._mechEditingId = itemId || null;
     window._mechCallbacks = callbacks;
@@ -568,17 +840,172 @@ window._mechTipoChange = function () {
     else if (tipo === 'narrativo') area.innerHTML = renderConfigNarrativo(config);
     else if (tipo === 'distribuir') area.innerHTML = renderConfigDistribuir(config);
 
-    // Re-set alvo if editing same type
-    if ((tipo === 'modificar' || tipo === 'limitar') && config.alvo) {
+    // Set alvo values and ficha refs in calc rows after DOM is ready
+    if (tipo === 'modificar' || tipo === 'limitar') {
         setTimeout(() => {
-            const sel = document.getElementById('mech_config_alvo');
-            if (sel) sel.value = Array.isArray(config.alvo) ? config.alvo[0] : config.alvo;
+            const calcList = document.getElementById('mechCalcList');
+            if (!calcList) return;
+            let calculos = config?.calculos;
+            // Backward compat
+            if (!Array.isArray(calculos) || calculos.length === 0) {
+                if (config?.alvo) {
+                    if (tipo === 'modificar') {
+                        calculos = [{ alvo: Array.isArray(config.alvo) ? config.alvo[0] : config.alvo }];
+                    } else {
+                        calculos = [{ alvo: config.alvo }];
+                    }
+                } else {
+                    calculos = [{}];
+                }
+            }
+            const rows = calcList.querySelectorAll('.calc-row');
+            rows.forEach((row, i) => {
+                const c = calculos[i] || {};
+                const alvoSel = row.querySelector('.calc-alvo');
+                if (alvoSel && c.alvo) alvoSel.value = c.alvo;
+                // Restore equation term ficha refs
+                const equacao = c.equacao || _migrateCalcToEquacao(c);
+                const termEls = row.querySelectorAll('.eq-term');
+                termEls.forEach((termEl, ti) => {
+                    const t = equacao[ti];
+                    if (t && t.tipo === 'ficha' && t.ref) {
+                        const refSel = termEl.querySelector('.eq-term-ref');
+                        if (refSel) refSel.value = t.ref;
+                    }
+                });
+            });
+            // Refresh progression after equacao is set in DOM
+            window._mechRefreshProgressao(tipo);
         }, 0);
     }
 
     // Re-render progression table with correct columns for new type
     window._mechRefreshProgressao(tipo);
     window._mechUpdatePreview();
+};
+
+// ===== CALC ROW HANDLERS =====
+window._mechAddCalc = function (calcType) {
+    const list = document.getElementById('mechCalcList');
+    if (!list) return;
+    const index = list.querySelectorAll('.calc-row').length;
+    const html = calcType === 'limitar'
+        ? _renderCalcRowLimitar(null, index)
+        : _renderCalcRowModificar(null, index);
+    list.insertAdjacentHTML('beforeend', html);
+    window._mechUpdatePreview();
+};
+
+window._mechRemoveCalc = function (index) {
+    const list = document.getElementById('mechCalcList');
+    if (!list) return;
+    const rows = list.querySelectorAll('.calc-row');
+    if (rows.length <= 1) return; // Keep at least 1
+    if (rows[index]) rows[index].remove();
+    // Re-index remaining rows
+    list.querySelectorAll('.calc-row').forEach((row, i) => {
+        row.dataset.calcIndex = i;
+        const num = row.querySelector('.calc-row-num');
+        if (num) num.textContent = `#${i + 1}`;
+    });
+    window._mechUpdatePreview();
+};
+
+// ===== EQUATION TERM HANDLERS =====
+window._mechTermTipoChange = function (calcIndex, termIndex) {
+    const list = document.getElementById('mechCalcList');
+    if (!list) return;
+    const row = list.querySelectorAll('.calc-row')[calcIndex];
+    if (!row) return;
+    const term = row.querySelectorAll('.eq-term')[termIndex];
+    if (!term) return;
+    const tipo = term.querySelector('.eq-term-tipo')?.value || 'fixo';
+    const fixoWrap = term.querySelector('.eq-term-fixo-wrap');
+    const fichaWrap = term.querySelector('.eq-term-ficha-wrap');
+    if (fixoWrap) fixoWrap.style.display = tipo === 'fixo' ? '' : 'none';
+    if (fichaWrap) fichaWrap.style.display = tipo === 'ficha' ? '' : 'none';
+    // Refresh progression columns when term type changes
+    window._mechRefreshProgressao();
+};
+
+window._mechAddTerm = function (calcIndex) {
+    const list = document.getElementById('mechCalcList');
+    if (!list) return;
+    const row = list.querySelectorAll('.calc-row')[calcIndex];
+    if (!row) return;
+    const container = row.querySelector('.eq-terms-container');
+    if (!container) return;
+    const termIndex = container.querySelectorAll('.eq-term').length;
+    const html = _renderEquationTerm({ op: '+', tipo: 'fixo', valor: '' }, calcIndex, termIndex);
+    container.insertAdjacentHTML('beforeend', html);
+    // Refresh progression columns
+    window._mechRefreshProgressao();
+    window._mechUpdatePreview();
+};
+
+window._mechRemoveTerm = function (calcIndex, termIndex) {
+    const list = document.getElementById('mechCalcList');
+    if (!list) return;
+    const row = list.querySelectorAll('.calc-row')[calcIndex];
+    if (!row) return;
+    const container = row.querySelector('.eq-terms-container');
+    if (!container) return;
+    const terms = container.querySelectorAll('.eq-term');
+    if (terms.length <= 1) return; // Keep at least 1
+    if (terms[termIndex]) terms[termIndex].remove();
+    // Re-index remaining terms — re-render to fix onclick indices
+    const currentEquacao = _collectEquacaoFromContainer(container);
+    container.innerHTML = currentEquacao.map((t, ti) => _renderEquationTerm(t, calcIndex, ti)).join('');
+    // Restore ficha ref values after re-render
+    _restoreEquacaoRefs(container, currentEquacao);
+    // Refresh progression columns
+    window._mechRefreshProgressao();
+    window._mechUpdatePreview();
+};
+
+// ===== COLLECT EQUATION FROM A CALC ROW =====
+function _collectEquacaoFromRow(row) {
+    const container = row.querySelector('.eq-terms-container');
+    if (!container) return [{ tipo: 'fixo', valor: '' }];
+    return _collectEquacaoFromContainer(container);
+}
+
+function _collectEquacaoFromContainer(container) {
+    const terms = container.querySelectorAll('.eq-term');
+    return Array.from(terms).map((term, i) => {
+        const tipo = term.querySelector('.eq-term-tipo')?.value || 'fixo';
+        const entry = { tipo };
+        if (i > 0) entry.op = term.querySelector('.eq-term-op')?.value || '+';
+        if (tipo === 'ficha') {
+            entry.ref = term.querySelector('.eq-term-ref')?.value || '';
+        } else {
+            const rawVal = term.querySelector('.eq-term-valor')?.value?.trim() ?? '';
+            entry.valor = isNaN(Number(rawVal)) || rawVal === '' ? rawVal : Number(rawVal);
+        }
+        return entry;
+    });
+}
+
+function _restoreEquacaoRefs(container, equacao) {
+    const terms = container.querySelectorAll('.eq-term');
+    terms.forEach((term, i) => {
+        const t = equacao[i];
+        if (!t) return;
+        if (t.tipo === 'ficha') {
+            const refSel = term.querySelector('.eq-term-ref');
+            if (refSel && t.ref) refSel.value = t.ref;
+        }
+    });
+}
+
+window._mechCalcLimitChange = function (index) {
+    const list = document.getElementById('mechCalcList');
+    if (!list) return;
+    const row = list.querySelectorAll('.calc-row')[index];
+    if (!row) return;
+    const tl = row.querySelector('.calc-tipoLimite')?.value || '';
+    const valorArea = row.querySelector('.calc-limit-valor-area');
+    if (valorArea) valorArea.style.display = (tl && tl !== 'bloqueio') ? '' : 'none';
 };
 
 window._mechLimitChange = function () {
@@ -625,30 +1052,42 @@ window._mechNivelMaxChange = function () {
     const tbody = document.getElementById('mech_progressaoBody');
     const thead = document.getElementById('mech_progressaoHead');
     if (!tbody) return;
+
+    const fixoTerms = (tipo === 'modificar' || tipo === 'limitar') ? _getEquacaoFixoTerms() : [];
+
     // Preserve existing values
     const existing = {};
     tbody.querySelectorAll('tr').forEach(row => {
         const nv = row.querySelector('.prog-custo')?.dataset.nivel;
         if (nv) {
             const p = { custoExp: row.querySelector('.prog-custo')?.value || '' };
-            if (tipo === 'modificar') p.valor = row.querySelector('.prog-valor')?.value || '';
-            else if (tipo === 'limitar') p.valorLimite = row.querySelector('.prog-valorLimite')?.value || '';
-            else if (tipo === 'distribuir') {
+            if ((tipo === 'modificar' || tipo === 'limitar') && fixoTerms.length > 0) {
+                p.termos = {};
+                row.querySelectorAll('.prog-termo').forEach(inp => {
+                    p.termos[inp.dataset.termoIndex] = inp.value || '';
+                });
+            } else if (tipo === 'modificar') {
+                p.valor = row.querySelector('.prog-valor')?.value || '';
+            } else if (tipo === 'limitar') {
+                p.valorLimite = row.querySelector('.prog-valorLimite')?.value || '';
+            } else if (tipo === 'distribuir') {
                 p.quantidadeAlvos = row.querySelector('.prog-quantidadeAlvos')?.value || '';
                 p.valorPorAlvo = row.querySelector('.prog-valorPorAlvo')?.value || '';
-            } else p.descricao = row.querySelector('.prog-descricao')?.value || '';
+            } else {
+                p.descricao = row.querySelector('.prog-descricao')?.value || '';
+            }
             existing[nv] = p;
         }
     });
     // Update headers
     if (thead) {
-        const headers = _getProgressaoHeaders(tipo, tipoExp);
+        const headers = _getProgressaoHeaders(tipo, tipoExp, fixoTerms);
         thead.innerHTML = `<tr style="background:var(--bg-secondary);color:var(--text-secondary)">${headers.map(h => `<th style="padding:6px 8px${h === 'Nível' ? ';width:60px' : ''}">${h}</th>`).join('')}</tr>`;
     }
     let html = '';
     for (let i = 1; i <= max; i++) {
         const prev = existing[String(i)] || {};
-        html += _renderProgressaoRow(i, prev, tipo);
+        html += _renderProgressaoRow(i, prev, tipo, fixoTerms);
     }
     tbody.innerHTML = html;
 };
@@ -710,18 +1149,25 @@ function collectMechFormData() {
     };
 
     if (tipo === 'modificar') {
-        data.config = {
-            alvo: document.getElementById('mech_config_alvo')?.value || '',
-            operacao: document.getElementById('mech_config_operacao')?.value || '+',
-            valor: isNaN(Number(document.getElementById('mech_config_valor')?.value)) ? document.getElementById('mech_config_valor')?.value : Number(document.getElementById('mech_config_valor')?.value)
-        };
+        const calcRows = document.querySelectorAll('#mechCalcList .calc-row');
+        const calculos = Array.from(calcRows).map(row => {
+            return {
+                alvo: row.querySelector('.calc-alvo')?.value || '',
+                operacao: row.querySelector('.calc-operacao')?.value || '+',
+                equacao: _collectEquacaoFromRow(row)
+            };
+        });
+        data.config = { calculos };
     } else if (tipo === 'limitar') {
-        data.config = {
-            alvo: document.getElementById('mech_config_alvo')?.value || '',
-            tipoLimite: document.getElementById('mech_config_tipoLimite')?.value || '',
-            valorMaximo: document.getElementById('mech_config_valorMaximo')?.value ? Number(document.getElementById('mech_config_valorMaximo').value) : null,
-            valorMinimo: document.getElementById('mech_config_valorMinimo')?.value ? Number(document.getElementById('mech_config_valorMinimo').value) : null
-        };
+        const calcRows = document.querySelectorAll('#mechCalcList .calc-row');
+        const calculos = Array.from(calcRows).map(row => {
+            return {
+                alvo: row.querySelector('.calc-alvo')?.value || '',
+                tipoLimite: row.querySelector('.calc-tipoLimite')?.value || '',
+                equacao: _collectEquacaoFromRow(row)
+            };
+        });
+        data.config = { calculos };
     } else if (tipo === 'conceder') {
         data.config = {
             tipoConcessao: document.getElementById('mech_config_tipoConcessao')?.value || '',
@@ -768,12 +1214,22 @@ function collectMechFormData() {
                 const nv = custoEl.dataset.nivel;
                 const entry = { custoExp: parseInt(custoEl.value) || 0 };
 
-                if (tipo === 'modificar') {
-                    const v = row.querySelector('.prog-valor')?.value?.trim() ?? '';
-                    entry.valor = isNaN(Number(v)) || v === '' ? v : Number(v);
-                } else if (tipo === 'limitar') {
-                    const v = row.querySelector('.prog-valorLimite')?.value?.trim() ?? '';
-                    entry.valorLimite = isNaN(Number(v)) || v === '' ? v : Number(v);
+                if (tipo === 'modificar' || tipo === 'limitar') {
+                    // Check for per-term progression (new equation format)
+                    const termoInputs = row.querySelectorAll('.prog-termo');
+                    if (termoInputs.length > 0) {
+                        entry.termos = {};
+                        termoInputs.forEach(inp => {
+                            const rawV = inp.value?.trim() ?? '';
+                            entry.termos[inp.dataset.termoIndex] = isNaN(Number(rawV)) || rawV === '' ? rawV : Number(rawV);
+                        });
+                    } else if (tipo === 'modificar') {
+                        const v = row.querySelector('.prog-valor')?.value?.trim() ?? '';
+                        entry.valor = isNaN(Number(v)) || v === '' ? v : Number(v);
+                    } else {
+                        const v = row.querySelector('.prog-valorLimite')?.value?.trim() ?? '';
+                        entry.valorLimite = isNaN(Number(v)) || v === '' ? v : Number(v);
+                    }
                 } else if (tipo === 'distribuir') {
                     entry.quantidadeAlvos = parseInt(row.querySelector('.prog-quantidadeAlvos')?.value) || null;
                     const v = row.querySelector('.prog-valorPorAlvo')?.value?.trim() ?? '';

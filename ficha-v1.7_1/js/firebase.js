@@ -246,6 +246,7 @@ onAuthStateChanged(auth, async (user) => {
 
             // Construir dados dinâmicos
             buildSkillsFromFirebase();
+            if (typeof populateTargetMapFromSkills === 'function') populateTargetMapFromSkills();
             window.RACES = buildRacesFromFirebase();
             populateRaceSelect();
             populateClassSelect();

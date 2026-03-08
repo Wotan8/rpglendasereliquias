@@ -192,6 +192,8 @@ const MODULE_DEFS = {
             },
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
             { key: 'custoEvolucao', label: 'Custo de Evolução (EXP por nível)', type: 'number', placeholder: '4' },
+            { key: 'todoPersonagem', label: 'Todo personagem tem esta perícia?', type: 'boolean' },
+            { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: '' },
         ]
     },
     equipment: {
@@ -478,7 +480,7 @@ async function loadModule(moduleName) {
     // Always refresh mechanics cache (needed for selectors in all modules)
     await refreshMechanicsCache();
     if (moduleName === 'races' || moduleName === 'classes') await refreshPeculiaritiesCache();
-    if (moduleName === 'classes') await refreshSkillsCache();
+    if (moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'skills') await refreshSkillsCache();
 
     const grid = document.getElementById('itemsGrid');
     const emptyState = document.getElementById('emptyState');

@@ -32,6 +32,7 @@ const TARGET_MAP = {
     "Deslocamento Terrestre": "DERIVED:DESLOC_T",
     "Deslocamento Aquático": "DERIVED:DESLOC_A",
     "Deslocamento Aéreo": "DERIVED:DESLOC_AR",
+    "Deslocamento Vertical": "DERIVED:DESLOC_V",
     "Tamanho": "field:tamanho",
     "Carga Máxima": "DERIVED:CARGA",
 
@@ -98,6 +99,29 @@ const TARGET_MAP = {
 };
 
 /**
+ * Popula TARGET_MAP com perícias carregadas dinamicamente do Firebase.
+ * Chamada após buildSkillsFromFirebase() para registrar skills criadas no painel.
+ */
+function populateTargetMapFromSkills() {
+    if (!window.SKILLS) return;
+    const CATEGORY_PREFIX = {
+        'mental': 'sk_mental_', 'fisico': 'sk_fisico_',
+        'social': 'sk_social_', 'combate': 'sk_combate_',
+        'exclusivo': 'sk_exclusivo_'
+    };
+    for (const cat of Object.keys(window.SKILLS)) {
+        const pfx = CATEGORY_PREFIX[cat] || 'sk_mental_';
+        for (const sk of window.SKILLS[cat]) {
+            // Registrar por nome (se ainda não existe — preserva aliases hardcoded)
+            if (!TARGET_MAP[sk.name]) {
+                TARGET_MAP[sk.name] = pfx + sk.key;
+            }
+        }
+    }
+    console.log('✅ TARGET_MAP atualizado com perícias do Firebase');
+}
+
+/**
  * Pool map: mapeia nomes de pool (usados em mecânicas distribuir) para listas de alvos válidos.
  * Usa o array SKILLS (data.js) como fonte canônica de nomes para evitar aliases/duplicatas.
  */
@@ -149,9 +173,95 @@ function clearMechanicBonuses() {
     state.mecanicasPendentes = [];
 }
 
+/* ===== RESOLVER VALOR DINÂMICO DE CÁLCULO ===== */
+function resolveCalcValue(calc) {
+    if (!calc) return 0;
+    // New equation format
+    if (Array.isArray(calc.equacao) && calc.equacao.length > 0) {
+        return resolveEquation(calc.equacao);
+    }
+    // Legacy format
+    if (calc.valorTipo !== 'ficha') {
+        return parseFloat(calc.valor) || 0;
+    }
+    // Resolve valor de ficha (legacy)
+    return _resolveSheetRef(calc.valorRef, calc.valorMultiplicador || 1);
+}
+
+/* ===== RESOLVER EQUAÇÃO MULTI-TERMO ===== */
+function resolveEquation(equacao) {
+    if (!Array.isArray(equacao) || equacao.length === 0) return 0;
+    let result = _resolveTermValue(equacao[0]);
+    for (let i = 1; i < equacao.length; i++) {
+        const t = equacao[i];
+        const val = _resolveTermValue(t);
+        const op = t.op || '+';
+        if (op === '+') result += val;
+        else if (op === '-') result -= val;
+        else if (op === '×' || op === '*') result *= val;
+        else if (op === '÷' || op === '/') result = val !== 0 ? result / val : result;
+        else if (op === 'min') result = Math.min(result, val);
+        else if (op === 'max') result = Math.max(result, val);
+    }
+    return result;
+}
+
+function _resolveTermValue(term) {
+    if (!term) return 0;
+    if (term.tipo === 'ficha') {
+        return _resolveSheetRef(term.ref, 1);
+    }
+    return parseFloat(term.valor) || 0;
+}
+
+function _resolveSheetRef(ref, mult) {
+    if (!ref) return 0;
+    mult = mult || 1;
+
+    // Check attributes
+    const attrKey = TARGET_MAP[ref];
+    if (attrKey && attrKey.startsWith('attr_')) {
+        const attrName = attrKey.replace('attr_', '');
+        const attrVal = state.dots['attr_' + attrName] || 0;
+        return attrVal * mult;
+    }
+
+    // Check skills
+    if (attrKey && attrKey.startsWith('sk_')) {
+        const skVal = state.dots[attrKey] || 0;
+        return skVal * mult;
+    }
+
+    // Check Nível
+    if (ref === 'Nível') {
+        const nivel = parseInt(document.querySelector('[data-key="nivel"]')?.value) || 1;
+        return nivel * mult;
+    }
+
+    // Check derived values
+    if (attrKey && attrKey.startsWith('DERIVED:')) {
+        const derivedKey = attrKey.replace('DERIVED:', '');
+        const derivedVal = state.derived?.[derivedKey] || 0;
+        return derivedVal * mult;
+    }
+
+    // Check field values
+    if (attrKey && attrKey.startsWith('field:')) {
+        const fieldKey = attrKey.replace('field:', '');
+        const fieldEl = document.querySelector(`[data-key="${fieldKey}"]`);
+        const fieldVal = parseFloat(fieldEl?.value) || 0;
+        return fieldVal * mult;
+    }
+
+    return 0;
+}
+
 /* ===== APLICAR TODAS AS MECÂNICAS DE UMA RAÇA ===== */
 function applyAllRaceMechanics(racaNome) {
     clearMechanicBonuses();
+
+    // Always apply skill mechanics, even without a race selected
+    applySkillMechanics();
 
     if (!racaNome || !window.RACES) return;
     const raca = window.RACES[racaNome];
@@ -161,6 +271,27 @@ function applyAllRaceMechanics(racaNome) {
         if (!pec.mecanicas) continue;
         for (const mech of pec.mecanicas) {
             applyMechanicToSheet(mech, pec);
+        }
+    }
+}
+
+/* ===== APLICAR MECÂNICAS VINCULADAS A PERÍCIAS ===== */
+function applySkillMechanics() {
+    if (!window.SKILLS || !window._systemData?.mechanics) return;
+
+    const mechanicsById = {};
+    for (const m of window._systemData.mechanics) {
+        mechanicsById[m.id] = m;
+    }
+
+    for (const cat of Object.keys(window.SKILLS)) {
+        for (const skill of window.SKILLS[cat]) {
+            if (!skill.mecanicaIds || skill.mecanicaIds.length === 0) continue;
+            for (const mechId of skill.mecanicaIds) {
+                const mech = mechanicsById[mechId];
+                if (!mech) continue;
+                applyMechanicToSheet(mech, null);
+            }
         }
     }
 }
@@ -178,13 +309,32 @@ function applyMechanicToSheet(mech, parentPec) {
         if (prog) {
             // Criar config ajustada ao nível
             config = JSON.parse(JSON.stringify(config));
-            if (tipo === 'modificar') {
-                if (prog.valor !== undefined) config.valor = prog.valor;
-            } else if (tipo === 'limitar') {
-                const limVal = prog.valorLimite !== undefined ? prog.valorLimite : prog.valor;
-                if (limVal !== undefined) {
-                    if (config.valorMaximo !== undefined) config.valorMaximo = limVal;
-                    if (config.valorMinimo !== undefined) config.valorMinimo = limVal;
+            if (tipo === 'modificar' || tipo === 'limitar') {
+                // New equation-based progression: override fixo term values
+                if (prog.termos && Array.isArray(config.calculos)) {
+                    for (const calc of config.calculos) {
+                        if (Array.isArray(calc.equacao)) {
+                            let fixoIdx = 0;
+                            for (const term of calc.equacao) {
+                                if (term.tipo !== 'ficha') {
+                                    const overrideVal = prog.termos[String(fixoIdx)];
+                                    if (overrideVal !== undefined && overrideVal !== '') {
+                                        term.valor = overrideVal;
+                                    }
+                                    fixoIdx++;
+                                }
+                            }
+                        }
+                    }
+                } else if (tipo === 'modificar' && prog.valor !== undefined) {
+                    // Legacy single-value progression
+                    config.valor = prog.valor;
+                } else if (tipo === 'limitar') {
+                    const limVal = prog.valorLimite !== undefined ? prog.valorLimite : prog.valor;
+                    if (limVal !== undefined) {
+                        if (config.valorMaximo !== undefined) config.valorMaximo = limVal;
+                        if (config.valorMinimo !== undefined) config.valorMinimo = limVal;
+                    }
                 }
             } else if (tipo === 'distribuir') {
                 if (prog.valor !== undefined) config.valorPorAlvo = prog.valor;
@@ -202,37 +352,63 @@ function applyMechanicToSheet(mech, parentPec) {
 
     // === TIPO: MODIFICAR ===
     if (tipo === 'modificar' && isPermanent && !isConditional) {
-        const alvos = Array.isArray(config.alvo) ? config.alvo : [config.alvo];
-        for (const alvo of alvos) {
-            if (!alvo) continue;
-            const field = TARGET_MAP[alvo];
-            if (!field) {
-                console.warn(`⚠️ Mecânica "${mech.nome}": alvo "${alvo}" não encontrado no TARGET_MAP`);
-                continue;
-            }
+        // Support new multi-calc format
+        const calculos = Array.isArray(config.calculos) ? config.calculos
+            : [{ alvo: config.alvo, operacao: config.operacao, valor: config.valor, valorTipo: 'fixo' }];
 
-            const val = parseFloat(config.valor) || 0;
-            const op = config.operacao;
+        for (const calc of calculos) {
+            const alvos = Array.isArray(calc.alvo) ? calc.alvo : [calc.alvo];
+            for (const alvo of alvos) {
+                if (!alvo) continue;
+                const field = TARGET_MAP[alvo];
+                if (!field) {
+                    console.warn(`⚠️ Mecânica "${mech.nome}": alvo "${alvo}" não encontrado no TARGET_MAP`);
+                    continue;
+                }
 
-            if (op === '+') state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) + val;
-            else if (op === '-') state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) - val;
-            else if (op === '×' || op === '*') {
-                // Multiplicadores: armazenar como "MULT:field"
-                const multKey = 'MULT:' + field;
-                state.mechanicBonuses[multKey] = (state.mechanicBonuses[multKey] || 1) * val;
+                const val = resolveCalcValue(calc);
+                const op = calc.operacao;
+
+                if (op === '+') state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) + val;
+                else if (op === '-') state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) - val;
+                else if (op === '×' || op === '*') {
+                    const multKey = 'MULT:' + field;
+                    state.mechanicBonuses[multKey] = (state.mechanicBonuses[multKey] || 1) * val;
+                }
+                else if (op === '=') {
+                    // "Definir fixo": overrides the base formula entirely
+                    const setKey = 'SET:' + field;
+                    state.mechanicBonuses[setKey] = val;
+                }
+                else if (op === '÷' || op === '/') {
+                    const divKey = 'DIV:' + field;
+                    state.mechanicBonuses[divKey] = (state.mechanicBonuses[divKey] || 1) * val;
+                }
             }
         }
     }
 
     // === TIPO: LIMITAR ===
     if (tipo === 'limitar' && isPermanent && !isConditional) {
-        const field = TARGET_MAP[config.alvo];
-        if (field) {
-            state.mechanicLimits[field] = {
-                tipo: config.tipoLimite,
-                max: config.valorMaximo,
-                min: config.valorMinimo
-            };
+        // Support new multi-calc format
+        const calculos = Array.isArray(config.calculos) ? config.calculos
+            : [{ alvo: config.alvo, tipoLimite: config.tipoLimite, valor: config.valorMaximo ?? config.valorMinimo, valorTipo: 'fixo' }];
+
+        for (const calc of calculos) {
+            const field = TARGET_MAP[calc.alvo];
+            if (!field) continue;
+
+            const resolvedVal = resolveCalcValue(calc);
+
+            if (calc.tipoLimite === 'bloqueio') {
+                state.mechanicLimits[field] = { tipo: 'bloqueio', max: 0, min: 0 };
+            } else if (calc.tipoLimite === 'maximo') {
+                state.mechanicLimits[field] = { tipo: 'maximo', max: resolvedVal, min: null };
+            } else if (calc.tipoLimite === 'minimo') {
+                state.mechanicLimits[field] = { tipo: 'minimo', max: null, min: resolvedVal };
+            } else if (calc.tipoLimite === 'clamp') {
+                state.mechanicLimits[field] = { tipo: 'clamp', max: resolvedVal, min: calc.valorMinimo ?? 0 };
+            }
         }
     }
 
@@ -268,6 +444,28 @@ function applyMechanicToSheet(mech, parentPec) {
 
     // Condicional e Narrativo: apenas informativo (exibido no card)
 }
+/* ===== FORMAT EQUATION PREVIEW ===== */
+function _formatEquationPreview(equacao) {
+    if (!Array.isArray(equacao) || equacao.length === 0) return '?';
+    // Check if any term uses min/max — format as menor(A, B) or maior(A, B)
+    const hasMinMax = equacao.some(t => t.op === 'min' || t.op === 'max');
+    if (hasMinMax && equacao.length > 1) {
+        const fnName = equacao[1].op === 'min' ? 'menor' : 'maior';
+        const parts = equacao.map(t => {
+            if (t.tipo === 'ficha') return `[${t.ref || '?'}]`;
+            return (t.valor ?? '?');
+        });
+        return `${fnName}(${parts.join(', ')})`;
+    }
+    let str = '';
+    for (let i = 0; i < equacao.length; i++) {
+        const t = equacao[i];
+        if (i > 0 && t.op) str += ` ${t.op} `;
+        if (t.tipo === 'ficha') str += `[${t.ref || '?'}]`;
+        else str += (t.valor ?? '?');
+    }
+    return equacao.length > 1 ? `(${str})` : str;
+}
 
 /* ===== GERAR TEXTO DE PREVIEW ===== */
 function generatePreviewText(mech) {
@@ -276,11 +474,44 @@ function generatePreviewText(mech) {
     const tipo = mech.tipo;
 
     if (tipo === 'modificar') {
+        if (Array.isArray(config.calculos) && config.calculos.length > 0) {
+            return config.calculos.map(c => {
+                const op = c.operacao || '+';
+                let val;
+                if (Array.isArray(c.equacao) && c.equacao.length > 0) {
+                    val = _formatEquationPreview(c.equacao);
+                } else if (c.valorTipo === 'ficha') {
+                    const mult = c.valorMultiplicador && c.valorMultiplicador !== 1 ? ` × ${c.valorMultiplicador}` : '';
+                    val = `[${c.valorRef || '?'}${mult}]`;
+                } else {
+                    val = c.valor ?? 0;
+                }
+                return `${op}${val} em ${c.alvo || '?'}`;
+            }).join('; ');
+        }
         const alvos = Array.isArray(config.alvo) ? config.alvo : [config.alvo];
         const alvosStr = alvos.filter(Boolean).join(', ');
         return `${config.operacao || '+'}${config.valor || 0} em ${alvosStr}`;
     }
     if (tipo === 'limitar') {
+        if (Array.isArray(config.calculos) && config.calculos.length > 0) {
+            return config.calculos.map(c => {
+                const alvo = c.alvo || '?';
+                if (c.tipoLimite === 'bloqueio') return `Bloqueio: ${alvo}`;
+                let val;
+                if (Array.isArray(c.equacao) && c.equacao.length > 0) {
+                    val = _formatEquationPreview(c.equacao);
+                } else if (c.valorTipo === 'ficha') {
+                    const mult = c.valorMultiplicador && c.valorMultiplicador !== 1 ? ` × ${c.valorMultiplicador}` : '';
+                    val = `[${c.valorRef || '?'}${mult}]`;
+                } else {
+                    val = c.valor ?? '?';
+                }
+                if (c.tipoLimite === 'maximo') return `${alvo} máximo ${val}`;
+                if (c.tipoLimite === 'minimo') return `${alvo} mínimo ${val}`;
+                return `Limite em ${alvo}`;
+            }).join('; ');
+        }
         if (config.tipoLimite === 'bloqueio') return `Bloqueio: ${config.alvo}`;
         if (config.tipoLimite === 'maximo') return `${config.alvo} máximo ${config.valorMaximo}`;
         if (config.tipoLimite === 'minimo') return `${config.alvo} mínimo ${config.valorMinimo}`;

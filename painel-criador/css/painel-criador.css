@@ -1818,3 +1818,246 @@ html.dark .multi-select-container {
     border-color: var(--primary);
     color: var(--primary) !important;
 }
+
+/* ===== CALC ROWS (Multi-calculation mechanic editor) ===== */
+.calc-row {
+    background: var(--chip);
+    border: 2px solid var(--soft);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 10px;
+    position: relative;
+    transition: border-color .15s;
+}
+
+.calc-row:hover {
+    border-color: var(--primary);
+}
+
+.calc-row-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--soft);
+}
+
+.calc-row-num {
+    font-size: .78rem;
+    font-weight: 800;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: .3px;
+}
+
+.calc-row-remove {
+    background: transparent;
+    border: 2px solid var(--danger);
+    color: var(--danger);
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: .8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .15s;
+    padding: 0;
+    line-height: 1;
+}
+
+.calc-row-remove:hover {
+    background: var(--danger);
+    color: #fff;
+}
+
+.calc-add-btn {
+    width: 100%;
+    padding: 10px;
+    border: 2px dashed var(--soft);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--primary);
+    font-weight: 800;
+    font-size: .82rem;
+    cursor: pointer;
+    transition: all .15s;
+    font-family: var(--font);
+    margin-top: 6px;
+}
+
+.calc-add-btn:hover {
+    border-color: var(--primary);
+    background: rgba(79, 110, 247, .06);
+}
+
+.calc-limit-valor-area {
+    margin-top: 10px;
+}
+
+/* ===== EQUATION BUILDER ===== */
+.eq-builder-section {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(79, 110, 247, .03);
+    border: 1px dashed var(--soft);
+    border-radius: 8px;
+}
+
+.eq-builder-label {
+    display: block;
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--muted);
+    margin-bottom: 8px;
+}
+
+.eq-terms-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.eq-term {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--chip);
+    border: 1px solid var(--soft);
+    border-radius: 8px;
+    padding: 5px 8px;
+    transition: border-color .15s;
+}
+
+.eq-term:hover {
+    border-color: var(--primary);
+}
+
+.eq-term-op {
+    width: 42px;
+    padding: 3px 2px;
+    border: 2px solid var(--primary);
+    border-radius: 6px;
+    font-size: .85rem;
+    font-weight: 900;
+    text-align: center;
+    background: rgba(79, 110, 247, .08);
+    color: var(--primary);
+    cursor: pointer;
+    font-family: var(--font);
+}
+
+.eq-term-tipo {
+    padding: 3px 6px;
+    border: 1px solid var(--soft);
+    border-radius: 6px;
+    font-size: .72rem;
+    font-weight: 700;
+    font-family: var(--font);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+}
+
+.eq-term-fixo-wrap input,
+.eq-term-ficha-wrap select {
+    padding: 3px 6px;
+    border: 1px solid var(--soft);
+    border-radius: 6px;
+    font-size: .78rem;
+    font-family: var(--font);
+    background: #fff;
+    color: var(--ink);
+}
+
+.eq-term-valor {
+    width: 60px;
+    text-align: center;
+}
+
+.eq-term-ref {
+    min-width: 90px;
+    max-width: 140px;
+}
+
+.eq-term-remove {
+    background: transparent;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: .65rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all .15s;
+    padding: 0;
+    line-height: 1;
+}
+
+.eq-term-remove:hover {
+    background: var(--danger);
+    color: #fff;
+}
+
+.eq-add-term-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border: 1px dashed var(--primary);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--primary);
+    font-weight: 700;
+    font-size: .72rem;
+    cursor: pointer;
+    transition: all .15s;
+    font-family: var(--font);
+}
+
+.eq-add-term-btn:hover {
+    background: rgba(79, 110, 247, .08);
+    border-style: solid;
+}
+
+/* Dark mode overrides */
+html.dark .eq-builder-section {
+    background: rgba(79, 110, 247, .04);
+    border-color: var(--line);
+}
+
+html.dark .eq-term {
+    background: #151829;
+    border-color: var(--line);
+}
+
+html.dark .eq-term-tipo,
+html.dark .eq-term-fixo-wrap input,
+html.dark .eq-term-ficha-wrap select {
+    background: #0f1120;
+    border-color: var(--line);
+    color: var(--ink);
+}
+
+html.dark .eq-term-op {
+    background: rgba(79, 110, 247, .15);
+}
+
+html.dark .calc-row {
+    background: #0f1120;
+    border-color: var(--line);
+}
+
+html.dark .calc-row:hover {
+    border-color: var(--primary);
+}

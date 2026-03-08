@@ -1,17 +1,23 @@
 /* ===== DERIVED VALUES — Cálculo Automático de Valores Derivados ===== */
 
+/* ===== FÓRMULAS DE VALORES DERIVADOS =====
+ * IMPORTANTE: Perícias NÃO participam das fórmulas base.
+ * Qualquer contribuição de perícia deve ser criada como
+ * mecânica no Painel de Criador (tipo Modificar → alvo derivado).
+ * Isso evita valores duplicados e garante flexibilidade total.
+ */
 const DERIVED_FORMULAS = {
-    VIT_MAX: (a, s, f) => (a.VIG + f.tamanho) * 3,
-    PERC: (a, s, f) => a.RAC + a.PRE,
-    INI: (a, s, f) => a.RAC + a.DES + a.AUT + s.agilidade - f.tamanho,
-    DET_MAX: (a, s, f) => a.PRS + a.AUT,
-    REA: (a, s, f) => Math.min(a.DES, a.RAC) + s.agilidade,
-    DESLOC_T: (a, s, f) => a.FOR + a.DES + f.tamanho + s.agilidade,
-    DESLOC_A: (a, s, f) => Math.floor((a.FOR + a.DES + f.tamanho + s.atletismo) / 3),
-    DESLOC_AR: (a, s, f) => a.FOR + a.DES + f.tamanho + s.atletismo,
-    DESLOC_V: (a, s, f) => Math.min(a.FOR, s.atletismo),
-    SAN_MAX: (a, s, f) => (a.INT + a.AUT + a.PRS) * 2 - (s.abismo * 2),
-    CARGA: (a, s, f) => a.FOR + a.VIG,
+    VIT_MAX: (a, f) => (a.VIG + f.tamanho) * 3,
+    PERC: (a, f) => a.RAC + a.PRE,
+    INI: (a, f) => a.RAC + a.DES + a.AUT - f.tamanho,
+    DET_MAX: (a, f) => a.PRS + a.AUT,
+    REA: (a, f) => Math.min(a.DES, a.RAC),
+    DESLOC_T: (a, f) => a.FOR + a.DES + f.tamanho,
+    DESLOC_A: (a, f) => Math.floor((a.FOR + a.DES + f.tamanho) / 3),
+    DESLOC_AR: (a, f) => a.FOR + a.DES + f.tamanho,
+    DESLOC_V: (a, f) => 0,
+    SAN_MAX: (a, f) => (a.INT + a.AUT + a.PRS) * 2,
+    CARGA: (a, f) => a.FOR + a.VIG,
 };
 
 /* Mapa: campo derivado → { display, atual (se aplicável) } */
@@ -47,14 +53,6 @@ function gatherAttributes() {
     };
 }
 
-function gatherDerivedSkills() {
-    return {
-        agilidade: getEffectiveDotValue('sk_fisico_agilidade'),
-        atletismo: getEffectiveDotValue('sk_fisico_atletismo'),
-        abismo: getEffectiveDotValue('sk_mental_abismo'),
-    };
-}
-
 function gatherDerivedFields() {
     const tamEl = document.querySelector('[data-key="tamanho"]');
     return {
@@ -64,22 +62,34 @@ function gatherDerivedFields() {
 
 function recalcAll() {
     const attrs = gatherAttributes();
-    const skills = gatherDerivedSkills();
     const fields = gatherDerivedFields();
     const bonuses = state.mechanicBonuses || {};
     const limits = state.mechanicLimits || {};
 
     for (const [key, formula] of Object.entries(DERIVED_FORMULAS)) {
-        let value = formula(attrs, skills, fields);
+        let value = formula(attrs, fields);
 
         // Aplicar bônus de mecânicas para este derivado
         const bonusKey = `DERIVED:${key}`;
+
+        // "Definir fixo" (=) — overrides the base formula entirely
+        const setKey = `SET:${bonusKey}`;
+        if (bonuses[setKey] !== undefined) {
+            value = bonuses[setKey];
+        }
+
         value += (bonuses[bonusKey] || 0);
 
         // Aplicar multiplicadores de mecânicas (ex: Yotun dobra carga)
         const multKey = `MULT:DERIVED:${key}`;
         if (bonuses[multKey]) {
             value = Math.floor(value * bonuses[multKey]);
+        }
+
+        // Aplicar divisores de mecânicas (÷)
+        const divKey = `DIV:${bonusKey}`;
+        if (bonuses[divKey] && bonuses[divKey] !== 0) {
+            value = Math.floor(value / bonuses[divKey]);
         }
 
         // Aplicar limites de mecânicas
@@ -114,17 +124,22 @@ function recalcAll() {
 
     // Coletar bônus agrupados por campo
     const fieldBonuses = {};
+    const fieldSets = {};   // SET: overrides for field targets
     for (const [bonusKey, bonusVal] of Object.entries(bonuses)) {
-        if (!bonusKey.startsWith('field:')) continue;
-        if (!bonusVal || bonusVal === 0) continue;
-        const dataKey = bonusKey.slice(6);
-        fieldBonuses[dataKey] = (fieldBonuses[dataKey] || 0) + bonusVal;
+        if (bonusKey.startsWith('field:')) {
+            if (!bonusVal || bonusVal === 0) continue;
+            const dataKey = bonusKey.slice(6);
+            fieldBonuses[dataKey] = (fieldBonuses[dataKey] || 0) + bonusVal;
+        } else if (bonusKey.startsWith('SET:field:')) {
+            const dataKey = bonusKey.slice(10);
+            fieldSets[dataKey] = bonusVal;
+        }
     }
 
     // Resetar campos que tinham bônus mas agora não têm mais
     document.querySelectorAll('[data-mechanic-field-bonus]').forEach(el => {
         const dk = el.dataset.key;
-        if (!dk || fieldBonuses[dk] !== undefined) return; // ainda tem bônus, será tratado abaixo
+        if (!dk || fieldBonuses[dk] !== undefined || fieldSets[dk] !== undefined) return; // ainda tem bônus/set, será tratado abaixo
         // Bônus removido: restaurar valor base
         if (state.fieldBaseValues[dk] !== undefined) {
             el.value = state.fieldBaseValues[dk];
@@ -161,6 +176,21 @@ function recalcAll() {
         el.value = baseVal + bonus;
         el.setAttribute('data-mechanic-field-bonus', 'true');
         state.appliedFieldBonuses[dataKey] = bonus;
+    }
+
+    // Aplicar SET: overrides (= Definir fixo) para campos DOM
+    for (const [dataKey, setVal] of Object.entries(fieldSets)) {
+        const el = document.querySelector(`[data-key="${dataKey}"]`);
+        if (!el) continue;
+        // Capture base value if not already captured
+        if (state.fieldBaseValues[dataKey] === undefined) {
+            state.fieldBaseValues[dataKey] = parseFloat(el.value) || 0;
+        }
+        // SET ignores base — applies the equation value directly, plus any additive bonus
+        const bonus = fieldBonuses[dataKey] || 0;
+        el.value = setVal + bonus;
+        el.setAttribute('data-mechanic-field-bonus', 'true');
+        state.appliedFieldBonuses[dataKey] = setVal + bonus;
     }
 
     // Aplicar bônus de mecânicas visualmente nos dots (sk_* e attr_*)
@@ -206,7 +236,7 @@ function updateDerivedField(key, value) {
     // Atualizar campo display (readonly)
     const displayEl = document.getElementById(mapping.display);
     if (displayEl) {
-        displayEl.value = value;
+        displayEl.value = Number.isInteger(value) ? value : parseFloat(value.toFixed(1));
     }
 
     // Se tem campo ATUAL, validar que não excede o MAX

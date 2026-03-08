@@ -28,6 +28,11 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
         // Fallback: sem tipo detectado, permite livremente (não deveria acontecer)
         state.dots[k] = newLevel;
         refreshDots(container, k); scheduleAutosave();
+        // Re-evaluate all mechanics (equations may reference this dot value)
+        if (typeof applyAllRaceMechanics === 'function') {
+            const raca = document.getElementById('selRaca')?.value;
+            applyAllRaceMechanics(raca);
+        }
         if (typeof recalcAll === 'function') recalcAll();
         if (typeof recalcMainTests === 'function') recalcMainTests();
         return;
@@ -47,6 +52,11 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
         state.dots[k] = newLevel;
         refreshDots(container, k);
         scheduleAutosave();
+        // Re-evaluate all mechanics (equations may reference this dot value)
+        if (typeof applyAllRaceMechanics === 'function') {
+            const raca = document.getElementById('selRaca')?.value;
+            applyAllRaceMechanics(raca);
+        }
         if (typeof recalcAll === 'function') recalcAll();
         if (typeof recalcMainTests === 'function') recalcMainTests();
         showUpgradeSuccess(label, newLevel, check.cost);
@@ -91,11 +101,12 @@ function createDotsHTML(k, specName) {
 }
 
 function initSkills() {
-    renderBlock('skillsMental', SKILLS.mental || [], 'sk_mental_');
-    renderBlock('skillsFisico', SKILLS.fisico || [], 'sk_fisico_');
-    renderBlock('skillsSocial', SKILLS.social || [], 'sk_social_');
-    renderBlock('skillsCombate', SKILLS.combate || [], 'sk_combate_');
-    renderBlock('skillsExclusivo', SKILLS.exclusivo || [], 'sk_exclusivo_');
+    const filterUniversal = (arr) => (arr || []).filter(s => s.todoPersonagem !== false);
+    renderBlock('skillsMental', filterUniversal(SKILLS.mental), 'sk_mental_');
+    renderBlock('skillsFisico', filterUniversal(SKILLS.fisico), 'sk_fisico_');
+    renderBlock('skillsSocial', filterUniversal(SKILLS.social), 'sk_social_');
+    renderBlock('skillsCombate', filterUniversal(SKILLS.combate), 'sk_combate_');
+    renderBlock('skillsExclusivo', filterUniversal(SKILLS.exclusivo), 'sk_exclusivo_');
 }
 function renderBlock(id, skills, pfx) {
     const c = document.getElementById(id);

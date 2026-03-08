@@ -197,7 +197,9 @@ function buildSkillsFromFirebase() {
             sub: sub,
             descricao: s.descricao || '',
             custoEvolucao: s.custoEvolucao || 4,
-            id: s.id
+            id: s.id,
+            mecanicaIds: Array.isArray(s.mecanicaIds) ? s.mecanicaIds : [],
+            todoPersonagem: s.todoPersonagem !== false  // Default true for backward compat
         });
 
         // Build SKILL_LIMITERS
