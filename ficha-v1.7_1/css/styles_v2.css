@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     --bg: #0b0c10;
     --bg-gradient: linear-gradient(180deg, #0b0c10, #111827);
     --paper: #ffffff;
@@ -2646,4 +2646,71 @@ html.dark .pec-condicao {
 
 html.dark .pec-capacidade {
     color: #818cf8;
+}
+
+/* ===== DERIVED VALUES — Dynamic Grid Labels + Tooltip ===== */
+.dv-label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .2px;
+    text-transform: uppercase;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dv-label.has-tooltip {
+    cursor: help;
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--muted);
+    text-underline-offset: 2px;
+}
+
+.dv-tooltip {
+    position: fixed;
+    z-index: 99999;
+    max-width: 320px;
+    min-width: 180px;
+    background: #1e293b;
+    color: #e2e8f0;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    font-size: 12px;
+    line-height: 1.5;
+    font-family: var(--font);
+    pointer-events: none;
+    animation: dvTooltipIn .15s ease-out;
+}
+
+.dv-tooltip-desc {
+    margin-bottom: 8px;
+    color: #cbd5e1;
+}
+
+.dv-tooltip-mechs {
+    border-top: 1px solid #374151;
+    padding-top: 8px;
+}
+
+.dv-tooltip-mechs-title {
+    font-weight: 700;
+    font-size: 11px;
+    margin-bottom: 4px;
+    color: #93c5fd;
+}
+
+.dv-tooltip-mech-item {
+    font-size: 11px;
+    color: #94a3b8;
+    padding-left: 4px;
+    margin-bottom: 2px;
+}
+
+@keyframes dvTooltipIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
 }

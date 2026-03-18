@@ -1,39 +1,28 @@
 /* ===== DERIVED VALUES — Cálculo Automático de Valores Derivados ===== */
 
-/* ===== FÓRMULAS DE VALORES DERIVADOS =====
- * IMPORTANTE: Perícias NÃO participam das fórmulas base.
- * Qualquer contribuição de perícia deve ser criada como
- * mecânica no Painel de Criador (tipo Modificar → alvo derivado).
- * Isso evita valores duplicados e garante flexibilidade total.
+/* ===== FÓRMULAS DE STATUS VITAIS (hardcoded — campos fixos no HTML) =====
+ * Apenas VIT_MAX, DET_MAX e SAN_MAX permanecem aqui pois possuem
+ * campos atual/max fixos no HTML. Todos os outros valores derivados
+ * são gerenciados exclusivamente pelo Firebase (Painel de Criador).
  */
 const DERIVED_FORMULAS = {
-    VIT_MAX: (a, f) => (a.VIG + f.tamanho) * 3,
-    PERC: (a, f) => a.RAC + a.PRE,
-    INI: (a, f) => a.RAC + a.DES + a.AUT - f.tamanho,
-    DET_MAX: (a, f) => a.PRS + a.AUT,
-    REA: (a, f) => Math.min(a.DES, a.RAC),
-    DESLOC_T: (a, f) => a.FOR + a.DES + f.tamanho,
-    DESLOC_A: (a, f) => Math.floor((a.FOR + a.DES + f.tamanho) / 3),
-    DESLOC_AR: (a, f) => a.FOR + a.DES + f.tamanho,
-    DESLOC_V: (a, f) => 0,
-    SAN_MAX: (a, f) => (a.INT + a.AUT + a.PRS) * 2,
-    CARGA: (a, f) => a.FOR + a.VIG,
+    VIT_MAX: (a) => (a.VIG) * 3,
+    DET_MAX: (a) => a.PRS + a.AUT,
+    SAN_MAX: (a) => (a.INT + a.AUT + a.PRS) * 2,
 };
 
-/* Mapa: campo derivado → { display, atual (se aplicável) } */
+/* Mapa: campo derivado → { display, atual (se aplicável) }
+ * Usado APENAS para os "Status Vitais" que ficam hardcoded no HTML
+ * (VIT_MAX, DET_MAX, SAN_MAX) — a seção dinâmica usa IDs gerados.
+ */
 const DERIVED_FIELDS_MAP = {
     VIT_MAX: { display: 'vit_max_display', atual: 'vit_atual' },
     DET_MAX: { display: 'det_max_display', atual: 'det_atual' },
     SAN_MAX: { display: 'san_max_display', atual: 'san_atual' },
-    PERC: { display: 'perc_display' },
-    INI: { display: 'ini_display' },
-    REA: { display: 'rea_display' },
-    DESLOC_T: { display: 'desloc_t_display' },
-    DESLOC_A: { display: 'desloc_a_display' },
-    DESLOC_AR: { display: 'desloc_ar_display' },
-    DESLOC_V: { display: 'desloc_v_display' },
-    CARGA: { display: 'carga_display' },
 };
+
+/* ===== KEYS de derivados que são renderizados dinamicamente na grid ===== */
+let _dynamicDerivedKeys = new Set();
 
 function getEffectiveDotValue(key) {
     return (state.dots[key] || 0) + (state.mechanicBonuses?.[key] || 0);
@@ -54,56 +43,257 @@ function gatherAttributes() {
 }
 
 function gatherDerivedFields() {
-    const tamEl = document.querySelector('[data-key="tamanho"]');
-    return {
-        tamanho: parseInt(tamEl ? tamEl.value : '0', 10) || 0,
-    };
+    return {};
 }
 
+/* ===== RENDER DERIVED VALUES GRID (DYNAMIC FROM FIREBASE) ===== */
+
+/**
+ * Renderiza a grid de Valores Derivados baseada nos dados do Firebase.
+ * Filtra por: todoPersonagem=true OU vinculado à raça/classe selecionada.
+ */
+function renderDerivedValuesGrid() {
+    const grid = document.getElementById('derivedValuesGrid');
+    if (!grid) return;
+
+    const allDVs = window.DERIVED_VALUES || [];
+    if (allDVs.length === 0) {
+        // Fallback: se não há valores no Firebase, não renderizar nada
+        grid.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:8px">Nenhum valor derivado cadastrado.</div>';
+        _dynamicDerivedKeys = new Set();
+        return;
+    }
+
+    // Determinar quais DVs são aplicáveis ao personagem
+    const racaNome = document.getElementById('selRaca')?.value || '';
+    const classeNome = document.getElementById('selClasse')?.value || '';
+
+    // IDs de valores derivados vinculados à raça selecionada
+    const raceDVIds = new Set();
+    if (racaNome && window._systemData?.races) {
+        const raceData = window._systemData.races.find(r => r.nome === racaNome);
+        if (raceData?.derivedValueIds) {
+            raceData.derivedValueIds.forEach(id => raceDVIds.add(id));
+        }
+    }
+
+    // IDs de valores derivados vinculados à classe selecionada
+    const classDVIds = new Set();
+    if (classeNome && window._systemData?.classes) {
+        const classData = window._systemData.classes.find(c => c.nome === classeNome);
+        if (classData?.derivedValueIds) {
+            classData.derivedValueIds.forEach(id => classDVIds.add(id));
+        }
+    }
+
+    // Filtrar: universais OU vinculados à raça/classe
+    const applicableDVs = allDVs.filter(dv =>
+        dv.todoPersonagem || raceDVIds.has(dv.id) || classDVIds.has(dv.id)
+    );
+
+    // Ordenar por ordem
+    applicableDVs.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
+
+    // Rastrear keys dinâmicos
+    _dynamicDerivedKeys = new Set(applicableDVs.map(dv => dv.key));
+
+    // Renderizar grid
+    grid.innerHTML = '';
+
+    applicableDVs.forEach(dv => {
+        const miniField = document.createElement('div');
+        miniField.className = 'mini-field';
+        miniField.dataset.dvId = dv.id;
+        miniField.dataset.dvKey = dv.key;
+
+        // Label com ícone + nome curto
+        const label = document.createElement('label');
+        label.className = 'dv-label';
+        if (dv.descricao || (dv.mechPreviews && dv.mechPreviews.length)) {
+            label.classList.add('has-tooltip');
+        }
+        label.textContent = `${dv.icone} ${dv.nome}`;
+        label.dataset.dvId = dv.id;
+
+        // Input
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = `dv_${dv.key}_display`;
+        input.className = 'derived-field';
+        input.value = '0';
+
+        if (!dv.campoEditavel) {
+            if (window.isCreator) {
+                // Criador pode editar qualquer campo — destaque visual
+                input.style.border = '2px solid #f59e0b';
+                input.title = '🛡️ Modo Criador: edição livre';
+                // Salvar override quando Criador editar manualmente
+                input.addEventListener('input', () => {
+                    if (!state.derivedOverrides) state.derivedOverrides = {};
+                    state.derivedOverrides[dv.key] = input.value;
+                    if (typeof scheduleAutosave === 'function') scheduleAutosave();
+                });
+            } else {
+                input.readOnly = true;
+            }
+        }
+
+        miniField.appendChild(label);
+        miniField.appendChild(input);
+        grid.appendChild(miniField);
+    });
+
+    // Setup tooltips after rendering
+    initDerivedTooltips();
+}
+
+/* ===== TOOLTIPS FLUTUANTES ===== */
+
+let _dvTooltipEl = null;
+
+function initDerivedTooltips() {
+    // Criar tooltip global se não existir
+    if (!_dvTooltipEl) {
+        _dvTooltipEl = document.createElement('div');
+        _dvTooltipEl.className = 'dv-tooltip';
+        _dvTooltipEl.style.display = 'none';
+        document.body.appendChild(_dvTooltipEl);
+    }
+
+    // Vincular eventos nos labels
+    document.querySelectorAll('.dv-label.has-tooltip').forEach(label => {
+        label.addEventListener('mouseenter', showDvTooltip);
+        label.addEventListener('mouseleave', hideDvTooltip);
+        label.addEventListener('touchstart', showDvTooltip, { passive: true });
+    });
+}
+
+function showDvTooltip(e) {
+    const label = e.currentTarget;
+    const dvId = label.dataset.dvId;
+    const dv = (window.DERIVED_VALUES || []).find(d => d.id === dvId);
+    if (!dv || !_dvTooltipEl) return;
+
+    // Montar conteúdo do tooltip
+    let html = '';
+    if (dv.descricao) {
+        html += `<div class="dv-tooltip-desc">${_escHtml(dv.descricao)}</div>`;
+    }
+    if (dv.mechPreviews && dv.mechPreviews.length) {
+        html += '<div class="dv-tooltip-mechs">';
+        html += '<div class="dv-tooltip-mechs-title">⚙️ Mecânicas Vinculadas:</div>';
+        dv.mechPreviews.forEach(preview => {
+            html += `<div class="dv-tooltip-mech-item">• ${_escHtml(preview)}</div>`;
+        });
+        html += '</div>';
+    }
+
+    if (!html) return;
+
+    _dvTooltipEl.innerHTML = html;
+    _dvTooltipEl.style.display = 'block';
+
+    // Posicionar
+    const rect = label.getBoundingClientRect();
+    _dvTooltipEl.style.left = rect.left + 'px';
+    _dvTooltipEl.style.top = (rect.bottom + 6) + 'px';
+
+    // Ajustar se sair da tela
+    requestAnimationFrame(() => {
+        const tipRect = _dvTooltipEl.getBoundingClientRect();
+        if (tipRect.right > window.innerWidth - 10) {
+            _dvTooltipEl.style.left = (window.innerWidth - tipRect.width - 10) + 'px';
+        }
+        if (tipRect.bottom > window.innerHeight - 10) {
+            _dvTooltipEl.style.top = (rect.top - tipRect.height - 6) + 'px';
+        }
+    });
+}
+
+function hideDvTooltip() {
+    if (_dvTooltipEl) _dvTooltipEl.style.display = 'none';
+}
+
+function _escHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+}
+
+/* ===== RECALC ALL — Combina fórmulas hardcoded + dinâmicas ===== */
+
 function recalcAll() {
+    // Re-avaliar equações de mecânicas de valores derivados com valores atuais
+    // Algumas mecânicas vinculadas a DVs usam equações com referências à ficha
+    // (atributos, perícias) e precisam ser recalculadas a cada chamada de recalcAll
+    if (typeof resolveDerivedValueMechanicsLive === 'function'
+        && typeof _getDerivedMechKeys === 'function') {
+        // Limpar apenas as chaves DERIVED: que são gerenciadas dinamicamente
+        const keysToReset = _getDerivedMechKeys();
+        const bonuses = state.mechanicBonuses || {};
+        for (const key of keysToReset) {
+            delete bonuses[key];
+            delete bonuses['SET:' + key];
+            delete bonuses['MULT:' + key];
+            delete bonuses['DIV:' + key];
+        }
+        // Re-resolver equações dinâmicas com valores atuais de state.dots
+        resolveDerivedValueMechanicsLive();
+    }
+
     const attrs = gatherAttributes();
-    const fields = gatherDerivedFields();
     const bonuses = state.mechanicBonuses || {};
     const limits = state.mechanicLimits || {};
 
+    // 1) Calcular derivados com fórmulas hardcoded (fallback para Status Vitais)
     for (const [key, formula] of Object.entries(DERIVED_FORMULAS)) {
-        let value = formula(attrs, fields);
+        // Se este key está renderizado na grid dinâmica, pular o fallback
+        // (será calculado apenas pelas mecânicas vinculadas)
+        if (_dynamicDerivedKeys.has(key)) continue;
 
-        // Aplicar bônus de mecânicas para este derivado
-        const bonusKey = `DERIVED:${key}`;
+        // Só calcular se tem campo de display (Status Vitais)
+        if (!DERIVED_FIELDS_MAP[key]) continue;
 
-        // "Definir fixo" (=) — overrides the base formula entirely
-        const setKey = `SET:${bonusKey}`;
-        if (bonuses[setKey] !== undefined) {
-            value = bonuses[setKey];
-        }
-
-        value += (bonuses[bonusKey] || 0);
-
-        // Aplicar multiplicadores de mecânicas (ex: Yotun dobra carga)
-        const multKey = `MULT:DERIVED:${key}`;
-        if (bonuses[multKey]) {
-            value = Math.floor(value * bonuses[multKey]);
-        }
-
-        // Aplicar divisores de mecânicas (÷)
-        const divKey = `DIV:${bonusKey}`;
-        if (bonuses[divKey] && bonuses[divKey] !== 0) {
-            value = Math.floor(value / bonuses[divKey]);
-        }
-
-        // Aplicar limites de mecânicas
-        const limit = limits[bonusKey];
-        if (limit) {
-            if (limit.tipo === 'bloqueio') value = 0;
-            if (limit.tipo === 'maximo' && limit.max != null) value = Math.min(value, limit.max);
-            if (limit.tipo === 'minimo' && limit.min != null) value = Math.max(value, limit.min);
-        }
-
+        let value = formula(attrs);
+        value = _applyMechanicModifiers(key, value, bonuses, limits);
         updateDerivedField(key, value);
     }
 
-    // Aplicar limites em atributos (ex: Pogo FOR max 3)
+    // 2) Calcular valores derivados dinâmicos (Firebase-driven)
+    for (const dvKey of _dynamicDerivedKeys) {
+        // Se Criador fez override manual, preservar o valor editado
+        const overrideVal = state.derivedOverrides?.[dvKey];
+        if (overrideVal !== undefined && overrideVal !== '') {
+            const displayEl = document.getElementById(`dv_${dvKey}_display`);
+            if (displayEl && displayEl.value !== String(overrideVal)) {
+                displayEl.value = overrideVal;
+            }
+            if (!state.derived) state.derived = {};
+            state.derived[dvKey] = parseFloat(overrideVal) || 0;
+            continue;
+        }
+
+        let value = 0;
+
+        // Se existe fórmula hardcoded para este key, usar como base
+        if (DERIVED_FORMULAS[dvKey]) {
+            value = DERIVED_FORMULAS[dvKey](attrs, fields);
+        }
+
+        value = _applyMechanicModifiers(dvKey, value, bonuses, limits);
+
+        // Atualizar campo na grid dinâmica
+        const displayEl = document.getElementById(`dv_${dvKey}_display`);
+        if (displayEl) {
+            displayEl.value = Number.isInteger(value) ? value : parseFloat(value.toFixed(1));
+        }
+
+        // Guardar em state.derived para referências cruzadas
+        if (!state.derived) state.derived = {};
+        state.derived[dvKey] = value;
+    }
+
+    // 3) Aplicar limites em atributos (ex: Pogo FOR max 3)
     for (const [field, limit] of Object.entries(limits)) {
         if (field.startsWith('attr_')) {
             const currentVal = state.dots[field] || 0;
@@ -115,16 +305,59 @@ function recalcAll() {
         }
     }
 
-    // Aplicar bônus de mecânicas em campos DOM (field:xxx, ex: blindagem, tamanho)
-    // Usa state.appliedFieldBonuses para rastrear bônus já aplicados.
-    // Só atualiza o campo quando o bônus de mecânica MUDA (ex: level-up).
-    // Se o bônus é o mesmo, o campo não é tocado — preservando edições manuais do usuário.
+    // 4) Aplicar bônus de mecânicas em campos DOM (field:xxx, ex: blindagem, tamanho)
+    _applyFieldBonuses(bonuses);
+
+    // 5) Aplicar bônus visuais nos dots
+    applyMechanicBonusesToDots();
+}
+
+/**
+ * Aplica modificadores de mecânicas (bônus, mult, div, set, limites) a um valor derivado.
+ */
+function _applyMechanicModifiers(key, value, bonuses, limits) {
+    const bonusKey = `DERIVED:${key}`;
+
+    // "Definir fixo" (=) — overrides the base formula entirely
+    const setKey = `SET:${bonusKey}`;
+    if (bonuses[setKey] !== undefined) {
+        value = bonuses[setKey];
+    }
+
+    value += (bonuses[bonusKey] || 0);
+
+    // Multiplicadores de mecânicas
+    const multKey = `MULT:DERIVED:${key}`;
+    if (bonuses[multKey]) {
+        value = Math.floor(value * bonuses[multKey]);
+    }
+
+    // Divisores
+    const divKey = `DIV:${bonusKey}`;
+    if (bonuses[divKey] && bonuses[divKey] !== 0) {
+        value = Math.floor(value / bonuses[divKey]);
+    }
+
+    // Limites
+    const limit = limits[bonusKey];
+    if (limit) {
+        if (limit.tipo === 'bloqueio') value = 0;
+        if (limit.tipo === 'maximo' && limit.max != null) value = Math.min(value, limit.max);
+        if (limit.tipo === 'minimo' && limit.min != null) value = Math.max(value, limit.min);
+    }
+
+    return value;
+}
+
+/**
+ * Aplica bônus de mecânicas em campos DOM (field:xxx).
+ */
+function _applyFieldBonuses(bonuses) {
     if (!state.fieldBaseValues) state.fieldBaseValues = {};
     if (!state.appliedFieldBonuses) state.appliedFieldBonuses = {};
 
-    // Coletar bônus agrupados por campo
     const fieldBonuses = {};
-    const fieldSets = {};   // SET: overrides for field targets
+    const fieldSets = {};
     for (const [bonusKey, bonusVal] of Object.entries(bonuses)) {
         if (bonusKey.startsWith('field:')) {
             if (!bonusVal || bonusVal === 0) continue;
@@ -136,11 +369,10 @@ function recalcAll() {
         }
     }
 
-    // Resetar campos que tinham bônus mas agora não têm mais
+    // Resetar campos sem bônus
     document.querySelectorAll('[data-mechanic-field-bonus]').forEach(el => {
         const dk = el.dataset.key;
-        if (!dk || fieldBonuses[dk] !== undefined || fieldSets[dk] !== undefined) return; // ainda tem bônus/set, será tratado abaixo
-        // Bônus removido: restaurar valor base
+        if (!dk || fieldBonuses[dk] !== undefined || fieldSets[dk] !== undefined) return;
         if (state.fieldBaseValues[dk] !== undefined) {
             el.value = state.fieldBaseValues[dk];
         }
@@ -148,72 +380,54 @@ function recalcAll() {
         delete state.appliedFieldBonuses[dk];
     });
 
-    // Aplicar bônus atuais — MAS só se o bônus mudou
+    // Aplicar bônus atuais
     for (const [dataKey, bonus] of Object.entries(fieldBonuses)) {
         const el = document.querySelector(`[data-key="${dataKey}"]`);
         if (!el) continue;
-
         const previousBonus = state.appliedFieldBonuses[dataKey];
-
-        // Se o bônus é idêntico ao já aplicado, NÃO tocar no campo
-        // → preserva edições manuais do usuário
         if (previousBonus !== undefined && previousBonus === bonus) {
             el.setAttribute('data-mechanic-field-bonus', 'true');
             continue;
         }
-
-        // Bônus mudou (ou é novo): capturar base e recalcular
         if (state.fieldBaseValues[dataKey] === undefined) {
-            // Se tinha bônus anterior, subtrair para achar o base
             if (previousBonus !== undefined) {
                 state.fieldBaseValues[dataKey] = (parseFloat(el.value) || 0) - previousBonus;
             } else {
                 state.fieldBaseValues[dataKey] = parseFloat(el.value) || 0;
             }
         }
-
         const baseVal = state.fieldBaseValues[dataKey];
         el.value = baseVal + bonus;
         el.setAttribute('data-mechanic-field-bonus', 'true');
         state.appliedFieldBonuses[dataKey] = bonus;
     }
 
-    // Aplicar SET: overrides (= Definir fixo) para campos DOM
+    // SET: overrides
     for (const [dataKey, setVal] of Object.entries(fieldSets)) {
         const el = document.querySelector(`[data-key="${dataKey}"]`);
         if (!el) continue;
-        // Capture base value if not already captured
         if (state.fieldBaseValues[dataKey] === undefined) {
             state.fieldBaseValues[dataKey] = parseFloat(el.value) || 0;
         }
-        // SET ignores base — applies the equation value directly, plus any additive bonus
         const bonus = fieldBonuses[dataKey] || 0;
         el.value = setVal + bonus;
         el.setAttribute('data-mechanic-field-bonus', 'true');
         state.appliedFieldBonuses[dataKey] = setVal + bonus;
     }
-
-    // Aplicar bônus de mecânicas visualmente nos dots (sk_* e attr_*)
-    applyMechanicBonusesToDots();
 }
 
 /**
  * Aplica visualmente os bônus de mecânicas (sk_* e attr_*) nos dots.
- * Dots de bônus recebem a classe 'bonus' para destaque visual.
  */
 function applyMechanicBonusesToDots() {
     const bonuses = state.mechanicBonuses || {};
-
     for (const [key, bonus] of Object.entries(bonuses)) {
         if (!key.startsWith('sk_') && !key.startsWith('attr_')) continue;
         if (!bonus || bonus === 0) continue;
-
         const container = document.querySelector(`.dots5[data-attr="${key}"]`);
         if (!container) continue;
-
         const baseVal = state.dots[key] || 0;
         const effectiveVal = baseVal + bonus;
-
         container.querySelectorAll('.dot').forEach(d => {
             const val = +d.dataset.val;
             if (val <= baseVal) {
@@ -228,18 +442,15 @@ function applyMechanicBonusesToDots() {
     }
 }
 
-
 function updateDerivedField(key, value) {
     const mapping = DERIVED_FIELDS_MAP[key];
     if (!mapping) return;
 
-    // Atualizar campo display (readonly)
     const displayEl = document.getElementById(mapping.display);
     if (displayEl) {
         displayEl.value = Number.isInteger(value) ? value : parseFloat(value.toFixed(1));
     }
 
-    // Se tem campo ATUAL, validar que não excede o MAX
     if (mapping.atual) {
         const atualEl = document.querySelector(`[data-key="${mapping.atual}"]`);
         if (atualEl) {
@@ -250,6 +461,10 @@ function updateDerivedField(key, value) {
             }
         }
     }
+
+    // Guardar em state.derived
+    if (!state.derived) state.derived = {};
+    state.derived[key] = value;
 }
 
 /* Validação: ATUAL ≤ MAX ao digitar */
@@ -257,7 +472,6 @@ function validateAtualField(atualKey, maxDisplayId) {
     const atualEl = document.querySelector(`[data-key="${atualKey}"]`);
     const maxEl = document.getElementById(maxDisplayId);
     if (!atualEl || !maxEl) return;
-
     atualEl.addEventListener('input', () => {
         const maxVal = parseInt(maxEl.value, 10) || 0;
         const curVal = parseInt(atualEl.value, 10);
@@ -267,22 +481,13 @@ function validateAtualField(atualKey, maxDisplayId) {
     });
 }
 
-/* Inicializar listeners em campos fonte */
+/* Inicializar listeners e renderizar grid dinâmica */
 function initDerivedListeners() {
-    // Validação de campos ATUAL ≤ MAX
+    // Validação de campos ATUAL ≤ MAX (Status Vitais hardcoded)
     validateAtualField('vit_atual', 'vit_max_display');
     validateAtualField('det_atual', 'det_max_display');
     validateAtualField('san_atual', 'san_max_display');
 
-    // Listener no campo Tamanho
-    const tamEl = document.querySelector('[data-key="tamanho"]');
-    if (tamEl) {
-        tamEl.addEventListener('input', recalcAll);
-        tamEl.addEventListener('change', recalcAll);
-    }
-
-    // Listener no campo Blindagem: quando o usuário editar manualmente,
-    // NÃO atualizar fieldBaseValues — o valor manual será preservado até
-    // que uma mecânica force recálculo (level-up de peculiaridade).
-    // A edição manual do usuário é salva diretamente pelo autosave normal.
+    // Renderizar grid dinâmica de valores derivados
+    renderDerivedValuesGrid();
 }

@@ -13,6 +13,26 @@ window._raceBonuses = window._raceBonuses || {
     desloc_ar_override: false
 };
 
+/**
+ * Define o valor de Tamanho no state.derived e atualiza o display.
+ * Resolve a key dinâmica do Valor Derivado "Tamanho" (vem do Firebase).
+ */
+function _setDerivedTamanho(valor) {
+    if (!state.derived) state.derived = {};
+    const numVal = parseFloat(String(valor).replace(',', '.')) || 0;
+
+    // Encontrar a key dinâmica do Valor Derivado "Tamanho"
+    const dvTamanho = (window.DERIVED_VALUES || []).find(d => d.nome === 'Tamanho');
+    if (dvTamanho) {
+        state.derived[dvTamanho.key] = numVal;
+        // Atualizar display na grid
+        const displayEl = document.getElementById(`dv_${dvTamanho.key}_display`);
+        if (displayEl) {
+            displayEl.value = Number.isInteger(numVal) ? numVal : parseFloat(numVal.toFixed(1));
+        }
+    }
+}
+
 function onRaceChange() {
     const selRaca = document.getElementById('selRaca');
     if (!selRaca) return;
@@ -23,7 +43,6 @@ function onRaceChange() {
 
     // Atualizar subtitulo da raça
     const subtitleEl = document.getElementById('raceSubtitle');
-    const tamanhoInput = document.querySelector('[data-key="tamanho"]');
     const grid = document.getElementById('peculiaridadesGrid');
 
     if (!grid) return;
@@ -31,7 +50,8 @@ function onRaceChange() {
 
     if (!racaNome || racaNome === '') {
         if (subtitleEl) subtitleEl.textContent = '';
-        if (tamanhoInput) tamanhoInput.value = '';
+        // Limpar tamanho do state.derived
+        _setDerivedTamanho(0);
         const hint = document.createElement('div');
         hint.className = 'hint-text';
         hint.id = 'raceHint';
@@ -49,7 +69,7 @@ function onRaceChange() {
     if (!raca) return;
 
     // Preencher tamanho e subtítulo
-    if (tamanhoInput) tamanhoInput.value = raca.tamanho;
+    _setDerivedTamanho(raca.tamanho);
     if (subtitleEl) subtitleEl.textContent = raca.subtitulo || '';
 
     // Renderizar peculiaridades
@@ -66,19 +86,15 @@ function onRaceChange() {
     if (typeof applyAllRaceMechanics === 'function') applyAllRaceMechanics(racaNome);
     _previousRace = racaNome;
 
+    // Atualizar grid de Valores Derivados (raça pode adicionar novos valores)
+    if (typeof renderDerivedValuesGrid === 'function') renderDerivedValuesGrid();
     if (typeof recalcAll === 'function') recalcAll();
     scheduleAutosave();
 }
 
 function updateDaereoVisibility(racaNome) {
-    const deslocArDisplay = document.getElementById('desloc_ar_display');
-    if (!deslocArDisplay) return;
-    const parent = deslocArDisplay.parentElement;
-    if (racaNome === 'Picxi') {
-        parent.style.display = '';
-    } else {
-        parent.style.display = 'none';
-    }
+    // No-op: Valores Derivados agora são renderizados dinamicamente pelo Firebase.
+    // D.AÉREO será exibido apenas se vinculado à raça/classe via Painel de Criador.
 }
 
 function updateYotunForcaUI(racaNome) {

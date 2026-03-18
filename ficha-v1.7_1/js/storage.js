@@ -11,7 +11,7 @@ function scheduleAutosave() {
 document.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.key) scheduleAutosave(); });
 
 function gatherData() {
-    const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, specs: [], locacoes: [], rituais: [], ritos: [], mecanicasAplicadas: state.mecanicasAplicadas || {}, fieldBaseValues: state.fieldBaseValues || {}, appliedFieldBonuses: state.appliedFieldBonuses || {} };
+    const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, specs: [], locacoes: [], rituais: [], ritos: [], mecanicasAplicadas: state.mecanicasAplicadas || {}, fieldBaseValues: state.fieldBaseValues || {}, appliedFieldBonuses: state.appliedFieldBonuses || {}, derivedOverrides: state.derivedOverrides || {} };
     document.querySelectorAll('[data-key]').forEach(el => {
         // Salvar o valor do DOM como está (incluindo edições manuais do usuário).
         // O sistema de appliedFieldBonuses garante que o bônus não será re-aplicado no reload.
@@ -174,6 +174,8 @@ function loadFromData(d) {
         else state.fieldBaseValues = {};
         if (d.appliedFieldBonuses) state.appliedFieldBonuses = d.appliedFieldBonuses;
         else state.appliedFieldBonuses = {};
+        if (d.derivedOverrides) state.derivedOverrides = d.derivedOverrides;
+        else state.derivedOverrides = {};
 
         onClassChange();
         onRaceChange();
@@ -185,7 +187,12 @@ function loadFromData(d) {
         setTimeout(() => { document.querySelectorAll('.dots5[data-attr]').forEach(c => refreshDots(c, c.dataset.attr)); }, 50);
         // Recalcular valores derivados e inicializar listeners
         if (typeof initDerivedListeners === 'function') initDerivedListeners();
-        if (typeof recalcAll === 'function') setTimeout(recalcAll, 100);
+        // Garantir que mecânicas estejam aplicadas antes de recalcular derivados
+        if (typeof applyAllRaceMechanics === 'function') {
+            const raca = document.getElementById('selRaca')?.value;
+            applyAllRaceMechanics(raca);
+        }
+        if (typeof recalcAll === 'function') setTimeout(recalcAll, 150);
     } catch (e) { console.error('loadFromData error:', e); }
 }
 

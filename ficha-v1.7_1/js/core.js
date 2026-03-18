@@ -213,6 +213,10 @@ function onClassChange() {
     /* Testes Principais por Classe */
     if (typeof renderMainTests === 'function') renderMainTests(cl);
 
+    /* Atualizar grid de Valores Derivados (classe pode adicionar novos valores) */
+    if (typeof renderDerivedValuesGrid === 'function') renderDerivedValuesGrid();
+    if (typeof recalcAll === 'function') recalcAll();
+
     scheduleAutosave();
 }
 

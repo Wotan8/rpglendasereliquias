@@ -248,6 +248,8 @@ onAuthStateChanged(auth, async (user) => {
             buildSkillsFromFirebase();
             if (typeof populateTargetMapFromSkills === 'function') populateTargetMapFromSkills();
             window.RACES = buildRacesFromFirebase();
+            buildDerivedValuesFromFirebase();
+            if (typeof populateTargetMapFromDerivedValues === 'function') populateTargetMapFromDerivedValues();
             populateRaceSelect();
             populateClassSelect();
 
@@ -278,7 +280,12 @@ onAuthStateChanged(auth, async (user) => {
         // Verificar se é criador (após tudo carregado)
         try {
             window.isCreator = await checkCreatorRole(user);
-            if (window.isCreator) enableCreatorExpEditing();
+            if (window.isCreator) {
+                enableCreatorExpEditing();
+                // Re-render derived values grid para liberar edição de campos
+                if (typeof renderDerivedValuesGrid === 'function') renderDerivedValuesGrid();
+                if (typeof recalcAll === 'function') recalcAll();
+            }
         } catch (e) { /* ignore */ }
     } else {
         // Não logado → redirecionar

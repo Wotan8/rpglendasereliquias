@@ -14,6 +14,7 @@ window._systemData = {
     equipment: [],
     maneuvers: [],
     spells: [],
+    derivedValues: [],
     loaded: false,
     error: null
 };
@@ -32,7 +33,7 @@ window.CLASS_RESOURCES = {};
  */
 async function loadSystemData(db, collectionFn, getDocsFn) {
     const collections = ['races', 'classes', 'tribes', 'peculiarities', 'mechanics',
-        'skills', 'conditions', 'equipment', 'maneuvers', 'spells'];
+        'skills', 'conditions', 'equipment', 'maneuvers', 'spells', 'derivedValues'];
 
     try {
         await Promise.all(collections.map(async (col) => {
@@ -152,6 +153,15 @@ function buildClassDataFromFirebase() {
 }
 
 /**
+ * Remove acentos/diacríticos de uma string.
+ * Garante que chaves geradas (sk_, dv_) sejam ASCII puras,
+ * compatíveis com TARGET_MAP hardcoded e state.dots salvos.
+ */
+function _stripAccents(str) {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
  * Constrói o objeto SKILLS e SKILL_LIMITERS a partir dos dados do Firebase.
  * Substitui os dados hardcoded em data.js e exp-upgrade.js.
  */
@@ -183,7 +193,7 @@ function buildSkillsFromFirebase() {
         const rawCat = (s.categoria || 'mental').toLowerCase();
         const cat = CATEGORY_MAP[rawCat] || 'mental';
         const prefix = CATEGORY_PREFIX[cat] || 'sk_mental_';
-        const key = s.nome.toLowerCase().replace(/[^a-z0-9áàâãéèêíïóôõúüçñ]/g, '_').replace(/__+/g, '_');
+        const key = _stripAccents(s.nome.toLowerCase()).replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_');
 
         // Build atributo display string
         const attrs = Array.isArray(s.atributoBase) ? s.atributoBase : (typeof s.atributoBase === 'string' && s.atributoBase ? s.atributoBase.split('/') : []);
@@ -428,4 +438,50 @@ function buildRacesFromFirebase() {
     }
 
     return RACES;
+}
+
+/**
+ * Constrói o array DERIVED_VALUES a partir do Firebase.
+ * Resolve mecânicas vinculadas e prepara para renderização.
+ */
+function buildDerivedValuesFromFirebase() {
+    const all = window._systemData.derivedValues.filter(d => d.publicado !== false);
+    all.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
+
+    window.DERIVED_VALUES = all.map(dv => {
+        // Resolver mecânicas vinculadas
+        const mecanicas = (dv.mecanicaIds || []).map(mid => {
+            return window._systemData.mechanics.find(m => m.id === mid);
+        }).filter(Boolean);
+
+        // Gerar key único para o valor derivado (usado em TARGET_MAP e display IDs)
+        const key = _stripAccents(dv.nome.toUpperCase())
+            .replace(/[^A-Z0-9]/g, '_')
+            .replace(/__+/g, '_')
+            .replace(/^_|_$/g, '');
+
+        // Gerar preview text das mecânicas
+        const mechPreviews = mecanicas.map(m => {
+            if (typeof generatePreviewText === 'function') return generatePreviewText(m);
+            return m.previewTexto || m.descricao || '';
+        }).filter(Boolean);
+
+        return {
+            id: dv.id,
+            key: key,
+            nome: dv.nome,
+            icone: dv.icone || '📊',
+            descricao: dv.descricao || '',
+            ordem: dv.ordem || 99,
+            todoPersonagem: dv.todoPersonagem === true,
+            mecanicas: mecanicas,
+            mecanicaIds: dv.mecanicaIds || [],
+            mechPreviews: mechPreviews,
+            campoAtual: dv.campoAtual === true,
+            campoEditavel: dv.campoEditavel === true,
+        };
+    });
+
+    console.log(`✅ Valores Derivados carregados: ${window.DERIVED_VALUES.length}`);
+    return window.DERIVED_VALUES;
 }

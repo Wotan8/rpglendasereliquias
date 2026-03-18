@@ -21,20 +21,15 @@ const TARGET_MAP = {
     "MAN": "attr_man",
     "AUT": "attr_aut",
 
-    // === VALORES DERIVADOS ===
+    // === STATUS VITAIS (hardcoded — têm campos atual/max no HTML) ===
     "Vitalidade Máxima": "DERIVED:VIT_MAX",
     "Determinação Máxima": "DERIVED:DET_MAX",
     "Sanidade Máxima": "DERIVED:SAN_MAX",
-    "Percepção": "DERIVED:PERC",
-    "Iniciativa": "DERIVED:INI",
-    "Reação": "DERIVED:REA",
+
+    // === CAMPOS DA FICHA ===
     "Blindagem": "field:blindagem",
-    "Deslocamento Terrestre": "DERIVED:DESLOC_T",
-    "Deslocamento Aquático": "DERIVED:DESLOC_A",
-    "Deslocamento Aéreo": "DERIVED:DESLOC_AR",
-    "Deslocamento Vertical": "DERIVED:DESLOC_V",
-    "Tamanho": "field:tamanho",
-    "Carga Máxima": "DERIVED:CARGA",
+
+    // === VALORES DERIVADOS: vêm do Firebase via populateTargetMapFromDerivedValues() ===
 
     // === PERÍCIAS MENTAIS ===
     "Abismo": "sk_mental_abismo",
@@ -112,13 +107,27 @@ function populateTargetMapFromSkills() {
     for (const cat of Object.keys(window.SKILLS)) {
         const pfx = CATEGORY_PREFIX[cat] || 'sk_mental_';
         for (const sk of window.SKILLS[cat]) {
-            // Registrar por nome (se ainda não existe — preserva aliases hardcoded)
-            if (!TARGET_MAP[sk.name]) {
-                TARGET_MAP[sk.name] = pfx + sk.key;
-            }
+            // SEMPRE sobrescreve para garantir que o key dinâmico (Firebase)
+            // coincida com o key usado nos dots/state (pode ter acentos)
+            TARGET_MAP[sk.name] = pfx + sk.key;
         }
     }
     console.log('✅ TARGET_MAP atualizado com perícias do Firebase');
+}
+
+/**
+ * Popula TARGET_MAP com valores derivados do Firebase.
+ * Chamada após buildDerivedValuesFromFirebase().
+ */
+function populateTargetMapFromDerivedValues() {
+    if (!window.DERIVED_VALUES) return;
+    for (const dv of window.DERIVED_VALUES) {
+        // Registrar/sobrescrever por nome legível → DERIVED:KEY
+        // SEMPRE sobrescreve para garantir que o key dinâmico (Firebase)
+        // coincida com o key usado em recalcAll/_applyMechanicModifiers
+        TARGET_MAP[dv.nome] = `DERIVED:${dv.key}`;
+    }
+    console.log('✅ TARGET_MAP atualizado com valores derivados do Firebase');
 }
 
 /**
@@ -165,12 +174,16 @@ function getDistribuirPool(poolName) {
     return [poolName];
 }
 
+/* ===== ARMAZENA MECÂNICAS BRUTAS DE VALORES DERIVADOS para re-avaliação dinâmica ===== */
+let _derivedValueMechanicsRaw = [];
+
 /* ===== LIMPAR BÔNUS DE MECÂNICAS ===== */
 function clearMechanicBonuses() {
     state.mechanicBonuses = {};
     state.mechanicLimits = {};
     state.capacidades = [];
     state.mecanicasPendentes = [];
+    _derivedValueMechanicsRaw = [];
 }
 
 /* ===== RESOLVER VALOR DINÂMICO DE CÁLCULO ===== */
@@ -249,7 +262,7 @@ function _resolveSheetRef(ref, mult) {
     if (attrKey && attrKey.startsWith('field:')) {
         const fieldKey = attrKey.replace('field:', '');
         const fieldEl = document.querySelector(`[data-key="${fieldKey}"]`);
-        const fieldVal = parseFloat(fieldEl?.value) || 0;
+        const fieldVal = parseFloat(String(fieldEl?.value || '0').replace(',', '.')) || 0;
         return fieldVal * mult;
     }
 
@@ -262,6 +275,9 @@ function applyAllRaceMechanics(racaNome) {
 
     // Always apply skill mechanics, even without a race selected
     applySkillMechanics();
+
+    // Apply mechanics linked to derived values
+    applyDerivedValueMechanics();
 
     if (!racaNome || !window.RACES) return;
     const raca = window.RACES[racaNome];
@@ -294,6 +310,120 @@ function applySkillMechanics() {
             }
         }
     }
+}
+
+/* ===== APLICAR MECÂNICAS VINCULADAS A VALORES DERIVADOS ===== */
+function applyDerivedValueMechanics() {
+    if (!window.DERIVED_VALUES || !window._systemData?.mechanics) return;
+
+    const mechanicsById = {};
+    for (const m of window._systemData.mechanics) {
+        mechanicsById[m.id] = m;
+    }
+
+    for (const dv of window.DERIVED_VALUES) {
+        if (!dv.mecanicaIds || dv.mecanicaIds.length === 0) continue;
+        for (const mechId of dv.mecanicaIds) {
+            const mech = mechanicsById[mechId];
+            if (!mech) continue;
+
+            // Se a mecânica é "modificar" permanente com equação que referencia a ficha,
+            // armazenar para re-avaliação dinâmica em recalcAll()
+            if (mech.tipo === 'modificar'
+                && (!mech.duracao || mech.duracao === 'permanente')
+                && !mech.condicaoAplicacao?.trim()
+                && _mechHasSheetRefs(mech)) {
+                _derivedValueMechanicsRaw.push(mech);
+                // Não chamar applyMechanicToSheet — será resolvido em recalcAll
+                continue;
+            }
+
+            applyMechanicToSheet(mech, null);
+        }
+    }
+}
+
+/**
+ * Verifica se uma mecânica "modificar" contém referências à ficha
+ * (tipo 'ficha' em algum termo de equação) — ou seja, seu valor depende
+ * de atributos/perícias que mudam dinamicamente.
+ */
+function _mechHasSheetRefs(mech) {
+    const config = mech.config || {};
+    const calculos = Array.isArray(config.calculos) ? config.calculos
+        : [{ equacao: config.equacao }];
+    for (const calc of calculos) {
+        if (Array.isArray(calc.equacao)) {
+            for (const term of calc.equacao) {
+                if (term.tipo === 'ficha') return true;
+            }
+        }
+        // Legacy format
+        if (calc.valorTipo === 'ficha') return true;
+    }
+    return false;
+}
+
+/**
+ * Re-avalia dinamicamente todas as mecânicas brutas de valores derivados.
+ * Chamada por recalcAll() para garantir que equações com referências à ficha
+ * sempre reflitam os valores atuais de atributos/perícias.
+ */
+function resolveDerivedValueMechanicsLive() {
+    for (const mech of _derivedValueMechanicsRaw) {
+        const config = mech.config || {};
+        const calculos = Array.isArray(config.calculos) ? config.calculos
+            : [{ alvo: config.alvo, operacao: config.operacao, valor: config.valor, valorTipo: 'fixo' }];
+
+        for (const calc of calculos) {
+            const alvos = Array.isArray(calc.alvo) ? calc.alvo : [calc.alvo];
+            for (const alvo of alvos) {
+                if (!alvo) continue;
+                const field = TARGET_MAP[alvo];
+                if (!field) continue;
+
+                const val = resolveCalcValue(calc);
+                const op = calc.operacao;
+
+                if (op === '+') state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) + val;
+                else if (op === '-') state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) - val;
+                else if (op === '×' || op === '*') {
+                    const multKey = 'MULT:' + field;
+                    state.mechanicBonuses[multKey] = (state.mechanicBonuses[multKey] || 1) * val;
+                }
+                else if (op === '=') {
+                    const setKey = 'SET:' + field;
+                    state.mechanicBonuses[setKey] = val;
+                }
+                else if (op === '÷' || op === '/') {
+                    const divKey = 'DIV:' + field;
+                    state.mechanicBonuses[divKey] = (state.mechanicBonuses[divKey] || 1) * val;
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Retorna as chaves DERIVED: que são gerenciadas por _derivedValueMechanicsRaw.
+ * Usado por recalcAll() para limpar apenas essas chaves antes de re-resolver.
+ */
+function _getDerivedMechKeys() {
+    const keys = new Set();
+    for (const mech of _derivedValueMechanicsRaw) {
+        const config = mech.config || {};
+        const calculos = Array.isArray(config.calculos) ? config.calculos
+            : [{ alvo: config.alvo }];
+        for (const calc of calculos) {
+            const alvos = Array.isArray(calc.alvo) ? calc.alvo : [calc.alvo];
+            for (const alvo of alvos) {
+                if (!alvo) continue;
+                const field = TARGET_MAP[alvo];
+                if (field) keys.add(field);
+            }
+        }
+    }
+    return keys;
 }
 
 /* ===== APLICAR UMA MECÂNICA INDIVIDUAL ===== */

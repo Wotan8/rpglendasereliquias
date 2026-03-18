@@ -130,31 +130,9 @@
                 </div>
 
                 <div class="section">
-                    <div class="section-title">Valores de Combate</div>
-                    <div class="combat-grid">
-                        <div class="mini-field"><label>👁️ PER</label><input type="text" id="perc_display"
-                                class="derived-field" title="RAC + PRE" value="0"></div>
-                        <div class="mini-field"><label>🔝 INI</label><input type="text" id="ini_display"
-                                class="derived-field" title="RAC + DES + AUT + Agilidade − Tamanho" value="0">
-                        </div>
-                        <div class="mini-field"><label>⚡ REA</label><input type="text" id="rea_display"
-                                class="derived-field" title="min(DES, RAC + Agilidade)" value="0"></div>
-                        <div class="mini-field"><label>🛡️ BLD</label><input type="text" data-key="blindagem"
-                                placeholder="0"></div>
-                        <div class="mini-field"><label>📏 TAM.</label><input type="text" data-key="tamanho"
-                                placeholder="0"></div>
-                    </div>
-                    <div class="combat-grid" style="margin-top:var(--gap)">
-                        <div class="mini-field"><label>🏃 D.TERR.</label><input type="text" id="desloc_t_display"
-                                class="derived-field" title="FOR + DES + Tamanho + Agilidade" value="0"></div>
-                        <div class="mini-field"><label>🏊 D.AQUA.</label><input type="text" id="desloc_a_display"
-                                class="derived-field" title="(FOR + DES + Tamanho + Atletismo) / 3" value="0"></div>
-                        <div class="mini-field"><label>🦅 D.AÉREO</label><input type="text" id="desloc_ar_display"
-                                class="derived-field" title="FOR + DES + Tamanho + Atletismo" value="0"></div>
-                        <div class="mini-field"><label>🧗 D.VERT.</label><input type="text" id="desloc_v_display"
-                                class="derived-field" title="min(FOR, Atletismo)" value="0"></div>
-                        <div class="mini-field"><label>🎒 CARGA</label><input type="text" id="carga_display"
-                                class="derived-field" title="FOR + VIG" value="0"></div>
+                    <div class="section-title">Valores Derivados</div>
+                    <div class="combat-grid" id="derivedValuesGrid">
+                        <!-- Populated dynamically from Firebase -->
                     </div>
                 </div>
 

@@ -3,7 +3,7 @@
 // Lendas e Relíquias (ficha-v1.7_1 style)
 // =============================================
 
-import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js';
+import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js';
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -34,6 +34,7 @@ let editingItemId = null;
 let mechanicsCache = [];
 let peculiaritiesCache = [];
 let skillsCache = [];
+let derivedValuesCache = [];
 
 // ====================================================================
 // MODULE DEFINITIONS — each module defines its fields and Firestore path
@@ -51,6 +52,7 @@ const MODULE_DEFS = {
             { key: 'aparencia', label: 'Aparência', type: 'textarea', required: true, placeholder: 'Descrição física típica da raça' },
             { key: 'habitat', label: 'Habitat', type: 'text', required: true, placeholder: 'Ex: Regiões temperadas, cidades' },
             { key: 'peculiaridadeIds', label: 'Peculiaridades Raciais', type: 'mechanic_selector', selectorTarget: 'peculiarities', fontePreFilter: 'raca' },
+            { key: 'derivedValueIds', label: 'Valores Derivados da Raça', type: 'mechanic_selector', selectorTarget: 'derivedValues' },
             { key: 'historia', label: 'História / Lore', type: 'textarea', placeholder: 'Lore da raça em Vasteluna' },
             { key: 'curiosidades', label: 'Curiosidades', type: 'tags', placeholder: 'Digite e pressione Enter' },
             { key: 'imagemUrl', label: 'URL da Imagem', type: 'text', placeholder: 'https://...' },
@@ -89,6 +91,7 @@ const MODULE_DEFS = {
             },
             { key: 'manobras', label: 'IDs de Manobras (referências)', type: 'tags', placeholder: 'ID da manobra e Enter' },
             { key: 'mecanicaIds', label: 'Mecânicas da Classe', type: 'mechanic_selector', fontePreFilter: 'classe' },
+            { key: 'derivedValueIds', label: 'Valores Derivados da Classe', type: 'mechanic_selector', selectorTarget: 'derivedValues' },
             { key: 'imagemUrl', label: 'URL da Imagem', type: 'text', placeholder: 'https://...' },
         ]
     },
@@ -243,6 +246,20 @@ const MODULE_DEFS = {
         collection: 'system/data/mechanics',
         useCustomEditor: true,
         fields: []
+    },
+    derivedValues: {
+        name: 'Valor Derivado', namePlural: 'Valores Derivados', icon: '📊',
+        collection: 'system/data/derivedValues',
+        fields: [
+            { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Percepção, Iniciativa, Carga' },
+            { key: 'ordem', label: 'Ordem na Ficha', type: 'number', required: true, placeholder: '1' },
+            { key: 'icone', label: 'Ícone / Emoji', type: 'text', placeholder: 'Ex: 👁️, ⚡' },
+            { key: 'descricao', label: 'Descrição', type: 'textarea', required: true, placeholder: 'Descreva o que este valor representa e como é calculado' },
+            { key: 'todoPersonagem', label: 'Todo personagem tem este valor?', type: 'boolean' },
+            { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: '' },
+            { key: 'campoAtual', label: 'Tem campo "Atual" (editável)?', type: 'boolean' },
+            { key: 'campoEditavel', label: 'Campo editável pelo jogador?', type: 'boolean' },
+        ]
     },
     maneuvers: {
         name: 'Manobra', namePlural: 'Manobras', icon: '💥',
@@ -481,6 +498,7 @@ async function loadModule(moduleName) {
     await refreshMechanicsCache();
     if (moduleName === 'races' || moduleName === 'classes') await refreshPeculiaritiesCache();
     if (moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'skills') await refreshSkillsCache();
+    if (moduleName === 'races' || moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'derivedValues') await refreshDerivedValuesCache();
 
     const grid = document.getElementById('itemsGrid');
     const emptyState = document.getElementById('emptyState');
@@ -539,6 +557,16 @@ async function refreshSkillsCache() {
         skillsCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
         window._skillsCache = skillsCache;
     } catch (e) { console.error('Erro cache skills:', e); }
+}
+
+async function refreshDerivedValuesCache() {
+    try {
+        const snap = await getDocs(collection(db, 'system/data/derivedValues'));
+        derivedValuesCache = [];
+        snap.forEach(d => derivedValuesCache.push({ id: d.id, ...d.data() }));
+        derivedValuesCache.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
+        window._derivedValuesCache = derivedValuesCache;
+    } catch (e) { console.error('Erro cache derivedValues:', e); }
 }
 
 // ===== RENDER ITEMS =====
@@ -730,6 +758,8 @@ function buildField(field, value) {
             wrap.innerHTML = buildPecSelectorHTML(field.key, field.label, ids, peculiaritiesCache, field.fontePreFilter);
         } else if (field.selectorTarget === 'skills') {
             wrap.innerHTML = buildSkillSelectorHTML(field.key, field.label, ids, skillsCache);
+        } else if (field.selectorTarget === 'derivedValues') {
+            wrap.innerHTML = buildDerivedValueSelectorHTML(field.key, field.label, ids, derivedValuesCache);
         } else {
             wrap.innerHTML = buildMechanicSelectorHTML(field.key, field.label, ids, mechanicsCache, field.fontePreFilter);
         }

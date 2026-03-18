@@ -14,14 +14,29 @@ function getMechanicTargetsHTML() {
 <option value="FOR">FOR</option><option value="DES">DES</option><option value="VIG">VIG</option>
 <option value="PRE">PRE</option><option value="MAN">MAN</option><option value="AUT">AUT</option>
 </optgroup>
-<optgroup label="Valores Derivados">
-<option value="Vitalidade Máxima">Vitalidade Máxima</option><option value="Determinação Máxima">Determinação Máxima</option>
-<option value="Sanidade Máxima">Sanidade Máxima</option><option value="Percepção">Percepção</option>
-<option value="Iniciativa">Iniciativa</option><option value="Reação">Reação</option>
-<option value="Blindagem">Blindagem</option><option value="Deslocamento Terrestre">Desl. Terrestre</option>
-<option value="Deslocamento Aquático">Desl. Aquático</option><option value="Deslocamento Aéreo">Desl. Aéreo</option>
-<option value="Deslocamento Vertical">Desl. Vertical</option>
-<option value="Tamanho">Tamanho</option><option value="Carga Máxima">Carga Máxima</option>
+<optgroup label="Status Vitais">
+<option value="Vitalidade Máxima">Vitalidade Máxima</option>
+<option value="Determinação Máxima">Determinação Máxima</option>
+<option value="Sanidade Máxima">Sanidade Máxima</option>
+</optgroup>`;
+
+    // Valores Derivados — dinâmico do Firebase
+    const dvCache = window._derivedValuesCache || [];
+    const publishedDVs = dvCache.filter(d => d.publicado !== false);
+    if (publishedDVs.length > 0) {
+        publishedDVs.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
+        html += `\n<optgroup label="Valores Derivados">`;
+        for (const dv of publishedDVs) {
+            const icon = dv.icone || '📊';
+            html += `\n<option value="${esc(dv.nome)}">${icon} ${esc(dv.nome)}</option>`;
+        }
+        html += `\n</optgroup>`;
+    }
+
+    html += `
+<optgroup label="Campos da Ficha">
+<option value="Blindagem">Blindagem</option>
+<option value="Tamanho">Tamanho</option>
 </optgroup>`;
 
     // Build skill options dynamically from skills cache
@@ -218,14 +233,29 @@ function getValueSourceHTML() {
 <option value="FOR">FOR</option><option value="DES">DES</option><option value="VIG">VIG</option>
 <option value="PRE">PRE</option><option value="MAN">MAN</option><option value="AUT">AUT</option>
 </optgroup>
-<optgroup label="Valores Derivados">
-<option value="Vitalidade Máxima">Vitalidade Máxima</option><option value="Determinação Máxima">Determinação Máxima</option>
-<option value="Sanidade Máxima">Sanidade Máxima</option><option value="Percepção">Percepção</option>
-<option value="Iniciativa">Iniciativa</option><option value="Reação">Reação</option>
-<option value="Blindagem">Blindagem</option><option value="Deslocamento Terrestre">Desl. Terrestre</option>
-<option value="Deslocamento Aquático">Desl. Aquático</option><option value="Deslocamento Aéreo">Desl. Aéreo</option>
-<option value="Deslocamento Vertical">Desl. Vertical</option>
-<option value="Tamanho">Tamanho</option><option value="Carga Máxima">Carga Máxima</option>
+<optgroup label="Status Vitais">
+<option value="Vitalidade Máxima">Vitalidade Máxima</option>
+<option value="Determinação Máxima">Determinação Máxima</option>
+<option value="Sanidade Máxima">Sanidade Máxima</option>
+</optgroup>`;
+
+    // Valores Derivados — dinâmico do Firebase
+    const dvCache = window._derivedValuesCache || [];
+    const publishedDVs = dvCache.filter(d => d.publicado !== false);
+    if (publishedDVs.length > 0) {
+        publishedDVs.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
+        html += `\n<optgroup label="Valores Derivados">`;
+        for (const dv of publishedDVs) {
+            const icon = dv.icone || '📊';
+            html += `\n<option value="${esc(dv.nome)}">${icon} ${esc(dv.nome)}</option>`;
+        }
+        html += `\n</optgroup>`;
+    }
+
+    html += `
+<optgroup label="Campos da Ficha">
+<option value="Blindagem">Blindagem</option>
+<option value="Tamanho">Tamanho</option>
 </optgroup>`;
 
     // Build skill options dynamically from skills cache
@@ -1538,4 +1568,61 @@ window._mechSelFilterFonte = function (fieldId, fonte) {
         if (!fonte) { l.style.display = ''; return; }
         l.style.display = (l.dataset.fonte === fonte) ? '' : 'none';
     });
+};
+
+// ===== DERIVED VALUE SELECTOR (for races/classes derivedValueIds) =====
+export function buildDerivedValueSelectorHTML(fieldKey, label, currentIds, cache) {
+    const published = cache.filter(d => d.publicado !== false);
+    const ids = currentIds || [];
+
+    const chips = ids.map(did => {
+        const d = cache.find(x => x.id === did);
+        if (!d) return '';
+        const icon = d.icone || '📊';
+        return `<div class="mechsel-chip" style="border-left-color:#8b5cf6"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">Ordem: ${d.ordem || '?'}${d.todoPersonagem ? ' — Universal' : ''}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${did}')">✕</button></div>`;
+    }).join('');
+
+    const opts = published.map(d => {
+        const icon = d.icone || '📊';
+        return `<label class="mechsel-result"><input type="checkbox" value="${d.id}" ${ids.includes(d.id) ? 'checked' : ''}><span class="mechsel-result-name">${icon} ${esc(d.nome)}</span><span class="mechsel-result-preview">Ordem: ${d.ordem || '?'}${d.todoPersonagem ? ' — Universal' : ''}</span></label>`;
+    }).join('');
+
+    return `
+    <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
+        <span class="mechsel-label">${esc(label)}</span>
+        <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhum valor derivado vinculado</span>'}</div>
+        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Valor Derivado</button>
+        <div class="mechsel-search" id="field_${fieldKey}_search">
+            <div class="mechsel-search-bar">
+                <input type="text" placeholder="🔍 Buscar valor derivado..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
+            </div>
+            <div class="mechsel-results" id="field_${fieldKey}_results">${opts}</div>
+            <button type="button" class="mechsel-confirm" onclick="window._dvSelConfirm('field_${fieldKey}')">✔️ Vincular Selecionados</button>
+        </div>
+        <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(ids)}'>
+    </div>`;
+}
+
+window._dvSelConfirm = function (fieldId) {
+    const results = document.getElementById(`${fieldId}_results`);
+    const hidden = document.getElementById(fieldId);
+    if (!results || !hidden) return;
+    const checked = Array.from(results.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+    hidden.value = JSON.stringify(checked);
+    document.getElementById(`${fieldId}_search`).classList.remove('open');
+    // Refresh chips
+    const cache = window._derivedValuesCache || [];
+    const chipsEl = document.getElementById(`${fieldId}_chips`);
+    if (chipsEl) {
+        if (!checked.length) {
+            chipsEl.innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhum valor derivado vinculado</span>';
+        } else {
+            chipsEl.innerHTML = checked.map(did => {
+                const d = cache.find(x => x.id === did);
+                if (!d) return '';
+                const icon = d.icone || '📊';
+                return `<div class="mechsel-chip" style="border-left-color:#8b5cf6"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">Ordem: ${d.ordem || '?'}${d.todoPersonagem ? ' — Universal' : ''}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${did}')">✕</button></div>`;
+            }).join('');
+        }
+    }
 };
