@@ -471,6 +471,8 @@ function buildDerivedValuesFromFirebase() {
             key: key,
             nome: dv.nome,
             icone: dv.icone || '📊',
+            prefixo: dv.prefixo || '',
+            sufixo: dv.sufixo || '',
             descricao: dv.descricao || '',
             ordem: dv.ordem || 99,
             todoPersonagem: dv.todoPersonagem === true,

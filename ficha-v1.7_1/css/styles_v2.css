@@ -2714,3 +2714,45 @@ html.dark .pec-capacidade {
     from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* ===== DERIVED VALUES — Prefix / Suffix (inside the field) ===== */
+.dv-value-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    width: 100%;
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 4px;
+    background: #fff;
+}
+
+html.dark .dv-value-row {
+    background: #232740 !important;
+    border-color: #374151 !important;
+}
+
+/* Input inside the wrapper — no border, transparent bg */
+.dv-input-inline {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.dv-value-row:focus-within {
+    outline: 3px solid rgba(59, 130, 246, .35);
+    outline-offset: 2px;
+}
+
+/* Affix text matches the value font */
+.dv-affix {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--ink);
+    white-space: nowrap;
+    flex-shrink: 0;
+    line-height: 1;
+    font-family: var(--font);
+}

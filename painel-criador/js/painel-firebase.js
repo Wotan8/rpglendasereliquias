@@ -254,6 +254,8 @@ const MODULE_DEFS = {
             { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Percepção, Iniciativa, Carga' },
             { key: 'ordem', label: 'Ordem na Ficha', type: 'number', required: true, placeholder: '1' },
             { key: 'icone', label: 'Ícone / Emoji', type: 'text', placeholder: 'Ex: 👁️, ⚡' },
+            { key: 'prefixo', label: 'Prefixo (exibido antes do valor)', type: 'text', placeholder: 'Ex: +, ≥, ~' },
+            { key: 'sufixo', label: 'Sufixo (exibido após o valor)', type: 'text', placeholder: 'Ex: metros, kg, %' },
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true, placeholder: 'Descreva o que este valor representa e como é calculado' },
             { key: 'todoPersonagem', label: 'Todo personagem tem este valor?', type: 'boolean' },
             { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: '' },
@@ -267,7 +269,7 @@ const MODULE_DEFS = {
         fields: [
             { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Postura Ofensiva, Investida' },
             { key: 'classe', label: 'Classe', type: 'text', required: true, placeholder: 'Ex: Guerreiro' },
-            { key: 'custo', label: 'Custo (Determinação)', type: 'text', required: true, placeholder: 'Ex: 1 DET' },
+            { key: 'custo', label: 'Custo (Energia)', type: 'text', required: true, placeholder: 'Ex: 1 ENER' },
             { key: 'efeito', label: 'Efeito', type: 'textarea', required: true },
             { key: 'requisitos', label: 'Requisitos', type: 'tags', placeholder: 'Ex: RAC 3, Performance 3' },
             { key: 'mecanicaIds', label: 'Mecânicas', type: 'mechanic_selector', fontePreFilter: 'manobra' },
@@ -290,7 +292,7 @@ const MODULE_DEFS = {
                 ]
             },
             { key: 'nivel', label: 'Nível', type: 'number', required: true, placeholder: '1' },
-            { key: 'custo', label: 'Custo', type: 'text', required: true, placeholder: 'Ex: 1 DET + Devoção' },
+            { key: 'custo', label: 'Custo', type: 'text', required: true, placeholder: 'Ex: 1 ENER + Devoção' },
             { key: 'tempo', label: 'Tempo de Conjuração', type: 'text', required: true, placeholder: 'Ex: 1 ação' },
             { key: 'alcance', label: 'Alcance', type: 'text', required: true, placeholder: 'Ex: Toque, 9m' },
             { key: 'duracao', label: 'Duração', type: 'text', required: true, placeholder: 'Ex: Instantâneo, 1 cena' },

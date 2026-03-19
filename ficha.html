@@ -3376,9 +3376,9 @@
                             style="background: rgba(236, 72, 153, 0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--secondary);">
                             <strong style="color: var(--secondary);">💪 FORÇA DE VONTADE NATURAL I</strong>
                             <p style="color: #cbd5e1; margin-top: 5px; font-size: 0.9rem;">
-                                Este usuário tem uma Determinação natural, devido ao seu histórico ou talvez de
+                                Este usuário tem uma Energia natural, devido ao seu histórico ou talvez de
                                 nascença.
-                                <br><span style="color: var(--success);">+1 ponto de Determinação Máxima na criação de
+                                <br><span style="color: var(--success);">+1 ponto de Energia Máxima na criação de
                                     personagem.</span>
                             </p>
                         </div>
@@ -4290,10 +4290,10 @@
 
                     <div class="characteristic-item">
                         <div>
-                            <div class="char-label">⚡ DET Max</div>
+                            <div class="char-label">⚡ ENER Max</div>
                             <div class="char-formula">PRS+AUT</div>
                         </div>
-                        <div class="char-value" id="calc-determinacao-max">0</div>
+                        <div class="char-value" id="calc-energia-max">0</div>
                     </div>
 
                     <div class="characteristic-item">
@@ -4382,16 +4382,16 @@
                 </div>
 
                 <div class="hp-bar-container">
-                    <label>⚡ Determinação</label>
+                    <label>⚡ Energia</label>
                     <div class="hp-bar">
-                        <div class="hp-fill" id="det-fill"
+                        <div class="hp-fill" id="ener-fill"
                             style="width: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary));">
-                            <span id="det-text">3 / 3</span>
+                            <span id="ener-text">3 / 3</span>
                         </div>
                     </div>
                     <div class="hp-controls">
                         <button class="btn btn-blood-red btn-small" onclick="adjustDET(-1)">-1</button>
-                        <input type="number" id="det-current" value="3" onchange="updateDETBar()" inputmode="numeric">
+                        <input type="number" id="ener-current" value="3" onchange="updateDETBar()" inputmode="numeric">
                         <button class="btn btn-warning btn-small" onclick="adjustDET(1)">+1</button>
                         <button class="btn btn-secondary btn-small" onclick="resetDET()">Max</button>
                     </div>
@@ -6171,7 +6171,7 @@ Exemplos:
                     { id: 'kits-ingredientes', name: 'Kits/Ingredientes', max: 10, info: 'Usados na preparação de loções' }
                 ],
                 info: `<strong>Papel:</strong> Rastreio, combate à distância e alquimancia ofensiva.<br>
-                    <strong>Recursos:</strong> Determinação e Ingredientes.<br>
+                    <strong>Recursos:</strong> Energia e Ingredientes.<br>
                     <strong>Marca de Caça:</strong> Ganhe (1 + Marcar Presa) em rastreamento e ataques contra o alvo marcado.<br>
                     <strong>Dica:</strong> Prepare loções antes do combate e marque os inimigos mais perigosos.`
             },
@@ -6200,14 +6200,14 @@ Exemplos:
                         }
                     },
                     {
-                        name: '🐺 Convocar Manada (-1 DET)', formula: 'PRE + Liderança + Linguagem Animal', calculate: (char) => {
+                        name: '🐺 Convocar Manada (-1 ENER)', formula: 'PRE + Liderança + Linguagem Animal', calculate: (char) => {
                             const lideranca = char.skills['liderança'] || 0;
                             const linguagemAnimal = char.classAbilities?.['linguagem-animal'] || 0;
                             return char.pre + lideranca + linguagemAnimal;
                         }
                     },
                     {
-                        name: '🔄 Fusão Selvagem (-1 DET)', formula: 'PRE + Aliado Animal + Linguagem Animal', calculate: (char) => {
+                        name: '🔄 Fusão Selvagem (-1 ENER)', formula: 'PRE + Aliado Animal + Linguagem Animal', calculate: (char) => {
                             const aliadoAnimal = char.classAbilities?.['aliado-animal'] || 0;
                             const linguagemAnimal = char.classAbilities?.['linguagem-animal'] || 0;
                             return char.pre + aliadoAnimal + linguagemAnimal;
@@ -6327,7 +6327,7 @@ Exemplos:
                 ],
                 resources: [],
                 info: `<strong>Papel:</strong> Combate direto, controle de campo.<br>
-                    <strong>Manobras:</strong> 1 DET cada. Máx 1/turno.<br>
+                    <strong>Manobras:</strong> 1 ENER cada. Máx 1/turno.<br>
                     <strong>Posturas:</strong> Ofensiva (+ataque, sem reação) ou Defensiva (+reação, sem ataque).<br>
                     <strong>Dica:</strong> Alterne posturas conforme a situação.`
             },
@@ -6423,7 +6423,7 @@ Exemplos:
                 ],
                 quickTests: [
                     {
-                        name: '🙏 Prece Breve (-1 DET → +1 Graça)', formula: 'PRE + Essência + Símbolo Sagrado', calculate: (char) => {
+                        name: '🙏 Prece Breve (-1 ENER → +1 Graça)', formula: 'PRE + Essência + Símbolo Sagrado', calculate: (char) => {
                             const essencia = char.skills['essência'] || 0;
                             const simbolo = char.classAbilities?.['simbolo-sagrado'] || 0;
                             return char.pre + essencia + simbolo;
@@ -6448,11 +6448,11 @@ Exemplos:
                     { name: '👁️ Percepção', formula: 'RAC + PRE', calculate: (char) => char.rac + char.pre }
                 ],
                 resources: [
-                    { id: 'graca', name: 'Graça', max: 'devocao-palla', info: 'Máximo = nível de Devoção (substitui DET nas preces)' }
+                    { id: 'graca', name: 'Graça', max: 'devocao-palla', info: 'Máximo = nível de Devoção (substitui ENER nas preces)' }
                 ],
                 info: `<strong>Papel:</strong> Suporte, cura e controle por luz.<br>
-                    <strong>Graça:</strong> Substitui Determinação nas preces.<br>
-                    <strong>Dica:</strong> Use Graça para preces e guarde DET para emergências.`
+                    <strong>Graça:</strong> Substitui Energia nas preces.<br>
+                    <strong>Dica:</strong> Use Graça para preces e guarde ENER para emergências.`
             },
             'Ritualista': {
                 abilities: [
@@ -6489,7 +6489,7 @@ Exemplos:
             skillInputs: {},
             classAbilities: {},
             classResources: {},
-            hpCurrent: 5, detCurrent: 3, sanCurrent: 80, blindagem: 0,
+            hpCurrent: 5, enerCurrent: 3, sanCurrent: 80, blindagem: 0,
             containers: [], // Agora containers não são mais salvos no documento do personagem
             notas: '',
             exp: 0,
@@ -6585,7 +6585,7 @@ Exemplos:
                                 <div style="color: #cbd5e1; font-size: 0.8rem;">
                                     <strong>📊 Cálculo:</strong> Máximo = PRE (${char.pre}) + Essência (${essencia}) = ${maxGraca}<br>
                                     <strong>📝 Atual:</strong> Ajustável na aba "Combate"<br>
-                                    <em style="color: #fde047;">💡 A Graça pode substituir Determinação em algumas preces.</em>
+                                    <em style="color: #fde047;">💡 A Graça pode substituir Energia em algumas preces.</em>
                                 </div>
                             </div>
                         </div>
@@ -6752,7 +6752,7 @@ Exemplos:
                     <div class="section" style="margin-top: 20px;">
                         <h2 class="section-title">🎯 Marca de Caça</h2>
                         <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.85rem; font-style: italic;">
-                            Pode apagar ou trocar o Alvo caso consiga abatê-lo. Para trocar de Alvo sem o abater, deve pagar 1 Determinação.
+                            Pode apagar ou trocar o Alvo caso consiga abatê-lo. Para trocar de Alvo sem o abater, deve pagar 1 Energia.
                         </p>
                         
                         <div style="background: rgba(139, 92, 246, 0.1); border: 2px solid var(--primary); border-radius: 12px; padding: 20px;">
@@ -6792,7 +6792,7 @@ Exemplos:
                     {
                         nome: 'Ritual de Reanimação',
                         objetivo: 'Novo Servo Permanente',
-                        custo: '1 DET e 1 SAN',
+                        custo: '1 ENER e 1 SAN',
                         tempo: '~30 min',
                         quando: 'Fora de combate',
                         requisito: {
@@ -6951,7 +6951,7 @@ Exemplos:
                             <p style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 10px;">
                                 <strong>ℹ️ Sobre Rituais:</strong><br>
                                 • Rituais requerem Talismã Profano<br>
-                                • Custam Determinação e/ou Sanidade<br>
+                                • Custam Energia e/ou Sanidade<br>
                                 • Rituais em <span style="color: #800080; font-weight: 700;">púrpura</span> = disponíveis<br>
                                 • Rituais em <span style="color: #64748b; font-weight: 700;">cinza</span> = requisitos não atendidos
                             </p>
@@ -7105,7 +7105,7 @@ Exemplos:
                             {
                                 nome: '2º PASSO: DEFINIR ASPECTO',
                                 calculo: 'Role 1d10',
-                                descricao: 'Pode forçar resultado adjacente (±1) pagando 1 DET e -2 SAN. Antes de definir, pode reduzir resultados na mesma quantidade de CA.',
+                                descricao: 'Pode forçar resultado adjacente (±1) pagando 1 ENER e -2 SAN. Antes de definir, pode reduzir resultados na mesma quantidade de CA.',
                                 teste: '1d10 para tipo de criatura',
                                 calcular: (char) => 0
                             },
@@ -7590,7 +7590,7 @@ Exemplos:
                         nome: 'Duelo Mortal',
                         calculo: 'Postura de Combate',
                         requisito: { tipo: 'skill', nome: 'intimidação', nivel: 3 },
-                        descricao: 'Não gasta Determinação. O Alvo deve estar vivo e ser capaz de se defender. Declara um único inimigo, e ganha bônus nos testes de ataque e defesa contra ele. Não pode atacar outros.',
+                        descricao: 'Não gasta Energia. O Alvo deve estar vivo e ser capaz de se defender. Declara um único inimigo, e ganha bônus nos testes de ataque e defesa contra ele. Não pode atacar outros.',
                         calcular: (char) => char.classAbilities?.['postura-combate'] || 0
                     },
                     {
@@ -7664,7 +7664,7 @@ Exemplos:
                         <div style="background: rgba(139, 92, 246, 0.1); border: 2px solid var(--primary); border-radius: 12px; padding: 15px; margin-bottom: 15px;">
                             <p style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 10px;">
                                 <strong>ℹ️ Regras:</strong><br>
-                                • Todas custam 1 Determinação<br>
+                                • Todas custam 1 Energia<br>
                                 • Pode usar 1 por turno (salvo indicação contrária)<br>
                                 • Manobras em <span style="color: var(--success); font-weight: 700;">verde</span> = disponíveis<br>
                                 • Manobras em <span style="color: #64748b; font-weight: 700;">cinza</span> = requisitos não atendidos
@@ -7785,7 +7785,7 @@ Exemplos:
                         nome: 'Troca De Mãos',
                         calculo: 'DES + Prestidigitação vs Percepção do alvo',
                         requisito: { tipo: 'nenhum' },
-                        descricao: 'Gatilho (não gasta determinação): Após acertar um ataque com punhal. Manobra manual. Executa Furto ou esconde um item como ação gratuita no mesmo turno. Se o alvo vencer no teste disputado, ele pode escolher gastar 1 reação do turno para evitar a "Troca de Mãos" ou deixar acontecer.',
+                        descricao: 'Gatilho (não gasta energia): Após acertar um ataque com punhal. Manobra manual. Executa Furto ou esconde um item como ação gratuita no mesmo turno. Se o alvo vencer no teste disputado, ele pode escolher gastar 1 reação do turno para evitar a "Troca de Mãos" ou deixar acontecer.',
                         calcular: (char) => {
                             const presti = char.classAbilities?.['prestidigitação'] || 0;
                             return char.des + presti;
@@ -7851,7 +7851,7 @@ Exemplos:
                                 return malan >= 2 && agilidade >= 2;
                             }, texto: 'Malandragem 2 e Agilidade 2'
                         },
-                        descricao: 'Custo: 2 Determinação. Teste: (DES + Furtividade I e Furtividade II + Prestidigitação vs Percepção). Se vencer: este ataque ignora Reação e Blindagem e causa dano direto à Vitalidade. <strong>B.Arma:</strong> O valor é adicionado no +Dano da arma. <strong>Punhal:</strong> DES + Arma + Armas Punho. Limites: Não funciona contra construtos/elementais; 1× por cena no mesmo alvo.',
+                        descricao: 'Custo: 2 Energia. Teste: (DES + Furtividade I e Furtividade II + Prestidigitação vs Percepção). Se vencer: este ataque ignora Reação e Blindagem e causa dano direto à Vitalidade. <strong>B.Arma:</strong> O valor é adicionado no +Dano da arma. <strong>Punhal:</strong> DES + Arma + Armas Punho. Limites: Não funciona contra construtos/elementais; 1× por cena no mesmo alvo.',
                         calcular: (char) => {
                             const arma = char.skills?.['arma'] || 0;
                             const punho = char.classAbilities?.['armas-punho'] || 0;
@@ -7895,7 +7895,7 @@ Exemplos:
                         <div style="background: rgba(136, 8, 8, 0.1); border: 2px solid #880808; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
                             <p style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 10px;">
                                 <strong>ℹ️ Regras:</strong><br>
-                                • Todas custam 1 Determinação<br>
+                                • Todas custam 1 Energia<br>
                                 • Pode usar 1 por turno (salvo indicação contrária)<br>
                                 • Manobras em <span style="color: #880808; font-weight: 700;">vermelho</span> = disponíveis<br>
                                 • Manobras em <span style="color: #64748b; font-weight: 700;">cinza</span> = requisitos não atendidos
@@ -8949,8 +8949,8 @@ Exemplos:
 
             // RS (Resistência/Sustentação)
             const VIT = char.vig + char.tamanho;
-            const DET = char.prs + char.aut;
-            const RS = Math.ceil((VIT + Math.floor(DET / 2)) / 3);
+            const ENER = char.prs + char.aut;
+            const RS = Math.ceil((VIT + Math.floor(ENER / 2)) / 3);
 
             // MB (Mobilidade)
             const deslocTerrestre = char.for + char.des + char.tamanho + agilidade + bonusEquip.deslocTerrestre;
@@ -9608,9 +9608,9 @@ Exemplos:
                 const vitalidadeMax = char.vig + char.tamanho + modVitalidade;
                 safeUpdate('calc-vitalidade-max', vitalidadeMax);
 
-                const modDeterminacao = (char.modMestre && char.modMestre.mod_determinacao) || 0;
-                const determinacaoMax = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0) + modDeterminacao;
-                safeUpdate('calc-determinacao-max', determinacaoMax);
+                const modEnergia = (char.modMestre && char.modMestre.mod_energia) || 0;
+                const energiaMax = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0) + modEnergia;
+                safeUpdate('calc-energia-max', energiaMax);
 
                 // Cálculo de Conexão com a Natureza (Elorin)
                 if (char.raca === 'Elorin') {
@@ -9729,8 +9729,8 @@ Exemplos:
                 if (!char.hpCurrent || char.hpCurrent > vitalidadeMax) {
                     char.hpCurrent = vitalidadeMax;
                 }
-                if (!char.detCurrent || char.detCurrent > determinacaoMax) {
-                    char.detCurrent = determinacaoMax;
+                if (!char.enerCurrent || char.enerCurrent > energiaMax) {
+                    char.enerCurrent = energiaMax;
                 }
                 if (!char.sanCurrent) {
                     char.sanCurrent = 80;
@@ -9839,12 +9839,12 @@ Exemplos:
 
         window.updateDETBar = function () {
             const char = getChar();
-            const modDeterminacao = (char.modMestre && char.modMestre.mod_determinacao) || 0;
-            const max = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0) + modDeterminacao;
-            const current = parseInt(document.getElementById('det-current').value) || 0;
-            char.detCurrent = Math.max(0, Math.min(current, max));
-            document.getElementById('det-current').value = char.detCurrent;
-            const percent = (char.detCurrent / max) * 100;
+            const modEnergia = (char.modMestre && char.modMestre.mod_energia) || 0;
+            const max = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0) + modEnergia;
+            const current = parseInt(document.getElementById('ener-current').value) || 0;
+            char.enerCurrent = Math.max(0, Math.min(current, max));
+            document.getElementById('ener-current').value = char.enerCurrent;
+            const percent = (char.enerCurrent / max) * 100;
 
             // Dynamic color: yellow (full) → brown (empty)
             const ratio = percent / 100;
@@ -9853,28 +9853,28 @@ Exemplos:
             const b = Math.round(36 * ratio); // 36 → 0
             const detColor = `rgb(${r}, ${g}, ${b})`;
 
-            const detFill = document.getElementById('det-fill');
+            const detFill = document.getElementById('ener-fill');
             detFill.style.width = percent + '%';
             detFill.style.background = detColor;
-            document.getElementById('det-text').textContent = `${char.detCurrent} / ${max}`;
+            document.getElementById('ener-text').textContent = `${char.enerCurrent} / ${max}`;
             autoSave();
         };
 
         window.adjustDET = function (amount) {
             const char = getChar();
-            const modDeterminacao = (char.modMestre && char.modMestre.mod_determinacao) || 0;
-            const max = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0) + modDeterminacao;
-            char.detCurrent = Math.max(0, Math.min(char.detCurrent + amount, max));
-            document.getElementById('det-current').value = char.detCurrent;
+            const modEnergia = (char.modMestre && char.modMestre.mod_energia) || 0;
+            const max = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0) + modEnergia;
+            char.enerCurrent = Math.max(0, Math.min(char.enerCurrent + amount, max));
+            document.getElementById('ener-current').value = char.enerCurrent;
             updateDETBar();
         };
 
         window.resetDET = function () {
             const char = getChar();
-            const modDeterminacao = (char.modMestre && char.modMestre.mod_determinacao) || 0;
-            const max = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0) + modDeterminacao;
-            char.detCurrent = max;
-            document.getElementById('det-current').value = char.detCurrent;
+            const modEnergia = (char.modMestre && char.modMestre.mod_energia) || 0;
+            const max = char.prs + char.aut + (char.raca === 'Humano' ? 1 : 0) + modEnergia;
+            char.enerCurrent = max;
+            document.getElementById('ener-current').value = char.enerCurrent;
             updateDETBar();
         };
 
@@ -12544,8 +12544,8 @@ Exemplos:
             const hpInput = document.getElementById('hp-current');
             if (hpInput) hpInput.value = char.hpCurrent || 5;
 
-            const detInput = document.getElementById('det-current');
-            if (detInput) detInput.value = char.detCurrent || 3;
+            const detInput = document.getElementById('ener-current');
+            if (detInput) detInput.value = char.enerCurrent || 3;
 
             const sanInput = document.getElementById('san-current');
             if (sanInput) sanInput.value = char.sanCurrent || 80;
@@ -12557,7 +12557,7 @@ Exemplos:
                     mod_reacao: 0,
                     mod_deslocterrestre: 0,
                     mod_vitalidade: 0,
-                    mod_determinacao: 0,
+                    mod_energia: 0,
                     mod_cargamax: 0,
                     blindagem: 0
                 };
@@ -13910,7 +13910,7 @@ Exemplos:
                 habitat: 'Áreas Urbanas, Rurais, Regiões Polares, Desertos, Subterrâneos e de Grandes Altitudes',
                 habilidades: [
                     { nome: 'APRENDIZADO ACELERADO IV', desc: '+4 nível para distribuir em qualquer Habilidade na criação do personagem. (Não pode ser na mesma habilidade)', positivo: true },
-                    { nome: 'FORÇA DE VONTADE NATURAL I', desc: '+1 ponto de Determinação Máxima na criação de personagem.', positivo: true },
+                    { nome: 'FORÇA DE VONTADE NATURAL I', desc: '+1 ponto de Energia Máxima na criação de personagem.', positivo: true },
                     { nome: 'EXPECTATIVA DE VIDA CURTA I', desc: 'Envelhecem mais rápido, limitados por linhas temporais curtas.', positivo: false },
                     { nome: 'NATUREZA AUTODESTRUTIVA I', desc: '-1 em testes de interação com o Abismo e resistir as suas tendências naturais.', positivo: false }
                 ],
@@ -14215,7 +14215,7 @@ Exemplos:
             const deslocAereo = document.getElementById('calc-deslocamento-aereo')?.textContent || '0m';
             const deslocFlutuante = document.getElementById('calc-deslocamento-flutuante')?.textContent || '2m';
             const vitMax = document.getElementById('calc-vitalidade-max')?.textContent || '0';
-            const detMax = document.getElementById('calc-determinacao-max')?.textContent || '0';
+            const enerMax = document.getElementById('calc-energia-max')?.textContent || '0';
             const cargaMax = document.getElementById('calc-carga')?.textContent || '0';
             const sanidade = document.getElementById('calc-sanidade')?.textContent || '80';
             const blindagem = document.getElementById('calc-blindagem')?.textContent || '0';
@@ -14262,7 +14262,7 @@ Exemplos:
                 </div>
             </div>`;
 
-            // ========== BLOCO 3: STATUS (VIT Max, DET Max, Sanidade) ==========
+            // ========== BLOCO 3: STATUS (VIT Max, ENER Max, Sanidade) ==========
             html += `<div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 10px; padding: 12px; margin-bottom: 10px;">
                 <div style="font-size: 0.75rem; font-weight: 700; color: #8b5cf6; margin-bottom: 8px; text-transform: uppercase;">❤️ Status</div>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;">
@@ -14271,8 +14271,8 @@ Exemplos:
                         <div style="font-size: 1.3rem; font-weight: 900; color: #f59e0b;">${vitMax}</div>
                     </div>
                     <div>
-                        <div style="font-size: 0.7rem; color: #94a3b8;">DET Max</div>
-                        <div style="font-size: 1.3rem; font-weight: 900; color: #f59e0b;">${detMax}</div>
+                        <div style="font-size: 0.7rem; color: #94a3b8;">ENER Max</div>
+                        <div style="font-size: 1.3rem; font-weight: 900; color: #f59e0b;">${enerMax}</div>
                     </div>
                     <div>
                         <div style="font-size: 0.7rem; color: #94a3b8;">Sanidade</div>

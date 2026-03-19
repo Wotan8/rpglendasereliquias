@@ -834,9 +834,9 @@
 
                 <div class="characteristic-item">
                     <div>
-                        <div class="char-label">DET Max</div>
+                        <div class="char-label">ENER Max</div>
                     </div>
-                    <div class="char-value" id="calc-determinacao-max">0</div>
+                    <div class="char-value" id="calc-energia-max">0</div>
                 </div>
 
                 <div class="characteristic-item">
@@ -1217,7 +1217,7 @@
             const reacao = Math.min(allyData.des, allyData.rac);
             const deslocamento = allyData.for + allyData.des + allyData.tamanho;
             const vitalidadeMax = allyData.vig + allyData.tamanho;
-            const determinacaoMax = allyData.prs + allyData.aut;
+            const energiaMax = allyData.prs + allyData.aut;
             const sanidadeMax = 100;
             const cargaMax = allyData.for + allyData.vig;
 
@@ -1225,7 +1225,7 @@
             document.getElementById('calc-reacao').textContent = reacao;
             document.getElementById('calc-deslocamento').textContent = deslocamento + 'm';
             document.getElementById('calc-vitalidade-max').textContent = vitalidadeMax;
-            document.getElementById('calc-determinacao-max').textContent = determinacaoMax;
+            document.getElementById('calc-energia-max').textContent = energiaMax;
             document.getElementById('calc-sanidade-max').textContent = sanidadeMax;
             document.getElementById('calc-carga').textContent = cargaMax;
             document.getElementById('pesoMax').value = cargaMax;

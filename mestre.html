@@ -1725,7 +1725,7 @@
             }
         }
 
-        /* ========== ESTILOS DO COMBAT STATS (VIT/DET/SAN) ========== */
+        /* ========== ESTILOS DO COMBAT STATS (VIT/ENER/SAN) ========== */
         .combat-stats {
             display: flex;
             gap: 15px;
@@ -3709,12 +3709,12 @@
                         <small style="color: #64748b;">VIG + Tamanho</small>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">⚡ Determinação Atual</label>
-                        <input type="number" class="form-input" id="edit_detCurrent" value="3">
+                        <label class="form-label">⚡ Energia Atual</label>
+                        <input type="number" class="form-input" id="edit_enerCurrent" value="3">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">⚡ Determinação Máxima</label>
-                        <input type="number" class="form-input" id="edit_detMax" value="3" readonly
+                        <label class="form-label">⚡ Energia Máxima</label>
+                        <input type="number" class="form-input" id="edit_enerMax" value="3" readonly
                             style="background: rgba(15, 23, 42, 0.4);">
                         <small style="color: #64748b;">AUT</small>
                     </div>
@@ -3764,8 +3764,8 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">⚡ Mod. Determinação</label>
-                        <input type="number" class="form-input" id="edit_modMestre_determinacao" value="0">
+                        <label class="form-label">⚡ Mod. Energia</label>
+                        <input type="number" class="form-input" id="edit_modMestre_energia" value="0">
                     </div>
                     <div class="form-group">
                         <label class="form-label">🎒 Mod. Carga Máxima</label>
@@ -4027,8 +4027,8 @@
                             <input type="number" class="npc-form-input" id="npcINI" value="0">
                         </div>
                         <div class="npc-form-group">
-                            <label class="npc-form-label"><span class="npc-stat-icon">🔥</span>DET</label>
-                            <input type="number" class="npc-form-input" id="npcDET" value="0">
+                            <label class="npc-form-label"><span class="npc-stat-icon">🔥</span>ENER</label>
+                            <input type="number" class="npc-form-input" id="npcENER" value="0">
                         </div>
                         <div class="npc-form-group">
                             <label class="npc-form-label"><span class="npc-stat-icon">🛡</span>REA</label>
@@ -5307,7 +5307,7 @@ Agilidade 2\n
 
             grid.innerHTML = allCharacters.map(char => {
                 const vitalidadeMax = (char.vig || 1) + (char.tamanho || 5);
-                const determinacaoMax = char.aut || 1;
+                const energiaMax = char.aut || 1;
 
                 // Cálculo de carga (mesmo do Itens > Personagens)
                 let maxLoad = (char.for || 1) + (char.vig || 1);
@@ -5346,8 +5346,8 @@ Agilidade 2\n
                                     <div class="stat-value">${char.hpCurrent || vitalidadeMax} / ${vitalidadeMax}</div>
                                 </div>
                                 <div class="stat-box">
-                                    <div class="stat-label">⚡ Determinação</div>
-                                    <div class="stat-value">${char.detCurrent || determinacaoMax} / ${determinacaoMax}</div>
+                                    <div class="stat-label">⚡ Energia</div>
+                                    <div class="stat-value">${char.enerCurrent || energiaMax} / ${energiaMax}</div>
                                 </div>
                                 <div class="stat-box">
                                     <div class="stat-label">🧠 Sanidade</div>
@@ -5440,7 +5440,7 @@ Agilidade 2\n
                     classAbilities: {},
                     classResources: {},
                     hpCurrent: 6,
-                    detCurrent: 1,
+                    enerCurrent: 1,
                     sanCurrent: 100,
                     blindagem: 0,
                     containers: [{
@@ -5588,7 +5588,7 @@ Agilidade 2\n
 
                 // Calcular valores máximos
                 const vitalidadeMax = (character.vig || 1) + (character.tamanho || 5);
-                const determinacaoMax = character.aut || 1;
+                const energiaMax = character.aut || 1;
 
                 // INFORMAÇÕES BÁSICAS
                 document.getElementById('edit_nome').value = character.nome || '';
@@ -5639,8 +5639,8 @@ Agilidade 2\n
                 // COMBATE
                 document.getElementById('edit_hpCurrent').value = character.hpCurrent !== undefined ? character.hpCurrent : vitalidadeMax;
                 document.getElementById('edit_hpMax').value = vitalidadeMax;
-                document.getElementById('edit_detCurrent').value = character.detCurrent !== undefined ? character.detCurrent : determinacaoMax;
-                document.getElementById('edit_detMax').value = determinacaoMax;
+                document.getElementById('edit_enerCurrent').value = character.enerCurrent !== undefined ? character.enerCurrent : energiaMax;
+                document.getElementById('edit_enerMax').value = energiaMax;
                 document.getElementById('edit_sanCurrent').value = character.sanCurrent !== undefined ? character.sanCurrent : 80;
                 document.getElementById('edit_blindagem').value = character.blindagem || 0;
 
@@ -5650,7 +5650,7 @@ Agilidade 2\n
                     mod_reacao: 0,
                     mod_deslocterrestre: 0,
                     mod_vitalidade: 0,
-                    mod_determinacao: 0,
+                    mod_energia: 0,
                     mod_cargamax: 0,
                     blindagem: 0
                 };
@@ -5658,7 +5658,7 @@ Agilidade 2\n
                 document.getElementById('edit_modMestre_reacao').value = modMestre.mod_reacao || 0;
                 document.getElementById('edit_modMestre_deslocterrestre').value = modMestre.mod_deslocterrestre || 0;
                 document.getElementById('edit_modMestre_vitalidade').value = modMestre.mod_vitalidade || 0;
-                document.getElementById('edit_modMestre_determinacao').value = modMestre.mod_determinacao || 0;
+                document.getElementById('edit_modMestre_energia').value = modMestre.mod_energia || 0;
                 document.getElementById('edit_modMestre_cargamax').value = modMestre.mod_cargamax || 0;
                 document.getElementById('edit_modMestre_blindagem').value = modMestre.blindagem || 0;
 
@@ -5710,7 +5710,7 @@ Agilidade 2\n
 
         function updateDetMax() {
             const aut = parseInt(document.getElementById('edit_aut').value) || 1;
-            document.getElementById('edit_detMax').value = aut;
+            document.getElementById('edit_enerMax').value = aut;
         }
 
         // ============= GERENCIAR HABILIDADES DE CLASSE =============
@@ -6148,7 +6148,7 @@ Agilidade 2\n
             const container = document.getElementById('edit_characteristics');
 
             const vitalidadeMax = (character.vig || 1) + (character.tamanho || 5);
-            const determinacaoMax = character.aut || 1;
+            const energiaMax = character.aut || 1;
 
             container.innerHTML = `
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
@@ -6158,8 +6158,8 @@ Agilidade 2\n
                         <small style="color: #64748b;">VIG (${character.vig || 1}) + Tamanho (${character.tamanho || 5})</small>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-label">⚡ Determinação Máxima</div>
-                        <div class="stat-value">${determinacaoMax}</div>
+                        <div class="stat-label">⚡ Energia Máxima</div>
+                        <div class="stat-value">${energiaMax}</div>
                         <small style="color: #64748b;">Igual ao AUT (${character.aut || 1})</small>
                     </div>
                     <div class="stat-box">
@@ -6288,7 +6288,7 @@ Agilidade 2\n
 
                     // COMBATE
                     hpCurrent: parseInt(document.getElementById('edit_hpCurrent').value) || 0,
-                    detCurrent: parseInt(document.getElementById('edit_detCurrent').value) || 0,
+                    enerCurrent: parseInt(document.getElementById('edit_enerCurrent').value) || 0,
                     sanCurrent: parseInt(document.getElementById('edit_sanCurrent').value) || 80,
                     blindagem: parseInt(document.getElementById('edit_blindagem').value) || 0,
 
@@ -6298,14 +6298,14 @@ Agilidade 2\n
                         mod_reacao: parseInt(document.getElementById('edit_modMestre_reacao')?.value) || 0,
                         mod_deslocterrestre: parseInt(document.getElementById('edit_modMestre_deslocterrestre')?.value) || 0,
                         mod_vitalidade: parseInt(document.getElementById('edit_modMestre_vitalidade')?.value) || 0,
-                        mod_determinacao: parseInt(document.getElementById('edit_modMestre_determinacao')?.value) || 0,
+                        mod_energia: parseInt(document.getElementById('edit_modMestre_energia')?.value) || 0,
                         mod_cargamax: parseInt(document.getElementById('edit_modMestre_cargamax')?.value) || 0,
                         blindagem: parseInt(document.getElementById('edit_modMestre_blindagem')?.value) || 0
                     },
 
                     // VALORES DERIVADOS RECALCULADOS
                     hpMax: (parseInt(document.getElementById('edit_vig').value) || 1) + (parseInt(document.getElementById('edit_tamanho').value) || 5),
-                    detMax: parseInt(document.getElementById('edit_aut').value) || 1,
+                    enerMax: parseInt(document.getElementById('edit_aut').value) || 1,
 
                     // INVENTÁRIO
                     luns: parseInt(document.getElementById('edit_luns').value) || 0,
@@ -6888,7 +6888,7 @@ Agilidade 2\n
             if (character) {
                 // Calcular valores máximos
                 const vitalidadeMax = (character.vig || 1) + (character.tamanho || 5);
-                const determinacaoMax = (character.prs || 1) + (character.aut || 1);
+                const energiaMax = (character.prs || 1) + (character.aut || 1);
                 const sanidadeMax = 100;
 
                 const participantId = 'char-' + Date.now();
@@ -6903,8 +6903,8 @@ Agilidade 2\n
                     // Stats em tempo real
                     hpCurrent: character.hpCurrent !== undefined ? character.hpCurrent : vitalidadeMax,
                     hpMax: vitalidadeMax,
-                    detCurrent: character.detCurrent !== undefined ? character.detCurrent : determinacaoMax,
-                    detMax: determinacaoMax,
+                    enerCurrent: character.enerCurrent !== undefined ? character.enerCurrent : energiaMax,
+                    enerMax: energiaMax,
                     sanCurrent: character.sanCurrent !== undefined ? character.sanCurrent : 80,
                     sanMax: sanidadeMax
                 });
@@ -6930,13 +6930,13 @@ Agilidade 2\n
                     if (participant) {
                         // Recalcular máximos (podem mudar se atributos mudarem)
                         const vitalidadeMax = (data.vig || 1) + (data.tamanho || 5);
-                        const determinacaoMax = (data.prs || 1) + (data.aut || 1);
+                        const energiaMax = (data.prs || 1) + (data.aut || 1);
 
                         // Atualizar valores
                         participant.hpCurrent = data.hpCurrent !== undefined ? data.hpCurrent : vitalidadeMax;
                         participant.hpMax = vitalidadeMax;
-                        participant.detCurrent = data.detCurrent !== undefined ? data.detCurrent : determinacaoMax;
-                        participant.detMax = determinacaoMax;
+                        participant.enerCurrent = data.enerCurrent !== undefined ? data.enerCurrent : energiaMax;
+                        participant.enerMax = energiaMax;
                         participant.sanCurrent = data.sanCurrent !== undefined ? data.sanCurrent : 80;
                         participant.name = data.nome || participant.name;
 
@@ -6968,13 +6968,13 @@ Agilidade 2\n
                 vitFillEl.style.background = vitPercent <= 25 ? 'linear-gradient(90deg, #dc2626, #ef4444)' : 'linear-gradient(90deg, #10b981, #34d399)';
             }
 
-            // Atualizar elementos DET
-            const detEl = document.getElementById(`combat-det-${participantId}`);
-            const detFillEl = document.getElementById(`combat-det-fill-${participantId}`);
-            if (detEl && detFillEl) {
-                detEl.textContent = `${participant.detCurrent}/${participant.detMax}`;
-                const detPercent = participant.detMax > 0 ? (participant.detCurrent / participant.detMax) * 100 : 0;
-                detFillEl.style.width = detPercent + '%';
+            // Atualizar elementos ENER
+            const enerEl = document.getElementById(`combat-ener-${participantId}`);
+            const enerFillEl = document.getElementById(`combat-ener-fill-${participantId}`);
+            if (enerEl && enerFillEl) {
+                enerEl.textContent = `${participant.enerCurrent}/${participant.enerMax}`;
+                const enerPercent = participant.enerMax > 0 ? (participant.enerCurrent / participant.enerMax) * 100 : 0;
+                enerFillEl.style.width = enerPercent + '%';
             }
 
             // Atualizar elementos SAN
@@ -7089,9 +7089,9 @@ Agilidade 2\n
             const npc = window.tempNpcs.find(n => n.id === npcId);
 
             if (npc) {
-                // Obter valores de VIT/DET/SAN do NPC
+                // Obter valores de VIT/ENER/SAN do NPC
                 const vitMax = npc.valoresDer?.VIT || 10;
-                const detMax = npc.valoresDer?.DET || 5;
+                const enerMax = npc.valoresDer?.ENER || 5;
                 const sanMax = npc.valoresDer?.SAN || 100;
 
                 combatParticipants.push({
@@ -7104,8 +7104,8 @@ Agilidade 2\n
                     // Stats editáveis no combate
                     hpCurrent: vitMax,
                     hpMax: vitMax,
-                    detCurrent: detMax,
-                    detMax: detMax,
+                    enerCurrent: enerMax,
+                    enerMax: enerMax,
                     sanCurrent: sanMax,
                     sanMax: sanMax,
                     isNpc: true
@@ -7127,8 +7127,8 @@ Agilidade 2\n
 
             if (stat === 'vit') {
                 participant.hpCurrent = Math.max(0, Math.min(participant.hpCurrent + amount, participant.hpMax));
-            } else if (stat === 'det') {
-                participant.detCurrent = Math.max(0, Math.min(participant.detCurrent + amount, participant.detMax));
+            } else if (stat === 'ener') {
+                participant.enerCurrent = Math.max(0, Math.min(participant.enerCurrent + amount, participant.enerMax));
             } else if (stat === 'san') {
                 participant.sanCurrent = Math.max(0, Math.min(participant.sanCurrent + amount, participant.sanMax));
             }
@@ -7177,8 +7177,8 @@ Agilidade 2\n
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px;">
                             <div class="form-group" style="margin-bottom: 0;">
-                                <label class="form-label">🔥 DET</label>
-                                <input type="number" class="form-input" id="customEnemyDET" value="5" min="0" style="text-align: center;">
+                                <label class="form-label">🔥 ENER</label>
+                                <input type="number" class="form-input" id="customEnemyENER" value="5" min="0" style="text-align: center;">
                             </div>
                             <div class="form-group" style="margin-bottom: 0;">
                                 <label class="form-label">🧠 SAN</label>
@@ -7210,7 +7210,7 @@ Agilidade 2\n
             const details = document.getElementById('customEnemyDetails').value.trim();
             const initiative = parseInt(document.getElementById('customInitiative').value) || 0;
             const vit = parseInt(document.getElementById('customEnemyVIT').value) || 10;
-            const det = parseInt(document.getElementById('customEnemyDET').value) || 5;
+            const ener = parseInt(document.getElementById('customEnemyENER').value) || 5;
             const san = parseInt(document.getElementById('customEnemySAN').value) || 50;
             const abilities = document.getElementById('customEnemyAbilities').value.trim();
 
@@ -7228,8 +7228,8 @@ Agilidade 2\n
                 // Stats editáveis
                 hpCurrent: vit,
                 hpMax: vit,
-                detCurrent: det,
-                detMax: det,
+                enerCurrent: ener,
+                enerMax: ener,
                 sanCurrent: san,
                 sanMax: san,
                 combatAbilities: abilities,
@@ -7311,7 +7311,7 @@ Agilidade 2\n
 
                 if (hasStats) {
                     const vitPercent = participant.hpMax > 0 ? (participant.hpCurrent / participant.hpMax) * 100 : 0;
-                    const detPercent = participant.detMax > 0 ? (participant.detCurrent / participant.detMax) * 100 : 0;
+                    const enerPercent = participant.enerMax > 0 ? (participant.enerCurrent / participant.enerMax) * 100 : 0;
                     const sanPercent = participant.sanMax > 0 ? (participant.sanCurrent / participant.sanMax) * 100 : 0;
 
                     const vitColor = vitPercent <= 25 ? 'linear-gradient(90deg, #dc2626, #ef4444)' : 'linear-gradient(90deg, #10b981, #34d399)';
@@ -7331,13 +7331,13 @@ Agilidade 2\n
                                     <button class="combat-stat-btn" onclick="adjustCombatStat('${participant.id}', 'vit', 1, event)">+</button>
                                 </div>
                                 <div class="combat-stat-item combat-stat-npc">
-                                    <button class="combat-stat-btn" onclick="adjustCombatStat('${participant.id}', 'det', -1, event)">−</button>
-                                    <span class="combat-stat-label">🔥 DET</span>
+                                    <button class="combat-stat-btn" onclick="adjustCombatStat('${participant.id}', 'ener', -1, event)">−</button>
+                                    <span class="combat-stat-label">🔥 ENER</span>
                                     <div class="combat-stat-bar">
-                                        <div class="combat-stat-fill" id="combat-det-fill-${participant.id}" style="width: ${detPercent}%; background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div>
+                                        <div class="combat-stat-fill" id="combat-ener-fill-${participant.id}" style="width: ${enerPercent}%; background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div>
                                     </div>
-                                    <span class="combat-stat-value" id="combat-det-${participant.id}">${participant.detCurrent}/${participant.detMax}</span>
-                                    <button class="combat-stat-btn" onclick="adjustCombatStat('${participant.id}', 'det', 1, event)">+</button>
+                                    <span class="combat-stat-value" id="combat-ener-${participant.id}">${participant.enerCurrent}/${participant.enerMax}</span>
+                                    <button class="combat-stat-btn" onclick="adjustCombatStat('${participant.id}', 'ener', 1, event)">+</button>
                                 </div>
                                 <div class="combat-stat-item combat-stat-npc">
                                     <button class="combat-stat-btn" onclick="adjustCombatStat('${participant.id}', 'san', -1, event)">−</button>
@@ -7362,11 +7362,11 @@ Agilidade 2\n
                                     <span class="combat-stat-value" id="combat-vit-${participant.id}">${participant.hpCurrent}/${participant.hpMax}</span>
                                 </div>
                                 <div class="combat-stat-item">
-                                    <span class="combat-stat-label">🔥 DET</span>
+                                    <span class="combat-stat-label">🔥 ENER</span>
                                     <div class="combat-stat-bar">
-                                        <div class="combat-stat-fill" id="combat-det-fill-${participant.id}" style="width: ${detPercent}%; background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div>
+                                        <div class="combat-stat-fill" id="combat-ener-fill-${participant.id}" style="width: ${enerPercent}%; background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div>
                                     </div>
-                                    <span class="combat-stat-value" id="combat-det-${participant.id}">${participant.detCurrent}/${participant.detMax}</span>
+                                    <span class="combat-stat-value" id="combat-ener-${participant.id}">${participant.enerCurrent}/${participant.enerMax}</span>
                                 </div>
                                 <div class="combat-stat-item">
                                     <span class="combat-stat-label">🧠 SAN</span>
@@ -7630,7 +7630,7 @@ Agilidade 2\n
                 document.getElementById('npcVIT').value = npc.valoresDer?.VIT || 0;
                 document.getElementById('npcPERC').value = npc.valoresDer?.PERC || 0;
                 document.getElementById('npcINI').value = npc.valoresDer?.INI || 0;
-                document.getElementById('npcDET').value = npc.valoresDer?.DET || 0;
+                document.getElementById('npcENER').value = npc.valoresDer?.ENER || 0;
                 document.getElementById('npcREA').value = npc.valoresDer?.REA || 0;
                 document.getElementById('npcBLD').value = npc.valoresDer?.BLD || 0;
                 document.getElementById('npcDESLOCAMENTO').value = npc.valoresDer?.DESLOCAMENTO || '';
@@ -7739,7 +7739,7 @@ Agilidade 2\n
                         VIT: parseInt(document.getElementById('npcVIT').value) || 0,
                         PERC: parseInt(document.getElementById('npcPERC').value) || 0,
                         INI: parseInt(document.getElementById('npcINI').value) || 0,
-                        DET: parseInt(document.getElementById('npcDET').value) || 0,
+                        ENER: parseInt(document.getElementById('npcENER').value) || 0,
                         REA: parseInt(document.getElementById('npcREA').value) || 0,
                         BLD: parseInt(document.getElementById('npcBLD').value) || 0,
                         DESLOCAMENTO: document.getElementById('npcDESLOCAMENTO').value.trim(),
@@ -7997,7 +7997,7 @@ Agilidade 2\n
                         VIT: parseInt(document.getElementById('npcVIT')?.value) || 0,
                         PERC: parseInt(document.getElementById('npcPERC')?.value) || 0,
                         INI: parseInt(document.getElementById('npcINI')?.value) || 0,
-                        DET: parseInt(document.getElementById('npcDET')?.value) || 0,
+                        ENER: parseInt(document.getElementById('npcENER')?.value) || 0,
                         REA: parseInt(document.getElementById('npcREA')?.value) || 0,
                         BLD: parseInt(document.getElementById('npcBLD')?.value) || 0,
                         DESLOCAMENTO: document.getElementById('npcDESLOCAMENTO')?.value?.trim() || '',
@@ -8112,7 +8112,7 @@ Agilidade 2\n
                                 document.getElementById('npcVIT').value = npcData.valoresDer.VIT || 0;
                                 document.getElementById('npcPERC').value = npcData.valoresDer.PERC || 0;
                                 document.getElementById('npcINI').value = npcData.valoresDer.INI || 0;
-                                document.getElementById('npcDET').value = npcData.valoresDer.DET || 0;
+                                document.getElementById('npcENER').value = npcData.valoresDer.ENER || 0;
                                 document.getElementById('npcREA').value = npcData.valoresDer.REA || 0;
                                 document.getElementById('npcBLD').value = npcData.valoresDer.BLD || 0;
                                 document.getElementById('npcDESLOCAMENTO').value = npcData.valoresDer.DESLOCAMENTO || '';
@@ -8306,7 +8306,7 @@ Agilidade 2\n
                 // Criar modal
                 // Calcular características
                 const vitalidadeMax = (ally.vig || 1) + (ally.tamanho || 5);
-                const determinacaoMax = ally.aut || 1;
+                const energiaMax = ally.aut || 1;
                 const iniciativa = (ally.rac || 0) + (ally.des || 0) + (ally.aut || 0) - (ally.tamanho || 5);
                 const reacao = (ally.rac || 0) + (ally.des || 0);
                 const deslocamento = (ally.for || 0) + (ally.des || 0) + 5;
@@ -8474,8 +8474,8 @@ Agilidade 2\n
                                             <div style="color: var(--danger); font-size: 1.4rem; font-weight: 900;">${vitalidadeMax}</div>
                                         </div>
                                         <div style="background: rgba(245, 158, 11, 0.15); padding: 12px; border-radius: 8px; text-align: center; border: 2px solid var(--warning);">
-                                            <div style="color: #94a3b8; font-size: 0.85rem;">DET Max</div>
-                                            <div style="color: var(--warning); font-size: 1.4rem; font-weight: 900;">${determinacaoMax}</div>
+                                            <div style="color: #94a3b8; font-size: 0.85rem;">ENER Max</div>
+                                            <div style="color: var(--warning); font-size: 1.4rem; font-weight: 900;">${energiaMax}</div>
                                         </div>
                                         <div style="background: rgba(99, 102, 241, 0.15); padding: 12px; border-radius: 8px; text-align: center; border: 2px solid #6366f1;">
                                             <div style="color: #94a3b8; font-size: 0.85rem;">SAN Max</div>

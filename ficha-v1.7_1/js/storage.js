@@ -133,7 +133,7 @@ function gatherData() {
     // Gather derived current values
     d.derivedValues = {
         vit_atual: (document.querySelector('[data-key="vit_atual"]') || {}).value || '',
-        det_atual: (document.querySelector('[data-key="det_atual"]') || {}).value || '',
+        ener_atual: (document.querySelector('[data-key="ener_atual"]') || {}).value || '',
         san_atual: (document.querySelector('[data-key="san_atual"]') || {}).value || '',
         blindagem: (document.querySelector('[data-key="blindagem"]') || {}).value || '',
     };

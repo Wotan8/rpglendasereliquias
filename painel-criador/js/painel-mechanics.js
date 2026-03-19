@@ -16,7 +16,7 @@ function getMechanicTargetsHTML() {
 </optgroup>
 <optgroup label="Status Vitais">
 <option value="Vitalidade Máxima">Vitalidade Máxima</option>
-<option value="Determinação Máxima">Determinação Máxima</option>
+<option value="Energia Máxima">Energia Máxima</option>
 <option value="Sanidade Máxima">Sanidade Máxima</option>
 </optgroup>`;
 
@@ -235,7 +235,7 @@ function getValueSourceHTML() {
 </optgroup>
 <optgroup label="Status Vitais">
 <option value="Vitalidade Máxima">Vitalidade Máxima</option>
-<option value="Determinação Máxima">Determinação Máxima</option>
+<option value="Energia Máxima">Energia Máxima</option>
 <option value="Sanidade Máxima">Sanidade Máxima</option>
 </optgroup>`;
 

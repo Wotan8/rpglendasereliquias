@@ -5,7 +5,7 @@ let _previousRace = '';
 
 // Default fallback to prevent crash if not initialized elsewhere
 window._raceBonuses = window._raceBonuses || {
-    det_max: 0,
+    ener_max: 0,
     vit_max: 0,
     perc: 0,
     is_yotun: false,
@@ -141,7 +141,7 @@ function clearRaceBonuses(oldRace) {
     // Limpar bônus dinâmicos das mecânicas do Firebase
     if (typeof clearMechanicBonuses === 'function') clearMechanicBonuses();
     const rb = window._raceBonuses;
-    rb.det_max = 0;
+    rb.ener_max = 0;
     rb.vit_max = 0;
     rb.perc = 0;
     rb.is_yotun = false;
@@ -175,8 +175,8 @@ function applyRaceBonuses(racaNome) {
 
     switch (racaNome) {
         case 'Humano':
-            // Força de Vontade Natural: +1 DET Máxima
-            rb.det_max = 1;
+            // Força de Vontade Natural: +1 ENER Máxima
+            rb.ener_max = 1;
             break;
 
         case 'Karu-Selvagem':

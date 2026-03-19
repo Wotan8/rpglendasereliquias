@@ -23,7 +23,7 @@ const TARGET_MAP = {
 
     // === STATUS VITAIS (hardcoded — têm campos atual/max no HTML) ===
     "Vitalidade Máxima": "DERIVED:VIT_MAX",
-    "Determinação Máxima": "DERIVED:DET_MAX",
+    "Energia Máxima": "DERIVED:ENER_MAX",
     "Sanidade Máxima": "DERIVED:SAN_MAX",
 
     // === CAMPOS DA FICHA ===
@@ -321,9 +321,16 @@ function applyDerivedValueMechanics() {
         mechanicsById[m.id] = m;
     }
 
+    // Evitar duplicatas: se o mesmo mechId está vinculado a múltiplos DVs,
+    // processar apenas uma vez.
+    const processedMechIds = new Set();
+
     for (const dv of window.DERIVED_VALUES) {
         if (!dv.mecanicaIds || dv.mecanicaIds.length === 0) continue;
         for (const mechId of dv.mecanicaIds) {
+            if (processedMechIds.has(mechId)) continue;
+            processedMechIds.add(mechId);
+
             const mech = mechanicsById[mechId];
             if (!mech) continue;
 
@@ -380,10 +387,15 @@ function resolveDerivedValueMechanicsLive() {
             for (const alvo of alvos) {
                 if (!alvo) continue;
                 const field = TARGET_MAP[alvo];
-                if (!field) continue;
+                if (!field) {
+                    console.warn(`⚠️ Mecânica DV "${mech.nome}": alvo "${alvo}" não encontrado no TARGET_MAP`);
+                    continue;
+                }
 
                 const val = resolveCalcValue(calc);
                 const op = calc.operacao;
+
+                console.log(`🔧 DV Mech "${mech.nome}": ${op}${val} → ${alvo} (${field})`);
 
                 if (op === '+') state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) + val;
                 else if (op === '-') state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) - val;

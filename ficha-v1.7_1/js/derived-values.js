@@ -1,23 +1,23 @@
 /* ===== DERIVED VALUES — Cálculo Automático de Valores Derivados ===== */
 
 /* ===== FÓRMULAS DE STATUS VITAIS (hardcoded — campos fixos no HTML) =====
- * Apenas VIT_MAX, DET_MAX e SAN_MAX permanecem aqui pois possuem
+ * Apenas VIT_MAX, ENER_MAX e SAN_MAX permanecem aqui pois possuem
  * campos atual/max fixos no HTML. Todos os outros valores derivados
  * são gerenciados exclusivamente pelo Firebase (Painel de Criador).
  */
 const DERIVED_FORMULAS = {
     VIT_MAX: (a) => (a.VIG) * 3,
-    DET_MAX: (a) => a.PRS + a.AUT,
+    ENER_MAX: (a) => a.PRS + a.AUT,
     SAN_MAX: (a) => (a.INT + a.AUT + a.PRS) * 2,
 };
 
 /* Mapa: campo derivado → { display, atual (se aplicável) }
  * Usado APENAS para os "Status Vitais" que ficam hardcoded no HTML
- * (VIT_MAX, DET_MAX, SAN_MAX) — a seção dinâmica usa IDs gerados.
+ * (VIT_MAX, ENER_MAX, SAN_MAX) — a seção dinâmica usa IDs gerados.
  */
 const DERIVED_FIELDS_MAP = {
     VIT_MAX: { display: 'vit_max_display', atual: 'vit_atual' },
-    DET_MAX: { display: 'det_max_display', atual: 'det_atual' },
+    ENER_MAX: { display: 'ener_max_display', atual: 'ener_atual' },
     SAN_MAX: { display: 'san_max_display', atual: 'san_atual' },
 };
 
@@ -139,7 +139,43 @@ function renderDerivedValuesGrid() {
         }
 
         miniField.appendChild(label);
-        miniField.appendChild(input);
+
+        // Wrapper com prefixo + input + sufixo — tudo DENTRO do campo
+        const hasPrefixOrSuffix = !!(dv.prefixo || dv.sufixo);
+        if (hasPrefixOrSuffix) {
+            const valueRow = document.createElement('div');
+            valueRow.className = 'dv-value-row';
+
+            // Copiar borda do Criador para o wrapper se necessário
+            if (!dv.campoEditavel && window.isCreator) {
+                valueRow.style.border = '2px solid #f59e0b';
+                input.style.border = 'none';
+            }
+
+            // Remover borda/bg do input — o wrapper assume o visual
+            input.classList.add('dv-input-inline');
+
+            if (dv.prefixo) {
+                const prefixSpan = document.createElement('span');
+                prefixSpan.className = 'dv-affix';
+                prefixSpan.textContent = dv.prefixo;
+                valueRow.appendChild(prefixSpan);
+            }
+
+            valueRow.appendChild(input);
+
+            if (dv.sufixo) {
+                const suffixSpan = document.createElement('span');
+                suffixSpan.className = 'dv-affix';
+                suffixSpan.textContent = dv.sufixo;
+                valueRow.appendChild(suffixSpan);
+            }
+
+            miniField.appendChild(valueRow);
+        } else {
+            miniField.appendChild(input);
+        }
+
         grid.appendChild(miniField);
     });
 
@@ -269,7 +305,7 @@ function recalcAll() {
                 displayEl.value = overrideVal;
             }
             if (!state.derived) state.derived = {};
-            state.derived[dvKey] = parseFloat(overrideVal) || 0;
+            state.derived[dvKey] = parseFloat(String(overrideVal).replace(',', '.')) || 0;
             continue;
         }
 
@@ -286,6 +322,11 @@ function recalcAll() {
         const displayEl = document.getElementById(`dv_${dvKey}_display`);
         if (displayEl) {
             displayEl.value = Number.isInteger(value) ? value : parseFloat(value.toFixed(1));
+        }
+
+        // Atualizar também o campo hardcoded, se existir (ex: ENER_MAX)
+        if (DERIVED_FIELDS_MAP[dvKey]) {
+            updateDerivedField(dvKey, value);
         }
 
         // Guardar em state.derived para referências cruzadas
@@ -485,7 +526,7 @@ function validateAtualField(atualKey, maxDisplayId) {
 function initDerivedListeners() {
     // Validação de campos ATUAL ≤ MAX (Status Vitais hardcoded)
     validateAtualField('vit_atual', 'vit_max_display');
-    validateAtualField('det_atual', 'det_max_display');
+    validateAtualField('ener_atual', 'ener_max_display');
     validateAtualField('san_atual', 'san_max_display');
 
     // Renderizar grid dinâmica de valores derivados

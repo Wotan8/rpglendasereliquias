@@ -70,8 +70,8 @@ const CLASS_TESTS = {
         testes: [
             { nome: 'Domar Aliado', formula: 'PRE + Domar + Aliado Animal', quando: 'Fora de combate, criar vínculo com criatura', parts: ['PRE', 'Domar', 'Aliado Animal'] },
             { nome: 'Comandar Aliado', formula: 'PRE + Liderança + Aliado Animal', quando: 'Dar ordens a aliado animal em cena', parts: ['PRE', 'Liderança', 'Aliado Animal'] },
-            { nome: 'Convocar Manada', formula: 'PRE + Liderança + Linguagem Animal', quando: 'Chamar animais próximos (custa 1 DET)', parts: ['PRE', 'Liderança', 'Linguagem Animal'] },
-            { nome: 'Fusão Selvagem', formula: 'PRE + Aliado Animal + Linguagem Animal', quando: 'Unir-se espiritualmente a um aliado (custa 1 DET)', parts: ['PRE', 'Aliado Animal', 'Linguagem Animal'] },
+            { nome: 'Convocar Manada', formula: 'PRE + Liderança + Linguagem Animal', quando: 'Chamar animais próximos (custa 1 ENER)', parts: ['PRE', 'Liderança', 'Linguagem Animal'] },
+            { nome: 'Fusão Selvagem', formula: 'PRE + Aliado Animal + Linguagem Animal', quando: 'Unir-se espiritualmente a um aliado (custa 1 ENER)', parts: ['PRE', 'Aliado Animal', 'Linguagem Animal'] },
             { nome: 'Preparar Loção', formula: 'RAC + Herbalismo + Maceração + Ferramenta', quando: 'Fora de combate, preparar loções', parts: ['RAC', 'Herbalismo', 'Maceração'] },
             { nome: 'Dosagem', formula: 'INT + Herbalismo + Dosagem', quando: 'Definir potência de loções', parts: ['INT', 'Herbalismo', 'Dosagem'] },
             { nome: 'Percepção', formula: 'RAC + PRE', quando: 'Notar armadilhas, emboscadas, rastros e sinais naturais', parts: ['RAC', 'PRE'] }
@@ -112,9 +112,9 @@ const CLASS_TESTS = {
         testes: [
             { nome: 'Cravar Totem', formula: 'RAC + Fluxomancia + Totemismo', quando: 'Posicionar totem espiritual no local', parts: ['RAC', 'Fluxomancia', 'Totemismo'] },
             { nome: 'Buscar Vestígio', formula: 'PRE + Performance + Comunhão c/ Ecos', quando: 'Procurar vestígios de alma ou presença espiritual', parts: ['PRE', 'Performance', 'Comunhão c/ Ecos'] },
-            { nome: 'Transcendência (Projetor)', formula: 'AUT + Fluxomancia + Transcendência', quando: 'Projetar consciência além do Véu (custa 2 DET)', parts: ['AUT', 'Fluxomancia', 'Transcendência'] },
-            { nome: 'Transcendência (Receptor)', formula: 'PRS + AUT + Transcendência', quando: 'Permitir que Eco compartilhe o corpo (custa 2 DET)', parts: ['PRS', 'AUT', 'Transcendência'] },
-            { nome: 'Comunhão Simples', formula: 'PRE + Performance + Comunhão c/ Ecos', quando: 'Comunicar-se com Eco ou espírito (custa 1 DET)', parts: ['PRE', 'Performance', 'Comunhão c/ Ecos'] },
+            { nome: 'Transcendência (Projetor)', formula: 'AUT + Fluxomancia + Transcendência', quando: 'Projetar consciência além do Véu (custa 2 ENER)', parts: ['AUT', 'Fluxomancia', 'Transcendência'] },
+            { nome: 'Transcendência (Receptor)', formula: 'PRS + AUT + Transcendência', quando: 'Permitir que Eco compartilhe o corpo (custa 2 ENER)', parts: ['PRS', 'AUT', 'Transcendência'] },
+            { nome: 'Comunhão Simples', formula: 'PRE + Performance + Comunhão c/ Ecos', quando: 'Comunicar-se com Eco ou espírito (custa 1 ENER)', parts: ['PRE', 'Performance', 'Comunhão c/ Ecos'] },
             { nome: 'Exorcismo', formula: 'PRS + Performance + Exorcismo vs PRS do Espírito', quando: 'Expulsar espíritos de pessoas, objetos ou locais', parts: ['PRS', 'Performance', 'Exorcismo'] },
             { nome: 'Percepção Espiritual', formula: 'RAC + PRE + Visão do Véu', quando: 'Perceber essências, Ecos e perturbações espirituais', parts: ['RAC', 'PRE', 'Visão do Véu'] },
             { nome: 'Resistir Possessão', formula: 'AUT + Transcendência vs PRS do Eco', quando: 'Resistir tentativa de possessão espiritual', parts: ['AUT', 'Transcendência'] }

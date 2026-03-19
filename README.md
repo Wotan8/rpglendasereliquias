@@ -51,7 +51,7 @@ Este sistema online foi originalmente iniciado por **Lucas Gabriel** em uma vers
 - ✅ **Sistema de pontos** visual com 5 níveis por atributo
 - ✅ **Skills especializadas** com rastreamento individual
 - ✅ **Cálculos automáticos** de bônus e penalidades
-- ✅ **HP, Determinação e Sanidade** com barras visuais
+- ✅ **HP, Energia e Sanidade** com barras visuais
 - ✅ **Sistema de defesas** (Física, Mental, Bélica)
 - ✅ **Rastreamento de EXP** e progressão de nível
 - ✅ **Sistema monetário** (Luns)
