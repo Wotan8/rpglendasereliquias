@@ -126,6 +126,12 @@ function populateTargetMapFromDerivedValues() {
         // SEMPRE sobrescreve para garantir que o key dinâmico (Firebase)
         // coincida com o key usado em recalcAll/_applyMechanicModifiers
         TARGET_MAP[dv.nome] = `DERIVED:${dv.key}`;
+
+        // Se DV tem campoAtual, registrar também entries para (Atual) e (Máximo)
+        if (dv.campoAtual) {
+            TARGET_MAP[`${dv.nome} (Atual)`] = `field:dv_${dv.key}_atual`;
+            TARGET_MAP[`${dv.nome} (Máximo)`] = `DERIVED:${dv.key}`;
+        }
     }
     console.log('✅ TARGET_MAP atualizado com valores derivados do Firebase');
 }
@@ -249,6 +255,13 @@ function _resolveSheetRef(ref, mult) {
     if (ref === 'Nível') {
         const nivel = parseInt(document.querySelector('[data-key="nivel"]')?.value) || 1;
         return nivel * mult;
+    }
+
+    // Check DV (Atual) — reads editable Atual field from state.dvAtual
+    if (attrKey && attrKey.startsWith('field:dv_') && attrKey.endsWith('_atual')) {
+        const dvKey = attrKey.replace('field:dv_', '').replace('_atual', '');
+        const atualVal = parseFloat(state.dvAtual?.[dvKey] || '0') || 0;
+        return atualVal * mult;
     }
 
     // Check derived values

@@ -68,21 +68,37 @@ function renderDerivedValuesGrid() {
     const racaNome = document.getElementById('selRaca')?.value || '';
     const classeNome = document.getElementById('selClasse')?.value || '';
 
-    // IDs de valores derivados vinculados à raça selecionada
+    // IDs e valores iniciais de DVs vinculados à raça selecionada
     const raceDVIds = new Set();
+    const raceDVInitials = {};  // dvId -> valorInicial
     if (racaNome && window._systemData?.races) {
         const raceData = window._systemData.races.find(r => r.nome === racaNome);
         if (raceData?.derivedValueIds) {
-            raceData.derivedValueIds.forEach(id => raceDVIds.add(id));
+            raceData.derivedValueIds.forEach(item => {
+                const isObj = typeof item === 'object' && item !== null;
+                const dvId = isObj ? item.id : item;
+                raceDVIds.add(dvId);
+                if (isObj && item.valorInicial) {
+                    raceDVInitials[dvId] = item.valorInicial;
+                }
+            });
         }
     }
 
     // IDs de valores derivados vinculados à classe selecionada
     const classDVIds = new Set();
+    const classDVInitials = {};  // dvId -> valorInicial
     if (classeNome && window._systemData?.classes) {
         const classData = window._systemData.classes.find(c => c.nome === classeNome);
         if (classData?.derivedValueIds) {
-            classData.derivedValueIds.forEach(id => classDVIds.add(id));
+            classData.derivedValueIds.forEach(item => {
+                const isObj = typeof item === 'object' && item !== null;
+                const dvId = isObj ? item.id : item;
+                classDVIds.add(dvId);
+                if (isObj && item.valorInicial) {
+                    classDVInitials[dvId] = item.valorInicial;
+                }
+            });
         }
     }
 
@@ -90,6 +106,9 @@ function renderDerivedValuesGrid() {
     const applicableDVs = allDVs.filter(dv =>
         dv.todoPersonagem || raceDVIds.has(dv.id) || classDVIds.has(dv.id)
     );
+
+    // Guardar mapa de valores iniciais para uso no recalcAll
+    window._dvInitialValues = { ...raceDVInitials, ...classDVInitials };
 
     // Ordenar por ordem
     applicableDVs.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
@@ -115,7 +134,7 @@ function renderDerivedValuesGrid() {
         label.textContent = `${dv.icone} ${dv.nome}`;
         label.dataset.dvId = dv.id;
 
-        // Input
+        // Input Máximo (calculado)
         const input = document.createElement('input');
         input.type = 'text';
         input.id = `dv_${dv.key}_display`;
@@ -124,10 +143,8 @@ function renderDerivedValuesGrid() {
 
         if (!dv.campoEditavel) {
             if (window.isCreator) {
-                // Criador pode editar qualquer campo — destaque visual
                 input.style.border = '2px solid #f59e0b';
                 input.title = '🛡️ Modo Criador: edição livre';
-                // Salvar override quando Criador editar manualmente
                 input.addEventListener('input', () => {
                     if (!state.derivedOverrides) state.derivedOverrides = {};
                     state.derivedOverrides[dv.key] = input.value;
@@ -140,40 +157,103 @@ function renderDerivedValuesGrid() {
 
         miniField.appendChild(label);
 
-        // Wrapper com prefixo + input + sufixo — tudo DENTRO do campo
-        const hasPrefixOrSuffix = !!(dv.prefixo || dv.sufixo);
-        if (hasPrefixOrSuffix) {
-            const valueRow = document.createElement('div');
-            valueRow.className = 'dv-value-row';
+        // === Campo Atual / Máx ===
+        if (dv.campoAtual) {
+            const atualRow = document.createElement('div');
+            atualRow.className = 'dv-atual-row';
 
-            // Copiar borda do Criador para o wrapper se necessário
-            if (!dv.campoEditavel && window.isCreator) {
-                valueRow.style.border = '2px solid #f59e0b';
-                input.style.border = 'none';
+            // Input Atual (editável)
+            const atualInput = document.createElement('input');
+            atualInput.type = 'text';
+            atualInput.id = `dv_${dv.key}_atual`;
+            atualInput.dataset.key = `dv_${dv.key}_atual`;
+            atualInput.className = 'dv-atual-input';
+            atualInput.placeholder = '0';
+            atualInput.value = '0';
+            atualInput.addEventListener('input', () => {
+                if (!state.dvAtual) state.dvAtual = {};
+                const maxVal = parseInt(input.value, 10) || 0;
+                const curVal = parseInt(atualInput.value, 10);
+                if (!isNaN(curVal) && curVal > maxVal) {
+                    atualInput.value = maxVal;
+                }
+                state.dvAtual[dv.key] = atualInput.value;
+                if (typeof scheduleAutosave === 'function') scheduleAutosave();
+            });
+
+            // Separador /
+            const sep = document.createElement('span');
+            sep.className = 'dv-atual-sep';
+            sep.textContent = '/';
+
+            // Máximo é readOnly no modo Atual/Máx
+            input.readOnly = true;
+            input.classList.add('dv-atual-max');
+
+            // Prefixo antes do row, sufixo depois
+            if (dv.prefixo || dv.sufixo) {
+                const outerRow = document.createElement('div');
+                outerRow.className = 'dv-value-row';
+                input.classList.add('dv-input-inline');
+                atualInput.classList.add('dv-input-inline');
+
+                if (dv.prefixo) {
+                    const prefixSpan = document.createElement('span');
+                    prefixSpan.className = 'dv-affix';
+                    prefixSpan.textContent = dv.prefixo;
+                    outerRow.appendChild(prefixSpan);
+                }
+                outerRow.appendChild(atualInput);
+                outerRow.appendChild(sep);
+                outerRow.appendChild(input);
+                if (dv.sufixo) {
+                    const suffixSpan = document.createElement('span');
+                    suffixSpan.className = 'dv-affix';
+                    suffixSpan.textContent = dv.sufixo;
+                    outerRow.appendChild(suffixSpan);
+                }
+                miniField.appendChild(outerRow);
+            } else {
+                atualRow.appendChild(atualInput);
+                atualRow.appendChild(sep);
+                atualRow.appendChild(input);
+                miniField.appendChild(atualRow);
             }
+        }
+        // === Campo normal (sem Atual) ===
+        else {
+            const hasPrefixOrSuffix = !!(dv.prefixo || dv.sufixo);
+            if (hasPrefixOrSuffix) {
+                const valueRow = document.createElement('div');
+                valueRow.className = 'dv-value-row';
 
-            // Remover borda/bg do input — o wrapper assume o visual
-            input.classList.add('dv-input-inline');
+                if (!dv.campoEditavel && window.isCreator) {
+                    valueRow.style.border = '2px solid #f59e0b';
+                    input.style.border = 'none';
+                }
 
-            if (dv.prefixo) {
-                const prefixSpan = document.createElement('span');
-                prefixSpan.className = 'dv-affix';
-                prefixSpan.textContent = dv.prefixo;
-                valueRow.appendChild(prefixSpan);
+                input.classList.add('dv-input-inline');
+
+                if (dv.prefixo) {
+                    const prefixSpan = document.createElement('span');
+                    prefixSpan.className = 'dv-affix';
+                    prefixSpan.textContent = dv.prefixo;
+                    valueRow.appendChild(prefixSpan);
+                }
+
+                valueRow.appendChild(input);
+
+                if (dv.sufixo) {
+                    const suffixSpan = document.createElement('span');
+                    suffixSpan.className = 'dv-affix';
+                    suffixSpan.textContent = dv.sufixo;
+                    valueRow.appendChild(suffixSpan);
+                }
+
+                miniField.appendChild(valueRow);
+            } else {
+                miniField.appendChild(input);
             }
-
-            valueRow.appendChild(input);
-
-            if (dv.sufixo) {
-                const suffixSpan = document.createElement('span');
-                suffixSpan.className = 'dv-affix';
-                suffixSpan.textContent = dv.sufixo;
-                valueRow.appendChild(suffixSpan);
-            }
-
-            miniField.appendChild(valueRow);
-        } else {
-            miniField.appendChild(input);
         }
 
         grid.appendChild(miniField);
@@ -311,9 +391,16 @@ function recalcAll() {
 
         let value = 0;
 
+        // Usar valorInicial de raça/classe como base (se definido)
+        const initials = window._dvInitialValues || {};
+        const dvDef = (window.DERIVED_VALUES || []).find(d => d.key === dvKey);
+        if (dvDef && initials[dvDef.id]) {
+            value = initials[dvDef.id];
+        }
+
         // Se existe fórmula hardcoded para este key, usar como base
         if (DERIVED_FORMULAS[dvKey]) {
-            value = DERIVED_FORMULAS[dvKey](attrs, fields);
+            value += DERIVED_FORMULAS[dvKey](attrs, fields);
         }
 
         value = _applyMechanicModifiers(dvKey, value, bonuses, limits);
@@ -322,6 +409,20 @@ function recalcAll() {
         const displayEl = document.getElementById(`dv_${dvKey}_display`);
         if (displayEl) {
             displayEl.value = Number.isInteger(value) ? value : parseFloat(value.toFixed(1));
+        }
+
+        // Se DV tem campoAtual, atualizar max do campo Atual e clampar valor
+        if (dvDef && dvDef.campoAtual) {
+            const atualEl = document.getElementById(`dv_${dvKey}_atual`);
+            if (atualEl) {
+                atualEl.max = value;
+                const curVal = parseInt(atualEl.value, 10);
+                if (!isNaN(curVal) && curVal > value) {
+                    atualEl.value = value;
+                    if (!state.dvAtual) state.dvAtual = {};
+                    state.dvAtual[dvKey] = String(value);
+                }
+            }
         }
 
         // Atualizar também o campo hardcoded, se existir (ex: ENER_MAX)
@@ -531,4 +632,14 @@ function initDerivedListeners() {
 
     // Renderizar grid dinâmica de valores derivados
     renderDerivedValuesGrid();
+
+    // Restaurar valores de state.dvAtual (campos "Atual" editáveis de DVs)
+    if (state.dvAtual) {
+        for (const [dvKey, val] of Object.entries(state.dvAtual)) {
+            const atualEl = document.getElementById(`dv_${dvKey}_atual`);
+            if (atualEl && val !== undefined && val !== '') {
+                atualEl.value = val;
+            }
+        }
+    }
 }

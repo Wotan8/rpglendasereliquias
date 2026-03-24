@@ -2,6 +2,7 @@
 
 /* Guarda a raça anterior para poder reverter bônus corretamente */
 let _previousRace = '';
+let _previousRaceData = null;
 
 // Default fallback to prevent crash if not initialized elsewhere
 window._raceBonuses = window._raceBonuses || {
@@ -14,21 +15,44 @@ window._raceBonuses = window._raceBonuses || {
 };
 
 /**
- * Define o valor de Tamanho no state.derived e atualiza o display.
- * Resolve a key dinâmica do Valor Derivado "Tamanho" (vem do Firebase).
+ * Define os valores iniciais dos Valores Derivados vinculados à raça.
+ * Itera derivedValueIds da raça e aplica valorInicial no state.derived + display.
  */
-function _setDerivedTamanho(valor) {
+function _setDerivedInitialValues(raceData) {
     if (!state.derived) state.derived = {};
-    const numVal = parseFloat(String(valor).replace(',', '.')) || 0;
+    const dvIds = raceData?.derivedValueIds || [];
+    for (const dvEntry of dvIds) {
+        const isObj = typeof dvEntry === 'object' && dvEntry !== null;
+        const dvId = isObj ? dvEntry.id : dvEntry;
+        const valorInicial = isObj ? (parseFloat(dvEntry.valorInicial) || 0) : 0;
 
-    // Encontrar a key dinâmica do Valor Derivado "Tamanho"
-    const dvTamanho = (window.DERIVED_VALUES || []).find(d => d.nome === 'Tamanho');
-    if (dvTamanho) {
-        state.derived[dvTamanho.key] = numVal;
-        // Atualizar display na grid
-        const displayEl = document.getElementById(`dv_${dvTamanho.key}_display`);
-        if (displayEl) {
-            displayEl.value = Number.isInteger(numVal) ? numVal : parseFloat(numVal.toFixed(1));
+        // Encontrar a key dinâmica do Valor Derivado
+        const dvDef = (window.DERIVED_VALUES || []).find(d => d.id === dvId);
+        if (dvDef) {
+            state.derived[dvDef.key] = valorInicial;
+            // Atualizar display na grid
+            const displayEl = document.getElementById(`dv_${dvDef.key}_display`);
+            if (displayEl) {
+                displayEl.value = Number.isInteger(valorInicial) ? valorInicial : parseFloat(valorInicial.toFixed(1));
+            }
+        }
+    }
+}
+
+/**
+ * Limpa os valores iniciais dos DVs de uma raça anterior.
+ */
+function _clearDerivedInitialValues(raceData) {
+    if (!state.derived) return;
+    const dvIds = raceData?.derivedValueIds || [];
+    for (const dvEntry of dvIds) {
+        const isObj = typeof dvEntry === 'object' && dvEntry !== null;
+        const dvId = isObj ? dvEntry.id : dvEntry;
+        const dvDef = (window.DERIVED_VALUES || []).find(d => d.id === dvId);
+        if (dvDef) {
+            state.derived[dvDef.key] = 0;
+            const displayEl = document.getElementById(`dv_${dvDef.key}_display`);
+            if (displayEl) displayEl.value = '0';
         }
     }
 }
@@ -40,6 +64,8 @@ function onRaceChange() {
 
     // --- Limpar bônus da raça anterior ANTES de tudo ---
     clearRaceBonuses(_previousRace);
+    // Limpar valores iniciais de DVs da raça anterior
+    if (_previousRaceData) _clearDerivedInitialValues(_previousRaceData);
 
     // Atualizar subtitulo da raça
     const subtitleEl = document.getElementById('raceSubtitle');
@@ -50,8 +76,8 @@ function onRaceChange() {
 
     if (!racaNome || racaNome === '') {
         if (subtitleEl) subtitleEl.textContent = '';
-        // Limpar tamanho do state.derived
-        _setDerivedTamanho(0);
+        // Limpar valores iniciais dos DVs da raça anterior
+        if (_previousRaceData) _clearDerivedInitialValues(_previousRaceData);
         const hint = document.createElement('div');
         hint.className = 'hint-text';
         hint.id = 'raceHint';
@@ -60,6 +86,8 @@ function onRaceChange() {
         updateYotunForcaUI('');
         updateDaereoVisibility('');
         _previousRace = '';
+        _previousRaceData = null;
+        window._dvInitialValues = {};
         if (typeof recalcAll === 'function') recalcAll();
         scheduleAutosave();
         return;
@@ -68,8 +96,7 @@ function onRaceChange() {
     const raca = RACES[racaNome];
     if (!raca) return;
 
-    // Preencher tamanho e subtítulo
-    _setDerivedTamanho(raca.tamanho);
+    // Preencher subtítulo e valores iniciais dos DVs vinculados
     if (subtitleEl) subtitleEl.textContent = raca.subtitulo || '';
 
     // Renderizar peculiaridades
@@ -85,9 +112,12 @@ function onRaceChange() {
     // Aplicar mecânicas dinâmicas do Firebase (painel criador)
     if (typeof applyAllRaceMechanics === 'function') applyAllRaceMechanics(racaNome);
     _previousRace = racaNome;
+    _previousRaceData = raca;
 
     // Atualizar grid de Valores Derivados (raça pode adicionar novos valores)
     if (typeof renderDerivedValuesGrid === 'function') renderDerivedValuesGrid();
+    // Aplicar valores iniciais dos DVs vinculados à raça
+    _setDerivedInitialValues(raca);
     if (typeof recalcAll === 'function') recalcAll();
     scheduleAutosave();
 }

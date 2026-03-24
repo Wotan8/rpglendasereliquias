@@ -2,6 +2,11 @@
 
 let saveTimeout = null;
 function scheduleAutosave() {
+    // GUARD: Nunca salvar antes dos dados estarem carregados!
+    if (!window._dataReady) {
+        console.log('⏳ scheduleAutosave BLOQUEADO — dados ainda não carregados.');
+        return;
+    }
     if (saveTimeout) clearTimeout(saveTimeout);
     saveTimeout = setTimeout(() => {
         saveToStorage();
@@ -140,7 +145,14 @@ function gatherData() {
     return d;
 }
 
-function saveToStorage() { const d = gatherData(); try { const storageKey = 'lr_ficha_v17_' + (window.currentCharacterId || 'default'); localStorage.setItem(storageKey, JSON.stringify(d)); document.querySelectorAll('#classResourcesGrid [data-key]').forEach(el => { localStorage.setItem('lr_' + el.dataset.key, el.value); }); } catch (e) { } }
+function saveToStorage() {
+    // GUARD: Nunca salvar antes dos dados estarem carregados!
+    if (!window._dataReady) {
+        console.log('⏳ saveToStorage BLOQUEADO — dados ainda não carregados.');
+        return;
+    }
+    const d = gatherData(); try { const storageKey = 'lr_ficha_v17_' + (window.currentCharacterId || 'default'); localStorage.setItem(storageKey, JSON.stringify(d)); document.querySelectorAll('#classResourcesGrid [data-key]').forEach(el => { localStorage.setItem('lr_' + el.dataset.key, el.value); }); } catch (e) { }
+}
 
 /* ===== LOAD FROM DATA (reusável: chamada do localStorage e do Firebase) ===== */
 function loadFromData(d) {
@@ -193,6 +205,10 @@ function loadFromData(d) {
             applyAllRaceMechanics(raca);
         }
         if (typeof recalcAll === 'function') setTimeout(recalcAll, 150);
+
+        // === DESBLOQUEAR SAVES — dados totalmente carregados ===
+        window._dataReady = true;
+        console.log('✅ _dataReady = true — saves desbloqueados.');
     } catch (e) { console.error('loadFromData error:', e); }
 }
 

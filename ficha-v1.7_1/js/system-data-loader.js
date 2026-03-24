@@ -429,11 +429,16 @@ function buildRacesFromFirebase() {
             };
         }).filter(Boolean);
 
+        // Parse derivedValueIds — suporta objetos {id, valorInicial} e strings legadas
+        const parsedDVIds = (race.derivedValueIds || []).map(item =>
+            typeof item === 'object' ? item : { id: item, valorInicial: 0 }
+        );
+
         RACES[race.nome] = {
             id: race.id,
-            tamanho: race.tamanho || 5,
             subtitulo: race.subtitulo || '',
             peculiaridades: peculiaridades,
+            derivedValueIds: parsedDVIds,
         };
     }
 

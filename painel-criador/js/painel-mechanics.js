@@ -29,6 +29,10 @@ function getMechanicTargetsHTML() {
         for (const dv of publishedDVs) {
             const icon = dv.icone || '📊';
             html += `\n<option value="${esc(dv.nome)}">${icon} ${esc(dv.nome)}</option>`;
+            if (dv.campoAtual) {
+                html += `\n<option value="${esc(dv.nome)} (Atual)">${icon} ${esc(dv.nome)} (Atual)</option>`;
+                html += `\n<option value="${esc(dv.nome)} (Máximo)">${icon} ${esc(dv.nome)} (Máximo)</option>`;
+            }
         }
         html += `\n</optgroup>`;
     }
@@ -248,6 +252,10 @@ function getValueSourceHTML() {
         for (const dv of publishedDVs) {
             const icon = dv.icone || '📊';
             html += `\n<option value="${esc(dv.nome)}">${icon} ${esc(dv.nome)}</option>`;
+            if (dv.campoAtual) {
+                html += `\n<option value="${esc(dv.nome)} (Atual)">${icon} ${esc(dv.nome)} (Atual)</option>`;
+                html += `\n<option value="${esc(dv.nome)} (Máximo)">${icon} ${esc(dv.nome)} (Máximo)</option>`;
+            }
         }
         html += `\n</optgroup>`;
     }
@@ -1573,18 +1581,20 @@ window._mechSelFilterFonte = function (fieldId, fonte) {
 // ===== DERIVED VALUE SELECTOR (for races/classes derivedValueIds) =====
 export function buildDerivedValueSelectorHTML(fieldKey, label, currentIds, cache) {
     const published = cache.filter(d => d.publicado !== false);
-    const ids = currentIds || [];
+    const parsedIds = (currentIds || []).map(item => typeof item === 'object' ? item : { id: item, valorInicial: 0 });
+    const selectedIds = parsedIds.map(p => p.id);
 
-    const chips = ids.map(did => {
+    const chips = parsedIds.map(dvObj => {
+        const did = dvObj.id;
         const d = cache.find(x => x.id === did);
         if (!d) return '';
         const icon = d.icone || '📊';
-        return `<div class="mechsel-chip" style="border-left-color:#8b5cf6"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">Ordem: ${d.ordem || '?'}${d.todoPersonagem ? ' — Universal' : ''}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${did}')">✕</button></div>`;
+        return `<div class="mechsel-chip" style="border-left-color:#8b5cf6"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${d.todoPersonagem ? '🌐 Universal' : '🔗 Vinculado'} — Valor Inicial: <input type="text" inputmode="decimal" value="${dvObj.valorInicial || 0}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('field_${fieldKey}', '${did}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${did}')">✕</button></div>`;
     }).join('');
 
     const opts = published.map(d => {
         const icon = d.icone || '📊';
-        return `<label class="mechsel-result"><input type="checkbox" value="${d.id}" ${ids.includes(d.id) ? 'checked' : ''}><span class="mechsel-result-name">${icon} ${esc(d.nome)}</span><span class="mechsel-result-preview">Ordem: ${d.ordem || '?'}${d.todoPersonagem ? ' — Universal' : ''}</span></label>`;
+        return `<label class="mechsel-result"><input type="checkbox" value="${d.id}" ${selectedIds.includes(d.id) ? 'checked' : ''}><span class="mechsel-result-name">${icon} ${esc(d.nome)}</span><span class="mechsel-result-preview">Ordem: ${d.ordem || '?'}${d.todoPersonagem ? ' — Universal' : ''}</span></label>`;
     }).join('');
 
     return `
@@ -1599,7 +1609,7 @@ export function buildDerivedValueSelectorHTML(fieldKey, label, currentIds, cache
             <div class="mechsel-results" id="field_${fieldKey}_results">${opts}</div>
             <button type="button" class="mechsel-confirm" onclick="window._dvSelConfirm('field_${fieldKey}')">✔️ Vincular Selecionados</button>
         </div>
-        <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(ids)}'>
+        <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(parsedIds)}'>
     </div>`;
 }
 
@@ -1607,9 +1617,25 @@ window._dvSelConfirm = function (fieldId) {
     const results = document.getElementById(`${fieldId}_results`);
     const hidden = document.getElementById(fieldId);
     if (!results || !hidden) return;
-    const checked = Array.from(results.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+
+    // Preserve existing valorInicial
+    const existingIds = JSON.parse(hidden.value || '[]');
+    const existingMap = new Map();
+    existingIds.forEach(item => {
+        if (typeof item === 'object') existingMap.set(item.id, item.valorInicial);
+        else existingMap.set(item, 0);
+    });
+
+    const checked = Array.from(results.querySelectorAll('input[type="checkbox"]:checked')).map(cb => {
+        return {
+            id: cb.value,
+            valorInicial: existingMap.has(cb.value) ? existingMap.get(cb.value) : 0
+        };
+    });
+
     hidden.value = JSON.stringify(checked);
     document.getElementById(`${fieldId}_search`).classList.remove('open');
+
     // Refresh chips
     const cache = window._derivedValuesCache || [];
     const chipsEl = document.getElementById(`${fieldId}_chips`);
@@ -1617,12 +1643,32 @@ window._dvSelConfirm = function (fieldId) {
         if (!checked.length) {
             chipsEl.innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhum valor derivado vinculado</span>';
         } else {
-            chipsEl.innerHTML = checked.map(did => {
+            chipsEl.innerHTML = checked.map(dvObj => {
+                const did = dvObj.id;
                 const d = cache.find(x => x.id === did);
                 if (!d) return '';
                 const icon = d.icone || '📊';
-                return `<div class="mechsel-chip" style="border-left-color:#8b5cf6"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">Ordem: ${d.ordem || '?'}${d.todoPersonagem ? ' — Universal' : ''}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${did}')">✕</button></div>`;
+                return `<div class="mechsel-chip" style="border-left-color:#8b5cf6"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${d.todoPersonagem ? '🌐 Universal' : '🔗 Vinculado'} — Valor Inicial: <input type="text" inputmode="decimal" value="${dvObj.valorInicial || 0}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('${fieldId}', '${did}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${did}')">✕</button></div>`;
             }).join('');
         }
     }
 };
+
+window._dvSelLevelChange = function (fieldId, dvId, newValue) {
+    const hidden = document.getElementById(fieldId);
+    if (!hidden) return;
+    // Suportar vírgula como separador decimal (ex: 1,75 → 1.75)
+    const parsed = parseFloat(String(newValue).replace(',', '.')) || 0;
+    let ids = JSON.parse(hidden.value || '[]');
+    ids = ids.map(item => {
+        if (typeof item === 'object' && item.id === dvId) {
+            return { ...item, valorInicial: parsed };
+        }
+        if (typeof item === 'string' && item === dvId) {
+            return { id: item, valorInicial: parsed };
+        }
+        return item;
+    });
+    hidden.value = JSON.stringify(ids);
+};
+

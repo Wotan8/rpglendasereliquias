@@ -1,5 +1,8 @@
 /* ===== ESTADO GLOBAL E INICIALIZAÇÃO ===== */
 
+/* === GUARD: Impede qualquer save antes dos dados estarem carregados === */
+window._dataReady = false;
+
 let state = {
     dots: {}, notes: [], charImg: '', specs: [], customTests: [], mainTestsOrder: [],
     mechanicBonuses: {}, mechanicLimits: {}, mecanicasAplicadas: {},
@@ -49,6 +52,13 @@ window.initApp = function () {
     onRaceChange();
     if (typeof initDerivedListeners === 'function') initDerivedListeners();
     if (typeof recalcAll === 'function') recalcAll();
+
+    // Garantir que _dataReady é setado mesmo se loadFromData nunca foi chamado
+    // (personagem novo ou localStorage vazio)
+    if (!window._dataReady) {
+        window._dataReady = true;
+        console.log('✅ _dataReady = true (initApp fallback — nenhum dado carregado).');
+    }
 };
 
 /* ===== DOMContentLoaded — fallback se firebase.js não estiver presente ===== */

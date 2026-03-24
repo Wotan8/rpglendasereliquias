@@ -102,12 +102,36 @@ let _saving = false;
 window.saveToFirebase = async function () {
     if (!window.currentUser || !window.currentCharacterId) return;
     if (_saving) return;
+
+    // === GUARD LAYER 2: Nunca salvar se dados não estão prontos ===
+    if (!window._dataReady) {
+        console.warn('⛔ saveToFirebase BLOQUEADO — _dataReady é false. Dados ainda não carregados.');
+        return;
+    }
+
     _saving = true;
 
     showSaveIndicator('💾 Salvando...', 'saving');
 
     try {
         const data = gatherData();
+
+        // === VALIDAÇÃO DE SEGURANÇA: impedir save de ficha vazia ===
+        const fieldsWithContent = data.fields
+            ? Object.values(data.fields).filter(v => v && String(v).trim() !== '').length
+            : 0;
+        const dotsWithContent = data.dots
+            ? Object.values(data.dots).filter(v => v && v > 0).length
+            : 0;
+        const hasMinimumData = fieldsWithContent >= 1 || dotsWithContent >= 1 || (data.notes && data.notes.length > 0);
+
+        if (!hasMinimumData) {
+            console.error('⛔ SAVE BLOQUEADO: gatherData() retornou ficha essencialmente vazia!',
+                `Fields com conteúdo: ${fieldsWithContent}, Dots com valor: ${dotsWithContent}`);
+            _saving = false;
+            return;
+        }
+
         data.lastUpdate = new Date().toISOString();
         data.userEmail = window.currentUser.email;
         if (!data.ownerUid) {
@@ -162,6 +186,27 @@ window.saveToFirebase = async function () {
         }
 
         const docRef = doc(db, 'char', window.currentCharacterId);
+
+        // === READ-BEFORE-WRITE: proteger contra sobrescrita com dados vazios ===
+        try {
+            const existingSnap = await getDoc(docRef);
+            if (existingSnap.exists()) {
+                const existingData = existingSnap.data();
+                const existingFields = existingData.fields
+                    ? Object.values(existingData.fields).filter(v => v && String(v).trim() !== '').length
+                    : 0;
+                if (existingFields >= 5 && fieldsWithContent < 3) {
+                    console.error('⛔ SAVE BLOQUEADO (read-before-write): Firebase tem', existingFields,
+                        'campos preenchidos, mas dados novos têm apenas', fieldsWithContent);
+                    showSaveIndicator('⛔ Save bloqueado — dados insuficientes', 'error');
+                    _saving = false;
+                    return;
+                }
+            }
+        } catch (rbwErr) {
+            console.warn('⚠️ Read-before-write check falhou (continuando save):', rbwErr);
+        }
+
         await setDoc(docRef, data, { merge: true });
 
         showSaveIndicator('✅ Salvo na nuvem!', 'saved');
