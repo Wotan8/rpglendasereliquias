@@ -1091,10 +1091,12 @@ function collectArrayData(field) {
 
 // ===== MECHANICS EDITOR BRIDGE =====
 function _openMechEditor(itemId) {
+    // When creating a new mechanic, pass currently selected filter tags
+    const initialTags = (!itemId && currentModule === 'mechanics') ? [...getSelectedTags()] : [];
     openMechanicEditor(itemId, allItems, mechanicsCache, {
         db, collection, addDoc, updateDoc, doc, Timestamp,
         currentUser, showAlert, loadModule, escapeHtml
-    });
+    }, initialTags);
 }
 window.openMechanicEditor = function (itemId) { _openMechEditor(itemId); };
 

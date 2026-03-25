@@ -729,7 +729,7 @@ function buildInlineMechSelector(id, label, currentIds, cache, excludeCondiciona
 }
 
 // ===== OPEN MECHANIC EDITOR (inline) =====
-export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks) {
+export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, initialTags) {
     const { db, collection: col, addDoc, updateDoc, doc, Timestamp, currentUser, showAlert, loadModule, escapeHtml } = callbacks;
     const isEditing = !!itemId;
     const existingData = isEditing ? allItems.find(i => i.id === itemId) : {};
@@ -743,7 +743,10 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks) 
     const title = isEditing ? `✏️ Editar Mecânica` : `➕ Criar Nova Mecânica`;
     const tipo = data.tipo || 'modificar';
     const config = data.config || {};
-    const tags = Array.isArray(data.tags) ? data.tags : [];
+    // Merge initialTags (from filter chips) with existing tags, avoiding duplicates
+    const existingTags = Array.isArray(data.tags) ? data.tags : [];
+    const mergedInitial = Array.isArray(initialTags) ? initialTags : [];
+    const tags = [...new Set([...existingTags, ...mergedInitial])];
 
     area.innerHTML = `
     <div class="mech-editor-wrap">
