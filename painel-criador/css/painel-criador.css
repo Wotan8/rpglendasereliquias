@@ -1490,6 +1490,36 @@ html.dark .tag-filter-chip:hover {
     border-color: var(--primary);
 }
 
+/* -- Skills Category Group Headers -- */
+.skills-category-header {
+    grid-column: 1 / -1;
+    font-size: .88rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--primary);
+    padding: 10px 4px 6px;
+    margin-top: 8px;
+    border-bottom: 2px solid var(--soft);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.skills-category-header:first-child {
+    margin-top: 0;
+}
+
+.skills-category-count {
+    font-size: .68rem;
+    font-weight: 800;
+    background: var(--primary);
+    color: #fff;
+    padding: 1px 8px;
+    border-radius: 12px;
+    line-height: 1.5;
+}
+
 /* -- Extra Filters -- */
 .mech-filters {
     display: flex;

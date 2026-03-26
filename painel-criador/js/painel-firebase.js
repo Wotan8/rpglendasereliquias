@@ -419,6 +419,11 @@ window.switchModule = function (moduleName, btnEl) {
     if (oldFilters) oldFilters.remove();
     if (moduleName === 'mechanics') renderMechExtraFilters();
 
+    // Remove/add skills extra filters
+    const oldSkillFilters = document.getElementById('skillsFiltersExtra');
+    if (oldSkillFilters) oldSkillFilters.remove();
+    if (moduleName === 'skills') renderSkillsExtraFilters();
+
     // Remove/add tag filter for modules that have tags
     const oldTagFilter = document.getElementById('tagFilterArea');
     if (oldTagFilter) oldTagFilter.remove();
@@ -441,6 +446,34 @@ function renderMechExtraFilters() {
             <option value="">🔧 Tipo: Todos</option>
             ${Object.entries(TIPO_LABELS).map(([k, v]) => `<option value="${k}">${TIPO_ICONS[k]} ${v}</option>`).join('')}
         </select>`;
+    filterBar.after(div);
+}
+
+const SKILL_CATEGORIA_ORDER = ['fisico', 'mental', 'social', 'combate', 'exclusivo'];
+const SKILL_CATEGORIA_LABELS = {
+    fisico: '💪 Físico',
+    mental: '🧠 Mental',
+    social: '🗣️ Social',
+    combate: '⚔️ Combate',
+    exclusivo: '🌟 Exclusivo'
+};
+
+function renderSkillsExtraFilters() {
+    const filterBar = document.getElementById('filterBar');
+    if (!filterBar || document.getElementById('skillsFiltersExtra')) return;
+    const div = document.createElement('div');
+    div.className = 'mech-filters';
+    div.id = 'skillsFiltersExtra';
+    div.innerHTML = `
+        <select id="skillFilterCategoria" onchange="filterItems()">
+            <option value="">📂 Categoria: Todas</option>
+            ${SKILL_CATEGORIA_ORDER.map(k => `<option value="${k}">${SKILL_CATEGORIA_LABELS[k]}</option>`).join('')}
+        </select>
+        <label style="display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap">
+            <input type="checkbox" id="skillGroupByCategoria" onchange="filterItems()" checked
+                style="width:16px;height:16px;accent-color:var(--primary);flex:none">
+            Agrupar por Categoria
+        </label>`;
     filterBar.after(div);
 }
 
@@ -571,6 +604,42 @@ async function refreshDerivedValuesCache() {
 }
 
 // ===== RENDER ITEMS =====
+function buildItemCardHTML(item) {
+    const name = escapeHtml(item.nome || item.titulo || 'Sem nome');
+    const subtitle = item.subtitulo || item.arquetipo || item.categoria || item.escola || item.classe || '';
+    const desc = item.descricao || item.conteudo || item.efeito || '';
+    const isPublished = item.publicado === true;
+    const badgeClass = isPublished ? 'badge-published' : 'badge-draft';
+    const badgeText = isPublished ? '✅ Publicado' : '📝 Rascunho';
+    const imageUrl = item.imagemUrl || '';
+
+    return `
+        <div class="item-card" onclick="openForm('${item.id}')">
+            <div class="item-card-header">
+                <div class="item-card-name">${name}</div>
+                <span class="badge-status ${badgeClass}">${badgeText}</span>
+            </div>
+            ${subtitle ? `<div class="item-card-subtitle">${escapeHtml(subtitle)}</div>` : ''}
+            ${imageUrl ? `<div class="item-card-image" style="margin-top:8px; border-radius:4px; overflow:hidden; height:150px; background:#000;"><img src="${escapeHtml(imageUrl)}" alt="Preview" style="width:100%; height:100%; object-fit:cover; object-position:top;"></div>` : ''}
+            ${desc ? `<div class="item-card-desc">${escapeHtml(truncate(desc, 100))}</div>` : ''}
+            <div class="item-card-footer">
+                <div class="item-card-actions">
+                    <button class="btn-edit" onclick="event.stopPropagation(); openForm('${item.id}')" title="Editar">✏️</button>
+                    <button class="btn-edit" onclick="event.stopPropagation(); duplicateItem('${item.id}')" title="Duplicar" style="border-color:var(--warning);color:var(--warning)">📋</button>
+                    <button class="btn-delete-card" onclick="event.stopPropagation(); openDeleteModal('${item.id}', '${escapeHtml(name).replace(/'/g, "\\'")}')" title="Excluir">🗑️</button>
+                </div>
+                <label onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                    <span style="font-size:.68rem;color:var(--muted);font-weight:700">PUB</span>
+                    <div class="toggle-publish">
+                        <input type="checkbox" ${isPublished ? 'checked' : ''} onchange="togglePublish('${item.id}', this.checked)">
+                        <span class="toggle-slider"></span>
+                    </div>
+                </label>
+            </div>
+        </div>
+    `;
+}
+
 function renderItems() {
     const grid = document.getElementById('itemsGrid');
     const emptyState = document.getElementById('emptyState');
@@ -587,6 +656,11 @@ function renderItems() {
             const tipoF = document.getElementById('mechFilterTipo')?.value || '';
             if (fonteF && item.fonte !== fonteF) return false;
             if (tipoF && item.tipo !== tipoF) return false;
+        }
+        // Skills category filter
+        if (currentModule === 'skills') {
+            const catF = document.getElementById('skillFilterCategoria')?.value || '';
+            if (catF && item.categoria !== catF) return false;
         }
         // Tag filter
         const selTags = getSelectedTags();
@@ -613,42 +687,28 @@ function renderItems() {
 
     const modDef = MODULE_DEFS[currentModule];
 
-    grid.innerHTML = filtered.map(item => {
-        const name = escapeHtml(item.nome || item.titulo || 'Sem nome');
-        const subtitle = item.subtitulo || item.arquetipo || item.categoria || item.escola || item.classe || '';
-        const desc = item.descricao || item.conteudo || item.efeito || '';
-        const isPublished = item.publicado === true;
-        const badgeClass = isPublished ? 'badge-published' : 'badge-draft';
-        const badgeText = isPublished ? '✅ Publicado' : '📝 Rascunho';
+    // Skills: group by category if checkbox is checked
+    if (currentModule === 'skills' && document.getElementById('skillGroupByCategoria')?.checked) {
+        const groups = {};
+        SKILL_CATEGORIA_ORDER.forEach(k => { groups[k] = []; });
+        filtered.forEach(item => {
+            const cat = (item.categoria || 'mental').toLowerCase();
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(item);
+        });
 
-        const imageUrl = item.imagemUrl || '';
+        let html = '';
+        SKILL_CATEGORIA_ORDER.forEach(cat => {
+            const items = groups[cat];
+            if (!items || items.length === 0) return;
+            html += `<div class="skills-category-header">${SKILL_CATEGORIA_LABELS[cat] || cat} <span class="skills-category-count">${items.length}</span></div>`;
+            html += items.map(item => buildItemCardHTML(item)).join('');
+        });
+        grid.innerHTML = html;
+        return;
+    }
 
-        return `
-            <div class="item-card" onclick="openForm('${item.id}')">
-                <div class="item-card-header">
-                    <div class="item-card-name">${name}</div>
-                    <span class="badge-status ${badgeClass}">${badgeText}</span>
-                </div>
-                ${subtitle ? `<div class="item-card-subtitle">${escapeHtml(subtitle)}</div>` : ''}
-                ${imageUrl ? `<div class="item-card-image" style="margin-top:8px; border-radius:4px; overflow:hidden; height:150px; background:#000;"><img src="${escapeHtml(imageUrl)}" alt="Preview" style="width:100%; height:100%; object-fit:cover; object-position:top;"></div>` : ''}
-                ${desc ? `<div class="item-card-desc">${escapeHtml(truncate(desc, 100))}</div>` : ''}
-                <div class="item-card-footer">
-                    <div class="item-card-actions">
-                        <button class="btn-edit" onclick="event.stopPropagation(); openForm('${item.id}')" title="Editar">✏️</button>
-                        <button class="btn-edit" onclick="event.stopPropagation(); duplicateItem('${item.id}')" title="Duplicar" style="border-color:var(--warning);color:var(--warning)">📋</button>
-                        <button class="btn-delete-card" onclick="event.stopPropagation(); openDeleteModal('${item.id}', '${escapeHtml(name).replace(/'/g, "\\'")}')" title="Excluir">🗑️</button>
-                    </div>
-                    <label onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                        <span style="font-size:.68rem;color:var(--muted);font-weight:700">PUB</span>
-                        <div class="toggle-publish">
-                            <input type="checkbox" ${isPublished ? 'checked' : ''} onchange="togglePublish('${item.id}', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </div>
-                    </label>
-                </div>
-            </div>
-        `;
-    }).join('');
+    grid.innerHTML = filtered.map(item => buildItemCardHTML(item)).join('');
 }
 
 window.filterItems = function () { renderItems(); };
@@ -718,7 +778,12 @@ window.openForm = function (itemId) {
     formGrid.className = 'form-grid';
 
     modDef.fields.forEach(field => {
-        const value = existingData ? existingData[field.key] : undefined;
+        let value = existingData ? existingData[field.key] : undefined;
+        // Pre-populate tags field with selected filter tags when creating a new item
+        if (!isEditing && field.type === 'tags' && field.key === 'tags' && TAG_MODULES.includes(currentModule)) {
+            const selectedTags = [...getSelectedTags()];
+            if (selectedTags.length > 0) value = selectedTags;
+        }
         const el = buildField(field, value);
         formGrid.appendChild(el);
     });

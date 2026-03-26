@@ -278,6 +278,21 @@ function canUpgrade(dotKey, newLevel, type, specName) {
     const cost = getExpCost(type, newLevel, dotKey);
     const currentExp = getCurrentExp();
 
+    // Verificar se base + bônus de mecânica ultrapassaria o máximo de bolinhas
+    if (type === 'attr' || type === 'skill' || type === 'spec') {
+        const mechBonus = state.mechanicBonuses?.[dotKey] || 0;
+        const limit = state.mechanicLimits?.[dotKey];
+        const maxLevel = (limit && limit.tipo === 'maximo' && limit.max != null) ? limit.max : 5;
+        if (newLevel + mechBonus > maxLevel) {
+            const currentBase = state.dots[dotKey] || 0;
+            return {
+                allowed: false,
+                reason: `Já está no máximo! (Nível: ${currentBase} + Bônus: ${mechBonus} = ${currentBase + mechBonus}/${maxLevel})`,
+                cost: 0
+            };
+        }
+    }
+
     // Verificar EXP suficiente
     if (cost > currentExp) {
         return { allowed: false, reason: `EXP insuficiente! Precisa de ${cost} EXP, mas só tem ${currentExp}.`, cost };

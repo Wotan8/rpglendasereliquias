@@ -25,7 +25,15 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
 
     const type = typeof detectDotType === 'function' ? detectDotType(k) : null;
     if (!type) {
-        // Fallback: sem tipo detectado, permite livremente (não deveria acontecer)
+        // Fallback: validar cap antes de permitir
+        const mechBonus = state.mechanicBonuses?.[k] || 0;
+        const limit = state.mechanicLimits?.[k];
+        const maxLevel = (limit && limit.tipo === 'maximo' && limit.max != null) ? limit.max : 5;
+        if (newLevel + mechBonus > maxLevel) {
+            if (typeof showUpgradeBlocked === 'function')
+                showUpgradeBlocked(`Já está no máximo! (${state.dots[k] || 0} + ${mechBonus} = ${(state.dots[k] || 0) + mechBonus}/${maxLevel})`);
+            return;
+        }
         state.dots[k] = newLevel;
         refreshDots(container, k); scheduleAutosave();
         // Re-evaluate all mechanics (equations may reference this dot value)
