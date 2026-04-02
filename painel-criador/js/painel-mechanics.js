@@ -14,11 +14,27 @@ function getMechanicTargetsHTML() {
 <option value="FOR">FOR</option><option value="DES">DES</option><option value="VIG">VIG</option>
 <option value="PRE">PRE</option><option value="MAN">MAN</option><option value="AUT">AUT</option>
 </optgroup>
-<optgroup label="Status Vitais">
-<option value="Vitalidade Máxima">Vitalidade Máxima</option>
-<option value="Energia Máxima">Energia Máxima</option>
-<option value="Sanidade Máxima">Sanidade Máxima</option>
-</optgroup>`;
+`;
+
+    // Status Vitais — dinâmico do Firebase
+    const vsCache = window._vitalStatsCache || [];
+    const publishedVS = vsCache.filter(v => v.publicado !== false);
+    if (publishedVS.length > 0) {
+        publishedVS.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
+        html += `\n<optgroup label="Status Vitais">`;
+        for (const vs of publishedVS) {
+            const icon = vs.icone || '❤️';
+            html += `\n<option value="${esc(vs.nome)} Máxima">${icon} ${esc(vs.nome)} Máxima</option>`;
+        }
+        html += `\n</optgroup>`;
+    } else {
+        // Fallback hardcoded para quando cache não carregou
+        html += `\n<optgroup label="Status Vitais">`;
+        html += `\n<option value="Vitalidade Máxima">Vitalidade Máxima</option>`;
+        html += `\n<option value="Energia Máxima">Energia Máxima</option>`;
+        html += `\n<option value="Sanidade Máxima">Sanidade Máxima</option>`;
+        html += `\n</optgroup>`;
+    }
 
     // Valores Derivados — dinâmico do Firebase
     const dvCache = window._derivedValuesCache || [];
@@ -237,11 +253,27 @@ function getValueSourceHTML() {
 <option value="FOR">FOR</option><option value="DES">DES</option><option value="VIG">VIG</option>
 <option value="PRE">PRE</option><option value="MAN">MAN</option><option value="AUT">AUT</option>
 </optgroup>
-<optgroup label="Status Vitais">
-<option value="Vitalidade Máxima">Vitalidade Máxima</option>
-<option value="Energia Máxima">Energia Máxima</option>
-<option value="Sanidade Máxima">Sanidade Máxima</option>
-</optgroup>`;
+`;
+
+    // Status Vitais — dinâmico do Firebase
+    const vsCache3 = window._vitalStatsCache || [];
+    const publishedVS3 = vsCache3.filter(v => v.publicado !== false);
+    if (publishedVS3.length > 0) {
+        publishedVS3.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
+        html += `\n<optgroup label="Status Vitais">`;
+        for (const vs of publishedVS3) {
+            const icon = vs.icone || '❤️';
+            html += `\n<option value="${esc(vs.nome)} Máxima">${icon} ${esc(vs.nome)} Máxima</option>`;
+        }
+        html += `\n</optgroup>`;
+    } else {
+        // Fallback hardcoded para quando cache não carregou
+        html += `\n<optgroup label="Status Vitais">`;
+        html += `\n<option value="Vitalidade Máxima">Vitalidade Máxima</option>`;
+        html += `\n<option value="Energia Máxima">Energia Máxima</option>`;
+        html += `\n<option value="Sanidade Máxima">Sanidade Máxima</option>`;
+        html += `\n</optgroup>`;
+    }
 
     // Valores Derivados — dinâmico do Firebase
     const dvCache = window._derivedValuesCache || [];

@@ -199,6 +199,8 @@ function loadFromData(d) {
         setTimeout(() => { document.querySelectorAll('.dots5[data-attr]').forEach(c => refreshDots(c, c.dataset.attr)); }, 50);
         // Recalcular valores derivados e inicializar listeners
         if (typeof initDerivedListeners === 'function') initDerivedListeners();
+        if (typeof initVitalStatsTooltips === 'function') initVitalStatsTooltips();
+        if (typeof initSkillTooltips === 'function') initSkillTooltips();
         // Garantir que mecânicas estejam aplicadas antes de recalcular derivados
         if (typeof applyAllRaceMechanics === 'function') {
             const raca = document.getElementById('selRaca')?.value;

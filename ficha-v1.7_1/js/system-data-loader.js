@@ -15,6 +15,7 @@ window._systemData = {
     maneuvers: [],
     spells: [],
     derivedValues: [],
+    vitalStats: [],
     loaded: false,
     error: null
 };
@@ -33,7 +34,7 @@ window.CLASS_RESOURCES = {};
  */
 async function loadSystemData(db, collectionFn, getDocsFn) {
     const collections = ['races', 'classes', 'tribes', 'peculiarities', 'mechanics',
-        'skills', 'conditions', 'equipment', 'maneuvers', 'spells', 'derivedValues'];
+        'skills', 'conditions', 'equipment', 'maneuvers', 'spells', 'derivedValues', 'vitalStats'];
 
     try {
         await Promise.all(collections.map(async (col) => {
@@ -491,4 +492,48 @@ function buildDerivedValuesFromFirebase() {
 
     console.log(`✅ Valores Derivados carregados: ${window.DERIVED_VALUES.length}`);
     return window.DERIVED_VALUES;
+}
+
+/**
+ * Constrói o array VITAL_STATS a partir do Firebase.
+ * Resolve mecânicas vinculadas e prepara para uso no mechanics-engine.
+ */
+function buildVitalStatsFromFirebase() {
+    const all = window._systemData.vitalStats.filter(d => d.publicado !== false);
+    all.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
+
+    window.VITAL_STATS = all.map(vs => {
+        // Resolver mecânicas vinculadas
+        const mecanicas = (vs.mecanicaIds || []).map(mid => {
+            return window._systemData.mechanics.find(m => m.id === mid);
+        }).filter(Boolean);
+
+        // Usar chaveInterna definida pelo criador (VIT_MAX, SAN_MAX, ENER_MAX)
+        // Fallback: gerar key automaticamente a partir do nome
+        const key = vs.chaveInterna || (_stripAccents(vs.nome.toUpperCase())
+            .replace(/[^A-Z0-9]/g, '_')
+            .replace(/__+/g, '_')
+            .replace(/^_|_$/g, '') + '_MAX');
+
+        // Gerar preview text das mecânicas
+        const mechPreviews = mecanicas.map(m => {
+            if (typeof generatePreviewText === 'function') return generatePreviewText(m);
+            return m.previewTexto || m.descricao || '';
+        }).filter(Boolean);
+
+        return {
+            id: vs.id,
+            key: key,
+            nome: vs.nome,
+            icone: vs.icone || '❤️',
+            descricao: vs.descricao || '',
+            ordem: vs.ordem || 99,
+            mecanicas: mecanicas,
+            mecanicaIds: vs.mecanicaIds || [],
+            mechPreviews: mechPreviews,
+        };
+    });
+
+    console.log(`✅ Status Vitais carregados: ${window.VITAL_STATS.length}`);
+    return window.VITAL_STATS;
 }

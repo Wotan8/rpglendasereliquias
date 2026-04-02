@@ -2660,7 +2660,9 @@ html.dark .pec-capacidade {
     text-overflow: ellipsis;
 }
 
-.dv-label.has-tooltip {
+.dv-label.has-tooltip,
+.vital-label.has-tooltip,
+.sk-name.has-tooltip {
     cursor: help;
     text-decoration-line: underline;
     text-decoration-style: dotted;
@@ -2708,6 +2710,22 @@ html.dark .pec-capacidade {
     color: #94a3b8;
     padding-left: 4px;
     margin-bottom: 2px;
+}
+
+.dv-tooltip-extras {
+    margin-top: 6px;
+    border-top: 1px dashed #475569;
+    padding-top: 8px;
+}
+
+.dv-tooltip-extras .dv-tooltip-mechs-title {
+    color: #fbbf24;
+}
+
+.dv-tooltip-fonte {
+    color: #a78bfa;
+    font-weight: 700;
+    font-size: 10px;
 }
 
 @keyframes dvTooltipIn {

@@ -21,7 +21,7 @@ const TARGET_MAP = {
     "MAN": "attr_man",
     "AUT": "attr_aut",
 
-    // === STATUS VITAIS (hardcoded — têm campos atual/max no HTML) ===
+    // === STATUS VITAIS (gerenciados por mecânicas do Firebase) ===
     "Vitalidade Máxima": "DERIVED:VIT_MAX",
     "Energia Máxima": "DERIVED:ENER_MAX",
     "Sanidade Máxima": "DERIVED:SAN_MAX",
@@ -137,6 +137,24 @@ function populateTargetMapFromDerivedValues() {
 }
 
 /**
+ * Popula TARGET_MAP com status vitais do Firebase.
+ * Chamada após buildVitalStatsFromFirebase().
+ * Os status vitais usam DERIVED:KEY (ex: DERIVED:VITALIDADE_MAX)
+ * e os entries hardcoded (ex: "Vitalidade Máxima" → DERIVED:VIT_MAX)
+ * já existem no TARGET_MAP estático, mas esta função garante
+ * que nomes do Firebase sobrescrevam corretamente.
+ */
+function populateTargetMapFromVitalStats() {
+    if (!window.VITAL_STATS) return;
+    for (const vs of window.VITAL_STATS) {
+        // Registrar como DERIVED:KEY (mesma lógica dos DVs)
+        TARGET_MAP[`${vs.nome} Máxima`] = `DERIVED:${vs.key}`;
+        TARGET_MAP[`${vs.nome} Máximo`] = `DERIVED:${vs.key}`;
+    }
+    console.log('✅ TARGET_MAP atualizado com status vitais do Firebase');
+}
+
+/**
  * Pool map: mapeia nomes de pool (usados em mecânicas distribuir) para listas de alvos válidos.
  * Usa o array SKILLS (data.js) como fonte canônica de nomes para evitar aliases/duplicatas.
  */
@@ -183,6 +201,9 @@ function getDistribuirPool(poolName) {
 /* ===== ARMAZENA MECÂNICAS BRUTAS DE VALORES DERIVADOS para re-avaliação dinâmica ===== */
 let _derivedValueMechanicsRaw = [];
 
+/* ===== RASTREIA contribuições de equações dinâmicas para subtração seletiva ===== */
+let _dynamicMechContributions = {};
+
 /* ===== LIMPAR BÔNUS DE MECÂNICAS ===== */
 function clearMechanicBonuses() {
     state.mechanicBonuses = {};
@@ -190,6 +211,7 @@ function clearMechanicBonuses() {
     state.capacidades = [];
     state.mecanicasPendentes = [];
     _derivedValueMechanicsRaw = [];
+    _dynamicMechContributions = {};
 }
 
 /* ===== RESOLVER VALOR DINÂMICO DE CÁLCULO ===== */
@@ -292,6 +314,9 @@ function applyAllRaceMechanics(racaNome) {
     // Apply mechanics linked to derived values
     applyDerivedValueMechanics();
 
+    // Apply mechanics linked to vital stats (from Firebase)
+    applyVitalStatsMechanics();
+
     if (!racaNome || !window.RACES) return;
     const raca = window.RACES[racaNome];
     if (!raca) return;
@@ -321,6 +346,40 @@ function applySkillMechanics() {
                 if (!mech) continue;
                 applyMechanicToSheet(mech, null);
             }
+        }
+    }
+}
+
+/* ===== APLICAR MECÂNICAS VINCULADAS A STATUS VITAIS (Firebase) ===== */
+function applyVitalStatsMechanics() {
+    if (!window.VITAL_STATS || !window._systemData?.mechanics) return;
+
+    const mechanicsById = {};
+    for (const m of window._systemData.mechanics) {
+        mechanicsById[m.id] = m;
+    }
+
+    const processedMechIds = new Set();
+
+    for (const vs of window.VITAL_STATS) {
+        if (!vs.mecanicaIds || vs.mecanicaIds.length === 0) continue;
+        for (const mechId of vs.mecanicaIds) {
+            if (processedMechIds.has(mechId)) continue;
+            processedMechIds.add(mechId);
+
+            const mech = mechanicsById[mechId];
+            if (!mech) continue;
+
+            // Se a mecânica tem referências à ficha, armazenar para re-avaliação dinâmica
+            if (mech.tipo === 'modificar'
+                && (!mech.duracao || mech.duracao === 'permanente')
+                && !mech.condicaoAplicacao?.trim()
+                && _mechHasSheetRefs(mech)) {
+                _derivedValueMechanicsRaw.push(mech);
+                continue;
+            }
+
+            applyMechanicToSheet(mech, null);
         }
     }
 }
@@ -390,6 +449,9 @@ function _mechHasSheetRefs(mech) {
  * sempre reflitam os valores atuais de atributos/perícias.
  */
 function resolveDerivedValueMechanicsLive() {
+    // Limpar contribuições anteriores rastreadas
+    _dynamicMechContributions = {};
+
     for (const mech of _derivedValueMechanicsRaw) {
         const config = mech.config || {};
         const calculos = Array.isArray(config.calculos) ? config.calculos
@@ -410,23 +472,41 @@ function resolveDerivedValueMechanicsLive() {
 
                 console.log(`🔧 DV Mech "${mech.nome}": ${op}${val} → ${alvo} (${field})`);
 
-                if (op === '+') state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) + val;
-                else if (op === '-') state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) - val;
+                if (op === '+') {
+                    state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) + val;
+                    _dynamicMechContributions[field] = (_dynamicMechContributions[field] || 0) + val;
+                }
+                else if (op === '-') {
+                    state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) - val;
+                    _dynamicMechContributions[field] = (_dynamicMechContributions[field] || 0) - val;
+                }
                 else if (op === '×' || op === '*') {
                     const multKey = 'MULT:' + field;
                     state.mechanicBonuses[multKey] = (state.mechanicBonuses[multKey] || 1) * val;
+                    _dynamicMechContributions[multKey] = val;
                 }
                 else if (op === '=') {
                     const setKey = 'SET:' + field;
                     state.mechanicBonuses[setKey] = val;
+                    _dynamicMechContributions[setKey] = val;
                 }
                 else if (op === '÷' || op === '/') {
                     const divKey = 'DIV:' + field;
                     state.mechanicBonuses[divKey] = (state.mechanicBonuses[divKey] || 1) * val;
+                    _dynamicMechContributions[divKey] = val;
                 }
             }
         }
     }
+}
+
+/**
+ * Retorna as contribuições dinâmicas rastreadas para subtração seletiva em recalcAll().
+ * Isso permite que recalcAll() remova APENAS os bônus de equações dinâmicas,
+ * preservando bônus de outras fontes (ex: peculiaridades raciais).
+ */
+function _getDynamicMechContributions() {
+    return _dynamicMechContributions;
 }
 
 /**
@@ -910,4 +990,217 @@ function checkDistribuirOnLevelUp(pec) {
     }
     // Re-renderizar para mostrar a UI
     _reRenderPeculiaridades();
+}
+
+/* ===== OBTER TODAS AS MECÂNICAS QUE AFETAM UMA PROPRIEDADE ===== */
+
+/**
+ * Retorna todas as mecânicas que afetam uma propriedade, de QUALQUER fonte.
+ *
+ * Fontes varridas:
+ *   1. Mecânicas vinculadas (mecanicaIds) do próprio Status Vital / Valor Derivado / Perícia
+ *   2. Mecânicas de peculiaridades da raça selecionada
+ *   3. Mecânicas dinâmicas de equação (_derivedValueMechanicsRaw)
+ *   4. Mecânicas de distribuição já aplicadas (state.mecanicasAplicadas)
+ *   5. Mecânicas vinculadas a Perícias que têm como alvo a propriedade
+ *   6. Mecânicas vinculadas a outros DVs / Status Vitais que têm como alvo a propriedade
+ *
+ * @param {string} propertyName - Nome legível da propriedade (ex: "Energia Máxima", "Agilidade")
+ * @param {object} [opts] - Opções: { skipLinked: string[] } IDs de mecânicas vinculadas já listadas
+ * @returns {Array<{fonte: string, preview: string, tipo: string}>}
+ */
+function getAffectingMechanics(propertyName, opts) {
+    const results = [];
+    const seenMechIds = new Set();
+    const skipLinked = (opts && opts.skipLinked) || [];
+    skipLinked.forEach(id => seenMechIds.add(id));
+
+    // Resolver o campo-alvo desta propriedade no TARGET_MAP
+    const targetField = TARGET_MAP[propertyName];
+    if (!targetField) return results;
+
+    // ---- Helper: verificar se uma mecânica afeta o campo-alvo ----
+    function _mechAffectsTarget(mech) {
+        if (!mech || !mech.config) return false;
+        const config = mech.config;
+
+        // Multi-calc format
+        if (Array.isArray(config.calculos)) {
+            for (const calc of config.calculos) {
+                const alvos = Array.isArray(calc.alvo) ? calc.alvo : [calc.alvo];
+                for (const alvo of alvos) {
+                    if (!alvo) continue;
+                    const field = TARGET_MAP[alvo];
+                    if (field === targetField) return true;
+                }
+            }
+        }
+
+        // Legacy / single-alvo format
+        if (config.alvo) {
+            const alvos = Array.isArray(config.alvo) ? config.alvo : [config.alvo];
+            for (const alvo of alvos) {
+                if (!alvo) continue;
+                const field = TARGET_MAP[alvo];
+                if (field === targetField) return true;
+            }
+        }
+
+        return false;
+    }
+
+    // ---- 1. Peculiaridades da raça selecionada ----
+    const racaNome = document.getElementById('selRaca')?.value || '';
+    if (racaNome && window.RACES && window.RACES[racaNome]) {
+        const raca = window.RACES[racaNome];
+        for (const pec of raca.peculiaridades) {
+            if (!pec.mecanicas) continue;
+            for (const mech of pec.mecanicas) {
+                if (seenMechIds.has(mech.id)) continue;
+                if (!_mechAffectsTarget(mech)) continue;
+                seenMechIds.add(mech.id);
+
+                // Se evoluível, ajustar preview ao nível atual
+                let previewMech = mech;
+                if (mech.evoluivel && mech.progressao) {
+                    const dotKey = 'pec_' + (pec.key || pec.id);
+                    const currentLevel = state.dots[dotKey] || pec.nivelAtual || 1;
+                    const prog = mech.progressao[String(currentLevel)];
+                    if (prog) {
+                        previewMech = JSON.parse(JSON.stringify(mech));
+                        delete previewMech.previewTexto;
+                        if (mech.tipo === 'modificar' && prog.valor !== undefined) {
+                            previewMech.config = { ...previewMech.config, valor: prog.valor };
+                        }
+                        // Override fixo terms in equation
+                        if (prog.termos && Array.isArray(previewMech.config?.calculos)) {
+                            for (const calc of previewMech.config.calculos) {
+                                if (Array.isArray(calc.equacao)) {
+                                    let fixoIdx = 0;
+                                    for (const term of calc.equacao) {
+                                        if (term.tipo !== 'ficha') {
+                                            const ov = prog.termos[String(fixoIdx)];
+                                            if (ov !== undefined && ov !== '') term.valor = ov;
+                                            fixoIdx++;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                const preview = typeof generatePreviewText === 'function'
+                    ? generatePreviewText(previewMech) : (mech.descricao || '');
+                results.push({
+                    fonte: `${pec.nome} (${racaNome})`,
+                    preview: preview,
+                    tipo: 'peculiaridade'
+                });
+            }
+        }
+    }
+
+    // ---- 2. Mecânicas dinâmicas de equação (DV/VS com ref à ficha) ----
+    for (const mech of _derivedValueMechanicsRaw) {
+        if (seenMechIds.has(mech.id)) continue;
+        if (!_mechAffectsTarget(mech)) continue;
+        seenMechIds.add(mech.id);
+        const preview = typeof generatePreviewText === 'function'
+            ? generatePreviewText(mech) : (mech.descricao || '');
+        results.push({
+            fonte: mech.nome || 'Equação Dinâmica',
+            preview: preview,
+            tipo: 'equacao_dinamica'
+        });
+    }
+
+    // ---- 3. Mecânicas de distribuição aplicadas ----
+    if (state.mecanicasAplicadas) {
+        const allMechanics = window._systemData?.mechanics || [];
+        for (const [mechId, dados] of Object.entries(state.mecanicasAplicadas)) {
+            if (!dados || !dados.alvosEscolhidos) continue;
+            for (const alvo of dados.alvosEscolhidos) {
+                const field = TARGET_MAP[alvo.nome];
+                if (field !== targetField) continue;
+                // Encontrar a mecânica original para pegar o nome
+                const mech = allMechanics.find(m => m.id === mechId);
+                const mechNome = mech?.nome || dados.fonte || 'Distribuição';
+                if (seenMechIds.has(mechId + ':dist:' + alvo.nome)) continue;
+                seenMechIds.add(mechId + ':dist:' + alvo.nome);
+                results.push({
+                    fonte: mechNome,
+                    preview: `+${alvo.valor} em ${alvo.nome} (distribuído)`,
+                    tipo: 'distribuicao'
+                });
+            }
+        }
+    }
+
+    // ---- 4. Mecânicas vinculadas a OUTROS Valores Derivados que afetam este alvo ----
+    if (window.DERIVED_VALUES) {
+        for (const dv of window.DERIVED_VALUES) {
+            if (!dv.mecanicaIds || dv.mecanicaIds.length === 0) continue;
+            for (const mechId of dv.mecanicaIds) {
+                if (seenMechIds.has(mechId)) continue;
+                const mech = (window._systemData?.mechanics || []).find(m => m.id === mechId);
+                if (!mech) continue;
+                if (!_mechAffectsTarget(mech)) continue;
+                seenMechIds.add(mechId);
+                const preview = typeof generatePreviewText === 'function'
+                    ? generatePreviewText(mech) : (mech.descricao || '');
+                results.push({
+                    fonte: `Vínculo: ${dv.nome}`,
+                    preview: preview,
+                    tipo: 'vinculo_dv'
+                });
+            }
+        }
+    }
+
+    // ---- 5. Mecânicas vinculadas a Status Vitais que afetam este alvo ----
+    if (window.VITAL_STATS) {
+        for (const vs of window.VITAL_STATS) {
+            if (!vs.mecanicaIds || vs.mecanicaIds.length === 0) continue;
+            for (const mechId of vs.mecanicaIds) {
+                if (seenMechIds.has(mechId)) continue;
+                const mech = (window._systemData?.mechanics || []).find(m => m.id === mechId);
+                if (!mech) continue;
+                if (!_mechAffectsTarget(mech)) continue;
+                seenMechIds.add(mechId);
+                const preview = typeof generatePreviewText === 'function'
+                    ? generatePreviewText(mech) : (mech.descricao || '');
+                results.push({
+                    fonte: `Vínculo: ${vs.nome}`,
+                    preview: preview,
+                    tipo: 'vinculo_vs'
+                });
+            }
+        }
+    }
+
+    // ---- 6. Mecânicas vinculadas a Perícias que afetam este alvo ----
+    if (window.SKILLS) {
+        for (const cat of Object.keys(window.SKILLS)) {
+            for (const skill of window.SKILLS[cat]) {
+                if (!skill.mecanicaIds || skill.mecanicaIds.length === 0) continue;
+                for (const mechId of skill.mecanicaIds) {
+                    if (seenMechIds.has(mechId)) continue;
+                    const mech = (window._systemData?.mechanics || []).find(m => m.id === mechId);
+                    if (!mech) continue;
+                    if (!_mechAffectsTarget(mech)) continue;
+                    seenMechIds.add(mechId);
+                    const preview = typeof generatePreviewText === 'function'
+                        ? generatePreviewText(mech) : (mech.descricao || '');
+                    results.push({
+                        fonte: `Vínculo: ${skill.name}`,
+                        preview: preview,
+                        tipo: 'vinculo_skill'
+                    });
+                }
+            }
+        }
+    }
+
+    return results;
 }

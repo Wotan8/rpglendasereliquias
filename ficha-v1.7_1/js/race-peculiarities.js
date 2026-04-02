@@ -119,6 +119,11 @@ function onRaceChange() {
     // Aplicar valores iniciais dos DVs vinculados à raça
     _setDerivedInitialValues(raca);
     if (typeof recalcAll === 'function') recalcAll();
+
+    // Re-inicializar tooltips (raça pode adicionar mecânicas que afetam perícias/vitais)
+    if (typeof initVitalStatsTooltips === 'function') initVitalStatsTooltips();
+    if (typeof initSkillTooltips === 'function') initSkillTooltips();
+
     scheduleAutosave();
 }
 

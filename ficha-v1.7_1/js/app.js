@@ -51,6 +51,8 @@ window.initApp = function () {
     document.getElementById('selRaca').addEventListener('change', onRaceChange);
     onRaceChange();
     if (typeof initDerivedListeners === 'function') initDerivedListeners();
+    if (typeof initVitalStatsTooltips === 'function') initVitalStatsTooltips();
+    if (typeof initSkillTooltips === 'function') initSkillTooltips();
     if (typeof recalcAll === 'function') recalcAll();
 
     // Garantir que _dataReady é setado mesmo se loadFromData nunca foi chamado

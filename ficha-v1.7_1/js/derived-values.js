@@ -1,19 +1,19 @@
 /* ===== DERIVED VALUES — Cálculo Automático de Valores Derivados ===== */
 
-/* ===== FÓRMULAS DE STATUS VITAIS (hardcoded — campos fixos no HTML) =====
- * Apenas VIT_MAX, ENER_MAX e SAN_MAX permanecem aqui pois possuem
- * campos atual/max fixos no HTML. Todos os outros valores derivados
- * são gerenciados exclusivamente pelo Firebase (Painel de Criador).
+/* ===== FÓRMULAS DE STATUS VITAIS =====
+ * Status Vitais (VIT_MAX, ENER_MAX, SAN_MAX) agora são gerenciados
+ * exclusivamente por mecânicas do Painel de Criador (Firebase).
+ * As fórmulas hardcoded foram removidas.
+ * O campo base começa em 0 e as mecânicas vinculadas definem o cálculo.
  */
 const DERIVED_FORMULAS = {
-    VIT_MAX: (a) => (a.VIG) * 3,
-    ENER_MAX: (a) => a.PRS + a.AUT,
-    SAN_MAX: (a) => (a.INT + a.AUT + a.PRS) * 2,
+    // Vazio — gerenciado por mecânicas do Firebase
 };
 
-/* Mapa: campo derivado → { display, atual (se aplicável) }
- * Usado APENAS para os "Status Vitais" que ficam hardcoded no HTML
- * (VIT_MAX, ENER_MAX, SAN_MAX) — a seção dinâmica usa IDs gerados.
+/* Mapa: campo de Status Vital → { display, atual }
+ * Mapeia as keys (VIT_MAX, ENER_MAX, SAN_MAX) para os IDs
+ * dos campos HTML fixos na seção Status Vitais.
+ * As fórmulas são definidas por mecânicas do Firebase.
  */
 const DERIVED_FIELDS_MAP = {
     VIT_MAX: { display: 'vit_max_display', atual: 'vit_atual' },
@@ -263,20 +263,23 @@ function renderDerivedValuesGrid() {
     initDerivedTooltips();
 }
 
-/* ===== TOOLTIPS FLUTUANTES ===== */
+/* ===== TOOLTIPS FLUTUANTES (Valores Derivados + Status Vitais + Perícias) ===== */
 
 let _dvTooltipEl = null;
 
-function initDerivedTooltips() {
-    // Criar tooltip global se não existir
+function _ensureTooltipEl() {
     if (!_dvTooltipEl) {
         _dvTooltipEl = document.createElement('div');
         _dvTooltipEl.className = 'dv-tooltip';
         _dvTooltipEl.style.display = 'none';
         document.body.appendChild(_dvTooltipEl);
     }
+}
 
-    // Vincular eventos nos labels
+function initDerivedTooltips() {
+    _ensureTooltipEl();
+
+    // Vincular eventos nos labels de Valores Derivados
     document.querySelectorAll('.dv-label.has-tooltip').forEach(label => {
         label.addEventListener('mouseenter', showDvTooltip);
         label.addEventListener('mouseleave', hideDvTooltip);
@@ -284,27 +287,221 @@ function initDerivedTooltips() {
     });
 }
 
+/**
+ * Inicializa tooltips nos labels de Status Vitais.
+ * Chamada após VITAL_STATS ser carregado do Firebase.
+ */
+function initVitalStatsTooltips() {
+    _ensureTooltipEl();
+    const vitalStats = window.VITAL_STATS || [];
+    if (!vitalStats.length) return;
+
+    document.querySelectorAll('.vital-label[data-vital-key]').forEach(label => {
+        // Evitar bind duplicado
+        if (label.dataset.tooltipBound) return;
+        const key = label.dataset.vitalKey;
+        const vs = vitalStats.find(v => v.key === key);
+        if (!vs) return;
+
+        // Verificar conteúdo direto
+        let hasContent = vs.descricao || (vs.mechPreviews && vs.mechPreviews.length);
+
+        // Verificar mecânicas externas que afetam este vital stat
+        if (!hasContent && typeof getAffectingMechanics === 'function') {
+            const linkedIds = vs.mecanicaIds || [];
+            const propNames = [`${vs.nome} Máxima`, `${vs.nome} Máximo`, vs.nome];
+            for (const propName of propNames) {
+                const extras = getAffectingMechanics(propName, { skipLinked: linkedIds });
+                if (extras.length > 0) { hasContent = true; break; }
+            }
+        }
+
+        if (!hasContent) return;
+
+        label.dataset.tooltipBound = '1';
+        label.classList.add('has-tooltip');
+        label.dataset.tooltipType = 'vital';
+        label.addEventListener('mouseenter', showDvTooltip);
+        label.addEventListener('mouseleave', hideDvTooltip);
+        label.addEventListener('touchstart', showDvTooltip, { passive: true });
+    });
+}
+
+/**
+ * Inicializa tooltips flutuantes nos nomes das Perícias.
+ * Chamada após SKILLS ser carregado do Firebase e renderizado via initSkills().
+ */
+function initSkillTooltips() {
+    _ensureTooltipEl();
+
+    // Bind em skills que já têm has-tooltip (via descrição)
+    document.querySelectorAll('.sk-name.has-tooltip').forEach(nameEl => {
+        if (nameEl.dataset.tooltipBound) return;
+        nameEl.dataset.tooltipBound = '1';
+        nameEl.dataset.tooltipType = 'skill';
+        nameEl.addEventListener('mouseenter', showDvTooltip);
+        nameEl.addEventListener('mouseleave', hideDvTooltip);
+        nameEl.addEventListener('touchstart', showDvTooltip, { passive: true });
+    });
+
+    // Verificar skills SEM has-tooltip mas que são afetadas por mecânicas externas
+    if (typeof getAffectingMechanics === 'function') {
+        document.querySelectorAll('.sk-name:not(.has-tooltip)').forEach(nameEl => {
+            if (nameEl.dataset.tooltipBound) return;
+            const skillName = nameEl.textContent.trim();
+            // Verificar se há mecânicas afetando esta perícia
+            const extras = getAffectingMechanics(skillName, { skipLinked: [] });
+            if (extras.length > 0) {
+                nameEl.classList.add('has-tooltip');
+                nameEl.dataset.tooltipBound = '1';
+                nameEl.dataset.tooltipType = 'skill';
+                nameEl.addEventListener('mouseenter', showDvTooltip);
+                nameEl.addEventListener('mouseleave', hideDvTooltip);
+                nameEl.addEventListener('touchstart', showDvTooltip, { passive: true });
+            }
+        });
+    }
+}
+
 function showDvTooltip(e) {
     const label = e.currentTarget;
-    const dvId = label.dataset.dvId;
-    const dv = (window.DERIVED_VALUES || []).find(d => d.id === dvId);
-    if (!dv || !_dvTooltipEl) return;
+    if (!_dvTooltipEl) return;
 
-    // Montar conteúdo do tooltip
     let html = '';
-    if (dv.descricao) {
-        html += `<div class="dv-tooltip-desc">${_escHtml(dv.descricao)}</div>`;
-    }
-    if (dv.mechPreviews && dv.mechPreviews.length) {
-        html += '<div class="dv-tooltip-mechs">';
-        html += '<div class="dv-tooltip-mechs-title">⚙️ Mecânicas Vinculadas:</div>';
-        dv.mechPreviews.forEach(preview => {
-            html += `<div class="dv-tooltip-mech-item">• ${_escHtml(preview)}</div>`;
-        });
-        html += '</div>';
+    const tooltipType = label.dataset.tooltipType;
+
+    if (tooltipType === 'vital') {
+        // === Status Vital ===
+        const key = label.dataset.vitalKey;
+        const vs = (window.VITAL_STATS || []).find(v => v.key === key);
+        if (!vs) return;
+        if (vs.descricao) {
+            html += `<div class="dv-tooltip-desc">${_escHtml(vs.descricao)}</div>`;
+        }
+        // Mecânicas vinculadas
+        if (vs.mechPreviews && vs.mechPreviews.length) {
+            html += '<div class="dv-tooltip-mechs">';
+            html += '<div class="dv-tooltip-mechs-title">⚙️ Mecânicas Vinculadas:</div>';
+            vs.mechPreviews.forEach(preview => {
+                html += `<div class="dv-tooltip-mech-item">• ${_escHtml(preview)}</div>`;
+            });
+            html += '</div>';
+        }
+        // Buscar TODAS as mecânicas que afetam este vital stat
+        // Usar variantes de nome para cobrir aliases no TARGET_MAP
+        const propNames = [`${vs.nome} Máxima`, `${vs.nome} Máximo`, vs.nome];
+        const linkedIds = vs.mecanicaIds || [];
+        let extras = [];
+        for (const propName of propNames) {
+            const found = typeof getAffectingMechanics === 'function'
+                ? getAffectingMechanics(propName, { skipLinked: linkedIds })
+                : [];
+            for (const f of found) {
+                if (!extras.some(e => e.preview === f.preview && e.fonte === f.fonte)) {
+                    extras.push(f);
+                }
+            }
+        }
+        if (extras.length > 0) {
+            html += '<div class="dv-tooltip-mechs dv-tooltip-extras">';
+            html += '<div class="dv-tooltip-mechs-title">🔗 Outras fontes que afetam:</div>';
+            extras.forEach(item => {
+                html += `<div class="dv-tooltip-mech-item"><span class="dv-tooltip-fonte">${_escHtml(item.fonte)}:</span> ${_escHtml(item.preview)}</div>`;
+            });
+            html += '</div>';
+        }
+
+    } else if (tooltipType === 'skill') {
+        // === Perícia ===
+        const skillName = label.textContent.trim();
+        const allSkills = window.SKILLS || {};
+        let skill = null;
+        for (const cat of Object.values(allSkills)) {
+            skill = cat.find(s => s.name === skillName);
+            if (skill) break;
+        }
+        if (!skill) return;
+        if (skill.descricao) {
+            html += `<div class="dv-tooltip-desc">${_escHtml(skill.descricao)}</div>`;
+        }
+        // Mecânicas vinculadas à perícia
+        const linkedMechIds = skill.mecanicaIds || [];
+        if (linkedMechIds.length > 0) {
+            const linkedPreviews = linkedMechIds.map(mid => {
+                const m = (window._systemData?.mechanics || []).find(m => m.id === mid);
+                if (!m) return null;
+                return typeof generatePreviewText === 'function'
+                    ? generatePreviewText(m) : (m.descricao || '');
+            }).filter(Boolean);
+            if (linkedPreviews.length > 0) {
+                html += '<div class="dv-tooltip-mechs">';
+                html += '<div class="dv-tooltip-mechs-title">⚙️ Mecânicas Vinculadas:</div>';
+                linkedPreviews.forEach(preview => {
+                    html += `<div class="dv-tooltip-mech-item">• ${_escHtml(preview)}</div>`;
+                });
+                html += '</div>';
+            }
+        }
+        // Buscar TODAS as mecânicas que afetam esta perícia
+        const extras = typeof getAffectingMechanics === 'function'
+            ? getAffectingMechanics(skillName, { skipLinked: linkedMechIds })
+            : [];
+        if (extras.length > 0) {
+            html += '<div class="dv-tooltip-mechs dv-tooltip-extras">';
+            html += '<div class="dv-tooltip-mechs-title">🔗 Outras fontes que afetam:</div>';
+            extras.forEach(item => {
+                html += `<div class="dv-tooltip-mech-item"><span class="dv-tooltip-fonte">${_escHtml(item.fonte)}:</span> ${_escHtml(item.preview)}</div>`;
+            });
+            html += '</div>';
+        }
+
+    } else {
+        // === Valor Derivado (padrão) ===
+        const dvId = label.dataset.dvId;
+        const dv = (window.DERIVED_VALUES || []).find(d => d.id === dvId);
+        if (!dv) return;
+        if (dv.descricao) {
+            html += `<div class="dv-tooltip-desc">${_escHtml(dv.descricao)}</div>`;
+        }
+        // Mecânicas vinculadas
+        if (dv.mechPreviews && dv.mechPreviews.length) {
+            html += '<div class="dv-tooltip-mechs">';
+            html += '<div class="dv-tooltip-mechs-title">⚙️ Mecânicas Vinculadas:</div>';
+            dv.mechPreviews.forEach(preview => {
+                html += `<div class="dv-tooltip-mech-item">• ${_escHtml(preview)}</div>`;
+            });
+            html += '</div>';
+        }
+        // Buscar TODAS as mecânicas que afetam este DV
+        const linkedIds = dv.mecanicaIds || [];
+        // Tentar com nome e variantes (com/sem sufixos Máxima/Máximo)
+        const propNames = [dv.nome, `${dv.nome} (Máximo)`, `${dv.nome} Máxima`, `${dv.nome} Máximo`];
+        let extras = [];
+        for (const propName of propNames) {
+            const found = typeof getAffectingMechanics === 'function'
+                ? getAffectingMechanics(propName, { skipLinked: linkedIds })
+                : [];
+            for (const f of found) {
+                if (!extras.some(e => e.preview === f.preview && e.fonte === f.fonte)) {
+                    extras.push(f);
+                }
+            }
+        }
+        if (extras.length > 0) {
+            html += '<div class="dv-tooltip-mechs dv-tooltip-extras">';
+            html += '<div class="dv-tooltip-mechs-title">🔗 Outras fontes que afetam:</div>';
+            extras.forEach(item => {
+                html += `<div class="dv-tooltip-mech-item"><span class="dv-tooltip-fonte">${_escHtml(item.fonte)}:</span> ${_escHtml(item.preview)}</div>`;
+            });
+            html += '</div>';
+        }
     }
 
-    if (!html) return;
+    if (!html) {
+        // Mesmo sem mecânicas vinculadas, verificar fontes externas
+        // para habilitar tooltip quando só há fontes externas
+        return;
+    }
 
     _dvTooltipEl.innerHTML = html;
     _dvTooltipEl.style.display = 'block';
@@ -336,41 +533,40 @@ function _escHtml(str) {
     return d.innerHTML;
 }
 
-/* ===== RECALC ALL — Combina fórmulas hardcoded + dinâmicas ===== */
+/* ===== RECALC ALL — Status Vitais (mecânicas) + Dinâmicos (Firebase) ===== */
 
 function recalcAll() {
     // Re-avaliar equações de mecânicas de valores derivados com valores atuais
     // Algumas mecânicas vinculadas a DVs usam equações com referências à ficha
     // (atributos, perícias) e precisam ser recalculadas a cada chamada de recalcAll
     if (typeof resolveDerivedValueMechanicsLive === 'function'
-        && typeof _getDerivedMechKeys === 'function') {
-        // Limpar apenas as chaves DERIVED: que são gerenciadas dinamicamente
-        const keysToReset = _getDerivedMechKeys();
+        && typeof _getDynamicMechContributions === 'function') {
+        // Subtrair APENAS as contribuições dinâmicas anteriores (equações com ref à ficha),
+        // preservando bônus de outras fontes (ex: peculiaridades raciais, mecânicas fixas)
+        const prevContributions = _getDynamicMechContributions();
         const bonuses = state.mechanicBonuses || {};
-        for (const key of keysToReset) {
-            delete bonuses[key];
-            delete bonuses['SET:' + key];
-            delete bonuses['MULT:' + key];
-            delete bonuses['DIV:' + key];
+        for (const [key, contribution] of Object.entries(prevContributions)) {
+            if (key.startsWith('SET:') || key.startsWith('MULT:') || key.startsWith('DIV:')) {
+                // Para SET/MULT/DIV, remover a chave inteira (são overrides, não somas)
+                delete bonuses[key];
+            } else {
+                // Para + e -, subtrair a contribuição anterior
+                bonuses[key] = (bonuses[key] || 0) - contribution;
+            }
         }
         // Re-resolver equações dinâmicas com valores atuais de state.dots
         resolveDerivedValueMechanicsLive();
     }
 
-    const attrs = gatherAttributes();
     const bonuses = state.mechanicBonuses || {};
     const limits = state.mechanicLimits || {};
 
-    // 1) Calcular derivados com fórmulas hardcoded (fallback para Status Vitais)
-    for (const [key, formula] of Object.entries(DERIVED_FORMULAS)) {
-        // Se este key está renderizado na grid dinâmica, pular o fallback
-        // (será calculado apenas pelas mecânicas vinculadas)
+    // 1) Calcular Status Vitais (via mecânicas do Firebase — base 0)
+    for (const [key, mapping] of Object.entries(DERIVED_FIELDS_MAP)) {
+        // Se este key está renderizado na grid dinâmica, pular
         if (_dynamicDerivedKeys.has(key)) continue;
 
-        // Só calcular se tem campo de display (Status Vitais)
-        if (!DERIVED_FIELDS_MAP[key]) continue;
-
-        let value = formula(attrs);
+        let value = 0; // Base 0 — mecânicas definem o cálculo
         value = _applyMechanicModifiers(key, value, bonuses, limits);
         updateDerivedField(key, value);
     }
@@ -396,11 +592,6 @@ function recalcAll() {
         const dvDef = (window.DERIVED_VALUES || []).find(d => d.key === dvKey);
         if (dvDef && initials[dvDef.id]) {
             value = initials[dvDef.id];
-        }
-
-        // Se existe fórmula hardcoded para este key, usar como base
-        if (DERIVED_FORMULAS[dvKey]) {
-            value += DERIVED_FORMULAS[dvKey](attrs, fields);
         }
 
         value = _applyMechanicModifiers(dvKey, value, bonuses, limits);
@@ -625,7 +816,7 @@ function validateAtualField(atualKey, maxDisplayId) {
 
 /* Inicializar listeners e renderizar grid dinâmica */
 function initDerivedListeners() {
-    // Validação de campos ATUAL ≤ MAX (Status Vitais hardcoded)
+    // Validação de campos ATUAL ≤ MAX (Status Vitais — mecânicas do Firebase)
     validateAtualField('vit_atual', 'vit_max_display');
     validateAtualField('ener_atual', 'ener_max_display');
     validateAtualField('san_atual', 'san_max_display');

@@ -35,6 +35,7 @@ let mechanicsCache = [];
 let peculiaritiesCache = [];
 let skillsCache = [];
 let derivedValuesCache = [];
+let vitalStatsCache = [];
 
 // ====================================================================
 // MODULE DEFINITIONS — each module defines its fields and Firestore path
@@ -260,6 +261,22 @@ const MODULE_DEFS = {
             { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: '' },
             { key: 'campoAtual', label: 'Tem campo "Atual" (editável)?', type: 'boolean' },
             { key: 'campoEditavel', label: 'Campo editável pelo jogador?', type: 'boolean' },
+        ]
+    },
+    vitalStats: {
+        name: 'Status Vital', namePlural: 'Status Vitais', icon: '❤️',
+        collection: 'system/data/vitalStats',
+        fields: [
+            { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Vitalidade, Sanidade, Energia' },
+            { key: 'chaveInterna', label: 'Campo na Ficha', type: 'select', required: true, options: [
+                { value: 'VIT_MAX', label: '❤️ Vitalidade (vit_atual / vit_max)' },
+                { value: 'SAN_MAX', label: '🧠 Sanidade (san_atual / san_max)' },
+                { value: 'ENER_MAX', label: '⚡ Energia (ener_atual / ener_max)' },
+            ] },
+            { key: 'ordem', label: 'Ordem na Ficha', type: 'number', required: true, placeholder: '1' },
+            { key: 'icone', label: 'Ícone / Emoji', type: 'text', placeholder: 'Ex: ❤️, 🧠, ⚡' },
+            { key: 'descricao', label: 'Descrição', type: 'textarea', required: true, placeholder: 'Descreva o que este status vital representa e como é calculado' },
+            { key: 'mecanicaIds', label: 'Mecânicas Vinculadas (definem a fórmula)', type: 'mechanic_selector', fontePreFilter: '' },
         ]
     },
     maneuvers: {
@@ -533,6 +550,7 @@ async function loadModule(moduleName) {
     if (moduleName === 'races' || moduleName === 'classes') await refreshPeculiaritiesCache();
     if (moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'skills') await refreshSkillsCache();
     if (moduleName === 'races' || moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'derivedValues') await refreshDerivedValuesCache();
+    if (moduleName === 'mechanics' || moduleName === 'vitalStats') await refreshVitalStatsCache();
 
     const grid = document.getElementById('itemsGrid');
     const emptyState = document.getElementById('emptyState');
@@ -601,6 +619,16 @@ async function refreshDerivedValuesCache() {
         derivedValuesCache.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
         window._derivedValuesCache = derivedValuesCache;
     } catch (e) { console.error('Erro cache derivedValues:', e); }
+}
+
+async function refreshVitalStatsCache() {
+    try {
+        const snap = await getDocs(collection(db, 'system/data/vitalStats'));
+        vitalStatsCache = [];
+        snap.forEach(d => vitalStatsCache.push({ id: d.id, ...d.data() }));
+        vitalStatsCache.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
+        window._vitalStatsCache = vitalStatsCache;
+    } catch (e) { console.error('Erro cache vitalStats:', e); }
 }
 
 // ===== RENDER ITEMS =====

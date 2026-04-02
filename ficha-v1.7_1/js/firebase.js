@@ -295,6 +295,8 @@ onAuthStateChanged(auth, async (user) => {
             window.RACES = buildRacesFromFirebase();
             buildDerivedValuesFromFirebase();
             if (typeof populateTargetMapFromDerivedValues === 'function') populateTargetMapFromDerivedValues();
+            buildVitalStatsFromFirebase();
+            if (typeof populateTargetMapFromVitalStats === 'function') populateTargetMapFromVitalStats();
             populateRaceSelect();
             populateClassSelect();
 

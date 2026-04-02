@@ -125,10 +125,8 @@ function renderBlock(id, skills, pfx) {
         const nameSpan = document.createElement('div'); nameSpan.className = 'sk-name'; nameSpan.textContent = s.name;
         const attrSpan = document.createElement('div'); attrSpan.className = 'sk-attr'; attrSpan.textContent = s.sub;
 
-        // Tooltip com descrição
+        // Tooltip flutuante com descrição (inicializado por initSkillTooltips)
         if (s.descricao) {
-            nameSpan.title = s.descricao;
-            nameSpan.style.cursor = 'help';
             nameSpan.classList.add('has-tooltip');
         }
 
