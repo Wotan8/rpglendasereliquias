@@ -25,7 +25,12 @@ function resolveTestPart(token, currentClass) {
         return Math.max(...token.split('|').map(p => resolveTestPart(p.trim(), currentClass)));
     }
     // Atributo?
-    if (ATTR_MAP[token]) return state.dots[ATTR_MAP[token]] || 0;
+    if (ATTR_MAP[token]) {
+        const k = ATTR_MAP[token];
+        return typeof getEffectiveDotValue === 'function'
+            ? getEffectiveDotValue(k)
+            : (state.dots[k] || 0) + (state.mechanicBonuses?.[k] || 0);
+    }
     // Valor derivado? (@id do elemento)
     if (token.startsWith('@')) {
         const el = document.getElementById(token.substring(1));
@@ -40,13 +45,20 @@ function resolveTestPart(token, currentClass) {
     ];
     for (const { list, prefix } of skillCategories) {
         const found = list.find(s => s.name === token);
-        if (found) return state.dots[prefix + found.key] || 0;
+        if (found) {
+            const k = prefix + found.key;
+            return typeof getEffectiveDotValue === 'function'
+                ? getEffectiveDotValue(k)
+                : (state.dots[k] || 0) + (state.mechanicBonuses?.[k] || 0);
+        }
     }
     // Perícia de classe?
     if (currentClass && CLASS_SKILLS[currentClass]) {
         if (CLASS_SKILLS[currentClass].includes(token)) {
             const key = 'sk_classe_' + token.toLowerCase().replace(/[^a-z0-9]/g, '_');
-            return state.dots[key] || 0;
+            return typeof getEffectiveDotValue === 'function'
+                ? getEffectiveDotValue(key)
+                : (state.dots[key] || 0) + (state.mechanicBonuses?.[key] || 0);
         }
     }
     return 0;

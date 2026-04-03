@@ -259,17 +259,20 @@ function _resolveSheetRef(ref, mult) {
     if (!ref) return 0;
     mult = mult || 1;
 
-    // Check attributes
+    // Check attributes (includes mechanic bonuses / highlighted levels)
     const attrKey = TARGET_MAP[ref];
     if (attrKey && attrKey.startsWith('attr_')) {
-        const attrName = attrKey.replace('attr_', '');
-        const attrVal = state.dots['attr_' + attrName] || 0;
+        const attrVal = typeof getEffectiveDotValue === 'function'
+            ? getEffectiveDotValue(attrKey)
+            : (state.dots[attrKey] || 0) + (state.mechanicBonuses?.[attrKey] || 0);
         return attrVal * mult;
     }
 
-    // Check skills
+    // Check skills (includes mechanic bonuses / highlighted levels)
     if (attrKey && attrKey.startsWith('sk_')) {
-        const skVal = state.dots[attrKey] || 0;
+        const skVal = typeof getEffectiveDotValue === 'function'
+            ? getEffectiveDotValue(attrKey)
+            : (state.dots[attrKey] || 0) + (state.mechanicBonuses?.[attrKey] || 0);
         return skVal * mult;
     }
 
