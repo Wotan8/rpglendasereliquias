@@ -84,6 +84,12 @@ html.dark .dot.bonus.filled {
     box-shadow: 0 0 4px rgba(245, 158, 11, 0.5)
 }
 
+html.dark .dot.floor.filled {
+    background: #6b7280;
+    border-color: #6b7280;
+    box-shadow: 0 0 3px rgba(107, 114, 128, 0.4)
+}
+
 html.dark .attr-item,
 html.dark .sk-row,
 html.dark .spec-item {
@@ -478,6 +484,17 @@ body {
     background: #4f6ef7;
     border-color: #4f6ef7;
     box-shadow: 0 0 4px rgba(79, 110, 247, 0.4)
+}
+
+.dot.floor.filled {
+    background: #6b7280;
+    border-color: #6b7280;
+    box-shadow: 0 0 3px rgba(107, 114, 128, 0.35);
+    cursor: default
+}
+
+.dot.capped {
+    display: none !important
 }
 
 .dot:hover {

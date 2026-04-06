@@ -281,7 +281,6 @@ function buildRacesFromFirebase() {
             const pec = window._systemData.peculiarities.find(p => p.id === pecId);
             if (!pec) {
                 console.error(`⚠️ Peculiaridade ID "${pecId}" não encontrada para raça "${race.nome}"`);
-                alert(`DEBUG: Peculiaridade ${pecId} não encontrada em ${window._systemData.peculiarities.length} peculiaridades carregadas.`);
                 return null;
             }
 

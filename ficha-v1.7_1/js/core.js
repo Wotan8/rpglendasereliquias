@@ -11,30 +11,59 @@ function initTabs() { document.querySelectorAll('.tab').forEach(b => { b.addEven
  */
 function handleDotUpgrade(container, k, clickedVal, specName) {
     const current = state.dots[k] || 0;
+    const limit = state.mechanicLimits?.[k];
+    const mechBonus = state.mechanicBonuses?.[k] || 0;
 
-    // Se click ≤ nível atual → nada acontece
-    if (clickedVal <= current) return;
+    // Extract floor and ceiling from limits
+    let floorVal = 0;
+    let ceiling = 5;
+    if (limit) {
+        if (limit.tipo === 'bloqueio') { ceiling = 0; floorVal = 0; }
+        else {
+            if ((limit.tipo === 'minimo' || limit.tipo === 'clamp') && limit.min != null) floorVal = limit.min;
+            if ((limit.tipo === 'maximo' || limit.tipo === 'clamp') && limit.max != null) ceiling = limit.max;
+        }
+    }
+
+    // For click purposes, "filled threshold" = base + floor only.
+    // Mechanic bonus dots CAN be overwritten by base investment.
+    const filledForClick = current + floorVal;
+
+    // Se click ≤ nível base+floor atual → nada acontece (floor dots are unclickable)
+    if (clickedVal <= filledForClick) return;
+
+    // Bloquear se ceiling = 0 (bloqueio)
+    if (ceiling <= 0) {
+        if (typeof showUpgradeBlocked === 'function')
+            showUpgradeBlocked('Esta propriedade está bloqueada (= 0).');
+        return;
+    }
+
+    // Próximo nível de investimento (base + floor + 1)
+    const nextClickLevel = filledForClick + 1;
 
     // Só permite subir 1 nível por vez
-    const newLevel = current + 1;
-    if (clickedVal !== newLevel) {
+    if (clickedVal !== nextClickLevel) {
         if (typeof showUpgradeBlocked === 'function')
-            showUpgradeBlocked(`Só é possível subir 1 nível por vez! Nível atual: ${current}, próximo: ${newLevel}.`);
+            showUpgradeBlocked(`Só é possível subir 1 nível por vez! Nível base+piso: ${filledForClick}, próximo: ${nextClickLevel}.`);
+        return;
+    }
+
+    // O nível raw que será armazenado
+    const newRawLevel = current + 1;
+
+    // Verificar se o total (novo base + floor + bonus) ultrapassaria o teto
+    const newTotal = newRawLevel + floorVal + mechBonus;
+    if (newTotal > ceiling) {
+        if (typeof showUpgradeBlocked === 'function')
+            showUpgradeBlocked(`Já está no máximo! (Base: ${current} + Piso: ${floorVal} + Bônus: ${mechBonus} = ${current + floorVal + mechBonus}/${ceiling})`);
         return;
     }
 
     const type = typeof detectDotType === 'function' ? detectDotType(k) : null;
     if (!type) {
-        // Fallback: validar cap antes de permitir
-        const mechBonus = state.mechanicBonuses?.[k] || 0;
-        const limit = state.mechanicLimits?.[k];
-        const maxLevel = (limit && limit.tipo === 'maximo' && limit.max != null) ? limit.max : 5;
-        if (newLevel + mechBonus > maxLevel) {
-            if (typeof showUpgradeBlocked === 'function')
-                showUpgradeBlocked(`Já está no máximo! (${state.dots[k] || 0} + ${mechBonus} = ${(state.dots[k] || 0) + mechBonus}/${maxLevel})`);
-            return;
-        }
-        state.dots[k] = newLevel;
+        // Fallback: sem sistema de EXP
+        state.dots[k] = newRawLevel;
         refreshDots(container, k); scheduleAutosave();
         // Re-evaluate all mechanics (equations may reference this dot value)
         if (typeof applyAllRaceMechanics === 'function') {
@@ -46,7 +75,8 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
         return;
     }
 
-    const check = canUpgrade(k, newLevel, type, specName);
+    // Pass the floor bonus for cost calculation (cost based on rawLevel + floor, NOT bonus)
+    const check = canUpgrade(k, newRawLevel, type, specName, floorVal);
     if (!check.allowed) {
         showUpgradeBlocked(check.reason);
         return;
@@ -55,9 +85,11 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
     // Obter label legível para a confirmação
     const label = getDotLabel(k, container, specName);
 
-    showUpgradeConfirm(label, newLevel, check.cost, () => {
+    // Show the base+floor level in the confirmation (not including bonus)
+    const displayLevel = newRawLevel + floorVal;
+    showUpgradeConfirm(label, displayLevel, check.cost, () => {
         spendExp(check.cost);
-        state.dots[k] = newLevel;
+        state.dots[k] = newRawLevel;
         refreshDots(container, k);
         scheduleAutosave();
         // Re-evaluate all mechanics (equations may reference this dot value)
@@ -67,7 +99,7 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
         }
         if (typeof recalcAll === 'function') recalcAll();
         if (typeof recalcMainTests === 'function') recalcMainTests();
-        showUpgradeSuccess(label, newLevel, check.cost);
+        showUpgradeSuccess(label, displayLevel, check.cost);
     });
 }
 

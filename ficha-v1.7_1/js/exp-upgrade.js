@@ -268,26 +268,37 @@ function getLimiterName(dotKey, specName) {
     return null;
 }
 
-/* ===== VALIDAÇÃO PRINCIPAL ===== */
-
 /**
  * Verifica se um upgrade é possível.
+ * @param {string} dotKey
+ * @param {number} newLevel - raw new level (state.dots + 1)
+ * @param {string} type - 'attr', 'skill', 'spec', 'pec'
+ * @param {string} [specName]
+ * @param {number} [floorBonus=0] - piso bonus from mechanicLimits
  * @returns {{ allowed: boolean, reason: string, cost: number }}
  */
-function canUpgrade(dotKey, newLevel, type, specName) {
-    const cost = getExpCost(type, newLevel, dotKey);
+function canUpgrade(dotKey, newLevel, type, specName, floorBonus) {
+    floorBonus = floorBonus || 0;
+    const effectiveNewLevel = newLevel + floorBonus;
+    const cost = getExpCost(type, effectiveNewLevel, dotKey);
     const currentExp = getCurrentExp();
 
-    // Verificar se base + bônus de mecânica ultrapassaria o máximo de bolinhas
+    // Verificar se base + bônus de mecânica + piso ultrapassaria o máximo
     if (type === 'attr' || type === 'skill' || type === 'spec') {
         const mechBonus = state.mechanicBonuses?.[dotKey] || 0;
         const limit = state.mechanicLimits?.[dotKey];
-        const maxLevel = (limit && limit.tipo === 'maximo' && limit.max != null) ? limit.max : 5;
-        if (newLevel + mechBonus > maxLevel) {
+        let maxLevel = 5;
+        if (limit) {
+            if (limit.tipo === 'bloqueio') maxLevel = 0;
+            else if ((limit.tipo === 'maximo' || limit.tipo === 'clamp') && limit.max != null) maxLevel = limit.max;
+        }
+        const effectiveTotal = effectiveNewLevel + mechBonus;
+        if (effectiveTotal > maxLevel) {
             const currentBase = state.dots[dotKey] || 0;
+            const effectiveCurrent = currentBase + floorBonus + mechBonus;
             return {
                 allowed: false,
-                reason: `Já está no máximo! (Nível: ${currentBase} + Bônus: ${mechBonus} = ${currentBase + mechBonus}/${maxLevel})`,
+                reason: `Já está no máximo! (Nível efetivo: ${effectiveCurrent}/${maxLevel})`,
                 cost: 0
             };
         }
@@ -301,7 +312,7 @@ function canUpgrade(dotKey, newLevel, type, specName) {
     // Verificar limitador para perícias
     if (type === 'skill') {
         const limiterLevel = getSkillLimiterLevel(dotKey);
-        if (limiterLevel !== Infinity && newLevel > limiterLevel) {
+        if (limiterLevel !== Infinity && effectiveNewLevel > limiterLevel) {
             const limiterName = getLimiterName(dotKey) || 'Limitador';
             return { allowed: false, reason: `${limiterName} está no nível ${limiterLevel}. Suba o atributo primeiro!`, cost };
         }
@@ -310,7 +321,7 @@ function canUpgrade(dotKey, newLevel, type, specName) {
     // Verificar limitador para especializações
     if (type === 'spec') {
         const limiterLevel = getSpecLimiterLevel(specName);
-        if (limiterLevel !== Infinity && newLevel > limiterLevel) {
+        if (limiterLevel !== Infinity && effectiveNewLevel > limiterLevel) {
             const limiterName = getLimiterName(dotKey, specName) || 'Limitador';
             return { allowed: false, reason: `${limiterName} está no nível ${limiterLevel}. Suba a perícia/atributo primeiro!`, cost };
         }

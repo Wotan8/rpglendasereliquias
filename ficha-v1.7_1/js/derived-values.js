@@ -25,7 +25,20 @@ const DERIVED_FIELDS_MAP = {
 let _dynamicDerivedKeys = new Set();
 
 function getEffectiveDotValue(key) {
-    return (state.dots[key] || 0) + (state.mechanicBonuses?.[key] || 0);
+    let val = (state.dots[key] || 0) + (state.mechanicBonuses?.[key] || 0);
+    const limit = state.mechanicLimits?.[key];
+    if (limit) {
+        if (limit.tipo === 'bloqueio') return 0;
+        // Piso: additive bonus (floor levels count as real levels)
+        if ((limit.tipo === 'minimo' || limit.tipo === 'clamp') && limit.min != null) {
+            val += limit.min;
+        }
+        // Teto: hard cap
+        if ((limit.tipo === 'maximo' || limit.tipo === 'clamp' || limit.tipo === 'bloqueio') && limit.max != null) {
+            val = Math.min(val, limit.max);
+        }
+    }
+    return val;
 }
 
 function gatherAttributes() {
@@ -626,14 +639,27 @@ function recalcAll() {
         state.derived[dvKey] = value;
     }
 
-    // 3) Aplicar limites em atributos (ex: Pogo FOR max 3)
+    // 3) Aplicar limites em atributos e perícias (teto trunca state.dots)
     for (const [field, limit] of Object.entries(limits)) {
-        if (field.startsWith('attr_')) {
-            const currentVal = state.dots[field] || 0;
-            if (limit.tipo === 'maximo' && limit.max != null && currentVal > limit.max) {
-                state.dots[field] = limit.max;
-                const dotsEl = document.querySelector(`.dots5[data-attr="${field}"]`);
-                if (dotsEl && typeof refreshDots === 'function') refreshDots(dotsEl, field);
+        if (field.startsWith('attr_') || field.startsWith('sk_')) {
+            if (limit.tipo === 'bloqueio') {
+                // Bloqueio: force to 0
+                if ((state.dots[field] || 0) > 0) {
+                    state.dots[field] = 0;
+                    const dotsEl = document.querySelector(`.dots5[data-attr="${field}"]`);
+                    if (dotsEl && typeof refreshDots === 'function') refreshDots(dotsEl, field);
+                }
+            } else if ((limit.tipo === 'maximo' || limit.tipo === 'clamp') && limit.max != null) {
+                // Teto: cap state.dots at (max - floor - bonus) so effective doesn't exceed max
+                const floorBonus = ((limit.tipo === 'clamp') && limit.min != null) ? limit.min : 0;
+                const mechBonus = state.mechanicBonuses?.[field] || 0;
+                const rawCap = limit.max - floorBonus - mechBonus;
+                const currentVal = state.dots[field] || 0;
+                if (currentVal > Math.max(0, rawCap)) {
+                    state.dots[field] = Math.max(0, rawCap);
+                    const dotsEl = document.querySelector(`.dots5[data-attr="${field}"]`);
+                    if (dotsEl && typeof refreshDots === 'function') refreshDots(dotsEl, field);
+                }
             }
         }
     }
@@ -754,23 +780,71 @@ function _applyFieldBonuses(bonuses) {
  */
 function applyMechanicBonusesToDots() {
     const bonuses = state.mechanicBonuses || {};
-    for (const [key, bonus] of Object.entries(bonuses)) {
-        if (!key.startsWith('sk_') && !key.startsWith('attr_')) continue;
-        if (!bonus || bonus === 0) continue;
+    const limits = state.mechanicLimits || {};
+
+    // Collect all dotKeys that need processing (bonuses + limits)
+    const allKeys = new Set();
+    for (const key of Object.keys(bonuses)) {
+        if (key.startsWith('sk_') || key.startsWith('attr_')) allKeys.add(key);
+    }
+    for (const key of Object.keys(limits)) {
+        if (key.startsWith('sk_') || key.startsWith('attr_')) allKeys.add(key);
+    }
+
+    // Also process ALL dot containers to clear stale visual states
+    document.querySelectorAll('.dots5[data-attr]').forEach(c => {
+        allKeys.add(c.dataset.attr);
+    });
+
+    for (const key of allKeys) {
         const container = document.querySelector(`.dots5[data-attr="${key}"]`);
         if (!container) continue;
+
         const baseVal = state.dots[key] || 0;
-        const effectiveVal = baseVal + bonus;
+        const bonus = bonuses[key] || 0;
+        const limit = limits[key];
+
+        // Calculate floor and ceiling
+        let floorVal = 0;
+        let ceiling = 5;
+        if (limit) {
+            if (limit.tipo === 'bloqueio') {
+                ceiling = 0;
+                floorVal = 0;
+            } else {
+                if ((limit.tipo === 'minimo' || limit.tipo === 'clamp') && limit.min != null) {
+                    floorVal = limit.min;
+                }
+                if ((limit.tipo === 'maximo' || limit.tipo === 'clamp') && limit.max != null) {
+                    ceiling = limit.max;
+                }
+            }
+        }
+
+        // Apply ceiling visual: hide dots above ceiling
         container.querySelectorAll('.dot').forEach(d => {
             const val = +d.dataset.val;
-            if (val <= baseVal) {
-                d.classList.add('filled');
-                d.classList.remove('bonus');
-            } else if (val <= effectiveVal) {
-                d.classList.add('filled', 'bonus');
-            } else {
-                d.classList.remove('filled', 'bonus');
+            // Reset all classes first
+            d.classList.remove('filled', 'bonus', 'floor', 'capped');
+
+            if (val > ceiling) {
+                // Beyond ceiling: hide
+                d.classList.add('capped');
+                return;
             }
+
+            // Within visible range
+            if (val <= floorVal) {
+                // Floor dot: auto-filled with floor style
+                d.classList.add('filled', 'floor');
+            } else if (val <= floorVal + baseVal) {
+                // User-invested dot (base level, shifted by floor)
+                d.classList.add('filled');
+            } else if (val <= floorVal + baseVal + bonus) {
+                // Mechanic bonus dot
+                d.classList.add('filled', 'bonus');
+            }
+            // else: empty dot (no class added)
         });
     }
 }
