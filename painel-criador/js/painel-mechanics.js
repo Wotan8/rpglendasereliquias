@@ -1707,3 +1707,125 @@ window._dvSelLevelChange = function (fieldId, dvId, newValue) {
     hidden.value = JSON.stringify(ids);
 };
 
+// ===== SPECIALIZATION SELECTOR (for classes especDaClasse) =====
+export function buildSpecSelectorHTML(fieldKey, label, currentIds, cache) {
+    const published = cache.filter(s => s.publicado !== false);
+    const ids = currentIds || [];
+
+    const chips = ids.map(sid => {
+        const s = cache.find(x => x.id === sid);
+        if (!s) return '';
+        const catLabel = CATEGORIA_LABELS[s.categoria] || s.categoria || '';
+        return `<div class="mechsel-chip" style="border-left-color:var(--warning)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">🎯 ${esc(s.nome)}</div><div class="mechsel-chip-preview">${catLabel}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${sid}')">✕</button></div>`;
+    }).join('');
+
+    const opts = published.map(s => {
+        const catLabel = CATEGORIA_LABELS[s.categoria] || s.categoria || '';
+        return `<label class="mechsel-result" data-fonte="${s.categoria || ''}"><input type="checkbox" value="${s.id}" ${ids.includes(s.id) ? 'checked' : ''}><span class="mechsel-result-name">🎯 ${esc(s.nome)}</span><span class="mechsel-result-preview">${catLabel}</span></label>`;
+    }).join('');
+
+    return `
+    <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
+        <span class="mechsel-label">${esc(label)}</span>
+        <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhuma especialização vinculada</span>'}</div>
+        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Especialização</button>
+        <div class="mechsel-search" id="field_${fieldKey}_search">
+            <div class="mechsel-search-bar">
+                <input type="text" placeholder="🔍 Buscar especialização..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
+            </div>
+            <div class="mechsel-results" id="field_${fieldKey}_results">${opts}</div>
+            <button type="button" class="mechsel-confirm" onclick="window._specSelConfirm('field_${fieldKey}')">✔️ Vincular Selecionadas</button>
+        </div>
+        <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(ids)}'>
+    </div>`;
+}
+
+window._specSelConfirm = function (fieldId) {
+    const results = document.getElementById(`${fieldId}_results`);
+    const hidden = document.getElementById(fieldId);
+    if (!results || !hidden) return;
+    const checked = Array.from(results.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+    hidden.value = JSON.stringify(checked);
+    document.getElementById(`${fieldId}_search`).classList.remove('open');
+    const cache = window._specsCache || [];
+    const chipsEl = document.getElementById(`${fieldId}_chips`);
+    if (chipsEl) {
+        if (!checked.length) {
+            chipsEl.innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhuma especialização vinculada</span>';
+        } else {
+            chipsEl.innerHTML = checked.map(sid => {
+                const s = cache.find(x => x.id === sid);
+                if (!s) return '';
+                const catLabel = CATEGORIA_LABELS[s.categoria] || s.categoria || '';
+                return `<div class="mechsel-chip" style="border-left-color:var(--warning)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">🎯 ${esc(s.nome)}</div><div class="mechsel-chip-preview">${catLabel}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${sid}')">✕</button></div>`;
+            }).join('');
+        }
+    }
+};
+
+// ===== SPEC LIMITER SELECTOR (atributos + perícias como limitadores) =====
+export function buildSpecLimiterHTML(fieldKey, label, value, skillsCache) {
+    const data = value || { atributos: [], pericias: [] };
+    const selectedAttrs = Array.isArray(data.atributos) ? data.atributos : [];
+    const selectedSkills = Array.isArray(data.pericias) ? data.pericias : [];
+
+    const ATTRS = [
+        { value: 'FOR', label: 'FOR — Força' },
+        { value: 'DES', label: 'DES — Destreza' },
+        { value: 'VIG', label: 'VIG — Vigor' },
+        { value: 'INT', label: 'INT — Inteligência' },
+        { value: 'RAC', label: 'RAC — Raciocínio' },
+        { value: 'PRS', label: 'PRS — Perseverança' },
+        { value: 'PRE', label: 'PRE — Presença' },
+        { value: 'MAN', label: 'MAN — Manipulação' },
+        { value: 'AUT', label: 'AUT — Autocontrole' }
+    ];
+
+    const attrCheckboxes = ATTRS.map(a => {
+        const checked = selectedAttrs.includes(a.value) ? 'checked' : '';
+        return `<label class="multi-select-option"><input type="checkbox" value="${a.value}" ${checked} data-limiter-attr="${fieldKey}"> ${esc(a.label)}</label>`;
+    }).join('');
+
+    const publishedSkills = (skillsCache || []).filter(s => s.publicado !== false);
+    const skillCheckboxes = publishedSkills.map(s => {
+        const checked = selectedSkills.includes(s.id) ? 'checked' : '';
+        const catLabel = CATEGORIA_LABELS[s.categoria] || s.categoria || '';
+        return `<label class="multi-select-option"><input type="checkbox" value="${s.id}" ${checked} data-limiter-skill="${fieldKey}"> ${esc(s.nome)} <small style="color:var(--muted)">(${catLabel})</small></label>`;
+    }).join('');
+
+    return `
+    <div class="form-group full-width" id="limiter_wrap_${fieldKey}">
+        <label>${esc(label)} <span class="required">*</span></label>
+        <p style="font-size:.72rem;color:var(--muted);margin:0 0 8px">O nível da especialização é limitado pelo <strong>menor</strong> entre todos os atributos e perícias selecionados.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+                <label style="font-size:.78rem;font-weight:700;color:var(--accent);margin-bottom:4px;display:block">⚔️ Atributos Base</label>
+                <div class="multi-select-container" style="max-height:200px;overflow-y:auto">${attrCheckboxes}</div>
+            </div>
+            <div>
+                <label style="font-size:.78rem;font-weight:700;color:var(--accent);margin-bottom:4px;display:block">📚 Perícias Relacionadas</label>
+                <div class="multi-select-container" style="max-height:200px;overflow-y:auto">${skillCheckboxes}</div>
+            </div>
+        </div>
+        <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(data)}'>
+    </div>`;
+}
+
+document.addEventListener('change', function(e) {
+    if (e.target.dataset.limiterAttr) {
+        _syncLimiterHidden(e.target.dataset.limiterAttr);
+    }
+    if (e.target.dataset.limiterSkill) {
+        _syncLimiterHidden(e.target.dataset.limiterSkill);
+    }
+});
+
+function _syncLimiterHidden(fieldKey) {
+    const wrap = document.getElementById(`limiter_wrap_${fieldKey}`);
+    if (!wrap) return;
+    const attrChecked = Array.from(wrap.querySelectorAll(`input[data-limiter-attr="${fieldKey}"]:checked`)).map(cb => cb.value);
+    const skillChecked = Array.from(wrap.querySelectorAll(`input[data-limiter-skill="${fieldKey}"]:checked`)).map(cb => cb.value);
+    const hidden = document.getElementById(`field_${fieldKey}`);
+    if (hidden) hidden.value = JSON.stringify({ atributos: attrChecked, pericias: skillChecked });
+}
+

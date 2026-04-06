@@ -208,11 +208,32 @@
 
                 <!-- ESPECIALIZAÇÕES -->
                 <div class="section">
-                    <div class="section-title">Especializações <span class="exp-cost">Nível × 2 EXP · Limite: ≤ Perícia
-                            ou Atributo vinculado</span></div>
-                    <div class="spec-grid" id="specContainer"></div>
-                    <button class="add-btn no-print" onclick="addSpec()" style="margin-top:8px">+ Adicionar
-                        Especialização</button>
+                    <div class="section-title">Especializações <span class="exp-cost">Custo variável por especialização
+                            EXP · Limite: ≤ Perícia ou Atributo vinculado</span></div>
+                    <div class="skills-row">
+                        <div class="skill-block">
+                            <div class="skill-block-title">Mental</div>
+                            <div id="specsMental"></div>
+                        </div>
+                        <div class="skill-block">
+                            <div class="skill-block-title">Físico</div>
+                            <div id="specsFisico"></div>
+                        </div>
+                        <div class="skill-block">
+                            <div class="skill-block-title">Social</div>
+                            <div id="specsSocial"></div>
+                        </div>
+                        <div class="skill-block">
+                            <div class="skill-block-title">Combate</div>
+                            <div id="specsCombate"></div>
+                        </div>
+                        <div class="skill-block">
+                            <div class="skill-block-title">Exclusivo</div>
+                            <div id="specsExclusivo"></div>
+                        </div>
+                    </div>
+                    <!-- Legacy: manual specs for old data -->
+                    <div class="spec-grid" id="specContainer" style="display:none"></div>
                 </div>
 
                 <!-- TESTES PRINCIPAIS -->

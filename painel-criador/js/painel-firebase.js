@@ -3,7 +3,7 @@
 // Lendas e Relíquias (ficha-v1.7_1 style)
 // =============================================
 
-import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js';
+import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildSpecSelectorHTML, buildSpecLimiterHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js';
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -36,6 +36,7 @@ let peculiaritiesCache = [];
 let skillsCache = [];
 let derivedValuesCache = [];
 let vitalStatsCache = [];
+let specsCache = [];
 
 // ====================================================================
 // MODULE DEFINITIONS — each module defines its fields and Firestore path
@@ -83,12 +84,7 @@ const MODULE_DEFS = {
                 ], maxItems: 1
             },
             { key: 'pericClasse', label: 'Perícias de Classe', type: 'mechanic_selector', selectorTarget: 'skills' },
-            {
-                key: 'especExclusivas', label: 'Especializações Exclusivas', type: 'array', arrayFields: [
-                    { key: 'nome', label: 'Nome', type: 'text', required: true },
-                    { key: 'descricao', label: 'Descrição', type: 'textarea' }
-                ]
-            },
+            { key: 'especDaClasse', label: 'Especializações da Classe', type: 'mechanic_selector', selectorTarget: 'specializations' },
             { key: 'manobras', label: 'IDs de Manobras (referências)', type: 'tags', placeholder: 'ID da manobra e Enter' },
             { key: 'mecanicaIds', label: 'Mecânicas da Classe', type: 'mechanic_selector', fontePreFilter: 'classe' },
             { key: 'derivedValueIds', label: 'Valores Derivados da Classe', type: 'mechanic_selector', selectorTarget: 'derivedValues' },
@@ -151,19 +147,19 @@ const MODULE_DEFS = {
             { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Espadas, Armaduras Leves' },
             {
                 key: 'categoria', label: 'Categoria', type: 'select', required: true, options: [
-                    { value: 'arma_corpo', label: 'Arma Corpo a Corpo' },
-                    { value: 'arma_distancia', label: 'Arma à Distância' },
-                    { value: 'armadura', label: 'Armadura' },
-                    { value: 'escudo', label: 'Escudo' },
-                    { value: 'classe', label: 'Classe' },
-                    { value: 'magica', label: 'Mágica' }
+                    { value: 'mental', label: 'Mental' },
+                    { value: 'fisico', label: 'Físico' },
+                    { value: 'social', label: 'Social' },
+                    { value: 'combate', label: 'Combate' },
+                    { value: 'exclusivo', label: 'Exclusivo' }
                 ]
             },
-            { key: 'pericRelacionada', label: 'Perícia Relacionada', type: 'text', required: true, placeholder: 'Ex: Arma, Disparo' },
-            { key: 'exemplos', label: 'Exemplos de Itens', type: 'tags', required: true, placeholder: 'Ex: Espada Curta, Espada Longa' },
-            { key: 'ampla', label: 'Especialização Ampla?', type: 'boolean' },
-            { key: 'classeExclusiva', label: 'Classe Exclusiva', type: 'text', placeholder: 'Ex: Guerreiro (se ampla)' },
-            { key: 'custoEvolucao', label: 'Custo de Evolução', type: 'text', required: true, placeholder: 'Ex: Novo Nível × 2 EXP' },
+            { key: 'descricao', label: 'Descrição', type: 'textarea', placeholder: 'Descreva a especialização' },
+            { key: 'limitadores', label: 'Limitadores de Upgrade (Atributos e Perícias)', type: 'spec_limiter' },
+            { key: 'custoEvolucao', label: 'Custo de Evolução (EXP por nível)', type: 'number', placeholder: '2' },
+            { key: 'todoPersonagem', label: 'Todo personagem tem esta especialização?', type: 'boolean' },
+            { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: '' },
+            { key: 'exemplos', label: 'Exemplos de Itens', type: 'tags', placeholder: 'Ex: Espada Curta, Espada Longa' },
         ]
     },
     skills: {
@@ -441,6 +437,11 @@ window.switchModule = function (moduleName, btnEl) {
     if (oldSkillFilters) oldSkillFilters.remove();
     if (moduleName === 'skills') renderSkillsExtraFilters();
 
+    // Remove/add specializations extra filters
+    const oldSpecFilters = document.getElementById('specsFiltersExtra');
+    if (oldSpecFilters) oldSpecFilters.remove();
+    if (moduleName === 'specializations') renderSpecsExtraFilters();
+
     // Remove/add tag filter for modules that have tags
     const oldTagFilter = document.getElementById('tagFilterArea');
     if (oldTagFilter) oldTagFilter.remove();
@@ -488,6 +489,25 @@ function renderSkillsExtraFilters() {
         </select>
         <label style="display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap">
             <input type="checkbox" id="skillGroupByCategoria" onchange="filterItems()" checked
+                style="width:16px;height:16px;accent-color:var(--primary);flex:none">
+            Agrupar por Categoria
+        </label>`;
+    filterBar.after(div);
+}
+
+function renderSpecsExtraFilters() {
+    const filterBar = document.getElementById('filterBar');
+    if (!filterBar || document.getElementById('specsFiltersExtra')) return;
+    const div = document.createElement('div');
+    div.className = 'mech-filters';
+    div.id = 'specsFiltersExtra';
+    div.innerHTML = `
+        <select id="specFilterCategoria" onchange="filterItems()">
+            <option value="">📂 Categoria: Todas</option>
+            ${SKILL_CATEGORIA_ORDER.map(k => `<option value="${k}">${SKILL_CATEGORIA_LABELS[k]}</option>`).join('')}
+        </select>
+        <label style="display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap">
+            <input type="checkbox" id="specGroupByCategoria" onchange="filterItems()" checked
                 style="width:16px;height:16px;accent-color:var(--primary);flex:none">
             Agrupar por Categoria
         </label>`;
@@ -548,9 +568,10 @@ async function loadModule(moduleName) {
     // Always refresh mechanics cache (needed for selectors in all modules)
     await refreshMechanicsCache();
     if (moduleName === 'races' || moduleName === 'classes') await refreshPeculiaritiesCache();
-    if (moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'skills') await refreshSkillsCache();
+    if (moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'skills' || moduleName === 'specializations') await refreshSkillsCache();
     if (moduleName === 'races' || moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'derivedValues') await refreshDerivedValuesCache();
     if (moduleName === 'mechanics' || moduleName === 'vitalStats') await refreshVitalStatsCache();
+    if (moduleName === 'classes' || moduleName === 'specializations') await refreshSpecsCache();
 
     const grid = document.getElementById('itemsGrid');
     const emptyState = document.getElementById('emptyState');
@@ -631,6 +652,16 @@ async function refreshVitalStatsCache() {
     } catch (e) { console.error('Erro cache vitalStats:', e); }
 }
 
+async function refreshSpecsCache() {
+    try {
+        const snap = await getDocs(collection(db, 'system/data/specializations'));
+        specsCache = [];
+        snap.forEach(d => specsCache.push({ id: d.id, ...d.data() }));
+        specsCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        window._specsCache = specsCache;
+    } catch (e) { console.error('Erro cache specializations:', e); }
+}
+
 // ===== RENDER ITEMS =====
 function buildItemCardHTML(item) {
     const name = escapeHtml(item.nome || item.titulo || 'Sem nome');
@@ -690,6 +721,11 @@ function renderItems() {
             const catF = document.getElementById('skillFilterCategoria')?.value || '';
             if (catF && item.categoria !== catF) return false;
         }
+        // Specializations category filter
+        if (currentModule === 'specializations') {
+            const catF = document.getElementById('specFilterCategoria')?.value || '';
+            if (catF && item.categoria !== catF) return false;
+        }
         // Tag filter
         const selTags = getSelectedTags();
         if (selTags.size > 0) {
@@ -721,6 +757,27 @@ function renderItems() {
         SKILL_CATEGORIA_ORDER.forEach(k => { groups[k] = []; });
         filtered.forEach(item => {
             const cat = (item.categoria || 'mental').toLowerCase();
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(item);
+        });
+
+        let html = '';
+        SKILL_CATEGORIA_ORDER.forEach(cat => {
+            const items = groups[cat];
+            if (!items || items.length === 0) return;
+            html += `<div class="skills-category-header">${SKILL_CATEGORIA_LABELS[cat] || cat} <span class="skills-category-count">${items.length}</span></div>`;
+            html += items.map(item => buildItemCardHTML(item)).join('');
+        });
+        grid.innerHTML = html;
+        return;
+    }
+
+    // Specializations: group by category if checkbox is checked
+    if (currentModule === 'specializations' && document.getElementById('specGroupByCategoria')?.checked) {
+        const groups = {};
+        SKILL_CATEGORIA_ORDER.forEach(k => { groups[k] = []; });
+        filtered.forEach(item => {
+            const cat = (item.categoria || 'combate').toLowerCase();
             if (!groups[cat]) groups[cat] = [];
             groups[cat].push(item);
         });
@@ -854,9 +911,17 @@ function buildField(field, value) {
             wrap.innerHTML = buildSkillSelectorHTML(field.key, field.label, ids, skillsCache);
         } else if (field.selectorTarget === 'derivedValues') {
             wrap.innerHTML = buildDerivedValueSelectorHTML(field.key, field.label, ids, derivedValuesCache);
+        } else if (field.selectorTarget === 'specializations') {
+            wrap.innerHTML = buildSpecSelectorHTML(field.key, field.label, ids, specsCache);
         } else {
             wrap.innerHTML = buildMechanicSelectorHTML(field.key, field.label, ids, mechanicsCache, field.fontePreFilter);
         }
+        return wrap;
+    }
+
+    if (field.type === 'spec_limiter') {
+        wrap.className = 'form-group full-width';
+        wrap.innerHTML = buildSpecLimiterHTML(field.key, field.label, value, skillsCache);
         return wrap;
     }
 
@@ -1097,6 +1162,12 @@ window.handleFormSubmit = async function (e) {
                 try { data[field.key] = JSON.parse(el.value || '[]'); }
                 catch { data[field.key] = []; }
             } else { data[field.key] = []; }
+        } else if (field.type === 'spec_limiter') {
+            const el = document.getElementById(`field_${field.key}`);
+            if (el) {
+                try { data[field.key] = JSON.parse(el.value || '{}'); }
+                catch { data[field.key] = { atributos: [], pericias: [] }; }
+            } else { data[field.key] = { atributos: [], pericias: [] }; }
         } else if (field.type === 'boolean') {
             const el = document.getElementById(`field_${field.key}`);
             data[field.key] = el ? el.checked : false;

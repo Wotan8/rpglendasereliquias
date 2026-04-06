@@ -7,116 +7,13 @@
 
 /**
  * Mapeamento de Limitadores de ESPECIALIZAÇÕES.
- * Chave = nome normalizado da especialização, valor = { type, keys }
- * type pode ser 'attr' (busca em attr_*) ou 'skill' (busca em sk_*_*)
+ * Agora construído DINAMICAMENTE pelo buildSpecializationsFromFirebase()
+ * em system-data-loader.js → window.SPEC_LIMITERS_DYNAMIC
+ * Formato: dotKey → { keys: [...attrKeys, ...skillKeys], mode: 'min', names: [...] }
+ *
+ * LEGACY: O const SPEC_LIMITERS antigo foi removido.
+ * A função getSpecLimiterLevel agora usa window.SPEC_LIMITERS_DYNAMIC.
  */
-const SPEC_LIMITERS = {
-    /* COMUNS */
-    'espadas': { type: 'skill', search: 'arma' },
-    'machados': { type: 'skill', search: 'arma' },
-    'macas e martelos': { type: 'skill', search: 'arma' },
-    'maças e martelos': { type: 'skill', search: 'arma' },
-    'lancas e hastes': { type: 'skill', search: 'arma' },
-    'lanças e hastes': { type: 'skill', search: 'arma' },
-    'adagas e punhais': { type: 'skill', search: 'arma' },
-    'arcos': { type: 'skill', search: 'disparo' },
-    'bestas': { type: 'skill', search: 'disparo' },
-    'arremesso': { type: 'skill', search: 'arremessar' },
-    'armaduras leves': { type: 'attr', key: 'attr_for' },
-    'armaduras medias': { type: 'attr', key: 'attr_for' },
-    'armaduras médias': { type: 'attr', key: 'attr_for' },
-    'armaduras pesadas': { type: 'attr', key: 'attr_for' },
-    'escudos': { type: 'attr', key: 'attr_for' },
-    /* GUERREIRO */
-    'armas de uma mao': { type: 'skill', search: 'arma' },
-    'armas de uma mão': { type: 'skill', search: 'arma' },
-    'armas de duas maos': { type: 'skill', search: 'arma' },
-    'armas de duas mãos': { type: 'skill', search: 'arma' },
-    'armas de haste': { type: 'skill', search: 'arma' },
-    'armas duplas': { type: 'skill', search: 'arma' },
-    /* LADINO */
-    'armas de punho': { type: 'skill', search: 'arma' },
-    'ferramentas do crime': { type: 'skill', search: 'arrombamento' },
-    /* CAÇADOR */
-    'armas de precisao a distancia': { type: 'skill', search: 'arma' },
-    'armas de precisão à distância': { type: 'skill', search: 'arma' },
-    /* ALQUIMANCIA — LOÇÕES */
-    'locoes toxicas': { type: 'skill', search: 'erudicao_ofensiva' },
-    'loções tóxicas': { type: 'skill', search: 'erudicao_ofensiva' },
-    'locoes paralisantes': { type: 'skill', search: 'erudicao_ofensiva' },
-    'loções paralisantes': { type: 'skill', search: 'erudicao_ofensiva' },
-    'locoes corrosivas': { type: 'skill', search: 'erudicao_ofensiva' },
-    'loções corrosivas': { type: 'skill', search: 'erudicao_ofensiva' },
-    'locoes sedativas': { type: 'skill', search: 'erudicao_ofensiva' },
-    'loções sedativas': { type: 'skill', search: 'erudicao_ofensiva' },
-    'locoes ilusorias': { type: 'skill', search: 'erudicao_ofensiva' },
-    'loções ilusórias': { type: 'skill', search: 'erudicao_ofensiva' },
-    'locoes curativas': { type: 'skill', search: 'erudicao_defensiva' },
-    'loções curativas': { type: 'skill', search: 'erudicao_defensiva' },
-    'locoes antidotos': { type: 'skill', search: 'erudicao_defensiva' },
-    'loções antídotos': { type: 'skill', search: 'erudicao_defensiva' },
-    'locoes estimulantes': { type: 'skill', search: 'erudicao_defensiva' },
-    'loções estimulantes': { type: 'skill', search: 'erudicao_defensiva' },
-    'locoes de resistencia': { type: 'skill', search: 'erudicao_defensiva' },
-    'loções de resistência': { type: 'skill', search: 'erudicao_defensiva' },
-    'locoes sensoriais': { type: 'skill', search: 'erudicao_defensiva' },
-    'loções sensoriais': { type: 'skill', search: 'erudicao_defensiva' },
-    /* DRUIDA — CRIATURAS */
-    'mamiferos': { type: 'skill', search: 'domar' },
-    'mamíferos': { type: 'skill', search: 'domar' },
-    'aves': { type: 'skill', search: 'domar' },
-    'repteis': { type: 'skill', search: 'domar' },
-    'répteis': { type: 'skill', search: 'domar' },
-    'insetos/aracnideos': { type: 'skill', search: 'domar' },
-    'insetos/aracnídeos': { type: 'skill', search: 'domar' },
-    'aquaticos': { type: 'skill', search: 'domar' },
-    'aquáticos': { type: 'skill', search: 'domar' },
-    'feras misticas': { type: 'skill', search: ['aliado_animal', 'linguagem_animal'], mode: 'min' },
-    'feras místicas': { type: 'skill', search: ['aliado_animal', 'linguagem_animal'], mode: 'min' },
-    /* ADEPTO DE THANNATHOG */
-    'necromancia': { type: 'skill', search: 'essencia' },
-    'talisma profano': { type: 'skill', search: ['essencia', 'performance'], mode: 'min' },
-    'talismã profano': { type: 'skill', search: ['essencia', 'performance'], mode: 'min' },
-    'vozes do tumulo': { type: 'skill', search: ['essencia', 'empatia'], mode: 'min' },
-    'vozes do túmulo': { type: 'skill', search: ['essencia', 'empatia'], mode: 'min' },
-    /* INVOCADOR DO ABISMO */
-    'abismancia': { type: 'skill', search: 'essencia' },
-    /* PALLACERDOTE */
-    'pallomancia': { type: 'skill', search: 'essencia' },
-    'simbolo sagrado': { type: 'skill', search: ['essencia', 'performance'], mode: 'min' },
-    'símbolo sagrado': { type: 'skill', search: ['essencia', 'performance'], mode: 'min' },
-    'cura radiante': { type: 'skill', search: 'pallomancia' },
-    /* RUNIMAGO */
-    'artus': { type: 'skill', search: 'runomancia' },
-    'aspectus': { type: 'skill', search: 'runomancia' },
-    'sigilus': { type: 'skill', search: 'runomancia' },
-    /* SANGRAL */
-    'hemomancia': { type: 'skill', search: 'essencia' },
-    'armas de sangue': { type: 'skill', search: 'solidif__hematica' },
-    'defesas de sangue': { type: 'skill', search: 'solidif__hematica' },
-    'sangue vivo': { type: 'skill', search: ['manip__de_sangue', 'empatia_sanguinea'], mode: 'min' },
-    'sangue morto': { type: 'skill', search: 'manip__de_sangue' },
-    'transfusao avancada': { type: 'skill', search: ['cirurgia_hematica', 'empatia_sanguinea'], mode: 'min' },
-    'transfusão avançada': { type: 'skill', search: ['cirurgia_hematica', 'empatia_sanguinea'], mode: 'min' },
-    'laminas hematicas': { type: 'skill', search: 'solidif__hematica' },
-    'lâminas hemáticas': { type: 'skill', search: 'solidif__hematica' },
-    'perfurantes hematicas': { type: 'skill', search: 'solidif__hematica' },
-    'perfurantes hemáticas': { type: 'skill', search: 'solidif__hematica' },
-    'contundentes hematicas': { type: 'skill', search: 'solidif__hematica' },
-    'contundentes hemáticas': { type: 'skill', search: 'solidif__hematica' },
-    'chicotes hematicos': { type: 'skill', search: 'solidif__hematica' },
-    'chicotes hemáticos': { type: 'skill', search: 'solidif__hematica' },
-    /* XAMÃ */
-    'totemancia': { type: 'skill', search: 'essencia' },
-    /* BARDO */
-    'sonoromancia': { type: 'skill', search: ['essencia', 'performance'], mode: 'min' },
-    'canto': { type: 'skill', search: 'performance' },
-    'instrumentos de corda': { type: 'skill', search: 'performance' },
-    'instrumentos de percussao': { type: 'skill', search: 'performance' },
-    'instrumentos de percussão': { type: 'skill', search: 'performance' },
-    'instrumentos de sopro': { type: 'skill', search: 'performance' },
-    'instrumento foco': { type: 'skill', search: 'performance' },
-};
 
 /* ===== FUNÇÕES DE CUSTO ===== */
 
@@ -128,7 +25,11 @@ function getExpCost(type, newLevel, dotKey) {
         const costPerLevel = customCost || 4;
         return newLevel * costPerLevel;
     }
-    if (type === 'spec') return newLevel * 2;
+    if (type === 'spec') {
+        const customCost = window.SPEC_COSTS && window.SPEC_COSTS[dotKey];
+        const costPerLevel = customCost || 2;
+        return newLevel * costPerLevel;
+    }
     return 0;
 }
 
@@ -168,7 +69,9 @@ function detectDotType(dotKey) {
     if (dotKey.startsWith('sk_mental_') || dotKey.startsWith('sk_fisico_') ||
         dotKey.startsWith('sk_social_') || dotKey.startsWith('sk_combate_') ||
         dotKey.startsWith('sk_exclusivo_') || dotKey.startsWith('sk_classe_')) return 'skill';
-    if (dotKey.startsWith('spec_')) return 'spec';
+    if (dotKey.startsWith('spec_mental_') || dotKey.startsWith('spec_fisico_') ||
+        dotKey.startsWith('spec_social_') || dotKey.startsWith('spec_combate_') ||
+        dotKey.startsWith('spec_exclusivo_') || dotKey.startsWith('spec_')) return 'spec';
     if (dotKey.startsWith('pec_')) return 'pec';
     return null;
 }
@@ -188,32 +91,27 @@ function getSkillLimiterLevel(dotKey) {
 }
 
 /**
- * Busca o nível do limitador de uma especialização pelo nome digitado.
+ * Busca o nível do limitador de uma especialização.
+ * Agora usa window.SPEC_LIMITERS_DYNAMIC (construído por buildSpecializationsFromFirebase).
+ * Se o dotKey está no mapa dinâmico, usa o menor entre todos os limitadores.
+ * Caso contrário, tenta fallback pelo specName (legado).
  */
-function getSpecLimiterLevel(specName) {
-    if (!specName) return Infinity;
-    const normalized = specName.toLowerCase().trim()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // remove acentos
-
-    // Tenta buscar com o nome normalizado
-    for (const [key, limiter] of Object.entries(SPEC_LIMITERS)) {
-        const normalizedKey = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        if (normalizedKey === normalized || key === specName.toLowerCase().trim()) {
-            if (!limiter) return Infinity;
-
-            if (limiter.type === 'attr') {
-                return state.dots[limiter.key] || 0;
-            }
-
-            if (limiter.type === 'skill') {
-                const searches = Array.isArray(limiter.search) ? limiter.search : [limiter.search];
-                const levels = searches.map(s => findSkillDotLevel(s));
-                return limiter.mode === 'min' ? Math.min(...levels) : levels[0];
-            }
+function getSpecLimiterLevel(specName, dotKey) {
+    // Primeiro: checar SPEC_LIMITERS_DYNAMIC pelo dotKey
+    const dynamicLimiters = window.SPEC_LIMITERS_DYNAMIC || {};
+    if (dotKey && dynamicLimiters[dotKey]) {
+        const limiter = dynamicLimiters[dotKey];
+        const getVal = (k) => {
+            if (typeof getEffectiveDotValue === 'function') return getEffectiveDotValue(k);
+            return (state.dots[k] || 0) + (state.mechanicBonuses?.[k] || 0);
+        };
+        if (limiter.mode === 'min') {
+            return Math.min(...limiter.keys.map(k => getVal(k)));
         }
+        return getVal(limiter.keys[0]);
     }
 
-    // Se não encontrou mapeamento, sem limitador
+    // Fallback: sem limitador dinâmico
     return Infinity;
 }
 
@@ -251,18 +149,14 @@ function getLimiterName(dotKey, specName) {
         return limiter.mode === 'min' ? `menor entre ${names.join('/')}` : names[0];
     }
 
-    if (type === 'spec' && specName) {
-        const normalized = specName.toLowerCase().trim()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        for (const [key, limiter] of Object.entries(SPEC_LIMITERS)) {
-            const normalizedKey = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            if (normalizedKey === normalized || key === specName.toLowerCase().trim()) {
-                if (!limiter) return null;
-                if (limiter.type === 'attr') return limiter.key.replace('attr_', '').toUpperCase();
-                const searches = Array.isArray(limiter.search) ? limiter.search : [limiter.search];
-                return searches.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('/');
-            }
+    if (type === 'spec') {
+        // Dynamic: use SPEC_LIMITERS_DYNAMIC
+        const dynamicLimiters = window.SPEC_LIMITERS_DYNAMIC || {};
+        if (dynamicLimiters[dotKey]) {
+            const limiter = dynamicLimiters[dotKey];
+            return limiter.names ? limiter.names.join('/') : null;
         }
+        return null;
     }
 
     return null;
@@ -320,7 +214,7 @@ function canUpgrade(dotKey, newLevel, type, specName, floorBonus) {
 
     // Verificar limitador para especializações
     if (type === 'spec') {
-        const limiterLevel = getSpecLimiterLevel(specName);
+        const limiterLevel = getSpecLimiterLevel(specName, dotKey);
         if (limiterLevel !== Infinity && effectiveNewLevel > limiterLevel) {
             const limiterName = getLimiterName(dotKey, specName) || 'Limitador';
             return { allowed: false, reason: `${limiterName} está no nível ${limiterLevel}. Suba a perícia/atributo primeiro!`, cost };

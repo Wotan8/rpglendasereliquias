@@ -168,6 +168,31 @@ function renderBlock(id, skills, pfx) {
     });
 }
 
+/* ===== SPECIALIZATIONS (dynamic from Firebase) ===== */
+function initSpecializations() {
+    if (!window.SPECIALIZATIONS) return;
+    const filterUniversal = (arr) => (arr || []).filter(s => s.todoPersonagem !== false);
+    renderSpecBlock('specsMental', filterUniversal(window.SPECIALIZATIONS.mental), 'spec_mental_');
+    renderSpecBlock('specsFisico', filterUniversal(window.SPECIALIZATIONS.fisico), 'spec_fisico_');
+    renderSpecBlock('specsSocial', filterUniversal(window.SPECIALIZATIONS.social), 'spec_social_');
+    renderSpecBlock('specsCombate', filterUniversal(window.SPECIALIZATIONS.combate), 'spec_combate_');
+    renderSpecBlock('specsExclusivo', filterUniversal(window.SPECIALIZATIONS.exclusivo), 'spec_exclusivo_');
+}
+function renderSpecBlock(id, specs, pfx) {
+    const c = document.getElementById(id);
+    if (!c) return;
+    specs.forEach(s => {
+        const row = document.createElement('div'); row.className = 'sk-row';
+        const lbl = document.createElement('div'); lbl.className = 'sk-label';
+        const nameSpan = document.createElement('div'); nameSpan.className = 'sk-name'; nameSpan.textContent = s.name;
+        const attrSpan = document.createElement('div'); attrSpan.className = 'sk-attr'; attrSpan.textContent = s.sub;
+        if (s.descricao) nameSpan.classList.add('has-tooltip');
+        lbl.appendChild(nameSpan);
+        lbl.appendChild(attrSpan);
+        row.appendChild(lbl); row.appendChild(createDotsHTML(pfx + s.key, s.name)); c.appendChild(row);
+    });
+}
+
 function onClassChange() {
     const cl = document.getElementById('selClasse').value;
     const g = document.getElementById('skillsExclusivo');
@@ -183,6 +208,49 @@ function onClassChange() {
             lbl.innerHTML = `<div class="sk-name">${sk}</div><div class="sk-attr">Classe</div>`;
             row.appendChild(lbl); row.appendChild(createDotsHTML(key)); g.appendChild(row);
         });
+    }
+
+    // === ESPECIALIZAÇÕES DA CLASSE ===
+    // Remove previously injected class spec rows
+    document.querySelectorAll('.sk-row[data-class-spec]').forEach(r => r.remove());
+
+    if (cl && window._systemData && window._systemData.classes && window.SPECIALIZATIONS) {
+        const classeData = window._systemData.classes.find(c => c.nome === cl);
+        const especIds = classeData?.especDaClasse || classeData?.especExclusivas || [];
+        // especIds pode ser array de IDs de especializações do Firebase
+        if (Array.isArray(especIds) && especIds.length > 0) {
+            // Flatten all specializations for lookup
+            const allSpecs = [];
+            for (const cat of Object.keys(window.SPECIALIZATIONS)) {
+                for (const sp of window.SPECIALIZATIONS[cat]) { allSpecs.push({ ...sp, _cat: cat }); }
+            }
+
+            especIds.forEach(specId => {
+                // Handle both string IDs and legacy {nome, descricao} objects
+                if (typeof specId === 'object' && specId.nome) return; // legacy format, skip
+                const spec = allSpecs.find(s => s.id === specId);
+                if (!spec) return;
+
+                const catCapMap = { mental: 'Mental', fisico: 'Fisico', social: 'Social', combate: 'Combate', exclusivo: 'Exclusivo' };
+                const containerSuffix = catCapMap[spec._cat] || 'Combate';
+                const container = document.getElementById('specs' + containerSuffix);
+                if (!container) return;
+
+                // Check if already rendered (universal spec)
+                const pfx = 'spec_' + spec._cat + '_';
+                const fullKey = pfx + spec.key;
+                if (container.querySelector(`[data-attr="${fullKey}"]`)) return;
+
+                const row = document.createElement('div'); row.className = 'sk-row'; row.dataset.classSpec = '1';
+                const lbl = document.createElement('div'); lbl.className = 'sk-label';
+                const nameSpan = document.createElement('div'); nameSpan.className = 'sk-name'; nameSpan.textContent = spec.name;
+                const attrSpan = document.createElement('div'); attrSpan.className = 'sk-attr'; attrSpan.textContent = spec.sub;
+                if (spec.descricao) nameSpan.classList.add('has-tooltip');
+                lbl.appendChild(nameSpan); lbl.appendChild(attrSpan);
+                row.appendChild(lbl); row.appendChild(createDotsHTML(fullKey, spec.name));
+                container.appendChild(row);
+            });
+        }
     }
 
     /* Resources */

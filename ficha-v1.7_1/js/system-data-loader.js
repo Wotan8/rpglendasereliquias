@@ -16,6 +16,7 @@ window._systemData = {
     spells: [],
     derivedValues: [],
     vitalStats: [],
+    specializations: [],
     loaded: false,
     error: null
 };
@@ -34,7 +35,7 @@ window.CLASS_RESOURCES = {};
  */
 async function loadSystemData(db, collectionFn, getDocsFn) {
     const collections = ['races', 'classes', 'tribes', 'peculiarities', 'mechanics',
-        'skills', 'conditions', 'equipment', 'maneuvers', 'spells', 'derivedValues', 'vitalStats'];
+        'skills', 'conditions', 'equipment', 'maneuvers', 'spells', 'derivedValues', 'vitalStats', 'specializations'];
 
     try {
         await Promise.all(collections.map(async (col) => {
@@ -535,4 +536,107 @@ function buildVitalStatsFromFirebase() {
 
     console.log(`✅ Status Vitais carregados: ${window.VITAL_STATS.length}`);
     return window.VITAL_STATS;
+}
+
+/**
+ * Constrói SPECIALIZATIONS, SPEC_LIMITERS_DYNAMIC e SPEC_COSTS a partir do Firebase.
+ * Substitui as constantes SPEC_LIMITERS hardcoded em exp-upgrade.js.
+ */
+function buildSpecializationsFromFirebase() {
+    const ATTR_KEY_MAP = {
+        'FOR': 'attr_for', 'DES': 'attr_des', 'VIG': 'attr_vig',
+        'INT': 'attr_int', 'RAC': 'attr_rac', 'PRS': 'attr_prs',
+        'PRE': 'attr_pre', 'MAN': 'attr_man', 'AUT': 'attr_aut'
+    };
+    const CATEGORY_MAP = {
+        'mental': 'mental', 'fisico': 'fisico', 'social': 'social',
+        'combate': 'combate', 'exclusivo': 'exclusivo'
+    };
+    const CATEGORY_PREFIX = {
+        'mental': 'spec_mental_', 'fisico': 'spec_fisico_',
+        'social': 'spec_social_', 'combate': 'spec_combate_',
+        'exclusivo': 'spec_exclusivo_'
+    };
+
+    window.SPECIALIZATIONS = { mental: [], fisico: [], social: [], combate: [], exclusivo: [] };
+    window.SPEC_LIMITERS_DYNAMIC = {};
+    window.SPEC_COSTS = {};
+
+    const specs = window._systemData.specializations.filter(s => s.publicado !== false);
+
+    for (const s of specs) {
+        const rawCat = (s.categoria || 'combate').toLowerCase();
+        const cat = CATEGORY_MAP[rawCat] || 'combate';
+        const prefix = CATEGORY_PREFIX[cat] || 'spec_combate_';
+        const key = _stripAccents(s.nome.toLowerCase()).replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_');
+
+        // Build limitadores display string
+        const limitadores = s.limitadores || { atributos: [], pericias: [] };
+        const attrNames = (limitadores.atributos || []);
+        const pericNames = (limitadores.pericias || []).map(pid => {
+            const sk = window._systemData.skills.find(sk => sk.id === pid);
+            return sk ? sk.nome : pid;
+        });
+        const allLimiterNames = [...attrNames, ...pericNames];
+        const sub = allLimiterNames.length > 0 ? allLimiterNames.join('/') : '—';
+
+        // Add to SPECIALIZATIONS
+        if (!window.SPECIALIZATIONS[cat]) window.SPECIALIZATIONS[cat] = [];
+        window.SPECIALIZATIONS[cat].push({
+            key: key,
+            name: s.nome,
+            sub: sub,
+            descricao: s.descricao || '',
+            custoEvolucao: s.custoEvolucao || 2,
+            id: s.id,
+            mecanicaIds: Array.isArray(s.mecanicaIds) ? s.mecanicaIds : [],
+            todoPersonagem: s.todoPersonagem !== false,
+            limitadores: limitadores
+        });
+
+        // Build SPEC_LIMITERS_DYNAMIC
+        const fullKey = prefix + key;
+        const limiterKeys = [];
+        if (limitadores.atributos && limitadores.atributos.length > 0) {
+            limitadores.atributos.forEach(a => {
+                const ak = ATTR_KEY_MAP[a.trim().toUpperCase()];
+                if (ak) limiterKeys.push(ak);
+            });
+        }
+        if (limitadores.pericias && limitadores.pericias.length > 0) {
+            limitadores.pericias.forEach(pid => {
+                // Resolve skill ID to dotKey
+                const sk = window._systemData.skills.find(sk => sk.id === pid);
+                if (sk) {
+                    const skCat = CATEGORY_MAP[(sk.categoria || 'mental').toLowerCase()] || 'mental';
+                    const skPrefix = { mental: 'sk_mental_', fisico: 'sk_fisico_', social: 'sk_social_', combate: 'sk_combate_', exclusivo: 'sk_exclusivo_' }[skCat];
+                    const skKey = _stripAccents(sk.nome.toLowerCase()).replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_');
+                    limiterKeys.push(skPrefix + skKey);
+                }
+            });
+        }
+        if (limiterKeys.length > 0) {
+            window.SPEC_LIMITERS_DYNAMIC[fullKey] = {
+                keys: limiterKeys,
+                mode: 'min',
+                names: allLimiterNames
+            };
+        }
+
+        // Build SPEC_COSTS
+        window.SPEC_COSTS[fullKey] = s.custoEvolucao || 2;
+    }
+
+    // Sort each category alphabetically
+    for (const cat of Object.keys(window.SPECIALIZATIONS)) {
+        window.SPECIALIZATIONS[cat].sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    console.log('✅ Especializações carregadas do Firebase:', {
+        mental: window.SPECIALIZATIONS.mental.length,
+        fisico: window.SPECIALIZATIONS.fisico.length,
+        social: window.SPECIALIZATIONS.social.length,
+        combate: window.SPECIALIZATIONS.combate.length,
+        exclusivo: window.SPECIALIZATIONS.exclusivo.length
+    });
 }

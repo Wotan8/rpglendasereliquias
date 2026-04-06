@@ -37,7 +37,7 @@ window.initApp = function () {
     if (_appInitialized) return;
     _appInitialized = true;
 
-    initTabs(); initDots(); initSkills(); initCharImg();
+    initTabs(); initDots(); initSkills(); initSpecializations(); initCharImg();
     addWeapon(); addArmor(); addProjectile();
     addInventoryItem(); addInventoryItem(); addInventoryItem();
 
