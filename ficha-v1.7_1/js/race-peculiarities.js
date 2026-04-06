@@ -123,6 +123,7 @@ function onRaceChange() {
     // Re-inicializar tooltips (raça pode adicionar mecânicas que afetam perícias/vitais)
     if (typeof initVitalStatsTooltips === 'function') initVitalStatsTooltips();
     if (typeof initSkillTooltips === 'function') initSkillTooltips();
+    if (typeof initAttributeTooltips === 'function') initAttributeTooltips();
 
     scheduleAutosave();
 }

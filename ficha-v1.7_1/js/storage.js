@@ -201,6 +201,7 @@ function loadFromData(d) {
         if (typeof initDerivedListeners === 'function') initDerivedListeners();
         if (typeof initVitalStatsTooltips === 'function') initVitalStatsTooltips();
         if (typeof initSkillTooltips === 'function') initSkillTooltips();
+        if (typeof initAttributeTooltips === 'function') initAttributeTooltips();
         // Garantir que mecânicas estejam aplicadas antes de recalcular derivados
         if (typeof applyAllRaceMechanics === 'function') {
             const raca = document.getElementById('selRaca')?.value;

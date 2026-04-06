@@ -257,6 +257,18 @@
         grid-template-columns: 1fr 1fr 1fr !important;
     }
 
+    .attr-item .print-abbr {
+        display: inline !important;
+        font-weight: 1000;
+        letter-spacing: .4px;
+        font-size: 12px;
+        text-transform: uppercase;
+    }
+
+    .attr-item .attr-name {
+        display: none !important;
+    }
+
     .skills-row {
         grid-template-columns: repeat(5, 1fr) !important;
     }

@@ -545,12 +545,27 @@ body {
     margin-bottom: 0
 }
 
-.attr-item .abbr {
-    font-weight: 1000;
-    letter-spacing: .4px;
-    font-size: 12px;
+.attr-item .attr-name {
+    font-weight: 900;
+    letter-spacing: .2px;
+    font-size: 11px;
     text-transform: uppercase;
-    min-width: 28px
+    min-width: 28px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.attr-item .attr-name.has-tooltip {
+    cursor: help;
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--muted);
+    text-underline-offset: 2px;
+}
+
+.attr-item .print-abbr {
+    display: none;
 }
 
 .attr-item .dots5 {

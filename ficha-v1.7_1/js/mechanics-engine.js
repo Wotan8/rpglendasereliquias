@@ -20,6 +20,16 @@ const TARGET_MAP = {
     "PRE": "attr_pre",
     "MAN": "attr_man",
     "AUT": "attr_aut",
+    // Aliases por nome completo
+    "Inteligência": "attr_int",
+    "Raciocínio": "attr_rac",
+    "Perseverança": "attr_prs",
+    "Força": "attr_for",
+    "Destreza": "attr_des",
+    "Vigor": "attr_vig",
+    "Presença": "attr_pre",
+    "Manipulação": "attr_man",
+    "Autocontrole": "attr_aut",
 
     // === STATUS VITAIS (gerenciados por mecânicas do Firebase) ===
     "Vitalidade Máxima": "DERIVED:VIT_MAX",

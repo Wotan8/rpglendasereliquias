@@ -376,6 +376,52 @@ function initSkillTooltips() {
     }
 }
 
+/* ===== HARDCODED ATTRIBUTE DESCRIPTIONS ===== */
+const ATTRIBUTE_DESCRIPTIONS = {
+    INT: 'Representa a sabedoria, memória e conhecimento acumulado do personagem. É o quanto ele sabe e o quão esperto ele é.',
+    RAC: 'Velocidade de pensamento, percepção e capacidade de reagir mentalmente. É a agilidade da mente, o "pensar rápido".',
+    PRS: 'Força de vontade prolongada, resistência mental e foco sob pressão. É o que impede o personagem de desistir quando tudo parece perdido.',
+    FOR: 'Potência muscular, capacidade de carga e poder de dano corpo-a-corpo. Determina o quanto o personagem consegue carregar, empurrar e golpear.',
+    DES: 'Agilidade, coordenação motora e precisão de movimentos. Governa reflexos, equilíbrio e a capacidade de realizar ações que exigem fineza física.',
+    VIG: 'Resistência física, saúde e capacidade de suportar dano. É o que mantém o personagem de pé após levar uma surra ou correr por horas.',
+    PRE: 'Magnetismo pessoal, capacidade de impressionar e intimidar. É aquela força invisível que faz as pessoas prestarem atenção quando o personagem entra numa sala.',
+    MAN: 'Habilidade de influenciar, persuadir e enganar outros. É a arte de fazer as pessoas fazerem o que você quer, muitas vezes sem que percebam.',
+    AUT: 'Domínio sobre as próprias emoções e calma sob pressão. É o que separa quem age racionalmente de quem é dominado pelo medo ou pela raiva no calor do momento.',
+};
+
+const ATTRIBUTE_FULL_NAMES = {
+    INT: 'Inteligência',
+    RAC: 'Raciocínio',
+    PRS: 'Perseverança',
+    FOR: 'Força',
+    DES: 'Destreza',
+    VIG: 'Vigor',
+    PRE: 'Presença',
+    MAN: 'Manipulação',
+    AUT: 'Autocontrole',
+};
+
+/**
+ * Inicializa tooltips flutuantes nos nomes dos Atributos.
+ * Chamada após o carregamento dos dados do Firebase.
+ */
+function initAttributeTooltips() {
+    _ensureTooltipEl();
+
+    document.querySelectorAll('.attr-name[data-attr-key]').forEach(nameEl => {
+        if (nameEl.dataset.tooltipBound) return;
+        const attrKey = nameEl.dataset.attrKey;
+        if (!ATTRIBUTE_DESCRIPTIONS[attrKey]) return;
+
+        nameEl.classList.add('has-tooltip');
+        nameEl.dataset.tooltipBound = '1';
+        nameEl.dataset.tooltipType = 'attribute';
+        nameEl.addEventListener('mouseenter', showDvTooltip);
+        nameEl.addEventListener('mouseleave', hideDvTooltip);
+        nameEl.addEventListener('touchstart', showDvTooltip, { passive: true });
+    });
+}
+
 function showDvTooltip(e) {
     const label = e.currentTarget;
     if (!_dvTooltipEl) return;
@@ -422,6 +468,36 @@ function showDvTooltip(e) {
                 html += `<div class="dv-tooltip-mech-item"><span class="dv-tooltip-fonte">${_escHtml(item.fonte)}:</span> ${_escHtml(item.preview)}</div>`;
             });
             html += '</div>';
+        }
+
+    } else if (tooltipType === 'attribute') {
+        // === Atributo ===
+        const attrKey = label.dataset.attrKey;
+        const fullName = ATTRIBUTE_FULL_NAMES[attrKey] || attrKey;
+        const desc = ATTRIBUTE_DESCRIPTIONS[attrKey];
+        if (desc) {
+            html += `<div class="dv-tooltip-desc">${_escHtml(desc)}</div>`;
+        }
+        // Buscar mecânicas que afetam este atributo (por abreviação e nome completo)
+        if (typeof getAffectingMechanics === 'function') {
+            let extras = [];
+            const lookups = [attrKey, fullName];
+            for (const propName of lookups) {
+                const found = getAffectingMechanics(propName, { skipLinked: [] });
+                for (const f of found) {
+                    if (!extras.some(e => e.preview === f.preview && e.fonte === f.fonte)) {
+                        extras.push(f);
+                    }
+                }
+            }
+            if (extras.length > 0) {
+                html += '<div class="dv-tooltip-mechs">';
+                html += '<div class="dv-tooltip-mechs-title">⚙️ Mecânicas que afetam:</div>';
+                extras.forEach(item => {
+                    html += `<div class="dv-tooltip-mech-item"><span class="dv-tooltip-fonte">${_escHtml(item.fonte)}:</span> ${_escHtml(item.preview)}</div>`;
+                });
+                html += '</div>';
+            }
         }
 
     } else if (tooltipType === 'skill') {
