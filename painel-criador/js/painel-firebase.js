@@ -37,6 +37,7 @@ let skillsCache = [];
 let derivedValuesCache = [];
 let vitalStatsCache = [];
 let specsCache = [];
+let aurasCache = [];
 
 // ====================================================================
 // MODULE DEFINITIONS — each module defines its fields and Firestore path
@@ -137,6 +138,8 @@ const MODULE_DEFS = {
             },
             { key: 'fonteRef', label: 'Referência da Fonte (ID)', type: 'text', placeholder: 'ID do registro de origem' },
             { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: '' },
+            { key: 'auraVinculadaId', label: '🌟 Aura Vinculada', type: 'aura_selector' },
+            { key: 'auraGrauConcedido', label: 'Grau Concedido da Aura', type: 'number', placeholder: '1' },
             { key: 'tags', label: 'Tags', type: 'tags', placeholder: 'Ex: bônus, racial' },
         ]
     },
@@ -311,6 +314,29 @@ const MODULE_DEFS = {
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
             { key: 'mecanicaIds', label: 'Mecânicas', type: 'mechanic_selector', fontePreFilter: 'magia' },
             { key: 'classeRequerida', label: 'Classe Requerida', type: 'text', placeholder: 'Ex: Pallacerdote' },
+        ]
+    },
+    auras: {
+        name: 'Aura', namePlural: 'Auras', icon: '🌟',
+        collection: 'system/data/auras',
+        useCustomAuraEditor: true,
+        fields: [
+            { key: 'nome', label: 'Nome da Aura', type: 'text', required: true, placeholder: 'Ex: Aura de Força' },
+            {
+                key: 'tipo', label: 'Tipo de Aura', type: 'select', required: true, options: [
+                    { value: 'propriedade', label: '📊 Propriedade (Atributo/Perícia/Especialização)' },
+                    { value: 'mortalidade', label: '💀 Mortalidade' }
+                ]
+            },
+            {
+                key: 'propriedadeTipo', label: 'Tipo de Propriedade', type: 'select', options: [
+                    { value: 'atributo', label: '💪 Atributo' },
+                    { value: 'pericia', label: '📚 Perícia' },
+                    { value: 'especializacao', label: '🎯 Especialização' }
+                ], showWhen: { field: 'tipo', value: 'propriedade' }
+            },
+            { key: 'propriedadeVinculada', label: 'Propriedade Vinculada', type: 'aura_property_selector', showWhen: { field: 'tipo', value: 'propriedade' } },
+            { key: 'graus', label: 'Graus da Aura', type: 'aura_graus_editor' },
         ]
     },
     lore: {
@@ -572,6 +598,8 @@ async function loadModule(moduleName) {
     if (moduleName === 'races' || moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'derivedValues') await refreshDerivedValuesCache();
     if (moduleName === 'mechanics' || moduleName === 'vitalStats') await refreshVitalStatsCache();
     if (moduleName === 'classes' || moduleName === 'specializations') await refreshSpecsCache();
+    if (moduleName === 'auras') { await refreshSkillsCache(); await refreshSpecsCache(); }
+    if (moduleName === 'peculiarities') await refreshAurasCache();
 
     const grid = document.getElementById('itemsGrid');
     const emptyState = document.getElementById('emptyState');
@@ -660,6 +688,15 @@ async function refreshSpecsCache() {
         specsCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
         window._specsCache = specsCache;
     } catch (e) { console.error('Erro cache specializations:', e); }
+}
+
+async function refreshAurasCache() {
+    try {
+        const snap = await getDocs(collection(db, 'system/data/auras'));
+        aurasCache = [];
+        snap.forEach(d => aurasCache.push({ id: d.id, ...d.data() }));
+        aurasCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+    } catch (e) { console.error('Erro cache auras:', e); }
 }
 
 // ===== RENDER ITEMS =====
@@ -848,6 +885,9 @@ window.openForm = function (itemId) {
         return;
     }
 
+    // Aura uses standard form but with custom field types
+    // (handled by buildField)
+
     editingItemId = itemId || null;
     const isEditing = !!itemId;
     const existingData = isEditing ? allItems.find(i => i.id === itemId) : null;
@@ -869,7 +909,7 @@ window.openForm = function (itemId) {
             const selectedTags = [...getSelectedTags()];
             if (selectedTags.length > 0) value = selectedTags;
         }
-        const el = buildField(field, value);
+        const el = buildField(field, value, existingData);
         formGrid.appendChild(el);
     });
 
@@ -888,6 +928,10 @@ window.openForm = function (itemId) {
     formGrid.appendChild(pubDiv);
 
     container.appendChild(formGrid);
+
+    // Wire up showWhen visibility for conditional fields
+    _wireShowWhenFields(modDef, formGrid);
+
     document.getElementById('formModal').classList.add('active');
 };
 
@@ -897,11 +941,15 @@ window.closeForm = function () {
 };
 
 // ===== BUILD FORM FIELD =====
-function buildField(field, value) {
+function buildField(field, value, existingData) {
     const wrap = document.createElement('div');
     wrap.className = 'form-group' + (
-        ['textarea', 'array', 'json', 'tags', 'mechanic_selector'].includes(field.type) ? ' full-width' : ''
+        ['textarea', 'array', 'json', 'tags', 'mechanic_selector', 'aura_graus_editor'].includes(field.type) ? ' full-width' : ''
     );
+    if (field.showWhen) {
+        wrap.dataset.showWhenField = field.showWhen.field;
+        wrap.dataset.showWhenValue = field.showWhen.value;
+    }
 
     if (field.type === 'mechanic_selector') {
         const ids = Array.isArray(value) ? value : [];
@@ -916,6 +964,33 @@ function buildField(field, value) {
         } else {
             wrap.innerHTML = buildMechanicSelectorHTML(field.key, field.label, ids, mechanicsCache, field.fontePreFilter);
         }
+        return wrap;
+    }
+
+    // === AURA PROPERTY SELECTOR ===
+    if (field.type === 'aura_property_selector') {
+        wrap.innerHTML = _buildAuraPropertySelectorHTML(field.key, field.label, value, existingData);
+        return wrap;
+    }
+
+    // === AURA SELECTOR (for linking an aura to a peculiarity) ===
+    if (field.type === 'aura_selector') {
+        let options = '<option value="">— Nenhuma —</option>';
+        aurasCache.forEach(a => {
+            const tipoLabel = a.tipo === 'mortalidade' ? '💀' : '📊';
+            const sel = value === a.id ? 'selected' : '';
+            options += `<option value="${a.id}" ${sel}>${tipoLabel} ${escapeHtml(a.nome || a.id)}</option>`;
+        });
+        wrap.innerHTML = `
+            <label>${escapeHtml(field.label)}</label>
+            <select id="field_${field.key}">${options}</select>
+        `;
+        return wrap;
+    }
+
+    // === AURA GRAUS EDITOR ===
+    if (field.type === 'aura_graus_editor') {
+        wrap.innerHTML = _buildAuraGrausEditorHTML(field.key, field.label, value || []);
         return wrap;
     }
 
@@ -1086,6 +1161,232 @@ window.removeArrayItem = function (btn) {
     }
 };
 
+// ===== AURA SYSTEM: SHOW-WHEN FIELD VISIBILITY =====
+function _wireShowWhenFields(modDef, container) {
+    const conditionalFields = container.querySelectorAll('[data-show-when-field]');
+    if (conditionalFields.length === 0) return;
+
+    // Find trigger fields
+    const triggerKeys = new Set();
+    conditionalFields.forEach(el => triggerKeys.add(el.dataset.showWhenField));
+
+    function updateVisibility() {
+        conditionalFields.forEach(wrap => {
+            const triggerKey = wrap.dataset.showWhenField;
+            const triggerValue = wrap.dataset.showWhenValue;
+            const triggerEl = document.getElementById(`field_${triggerKey}`);
+            if (!triggerEl) return;
+            const currentVal = triggerEl.value;
+            wrap.style.display = (currentVal === triggerValue) ? '' : 'none';
+        });
+    }
+
+    // Initial update
+    setTimeout(updateVisibility, 0);
+
+    // Listen for changes
+    triggerKeys.forEach(key => {
+        const el = document.getElementById(`field_${key}`);
+        if (el) el.addEventListener('change', updateVisibility);
+    });
+}
+
+// ===== AURA SYSTEM: PROPERTY SELECTOR =====
+function _buildAuraPropertySelectorHTML(fieldKey, label, value, existingData) {
+    // Build options from attributes, skills, and specializations
+    let options = '<option value="">— Selecionar Propriedade —</option>';
+
+    // Attributes (hardcoded keys matching the sheet)
+    const attrs = [
+        { key: 'FOR', name: 'Força' }, { key: 'DES', name: 'Destreza' }, { key: 'VIG', name: 'Vigor' },
+        { key: 'INT', name: 'Inteligência' }, { key: 'RAC', name: 'Raciocínio' }, { key: 'PRS', name: 'Perseverança' },
+        { key: 'PRE', name: 'Presença' }, { key: 'MAN', name: 'Manipulação' }, { key: 'AUT', name: 'Autocontrole' }
+    ];
+
+    options += '<optgroup label="💪 Atributos">';
+    attrs.forEach(a => {
+        const sel = value === a.key ? 'selected' : '';
+        options += `<option value="${a.key}" ${sel}>${a.name} (${a.key})</option>`;
+    });
+    options += '</optgroup>';
+
+    // Skills from cache
+    if (skillsCache.length > 0) {
+        options += '<optgroup label="📚 Perícias">';
+        skillsCache.forEach(sk => {
+            const sel = value === sk.nome ? 'selected' : '';
+            options += `<option value="${escapeHtml(sk.nome)}" ${sel}>${escapeHtml(sk.nome)}</option>`;
+        });
+        options += '</optgroup>';
+    }
+
+    // Specializations from cache
+    if (specsCache.length > 0) {
+        options += '<optgroup label="🎯 Especializações">';
+        specsCache.forEach(sp => {
+            const sel = value === sp.nome ? 'selected' : '';
+            options += `<option value="${escapeHtml(sp.nome)}" ${sel}>${escapeHtml(sp.nome)}</option>`;
+        });
+        options += '</optgroup>';
+    }
+
+    return `
+        <label>${escapeHtml(label)}</label>
+        <select id="field_${fieldKey}">${options}</select>
+    `;
+}
+
+// ===== AURA SYSTEM: GRAUS EDITOR =====
+function _buildAuraGrausEditorHTML(fieldKey, label, graus) {
+    const grausHtml = graus.map((g, idx) => _buildAuraGrauItemHTML(idx, g)).join('');
+    return `
+        <div class="aura-graus-editor" id="auraGraus_${fieldKey}" data-field-key="${fieldKey}">
+            <div class="array-editor-header">
+                <label>${escapeHtml(label)}</label>
+                <button type="button" class="btn-array-add" onclick="addAuraGrau('${fieldKey}')">➕ Adicionar Grau</button>
+            </div>
+            <div class="aura-graus-items" id="auraGrausItems_${fieldKey}">${grausHtml}</div>
+        </div>
+    `;
+}
+
+function _buildAuraGrauItemHTML(idx, data) {
+    data = data || {};
+    const grauNum = data.grau ?? (idx + 1);
+    const nomeGrau = data.nomeGrau || '';
+    const descricaoNarrativa = data.descricaoNarrativa || '';
+    const cor = data.cor || '#8b5cf6';
+    const mecanicaIds = Array.isArray(data.mecanicaIds) ? data.mecanicaIds : [];
+    const mecanicasSelectedHtml = mecanicaIds.map(id => {
+        const mech = mechanicsCache.find(m => m.id === id);
+        return mech ? `<span class="mech-tag" data-id="${id}">${escapeHtml(mech.nome || id)} <button type="button" onclick="this.parentElement.remove()">×</button></span>` : '';
+    }).join('');
+
+    return `
+        <div class="aura-grau-item" data-grau-index="${idx}">
+            <div class="aura-grau-header">
+                <span class="aura-grau-badge" style="background:${escapeHtml(cor)}">Grau ${grauNum}</span>
+                <button type="button" class="btn-array-remove" onclick="removeAuraGrau(this)">✕</button>
+            </div>
+            <div class="form-grid aura-grau-fields">
+                <div class="form-group">
+                    <label>Número do Grau</label>
+                    <input type="number" data-grau-key="grau" value="${grauNum}" min="1" onchange="updateAuraGrauBadge(this)">
+                </div>
+                <div class="form-group">
+                    <label>Nome do Grau</label>
+                    <input type="text" data-grau-key="nomeGrau" value="${escapeHtml(nomeGrau)}" placeholder="Ex: Aura de Força I">
+                </div>
+                <div class="form-group">
+                    <label>🎨 Cor do Grau (hex)</label>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <input type="color" data-grau-key="cor" value="${escapeHtml(cor)}" style="width:48px;height:36px;border:none;cursor:pointer;border-radius:6px" onchange="updateAuraGrauBadge(this)">
+                        <input type="text" data-grau-key="corText" value="${escapeHtml(cor)}" placeholder="#8b5cf6" style="flex:1" oninput="syncAuraColorInput(this)">
+                    </div>
+                </div>
+                <div class="form-group full-width">
+                    <label>Descrição Narrativa</label>
+                    <textarea data-grau-key="descricaoNarrativa" placeholder="Texto narrativo do grau...">${escapeHtml(descricaoNarrativa)}</textarea>
+                </div>
+                <div class="form-group full-width">
+                    <label>Mecânicas Vinculadas</label>
+                    <div class="aura-grau-mechs" data-grau-key="mecanicaIds">
+                        <div class="mech-tags-container">${mecanicasSelectedHtml}</div>
+                        <select class="aura-mech-select" onchange="addAuraGrauMech(this)">
+                            <option value="">+ Vincular Mecânica...</option>
+                            ${mechanicsCache.map(m => `<option value="${m.id}">${escapeHtml(m.nome || m.id)}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+window.addAuraGrau = function(fieldKey) {
+    const container = document.getElementById(`auraGrausItems_${fieldKey}`);
+    if (!container) return;
+    const idx = container.children.length;
+    const temp = document.createElement('div');
+    temp.innerHTML = _buildAuraGrauItemHTML(idx, { grau: idx + 1 });
+    container.appendChild(temp.firstElementChild);
+};
+
+window.removeAuraGrau = function(btn) {
+    const item = btn.closest('.aura-grau-item');
+    if (item) item.remove();
+};
+
+window.updateAuraGrauBadge = function(input) {
+    const item = input.closest('.aura-grau-item');
+    if (!item) return;
+    const grauInput = item.querySelector('[data-grau-key="grau"]');
+    const corInput = item.querySelector('[data-grau-key="cor"]');
+    const badge = item.querySelector('.aura-grau-badge');
+    if (badge && grauInput) {
+        badge.textContent = `Grau ${grauInput.value}`;
+    }
+    if (badge && corInput) {
+        badge.style.background = corInput.value;
+    }
+    // Sync text input
+    const corText = item.querySelector('[data-grau-key="corText"]');
+    if (corText && corInput && input === corInput) {
+        corText.value = corInput.value;
+    }
+};
+
+window.syncAuraColorInput = function(textInput) {
+    const item = textInput.closest('.aura-grau-item');
+    if (!item) return;
+    const corInput = item.querySelector('[data-grau-key="cor"]');
+    const badge = item.querySelector('.aura-grau-badge');
+    const val = textInput.value.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+        if (corInput) corInput.value = val;
+        if (badge) badge.style.background = val;
+    }
+};
+
+window.addAuraGrauMech = function(select) {
+    const mechId = select.value;
+    if (!mechId) return;
+    const mech = mechanicsCache.find(m => m.id === mechId);
+    if (!mech) return;
+    const container = select.closest('[data-grau-key="mecanicaIds"]')?.querySelector('.mech-tags-container');
+    if (!container) return;
+    // Check if already added
+    if (container.querySelector(`[data-id="${mechId}"]`)) { select.value = ''; return; }
+    const tag = document.createElement('span');
+    tag.className = 'mech-tag';
+    tag.dataset.id = mechId;
+    tag.innerHTML = `${escapeHtml(mech.nome || mechId)} <button type="button" onclick="this.parentElement.remove()">×</button>`;
+    container.appendChild(tag);
+    select.value = '';
+};
+
+function collectAuraGrausData(fieldKey) {
+    const container = document.getElementById(`auraGrausItems_${fieldKey}`);
+    if (!container) return [];
+    const items = container.querySelectorAll('.aura-grau-item');
+    const graus = [];
+    items.forEach(item => {
+        const grau = {
+            grau: parseInt(item.querySelector('[data-grau-key="grau"]')?.value || '1', 10),
+            nomeGrau: item.querySelector('[data-grau-key="nomeGrau"]')?.value || '',
+            cor: item.querySelector('[data-grau-key="cor"]')?.value || '#8b5cf6',
+            descricaoNarrativa: item.querySelector('[data-grau-key="descricaoNarrativa"]')?.value || '',
+            mecanicaIds: []
+        };
+        const mechTags = item.querySelectorAll('.mech-tags-container .mech-tag');
+        mechTags.forEach(tag => {
+            if (tag.dataset.id) grau.mecanicaIds.push(tag.dataset.id);
+        });
+        graus.push(grau);
+    });
+    return graus;
+}
+
 // ===== TAGS =====
 window.handleTagKey = function (e, fieldKey) {
     if (e.key === 'Enter' || e.key === ',') {
@@ -1135,7 +1436,12 @@ window.handleFormSubmit = async function (e) {
 
     // Collect field values
     modDef.fields.forEach(field => {
-        if (field.type === 'array') {
+        if (field.type === 'aura_graus_editor') {
+            data[field.key] = collectAuraGrausData(field.key);
+        } else if (field.type === 'aura_property_selector' || field.type === 'aura_selector') {
+            const el = document.getElementById(`field_${field.key}`);
+            data[field.key] = el ? el.value : '';
+        } else if (field.type === 'array') {
             data[field.key] = collectArrayData(field);
         } else if (field.type === 'tags') {
             const container = document.getElementById(`tags_${field.key}`);

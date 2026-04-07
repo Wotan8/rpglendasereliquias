@@ -33,10 +33,16 @@ function getEffectiveDotValue(key) {
         if ((limit.tipo === 'minimo' || limit.tipo === 'clamp') && limit.min != null) {
             val += limit.min;
         }
-        // Teto: hard cap
+        // Teto: hard cap — but if aura extends ceiling, use aura max instead
         if ((limit.tipo === 'maximo' || limit.tipo === 'clamp' || limit.tipo === 'bloqueio') && limit.max != null) {
-            val = Math.min(val, limit.max);
+            const auraMax = typeof getAuraMaxLevel === 'function' ? getAuraMaxLevel(key) : limit.max;
+            val = Math.min(val, auraMax);
         }
+    }
+    // If no limit but aura exists, still apply aura max
+    if (!limit) {
+        const auraMax = typeof getAuraMaxLevel === 'function' ? getAuraMaxLevel(key) : 5;
+        if (val > auraMax) val = auraMax;
     }
     return val;
 }
@@ -897,31 +903,64 @@ function applyMechanicBonusesToDots() {
             }
         }
 
-        // Apply ceiling visual: hide dots above ceiling
-        container.querySelectorAll('.dot').forEach(d => {
-            const val = +d.dataset.val;
-            // Reset all classes first
-            d.classList.remove('filled', 'bonus', 'floor', 'capped');
+        // === AURA SYSTEM: check for aura on this dotKey ===
+        const auraInfo = typeof getAuraInfoForDot === 'function' ? getAuraInfoForDot(key) : null;
+        const baseDots = typeof getPropertyBaseDots === 'function' ? getPropertyBaseDots(key) : ceiling;
 
-            if (val > ceiling) {
-                // Beyond ceiling: hide
-                d.classList.add('capped');
-                return;
-            }
+        if (auraInfo && auraInfo.grauDesbloqueado > 0) {
+            // Aura active: use grade-cycling visual
+            const auraCeiling = (auraInfo.grauDesbloqueado + 1) * baseDots;
+            const totalLevel = baseVal + floorVal + bonus;
+            const clampedLevel = Math.min(totalLevel, auraCeiling);
+            const currentGrade = clampedLevel > 0 ? Math.floor((clampedLevel - 1) / baseDots) : 0;
+            const posInGrade = clampedLevel > 0 ? ((clampedLevel - 1) % baseDots) + 1 : 0;
+            const auraColor = typeof getAuraColorForGrade === 'function' ? getAuraColorForGrade(auraInfo.aura, currentGrade) : null;
 
-            // Within visible range
-            if (val <= floorVal) {
-                // Floor dot: auto-filled with floor style
-                d.classList.add('filled', 'floor');
-            } else if (val <= floorVal + baseVal) {
-                // User-invested dot (base level, shifted by floor)
-                d.classList.add('filled');
-            } else if (val <= floorVal + baseVal + bonus) {
-                // Mechanic bonus dot
-                d.classList.add('filled', 'bonus');
+            container.querySelectorAll('.dot').forEach(d => {
+                const val = +d.dataset.val;
+                d.classList.remove('filled', 'bonus', 'floor', 'capped', 'aura-filled');
+                d.style.removeProperty('--aura-color');
+
+                if (val > baseDots) {
+                    d.classList.add('capped');
+                    return;
+                }
+
+                if (val <= posInGrade) {
+                    d.classList.add('filled');
+                    if (auraColor) {
+                        d.classList.add('aura-filled');
+                        d.style.setProperty('--aura-color', auraColor);
+                    }
+                }
+            });
+
+            // Update grade indicator
+            if (typeof _updateGradeIndicator === 'function') {
+                _updateGradeIndicator(container, key, currentGrade, auraInfo, baseDots, clampedLevel);
             }
-            // else: empty dot (no class added)
-        });
+        } else {
+            // Standard (non-aura) visual
+            // Apply ceiling visual: hide dots above ceiling
+            container.querySelectorAll('.dot').forEach(d => {
+                const val = +d.dataset.val;
+                d.classList.remove('filled', 'bonus', 'floor', 'capped', 'aura-filled');
+                d.style.removeProperty('--aura-color');
+
+                if (val > ceiling) {
+                    d.classList.add('capped');
+                    return;
+                }
+
+                if (val <= floorVal) {
+                    d.classList.add('filled', 'floor');
+                } else if (val <= floorVal + baseVal) {
+                    d.classList.add('filled');
+                } else if (val <= floorVal + baseVal + bonus) {
+                    d.classList.add('filled', 'bonus');
+                }
+            });
+        }
     }
 }
 

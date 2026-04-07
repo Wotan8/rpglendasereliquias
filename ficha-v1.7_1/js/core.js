@@ -16,43 +16,110 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
 
     // Extract floor and ceiling from limits
     let floorVal = 0;
-    let ceiling = 5;
+    let baseCeiling = 5;
     if (limit) {
-        if (limit.tipo === 'bloqueio') { ceiling = 0; floorVal = 0; }
+        if (limit.tipo === 'bloqueio') { baseCeiling = 0; floorVal = 0; }
         else {
             if ((limit.tipo === 'minimo' || limit.tipo === 'clamp') && limit.min != null) floorVal = limit.min;
-            if ((limit.tipo === 'maximo' || limit.tipo === 'clamp') && limit.max != null) ceiling = limit.max;
+            if ((limit.tipo === 'maximo' || limit.tipo === 'clamp') && limit.max != null) baseCeiling = limit.max;
         }
     }
 
-    // For click purposes, "filled threshold" = base + floor only.
-    // Mechanic bonus dots CAN be overwritten by base investment.
-    const filledForClick = current + floorVal;
+    // === AURA SYSTEM: extend ceiling if aura is active ===
+    const auraInfo = typeof getAuraInfoForDot === 'function' ? getAuraInfoForDot(k) : null;
+    const baseDots = typeof getPropertyBaseDots === 'function' ? getPropertyBaseDots(k) : baseCeiling;
+    let ceiling = baseCeiling;
+    if (auraInfo && auraInfo.grauDesbloqueado > 0) {
+        ceiling = (auraInfo.grauDesbloqueado + 1) * baseDots;
+    }
 
-    // Se click ≤ nível base+floor atual → nada acontece (floor dots are unclickable)
+    // === AURA SYSTEM: map clicked dot value to actual target level ===
+    let targetLevel;
+    if (auraInfo && auraInfo.grauDesbloqueado > 0) {
+        // Calculate current position in grade context
+        const totalLevel = current + floorVal;
+        const currentGrade = totalLevel > 0 ? Math.floor((totalLevel - 1) / baseDots) : 0;
+        const posInGrade = totalLevel > 0 ? ((totalLevel - 1) % baseDots) + 1 : 0;
+
+        if (posInGrade >= baseDots && clickedVal === 1) {
+            // Advancing to next grade (all dots filled, click first dot)
+            targetLevel = totalLevel + 1;
+        } else if (clickedVal === posInGrade + 1) {
+            // Normal sequential advance within grade
+            targetLevel = totalLevel + 1;
+        } else if (posInGrade === 0 && clickedVal === 1) {
+            // First dot from zero
+            targetLevel = 1;
+        } else {
+            // Invalid click
+            return;
+        }
+
+        const newRawLevel = targetLevel - floorVal;
+        if (newRawLevel < 0) return;
+
+        // Check ceiling with aura
+        const newTotal = newRawLevel + floorVal + mechBonus;
+        if (newTotal > ceiling) {
+            if (typeof showUpgradeBlocked === 'function')
+                showUpgradeBlocked(`Já está no máximo da Aura! (${current + floorVal + mechBonus}/${ceiling})`);
+            return;
+        }
+
+        const type = typeof detectDotType === 'function' ? detectDotType(k) : null;
+        if (!type) {
+            state.dots[k] = newRawLevel;
+            refreshDots(container, k); scheduleAutosave();
+            if (typeof applyAllRaceMechanics === 'function') {
+                const raca = document.getElementById('selRaca')?.value;
+                applyAllRaceMechanics(raca);
+            }
+            if (typeof recalcAll === 'function') recalcAll();
+            if (typeof recalcMainTests === 'function') recalcMainTests();
+            return;
+        }
+
+        const check = canUpgrade(k, newRawLevel, type, specName, floorVal);
+        if (!check.allowed) { showUpgradeBlocked(check.reason); return; }
+
+        const label = getDotLabel(k, container, specName);
+        const displayLevel = newRawLevel + floorVal;
+        const newGrade = Math.floor((displayLevel - 1) / baseDots);
+        const grauDef = auraInfo.graus.find(g => g.grau === newGrade);
+        const grauName = grauDef?.nomeGrau ? ` (${grauDef.nomeGrau})` : '';
+        showUpgradeConfirm(`${label}${grauName}`, displayLevel, check.cost, () => {
+            spendExp(check.cost);
+            state.dots[k] = newRawLevel;
+            refreshDots(container, k); scheduleAutosave();
+            if (typeof applyAllRaceMechanics === 'function') {
+                const raca = document.getElementById('selRaca')?.value;
+                applyAllRaceMechanics(raca);
+            }
+            if (typeof recalcAll === 'function') recalcAll();
+            if (typeof recalcMainTests === 'function') recalcMainTests();
+            showUpgradeSuccess(`${label}${grauName}`, displayLevel, check.cost);
+        });
+        return;
+    }
+
+    // --- Standard (non-aura) flow ---
+    const filledForClick = current + floorVal;
     if (clickedVal <= filledForClick) return;
 
-    // Bloquear se ceiling = 0 (bloqueio)
     if (ceiling <= 0) {
         if (typeof showUpgradeBlocked === 'function')
             showUpgradeBlocked('Esta propriedade está bloqueada (= 0).');
         return;
     }
 
-    // Próximo nível de investimento (base + floor + 1)
     const nextClickLevel = filledForClick + 1;
-
-    // Só permite subir 1 nível por vez
     if (clickedVal !== nextClickLevel) {
         if (typeof showUpgradeBlocked === 'function')
             showUpgradeBlocked(`Só é possível subir 1 nível por vez! Nível base+piso: ${filledForClick}, próximo: ${nextClickLevel}.`);
         return;
     }
 
-    // O nível raw que será armazenado
     const newRawLevel = current + 1;
-
-    // Verificar se o total (novo base + floor + bonus) ultrapassaria o teto
     const newTotal = newRawLevel + floorVal + mechBonus;
     if (newTotal > ceiling) {
         if (typeof showUpgradeBlocked === 'function')
@@ -62,10 +129,8 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
 
     const type = typeof detectDotType === 'function' ? detectDotType(k) : null;
     if (!type) {
-        // Fallback: sem sistema de EXP
         state.dots[k] = newRawLevel;
         refreshDots(container, k); scheduleAutosave();
-        // Re-evaluate all mechanics (equations may reference this dot value)
         if (typeof applyAllRaceMechanics === 'function') {
             const raca = document.getElementById('selRaca')?.value;
             applyAllRaceMechanics(raca);
@@ -75,24 +140,15 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
         return;
     }
 
-    // Pass the floor bonus for cost calculation (cost based on rawLevel + floor, NOT bonus)
     const check = canUpgrade(k, newRawLevel, type, specName, floorVal);
-    if (!check.allowed) {
-        showUpgradeBlocked(check.reason);
-        return;
-    }
+    if (!check.allowed) { showUpgradeBlocked(check.reason); return; }
 
-    // Obter label legível para a confirmação
     const label = getDotLabel(k, container, specName);
-
-    // Show the base+floor level in the confirmation (not including bonus)
     const displayLevel = newRawLevel + floorVal;
     showUpgradeConfirm(label, displayLevel, check.cost, () => {
         spendExp(check.cost);
         state.dots[k] = newRawLevel;
-        refreshDots(container, k);
-        scheduleAutosave();
-        // Re-evaluate all mechanics (equations may reference this dot value)
+        refreshDots(container, k); scheduleAutosave();
         if (typeof applyAllRaceMechanics === 'function') {
             const raca = document.getElementById('selRaca')?.value;
             applyAllRaceMechanics(raca);
@@ -128,7 +184,69 @@ function initDots() {
         refreshDots(c, k);
     });
 }
-function refreshDots(c, k) { const v = state.dots[k] || 0; c.querySelectorAll('.dot').forEach(d => { d.classList.toggle('filled', +d.dataset.val <= v); }); }
+function refreshDots(c, k) {
+    const v = state.dots[k] || 0;
+    const auraInfo = typeof getAuraInfoForDot === 'function' ? getAuraInfoForDot(k) : null;
+
+    if (auraInfo && auraInfo.grauDesbloqueado > 0) {
+        const baseDots = typeof getPropertyBaseDots === 'function' ? getPropertyBaseDots(k) : 5;
+        const floorVal = _getFloorForRefresh(k);
+        const totalLevel = v + floorVal;
+        const currentGrade = totalLevel > 0 ? Math.floor((totalLevel - 1) / baseDots) : 0;
+        const posInGrade = totalLevel > 0 ? ((totalLevel - 1) % baseDots) + 1 : 0;
+        const auraColor = typeof getAuraColorForGrade === 'function' ? getAuraColorForGrade(auraInfo.aura, currentGrade) : null;
+
+        c.querySelectorAll('.dot').forEach(d => {
+            const val = +d.dataset.val;
+            d.classList.remove('filled', 'bonus', 'floor', 'capped', 'aura-filled');
+            d.style.removeProperty('--aura-color');
+
+            if (val <= posInGrade) {
+                d.classList.add('filled');
+                if (auraColor) {
+                    d.classList.add('aura-filled');
+                    d.style.setProperty('--aura-color', auraColor);
+                }
+            }
+        });
+
+        // Show current grade indicator
+        _updateGradeIndicator(c, k, currentGrade, auraInfo, baseDots, totalLevel);
+    } else {
+        c.querySelectorAll('.dot').forEach(d => {
+            d.classList.toggle('filled', +d.dataset.val <= v);
+            d.classList.remove('aura-filled');
+            d.style.removeProperty('--aura-color');
+        });
+    }
+}
+
+/** Helper: get floor value for refreshDots */
+function _getFloorForRefresh(k) {
+    const limit = state.mechanicLimits?.[k];
+    if (!limit) return 0;
+    if ((limit.tipo === 'minimo' || limit.tipo === 'clamp') && limit.min != null) return limit.min;
+    return 0;
+}
+
+/** Update or create grade indicator badge near the dots */
+function _updateGradeIndicator(container, dotKey, currentGrade, auraInfo, baseDots, totalLevel) {
+    let indicator = container.parentElement?.querySelector('.aura-grade-indicator');
+    if (currentGrade > 0 || totalLevel > baseDots) {
+        if (!indicator) {
+            indicator = document.createElement('span');
+            indicator.className = 'aura-grade-indicator';
+            container.parentElement?.appendChild(indicator);
+        }
+        const grauDef = auraInfo.graus.find(g => g.grau === currentGrade);
+        const color = grauDef?.cor || '#8b5cf6';
+        indicator.textContent = `G${currentGrade} | ${totalLevel}`;
+        indicator.style.background = color;
+        indicator.title = `Grau ${currentGrade}${grauDef?.nomeGrau ? ': ' + grauDef.nomeGrau : ''} — Nível real: ${totalLevel}`;
+    } else if (indicator) {
+        indicator.remove();
+    }
+}
 function createDotsHTML(k, specName) {
     state.dots[k] = state.dots[k] || 0;
     const div = document.createElement('div'); div.className = 'dots5'; div.dataset.attr = k;

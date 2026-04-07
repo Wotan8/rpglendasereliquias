@@ -315,6 +315,17 @@ function renderPeculiaridadeCard(pec, raceKey, container) {
     desc.textContent = pec.descricao;
     card.appendChild(desc);
 
+    // Aura indicator
+    if (pec.auraVinculadaId && window.AURAS) {
+        const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
+        if (auraDef) {
+            const auraTag = document.createElement('div');
+            auraTag.className = 'pec-aura-tag';
+            auraTag.innerHTML = `🌟 Concede: <strong>${auraDef.nome}</strong> (Grau ${pec.auraGrauConcedido || 1})`;
+            card.appendChild(auraTag);
+        }
+    }
+
     // Efeito
     const efeitoContainer = document.createElement('div');
     efeitoContainer.className = 'pec-efeito-container';

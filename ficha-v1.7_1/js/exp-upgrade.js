@@ -186,6 +186,10 @@ function canUpgrade(dotKey, newLevel, type, specName, floorBonus) {
             if (limit.tipo === 'bloqueio') maxLevel = 0;
             else if ((limit.tipo === 'maximo' || limit.tipo === 'clamp') && limit.max != null) maxLevel = limit.max;
         }
+        // === AURA SYSTEM: extend maxLevel if aura is active ===
+        const auraMax = typeof getAuraMaxLevel === 'function' ? getAuraMaxLevel(dotKey) : maxLevel;
+        if (auraMax > maxLevel) maxLevel = auraMax;
+
         const effectiveTotal = effectiveNewLevel + mechBonus;
         if (effectiveTotal > maxLevel) {
             const currentBase = state.dots[dotKey] || 0;

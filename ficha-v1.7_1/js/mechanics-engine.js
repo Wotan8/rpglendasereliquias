@@ -321,6 +321,15 @@ function _resolveSheetRef(ref, mult) {
 function applyAllRaceMechanics(racaNome) {
     clearMechanicBonuses();
 
+    // Clear auras that came from peculiarities (will be re-applied below)
+    if (state.auras) {
+        for (const auraId of Object.keys(state.auras)) {
+            if (state.auras[auraId]?.fonte === 'peculiaridade') {
+                delete state.auras[auraId];
+            }
+        }
+    }
+
     // Always apply skill mechanics, even without a race selected
     applySkillMechanics();
 
@@ -338,11 +347,29 @@ function applyAllRaceMechanics(racaNome) {
     if (!raca) return;
 
     for (const pec of raca.peculiaridades) {
-        if (!pec.mecanicas) continue;
-        for (const mech of pec.mecanicas) {
-            applyMechanicToSheet(mech, pec);
+        if (pec.mecanicas) {
+            for (const mech of pec.mecanicas) {
+                applyMechanicToSheet(mech, pec);
+            }
+        }
+
+        // === AURA SYSTEM: apply linked aura from peculiarity ===
+        if (pec.auraVinculadaId && window.AURAS) {
+            const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
+            if (auraDef) {
+                const grau = pec.auraGrauConcedido || 1;
+                // Add or update aura in state (use highest grade if multiple sources)
+                if (!state.auras) state.auras = {};
+                const existing = state.auras[pec.auraVinculadaId];
+                if (!existing || existing.grauDesbloqueado < grau) {
+                    state.auras[pec.auraVinculadaId] = { grauDesbloqueado: grau, fonte: 'peculiaridade', fonteId: pec.id };
+                }
+            }
         }
     }
+
+    // Render auras tab if available
+    if (typeof renderAurasTab === 'function') renderAurasTab();
 }
 
 /* ===== APLICAR MECÂNICAS VINCULADAS A PERÍCIAS ===== */

@@ -61,6 +61,7 @@
                 <button class="tab" data-tab="tabCombate">Combate</button>
                 <button class="tab" data-tab="tabInventario">Inventário</button>
                 <button class="tab" data-tab="tabPeculiaridades">Peculiaridades</button>
+                <button class="tab" data-tab="tabAura">🌟 Aura</button>
                 <button class="tab" data-tab="tabNotas">📝 Notas</button>
             </div>
 
@@ -336,6 +337,18 @@
                 </div>
             </div>
 
+            <!-- ======== AURA ======== -->
+            <div class="tab-content" id="tabAura">
+                <div class="section">
+                    <div class="section-title">🌟 Auras</div>
+                    <div id="auraMortalidadeContainer"></div>
+                    <div id="aurasPropriedadeContainer"></div>
+                    <div id="auraEmptyHint" style="font-size:12px;color:var(--muted);text-align:center;padding:20px;">
+                        Nenhuma aura ativa. Auras são concedidas pelo Mestre ou por Peculiaridades.
+                    </div>
+                </div>
+            </div>
+
             <!-- ======== NOTAS ======== -->
             <div class="tab-content" id="tabNotas">
                 <div class="section">
@@ -389,6 +402,7 @@
     <script src="js/class-resources.js"></script>
     <script src="js/equipment.js"></script>
     <script src="js/notes.js"></script>
+    <script src="js/aura.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/drag-drop.js"></script>
     <script src="js/print.js"></script>

@@ -302,6 +302,9 @@ onAuthStateChanged(auth, async (user) => {
             populateClassSelect();
 
             console.log('✅ RACES construído do Firebase:', Object.keys(window.RACES));
+
+            // Build auras
+            if (typeof buildAurasFromFirebase === 'function') buildAurasFromFirebase();
         } catch (err) {
             console.error('❌ Falha ao carregar dados do sistema:', err);
             if (loadingText) {

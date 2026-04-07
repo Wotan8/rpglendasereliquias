@@ -16,7 +16,7 @@ function scheduleAutosave() {
 document.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.key) scheduleAutosave(); });
 
 function gatherData() {
-    const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, specs: [], locacoes: [], rituais: [], ritos: [], mecanicasAplicadas: state.mecanicasAplicadas || {}, fieldBaseValues: state.fieldBaseValues || {}, appliedFieldBonuses: state.appliedFieldBonuses || {}, derivedOverrides: state.derivedOverrides || {} };
+    const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, specs: [], locacoes: [], rituais: [], ritos: [], mecanicasAplicadas: state.mecanicasAplicadas || {}, fieldBaseValues: state.fieldBaseValues || {}, appliedFieldBonuses: state.appliedFieldBonuses || {}, derivedOverrides: state.derivedOverrides || {}, auras: state.auras || {} };
     document.querySelectorAll('[data-key]').forEach(el => {
         // Salvar o valor do DOM como está (incluindo edições manuais do usuário).
         // O sistema de appliedFieldBonuses garante que o bônus não será re-aplicado no reload.
@@ -188,6 +188,8 @@ function loadFromData(d) {
         else state.appliedFieldBonuses = {};
         if (d.derivedOverrides) state.derivedOverrides = d.derivedOverrides;
         else state.derivedOverrides = {};
+        if (d.auras) state.auras = d.auras;
+        else state.auras = {};
 
         onClassChange();
         onRaceChange();
@@ -208,6 +210,7 @@ function loadFromData(d) {
             applyAllRaceMechanics(raca);
         }
         if (typeof recalcAll === 'function') setTimeout(recalcAll, 150);
+        if (typeof renderAurasTab === 'function') setTimeout(renderAurasTab, 200);
 
         // === DESBLOQUEAR SAVES — dados totalmente carregados ===
         window._dataReady = true;

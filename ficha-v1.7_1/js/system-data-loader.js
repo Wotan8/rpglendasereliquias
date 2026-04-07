@@ -17,6 +17,7 @@ window._systemData = {
     derivedValues: [],
     vitalStats: [],
     specializations: [],
+    auras: [],
     loaded: false,
     error: null
 };
@@ -35,7 +36,7 @@ window.CLASS_RESOURCES = {};
  */
 async function loadSystemData(db, collectionFn, getDocsFn) {
     const collections = ['races', 'classes', 'tribes', 'peculiarities', 'mechanics',
-        'skills', 'conditions', 'equipment', 'maneuvers', 'spells', 'derivedValues', 'vitalStats', 'specializations'];
+        'skills', 'conditions', 'equipment', 'maneuvers', 'spells', 'derivedValues', 'vitalStats', 'specializations', 'auras'];
 
     try {
         await Promise.all(collections.map(async (col) => {
@@ -427,6 +428,9 @@ function buildRacesFromFirebase() {
                 nivelAtual: nivelAtual,
                 nivelMax: nivelMax,
                 niveis: niveis,
+                // Aura vinculada
+                auraVinculadaId: pec.auraVinculadaId || null,
+                auraGrauConcedido: pec.auraGrauConcedido || 1,
             };
         }).filter(Boolean);
 
@@ -639,4 +643,103 @@ function buildSpecializationsFromFirebase() {
         combate: window.SPECIALIZATIONS.combate.length,
         exclusivo: window.SPECIALIZATIONS.exclusivo.length
     });
+}
+
+/* ===== AURAS ===== */
+
+/**
+ * Atributos key → dotKey (attr_xxx)
+ */
+const _AURA_ATTR_TO_DOTKEY = {
+    'FOR': 'attr_for', 'DES': 'attr_des', 'VIG': 'attr_vig',
+    'INT': 'attr_int', 'RAC': 'attr_rac', 'PRS': 'attr_prs',
+    'PRE': 'attr_pre', 'MAN': 'attr_man', 'AUT': 'attr_aut'
+};
+
+/**
+ * Constrói window.AURAS (array de definições de auras) e
+ * window.AURA_BY_DOTKEY (mapa dotKey → aura definition) a partir dos dados do Firebase.
+ */
+function buildAurasFromFirebase() {
+    const raw = window._systemData.auras || [];
+    window.AURAS = [];
+    window.AURA_BY_DOTKEY = {};
+
+    for (const aura of raw) {
+        const entry = {
+            id: aura.id,
+            nome: aura.nome || 'Aura sem nome',
+            tipo: aura.tipo || 'propriedade',
+            propriedadeVinculada: aura.propriedadeVinculada || '',
+            propriedadeTipo: aura.propriedadeTipo || 'atributo',
+            graus: (aura.graus || []).sort((a, b) => (a.grau || 0) - (b.grau || 0)),
+            mecanicasPorGrau: {}
+        };
+
+        // Resolver mecânicas de cada grau
+        for (const g of entry.graus) {
+            const mechs = [];
+            if (g.mecanicaIds && g.mecanicaIds.length > 0) {
+                for (const mechId of g.mecanicaIds) {
+                    const mech = (window._systemData.mechanics || []).find(m => m.id === mechId);
+                    if (mech) mechs.push(mech);
+                }
+            }
+            entry.mecanicasPorGrau[g.grau] = mechs;
+        }
+
+        window.AURAS.push(entry);
+
+        // Build reverse index: dotKey → aura (only for 'propriedade' type)
+        if (entry.tipo === 'propriedade' && entry.propriedadeVinculada) {
+            const dotKey = _resolveAuraPropToDotKey(entry.propriedadeVinculada, entry.propriedadeTipo);
+            if (dotKey) {
+                window.AURA_BY_DOTKEY[dotKey] = entry;
+            }
+        }
+    }
+
+    console.log('✅ Auras carregadas do Firebase:', window.AURAS.length, '| Mapeamentos dotKey:', Object.keys(window.AURA_BY_DOTKEY).length);
+}
+
+/**
+ * Resolve o nome da propriedade vinculada ao dotKey correspondente.
+ * @param {string} propName - Nome ou key da propriedade (e.g., 'FOR', 'Agilidade')
+ * @param {string} propTipo - 'atributo', 'pericia', ou 'especializacao'
+ * @returns {string|null} dotKey
+ */
+function _resolveAuraPropToDotKey(propName, propTipo) {
+    if (!propName) return null;
+
+    // Atributo: map abbreviation to dotKey
+    if (propTipo === 'atributo') {
+        const key = propName.toUpperCase();
+        return _AURA_ATTR_TO_DOTKEY[key] || null;
+    }
+
+    // Perícia: find by name in loaded skills
+    if (propTipo === 'pericia') {
+        if (window.SKILLS) {
+            for (const cat of Object.keys(window.SKILLS)) {
+                for (const sk of window.SKILLS[cat]) {
+                    if (sk.name === propName) return sk.dotKey;
+                }
+            }
+        }
+        return null;
+    }
+
+    // Especialização: find by name in loaded specializations
+    if (propTipo === 'especializacao') {
+        if (window.SPECIALIZATIONS) {
+            for (const cat of Object.keys(window.SPECIALIZATIONS)) {
+                for (const sp of window.SPECIALIZATIONS[cat]) {
+                    if (sp.name === propName) return sp.dotKey;
+                }
+            }
+        }
+        return null;
+    }
+
+    return null;
 }

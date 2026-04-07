@@ -2090,4 +2090,109 @@ html.dark .calc-row {
 
 html.dark .calc-row:hover {
     border-color: var(--primary);
+}
+
+/* ===== AURA GRAUS EDITOR ===== */
+.aura-graus-editor {
+    margin-bottom: 12px;
+}
+
+.aura-graus-items {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.aura-grau-item {
+    background: #0f1120;
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    padding: 14px;
+    position: relative;
+    transition: border-color .15s;
+}
+
+.aura-grau-item:hover {
+    border-color: var(--primary);
+}
+
+.aura-grau-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.aura-grau-badge {
+    display: inline-flex;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: .75rem;
+    font-weight: 800;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    text-shadow: 0 1px 3px rgba(0,0,0,.4);
+}
+
+.aura-grau-fields {
+    gap: 10px;
+}
+
+.aura-grau-fields .form-group {
+    margin-bottom: 6px;
+}
+
+.aura-grau-mechs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mech-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 28px;
+}
+
+.mech-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: .75rem;
+    font-weight: 700;
+    background: rgba(79, 110, 247, .15);
+    color: var(--primary);
+    border: 1px solid rgba(79, 110, 247, .3);
+}
+
+.mech-tag button {
+    background: none;
+    border: none;
+    color: var(--danger);
+    cursor: pointer;
+    font-size: .85rem;
+    padding: 0 2px;
+    line-height: 1;
+}
+
+.aura-mech-select {
+    width: 100%;
+    padding: 6px 10px;
+    border: 2px solid var(--line);
+    border-radius: 8px;
+    font-size: .82rem;
+    font-family: var(--font);
+    background: #0f1120;
+    color: var(--ink);
+    cursor: pointer;
+    transition: border-color .15s;
+}
+
+.aura-mech-select:focus {
+    border-color: var(--primary);
+    outline: none;
 }

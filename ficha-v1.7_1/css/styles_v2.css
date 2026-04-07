@@ -1986,6 +1986,22 @@ button:hover {
     line-height: 1.4;
 }
 
+.pec-aura-tag {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    color: #7c3aed;
+}
+
+html.dark .pec-aura-tag {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05));
+    border-color: rgba(139, 92, 246, 0.35);
+    color: #a78bfa;
+}
+
 .pec-efeito {
     font-size: 12px;
     color: var(--ink);
@@ -2857,4 +2873,198 @@ html.dark .dv-atual-max {
 
 html.dark .dv-atual-max {
     color: #9ca3af !important;
+}
+
+/* ===== AURA SYSTEM ===== */
+
+/* Aura-colored dots */
+.dot.aura-filled {
+    background: var(--aura-color, #8b5cf6) !important;
+    border-color: var(--aura-color, #8b5cf6) !important;
+    box-shadow: 0 0 6px color-mix(in srgb, var(--aura-color, #8b5cf6) 50%, transparent);
+}
+
+html.dark .dot.aura-filled {
+    background: var(--aura-color, #8b5cf6) !important;
+    border-color: var(--aura-color, #8b5cf6) !important;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--aura-color, #8b5cf6) 50%, transparent);
+}
+
+/* Grade indicator badge */
+.aura-grade-indicator {
+    display: inline-flex;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 8px;
+    font-weight: 800;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    margin-left: 4px;
+    flex-shrink: 0;
+    text-shadow: 0 1px 2px rgba(0,0,0,.4);
+    animation: auraGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes auraGlow {
+    0% { opacity: .8; }
+    100% { opacity: 1; }
+}
+
+/* ===== AURA TAB ===== */
+.aura-card {
+    border: 2px solid var(--soft);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+    background: var(--chip);
+    transition: border-color .15s;
+}
+
+.aura-card:hover {
+    border-color: #8b5cf6;
+}
+
+.aura-card.aura-mortalidade {
+    border-color: #991b1b;
+    background: linear-gradient(135deg, rgba(153, 27, 27, 0.08), transparent);
+}
+
+.aura-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.aura-card-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: -.2px;
+}
+
+.aura-card-icon {
+    font-size: 18px;
+}
+
+.aura-card-type {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .3px;
+}
+
+/* Graus list */
+.aura-graus-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.aura-grau-display {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid var(--soft);
+    border-radius: 8px;
+    background: rgba(255,255,255,.03);
+    position: relative;
+}
+
+.aura-grau-display.locked {
+    opacity: .5;
+    filter: grayscale(.6);
+}
+
+.aura-grau-display.unlocked {
+    border-color: var(--line);
+}
+
+.aura-grau-badge-display {
+    display: inline-flex;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 9px;
+    font-weight: 800;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    text-shadow: 0 1px 2px rgba(0,0,0,.3);
+    flex-shrink: 0;
+}
+
+.aura-grau-nome {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.aura-grau-desc {
+    width: 100%;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+    margin-top: 2px;
+}
+
+.aura-grau-mechs-display {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.aura-mech-tag {
+    display: inline-flex;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    background: rgba(79, 110, 247, .12);
+    color: #4f6ef7;
+    border: 1px solid rgba(79, 110, 247, .25);
+}
+
+.aura-lock-icon {
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    font-size: 12px;
+    opacity: .6;
+}
+
+/* Dark mode aura tab */
+html.dark .aura-card {
+    background: #232740;
+    border-color: #374151;
+}
+
+html.dark .aura-card:hover {
+    border-color: #8b5cf6;
+}
+
+html.dark .aura-card.aura-mortalidade {
+    border-color: #7f1d1d;
+    background: linear-gradient(135deg, rgba(127, 29, 29, 0.15), #232740);
+}
+
+html.dark .aura-grau-display {
+    border-color: #374151;
+    background: rgba(255,255,255,.02);
+}
+
+html.dark .aura-grau-display.unlocked {
+    border-color: #4b5563;
+}
+
+html.dark .aura-mech-tag {
+    background: rgba(79, 110, 247, .15);
+    border-color: rgba(79, 110, 247, .3);
 }
