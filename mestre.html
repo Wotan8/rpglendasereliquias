@@ -404,6 +404,7 @@
 
         .npc-image-container {
             width: 100%;
+            height: 400px;
             margin: 15px 0;
             border-radius: 8px;
             overflow: hidden;
@@ -1252,7 +1253,7 @@
 
         .npc-image-container {
             width: 100%;
-            max-height: 120px;
+            max-height: 350px;
             overflow: hidden;
             border-radius: 6px;
             margin-bottom: 6px;
@@ -1552,6 +1553,37 @@
         }
 
         .btn-npc-import:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+        }
+
+        /* Botões de ação em lote na aba NPCs */
+        .btn-npc-select-all {
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+            color: white;
+        }
+
+        .btn-npc-select-all:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+        }
+
+        .btn-npc-export-bulk {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+
+        .btn-npc-export-bulk:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-npc-import-bulk {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+        }
+
+        .btn-npc-import-bulk:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
         }
@@ -3062,6 +3094,15 @@
                     </button>
                     <button class="btn-npc btn-npc-delete" onclick="deleteSelectedNpcs()">
                         🗑️ Deletar
+                    </button>
+                    <button class="btn-npc btn-npc-select-all" onclick="selectAllFilteredNpcs()">
+                        ☑️ Selecionar Todos
+                    </button>
+                    <button class="btn-npc btn-npc-export-bulk" onclick="exportSelectedNpcs()">
+                        📥 Exportar Selecionados
+                    </button>
+                    <button class="btn-npc btn-npc-import-bulk" onclick="bulkImportNpcs()">
+                        📤 Importar Vários
                     </button>
                 </div>
 
@@ -4797,6 +4838,9 @@ Agilidade 2\n
             </div>
         </div>
     </div>
+
+    <!-- JSZip para exportação em lote -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
     <!-- FIREBASE SDK -->
     <script type="module">
@@ -8178,6 +8222,254 @@ Agilidade 2\n
             }
 
             // Aciona o clique no input file
+            fileInput.click();
+        };
+
+        // ============= SELECIONAR TODOS OS NPCs FILTRADOS =============
+        window.selectAllFilteredNpcs = function () {
+            const checkboxes = document.querySelectorAll('.npc-checkbox');
+            if (checkboxes.length === 0) {
+                showAlert('⚠️ Nenhum NPC visível para selecionar', 'warning');
+                return;
+            }
+
+            // Verifica se todos já estão selecionados para poder desselecionar
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+            checkboxes.forEach(cb => {
+                cb.checked = !allChecked;
+            });
+
+            if (allChecked) {
+                showAlert(`☑️ ${checkboxes.length} NPC(s) desselecionados`, 'success');
+            } else {
+                showAlert(`☑️ ${checkboxes.length} NPC(s) selecionados`, 'success');
+            }
+        };
+
+        // ============= EXPORTAR NPCs SELECIONADOS EM LOTE =============
+        window.exportSelectedNpcs = async function () {
+            const checkboxes = document.querySelectorAll('.npc-checkbox:checked');
+
+            if (checkboxes.length === 0) {
+                showAlert('⚠️ Selecione pelo menos um NPC para exportar', 'warning');
+                return;
+            }
+
+            const choice = prompt(
+                `Exportar ${checkboxes.length} NPC(s) selecionado(s):\n\n` +
+                `1 - ZIP (cada NPC em um JSON separado)\n` +
+                `2 - JSON único (todos os NPCs em um só arquivo)\n\n` +
+                `Digite 1 ou 2:`
+            );
+
+            if (choice !== '1' && choice !== '2') return;
+
+            try {
+                const selectedNpcs = Array.from(checkboxes).map(cb => {
+                    const npcId = cb.dataset.npcId;
+                    const npc = allNpcs.find(n => n.id === npcId);
+                    if (!npc) return null;
+
+                    const npcExport = { ...npc };
+                    npcExport.firestoreId = npc.id;
+                    delete npcExport.id;
+                    npcExport.exportDate = new Date().toISOString();
+                    npcExport.exportedBy = currentUser?.email || 'Desconhecido';
+                    return npcExport;
+                }).filter(Boolean);
+
+                if (selectedNpcs.length === 0) {
+                    showAlert('⚠️ Nenhum NPC válido encontrado para exportar', 'warning');
+                    return;
+                }
+
+                const now = new Date();
+                const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+                if (choice === '1') {
+                    // ===== OPÇÃO 1: ZIP com JSONs separados =====
+                    showAlert('📦 Gerando arquivo ZIP...', 'warning');
+
+                    const zip = new JSZip();
+                    const usedNames = {};
+                    selectedNpcs.forEach(npcData => {
+                        let baseName = (npcData.nome || 'sem_nome').replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
+                        if (usedNames[baseName]) {
+                            usedNames[baseName]++;
+                            baseName = `${baseName}_${usedNames[baseName]}`;
+                        } else {
+                            usedNames[baseName] = 1;
+                        }
+                        zip.file(`${baseName}.json`, JSON.stringify(npcData, null, 2));
+                    });
+
+                    const zipBlob = await zip.generateAsync({ type: 'blob' });
+                    const url = URL.createObjectURL(zipBlob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `npcs_export_${dateStr}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    showAlert(`✅ ${selectedNpcs.length} NPC(s) exportado(s) em ZIP!`, 'success');
+
+                } else {
+                    // ===== OPÇÃO 2: JSON único com todos os NPCs =====
+                    const jsonData = JSON.stringify(selectedNpcs, null, 2);
+                    const blob = new Blob([jsonData], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `npcs_export_${dateStr}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    showAlert(`✅ ${selectedNpcs.length} NPC(s) exportado(s) em JSON único!`, 'success');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao exportar NPCs:', error);
+                showAlert('❌ Erro ao exportar NPCs: ' + error.message, 'danger');
+            }
+        };
+
+        // ============= IMPORTAR VÁRIOS NPCs EM LOTE =============
+        // Função auxiliar para processar um único NPC importado
+        async function processImportedNpc(npcData) {
+            // Remove campos de metadados de exportação
+            const firestoreId = npcData.firestoreId || null;
+            delete npcData.firestoreId;
+            delete npcData.exportDate;
+            delete npcData.exportedBy;
+            delete npcData.id;
+
+            // Atualiza metadados
+            npcData.lastUpdate = new Date().toISOString();
+            npcData.lastUpdateBy = currentUser.email;
+
+            // Tenta encontrar NPC existente:
+            // 1. Primeiro pelo firestoreId (match exato)
+            // 2. Depois pelo nome (match flexível)
+            let existingNpc = null;
+
+            if (firestoreId) {
+                existingNpc = allNpcs.find(n => n.id === firestoreId);
+            }
+
+            if (!existingNpc && npcData.nome) {
+                existingNpc = allNpcs.find(n =>
+                    n.nome && n.nome.toLowerCase().trim() === npcData.nome.toLowerCase().trim()
+                );
+            }
+
+            if (existingNpc) {
+                const npcRef = doc(db, 'npcs', existingNpc.id);
+                await setDoc(npcRef, npcData, { merge: true });
+                await addLog(currentUser.email, 'Atualizou NPC via importação em lote', npcData.nome || 'Sem nome', 'npcs');
+                return 'updated';
+            } else {
+                const npcsRef = collection(db, 'npcs');
+                const npcDoc = doc(npcsRef);
+                await setDoc(npcDoc, npcData);
+                await addLog(currentUser.email, 'Criou NPC via importação em lote', npcData.nome || 'Sem nome', 'npcs');
+                return 'created';
+            }
+        }
+
+        window.bulkImportNpcs = function () {
+            let fileInput = document.getElementById('npcBulkImportFile');
+            if (!fileInput) {
+                fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.id = 'npcBulkImportFile';
+                fileInput.accept = '.json,.zip';
+                fileInput.multiple = true;
+                fileInput.style.display = 'none';
+                document.body.appendChild(fileInput);
+
+                fileInput.addEventListener('change', async function (e) {
+                    const files = Array.from(e.target.files);
+                    if (files.length === 0) return;
+
+                    // Verificar se tem ZIP
+                    const hasZip = files.some(f => f.name.toLowerCase().endsWith('.zip'));
+                    const desc = hasZip ? 'arquivo(s) (ZIP/JSON)' : 'arquivo(s) JSON';
+                    const confirmMsg = `Importar ${files.length} ${desc}?\n\nNPCs existentes (por nome ou ID) serão ATUALIZADOS.\nNPCs novos serão CRIADOS.`;
+                    if (!confirm(confirmMsg)) {
+                        fileInput.value = '';
+                        return;
+                    }
+
+                    let updated = 0;
+                    let created = 0;
+                    let errors = 0;
+
+                    showAlert('📦 Processando arquivos...', 'warning');
+
+                    for (const file of files) {
+                        try {
+                            if (file.name.toLowerCase().endsWith('.zip')) {
+                                // Descompactar ZIP e processar cada JSON dentro
+                                const zipData = await file.arrayBuffer();
+                                const zip = await JSZip.loadAsync(zipData);
+
+                                const jsonFiles = Object.keys(zip.files).filter(name =>
+                                    name.toLowerCase().endsWith('.json') && !zip.files[name].dir
+                                );
+
+                                for (const jsonFileName of jsonFiles) {
+                                    try {
+                                        const jsonText = await zip.files[jsonFileName].async('string');
+                                        const npcData = JSON.parse(jsonText);
+                                        const result = await processImportedNpc(npcData);
+                                        if (result === 'updated') updated++;
+                                        else if (result === 'created') created++;
+                                    } catch (innerError) {
+                                        console.error(`❌ Erro ao processar ${jsonFileName} do ZIP:`, innerError);
+                                        errors++;
+                                    }
+                                }
+                            } else {
+                                // Arquivo JSON direto (pode ser um NPC ou array de NPCs)
+                                const text = await file.text();
+                                const parsed = JSON.parse(text);
+
+                                // Se for array, processar cada NPC do array
+                                const npcList = Array.isArray(parsed) ? parsed : [parsed];
+                                for (const npcData of npcList) {
+                                    try {
+                                        const result = await processImportedNpc(npcData);
+                                        if (result === 'updated') updated++;
+                                        else if (result === 'created') created++;
+                                    } catch (innerError) {
+                                        console.error(`❌ Erro ao processar NPC do arquivo ${file.name}:`, innerError);
+                                        errors++;
+                                    }
+                                }
+                            }
+                        } catch (error) {
+                            console.error(`❌ Erro ao importar arquivo ${file.name}:`, error);
+                            errors++;
+                        }
+                    }
+
+                    // Rebuild lista
+                    await loadAllNpcs();
+
+                    let msg = `✅ Importação concluída!`;
+                    if (updated > 0) msg += ` | 📝 ${updated} atualizado(s)`;
+                    if (created > 0) msg += ` | ➕ ${created} criado(s)`;
+                    if (errors > 0) msg += ` | ❌ ${errors} erro(s)`;
+
+                    showAlert(msg, updated > 0 || created > 0 ? 'success' : 'danger');
+                    fileInput.value = '';
+                });
+            }
+
             fileInput.click();
         };
 

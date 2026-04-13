@@ -165,6 +165,25 @@ function populateTargetMapFromVitalStats() {
 }
 
 /**
+ * Popula TARGET_MAP com entradas MODULE_LIMIT para módulos de classe.
+ * Permite que mecânicas usem "Limite: [titulo]" como alvo.
+ * Chamada por buildClassModulesFromFirebase() após carregar os módulos.
+ */
+function populateTargetMapFromClassModules() {
+    if (!window._classModules) return;
+    let count = 0;
+    for (const classeNome of Object.keys(window._classModules)) {
+        for (const mod of window._classModules[classeNome]) {
+            if (mod.mecanicaLimiteId) {
+                TARGET_MAP['Limite: ' + mod.titulo] = 'MODULE_LIMIT:' + mod.id;
+                count++;
+            }
+        }
+    }
+    if (count > 0) console.log(`✅ TARGET_MAP atualizado com ${count} limite(s) de módulo`);
+}
+
+/**
  * Pool map: mapeia nomes de pool (usados em mecânicas distribuir) para listas de alvos válidos.
  * Usa o array SKILLS (data.js) como fonte canônica de nomes para evitar aliases/duplicatas.
  */
@@ -339,6 +358,9 @@ function applyAllRaceMechanics(racaNome) {
     // Apply mechanics linked to derived values
     applyDerivedValueMechanics();
 
+    // Apply mechanics linked to class module limits
+    applyClassModuleLimitMechanics();
+
     // Apply mechanics linked to vital stats (from Firebase)
     applyVitalStatsMechanics();
 
@@ -483,6 +505,31 @@ function applyDerivedValueMechanics() {
 
             applyMechanicToSheet(mech, null);
         }
+    }
+}
+
+/* ===== APLICAR MECÂNICAS DE LIMITE DE MÓDULOS DE CLASSE ===== */
+function applyClassModuleLimitMechanics() {
+    if (!window._classModules || !window._systemData?.mechanics) return;
+
+    // Descobrir classe selecionada
+    const classeEl = document.getElementById('selClasse');
+    const classeNome = classeEl ? classeEl.value : '';
+    if (!classeNome || !window._classModules[classeNome]) return;
+
+    const mechanicsById = {};
+    for (const m of window._systemData.mechanics) {
+        mechanicsById[m.id] = m;
+    }
+
+    for (const mod of window._classModules[classeNome]) {
+        if (!mod.mecanicaLimiteId) continue;
+        const mech = mechanicsById[mod.mecanicaLimiteId];
+        if (!mech) {
+            console.warn(`⚠️ Módulo "${mod.titulo}": mecânica de limite "${mod.mecanicaLimiteId}" não encontrada`);
+            continue;
+        }
+        applyMechanicToSheet(mech, null);
     }
 }
 
@@ -768,7 +815,8 @@ function _formatEquationPreview(equacao) {
 
 /* ===== GERAR TEXTO DE PREVIEW ===== */
 function generatePreviewText(mech) {
-    if (mech.previewTexto) return mech.previewTexto;
+    // For conditional mechanics, always generate dynamically to resolve sub-mechanic previews
+    if (mech.previewTexto && mech.tipo !== 'condicional') return mech.previewTexto;
     const config = mech.config || {};
     const tipo = mech.tipo;
 
@@ -823,7 +871,29 @@ function generatePreviewText(mech) {
         return `Distribuir: ${config.operacao || '+'}${config.valorPorAlvo || 1} em ${config.quantidadeAlvos || '?'} alvos de [${config.pool || '?'}]`;
     }
     if (tipo === 'condicional') {
-        return `Condicional: ${config.gatilho || ''}`;
+        // Build conditional preview with resolved sub-mechanic previews
+        const parts = [];
+        parts.push(config.gatilho || '');
+        const allMechanics = window._systemData?.mechanics || [];
+        const sucessoIds = config.efeitoSucessoIds || [];
+        const falhaIds = config.efeitoFalhaIds || [];
+        if (sucessoIds.length > 0) {
+            const sucessoPreviews = sucessoIds.map(id => {
+                const m = allMechanics.find(x => x.id === id);
+                if (!m) return '?';
+                return m.previewTexto || generatePreviewText(m);
+            }).join('; ');
+            parts.push(`Se Sucesso: ${sucessoPreviews}`);
+        }
+        if (falhaIds.length > 0) {
+            const falhaPreviews = falhaIds.map(id => {
+                const m = allMechanics.find(x => x.id === id);
+                if (!m) return '?';
+                return m.previewTexto || generatePreviewText(m);
+            }).join('; ');
+            parts.push(`Se Falha: ${falhaPreviews}`);
+        }
+        return parts.filter(Boolean).join(' — ');
     }
     if (tipo === 'narrativo') {
         return config.textoEfeito || mech.descricao || '';

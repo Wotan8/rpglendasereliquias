@@ -5,7 +5,7 @@
    - Token @id: lê valor do elemento DOM pelo id (ex: '@rea_display')
    - Tokens não encontrados resolvem para 0 */
 
-const CLASS_TESTS = {
+const CLASS_TESTS_FALLBACK = {
     'Guerreiro': {
         nome: 'Guerreiro',
         testes: [
@@ -129,3 +129,8 @@ const CLASS_TESTS = {
         ]
     }
 };
+
+/* Se o Firebase ainda não populou window.CLASS_TESTS, usar o fallback hardcoded */
+if (!window.CLASS_TESTS) {
+    window.CLASS_TESTS = CLASS_TESTS_FALLBACK;
+}

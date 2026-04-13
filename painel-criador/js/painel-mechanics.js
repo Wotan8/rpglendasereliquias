@@ -95,6 +95,9 @@ function getMechanicTargetsHTML() {
 <option value="EXP Necessária">EXP Necessária</option>
 </optgroup>`;
 
+    // Limites de Módulos de Classe (dinâmico)
+    html += _getModuleLimitOptions();
+
     return html;
 }
 
@@ -105,6 +108,31 @@ export const TIPO_LABELS = { modificar: 'Modificar', limitar: 'Limitar', concede
 function esc(text) {
     if (text === null || text === undefined) return '';
     const d = document.createElement('div'); d.textContent = String(text); return d.innerHTML;
+}
+
+/**
+ * Gera optgroup com opções de "Limite: <titulo>" para cada módulo de classe.
+ * Percorre window._classesCache ou window._systemData.classes.
+ */
+function _getModuleLimitOptions() {
+    const classes = window._classesCache || (window._systemData?.classes) || [];
+    const options = [];
+    for (const cls of classes) {
+        if (cls.publicado === false) continue;
+        if (!cls.modulosDaClasse || !Array.isArray(cls.modulosDaClasse)) continue;
+        for (const mod of cls.modulosDaClasse) {
+            const titulo = mod.titulo || mod.id || '';
+            if (!titulo) continue;
+            options.push({ value: `Limite: ${titulo}`, label: `📦 Limite: ${titulo} (${cls.nome})` });
+        }
+    }
+    if (options.length === 0) return '';
+    let html = `\n<optgroup label="Limites de M\u00f3dulos de Classe">`;
+    for (const opt of options) {
+        html += `\n<option value="${esc(opt.value)}">${esc(opt.label)}</option>`;
+    }
+    html += `\n</optgroup>`;
+    return html;
 }
 
 // ===== HELPER: Format a single calc value for display =====
@@ -192,7 +220,29 @@ export function generatePreviewText(data) {
         const label = { capacidade: 'Concede', imunidade: 'Imunidade', vulnerabilidade: 'Vulnerabilidade', resistencia: 'Resistência', vantagem: 'Vantagem', desvantagem: 'Desvantagem', acesso: 'Acesso', remover_acesso: 'Remove acesso' };
         text = `${label[config.tipoConcessao] || 'Concede'}: ${config.descricaoConcessao || '?'}`;
     } else if (tipo === 'condicional') {
-        text = `Se ${config.gatilho || '?'}: efeito condicional`;
+        // Build conditional preview with resolved sub-mechanic previews
+        const parts = [];
+        parts.push(config.gatilho || '?');
+        const cache = window._mechCache || [];
+        const sucessoIds = config.efeitoSucessoIds || [];
+        const falhaIds = config.efeitoFalhaIds || [];
+        if (sucessoIds.length > 0) {
+            const sucessoPreviews = sucessoIds.map(id => {
+                const m = cache.find(x => x.id === id);
+                if (!m) return '?';
+                return m.previewTexto || generatePreviewText({ tipo: m.tipo, config: m.config || {}, condicaoAplicacao: m.condicaoAplicacao, duracao: m.duracao, duracaoTurnos: m.duracaoTurnos, evoluivel: m.evoluivel, nivelMaximo: m.nivelMaximo, progressaoApenasCriacao: m.progressaoApenasCriacao });
+            }).join('; ');
+            parts.push(`Se Sucesso: ${sucessoPreviews}`);
+        }
+        if (falhaIds.length > 0) {
+            const falhaPreviews = falhaIds.map(id => {
+                const m = cache.find(x => x.id === id);
+                if (!m) return '?';
+                return m.previewTexto || generatePreviewText({ tipo: m.tipo, config: m.config || {}, condicaoAplicacao: m.condicaoAplicacao, duracao: m.duracao, duracaoTurnos: m.duracaoTurnos, evoluivel: m.evoluivel, nivelMaximo: m.nivelMaximo, progressaoApenasCriacao: m.progressaoApenasCriacao });
+            }).join('; ');
+            parts.push(`Se Falha: ${falhaPreviews}`);
+        }
+        text = parts.join('\n');
     } else if (tipo === 'narrativo') {
         const t = config.textoEfeito || '';
         text = `Narrativo: ${t.length > 60 ? t.substring(0, 60) + '...' : t}`;
@@ -322,6 +372,10 @@ function getValueSourceHTML() {
     }
 
     html += `\n<optgroup label="Outros">\n<option value="Nível">Nível</option>\n</optgroup>`;
+
+    // Limites de Módulos de Classe (dinâmico)
+    html += _getModuleLimitOptions();
+
     return html;
 }
 
@@ -1758,6 +1812,59 @@ window._specSelConfirm = function (fieldId) {
                 if (!s) return '';
                 const catLabel = CATEGORIA_LABELS[s.categoria] || s.categoria || '';
                 return `<div class="mechsel-chip" style="border-left-color:var(--warning)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">🎯 ${esc(s.nome)}</div><div class="mechsel-chip-preview">${catLabel}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${sid}')">✕</button></div>`;
+            }).join('');
+        }
+    }
+};
+
+// ===== MANEUVER SELECTOR (for classes manobras) =====
+export function buildManeuverSelectorHTML(fieldKey, label, currentIds, cache) {
+    const published = cache.filter(m => m.publicado !== false);
+    const ids = currentIds || [];
+
+    const chips = ids.map(mid => {
+        const m = cache.find(x => x.id === mid);
+        if (!m) return '';
+        return `<div class="mechsel-chip" style="border-left-color:var(--fonte-manobra, #EC4899)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">💥 ${esc(m.nome)}</div><div class="mechsel-chip-preview">${esc(m.classe || '')} — ${esc(m.custo || '')}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${mid}')">✕</button></div>`;
+    }).join('');
+
+    const opts = published.map(m => {
+        return `<label class="mechsel-result"><input type="checkbox" value="${m.id}" ${ids.includes(m.id) ? 'checked' : ''}><span class="mechsel-result-name">💥 ${esc(m.nome)}</span><span class="mechsel-result-preview">${esc(m.classe || '')} — ${esc(m.custo || '')}</span></label>`;
+    }).join('');
+
+    return `
+    <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
+        <span class="mechsel-label">${esc(label)}</span>
+        <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhuma manobra vinculada</span>'}</div>
+        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Manobra</button>
+        <div class="mechsel-search" id="field_${fieldKey}_search">
+            <div class="mechsel-search-bar">
+                <input type="text" placeholder="🔍 Buscar manobra..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
+            </div>
+            <div class="mechsel-results" id="field_${fieldKey}_results">${opts}</div>
+            <button type="button" class="mechsel-confirm" onclick="window._maneuverSelConfirm('field_${fieldKey}')">✔️ Vincular Selecionadas</button>
+        </div>
+        <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(ids)}'>
+    </div>`;
+}
+
+window._maneuverSelConfirm = function (fieldId) {
+    const results = document.getElementById(`${fieldId}_results`);
+    const hidden = document.getElementById(fieldId);
+    if (!results || !hidden) return;
+    const checked = Array.from(results.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+    hidden.value = JSON.stringify(checked);
+    document.getElementById(`${fieldId}_search`).classList.remove('open');
+    const cache = window._maneuversCache || [];
+    const chipsEl = document.getElementById(`${fieldId}_chips`);
+    if (chipsEl) {
+        if (!checked.length) {
+            chipsEl.innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhuma manobra vinculada</span>';
+        } else {
+            chipsEl.innerHTML = checked.map(mid => {
+                const m = cache.find(x => x.id === mid);
+                if (!m) return '';
+                return `<div class="mechsel-chip" style="border-left-color:var(--fonte-manobra, #EC4899)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">💥 ${esc(m.nome)}</div><div class="mechsel-chip-preview">${esc(m.classe || '')} — ${esc(m.custo || '')}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${mid}')">✕</button></div>`;
             }).join('');
         }
     }

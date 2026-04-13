@@ -69,6 +69,34 @@ function calcTestTotal(parts, currentClass) {
     return parts.reduce((sum, token) => sum + resolveTestPart(token, currentClass), 0);
 }
 
+/**
+ * Resolve o total de um teste de classe a partir da mecânica vinculada.
+ * Avalia a equação completa da mecânica usando resolveEquation/resolveCalcValue
+ * do mechanics-engine.js.
+ */
+function resolveTestFromMechanic(mechData) {
+    if (!mechData || mechData.tipo !== 'modificar') return 0;
+    const config = mechData.config || {};
+    if (Array.isArray(config.calculos) && config.calculos.length > 0) {
+        // Sum all calculos values
+        let total = 0;
+        for (const calc of config.calculos) {
+            const val = typeof resolveCalcValue === 'function'
+                ? resolveCalcValue(calc)
+                : (parseFloat(calc.valor) || 0);
+            const op = calc.operacao || '+';
+            if (op === '+') total += val;
+            else if (op === '-') total -= val;
+            else if (op === '×' || op === '*') total *= val;
+            else if (op === '÷' || op === '/') total = val !== 0 ? total / val : total;
+            else total += val; // default to add
+        }
+        return total;
+    }
+    // Legacy single-value
+    return parseFloat(config.valor) || 0;
+}
+
 /* Renderizar TODOS os testes (Classe + Customizados) no container único */
 function renderMainTests(classeKey) {
     const container = document.getElementById('mainTestsContainer');
@@ -77,9 +105,10 @@ function renderMainTests(classeKey) {
     container.innerHTML = '';
 
     // 1. Identificar testes de classe ativos
+    const classTests = window.CLASS_TESTS || {};
     let activeTests = [];
-    if (classeKey && CLASS_TESTS[classeKey]) {
-        CLASS_TESTS[classeKey].testes.forEach((t, i) => {
+    if (classeKey && classTests[classeKey]) {
+        classTests[classeKey].testes.forEach((t, i) => {
             activeTests.push({
                 type: 'class',
                 id: `class_${classeKey}_${i}`,
@@ -87,7 +116,9 @@ function renderMainTests(classeKey) {
                 formula: t.formula,
                 parts: t.parts,
                 idx: i,
-                quando: t.quando
+                quando: t.quando,
+                mechData: t.mechData || null,
+                mecanicaId: t.mecanicaId || null
             });
         });
     }
@@ -206,8 +237,13 @@ function renderMainTests(classeKey) {
         totalInput.style.textAlign = "center";
 
         if (t.type === 'class') {
-            totalInput.value = calcTestTotal(t.parts, classeKey);
+            if (t.mechData) {
+                totalInput.value = resolveTestFromMechanic(t.mechData);
+            } else {
+                totalInput.value = calcTestTotal(t.parts, classeKey);
+            }
             totalInput.dataset.classTestIdx = t.idx; // Para recálculo
+            if (t.mecanicaId) totalInput.dataset.mecanicaId = t.mecanicaId;
         } else {
             const testObj = state.customTests.find(ct => ct.id === t.id);
             totalInput.value = testObj ? (testObj.total || '') : '';
@@ -274,19 +310,23 @@ function recalcMainTests() {
     const classeEl = document.getElementById('selClasse');
     if (!classeEl) return;
     const cl = classeEl.value;
+    const classTests = window.CLASS_TESTS || {};
 
     // Só podemos recalcular os de classe de forma automática por enquanto
-    if (!cl || !CLASS_TESTS[cl]) return;
+    if (!cl || !classTests[cl]) return;
 
     const container = document.getElementById('mainTestsContainer');
     if (!container) return;
 
-    CLASS_TESTS[cl].testes.forEach((teste, idx) => {
+    classTests[cl].testes.forEach((teste, idx) => {
         // Encontrar o input que corresponde a este índice de teste de classe
-        // A estrutura mudou, mas salvamos data-class-test-idx
         const totalEl = container.querySelector(`input[data-class-test-idx="${idx}"]`);
         if (totalEl) {
-            totalEl.value = calcTestTotal(teste.parts, cl);
+            if (teste.mechData) {
+                totalEl.value = resolveTestFromMechanic(teste.mechData);
+            } else {
+                totalEl.value = calcTestTotal(teste.parts, cl);
+            }
         }
     });
 }

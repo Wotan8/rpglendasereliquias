@@ -1304,6 +1304,7 @@ html.dark .mech-preview-panel {
     margin-bottom: 14px;
     min-height: 40px;
     word-break: break-word;
+    white-space: pre-line;
 }
 
 .mech-preview-meta {
@@ -2195,4 +2196,77 @@ html.dark .calc-row:hover {
 .aura-mech-select:focus {
     border-color: var(--primary);
     outline: none;
+}
+
+/* ===== CLASS TEST MECHANIC MODAL ===== */
+.ct-mech-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .6);
+    backdrop-filter: blur(4px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.ct-mech-modal {
+    background: var(--paper);
+    border: 2px solid var(--primary);
+    border-radius: 14px;
+    width: 100%;
+    max-width: 520px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .4);
+}
+
+.ct-mech-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 2px solid var(--soft);
+    font-size: .9rem;
+    color: var(--ink);
+}
+
+.ct-mech-modal-header button {
+    background: transparent;
+    border: 2px solid var(--soft);
+    color: var(--muted);
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: .9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .15s;
+}
+
+.ct-mech-modal-header button:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.ct-mech-modal .mechsel-results {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.ct-mech-modal .mechsel-results .mechsel-result {
+    cursor: pointer;
+}
+
+.ct-mech-modal .mechsel-results .mechsel-result:hover {
+    background: rgba(79, 110, 247, .12);
+}
+
+.ct-mech-chip {
+    min-height: 32px;
 }

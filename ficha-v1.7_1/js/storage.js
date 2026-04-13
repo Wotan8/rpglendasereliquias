@@ -142,6 +142,10 @@ function gatherData() {
         san_atual: (document.querySelector('[data-key="san_atual"]') || {}).value || '',
         blindagem: (document.querySelector('[data-key="blindagem"]') || {}).value || '',
     };
+    // Gather class module data
+    d.classModuleData = typeof gatherClassModuleData === 'function'
+        ? gatherClassModuleData()
+        : (state.classModuleData || {});
     return d;
 }
 
@@ -190,6 +194,8 @@ function loadFromData(d) {
         else state.derivedOverrides = {};
         if (d.auras) state.auras = d.auras;
         else state.auras = {};
+        if (d.classModuleData) state.classModuleData = d.classModuleData;
+        else state.classModuleData = {};
 
         onClassChange();
         onRaceChange();

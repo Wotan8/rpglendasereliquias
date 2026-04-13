@@ -22,10 +22,12 @@ window._systemData = {
     error: null
 };
 
-/* Inicializar CLASS_SKILLS e CLASS_RESOURCES como globais vazios
-   (anteriormente hardcoded em data.js, agora vêm do Firebase) */
+/* Inicializar CLASS_SKILLS, CLASS_RESOURCES e CLASS_TESTS como globais vazios
+   (anteriormente hardcoded em data.js / class-tests-data.js, agora vêm do Firebase) */
 window.CLASS_SKILLS = {};
 window.CLASS_RESOURCES = {};
+// CLASS_TESTS será populado por buildClassTestsFromFirebase() ou pelo fallback em class-tests-data.js
+window._classModules = {};
 
 /**
  * Carrega todas as coleções system/data/* do Firestore.
@@ -152,6 +154,262 @@ function buildClassDataFromFirebase() {
         } else {
             window.CLASS_RESOURCES[cls.nome] = [];
         }
+    }
+
+    // Construir CLASS_TESTS a partir do Firebase (campo testesDeClasse de cada classe)
+    buildClassTestsFromFirebase();
+
+    // Construir módulos de classe a partir do Firebase (campo modulosDaClasse de cada classe)
+    buildClassModulesFromFirebase();
+}
+
+/**
+ * Tokens genéricos que devem ser ignorados ao extrair parts de uma fórmula.
+ * São termos de equipamento/bônus que não correspondem a atributos, perícias ou referências DOM.
+ */
+const _FORMULA_IGNORE_TOKENS = new Set([
+    'equip', 'equip.', 'b.arma', 'b.simbolo', 'b.símbolo', 'ferramenta', 'ferramentas',
+    'instrumento', 'sacrifício', 'sacrificio', 'complexidade',
+    'talismã profano', 'talismã', 'símbolo sagrado', 'simbolo sagrado'
+]);
+
+/**
+ * Lista de abreviações de atributos reconhecidas.
+ */
+const _KNOWN_ATTRS = new Set(['FOR', 'DES', 'VIG', 'INT', 'RAC', 'PRS', 'PRE', 'MAN', 'AUT']);
+
+/**
+ * Extrai tokens de parts[] automaticamente a partir de uma string de fórmula.
+ * Usado quando o criador não definir parts explicitamente no Firebase.
+ * Reconhece:
+ *   - Atributos: FOR, DES, INT, etc.
+ *   - "X ou Y" → "X|Y" (escolha do maior)
+ *   - Nomes de perícias/especializações (qualquer token não-genérico)
+ *   - Referências DOM: @id
+ * Ignora tokens genéricos como Equip., B.Arma, Ferramenta, etc.
+ * @param {string} formula - ex: "FOR ou DES + Arma + Equip."
+ * @returns {string[]} - ex: ["FOR|DES", "Arma"]
+ */
+function _parsePartsFromFormula(formula) {
+    if (!formula || typeof formula !== 'string') return [];
+
+    const parts = [];
+
+    // Primeiro, tratar padrões "X ou Y" → combinar antes de split
+    // Ex: "FOR ou DES + Arma" → tokens pré-processados
+    const normalized = formula
+        .replace(/−/g, '-')  // normalizar traço
+        .replace(/\s*\+\s*/g, ' + ')  // normalizar espaçamento de +
+        .replace(/\s*-\s*/g, ' - ');  // normalizar espaçamento de -
+
+    // Split por + e - (separadores de termos)
+    const rawTerms = normalized.split(/\s*[+\-]\s*/).map(t => t.trim()).filter(Boolean);
+
+    for (const term of rawTerms) {
+        // Detectar padrão "X ou Y" (escolha do maior)
+        const ouMatch = term.match(/^(.+?)\s+ou\s+(.+)$/i);
+        if (ouMatch) {
+            const left = ouMatch[1].trim();
+            const right = ouMatch[2].trim();
+            // Só combinar se ambos forem atributos conhecidos
+            if (_KNOWN_ATTRS.has(left) && _KNOWN_ATTRS.has(right)) {
+                parts.push(`${left}|${right}`);
+                continue;
+            }
+            // Se não são ambos atributos, tratar cada um separadamente
+            if (!_FORMULA_IGNORE_TOKENS.has(left.toLowerCase())) parts.push(left);
+            if (!_FORMULA_IGNORE_TOKENS.has(right.toLowerCase())) parts.push(right);
+            continue;
+        }
+
+        // Referência DOM: @id
+        if (term.startsWith('@')) {
+            parts.push(term);
+            continue;
+        }
+
+        // Ignorar tokens genéricos
+        if (_FORMULA_IGNORE_TOKENS.has(term.toLowerCase())) continue;
+
+        // Ignorar modificadores numéricos puros (ex: "2", "−2")
+        if (/^\d+$/.test(term)) continue;
+
+        // Token válido (atributo ou perícia)
+        parts.push(term);
+    }
+
+    return parts;
+}
+
+/**
+ * Constrói window.CLASS_TESTS a partir do campo testesDeClasse de cada classe no Firebase.
+ * Se a classe não tiver testesDeClasse, usa CLASS_TESTS_FALLBACK (o hardcoded renomeado).
+ * Suporta tanto o formato novo (mecanicaId) quanto o formato antigo (formula/parts).
+ */
+function buildClassTestsFromFirebase() {
+    window.CLASS_TESTS = {};
+
+    const fallback = (typeof CLASS_TESTS_FALLBACK !== 'undefined') ? CLASS_TESTS_FALLBACK : {};
+    let fromFirebase = 0;
+    let fromFallback = 0;
+
+    for (const cls of window._systemData.classes) {
+        if (cls.publicado === false) continue;
+
+        if (cls.testesDeClasse && Array.isArray(cls.testesDeClasse) && cls.testesDeClasse.length > 0) {
+            // Usar dados do Firebase
+            window.CLASS_TESTS[cls.nome] = {
+                nome: cls.nome,
+                testes: cls.testesDeClasse.map(t => {
+                    // New format: mecanicaId linked
+                    if (t.mecanicaId) {
+                        const mech = window._systemData.mechanics.find(m => m.id === t.mecanicaId);
+                        if (mech) {
+                            const formula = _buildFormulaFromMechanic(mech);
+                            const parts = _buildPartsFromMechanic(mech);
+                            return {
+                                nome: t.nome || '',
+                                formula: formula,
+                                quando: '',
+                                parts: parts,
+                                mecanicaId: t.mecanicaId,
+                                mechData: mech
+                            };
+                        }
+                        // Mechanic not found — show placeholder
+                        return {
+                            nome: t.nome || '',
+                            formula: '(mecânica não encontrada)',
+                            quando: '',
+                            parts: [],
+                            mecanicaId: t.mecanicaId
+                        };
+                    }
+                    // Legacy format: manual formula/parts
+                    return {
+                        nome: t.nome || '',
+                        formula: t.formula || '',
+                        quando: t.quando || '',
+                        parts: (t.parts && Array.isArray(t.parts) && t.parts.length > 0)
+                            ? t.parts
+                            : _parsePartsFromFormula(t.formula)
+                    };
+                })
+            };
+            fromFirebase++;
+        } else if (fallback[cls.nome]) {
+            // Usar fallback hardcoded
+            window.CLASS_TESTS[cls.nome] = fallback[cls.nome];
+            fromFallback++;
+        }
+        // Se não tem nem Firebase nem fallback, a classe simplesmente não aparece em CLASS_TESTS
+    }
+
+    console.log(`✅ Testes de classe carregados: ${fromFirebase} do Firebase, ${fromFallback} do fallback`);
+}
+
+/**
+ * Gera uma string de fórmula descritiva a partir de uma mecânica do tipo 'modificar'.
+ * Ex: "+FOR + Briga + Equip." a partir dos calculos da mecânica.
+ */
+function _buildFormulaFromMechanic(mech) {
+    if (!mech || mech.tipo !== 'modificar') return '';
+    const config = mech.config || {};
+    if (!Array.isArray(config.calculos) || config.calculos.length === 0) {
+        // Legacy single-calc format
+        const op = config.operacao || '+';
+        const val = config.valor ?? '?';
+        const alvo = Array.isArray(config.alvo) ? config.alvo.join(', ') : (config.alvo || '?');
+        return `${op}${val} em ${alvo}`;
+    }
+    return config.calculos.map(c => {
+        const op = c.operacao || '+';
+        const val = _formatEquationForFormula(c.equacao);
+        return `${op}${val} em ${c.alvo || '?'}`;
+    }).join('; ');
+}
+
+/**
+ * Formata uma equação para exibição como string de fórmula.
+ */
+function _formatEquationForFormula(equacao) {
+    if (!Array.isArray(equacao) || equacao.length === 0) return '?';
+    let str = '';
+    for (let i = 0; i < equacao.length; i++) {
+        const t = equacao[i];
+        if (i > 0 && t.op) str += ` ${t.op} `;
+        if (t.tipo === 'ficha') str += `[${t.ref || '?'}]`;
+        else str += (t.valor ?? '?');
+    }
+    return str;
+}
+
+/**
+ * Constrói parts[] automaticamente a partir de uma mecânica do tipo 'modificar'.
+ * Extrai referências da equação como tokens para o resolvedor de testes.
+ */
+function _buildPartsFromMechanic(mech) {
+    if (!mech || mech.tipo !== 'modificar') return [];
+    const config = mech.config || {};
+    const parts = [];
+
+    const processEquacao = (equacao) => {
+        if (!Array.isArray(equacao)) return;
+        for (const term of equacao) {
+            if (term.tipo === 'ficha' && term.ref) {
+                parts.push('@' + term.ref);
+            } else if (term.tipo === 'fixo' && term.valor !== undefined && term.valor !== '') {
+                // Check if it's a known attribute or skill name
+                const val = String(term.valor).trim();
+                if (/^[A-Z]{2,4}$/.test(val)) {
+                    // Looks like an attribute abbreviation
+                    parts.push(val);
+                }
+                // Skip numeric constants
+            }
+        }
+    };
+
+    if (Array.isArray(config.calculos)) {
+        config.calculos.forEach(c => processEquacao(c.equacao));
+    }
+
+    return parts;
+}
+
+
+/**
+ * Constrói window._classModules a partir do campo modulosDaClasse de cada classe no Firebase.
+ * Cada módulo é normalizado com: id, tipo, titulo, icone, custoExpPorItem, custoExpLabel, mecanicaLimiteId, schema
+ */
+function buildClassModulesFromFirebase() {
+    window._classModules = {};
+    let totalModules = 0;
+
+    for (const cls of window._systemData.classes) {
+        if (cls.publicado === false) continue;
+        if (!cls.modulosDaClasse || !Array.isArray(cls.modulosDaClasse) || cls.modulosDaClasse.length === 0) continue;
+
+        window._classModules[cls.nome] = cls.modulosDaClasse.map(mod => {
+            totalModules++;
+            return {
+                id: mod.id || ('mod_' + (mod.titulo || '').toLowerCase().replace(/[^a-z0-9]/g, '_')),
+                tipo: mod.tipo || 'lista',
+                titulo: mod.titulo || 'Módulo',
+                icone: mod.icone || '📦',
+                custoExpPorItem: mod.custoExpPorItem ?? 0,
+                custoExpLabel: mod.custoExpLabel || '',
+                mecanicaLimiteId: mod.mecanicaLimiteId || null,
+                schema: Array.isArray(mod.schema) ? mod.schema : []
+            };
+        });
+    }
+
+    console.log(`✅ Módulos de classe carregados: ${totalModules} módulo(s)`);
+
+    // Registrar entradas MODULE_LIMIT no TARGET_MAP do mechanics-engine
+    if (typeof populateTargetMapFromClassModules === 'function') {
+        populateTargetMapFromClassModules();
     }
 }
 

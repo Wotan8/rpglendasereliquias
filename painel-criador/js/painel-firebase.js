@@ -3,7 +3,7 @@
 // Lendas e Relíquias (ficha-v1.7_1 style)
 // =============================================
 
-import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildSpecSelectorHTML, buildSpecLimiterHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js';
+import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildSpecSelectorHTML, buildManeuverSelectorHTML, buildSpecLimiterHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js';
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -38,6 +38,7 @@ let derivedValuesCache = [];
 let vitalStatsCache = [];
 let specsCache = [];
 let aurasCache = [];
+let maneuversCache = [];
 
 // ====================================================================
 // MODULE DEFINITIONS — each module defines its fields and Firestore path
@@ -86,9 +87,11 @@ const MODULE_DEFS = {
             },
             { key: 'pericClasse', label: 'Perícias de Classe', type: 'mechanic_selector', selectorTarget: 'skills' },
             { key: 'especDaClasse', label: 'Especializações da Classe', type: 'mechanic_selector', selectorTarget: 'specializations' },
-            { key: 'manobras', label: 'IDs de Manobras (referências)', type: 'tags', placeholder: 'ID da manobra e Enter' },
+            { key: 'manobras', label: '💥 Manobras da Classe', type: 'mechanic_selector', selectorTarget: 'maneuvers' },
             { key: 'mecanicaIds', label: 'Mecânicas da Classe', type: 'mechanic_selector', fontePreFilter: 'classe' },
             { key: 'derivedValueIds', label: 'Valores Derivados da Classe', type: 'mechanic_selector', selectorTarget: 'derivedValues' },
+            { key: 'testesDeClasse', label: '🎯 Testes de Classe (Rolagens)', type: 'class_tests_editor' },
+            { key: 'modulosDaClasse', label: '📦 Módulos da Classe', type: 'class_modules_editor' },
             { key: 'imagemUrl', label: 'URL da Imagem', type: 'text', placeholder: 'https://...' },
         ]
     },
@@ -598,6 +601,7 @@ async function loadModule(moduleName) {
     if (moduleName === 'races' || moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'derivedValues') await refreshDerivedValuesCache();
     if (moduleName === 'mechanics' || moduleName === 'vitalStats') await refreshVitalStatsCache();
     if (moduleName === 'classes' || moduleName === 'specializations') await refreshSpecsCache();
+    if (moduleName === 'classes') await refreshManeuversCache();
     if (moduleName === 'auras') { await refreshSkillsCache(); await refreshSpecsCache(); }
     if (moduleName === 'peculiarities') await refreshAurasCache();
 
@@ -697,6 +701,16 @@ async function refreshAurasCache() {
         snap.forEach(d => aurasCache.push({ id: d.id, ...d.data() }));
         aurasCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
     } catch (e) { console.error('Erro cache auras:', e); }
+}
+
+async function refreshManeuversCache() {
+    try {
+        const snap = await getDocs(collection(db, 'system/data/maneuvers'));
+        maneuversCache = [];
+        snap.forEach(d => maneuversCache.push({ id: d.id, ...d.data() }));
+        maneuversCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        window._maneuversCache = maneuversCache;
+    } catch (e) { console.error('Erro cache maneuvers:', e); }
 }
 
 // ===== RENDER ITEMS =====
@@ -944,7 +958,7 @@ window.closeForm = function () {
 function buildField(field, value, existingData) {
     const wrap = document.createElement('div');
     wrap.className = 'form-group' + (
-        ['textarea', 'array', 'json', 'tags', 'mechanic_selector', 'aura_graus_editor'].includes(field.type) ? ' full-width' : ''
+        ['textarea', 'array', 'json', 'tags', 'mechanic_selector', 'aura_graus_editor', 'class_tests_editor', 'class_modules_editor'].includes(field.type) ? ' full-width' : ''
     );
     if (field.showWhen) {
         wrap.dataset.showWhenField = field.showWhen.field;
@@ -961,6 +975,8 @@ function buildField(field, value, existingData) {
             wrap.innerHTML = buildDerivedValueSelectorHTML(field.key, field.label, ids, derivedValuesCache);
         } else if (field.selectorTarget === 'specializations') {
             wrap.innerHTML = buildSpecSelectorHTML(field.key, field.label, ids, specsCache);
+        } else if (field.selectorTarget === 'maneuvers') {
+            wrap.innerHTML = buildManeuverSelectorHTML(field.key, field.label, ids, maneuversCache);
         } else {
             wrap.innerHTML = buildMechanicSelectorHTML(field.key, field.label, ids, mechanicsCache, field.fontePreFilter);
         }
@@ -997,6 +1013,18 @@ function buildField(field, value, existingData) {
     if (field.type === 'spec_limiter') {
         wrap.className = 'form-group full-width';
         wrap.innerHTML = buildSpecLimiterHTML(field.key, field.label, value, skillsCache);
+        return wrap;
+    }
+
+    // === CLASS TESTS EDITOR ===
+    if (field.type === 'class_tests_editor') {
+        wrap.innerHTML = _buildClassTestsEditorHTML(field.key, field.label, Array.isArray(value) ? value : []);
+        return wrap;
+    }
+
+    // === CLASS MODULES EDITOR ===
+    if (field.type === 'class_modules_editor') {
+        wrap.innerHTML = _buildClassModulesEditorHTML(field.key, field.label, Array.isArray(value) ? value : []);
         return wrap;
     }
 
@@ -1387,6 +1415,344 @@ function collectAuraGrausData(fieldKey) {
     return graus;
 }
 
+// ===== CLASS TESTS EDITOR =====
+
+function _buildClassTestsEditorHTML(fieldKey, label, tests) {
+    const testsHtml = tests.map((t, idx) => _buildClassTestRow(idx, t)).join('');
+    return `
+        <div class="class-tests-editor" id="classTests_${fieldKey}" data-field-key="${fieldKey}">
+            <div class="array-editor-header">
+                <label>${escapeHtml(label)}</label>
+                <button type="button" class="btn-array-add" onclick="addClassTest('${fieldKey}')">➕ Adicionar Teste</button>
+            </div>
+            <div class="class-tests-items" id="classTestsItems_${fieldKey}">${testsHtml}</div>
+        </div>
+    `;
+}
+
+function _buildClassTestRow(idx, data) {
+    data = data || {};
+    const mechId = data.mecanicaId || '';
+    const mechChip = mechId ? _buildClassTestMechChip(idx, mechId) : '<span style="color:var(--muted);font-size:.75rem">Nenhuma mecânica vinculada</span>';
+    return `
+        <div class="array-item class-test-item" data-index="${idx}">
+            <div class="array-item-header">
+                <span class="array-item-number">#${idx + 1}</span>
+                <button type="button" class="btn-array-remove" onclick="removeClassTest(this)">✕</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label>Nome do Teste <span class="required">*</span></label>
+                    <input type="text" data-ct-key="nome" value="${escapeHtml(data.nome || '')}" placeholder="Ex: Mãos Vazias, Disparo">
+                </div>
+                <div class="form-group full-width">
+                    <label>Mecânica Vinculada (tipo Modificar)</label>
+                    <input type="hidden" data-ct-key="mecanicaId" value="${escapeHtml(mechId)}">
+                    <div class="ct-mech-chip" id="ctMechChip_${idx}">${mechChip}</div>
+                    <button type="button" class="mechsel-add-btn" onclick="window._classTestSelectMech(${idx})" style="margin-top:6px">🔗 Vincular Mecânica</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function _buildClassTestMechChip(idx, mechId) {
+    const m = (typeof mechanicsCache !== 'undefined' ? mechanicsCache : []).find(x => x.id === mechId);
+    if (!m) return `<div class="mechsel-chip" style="border-left-color:var(--muted)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">⚠️ Mecânica não encontrada</div><div class="mechsel-chip-preview">${escapeHtml(mechId)}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._classTestRemoveMech(${idx})">✕</button></div>`;
+    const preview = m.previewTexto || generatePreviewText(m);
+    return `<div class="mechsel-chip" style="border-left-color:var(--type-modificar, #10b981)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">➕ ${escapeHtml(m.nome)}</div><div class="mechsel-chip-preview">${escapeHtml(preview)}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._classTestRemoveMech(${idx})">✕</button></div>`;
+}
+
+window.addClassTest = function(fieldKey) {
+    const container = document.getElementById(`classTestsItems_${fieldKey}`);
+    if (!container) return;
+    const idx = container.children.length;
+    const temp = document.createElement('div');
+    temp.innerHTML = _buildClassTestRow(idx, {});
+    container.appendChild(temp.firstElementChild);
+};
+
+window.removeClassTest = function(btn) {
+    const item = btn.closest('.class-test-item');
+    if (!item) return;
+    const container = item.parentElement;
+    item.remove();
+    // Re-index remaining items
+    if (container) {
+        container.querySelectorAll('.class-test-item').forEach((el, i) => {
+            el.dataset.index = i;
+            const num = el.querySelector('.array-item-number');
+            if (num) num.textContent = `#${i + 1}`;
+        });
+    }
+};
+
+// --- Class Test mechanics selector helpers ---
+
+window._classTestSelectMech = function(idx) {
+    // Build a mini-modal that lists only 'modificar' type mechanics
+    const existing = document.getElementById('ctMechModal');
+    if (existing) existing.remove();
+
+    const modifyMechanics = (typeof mechanicsCache !== 'undefined' ? mechanicsCache : [])
+        .filter(m => m.publicado && m.tipo === 'modificar');
+
+    const opts = modifyMechanics.map(m => {
+        const preview = m.previewTexto || generatePreviewText(m);
+        return `<label class="mechsel-result" onclick="window._classTestConfirmMech(${idx}, '${m.id}')"><span class="mechsel-result-name">➕ ${escapeHtml(m.nome)}</span><span class="mechsel-result-preview">${escapeHtml(preview)}</span></label>`;
+    }).join('');
+
+    const modal = document.createElement('div');
+    modal.id = 'ctMechModal';
+    modal.className = 'ct-mech-modal-overlay';
+    modal.innerHTML = `
+        <div class="ct-mech-modal">
+            <div class="ct-mech-modal-header">
+                <strong>🔗 Selecionar Mecânica (Modificar)</strong>
+                <button type="button" onclick="this.closest('.ct-mech-modal-overlay').remove()">✕</button>
+            </div>
+            <div class="mechsel-search-bar" style="padding:8px">
+                <input type="text" placeholder="🔍 Buscar mecânica..." oninput="window._classTestFilterMech(this.value)">
+            </div>
+            <div class="mechsel-results" id="ctMechModalResults" style="max-height:300px;overflow-y:auto">
+                ${opts || '<div style="padding:12px;color:var(--muted);text-align:center">Nenhuma mecânica do tipo Modificar encontrada</div>'}
+            </div>
+        </div>
+    `;
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
+};
+
+window._classTestFilterMech = function(text) {
+    const results = document.getElementById('ctMechModalResults');
+    if (!results) return;
+    const lower = text.toLowerCase();
+    results.querySelectorAll('.mechsel-result').forEach(l => {
+        const name = l.querySelector('.mechsel-result-name')?.textContent.toLowerCase() || '';
+        const preview = l.querySelector('.mechsel-result-preview')?.textContent.toLowerCase() || '';
+        l.style.display = (name.includes(lower) || preview.includes(lower)) ? '' : 'none';
+    });
+};
+
+window._classTestConfirmMech = function(idx, mechId) {
+    // Set the hidden input and update the chip
+    const items = document.querySelectorAll('.class-test-item');
+    const item = Array.from(items).find(el => parseInt(el.dataset.index) === idx);
+    if (!item) return;
+    const hidden = item.querySelector('[data-ct-key="mecanicaId"]');
+    if (hidden) hidden.value = mechId;
+    const chipEl = document.getElementById(`ctMechChip_${idx}`);
+    if (chipEl) chipEl.innerHTML = _buildClassTestMechChip(idx, mechId);
+    // Close modal
+    const modal = document.getElementById('ctMechModal');
+    if (modal) modal.remove();
+};
+
+window._classTestRemoveMech = function(idx) {
+    const items = document.querySelectorAll('.class-test-item');
+    const item = Array.from(items).find(el => parseInt(el.dataset.index) === idx);
+    if (!item) return;
+    const hidden = item.querySelector('[data-ct-key="mecanicaId"]');
+    if (hidden) hidden.value = '';
+    const chipEl = document.getElementById(`ctMechChip_${idx}`);
+    if (chipEl) chipEl.innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhuma mecânica vinculada</span>';
+};
+
+function _collectClassTestsData(fieldKey) {
+    const container = document.getElementById(`classTestsItems_${fieldKey}`);
+    if (!container) return [];
+    const tests = [];
+    container.querySelectorAll('.class-test-item').forEach(item => {
+        const nome = (item.querySelector('[data-ct-key="nome"]')?.value || '').trim();
+        if (!nome) return; // Skip empty tests
+        const mecanicaId = (item.querySelector('[data-ct-key="mecanicaId"]')?.value || '').trim();
+        tests.push({ nome, mecanicaId });
+    });
+    return tests;
+}
+
+
+// ===== CLASS MODULES EDITOR =====
+
+function _buildClassModulesEditorHTML(fieldKey, label, modules) {
+    const modulesHtml = modules.map((m, idx) => _buildClassModuleEditorRow(idx, m)).join('');
+    return `
+        <div class="class-modules-editor" id="classModules_${fieldKey}" data-field-key="${fieldKey}">
+            <div class="array-editor-header">
+                <label>${escapeHtml(label)}</label>
+                <button type="button" class="btn-array-add" onclick="addClassModule('${fieldKey}')">➕ Adicionar Módulo</button>
+            </div>
+            <div class="class-modules-items" id="classModulesItems_${fieldKey}">${modulesHtml}</div>
+        </div>
+    `;
+}
+
+function _buildClassModuleEditorRow(idx, data) {
+    data = data || {};
+    const schemaArr = Array.isArray(data.schema) ? data.schema : [];
+    const schemaRowsHtml = schemaArr.map((sf, si) => _buildSchemaFieldRow(idx, si, sf)).join('');
+    const limitId = data.mecanicaLimiteId || '';
+    const limitMechName = limitId ? _findMechName(limitId) : '';
+    return `
+        <div class="array-item class-module-editor-item" data-index="${idx}">
+            <div class="array-item-header">
+                <span class="array-item-number">📦 Módulo #${idx + 1}</span>
+                <button type="button" class="btn-array-remove" onclick="removeClassModule(this)">✕</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>ID do Módulo <span class="required">*</span></label>
+                    <input type="text" data-cm-key="id" value="${escapeHtml(data.id || '')}" placeholder="Ex: mod_locoes">
+                </div>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <select data-cm-key="tipo">
+                        <option value="lista" ${data.tipo === 'lista' || !data.tipo ? 'selected' : ''}>Lista</option>
+                        <option value="grimorio" ${data.tipo === 'grimorio' ? 'selected' : ''}>Grimório</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Título <span class="required">*</span></label>
+                    <input type="text" data-cm-key="titulo" value="${escapeHtml(data.titulo || '')}" placeholder="Ex: Receita de Loções">
+                </div>
+                <div class="form-group">
+                    <label>Ícone</label>
+                    <input type="text" data-cm-key="icone" value="${escapeHtml(data.icone || '')}"
+                        placeholder="🧪" style="max-width:60px">
+                </div>
+                <div class="form-group">
+                    <label>Custo EXP por Item</label>
+                    <input type="number" data-cm-key="custoExpPorItem" value="${data.custoExpPorItem ?? 0}" placeholder="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Label de Custo</label>
+                    <input type="text" data-cm-key="custoExpLabel" value="${escapeHtml(data.custoExpLabel || '')}" placeholder="Ex: 5 EXP por receita">
+                </div>
+                <div class="form-group full-width">
+                    <label>Mecânica de Limite (define máx. de itens)</label>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <input type="text" data-cm-key="mecanicaLimiteId" value="${escapeHtml(limitId)}" 
+                            placeholder="ID da mecânica ou deixe vazio (ilimitado)" style="flex:1">
+                        ${limitMechName ? `<span style="font-size:.72rem;color:var(--accent)">${escapeHtml(limitMechName)}</span>` : ''}
+                    </div>
+                    <div style="font-size:.65rem;color:var(--muted);margin-top:2px">Crie uma mecânica "modificar" com operação "=" (definir fixo) apontando para "Limite: Título". Cole o ID aqui.</div>
+                </div>
+            </div>
+            <div style="padding:0 10px 10px">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                    <label style="font-weight:700;font-size:.78rem;color:var(--text)">📋 Schema de Campos</label>
+                    <button type="button" class="btn-array-add" style="font-size:.7rem;padding:3px 8px" onclick="addSchemaField(${idx})">+ Campo</button>
+                </div>
+                <div style="font-size:.6rem;color:var(--muted);margin-bottom:6px">key · label · tipo · largura · placeholder · opções (para select) · remover</div>
+                <div class="schema-fields-container" id="schemaFields_${idx}">${schemaRowsHtml}</div>
+            </div>
+        </div>
+    `;
+}
+
+function _findMechName(mechId) {
+    if (!mechId) return '';
+    const m = (typeof mechanicsCache !== 'undefined' ? mechanicsCache : []).find(x => x.id === mechId);
+    return m ? m.nome : '';
+}
+
+function _buildSchemaFieldRow(moduleIdx, fieldIdx, data) {
+    data = data || {};
+    const tipoOpts = ['text', 'number', 'textarea', 'select', 'progress', 'steps'].map(t =>
+        `<option value="${t}" ${data.tipo === t ? 'selected' : ''}>${t}</option>`
+    ).join('');
+    return `
+        <div class="schema-field-row" data-field-index="${fieldIdx}" style="display:flex;gap:4px;align-items:center;margin-bottom:4px;flex-wrap:wrap">
+            <input type="text" data-sf-key="key" value="${escapeHtml(data.key || '')}" placeholder="key" style="width:80px;font-size:.72rem">
+            <input type="text" data-sf-key="label" value="${escapeHtml(data.label || '')}" placeholder="label" style="width:100px;font-size:.72rem">
+            <select data-sf-key="tipo" style="width:80px;font-size:.72rem">${tipoOpts}</select>
+            <select data-sf-key="largura" style="width:65px;font-size:.72rem">
+                <option value="" ${!data.largura ? 'selected' : ''}>½</option>
+                <option value="full" ${data.largura === 'full' ? 'selected' : ''}>Full</option>
+            </select>
+            <input type="text" data-sf-key="placeholder" value="${escapeHtml(data.placeholder || '')}" placeholder="placeholder" style="width:80px;font-size:.72rem">
+            <input type="text" data-sf-key="opcoes" value="${escapeHtml(Array.isArray(data.opcoes) ? data.opcoes.join(', ') : (data.opcoes || ''))}"
+                placeholder="opções (vírgula)" style="width:100px;font-size:.72rem" title="Apenas para tipo select">
+            <button type="button" onclick="this.closest('.schema-field-row').remove()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:.8rem;padding:2px 4px">✕</button>
+        </div>
+    `;
+}
+
+window.addClassModule = function(fieldKey) {
+    const container = document.getElementById(`classModulesItems_${fieldKey}`);
+    if (!container) return;
+    const idx = container.children.length;
+    const temp = document.createElement('div');
+    temp.innerHTML = _buildClassModuleEditorRow(idx, {});
+    container.appendChild(temp.firstElementChild);
+};
+
+window.removeClassModule = function(btn) {
+    const item = btn.closest('.class-module-editor-item');
+    if (!item) return;
+    const container = item.parentElement;
+    item.remove();
+    if (container) {
+        container.querySelectorAll('.class-module-editor-item').forEach((el, i) => {
+            el.dataset.index = i;
+            const num = el.querySelector('.array-item-number');
+            if (num) num.textContent = `📦 Módulo #${i + 1}`;
+        });
+    }
+};
+
+window.addSchemaField = function(moduleIdx) {
+    const container = document.getElementById(`schemaFields_${moduleIdx}`);
+    if (!container) return;
+    const fieldIdx = container.children.length;
+    const temp = document.createElement('div');
+    temp.innerHTML = _buildSchemaFieldRow(moduleIdx, fieldIdx, {});
+    container.appendChild(temp.firstElementChild);
+};
+
+function _collectClassModulesData(fieldKey) {
+    const container = document.getElementById(`classModulesItems_${fieldKey}`);
+    if (!container) return [];
+    const modules = [];
+    container.querySelectorAll('.class-module-editor-item').forEach(item => {
+        const id = (item.querySelector('[data-cm-key="id"]')?.value || '').trim();
+        const titulo = (item.querySelector('[data-cm-key="titulo"]')?.value || '').trim();
+        if (!id && !titulo) return; // skip empty
+        const mod = {
+            id: id || ('mod_' + titulo.toLowerCase().replace(/[^a-z0-9]/g, '_')),
+            tipo: item.querySelector('[data-cm-key="tipo"]')?.value || 'lista',
+            titulo: titulo,
+            icone: (item.querySelector('[data-cm-key="icone"]')?.value || '').trim() || '📦',
+            custoExpPorItem: parseInt(item.querySelector('[data-cm-key="custoExpPorItem"]')?.value || '0', 10) || 0,
+            custoExpLabel: (item.querySelector('[data-cm-key="custoExpLabel"]')?.value || '').trim(),
+            mecanicaLimiteId: (item.querySelector('[data-cm-key="mecanicaLimiteId"]')?.value || '').trim() || null,
+            schema: []
+        };
+        // Collect schema fields
+        const schemaContainer = item.querySelector('.schema-fields-container');
+        if (schemaContainer) {
+            schemaContainer.querySelectorAll('.schema-field-row').forEach(row => {
+                const key = (row.querySelector('[data-sf-key="key"]')?.value || '').trim();
+                if (!key) return;
+                const sf = {
+                    key: key,
+                    label: (row.querySelector('[data-sf-key="label"]')?.value || '').trim(),
+                    tipo: row.querySelector('[data-sf-key="tipo"]')?.value || 'text',
+                    largura: row.querySelector('[data-sf-key="largura"]')?.value || '',
+                    placeholder: (row.querySelector('[data-sf-key="placeholder"]')?.value || '').trim()
+                };
+                const opcoesRaw = (row.querySelector('[data-sf-key="opcoes"]')?.value || '').trim();
+                if (opcoesRaw && sf.tipo === 'select') {
+                    sf.opcoes = opcoesRaw.split(',').map(o => o.trim()).filter(Boolean);
+                }
+                mod.schema.push(sf);
+            });
+        }
+        modules.push(mod);
+    });
+    return modules;
+}
+
 // ===== TAGS =====
 window.handleTagKey = function (e, fieldKey) {
     if (e.key === 'Enter' || e.key === ',') {
@@ -1436,7 +1802,11 @@ window.handleFormSubmit = async function (e) {
 
     // Collect field values
     modDef.fields.forEach(field => {
-        if (field.type === 'aura_graus_editor') {
+        if (field.type === 'class_tests_editor') {
+            data[field.key] = _collectClassTestsData(field.key);
+        } else if (field.type === 'class_modules_editor') {
+            data[field.key] = _collectClassModulesData(field.key);
+        } else if (field.type === 'aura_graus_editor') {
             data[field.key] = collectAuraGrausData(field.key);
         } else if (field.type === 'aura_property_selector' || field.type === 'aura_selector') {
             const el = document.getElementById(`field_${field.key}`);
