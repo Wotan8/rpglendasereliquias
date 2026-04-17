@@ -14,6 +14,16 @@ window._raceBonuses = window._raceBonuses || {
     desloc_ar_override: false
 };
 
+/* ===== FONTE LABELS e ÍCONES ===== */
+const PEC_FONTE_CONFIG = {
+    raca:       { label: '🧬 Peculiaridades Raciais',     icon: '🧬', order: 1 },
+    individual: { label: '👤 Peculiaridades Individuais',  icon: '👤', order: 2 },
+    classe:     { label: '⚔️ Peculiaridades de Classe',    icon: '⚔️', order: 3 },
+    tribo:      { label: '🏕️ Peculiaridades de Tribo',     icon: '🏕️', order: 4 },
+    // Fallback para fontes desconhecidas
+    _default:   { label: '📋 Outras Peculiaridades',       icon: '📋', order: 99 }
+};
+
 /**
  * Define os valores iniciais dos Valores Derivados vinculados à raça.
  * Itera derivedValueIds da raça e aplica valorInicial no state.derived + display.
@@ -99,10 +109,8 @@ function onRaceChange() {
     // Preencher subtítulo e valores iniciais dos DVs vinculados
     if (subtitleEl) subtitleEl.textContent = raca.subtitulo || '';
 
-    // Renderizar peculiaridades
-    raca.peculiaridades.forEach(pec => {
-        renderPeculiaridadeCard(pec, racaNome, grid);
-    });
+    // Renderizar peculiaridades agrupadas por fonte
+    renderPeculiaridadesGrouped(raca.peculiaridades, racaNome, grid);
 
     updateYotunForcaUI(racaNome);
     updateDaereoVisibility(racaNome);
@@ -279,92 +287,114 @@ function updatePogoForUI(isPogo) {
     if (typeof refreshDots === 'function') refreshDots(forcaDotsContainer, 'attr_for');
 }
 
-function renderPeculiaridadeCard(pec, raceKey, container) {
-    const card = document.createElement('div');
-    card.className = 'peculiaridade-card';
-    if (pec.negativo) card.classList.add('negativo');
-    else card.classList.add('positivo');
+/* ===== RENDERIZAÇÃO AGRUPADA (BLOCOS RETRÁTEIS POR FONTE) ===== */
 
-    // Header: Nome e Badge de Nível (se fixo)
-    const header = document.createElement('div');
-    header.className = 'pec-header';
+/**
+ * Renderiza todas as peculiaridades em blocos retráteis agrupados por fonte.
+ */
+function renderPeculiaridadesGrouped(peculiaridades, raceKey, container) {
+    container.innerHTML = '';
 
-    const nomeEl = document.createElement('div');
-    nomeEl.className = 'pec-nome';
-    nomeEl.innerHTML = `${pec.icone} ${pec.nome}`;
+    // Agrupar por fonte
+    const groups = {};
+    for (const pec of peculiaridades) {
+        const fonte = pec.fonte || 'raca'; // default: racial
+        if (!groups[fonte]) groups[fonte] = [];
+        groups[fonte].push(pec);
+    }
 
-    // Badge de Nível (antes do nome) — funciona para fixo e evolutivo
+    // Ordenar fontes
+    const sortedFontes = Object.keys(groups).sort((a, b) => {
+        const oa = (PEC_FONTE_CONFIG[a] || PEC_FONTE_CONFIG._default).order;
+        const ob = (PEC_FONTE_CONFIG[b] || PEC_FONTE_CONFIG._default).order;
+        return oa - ob;
+    });
+
+    for (const fonte of sortedFontes) {
+        const pecList = groups[fonte];
+        const config = PEC_FONTE_CONFIG[fonte] || PEC_FONTE_CONFIG._default;
+
+        // Bloco retrátil
+        const block = document.createElement('div');
+        block.className = 'pec-source-block';
+        block.dataset.fonte = fonte;
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'pec-source-header';
+        header.innerHTML = `
+            <span class="pec-source-chevron">▼</span>
+            <span class="pec-source-title">${config.label}</span>
+            <span class="pec-source-count">${pecList.length}</span>
+        `;
+        header.addEventListener('click', () => {
+            block.classList.toggle('collapsed');
+        });
+        block.appendChild(header);
+
+        // Content (flex-wrap de pills)
+        const content = document.createElement('div');
+        content.className = 'pec-source-content';
+
+        for (const pec of pecList) {
+            renderPeculiaridadeCompact(pec, raceKey, content);
+        }
+
+        block.appendChild(content);
+        container.appendChild(block);
+    }
+
+    // Inicializar tooltips para as pills
+    initPeculiarityTooltips();
+}
+
+/* ===== RENDERIZAÇÃO COMPACTA (PILL/CHIP) ===== */
+
+/**
+ * Renderiza uma peculiaridade como pill/chip compacta.
+ */
+function renderPeculiaridadeCompact(pec, raceKey, container) {
+    const pill = document.createElement('div');
+    pill.className = 'pec-compact';
+    pill.dataset.pecKey = pec.key;
+    if (pec.negativo) pill.classList.add('negativo');
+    else pill.classList.add('positivo');
+
+    // Ícone
+    const iconEl = document.createElement('span');
+    iconEl.className = 'pec-compact-icon';
+    iconEl.textContent = pec.icone || '📋';
+    pill.appendChild(iconEl);
+
+    // Nome (com tooltip)
+    const nameEl = document.createElement('span');
+    nameEl.className = 'pec-compact-name has-tooltip';
+    nameEl.textContent = pec.nome;
+    nameEl.dataset.tooltipType = 'peculiaridade';
+    nameEl.dataset.pecKey = pec.key;
+    nameEl.dataset.raceKey = raceKey;
+    pill.appendChild(nameEl);
+
+    // Badge de nível
     const nivelDisplay = pec.tipo === 'evolutivo'
         ? (state.dots['pec_' + pec.key] || pec.nivelAtual || 1)
         : pec.nivel;
 
     if (nivelDisplay !== null && nivelDisplay !== undefined) {
-        const badge = document.createElement('div');
-        badge.className = 'pec-nivel-badge';
+        const badge = document.createElement('span');
+        badge.className = 'pec-compact-badge';
         badge.id = `pec_badge_${pec.key}`;
-        badge.textContent = `Nível ${nivelDisplay}`;
-        header.appendChild(badge);
+        badge.textContent = `Nv ${nivelDisplay}`;
+        pill.appendChild(badge);
     }
 
-    header.appendChild(nomeEl);
-    card.appendChild(header);
-
-    // Descrição
-    const desc = document.createElement('div');
-    desc.className = 'pec-desc';
-    desc.textContent = pec.descricao;
-    card.appendChild(desc);
-
-    // Aura indicator
-    if (pec.auraVinculadaId && window.AURAS) {
-        const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
-        if (auraDef) {
-            const auraTag = document.createElement('div');
-            auraTag.className = 'pec-aura-tag';
-            auraTag.innerHTML = `🌟 Concede: <strong>${auraDef.nome}</strong> (Grau ${pec.auraGrauConcedido || 1})`;
-            card.appendChild(auraTag);
-        }
-    }
-
-    // Efeito
-    const efeitoContainer = document.createElement('div');
-    efeitoContainer.className = 'pec-efeito-container';
-
-    const efeito = document.createElement('div');
-    efeito.className = 'pec-efeito';
-    efeito.id = `pec_efeito_${pec.key}`;
-    efeito.innerHTML = `<strong>Efeito:</strong> <span class="efeito-text">${pec.efeito}</span>`;
-
-    efeitoContainer.appendChild(efeito);
-
-    // Se for evolutivo, gerenciar níveis e custo
+    // Se evolutivo: dots inline
     if (pec.tipo === 'evolutivo') {
-        const custo = document.createElement('div');
-        custo.className = 'pec-custo';
-        custo.id = `pec_custo_${pec.key}`;
-        const currentLvl = state.dots['pec_' + pec.key] || pec.nivelAtual || 1;
-        if (pec.niveis && pec.niveis[currentLvl]) {
-            custo.textContent = pec.niveis[currentLvl].custo;
-            efeito.querySelector('.efeito-text').textContent = pec.niveis[currentLvl].efeito;
-        }
-        efeitoContainer.appendChild(custo);
-
-        // Seletor de Nível (Dots)
-        const selector = document.createElement('div');
-        selector.className = 'pec-level-selector';
-
-        const lbl = document.createElement('label');
-        lbl.textContent = 'Nível Atual:';
-        selector.appendChild(lbl);
-
         const dotsDiv = document.createElement('div');
-        dotsDiv.className = 'pec-dots dots5';
+        dotsDiv.className = 'pec-dots-inline';
         dotsDiv.dataset.attr = 'pec_' + pec.key;
-        renderEvolutableDots(dotsDiv, raceKey, pec, pec.nivelAtual, pec.nivelMax);
-
-        selector.appendChild(dotsDiv);
-        card.appendChild(efeitoContainer);
-        card.appendChild(selector);
+        renderEvolutableDotsInline(dotsDiv, raceKey, pec, pec.nivelAtual, pec.nivelMax);
+        pill.appendChild(dotsDiv);
 
         // Garantir que o valor inicial esteja no state
         const dotKey = 'pec_' + pec.key;
@@ -372,12 +402,17 @@ function renderPeculiaridadeCard(pec, raceKey, container) {
             state.dots[dotKey] = pec.nivelAtual;
         }
         refreshPecDots(dotsDiv, dotKey, pec.nivelAtual);
-
-    } else {
-        card.appendChild(efeitoContainer);
     }
 
-    // Renderizar UI de distribuição (pendente, parcial ou completa)
+    container.appendChild(pill);
+
+    // Chamar DEPOIS do appendChild para que document.getElementById funcione
+    if (pec.tipo === 'evolutivo') {
+        const dotKey = 'pec_' + pec.key;
+        updatePeculiaridadeLevel(raceKey, pec.key, state.dots[dotKey] || pec.nivelAtual || 1, pec);
+    }
+
+    // Renderizar UI de distribuição (fora da pill, direto no container)
     if (pec.mecanicas && typeof renderDistribuirUI === 'function') {
         for (const mech of pec.mecanicas) {
             if (mech.tipo !== 'distribuir') continue;
@@ -385,21 +420,19 @@ function renderPeculiaridadeCard(pec, raceKey, container) {
             const isCreation = mech.duracao === 'criacao';
             if (!isPermanent && !isCreation) continue;
 
-            // Sempre renderizar — a função decide se mostra selects ou apenas resumo
-            renderDistribuirUI(card, mech, pec);
+            // Criar wrapper para a UI de distribuição no nível do content
+            const distWrapper = document.createElement('div');
+            distWrapper.style.width = '100%';
+            distWrapper.style.flexBasis = '100%';
+            renderDistribuirUI(distWrapper, mech, pec);
+            container.appendChild(distWrapper);
         }
-    }
-
-    container.appendChild(card);
-
-    // Chamar DEPOIS do appendChild para que document.getElementById funcione
-    if (pec.tipo === 'evolutivo') {
-        const dotKey = 'pec_' + pec.key;
-        updatePeculiaridadeLevel(raceKey, pec.key, state.dots[dotKey] || pec.nivelAtual || 1, pec);
     }
 }
 
-function renderEvolutableDots(dotsDiv, raceKey, pec, minLevel, maxLevel) {
+/* ===== DOTS INLINE PARA EVOLUTIVAS ===== */
+
+function renderEvolutableDotsInline(dotsDiv, raceKey, pec, minLevel, maxLevel) {
     const dotKey = 'pec_' + pec.key;
 
     // Verificar se alguma mecânica é "Apenas na Criação"
@@ -415,23 +448,17 @@ function renderEvolutableDots(dotsDiv, raceKey, pec, minLevel, maxLevel) {
         // Desabilitar dots abaixo do mínimo
         if (i < minLevel) {
             dot.disabled = true;
-            dot.style.opacity = '0.3';
-            dot.style.cursor = 'not-allowed';
         }
 
         // Se é "Apenas na Criação", desabilitar todos os dots acima do nível atual
         if (isCreationOnly && i > minLevel) {
             dot.disabled = true;
-            dot.style.opacity = '0.3';
-            dot.style.cursor = 'not-allowed';
             dot.title = '🏗️ Apenas na Criação (não pode upar depois)';
         }
 
         // Verificar se o nível existe nos dados
         if (!pec.niveis[i]) {
             dot.disabled = true;
-            dot.style.opacity = '0.3';
-            dot.style.cursor = 'not-allowed';
         }
 
         dot.addEventListener('click', () => {
@@ -530,108 +557,10 @@ function refreshPecDots(container, dotKey, minLevel) {
 }
 
 function updatePeculiaridadeLevel(raceKey, pecKey, newLevel, pecData) {
-    const efeitoEl = document.getElementById(`pec_efeito_${pecKey}`);
-    const custoEl = document.getElementById(`pec_custo_${pecKey}`);
-
-    // Atualizar badge de nível no header
+    // Atualizar badge de nível
     const badgeEl = document.getElementById(`pec_badge_${pecKey}`);
     if (badgeEl) {
-        badgeEl.textContent = `Nível ${newLevel}`;
-    }
-
-    if (efeitoEl && pecData.niveis && pecData.niveis[newLevel]) {
-        // Regenerar efeito dinamicamente a partir de TODAS as mecânicas
-        let efeitoTexto = '';
-        if (pecData.mecanicas && typeof generatePreviewText === 'function') {
-            const efeitosNivel = [];
-            for (const m of pecData.mecanicas) {
-                // --- Mecânica evoluível: ajustar config com valores da progressão ---
-                if (m.evoluivel === true && m.progressao) {
-                    const prog = m.progressao[String(newLevel)];
-                    if (prog) {
-                        const adjustedMech = JSON.parse(JSON.stringify(m));
-                        delete adjustedMech.previewTexto; // Forçar geração dinâmica
-
-                        if (m.tipo === 'modificar') {
-                            if (prog.valor !== undefined) {
-                                adjustedMech.config = { ...adjustedMech.config, valor: prog.valor };
-                            }
-                        } else if (m.tipo === 'limitar') {
-                            // Aplicar valorLimite/valor diretamente sem depender do campo base existir
-                            const limVal = prog.valorLimite !== undefined ? prog.valorLimite : prog.valor;
-                            if (limVal !== undefined) {
-                                if (!adjustedMech.config) adjustedMech.config = {};
-                                // Detectar tipo do limite para atribuir ao campo correto
-                                const tipoLim = adjustedMech.config.tipoLimite;
-                                if (tipoLim === 'maximo' || adjustedMech.config.valorMaximo !== undefined) {
-                                    adjustedMech.config.valorMaximo = limVal;
-                                }
-                                if (tipoLim === 'minimo' || adjustedMech.config.valorMinimo !== undefined) {
-                                    adjustedMech.config.valorMinimo = limVal;
-                                }
-                                // Fallback: se nenhum campo foi setado, definir ambos
-                                if (adjustedMech.config.valorMaximo === undefined && adjustedMech.config.valorMinimo === undefined) {
-                                    adjustedMech.config.valorMaximo = limVal;
-                                }
-                            }
-                        } else if (m.tipo === 'distribuir') {
-                            if (prog.valorPorAlvo !== undefined) adjustedMech.config = { ...adjustedMech.config, valorPorAlvo: prog.valorPorAlvo };
-                            if (prog.quantidadeAlvos !== undefined) adjustedMech.config = { ...adjustedMech.config, quantidadeAlvos: prog.quantidadeAlvos };
-                            if (prog.valor !== undefined && prog.valorPorAlvo === undefined) adjustedMech.config = { ...adjustedMech.config, valorPorAlvo: prog.valor };
-                        } else if (m.tipo === 'narrativo') {
-                            // Narrativo: usar descricao ou textoEfeito da progressão
-                            if (prog.descricao) {
-                                efeitosNivel.push(prog.descricao);
-                                continue;
-                            }
-                            if (prog.textoEfeito) {
-                                adjustedMech.config = { ...adjustedMech.config, textoEfeito: prog.textoEfeito };
-                            }
-                        } else if (m.tipo === 'conceder') {
-                            // Conceder: usar descrição/tipo da progressão
-                            if (prog.descricaoConcessao !== undefined) {
-                                adjustedMech.config = { ...adjustedMech.config, descricaoConcessao: prog.descricaoConcessao };
-                            }
-                            if (prog.tipoConcessao !== undefined) {
-                                adjustedMech.config = { ...adjustedMech.config, tipoConcessao: prog.tipoConcessao };
-                            }
-                            if (prog.descricao) {
-                                efeitosNivel.push(prog.descricao);
-                                continue;
-                            }
-                        } else if (m.tipo === 'condicional') {
-                            // Condicional: usar gatilho da progressão
-                            if (prog.gatilho !== undefined) {
-                                adjustedMech.config = { ...adjustedMech.config, gatilho: prog.gatilho };
-                            }
-                            if (prog.descricao) {
-                                efeitosNivel.push(prog.descricao);
-                                continue;
-                            }
-                        } else if (prog.descricao) {
-                            // Tipo desconhecido com descrição: usar direto
-                            efeitosNivel.push(prog.descricao);
-                            continue;
-                        }
-                        efeitosNivel.push(generatePreviewText(adjustedMech));
-                    }
-                } else {
-                    // --- Mecânica NÃO-evoluível: incluir texto estático ---
-                    efeitosNivel.push(generatePreviewText(m));
-                }
-            }
-            if (efeitosNivel.length > 0) {
-                efeitoTexto = efeitosNivel.join('; ');
-            }
-        }
-        // Fallback: usar texto pré-computado se não conseguiu gerar dinamicamente
-        if (!efeitoTexto) {
-            efeitoTexto = pecData.niveis[newLevel].efeito;
-        }
-        efeitoEl.querySelector('.efeito-text').textContent = efeitoTexto;
-        if (custoEl) {
-            custoEl.textContent = pecData.niveis[newLevel].custo;
-        }
+        badgeEl.textContent = `Nv ${newLevel}`;
     }
 
     // Auto-update blindagem if "blindagem_natural" is upgraded
@@ -650,4 +579,172 @@ function updatePeculiaridadeLevel(raceKey, pecKey, newLevel, pecData) {
         window._raceBonuses.perc = newLevel + 1; // nv1→+2, nv2→+3, nv3→+4
         if (typeof recalcAll === 'function') recalcAll();
     }
+}
+
+/* ===== TOOLTIP DE PECULIARIDADES ===== */
+
+/**
+ * Inicializa tooltips nos nomes das peculiaridades compactas.
+ * Reutiliza o sistema de tooltip flutuante compartilhado (dv-tooltip).
+ */
+function initPeculiarityTooltips() {
+    if (typeof _ensureTooltipEl === 'function') _ensureTooltipEl();
+
+    document.querySelectorAll('.pec-compact-name.has-tooltip').forEach(nameEl => {
+        if (nameEl.dataset.tooltipBound) return;
+        nameEl.dataset.tooltipBound = '1';
+        nameEl.addEventListener('mouseenter', showDvTooltip);
+        nameEl.addEventListener('mouseleave', hideDvTooltip);
+        nameEl.addEventListener('touchstart', showDvTooltip, { passive: true });
+    });
+}
+
+/**
+ * Gera o efeito texto de uma peculiaridade para o tooltip.
+ * Equivalente à lógica que existia em updatePeculiaridadeLevel.
+ */
+function _generatePecEffectText(pec) {
+    const dotKey = 'pec_' + pec.key;
+
+    if (pec.tipo === 'evolutivo') {
+        const currentLevel = state.dots[dotKey] || pec.nivelAtual || 1;
+
+        if (pec.mecanicas && typeof generatePreviewText === 'function') {
+            const efeitosNivel = [];
+            for (const m of pec.mecanicas) {
+                if (m.evoluivel === true && m.progressao) {
+                    const prog = m.progressao[String(currentLevel)];
+                    if (prog) {
+                        const adjustedMech = JSON.parse(JSON.stringify(m));
+                        delete adjustedMech.previewTexto;
+
+                        if (m.tipo === 'modificar') {
+                            if (prog.valor !== undefined) {
+                                adjustedMech.config = { ...adjustedMech.config, valor: prog.valor };
+                            }
+                        } else if (m.tipo === 'limitar') {
+                            const limVal = prog.valorLimite !== undefined ? prog.valorLimite : prog.valor;
+                            if (limVal !== undefined) {
+                                if (!adjustedMech.config) adjustedMech.config = {};
+                                const tipoLim = adjustedMech.config.tipoLimite;
+                                if (tipoLim === 'maximo' || adjustedMech.config.valorMaximo !== undefined) {
+                                    adjustedMech.config.valorMaximo = limVal;
+                                }
+                                if (tipoLim === 'minimo' || adjustedMech.config.valorMinimo !== undefined) {
+                                    adjustedMech.config.valorMinimo = limVal;
+                                }
+                                if (adjustedMech.config.valorMaximo === undefined && adjustedMech.config.valorMinimo === undefined) {
+                                    adjustedMech.config.valorMaximo = limVal;
+                                }
+                            }
+                        } else if (m.tipo === 'distribuir') {
+                            if (prog.valorPorAlvo !== undefined) adjustedMech.config = { ...adjustedMech.config, valorPorAlvo: prog.valorPorAlvo };
+                            if (prog.quantidadeAlvos !== undefined) adjustedMech.config = { ...adjustedMech.config, quantidadeAlvos: prog.quantidadeAlvos };
+                            if (prog.valor !== undefined && prog.valorPorAlvo === undefined) adjustedMech.config = { ...adjustedMech.config, valorPorAlvo: prog.valor };
+                        } else if (m.tipo === 'narrativo') {
+                            if (prog.descricao) { efeitosNivel.push(prog.descricao); continue; }
+                            if (prog.textoEfeito) adjustedMech.config = { ...adjustedMech.config, textoEfeito: prog.textoEfeito };
+                        } else if (m.tipo === 'conceder') {
+                            if (prog.descricaoConcessao !== undefined) adjustedMech.config = { ...adjustedMech.config, descricaoConcessao: prog.descricaoConcessao };
+                            if (prog.tipoConcessao !== undefined) adjustedMech.config = { ...adjustedMech.config, tipoConcessao: prog.tipoConcessao };
+                            if (prog.descricao) { efeitosNivel.push(prog.descricao); continue; }
+                        } else if (m.tipo === 'condicional') {
+                            if (prog.gatilho !== undefined) adjustedMech.config = { ...adjustedMech.config, gatilho: prog.gatilho };
+                            if (prog.descricao) { efeitosNivel.push(prog.descricao); continue; }
+                        } else if (prog.descricao) {
+                            efeitosNivel.push(prog.descricao); continue;
+                        }
+                        efeitosNivel.push(generatePreviewText(adjustedMech));
+                    }
+                } else {
+                    efeitosNivel.push(generatePreviewText(m));
+                }
+            }
+            if (efeitosNivel.length > 0) return efeitosNivel.join('; ');
+        }
+
+        // Fallback
+        if (pec.niveis && pec.niveis[currentLevel]) {
+            return pec.niveis[currentLevel].efeito;
+        }
+    }
+
+    // Para fixas, usar efeito direto
+    return pec.efeito || '';
+}
+
+/**
+ * Gera HTML do tooltip para uma peculiaridade.
+ * Chamada por showDvTooltip quando tooltipType === 'peculiaridade'.
+ */
+function buildPeculiarityTooltipHTML(pecKey, raceKey) {
+    if (!raceKey || !window.RACES || !window.RACES[raceKey]) return '';
+
+    const raca = window.RACES[raceKey];
+    const pec = raca.peculiaridades.find(p => p.key === pecKey);
+    if (!pec) return '';
+
+    let html = '';
+    const esc = typeof _escHtml === 'function' ? _escHtml : (s => {
+        const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+    });
+
+    // Descrição
+    if (pec.descricao) {
+        html += `<div class="dv-tooltip-desc">${esc(pec.descricao)}</div>`;
+    }
+
+    // Efeito atual
+    const efeito = _generatePecEffectText(pec);
+    if (efeito) {
+        html += `<div class="dv-tooltip-mechs">`;
+        html += `<div class="dv-tooltip-mechs-title">⚡ Efeito:</div>`;
+        html += `<div class="dv-tooltip-mech-item" style="white-space:pre-wrap">${esc(efeito)}</div>`;
+        html += `</div>`;
+    }
+
+    // Custo (evolutivas)
+    if (pec.tipo === 'evolutivo') {
+        const dotKey = 'pec_' + pec.key;
+        const currentLevel = state.dots[dotKey] || pec.nivelAtual || 1;
+        if (pec.niveis && pec.niveis[currentLevel]) {
+            const custoText = pec.niveis[currentLevel].custo || '';
+            if (custoText) {
+                html += `<div class="dv-tooltip-mech-item" style="font-style:italic;color:var(--muted)">💰 ${esc(custoText)}</div>`;
+            }
+        }
+    }
+
+    // Aura vinculada
+    if (pec.auraVinculadaId && window.AURAS) {
+        const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
+        if (auraDef) {
+            html += `<div class="dv-tooltip-mech-item" style="color:#7c3aed">🌟 Concede: <strong>${esc(auraDef.nome)}</strong> (Grau ${pec.auraGrauConcedido || 1})</div>`;
+        }
+    }
+
+    // Mecânicas vinculadas
+    if (pec.mecanicas && pec.mecanicas.length > 0 && typeof generatePreviewText === 'function') {
+        html += `<div class="dv-tooltip-mechs">`;
+        html += `<div class="dv-tooltip-mechs-title">⚙️ Mecânicas Vinculadas:</div>`;
+        for (const m of pec.mecanicas) {
+            const preview = generatePreviewText(m);
+            if (preview) {
+                html += `<div class="dv-tooltip-mech-item">• ${esc(preview)}</div>`;
+            }
+        }
+        html += `</div>`;
+    }
+
+    return html;
+}
+
+// Legacy compatibility — old code may call renderPeculiaridadeCard
+function renderPeculiaridadeCard(pec, raceKey, container) {
+    renderPeculiaridadeCompact(pec, raceKey, container);
+}
+
+// Legacy compatibility — old code may call renderEvolutableDots
+function renderEvolutableDots(dotsDiv, raceKey, pec, minLevel, maxLevel) {
+    renderEvolutableDotsInline(dotsDiv, raceKey, pec, minLevel, maxLevel);
 }

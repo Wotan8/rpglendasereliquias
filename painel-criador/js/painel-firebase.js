@@ -102,6 +102,7 @@ const MODULE_DEFS = {
             { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Comuno, Famo, Pogtara' },
             { key: 'lema', label: 'Lema / Citação', type: 'text', placeholder: 'Lema da tribo' },
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
+            { key: 'peculiaridadeIds', label: '✨ Peculiaridades da Tribo', type: 'mechanic_selector', selectorTarget: 'peculiarities', fontePreFilter: 'tribo' },
             {
                 key: 'pericias', label: 'Perícias Tribais', type: 'array', arrayFields: [
                     { key: 'nome', label: 'Perícia', type: 'text', required: true },
@@ -596,7 +597,7 @@ async function loadModule(moduleName) {
 
     // Always refresh mechanics cache (needed for selectors in all modules)
     await refreshMechanicsCache();
-    if (moduleName === 'races' || moduleName === 'classes') await refreshPeculiaritiesCache();
+    if (moduleName === 'races' || moduleName === 'classes' || moduleName === 'tribes') await refreshPeculiaritiesCache();
     if (moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'skills' || moduleName === 'specializations') await refreshSkillsCache();
     if (moduleName === 'races' || moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'derivedValues') await refreshDerivedValuesCache();
     if (moduleName === 'mechanics' || moduleName === 'vitalStats') await refreshVitalStatsCache();

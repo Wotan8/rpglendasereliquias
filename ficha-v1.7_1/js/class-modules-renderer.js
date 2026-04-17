@@ -612,7 +612,7 @@ function _removeModuleItem(mod, itemEl) {
 /**
  * Salva dados de um módulo no state e dispara autosave.
  */
-function _saveModuleData(moduleId) {
+function _saveModuleData(moduleId, skipAutosave = false) {
     if (!state.classModuleData) state.classModuleData = {};
 
     const container = document.getElementById(`modItems_${moduleId}`);
@@ -651,7 +651,9 @@ function _saveModuleData(moduleId) {
     });
 
     state.classModuleData[moduleId] = items;
-    scheduleAutosave();
+    if (!skipAutosave) {
+        scheduleAutosave();
+    }
 }
 
 /**
@@ -666,7 +668,7 @@ function gatherClassModuleData() {
         if (container) {
             container.querySelectorAll('.class-module-section').forEach(section => {
                 const modId = section.dataset.moduleId;
-                if (modId) _saveModuleData(modId);
+                if (modId) _saveModuleData(modId, true);
             });
         }
     }

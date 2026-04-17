@@ -1085,12 +1085,17 @@ function _reRenderPeculiaridades() {
     const grid = document.getElementById('peculiaridadesGrid');
     const racaNome = document.getElementById('selRaca')?.value;
     if (grid && racaNome && window.RACES?.[racaNome]) {
-        grid.innerHTML = '';
-        window.RACES[racaNome].peculiaridades.forEach(pec => {
-            if (typeof renderPeculiaridadeCard === 'function') {
-                renderPeculiaridadeCard(pec, racaNome, grid);
-            }
-        });
+        if (typeof renderPeculiaridadesGrouped === 'function') {
+            renderPeculiaridadesGrouped(window.RACES[racaNome].peculiaridades, racaNome, grid);
+        } else {
+            // Fallback legacy
+            grid.innerHTML = '';
+            window.RACES[racaNome].peculiaridades.forEach(pec => {
+                if (typeof renderPeculiaridadeCard === 'function') {
+                    renderPeculiaridadeCard(pec, racaNome, grid);
+                }
+            });
+        }
     }
 }
 

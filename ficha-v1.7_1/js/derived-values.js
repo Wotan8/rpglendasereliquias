@@ -550,6 +550,14 @@ function showDvTooltip(e) {
             html += '</div>';
         }
 
+    } else if (tooltipType === 'peculiaridade') {
+        // === Peculiaridade ===
+        const pecKey = label.dataset.pecKey;
+        const raceKey = label.dataset.raceKey;
+        if (typeof buildPeculiarityTooltipHTML === 'function') {
+            html = buildPeculiarityTooltipHTML(pecKey, raceKey);
+        }
+
     } else {
         // === Valor Derivado (padrão) ===
         const dvId = label.dataset.dvId;
