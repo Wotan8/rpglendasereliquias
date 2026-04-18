@@ -50,6 +50,11 @@ window.initApp = function () {
     onClassChange();
     document.getElementById('selRaca').addEventListener('change', onRaceChange);
     onRaceChange();
+    const selTribo = document.getElementById('selTribo');
+    if (selTribo) {
+        selTribo.addEventListener('change', onTriboChange);
+        onTriboChange();
+    }
     if (typeof initDerivedListeners === 'function') initDerivedListeners();
     if (typeof initVitalStatsTooltips === 'function') initVitalStatsTooltips();
     if (typeof initSkillTooltips === 'function') initSkillTooltips();

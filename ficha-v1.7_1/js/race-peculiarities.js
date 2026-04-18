@@ -80,19 +80,19 @@ function onRaceChange() {
     // Atualizar subtitulo da raça
     const subtitleEl = document.getElementById('raceSubtitle');
     const grid = document.getElementById('peculiaridadesGrid');
+    const hintEl = document.getElementById('raceHint');
 
     if (!grid) return;
-    grid.innerHTML = ''; // Limpar peculiaridades atuais
+
+    // Limpar apenas blocos raciais (preservar blocos de classe/tribo)
+    _clearPeculiaridadeBlocksByFonte(grid, 'raca');
 
     if (!racaNome || racaNome === '') {
         if (subtitleEl) subtitleEl.textContent = '';
         // Limpar valores iniciais dos DVs da raça anterior
         if (_previousRaceData) _clearDerivedInitialValues(_previousRaceData);
-        const hint = document.createElement('div');
-        hint.className = 'hint-text';
-        hint.id = 'raceHint';
-        hint.textContent = 'Selecione uma raça para visualizar suas peculiaridades.';
-        grid.appendChild(hint);
+        // Mostrar hint apenas se não houver nenhum bloco (nem classe nem tribo)
+        if (hintEl) hintEl.style.display = grid.children.length === 0 ? '' : 'none';
         updateYotunForcaUI('');
         updateDaereoVisibility('');
         _previousRace = '';
@@ -106,11 +106,14 @@ function onRaceChange() {
     const raca = RACES[racaNome];
     if (!raca) return;
 
+    // Esconder hint
+    if (hintEl) hintEl.style.display = 'none';
+
     // Preencher subtítulo e valores iniciais dos DVs vinculados
     if (subtitleEl) subtitleEl.textContent = raca.subtitulo || '';
 
-    // Renderizar peculiaridades agrupadas por fonte
-    renderPeculiaridadesGrouped(raca.peculiaridades, racaNome, grid);
+    // Renderizar peculiaridades raciais como blocos dentro do grid (inserir no início)
+    _renderSourceBlock(raca.peculiaridades, racaNome, grid, 'raca');
 
     updateYotunForcaUI(racaNome);
     updateDaereoVisibility(racaNome);
@@ -291,8 +294,9 @@ function updatePogoForUI(isPogo) {
 
 /**
  * Renderiza todas as peculiaridades em blocos retráteis agrupados por fonte.
+ * Usado internamente e por renderização legacy.
  */
-function renderPeculiaridadesGrouped(peculiaridades, raceKey, container) {
+function renderPeculiaridadesGrouped(peculiaridades, sourceKey, container) {
     container.innerHTML = '';
 
     // Agrupar por fonte
@@ -311,41 +315,144 @@ function renderPeculiaridadesGrouped(peculiaridades, raceKey, container) {
     });
 
     for (const fonte of sortedFontes) {
-        const pecList = groups[fonte];
-        const config = PEC_FONTE_CONFIG[fonte] || PEC_FONTE_CONFIG._default;
-
-        // Bloco retrátil
-        const block = document.createElement('div');
-        block.className = 'pec-source-block';
-        block.dataset.fonte = fonte;
-
-        // Header
-        const header = document.createElement('div');
-        header.className = 'pec-source-header';
-        header.innerHTML = `
-            <span class="pec-source-chevron">▼</span>
-            <span class="pec-source-title">${config.label}</span>
-            <span class="pec-source-count">${pecList.length}</span>
-        `;
-        header.addEventListener('click', () => {
-            block.classList.toggle('collapsed');
-        });
-        block.appendChild(header);
-
-        // Content (flex-wrap de pills)
-        const content = document.createElement('div');
-        content.className = 'pec-source-content';
-
-        for (const pec of pecList) {
-            renderPeculiaridadeCompact(pec, raceKey, content);
-        }
-
-        block.appendChild(content);
-        container.appendChild(block);
+        _renderSingleSourceBlock(groups[fonte], sourceKey, container, fonte);
     }
 
     // Inicializar tooltips para as pills
     initPeculiarityTooltips();
+}
+
+/**
+ * Limpa blocos de peculiaridades de uma fonte específica dentro do container.
+ */
+function _clearPeculiaridadeBlocksByFonte(container, fonte) {
+    container.querySelectorAll(`.pec-source-block[data-fonte="${fonte}"]`).forEach(b => b.remove());
+    // Também remover wrappers de distribuir vinculados à fonte
+    container.querySelectorAll(`.pec-dist-wrapper[data-fonte="${fonte}"]`).forEach(b => b.remove());
+}
+
+/**
+ * Renderiza um bloco retrátil de uma única fonte e insere no container
+ * na posição correta (ordenado por PEC_FONTE_CONFIG.order).
+ */
+function _renderSourceBlock(peculiaridades, sourceKey, container, fonteOverride) {
+    if (!peculiaridades || peculiaridades.length === 0) return;
+
+    // Agrupar por fonte (dentro das peculiaridades passadas)
+    const groups = {};
+    for (const pec of peculiaridades) {
+        const fonte = fonteOverride || pec.fonte || 'raca';
+        if (!groups[fonte]) groups[fonte] = [];
+        groups[fonte].push(pec);
+    }
+
+    for (const fonte of Object.keys(groups)) {
+        _renderSingleSourceBlock(groups[fonte], sourceKey, container, fonte);
+    }
+
+    initPeculiarityTooltips();
+}
+
+/**
+ * Renderiza um único bloco retrátil para uma fonte e insere na posição correta.
+ */
+function _renderSingleSourceBlock(pecList, sourceKey, container, fonte) {
+    const config = PEC_FONTE_CONFIG[fonte] || PEC_FONTE_CONFIG._default;
+
+    // Bloco retrátil
+    const block = document.createElement('div');
+    block.className = 'pec-source-block';
+    block.dataset.fonte = fonte;
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'pec-source-header';
+    header.innerHTML = `
+        <span class="pec-source-chevron">▼</span>
+        <span class="pec-source-title">${config.label}</span>
+        <span class="pec-source-count">${pecList.length}</span>
+    `;
+    header.addEventListener('click', () => {
+        block.classList.toggle('collapsed');
+    });
+    block.appendChild(header);
+
+    // Content (flex-wrap de pills)
+    const content = document.createElement('div');
+    content.className = 'pec-source-content';
+
+    for (const pec of pecList) {
+        renderPeculiaridadeCompact(pec, sourceKey, content);
+    }
+
+    block.appendChild(content);
+
+    // Inserir na posição correta (ordenado por order da fonte)
+    const targetOrder = config.order;
+    let inserted = false;
+    for (const existing of container.querySelectorAll('.pec-source-block')) {
+        const existingFonte = existing.dataset.fonte || '';
+        const existingOrder = (PEC_FONTE_CONFIG[existingFonte] || PEC_FONTE_CONFIG._default).order;
+        if (existingOrder > targetOrder) {
+            container.insertBefore(block, existing);
+            inserted = true;
+            break;
+        }
+    }
+    if (!inserted) container.appendChild(block);
+}
+
+/* ===== RENDERIZAÇÃO DE PECULIARIDADES POR FONTE (CLASSE / TRIBO) ===== */
+
+/**
+ * Renderiza peculiaridades de classe no grid de peculiaridades.
+ * Chamada por onClassChange() em core.js.
+ */
+function renderClassPeculiaridades(classeNome) {
+    const grid = document.getElementById('peculiaridadesGrid');
+    if (!grid) return;
+
+    // Limpar blocos de classe anteriores
+    _clearPeculiaridadeBlocksByFonte(grid, 'classe');
+
+    // Esconder hint se houver classe com peculiaridades
+    const hintEl = document.getElementById('raceHint');
+
+    if (!classeNome || !window.CLASS_PECULIARITIES || !window.CLASS_PECULIARITIES[classeNome]) {
+        // Mostrar hint se grid está vazio
+        if (hintEl && grid.children.length === 0) hintEl.style.display = '';
+        return;
+    }
+    const pecList = window.CLASS_PECULIARITIES[classeNome];
+    if (pecList.length === 0) return;
+
+    if (hintEl) hintEl.style.display = 'none';
+    _renderSourceBlock(pecList, classeNome, grid, 'classe');
+}
+
+/**
+ * Renderiza peculiaridades de tribo no grid de peculiaridades.
+ * Chamada por onTriboChange() em core.js.
+ */
+function renderTriboPeculiaridades(triboNome) {
+    const grid = document.getElementById('peculiaridadesGrid');
+    if (!grid) return;
+
+    // Limpar blocos de tribo anteriores
+    _clearPeculiaridadeBlocksByFonte(grid, 'tribo');
+
+    // Esconder hint se houver tribo com peculiaridades
+    const hintEl = document.getElementById('raceHint');
+
+    if (!triboNome || !window.TRIBES || !window.TRIBES[triboNome]) {
+        if (hintEl && grid.children.length === 0) hintEl.style.display = '';
+        return;
+    }
+    const pecList = window.TRIBES[triboNome].peculiaridades;
+    if (!pecList || pecList.length === 0) return;
+
+    if (hintEl) hintEl.style.display = 'none';
+    _renderSourceBlock(pecList, triboNome, grid, 'tribo');
 }
 
 /* ===== RENDERIZAÇÃO COMPACTA (PILL/CHIP) ===== */
@@ -676,12 +783,44 @@ function _generatePecEffectText(pec) {
 /**
  * Gera HTML do tooltip para uma peculiaridade.
  * Chamada por showDvTooltip quando tooltipType === 'peculiaridade'.
+ * Busca em RACES, CLASS_PECULIARITIES e TRIBES.
  */
-function buildPeculiarityTooltipHTML(pecKey, raceKey) {
-    if (!raceKey || !window.RACES || !window.RACES[raceKey]) return '';
-
-    const raca = window.RACES[raceKey];
-    const pec = raca.peculiaridades.find(p => p.key === pecKey);
+function buildPeculiarityTooltipHTML(pecKey, sourceKey) {
+    // Buscar peculiaridade em todas as fontes
+    let pec = null;
+    if (sourceKey && window.RACES && window.RACES[sourceKey]) {
+        pec = window.RACES[sourceKey].peculiaridades.find(p => p.key === pecKey);
+    }
+    if (!pec && sourceKey && window.CLASS_PECULIARITIES && window.CLASS_PECULIARITIES[sourceKey]) {
+        pec = window.CLASS_PECULIARITIES[sourceKey].find(p => p.key === pecKey);
+    }
+    if (!pec && sourceKey && window.TRIBES && window.TRIBES[sourceKey]) {
+        pec = window.TRIBES[sourceKey].peculiaridades.find(p => p.key === pecKey);
+    }
+    // Fallback: buscar em todas as fontes independente da sourceKey
+    if (!pec) {
+        // Buscar em todas as raças
+        if (window.RACES) {
+            for (const rk of Object.keys(window.RACES)) {
+                pec = window.RACES[rk].peculiaridades.find(p => p.key === pecKey);
+                if (pec) break;
+            }
+        }
+        // Buscar em todas as classes
+        if (!pec && window.CLASS_PECULIARITIES) {
+            for (const ck of Object.keys(window.CLASS_PECULIARITIES)) {
+                pec = window.CLASS_PECULIARITIES[ck].find(p => p.key === pecKey);
+                if (pec) break;
+            }
+        }
+        // Buscar em todas as tribos
+        if (!pec && window.TRIBES) {
+            for (const tk of Object.keys(window.TRIBES)) {
+                pec = window.TRIBES[tk].peculiaridades.find(p => p.key === pecKey);
+                if (pec) break;
+            }
+        }
+    }
     if (!pec) return '';
 
     let html = '';

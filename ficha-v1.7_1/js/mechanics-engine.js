@@ -364,9 +364,20 @@ function applyAllRaceMechanics(racaNome) {
     // Apply mechanics linked to vital stats (from Firebase)
     applyVitalStatsMechanics();
 
-    if (!racaNome || !window.RACES) return;
+    if (!racaNome || !window.RACES) {
+        // Even without a race, apply class and tribe peculiarity mechanics
+        _applyClassPeculiarityMechanics();
+        _applyTribePeculiarityMechanics();
+        if (typeof renderAurasTab === 'function') renderAurasTab();
+        return;
+    }
     const raca = window.RACES[racaNome];
-    if (!raca) return;
+    if (!raca) {
+        _applyClassPeculiarityMechanics();
+        _applyTribePeculiarityMechanics();
+        if (typeof renderAurasTab === 'function') renderAurasTab();
+        return;
+    }
 
     for (const pec of raca.peculiaridades) {
         if (pec.mecanicas) {
@@ -380,7 +391,6 @@ function applyAllRaceMechanics(racaNome) {
             const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
             if (auraDef) {
                 const grau = pec.auraGrauConcedido || 1;
-                // Add or update aura in state (use highest grade if multiple sources)
                 if (!state.auras) state.auras = {};
                 const existing = state.auras[pec.auraVinculadaId];
                 if (!existing || existing.grauDesbloqueado < grau) {
@@ -390,8 +400,70 @@ function applyAllRaceMechanics(racaNome) {
         }
     }
 
+    // === Aplicar mecânicas de peculiaridades de CLASSE ===
+    _applyClassPeculiarityMechanics();
+
+    // === Aplicar mecânicas de peculiaridades de TRIBO ===
+    _applyTribePeculiarityMechanics();
+
     // Render auras tab if available
     if (typeof renderAurasTab === 'function') renderAurasTab();
+}
+
+/**
+ * Aplica mecânicas das peculiaridades da classe selecionada.
+ */
+function _applyClassPeculiarityMechanics() {
+    const classeNome = document.getElementById('selClasse')?.value;
+    if (!classeNome || !window.CLASS_PECULIARITIES || !window.CLASS_PECULIARITIES[classeNome]) return;
+
+    for (const pec of window.CLASS_PECULIARITIES[classeNome]) {
+        if (pec.mecanicas) {
+            for (const mech of pec.mecanicas) {
+                applyMechanicToSheet(mech, pec);
+            }
+        }
+        // Aura from class peculiarity
+        if (pec.auraVinculadaId && window.AURAS) {
+            const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
+            if (auraDef) {
+                const grau = pec.auraGrauConcedido || 1;
+                if (!state.auras) state.auras = {};
+                const existing = state.auras[pec.auraVinculadaId];
+                if (!existing || existing.grauDesbloqueado < grau) {
+                    state.auras[pec.auraVinculadaId] = { grauDesbloqueado: grau, fonte: 'peculiaridade', fonteId: pec.id };
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Aplica mecânicas das peculiaridades da tribo selecionada.
+ */
+function _applyTribePeculiarityMechanics() {
+    const triboNome = document.getElementById('selTribo')?.value;
+    if (!triboNome || !window.TRIBES || !window.TRIBES[triboNome]) return;
+
+    for (const pec of window.TRIBES[triboNome].peculiaridades) {
+        if (pec.mecanicas) {
+            for (const mech of pec.mecanicas) {
+                applyMechanicToSheet(mech, pec);
+            }
+        }
+        // Aura from tribe peculiarity
+        if (pec.auraVinculadaId && window.AURAS) {
+            const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
+            if (auraDef) {
+                const grau = pec.auraGrauConcedido || 1;
+                if (!state.auras) state.auras = {};
+                const existing = state.auras[pec.auraVinculadaId];
+                if (!existing || existing.grauDesbloqueado < grau) {
+                    state.auras[pec.auraVinculadaId] = { grauDesbloqueado: grau, fonte: 'peculiaridade', fonteId: pec.id };
+                }
+            }
+        }
+    }
 }
 
 /* ===== APLICAR MECÂNICAS VINCULADAS A PERÍCIAS ===== */
@@ -1080,22 +1152,36 @@ function confirmarDistribuicao(mech, wrapper, parentPec) {
 
 /**
  * Re-renderiza toda a grid de peculiaridades para refletir mudanças.
+ * Inclui peculiaridades de raça, classe e tribo.
  */
 function _reRenderPeculiaridades() {
     const grid = document.getElementById('peculiaridadesGrid');
+    if (!grid) return;
+
+    // Re-renderizar raça
     const racaNome = document.getElementById('selRaca')?.value;
-    if (grid && racaNome && window.RACES?.[racaNome]) {
-        if (typeof renderPeculiaridadesGrouped === 'function') {
-            renderPeculiaridadesGrouped(window.RACES[racaNome].peculiaridades, racaNome, grid);
-        } else {
-            // Fallback legacy
-            grid.innerHTML = '';
-            window.RACES[racaNome].peculiaridades.forEach(pec => {
-                if (typeof renderPeculiaridadeCard === 'function') {
-                    renderPeculiaridadeCard(pec, racaNome, grid);
-                }
-            });
+    if (racaNome && window.RACES?.[racaNome]) {
+        if (typeof _clearPeculiaridadeBlocksByFonte === 'function') {
+            _clearPeculiaridadeBlocksByFonte(grid, 'raca');
         }
+        if (typeof _renderSourceBlock === 'function') {
+            _renderSourceBlock(window.RACES[racaNome].peculiaridades, racaNome, grid, 'raca');
+        } else if (typeof renderPeculiaridadesGrouped === 'function') {
+            // Fallback: render all in grid (legacy)
+            renderPeculiaridadesGrouped(window.RACES[racaNome].peculiaridades, racaNome, grid);
+        }
+    }
+
+    // Re-renderizar classe
+    const classeNome = document.getElementById('selClasse')?.value;
+    if (classeNome && typeof renderClassPeculiaridades === 'function') {
+        renderClassPeculiaridades(classeNome);
+    }
+
+    // Re-renderizar tribo
+    const triboNome = document.getElementById('selTribo')?.value;
+    if (triboNome && typeof renderTriboPeculiaridades === 'function') {
+        renderTriboPeculiaridades(triboNome);
     }
 }
 

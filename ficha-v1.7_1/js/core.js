@@ -442,6 +442,35 @@ function onClassChange() {
 
     /* Atualizar grid de Valores Derivados (classe pode adicionar novos valores) */
     if (typeof renderDerivedValuesGrid === 'function') renderDerivedValuesGrid();
+
+    /* Peculiaridades de Classe (bonusIniciais) */
+    if (typeof renderClassPeculiaridades === 'function') renderClassPeculiaridades(cl);
+
+    /* Re-aplicar mecânicas (incluindo as de peculiaridades de classe) */
+    if (typeof applyAllRaceMechanics === 'function') {
+        const raca = document.getElementById('selRaca')?.value;
+        applyAllRaceMechanics(raca);
+    }
+    if (typeof recalcAll === 'function') recalcAll();
+
+    scheduleAutosave();
+}
+
+/**
+ * Handler para mudança de tribo.
+ * Renderiza peculiaridades de tribo e aplica mecânicas.
+ */
+function onTriboChange() {
+    const triboNome = document.getElementById('selTribo')?.value || '';
+
+    /* Renderizar peculiaridades de tribo */
+    if (typeof renderTriboPeculiaridades === 'function') renderTriboPeculiaridades(triboNome);
+
+    /* Re-aplicar mecânicas (incluindo as de peculiaridades de tribo) */
+    if (typeof applyAllRaceMechanics === 'function') {
+        const raca = document.getElementById('selRaca')?.value;
+        applyAllRaceMechanics(raca);
+    }
     if (typeof recalcAll === 'function') recalcAll();
 
     scheduleAutosave();

@@ -161,6 +161,9 @@ function buildClassDataFromFirebase() {
 
     // Construir módulos de classe a partir do Firebase (campo modulosDaClasse de cada classe)
     buildClassModulesFromFirebase();
+
+    // Construir peculiaridades de classe a partir do Firebase (campo bonusIniciais de cada classe)
+    buildClassPeculiaritiesFromFirebase();
 }
 
 /**
@@ -523,6 +526,142 @@ function determineIcon(pec, mecanicas) {
 }
 
 /**
+ * Resolve uma entrada de peculiaridade (ID ou {id, nivelInicial}) em um objeto completo.
+ * Reutilizado por buildRacesFromFirebase(), buildClassPeculiaritiesFromFirebase(), buildTribesFromFirebase().
+ * @param {string|object} pecData - ID da peculiaridade ou objeto {id, nivelInicial}
+ * @param {string} sourceLabel - Label para mensagens de erro (ex: "raça Humano")
+ * @returns {object|null} - Objeto de peculiaridade resolvido ou null
+ */
+function _resolvePeculiaridade(pecData, sourceLabel) {
+    const isObject = typeof pecData === 'object' && pecData !== null;
+    const pecId = isObject ? pecData.id : pecData;
+    const nivelInicial = isObject ? (pecData.nivelInicial || 1) : 1;
+
+    const pec = window._systemData.peculiarities.find(p => p.id === pecId);
+    if (!pec) {
+        console.error(`⚠️ Peculiaridade ID "${pecId}" não encontrada para ${sourceLabel}`);
+        return null;
+    }
+
+    // Resolver mecânicas da peculiaridade
+    const mecanicas = (pec.mecanicaIds || []).map(mechId => {
+        const m = window._systemData.mechanics.find(m => m.id === mechId);
+        if (!m) {
+            console.warn(`⚠️ Mecânica ID "${mechId}" não encontrada para peculiaridade "${pec.nome}"`);
+        }
+        return m;
+    }).filter(Boolean);
+
+    // Detectar se alguma mecânica é evoluível e construir progressão
+    const evoluiveis = mecanicas.filter(m => m.evoluivel === true);
+    let tipo = pec.tipo || 'fixo';
+    let nivelMax = pec.nivelMax || null;
+    let nivelAtual = nivelInicial;
+    let niveis = pec.niveis || null;
+
+    if (evoluiveis.length > 0) {
+        tipo = 'evolutivo';
+        nivelMax = Math.max(...evoluiveis.map(m => m.nivelMaximo || 3));
+        const isGanhoExp = evoluiveis.some(m => m.progressaoTipoExp === 'ganho');
+
+        niveis = {};
+        for (let i = 1; i <= nivelMax; i++) {
+            let custoTotal = 0;
+            const efeitosNivel = [];
+            for (const m of evoluiveis) {
+                const prog = m.progressao?.[String(i)];
+                if (prog) {
+                    custoTotal += (prog.custoExp || 0);
+                    const adjustedMech = JSON.parse(JSON.stringify(m));
+                    delete adjustedMech.previewTexto;
+
+                    if (m.tipo === 'modificar') {
+                        if (prog.valor !== undefined) {
+                            adjustedMech.config = { ...adjustedMech.config, valor: prog.valor };
+                        }
+                    } else if (m.tipo === 'limitar') {
+                        const limVal = prog.valorLimite !== undefined ? prog.valorLimite : prog.valor;
+                        if (limVal !== undefined) {
+                            if (!adjustedMech.config) adjustedMech.config = {};
+                            const tipoLim = adjustedMech.config.tipoLimite;
+                            if (tipoLim === 'maximo' || adjustedMech.config.valorMaximo !== undefined) {
+                                adjustedMech.config.valorMaximo = limVal;
+                            }
+                            if (tipoLim === 'minimo' || adjustedMech.config.valorMinimo !== undefined) {
+                                adjustedMech.config.valorMinimo = limVal;
+                            }
+                            if (adjustedMech.config.valorMaximo === undefined && adjustedMech.config.valorMinimo === undefined) {
+                                adjustedMech.config.valorMaximo = limVal;
+                            }
+                        }
+                    } else if (m.tipo === 'distribuir') {
+                        if (prog.valorPorAlvo !== undefined) adjustedMech.config = { ...adjustedMech.config, valorPorAlvo: prog.valorPorAlvo };
+                        if (prog.quantidadeAlvos !== undefined) adjustedMech.config = { ...adjustedMech.config, quantidadeAlvos: prog.quantidadeAlvos };
+                    } else if (m.tipo === 'narrativo') {
+                        if (prog.descricao) { efeitosNivel.push(prog.descricao); continue; }
+                        if (prog.textoEfeito) adjustedMech.config = { ...adjustedMech.config, textoEfeito: prog.textoEfeito };
+                    } else if (m.tipo === 'conceder') {
+                        if (prog.descricaoConcessao !== undefined) adjustedMech.config = { ...adjustedMech.config, descricaoConcessao: prog.descricaoConcessao };
+                        if (prog.tipoConcessao !== undefined) adjustedMech.config = { ...adjustedMech.config, tipoConcessao: prog.tipoConcessao };
+                        if (prog.descricao) { efeitosNivel.push(prog.descricao); continue; }
+                    } else if (m.tipo === 'condicional') {
+                        if (prog.gatilho !== undefined) adjustedMech.config = { ...adjustedMech.config, gatilho: prog.gatilho };
+                        if (prog.descricao) { efeitosNivel.push(prog.descricao); continue; }
+                    } else if (prog.descricao) {
+                        efeitosNivel.push(prog.descricao); continue;
+                    }
+                    efeitosNivel.push(typeof generatePreviewText === 'function' ? generatePreviewText(adjustedMech) : `${prog.valor}`);
+                }
+            }
+            const expLabel = isGanhoExp ? 'Ganho' : 'Custo';
+            niveis[i] = {
+                custo: custoTotal > 0 ? `${expLabel}: ${custoTotal} EXP` : 'Grátis',
+                custoExp: custoTotal,
+                tipoExp: isGanhoExp ? 'ganho' : 'custo',
+                efeito: efeitosNivel.join('; '),
+                mechProgressao: evoluiveis.reduce((acc, m) => {
+                    const prog = m.progressao?.[String(i)];
+                    if (prog) acc[m.id] = prog;
+                    return acc;
+                }, {})
+            };
+        }
+    }
+
+    // Gerar efeito a partir das mecânicas (para peculiaridades não-evolutivas)
+    let efeito = '';
+    if (tipo !== 'evolutivo') {
+        const efeitoTexts = mecanicas.map(m => {
+            if (typeof generatePreviewText === 'function') return generatePreviewText(m);
+            if (m.tipo === 'narrativo') return m.config?.textoEfeito || m.descricao || '';
+            return m.descricao || '';
+        }).filter(Boolean);
+        efeito = efeitoTexts.join('; ') || pec.descricao || '';
+    }
+
+    return {
+        id: pec.id,
+        key: pec.id,
+        nome: pec.nome,
+        descricao: pec.descricao || '',
+        efeito: efeito,
+        nivel: pec.nivel || null,
+        fonte: pec.fonte,
+        mecanicas: mecanicas,
+        negativo: mecanicas.some(m =>
+            m.tipo === 'modificar' && m.config?.operacao === '-'
+        ) || (pec.tags || []).includes('negativo'),
+        icone: determineIcon(pec, mecanicas),
+        tipo: tipo,
+        nivelAtual: nivelAtual,
+        nivelMax: nivelMax,
+        niveis: niveis,
+        auraVinculadaId: pec.auraVinculadaId || null,
+        auraGrauConcedido: pec.auraGrauConcedido || 1,
+    };
+}
+
+/**
  * Constrói o objeto RACES a partir dos dados do Firebase.
  * Resolve peculiaridades e mecânicas por ID.
  */
@@ -532,165 +671,10 @@ function buildRacesFromFirebase() {
     for (const race of window._systemData.races) {
         if (race.publicado === false) continue;
 
-        // Resolver peculiaridades por ID
-        const peculiaridades = (race.peculiaridadeIds || []).map(pecData => {
-            const isObject = typeof pecData === 'object' && pecData !== null;
-            const pecId = isObject ? pecData.id : pecData;
-            const nivelInicial = isObject ? (pecData.nivelInicial || 1) : 1;
-
-            const pec = window._systemData.peculiarities.find(p => p.id === pecId);
-            if (!pec) {
-                console.error(`⚠️ Peculiaridade ID "${pecId}" não encontrada para raça "${race.nome}"`);
-                return null;
-            }
-
-            // Resolver mecânicas da peculiaridade
-            const mecanicas = (pec.mecanicaIds || []).map(mechId => {
-                const m = window._systemData.mechanics.find(m => m.id === mechId);
-                if (!m) {
-                    console.warn(`⚠️ Mecânica ID "${mechId}" não encontrada para peculiaridade "${pec.nome}"`);
-                }
-                return m;
-            }).filter(Boolean);
-
-            // Detectar se alguma mecânica é evoluível e construir progressão
-            const evoluiveis = mecanicas.filter(m => m.evoluivel === true);
-            let tipo = pec.tipo || 'fixo';
-            let nivelMax = pec.nivelMax || null;
-            let nivelAtual = nivelInicial;
-            let niveis = pec.niveis || null;
-
-            if (evoluiveis.length > 0) {
-                tipo = 'evolutivo';
-                // Usar o maior nivelMaximo entre todas as mecânicas evoluíveis
-                nivelMax = Math.max(...evoluiveis.map(m => m.nivelMaximo || 3));
-
-                // Detectar se alguma mecânica evoluível é do tipo "ganho" de EXP
-                const isGanhoExp = evoluiveis.some(m => m.progressaoTipoExp === 'ganho');
-
-                // Construir niveis{} a partir das progressões das mecânicas
-                niveis = {};
-                for (let i = 1; i <= nivelMax; i++) {
-                    // Calcular custo: soma dos custos de todas as mecânicas evoluíveis neste nível
-                    let custoTotal = 0;
-                    const efeitosNivel = [];
-                    for (const m of evoluiveis) {
-                        const prog = m.progressao?.[String(i)];
-                        if (prog) {
-                            custoTotal += (prog.custoExp || 0);
-                            // Gerar preview do efeito com config ajustada ao nível
-                            const adjustedMech = JSON.parse(JSON.stringify(m));
-                            delete adjustedMech.previewTexto; // Forçar geração dinâmica
-
-                            if (m.tipo === 'modificar') {
-                                if (prog.valor !== undefined) {
-                                    adjustedMech.config = { ...adjustedMech.config, valor: prog.valor };
-                                }
-                            } else if (m.tipo === 'limitar') {
-                                const limVal = prog.valorLimite !== undefined ? prog.valorLimite : prog.valor;
-                                if (limVal !== undefined) {
-                                    if (!adjustedMech.config) adjustedMech.config = {};
-                                    const tipoLim = adjustedMech.config.tipoLimite;
-                                    if (tipoLim === 'maximo' || adjustedMech.config.valorMaximo !== undefined) {
-                                        adjustedMech.config.valorMaximo = limVal;
-                                    }
-                                    if (tipoLim === 'minimo' || adjustedMech.config.valorMinimo !== undefined) {
-                                        adjustedMech.config.valorMinimo = limVal;
-                                    }
-                                    if (adjustedMech.config.valorMaximo === undefined && adjustedMech.config.valorMinimo === undefined) {
-                                        adjustedMech.config.valorMaximo = limVal;
-                                    }
-                                }
-                            } else if (m.tipo === 'distribuir') {
-                                if (prog.valorPorAlvo !== undefined) adjustedMech.config = { ...adjustedMech.config, valorPorAlvo: prog.valorPorAlvo };
-                                if (prog.quantidadeAlvos !== undefined) adjustedMech.config = { ...adjustedMech.config, quantidadeAlvos: prog.quantidadeAlvos };
-                            } else if (m.tipo === 'narrativo') {
-                                if (prog.descricao) {
-                                    efeitosNivel.push(prog.descricao);
-                                    continue;
-                                }
-                                if (prog.textoEfeito) {
-                                    adjustedMech.config = { ...adjustedMech.config, textoEfeito: prog.textoEfeito };
-                                }
-                            } else if (m.tipo === 'conceder') {
-                                if (prog.descricaoConcessao !== undefined) {
-                                    adjustedMech.config = { ...adjustedMech.config, descricaoConcessao: prog.descricaoConcessao };
-                                }
-                                if (prog.tipoConcessao !== undefined) {
-                                    adjustedMech.config = { ...adjustedMech.config, tipoConcessao: prog.tipoConcessao };
-                                }
-                                if (prog.descricao) {
-                                    efeitosNivel.push(prog.descricao);
-                                    continue;
-                                }
-                            } else if (m.tipo === 'condicional') {
-                                if (prog.gatilho !== undefined) {
-                                    adjustedMech.config = { ...adjustedMech.config, gatilho: prog.gatilho };
-                                }
-                                if (prog.descricao) {
-                                    efeitosNivel.push(prog.descricao);
-                                    continue;
-                                }
-                            } else if (prog.descricao) {
-                                efeitosNivel.push(prog.descricao);
-                                continue;
-                            }
-                            efeitosNivel.push(typeof generatePreviewText === 'function' ? generatePreviewText(adjustedMech) : `${prog.valor}`);
-                        }
-                    }
-                    const expLabel = isGanhoExp ? 'Ganho' : 'Custo';
-                    niveis[i] = {
-                        custo: custoTotal > 0 ? `${expLabel}: ${custoTotal} EXP` : 'Grátis',
-                        custoExp: custoTotal,
-                        tipoExp: isGanhoExp ? 'ganho' : 'custo',
-                        efeito: efeitosNivel.join('; '),
-                        // Guardar progressão individual de cada mecânica para este nível
-                        mechProgressao: evoluiveis.reduce((acc, m) => {
-                            const prog = m.progressao?.[String(i)];
-                            if (prog) acc[m.id] = prog;
-                            return acc;
-                        }, {})
-                    };
-                }
-            }
-
-            // Gerar efeito a partir das mecânicas (para peculiaridades não-evolutivas)
-            let efeito = '';
-            if (tipo !== 'evolutivo') {
-                const efeitoTexts = mecanicas.map(m => {
-                    if (typeof generatePreviewText === 'function') {
-                        return generatePreviewText(m);
-                    }
-                    // Fallback
-                    if (m.tipo === 'narrativo') return m.config?.textoEfeito || m.descricao || '';
-                    return m.descricao || '';
-                }).filter(Boolean);
-                efeito = efeitoTexts.join('; ') || pec.descricao || '';
-            }
-
-            return {
-                id: pec.id,
-                key: pec.id,
-                nome: pec.nome,
-                descricao: pec.descricao || '',
-                efeito: efeito,
-                nivel: pec.nivel || null,
-                fonte: pec.fonte,
-                mecanicas: mecanicas,
-                negativo: mecanicas.some(m =>
-                    m.tipo === 'modificar' && m.config?.operacao === '-'
-                ) || (pec.tags || []).includes('negativo'),
-                icone: determineIcon(pec, mecanicas),
-                // Evolutivas
-                tipo: tipo,
-                nivelAtual: nivelAtual,
-                nivelMax: nivelMax,
-                niveis: niveis,
-                // Aura vinculada
-                auraVinculadaId: pec.auraVinculadaId || null,
-                auraGrauConcedido: pec.auraGrauConcedido || 1,
-            };
-        }).filter(Boolean);
+        // Resolver peculiaridades por ID usando função reutilizável
+        const peculiaridades = (race.peculiaridadeIds || []).map(pecData =>
+            _resolvePeculiaridade(pecData, `raça "${race.nome}"`)
+        ).filter(Boolean);
 
         // Parse derivedValueIds — suporta objetos {id, valorInicial} e strings legadas
         const parsedDVIds = (race.derivedValueIds || []).map(item =>
@@ -706,6 +690,80 @@ function buildRacesFromFirebase() {
     }
 
     return RACES;
+}
+
+/**
+ * Constrói window.CLASS_PECULIARITIES a partir do campo bonusIniciais de cada classe.
+ * Resolve IDs de peculiaridades exatamente como buildRacesFromFirebase faz.
+ * Chamada dentro de buildClassDataFromFirebase().
+ */
+function buildClassPeculiaritiesFromFirebase() {
+    window.CLASS_PECULIARITIES = {};
+    let total = 0;
+
+    for (const cls of window._systemData.classes) {
+        if (cls.publicado === false) continue;
+        const pecIds = cls.bonusIniciais || [];
+        if (!Array.isArray(pecIds) || pecIds.length === 0) continue;
+
+        const resolved = pecIds.map(pecData =>
+            _resolvePeculiaridade(pecData, `classe "${cls.nome}"`)
+        ).filter(Boolean);
+
+        if (resolved.length > 0) {
+            window.CLASS_PECULIARITIES[cls.nome] = resolved;
+            total += resolved.length;
+        }
+    }
+
+    console.log(`✅ Peculiaridades de classe carregadas: ${total} peculiaridade(s)`);
+}
+
+/**
+ * Constrói window.TRIBES a partir dos dados do Firebase.
+ * Resolve peculiaridades vinculadas por ID (campo peculiaridadeIds de cada tribo).
+ */
+function buildTribesFromFirebase() {
+    window.TRIBES = {};
+
+    for (const tribe of window._systemData.tribes) {
+        if (tribe.publicado === false) continue;
+
+        const peculiaridades = (tribe.peculiaridadeIds || []).map(pecData =>
+            _resolvePeculiaridade(pecData, `tribo "${tribe.nome}"`)
+        ).filter(Boolean);
+
+        window.TRIBES[tribe.nome] = {
+            id: tribe.id,
+            peculiaridades: peculiaridades,
+        };
+    }
+
+    console.log(`✅ Tribos construídas: ${Object.keys(window.TRIBES).length} tribo(s)`);
+}
+
+/**
+ * Preenche o select #selTribo a partir dos dados do Firebase.
+ */
+function populateTribesSelect() {
+    const el = document.getElementById('selTribo');
+    if (!el) return;
+
+    el.querySelectorAll('option:not(:first-child)').forEach(o => o.remove());
+
+    const tribos = window._systemData.tribes
+        .filter(t => t.publicado !== false)
+        .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+
+    tribos.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.nome;
+        opt.textContent = t.nome;
+        opt.dataset.tribeId = t.id;
+        el.appendChild(opt);
+    });
+
+    console.log(`✅ Select de tribos populado: ${tribos.length} tribos`);
 }
 
 /**

@@ -300,8 +300,12 @@ onAuthStateChanged(auth, async (user) => {
             if (typeof populateTargetMapFromVitalStats === 'function') populateTargetMapFromVitalStats();
             populateRaceSelect();
             populateClassSelect();
+            buildTribesFromFirebase();
+            if (typeof populateTribesSelect === 'function') populateTribesSelect();
 
             console.log('✅ RACES construído do Firebase:', Object.keys(window.RACES));
+            console.log('✅ TRIBES construído do Firebase:', Object.keys(window.TRIBES || {}));
+            console.log('✅ CLASS_PECULIARITIES construído do Firebase:', Object.keys(window.CLASS_PECULIARITIES || {}));
 
             // Build auras
             if (typeof buildAurasFromFirebase === 'function') buildAurasFromFirebase();

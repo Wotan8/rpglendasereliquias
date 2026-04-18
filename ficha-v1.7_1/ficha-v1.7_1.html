@@ -80,11 +80,14 @@
                                 <div class="field"><label>Sessões</label><input type="text" data-key="sessoes"
                                         placeholder="0" maxlength="3" style="text-align: center;"></div>
                             </div>
-                            <div class="row">
+                            <div class="row" style="grid-template-columns: 1fr 1fr 1fr;">
                                 <div class="field"><label>Raça</label><select id="selRaca" data-key="raca">
                                         <option value="">— Selecione —</option>
                                     </select></div>
                                 <div class="field"><label>Classe</label><select data-key="classe" id="selClasse">
+                                        <option value="">— Selecione —</option>
+                                    </select></div>
+                                <div class="field"><label>Tribo</label><select id="selTribo" data-key="tribo">
                                         <option value="">— Selecione —</option>
                                     </select></div>
                             </div>
@@ -336,7 +339,7 @@
             <div class="tab-content" id="tabPeculiaridades">
                 <div class="section">
                     <div class="section-title">
-                        <span id="raceTitle">Raça</span>
+                        <span id="raceTitle">Peculiaridades</span>
                         <span id="raceSubtitle" class="race-subtitle"></span>
                     </div>
                     <div id="raceHint" style="font-size:12px;color:var(--muted);text-align:center;padding:20px;">

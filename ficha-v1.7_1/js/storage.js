@@ -124,11 +124,29 @@ function gatherData() {
     d.mainTestsOrder = state.mainTestsOrder || [];
     d.testColors = state.testColors || {};
 
-    // Gather peculiaridade levels
+    // Gather peculiaridade levels (race, class, tribe)
     d.peculiaridadeLevels = {};
     const raca = document.getElementById('selRaca').value;
     if (raca && window.RACES && window.RACES[raca]) {
         window.RACES[raca].peculiaridades.forEach(pec => {
+            if (pec.tipo === 'evolutivo') {
+                const savedLevel = state.dots['pec_' + pec.key] || pec.nivelAtual;
+                d.peculiaridadeLevels[pec.key] = savedLevel;
+            }
+        });
+    }
+    const classe = document.getElementById('selClasse')?.value;
+    if (classe && window.CLASS_PECULIARITIES && window.CLASS_PECULIARITIES[classe]) {
+        window.CLASS_PECULIARITIES[classe].forEach(pec => {
+            if (pec.tipo === 'evolutivo') {
+                const savedLevel = state.dots['pec_' + pec.key] || pec.nivelAtual;
+                d.peculiaridadeLevels[pec.key] = savedLevel;
+            }
+        });
+    }
+    const tribo = document.getElementById('selTribo')?.value;
+    if (tribo && window.TRIBES && window.TRIBES[tribo]) {
+        (window.TRIBES[tribo].peculiaridades || []).forEach(pec => {
             if (pec.tipo === 'evolutivo') {
                 const savedLevel = state.dots['pec_' + pec.key] || pec.nivelAtual;
                 d.peculiaridadeLevels[pec.key] = savedLevel;
@@ -199,6 +217,7 @@ function loadFromData(d) {
 
         onClassChange();
         onRaceChange();
+        if (typeof onTriboChange === 'function') onTriboChange();
 
         // Force render main tests with restored data
         const cl = document.getElementById('selClasse').value;
