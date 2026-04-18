@@ -27,26 +27,47 @@ window.storage = storage;
 window.currentUser = null;
 window.currentCharacterId = null;
 window.isCreator = false;
+window.isMestre = false;
 
 // ===== VERIFICAR ROLE DO USUÁRIO =====
-async function checkCreatorRole(user) {
+/**
+ * Verifica a role do usuário no Firestore.
+ * Retorna a string da role ('criador', 'mestre') ou null.
+ */
+async function checkUserRole(user) {
     try {
+        const PRIVILEGED_ROLES = ['criador', 'mestre'];
         // Método 1: por UID field
         let q = query(collection(db, 'users'), where('uid', '==', user.uid));
         let snap = await getDocs(q);
-        if (!snap.empty && snap.docs[0].data().role === 'criador') return true;
+        if (!snap.empty) {
+            const role = snap.docs[0].data().role;
+            if (PRIVILEGED_ROLES.includes(role)) return role;
+        }
 
         // Método 2: por email
         q = query(collection(db, 'users'), where('email', '==', user.email));
         snap = await getDocs(q);
-        if (!snap.empty && snap.docs[0].data().role === 'criador') return true;
+        if (!snap.empty) {
+            const role = snap.docs[0].data().role;
+            if (PRIVILEGED_ROLES.includes(role)) return role;
+        }
 
         // Método 3: doc ID = UID
         const docRef = doc(db, 'users', user.uid);
         const docSnap = await getDoc(docRef);
-        if (docSnap.exists() && docSnap.data().role === 'criador') return true;
+        if (docSnap.exists()) {
+            const role = docSnap.data().role;
+            if (PRIVILEGED_ROLES.includes(role)) return role;
+        }
     } catch (e) { console.warn('Erro ao verificar role:', e); }
-    return false;
+    return null;
+}
+
+/** Legacy compat wrapper */
+async function checkCreatorRole(user) {
+    const role = await checkUserRole(user);
+    return role === 'criador';
 }
 
 function enableCreatorExpEditing() {
@@ -334,13 +355,17 @@ onAuthStateChanged(auth, async (user) => {
 
         // Verificar se é criador (após tudo carregado)
         try {
-            window.isCreator = await checkCreatorRole(user);
+            const userRole = await checkUserRole(user);
+            window.isCreator = (userRole === 'criador');
+            window.isMestre = (userRole === 'criador' || userRole === 'mestre');
             if (window.isCreator) {
                 enableCreatorExpEditing();
                 // Re-render derived values grid para liberar edição de campos
                 if (typeof renderDerivedValuesGrid === 'function') renderDerivedValuesGrid();
                 if (typeof recalcAll === 'function') recalcAll();
             }
+            // Bloquear selects para usuários sem privilégio
+            if (typeof lockSelectsIfNeeded === 'function') lockSelectsIfNeeded();
         } catch (e) { /* ignore */ }
     } else {
         // Não logado → redirecionar

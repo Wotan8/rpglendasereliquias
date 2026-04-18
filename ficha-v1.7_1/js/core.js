@@ -454,6 +454,9 @@ function onClassChange() {
     if (typeof recalcAll === 'function') recalcAll();
 
     scheduleAutosave();
+
+    /* Bloquear selects se necessário */
+    if (typeof lockSelectsIfNeeded === 'function') lockSelectsIfNeeded();
 }
 
 /**
@@ -474,6 +477,9 @@ function onTriboChange() {
     if (typeof recalcAll === 'function') recalcAll();
 
     scheduleAutosave();
+
+    /* Bloquear selects se necessário */
+    if (typeof lockSelectsIfNeeded === 'function') lockSelectsIfNeeded();
 }
 
 /* SPECIALIZATIONS */

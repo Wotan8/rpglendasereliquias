@@ -1995,7 +1995,7 @@ button:hover {
 
 .pec-source-content {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 6px;
     padding: 12px 14px;
     transition: max-height .25s ease, padding .25s ease, opacity .2s ease;
@@ -2011,7 +2011,7 @@ button:hover {
 
 /* --- Compact Pill / Chip --- */
 .pec-compact {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 5px;
     padding: 5px 10px;
@@ -2021,7 +2021,7 @@ button:hover {
     cursor: default;
     transition: border-color .15s, box-shadow .15s, transform .1s;
     position: relative;
-    max-width: 100%;
+    width: 100%;
 }
 
 .pec-compact:hover {
@@ -3163,4 +3163,561 @@ html.dark .aura-grau-display.unlocked {
 html.dark .aura-mech-tag {
     background: rgba(79, 110, 247, .15);
     border-color: rgba(79, 110, 247, .3);
+}
+
+/* ===== INFO BUTTON (ℹ️ ao lado dos labels) ===== */
+.info-btn {
+    cursor: pointer;
+    font-size: 12px;
+    opacity: .6;
+    transition: opacity .15s, transform .15s;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 2px;
+    user-select: none;
+}
+
+.info-btn:hover {
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+/* ===== SELECT LOCKED ===== */
+.select-locked {
+    opacity: .7;
+    cursor: pointer !important;
+    background: var(--chip) !important;
+    border-style: dashed !important;
+}
+
+html.dark .select-locked {
+    background: #1e2235 !important;
+    border-color: #4b5563 !important;
+}
+
+/* ===== DETAIL MODAL ===== */
+.detail-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, .7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    animation: detailModalFadeIn .2s ease;
+}
+
+@keyframes detailModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.detail-modal.hidden {
+    display: none;
+}
+
+.detail-modal-content {
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 16px;
+    width: 92%;
+    max-width: 640px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .5);
+    position: relative;
+    overflow: hidden;
+    animation: detailModalSlideIn .25s ease;
+}
+
+@keyframes detailModalSlideIn {
+    from { opacity: 0; transform: translateY(20px) scale(.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.detail-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    width: 32px;
+    height: 32px;
+    border-radius: 50% !important;
+    border: 2px solid var(--soft) !important;
+    background: var(--paper) !important;
+    color: var(--muted) !important;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
+    transition: all .15s;
+    box-shadow: 0 2px 8px rgba(0,0,0,.1);
+}
+
+.detail-modal-close:hover {
+    background: #fee2e2 !important;
+    color: #dc2626 !important;
+    border-color: #fca5a5 !important;
+    transform: rotate(90deg);
+}
+
+.detail-modal-body {
+    overflow-y: auto;
+    padding: 24px;
+    flex: 1;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* --- Image Header --- */
+.detail-img-wrapper {
+    margin: -24px -24px 20px -24px;
+    max-height: 260px;
+    overflow: hidden;
+    border-radius: 16px 16px 0 0;
+    background: var(--chip);
+}
+
+.detail-img {
+    width: 100%;
+    height: 260px;
+    object-fit: cover;
+    display: block;
+}
+
+/* --- Title & Subtitle --- */
+.detail-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+}
+
+.detail-title {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: .2px;
+    color: var(--ink);
+}
+
+.detail-subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    font-style: italic;
+    margin-bottom: 12px;
+}
+
+.detail-level-badge {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+.detail-level-badge.positivo {
+    background: rgba(39, 174, 96, .12);
+    color: #27ae60;
+    border: 1px solid rgba(39, 174, 96, .3);
+}
+
+.detail-level-badge.negativo {
+    background: rgba(192, 57, 43, .12);
+    color: #c0392b;
+    border: 1px solid rgba(192, 57, 43, .3);
+}
+
+/* --- Fields Grid --- */
+.detail-fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.detail-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    background: var(--chip);
+    border-radius: 8px;
+    border: 1px solid var(--soft);
+}
+
+.detail-field-label {
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    color: var(--muted);
+}
+
+.detail-field-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+}
+
+/* --- Sections --- */
+.detail-section {
+    margin-bottom: 16px;
+}
+
+.detail-section-title {
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    color: var(--ink);
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--soft);
+}
+
+.detail-section-text {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--ink);
+    white-space: pre-wrap;
+}
+
+/* --- Quote --- */
+.detail-quote {
+    font-size: 14px;
+    font-style: italic;
+    color: var(--muted);
+    padding: 12px 16px;
+    border-left: 3px solid #8b5cf6;
+    background: rgba(139, 92, 246, .06);
+    border-radius: 0 8px 8px 0;
+    margin: 8px 0;
+    line-height: 1.5;
+}
+
+/* --- Tags --- */
+.detail-tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.detail-tag {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--chip);
+    border: 1px solid var(--soft);
+    color: var(--ink);
+}
+
+/* --- Role Items --- */
+.detail-role-item {
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 6px;
+    color: var(--ink);
+}
+
+/* --- Peculiarity List (inside race/class detail) --- */
+.detail-pec-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.detail-pec-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--soft);
+    background: var(--chip);
+    transition: border-color .15s;
+}
+
+.detail-pec-item:hover {
+    border-color: var(--muted);
+}
+
+.detail-pec-item.positivo {
+    border-left: 3px solid #27ae60;
+}
+
+.detail-pec-item.negativo {
+    border-left: 3px solid #c0392b;
+}
+
+.detail-pec-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.detail-pec-name {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--ink);
+}
+
+.detail-pec-desc {
+    font-size: 11px;
+    color: var(--muted);
+    display: block;
+    margin-top: 2px;
+    line-height: 1.4;
+}
+
+/* --- Progression Table --- */
+.detail-progression-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    border: 1px solid var(--soft);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.detail-progression-table th {
+    background: var(--chip);
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: .3px;
+    padding: 8px 10px;
+    text-align: left;
+    color: var(--muted);
+    border-bottom: 1px solid var(--soft);
+}
+
+.detail-progression-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--soft);
+    vertical-align: top;
+}
+
+.detail-progression-table tr:last-child td {
+    border-bottom: none;
+}
+
+.detail-progression-table tr.current-level {
+    background: rgba(79, 110, 247, .08);
+}
+
+.detail-progression-table tr.current-level td {
+    font-weight: 700;
+}
+
+.detail-lvl-cell {
+    font-weight: 800;
+    white-space: nowrap;
+    min-width: 50px;
+}
+
+.detail-cost-cell {
+    color: var(--muted);
+    font-size: 11px;
+    min-width: 80px;
+}
+
+.detail-effect-cell {
+    line-height: 1.4;
+}
+
+/* --- Mechanics List --- */
+.detail-mech-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detail-mech-item {
+    display: flex;
+    gap: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 4px 0;
+}
+
+.detail-mech-bullet {
+    color: #4f6ef7;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+/* --- Aura Info --- */
+.detail-aura-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: rgba(139, 92, 246, .08);
+    border: 1px solid rgba(139, 92, 246, .2);
+    border-radius: 8px;
+}
+
+.detail-aura-name {
+    font-size: 13px;
+    font-weight: 800;
+    color: #7c3aed;
+}
+
+.detail-aura-grade {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(139, 92, 246, .15);
+    color: #7c3aed;
+}
+
+/* --- Empty State --- */
+.detail-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+/* ===== DETAIL MODAL DARK MODE ===== */
+html.dark .detail-modal-content {
+    background: var(--paper);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .8);
+}
+
+html.dark .detail-modal-close {
+    background: var(--chip) !important;
+    border-color: var(--line) !important;
+    color: var(--muted) !important;
+}
+
+html.dark .detail-modal-close:hover {
+    background: rgba(220, 38, 38, .15) !important;
+    color: #f87171 !important;
+    border-color: rgba(220, 38, 38, .3) !important;
+}
+
+html.dark .detail-img-wrapper {
+    background: #1e2235;
+}
+
+html.dark .detail-field {
+    background: rgba(255,255,255,.03);
+    border-color: var(--line);
+}
+
+html.dark .detail-quote {
+    background: rgba(139, 92, 246, .08);
+    border-left-color: #8b5cf6;
+}
+
+html.dark .detail-tag {
+    background: rgba(255,255,255,.05);
+    border-color: var(--line);
+}
+
+html.dark .detail-pec-item {
+    background: rgba(255,255,255,.03);
+    border-color: var(--line);
+}
+
+html.dark .detail-pec-item.positivo {
+    border-left-color: #2ecc71;
+}
+
+html.dark .detail-pec-item.negativo {
+    border-left-color: #e74c3c;
+}
+
+html.dark .detail-progression-table {
+    border-color: var(--line);
+}
+
+html.dark .detail-progression-table th {
+    background: rgba(255,255,255,.03);
+    border-bottom-color: var(--line);
+}
+
+html.dark .detail-progression-table td {
+    border-bottom-color: var(--line);
+}
+
+html.dark .detail-progression-table tr.current-level {
+    background: rgba(79, 110, 247, .12);
+}
+
+html.dark .detail-level-badge.positivo {
+    background: rgba(46, 204, 113, .15);
+    color: #2ecc71;
+    border-color: rgba(46, 204, 113, .3);
+}
+
+html.dark .detail-level-badge.negativo {
+    background: rgba(231, 76, 60, .15);
+    color: #e74c3c;
+    border-color: rgba(231, 76, 60, .3);
+}
+
+html.dark .detail-aura-info {
+    background: rgba(139, 92, 246, .1);
+    border-color: rgba(139, 92, 246, .25);
+}
+
+html.dark .detail-aura-name {
+    color: #a78bfa;
+}
+
+html.dark .detail-aura-grade {
+    background: rgba(139, 92, 246, .2);
+    color: #a78bfa;
+}
+
+/* ===== DETAIL MODAL RESPONSIVE ===== */
+@media (max-width: 600px) {
+    .detail-modal-content {
+        width: 98%;
+        max-height: 92vh;
+        border-radius: 12px;
+    }
+
+    .detail-modal-body {
+        padding: 16px;
+    }
+
+    .detail-img-wrapper {
+        margin: -16px -16px 14px -16px;
+        max-height: 180px;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .detail-img {
+        height: 180px;
+    }
+
+    .detail-title {
+        font-size: 17px;
+    }
+
+    .detail-fields-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .detail-progression-table {
+        font-size: 11px;
+    }
+
+    .detail-progression-table th,
+    .detail-progression-table td {
+        padding: 6px 8px;
+    }
 }

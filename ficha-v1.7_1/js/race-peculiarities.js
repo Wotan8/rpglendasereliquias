@@ -137,6 +137,9 @@ function onRaceChange() {
     if (typeof initAttributeTooltips === 'function') initAttributeTooltips();
 
     scheduleAutosave();
+
+    /* Bloquear selects se necessário */
+    if (typeof lockSelectsIfNeeded === 'function') lockSelectsIfNeeded();
 }
 
 function updateDaereoVisibility(racaNome) {
@@ -510,6 +513,16 @@ function renderPeculiaridadeCompact(pec, raceKey, container) {
         }
         refreshPecDots(dotsDiv, dotKey, pec.nivelAtual);
     }
+
+    // Click na pill abre modal de detalhes (exceto se clicar em dots de evolução)
+    pill.addEventListener('click', (e) => {
+        if (e.target.closest('.pec-dots-inline')) return;
+        if (e.target.closest('.distribuir-ui')) return;
+        if (typeof openDetailModal === 'function') {
+            openDetailModal('peculiaridade', pec.key, raceKey);
+        }
+    });
+    pill.style.cursor = 'pointer';
 
     container.appendChild(pill);
 
