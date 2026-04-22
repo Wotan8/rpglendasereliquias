@@ -6,7 +6,8 @@ window._dataReady = false;
 let state = {
     dots: {}, notes: [], charImg: '', specs: [], customTests: [], mainTestsOrder: [],
     mechanicBonuses: {}, mechanicLimits: {}, mecanicasAplicadas: {},
-    mecanicasPendentes: [], capacidades: [], auras: {}, classModuleData: {}
+    mecanicasPendentes: [], capacidades: [], auras: {}, classModuleData: {},
+    expApplied: {}, expSessionTriggers: []
 };
 let editingNoteId = null, testCount = 3, specCount = 0;
 

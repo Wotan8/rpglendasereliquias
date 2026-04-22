@@ -101,6 +101,9 @@ const TARGET_MAP = {
     "Dano": "INFO:dano",
     "Dano Crítico": "INFO:dano_critico",
     "Ações por turno": "INFO:acoes_turno",
+
+    // === EXPERIÊNCIA ===
+    "EXP": "EXP_MODIFIER",
 };
 
 /**
@@ -775,6 +778,11 @@ function applyMechanicToSheet(mech, parentPec) {
             : [{ alvo: config.alvo, operacao: config.operacao, valor: config.valor, valorTipo: 'fixo' }];
 
         for (const calc of calculos) {
+            // === EXP MODIFIER: special handling ===
+            if (calc.alvo === 'EXP') {
+                _handleExpCalc(calc, mech, parentPec);
+                continue;
+            }
             const alvos = Array.isArray(calc.alvo) ? calc.alvo : [calc.alvo];
             for (const alvo of alvos) {
                 if (!alvo) continue;
@@ -895,6 +903,21 @@ function generatePreviewText(mech) {
     if (tipo === 'modificar') {
         if (Array.isArray(config.calculos) && config.calculos.length > 0) {
             return config.calculos.map(c => {
+                // EXP: use standard equation format
+                if (c.alvo === 'EXP') {
+                    const op = c.operacao || '+';
+                    let val;
+                    if (Array.isArray(c.equacao) && c.equacao.length > 0) {
+                        val = _formatEquationPreview(c.equacao);
+                    } else {
+                        val = c.valor ?? '?';
+                    }
+                    const qualLabels = { exp_total: 'EXP Total', exp_restante: 'EXP Restante', ambos: 'EXP Total + Restante' };
+                    const quandoLabels = { na_criacao: 'Na Criação', por_sessao: 'Por Sessão', por_descanso_longo: 'Por Descanso Longo', por_descanso_curto: 'Por Descanso Curto', por_arco: 'Por Arco', por_masmorra: 'Por Masmorra', ao_ativar: 'Ao Ativar', ao_desativar: 'Ao Desativar', condicional: 'Condicional', permanente: 'Permanente', por_uso_recurso: 'Por Uso de Recurso', por_morte: 'Por Morte/Ressurreição' };
+                    const quandoLabel = quandoLabels[mech.quandoAplica] || '';
+                    const triggerSuffix = quandoLabel ? ` — ${quandoLabel}` : '';
+                    return `${op}${val} em ${qualLabels[c.qualExp] || 'EXP'}${triggerSuffix}`;
+                }
                 const op = c.operacao || '+';
                 let val;
                 if (Array.isArray(c.equacao) && c.equacao.length > 0) {
@@ -1429,3 +1452,217 @@ function getAffectingMechanics(propertyName, opts) {
 
     return results;
 }
+
+/* ===== EXP MODIFIER SYSTEM ===== */
+
+/**
+ * Handles a single EXP calc from a 'modificar' mechanic.
+ * Decides whether to apply immediately or register as a pending trigger.
+ * Uses resolveCalcValue() for formula-based EXP values.
+ * quandoAplica is stored at mech level (Duração section), not per-calc.
+ */
+function _handleExpCalc(calc, mech, parentPec) {
+    const quando = mech.quandoAplica || 'permanente';
+    const valor = resolveCalcValue(calc);
+    const qualExp = calc.qualExp || 'ambos';
+    const op = calc.operacao || '+';
+    const fonte = parentPec?.nome || mech.nome || 'Mecânica';
+
+    // Apply operation to get final value
+    let finalValor = valor;
+    if (op === '-') finalValor = -Math.abs(valor);
+    // For +, ×, ÷, = — use valor as-is (+ is the most common for EXP)
+
+    // "Na Criação" — read-only metadata; never auto-apply after creation
+    if (quando === 'na_criacao') {
+        return;
+    }
+
+    // "Permanente (Passivo)" — apply once during mechanic resolution (idempotent via tracking)
+    if (quando === 'permanente') {
+        const trackKey = `exp_perm_${mech.id}_${calc.qualExp}`;
+        if (state.expApplied && state.expApplied[trackKey]) return;
+        if (!state.expApplied) state.expApplied = {};
+        const success = applyExpModification(finalValor, qualExp, fonte, 'permanente');
+        if (success) {
+            state.expApplied[trackKey] = true;
+        }
+        return;
+    }
+
+    // "Ao Ativar" — apply when the mechanic source is activated
+    if (quando === 'ao_ativar') {
+        const trackKey = `exp_ativar_${mech.id}_${calc.qualExp}`;
+        if (state.expApplied && state.expApplied[trackKey]) return;
+        if (!state.expApplied) state.expApplied = {};
+        const success = applyExpModification(finalValor, qualExp, fonte, 'ao_ativar');
+        if (success) {
+            state.expApplied[trackKey] = true;
+        }
+        return;
+    }
+
+    // "Por Sessão" — register as a session trigger (applied when session count increments)
+    if (quando === 'por_sessao') {
+        if (!state.expSessionTriggers) state.expSessionTriggers = [];
+        const exists = state.expSessionTriggers.find(t => t.mechId === mech.id && t.qualExp === qualExp);
+        if (!exists) {
+            state.expSessionTriggers.push({
+                mechId: mech.id,
+                calc: calc,  // Store full calc for re-resolution at trigger time
+                qualExp: qualExp,
+                fonte: fonte,
+                op: op
+            });
+        }
+        return;
+    }
+
+    // "Condicional" — just registered; application is manual / narrator-driven
+    if (quando === 'condicional') {
+        return;
+    }
+
+    // All other triggers — NOT YET implemented. Silently ignore.
+}
+
+/**
+ * Applies an EXP modification directly to the character sheet.
+ * @param {number} valor - Amount to add (positive) or subtract (negative)
+ * @param {string} qualExp - 'exp_total', 'exp_restante', or 'ambos'
+ * @param {string} fonte - Source name for reference
+ * @param {string} gatilho - Trigger type for reference
+ * @returns {boolean} - True if applied successfully
+ */
+function applyExpModification(valor, qualExp, fonte, gatilho) {
+    const expEl = document.querySelector('[data-key="exp"]');
+    const expTotalEl = document.querySelector('[data-key="exp_total"]');
+    if (!expEl || !expTotalEl) return false;
+
+    const currentRestante = parseInt(expEl.value || '0', 10) || 0;
+    const currentTotal = parseInt(expTotalEl.value || '0', 10) || 0;
+
+    if (qualExp === 'exp_restante') {
+        let newRestante = currentRestante + valor;
+        if (newRestante < 0) newRestante = 0; // Floor at 0
+        expEl.value = newRestante;
+        // If adding to Restante, also add to Total (per spec)
+        if (valor > 0) {
+            expTotalEl.value = currentTotal + valor;
+        }
+    } else if (qualExp === 'exp_total') {
+        let newTotal = currentTotal + valor;
+        if (newTotal < 0) newTotal = 0; // Floor at 0
+        expTotalEl.value = newTotal;
+        // Does NOT affect Restante
+    } else if (qualExp === 'ambos') {
+        let newRestante = currentRestante + valor;
+        if (newRestante < 0) newRestante = 0;
+        expEl.value = newRestante;
+        let newTotal = currentTotal + valor;
+        if (newTotal < 0) newTotal = 0;
+        expTotalEl.value = newTotal;
+    }
+
+    console.log(`⭐ EXP Modificado: ${valor > 0 ? '+' : ''}${valor} ${qualExp} — Fonte: ${fonte} — Gatilho: ${gatilho}`);
+    if (typeof scheduleAutosave === 'function') scheduleAutosave();
+    return true;
+}
+
+/**
+ * Collects all EXP mechanics from all active sources (race, class, tribe, peculiarities).
+ * Returns an array of { calc, mech, parentPec } objects.
+ */
+function collectAllExpMechanics() {
+    const results = [];
+    const mechanics = window._systemData?.mechanics || [];
+
+    function _processMechanics(mechIds, source) {
+        if (!Array.isArray(mechIds)) return;
+        for (const mid of mechIds) {
+            const id = typeof mid === 'object' ? mid.id : mid;
+            const mech = mechanics.find(m => m.id === id);
+            if (!mech || mech.tipo !== 'modificar') continue;
+            const config = mech.config || {};
+            const calculos = Array.isArray(config.calculos) ? config.calculos : [];
+            for (const calc of calculos) {
+                if (calc.alvo === 'EXP') {
+                    results.push({ calc, mech, fonte: source });
+                }
+            }
+        }
+    }
+
+    // From race peculiarities
+    const raca = document.getElementById('selRaca')?.value;
+    if (raca && window.RACES && window.RACES[raca]) {
+        for (const pec of window.RACES[raca].peculiaridades || []) {
+            _processMechanics(pec.mecanicaIds || pec.mecanicas?.map(m => m.id) || [], pec.nome);
+        }
+    }
+
+    // From class peculiarities
+    const classe = document.getElementById('selClasse')?.value;
+    if (classe && window.CLASS_PECULIARITIES && window.CLASS_PECULIARITIES[classe]) {
+        for (const pec of window.CLASS_PECULIARITIES[classe]) {
+            _processMechanics(pec.mecanicaIds || pec.mecanicas?.map(m => m.id) || [], pec.nome);
+        }
+    }
+
+    // From tribe peculiarities
+    const tribo = document.getElementById('selTribo')?.value;
+    if (tribo && window.TRIBES && window.TRIBES[tribo]) {
+        for (const pec of window.TRIBES[tribo].peculiaridades || []) {
+            _processMechanics(pec.mecanicaIds || pec.mecanicas?.map(m => m.id) || [], pec.nome);
+        }
+    }
+
+    return results;
+}
+
+/* ===== SESSION INCREMENT LISTENER ===== */
+
+/**
+ * Detects when the "sessoes" field increments and triggers all 'por_sessao' EXP mechanics.
+ */
+(function initSessionExpListener() {
+    let _lastSessionValue = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            const sessoesEl = document.querySelector('[data-key="sessoes"]');
+            if (!sessoesEl) return;
+
+            // Capture initial value
+            _lastSessionValue = parseInt(sessoesEl.value || '0', 10) || 0;
+
+            sessoesEl.addEventListener('change', function () {
+                const newVal = parseInt(this.value || '0', 10) || 0;
+                const oldVal = _lastSessionValue;
+                _lastSessionValue = newVal;
+
+                // Only trigger if session count increased
+                if (newVal > oldVal) {
+                    const increment = newVal - oldVal;
+                    console.log(`📅 Sessões incrementadas: ${oldVal} → ${newVal} (+${increment})`);
+                    _applySessionExpTriggers(increment);
+                }
+            });
+        }, 2000); // Wait for data to load
+    });
+
+    function _applySessionExpTriggers(increment) {
+        const triggers = state.expSessionTriggers || [];
+        if (triggers.length === 0) return;
+
+        for (const trigger of triggers) {
+            // Re-resolve value at trigger time (formula may reference changing stats)
+            let valor = trigger.calc ? resolveCalcValue(trigger.calc) : (trigger.valor || 0);
+            if (trigger.op === '-') valor = -Math.abs(valor);
+            // Apply once per session increment
+            for (let i = 0; i < increment; i++) {
+                applyExpModification(valor, trigger.qualExp, trigger.fonte, 'por_sessao');
+            }
+        }
+    }
+})();

@@ -2269,4 +2269,38 @@ html.dark .calc-row:hover {
 
 .ct-mech-chip {
     min-height: 32px;
+}
+
+/* ===== EXP CONFIG (mechanic type Modificar → EXP) ===== */
+.calc-exp-qual-wrap {
+    border-left: 3px solid #facc15;
+    padding: 6px 0 6px 12px;
+    margin: 6px 0;
+}
+
+#mech_duracao_exp_wrap {
+    border: 2px solid rgba(250, 204, 21, .25);
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: rgba(250, 204, 21, .04);
+}
+
+#mech_expCondicaoWrap,
+#mech_expRecursoWrap {
+    margin-top: 8px;
+    animation: expFieldReveal .25s ease;
+}
+
+#mech_expCondicaoWrap textarea {
+    min-height: 60px;
+}
+
+@keyframes expFieldReveal {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+html.dark #mech_duracao_exp_wrap {
+    background: rgba(250, 204, 21, .06);
+    border-color: rgba(250, 204, 21, .3);
 }

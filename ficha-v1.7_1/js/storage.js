@@ -16,7 +16,7 @@ function scheduleAutosave() {
 document.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.key) scheduleAutosave(); });
 
 function gatherData() {
-    const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, specs: [], locacoes: [], rituais: [], ritos: [], mecanicasAplicadas: state.mecanicasAplicadas || {}, fieldBaseValues: state.fieldBaseValues || {}, appliedFieldBonuses: state.appliedFieldBonuses || {}, derivedOverrides: state.derivedOverrides || {}, auras: state.auras || {} };
+    const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, specs: [], locacoes: [], rituais: [], ritos: [], mecanicasAplicadas: state.mecanicasAplicadas || {}, fieldBaseValues: state.fieldBaseValues || {}, appliedFieldBonuses: state.appliedFieldBonuses || {}, derivedOverrides: state.derivedOverrides || {}, auras: state.auras || {}, expApplied: state.expApplied || {} };
     document.querySelectorAll('[data-key]').forEach(el => {
         // Salvar o valor do DOM como está (incluindo edições manuais do usuário).
         // O sistema de appliedFieldBonuses garante que o bônus não será re-aplicado no reload.
@@ -214,6 +214,8 @@ function loadFromData(d) {
         else state.auras = {};
         if (d.classModuleData) state.classModuleData = d.classModuleData;
         else state.classModuleData = {};
+        if (d.expApplied) state.expApplied = d.expApplied;
+        else state.expApplied = {};
 
         onClassChange();
         onRaceChange();

@@ -86,6 +86,9 @@ function getMechanicTargetsHTML() {
 <option value="Alvo de Ataque">Alvo de Ataque</option><option value="Alvo de Defesa">Alvo de Defesa</option>
 <option value="Dano">Dano</option><option value="Dano Crítico">Dano Crítico</option>
 </optgroup>
+<optgroup label="Experiência">
+<option value="EXP">⭐ EXP</option>
+</optgroup>
 <optgroup label="Outros">
 <option value="Perícias (qualquer)">Perícias (qualquer)</option>
 <option value="Perícias Mentais (qualquer)">Perícias Mentais (qualquer)</option>
@@ -186,6 +189,18 @@ export function generatePreviewText(data) {
         // Support new multi-calc format
         if (Array.isArray(config.calculos) && config.calculos.length > 0) {
             text = config.calculos.map(c => {
+                // EXP: use standard equation format, target shows qualExp label
+                if (c.alvo === 'EXP') {
+                    const op = c.operacao || '+';
+                    const val = _formatCalcValue(c);
+                    const qualLabels = { exp_total: 'EXP Total', exp_restante: 'EXP Restante', ambos: 'EXP Total + Restante' };
+                    const qualLabel = qualLabels[c.qualExp] || 'EXP';
+                    // quandoAplica is at top-level data, not in calc
+                    const quandoLabels = { na_criacao: 'Na Criação', por_sessao: 'Por Sessão', por_descanso_longo: 'Por Descanso Longo', por_descanso_curto: 'Por Descanso Curto', por_arco: 'Por Arco', por_masmorra: 'Por Masmorra', ao_ativar: 'Ao Ativar', ao_desativar: 'Ao Desativar', condicional: 'Condicional', permanente: 'Permanente', por_uso_recurso: 'Por Uso de Recurso', por_morte: 'Por Morte/Ressurreição' };
+                    const quandoLabel = quandoLabels[data.quandoAplica] || '';
+                    const triggerSuffix = quandoLabel ? ` — ${quandoLabel}` : '';
+                    return `${op}${val} em ${qualLabel}${triggerSuffix}`;
+                }
                 const op = c.operacao || '+';
                 const val = _formatCalcValue(c);
                 return `${op}${val} em ${c.alvo || '?'}`;
@@ -433,8 +448,10 @@ function _renderEquationTerm(term, calcIndex, termIndex) {
 // ===== RENDER A SINGLE CALC ROW (Modificar) =====
 function _renderCalcRowModificar(calc, index) {
     const c = calc || { alvo: '', operacao: '+', equacao: [{ tipo: 'fixo', valor: '' }] };
+    const isEXP = c.alvo === 'EXP';
     const equacao = _migrateCalcToEquacao(c);
     const termsHtml = equacao.map((t, ti) => _renderEquationTerm(t, index, ti)).join('');
+    const qualExp = c.qualExp || 'ambos';
     return `
     <div class="calc-row" data-calc-index="${index}">
         <div class="calc-row-header">
@@ -443,10 +460,23 @@ function _renderCalcRowModificar(calc, index) {
         </div>
         <div class="form-grid">
             <div class="form-group full-width"><label>O que é afetado? <span class="required">*</span></label>
-                <select class="calc-alvo" onchange="window._mechUpdatePreview()">
+                <select class="calc-alvo" onchange="window._mechAlvoChange(${index}); window._mechUpdatePreview()">
                     <option value="">— Selecionar alvo —</option>${getMechanicTargetsHTML()}
                 </select>
             </div>
+        </div>
+        <div class="calc-exp-qual-wrap" style="display:${isEXP ? '' : 'none'}">
+            <div class="form-grid">
+                <div class="form-group"><label>⭐ Qual EXP é afetado? <span class="required">*</span></label>
+                    <select class="calc-qualExp" onchange="window._mechUpdatePreview()">
+                        <option value="ambos" ${qualExp === 'ambos' ? 'selected' : ''}>Ambos (Total + Restante)</option>
+                        <option value="exp_total" ${qualExp === 'exp_total' ? 'selected' : ''}>EXP Total</option>
+                        <option value="exp_restante" ${qualExp === 'exp_restante' ? 'selected' : ''}>EXP Restante</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="form-grid">
             <div class="form-group"><label>Operação <span class="required">*</span></label>
                 <select class="calc-operacao" onchange="window._mechUpdatePreview()">
                     <option value="+" ${c.operacao === '+' ? 'selected' : ''}>+ Somar</option>
@@ -790,6 +820,46 @@ window._mechPoolChange = function () {
     if (wrap) wrap.style.display = pool === 'Personalizado' ? '' : 'none';
 };
 
+// ===== EXP SUBFORM HANDLERS =====
+window._mechAlvoChange = function (calcIndex) {
+    const list = document.getElementById('mechCalcList');
+    if (!list) return;
+    const row = list.querySelectorAll('.calc-row')[calcIndex];
+    if (!row) return;
+    const alvo = row.querySelector('.calc-alvo')?.value || '';
+    const qualWrap = row.querySelector('.calc-exp-qual-wrap');
+    if (qualWrap) qualWrap.style.display = alvo === 'EXP' ? '' : 'none';
+    // Check if ANY calc row targets EXP to toggle Duração section
+    window._mechSyncDuracaoForExp();
+    window._mechRefreshProgressao();
+};
+
+// Checks all calc rows; if any targets EXP, swap Duração for EXP triggers
+window._mechSyncDuracaoForExp = function () {
+    const list = document.getElementById('mechCalcList');
+    const hasExp = list ? Array.from(list.querySelectorAll('.calc-alvo')).some(s => s.value === 'EXP') : false;
+    const stdDuracao = document.getElementById('mech_duracao_standard_wrap');
+    const expDuracao = document.getElementById('mech_duracao_exp_wrap');
+    if (stdDuracao) stdDuracao.style.display = hasExp ? 'none' : '';
+    if (expDuracao) expDuracao.style.display = hasExp ? '' : 'none';
+};
+
+window._mechDuracaoExpChange = function () {
+    const d = document.getElementById('mech_duracao_exp')?.value || '';
+    const condicaoWrap = document.getElementById('mech_expCondicaoWrap');
+    const recursoWrap = document.getElementById('mech_expRecursoWrap');
+    if (condicaoWrap) condicaoWrap.style.display = d === 'condicional' ? '' : 'none';
+    if (recursoWrap) recursoWrap.style.display = d === 'por_uso_recurso' ? '' : 'none';
+    window._mechUpdatePreview();
+};
+
+window._mechRecursoExpChange = function () {
+    const r = document.getElementById('mech_expRecurso')?.value || '';
+    const outroWrap = document.getElementById('mech_expRecursoOutroWrap');
+    if (outroWrap) outroWrap.style.display = r === 'outro' ? '' : 'none';
+    window._mechUpdatePreview();
+};
+
 // ===== INLINE MECH SELECTOR (for condicional sub-effects) =====
 function buildInlineMechSelector(id, label, currentIds, cache, excludeCondicional) {
     const filtered = excludeCondicional ? cache.filter(m => m.tipo !== 'condicional' && m.publicado) : cache.filter(m => m.publicado);
@@ -873,19 +943,62 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, 
             <div class="mech-form-section">
                 <div class="mech-section-label">🕐 Quando se Aplica</div>
                 <div class="form-grid">
-                    <div class="form-group"><label>Duração</label>
-                        <select id="mech_duracao" onchange="window._mechDuracaoChange(); window._mechUpdatePreview()">
-                            <option value="permanente" ${(data.duracao || 'permanente') === 'permanente' ? 'selected' : ''}>Permanente</option>
-                            <option value="cena" ${data.duracao === 'cena' ? 'selected' : ''}>1 Cena</option>
-                            <option value="turno" ${data.duracao === 'turno' ? 'selected' : ''}>X Turnos</option>
-                            <option value="ate_remover" ${data.duracao === 'ate_remover' ? 'selected' : ''}>Até ser removido</option>
-                            <option value="criacao" ${data.duracao === 'criacao' ? 'selected' : ''}>Na criação do personagem</option>
-                            <option value="especial" ${data.duracao === 'especial' ? 'selected' : ''}>Especial</option>
-                        </select></div>
-                    <div class="form-group" id="mech_turnosWrap" style="display:${data.duracao === 'turno' ? '' : 'none'}"><label>Quantos turnos?</label>
-                        <input type="number" id="mech_duracaoTurnos" value="${data.duracaoTurnos || ''}" min="1" oninput="window._mechUpdatePreview()"></div>
-                    <div class="form-group" id="mech_especWrap" style="display:${data.duracao === 'especial' ? '' : 'none'}"><label>Descrever duração</label>
-                        <input type="text" id="mech_duracaoEspecial" value="${esc(data.duracaoEspecial || '')}" oninput="window._mechUpdatePreview()"></div>
+                    <div id="mech_duracao_standard_wrap">
+                        <div class="form-group"><label>Duração</label>
+                            <select id="mech_duracao" onchange="window._mechDuracaoChange(); window._mechUpdatePreview()">
+                                <option value="permanente" ${(data.duracao || 'permanente') === 'permanente' ? 'selected' : ''}>Permanente</option>
+                                <option value="cena" ${data.duracao === 'cena' ? 'selected' : ''}>1 Cena</option>
+                                <option value="turno" ${data.duracao === 'turno' ? 'selected' : ''}>X Turnos</option>
+                                <option value="ate_remover" ${data.duracao === 'ate_remover' ? 'selected' : ''}>Até ser removido</option>
+                                <option value="criacao" ${data.duracao === 'criacao' ? 'selected' : ''}>Na criação do personagem</option>
+                                <option value="especial" ${data.duracao === 'especial' ? 'selected' : ''}>Especial</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="mech_turnosWrap" style="display:${data.duracao === 'turno' ? '' : 'none'}"><label>Quantos turnos?</label>
+                            <input type="number" id="mech_duracaoTurnos" value="${data.duracaoTurnos || ''}" min="1" oninput="window._mechUpdatePreview()"></div>
+                        <div class="form-group" id="mech_especWrap" style="display:${data.duracao === 'especial' ? '' : 'none'}"><label>Descrever duração</label>
+                            <input type="text" id="mech_duracaoEspecial" value="${esc(data.duracaoEspecial || '')}" oninput="window._mechUpdatePreview()"></div>
+                    </div>
+                    <div id="mech_duracao_exp_wrap" style="display:none">
+                        <div class="form-group"><label>⭐ Quando o EXP se Aplica? <span class="required">*</span></label>
+                            <select id="mech_duracao_exp" onchange="window._mechDuracaoExpChange()">
+                                <option value="na_criacao" ${data.quandoAplica === 'na_criacao' ? 'selected' : ''}>🏗️ Na Criação de Personagem</option>
+                                <option value="por_sessao" ${data.quandoAplica === 'por_sessao' ? 'selected' : ''}>📅 Por Sessão</option>
+                                <option value="por_descanso_longo" ${data.quandoAplica === 'por_descanso_longo' ? 'selected' : ''}>🛏️ Por Descanso Longo</option>
+                                <option value="por_descanso_curto" ${data.quandoAplica === 'por_descanso_curto' ? 'selected' : ''}>☕ Por Descanso Curto</option>
+                                <option value="por_arco" ${data.quandoAplica === 'por_arco' ? 'selected' : ''}>📖 Por Arco</option>
+                                <option value="por_masmorra" ${data.quandoAplica === 'por_masmorra' ? 'selected' : ''}>🏰 Por Masmorra</option>
+                                <option value="ao_ativar" ${data.quandoAplica === 'ao_ativar' ? 'selected' : ''}>⚡ Ao Ativar</option>
+                                <option value="ao_desativar" ${data.quandoAplica === 'ao_desativar' ? 'selected' : ''}>🔌 Ao Desativar</option>
+                                <option value="condicional" ${data.quandoAplica === 'condicional' ? 'selected' : ''}>🎯 Condicional</option>
+                                <option value="permanente" ${(!data.quandoAplica || data.quandoAplica === 'permanente') ? 'selected' : ''}>♾️ Permanente (Passivo)</option>
+                                <option value="por_uso_recurso" ${data.quandoAplica === 'por_uso_recurso' ? 'selected' : ''}>🔋 Por Uso de Recurso</option>
+                                <option value="por_morte" ${data.quandoAplica === 'por_morte' ? 'selected' : ''}>💀 Por Morte e Ressurreição</option>
+                            </select>
+                        </div>
+                        <div id="mech_expCondicaoWrap" style="display:${data.quandoAplica === 'condicional' ? '' : 'none'}">
+                            <div class="form-group full-width"><label>Condição <span class="required">*</span></label>
+                                <textarea id="mech_expCondicao" placeholder="Ex: Quando o personagem mata um inimigo com AI superior ao dele" oninput="window._mechUpdatePreview()">${esc(data.condicaoExp || '')}</textarea>
+                            </div>
+                        </div>
+                        <div id="mech_expRecursoWrap" style="display:${data.quandoAplica === 'por_uso_recurso' ? '' : 'none'}">
+                            <div class="form-grid">
+                                <div class="form-group"><label>Recurso <span class="required">*</span></label>
+                                    <select id="mech_expRecurso" onchange="window._mechRecursoExpChange()">
+                                        <option value="energia" ${(data.recursoExp || 'energia') === 'energia' ? 'selected' : ''}>⚡ Energia</option>
+                                        <option value="sanidade" ${data.recursoExp === 'sanidade' ? 'selected' : ''}>🧠 Sanidade</option>
+                                        <option value="graca" ${data.recursoExp === 'graca' ? 'selected' : ''}>✨ Graça</option>
+                                        <option value="vitalidade" ${data.recursoExp === 'vitalidade' ? 'selected' : ''}>❤️ Vitalidade</option>
+                                        <option value="outro" ${data.recursoExp === 'outro' ? 'selected' : ''}>📝 Outro</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" id="mech_expRecursoOutroWrap" style="display:${data.recursoExp === 'outro' ? '' : 'none'}">
+                                    <label>Qual recurso?</label>
+                                    <input type="text" id="mech_expRecursoOutro" value="${esc(data.recursoExpOutro || '')}" placeholder="Nome do recurso" oninput="window._mechUpdatePreview()">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="form-group"><label>Quem é afetado?</label>
                         <select id="mech_escopo" onchange="window._mechUpdatePreview()">
                             <option value="proprio" ${(data.escopo || 'proprio') === 'proprio' ? 'selected' : ''}>O próprio personagem</option>
@@ -990,6 +1103,18 @@ window._mechTipoChange = function () {
                 const c = calculos[i] || {};
                 const alvoSel = row.querySelector('.calc-alvo');
                 if (alvoSel && c.alvo) alvoSel.value = c.alvo;
+
+                // Toggle qualExp selector visibility
+                const isEXP = c.alvo === 'EXP';
+                const qualWrap = row.querySelector('.calc-exp-qual-wrap');
+                if (qualWrap) qualWrap.style.display = isEXP ? '' : 'none';
+
+                // Restore qualExp value
+                if (isEXP) {
+                    const qualExpSel = row.querySelector('.calc-qualExp');
+                    if (qualExpSel && c.qualExp) qualExpSel.value = c.qualExp;
+                }
+
                 // Restore equation term ficha refs
                 const equacao = c.equacao || _migrateCalcToEquacao(c);
                 const termEls = row.querySelectorAll('.eq-term');
@@ -1001,6 +1126,8 @@ window._mechTipoChange = function () {
                     }
                 });
             });
+            // Sync Duração section for EXP after calc rows are restored
+            window._mechSyncDuracaoForExp();
             // Refresh progression after equacao is set in DOM
             window._mechRefreshProgressao(tipo);
         }, 0);
@@ -1278,13 +1405,33 @@ function collectMechFormData() {
     if (tipo === 'modificar') {
         const calcRows = document.querySelectorAll('#mechCalcList .calc-row');
         const calculos = Array.from(calcRows).map(row => {
+            const alvo = row.querySelector('.calc-alvo')?.value || '';
+            if (alvo === 'EXP') {
+                // EXP uses standard operacao + equacao, just adds qualExp
+                return {
+                    alvo: 'EXP',
+                    qualExp: row.querySelector('.calc-qualExp')?.value || 'ambos',
+                    operacao: row.querySelector('.calc-operacao')?.value || '+',
+                    equacao: _collectEquacaoFromRow(row)
+                };
+            }
             return {
-                alvo: row.querySelector('.calc-alvo')?.value || '',
+                alvo,
                 operacao: row.querySelector('.calc-operacao')?.value || '+',
                 equacao: _collectEquacaoFromRow(row)
             };
         });
         data.config = { calculos };
+
+        // If any calc targets EXP, collect the EXP trigger info from Duração section
+        const hasExpCalc = calculos.some(c => c.alvo === 'EXP');
+        if (hasExpCalc) {
+            const recursoExp = document.getElementById('mech_expRecurso')?.value || 'energia';
+            data.quandoAplica = document.getElementById('mech_duracao_exp')?.value || 'permanente';
+            data.condicaoExp = document.getElementById('mech_expCondicao')?.value || '';
+            data.recursoExp = recursoExp;
+            data.recursoExpOutro = recursoExp === 'outro' ? (document.getElementById('mech_expRecursoOutro')?.value || '') : '';
+        }
     } else if (tipo === 'limitar') {
         const calcRows = document.querySelectorAll('#mechCalcList .calc-row');
         const calculos = Array.from(calcRows).map(row => {
