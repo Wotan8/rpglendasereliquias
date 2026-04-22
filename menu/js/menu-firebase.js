@@ -204,7 +204,7 @@ function renderCharacters() {
 
 // ===== CRIAR NOVO PERSONAGEM =====
 window.createNewCharacter = function () {
-    window.location.href = '../ficha-v1.7_1/ficha-v1.7_1.html';
+    window.location.href = '../criar-personagem/criacao.html';
 };
 
 // ===== SELECIONAR PERSONAGEM =====

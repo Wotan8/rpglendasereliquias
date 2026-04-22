@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Personagem — Lendas e Relíquias</title>
+    <meta name="description" content="Wizard interativo de criação de personagem para o RPG Lendas e Relíquias v1.7">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles_wizard.css">
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">⚔️ Preparando o ritual de criação...</div>
+    </div>
+
+    <!-- EXP Display -->
+    <div class="exp-display" id="expDisplay" style="display:none;">
+        <span class="exp-label">EXP</span>
+        <span class="exp-value" id="expValue">0</span>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar" style="display:none">
+        <button id="btnThemeToggle" onclick="toggleTheme()">🌙</button>
+        <button onclick="if(confirm('Voltar ao menu? Seu progresso será salvo.')) window.location.href='../menu/menu.html'"
+            style="font-size:11px;">🏠 Menu</button>
+        <div class="spacer"></div>
+        <span class="hint-toolbar">Lendas e Relíquias — Criação de Personagem</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:12px">
+            <span id="userDisplayName"
+                style="color:#94a3b8;font-size:.8rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+            <button onclick="logout()"
+                style="background:#ef4444;color:#fff;border:none;padding:4px 10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:.75rem">🚪</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="wrap" style="display:none">
+        <div class="sheet">
+
+            <!-- Mini Preview -->
+            <div class="mini-preview" id="miniPreview" style="display:none;margin-bottom:12px;"></div>
+
+            <!-- Progress Bar -->
+            <div class="wizard-progress" id="progressBar"></div>
+
+            <!-- Phase Containers -->
+            <div class="phase-container" id="phase0"></div>
+            <div class="phase-container" id="phase1"></div>
+            <div class="phase-container" id="phase2"></div>
+            <div class="phase-container" id="phase3"></div>
+            <div class="phase-container" id="phase4"></div>
+            <div class="phase-container" id="phase5"></div>
+            <div class="phase-container" id="phase6"></div>
+            <div class="phase-container" id="phase7"></div>
+            <div class="phase-container" id="phase8"></div>
+            <div class="phase-container" id="phase9"></div>
+            <div class="phase-container" id="phase10"></div>
+
+        </div>
+    </div>
+
+    <!-- Navigation Footer -->
+    <div class="wizard-footer" style="display:none">
+        <button class="btn" id="btnBack" onclick="goBack()" disabled>← Voltar</button>
+        <span class="wizard-footer-info" id="footerInfo"></span>
+        <button class="btn btn-primary" id="btnNext" onclick="goNext()">Avançar →</button>
+    </div>
+
+    <!-- Scripts (regular, not module) -->
+    <script src="js/data.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/wizard-engine.js"></script>
+    <script src="js/exp-tracker.js"></script>
+    <script src="js/memory-manager.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/system-data-loader.js"></script>
+    <script src="js/app.js"></script>
+
+    <!-- Phase Modules -->
+    <script src="js/race-module.js"></script>
+    <script src="js/tribe-module.js"></script>
+    <script src="js/peculiarities-module.js"></script>
+    <script src="js/attributes-module.js"></script>
+    <script src="js/skills-module.js"></script>
+    <script src="js/soul-module.js"></script>
+    <script src="js/npcs-module.js"></script>
+    <script src="js/equipment-module.js"></script>
+    <script src="js/finale-module.js"></script>
+
+    <!-- Firebase Module (ESM) -->
+    <script type="module" src="js/firebase.js"></script>
+
+</body>
+</html>
