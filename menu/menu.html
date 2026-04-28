@@ -58,11 +58,17 @@
             <!-- ======== ABA PERSONAGENS ======== -->
             <div class="tab-content active" id="tab-personagens">
 
-                <!-- Card Criar Personagem -->
-                <div class="create-card" onclick="createNewCharacter()">
-                    <div class="icon">➕</div>
-                    <div class="title">Criar Novo Personagem</div>
-                    <div class="desc">Comece uma nova aventura!</div>
+                <!-- Cards Criar Personagem -->
+                <div class="create-card-row">
+                    <div class="create-card create-card-main" onclick="createNewCharacter()">
+                        <div class="icon">➕</div>
+                        <div class="title">Criar Novo Personagem</div>
+                        <div class="desc">Comece uma nova aventura!</div>
+                    </div>
+                    <div class="create-card create-card-blank" onclick="createBlankCharacter()">
+                        <div class="icon">📄</div>
+                        <div class="title">Nova Ficha em Branco</div>
+                    </div>
                 </div>
 
                 <!-- Grid de Personagens -->

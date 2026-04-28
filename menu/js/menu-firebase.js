@@ -14,6 +14,7 @@ import {
     getDoc,
     deleteDoc,
     updateDoc,
+    addDoc,
     doc
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
@@ -205,6 +206,37 @@ function renderCharacters() {
 // ===== CRIAR NOVO PERSONAGEM =====
 window.createNewCharacter = function () {
     window.location.href = '../criar-personagem/criacao.html';
+};
+
+// ===== CRIAR FICHA EM BRANCO =====
+window.createBlankCharacter = async function () {
+    if (!currentUser) {
+        showAlert('❌ Você precisa estar logado para criar uma ficha.', 'danger');
+        return;
+    }
+
+    try {
+        showAlert('📄 Criando ficha em branco...', 'success');
+
+        const blankChar = {
+            ownerUid: currentUser.uid,
+            userEmail: currentUser.email,
+            fields: {},
+            dots: {},
+            notes: '',
+            createdAt: new Date().toISOString(),
+            lastUpdate: new Date().toISOString()
+        };
+
+        const docRef = await addDoc(collection(db, 'char'), blankChar);
+        console.log('✅ Ficha em branco criada:', docRef.id);
+
+        // Redirecionar diretamente para a ficha v1.7
+        window.location.href = `../ficha-v1.7_1/ficha-v1.7_1.html?id=${docRef.id}`;
+    } catch (error) {
+        console.error('❌ Erro ao criar ficha em branco:', error);
+        showAlert('❌ Erro ao criar ficha: ' + error.message, 'danger');
+    }
 };
 
 // ===== SELECIONAR PERSONAGEM =====

@@ -76,10 +76,20 @@ html.dark .info-item {
 
 html.dark .create-card {
     border-color: var(--line);
-    background: rgba(79, 110, 247, .08)
+    background: rgba(16, 185, 129, .06)
 }
 
 html.dark .create-card:hover {
+    border-color: var(--success);
+    background: rgba(16, 185, 129, .14)
+}
+
+html.dark .create-card-blank {
+    background: rgba(79, 110, 247, .08);
+    border-color: var(--line)
+}
+
+html.dark .create-card-blank:hover {
     border-color: var(--primary);
     background: rgba(79, 110, 247, .15)
 }
@@ -334,7 +344,13 @@ body {
     font-weight: 500;
 }
 
-/* ===== CREATE CARD ===== */
+/* ===== CREATE CARD ROW ===== */
+.create-card-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
 .create-card {
     border: 3px dashed var(--soft);
     border-radius: var(--radius);
@@ -342,15 +358,51 @@ body {
     text-align: center;
     cursor: pointer;
     transition: all .2s;
-    margin-bottom: 14px;
-    background: rgba(79, 110, 247, .03);
+    background: rgba(16, 185, 129, .03);
+}
+
+.create-card-main {
+    flex: 19 1 0;
+    min-width: 0;
+}
+
+.create-card-blank {
+    flex: 1 1 0;
+    min-width: 60px;
+    max-width: 90px;
+    padding: 0.6rem 0.3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border-color: var(--line);
+    background: rgba(79, 110, 247, .04);
+}
+
+.create-card-blank .icon {
+    font-size: 1.6rem !important;
+    margin-bottom: 2px !important;
+}
+
+.create-card-blank .title {
+    font-size: .62rem !important;
+    line-height: 1.2;
+    color: var(--primary) !important;
+}
+
+.create-card-blank:hover {
+    border-color: var(--primary);
+    background: rgba(79, 110, 247, .1);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(79, 110, 247, .15);
 }
 
 .create-card:hover {
-    border-color: var(--primary);
-    background: rgba(79, 110, 247, .07);
+    border-color: var(--success);
+    background: rgba(16, 185, 129, .07);
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(79, 110, 247, .12);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, .12);
 }
 
 .create-card .icon {
@@ -363,7 +415,7 @@ body {
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: .3px;
-    color: var(--primary);
+    color: var(--success);
     margin-bottom: 4px;
 }
 
