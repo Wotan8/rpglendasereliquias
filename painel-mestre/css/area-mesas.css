@@ -1,0 +1,334 @@
+/* =============================================
+   ÁREA — MESAS (Campanha-focused hub)
+   ============================================= */
+
+/* ===== MESA CARD ===== */
+.mesa-card {
+    background: rgba(15, 23, 42, 0.6);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.mesa-card:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.mesa-card.active {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.mesa-card-name {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--light);
+    margin-bottom: 6px;
+}
+
+.mesa-card-desc {
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+/* ===== PLAYER LIST ===== */
+.player-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+.player-card {
+    background: rgba(15, 23, 42, 0.6);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: all 0.3s;
+}
+
+.player-card:hover {
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+.player-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--primary-glow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+.player-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.player-name {
+    font-weight: 700;
+    color: var(--light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.player-email {
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+
+/* ===== SESSÃO LOG ===== */
+.sessao-card {
+    background: rgba(15, 23, 42, 0.6);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 10px;
+}
+
+.sessao-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.sessao-titulo {
+    font-weight: 800;
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.sessao-data {
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+
+.sessao-resumo {
+    font-size: 0.88rem;
+    color: var(--ink);
+    line-height: 1.6;
+}
+
+/* ===== COMBAT SYSTEM ===== */
+.combat-participant {
+    background: rgba(15, 23, 42, 0.6);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 10px;
+    transition: all 0.3s;
+}
+
+.combat-participant:hover {
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+.combat-participant-npc:hover {
+    border-color: rgba(245, 158, 11, 0.4);
+    cursor: pointer;
+}
+
+.combat-participant-custom {
+    border-left: 4px solid var(--danger);
+}
+
+.combat-initiative {
+    width: 60px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.combat-initiative-value {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: var(--primary);
+    line-height: 1;
+}
+
+.combat-initiative-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.combat-name {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--light);
+}
+
+.combat-type {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    background: rgba(139, 92, 246, 0.2);
+    color: var(--primary);
+    margin-left: 8px;
+}
+
+.combat-details {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-top: 4px;
+}
+
+.combat-stats {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.combat-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 120px;
+}
+
+.combat-stat-npc {
+    min-width: 150px;
+}
+
+.combat-stat-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.combat-stat-bar {
+    flex: 1;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.combat-stat-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.3s;
+}
+
+.combat-stat-value {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--light);
+    white-space: nowrap;
+    min-width: 50px;
+    text-align: right;
+}
+
+.combat-stat-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--muted);
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    font-family: var(--font);
+}
+
+.combat-stat-btn:hover {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.combat-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.combat-initiative-input {
+    width: 55px;
+    text-align: center;
+    padding: 8px;
+    border: 2px solid var(--line);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.8);
+    color: var(--light);
+    font-weight: 700;
+    font-size: 0.88rem;
+    font-family: var(--font);
+}
+
+.combat-abilities-container {
+    margin-top: 10px;
+    width: 100%;
+}
+
+.combat-abilities-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.combat-abilities-input {
+    width: 100%;
+    min-height: 60px;
+    padding: 8px;
+    border: 2px solid var(--line);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.8);
+    color: var(--light);
+    font-size: 0.82rem;
+    font-family: var(--font);
+    resize: vertical;
+}
+
+.no-combat {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--muted);
+    font-size: 1rem;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .combat-participant {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .combat-actions {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .combat-stats {
+        flex-direction: column;
+    }
+}

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0b0c10">
+    <title>Lendas e Relíquias — Painel do Mestre</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/tabs.css">
+    <link rel="stylesheet" href="css/modais.css">
+    <link rel="stylesheet" href="css/area-mesas.css">
+    <link rel="stylesheet" href="css/area-npcs.css">
+    <link rel="stylesheet" href="css/area-economica.css">
+    <link rel="stylesheet" href="css/area-apoio.css">
+    <link rel="stylesheet" href="css/area-historico.css">
+</head>
+<body>
+    <!-- LOADING -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Carregando Painel do Mestre...</div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar" style="display:none">
+        <button onclick="goToMenu()">🏠 Menu</button>
+        <button onclick="goToWorldbuilding()">🌍 Worldbuilding</button>
+        <button onclick="goToHexmap()">🗺️ Hexmap</button>
+        <div class="spacer"></div>
+        <div class="user-info">
+            <span class="user-name" id="userDisplayName"></span>
+            <button onclick="logout()">🚪 Sair</button>
+        </div>
+    </div>
+
+    <!-- MAIN WRAP -->
+    <div class="wrap" style="display:none">
+        <div class="sheet">
+            <div class="menu-header">
+                <h1>⚔️ Painel do Mestre</h1>
+                <div class="subtitle">Lendas e Relíquias — Gestão de Campanha</div>
+            </div>
+
+            <!-- TABS -->
+            <div class="tabs">
+                <button class="tab-button active" data-tab="mesas" onclick="switchTab('mesas')">🎲 MESAS</button>
+                <button class="tab-button" data-tab="npcs" onclick="switchTab('npcs')">👥 NPCs</button>
+                <button class="tab-button" data-tab="economica" onclick="switchTab('economica')">💰 ECONÔMICA</button>
+                <button class="tab-button" data-tab="apoio" onclick="switchTab('apoio')">🤝 APOIO</button>
+                <button class="tab-button" data-tab="historico" onclick="switchTab('historico')">📜 HISTÓRICO</button>
+            </div>
+
+            <!-- TAB: MESAS -->
+            <div class="tab-content active" id="tab-mesas">
+                <div class="sub-tabs">
+                    <button class="sub-tab-btn active" data-subtab="personagens" onclick="switchSubTab('mesas','personagens')">👥 Personagens</button>
+                    <button class="sub-tab-btn" data-subtab="aliados" onclick="switchSubTab('mesas','aliados')">🤝 Aliados</button>
+                    <button class="sub-tab-btn" data-subtab="combate" onclick="switchSubTab('mesas','combate')">⚔️ Combate</button>
+                    <button class="sub-tab-btn" data-subtab="sessoes" onclick="switchSubTab('mesas','sessoes')">📝 Sessões</button>
+                    <button class="sub-tab-btn" data-subtab="producao" onclick="switchSubTab('mesas','producao')">🏭 Produção</button>
+                </div>
+                <div class="sub-tab-content active" id="subtab-personagens">
+                    <div class="exp-controls">
+                        <input type="number" class="form-input" id="expValue" placeholder="EXP" value="10" min="1" style="width:100px;text-align:center">
+                        <button class="btn btn-success btn-small" onclick="addCustomExpToSelected()">➕ EXP</button>
+                        <button class="btn btn-danger btn-small" onclick="subtractCustomExpFromSelected()">➖ EXP</button>
+                        <button class="btn btn-primary btn-small" onclick="openCreateCharacterModal()">➕ Criar</button>
+                        <button class="btn btn-danger btn-small" onclick="openDeleteCharactersModal()">🗑️ Deletar</button>
+                    </div>
+                    <div class="player-list" id="charactersGrid">
+                        <div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Carregando personagens...</div>
+                    </div>
+                </div>
+                <div class="sub-tab-content" id="subtab-aliados">
+                    <div class="npc-filters">
+                        <div class="form-group" style="flex:1"><input type="text" class="form-input" id="searchAllies" placeholder="Buscar aliado..." oninput="filterAllies()"></div>
+                    </div>
+                    <div class="npcs-grid" id="alliesList"><div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Carregando aliados...</div></div>
+                </div>
+                <div class="sub-tab-content" id="subtab-combate">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                        <button class="btn btn-primary btn-small" onclick="addCharacterToCombat()">➕ Personagem</button>
+                        <button class="btn btn-warning btn-small" onclick="addNpcToCombat()">➕ NPC</button>
+                        <button class="btn btn-secondary btn-small" onclick="addCustomToCombat()">➕ Custom</button>
+                        <button class="btn btn-success btn-small" onclick="sortCombatByInitiative()">🔄 Ordenar</button>
+                        <button class="btn btn-danger btn-small" onclick="clearCombat()">🗑️ Limpar</button>
+                    </div>
+                    <div id="combatList" class="combat-list"><div class="no-combat">Nenhum participante no combate</div></div>
+                </div>
+                <div class="sub-tab-content" id="subtab-sessoes">
+                    <div style="text-align:center;padding:50px;color:var(--muted)"><div style="font-size:2.5rem;margin-bottom:12px">📝</div>Registro de sessões — Em breve</div>
+                </div>
+                <div class="sub-tab-content" id="subtab-producao">
+                    <div style="margin-bottom:16px;display:flex;gap:8px">
+                        <button class="btn btn-success btn-small" onclick="adicionarItemProducao()">➕ Adicionar Item</button>
+                    </div>
+                    <table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:2px solid var(--line)"><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">☰</th><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">NOME</th><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">PROGRESSO</th><th style="padding:10px;text-align:center;color:var(--muted);font-size:.78rem">AÇÃO</th></tr></thead><tbody id="listaProducaoBody"></tbody></table>
+                </div>
+            </div>
+
+            <!-- TAB: NPCs -->
+            <div class="tab-content" id="tab-npcs">
+                <div class="npc-actions-bar">
+                    <button class="btn btn-success btn-small" onclick="openNpcModal()">➕ Novo NPC</button>
+                    <button class="btn btn-primary btn-small" onclick="selectAllFilteredNpcs()">☑️ Sel. Todos</button>
+                    <button class="btn btn-secondary btn-small" onclick="duplicateSelectedNpcs()">📋 Duplicar</button>
+                    <button class="btn btn-warning btn-small" onclick="exportSelectedNpcs()">📤 Exportar</button>
+                    <button class="btn btn-secondary btn-small" onclick="bulkImportNpcs()">📥 Importar</button>
+                    <button class="btn btn-danger btn-small" onclick="deleteSelectedNpcs()">🗑️ Deletar</button>
+                </div>
+                <div class="npc-filters">
+                    <div class="form-group"><label class="form-label">Buscar</label><input type="text" class="form-input" id="npcSearchInput" placeholder="Nome do NPC..." oninput="filterNpcs()"></div>
+                    <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="npcFilterType" onchange="filterNpcs()"><option value="">Todos</option><option value="npc">NPC</option><option value="criatura">Criatura</option></select></div>
+                    <div class="form-group"><label class="form-label">Tags</label><input type="text" class="form-input" id="npcFilterTags" placeholder="Tags..." oninput="filterNpcs()"></div>
+                </div>
+                <div class="npcs-grid" id="npcsList"><div class="no-npcs">Carregando NPCs...</div></div>
+            </div>
+
+            <!-- TAB: ECONÔMICA -->
+            <div class="tab-content" id="tab-economica">
+                <div class="sub-tabs">
+                    <button class="sub-tab-btn active" data-subtab="repertorio" onclick="switchSubTab('economica','repertorio')">🗃️ Repertório</button>
+                    <button class="sub-tab-btn" data-subtab="avulsos" onclick="switchSubTab('economica','avulsos')">📦 Recursos Avulsos</button>
+                    <button class="sub-tab-btn" data-subtab="criar" onclick="switchSubTab('economica','criar')">🛠️ Criar Recurso</button>
+                    <button class="sub-tab-btn" data-subtab="economia" onclick="switchSubTab('economica','economia')">💹 Motor Econômico</button>
+                </div>
+                <div class="sub-tab-content active" id="subtab-repertorio">
+                    <div style="text-align:center;padding:50px;color:var(--muted)"><div style="font-size:2.5rem;margin-bottom:12px">🗃️</div>Selecione um personagem para ver seu Repertório</div>
+                </div>
+                <div class="sub-tab-content" id="subtab-avulsos">
+                    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+                        <button class="btn btn-success btn-small" onclick="openAddAvulsoItemModal()">➕ Novo Recurso</button>
+                    </div>
+                    <div class="avulsos-filters">
+                        <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="avulsosFilterTipo" onchange="applyAvulsosFilters()"><option value="">Todos</option><option value="Arma">Arma</option><option value="Vestimenta">Vestimenta</option><option value="Projétil">Projétil</option><option value="Objeto">Objeto</option><option value="Container">Container</option><option value="Lunis">Lunis</option></select></div>
+                        <div class="form-group"><label class="form-label">Categoria</label><select class="form-select" id="avulsosFilterCategoria" onchange="applyAvulsosFilters()"><option value="">Todas</option><option value="comida">Comida</option><option value="equipamento">Equipamento</option><option value="armas">Armas</option><option value="armaduras">Armaduras</option><option value="magia">Magia</option><option value="materias">Matérias</option></select></div>
+                        <div class="form-group"><label class="form-label">Buscar</label><input type="text" class="form-input" id="avulsosFilterSearch" placeholder="Nome..." oninput="applyAvulsosFilters()"></div>
+                    </div>
+                    <div id="avulsosItemsCount" style="font-size:.78rem;color:var(--muted);margin-bottom:10px"></div>
+                    <div id="avulsosItemsContainer" style="display:none"><div id="avulsosItemsList"></div></div>
+                    <div id="avulsosItemsEmpty" style="text-align:center;padding:40px;color:var(--muted)">Nenhum recurso avulso encontrado</div>
+                    <div id="avulsoContainerViewer" class="container-viewer" style="display:none">
+                        <div class="container-viewer-header"><span class="container-viewer-title">📂 <span id="avulsoContainerName"></span></span><button class="btn btn-danger btn-small" onclick="closeAvulsoContainerViewer()">✕ Fechar</button></div>
+                        <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Tam. máx: <span id="containerMaxSize">5</span></div>
+                        <div id="containerItemsList"></div>
+                    </div>
+                </div>
+                <div class="sub-tab-content" id="subtab-criar">
+                    <div style="text-align:center;padding:20px;color:var(--muted);margin-bottom:16px">📥 Importar recursos via JSON</div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                        <button class="btn btn-secondary btn-small" onclick="downloadItemTemplate()">📄 Template</button>
+                        <label class="btn btn-primary btn-small" style="cursor:pointer">📁 Arquivo<input type="file" id="jsonFileInput" accept=".json" onchange="handleJsonFileUpload(event)" style="display:none"></label>
+                    </div>
+                    <div id="selectedFileName" style="font-size:.82rem;color:var(--muted);margin-bottom:10px">Nenhum arquivo selecionado</div>
+                    <textarea class="form-textarea" id="jsonTextInput" rows="8" placeholder="Cole o JSON aqui..." style="margin-bottom:14px"></textarea>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+                        <button class="btn btn-primary btn-small" onclick="previewJsonItems()">👁️ Pré-visualizar</button>
+                        <button class="btn btn-success btn-small" onclick="importJsonItemsToAvulso()">📥 Importar</button>
+                        <button class="btn btn-secondary btn-small" onclick="clearJsonInput()">🗑️ Limpar</button>
+                    </div>
+                    <div id="jsonPreviewArea" style="display:none">
+                        <div id="jsonPreviewCount" style="font-size:.82rem;color:var(--muted);margin-bottom:10px"></div>
+                        <div id="jsonPreviewList" style="display:grid;gap:10px"></div>
+                    </div>
+                </div>
+                <div class="sub-tab-content" id="subtab-economia">
+                    <div style="text-align:center;padding:50px;color:var(--muted)"><div style="font-size:2.5rem;margin-bottom:12px">💹</div>Motor Econômico — carregando...</div>
+                </div>
+            </div>
+
+            <!-- TAB: APOIO -->
+            <div class="tab-content" id="tab-apoio">
+                <div class="sub-tabs">
+                    <button class="sub-tab-btn active" data-subtab="apoios" onclick="switchSubTab('apoio','apoios')">🤝 Apoios</button>
+                    <button class="sub-tab-btn" data-subtab="metas" onclick="switchSubTab('apoio','metas')">🎯 Metas</button>
+                    <button class="sub-tab-btn" data-subtab="notificacoes" onclick="switchSubTab('apoio','notificacoes')">📢 Notificações</button>
+                </div>
+                <div class="sub-tab-content active" id="subtab-apoios">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                        <select class="form-select" id="apoioUserSelect" onchange="loadUserApoios()" style="flex:1;min-width:200px"><option value="">Selecione um jogador...</option></select>
+                        <button class="btn btn-success btn-small" onclick="openAddApoioModal()">➕ Novo Apoio</button>
+                    </div>
+                    <div class="apoio-filters">
+                        <div class="form-group"><label class="form-label">Status</label><select class="form-select" id="filtroStatus" onchange="aplicarFiltrosApoios()"><option value="todos">Todos</option><option value="nao-recebidos">Não Recebidos</option><option value="recebidos">Recebidos</option></select></div>
+                        <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="filtroTipo" onchange="aplicarFiltrosApoios()"><option value="todos">Todos</option></select></div>
+                        <div class="form-group"><label class="form-label">Data Início</label><input type="date" class="form-input" id="filtroDataInicio" onchange="aplicarFiltrosApoios()"></div>
+                        <div class="form-group"><label class="form-label">Data Fim</label><input type="date" class="form-input" id="filtroDataFim" onchange="aplicarFiltrosApoios()"></div>
+                        <button class="btn btn-secondary btn-small" onclick="limparFiltrosApoios()" style="align-self:flex-end">🗑️ Limpar</button>
+                    </div>
+                    <div id="apoiosList"><div style="text-align:center;padding:40px;color:var(--muted)">Selecione um jogador para ver apoios</div></div>
+                </div>
+                <div class="sub-tab-content" id="subtab-metas">
+                    <div id="metasContent"><div style="text-align:center;padding:50px;color:var(--muted)">Carregando metas...</div></div>
+                </div>
+                <div class="sub-tab-content" id="subtab-notificacoes">
+                    <button class="btn btn-primary" onclick="openSendNotificationModal()">📢 Enviar Notificação</button>
+                </div>
+            </div>
+
+            <!-- TAB: HISTÓRICO -->
+            <div class="tab-content" id="tab-historico">
+                <div class="log-filters">
+                    <div class="form-group"><label class="form-label">Buscar</label><input type="text" class="form-input" id="logSearchInput" placeholder="Buscar nos logs..." oninput="filterLogs()"></div>
+                    <div class="form-group"><label class="form-label">Seção</label><select class="form-select" id="logFilterSection" onchange="filterLogs()"><option value="">Todas</option><option value="characters">Personagens</option><option value="npcs">NPCs</option><option value="items">Itens</option><option value="notifications">Notificações</option></select></div>
+                </div>
+                <div id="logsList"><div class="no-logs">Carregando histórico...</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAIS GLOBAIS -->
+    <!-- NPC Modal -->
+    <div id="npcModal" class="modal"><div class="modal-content" style="max-width:900px"><div class="modal-header"><span class="modal-title" id="npcModalTitle">Novo NPC</span><button class="modal-close" onclick="closeNpcModal()">✕</button></div><div class="modal-body" id="npcModalBody"></div></div></div>
+
+    <!-- Send Notification Modal -->
+    <div id="sendNotificationModal" class="modal"><div class="modal-content" style="max-width:600px"><div class="modal-header"><span class="modal-title">📢 Enviar Notificação</span><button class="modal-close" onclick="closeSendNotificationModal()">✕</button></div><div class="modal-body">
+        <div class="form-group"><label class="form-label">Mensagem *</label><textarea class="form-textarea" id="notificationMessage" rows="4" placeholder="Digite a mensagem..."></textarea></div>
+        <div class="form-group"><label class="form-label">Destaque</label><div style="display:flex;gap:12px"><label style="cursor:pointer;display:flex;align-items:center;gap:6px"><input type="radio" name="notificationHighlight" value="normal" checked> Normal</label><label style="cursor:pointer;display:flex;align-items:center;gap:6px"><input type="radio" name="notificationHighlight" value="importante"> Importante</label><label style="cursor:pointer;display:flex;align-items:center;gap:6px"><input type="radio" name="notificationHighlight" value="urgente"> Urgente</label></div></div>
+        <div class="form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="selectAllPlayers" onchange="toggleAllPlayersSelection()" style="width:18px;height:18px"> <span class="form-label" style="margin:0">Selecionar Todos</span></label></div>
+        <div id="playerCheckboxList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;max-height:250px;overflow-y:auto"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px"><button class="btn btn-secondary" onclick="closeSendNotificationModal()">Cancelar</button><button class="btn btn-primary" onclick="sendMasterNotification()">📤 Enviar</button></div>
+    </div></div></div>
+
+    <!-- JSZip -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <!-- MAIN MODULE -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
