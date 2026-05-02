@@ -3,8 +3,9 @@
 const MemoryManager = {
     /** Fases que contam para o bônus de EXP (obrigatórias) */
     REQUIRED_PHASES: [
-        'convite', 'linhagem_raca', 'linhagem_classe',
-        'origens', 'peculiaridades', 'corpo', 'habilidades',
+        'linhagem_raca', 'linhagem_classe',
+        'origens', 'peculiaridades', 'corpo', 'corpo_adicional',
+        'habilidades', 'habilidades_fraco',
         'alma_virtude', 'alma_vicio', 'vespera'
     ],
 
@@ -63,18 +64,18 @@ const MemoryManager = {
         if (Object.keys(memorias).length === 0) return null;
 
         const PHASE_LABELS = {
-            convite: '📜 O Convite',
             linhagem_raca: '🧬 A Linhagem — Raça',
             linhagem_classe: '⚔️ A Linhagem — Classe',
             origens: '🏕️ As Origens',
-            origens_opcional: '🍖 O Sabor de Casa',
+            origens_adicional: '🍖 O Sabor de Casa',
             peculiaridades: '✨ Peculiaridades',
-            corpo: '💪 O Corpo e a Mente',
-            corpo_opcional: '🩹 A Cicatriz',
-            habilidades: '📚 As Habilidades',
-            alma_virtude: '💫 A Alma — Virtude',
-            alma_vicio: '🔥 A Alma — Vício',
-            alma_opcional: '💭 Sonho ou Pesadelo',
+            corpo: '💪 Memória dos pontos forte',
+            corpo_adicional: '💪 Memória dos pontos fraco',
+            habilidades: '📚 Memória das melhores habilidades',
+            habilidades_fraco: '📚 Memória das piores habilidades',
+            alma_virtude: '💫 Memória da Virtude',
+            alma_vicio: '🔥 Memória do Vicio',
+            alma_adicional: '💭 Sonho ou Pesadelo',
             lacos_promessa: '🤝 A Promessa',
             equipamento_objeto: '🎒 O Objeto Pessoal',
             vespera: '🌅 A Véspera da Partida'

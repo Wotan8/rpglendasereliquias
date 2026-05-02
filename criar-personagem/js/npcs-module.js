@@ -23,10 +23,11 @@ function initPhase6(container) {
     `;
 
     // Memória opcional
-    html += createMemoryBox('lacos_promessa', 'A Promessa — Existe uma promessa que fez a alguém antes de partir? O que prometeu?', true);
+    html += createMemoryBox('lacos_promessa', 'A Promessa — Você fez uma promessa a alguém? Se sim, qual foi? Você pretende cumpri-la? Se não fez, pode seguir em frente.', true);
 
     container.innerHTML = html;
     renderNpcList();
+    updateNpcExpDisplay();
 }
 
 function addNpc() {
@@ -34,15 +35,34 @@ function addNpc() {
         nome: '',
         relacao: '',
         memoria: '',
-        vinculo: ''
+        vinculo: '',
+        confirmado: false
     });
     renderNpcList();
-    updateNpcExp();
     saveWizardToStorage();
 }
 
 function removeNpc(index) {
     wizardState.npcs.splice(index, 1);
+    renderNpcList();
+    updateNpcExp();
+    saveWizardToStorage();
+}
+
+function isNpcComplete(npc) {
+    return npc.nome && npc.nome.trim() &&
+           npc.relacao && npc.relacao.trim() &&
+           npc.memoria && npc.memoria.trim() &&
+           npc.vinculo && npc.vinculo.trim();
+}
+
+function confirmNpc(index) {
+    const npc = wizardState.npcs[index];
+    if (!isNpcComplete(npc)) {
+        showWizardToast('Preencha todos os campos do NPC antes de criar.', 'error');
+        return;
+    }
+    npc.confirmado = true;
     renderNpcList();
     updateNpcExp();
     saveWizardToStorage();
@@ -59,18 +79,23 @@ function renderNpcList() {
 
     let html = '';
     wizardState.npcs.forEach((npc, idx) => {
+        const complete = isNpcComplete(npc);
+        const confirmed = npc.confirmado === true;
+
         html += `
-            <div class="npc-card">
+            <div class="npc-card" style="${confirmed ? 'border-color:var(--success);opacity:0.9;' : ''}">
                 <button class="npc-card-remove" onclick="removeNpc(${idx})" title="Remover NPC">🗑️</button>
+                ${confirmed ? '<div style="position:absolute;top:8px;left:12px;font-size:.75rem;font-weight:800;color:var(--success);">✅ CRIADO</div>' : ''}
                 <div class="row" style="margin-bottom:8px;">
                     <div class="field">
                         <label>Nome do NPC</label>
                         <input type="text" value="${escHtml(npc.nome)}" placeholder="Nome..."
-                            oninput="wizardState.npcs[${idx}].nome = this.value; saveWizardToStorage();">
+                            ${confirmed ? 'readonly' : ''}
+                            oninput="wizardState.npcs[${idx}].nome = this.value; onNpcFieldChange(${idx}); saveWizardToStorage();">
                     </div>
                     <div class="field">
                         <label>Relação</label>
-                        <select onchange="wizardState.npcs[${idx}].relacao = this.value; saveWizardToStorage();">
+                        <select ${confirmed ? 'disabled' : ''} onchange="wizardState.npcs[${idx}].relacao = this.value; onNpcFieldChange(${idx}); saveWizardToStorage();">
                             <option value="">Selecione...</option>
                             ${RELACOES_NPC.map(r => `<option value="${escHtml(r)}" ${npc.relacao === r ? 'selected' : ''}>${escHtml(r)}</option>`).join('')}
                         </select>
@@ -79,29 +104,69 @@ function renderNpcList() {
                 <div class="field" style="margin-bottom:8px;">
                     <label>Memória com este NPC</label>
                     <textarea rows="2" placeholder="Uma memória marcante com esta pessoa..."
-                        oninput="wizardState.npcs[${idx}].memoria = this.value; saveWizardToStorage();">${escHtml(npc.memoria)}</textarea>
+                        ${confirmed ? 'readonly' : ''}
+                        oninput="wizardState.npcs[${idx}].memoria = this.value; onNpcFieldChange(${idx}); saveWizardToStorage();">${escHtml(npc.memoria)}</textarea>
                 </div>
-                <div class="field">
+                <div class="field" style="margin-bottom:8px;">
                     <label>Pergunta do Vínculo</label>
-                    <textarea rows="2" placeholder="O que esta pessoa significava para você antes de partir?"
-                        oninput="wizardState.npcs[${idx}].vinculo = this.value; saveWizardToStorage();">${escHtml(npc.vinculo)}</textarea>
+                    <textarea rows="2" placeholder="O que esta pessoa significa para você?"
+                        ${confirmed ? 'readonly' : ''}
+                        oninput="wizardState.npcs[${idx}].vinculo = this.value; onNpcFieldChange(${idx}); saveWizardToStorage();">${escHtml(npc.vinculo)}</textarea>
                 </div>
+                ${!confirmed ? `
+                    <div style="text-align:right;margin-top:4px;">
+                        <button class="btn ${complete ? 'btn-success' : ''}" 
+                                ${!complete ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}
+                                onclick="confirmNpc(${idx})">
+                            ✅ Criar NPC
+                        </button>
+                    </div>
+                ` : ''}
             </div>
         `;
     });
     container.innerHTML = html;
 }
 
+function onNpcFieldChange(idx) {
+    // Update only the confirm button state without re-rendering
+    // (re-rendering destroys focus on the active input field)
+    const npc = wizardState.npcs[idx];
+    const complete = isNpcComplete(npc);
+    const cards = document.querySelectorAll('#npcList .npc-card');
+    if (cards[idx]) {
+        const btn = cards[idx].querySelector('.btn:not(.npc-card-remove)');
+        if (btn) {
+            btn.disabled = !complete;
+            btn.style.opacity = complete ? '' : '0.5';
+            btn.style.cursor = complete ? '' : 'not-allowed';
+            if (complete) {
+                btn.classList.add('btn-success');
+            } else {
+                btn.classList.remove('btn-success');
+            }
+        }
+    }
+}
+
 function updateNpcExp() {
     const regras = REGRAS_CRIACAO.npcs;
-    const validNpcs = wizardState.npcs.filter(n => n.nome && n.nome.trim());
-    const expCount = Math.min(validNpcs.length, regras.max_exp_npcs);
+    const confirmedNpcs = wizardState.npcs.filter(n => n.confirmado === true);
+    const expCount = Math.min(confirmedNpcs.length, regras.max_exp_npcs);
 
     if (expCount > 0) {
         ExpTracker.addSource('npcs', expCount * regras.exp_por_npc, `${expCount} NPC(s) criados`);
     } else {
         ExpTracker.removeSource('npcs');
     }
+
+    updateNpcExpDisplay();
+}
+
+function updateNpcExpDisplay() {
+    const regras = REGRAS_CRIACAO.npcs;
+    const confirmedNpcs = wizardState.npcs.filter(n => n.confirmado === true);
+    const expCount = Math.min(confirmedNpcs.length, regras.max_exp_npcs);
 
     const indicator = document.getElementById('npcExpIndicator');
     if (indicator) {

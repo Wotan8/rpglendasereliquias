@@ -4,26 +4,45 @@ function initPhase4(container) {
     let html = createNarratorBox(NARRADOR_TEXTOS.habilidades);
 
     const regras = REGRAS_CRIACAO.pericias;
-    const groups = ['mental', 'fisico', 'social', 'combate'];
-    const pools = [regras.primario, regras.segundo, regras.terceiro, regras.fraco];
-    const groupLabels = { mental: '🧠 Mental', fisico: '💪 Físico', social: '🗣️ Social', combate: '⚔️ Combate' };
 
-    // Step 1: Priority selection
+    // Step 1: Select highest (6 points)
     html += `
-        <div class="section">
-            <div class="section-title">Passo 1 — Prioridade de Perícias</div>
+        <div class="section" id="skillStep1">
+            <div class="section-title">Passo 1 — A Maior (${regras.primario} pontos)</div>
             <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
-                Distribua as prioridades: <strong>${pools.join(' / ')}</strong> pontos entre os 4 grupos.
-                Arraste ou selecione qual grupo recebe quantos pontos.
+                Qual grupo de perícias define você? Esse grupo recebe <strong>${regras.primario} pontos</strong>.
             </p>
-            <div id="skillPrioritySelector"></div>
+            <div class="group-selector" id="skillStep1Selector" style="grid-template-columns: repeat(4, 1fr);"></div>
         </div>
     `;
 
-    // Step 2: Distribute skills
+    // Step 2: Select second (4 points)
+    html += `
+        <div class="section" id="skillStep2">
+            <div class="section-title">Passo 2 — A Segunda (${regras.segundo} pontos)</div>
+            <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
+                Qual é seu segundo forte? Esse grupo recebe <strong>${regras.segundo} pontos</strong>.
+            </p>
+            <div class="group-selector" id="skillStep2Selector" style="grid-template-columns: repeat(4, 1fr);"></div>
+        </div>
+    `;
+
+    // Step 3: Select worst (2 points)
+    html += `
+        <div class="section" id="skillStep3">
+            <div class="section-title">Passo 3 — A Pior (${regras.fraco} pontos)</div>
+            <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
+                Qual área é sua fraqueza? Esse grupo recebe apenas <strong>${regras.fraco} pontos</strong>.
+                O grupo restante ficará automaticamente com <strong>${regras.terceiro} pontos</strong>.
+            </p>
+            <div class="group-selector" id="skillStep3Selector" style="grid-template-columns: repeat(4, 1fr);"></div>
+        </div>
+    `;
+
+    // Step 4: Distribute skills
     html += `
         <div class="section">
-            <div class="section-title">Passo 2 — Distribuir Perícias</div>
+            <div class="section-title">Passo 4 — Distribuir Perícias</div>
             <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
                 Máximo <strong>${regras.limite_max_por_pericia}</strong> por perícia na criação.
                 Perícias de classe são marcadas com ⭐.
@@ -33,124 +52,97 @@ function initPhase4(container) {
     `;
 
     // Memórias
-    html += createMemoryBox('habilidades', 'Qual foi a perícia que mais suou para aprender? Quem te ensinou?', false);
+    html += createMemoryBox('habilidades', 'Descreva como você aprendeu essas habilidades. Foi com um mentor? Sozinho? Por necessidade desesperada?', false, '✍️ Memória das melhores habilidades');
+    html += createMemoryBox('habilidades_fraco', 'Essas são as coisas que você nunca praticou muito. Por quê? Falta de interesse, de oportunidade, ou algo te afastou delas?', false, '✍️ Memória das piores habilidades');
 
     container.innerHTML = html;
 
-    renderSkillPrioritySelector();
+    renderSkillStepSelectors();
     renderSkillDistribution();
 }
 
-function renderSkillPrioritySelector() {
-    const container = document.getElementById('skillPrioritySelector');
-    if (!container) return;
+const _skillGroupLabels = { mental: '🧠 Mental', fisico: '💪 Físico', social: '🗣️ Social', combate: '⚔️ Combate' };
+const _skillGroups = ['mental', 'fisico', 'social', 'combate'];
 
-    const groups = ['mental', 'fisico', 'social', 'combate'];
-    const groupLabels = { mental: '🧠 Mental', fisico: '💪 Físico', social: '🗣️ Social', combate: '⚔️ Combate' };
-    const pools = [
-        REGRAS_CRIACAO.pericias.primario,
-        REGRAS_CRIACAO.pericias.segundo,
-        REGRAS_CRIACAO.pericias.terceiro,
-        REGRAS_CRIACAO.pericias.fraco
-    ];
+function renderSkillStepSelectors() {
+    const regras = REGRAS_CRIACAO.pericias;
+    const pools = [regras.primario, regras.segundo, regras.fraco];
+    const stateKeys = ['grupoPericiaPrimario', 'grupoPericia2', 'grupoPericiaFraco'];
+    const stepIds = ['skillStep1Selector', 'skillStep2Selector', 'skillStep3Selector'];
 
-    // Get current assignment
-    const assigned = {};
-    if (wizardState.grupoPericiaPrimario) assigned[wizardState.grupoPericiaPrimario] = pools[0];
-    if (wizardState.grupoPericia2) assigned[wizardState.grupoPericia2] = pools[1];
-    if (wizardState.grupoPericia3) assigned[wizardState.grupoPericia3] = pools[2];
-    if (wizardState.grupoPericiaFraco) assigned[wizardState.grupoPericiaFraco] = pools[3];
+    for (let step = 0; step < 3; step++) {
+        const container = document.getElementById(stepIds[step]);
+        if (!container) continue;
 
-    let html = `<div class="group-selector" style="grid-template-columns: repeat(4, 1fr);">`;
-    for (const grp of groups) {
-        const pts = assigned[grp] || '?';
-        html += `
-            <div class="group-card" data-skill-group="${grp}" onclick="cycleSkillPriority('${grp}')" style="cursor:pointer;">
-                <div class="group-card-title">${groupLabels[grp]}</div>
-                <div class="group-card-points">${pts}</div>
-                <div class="group-card-label" id="skillPriorityLabel_${grp}">Clique para definir</div>
-            </div>
-        `;
+        let html = '';
+        for (const grp of _skillGroups) {
+            // Is this group already selected in another step?
+            const selectedInStep = stateKeys.findIndex(k => wizardState[k] === grp);
+            const isSelectedHere = wizardState[stateKeys[step]] === grp;
+            const isDisabled = selectedInStep >= 0 && selectedInStep !== step;
+
+            html += `
+                <div class="group-card ${isSelectedHere ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
+                     data-skill-group="${grp}"
+                     onclick="${isDisabled ? '' : `selectSkillStep(${step}, '${grp}')`}"
+                     style="cursor:${isDisabled ? 'not-allowed' : 'pointer'};">
+                    <div class="group-card-title">${_skillGroupLabels[grp]}</div>
+                    <div class="group-card-points">${isSelectedHere ? pools[step] : '?'}</div>
+                    <div class="group-card-label">${isSelectedHere ? ['1º Maior', '2º Segundo', '3º Pior'][step] : (isDisabled ? _getSkillStepLabel(grp) : 'Selecione')}</div>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
     }
-    html += `</div>`;
-
-    // Quick assign buttons
-    html += `<div style="text-align:center;margin-top:8px;">`;
-    html += `<button class="btn" style="font-size:11px;" onclick="autoAssignSkillPriority()">🎲 Distribuir Automaticamente</button>`;
-    html += `</div>`;
-
-    container.innerHTML = html;
-    updateSkillPriorityLabels();
 }
 
-let _skillPriorityOrder = [];
+function _getSkillStepLabel(grp) {
+    if (wizardState.grupoPericiaPrimario === grp) return '1º Maior';
+    if (wizardState.grupoPericia2 === grp) return '2º Segundo';
+    if (wizardState.grupoPericiaFraco === grp) return '3º Pior';
+    if (wizardState.grupoPericia3 === grp) return '4º Terceiro';
+    return 'Selecione';
+}
 
-function cycleSkillPriority(group) {
-    // Remove if already in list
-    _skillPriorityOrder = _skillPriorityOrder.filter(g => g !== group);
-    // Add to end
-    _skillPriorityOrder.push(group);
-    // Keep max 4
-    if (_skillPriorityOrder.length > 4) _skillPriorityOrder = _skillPriorityOrder.slice(-4);
+function selectSkillStep(step, group) {
+    const stateKeys = ['grupoPericiaPrimario', 'grupoPericia2', 'grupoPericiaFraco'];
 
-    // Assign pools
-    const pools = [
-        REGRAS_CRIACAO.pericias.primario,
-        REGRAS_CRIACAO.pericias.segundo,
-        REGRAS_CRIACAO.pericias.terceiro,
-        REGRAS_CRIACAO.pericias.fraco
-    ];
+    // Don't allow selecting a group already used in another step
+    for (let i = 0; i < stateKeys.length; i++) {
+        if (i !== step && wizardState[stateKeys[i]] === group) return;
+    }
 
-    wizardState.grupoPericiaPrimario = _skillPriorityOrder[0] || null;
-    wizardState.grupoPericia2 = _skillPriorityOrder[1] || null;
-    wizardState.grupoPericia3 = _skillPriorityOrder[2] || null;
-    wizardState.grupoPericiaFraco = _skillPriorityOrder[3] || null;
+    wizardState[stateKeys[step]] = group;
 
-    updateSkillPriorityLabels();
+    // Auto-assign the remaining group as "terceiro" (3 points)
+    _autoAssignThirdGroup();
+
+    renderSkillStepSelectors();
     renderSkillDistribution();
     saveWizardToStorage();
+}
+
+function _autoAssignThirdGroup() {
+    const assigned = [wizardState.grupoPericiaPrimario, wizardState.grupoPericia2, wizardState.grupoPericiaFraco].filter(Boolean);
+    if (assigned.length === 3) {
+        const remaining = _skillGroups.find(g => !assigned.includes(g));
+        wizardState.grupoPericia3 = remaining || null;
+    } else {
+        wizardState.grupoPericia3 = null;
+    }
 }
 
 function autoAssignSkillPriority() {
-    const groups = ['mental', 'fisico', 'social', 'combate'];
-    _skillPriorityOrder = [...groups].sort(() => Math.random() - 0.5);
+    const shuffled = [..._skillGroups].sort(() => Math.random() - 0.5);
 
-    wizardState.grupoPericiaPrimario = _skillPriorityOrder[0];
-    wizardState.grupoPericia2 = _skillPriorityOrder[1];
-    wizardState.grupoPericia3 = _skillPriorityOrder[2];
-    wizardState.grupoPericiaFraco = _skillPriorityOrder[3];
+    wizardState.grupoPericiaPrimario = shuffled[0];
+    wizardState.grupoPericia2 = shuffled[1];
+    wizardState.grupoPericiaFraco = shuffled[2];
+    wizardState.grupoPericia3 = shuffled[3];
 
-    updateSkillPriorityLabels();
+    renderSkillStepSelectors();
     renderSkillDistribution();
     saveWizardToStorage();
-}
-
-function updateSkillPriorityLabels() {
-    const pools = [
-        REGRAS_CRIACAO.pericias.primario,
-        REGRAS_CRIACAO.pericias.segundo,
-        REGRAS_CRIACAO.pericias.terceiro,
-        REGRAS_CRIACAO.pericias.fraco
-    ];
-    const labels = ['1º Primário', '2º Segundo', '3º Terceiro', '4º Fraco'];
-
-    const groups = ['mental', 'fisico', 'social', 'combate'];
-    for (const grp of groups) {
-        const idx = _skillPriorityOrder.indexOf(grp);
-        const el = document.getElementById(`skillPriorityLabel_${grp}`);
-        const pts = document.querySelector(`[data-skill-group="${grp}"] .group-card-points`);
-        const card = document.querySelector(`[data-skill-group="${grp}"]`);
-
-        if (el && idx >= 0) {
-            el.textContent = labels[idx];
-            if (pts) pts.textContent = pools[idx];
-            if (card) card.classList.add('selected');
-        } else {
-            if (el) el.textContent = 'Clique para definir';
-            if (pts) pts.textContent = '?';
-            if (card) card.classList.remove('selected');
-        }
-    }
 }
 
 function getSkillGroupPool(group) {
@@ -165,19 +157,17 @@ function renderSkillDistribution() {
     const container = document.getElementById('skillDistGrid');
     if (!container) return;
 
-    const groups = ['mental', 'fisico', 'social', 'combate'];
-    const groupLabels = { mental: '🧠 Mental', fisico: '💪 Físico', social: '🗣️ Social', combate: '⚔️ Combate' };
     const classSkills = wizardState.classeSelecionada ? (window.CLASS_SKILLS[wizardState.classeSelecionada] || []) : [];
 
     let html = '';
-    for (const grp of groups) {
+    for (const grp of _skillGroups) {
         const skills = window.SKILLS?.[grp] || [];
         const pool = getSkillGroupPool(grp);
         const remaining = getSkillGroupRemaining(grp);
 
         html += `
             <div class="attr-dist-block">
-                <div class="attr-dist-title">${groupLabels[grp]}</div>
+                <div class="attr-dist-title">${_skillGroupLabels[grp]}</div>
                 <div class="attr-dist-counter" id="skillCounter_${grp}">Restante: ${remaining}/${pool}</div>
         `;
 
@@ -254,8 +244,7 @@ function getSkillGroupRemaining(group) {
 }
 
 function updateSkillCounters() {
-    const groups = ['mental', 'fisico', 'social', 'combate'];
-    for (const grp of groups) {
+    for (const grp of _skillGroups) {
         const el = document.getElementById(`skillCounter_${grp}`);
         if (!el) continue;
         const pool = getSkillGroupPool(grp);

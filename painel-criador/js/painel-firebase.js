@@ -129,7 +129,6 @@ const MODULE_DEFS = {
         collection: 'system/data/peculiarities',
         fields: [
             { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Aprendizado Acelerado IV' },
-            { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
             {
                 key: 'fonte', label: 'Fonte', type: 'select', required: true, options: [
                     { value: 'raca', label: 'Raça' },
@@ -140,10 +139,20 @@ const MODULE_DEFS = {
                     { value: 'generica', label: 'Genérica' }
                 ]
             },
-            { key: 'fonteRef', label: 'Referência da Fonte (ID)', type: 'text', placeholder: 'ID do registro de origem' },
+            { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
+            {
+                key: 'quandoSeAplica', label: 'Quando se Aplica', type: 'select', options: [
+                    { value: 'passivo', label: 'Passivo' },
+                    { value: 'na_criacao', label: 'Na criação' }
+                ], defaultValue: 'passivo'
+            },
+            { key: 'ehVantagem', label: '🟢 É Vantagem? (custar EXP)', type: 'boolean', showWhen: { field: 'quandoSeAplica', value: 'na_criacao' } },
+            { key: 'mecanicaExpCriacao', label: '⭐ Mecânica de Modificar EXP (aplicada na criação)', type: 'mechanic_selector', showWhen: { field: 'quandoSeAplica', value: 'na_criacao' } },
+            { key: 'fonteRef', label: '(ID)', type: 'text', placeholder: 'ID do registro de origem' },
+            { key: 'concedeAura', label: 'Concede Aura?', type: 'boolean' },
+            { key: 'auraVinculadaId', label: '🌟 Aura Vinculada', type: 'aura_selector', showWhenBoolean: 'concedeAura' },
+            { key: 'auraGrauConcedido', label: 'Grau Concedido da Aura', type: 'number', placeholder: '1', showWhenBoolean: 'concedeAura' },
             { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: '' },
-            { key: 'auraVinculadaId', label: '🌟 Aura Vinculada', type: 'aura_selector' },
-            { key: 'auraGrauConcedido', label: 'Grau Concedido da Aura', type: 'number', placeholder: '1' },
             { key: 'tags', label: 'Tags', type: 'tags', placeholder: 'Ex: bônus, racial' },
         ]
     },
@@ -924,6 +933,14 @@ window.openForm = function (itemId) {
             const selectedTags = [...getSelectedTags()];
             if (selectedTags.length > 0) value = selectedTags;
         }
+        // Apply defaultValue for fields when value is undefined (new or missing field)
+        if (value === undefined && field.defaultValue !== undefined) {
+            value = field.defaultValue;
+        }
+        // Auto-derive concedeAura from existing auraVinculadaId for backward compatibility
+        if (field.key === 'concedeAura' && value === undefined && existingData && existingData.auraVinculadaId) {
+            value = true;
+        }
         const el = buildField(field, value, existingData);
         formGrid.appendChild(el);
     });
@@ -947,6 +964,9 @@ window.openForm = function (itemId) {
     // Wire up showWhen visibility for conditional fields
     _wireShowWhenFields(modDef, formGrid);
 
+    // Wire up showWhenBoolean visibility for boolean toggle conditional fields
+    _wireShowWhenBooleanFields(modDef, formGrid);
+
     document.getElementById('formModal').classList.add('active');
 };
 
@@ -964,6 +984,9 @@ function buildField(field, value, existingData) {
     if (field.showWhen) {
         wrap.dataset.showWhenField = field.showWhen.field;
         wrap.dataset.showWhenValue = field.showWhen.value;
+    }
+    if (field.showWhenBoolean) {
+        wrap.dataset.showWhenBoolean = field.showWhenBoolean;
     }
 
     if (field.type === 'mechanic_selector') {
@@ -1214,6 +1237,34 @@ function _wireShowWhenFields(modDef, container) {
     setTimeout(updateVisibility, 0);
 
     // Listen for changes
+    triggerKeys.forEach(key => {
+        const el = document.getElementById(`field_${key}`);
+        if (el) el.addEventListener('change', updateVisibility);
+    });
+}
+
+// ===== SHOW-WHEN-BOOLEAN: FIELD VISIBILITY BASED ON BOOLEAN TOGGLE =====
+function _wireShowWhenBooleanFields(modDef, container) {
+    const conditionalFields = container.querySelectorAll('[data-show-when-boolean]');
+    if (conditionalFields.length === 0) return;
+
+    // Find trigger boolean field keys
+    const triggerKeys = new Set();
+    conditionalFields.forEach(el => triggerKeys.add(el.dataset.showWhenBoolean));
+
+    function updateVisibility() {
+        conditionalFields.forEach(wrap => {
+            const triggerKey = wrap.dataset.showWhenBoolean;
+            const triggerEl = document.getElementById(`field_${triggerKey}`);
+            if (!triggerEl) return;
+            wrap.style.display = triggerEl.checked ? '' : 'none';
+        });
+    }
+
+    // Initial update
+    setTimeout(updateVisibility, 0);
+
+    // Listen for changes on checkbox triggers
     triggerKeys.forEach(key => {
         const el = document.getElementById(`field_${key}`);
         if (el) el.addEventListener('change', updateVisibility);

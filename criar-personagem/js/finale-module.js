@@ -6,24 +6,29 @@ function initPhase8(container) {
     html += `
         <div class="section">
             <div class="section-title">📝 Identidade Final</div>
-            <div class="row" style="margin-bottom:8px;">
-                <div class="field">
-                    <label>Nome Completo</label>
-                    <input type="text" id="nomeCompleto" value="${escHtml(wizardState.nomeCompleto || wizardState.nomePersonagem)}"
-                        placeholder="Nome completo do personagem"
-                        oninput="wizardState.nomeCompleto = this.value; saveWizardToStorage();">
-                </div>
-                <div class="field">
-                    <label>Apelido (opcional)</label>
-                    <input type="text" id="apelido" value="${escHtml(wizardState.apelido)}"
-                        placeholder="Como é chamado pelos amigos?"
-                        oninput="wizardState.apelido = this.value; saveWizardToStorage();">
-                </div>
+            <div class="field" style="margin-bottom:8px;">
+                <label>Nome Completo</label>
+                <input type="text" id="nomeCompleto" value="${escHtml(wizardState.nomeCompleto || wizardState.nomePersonagem)}"
+                    placeholder="Nome do personagem"
+                    oninput="wizardState.nomeCompleto = this.value; saveWizardToStorage();">
             </div>
             <div class="field" style="margin-bottom:8px;">
                 <label>Aparência</label>
                 <textarea id="aparencia" rows="3" placeholder="Descreva a aparência do seu personagem..."
                     oninput="wizardState.aparencia = this.value; saveWizardToStorage();">${escHtml(wizardState.aparencia)}</textarea>
+            </div>
+            <div class="field" style="margin-bottom:8px;">
+                <label>📷 Imagem do Personagem (opcional)</label>
+                <p style="font-size:.8rem;color:var(--muted);margin:0 0 8px;">Faça upload de uma imagem para o seu personagem. Ela aparecerá na ficha.</p>
+                <input type="file" id="charImgUpload" accept="image/*" onchange="handleCharImgUpload(this)"
+                    style="font-size:.85rem;font-family:var(--font);">
+                <div id="charImgPreviewWrap" style="margin-top:10px;text-align:center;${wizardState.imagemPersonagem ? '' : 'display:none;'}">
+                    <img id="charImgPreviewImg" src="${escHtml(wizardState.imagemPersonagem || '')}"
+                        style="max-width:200px;max-height:200px;border-radius:12px;border:2px solid var(--soft);object-fit:cover;">
+                    <div style="margin-top:6px;">
+                        <button class="btn" style="font-size:.75rem;" onclick="removeCharImg()">🗑️ Remover imagem</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -40,8 +45,8 @@ function initPhase8(container) {
                     oninput="wizardState.medo = this.value; saveWizardToStorage();">${escHtml(wizardState.medo)}</textarea>
             </div>
             <div class="field">
-                <label>Última Pergunta — Se soubesse que amanhã morreria, o que faria esta noite?</label>
-                <textarea id="ultimaPergunta" rows="2" placeholder="Sua resposta..."
+                <label>Arrependimento — Do que seu personagem se arrepende?</label>
+                <textarea id="ultimaPergunta" rows="2" placeholder="O que te faz querer voltar no tempo?"
                     oninput="wizardState.ultimaPergunta = this.value; saveWizardToStorage();">${escHtml(wizardState.ultimaPergunta)}</textarea>
             </div>
         </div>
@@ -51,6 +56,31 @@ function initPhase8(container) {
     html += createMemoryBox('vespera', 'Na última noite antes de tudo mudar — sozinho com seus pensamentos — o que passa pela sua cabeça?', false);
 
     container.innerHTML = html;
+}
+
+function handleCharImgUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (ev) {
+        wizardState.imagemPersonagem = ev.target.result;
+        const wrap = document.getElementById('charImgPreviewWrap');
+        const img = document.getElementById('charImgPreviewImg');
+        if (img) img.src = ev.target.result;
+        if (wrap) wrap.style.display = '';
+        saveWizardToStorage();
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeCharImg() {
+    wizardState.imagemPersonagem = null;
+    const wrap = document.getElementById('charImgPreviewWrap');
+    if (wrap) wrap.style.display = 'none';
+    const input = document.getElementById('charImgUpload');
+    if (input) input.value = '';
+    saveWizardToStorage();
 }
 
 /* ===== PHASE 9 — Resumo Final ===== */
@@ -122,10 +152,11 @@ function initResumo(container) {
     }
 
     // NPCs
-    if (ws.npcs.length) {
+    const confirmedNpcs = ws.npcs.filter(n => n.confirmado && n.nome);
+    if (confirmedNpcs.length) {
         html += `<div class="summary-section"><div class="summary-title">🤝 NPCs</div>`;
-        for (const npc of ws.npcs) {
-            if (npc.nome) html += `<div class="detail-tag" style="margin-bottom:4px;">${escHtml(npc.nome)} — ${escHtml(npc.relacao || 'Sem relação')}</div>`;
+        for (const npc of confirmedNpcs) {
+            html += `<div class="detail-tag" style="margin-bottom:4px;">${escHtml(npc.nome)} — ${escHtml(npc.relacao || 'Sem relação')}</div>`;
         }
         html += `</div>`;
     }
@@ -180,6 +211,17 @@ async function createCharacter() {
         }
     }
 
+    // === Validate attributes are fully distributed (deferred from Etapa 4) ===
+    if (wizardState.grupoPrimario && wizardState.grupoFraco) {
+        for (const grupo of GRUPOS_ATRIBUTOS) {
+            const remaining = getGroupRemainingPoints(grupo);
+            if (remaining > 0) {
+                showWizardToast(`Faltam pontos de atributos no grupo ${grupo}. Distribua todos os pontos antes de finalizar.`, 'error');
+                return;
+            }
+        }
+    }
+
     const ws = wizardState;
     const base = REGRAS_CRIACAO.atributos.base_inicial;
 
@@ -204,9 +246,9 @@ async function createCharacter() {
     }
 
     // Build fields object
+    const charName = ws.nomeCompleto || ws.nomePersonagem;
     const fields = {
-        nome: ws.nomeCompleto || ws.nomePersonagem,
-        apelido: ws.apelido || '',
+        nome: charName,
         raca: ws.racaSelecionada || '',
         classe: ws.classeSelecionada || '',
         tribo: ws.triboSelecionada || '',
@@ -216,7 +258,6 @@ async function createCharacter() {
         medo: ws.medo || '',
         virtude: ws.virtudeSelecionada || '',
         vicio: ws.vicioSelecionado || '',
-        vicioEspecificacao: ws.vicioEspecificacao || '',
         luns: ws.luns || 0,
         sessoes: 0
     };
@@ -230,7 +271,7 @@ async function createCharacter() {
 
     // NPC notes
     for (const npc of ws.npcs) {
-        if (!npc.nome) continue;
+        if (!npc.nome || !npc.confirmado) continue;
         notes.push({
             id: 'note-npc-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
             titulo: `🤝 ${npc.nome}`,
@@ -256,10 +297,16 @@ async function createCharacter() {
         notes.push({
             id: 'note-vespera-' + Date.now(),
             titulo: '🌅 A Véspera da Partida',
-            conteudo: `<b>Motivação:</b> ${ws.motivacao || '—'}<br><b>Medo:</b> ${ws.medo || '—'}<br><b>Última Pergunta:</b> ${ws.ultimaPergunta || '—'}`,
+            conteudo: `<b>Motivação:</b> ${ws.motivacao || '—'}<br><b>Medo:</b> ${ws.medo || '—'}<br><b>Arrependimento:</b> ${ws.ultimaPergunta || '—'}`,
             criadoEm: new Date().toISOString(),
             atualizadoEm: new Date().toISOString()
         });
+    }
+
+    // Build equipment list (including Objeto Pessoal)
+    const equipamento = [...(ws.equipamentoSelecionado || [])];
+    if (ws.objetoPessoal?.nome) {
+        equipamento.push(ws.objetoPessoal.nome);
     }
 
     // Assemble final charData
@@ -267,12 +314,19 @@ async function createCharacter() {
         dots,
         fields,
         notes,
-        equipamento: ws.equipamentoSelecionado || [],
+        equipamento,
         mecanicasAplicadas: {},
         mechanicBonuses: {},
         mecanicasPendentes: [],
-        nivelInicio: ws.nivelInicio?.id || 'iniciante'
+        nivelInicio: ws.nivelInicio?.id || 'iniciante',
+        expInicial: ws.expInicial || (ws.nivelInicio?.exp || 0),
+        mesaVinculada: ws.mesaVinculada ? { id: ws.mesaVinculada.id, nome: ws.mesaVinculada.nome } : null
     };
+
+    // Include character image (base64 — will be uploaded to Storage by the v1.7 sheet on first save)
+    if (ws.imagemPersonagem) {
+        charData.charImg = ws.imagemPersonagem;
+    }
 
     // Show saving indicator
     showWizardToast('💾 Salvando personagem...', 'info');
@@ -280,6 +334,10 @@ async function createCharacter() {
     try {
         if (typeof window.createCharacterInFirebase === 'function') {
             const charId = await window.createCharacterInFirebase(charData);
+
+            // === Save NPCs to Master Panel (collection 'npcs') ===
+            await saveNpcsToMasterPanel(ws, charName, charId);
+
             showConfetti();
             showWizardToast('🎉 Personagem criado com sucesso!', 'success');
             setTimeout(() => {
@@ -291,6 +349,82 @@ async function createCharacter() {
     } catch (e) {
         console.error('Erro ao criar personagem:', e);
         showWizardToast('❌ Erro ao salvar: ' + e.message, 'error');
+    }
+}
+
+/* ===== SAVE NPCS TO MASTER PANEL ===== */
+
+async function saveNpcsToMasterPanel(ws, charName, charId) {
+    const confirmedNpcs = ws.npcs.filter(n => n.confirmado && n.nome);
+    if (confirmedNpcs.length === 0) return;
+
+    try {
+        // Import Firestore functions dynamically
+        const { getFirestore, collection, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const db = window.db;
+        if (!db) {
+            console.warn('⚠️ DB not available for NPC save to master panel');
+            return;
+        }
+
+        for (const npc of confirmedNpcs) {
+            // Build tags
+            const tags = [];
+            tags.push(`Vinculado com o Personagem ${charName}`);
+
+            if (ws.mesaVinculada) {
+                if (ws.mesaVinculada.nome) tags.push(`MESA: ${ws.mesaVinculada.nome}`);
+                if (ws.mesaVinculada.mestreNome) tags.push(`MESTRE: ${ws.mesaVinculada.mestreNome}`);
+            }
+
+            // Build history string: 3 lines
+            const historia = [
+                npc.relacao || '',
+                npc.memoria || '',
+                npc.vinculo || ''
+            ].join('\n');
+
+            const npcData = {
+                nome: npc.nome,
+                tipo: 'npc',
+                tags: tags.join(', '),
+                rolePlay: {
+                    historia: historia,
+                    personalidade: ['', '', ''],
+                    trejeitos: '',
+                    motivacao: '',
+                    segredos: '',
+                    relacoes: { aliado: '', rival: '', devedor: '' },
+                    frases: ''
+                },
+                imagem: '',
+                raca: '',
+                porte: '',
+                papel: '',
+                local: '',
+                tribo: '',
+                ai: 0,
+                classe: '',
+                tamanho: '',
+                atributos: { INT: 0, RAC: 0, PRS: 0, FOR: 0, DES: 0, VIG: 0, PRE: 0, MAN: 0, AUT: 0 },
+                valoresDer: { VIT: 0, PERC: 0, INI: 0, ENER: 0, REA: 0, BLD: 0, DESLOCAMENTO: '', SAN: 0 },
+                ataques: '',
+                skills: '',
+                loot: { itens: '', luns: '', pistas: '', complicacoes: '' },
+                criatura: null,
+                lastUpdate: new Date().toISOString(),
+                lastUpdateBy: window.currentUser?.email || '',
+                createdVia: 'wizard-v1',
+                linkedCharId: charId
+            };
+
+            const npcId = 'npc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+            await setDoc(doc(db, 'npcs', npcId), npcData);
+            console.log(`✅ NPC "${npc.nome}" salvo no Painel do Mestre`);
+        }
+    } catch (e) {
+        console.error('⚠️ Erro ao salvar NPCs no Painel do Mestre:', e);
+        // Non-blocking — character is already saved
     }
 }
 

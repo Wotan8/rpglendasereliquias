@@ -5,6 +5,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { getFirestore, doc, setDoc, collection, getDocs, query, where, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getStorage, ref, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 // ===== CONFIG =====
 const firebaseConfig = {
@@ -19,6 +20,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 window.db = db;
 window.currentUser = null;
@@ -87,6 +89,23 @@ window.createCharacterInFirebase = async function (charData) {
         lastUpdate: new Date().toISOString(),
         createdVia: 'wizard-v1'
     };
+
+    // Upload charImg to Firebase Storage if it's a base64 string (too large for Firestore)
+    if (saveData.charImg && saveData.charImg.startsWith('data:image')) {
+        console.log(`📤 Imagem detectada (${saveData.charImg.length} bytes). Enviando para Storage...`);
+        try {
+            const storageRef = ref(storage, `char-images/${window.currentUser.uid}/${charId}.jpg`);
+            await uploadString(storageRef, saveData.charImg, 'data_url');
+            const downloadURL = await getDownloadURL(storageRef);
+            console.log('✅ Imagem enviada com sucesso. URL:', downloadURL);
+            saveData.charImg = downloadURL;
+        } catch (uploadErr) {
+            console.error('❌ Falha no upload da imagem:', uploadErr);
+            // Remove the image to prevent Firestore size limit error
+            delete saveData.charImg;
+            console.warn('⚠️ Imagem removida dos dados para evitar erro de tamanho.');
+        }
+    }
 
     await setDoc(docRef, saveData);
     console.log('✅ Personagem criado no Firebase:', charId);

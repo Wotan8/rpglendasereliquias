@@ -51,6 +51,8 @@ window.initWizard = function () {
 function resetWizardState() {
     wizardState.nomePersonagem = '';
     wizardState.nivelInicio = null;
+    wizardState.expInicial = 0;
+    wizardState.mesaVinculada = null;
     wizardState.racaSelecionada = null;
     wizardState.classeSelecionada = null;
     wizardState.triboSelecionada = null;
@@ -66,14 +68,13 @@ function resetWizardState() {
     wizardState.pericias = {};
     wizardState.virtudeSelecionada = null;
     wizardState.vicioSelecionado = null;
-    wizardState.vicioEspecificacao = '';
     wizardState.npcs = [];
     wizardState.equipamentoSelecionado = [];
     wizardState.luns = 0;
     wizardState.objetoPessoal = null;
     wizardState.nomeCompleto = '';
-    wizardState.apelido = '';
     wizardState.aparencia = '';
+    wizardState.imagemPersonagem = null;
     wizardState.motivacao = '';
     wizardState.medo = '';
     wizardState.ultimaPergunta = '';
@@ -180,6 +181,13 @@ function tryGoToPhase(index) {
 
 function goNext() {
     const current = wizardState.faseAtual;
+
+    // If on the last phase (resumo), trigger character creation
+    if (current === FASES_WIZARD.length - 1) {
+        if (typeof createCharacter === 'function') createCharacter();
+        return;
+    }
+
     const result = validatePhase(current);
 
     if (!result.valid) {
@@ -252,6 +260,11 @@ function renderPhase(index) {
     }
 
     container.dataset.rendered = 'true';
+
+    // Inject inline name field at the top of phases 1+ (if not phase 0 or resumo)
+    if (index >= 1 && fase.key !== 'resumo') {
+        injectInlineNameField(container);
+    }
 }
 
 /** Forces a phase to re-render (e.g., after going back and changing something) */
@@ -334,12 +347,13 @@ function createNarratorBox(text) {
     `;
 }
 
-function createMemoryBox(phaseKey, placeholder, optional) {
+function createMemoryBox(phaseKey, placeholder, optional, customTitle) {
     const saved = MemoryManager.get(phaseKey);
+    const label = customTitle || (optional ? '✍ Memória Adicional' : '✍️ Memória');
     return `
         <div class="memory-box ${optional ? 'optional' : ''}">
             <div class="memory-box-label">
-                ${optional ? '❓ Memória Opcional' : '✍️ Memória'}
+                ${label}
             </div>
             <textarea
                 id="memory_${phaseKey}"
@@ -350,69 +364,115 @@ function createMemoryBox(phaseKey, placeholder, optional) {
     `;
 }
 
-/* ===== PHASE 0 — O Convite ===== */
+/** Inject an inline name field at the top of a phase container */
+function injectInlineNameField(container) {
+    // Don't double-inject
+    if (container.querySelector('.inline-name-field')) return;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'inline-name-field';
+    wrapper.innerHTML = `
+        <div class="inline-name-inner">
+            <label class="inline-name-label">🏷️ Nome do Personagem</label>
+            <input type="text" class="inline-name-input" id="inlineName_${container.id}"
+                placeholder="Digite o nome do seu personagem..."
+                value="${escHtml(wizardState.nomePersonagem)}"
+                oninput="wizardState.nomePersonagem = this.value; syncAllNameFields(); updateMiniPreview(); saveWizardToStorage();">
+        </div>
+    `;
+    container.insertBefore(wrapper, container.firstChild);
+}
+
+/** Keep all inline name fields in sync */
+function syncAllNameFields() {
+    document.querySelectorAll('.inline-name-input').forEach(input => {
+        if (input.value !== wizardState.nomePersonagem) {
+            input.value = wizardState.nomePersonagem;
+        }
+    });
+    // Also sync the phase 0 name field if present
+    const phase0Input = document.getElementById('inputNome');
+    if (phase0Input && phase0Input.value !== wizardState.nomePersonagem) {
+        phase0Input.value = wizardState.nomePersonagem;
+    }
+}
+
+/* ===== PHASE 0 — O Convite (Reestruturado) ===== */
 
 function renderPhase0(container) {
     let html = createNarratorBox(NARRADOR_TEXTOS.convite);
 
-    // Nome do personagem
+    // Nome do personagem — opcional
     html += `
         <div class="section">
             <div class="section-title">Seu Nome</div>
             <div class="field">
-                <label>Como deseja ser chamado?</label>
+                <label>Como deseja ser chamado? <span style="font-size:.78rem;color:var(--muted);font-weight:400;">(pode preencher depois)</span></label>
                 <input type="text" id="inputNome" placeholder="Digite o nome do seu personagem"
                     value="${escHtml(wizardState.nomePersonagem)}"
-                    oninput="wizardState.nomePersonagem = this.value; updateMiniPreview(); saveWizardToStorage();">
+                    oninput="wizardState.nomePersonagem = this.value; syncAllNameFields(); updateMiniPreview(); saveWizardToStorage();">
             </div>
         </div>
     `;
 
-    // Nível de início
+    // EXP Inicial — manual ou da mesa
+    const mesaExp = wizardState.mesaVinculada?.expInicial;
+    const expValue = mesaExp != null ? mesaExp : (wizardState.expInicial || 0);
+    const expReadonly = mesaExp != null ? 'readonly' : '';
+    const expLabel = mesaExp != null
+        ? `EXP Inicial <span style="font-size:.78rem;color:var(--muted);">(definido pelo Mestre — ${escHtml(wizardState.mesaVinculada.mestreNome || 'Mesa')})</span>`
+        : `EXP Inicial <span style="font-size:.78rem;color:var(--muted);">(definido pelo Mestre)</span>`;
+
     html += `
         <div class="section">
-            <div class="section-title">Nível de Início</div>
+            <div class="section-title">⭐ Experiência Inicial</div>
             <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
-                O nível de início determina quanta experiência você terá para moldar seu personagem.
-                Converse com seu Narrador sobre qual nível usar.
+                A quantidade de EXP inicial determina quão experiente seu personagem é ao começar.
+                Se você está criando para uma mesa, o Mestre define esse valor.
             </p>
-            <div class="selection-grid" id="nivelGrid">
+            <div class="field">
+                <label>${expLabel}</label>
+                <input type="number" id="inputExpInicial" min="0" step="1"
+                    value="${expValue}" ${expReadonly}
+                    placeholder="0"
+                    style="max-width:200px;font-size:1.2rem;font-weight:900;text-align:center;"
+                    oninput="setExpInicial(parseInt(this.value) || 0)">
+            </div>
+        </div>
     `;
 
-    for (const nivel of NIVEIS_INICIO) {
-        const selected = wizardState.nivelInicio?.id === nivel.id ? 'selected' : '';
-        html += `
-            <div class="selection-card ${selected}" onclick="selectNivel('${nivel.id}')">
-                <div class="selection-card-title">⭐ ${escHtml(nivel.nome)}</div>
-                <div class="selection-card-subtitle">${nivel.exp} EXP</div>
-                <div class="selection-card-desc">${escHtml(nivel.desc)}</div>
+    // Introdução à Campanha / Vasteluna
+    const introText = wizardState.mesaVinculada?.introducao || VASTELUNA_INTRO;
+    const introTitle = wizardState.mesaVinculada
+        ? `🎭 ${escHtml(wizardState.mesaVinculada.nome)} — Introdução`
+        : '🌍 Bem-vindo a Vasteluna';
+
+    html += `
+        <div class="section">
+            <div class="section-title">${introTitle}</div>
+            <div class="campaign-intro">
+                ${escHtml(introText).replace(/\n/g, '<br>')}
             </div>
-        `;
-    }
+        </div>
+    `;
 
-    html += `</div></div>`;
-
-    // Memória
-    html += createMemoryBox('convite', 'Qual é a sua primeira memória? O que você vê quando fecha os olhos e pensa em "começo"?', false);
+    // SEM memória na Etapa 0
 
     container.innerHTML = html;
 }
 
+function setExpInicial(value) {
+    wizardState.expInicial = value;
+    ExpTracker.addSource('exp_inicial', value, 'EXP Inicial');
+    saveWizardToStorage();
+}
+
+// Legacy compat — keep selectNivel working if called
 function selectNivel(nivelId) {
     const nivel = NIVEIS_INICIO.find(n => n.id === nivelId);
     if (!nivel) return;
-
     wizardState.nivelInicio = nivel;
-
-    // Update EXP
-    ExpTracker.addSource('nivel_inicio', nivel.exp, `Nível: ${nivel.nome}`);
-
-    // Update UI
-    document.querySelectorAll('#nivelGrid .selection-card').forEach(card => {
-        card.classList.remove('selected');
-    });
-    event.currentTarget.classList.add('selected');
-
+    wizardState.expInicial = nivel.exp;
+    ExpTracker.addSource('exp_inicial', nivel.exp, `Nível: ${nivel.nome}`);
     saveWizardToStorage();
 }
 

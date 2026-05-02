@@ -34,7 +34,7 @@ function initPhase5(container) {
     html += `</div></div>`;
 
     // Memória virtude
-    html += createMemoryBox('alma_virtude', 'Quando sua virtude brilhou pela primeira vez? Houve alguém que a inspirou?', false);
+    html += createMemoryBox('alma_virtude', 'Descreva o momento em que essa Virtude salvou você — ou salvou alguém por sua causa.', false, '✍️ Memória da Virtude');
 
     // Separador
     html += `<hr style="border:none;border-top:2px solid var(--soft);margin:30px 0;">`;
@@ -60,7 +60,6 @@ function initPhase5(container) {
                 </div>
                 <div class="soul-card-subtitle">${escHtml(v.subtitulo)}</div>
                 <div class="soul-card-desc">${escHtml(v.descricao)}</div>
-                ${v.especificar ? `<div style="margin-top:8px;"><input type="text" class="vice-spec-input" id="viceSpec_${v.id}" placeholder="${escHtml(v.especificarLabel)}" value="${wizardState.vicioSelecionado === v.id ? escHtml(wizardState.vicioEspecificacao) : ''}" oninput="wizardState.vicioEspecificacao = this.value; saveWizardToStorage();" onclick="event.stopPropagation();" style="width:100%;padding:6px 10px;border:1px solid var(--soft);border-radius:6px;font-size:.8rem;background:var(--chip);color:var(--ink);font-family:var(--font);"></div>` : ''}
                 <div class="soul-card-recupera">
                     <strong>🔄 Recupera 1 Determinação quando:</strong>
                     ${escHtml(v.recupera)}
@@ -71,10 +70,10 @@ function initPhase5(container) {
     html += `</div></div>`;
 
     // Memória vício
-    html += createMemoryBox('alma_vicio', 'Quando seu vício te dominou pela primeira vez? O que perdeu por causa dele?', false);
+    html += createMemoryBox('alma_vicio', 'Descreva o momento em que seu Vício te dominou. O que você perdeu por causa dele?', false, '✍️ Memória do Vicio');
 
     // Opcional
-    html += createMemoryBox('alma_opcional', 'Sonho ou Pesadelo — Qual sonho recorrente te persegue? Ou qual pesadelo?', true);
+    html += createMemoryBox('alma_adicional', 'Sonho ou Pesadelo — Qual sonho recorrente te persegue? Ou qual pesadelo?', true);
 
     container.innerHTML = html;
 }
@@ -91,12 +90,6 @@ function selectVirtue(virtueId) {
 
 function selectVice(viceId) {
     wizardState.vicioSelecionado = viceId;
-
-    // Clear spec if switching to non-spec vice
-    const vice = VICIOS.find(v => v.id === viceId);
-    if (!vice?.especificar) {
-        wizardState.vicioEspecificacao = '';
-    }
 
     document.querySelectorAll('#viceGrid .soul-card').forEach(c => {
         c.classList.toggle('selected', c.dataset.vice === viceId);

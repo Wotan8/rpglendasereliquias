@@ -31,18 +31,27 @@ function initPhase7(container) {
 
     html += `</div>`;
 
-    // Luns (dinheiro)
+    // Luns (dinheiro) — 1d100
     html += `
         <div class="section">
             <div class="section-title">💰 Luns Iniciais</div>
             <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
-                Role 1d10 + 1d10 para determinar seus Luns iniciais.
+                Role 1d100 para determinar seus Luns iniciais. Você também pode editar o valor manualmente caso prefira rolar o dado físico.
             </p>
-            <div style="display:flex;align-items:center;gap:12px;">
-                <button class="btn btn-primary" onclick="rollLuns()">🎲 Rolar Luns</button>
-                <span id="lunsResult" style="font-size:1.2rem;font-weight:900;color:var(--accent);">
-                    ${wizardState.luns > 0 ? `💰 ${wizardState.luns} Luns` : ''}
-                </span>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="rollLuns()">🎲 Rolar 1d100</button>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="font-size:.9rem;color:var(--muted);">💰</span>
+                    <input type="number" id="lunsInput" min="0" max="100"
+                        value="${wizardState.luns || ''}"
+                        placeholder="0"
+                        style="width:80px;font-size:1.2rem;font-weight:900;text-align:center;color:var(--accent);border:2px solid var(--soft);border-radius:8px;padding:6px;background:var(--chip);font-family:var(--font);"
+                        oninput="updateLunsManual(this.value)">
+                    <span style="font-size:.9rem;font-weight:700;color:var(--accent);">Luns</span>
+                </div>
+            </div>
+            <div id="lunsRollResult" style="font-size:.85rem;color:var(--muted);margin-top:6px;">
+                ${wizardState.luns > 0 ? `Resultado: ${wizardState.luns}` : ''}
             </div>
         </div>
     `;
@@ -89,16 +98,32 @@ function toggleEquipItem(itemName, checked) {
 }
 
 function rollLuns() {
-    const d1 = Math.floor(Math.random() * 10) + 1;
-    const d2 = Math.floor(Math.random() * 10) + 1;
-    wizardState.luns = d1 + d2;
+    const result = Math.floor(Math.random() * 100) + 1;
+    wizardState.luns = result;
 
-    const el = document.getElementById('lunsResult');
-    if (el) {
-        el.textContent = `🎲 ${d1} + ${d2} = 💰 ${wizardState.luns} Luns`;
-        el.style.animation = 'none';
-        void el.offsetWidth;
-        el.style.animation = 'phaseIn .3s ease-out';
+    const input = document.getElementById('lunsInput');
+    if (input) {
+        input.value = result;
+        input.style.animation = 'none';
+        void input.offsetWidth;
+        input.style.animation = 'phaseIn .3s ease-out';
+    }
+
+    const resultEl = document.getElementById('lunsRollResult');
+    if (resultEl) {
+        resultEl.textContent = `🎲 Resultado: ${result}`;
+    }
+
+    saveWizardToStorage();
+}
+
+function updateLunsManual(value) {
+    const num = parseInt(value) || 0;
+    wizardState.luns = num;
+
+    const resultEl = document.getElementById('lunsRollResult');
+    if (resultEl) {
+        resultEl.textContent = num > 0 ? `Valor definido: ${num}` : '';
     }
 
     saveWizardToStorage();

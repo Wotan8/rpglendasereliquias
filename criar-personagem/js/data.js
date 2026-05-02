@@ -28,7 +28,7 @@ const REGRAS_CRIACAO = {
         intermediario: 4,
         fraco: 3,
         custo_quinta_bolinha: 2, // A 5ª bolinha custa 2 pontos em vez de 1
-        limite_max_por_atributo: 3, // Máximo 3 por atributo na criação (exceto se mecânica altera)
+        limite_max_por_atributo: 2, // Máximo 2 pontos distribuídos (+ 1 base = Nv 3 na criação)
         base_inicial: 1 // Todos começam com 1
     },
     pericias: {
@@ -139,8 +139,7 @@ const VICIOS = [
         descricao: "Precisar saciar certos desejos acima de tudo — seja comida, bebida, substâncias, ou qualquer outro vício específico. A necessidade supera a razão.",
         recupera: "Sacrifica sua segurança ou a de outros para saciar seu vício — colocar-se em perigo real para conseguir o que precisa, ou abandonar responsabilidades importantes pela compulsão.",
         icone: "🍷",
-        especificar: true,
-        especificarLabel: "Especifique seu vício (álcool, jogo, uma substância, etc.)"
+        especificar: false
     },
     {
         id: "inveja",
@@ -167,8 +166,7 @@ const VICIOS = [
         descricao: "Ser consumido por desejos intensos — geralmente românticos ou sexuais, mas pode ser por experiências, sensações ou qualquer forma de prazer.",
         recupera: "Sacrifica algo valioso para satisfazer seu desejo — colocar-se em perigo, trair confiança ou prejudicar alguém para conseguir o que quer.",
         icone: "❤️‍🔥",
-        especificar: true,
-        especificarLabel: "Especifique o objeto de sua luxúria, se aplicável"
+        especificar: false
     },
     {
         id: "orgulho",
@@ -216,13 +214,13 @@ const FASES_WIZARD = [
 const NARRADOR_TEXTOS = {
     convite: `Toda grande lenda começa com uma escolha. E a sua começa agora.\n\nAntes de existir como herói — ou vilão — você era apenas uma possibilidade. Um nome sussurrado pelo destino. Um par de olhos que se abriram pela primeira vez para um mundo cheio de perigos, maravilhas e segredos antigos.\n\nDiga-me: como devo chamá-lo?`,
 
-    linhagem_raca: `Seu sangue carrega histórias mais antigas que qualquer reino. Antes mesmo de dar o primeiro passo, sua raça já moldou seus ossos, seus instintos, suas fraquezas.\n\nDe qual povo você descende?`,
+    linhagem_raca: `Em Vasteluna, cada povo carrega a marca de sua essência — ou a ausência dela. Há os que nasceram sob a luz de Palla, os que o Abismo tocou, os que a floresta moldou e os que o ferro forjou. Você vê o reflexo de alguém. Não sabe ainda o nome, nem a história. Mas vê o rosto, o corpo, os traços. De qual povo você descende?`,
 
-    linhagem_classe: `Todo aventureiro caminha por um caminho — uma vocação que define como ele enfrenta o mundo. Alguns empunham espadas, outros decifram runas. Alguns curam, outros destroem.\n\nQual caminho chamou você?`,
+    linhagem_classe: `Em Vasteluna, toda criança cresce sabendo que um dia precisará escolher — ou será escolhida. Há os que empunham aço e aprendem posturas de combate. Há os que decifram runas antigas e dobram o fluxo da essência. Há os que oram a Palla e canalizam sua luz vacilante. E há os que caminham na beira do Abismo, sem medo do que olha de volta. Qual caminho chamou você?`,
 
-    origens: `Ninguém nasce no vazio. Você cresceu entre rostos, rituais e paisagens que marcaram sua alma para sempre. Sua tribo não é apenas de onde você vem — é quem você é.\n\nDe qual povo você veio?`,
+    origens: `Nas vastas planícies de Vasteluna, tribos com culturas únicas disputam e convivem em equilíbrio frágil. Há o barulho da feira Comuno, o marchar rígido dos Famo, os tambores noturnos dos Pogtara e o silêncio cortante dos Mâni. Todo mundo vem de algum lugar. Quando você pensa em lar, o que sente?`,
 
-    peculiaridades: `Nem tudo sobre você pode ser explicado pela sua raça ou pelo seu treinamento. Há algo mais — algo único, inexplicável talvez — que faz de você quem é.\n\nAlgumas dessas marcas são dons. Outras, fardos. Todas fazem parte da sua história.`,
+    peculiaridades: `Nem todos nascem iguais em Vasteluna. Alguns carregam corpos que desafiam o padrão — mais frágeis, mais resistentes, maiores ou menores do que deveriam ser. Outros possuem dons sutis ou fardos pesados que nenhuma tribo ensinou e nenhuma raça explica. Essas marcas são suas. Escolha o que te faz diferente — e aceite o preço.`,
 
     corpo: `Agora precisamos falar do que você é feito. Não de sonhos ou linhagens — mas de músculo, mente e presença. De como o mundo te sente quando você entra em uma sala.\n\nDistribua seus atributos com sabedoria. Escolha seu ponto forte — e aceite suas fraquezas.`,
 
@@ -238,3 +236,22 @@ const NARRADOR_TEXTOS = {
 
     resumo: `E assim, sua história começa. Não com um estrondo, mas com uma escolha — a escolha de se levantar quando o mundo diz para ficar de joelhos.\n\nRevisite quem você é. E quando estiver pronto... dê o primeiro passo.`
 };
+
+/* ===== TEXTO INTRODUTÓRIO PADRÃO (Personagem Avulso) ===== */
+const VASTELUNA_INTRO = `Bem-vindo a Vasteluna.
+
+Ano 212 da Era Dourada — também chamada de Era da Alta Magia e Idade das Relíquias.
+
+Há séculos, os Asliais — Deuses Superiores de poder incomensurável — reuniram todas as relíquias de Forkrok e deram início a uma nova era. Ergueram masmorras imponentes pelo mundo e esconderam dentro delas os artefatos mais poderosos já criados: as Relíquias. Objetos capazes de mudar destinos, conceder poder além da compreensão mortal, ou destruir quem ousar empunhá-los sem merecimento.
+
+Agora, a sociedade mortal floresce em meio a conflitos, exploração e mistérios. Tribos com culturas únicas disputam territórios e influência nas vastas planícies de Vasteluna. Entre elas, destaca-se a neutra e mercantil vila de Sereni, onde viajantes e tribos rivais convivem em uma tensa paz — um equilíbrio frágil que pode ruir a qualquer momento.
+
+Os povos de Vasteluna são tão diversos quanto a própria terra. Humanos ambiciosos, Elorins ligados às florestas ancestrais, Karu com fogo correndo nas veias, Picxis que flutuam com asas translúcidas, Pogos pequenos e imprevisíveis, Tamanos com garras e instinto predador, e Yotun gigantes que fazem a terra tremer ao caminhar. Cada povo carrega a marca de uma essência — ou a ausência dela.
+
+Sob a superfície, o Abismo sussurra. Fendas se abrem em lugares esquecidos. Criaturas que não deveriam existir caminham nas sombras. A luz de Palla enfraquece, e os devotos rezam mais alto para compensar. Nem toda ameaça vem das masmorras — algumas já estão entre nós.
+
+E entre tudo isso, surgem os aventureiros. Pessoas comuns — ou nem tanto — que decidem deixar o conforto da tribo, pegar uma arma, um foco arcano ou um instrumento, e caminhar em direção ao perigo. Alguns buscam riqueza. Outros, respostas. Alguns fogem de algo. E há os que simplesmente não conseguem ficar parados enquanto o mundo desmorona ao redor.
+
+Você é um deles.
+
+A estrada espera. As masmorras guardam seus segredos. E Vasteluna não perdoa os despreparados.`;

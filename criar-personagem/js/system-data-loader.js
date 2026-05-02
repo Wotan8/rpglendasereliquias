@@ -163,7 +163,10 @@ function _resolvePeculiaridade(pecData, sourceLabel) {
         nivelAtual, nivelMax, niveis,
         auraVinculadaId: pec.auraVinculadaId || null,
         auraGrauConcedido: pec.auraGrauConcedido || 1,
-        tags: pec.tags || []
+        tags: pec.tags || [],
+        ehVantagem: pec.ehVantagem === true,
+        mecanicaExpCriacao: pec.mecanicaExpCriacao || [],
+        quandoSeAplica: pec.quandoSeAplica || 'passivo'
     };
 }
 window._resolvePeculiaridade = _resolvePeculiaridade;
@@ -269,10 +272,10 @@ function buildSkillsFromFirebase() {
 /* ===== buildIndividualPeculiarities ===== */
 function buildIndividualPeculiarities() {
     window.INDIVIDUAL_PECULIARITIES = window._systemData.peculiarities
-        .filter(p => p.fonte === 'individual' && p.publicado !== false)
+        .filter(p => p.fonte === 'individual' && p.publicado !== false && (p.quandoSeAplica === 'na_criacao'))
         .map(p => _resolvePeculiaridade(p.id, 'individual'))
         .filter(Boolean);
-    console.log(`✅ Peculiaridades individuais: ${window.INDIVIDUAL_PECULIARITIES.length}`);
+    console.log(`✅ Peculiaridades individuais (na criação): ${window.INDIVIDUAL_PECULIARITIES.length}`);
 }
 
 /* ===== buildDerivedValuesFromFirebase ===== */

@@ -3,7 +3,9 @@
 window.wizardState = {
     // Fase 0
     nomePersonagem: '',
-    nivelInicio: null, // { id, nome, exp }
+    nivelInicio: null, // { id, nome, exp } — legado, mantido para compat
+    expInicial: 0,     // EXP manual ou da mesa
+    mesaVinculada: null, // { id, nome, mestreNome, expInicial, introducao } ou null
 
     // Fase 1
     racaSelecionada: null,   // nome da raça
@@ -34,10 +36,9 @@ window.wizardState = {
     // Fase 5
     virtudeSelecionada: null,  // id da virtude
     vicioSelecionado: null,    // id do vício
-    vicioEspecificacao: '',     // texto livre (para Gula/Luxúria)
 
     // Fase 6
-    npcs: [], // [{ nome, relacao, memoria, vinculo }]
+    npcs: [], // [{ nome, relacao, memoria, vinculo, confirmado }]
 
     // Fase 7
     equipamentoSelecionado: [], // [string]
@@ -46,8 +47,8 @@ window.wizardState = {
 
     // Fase 8
     nomeCompleto: '',
-    apelido: '',
     aparencia: '',
+    imagemPersonagem: null, // base64 data URL da imagem do personagem
     motivacao: '',
     medo: '',
     ultimaPergunta: '',
@@ -84,8 +85,7 @@ function validatePhase(phaseIndex) {
 
     switch (fase.key) {
         case 'convite':
-            if (!wizardState.nomePersonagem.trim()) return { valid: false, reason: 'Digite o nome do personagem.' };
-            if (!wizardState.nivelInicio) return { valid: false, reason: 'Selecione o nível de início.' };
+            // Fase 0 nunca bloqueia — nome e EXP são opcionais aqui
             return { valid: true };
 
         case 'linhagem':
@@ -117,9 +117,19 @@ function validatePhase(phaseIndex) {
         case 'equipamento':
             return { valid: true }; // Equipamento é informativo
 
-        case 'vespera':
-            if (!wizardState.nomeCompleto.trim()) return { valid: false, reason: 'Digite o nome completo.' };
+        case 'vespera': {
+            const name = (wizardState.nomeCompleto || wizardState.nomePersonagem || '').trim();
+            if (!name) return { valid: false, reason: 'Digite o nome do personagem.' };
             return { valid: true };
+        }
+
+        case 'resumo': {
+            const charName = (wizardState.nomeCompleto || wizardState.nomePersonagem || '').trim();
+            if (!charName) {
+                return { valid: false, reason: 'Dê um nome ao seu personagem para finalizar.' };
+            }
+            return { valid: true };
+        }
 
         default:
             return { valid: true };
@@ -130,13 +140,7 @@ function validateAttributes() {
     if (!wizardState.grupoPrimario || !wizardState.grupoFraco) {
         return { valid: false, reason: 'Selecione os grupos primário e fraco.' };
     }
-    // Check all groups have distributed their points
-    for (const grupo of GRUPOS_ATRIBUTOS) {
-        const remaining = getGroupRemainingPoints(grupo);
-        if (remaining > 0) {
-            return { valid: false, reason: `Distribua todos os pontos do grupo ${grupo}.` };
-        }
-    }
+    // Permite avançar sem distribuir todos os pontos — validação completa ocorre ao finalizar
     return { valid: true };
 }
 

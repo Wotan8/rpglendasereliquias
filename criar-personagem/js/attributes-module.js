@@ -89,8 +89,8 @@ function initPhase3(container) {
     html += `</div></div>`;
 
     // Memórias
-    html += createMemoryBox('corpo', 'Qual parte do seu corpo conta uma história? Uma marca, um hábito, um gesto que ninguém mais faz?', false);
-    html += createMemoryBox('corpo_opcional', 'A Cicatriz — Qual é a marca que carrega? Como a conseguiu?', true);
+    html += createMemoryBox('corpo', 'Por que seu personagem é forte nessa área? Foi treino, talento natural, ou uma experiência traumática que o forçou a se desenvolver?', false, '✍️ Memória dos pontos forte');
+    html += createMemoryBox('corpo_adicional', 'E a fraqueza — é algo que ele tenta superar, ou que simplesmente aceita?', false, '✍️ Memória dos pontos fraco');
 
     container.innerHTML = html;
     updateAllAttrCounters();
