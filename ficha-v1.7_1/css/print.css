@@ -344,9 +344,6 @@
         grid-template-columns: 1.5fr 2.5fr .5fr 40px !important;
     }
 
-    .spec-grid {
-        grid-template-columns: repeat(3, 1fr) !important;
-    }
 
     /* Ensure inputs are visible */
     input,

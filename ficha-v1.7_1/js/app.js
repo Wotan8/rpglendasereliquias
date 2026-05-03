@@ -4,12 +4,12 @@
 window._dataReady = false;
 
 let state = {
-    dots: {}, notes: [], charImg: '', specs: [], customTests: [], mainTestsOrder: [],
+    dots: {}, notes: [], charImg: '', customTests: [], mainTestsOrder: [],
     mechanicBonuses: {}, mechanicLimits: {}, mecanicasAplicadas: {},
     mecanicasPendentes: [], capacidades: [], auras: {}, classModuleData: {},
     expApplied: {}, expSessionTriggers: []
 };
-let editingNoteId = null, testCount = 3, specCount = 0;
+let editingNoteId = null, testCount = 3;
 
 /* Contadores de recursos de classe */
 let sigilusCount = 0, runaPrepCount = 0, estudoCount = 0;
@@ -38,7 +38,7 @@ window.initApp = function () {
     if (_appInitialized) return;
     _appInitialized = true;
 
-    initTabs(); initDots(); initSkills(); initSpecializations(); initCharImg();
+    initTabs(); initDots(); initSkills(); initCharImg();
     addWeapon(); addArmor(); addProjectile();
     addInventoryItem(); addInventoryItem(); addInventoryItem();
 

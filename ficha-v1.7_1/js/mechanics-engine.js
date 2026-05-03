@@ -355,8 +355,6 @@ function applyAllRaceMechanics(racaNome) {
     // Always apply skill mechanics, even without a race selected
     applySkillMechanics();
 
-    // Apply mechanics linked to specializations
-    applySpecializationMechanics();
 
     // Apply mechanics linked to derived values
     applyDerivedValueMechanics();
@@ -490,26 +488,7 @@ function applySkillMechanics() {
     }
 }
 
-/* ===== APLICAR MECÂNICAS VINCULADAS A ESPECIALIZAÇÕES ===== */
-function applySpecializationMechanics() {
-    if (!window.SPECIALIZATIONS || !window._systemData?.mechanics) return;
 
-    const mechanicsById = {};
-    for (const m of window._systemData.mechanics) {
-        mechanicsById[m.id] = m;
-    }
-
-    for (const cat of Object.keys(window.SPECIALIZATIONS)) {
-        for (const spec of window.SPECIALIZATIONS[cat]) {
-            if (!spec.mecanicaIds || spec.mecanicaIds.length === 0) continue;
-            for (const mechId of spec.mecanicaIds) {
-                const mech = mechanicsById[mechId];
-                if (!mech) continue;
-                applyMechanicToSheet(mech, null);
-            }
-        }
-    }
-}
 
 /* ===== APLICAR MECÂNICAS VINCULADAS A STATUS VITAIS (Firebase) ===== */
 function applyVitalStatsMechanics() {

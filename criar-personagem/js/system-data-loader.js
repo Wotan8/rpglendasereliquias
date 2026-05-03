@@ -7,7 +7,7 @@
 window._systemData = {
     races: [], classes: [], tribes: [], peculiarities: [], mechanics: [],
     skills: [], conditions: [], equipment: [], maneuvers: [], spells: [],
-    derivedValues: [], vitalStats: [], specializations: [], auras: [],
+    derivedValues: [], vitalStats: [], auras: [],
     loaded: false, error: null
 };
 
@@ -20,7 +20,6 @@ window.CLASS_PECULIARITIES = {};
 window.DERIVED_VALUES = [];
 window.VITAL_STATS = [];
 window.AURAS = [];
-window.SPECIALIZATIONS = {};
 window.INDIVIDUAL_PECULIARITIES = [];
 
 /**
@@ -33,7 +32,7 @@ window.loadSystemData = async function () {
     const collections = [
         'races', 'classes', 'tribes', 'peculiarities', 'mechanics',
         'skills', 'conditions', 'equipment', 'maneuvers', 'spells',
-        'derivedValues', 'vitalStats', 'specializations', 'auras'
+        'derivedValues', 'vitalStats', 'auras'
     ];
 
     try {
@@ -66,7 +65,6 @@ window.loadSystemData = async function () {
         buildIndividualPeculiarities();
         buildDerivedValuesFromFirebase();
         buildVitalStatsFromFirebase();
-        buildSpecializationsFromFirebase();
 
         if (window._systemData.auras) {
             window.AURAS = window._systemData.auras;
@@ -308,19 +306,3 @@ function buildVitalStatsFromFirebase() {
     console.log(`✅ Status vitais: ${window.VITAL_STATS.length}`);
 }
 
-/* ===== buildSpecializationsFromFirebase ===== */
-function buildSpecializationsFromFirebase() {
-    window.SPECIALIZATIONS = { mental: [], fisico: [], social: [], combate: [], exclusivo: [] };
-    const sorted = [...window._systemData.specializations].sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
-    for (const sp of sorted) {
-        if (sp.publicado === false) continue;
-        const cat = sp.categoria || 'mental';
-        if (!window.SPECIALIZATIONS[cat]) window.SPECIALIZATIONS[cat] = [];
-        window.SPECIALIZATIONS[cat].push({
-            id: sp.id, name: sp.nome,
-            limitador: sp.limitador || [],
-            custoExp: sp.custoExp || 2,
-            descricao: sp.descricao || ''
-        });
-    }
-}

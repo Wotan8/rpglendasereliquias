@@ -16,17 +16,13 @@ function scheduleAutosave() {
 document.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.key) scheduleAutosave(); });
 
 function gatherData() {
-    const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, specs: [], locacoes: [], rituais: [], ritos: [], mecanicasAplicadas: state.mecanicasAplicadas || {}, fieldBaseValues: state.fieldBaseValues || {}, appliedFieldBonuses: state.appliedFieldBonuses || {}, derivedOverrides: state.derivedOverrides || {}, auras: state.auras || {}, expApplied: state.expApplied || {} };
+    const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, locacoes: [], rituais: [], ritos: [], mecanicasAplicadas: state.mecanicasAplicadas || {}, fieldBaseValues: state.fieldBaseValues || {}, appliedFieldBonuses: state.appliedFieldBonuses || {}, derivedOverrides: state.derivedOverrides || {}, auras: state.auras || {}, expApplied: state.expApplied || {} };
     document.querySelectorAll('[data-key]').forEach(el => {
         // Salvar o valor do DOM como está (incluindo edições manuais do usuário).
         // O sistema de appliedFieldBonuses garante que o bônus não será re-aplicado no reload.
         d.fields[el.dataset.key] = el.value || '';
     });
-    document.querySelectorAll('.spec-item').forEach(item => {
-        const inp = item.querySelector('input[data-key]');
-        const dotsEl = item.querySelector('.dots5');
-        if (inp && dotsEl) { d.specs.push({ name: inp.value, dotsKey: dotsEl.dataset.attr, level: state.dots[dotsEl.dataset.attr] || 0 }); }
-    });
+
     // Gather loções
     document.querySelectorAll('.receita-item').forEach(item => {
         const id = item.dataset.locaoId;
@@ -183,7 +179,7 @@ function loadFromData(d) {
         if (d.fields) Object.entries(d.fields).forEach(([k, v]) => { const el = document.querySelector(`[data-key="${k}"]`); if (el) el.value = v; });
         if (d.notes) { state.notes = d.notes; renderNotes(); }
         if (d.charImg) { state.charImg = d.charImg; const img = document.getElementById('charImgPreview'); img.src = state.charImg; img.style.display = 'block'; document.getElementById('charImgPlaceholder').style.display = 'none'; }
-        if (d.specs && d.specs.length) { d.specs.forEach(s => { const item = addSpec(s.name, s.dotsKey); if (s.level) { state.dots[s.dotsKey] = s.level; const dotsEl = item.querySelector('.dots5'); if (dotsEl) refreshDots(dotsEl, s.dotsKey); } }); }
+
         if (d.locacoes) state.locacoes = d.locacoes;
         if (d.rituais) state.rituais = d.rituais;
         if (d.ritos) state.ritos = d.ritos;

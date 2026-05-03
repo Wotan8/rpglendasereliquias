@@ -1,4 +1,4 @@
-/* ===== CORE: Tabs, Dots, Skills, Class Change, Specs, Tests ===== */
+/* ===== CORE: Tabs, Dots, Skills, Class Change, Tests ===== */
 
 function initTabs() { document.querySelectorAll('.tab').forEach(b => { b.addEventListener('click', () => { document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); b.classList.add('active'); document.getElementById(b.dataset.tab).classList.add('active'); }); }); }
 
@@ -7,7 +7,6 @@ function initTabs() { document.querySelectorAll('.tab').forEach(b => { b.addEven
  * @param {HTMLElement} container - o .dots5
  * @param {string} k - dotKey
  * @param {number} clickedVal - nível clicado (1-5)
- * @param {string} [specName] - nome da especialização (se for spec)
  */
 function handleDotUpgrade(container, k, clickedVal, specName) {
     const current = state.dots[k] || 0;
@@ -160,17 +159,16 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
 }
 
 /** Obtém nome legível do parâmetro pela UI */
-function getDotLabel(k, container, specName) {
-    if (specName) return specName || 'Especialização';
+function getDotLabel(k, container) {
     // Tenta achar label no sk-row pai ou attr-item pai
-    const parent = container.closest('.sk-row, .attr-item, .spec-item');
+    const parent = container.closest('.sk-row, .attr-item');
     if (parent) {
         const nameEl = parent.querySelector('.sk-name, .abbr');
         if (nameEl) return nameEl.textContent.trim();
         const inp = parent.querySelector('input[data-key]');
         if (inp && inp.value) return inp.value;
     }
-    return k.replace(/^(attr_|sk_\w+_|spec_)/, '').replace(/_/g, ' ');
+    return k.replace(/^(attr_|sk_\w+_)/, '').replace(/_/g, ' ');
 }
 
 function initDots() {
@@ -286,30 +284,7 @@ function renderBlock(id, skills, pfx) {
     });
 }
 
-/* ===== SPECIALIZATIONS (dynamic from Firebase) ===== */
-function initSpecializations() {
-    if (!window.SPECIALIZATIONS) return;
-    const filterUniversal = (arr) => (arr || []).filter(s => s.todoPersonagem !== false);
-    renderSpecBlock('specsMental', filterUniversal(window.SPECIALIZATIONS.mental), 'spec_mental_');
-    renderSpecBlock('specsFisico', filterUniversal(window.SPECIALIZATIONS.fisico), 'spec_fisico_');
-    renderSpecBlock('specsSocial', filterUniversal(window.SPECIALIZATIONS.social), 'spec_social_');
-    renderSpecBlock('specsCombate', filterUniversal(window.SPECIALIZATIONS.combate), 'spec_combate_');
-    renderSpecBlock('specsExclusivo', filterUniversal(window.SPECIALIZATIONS.exclusivo), 'spec_exclusivo_');
-}
-function renderSpecBlock(id, specs, pfx) {
-    const c = document.getElementById(id);
-    if (!c) return;
-    specs.forEach(s => {
-        const row = document.createElement('div'); row.className = 'sk-row';
-        const lbl = document.createElement('div'); lbl.className = 'sk-label';
-        const nameSpan = document.createElement('div'); nameSpan.className = 'sk-name'; nameSpan.textContent = s.name;
-        const attrSpan = document.createElement('div'); attrSpan.className = 'sk-attr'; attrSpan.textContent = s.sub;
-        if (s.descricao) nameSpan.classList.add('has-tooltip');
-        lbl.appendChild(nameSpan);
-        lbl.appendChild(attrSpan);
-        row.appendChild(lbl); row.appendChild(createDotsHTML(pfx + s.key, s.name)); c.appendChild(row);
-    });
-}
+
 
 function onClassChange() {
     const cl = document.getElementById('selClasse').value;
@@ -328,48 +303,6 @@ function onClassChange() {
         });
     }
 
-    // === ESPECIALIZAÇÕES DA CLASSE ===
-    // Remove previously injected class spec rows
-    document.querySelectorAll('.sk-row[data-class-spec]').forEach(r => r.remove());
-
-    if (cl && window._systemData && window._systemData.classes && window.SPECIALIZATIONS) {
-        const classeData = window._systemData.classes.find(c => c.nome === cl);
-        const especIds = classeData?.especDaClasse || classeData?.especExclusivas || [];
-        // especIds pode ser array de IDs de especializações do Firebase
-        if (Array.isArray(especIds) && especIds.length > 0) {
-            // Flatten all specializations for lookup
-            const allSpecs = [];
-            for (const cat of Object.keys(window.SPECIALIZATIONS)) {
-                for (const sp of window.SPECIALIZATIONS[cat]) { allSpecs.push({ ...sp, _cat: cat }); }
-            }
-
-            especIds.forEach(specId => {
-                // Handle both string IDs and legacy {nome, descricao} objects
-                if (typeof specId === 'object' && specId.nome) return; // legacy format, skip
-                const spec = allSpecs.find(s => s.id === specId);
-                if (!spec) return;
-
-                const catCapMap = { mental: 'Mental', fisico: 'Fisico', social: 'Social', combate: 'Combate', exclusivo: 'Exclusivo' };
-                const containerSuffix = catCapMap[spec._cat] || 'Combate';
-                const container = document.getElementById('specs' + containerSuffix);
-                if (!container) return;
-
-                // Check if already rendered (universal spec)
-                const pfx = 'spec_' + spec._cat + '_';
-                const fullKey = pfx + spec.key;
-                if (container.querySelector(`[data-attr="${fullKey}"]`)) return;
-
-                const row = document.createElement('div'); row.className = 'sk-row'; row.dataset.classSpec = '1';
-                const lbl = document.createElement('div'); lbl.className = 'sk-label';
-                const nameSpan = document.createElement('div'); nameSpan.className = 'sk-name'; nameSpan.textContent = spec.name;
-                const attrSpan = document.createElement('div'); attrSpan.className = 'sk-attr'; attrSpan.textContent = spec.sub;
-                if (spec.descricao) nameSpan.classList.add('has-tooltip');
-                lbl.appendChild(nameSpan); lbl.appendChild(attrSpan);
-                row.appendChild(lbl); row.appendChild(createDotsHTML(fullKey, spec.name));
-                container.appendChild(row);
-            });
-        }
-    }
 
     /* Resources */
     const resSection = document.getElementById('classResourcesSection');
@@ -482,34 +415,7 @@ function onTriboChange() {
     if (typeof lockSelectsIfNeeded === 'function') lockSelectsIfNeeded();
 }
 
-/* SPECIALIZATIONS */
-function addSpec(name, dotsKey) {
-    const c = document.getElementById('specContainer');
-    const i = specCount++;
-    const dk = dotsKey || ('spec_' + i);
-    const item = document.createElement('div'); item.className = 'spec-item'; item.dataset.specId = i;
-    const inp = document.createElement('input'); inp.type = 'text'; inp.dataset.key = 'spec_name_' + i; inp.placeholder = 'Ex: Espadas (Arma)';
-    if (name) inp.value = name;
-    inp.addEventListener('input', scheduleAutosave);
-    item.appendChild(inp);
 
-    // Criar dots com referência dinâmica ao nome da especialização
-    state.dots[dk] = state.dots[dk] || 0;
-    const dotsDiv = document.createElement('div'); dotsDiv.className = 'dots5'; dotsDiv.dataset.attr = dk;
-    for (let lvl = 1; lvl <= 5; lvl++) {
-        const d = document.createElement('button'); d.className = 'dot'; d.dataset.val = lvl; d.title = 'Nível ' + lvl;
-        d.addEventListener('click', () => handleDotUpgrade(dotsDiv, dk, lvl, inp.value));
-        dotsDiv.appendChild(d);
-    }
-    refreshDots(dotsDiv, dk);
-    item.appendChild(dotsDiv);
-
-    const rm = document.createElement('button'); rm.className = 'rm-spec no-print'; rm.textContent = '✕';
-    rm.addEventListener('click', () => { item.remove(); scheduleAutosave(); });
-    item.appendChild(rm);
-    c.appendChild(item);
-    return item;
-}
 
 function addTest() {
     // New logic: Use state.customTests

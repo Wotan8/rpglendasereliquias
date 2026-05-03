@@ -3,7 +3,7 @@
 // Lendas e Relíquias (ficha-v1.7_1 style)
 // =============================================
 
-import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildSpecSelectorHTML, buildManeuverSelectorHTML, buildSpecLimiterHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js';
+import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildManeuverSelectorHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js';
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -36,7 +36,7 @@ let peculiaritiesCache = [];
 let skillsCache = [];
 let derivedValuesCache = [];
 let vitalStatsCache = [];
-let specsCache = [];
+
 let aurasCache = [];
 let maneuversCache = [];
 
@@ -86,7 +86,6 @@ const MODULE_DEFS = {
                 ], maxItems: 1
             },
             { key: 'pericClasse', label: 'Perícias de Classe', type: 'mechanic_selector', selectorTarget: 'skills' },
-            { key: 'especDaClasse', label: 'Especializações da Classe', type: 'mechanic_selector', selectorTarget: 'specializations' },
             { key: 'manobras', label: '💥 Manobras da Classe', type: 'mechanic_selector', selectorTarget: 'maneuvers' },
             { key: 'mecanicaIds', label: 'Mecânicas da Classe', type: 'mechanic_selector', fontePreFilter: 'classe' },
             { key: 'derivedValueIds', label: 'Valores Derivados da Classe', type: 'mechanic_selector', selectorTarget: 'derivedValues' },
@@ -156,28 +155,7 @@ const MODULE_DEFS = {
             { key: 'tags', label: 'Tags', type: 'tags', placeholder: 'Ex: bônus, racial' },
         ]
     },
-    specializations: {
-        name: 'Especialização', namePlural: 'Especializações', icon: '🎯',
-        collection: 'system/data/specializations',
-        fields: [
-            { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Espadas, Armaduras Leves' },
-            {
-                key: 'categoria', label: 'Categoria', type: 'select', required: true, options: [
-                    { value: 'mental', label: 'Mental' },
-                    { value: 'fisico', label: 'Físico' },
-                    { value: 'social', label: 'Social' },
-                    { value: 'combate', label: 'Combate' },
-                    { value: 'exclusivo', label: 'Exclusivo' }
-                ]
-            },
-            { key: 'descricao', label: 'Descrição', type: 'textarea', placeholder: 'Descreva a especialização' },
-            { key: 'limitadores', label: 'Limitadores de Upgrade (Atributos e Perícias)', type: 'spec_limiter' },
-            { key: 'custoEvolucao', label: 'Custo de Evolução (EXP por nível)', type: 'number', placeholder: '2' },
-            { key: 'todoPersonagem', label: 'Todo personagem tem esta especialização?', type: 'boolean' },
-            { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: '' },
-            { key: 'exemplos', label: 'Exemplos de Itens', type: 'tags', placeholder: 'Ex: Espada Curta, Espada Longa' },
-        ]
-    },
+
     skills: {
         name: 'Perícia', namePlural: 'Perícias', icon: '📚',
         collection: 'system/data/skills',
@@ -337,15 +315,14 @@ const MODULE_DEFS = {
             { key: 'nome', label: 'Nome da Aura', type: 'text', required: true, placeholder: 'Ex: Aura de Força' },
             {
                 key: 'tipo', label: 'Tipo de Aura', type: 'select', required: true, options: [
-                    { value: 'propriedade', label: '📊 Propriedade (Atributo/Perícia/Especialização)' },
+                    { value: 'propriedade', label: '📊 Propriedade (Atributo/Perícia)' },
                     { value: 'mortalidade', label: '💀 Mortalidade' }
                 ]
             },
             {
                 key: 'propriedadeTipo', label: 'Tipo de Propriedade', type: 'select', options: [
                     { value: 'atributo', label: '💪 Atributo' },
-                    { value: 'pericia', label: '📚 Perícia' },
-                    { value: 'especializacao', label: '🎯 Especialização' }
+                    { value: 'pericia', label: '📚 Perícia' }
                 ], showWhen: { field: 'tipo', value: 'propriedade' }
             },
             { key: 'propriedadeVinculada', label: 'Propriedade Vinculada', type: 'aura_property_selector', showWhen: { field: 'tipo', value: 'propriedade' } },
@@ -476,10 +453,7 @@ window.switchModule = function (moduleName, btnEl) {
     if (oldSkillFilters) oldSkillFilters.remove();
     if (moduleName === 'skills') renderSkillsExtraFilters();
 
-    // Remove/add specializations extra filters
-    const oldSpecFilters = document.getElementById('specsFiltersExtra');
-    if (oldSpecFilters) oldSpecFilters.remove();
-    if (moduleName === 'specializations') renderSpecsExtraFilters();
+
 
     // Remove/add tag filter for modules that have tags
     const oldTagFilter = document.getElementById('tagFilterArea');
@@ -534,24 +508,7 @@ function renderSkillsExtraFilters() {
     filterBar.after(div);
 }
 
-function renderSpecsExtraFilters() {
-    const filterBar = document.getElementById('filterBar');
-    if (!filterBar || document.getElementById('specsFiltersExtra')) return;
-    const div = document.createElement('div');
-    div.className = 'mech-filters';
-    div.id = 'specsFiltersExtra';
-    div.innerHTML = `
-        <select id="specFilterCategoria" onchange="filterItems()">
-            <option value="">📂 Categoria: Todas</option>
-            ${SKILL_CATEGORIA_ORDER.map(k => `<option value="${k}">${SKILL_CATEGORIA_LABELS[k]}</option>`).join('')}
-        </select>
-        <label style="display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap">
-            <input type="checkbox" id="specGroupByCategoria" onchange="filterItems()" checked
-                style="width:16px;height:16px;accent-color:var(--primary);flex:none">
-            Agrupar por Categoria
-        </label>`;
-    filterBar.after(div);
-}
+
 
 // Modules that support tag filtering
 const TAG_MODULES = ['peculiarities', 'mechanics'];
@@ -607,12 +564,11 @@ async function loadModule(moduleName) {
     // Always refresh mechanics cache (needed for selectors in all modules)
     await refreshMechanicsCache();
     if (moduleName === 'races' || moduleName === 'classes' || moduleName === 'tribes') await refreshPeculiaritiesCache();
-    if (moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'skills' || moduleName === 'specializations') await refreshSkillsCache();
+    if (moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'skills') await refreshSkillsCache();
     if (moduleName === 'races' || moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'derivedValues') await refreshDerivedValuesCache();
     if (moduleName === 'mechanics' || moduleName === 'vitalStats') await refreshVitalStatsCache();
-    if (moduleName === 'classes' || moduleName === 'specializations') await refreshSpecsCache();
     if (moduleName === 'classes') await refreshManeuversCache();
-    if (moduleName === 'auras') { await refreshSkillsCache(); await refreshSpecsCache(); }
+    if (moduleName === 'auras') { await refreshSkillsCache(); }
     if (moduleName === 'peculiarities') await refreshAurasCache();
 
     const grid = document.getElementById('itemsGrid');
@@ -694,15 +650,7 @@ async function refreshVitalStatsCache() {
     } catch (e) { console.error('Erro cache vitalStats:', e); }
 }
 
-async function refreshSpecsCache() {
-    try {
-        const snap = await getDocs(collection(db, 'system/data/specializations'));
-        specsCache = [];
-        snap.forEach(d => specsCache.push({ id: d.id, ...d.data() }));
-        specsCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-        window._specsCache = specsCache;
-    } catch (e) { console.error('Erro cache specializations:', e); }
-}
+
 
 async function refreshAurasCache() {
     try {
@@ -782,11 +730,7 @@ function renderItems() {
             const catF = document.getElementById('skillFilterCategoria')?.value || '';
             if (catF && item.categoria !== catF) return false;
         }
-        // Specializations category filter
-        if (currentModule === 'specializations') {
-            const catF = document.getElementById('specFilterCategoria')?.value || '';
-            if (catF && item.categoria !== catF) return false;
-        }
+
         // Tag filter
         const selTags = getSelectedTags();
         if (selTags.size > 0) {
@@ -833,26 +777,7 @@ function renderItems() {
         return;
     }
 
-    // Specializations: group by category if checkbox is checked
-    if (currentModule === 'specializations' && document.getElementById('specGroupByCategoria')?.checked) {
-        const groups = {};
-        SKILL_CATEGORIA_ORDER.forEach(k => { groups[k] = []; });
-        filtered.forEach(item => {
-            const cat = (item.categoria || 'combate').toLowerCase();
-            if (!groups[cat]) groups[cat] = [];
-            groups[cat].push(item);
-        });
 
-        let html = '';
-        SKILL_CATEGORIA_ORDER.forEach(cat => {
-            const items = groups[cat];
-            if (!items || items.length === 0) return;
-            html += `<div class="skills-category-header">${SKILL_CATEGORIA_LABELS[cat] || cat} <span class="skills-category-count">${items.length}</span></div>`;
-            html += items.map(item => buildItemCardHTML(item)).join('');
-        });
-        grid.innerHTML = html;
-        return;
-    }
 
     grid.innerHTML = filtered.map(item => buildItemCardHTML(item)).join('');
 }
@@ -997,8 +922,6 @@ function buildField(field, value, existingData) {
             wrap.innerHTML = buildSkillSelectorHTML(field.key, field.label, ids, skillsCache);
         } else if (field.selectorTarget === 'derivedValues') {
             wrap.innerHTML = buildDerivedValueSelectorHTML(field.key, field.label, ids, derivedValuesCache);
-        } else if (field.selectorTarget === 'specializations') {
-            wrap.innerHTML = buildSpecSelectorHTML(field.key, field.label, ids, specsCache);
         } else if (field.selectorTarget === 'maneuvers') {
             wrap.innerHTML = buildManeuverSelectorHTML(field.key, field.label, ids, maneuversCache);
         } else {
@@ -1034,11 +957,7 @@ function buildField(field, value, existingData) {
         return wrap;
     }
 
-    if (field.type === 'spec_limiter') {
-        wrap.className = 'form-group full-width';
-        wrap.innerHTML = buildSpecLimiterHTML(field.key, field.label, value, skillsCache);
-        return wrap;
-    }
+
 
     // === CLASS TESTS EDITOR ===
     if (field.type === 'class_tests_editor') {
@@ -1273,7 +1192,7 @@ function _wireShowWhenBooleanFields(modDef, container) {
 
 // ===== AURA SYSTEM: PROPERTY SELECTOR =====
 function _buildAuraPropertySelectorHTML(fieldKey, label, value, existingData) {
-    // Build options from attributes, skills, and specializations
+    // Build options from attributes and skills
     let options = '<option value="">— Selecionar Propriedade —</option>';
 
     // Attributes (hardcoded keys matching the sheet)
@@ -1300,15 +1219,7 @@ function _buildAuraPropertySelectorHTML(fieldKey, label, value, existingData) {
         options += '</optgroup>';
     }
 
-    // Specializations from cache
-    if (specsCache.length > 0) {
-        options += '<optgroup label="🎯 Especializações">';
-        specsCache.forEach(sp => {
-            const sel = value === sp.nome ? 'selected' : '';
-            options += `<option value="${escapeHtml(sp.nome)}" ${sel}>${escapeHtml(sp.nome)}</option>`;
-        });
-        options += '</optgroup>';
-    }
+
 
     return `
         <label>${escapeHtml(label)}</label>
@@ -1890,12 +1801,7 @@ window.handleFormSubmit = async function (e) {
                 try { data[field.key] = JSON.parse(el.value || '[]'); }
                 catch { data[field.key] = []; }
             } else { data[field.key] = []; }
-        } else if (field.type === 'spec_limiter') {
-            const el = document.getElementById(`field_${field.key}`);
-            if (el) {
-                try { data[field.key] = JSON.parse(el.value || '{}'); }
-                catch { data[field.key] = { atributos: [], pericias: [] }; }
-            } else { data[field.key] = { atributos: [], pericias: [] }; }
+
         } else if (field.type === 'boolean') {
             const el = document.getElementById(`field_${field.key}`);
             data[field.key] = el ? el.checked : false;

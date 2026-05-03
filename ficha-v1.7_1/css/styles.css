@@ -79,8 +79,7 @@ html.dark .dot.filled {
 }
 
 html.dark .attr-item,
-html.dark .sk-row,
-html.dark .spec-item {
+html.dark .sk-row {
     background: var(--chip);
     border-color: var(--line)
 }
@@ -652,68 +651,6 @@ body {
     margin-left: auto
 }
 
-/* ===== SPECIALIZATIONS ===== */
-.spec-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px
-}
-
-.spec-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    border: 1px solid var(--soft);
-    border-radius: 8px;
-    padding: 4px 6px;
-    background: var(--chip)
-}
-
-.spec-item input {
-    border: none;
-    background: transparent;
-    font-size: 10px;
-    font-weight: 800;
-    text-transform: uppercase;
-    color: var(--ink);
-    font-family: var(--font);
-    outline: none;
-    min-width: 0;
-    flex: 1;
-    padding: 2px 0
-}
-
-.spec-item input::placeholder {
-    color: var(--muted);
-    font-weight: 600;
-    text-transform: none
-}
-
-.spec-item .dots5 {
-    margin-left: auto
-}
-
-.spec-item .rm-spec {
-    width: 18px;
-    height: 18px;
-    border: none !important;
-    border-radius: 4px !important;
-    background: transparent !important;
-    color: var(--muted) !important;
-    cursor: pointer;
-    font-size: 11px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 !important;
-    flex-shrink: 0;
-    transition: all .15s
-}
-
-.spec-item .rm-spec:hover {
-    background: var(--soft) !important;
-    color: #dc2626 !important
-}
 
 /* TESTS */
 .test-head {
@@ -1851,10 +1788,6 @@ button:hover {
     .inv-head,
     .inv-row {
         grid-template-columns: 1fr
-    }
-
-    .spec-grid {
-        grid-template-columns: 1fr 1fr
     }
 }
 

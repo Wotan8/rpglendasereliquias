@@ -5,16 +5,6 @@
  */
 // SKILL_LIMITERS is now dynamic: window.SKILL_LIMITERS (set by buildSkillsFromFirebase)
 
-/**
- * Mapeamento de Limitadores de ESPECIALIZAÇÕES.
- * Agora construído DINAMICAMENTE pelo buildSpecializationsFromFirebase()
- * em system-data-loader.js → window.SPEC_LIMITERS_DYNAMIC
- * Formato: dotKey → { keys: [...attrKeys, ...skillKeys], mode: 'min', names: [...] }
- *
- * LEGACY: O const SPEC_LIMITERS antigo foi removido.
- * A função getSpecLimiterLevel agora usa window.SPEC_LIMITERS_DYNAMIC.
- */
-
 /* ===== FUNÇÕES DE CUSTO ===== */
 
 function getExpCost(type, newLevel, dotKey) {
@@ -23,11 +13,6 @@ function getExpCost(type, newLevel, dotKey) {
         // Use custom cost from window.SKILL_COSTS if available
         const customCost = window.SKILL_COSTS && window.SKILL_COSTS[dotKey];
         const costPerLevel = customCost || 4;
-        return newLevel * costPerLevel;
-    }
-    if (type === 'spec') {
-        const customCost = window.SPEC_COSTS && window.SPEC_COSTS[dotKey];
-        const costPerLevel = customCost || 2;
         return newLevel * costPerLevel;
     }
     return 0;
@@ -69,9 +54,6 @@ function detectDotType(dotKey) {
     if (dotKey.startsWith('sk_mental_') || dotKey.startsWith('sk_fisico_') ||
         dotKey.startsWith('sk_social_') || dotKey.startsWith('sk_combate_') ||
         dotKey.startsWith('sk_exclusivo_') || dotKey.startsWith('sk_classe_')) return 'skill';
-    if (dotKey.startsWith('spec_mental_') || dotKey.startsWith('spec_fisico_') ||
-        dotKey.startsWith('spec_social_') || dotKey.startsWith('spec_combate_') ||
-        dotKey.startsWith('spec_exclusivo_') || dotKey.startsWith('spec_')) return 'spec';
     if (dotKey.startsWith('pec_')) return 'pec';
     return null;
 }
@@ -90,30 +72,6 @@ function getSkillLimiterLevel(dotKey) {
     return state.dots[limiter.keys[0]] || 0;
 }
 
-/**
- * Busca o nível do limitador de uma especialização.
- * Agora usa window.SPEC_LIMITERS_DYNAMIC (construído por buildSpecializationsFromFirebase).
- * Se o dotKey está no mapa dinâmico, usa o menor entre todos os limitadores.
- * Caso contrário, tenta fallback pelo specName (legado).
- */
-function getSpecLimiterLevel(specName, dotKey) {
-    // Primeiro: checar SPEC_LIMITERS_DYNAMIC pelo dotKey
-    const dynamicLimiters = window.SPEC_LIMITERS_DYNAMIC || {};
-    if (dotKey && dynamicLimiters[dotKey]) {
-        const limiter = dynamicLimiters[dotKey];
-        const getVal = (k) => {
-            if (typeof getEffectiveDotValue === 'function') return getEffectiveDotValue(k);
-            return (state.dots[k] || 0) + (state.mechanicBonuses?.[k] || 0);
-        };
-        if (limiter.mode === 'min') {
-            return Math.min(...limiter.keys.map(k => getVal(k)));
-        }
-        return getVal(limiter.keys[0]);
-    }
-
-    // Fallback: sem limitador dinâmico
-    return Infinity;
-}
 
 /**
  * Busca o nível de uma perícia pelo nome da key (parcial).
@@ -147,16 +105,6 @@ function getLimiterName(dotKey, specName) {
         if (!limiter) return null;
         const names = limiter.keys.map(k => k.replace('attr_', '').toUpperCase());
         return limiter.mode === 'min' ? `menor entre ${names.join('/')}` : names[0];
-    }
-
-    if (type === 'spec') {
-        // Dynamic: use SPEC_LIMITERS_DYNAMIC
-        const dynamicLimiters = window.SPEC_LIMITERS_DYNAMIC || {};
-        if (dynamicLimiters[dotKey]) {
-            const limiter = dynamicLimiters[dotKey];
-            return limiter.names ? limiter.names.join('/') : null;
-        }
-        return null;
     }
 
     return null;
@@ -216,14 +164,6 @@ function canUpgrade(dotKey, newLevel, type, specName, floorBonus) {
         }
     }
 
-    // Verificar limitador para especializações
-    if (type === 'spec') {
-        const limiterLevel = getSpecLimiterLevel(specName, dotKey);
-        if (limiterLevel !== Infinity && effectiveNewLevel > limiterLevel) {
-            const limiterName = getLimiterName(dotKey, specName) || 'Limitador';
-            return { allowed: false, reason: `${limiterName} está no nível ${limiterLevel}. Suba a perícia/atributo primeiro!`, cost };
-        }
-    }
 
     // Verificar se é uma peculiaridade "Apenas na Criação"
     if (type === 'pec') {

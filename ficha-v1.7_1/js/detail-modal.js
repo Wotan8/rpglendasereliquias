@@ -217,31 +217,7 @@ function buildClassDetailHTML(className) {
         html += '</div></div>';
     }
 
-    // Especializações
-    if (classData.especDaClasse?.length > 0 || classData.especExclusivas?.length > 0) {
-        const especIds = classData.especDaClasse || classData.especExclusivas || [];
-        const allSpecs = [];
-        if (window.SPECIALIZATIONS) {
-            for (const cat of Object.keys(window.SPECIALIZATIONS)) {
-                for (const sp of window.SPECIALIZATIONS[cat]) { allSpecs.push(sp); }
-            }
-        }
-        const resolvedNames = especIds.map(id => {
-            if (typeof id === 'object' && id.nome) return id.nome;
-            const sp = allSpecs.find(s => s.id === id);
-            return sp ? sp.name : null;
-        }).filter(Boolean);
 
-        if (resolvedNames.length > 0) {
-            html += `<div class="detail-section">
-                <div class="detail-section-title">🎯 Especializações</div>
-                <div class="detail-tag-list">`;
-            for (const name of resolvedNames) {
-                html += `<span class="detail-tag">${_escDetail(name)}</span>`;
-            }
-            html += '</div></div>';
-        }
-    }
 
     // Recursos de Classe
     if (window.CLASS_RESOURCES?.[className]?.length > 0) {

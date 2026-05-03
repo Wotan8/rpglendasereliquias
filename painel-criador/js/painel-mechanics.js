@@ -1,5 +1,5 @@
-// =============================================
-// VISUAL MECHANICS EDITOR — Lendas e Relíquias
+﻿// =============================================
+// VISUAL MECHANICS EDITOR â€” Lendas e RelÃ­quias
 // Handles: inline form, preview, mechanic cards,
 //          MechanicSelector component
 // =============================================
@@ -16,38 +16,38 @@ function getMechanicTargetsHTML() {
 </optgroup>
 `;
 
-    // Status Vitais — dinâmico do Firebase
+    // Status Vitais â€” dinÃ¢mico do Firebase
     const vsCache = window._vitalStatsCache || [];
     const publishedVS = vsCache.filter(v => v.publicado !== false);
     if (publishedVS.length > 0) {
         publishedVS.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
         html += `\n<optgroup label="Status Vitais">`;
         for (const vs of publishedVS) {
-            const icon = vs.icone || '❤️';
-            html += `\n<option value="${esc(vs.nome)} Máxima">${icon} ${esc(vs.nome)} Máxima</option>`;
+            const icon = vs.icone || 'â¤ï¸';
+            html += `\n<option value="${esc(vs.nome)} MÃ¡xima">${icon} ${esc(vs.nome)} MÃ¡xima</option>`;
         }
         html += `\n</optgroup>`;
     } else {
-        // Fallback hardcoded para quando cache não carregou
+        // Fallback hardcoded para quando cache nÃ£o carregou
         html += `\n<optgroup label="Status Vitais">`;
-        html += `\n<option value="Vitalidade Máxima">Vitalidade Máxima</option>`;
-        html += `\n<option value="Energia Máxima">Energia Máxima</option>`;
-        html += `\n<option value="Sanidade Máxima">Sanidade Máxima</option>`;
+        html += `\n<option value="Vitalidade MÃ¡xima">Vitalidade MÃ¡xima</option>`;
+        html += `\n<option value="Energia MÃ¡xima">Energia MÃ¡xima</option>`;
+        html += `\n<option value="Sanidade MÃ¡xima">Sanidade MÃ¡xima</option>`;
         html += `\n</optgroup>`;
     }
 
-    // Valores Derivados — dinâmico do Firebase
+    // Valores Derivados â€” dinÃ¢mico do Firebase
     const dvCache = window._derivedValuesCache || [];
     const publishedDVs = dvCache.filter(d => d.publicado !== false);
     if (publishedDVs.length > 0) {
         publishedDVs.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
         html += `\n<optgroup label="Valores Derivados">`;
         for (const dv of publishedDVs) {
-            const icon = dv.icone || '📊';
+            const icon = dv.icone || 'ðŸ“Š';
             html += `\n<option value="${esc(dv.nome)}">${icon} ${esc(dv.nome)}</option>`;
             if (dv.campoAtual) {
                 html += `\n<option value="${esc(dv.nome)} (Atual)">${icon} ${esc(dv.nome)} (Atual)</option>`;
-                html += `\n<option value="${esc(dv.nome)} (Máximo)">${icon} ${esc(dv.nome)} (Máximo)</option>`;
+                html += `\n<option value="${esc(dv.nome)} (MÃ¡ximo)">${icon} ${esc(dv.nome)} (MÃ¡ximo)</option>`;
             }
         }
         html += `\n</optgroup>`;
@@ -84,28 +84,28 @@ function getMechanicTargetsHTML() {
     html += `
 <optgroup label="Propriedades de Combate">
 <option value="Alvo de Ataque">Alvo de Ataque</option><option value="Alvo de Defesa">Alvo de Defesa</option>
-<option value="Dano">Dano</option><option value="Dano Crítico">Dano Crítico</option>
+<option value="Dano">Dano</option><option value="Dano CrÃ­tico">Dano CrÃ­tico</option>
 </optgroup>
-<optgroup label="Experiência">
-<option value="EXP">⭐ EXP</option>
+<optgroup label="ExperiÃªncia">
+<option value="EXP">â­ EXP</option>
 </optgroup>
 <optgroup label="Outros">
-<option value="Perícias (qualquer)">Perícias (qualquer)</option>
-<option value="Perícias Mentais (qualquer)">Perícias Mentais (qualquer)</option>
-<option value="Perícias Físicas (qualquer)">Perícias Físicas (qualquer)</option>
-<option value="Perícias Sociais (qualquer)">Perícias Sociais (qualquer)</option>
-<option value="Ações por turno">Ações por turno</option>
-<option value="EXP Necessária">EXP Necessária</option>
+<option value="PerÃ­cias (qualquer)">PerÃ­cias (qualquer)</option>
+<option value="PerÃ­cias Mentais (qualquer)">PerÃ­cias Mentais (qualquer)</option>
+<option value="PerÃ­cias FÃ­sicas (qualquer)">PerÃ­cias FÃ­sicas (qualquer)</option>
+<option value="PerÃ­cias Sociais (qualquer)">PerÃ­cias Sociais (qualquer)</option>
+<option value="AÃ§Ãµes por turno">AÃ§Ãµes por turno</option>
+<option value="EXP NecessÃ¡ria">EXP NecessÃ¡ria</option>
 </optgroup>`;
 
-    // Limites de Módulos de Classe (dinâmico)
+    // Limites de MÃ³dulos de Classe (dinÃ¢mico)
     html += _getModuleLimitOptions();
 
     return html;
 }
 
-export const FONTE_LABELS = { raca: '🧬 Raça', classe: '⚔️ Classe', tribo: '🏕️ Tribo', peculiaridade: '✨ Pecul.', item: '🗡️ Item', condicao: '💀 Condição', manobra: '💥 Manobra', magia: '🔮 Magia', individual: '👤 Individual', generica: '⚙️ Genérica' };
-export const TIPO_ICONS = { modificar: '➕', limitar: '🔒', conceder: '🎁', condicional: '⚡', narrativo: '📝', distribuir: '🎲' };
+export const FONTE_LABELS = { raca: 'ðŸ§¬ RaÃ§a', classe: 'âš”ï¸ Classe', tribo: 'ðŸ•ï¸ Tribo', peculiaridade: 'âœ¨ Pecul.', item: 'ðŸ—¡ï¸ Item', condicao: 'ðŸ’€ CondiÃ§Ã£o', manobra: 'ðŸ’¥ Manobra', magia: 'ðŸ”® Magia', individual: 'ðŸ‘¤ Individual', generica: 'âš™ï¸ GenÃ©rica' };
+export const TIPO_ICONS = { modificar: 'âž•', limitar: 'ðŸ”’', conceder: 'ðŸŽ', condicional: 'âš¡', narrativo: 'ðŸ“', distribuir: 'ðŸŽ²' };
 export const TIPO_LABELS = { modificar: 'Modificar', limitar: 'Limitar', conceder: 'Conceder', condicional: 'Condicional', narrativo: 'Narrativo', distribuir: 'Distribuir' };
 
 function esc(text) {
@@ -114,7 +114,7 @@ function esc(text) {
 }
 
 /**
- * Gera optgroup com opções de "Limite: <titulo>" para cada módulo de classe.
+ * Gera optgroup com opÃ§Ãµes de "Limite: <titulo>" para cada mÃ³dulo de classe.
  * Percorre window._classesCache ou window._systemData.classes.
  */
 function _getModuleLimitOptions() {
@@ -126,7 +126,7 @@ function _getModuleLimitOptions() {
         for (const mod of cls.modulosDaClasse) {
             const titulo = mod.titulo || mod.id || '';
             if (!titulo) continue;
-            options.push({ value: `Limite: ${titulo}`, label: `📦 Limite: ${titulo} (${cls.nome})` });
+            options.push({ value: `Limite: ${titulo}`, label: `ðŸ“¦ Limite: ${titulo} (${cls.nome})` });
         }
     }
     if (options.length === 0) return '';
@@ -148,7 +148,7 @@ function _formatCalcValue(calc) {
     // Legacy format
     if (calc.valorTipo === 'ficha') {
         const ref = calc.valorRef || '?';
-        const mult = calc.valorMultiplicador && calc.valorMultiplicador !== 1 ? ` × ${calc.valorMultiplicador}` : '';
+        const mult = calc.valorMultiplicador && calc.valorMultiplicador !== 1 ? ` Ã— ${calc.valorMultiplicador}` : '';
         return `[${ref}${mult}]`;
     }
     return calc.valor ?? '?';
@@ -156,7 +156,7 @@ function _formatCalcValue(calc) {
 
 function _formatEquation(equacao) {
     if (!Array.isArray(equacao) || equacao.length === 0) return '?';
-    // Check if any term uses min/max — if so, format as min(A, B, ...) or max(A, B, ...)
+    // Check if any term uses min/max â€” if so, format as min(A, B, ...) or max(A, B, ...)
     const hasMinMax = equacao.some(t => t.op === 'min' || t.op === 'max');
     if (hasMinMax && equacao.length > 1) {
         const fnName = equacao[1].op === 'min' ? 'menor' : 'maior';
@@ -181,8 +181,8 @@ export function generatePreviewText(data) {
     const tipo = data.tipo || '';
     const config = data.config || {};
     const cond = data.condicaoAplicacao ? ` (${data.condicaoAplicacao})` : '';
-    const dur = data.duracao && data.duracao !== 'permanente' ? ` — Duração: ${data.duracao === 'turno' ? (data.duracaoTurnos || '?') + ' turno(s)' : data.duracao}` : '';
-    const evo = data.evoluivel ? ` 📈 Nv1-${data.nivelMaximo || '?'}${data.progressaoApenasCriacao ? ' 🏗️' : ''}` : '';
+    const dur = data.duracao && data.duracao !== 'permanente' ? ` â€” DuraÃ§Ã£o: ${data.duracao === 'turno' ? (data.duracaoTurnos || '?') + ' turno(s)' : data.duracao}` : '';
+    const evo = data.evoluivel ? ` ðŸ“ˆ Nv1-${data.nivelMaximo || '?'}${data.progressaoApenasCriacao ? ' ðŸ—ï¸' : ''}` : '';
 
     let text = '';
     if (tipo === 'modificar') {
@@ -196,9 +196,9 @@ export function generatePreviewText(data) {
                     const qualLabels = { exp_total: 'EXP Total', exp_restante: 'EXP Restante', ambos: 'EXP Total + Restante' };
                     const qualLabel = qualLabels[c.qualExp] || 'EXP';
                     // quandoAplica is at top-level data, not in calc
-                    const quandoLabels = { na_criacao: 'Na Criação', por_sessao: 'Por Sessão', por_descanso_longo: 'Por Descanso Longo', por_descanso_curto: 'Por Descanso Curto', por_arco: 'Por Arco', por_masmorra: 'Por Masmorra', ao_ativar: 'Ao Ativar', ao_desativar: 'Ao Desativar', condicional: 'Condicional', permanente: 'Permanente', por_uso_recurso: 'Por Uso de Recurso', por_morte: 'Por Morte/Ressurreição' };
+                    const quandoLabels = { na_criacao: 'Na CriaÃ§Ã£o', por_sessao: 'Por SessÃ£o', por_descanso_longo: 'Por Descanso Longo', por_descanso_curto: 'Por Descanso Curto', por_arco: 'Por Arco', por_masmorra: 'Por Masmorra', ao_ativar: 'Ao Ativar', ao_desativar: 'Ao Desativar', condicional: 'Condicional', permanente: 'Permanente', por_uso_recurso: 'Por Uso de Recurso', por_morte: 'Por Morte/RessurreiÃ§Ã£o' };
                     const quandoLabel = quandoLabels[data.quandoAplica] || '';
-                    const triggerSuffix = quandoLabel ? ` — ${quandoLabel}` : '';
+                    const triggerSuffix = quandoLabel ? ` â€” ${quandoLabel}` : '';
                     return `${op}${val} em ${qualLabel}${triggerSuffix}`;
                 }
                 const op = c.operacao || '+';
@@ -218,21 +218,21 @@ export function generatePreviewText(data) {
                 const alvo = c.alvo || '?';
                 if (c.tipoLimite === 'bloqueio') return `${alvo}: bloqueado (= 0)`;
                 const valStr = _formatCalcValue(c);
-                if (c.tipoLimite === 'maximo') return `${alvo}: máximo ${valStr}`;
-                if (c.tipoLimite === 'minimo') return `${alvo}: mínimo ${valStr}`;
+                if (c.tipoLimite === 'maximo') return `${alvo}: mÃ¡ximo ${valStr}`;
+                if (c.tipoLimite === 'minimo') return `${alvo}: mÃ­nimo ${valStr}`;
                 if (c.tipoLimite === 'clamp') return `${alvo}: min ${_formatCalcValue({...c, valor: c.valorMinimo, valorRef: c.valorRefMin})}, max ${valStr}`;
                 return `${alvo}: limite`;
             }).join('; ');
         } else {
             const alvo = config.alvo || '?';
             if (config.tipoLimite === 'bloqueio') text = `${alvo}: bloqueado (= 0)`;
-            else if (config.tipoLimite === 'maximo') text = `${alvo}: máximo ${config.valorMaximo ?? '?'}`;
-            else if (config.tipoLimite === 'minimo') text = `${alvo}: mínimo ${config.valorMinimo ?? '?'}`;
+            else if (config.tipoLimite === 'maximo') text = `${alvo}: mÃ¡ximo ${config.valorMaximo ?? '?'}`;
+            else if (config.tipoLimite === 'minimo') text = `${alvo}: mÃ­nimo ${config.valorMinimo ?? '?'}`;
             else if (config.tipoLimite === 'clamp') text = `${alvo}: min ${config.valorMinimo ?? '?'}, max ${config.valorMaximo ?? '?'}`;
             else text = `${alvo}: limite`;
         }
     } else if (tipo === 'conceder') {
-        const label = { capacidade: 'Concede', imunidade: 'Imunidade', vulnerabilidade: 'Vulnerabilidade', resistencia: 'Resistência', vantagem: 'Vantagem', desvantagem: 'Desvantagem', acesso: 'Acesso', remover_acesso: 'Remove acesso' };
+        const label = { capacidade: 'Concede', imunidade: 'Imunidade', vulnerabilidade: 'Vulnerabilidade', resistencia: 'ResistÃªncia', vantagem: 'Vantagem', desvantagem: 'Desvantagem', acesso: 'Acesso', remover_acesso: 'Remove acesso' };
         text = `${label[config.tipoConcessao] || 'Concede'}: ${config.descricaoConcessao || '?'}`;
     } else if (tipo === 'condicional') {
         // Build conditional preview with resolved sub-mechanic previews
@@ -271,7 +271,7 @@ export function generatePreviewText(data) {
             ? `Personalizado: ${config.poolPersonalizado.join(', ')}` : pool;
         text = `Distribuir: ${op}${val} em ${qty} alvos${rest} de [${poolLabel}]`;
     }
-    return text + evo + cond + dur || 'Efeito não definido';
+    return text + evo + cond + dur || 'Efeito nÃ£o definido';
 }
 
 // ===== MECHANIC CARD (for grid) =====
@@ -279,12 +279,12 @@ export function renderMechanicCard(item) {
     const name = esc(item.nome || 'Sem nome');
     const tipo = item.tipo || 'modificar';
     const fonte = item.fonte || 'generica';
-    const preview = esc(item.previewTexto || '—');
+    const preview = esc(item.previewTexto || 'â€”');
     const isPublished = item.publicado === true;
     return `
         <div class="mech-card" data-type="${tipo}" onclick="openMechanicEditor('${item.id}')">
             <div class="mech-card-header">
-                <div class="mech-card-name">${TIPO_ICONS[tipo] || '🔧'} ${name}</div>
+                <div class="mech-card-name">${TIPO_ICONS[tipo] || 'ðŸ”§'} ${name}</div>
                 <div class="mech-card-badges">
                     <span class="badge-fonte" style="background:var(--fonte-${fonte})">${FONTE_LABELS[fonte] || fonte}</span>
                     <span class="badge-tipo" style="background:var(--type-${tipo})">${TIPO_LABELS[tipo] || tipo}</span>
@@ -293,22 +293,22 @@ export function renderMechanicCard(item) {
             <div class="mech-card-preview">"${preview}"</div>
             <div class="mech-card-footer">
                 <div class="item-card-actions">
-                    <button class="btn-edit" onclick="event.stopPropagation(); openMechanicEditor('${item.id}')" title="Editar">✏️</button>
-                    <button class="btn-edit" onclick="event.stopPropagation(); duplicateItem('${item.id}')" title="Duplicar" style="border-color:var(--warning);color:var(--warning)">📋</button>
-                    <button class="btn-delete-card" onclick="event.stopPropagation(); openDeleteModal('${item.id}','${esc(name).replace(/'/g, "\\'")}')" title="Excluir">🗑️</button>
+                    <button class="btn-edit" onclick="event.stopPropagation(); openMechanicEditor('${item.id}')" title="Editar">âœï¸</button>
+                    <button class="btn-edit" onclick="event.stopPropagation(); duplicateItem('${item.id}')" title="Duplicar" style="border-color:var(--warning);color:var(--warning)">ðŸ“‹</button>
+                    <button class="btn-delete-card" onclick="event.stopPropagation(); openDeleteModal('${item.id}','${esc(name).replace(/'/g, "\\'")}')" title="Excluir">ðŸ—‘ï¸</button>
                 </div>
-                <span class="badge-status ${isPublished ? 'badge-published' : 'badge-draft'}">${isPublished ? '✅ Pub' : '📝 Rasc'}</span>
+                <span class="badge-status ${isPublished ? 'badge-published' : 'badge-draft'}">${isPublished ? 'âœ… Pub' : 'ðŸ“ Rasc'}</span>
             </div>
         </div>`;
 }
 
 // ===== VALUE SOURCE OPTIONS (dynamic from skills cache) =====
 const CATEGORY_LABELS = {
-    'mental': 'Perícias Mentais',
-    'fisico': 'Perícias Físicas',
-    'social': 'Perícias Sociais',
-    'combate': 'Perícias Defensivas',
-    'exclusivo': 'Perícias Exclusivas'
+    'mental': 'PerÃ­cias Mentais',
+    'fisico': 'PerÃ­cias FÃ­sicas',
+    'social': 'PerÃ­cias Sociais',
+    'combate': 'PerÃ­cias Defensivas',
+    'exclusivo': 'PerÃ­cias Exclusivas'
 };
 
 function getValueSourceHTML() {
@@ -320,38 +320,38 @@ function getValueSourceHTML() {
 </optgroup>
 `;
 
-    // Status Vitais — dinâmico do Firebase
+    // Status Vitais â€” dinÃ¢mico do Firebase
     const vsCache3 = window._vitalStatsCache || [];
     const publishedVS3 = vsCache3.filter(v => v.publicado !== false);
     if (publishedVS3.length > 0) {
         publishedVS3.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
         html += `\n<optgroup label="Status Vitais">`;
         for (const vs of publishedVS3) {
-            const icon = vs.icone || '❤️';
-            html += `\n<option value="${esc(vs.nome)} Máxima">${icon} ${esc(vs.nome)} Máxima</option>`;
+            const icon = vs.icone || 'â¤ï¸';
+            html += `\n<option value="${esc(vs.nome)} MÃ¡xima">${icon} ${esc(vs.nome)} MÃ¡xima</option>`;
         }
         html += `\n</optgroup>`;
     } else {
-        // Fallback hardcoded para quando cache não carregou
+        // Fallback hardcoded para quando cache nÃ£o carregou
         html += `\n<optgroup label="Status Vitais">`;
-        html += `\n<option value="Vitalidade Máxima">Vitalidade Máxima</option>`;
-        html += `\n<option value="Energia Máxima">Energia Máxima</option>`;
-        html += `\n<option value="Sanidade Máxima">Sanidade Máxima</option>`;
+        html += `\n<option value="Vitalidade MÃ¡xima">Vitalidade MÃ¡xima</option>`;
+        html += `\n<option value="Energia MÃ¡xima">Energia MÃ¡xima</option>`;
+        html += `\n<option value="Sanidade MÃ¡xima">Sanidade MÃ¡xima</option>`;
         html += `\n</optgroup>`;
     }
 
-    // Valores Derivados — dinâmico do Firebase
+    // Valores Derivados â€” dinÃ¢mico do Firebase
     const dvCache = window._derivedValuesCache || [];
     const publishedDVs = dvCache.filter(d => d.publicado !== false);
     if (publishedDVs.length > 0) {
         publishedDVs.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
         html += `\n<optgroup label="Valores Derivados">`;
         for (const dv of publishedDVs) {
-            const icon = dv.icone || '📊';
+            const icon = dv.icone || 'ðŸ“Š';
             html += `\n<option value="${esc(dv.nome)}">${icon} ${esc(dv.nome)}</option>`;
             if (dv.campoAtual) {
                 html += `\n<option value="${esc(dv.nome)} (Atual)">${icon} ${esc(dv.nome)} (Atual)</option>`;
-                html += `\n<option value="${esc(dv.nome)} (Máximo)">${icon} ${esc(dv.nome)} (Máximo)</option>`;
+                html += `\n<option value="${esc(dv.nome)} (MÃ¡ximo)">${icon} ${esc(dv.nome)} (MÃ¡ximo)</option>`;
             }
         }
         html += `\n</optgroup>`;
@@ -386,9 +386,9 @@ function getValueSourceHTML() {
         }
     }
 
-    html += `\n<optgroup label="Outros">\n<option value="Nível">Nível</option>\n</optgroup>`;
+    html += `\n<optgroup label="Outros">\n<option value="NÃ­vel">NÃ­vel</option>\n</optgroup>`;
 
-    // Limites de Módulos de Classe (dinâmico)
+    // Limites de MÃ³dulos de Classe (dinÃ¢mico)
     html += _getModuleLimitOptions();
 
     return html;
@@ -401,7 +401,7 @@ function _migrateCalcToEquacao(c) {
     if (c.valorTipo === 'ficha') {
         const terms = [{ tipo: 'ficha', ref: c.valorRef || '' }];
         if (c.valorMultiplicador && c.valorMultiplicador !== 1) {
-            terms.push({ op: '×', tipo: 'fixo', valor: c.valorMultiplicador });
+            terms.push({ op: 'Ã—', tipo: 'fixo', valor: c.valorMultiplicador });
         }
         return terms;
     }
@@ -414,15 +414,15 @@ function _renderEquationTerm(term, calcIndex, termIndex) {
     const showOp = termIndex > 0;
     const opHtml = showOp ? `
         <select class="eq-term-op" onchange="window._mechUpdatePreview()">
-            <optgroup label="Aritméticos">
+            <optgroup label="AritmÃ©ticos">
             <option value="+" ${t.op === '+' ? 'selected' : ''}>+</option>
-            <option value="-" ${t.op === '-' ? 'selected' : ''}>−</option>
-            <option value="×" ${t.op === '×' ? 'selected' : ''}>×</option>
-            <option value="÷" ${t.op === '÷' ? 'selected' : ''}>÷</option>
+            <option value="-" ${t.op === '-' ? 'selected' : ''}>âˆ’</option>
+            <option value="Ã—" ${t.op === 'Ã—' ? 'selected' : ''}>Ã—</option>
+            <option value="Ã·" ${t.op === 'Ã·' ? 'selected' : ''}>Ã·</option>
             </optgroup>
-            <optgroup label="Lógicos">
-            <option value="min" ${t.op === 'min' ? 'selected' : ''}>↓ Menor entre</option>
-            <option value="max" ${t.op === 'max' ? 'selected' : ''}>↑ Maior entre</option>
+            <optgroup label="LÃ³gicos">
+            <option value="min" ${t.op === 'min' ? 'selected' : ''}>â†“ Menor entre</option>
+            <option value="max" ${t.op === 'max' ? 'selected' : ''}>â†‘ Maior entre</option>
             </optgroup>
         </select>` : '';
 
@@ -430,18 +430,18 @@ function _renderEquationTerm(term, calcIndex, termIndex) {
     <div class="eq-term" data-term-index="${termIndex}">
         ${opHtml}
         <select class="eq-term-tipo" onchange="window._mechTermTipoChange(${calcIndex}, ${termIndex}); window._mechUpdatePreview()">
-            <option value="fixo" ${t.tipo !== 'ficha' ? 'selected' : ''}>🔢 Fixo</option>
-            <option value="ficha" ${t.tipo === 'ficha' ? 'selected' : ''}>📋 Ficha</option>
+            <option value="fixo" ${t.tipo !== 'ficha' ? 'selected' : ''}>ðŸ”¢ Fixo</option>
+            <option value="ficha" ${t.tipo === 'ficha' ? 'selected' : ''}>ðŸ“‹ Ficha</option>
         </select>
         <div class="eq-term-fixo-wrap" style="display:${t.tipo !== 'ficha' ? '' : 'none'}">
             <input type="text" class="eq-term-valor" value="${esc(String(t.valor ?? ''))}" placeholder="Valor" oninput="window._mechUpdatePreview()">
         </div>
         <div class="eq-term-ficha-wrap" style="display:${t.tipo === 'ficha' ? '' : 'none'}">
             <select class="eq-term-ref" onchange="window._mechUpdatePreview()">
-                <option value="">— Ref —</option>${getValueSourceHTML()}
+                <option value="">â€” Ref â€”</option>${getValueSourceHTML()}
             </select>
         </div>
-        ${termIndex > 0 ? `<button type="button" class="eq-term-remove" onclick="window._mechRemoveTerm(${calcIndex}, ${termIndex})" title="Remover termo">✕</button>` : ''}
+        ${termIndex > 0 ? `<button type="button" class="eq-term-remove" onclick="window._mechRemoveTerm(${calcIndex}, ${termIndex})" title="Remover termo">âœ•</button>` : ''}
     </div>`;
 }
 
@@ -456,18 +456,18 @@ function _renderCalcRowModificar(calc, index) {
     <div class="calc-row" data-calc-index="${index}">
         <div class="calc-row-header">
             <span class="calc-row-num">#${index + 1}</span>
-            <button type="button" class="calc-row-remove" onclick="window._mechRemoveCalc(${index})" title="Remover cálculo">🗑️</button>
+            <button type="button" class="calc-row-remove" onclick="window._mechRemoveCalc(${index})" title="Remover cÃ¡lculo">ðŸ—‘ï¸</button>
         </div>
         <div class="form-grid">
-            <div class="form-group full-width"><label>O que é afetado? <span class="required">*</span></label>
+            <div class="form-group full-width"><label>O que Ã© afetado? <span class="required">*</span></label>
                 <select class="calc-alvo" onchange="window._mechAlvoChange(${index}); window._mechUpdatePreview()">
-                    <option value="">— Selecionar alvo —</option>${getMechanicTargetsHTML()}
+                    <option value="">â€” Selecionar alvo â€”</option>${getMechanicTargetsHTML()}
                 </select>
             </div>
         </div>
         <div class="calc-exp-qual-wrap" style="display:${isEXP ? '' : 'none'}">
             <div class="form-grid">
-                <div class="form-group"><label>⭐ Qual EXP é afetado? <span class="required">*</span></label>
+                <div class="form-group"><label>â­ Qual EXP Ã© afetado? <span class="required">*</span></label>
                     <select class="calc-qualExp" onchange="window._mechUpdatePreview()">
                         <option value="ambos" ${qualExp === 'ambos' ? 'selected' : ''}>Ambos (Total + Restante)</option>
                         <option value="exp_total" ${qualExp === 'exp_total' ? 'selected' : ''}>EXP Total</option>
@@ -477,22 +477,22 @@ function _renderCalcRowModificar(calc, index) {
             </div>
         </div>
         <div class="form-grid">
-            <div class="form-group"><label>Operação <span class="required">*</span></label>
+            <div class="form-group"><label>OperaÃ§Ã£o <span class="required">*</span></label>
                 <select class="calc-operacao" onchange="window._mechUpdatePreview()">
                     <option value="+" ${c.operacao === '+' ? 'selected' : ''}>+ Somar</option>
-                    <option value="-" ${c.operacao === '-' ? 'selected' : ''}>− Subtrair</option>
-                    <option value="×" ${c.operacao === '×' ? 'selected' : ''}>× Multiplicar</option>
-                    <option value="÷" ${c.operacao === '÷' ? 'selected' : ''}>÷ Dividir</option>
+                    <option value="-" ${c.operacao === '-' ? 'selected' : ''}>âˆ’ Subtrair</option>
+                    <option value="Ã—" ${c.operacao === 'Ã—' ? 'selected' : ''}>Ã— Multiplicar</option>
+                    <option value="Ã·" ${c.operacao === 'Ã·' ? 'selected' : ''}>Ã· Dividir</option>
                     <option value="=" ${c.operacao === '=' ? 'selected' : ''}>=  Definir fixo</option>
                 </select>
             </div>
         </div>
         <div class="eq-builder-section">
-            <label class="eq-builder-label">Equação de Valor <span class="required">*</span></label>
+            <label class="eq-builder-label">EquaÃ§Ã£o de Valor <span class="required">*</span></label>
             <div class="eq-terms-container" data-calc-index="${index}">
                 ${termsHtml}
             </div>
-            <button type="button" class="eq-add-term-btn" onclick="window._mechAddTerm(${index})">➕ Adicionar Termo</button>
+            <button type="button" class="eq-add-term-btn" onclick="window._mechAddTerm(${index})">âž• Adicionar Termo</button>
         </div>
     </div>`;
 }
@@ -508,19 +508,19 @@ function _renderCalcRowLimitar(calc, index) {
     <div class="calc-row" data-calc-index="${index}">
         <div class="calc-row-header">
             <span class="calc-row-num">#${index + 1}</span>
-            <button type="button" class="calc-row-remove" onclick="window._mechRemoveCalc(${index})" title="Remover cálculo">🗑️</button>
+            <button type="button" class="calc-row-remove" onclick="window._mechRemoveCalc(${index})" title="Remover cÃ¡lculo">ðŸ—‘ï¸</button>
         </div>
         <div class="form-grid">
-            <div class="form-group full-width"><label>O que é limitado? <span class="required">*</span></label>
+            <div class="form-group full-width"><label>O que Ã© limitado? <span class="required">*</span></label>
                 <select class="calc-alvo" onchange="window._mechUpdatePreview()">
-                    <option value="">— Selecionar alvo —</option>${getMechanicTargetsHTML()}
+                    <option value="">â€” Selecionar alvo â€”</option>${getMechanicTargetsHTML()}
                 </select>
             </div>
             <div class="form-group"><label>Tipo de Limite <span class="required">*</span></label>
                 <select class="calc-tipoLimite" onchange="window._mechCalcLimitChange(${index}); window._mechUpdatePreview()">
-                    <option value="">— Selecionar —</option>
-                    <option value="maximo" ${tl === 'maximo' ? 'selected' : ''}>Teto (máximo)</option>
-                    <option value="minimo" ${tl === 'minimo' ? 'selected' : ''}>Piso (mínimo)</option>
+                    <option value="">â€” Selecionar â€”</option>
+                    <option value="maximo" ${tl === 'maximo' ? 'selected' : ''}>Teto (mÃ¡ximo)</option>
+                    <option value="minimo" ${tl === 'minimo' ? 'selected' : ''}>Piso (mÃ­nimo)</option>
                     <option value="clamp" ${tl === 'clamp' ? 'selected' : ''}>Ambos (clamp)</option>
                     <option value="bloqueio" ${tl === 'bloqueio' ? 'selected' : ''}>Bloqueio (= 0)</option>
                 </select>
@@ -528,11 +528,11 @@ function _renderCalcRowLimitar(calc, index) {
         </div>
         <div class="calc-limit-valor-area" style="display:${showValor ? '' : 'none'}">
             <div class="eq-builder-section">
-                <label class="eq-builder-label">Equação de Valor do Limite</label>
+                <label class="eq-builder-label">EquaÃ§Ã£o de Valor do Limite</label>
                 <div class="eq-terms-container" data-calc-index="${index}">
                     ${termsHtml}
                 </div>
-                <button type="button" class="eq-add-term-btn" onclick="window._mechAddTerm(${index})">➕ Adicionar Termo</button>
+                <button type="button" class="eq-add-term-btn" onclick="window._mechAddTerm(${index})">âž• Adicionar Termo</button>
             </div>
         </div>
     </div>`
@@ -560,7 +560,7 @@ function renderConfigModificar(config) {
     <div id="mechCalcList" data-calc-type="modificar">
         ${rows}
     </div>
-    <button type="button" class="calc-add-btn" onclick="window._mechAddCalc('modificar')">➕ Adicionar Cálculo</button>`;
+    <button type="button" class="calc-add-btn" onclick="window._mechAddCalc('modificar')">âž• Adicionar CÃ¡lculo</button>`;
 }
 
 function renderConfigLimitar(config) {
@@ -584,7 +584,7 @@ function renderConfigLimitar(config) {
     <div id="mechCalcList" data-calc-type="limitar">
         ${rows}
     </div>
-    <button type="button" class="calc-add-btn" onclick="window._mechAddCalc('limitar')">➕ Adicionar Cálculo</button>`;
+    <button type="button" class="calc-add-btn" onclick="window._mechAddCalc('limitar')">âž• Adicionar CÃ¡lculo</button>`;
 }
 
 
@@ -594,19 +594,19 @@ function renderConfigConceder(config) {
     <div class="form-grid">
         <div class="form-group"><label>O que concede? <span class="required">*</span></label>
             <select id="mech_config_tipoConcessao" onchange="window._mechUpdatePreview()">
-                <option value="">— Selecionar —</option>
+                <option value="">â€” Selecionar â€”</option>
                 <option value="capacidade" ${tc === 'capacidade' ? 'selected' : ''}>Capacidade especial</option>
                 <option value="imunidade" ${tc === 'imunidade' ? 'selected' : ''}>Imunidade</option>
                 <option value="vulnerabilidade" ${tc === 'vulnerabilidade' ? 'selected' : ''}>Vulnerabilidade</option>
-                <option value="resistencia" ${tc === 'resistencia' ? 'selected' : ''}>Resistência</option>
+                <option value="resistencia" ${tc === 'resistencia' ? 'selected' : ''}>ResistÃªncia</option>
                 <option value="vantagem" ${tc === 'vantagem' ? 'selected' : ''}>Vantagem em testes</option>
                 <option value="desvantagem" ${tc === 'desvantagem' ? 'selected' : ''}>Desvantagem em testes</option>
                 <option value="acesso" ${tc === 'acesso' ? 'selected' : ''}>Acesso a recurso</option>
                 <option value="remover_acesso" ${tc === 'remover_acesso' ? 'selected' : ''}>Remove acesso</option>
             </select>
         </div>
-        <div class="form-group"><label>Descrição da concessão <span class="required">*</span></label>
-            <input type="text" id="mech_config_descricaoConcessao" value="${esc(config?.descricaoConcessao || '')}" placeholder="Ex: Voo, Visão de Essência" oninput="window._mechUpdatePreview()">
+        <div class="form-group"><label>DescriÃ§Ã£o da concessÃ£o <span class="required">*</span></label>
+            <input type="text" id="mech_config_descricaoConcessao" value="${esc(config?.descricaoConcessao || '')}" placeholder="Ex: Voo, VisÃ£o de EssÃªncia" oninput="window._mechUpdatePreview()">
         </div>
     </div>`;
 }
@@ -621,7 +621,7 @@ function renderConfigCondicional(config, mechanicsCache) {
             <textarea id="mech_config_gatilho" placeholder="Ex: Teste de AUT por cena" oninput="window._mechUpdatePreview()">${esc(gatilho)}</textarea>
         </div>
         <div class="form-group full-width">
-            ${buildInlineMechSelector('mech_config_efeitoSucessoIds', 'Efeito Sucesso (mecânicas)', sucessoIds, mechanicsCache, true)}
+            ${buildInlineMechSelector('mech_config_efeitoSucessoIds', 'Efeito Sucesso (mecÃ¢nicas)', sucessoIds, mechanicsCache, true)}
         </div>
         <div class="form-group full-width">
             ${buildInlineMechSelector('mech_config_efeitoFalhaIds', 'Efeito Falha (opcional)', falhaIds, mechanicsCache, true)}
@@ -630,7 +630,7 @@ function renderConfigCondicional(config, mechanicsCache) {
 }
 
 function renderConfigNarrativo(config) {
-    return `<div class="form-group"><label>Descrição do efeito narrativo <span class="required">*</span></label>
+    return `<div class="form-group"><label>DescriÃ§Ã£o do efeito narrativo <span class="required">*</span></label>
         <textarea id="mech_config_textoEfeito" placeholder="Texto livre descrevendo o efeito qualitativo" oninput="window._mechUpdatePreview()">${esc(config?.textoEfeito || '')}</textarea></div>`;
 }
 
@@ -656,14 +656,14 @@ function renderConfigDistribuir(config) {
     <div class="form-grid">
         <div class="form-group full-width"><label>Pool de Alvos <span class="required">*</span></label>
             <select id="mech_config_pool" onchange="window._mechPoolChange(); window._mechUpdatePreview()">
-                <option value="" ${!poolVal ? 'selected' : ''}>— Selecionar pool —</option>
-                <option value="Perícias (qualquer)" ${poolVal === 'Perícias (qualquer)' ? 'selected' : ''}>Perícias (qualquer)</option>
-                <option value="Perícias Mentais (qualquer)" ${poolVal === 'Perícias Mentais (qualquer)' ? 'selected' : ''}>Perícias Mentais (qualquer)</option>
-                <option value="Perícias Físicas (qualquer)" ${poolVal === 'Perícias Físicas (qualquer)' ? 'selected' : ''}>Perícias Físicas (qualquer)</option>
-                <option value="Perícias Sociais (qualquer)" ${poolVal === 'Perícias Sociais (qualquer)' ? 'selected' : ''}>Perícias Sociais (qualquer)</option>
+                <option value="" ${!poolVal ? 'selected' : ''}>â€” Selecionar pool â€”</option>
+                <option value="PerÃ­cias (qualquer)" ${poolVal === 'PerÃ­cias (qualquer)' ? 'selected' : ''}>PerÃ­cias (qualquer)</option>
+                <option value="PerÃ­cias Mentais (qualquer)" ${poolVal === 'PerÃ­cias Mentais (qualquer)' ? 'selected' : ''}>PerÃ­cias Mentais (qualquer)</option>
+                <option value="PerÃ­cias FÃ­sicas (qualquer)" ${poolVal === 'PerÃ­cias FÃ­sicas (qualquer)' ? 'selected' : ''}>PerÃ­cias FÃ­sicas (qualquer)</option>
+                <option value="PerÃ­cias Sociais (qualquer)" ${poolVal === 'PerÃ­cias Sociais (qualquer)' ? 'selected' : ''}>PerÃ­cias Sociais (qualquer)</option>
                 <option value="Atributos (qualquer)" ${poolVal === 'Atributos (qualquer)' ? 'selected' : ''}>Atributos (qualquer)</option>
                 <option value="Atributos Mentais" ${poolVal === 'Atributos Mentais' ? 'selected' : ''}>Atributos Mentais</option>
-                <option value="Atributos Físicos" ${poolVal === 'Atributos Físicos' ? 'selected' : ''}>Atributos Físicos</option>
+                <option value="Atributos FÃ­sicos" ${poolVal === 'Atributos FÃ­sicos' ? 'selected' : ''}>Atributos FÃ­sicos</option>
                 <option value="Atributos Sociais" ${poolVal === 'Atributos Sociais' ? 'selected' : ''}>Atributos Sociais</option>
                 <option value="Personalizado" ${poolVal === 'Personalizado' ? 'selected' : ''}>Personalizado</option>
             </select>
@@ -674,21 +674,21 @@ function renderConfigDistribuir(config) {
         <div class="form-group"><label>Valor por alvo <span class="required">*</span></label>
             <input type="text" id="mech_config_valorPorAlvo" value="${esc(String(valVal))}" placeholder="Ex: 1" oninput="window._mechUpdatePreview()">
         </div>
-        <div class="form-group"><label>Operação <span class="required">*</span></label>
+        <div class="form-group"><label>OperaÃ§Ã£o <span class="required">*</span></label>
             <select id="mech_config_operacao_dist" onchange="window._mechUpdatePreview()">
                 <option value="+" ${opVal === '+' ? 'selected' : ''}>+ Somar</option>
-                <option value="-" ${opVal === '-' ? 'selected' : ''}>− Subtrair</option>
+                <option value="-" ${opVal === '-' ? 'selected' : ''}>âˆ’ Subtrair</option>
                 <option value="=" ${opVal === '=' ? 'selected' : ''}>= Definir</option>
             </select>
         </div>
-        <div class="form-group"><label>Restrição</label>
+        <div class="form-group"><label>RestriÃ§Ã£o</label>
             <select id="mech_config_restricao" onchange="window._mechUpdatePreview()">
                 <option value="diferentes" ${restVal === 'diferentes' ? 'selected' : ''}>Alvos devem ser diferentes</option>
                 <option value="livre" ${restVal === 'livre' ? 'selected' : ''}>Pode repetir alvos</option>
             </select>
         </div>
         <div class="form-group full-width" id="mech_config_poolCustomWrap" style="display:${poolVal === 'Personalizado' ? '' : 'none'}">
-            <label>Pool Personalizado — Selecione os alvos permitidos</label>
+            <label>Pool Personalizado â€” Selecione os alvos permitidos</label>
             <div id="mech_config_poolPersonalizado" style="max-height:200px;overflow-y:auto;border:2px solid var(--soft);border-radius:8px;padding:8px;display:flex;flex-wrap:wrap;gap:2px">
                 ${checkboxesHtml}
             </div>
@@ -721,13 +721,13 @@ function _getProgressaoHeaders(tipo, tipoExp, fixoTerms) {
     const expLabel = tipoExp === 'ganho' ? 'Ganho EXP' : 'Custo EXP';
     if (tipo === 'modificar' || tipo === 'limitar') {
         if (fixoTerms && fixoTerms.length > 0) {
-            return ['Nível', expLabel, ...fixoTerms.map(ft => ft.label)];
+            return ['NÃ­vel', expLabel, ...fixoTerms.map(ft => ft.label)];
         }
         // Fallback: single valor column
-        return ['Nível', expLabel, tipo === 'limitar' ? 'Valor do Limite' : 'Valor'];
+        return ['NÃ­vel', expLabel, tipo === 'limitar' ? 'Valor do Limite' : 'Valor'];
     }
-    if (tipo === 'distribuir') return ['Nível', expLabel, 'Qtd Alvos', 'Valor por Alvo'];
-    return ['Nível', expLabel, 'Descrição do Efeito'];
+    if (tipo === 'distribuir') return ['NÃ­vel', expLabel, 'Qtd Alvos', 'Valor por Alvo'];
+    return ['NÃ­vel', expLabel, 'DescriÃ§Ã£o do Efeito'];
 }
 
 function _renderProgressaoRow(i, p, tipo, fixoTerms) {
@@ -751,7 +751,7 @@ function _renderProgressaoRow(i, p, tipo, fixoTerms) {
     } else if (tipo === 'distribuir') {
         return `<tr>${nvCell}${custoCell}<td><input type="number" class="prog-quantidadeAlvos" data-nivel="${i}" value="${p.quantidadeAlvos ?? ''}" placeholder="Ex: ${i + 1}" min="1" style="width:100%" oninput="window._mechUpdatePreview()"></td><td><input type="text" class="prog-valorPorAlvo" data-nivel="${i}" value="${esc(String(p.valorPorAlvo ?? ''))}" placeholder="Ex: 1" style="width:100%" oninput="window._mechUpdatePreview()"></td></tr>`;
     } else {
-        return `<tr>${nvCell}${custoCell}<td><input type="text" class="prog-descricao" data-nivel="${i}" value="${esc(String(p.descricao ?? ''))}" placeholder="Descrever o efeito neste nível" style="width:100%" oninput="window._mechUpdatePreview()"></td></tr>`;
+        return `<tr>${nvCell}${custoCell}<td><input type="text" class="prog-descricao" data-nivel="${i}" value="${esc(String(p.descricao ?? ''))}" placeholder="Descrever o efeito neste nÃ­vel" style="width:100%" oninput="window._mechUpdatePreview()"></td></tr>`;
     }
 }
 
@@ -777,36 +777,36 @@ function renderConfigProgressao(data, tipo) {
 
     return `
     <div class="mech-form-section" id="mechProgressaoSection">
-        <div class="mech-section-label">📈 Progressão por Nível</div>
+        <div class="mech-section-label">ðŸ“ˆ ProgressÃ£o por NÃ­vel</div>
         <div class="form-grid">
             <div class="form-group">
                 <div class="form-toggle">
                     <label class="toggle-publish"><input type="checkbox" id="mech_evoluivel" ${evoluivel ? 'checked' : ''} onchange="window._mechEvoluivelChange()"><span class="toggle-slider"></span></label>
-                    <span class="toggle-label">Evoluível (permite subir de nível com EXP)</span>
+                    <span class="toggle-label">EvoluÃ­vel (permite subir de nÃ­vel com EXP)</span>
                 </div>
             </div>
             <div class="form-group" id="mech_apenasCriacaoWrap" style="display:${evoluivel ? '' : 'none'}">
                 <div class="form-toggle">
                     <label class="toggle-publish"><input type="checkbox" id="mech_progressaoApenasCriacao" ${apenasCriacao ? 'checked' : ''}><span class="toggle-slider"></span></label>
-                    <span class="toggle-label">🏗️ Apenas na Criação (não pode upar depois)</span>
+                    <span class="toggle-label">ðŸ—ï¸ Apenas na CriaÃ§Ã£o (nÃ£o pode upar depois)</span>
                 </div>
             </div>
             <div class="form-group" id="mech_tipoExpWrap" style="display:${evoluivel ? '' : 'none'}">
-                <label>Tipo de EXP na Progressão</label>
+                <label>Tipo de EXP na ProgressÃ£o</label>
                 <select id="mech_progressaoTipoExp" onchange="window._mechTipoExpChange()">
-                    <option value="custo" ${tipoExp === 'custo' ? 'selected' : ''}>💰 Custo de EXP (mecânica benéfica — subtrai EXP)</option>
-                    <option value="ganho" ${tipoExp === 'ganho' ? 'selected' : ''}>🎁 Ganho de EXP (mecânica prejudicial — adiciona EXP)</option>
+                    <option value="custo" ${tipoExp === 'custo' ? 'selected' : ''}>ðŸ’° Custo de EXP (mecÃ¢nica benÃ©fica â€” subtrai EXP)</option>
+                    <option value="ganho" ${tipoExp === 'ganho' ? 'selected' : ''}>ðŸŽ Ganho de EXP (mecÃ¢nica prejudicial â€” adiciona EXP)</option>
                 </select>
             </div>
             <div class="form-group" id="mech_nivelMaxWrap" style="display:${evoluivel ? '' : 'none'}">
-                <label>Nível Máximo <span class="required">*</span></label>
+                <label>NÃ­vel MÃ¡ximo <span class="required">*</span></label>
                 <input type="number" id="mech_nivelMaximo" value="${nivelMax}" min="2" max="10" onchange="window._mechNivelMaxChange()">
             </div>
         </div>
         <div id="mech_progressaoTabela" style="display:${evoluivel ? '' : 'none'}">
             <table style="width:100%;border-collapse:collapse;margin-top:8px">
                 <thead id="mech_progressaoHead"><tr style="background:var(--bg-secondary);color:var(--text-secondary)">
-                    ${headers.map(h => `<th style="padding:6px 8px${h === 'Nível' ? ';width:60px' : ''}">${h}</th>`).join('')}
+                    ${headers.map(h => `<th style="padding:6px 8px${h === 'NÃ­vel' ? ';width:60px' : ''}">${h}</th>`).join('')}
                 </tr></thead>
                 <tbody id="mech_progressaoBody">${tabelaRows}</tbody>
             </table>
@@ -829,12 +829,12 @@ window._mechAlvoChange = function (calcIndex) {
     const alvo = row.querySelector('.calc-alvo')?.value || '';
     const qualWrap = row.querySelector('.calc-exp-qual-wrap');
     if (qualWrap) qualWrap.style.display = alvo === 'EXP' ? '' : 'none';
-    // Check if ANY calc row targets EXP to toggle Duração section
+    // Check if ANY calc row targets EXP to toggle DuraÃ§Ã£o section
     window._mechSyncDuracaoForExp();
     window._mechRefreshProgressao();
 };
 
-// Checks all calc rows; if any targets EXP, swap Duração for EXP triggers
+// Checks all calc rows; if any targets EXP, swap DuraÃ§Ã£o for EXP triggers
 window._mechSyncDuracaoForExp = function () {
     const list = document.getElementById('mechCalcList');
     const hasExp = list ? Array.from(list.querySelectorAll('.calc-alvo')).some(s => s.value === 'EXP') : false;
@@ -865,20 +865,20 @@ function buildInlineMechSelector(id, label, currentIds, cache, excludeCondiciona
     const filtered = excludeCondicional ? cache.filter(m => m.tipo !== 'condicional' && m.publicado) : cache.filter(m => m.publicado);
     const chips = currentIds.map(mid => {
         const m = cache.find(x => x.id === mid);
-        return m ? `<div class="mechsel-chip" style="border-left-color:var(--type-${m.tipo || 'modificar'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${TIPO_ICONS[m.tipo] || '🔧'} ${esc(m.nome)}</div><div class="mechsel-chip-preview">${esc(m.previewTexto || '')}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${id}','${mid}')">✕</button></div>` : '';
+        return m ? `<div class="mechsel-chip" style="border-left-color:var(--type-${m.tipo || 'modificar'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${TIPO_ICONS[m.tipo] || 'ðŸ”§'} ${esc(m.nome)}</div><div class="mechsel-chip-preview">${esc(m.previewTexto || '')}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${id}','${mid}')">âœ•</button></div>` : '';
     }).join('');
-    const opts = filtered.map(m => `<label class="mechsel-result"><input type="checkbox" value="${m.id}" ${currentIds.includes(m.id) ? 'checked' : ''}><span class="mechsel-result-name">${TIPO_ICONS[m.tipo] || '🔧'} ${esc(m.nome)}</span><span class="mechsel-result-preview">${esc(m.previewTexto || '')}</span></label>`).join('');
+    const opts = filtered.map(m => `<label class="mechsel-result"><input type="checkbox" value="${m.id}" ${currentIds.includes(m.id) ? 'checked' : ''}><span class="mechsel-result-name">${TIPO_ICONS[m.tipo] || 'ðŸ”§'} ${esc(m.nome)}</span><span class="mechsel-result-preview">${esc(m.previewTexto || '')}</span></label>`).join('');
     return `
     <div class="mechsel-wrap" id="${id}_wrap">
         <span class="mechsel-label">${label}</span>
-        <div class="mechsel-chips" id="${id}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhuma mecânica vinculada</span>'}</div>
-        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('${id}_search').classList.toggle('open')">➕ Adicionar Mecânica</button>
+        <div class="mechsel-chips" id="${id}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhuma mecÃ¢nica vinculada</span>'}</div>
+        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('${id}_search').classList.toggle('open')">âž• Adicionar MecÃ¢nica</button>
         <div class="mechsel-search" id="${id}_search">
             <div class="mechsel-search-bar">
-                <input type="text" placeholder="🔍 Buscar mecânica..." oninput="window._mechSelFilter('${id}', this.value)">
+                <input type="text" placeholder="ðŸ” Buscar mecÃ¢nica..." oninput="window._mechSelFilter('${id}', this.value)">
             </div>
             <div class="mechsel-results" id="${id}_results">${opts}</div>
-            <button type="button" class="mechsel-confirm" onclick="window._mechSelConfirm('${id}')">✔️ Confirmar Seleção</button>
+            <button type="button" class="mechsel-confirm" onclick="window._mechSelConfirm('${id}')">âœ”ï¸ Confirmar SeleÃ§Ã£o</button>
         </div>
         <input type="hidden" id="${id}" value='${JSON.stringify(currentIds)}'>
     </div>`;
@@ -896,7 +896,7 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, 
     const area = document.getElementById('mechanicsEditorArea');
     area.style.display = '';
 
-    const title = isEditing ? `✏️ Editar Mecânica` : `➕ Criar Nova Mecânica`;
+    const title = isEditing ? `âœï¸ Editar MecÃ¢nica` : `âž• Criar Nova MecÃ¢nica`;
     const tipo = data.tipo || 'modificar';
     const config = data.config || {};
     // Merge initialTags (from filter chips) with existing tags, avoiding duplicates
@@ -907,77 +907,77 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, 
     area.innerHTML = `
     <div class="mech-editor-wrap">
         <div class="mech-editor-form">
-            <button class="mech-editor-back" onclick="window._mechBack()">← Voltar à Lista</button>
+            <button class="mech-editor-back" onclick="window._mechBack()">â† Voltar Ã  Lista</button>
             <div class="mech-editor-title">${title}</div>
 
             <div class="mech-form-section">
-                <div class="mech-section-label">📋 Informações Básicas</div>
+                <div class="mech-section-label">ðŸ“‹ InformaÃ§Ãµes BÃ¡sicas</div>
                 <div class="form-grid">
                     <div class="form-group"><label>Nome <span class="required">*</span></label>
                         <input type="text" id="mech_nome" value="${esc(data.nome || '')}" placeholder="Ex: Aprendizado Acelerado IV" oninput="window._mechUpdatePreview()"></div>
                     <div class="form-group"><label>Fonte <span class="required">*</span></label>
                         <select id="mech_fonte" onchange="window._mechUpdatePreview()">
-                            <option value="">— Selecionar —</option>
+                            <option value="">â€” Selecionar â€”</option>
                             ${Object.entries(FONTE_LABELS).map(([k, v]) => `<option value="${k}" ${data.fonte === k ? 'selected' : ''}>${v}</option>`).join('')}
                         </select></div>
-                    <div class="form-group full-width"><label>Descrição <span class="required">*</span></label>
+                    <div class="form-group full-width"><label>DescriÃ§Ã£o <span class="required">*</span></label>
                         <textarea id="mech_descricao" placeholder="Texto explicando o efeito">${esc(data.descricao || '')}</textarea></div>
                 </div>
             </div>
 
             <div class="mech-form-section">
-                <div class="mech-section-label">⚙️ Tipo de Efeito</div>
+                <div class="mech-section-label">âš™ï¸ Tipo de Efeito</div>
                 <div class="form-group">
                     <select id="mech_tipo" onchange="window._mechTipoChange()">
-                        <option value="modificar" ${tipo === 'modificar' ? 'selected' : ''}>➕ Modificar (altera valor numérico)</option>
-                        <option value="limitar" ${tipo === 'limitar' ? 'selected' : ''}>🔒 Limitar (impõe teto/piso/bloqueio)</option>
-                        <option value="conceder" ${tipo === 'conceder' ? 'selected' : ''}>🎁 Conceder (dá ou remove capacidade)</option>
-                        <option value="condicional" ${tipo === 'condicional' ? 'selected' : ''}>⚡ Condicional (efeito com gatilho)</option>
-                        <option value="narrativo" ${tipo === 'narrativo' ? 'selected' : ''}>📝 Narrativo (efeito descritivo)</option>
-                        <option value="distribuir" ${tipo === 'distribuir' ? 'selected' : ''}>🎲 Distribuir (distribui pontos entre múltiplos alvos)</option>
+                        <option value="modificar" ${tipo === 'modificar' ? 'selected' : ''}>âž• Modificar (altera valor numÃ©rico)</option>
+                        <option value="limitar" ${tipo === 'limitar' ? 'selected' : ''}>ðŸ”’ Limitar (impÃµe teto/piso/bloqueio)</option>
+                        <option value="conceder" ${tipo === 'conceder' ? 'selected' : ''}>ðŸŽ Conceder (dÃ¡ ou remove capacidade)</option>
+                        <option value="condicional" ${tipo === 'condicional' ? 'selected' : ''}>âš¡ Condicional (efeito com gatilho)</option>
+                        <option value="narrativo" ${tipo === 'narrativo' ? 'selected' : ''}>ðŸ“ Narrativo (efeito descritivo)</option>
+                        <option value="distribuir" ${tipo === 'distribuir' ? 'selected' : ''}>ðŸŽ² Distribuir (distribui pontos entre mÃºltiplos alvos)</option>
                     </select>
                 </div>
                 <div class="mech-config-area" id="mechConfigArea"></div>
             </div>
 
             <div class="mech-form-section">
-                <div class="mech-section-label">🕐 Quando se Aplica</div>
+                <div class="mech-section-label">ðŸ• Quando se Aplica</div>
                 <div class="form-grid">
                     <div id="mech_duracao_standard_wrap">
-                        <div class="form-group"><label>Duração</label>
+                        <div class="form-group"><label>DuraÃ§Ã£o</label>
                             <select id="mech_duracao" onchange="window._mechDuracaoChange(); window._mechUpdatePreview()">
                                 <option value="permanente" ${(data.duracao || 'permanente') === 'permanente' ? 'selected' : ''}>Permanente</option>
                                 <option value="cena" ${data.duracao === 'cena' ? 'selected' : ''}>1 Cena</option>
                                 <option value="turno" ${data.duracao === 'turno' ? 'selected' : ''}>X Turnos</option>
-                                <option value="ate_remover" ${data.duracao === 'ate_remover' ? 'selected' : ''}>Até ser removido</option>
-                                <option value="criacao" ${data.duracao === 'criacao' ? 'selected' : ''}>Na criação do personagem</option>
+                                <option value="ate_remover" ${data.duracao === 'ate_remover' ? 'selected' : ''}>AtÃ© ser removido</option>
+                                <option value="criacao" ${data.duracao === 'criacao' ? 'selected' : ''}>Na criaÃ§Ã£o do personagem</option>
                                 <option value="especial" ${data.duracao === 'especial' ? 'selected' : ''}>Especial</option>
                             </select>
                         </div>
                         <div class="form-group" id="mech_turnosWrap" style="display:${data.duracao === 'turno' ? '' : 'none'}"><label>Quantos turnos?</label>
                             <input type="number" id="mech_duracaoTurnos" value="${data.duracaoTurnos || ''}" min="1" oninput="window._mechUpdatePreview()"></div>
-                        <div class="form-group" id="mech_especWrap" style="display:${data.duracao === 'especial' ? '' : 'none'}"><label>Descrever duração</label>
+                        <div class="form-group" id="mech_especWrap" style="display:${data.duracao === 'especial' ? '' : 'none'}"><label>Descrever duraÃ§Ã£o</label>
                             <input type="text" id="mech_duracaoEspecial" value="${esc(data.duracaoEspecial || '')}" oninput="window._mechUpdatePreview()"></div>
                     </div>
                     <div id="mech_duracao_exp_wrap" style="display:none">
-                        <div class="form-group"><label>⭐ Quando o EXP se Aplica? <span class="required">*</span></label>
+                        <div class="form-group"><label>â­ Quando o EXP se Aplica? <span class="required">*</span></label>
                             <select id="mech_duracao_exp" onchange="window._mechDuracaoExpChange()">
-                                <option value="na_criacao" ${data.quandoAplica === 'na_criacao' ? 'selected' : ''}>🏗️ Na Criação de Personagem</option>
-                                <option value="por_sessao" ${data.quandoAplica === 'por_sessao' ? 'selected' : ''}>📅 Por Sessão</option>
-                                <option value="por_descanso_longo" ${data.quandoAplica === 'por_descanso_longo' ? 'selected' : ''}>🛏️ Por Descanso Longo</option>
-                                <option value="por_descanso_curto" ${data.quandoAplica === 'por_descanso_curto' ? 'selected' : ''}>☕ Por Descanso Curto</option>
-                                <option value="por_arco" ${data.quandoAplica === 'por_arco' ? 'selected' : ''}>📖 Por Arco</option>
-                                <option value="por_masmorra" ${data.quandoAplica === 'por_masmorra' ? 'selected' : ''}>🏰 Por Masmorra</option>
-                                <option value="ao_ativar" ${data.quandoAplica === 'ao_ativar' ? 'selected' : ''}>⚡ Ao Ativar</option>
-                                <option value="ao_desativar" ${data.quandoAplica === 'ao_desativar' ? 'selected' : ''}>🔌 Ao Desativar</option>
-                                <option value="condicional" ${data.quandoAplica === 'condicional' ? 'selected' : ''}>🎯 Condicional</option>
-                                <option value="permanente" ${(!data.quandoAplica || data.quandoAplica === 'permanente') ? 'selected' : ''}>♾️ Permanente (Passivo)</option>
-                                <option value="por_uso_recurso" ${data.quandoAplica === 'por_uso_recurso' ? 'selected' : ''}>🔋 Por Uso de Recurso</option>
-                                <option value="por_morte" ${data.quandoAplica === 'por_morte' ? 'selected' : ''}>💀 Por Morte e Ressurreição</option>
+                                <option value="na_criacao" ${data.quandoAplica === 'na_criacao' ? 'selected' : ''}>ðŸ—ï¸ Na CriaÃ§Ã£o de Personagem</option>
+                                <option value="por_sessao" ${data.quandoAplica === 'por_sessao' ? 'selected' : ''}>ðŸ“… Por SessÃ£o</option>
+                                <option value="por_descanso_longo" ${data.quandoAplica === 'por_descanso_longo' ? 'selected' : ''}>ðŸ›ï¸ Por Descanso Longo</option>
+                                <option value="por_descanso_curto" ${data.quandoAplica === 'por_descanso_curto' ? 'selected' : ''}>â˜• Por Descanso Curto</option>
+                                <option value="por_arco" ${data.quandoAplica === 'por_arco' ? 'selected' : ''}>ðŸ“– Por Arco</option>
+                                <option value="por_masmorra" ${data.quandoAplica === 'por_masmorra' ? 'selected' : ''}>ðŸ° Por Masmorra</option>
+                                <option value="ao_ativar" ${data.quandoAplica === 'ao_ativar' ? 'selected' : ''}>âš¡ Ao Ativar</option>
+                                <option value="ao_desativar" ${data.quandoAplica === 'ao_desativar' ? 'selected' : ''}>ðŸ”Œ Ao Desativar</option>
+                                <option value="condicional" ${data.quandoAplica === 'condicional' ? 'selected' : ''}>ðŸŽ¯ Condicional</option>
+                                <option value="permanente" ${(!data.quandoAplica || data.quandoAplica === 'permanente') ? 'selected' : ''}>â™¾ï¸ Permanente (Passivo)</option>
+                                <option value="por_uso_recurso" ${data.quandoAplica === 'por_uso_recurso' ? 'selected' : ''}>ðŸ”‹ Por Uso de Recurso</option>
+                                <option value="por_morte" ${data.quandoAplica === 'por_morte' ? 'selected' : ''}>ðŸ’€ Por Morte e RessurreiÃ§Ã£o</option>
                             </select>
                         </div>
                         <div id="mech_expCondicaoWrap" style="display:${data.quandoAplica === 'condicional' ? '' : 'none'}">
-                            <div class="form-group full-width"><label>Condição <span class="required">*</span></label>
+                            <div class="form-group full-width"><label>CondiÃ§Ã£o <span class="required">*</span></label>
                                 <textarea id="mech_expCondicao" placeholder="Ex: Quando o personagem mata um inimigo com AI superior ao dele" oninput="window._mechUpdatePreview()">${esc(data.condicaoExp || '')}</textarea>
                             </div>
                         </div>
@@ -985,11 +985,11 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, 
                             <div class="form-grid">
                                 <div class="form-group"><label>Recurso <span class="required">*</span></label>
                                     <select id="mech_expRecurso" onchange="window._mechRecursoExpChange()">
-                                        <option value="energia" ${(data.recursoExp || 'energia') === 'energia' ? 'selected' : ''}>⚡ Energia</option>
-                                        <option value="sanidade" ${data.recursoExp === 'sanidade' ? 'selected' : ''}>🧠 Sanidade</option>
-                                        <option value="graca" ${data.recursoExp === 'graca' ? 'selected' : ''}>✨ Graça</option>
-                                        <option value="vitalidade" ${data.recursoExp === 'vitalidade' ? 'selected' : ''}>❤️ Vitalidade</option>
-                                        <option value="outro" ${data.recursoExp === 'outro' ? 'selected' : ''}>📝 Outro</option>
+                                        <option value="energia" ${(data.recursoExp || 'energia') === 'energia' ? 'selected' : ''}>âš¡ Energia</option>
+                                        <option value="sanidade" ${data.recursoExp === 'sanidade' ? 'selected' : ''}>ðŸ§  Sanidade</option>
+                                        <option value="graca" ${data.recursoExp === 'graca' ? 'selected' : ''}>âœ¨ GraÃ§a</option>
+                                        <option value="vitalidade" ${data.recursoExp === 'vitalidade' ? 'selected' : ''}>â¤ï¸ Vitalidade</option>
+                                        <option value="outro" ${data.recursoExp === 'outro' ? 'selected' : ''}>ðŸ“ Outro</option>
                                     </select>
                                 </div>
                                 <div class="form-group" id="mech_expRecursoOutroWrap" style="display:${data.recursoExp === 'outro' ? '' : 'none'}">
@@ -999,22 +999,22 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, 
                             </div>
                         </div>
                     </div>
-                    <div class="form-group"><label>Quem é afetado?</label>
+                    <div class="form-group"><label>Quem Ã© afetado?</label>
                         <select id="mech_escopo" onchange="window._mechUpdatePreview()">
-                            <option value="proprio" ${(data.escopo || 'proprio') === 'proprio' ? 'selected' : ''}>O próprio personagem</option>
+                            <option value="proprio" ${(data.escopo || 'proprio') === 'proprio' ? 'selected' : ''}>O prÃ³prio personagem</option>
                             <option value="aliado" ${data.escopo === 'aliado' ? 'selected' : ''}>1 Aliado</option>
-                            <option value="aliados_area" ${data.escopo === 'aliados_area' ? 'selected' : ''}>Aliados em área</option>
+                            <option value="aliados_area" ${data.escopo === 'aliados_area' ? 'selected' : ''}>Aliados em Ã¡rea</option>
                             <option value="inimigo" ${data.escopo === 'inimigo' ? 'selected' : ''}>1 Inimigo</option>
-                            <option value="inimigos_area" ${data.escopo === 'inimigos_area' ? 'selected' : ''}>Inimigos em área</option>
-                            <option value="todos_area" ${data.escopo === 'todos_area' ? 'selected' : ''}>Todos em área</option>
+                            <option value="inimigos_area" ${data.escopo === 'inimigos_area' ? 'selected' : ''}>Inimigos em Ã¡rea</option>
+                            <option value="todos_area" ${data.escopo === 'todos_area' ? 'selected' : ''}>Todos em Ã¡rea</option>
                         </select></div>
-                    <div class="form-group full-width"><label>Condição de Aplicação</label>
-                        <textarea id="mech_condicaoAplicacao" placeholder="Ex: Apenas em ambientes urbanos, Em testes de Intimidação..." oninput="window._mechUpdatePreview()">${esc(data.condicaoAplicacao || '')}</textarea></div>
+                    <div class="form-group full-width"><label>CondiÃ§Ã£o de AplicaÃ§Ã£o</label>
+                        <textarea id="mech_condicaoAplicacao" placeholder="Ex: Apenas em ambientes urbanos, Em testes de IntimidaÃ§Ã£o..." oninput="window._mechUpdatePreview()">${esc(data.condicaoAplicacao || '')}</textarea></div>
                     <div class="form-group"><label>Empilhamento</label>
                         <select id="mech_empilhamento">
                             <option value="soma" ${(data.empilhamento || 'soma') === 'soma' ? 'selected' : ''}>Soma com outros iguais</option>
-                            <option value="maior" ${data.empilhamento === 'maior' ? 'selected' : ''}>Só o maior valor</option>
-                            <option value="nao_empilha" ${data.empilhamento === 'nao_empilha' ? 'selected' : ''}>Não empilha</option>
+                            <option value="maior" ${data.empilhamento === 'maior' ? 'selected' : ''}>SÃ³ o maior valor</option>
+                            <option value="nao_empilha" ${data.empilhamento === 'nao_empilha' ? 'selected' : ''}>NÃ£o empilha</option>
                         </select></div>
                 </div>
             </div>
@@ -1022,11 +1022,11 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, 
             ${renderConfigProgressao(data, tipo)}
 
             <div class="mech-form-section">
-                <div class="mech-section-label">🏷️ Tags e Publicação</div>
+                <div class="mech-section-label">ðŸ·ï¸ Tags e PublicaÃ§Ã£o</div>
                 <div class="form-grid">
                     <div class="form-group full-width"><label>Tags de busca</label>
                         <div class="tags-container" id="mech_tags_container" onclick="this.querySelector('input').focus()">
-                            ${tags.map(t => `<span class="tag">${esc(t)}<button type="button" onclick="this.closest('.tag').remove()">×</button></span>`).join('')}
+                            ${tags.map(t => `<span class="tag">${esc(t)}<button type="button" onclick="this.closest('.tag').remove()">Ã—</button></span>`).join('')}
                             <input type="text" placeholder="Digite e pressione Enter" onkeydown="window._mechTagKey(event)">
                         </div></div>
                     <div class="form-group">
@@ -1039,12 +1039,12 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, 
 
             <div class="mech-form-actions">
                 <button type="button" class="btn-modal btn-cancel" onclick="window._mechBack()">Cancelar</button>
-                <button type="button" class="btn-save" id="mechBtnSave" onclick="window._mechSave()">💾 Salvar</button>
+                <button type="button" class="btn-save" id="mechBtnSave" onclick="window._mechSave()">ðŸ’¾ Salvar</button>
             </div>
         </div>
 
         <div class="mech-preview-panel">
-            <div class="mech-preview-header">📋 Preview do Efeito</div>
+            <div class="mech-preview-header">ðŸ“‹ Preview do Efeito</div>
             <div class="mech-preview-text" id="mechPreviewText">Preencha os campos para ver o preview</div>
             <div class="mech-preview-meta" id="mechPreviewMeta"></div>
         </div>
@@ -1126,7 +1126,7 @@ window._mechTipoChange = function () {
                     }
                 });
             });
-            // Sync Duração section for EXP after calc rows are restored
+            // Sync DuraÃ§Ã£o section for EXP after calc rows are restored
             window._mechSyncDuracaoForExp();
             // Refresh progression after equacao is set in DOM
             window._mechRefreshProgressao(tipo);
@@ -1207,7 +1207,7 @@ window._mechRemoveTerm = function (calcIndex, termIndex) {
     const terms = container.querySelectorAll('.eq-term');
     if (terms.length <= 1) return; // Keep at least 1
     if (terms[termIndex]) terms[termIndex].remove();
-    // Re-index remaining terms — re-render to fix onclick indices
+    // Re-index remaining terms â€” re-render to fix onclick indices
     const currentEquacao = _collectEquacaoFromContainer(container);
     container.innerHTML = currentEquacao.map((t, ti) => _renderEquationTerm(t, calcIndex, ti)).join('');
     // Restore ficha ref values after re-render
@@ -1336,7 +1336,7 @@ window._mechNivelMaxChange = function () {
     // Update headers
     if (thead) {
         const headers = _getProgressaoHeaders(tipo, tipoExp, fixoTerms);
-        thead.innerHTML = `<tr style="background:var(--bg-secondary);color:var(--text-secondary)">${headers.map(h => `<th style="padding:6px 8px${h === 'Nível' ? ';width:60px' : ''}">${h}</th>`).join('')}</tr>`;
+        thead.innerHTML = `<tr style="background:var(--bg-secondary);color:var(--text-secondary)">${headers.map(h => `<th style="padding:6px 8px${h === 'NÃ­vel' ? ';width:60px' : ''}">${h}</th>`).join('')}</tr>`;
     }
     let html = '';
     for (let i = 1; i <= max; i++) {
@@ -1360,14 +1360,14 @@ window._mechUpdatePreview = function () {
 
     const meta = document.getElementById('mechPreviewMeta');
     if (meta) {
-        const fonte = FONTE_LABELS[formData.fonte] || formData.fonte || '—';
+        const fonte = FONTE_LABELS[formData.fonte] || formData.fonte || 'â€”';
         const dur = formData.duracao || 'permanente';
         const esc2 = formData.escopo || 'proprio';
         meta.innerHTML = `
-            <span>📌 <strong>Fonte:</strong> ${fonte}</span>
-            <span>🕐 <strong>Duração:</strong> ${dur}${dur === 'turno' ? ' (' + (formData.duracaoTurnos || '?') + ' turnos)' : ''}${dur === 'especial' ? ' — ' + (formData.duracaoEspecial || '?') : ''}</span>
-            <span>👤 <strong>Escopo:</strong> ${esc2}</span>
-            ${formData.condicaoAplicacao ? `<span>📎 <strong>Condição:</strong> ${esc(formData.condicaoAplicacao)}</span>` : ''}`;
+            <span>ðŸ“Œ <strong>Fonte:</strong> ${fonte}</span>
+            <span>ðŸ• <strong>DuraÃ§Ã£o:</strong> ${dur}${dur === 'turno' ? ' (' + (formData.duracaoTurnos || '?') + ' turnos)' : ''}${dur === 'especial' ? ' â€” ' + (formData.duracaoEspecial || '?') : ''}</span>
+            <span>ðŸ‘¤ <strong>Escopo:</strong> ${esc2}</span>
+            ${formData.condicaoAplicacao ? `<span>ðŸ“Ž <strong>CondiÃ§Ã£o:</strong> ${esc(formData.condicaoAplicacao)}</span>` : ''}`;
     }
 };
 
@@ -1379,7 +1379,7 @@ window._mechTagKey = function (e) {
         if (!val) return;
         const tag = document.createElement('span');
         tag.className = 'tag';
-        tag.innerHTML = `${esc(val)}<button type="button" onclick="this.closest('.tag').remove()">×</button>`;
+        tag.innerHTML = `${esc(val)}<button type="button" onclick="this.closest('.tag').remove()">Ã—</button>`;
         input.parentElement.insertBefore(tag, input);
         input.value = '';
     }
@@ -1423,7 +1423,7 @@ function collectMechFormData() {
         });
         data.config = { calculos };
 
-        // If any calc targets EXP, collect the EXP trigger info from Duração section
+        // If any calc targets EXP, collect the EXP trigger info from DuraÃ§Ã£o section
         const hasExpCalc = calculos.some(c => c.alvo === 'EXP');
         if (hasExpCalc) {
             const recursoExp = document.getElementById('mech_expRecurso')?.value || 'energia';
@@ -1473,7 +1473,7 @@ function collectMechFormData() {
         };
     }
 
-    // Progressão por nível
+    // ProgressÃ£o por nÃ­vel
     data.evoluivel = document.getElementById('mech_evoluivel')?.checked || false;
     if (data.evoluivel) {
         data.nivelMaximo = parseInt(document.getElementById('mech_nivelMaximo')?.value) || 3;
@@ -1533,13 +1533,13 @@ window._mechSave = async function () {
 
     // Collect tags
     const tagsContainer = document.getElementById('mech_tags_container');
-    data.tags = tagsContainer ? Array.from(tagsContainer.querySelectorAll('.tag')).map(t => t.textContent.replace('×', '').trim()) : [];
+    data.tags = tagsContainer ? Array.from(tagsContainer.querySelectorAll('.tag')).map(t => t.textContent.replace('Ã—', '').trim()) : [];
     data.publicado = document.getElementById('mech_publicado')?.checked || false;
     data.previewTexto = generatePreviewText(data);
 
     // Validate
-    if (!data.nome) { cb.showAlert('⚠️ Campo obrigatório: Nome', 'danger'); return; }
-    if (!data.descricao) { cb.showAlert('⚠️ Campo obrigatório: Descrição', 'danger'); return; }
+    if (!data.nome) { cb.showAlert('âš ï¸ Campo obrigatÃ³rio: Nome', 'danger'); return; }
+    if (!data.descricao) { cb.showAlert('âš ï¸ Campo obrigatÃ³rio: DescriÃ§Ã£o', 'danger'); return; }
 
     // Metadata
     data.atualizadoEm = cb.Timestamp.now();
@@ -1554,23 +1554,23 @@ window._mechSave = async function () {
     }
 
     const btn = document.getElementById('mechBtnSave');
-    btn.disabled = true; btn.textContent = '⏳ Salvando...';
+    btn.disabled = true; btn.textContent = 'â³ Salvando...';
 
     try {
         if (editId) {
             await cb.updateDoc(cb.doc(cb.db, 'system/data/mechanics', editId), data);
-            cb.showAlert('✅ Mecânica atualizada!', 'success');
+            cb.showAlert('âœ… MecÃ¢nica atualizada!', 'success');
         } else {
             await cb.addDoc(cb.collection(cb.db, 'system/data/mechanics'), data);
-            cb.showAlert('✅ Mecânica criada!', 'success');
+            cb.showAlert('âœ… MecÃ¢nica criada!', 'success');
         }
         window._mechBack();
         await cb.loadModule('mechanics');
     } catch (e) {
-        console.error('Erro ao salvar mecânica:', e);
-        cb.showAlert('❌ Erro ao salvar: ' + e.message, 'danger');
+        console.error('Erro ao salvar mecÃ¢nica:', e);
+        cb.showAlert('âŒ Erro ao salvar: ' + e.message, 'danger');
     } finally {
-        btn.disabled = false; btn.textContent = '💾 Salvar';
+        btn.disabled = false; btn.textContent = 'ðŸ’¾ Salvar';
     }
 };
 
@@ -1589,7 +1589,7 @@ window._mechSelRemove = function (fieldId, mechId) {
     const chip = document.querySelector(`#${fieldId}_chips .mechsel-chip button[onclick*="${mechId}"]`);
     if (chip) chip.closest('.mechsel-chip').remove();
     if (!ids.length) {
-        document.getElementById(`${fieldId}_chips`).innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhuma mecânica ou peculiaridade vinculada</span>';
+        document.getElementById(`${fieldId}_chips`).innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhuma mecÃ¢nica ou peculiaridade vinculada</span>';
     }
 };
 
@@ -1616,12 +1616,12 @@ window._mechSelConfirm = function (fieldId) {
     const chipsEl = document.getElementById(`${fieldId}_chips`);
     if (chipsEl) {
         if (!checked.length) {
-            chipsEl.innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhuma mecânica vinculada</span>';
+            chipsEl.innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhuma mecÃ¢nica vinculada</span>';
         } else {
             chipsEl.innerHTML = checked.map(mid => {
                 const m = cache.find(x => x.id === mid);
                 if (!m) return '';
-                return `<div class="mechsel-chip" style="border-left-color:var(--type-${m.tipo || 'modificar'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${TIPO_ICONS[m.tipo] || '🔧'} ${esc(m.nome)}</div><div class="mechsel-chip-preview">${esc(m.previewTexto || '')}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${mid}')">✕</button></div>`;
+                return `<div class="mechsel-chip" style="border-left-color:var(--type-${m.tipo || 'modificar'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${TIPO_ICONS[m.tipo] || 'ðŸ”§'} ${esc(m.nome)}</div><div class="mechsel-chip-preview">${esc(m.previewTexto || '')}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${mid}')">âœ•</button></div>`;
             }).join('');
         }
     }
@@ -1632,24 +1632,24 @@ export function buildMechanicSelectorHTML(fieldKey, label, currentIds, cache, fo
     const published = cache.filter(m => m.publicado);
     const chips = (currentIds || []).map(mid => {
         const m = cache.find(x => x.id === mid);
-        return m ? `<div class="mechsel-chip" style="border-left-color:var(--type-${m.tipo || 'modificar'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${TIPO_ICONS[m.tipo] || '🔧'} ${esc(m.nome)}</div><div class="mechsel-chip-preview">${esc(m.previewTexto || '')}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${mid}')">✕</button></div>` : '';
+        return m ? `<div class="mechsel-chip" style="border-left-color:var(--type-${m.tipo || 'modificar'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${TIPO_ICONS[m.tipo] || 'ðŸ”§'} ${esc(m.nome)}</div><div class="mechsel-chip-preview">${esc(m.previewTexto || '')}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${mid}')">âœ•</button></div>` : '';
     }).join('');
-    const opts = published.map(m => `<label class="mechsel-result" data-fonte="${m.fonte || ''}"><input type="checkbox" value="${m.id}" ${(currentIds || []).includes(m.id) ? 'checked' : ''}><span class="mechsel-result-name">${TIPO_ICONS[m.tipo] || '🔧'} ${esc(m.nome)}</span><span class="mechsel-result-preview">${esc(m.previewTexto || '')}</span></label>`).join('');
+    const opts = published.map(m => `<label class="mechsel-result" data-fonte="${m.fonte || ''}"><input type="checkbox" value="${m.id}" ${(currentIds || []).includes(m.id) ? 'checked' : ''}><span class="mechsel-result-name">${TIPO_ICONS[m.tipo] || 'ðŸ”§'} ${esc(m.nome)}</span><span class="mechsel-result-preview">${esc(m.previewTexto || '')}</span></label>`).join('');
     return `
     <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
         <span class="mechsel-label">${esc(label)}</span>
-        <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhuma mecânica vinculada</span>'}</div>
-        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Mecânica</button>
+        <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhuma mecÃ¢nica vinculada</span>'}</div>
+        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">âž• Adicionar MecÃ¢nica</button>
         <div class="mechsel-search" id="field_${fieldKey}_search">
             <div class="mechsel-search-bar">
-                <input type="text" placeholder="🔍 Buscar..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
+                <input type="text" placeholder="ðŸ” Buscar..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
                 <select onchange="window._mechSelFilterFonte('field_${fieldKey}', this.value)">
                     <option value="">Todas fontes</option>
                     ${Object.entries(FONTE_LABELS).map(([k, v]) => `<option value="${k}" ${fontePreFilter === k ? 'selected' : ''}>${v}</option>`).join('')}
                 </select>
             </div>
             <div class="mechsel-results" id="field_${fieldKey}_results">${opts}</div>
-            <button type="button" class="mechsel-confirm" onclick="window._mechSelConfirm('field_${fieldKey}')">✔️ Vincular Selecionadas</button>
+            <button type="button" class="mechsel-confirm" onclick="window._mechSelConfirm('field_${fieldKey}')">âœ”ï¸ Vincular Selecionadas</button>
         </div>
         <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(currentIds || [])}'>
     </div>`;
@@ -1664,20 +1664,20 @@ export function buildPecSelectorHTML(fieldKey, label, currentIds, cache, fontePr
     const chips = parsedIds.map(pObj => {
         const pid = pObj.id;
         const p = cache.find(x => x.id === pid);
-        return p ? `<div class="mechsel-chip" style="border-left-color:var(--fonte-${p.fonte || 'generica'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">✨ ${esc(p.nome)}</div><div class="mechsel-chip-preview">${esc(p.fonte || '')} — Nível Inicial: <input type="number" value="${pObj.nivelInicial || 1}" min="1" max="10" style="width:40px;padding:2px;font-size:0.7rem;" onchange="window._pecSelLevelChange('field_${fieldKey}', '${pid}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${pid}')">✕</button></div>` : '';
+        return p ? `<div class="mechsel-chip" style="border-left-color:var(--fonte-${p.fonte || 'generica'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">âœ¨ ${esc(p.nome)}</div><div class="mechsel-chip-preview">${esc(p.fonte || '')} â€” NÃ­vel Inicial: <input type="number" value="${pObj.nivelInicial || 1}" min="1" max="10" style="width:40px;padding:2px;font-size:0.7rem;" onchange="window._pecSelLevelChange('field_${fieldKey}', '${pid}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${pid}')">âœ•</button></div>` : '';
     }).join('');
-    const opts = published.map(p => `<label class="mechsel-result"><input type="checkbox" value="${p.id}" ${selectedIds.includes(p.id) ? 'checked' : ''}><span class="mechsel-result-name">✨ ${esc(p.nome)}</span><span class="mechsel-result-preview">${esc(p.fonte || '')}</span></label>`).join('');
+    const opts = published.map(p => `<label class="mechsel-result"><input type="checkbox" value="${p.id}" ${selectedIds.includes(p.id) ? 'checked' : ''}><span class="mechsel-result-name">âœ¨ ${esc(p.nome)}</span><span class="mechsel-result-preview">${esc(p.fonte || '')}</span></label>`).join('');
     return `
     <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
         <span class="mechsel-label">${esc(label)}</span>
         <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhuma peculiaridade vinculada</span>'}</div>
-        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Peculiaridade</button>
+        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">âž• Adicionar Peculiaridade</button>
         <div class="mechsel-search" id="field_${fieldKey}_search">
             <div class="mechsel-search-bar">
-                <input type="text" placeholder="🔍 Buscar peculiaridade..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
+                <input type="text" placeholder="ðŸ” Buscar peculiaridade..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
             </div>
             <div class="mechsel-results" id="field_${fieldKey}_results">${opts}</div>
-            <button type="button" class="mechsel-confirm" onclick="window._pecSelConfirm('field_${fieldKey}')">✔️ Vincular Selecionadas</button>
+            <button type="button" class="mechsel-confirm" onclick="window._pecSelConfirm('field_${fieldKey}')">âœ”ï¸ Vincular Selecionadas</button>
         </div>
         <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(parsedIds)}'>
     </div>`;
@@ -1721,7 +1721,7 @@ window._pecSelConfirm = function (fieldId) {
                 // To be safe, wait for visual update or use simple names based on existing cache.
                 const p = window._mechAllItems ? window._mechAllItems.find(x => x.id === mid) : { nome: "Carregando...", fonte: "?" };
                 if (!p && globals_for_cache) return ''; // just a fallback
-                return `<div class="mechsel-chip" style="border-left-color:var(--fonte-${p?.fonte || 'generica'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">✨ ${esc(p?.nome || mid)}</div><div class="mechsel-chip-preview">${esc(p?.fonte || '')} — Nível Inicial: <input type="number" value="${pObj.nivelInicial || 1}" min="1" max="10" style="width:40px;padding:2px;font-size:0.7rem;" onchange="window._pecSelLevelChange('${fieldId}', '${mid}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${mid}')">✕</button></div>`;
+                return `<div class="mechsel-chip" style="border-left-color:var(--fonte-${p?.fonte || 'generica'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">âœ¨ ${esc(p?.nome || mid)}</div><div class="mechsel-chip-preview">${esc(p?.fonte || '')} â€” NÃ­vel Inicial: <input type="number" value="${pObj.nivelInicial || 1}" min="1" max="10" style="width:40px;padding:2px;font-size:0.7rem;" onchange="window._pecSelLevelChange('${fieldId}', '${mid}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${mid}')">âœ•</button></div>`;
             }).join('');
         }
     }
@@ -1744,7 +1744,7 @@ window._pecSelLevelChange = function (fieldId, mechId, newValue) {
 };
 
 // ===== SKILL SELECTOR (for classes pericClasse) =====
-const CATEGORIA_LABELS = { mental: '🧠 Mental', fisico: '💪 Físico', social: '🗣️ Social', combate: '⚔️ Combate', exclusivo: '🌟 Exclusivo' };
+const CATEGORIA_LABELS = { mental: 'ðŸ§  Mental', fisico: 'ðŸ’ª FÃ­sico', social: 'ðŸ—£ï¸ Social', combate: 'âš”ï¸ Combate', exclusivo: 'ðŸŒŸ Exclusivo' };
 
 export function buildSkillSelectorHTML(fieldKey, label, currentIds, cache) {
     const published = cache.filter(s => s.publicado !== false);
@@ -1755,26 +1755,26 @@ export function buildSkillSelectorHTML(fieldKey, label, currentIds, cache) {
         if (!s) return '';
         const catLabel = CATEGORIA_LABELS[s.categoria] || s.categoria || '';
         const attrs = Array.isArray(s.atributoBase) ? s.atributoBase.join('/') : (s.atributoBase || '');
-        return `<div class="mechsel-chip" style="border-left-color:var(--accent)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">📚 ${esc(s.nome)}</div><div class="mechsel-chip-preview">${catLabel} — ${attrs}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${sid}')">✕</button></div>`;
+        return `<div class="mechsel-chip" style="border-left-color:var(--accent)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">ðŸ“š ${esc(s.nome)}</div><div class="mechsel-chip-preview">${catLabel} â€” ${attrs}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${sid}')">âœ•</button></div>`;
     }).join('');
 
     const opts = published.map(s => {
         const catLabel = CATEGORIA_LABELS[s.categoria] || s.categoria || '';
         const attrs = Array.isArray(s.atributoBase) ? s.atributoBase.join('/') : (s.atributoBase || '');
-        return `<label class="mechsel-result" data-fonte="${s.categoria || ''}"><input type="checkbox" value="${s.id}" ${ids.includes(s.id) ? 'checked' : ''}><span class="mechsel-result-name">📚 ${esc(s.nome)}</span><span class="mechsel-result-preview">${catLabel} — ${attrs}</span></label>`;
+        return `<label class="mechsel-result" data-fonte="${s.categoria || ''}"><input type="checkbox" value="${s.id}" ${ids.includes(s.id) ? 'checked' : ''}><span class="mechsel-result-name">ðŸ“š ${esc(s.nome)}</span><span class="mechsel-result-preview">${catLabel} â€” ${attrs}</span></label>`;
     }).join('');
 
     return `
     <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
         <span class="mechsel-label">${esc(label)}</span>
-        <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhuma perícia vinculada</span>'}</div>
-        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Perícia</button>
+        <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhuma perÃ­cia vinculada</span>'}</div>
+        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">âž• Adicionar PerÃ­cia</button>
         <div class="mechsel-search" id="field_${fieldKey}_search">
             <div class="mechsel-search-bar">
-                <input type="text" placeholder="🔍 Buscar perícia..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
+                <input type="text" placeholder="ðŸ” Buscar perÃ­cia..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
             </div>
             <div class="mechsel-results" id="field_${fieldKey}_results">${opts}</div>
-            <button type="button" class="mechsel-confirm" onclick="window._skillSelConfirm('field_${fieldKey}')">✔️ Vincular Selecionadas</button>
+            <button type="button" class="mechsel-confirm" onclick="window._skillSelConfirm('field_${fieldKey}')">âœ”ï¸ Vincular Selecionadas</button>
         </div>
         <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(ids)}'>
     </div>`;
@@ -1792,14 +1792,14 @@ window._skillSelConfirm = function (fieldId) {
     const chipsEl = document.getElementById(`${fieldId}_chips`);
     if (chipsEl) {
         if (!checked.length) {
-            chipsEl.innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhuma perícia vinculada</span>';
+            chipsEl.innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhuma perÃ­cia vinculada</span>';
         } else {
             chipsEl.innerHTML = checked.map(sid => {
                 const s = cache.find(x => x.id === sid);
                 if (!s) return '';
                 const catLabel = CATEGORIA_LABELS[s.categoria] || s.categoria || '';
                 const attrs = Array.isArray(s.atributoBase) ? s.atributoBase.join('/') : (s.atributoBase || '');
-                return `<div class="mechsel-chip" style="border-left-color:var(--accent)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">📚 ${esc(s.nome)}</div><div class="mechsel-chip-preview">${catLabel} — ${attrs}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${sid}')">✕</button></div>`;
+                return `<div class="mechsel-chip" style="border-left-color:var(--accent)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">ðŸ“š ${esc(s.nome)}</div><div class="mechsel-chip-preview">${catLabel} â€” ${attrs}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${sid}')">âœ•</button></div>`;
             }).join('');
         }
     }
@@ -1824,26 +1824,26 @@ export function buildDerivedValueSelectorHTML(fieldKey, label, currentIds, cache
         const did = dvObj.id;
         const d = cache.find(x => x.id === did);
         if (!d) return '';
-        const icon = d.icone || '📊';
-        return `<div class="mechsel-chip" style="border-left-color:#8b5cf6"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${d.todoPersonagem ? '🌐 Universal' : '🔗 Vinculado'} — Valor Inicial: <input type="text" inputmode="decimal" value="${dvObj.valorInicial || 0}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('field_${fieldKey}', '${did}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${did}')">✕</button></div>`;
+        const icon = d.icone || 'ðŸ“Š';
+        return `<div class="mechsel-chip" style="border-left-color:#8b5cf6"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${d.todoPersonagem ? 'ðŸŒ Universal' : 'ðŸ”— Vinculado'} â€” Valor Inicial: <input type="text" inputmode="decimal" value="${dvObj.valorInicial || 0}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('field_${fieldKey}', '${did}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${did}')">âœ•</button></div>`;
     }).join('');
 
     const opts = published.map(d => {
-        const icon = d.icone || '📊';
-        return `<label class="mechsel-result"><input type="checkbox" value="${d.id}" ${selectedIds.includes(d.id) ? 'checked' : ''}><span class="mechsel-result-name">${icon} ${esc(d.nome)}</span><span class="mechsel-result-preview">Ordem: ${d.ordem || '?'}${d.todoPersonagem ? ' — Universal' : ''}</span></label>`;
+        const icon = d.icone || 'ðŸ“Š';
+        return `<label class="mechsel-result"><input type="checkbox" value="${d.id}" ${selectedIds.includes(d.id) ? 'checked' : ''}><span class="mechsel-result-name">${icon} ${esc(d.nome)}</span><span class="mechsel-result-preview">Ordem: ${d.ordem || '?'}${d.todoPersonagem ? ' â€” Universal' : ''}</span></label>`;
     }).join('');
 
     return `
     <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
         <span class="mechsel-label">${esc(label)}</span>
         <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhum valor derivado vinculado</span>'}</div>
-        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Valor Derivado</button>
+        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">âž• Adicionar Valor Derivado</button>
         <div class="mechsel-search" id="field_${fieldKey}_search">
             <div class="mechsel-search-bar">
-                <input type="text" placeholder="🔍 Buscar valor derivado..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
+                <input type="text" placeholder="ðŸ” Buscar valor derivado..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
             </div>
             <div class="mechsel-results" id="field_${fieldKey}_results">${opts}</div>
-            <button type="button" class="mechsel-confirm" onclick="window._dvSelConfirm('field_${fieldKey}')">✔️ Vincular Selecionados</button>
+            <button type="button" class="mechsel-confirm" onclick="window._dvSelConfirm('field_${fieldKey}')">âœ”ï¸ Vincular Selecionados</button>
         </div>
         <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(parsedIds)}'>
     </div>`;
@@ -1883,8 +1883,8 @@ window._dvSelConfirm = function (fieldId) {
                 const did = dvObj.id;
                 const d = cache.find(x => x.id === did);
                 if (!d) return '';
-                const icon = d.icone || '📊';
-                return `<div class="mechsel-chip" style="border-left-color:#8b5cf6"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${d.todoPersonagem ? '🌐 Universal' : '🔗 Vinculado'} — Valor Inicial: <input type="text" inputmode="decimal" value="${dvObj.valorInicial || 0}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('${fieldId}', '${did}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${did}')">✕</button></div>`;
+                const icon = d.icone || 'ðŸ“Š';
+                return `<div class="mechsel-chip" style="border-left-color:#8b5cf6"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${d.todoPersonagem ? 'ðŸŒ Universal' : 'ðŸ”— Vinculado'} â€” Valor Inicial: <input type="text" inputmode="decimal" value="${dvObj.valorInicial || 0}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('${fieldId}', '${did}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${did}')">âœ•</button></div>`;
             }).join('');
         }
     }
@@ -1893,7 +1893,7 @@ window._dvSelConfirm = function (fieldId) {
 window._dvSelLevelChange = function (fieldId, dvId, newValue) {
     const hidden = document.getElementById(fieldId);
     if (!hidden) return;
-    // Suportar vírgula como separador decimal (ex: 1,75 → 1.75)
+    // Suportar vÃ­rgula como separador decimal (ex: 1,75 â†’ 1.75)
     const parsed = parseFloat(String(newValue).replace(',', '.')) || 0;
     let ids = JSON.parse(hidden.value || '[]');
     ids = ids.map(item => {
@@ -1908,178 +1908,4 @@ window._dvSelLevelChange = function (fieldId, dvId, newValue) {
     hidden.value = JSON.stringify(ids);
 };
 
-// ===== SPECIALIZATION SELECTOR (for classes especDaClasse) =====
-export function buildSpecSelectorHTML(fieldKey, label, currentIds, cache) {
-    const published = cache.filter(s => s.publicado !== false);
-    const ids = currentIds || [];
-
-    const chips = ids.map(sid => {
-        const s = cache.find(x => x.id === sid);
-        if (!s) return '';
-        const catLabel = CATEGORIA_LABELS[s.categoria] || s.categoria || '';
-        return `<div class="mechsel-chip" style="border-left-color:var(--warning)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">🎯 ${esc(s.nome)}</div><div class="mechsel-chip-preview">${catLabel}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${sid}')">✕</button></div>`;
-    }).join('');
-
-    const opts = published.map(s => {
-        const catLabel = CATEGORIA_LABELS[s.categoria] || s.categoria || '';
-        return `<label class="mechsel-result" data-fonte="${s.categoria || ''}"><input type="checkbox" value="${s.id}" ${ids.includes(s.id) ? 'checked' : ''}><span class="mechsel-result-name">🎯 ${esc(s.nome)}</span><span class="mechsel-result-preview">${catLabel}</span></label>`;
-    }).join('');
-
-    return `
-    <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
-        <span class="mechsel-label">${esc(label)}</span>
-        <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhuma especialização vinculada</span>'}</div>
-        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Especialização</button>
-        <div class="mechsel-search" id="field_${fieldKey}_search">
-            <div class="mechsel-search-bar">
-                <input type="text" placeholder="🔍 Buscar especialização..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
-            </div>
-            <div class="mechsel-results" id="field_${fieldKey}_results">${opts}</div>
-            <button type="button" class="mechsel-confirm" onclick="window._specSelConfirm('field_${fieldKey}')">✔️ Vincular Selecionadas</button>
-        </div>
-        <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(ids)}'>
-    </div>`;
-}
-
-window._specSelConfirm = function (fieldId) {
-    const results = document.getElementById(`${fieldId}_results`);
-    const hidden = document.getElementById(fieldId);
-    if (!results || !hidden) return;
-    const checked = Array.from(results.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
-    hidden.value = JSON.stringify(checked);
-    document.getElementById(`${fieldId}_search`).classList.remove('open');
-    const cache = window._specsCache || [];
-    const chipsEl = document.getElementById(`${fieldId}_chips`);
-    if (chipsEl) {
-        if (!checked.length) {
-            chipsEl.innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhuma especialização vinculada</span>';
-        } else {
-            chipsEl.innerHTML = checked.map(sid => {
-                const s = cache.find(x => x.id === sid);
-                if (!s) return '';
-                const catLabel = CATEGORIA_LABELS[s.categoria] || s.categoria || '';
-                return `<div class="mechsel-chip" style="border-left-color:var(--warning)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">🎯 ${esc(s.nome)}</div><div class="mechsel-chip-preview">${catLabel}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${sid}')">✕</button></div>`;
-            }).join('');
-        }
-    }
-};
-
-// ===== MANEUVER SELECTOR (for classes manobras) =====
-export function buildManeuverSelectorHTML(fieldKey, label, currentIds, cache) {
-    const published = cache.filter(m => m.publicado !== false);
-    const ids = currentIds || [];
-
-    const chips = ids.map(mid => {
-        const m = cache.find(x => x.id === mid);
-        if (!m) return '';
-        return `<div class="mechsel-chip" style="border-left-color:var(--fonte-manobra, #EC4899)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">💥 ${esc(m.nome)}</div><div class="mechsel-chip-preview">${esc(m.classe || '')} — ${esc(m.custo || '')}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${mid}')">✕</button></div>`;
-    }).join('');
-
-    const opts = published.map(m => {
-        return `<label class="mechsel-result"><input type="checkbox" value="${m.id}" ${ids.includes(m.id) ? 'checked' : ''}><span class="mechsel-result-name">💥 ${esc(m.nome)}</span><span class="mechsel-result-preview">${esc(m.classe || '')} — ${esc(m.custo || '')}</span></label>`;
-    }).join('');
-
-    return `
-    <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
-        <span class="mechsel-label">${esc(label)}</span>
-        <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhuma manobra vinculada</span>'}</div>
-        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Manobra</button>
-        <div class="mechsel-search" id="field_${fieldKey}_search">
-            <div class="mechsel-search-bar">
-                <input type="text" placeholder="🔍 Buscar manobra..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
-            </div>
-            <div class="mechsel-results" id="field_${fieldKey}_results">${opts}</div>
-            <button type="button" class="mechsel-confirm" onclick="window._maneuverSelConfirm('field_${fieldKey}')">✔️ Vincular Selecionadas</button>
-        </div>
-        <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(ids)}'>
-    </div>`;
-}
-
-window._maneuverSelConfirm = function (fieldId) {
-    const results = document.getElementById(`${fieldId}_results`);
-    const hidden = document.getElementById(fieldId);
-    if (!results || !hidden) return;
-    const checked = Array.from(results.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
-    hidden.value = JSON.stringify(checked);
-    document.getElementById(`${fieldId}_search`).classList.remove('open');
-    const cache = window._maneuversCache || [];
-    const chipsEl = document.getElementById(`${fieldId}_chips`);
-    if (chipsEl) {
-        if (!checked.length) {
-            chipsEl.innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhuma manobra vinculada</span>';
-        } else {
-            chipsEl.innerHTML = checked.map(mid => {
-                const m = cache.find(x => x.id === mid);
-                if (!m) return '';
-                return `<div class="mechsel-chip" style="border-left-color:var(--fonte-manobra, #EC4899)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">💥 ${esc(m.nome)}</div><div class="mechsel-chip-preview">${esc(m.classe || '')} — ${esc(m.custo || '')}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${mid}')">✕</button></div>`;
-            }).join('');
-        }
-    }
-};
-
-// ===== SPEC LIMITER SELECTOR (atributos + perícias como limitadores) =====
-export function buildSpecLimiterHTML(fieldKey, label, value, skillsCache) {
-    const data = value || { atributos: [], pericias: [] };
-    const selectedAttrs = Array.isArray(data.atributos) ? data.atributos : [];
-    const selectedSkills = Array.isArray(data.pericias) ? data.pericias : [];
-
-    const ATTRS = [
-        { value: 'FOR', label: 'FOR — Força' },
-        { value: 'DES', label: 'DES — Destreza' },
-        { value: 'VIG', label: 'VIG — Vigor' },
-        { value: 'INT', label: 'INT — Inteligência' },
-        { value: 'RAC', label: 'RAC — Raciocínio' },
-        { value: 'PRS', label: 'PRS — Perseverança' },
-        { value: 'PRE', label: 'PRE — Presença' },
-        { value: 'MAN', label: 'MAN — Manipulação' },
-        { value: 'AUT', label: 'AUT — Autocontrole' }
-    ];
-
-    const attrCheckboxes = ATTRS.map(a => {
-        const checked = selectedAttrs.includes(a.value) ? 'checked' : '';
-        return `<label class="multi-select-option"><input type="checkbox" value="${a.value}" ${checked} data-limiter-attr="${fieldKey}"> ${esc(a.label)}</label>`;
-    }).join('');
-
-    const publishedSkills = (skillsCache || []).filter(s => s.publicado !== false);
-    const skillCheckboxes = publishedSkills.map(s => {
-        const checked = selectedSkills.includes(s.id) ? 'checked' : '';
-        const catLabel = CATEGORIA_LABELS[s.categoria] || s.categoria || '';
-        return `<label class="multi-select-option"><input type="checkbox" value="${s.id}" ${checked} data-limiter-skill="${fieldKey}"> ${esc(s.nome)} <small style="color:var(--muted)">(${catLabel})</small></label>`;
-    }).join('');
-
-    return `
-    <div class="form-group full-width" id="limiter_wrap_${fieldKey}">
-        <label>${esc(label)} <span class="required">*</span></label>
-        <p style="font-size:.72rem;color:var(--muted);margin:0 0 8px">O nível da especialização é limitado pelo <strong>menor</strong> entre todos os atributos e perícias selecionados.</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div>
-                <label style="font-size:.78rem;font-weight:700;color:var(--accent);margin-bottom:4px;display:block">⚔️ Atributos Base</label>
-                <div class="multi-select-container" style="max-height:200px;overflow-y:auto">${attrCheckboxes}</div>
-            </div>
-            <div>
-                <label style="font-size:.78rem;font-weight:700;color:var(--accent);margin-bottom:4px;display:block">📚 Perícias Relacionadas</label>
-                <div class="multi-select-container" style="max-height:200px;overflow-y:auto">${skillCheckboxes}</div>
-            </div>
-        </div>
-        <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(data)}'>
-    </div>`;
-}
-
-document.addEventListener('change', function(e) {
-    if (e.target.dataset.limiterAttr) {
-        _syncLimiterHidden(e.target.dataset.limiterAttr);
-    }
-    if (e.target.dataset.limiterSkill) {
-        _syncLimiterHidden(e.target.dataset.limiterSkill);
-    }
-});
-
-function _syncLimiterHidden(fieldKey) {
-    const wrap = document.getElementById(`limiter_wrap_${fieldKey}`);
-    if (!wrap) return;
-    const attrChecked = Array.from(wrap.querySelectorAll(`input[data-limiter-attr="${fieldKey}"]:checked`)).map(cb => cb.value);
-    const skillChecked = Array.from(wrap.querySelectorAll(`input[data-limiter-skill="${fieldKey}"]:checked`)).map(cb => cb.value);
-    const hidden = document.getElementById(`field_${fieldKey}`);
-    if (hidden) hidden.value = JSON.stringify({ atributos: attrChecked, pericias: skillChecked });
-}
 
