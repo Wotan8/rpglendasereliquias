@@ -89,6 +89,8 @@ function initResumo(container) {
     let html = createNarratorBox(NARRADOR_TEXTOS.resumo);
 
     const ws = wizardState;
+    const expTotal = ExpTracker.calcExpTotal();
+    const expRestante = ExpTracker.getTotal();
 
     // === Character Summary ===
     html += `<div class="summary-section">
@@ -98,8 +100,8 @@ function initResumo(container) {
             <div class="summary-item"><div class="summary-item-label">Raça</div><div class="summary-item-value">${escHtml(ws.racaSelecionada || '—')}</div></div>
             <div class="summary-item"><div class="summary-item-label">Classe</div><div class="summary-item-value">${escHtml(ws.classeSelecionada || '—')}</div></div>
             <div class="summary-item"><div class="summary-item-label">Tribo</div><div class="summary-item-value">${escHtml(ws.triboSelecionada || '—')}</div></div>
-            <div class="summary-item"><div class="summary-item-label">Nível</div><div class="summary-item-value">${escHtml(ws.nivelInicio?.nome || '—')}</div></div>
-            <div class="summary-item"><div class="summary-item-label">EXP Total</div><div class="summary-item-value">${ExpTracker.getTotal()}</div></div>
+            <div class="summary-item"><div class="summary-item-label">EXP Total</div><div class="summary-item-value" style="font-weight:900;color:var(--accent);">${expTotal}</div></div>
+            <div class="summary-item"><div class="summary-item-label">EXP Restante</div><div class="summary-item-value">${expRestante}</div></div>
         </div>
     </div>`;
 
@@ -163,16 +165,32 @@ function initResumo(container) {
 
     // EXP Breakdown
     const breakdown = ExpTracker.getBreakdown();
+    const attrExpCost = ExpTracker.calcAttrExpTotal();
+    const skillExpCost = ExpTracker.calcSkillExpTotal();
+
+    html += `<div class="summary-section"><div class="summary-title">⭐ Detalhamento de EXP</div>`;
+    html += `<table style="width:100%;font-size:.85rem;border-collapse:collapse;">`;
+
+    // Pool sources
     if (breakdown.length) {
-        html += `<div class="summary-section"><div class="summary-title">⭐ Detalhamento de EXP</div>`;
-        html += `<table style="width:100%;font-size:.85rem;border-collapse:collapse;">`;
+        html += `<tr style="border-bottom:1px solid var(--soft);"><td colspan="2" style="padding:6px 0;font-weight:700;color:var(--muted);">📦 Pool de EXP</td></tr>`;
         for (const src of breakdown) {
             const color = src.amount >= 0 ? 'var(--success)' : 'var(--danger)';
-            html += `<tr><td style="padding:4px 0;">${escHtml(src.label)}</td><td style="text-align:right;font-weight:700;color:${color};">${src.amount > 0 ? '+' : ''}${src.amount}</td></tr>`;
+            html += `<tr><td style="padding:4px 0;padding-left:12px;">${escHtml(src.label)}</td><td style="text-align:right;font-weight:700;color:${color};">${src.amount > 0 ? '+' : ''}${src.amount}</td></tr>`;
         }
-        html += `<tr style="border-top:2px solid var(--soft);"><td style="padding:6px 0;font-weight:900;">Total</td><td style="text-align:right;font-weight:900;font-size:1.1rem;">${ExpTracker.getTotal()} EXP</td></tr>`;
-        html += `</table></div>`;
+        html += `<tr><td style="padding:4px 0;padding-left:12px;font-weight:700;">Pool Restante</td><td style="text-align:right;font-weight:700;">${ExpTracker.getTotal()} EXP</td></tr>`;
     }
+
+    // Attribute & Skill costs
+    html += `<tr style="border-top:1px solid var(--soft);border-bottom:1px solid var(--soft);"><td colspan="2" style="padding:6px 0;font-weight:700;color:var(--muted);">📊 Custo de Criação (calculado)</td></tr>`;
+    html += `<tr><td style="padding:4px 0;padding-left:12px;">Atributos (Nv × 5)</td><td style="text-align:right;font-weight:700;">${attrExpCost} EXP</td></tr>`;
+    html += `<tr><td style="padding:4px 0;padding-left:12px;">Perícias (Nv × custo)</td><td style="text-align:right;font-weight:700;">${skillExpCost} EXP</td></tr>`;
+
+    // Totals
+    const calcTotal = ExpTracker.calcExpTotal();
+    html += `<tr style="border-top:2px solid var(--soft);"><td style="padding:6px 0;font-weight:900;">EXP Total</td><td style="text-align:right;font-weight:900;font-size:1.1rem;color:var(--accent);">${calcTotal} EXP</td></tr>`;
+    html += `<tr><td style="padding:4px 0;font-weight:700;">EXP Restante</td><td style="text-align:right;font-weight:700;color:var(--success);">${ExpTracker.getTotal()} EXP</td></tr>`;
+    html += `</table></div>`;
 
     // Memórias status
     const memWritten = MemoryManager.getWrittenCount();
@@ -235,9 +253,21 @@ async function createCharacter() {
         }
     }
 
-    // Skills
-    for (const [key, val] of Object.entries(ws.pericias)) {
-        if (val > 0) dots[key] = val;
+    // Skills — convert wizard keys (sk_<key>) to ficha v1.7 format (sk_<category>_<key>)
+    for (const [wizKey, val] of Object.entries(ws.pericias)) {
+        if (val > 0) {
+            const rawKey = wizKey.replace('sk_', '');
+            // Find which category this skill belongs to
+            let sheetKey = wizKey; // fallback: keep as-is
+            for (const [cat, skills] of Object.entries(window.SKILLS || {})) {
+                const found = skills.find(s => s.key === rawKey);
+                if (found) {
+                    sheetKey = `sk_${cat}_${rawKey}`;
+                    break;
+                }
+            }
+            dots[sheetKey] = val;
+        }
     }
 
     // Peculiarity dots
@@ -247,12 +277,16 @@ async function createCharacter() {
 
     // Build fields object
     const charName = ws.nomeCompleto || ws.nomePersonagem;
+    const expTotal = ExpTracker.calcExpTotal();
+    const expRestante = ExpTracker.getTotal();
+
     const fields = {
         nome: charName,
         raca: ws.racaSelecionada || '',
         classe: ws.classeSelecionada || '',
         tribo: ws.triboSelecionada || '',
-        exp_total: ExpTracker.getTotal(),
+        exp_total: expTotal,
+        exp: expRestante,
         aparencia: ws.aparencia || '',
         motivacao: ws.motivacao || '',
         medo: ws.medo || '',
@@ -309,12 +343,25 @@ async function createCharacter() {
         equipamento.push(ws.objetoPessoal.nome);
     }
 
+    // Build structured inventory items (with name, desc, qtd) for ficha v1.7
+    const inventoryItems = (ws.equipamentoSelecionado || []).map(name => ({
+        name: name, desc: '', qtd: '1'
+    }));
+    if (ws.objetoPessoal?.nome) {
+        inventoryItems.push({
+            name: ws.objetoPessoal.nome,
+            desc: ws.objetoPessoal.descricao || '',
+            qtd: '1'
+        });
+    }
+
     // Assemble final charData
     const charData = {
         dots,
         fields,
         notes,
         equipamento,
+        inventoryItems,
         mecanicasAplicadas: {},
         mechanicBonuses: {},
         mecanicasPendentes: [],

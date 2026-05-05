@@ -33,6 +33,39 @@ function lockSelectsIfNeeded() {
             el.classList.remove('select-locked');
         }
     });
+
+    // === EXP Total e EXP Restante: sempre bloqueados para jogadores ===
+    const expFields = ['exp', 'exp_total'];
+    expFields.forEach(key => {
+        const el = document.querySelector(`[data-key="${key}"]`);
+        if (!el) return;
+
+        if (isPrivileged) {
+            el.readOnly = false;
+            el.classList.remove('field-locked');
+        } else {
+            el.readOnly = true;
+            el.classList.add('field-locked');
+        }
+    });
+
+    // === Virtude e Vício: bloqueados após preenchimento ===
+    const lockAfterSet = ['virtude', 'vicio'];
+    lockAfterSet.forEach(key => {
+        const el = document.querySelector(`[data-key="${key}"]`);
+        if (!el) return;
+
+        if (isPrivileged) {
+            el.readOnly = false;
+            el.classList.remove('field-locked');
+        } else if (el.value && el.value.trim() !== '') {
+            el.readOnly = true;
+            el.classList.add('field-locked');
+        } else {
+            el.readOnly = false;
+            el.classList.remove('field-locked');
+        }
+    });
 }
 
 /* ===== OPEN / CLOSE MODAL ===== */

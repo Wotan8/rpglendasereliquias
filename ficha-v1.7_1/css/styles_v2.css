@@ -3130,6 +3130,19 @@ html.dark .select-locked {
     border-color: #4b5563 !important;
 }
 
+/* ===== FIELD LOCKED (EXP, Virtude, Vício para jogadores) ===== */
+.field-locked {
+    opacity: .7;
+    cursor: not-allowed !important;
+    border-style: dashed !important;
+    background: var(--chip) !important;
+}
+
+html.dark .field-locked {
+    background: #1e2235 !important;
+    border-color: #4b5563 !important;
+}
+
 /* ===== DETAIL MODAL ===== */
 .detail-modal {
     position: fixed;

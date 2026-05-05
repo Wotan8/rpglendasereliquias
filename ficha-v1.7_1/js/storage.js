@@ -213,6 +213,45 @@ function loadFromData(d) {
         if (d.expApplied) state.expApplied = d.expApplied;
         else state.expApplied = {};
 
+        // === INVENTÁRIO do wizard: carregar itens estruturados ou array de strings ===
+        if (d.inventoryItems && Array.isArray(d.inventoryItems) && d.inventoryItems.length > 0) {
+            // Structured format (name, desc, qtd) — preferred
+            const invContainer = document.getElementById('inventoryContainer');
+            if (invContainer) {
+                for (const item of d.inventoryItems) {
+                    if (!item.name || !item.name.trim()) continue;
+                    addInventoryItem();
+                    const rows = invContainer.querySelectorAll('.inv-row');
+                    const lastRow = rows[rows.length - 1];
+                    if (lastRow) {
+                        const nameInput = lastRow.querySelector('input[data-key^="inv_name_"]');
+                        if (nameInput) nameInput.value = item.name;
+                        const descInput = lastRow.querySelector('input[data-key^="inv_desc_"]');
+                        if (descInput) descInput.value = item.desc || '';
+                        const qtdInput = lastRow.querySelector('input[data-key^="inv_qtd_"]');
+                        if (qtdInput) qtdInput.value = item.qtd || '1';
+                    }
+                }
+            }
+        } else if (d.equipamento && Array.isArray(d.equipamento) && d.equipamento.length > 0) {
+            // Fallback: simple string array (legacy)
+            const invContainer = document.getElementById('inventoryContainer');
+            if (invContainer) {
+                for (const itemName of d.equipamento) {
+                    if (!itemName || !itemName.trim()) continue;
+                    addInventoryItem();
+                    const rows = invContainer.querySelectorAll('.inv-row');
+                    const lastRow = rows[rows.length - 1];
+                    if (lastRow) {
+                        const nameInput = lastRow.querySelector('input[data-key^="inv_name_"]');
+                        if (nameInput) nameInput.value = itemName;
+                        const qtdInput = lastRow.querySelector('input[data-key^="inv_qtd_"]');
+                        if (qtdInput) qtdInput.value = '1';
+                    }
+                }
+            }
+        }
+
         onClassChange();
         onRaceChange();
         if (typeof onTriboChange === 'function') onTriboChange();
@@ -248,4 +287,3 @@ function loadFromStorage() {
         loadFromData(d);
     } catch (e) { console.error(e); }
 }
-

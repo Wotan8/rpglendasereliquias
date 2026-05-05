@@ -600,19 +600,34 @@ html.dark .memory-box-label { background: var(--paper); }
     z-index: 1000;
     display: flex;
     align-items: center;
-    gap: 8px;
-    background: rgba(15, 23, 42, .9);
+    gap: 10px;
+    background: rgba(15, 23, 42, .92);
     backdrop-filter: blur(8px);
     border: 1px solid rgba(79,110,247,.3);
     border-radius: 12px;
-    padding: 8px 16px;
+    padding: 8px 14px;
     font-family: var(--font);
 }
 
+.exp-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    min-width: 48px;
+}
+
+.exp-sep {
+    width: 1px;
+    height: 28px;
+    background: rgba(148, 163, 184, .3);
+}
+
 .exp-label {
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 8px;
+    font-weight: 800;
     text-transform: uppercase;
+    letter-spacing: .5px;
     color: #94a3b8;
 }
 
@@ -621,6 +636,10 @@ html.dark .memory-box-label { background: var(--paper); }
     font-weight: 900;
     color: var(--accent);
     transition: color .3s, transform .2s;
+}
+
+.exp-total-value {
+    color: #fbbf24;
 }
 
 .exp-value.flash-green { color: var(--success); transform: scale(1.15); }

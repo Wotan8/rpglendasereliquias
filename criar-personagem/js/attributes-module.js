@@ -172,6 +172,7 @@ function clickAttrDot(attrKey, dotLevel, grupo) {
     // Update dots UI
     updateAttrDotsUI(attrKey);
     updateAllAttrCounters();
+    ExpTracker.updateDisplay();
     saveWizardToStorage();
 }
 

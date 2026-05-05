@@ -229,6 +229,7 @@ function clickSkillDot(dotKey, dotLevel, group) {
     });
 
     updateSkillCounters();
+    ExpTracker.updateDisplay();
     saveWizardToStorage();
 }
 
