@@ -14,16 +14,35 @@ let economicaModule = null;
 let apoioModule = null;
 let historicoModule = null;
 
+// ===== MESA SUB-MODULES (lazy-loaded on sub-tab switch) =====
+let mesaSessoesLoaded = false;
+let mesaConfigLoaded = false;
+let mesaNpcsLoaded = false;
+let mesaInventarioLoaded = false;
+let mesaNotasLoaded = false;
+
 // ===== KEYBOARD SHORTCUTS =====
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-        // Close any active modal
         const activeModal = document.querySelector('.modal.active');
         if (activeModal) {
             activeModal.classList.remove('active');
         }
     }
 });
+
+// ===== MESA SUB-MODULE LOADER =====
+async function ensureMesaSubModules() {
+    try {
+        if (!mesaSessoesLoaded) { await import('./area-mesas-sessoes.js'); mesaSessoesLoaded = true; }
+        if (!mesaConfigLoaded) { await import('./area-mesas-config.js'); mesaConfigLoaded = true; }
+        if (!mesaNpcsLoaded) { await import('./area-mesas-npcs.js'); mesaNpcsLoaded = true; }
+        if (!mesaInventarioLoaded) { await import('./area-mesas-inventario.js'); mesaInventarioLoaded = true; }
+        if (!mesaNotasLoaded) { await import('./area-mesas-notas.js'); mesaNotasLoaded = true; }
+    } catch (error) {
+        console.error('❌ Erro ao carregar sub-módulos de mesa:', error);
+    }
+}
 
 // ===== TAB SWITCHING WITH LAZY LOAD =====
 window.switchTab = async function (tabName) {
@@ -42,6 +61,8 @@ window.switchTab = async function (tabName) {
             case 'mesas':
                 if (!mesasModule) {
                     mesasModule = await import('./area-mesas.js');
+                    // Also load sub-modules for mesa content
+                    await ensureMesaSubModules();
                 }
                 if (mesasModule.onTabActivated) mesasModule.onTabActivated();
                 break;

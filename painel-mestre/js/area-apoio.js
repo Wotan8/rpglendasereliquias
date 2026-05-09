@@ -219,3 +219,18 @@ window.sendMasterNotification = async function() {
         window.closeSendNotificationModal(); document.getElementById('notificationMessage').value = '';
     } catch (e) { showAlert('❌ Erro', 'danger'); }
 };
+
+// ===== PRODUÇÃO (migrado de area-mesas) =====
+async function carregarListaProducao() {
+    try { const d = await getDoc(doc(db, 'mestre-config', 'listaProducao')); if (d.exists()) S.setListaProducao(d.data().items||[]); renderProd(); } catch (e) { console.error(e); }
+}
+async function salvarProd() { try { await setDoc(doc(db, 'mestre-config', 'listaProducao'), { items: S.listaProducao }); } catch (e) { showAlert('❌ Erro', 'danger'); } }
+function renderProd() {
+    const tb = document.getElementById('listaProducaoBody'); if (!tb) return;
+    if (!S.listaProducao.length) { tb.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--muted)">Lista vazia</td></tr>'; return; }
+    tb.innerHTML = S.listaProducao.map((it, i) => `<tr style="border-bottom:1px solid var(--line)"><td style="padding:12px;text-align:center;color:var(--muted)">☰</td><td style="padding:12px;cursor:pointer" onclick="editProd(${i},'nome')">${it.nome||'-'}</td><td style="padding:12px;cursor:pointer" onclick="editProd(${i},'progresso')">${it.progresso||'-'}</td><td style="padding:12px;text-align:center"><button class="btn btn-danger btn-small" onclick="remProd(${i})">🗑️</button></td></tr>`).join('');
+}
+window.adicionarItemProducao = async function() { S.listaProducao.push({ nome: 'Novo Item', progresso: '' }); await salvarProd(); renderProd(); };
+window.remProd = async function(i) { if (confirm('Remover?')) { S.listaProducao.splice(i, 1); await salvarProd(); renderProd(); } };
+window.editProd = async function(i, f) { const v = prompt(`Editar ${f}:`, S.listaProducao[i][f]||''); if (v !== null) { S.listaProducao[i][f] = v; await salvarProd(); renderProd(); } };
+setTimeout(carregarListaProducao, 500);

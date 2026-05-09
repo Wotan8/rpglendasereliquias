@@ -2,6 +2,13 @@
    ÁREA — MESAS (Campanha-focused hub)
    ============================================= */
 
+/* ===== MESAS GRID ===== */
+.mesas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+}
+
 /* ===== MESA CARD ===== */
 .mesa-card {
     background: rgba(15, 23, 42, 0.6);
@@ -33,6 +40,30 @@
 .mesa-card-desc {
     font-size: 0.85rem;
     color: var(--muted);
+}
+
+/* ===== MESA AUTH BOX ===== */
+.mesa-auth-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* ===== MESA HEADER BAR ===== */
+.mesa-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: rgba(139, 92, 246, 0.06);
+    border: 2px solid rgba(139, 92, 246, 0.15);
+    border-radius: 12px;
 }
 
 /* ===== PLAYER LIST ===== */
@@ -87,6 +118,36 @@
     color: var(--muted);
 }
 
+/* ===== EXP CONTROLS ===== */
+.exp-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    align-items: center;
+}
+
+/* ===== STAT BOX ===== */
+.stat-box {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 8px;
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.stat-value {
+    font-weight: 800;
+    color: var(--light);
+}
+
 /* ===== SESSÃO LOG ===== */
 .sessao-card {
     background: rgba(15, 23, 42, 0.6);
@@ -94,6 +155,11 @@
     border-radius: 12px;
     padding: 16px;
     margin-bottom: 10px;
+    transition: all 0.3s;
+}
+
+.sessao-card:hover {
+    border-color: rgba(139, 92, 246, 0.3);
 }
 
 .sessao-card-header {
@@ -318,6 +384,16 @@
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
+    .mesas-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mesa-header-bar {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+    }
+
     .combat-participant {
         flex-direction: column;
         text-align: center;
@@ -330,5 +406,9 @@
 
     .combat-stats {
         flex-direction: column;
+    }
+
+    .player-list {
+        grid-template-columns: 1fr;
     }
 }

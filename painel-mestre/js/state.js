@@ -136,3 +136,22 @@ export function setNotificationUsersCache(cache) { notificationUsersCache = cach
 // ===== PARSED JSON ITEMS =====
 export let parsedJsonItems = [];
 export function setParsedJsonItems(items) { parsedJsonItems = items; }
+
+// ===== MESA STATE =====
+export let currentMesaId = null;
+export function setCurrentMesaId(id) { currentMesaId = id; }
+
+export let currentMesaData = null;
+export function setCurrentMesaData(data) { currentMesaData = data; }
+
+export let allMesas = [];
+export function setAllMesas(mesas) { allMesas = mesas; }
+
+export let mesaCharacters = [];
+export function setMesaCharacters(chars) { mesaCharacters = chars; }
+
+export let mesaSessionLogs = [];
+export function setMesaSessionLogs(logs) { mesaSessionLogs = logs; }
+
+export let isExpMode = false;
+export function setIsExpMode(mode) { isExpMode = mode; }

@@ -53,49 +53,126 @@
 
             <!-- TAB: MESAS -->
             <div class="tab-content active" id="tab-mesas">
-                <div class="sub-tabs">
-                    <button class="sub-tab-btn active" data-subtab="personagens" onclick="switchSubTab('mesas','personagens')">👥 Personagens</button>
-                    <button class="sub-tab-btn" data-subtab="aliados" onclick="switchSubTab('mesas','aliados')">🤝 Aliados</button>
-                    <button class="sub-tab-btn" data-subtab="combate" onclick="switchSubTab('mesas','combate')">⚔️ Combate</button>
-                    <button class="sub-tab-btn" data-subtab="sessoes" onclick="switchSubTab('mesas','sessoes')">📝 Sessões</button>
-                    <button class="sub-tab-btn" data-subtab="producao" onclick="switchSubTab('mesas','producao')">🏭 Produção</button>
-                </div>
-                <div class="sub-tab-content active" id="subtab-personagens">
-                    <div class="exp-controls">
-                        <input type="number" class="form-input" id="expValue" placeholder="EXP" value="10" min="1" style="width:100px;text-align:center">
-                        <button class="btn btn-success btn-small" onclick="addCustomExpToSelected()">➕ EXP</button>
-                        <button class="btn btn-danger btn-small" onclick="subtractCustomExpFromSelected()">➖ EXP</button>
-                        <button class="btn btn-primary btn-small" onclick="openCreateCharacterModal()">➕ Criar</button>
-                        <button class="btn btn-danger btn-small" onclick="openDeleteCharactersModal()">🗑️ Deletar</button>
+                <!-- SCREEN 1: Mesa Selection -->
+                <div id="mesa-selection-screen">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+                        <h2 style="font-size:1.1rem;font-weight:800;color:var(--light);margin:0">🎲 Suas Mesas</h2>
+                        <button class="btn btn-success btn-small" onclick="openCreateMesaModal()">➕ Criar Mesa</button>
                     </div>
-                    <div class="player-list" id="charactersGrid">
-                        <div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Carregando personagens...</div>
+                    <div id="mesasGrid" class="mesas-grid">
+                        <div style="text-align:center;padding:50px;color:var(--muted);grid-column:1/-1">Carregando mesas...</div>
                     </div>
                 </div>
-                <div class="sub-tab-content" id="subtab-aliados">
-                    <div class="npc-filters">
-                        <div class="form-group" style="flex:1"><input type="text" class="form-input" id="searchAllies" placeholder="Buscar aliado..." oninput="filterAllies()"></div>
+
+                <!-- SCREEN 2: Mesa Auth -->
+                <div id="mesa-auth-screen" style="display:none">
+                    <div class="mesa-auth-box">
+                        <button class="btn btn-secondary btn-small" onclick="backToMesaList()" style="align-self:flex-start">← Voltar</button>
+                        <div style="font-size:2.5rem;margin:10px 0">🔒</div>
+                        <h2 id="mesaAuthName" style="font-size:1.2rem;font-weight:800;color:var(--light);margin-bottom:4px"></h2>
+                        <p style="color:var(--muted);font-size:.88rem;margin-bottom:20px">Digite a senha para acessar esta mesa</p>
+                        <input type="password" class="form-input" id="mesaPasswordInput" placeholder="Senha da mesa..." style="text-align:center;max-width:300px" onkeydown="if(event.key==='Enter')authenticateMesa()">
+                        <button class="btn btn-primary" onclick="authenticateMesa()" style="margin-top:12px">🔓 Entrar</button>
                     </div>
-                    <div class="npcs-grid" id="alliesList"><div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Carregando aliados...</div></div>
                 </div>
-                <div class="sub-tab-content" id="subtab-combate">
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-                        <button class="btn btn-primary btn-small" onclick="addCharacterToCombat()">➕ Personagem</button>
-                        <button class="btn btn-warning btn-small" onclick="addNpcToCombat()">➕ NPC</button>
-                        <button class="btn btn-secondary btn-small" onclick="addCustomToCombat()">➕ Custom</button>
-                        <button class="btn btn-success btn-small" onclick="sortCombatByInitiative()">🔄 Ordenar</button>
-                        <button class="btn btn-danger btn-small" onclick="clearCombat()">🗑️ Limpar</button>
+
+                <!-- SCREEN 3: Mesa Content (after auth) -->
+                <div id="mesa-content" style="display:none">
+                    <div class="mesa-header-bar">
+                        <button class="btn btn-secondary btn-small" onclick="closeMesa()">← Mesas</button>
+                        <h2 id="mesaContentName" style="font-size:1.1rem;font-weight:800;color:var(--primary);margin:0"></h2>
+                        <button class="btn btn-danger btn-small" onclick="openDeleteMesaModal()">🗑️</button>
                     </div>
-                    <div id="combatList" class="combat-list"><div class="no-combat">Nenhum participante no combate</div></div>
-                </div>
-                <div class="sub-tab-content" id="subtab-sessoes">
-                    <div style="text-align:center;padding:50px;color:var(--muted)"><div style="font-size:2.5rem;margin-bottom:12px">📝</div>Registro de sessões — Em breve</div>
-                </div>
-                <div class="sub-tab-content" id="subtab-producao">
-                    <div style="margin-bottom:16px;display:flex;gap:8px">
-                        <button class="btn btn-success btn-small" onclick="adicionarItemProducao()">➕ Adicionar Item</button>
+                    <div class="sub-tabs">
+                        <button class="sub-tab-btn active" data-subtab="m-jogadores" onclick="switchMesaSubTab('m-jogadores')">👥 Jogadores</button>
+                        <button class="sub-tab-btn" data-subtab="m-personagens" onclick="switchMesaSubTab('m-personagens')">🎭 Personagens</button>
+                        <button class="sub-tab-btn" data-subtab="m-sessoes" onclick="switchMesaSubTab('m-sessoes')">📝 Sessões</button>
+                        <button class="sub-tab-btn" data-subtab="m-config" onclick="switchMesaSubTab('m-config')">⚙️ Config</button>
+                        <button class="sub-tab-btn" data-subtab="m-npcs" onclick="switchMesaSubTab('m-npcs')">👹 NPCs</button>
+                        <button class="sub-tab-btn" data-subtab="m-inventario" onclick="switchMesaSubTab('m-inventario')">📦 Inventário</button>
+                        <button class="sub-tab-btn" data-subtab="m-notas" onclick="switchMesaSubTab('m-notas')">📝 Notas</button>
+                        <button class="sub-tab-btn" data-subtab="m-combate" onclick="switchMesaSubTab('m-combate')">⚔️ Combate</button>
                     </div>
-                    <table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:2px solid var(--line)"><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">☰</th><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">NOME</th><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">PROGRESSO</th><th style="padding:10px;text-align:center;color:var(--muted);font-size:.78rem">AÇÃO</th></tr></thead><tbody id="listaProducaoBody"></tbody></table>
+
+                    <!-- Sub-tab: Jogadores -->
+                    <div class="sub-tab-content active" id="subtab-m-jogadores">
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                            <button class="btn btn-success btn-small" onclick="openLinkPlayerModal()">➕ Vincular Jogador</button>
+                            <button class="btn btn-primary btn-small" onclick="openMesaNotificationModal()">📢 Notificar</button>
+                        </div>
+                        <div id="mesaPlayersList" class="player-list">
+                            <div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Carregando jogadores...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: Personagens -->
+                    <div class="sub-tab-content" id="subtab-m-personagens">
+                        <div class="exp-controls">
+                            <button class="btn btn-warning btn-small" id="btnToggleExp" onclick="toggleExpMode()">⭐ +EXP</button>
+                        </div>
+                        <div id="expBulkActions" style="display:none;gap:8px;margin-bottom:12px">
+                            <button class="btn btn-success btn-small" onclick="applyExpBulk(true)">✅ +ADD</button>
+                            <button class="btn btn-danger btn-small" onclick="applyExpBulk(false)">❌ -RMV</button>
+                            <button class="btn btn-secondary btn-small" onclick="toggleExpMode()">Cancelar</button>
+                        </div>
+                        <div class="player-list" id="mesaCharactersGrid">
+                            <div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Carregando personagens...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: Sessões -->
+                    <div class="sub-tab-content" id="subtab-m-sessoes">
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                            <button class="btn btn-success btn-small" onclick="openCreateSessionLogModal()">➕ Novo Log</button>
+                        </div>
+                        <div id="sessionLogsList">
+                            <div style="text-align:center;padding:50px;color:var(--muted)"><div style="font-size:2.5rem;margin-bottom:12px">📝</div>Carregando logs de sessão...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: Config -->
+                    <div class="sub-tab-content" id="subtab-m-config">
+                        <div id="mesaConfigContent">
+                            <div style="text-align:center;padding:50px;color:var(--muted)">Carregando configurações...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: NPCs -->
+                    <div class="sub-tab-content" id="subtab-m-npcs">
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                            <button class="btn btn-success btn-small" onclick="openCreateMesaNpcModal()">➕ Novo NPC</button>
+                            <button class="btn btn-primary btn-small" onclick="openLinkNpcModal()">🔗 Vincular NPC</button>
+                        </div>
+                        <div id="mesaNpcsList" class="npcs-grid">
+                            <div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Carregando NPCs...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: Inventário -->
+                    <div class="sub-tab-content" id="subtab-m-inventario">
+                        <div id="mesaInventarioContent">
+                            <div style="text-align:center;padding:50px;color:var(--muted)">Carregando inventários...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: Notas -->
+                    <div class="sub-tab-content" id="subtab-m-notas">
+                        <div id="mesaNotasContent">
+                            <div style="text-align:center;padding:50px;color:var(--muted)">Carregando notas...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: Combate -->
+                    <div class="sub-tab-content" id="subtab-m-combate">
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                            <button class="btn btn-primary btn-small" onclick="addCharacterToCombat()">➕ Personagem</button>
+                            <button class="btn btn-warning btn-small" onclick="addNpcToCombat()">➕ NPC</button>
+                            <button class="btn btn-secondary btn-small" onclick="addCustomToCombat()">➕ Custom</button>
+                            <button class="btn btn-success btn-small" onclick="sortCombatByInitiative()">🔄 Ordenar</button>
+                            <button class="btn btn-danger btn-small" onclick="clearCombat()">🗑️ Limpar</button>
+                        </div>
+                        <div id="combatList" class="combat-list"><div class="no-combat">Nenhum participante no combate</div></div>
+                    </div>
                 </div>
             </div>
 
@@ -175,6 +252,7 @@
                     <button class="sub-tab-btn active" data-subtab="apoios" onclick="switchSubTab('apoio','apoios')">🤝 Apoios</button>
                     <button class="sub-tab-btn" data-subtab="metas" onclick="switchSubTab('apoio','metas')">🎯 Metas</button>
                     <button class="sub-tab-btn" data-subtab="notificacoes" onclick="switchSubTab('apoio','notificacoes')">📢 Notificações</button>
+                    <button class="sub-tab-btn" data-subtab="producao" onclick="switchSubTab('apoio','producao')">🏭 Produção</button>
                 </div>
                 <div class="sub-tab-content active" id="subtab-apoios">
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
@@ -195,6 +273,12 @@
                 </div>
                 <div class="sub-tab-content" id="subtab-notificacoes">
                     <button class="btn btn-primary" onclick="openSendNotificationModal()">📢 Enviar Notificação</button>
+                </div>
+                <div class="sub-tab-content" id="subtab-producao">
+                    <div style="margin-bottom:16px;display:flex;gap:8px">
+                        <button class="btn btn-success btn-small" onclick="adicionarItemProducao()">➕ Adicionar Item</button>
+                    </div>
+                    <table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:2px solid var(--line)"><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">☰</th><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">NOME</th><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">PROGRESSO</th><th style="padding:10px;text-align:center;color:var(--muted);font-size:.78rem">AÇÃO</th></tr></thead><tbody id="listaProducaoBody"></tbody></table>
                 </div>
             </div>
 
