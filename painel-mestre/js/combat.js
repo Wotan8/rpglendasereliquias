@@ -1,7 +1,7 @@
 // =============================================
 // COMBAT SYSTEM — Full migration from mestre.html
 // =============================================
-import { db, collection, getDocs, doc, onSnapshot } from './firebase-config.js';
+import { db, collection, getDocs, doc, onSnapshot, query, where } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 
@@ -10,10 +10,12 @@ let combatListeners = {};
 // ===== ADD TO COMBAT =====
 window.addCharacterToCombat = async function() {
     try {
-        const snap = await getDocs(collection(db, 'characters'));
-        const chars = []; snap.forEach(d => chars.push({ id: d.id, ...d.data() }));
-        if (!chars.length) { showAlert('❌ Nenhum personagem', 'danger'); return; }
-        const opts = chars.map(c => `<option value="${c.id}" data-name="${(c.nome||'').toLowerCase()}">${c.nome} (${c.jogador})</option>`).join('');
+        if (!S.currentMesaId) { showAlert('⚠️ Nenhuma mesa aberta', 'warning'); return; }
+        const snap = await getDocs(collection(db, 'char'));
+        const chars = [];
+        snap.forEach(d => { const data = d.data(); if (data.mesaId === S.currentMesaId) chars.push({ id: d.id, ...data }); });
+        if (!chars.length) { showAlert('❌ Nenhum personagem nesta mesa', 'danger'); return; }
+        const opts = chars.map(c => { const f = c.fields || {}; const nome = f.nome || c.nome || 'Sem nome'; const jogador = c.ownerEmail || c.jogador || '-'; return `<option value="${c.id}" data-name="${nome.toLowerCase()}">${nome} (${jogador})</option>`; }).join('');
         const m = document.createElement('div'); m.className = 'modal active';
         m.innerHTML = `<div class="modal-content" style="max-width:500px"><div class="modal-header"><span class="modal-title">Adicionar Jogador</span><button class="modal-close" onclick="this.closest('.modal').remove()">✕</button></div><div class="modal-body"><div class="form-group"><label class="form-label">🔍 Buscar</label><input type="text" class="form-input" id="searchCharCombat" placeholder="Filtrar..." oninput="filterCombatSelect('searchCharCombat','selChar')"></div><div class="form-group"><label class="form-label">Personagem</label><select class="form-select" id="selChar" size="6" style="height:180px">${opts}</select></div><div class="form-group"><label class="form-label">Iniciativa</label><input type="number" class="form-input" id="charInit" value="0" min="0"></div><div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px"><button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancelar</button><button class="btn btn-success" onclick="confirmAddChar()">Adicionar</button></div></div></div>`;
         document.body.appendChild(m); window._tempChars = chars;
@@ -35,22 +37,29 @@ window.confirmAddChar = function() {
     const id = document.getElementById('selChar').value;
     const init = parseInt(document.getElementById('charInit').value) || 0;
     const c = window._tempChars.find(x => x.id === id); if (!c) return;
-    const vitMax = (c.vig||1) + (c.tamanho||5), enerMax = (c.prs||1) + (c.aut||1);
+    const f = c.fields || {}; const d = c.dots || {};
+    const nome = f.nome || c.nome || 'Sem nome';
+    const raca = f.raca || c.raca || '-';
+    const classe = f.classe || c.classe || '-';
+    const vitMax = (d.vig || c.vig || 1) + (d.tamanho || c.tamanho || 5);
+    const enerMax = (d.prs || c.prs || 1) + (d.aut || c.aut || 1);
     const pid = 'char-' + Date.now();
-    S.combatParticipants.push({ id: pid, characterId: id, name: c.nome, type: 'Jogador', initiative: init, details: `${c.raca||'-'} - ${c.classe||'-'}`, hpCurrent: c.hpCurrent !== undefined ? c.hpCurrent : vitMax, hpMax: vitMax, enerCurrent: c.enerCurrent !== undefined ? c.enerCurrent : enerMax, enerMax: enerMax, sanCurrent: c.sanCurrent !== undefined ? c.sanCurrent : 80, sanMax: 100 });
+    S.combatParticipants.push({ id: pid, characterId: id, name: nome, type: 'Jogador', initiative: init, details: `${raca} - ${classe}`, hpCurrent: c.hpCurrent !== undefined ? c.hpCurrent : vitMax, hpMax: vitMax, enerCurrent: c.enerCurrent !== undefined ? c.enerCurrent : enerMax, enerMax: enerMax, sanCurrent: c.sanCurrent !== undefined ? c.sanCurrent : 80, sanMax: 100 });
     setupCombatListener(id, pid);
     renderCombatList(); document.querySelector('.modal.active')?.remove();
     showAlert('✅ Jogador adicionado!', 'success');
 };
 
 function setupCombatListener(charId, pid) {
-    const unsub = onSnapshot(doc(db, 'characters', charId), snap => {
+    const unsub = onSnapshot(doc(db, 'char', charId), snap => {
         if (!snap.exists()) return;
-        const d = snap.data(), p = S.combatParticipants.find(x => x.id === pid); if (!p) return;
-        const vm = (d.vig||1) + (d.tamanho||5), em = (d.prs||1) + (d.aut||1);
+        const d = snap.data(), f = d.fields || {}, dt = d.dots || {};
+        const p = S.combatParticipants.find(x => x.id === pid); if (!p) return;
+        const vm = (dt.vig || d.vig || 1) + (dt.tamanho || d.tamanho || 5);
+        const em = (dt.prs || d.prs || 1) + (dt.aut || d.aut || 1);
         p.hpCurrent = d.hpCurrent !== undefined ? d.hpCurrent : vm; p.hpMax = vm;
         p.enerCurrent = d.enerCurrent !== undefined ? d.enerCurrent : em; p.enerMax = em;
-        p.sanCurrent = d.sanCurrent !== undefined ? d.sanCurrent : 80; p.name = d.nome || p.name;
+        p.sanCurrent = d.sanCurrent !== undefined ? d.sanCurrent : 80; p.name = f.nome || d.nome || p.name;
         updateParticipantStats(pid);
     }); combatListeners[pid] = unsub;
 }

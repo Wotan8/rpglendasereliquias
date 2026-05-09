@@ -295,7 +295,7 @@ function displayMesaCharacters() {
     }).join('');
 }
 
-window.openCharacter = function(id) { window.open(`../ficha-v1.7_1/ficha.html?id=${id}`, '_blank'); };
+window.openCharacter = function(id) { window.open(`../ficha-v1.7_1/ficha-v1.7_1.html?id=${id}`, '_blank'); };
 
 // ===== EXP MODE =====
 window.toggleExpMode = function() {

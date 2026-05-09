@@ -435,6 +435,7 @@ async function saveNpcsToMasterPanel(ws, charName, charId) {
             const npcData = {
                 nome: npc.nome,
                 tipo: 'npc',
+                mesaId: ws.mesaVinculada?.id || '',
                 tags: tags.join(', '),
                 rolePlay: {
                     historia: historia,

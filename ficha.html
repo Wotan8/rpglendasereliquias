@@ -5028,14 +5028,40 @@ Exemplos:
                         // 🔒 VERIFICAR PROPRIEDADE: Impedir acesso a personagens de outros usuários
                         const characterData = characterDoc.data();
                         if (characterData.ownerUid && characterData.ownerUid !== user.uid) {
-                            console.error('❌ ACESSO NEGADO: Este personagem pertence a outro usuário!');
-                            console.error('Owner:', characterData.ownerUid);
-                            console.error('Tentativa de acesso:', user.uid);
-
-                            // NÃO mostra NADA da ficha e redireciona imediatamente
-                            alert('🚫 ACESSO NEGADO!Este personagem não pertence a você.Redirecionando para seus personagens...');
-                            window.location.href = 'personagens.html';
-                            return;
+                            // Não é o dono — verificar se é o mestre da mesa vinculada
+                            let isMestreOfMesa = false;
+                            if (characterData.mesaId) {
+                                try {
+                                    // Verificar role do usuário
+                                    const PRIVILEGED_ROLES = ['criador', 'mestre'];
+                                    let userRole = null;
+                                    let q2 = query(collection(db, 'users'), where('uid', '==', user.uid));
+                                    let snap2 = await getDocs(q2);
+                                    if (!snap2.empty) userRole = snap2.docs[0].data().role;
+                                    if (!userRole) {
+                                        q2 = query(collection(db, 'users'), where('email', '==', user.email));
+                                        snap2 = await getDocs(q2);
+                                        if (!snap2.empty) userRole = snap2.docs[0].data().role;
+                                    }
+                                    if (PRIVILEGED_ROLES.includes(userRole)) {
+                                        const mesaDoc = await getDoc(doc(db, 'mesas', characterData.mesaId));
+                                        if (mesaDoc.exists() && mesaDoc.data().createdBy === user.email) {
+                                            isMestreOfMesa = true;
+                                            console.log('✅ Acesso concedido: Mestre da mesa vinculada ao personagem.');
+                                        }
+                                    }
+                                } catch (mesaErr) {
+                                    console.warn('⚠️ Erro ao verificar mesa:', mesaErr);
+                                }
+                            }
+                            if (!isMestreOfMesa) {
+                                console.error('❌ ACESSO NEGADO: Este personagem pertence a outro usuário!');
+                                console.error('Owner:', characterData.ownerUid);
+                                console.error('Tentativa de acesso:', user.uid);
+                                alert('🚫 ACESSO NEGADO!Este personagem não pertence a você.Redirecionando para seus personagens...');
+                                window.location.href = 'personagens.html';
+                                return;
+                            }
                         }
 
                         console.log('✅ Permissão concedida para acessar personagem:', characterId);

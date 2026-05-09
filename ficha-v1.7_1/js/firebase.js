@@ -279,16 +279,35 @@ onAuthStateChanged(auth, async (user) => {
         }
         window.currentCharacterId = charId;
 
-        // Verificar ownership
+        // Verificar ownership (permitir acesso ao dono OU ao mestre da mesa vinculada)
         try {
             const docRef = doc(db, 'char', charId);
             const snap = await getDoc(docRef);
             if (snap.exists()) {
                 const data = snap.data();
                 if (data.ownerUid && data.ownerUid !== user.uid) {
-                    alert('🚫 ACESSO NEGADO! Esta ficha não pertence a você.');
-                    window.location.href = '../personagens.html';
-                    return;
+                    // Não é o dono — verificar se é o mestre da mesa vinculada
+                    let isMestreOfMesa = false;
+                    if (data.mesaId) {
+                        try {
+                            const userRole = await checkUserRole(user);
+                            if (userRole === 'mestre' || userRole === 'criador') {
+                                const mesaRef = doc(db, 'mesas', data.mesaId);
+                                const mesaSnap = await getDoc(mesaRef);
+                                if (mesaSnap.exists() && mesaSnap.data().createdBy === user.email) {
+                                    isMestreOfMesa = true;
+                                    console.log('✅ Acesso concedido: Mestre da mesa vinculada ao personagem.');
+                                }
+                            }
+                        } catch (mesaErr) {
+                            console.warn('⚠️ Erro ao verificar mesa:', mesaErr);
+                        }
+                    }
+                    if (!isMestreOfMesa) {
+                        alert('🚫 ACESSO NEGADO! Esta ficha não pertence a você.');
+                        window.location.href = '../personagens.html';
+                        return;
+                    }
                 }
             }
         } catch (err) {
