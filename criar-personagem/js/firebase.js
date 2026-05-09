@@ -47,6 +47,39 @@ onAuthStateChanged(auth, async (user) => {
             console.error('❌ Erro ao carregar dados do sistema:', e);
         }
 
+        // Check for mesaId in URL params → load mesa config before wizard init
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const mesaId = urlParams.get('mesaId');
+            if (mesaId) {
+                console.log('🎲 Mesa vinculada detectada:', mesaId);
+                const mesaRef = doc(db, 'mesas', mesaId);
+                const mesaSnap = await getDoc(mesaRef);
+                if (mesaSnap.exists()) {
+                    const mesaData = mesaSnap.data();
+                    const cfg = mesaData.config || {};
+                    window.wizardState.mesaVinculada = {
+                        id: mesaId,
+                        nome: mesaData.nome || 'Mesa',
+                        mestreNome: mesaData.createdBy || 'Mestre',
+                        expInicial: cfg.expInicial ?? 100,
+                        introducao: cfg.textoIntroducao || ''
+                    };
+                    // Pre-set EXP from mesa config
+                    window.wizardState.expInicial = cfg.expInicial ?? 100;
+                    // Register EXP source (will be picked up by ExpTracker on init)
+                    if (typeof ExpTracker !== 'undefined' && ExpTracker.addSource) {
+                        ExpTracker.addSource('exp_inicial', cfg.expInicial ?? 100, 'EXP Inicial (Mesa)');
+                    }
+                    console.log('✅ Config da mesa carregada:', window.wizardState.mesaVinculada);
+                } else {
+                    console.warn('⚠️ Mesa não encontrada:', mesaId);
+                }
+            }
+        } catch (e) {
+            console.error('⚠️ Erro ao carregar mesa vinculada:', e);
+        }
+
         // Initialize wizard
         if (typeof window.initWizard === 'function') {
             window.initWizard();

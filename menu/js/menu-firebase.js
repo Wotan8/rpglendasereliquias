@@ -212,8 +212,130 @@ function renderCharacters() {
 }
 
 // ===== CRIAR NOVO PERSONAGEM =====
-window.createNewCharacter = function () {
-    window.location.href = '../criar-personagem/criacao.html';
+window.createNewCharacter = async function () {
+    if (!currentUser) {
+        showAlert('❌ Você precisa estar logado.', 'danger');
+        return;
+    }
+
+    // Show loading state
+    showAlert('🔍 Buscando suas mesas...', 'success');
+
+    try {
+        // 1. Find user's mesas
+        const mesasSnap = await getDocs(collection(db, 'mesas'));
+        const playerMesas = [];
+        mesasSnap.forEach(d => {
+            const data = d.data();
+            const jogadores = data.jogadores || [];
+            if (jogadores.includes(currentUser.uid)) {
+                playerMesas.push({ id: d.id, ...data });
+            }
+        });
+
+        // 2. Count player's chars per mesa
+        const charSnap = await getDocs(query(
+            collection(db, 'char'),
+            where('ownerUid', '==', currentUser.uid)
+        ));
+        const charCountByMesa = {};
+        charSnap.forEach(d => {
+            const mesaId = d.data().mesaId;
+            if (mesaId) {
+                charCountByMesa[mesaId] = (charCountByMesa[mesaId] || 0) + 1;
+            }
+        });
+
+        // 3. Build mesa options with limit check
+        let mesaOptionsHtml = '';
+        if (playerMesas.length > 0) {
+            mesaOptionsHtml = playerMesas.map(m => {
+                const limites = m.limitePersonagens || {};
+                const cfgDefault = m.config?.limitePadraoPersonagens ?? 1;
+                const limit = limites[currentUser.uid] ?? cfgDefault;
+                const count = charCountByMesa[m.id] || 0;
+                const isFull = count >= limit;
+
+                if (isFull) {
+                    return `<div class="mesa-option disabled" title="Limite atingido">
+                        <div class="mesa-option-icon">🎲</div>
+                        <div class="mesa-option-info">
+                            <div class="mesa-option-name">${escapeHtml(m.nome || 'Sem nome')}</div>
+                            <div class="mesa-option-detail">🎭 ${count}/${limit} personagem(ns) — <span style="color:var(--danger);font-weight:700">Limite atingido</span></div>
+                        </div>
+                    </div>`;
+                } else {
+                    return `<div class="mesa-option" onclick="selectMesaForCreation('${m.id}')">
+                        <div class="mesa-option-icon">🎲</div>
+                        <div class="mesa-option-info">
+                            <div class="mesa-option-name">${escapeHtml(m.nome || 'Sem nome')}</div>
+                            <div class="mesa-option-detail">🎭 ${count}/${limit} personagem(ns)</div>
+                        </div>
+                        <div class="mesa-option-arrow">→</div>
+                    </div>`;
+                }
+            }).join('');
+        }
+
+        // 4. Build and show modal
+        const existingModal = document.getElementById('createCharModal');
+        if (existingModal) existingModal.remove();
+
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.id = 'createCharModal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:520px">
+                <div class="modal-header-create">
+                    <div class="modal-title-create">✨ Criar Novo Personagem</div>
+                    <button class="modal-close-btn" onclick="this.closest('.modal').remove()">✕</button>
+                </div>
+                <div class="modal-body-create">
+                    <p class="modal-desc">Escolha como deseja criar seu personagem:</p>
+
+                    <div class="mesa-option avulso" onclick="selectMesaForCreation(null)">
+                        <div class="mesa-option-icon">📜</div>
+                        <div class="mesa-option-info">
+                            <div class="mesa-option-name">Personagem Avulso</div>
+                            <div class="mesa-option-detail">Não vinculado a nenhuma mesa</div>
+                        </div>
+                        <div class="mesa-option-arrow">→</div>
+                    </div>
+
+                    ${playerMesas.length > 0 ? `
+                        <div class="mesa-divider">
+                            <span>ou vincular a uma mesa</span>
+                        </div>
+                        <div class="mesa-options-list">
+                            ${mesaOptionsHtml}
+                        </div>
+                    ` : `
+                        <div class="mesa-divider">
+                            <span>Nenhuma mesa disponível</span>
+                        </div>
+                        <p style="text-align:center;font-size:.82rem;color:var(--muted);padding:8px 0">Você não está vinculado a nenhuma mesa. Peça ao Mestre para te vincular.</p>
+                    `}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+    } catch (error) {
+        console.error('Erro ao buscar mesas:', error);
+        // Fallback: redirect directly
+        window.location.href = '../criar-personagem/criacao.html';
+    }
+};
+
+window.selectMesaForCreation = function(mesaId) {
+    const modal = document.getElementById('createCharModal');
+    if (modal) modal.remove();
+
+    if (mesaId) {
+        window.location.href = `../criar-personagem/criacao.html?mesaId=${mesaId}`;
+    } else {
+        window.location.href = '../criar-personagem/criacao.html';
+    }
 };
 
 // ===== CRIAR FICHA EM BRANCO =====

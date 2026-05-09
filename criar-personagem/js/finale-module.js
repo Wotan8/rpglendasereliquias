@@ -367,7 +367,8 @@ async function createCharacter() {
         mecanicasPendentes: [],
         nivelInicio: ws.nivelInicio?.id || 'iniciante',
         expInicial: ws.expInicial || (ws.nivelInicio?.exp || 0),
-        mesaVinculada: ws.mesaVinculada ? { id: ws.mesaVinculada.id, nome: ws.mesaVinculada.nome } : null
+        mesaVinculada: ws.mesaVinculada ? { id: ws.mesaVinculada.id, nome: ws.mesaVinculada.nome } : null,
+        mesaId: ws.mesaVinculada?.id || null
     };
 
     // Include character image (base64 — will be uploaded to Storage by the v1.7 sheet on first save)

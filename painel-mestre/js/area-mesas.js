@@ -155,17 +155,54 @@ async function loadMesaPlayers() {
         const allUsers = []; snap.forEach(d => allUsers.push({ id: d.id, ...d.data() }));
         const linked = allUsers.filter(u => jogadorUids.includes(u.uid || u.id));
         if (!linked.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Nenhum jogador encontrado</div>'; return; }
-        el.innerHTML = linked.map(u => `
-            <div class="player-card">
+
+        // Count characters per player in this mesa
+        const charSnap = await getDocs(collection(db, 'char'));
+        const charCountMap = {};
+        charSnap.forEach(d => {
+            const data = d.data();
+            if (data.mesaId === S.currentMesaId) {
+                const owner = data.ownerUid || '';
+                charCountMap[owner] = (charCountMap[owner] || 0) + 1;
+            }
+        });
+
+        const limites = S.currentMesaData.limitePersonagens || {};
+        const cfgDefault = S.currentMesaData.config?.limitePadraoPersonagens ?? 1;
+
+        el.innerHTML = linked.map(u => {
+            const uid = u.uid || u.id;
+            const limit = limites[uid] ?? cfgDefault;
+            const count = charCountMap[uid] || 0;
+            return `
+            <div class="player-card" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
                 <div class="player-avatar">👤</div>
-                <div class="player-info">
+                <div class="player-info" style="flex:1;min-width:120px">
                     <div class="player-name">${escapeHtml(u.nome || u.displayName || u.email || u.id)}</div>
                     <div class="player-email">${escapeHtml(u.email || '')}</div>
+                    <div style="font-size:.75rem;color:var(--muted);margin-top:4px">🎭 ${count}/${limit} personagem(ns)</div>
                 </div>
-                <button class="btn btn-danger btn-small" onclick="unlinkPlayer('${u.uid || u.id}')">✕</button>
-            </div>`).join('');
-    } catch (e) { showAlert('❌ Erro ao carregar jogadores', 'danger'); }
+                <div style="display:flex;align-items:center;gap:6px" onclick="event.stopPropagation()">
+                    <label style="font-size:.72rem;color:var(--muted);font-weight:700;white-space:nowrap">Máx. Personagens:</label>
+                    <input type="number" class="form-input" value="${limit}" min="1" max="99" style="width:60px;text-align:center;padding:4px 6px;font-size:.85rem"
+                        onchange="savePlayerLimit('${uid}', parseInt(this.value) || 1)">
+                </div>
+                <button class="btn btn-danger btn-small" onclick="unlinkPlayer('${uid}')">✕</button>
+            </div>`;
+        }).join('');
+    } catch (e) { console.error(e); showAlert('❌ Erro ao carregar jogadores', 'danger'); }
 }
+
+window.savePlayerLimit = async function(uid, limit) {
+    if (!S.currentMesaId || !S.currentMesaData) return;
+    const limites = { ...(S.currentMesaData.limitePersonagens || {}) };
+    limites[uid] = Math.max(1, limit);
+    try {
+        await updateDoc(doc(db, 'mesas', S.currentMesaId), { limitePersonagens: limites });
+        S.currentMesaData.limitePersonagens = limites;
+        showAlert('✅ Limite atualizado!', 'success');
+    } catch (e) { showAlert('❌ Erro: ' + e.message, 'danger'); }
+};
 
 window.openLinkPlayerModal = async function() {
     try {
@@ -212,11 +249,14 @@ window.unlinkPlayer = async function(uid) {
 async function loadMesaCharacters() {
     if (!S.currentMesaId) return;
     try {
-        const snap = await getDocs(collection(db, 'characters'));
-        const chars = []; snap.forEach(d => { const data = d.data(); if (data.mesaId === S.currentMesaId) chars.push({ id: d.id, ...data }); });
-        // Also include chars whose ownerUid is in mesa jogadores and have no mesaId
-        const jogadores = S.currentMesaData?.jogadores || [];
-        snap.forEach(d => { const data = d.data(); if (!data.mesaId && jogadores.includes(data.ownerUid) && !chars.find(c => c.id === d.id)) chars.push({ id: d.id, ...data }); });
+        const snap = await getDocs(collection(db, 'char'));
+        const chars = [];
+        snap.forEach(d => {
+            const data = d.data();
+            if (data.mesaId === S.currentMesaId) {
+                chars.push({ id: d.id, ...data });
+            }
+        });
         S.setMesaCharacters(chars);
         displayMesaCharacters();
     } catch (e) { console.error(e); showAlert('❌ Erro ao carregar personagens', 'danger'); }
@@ -225,25 +265,31 @@ async function loadMesaCharacters() {
 function displayMesaCharacters() {
     const grid = document.getElementById('mesaCharactersGrid'); if (!grid) return;
     const chars = S.mesaCharacters;
-    if (!chars.length) { grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Nenhum personagem nesta mesa</div>'; return; }
+    if (!chars.length) { grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Nenhum personagem vinculado a esta mesa</div>'; return; }
     const expMode = S.isExpMode;
     grid.innerHTML = chars.map(c => {
-        const vitMax = (c.vig||1) + (c.tamanho||5), enerMax = c.aut||1;
-        const hasImg = c.characterImage?.length > 0;
-        const imgH = hasImg ? `<div style="width:100%;height:140px;background-image:url('${c.characterImage}');background-size:cover;background-position:center;border-radius:10px 10px 0 0;border-bottom:1px solid var(--border)"></div>` : '';
+        // Support both old top-level fields and new nested fields format
+        const f = c.fields || {};
+        const nome = f.nome || c.nome || 'Sem nome';
+        const classe = f.classe || c.classe || '-';
+        const raca = f.raca || c.raca || '-';
+        const jogador = c.ownerEmail || c.jogador || '-';
+        const exp = f.exp ?? c.exp ?? 0;
+        const expTotal = f.exp_total ?? c.exp_total ?? 0;
+        const hasImg = (c.charImg || c.characterImage || '')?.length > 0;
+        const imgSrc = c.charImg || c.characterImage || '';
+        const imgH = hasImg ? `<div style="width:100%;height:140px;background-image:url('${imgSrc}');background-size:cover;background-position:center;border-radius:10px 10px 0 0;border-bottom:1px solid var(--border)"></div>` : '';
         const expInput = expMode ? `<div style="margin:8px 0" onclick="event.stopPropagation()"><input type="number" class="form-input exp-individual-input" data-char-id="${c.id}" placeholder="EXP" value="0" min="0" style="width:80px;text-align:center;padding:6px"></div>` : '';
         return `<div class="player-card" onclick="openCharacter('${c.id}')" style="display:block;padding:0;overflow:hidden;cursor:pointer">
             ${imgH}<div style="padding:14px">
             ${expInput}
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                <span style="font-weight:800;color:var(--light);font-size:1.05rem">${escapeHtml(c.nome||'Sem nome')}</span>
-                <span style="background:var(--primary-glow);color:var(--primary);padding:3px 10px;border-radius:8px;font-weight:800;font-size:.85rem">${c.auraImortalidade||1}</span>
+                <span style="font-weight:800;color:var(--light);font-size:1.05rem">${escapeHtml(nome)}</span>
             </div>
-            <div style="font-size:.82rem;color:var(--muted);margin-bottom:8px">👤 ${escapeHtml(c.jogador||'-')} | ⚔️ ${c.classe||'-'} | 🎭 ${c.raca||'-'}</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
-                <div class="stat-box"><div class="stat-label">❤️ VIT</div><div class="stat-value" style="font-size:.88rem">${c.hpCurrent||vitMax}/${vitMax}</div></div>
-                <div class="stat-box"><div class="stat-label">⚡ ENER</div><div class="stat-value" style="font-size:.88rem">${c.enerCurrent||enerMax}/${enerMax}</div></div>
-                <div class="stat-box"><div class="stat-label">⭐ EXP</div><div class="stat-value" style="font-size:.88rem">${c.exp||0}</div></div>
+            <div style="font-size:.82rem;color:var(--muted);margin-bottom:8px">👤 ${escapeHtml(jogador)} | ⚔️ ${escapeHtml(classe)} | 🎭 ${escapeHtml(raca)}</div>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
+                <div class="stat-box"><div class="stat-label">⭐ EXP Rest.</div><div class="stat-value" style="font-size:.88rem">${exp}</div></div>
+                <div class="stat-box"><div class="stat-label">⭐ EXP Total</div><div class="stat-value" style="font-size:.88rem">${expTotal}</div></div>
             </div>
         </div></div>`;
     }).join('');
@@ -271,10 +317,15 @@ window.applyExpBulk = async function(isAdd) {
         const charId = input.dataset.charId;
         const c = S.mesaCharacters.find(x => x.id === charId);
         if (!c) continue;
-        const newExp = isAdd ? (c.exp||0) + v : Math.max(0, (c.exp||0) - v);
-        const newExpTotal = isAdd ? (c.exp_total||0) + v : Math.max(0, (c.exp_total||0) - v);
-        await updateDoc(doc(db, 'characters', charId), { exp: newExp, exp_total: newExpTotal });
-        await addLog(S.currentUser?.email, `${isAdd?'+':'-'}${v} EXP`, c.nome, 'characters');
+        const f = c.fields || {};
+        const curExp = f.exp ?? c.exp ?? 0;
+        const curExpTotal = f.exp_total ?? c.exp_total ?? 0;
+        const nome = f.nome || c.nome || 'Sem nome';
+        const newExp = isAdd ? curExp + v : Math.max(0, curExp - v);
+        const newExpTotal = isAdd ? curExpTotal + v : Math.max(0, curExpTotal - v);
+        // Update in 'char' collection using nested fields path
+        await updateDoc(doc(db, 'char', charId), { 'fields.exp': newExp, 'fields.exp_total': newExpTotal });
+        await addLog(S.currentUser?.email, `${isAdd?'+':'-'}${v} EXP`, nome, 'characters');
         // Send notification to player
         if (c.ownerUid) {
             try {
@@ -282,7 +333,7 @@ window.applyExpBulk = async function(isAdd) {
                 const userDoc = await getDoc(userRef);
                 if (userDoc.exists()) {
                     const notifs = userDoc.data().notifications || [];
-                    notifs.push({ message: `${isAdd?'Ganhou':'Perdeu'} ${v} EXP em ${c.nome}!`, highlight: 'importante', from: S.currentUser?.email||'Mestre', date: new Date().toISOString(), read: false });
+                    notifs.push({ message: `${isAdd?'Ganhou':'Perdeu'} ${v} EXP em ${nome}!`, highlight: 'importante', from: S.currentUser?.email||'Mestre', date: new Date().toISOString(), read: false });
                     await updateDoc(userRef, { notifications: notifs });
                 }
             } catch (ne) { console.warn('Notif error:', ne); }

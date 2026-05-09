@@ -15,8 +15,20 @@ window.initWizard = function () {
             loadWizardFromStorage();
         } else {
             clearWizardStorage();
+            // Preserve mesaVinculada (set from URL param before initWizard)
+            const savedMesa = wizardState.mesaVinculada;
+            const savedMesaExp = wizardState.expInicial;
             resetWizardState();
+            if (savedMesa) {
+                wizardState.mesaVinculada = savedMesa;
+                wizardState.expInicial = savedMesaExp;
+            }
         }
+    }
+
+    // If mesa is linked (from URL), ensure EXP is registered
+    if (wizardState.mesaVinculada) {
+        ExpTracker.addSource('exp_inicial', wizardState.mesaVinculada.expInicial ?? 100, 'EXP Inicial (Mesa)');
     }
 
     // Initialize EXP display
