@@ -90,12 +90,20 @@ onAuthStateChanged(auth, async (user) => {
         await loadNotifications();
         await loadInventory();
 
-        // Check for criador role and show Painel Criador button
+        // Check for mestre or criador role and show respective buttons
         try {
             const userDoc = await findUserDoc();
-            if (userDoc && userDoc.data().role === 'criador') {
+            if (userDoc) {
+                const role = userDoc.data().role;
+                const btnMestre = document.getElementById('btnPainelMestre');
                 const btnCriador = document.getElementById('btnPainelCriador');
-                if (btnCriador) btnCriador.style.display = '';
+                
+                if (role === 'mestre') {
+                    if (btnMestre) btnMestre.style.display = '';
+                } else if (role === 'criador') {
+                    if (btnMestre) btnMestre.style.display = '';
+                    if (btnCriador) btnCriador.style.display = '';
+                }
             }
         } catch (e) { /* ignore */ }
 
