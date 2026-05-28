@@ -157,7 +157,7 @@ window.saveNpc = async function() {
     try {
         if (currentEditingNpc) { await setDoc(doc(db, 'npcs', currentEditingNpc.id), data, { merge: true }); await addLog(S.currentUser?.email, 'Editou NPC', data.nome, 'npcs'); showAlert('✅ NPC atualizado!', 'success'); }
         else { await setDoc(doc(collection(db, 'npcs')), data); await addLog(S.currentUser?.email, 'Criou NPC', data.nome, 'npcs'); showAlert('✅ NPC criado!', 'success'); }
-        closeNpcModal(); await loadAllNpcs();
+        closeNpcModal(); await loadAllNpcs(); if (window._loadMesaNpcs) await window._loadMesaNpcs();
     } catch (e) { console.error(e); showAlert('❌ Erro ao salvar', 'danger'); }
 };
 
@@ -165,7 +165,7 @@ window.closeNpcModal = function() { document.getElementById('npcModal')?.classLi
 
 window.deleteCurrentNpc = async function() {
     if (!currentEditingNpc || !confirm(`Deletar "${currentEditingNpc.nome}"?`)) return;
-    try { await deleteDoc(doc(db, 'npcs', currentEditingNpc.id)); await addLog(S.currentUser?.email, 'Deletou NPC', currentEditingNpc.nome, 'npcs'); showAlert('✅ Deletado', 'success'); closeNpcModal(); await loadAllNpcs(); } catch (e) { showAlert('❌ Erro', 'danger'); }
+    try { await deleteDoc(doc(db, 'npcs', currentEditingNpc.id)); await addLog(S.currentUser?.email, 'Deletou NPC', currentEditingNpc.nome, 'npcs'); showAlert('✅ Deletado', 'success'); closeNpcModal(); await loadAllNpcs(); if (window._loadMesaNpcs) await window._loadMesaNpcs(); } catch (e) { showAlert('❌ Erro', 'danger'); }
 };
 
 // ===== BATCH =====

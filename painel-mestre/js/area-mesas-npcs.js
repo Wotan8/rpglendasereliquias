@@ -28,12 +28,8 @@ async function loadMesaNpcs() {
                     </div>
                 </div>
                 ${n.imagem?`<div class="npc-image-container"><img src="${n.imagem}" class="npc-card-image"></div>`:''}
-                ${n.papel?`<div style="font-size:.82rem;color:var(--muted);margin-bottom:4px">🎭 ${escapeHtml(n.papel)}</div>`:''}
-                ${n.raca?`<div style="font-size:.82rem;color:var(--muted);margin-bottom:4px">🏷️ ${escapeHtml(n.raca)} ${n.porte?'| '+escapeHtml(n.porte):''}</div>`:''}
-                ${n.rolePlay?.personalidade?.[0]?`<div style="font-size:.82rem;color:var(--muted);margin-top:4px">- ${escapeHtml(n.rolePlay.personalidade[0])}</div>`:''}
-                ${n.rolePlay?.personalidade?.[1]?`<div style="font-size:.82rem;color:var(--muted)">- ${escapeHtml(n.rolePlay.personalidade[1])}</div>`:''}
+                ${n.rolePlay?.personalidade?.[0]?`<div style="font-size:.82rem;color:var(--muted);margin-top:6px">- ${escapeHtml(n.rolePlay.personalidade[0])}</div>`:''}
                 ${n.rolePlay?.trejeitos?`<div style="font-size:.82rem;color:var(--muted)">🎭 ${escapeHtml(n.rolePlay.trejeitos)}</div>`:''}
-                ${n.local?`<div style="font-size:.82rem;color:var(--muted);margin-top:4px">📍 ${escapeHtml(n.local)}</div>`:''}
                 ${tags?`<div class="npc-tags">${tags}</div>`:''}
             </div>`;
         }).join('');
@@ -110,8 +106,7 @@ window.createMesaNpc = async function() {
 };
 
 // Ensure the NPC edit modal from area-npcs.js is accessible
-// openNpcEditModal is already set as window.openNpcEditModal = window.openNpcModal in area-npcs.js
-// We need to make sure allNpcs is populated before editing from mesa context
+// Dynamically import area-npcs.js if openNpcModal is not yet loaded
 window._openMesaNpcEdit = async function(npcId) {
     // Ensure allNpcs has this NPC loaded
     if (!S.allNpcs || !S.allNpcs.find(n => n.id === npcId)) {
@@ -121,12 +116,13 @@ window._openMesaNpcEdit = async function(npcId) {
             S.setAllNpcs(npcs);
         } catch (e) { console.error(e); }
     }
+    // Dynamically load area-npcs.js if openNpcModal is not available
+    if (!window.openNpcModal) {
+        try {
+            await import('./area-npcs.js');
+        } catch (e) { console.error('Erro ao carregar módulo NPC:', e); }
+    }
     if (window.openNpcModal) {
         window.openNpcModal(npcId);
     }
-};
-
-// Override the click handler to use _openMesaNpcEdit for proper loading
-window.openNpcEditModal = window.openNpcEditModal || function(npcId) {
-    window._openMesaNpcEdit(npcId);
 };
