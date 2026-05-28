@@ -154,9 +154,32 @@ window.saveToFirebase = async function () {
         }
 
         data.lastUpdate = new Date().toISOString();
-        data.userEmail = window.currentUser.email;
-        if (!data.ownerUid) {
-            data.ownerUid = window.currentUser.uid;
+
+        // === PRESERVAR OWNERSHIP ORIGINAL ===
+        // Ler o documento existente UMA VEZ para:
+        // 1) Manter o dono original da ficha (mesmo quando o mestre edita)
+        // 2) Reutilizar no read-before-write check abaixo
+        const docRef = doc(db, 'char', window.currentCharacterId);
+        let existingSnap = null;
+        try {
+            existingSnap = await getDoc(docRef);
+            if (existingSnap.exists()) {
+                const existingData = existingSnap.data();
+                data.ownerUid = existingData.ownerUid || window.currentUser.uid;
+                data.ownerEmail = existingData.ownerEmail || window.currentUser.email;
+                data.userEmail = existingData.ownerEmail || existingData.userEmail || window.currentUser.email;
+            } else {
+                // Ficha nova — o usuário atual é o dono
+                data.ownerUid = window.currentUser.uid;
+                data.ownerEmail = window.currentUser.email;
+                data.userEmail = window.currentUser.email;
+            }
+        } catch (ownerErr) {
+            console.warn('⚠️ Erro ao preservar ownership, usando usuário atual:', ownerErr);
+            if (!data.ownerUid) {
+                data.ownerUid = window.currentUser.uid;
+            }
+            data.userEmail = window.currentUser.email;
         }
 
         // --- LÓGICA DE UPLOAD DE IMAGEM ---
@@ -206,12 +229,10 @@ window.saveToFirebase = async function () {
             throw new Error("Payload size too large: " + payloadSize);
         }
 
-        const docRef = doc(db, 'char', window.currentCharacterId);
-
         // === READ-BEFORE-WRITE: proteger contra sobrescrita com dados vazios ===
+        // Reutiliza o snapshot já lido acima para evitar leitura duplicada
         try {
-            const existingSnap = await getDoc(docRef);
-            if (existingSnap.exists()) {
+            if (existingSnap && existingSnap.exists()) {
                 const existingData = existingSnap.data();
                 const existingFields = existingData.fields
                     ? Object.values(existingData.fields).filter(v => v && String(v).trim() !== '').length

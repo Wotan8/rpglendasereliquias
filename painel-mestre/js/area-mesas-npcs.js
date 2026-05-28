@@ -1,5 +1,5 @@
 // =============================================
-// AREA MESAS — NPCs Importantes
+// AREA MESAS — NPCs Importantes (estilo Aba Geral)
 // =============================================
 import { db, collection, getDocs, getDoc, doc, addDoc, updateDoc, deleteDoc } from './firebase-config.js';
 import * as S from './state.js';
@@ -15,17 +15,28 @@ async function loadMesaNpcs() {
         const npcs = [];
         snap.forEach(d => { const data = d.data(); if (data.mesaId === S.currentMesaId) npcs.push({ id: d.id, ...data }); });
         if (!npcs.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Nenhum NPC vinculado a esta mesa</div>'; return; }
-        el.innerHTML = npcs.map(n => `
-            <div class="npc-card">
-                ${n.imagem ? `<div class="npc-image-container"><img src="${n.imagem}" class="npc-card-image"></div>` : ''}
-                <div class="npc-card-info">
-                    <div class="npc-name">${escapeHtml(n.nome || 'Sem nome')}</div>
-                    <div style="color:var(--muted);font-size:.82rem">${escapeHtml(n.tipo || 'NPC')} ${n.papel ? '| ' + escapeHtml(n.papel) : ''}</div>
+        el.innerHTML = npcs.map(n => {
+            const tags = (n.tags||'').split(',').filter(t=>t.trim()).map(t=>`<span class="npc-tag">${escapeHtml(t.trim())}</span>`).join('');
+            return `<div class="npc-card" onclick="if(!event.target.closest('.mesa-npc-actions'))_openMesaNpcEdit('${n.id}')">
+                <div class="npc-card-header">
+                    <div class="npc-card-info">
+                        <div class="npc-name">${escapeHtml(n.nome||'Sem nome')}</div>
+                        <span class="npc-type-badge">${n.tipo==='criatura'?'🐉 Criatura':'👤 NPC'}</span>
+                    </div>
+                    <div class="mesa-npc-actions" style="display:flex;gap:4px">
+                        <button class="btn btn-danger btn-small" onclick="event.stopPropagation();unlinkNpcFromMesa('${n.id}')" title="Desvincular da mesa">✕</button>
+                    </div>
                 </div>
-                <div style="display:flex;gap:4px">
-                    <button class="btn btn-danger btn-small" onclick="event.stopPropagation();unlinkNpcFromMesa('${n.id}')" title="Desvincular">✕</button>
-                </div>
-            </div>`).join('');
+                ${n.imagem?`<div class="npc-image-container"><img src="${n.imagem}" class="npc-card-image"></div>`:''}
+                ${n.papel?`<div style="font-size:.82rem;color:var(--muted);margin-bottom:4px">🎭 ${escapeHtml(n.papel)}</div>`:''}
+                ${n.raca?`<div style="font-size:.82rem;color:var(--muted);margin-bottom:4px">🏷️ ${escapeHtml(n.raca)} ${n.porte?'| '+escapeHtml(n.porte):''}</div>`:''}
+                ${n.rolePlay?.personalidade?.[0]?`<div style="font-size:.82rem;color:var(--muted);margin-top:4px">- ${escapeHtml(n.rolePlay.personalidade[0])}</div>`:''}
+                ${n.rolePlay?.personalidade?.[1]?`<div style="font-size:.82rem;color:var(--muted)">- ${escapeHtml(n.rolePlay.personalidade[1])}</div>`:''}
+                ${n.rolePlay?.trejeitos?`<div style="font-size:.82rem;color:var(--muted)">🎭 ${escapeHtml(n.rolePlay.trejeitos)}</div>`:''}
+                ${n.local?`<div style="font-size:.82rem;color:var(--muted);margin-top:4px">📍 ${escapeHtml(n.local)}</div>`:''}
+                ${tags?`<div class="npc-tags">${tags}</div>`:''}
+            </div>`;
+        }).join('');
     } catch (e) { showAlert('❌ Erro ao carregar NPCs', 'danger'); }
 }
 
@@ -96,4 +107,26 @@ window.createMesaNpc = async function() {
         document.getElementById('createMesaNpcModal')?.remove();
         await loadMesaNpcs();
     } catch (e) { showAlert('❌ Erro: ' + e.message, 'danger'); }
+};
+
+// Ensure the NPC edit modal from area-npcs.js is accessible
+// openNpcEditModal is already set as window.openNpcEditModal = window.openNpcModal in area-npcs.js
+// We need to make sure allNpcs is populated before editing from mesa context
+window._openMesaNpcEdit = async function(npcId) {
+    // Ensure allNpcs has this NPC loaded
+    if (!S.allNpcs || !S.allNpcs.find(n => n.id === npcId)) {
+        try {
+            const snap = await getDocs(collection(db, 'npcs'));
+            const npcs = []; snap.forEach(d => npcs.push({ id: d.id, ...d.data() }));
+            S.setAllNpcs(npcs);
+        } catch (e) { console.error(e); }
+    }
+    if (window.openNpcModal) {
+        window.openNpcModal(npcId);
+    }
+};
+
+// Override the click handler to use _openMesaNpcEdit for proper loading
+window.openNpcEditModal = window.openNpcEditModal || function(npcId) {
+    window._openMesaNpcEdit(npcId);
 };
