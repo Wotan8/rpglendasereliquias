@@ -274,6 +274,54 @@ window.logout = async function () {
     }
 };
 
+// ===== SINCRONIZAR SESSÕES COM A MESA VINCULADA =====
+/**
+ * Busca o mesaId do personagem e, se vinculado a uma mesa,
+ * consulta a coleção 'session-logs' para encontrar o maior Nº de Sessão
+ * e atualizar o campo 'Sessões' na aba Principal.
+ */
+async function syncSessionCount(charId) {
+    try {
+        const charRef = doc(db, 'char', charId);
+        const charSnap = await getDoc(charRef);
+        if (!charSnap.exists()) return;
+
+        const charData = charSnap.data();
+        const mesaId = charData.mesaId;
+        if (!mesaId) {
+            console.log('📅 Personagem sem mesa vinculada — sessões não sincronizadas.');
+            return;
+        }
+
+        // Buscar todos os session-logs da mesa
+        const logsSnap = await getDocs(collection(db, 'session-logs'));
+        let maxSession = 0;
+        logsSnap.forEach(d => {
+            const data = d.data();
+            if (data.mesaId === mesaId) {
+                const num = data.sessionNumber || 0;
+                if (num > maxSession) maxSession = num;
+            }
+        });
+
+        // Atualizar o campo sessões na ficha
+        const sessoesEl = document.querySelector('[data-key="sessoes"]');
+        if (sessoesEl && maxSession > 0) {
+            const currentVal = parseInt(sessoesEl.value || '0', 10) || 0;
+            if (maxSession !== currentVal) {
+                sessoesEl.value = maxSession;
+                // Disparar evento 'change' para que o listener de EXP por sessão detecte a mudança
+                sessoesEl.dispatchEvent(new Event('change', { bubbles: true }));
+                console.log(`📅 Sessões sincronizadas com a mesa: ${currentVal} → ${maxSession}`);
+            } else {
+                console.log(`📅 Sessões já sincronizadas: ${maxSession}`);
+            }
+        }
+    } catch (err) {
+        console.warn('⚠️ Erro ao sincronizar sessões:', err);
+    }
+}
+
 // ===== AUTH STATE =====
 onAuthStateChanged(auth, async (user) => {
     const loadingScreen = document.getElementById('loadingScreen');
@@ -386,6 +434,9 @@ onAuthStateChanged(auth, async (user) => {
         if (!loaded) {
             window.initApp();
         }
+
+        // === SINCRONIZAR SESSÕES COM A MESA VINCULADA ===
+        syncSessionCount(charId);
 
         // Esconder loading, mostrar conteúdo
         if (loadingScreen) loadingScreen.style.display = 'none';
