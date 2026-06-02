@@ -280,8 +280,22 @@ async function createCharacter() {
     const expTotal = ExpTracker.calcExpTotal();
     const expRestante = ExpTracker.getTotal();
 
+    // Fetch displayName from users collection (same pattern as novo-personagem.html)
+    let jogadorName = window.currentUser?.displayName || 'Jogador';
+    try {
+        const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const userDoc = await getDoc(doc(window.db, 'users', window.currentUser.uid));
+        if (userDoc.exists()) {
+            const userData = userDoc.data();
+            jogadorName = userData.displayName || userData.nome || window.currentUser.displayName || 'Jogador';
+        }
+    } catch (e) {
+        console.warn('⚠️ Não foi possível buscar displayName do usuário:', e);
+    }
+
     const fields = {
         nome: charName,
+        jogador: jogadorName,
         raca: ws.racaSelecionada || '',
         classe: ws.classeSelecionada || '',
         tribo: ws.triboSelecionada || '',
