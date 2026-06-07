@@ -369,6 +369,8 @@ function applyAllRaceMechanics(racaNome) {
         // Even without a race, apply class and tribe peculiarity mechanics
         _applyClassPeculiarityMechanics();
         _applyTribePeculiarityMechanics();
+        if (typeof applyEquippedItemsMechanics === 'function') applyEquippedItemsMechanics();
+        if (typeof recalcInventoryPressure === 'function') recalcInventoryPressure();
         if (typeof renderAurasTab === 'function') renderAurasTab();
         return;
     }
@@ -376,6 +378,8 @@ function applyAllRaceMechanics(racaNome) {
     if (!raca) {
         _applyClassPeculiarityMechanics();
         _applyTribePeculiarityMechanics();
+        if (typeof applyEquippedItemsMechanics === 'function') applyEquippedItemsMechanics();
+        if (typeof recalcInventoryPressure === 'function') recalcInventoryPressure();
         if (typeof renderAurasTab === 'function') renderAurasTab();
         return;
     }
@@ -406,6 +410,15 @@ function applyAllRaceMechanics(racaNome) {
 
     // === Aplicar mecânicas de peculiaridades de TRIBO ===
     _applyTribePeculiarityMechanics();
+
+    // === Aplicar mecânicas dos ITENS EQUIPADOS ===
+    if (typeof applyEquippedItemsMechanics === 'function') {
+        applyEquippedItemsMechanics();
+    }
+    // === Recalcular Pressão do inventário (alimenta Carga) ===
+    if (typeof recalcInventoryPressure === 'function') {
+        recalcInventoryPressure();
+    }
 
     // Render auras tab if available
     if (typeof renderAurasTab === 'function') renderAurasTab();

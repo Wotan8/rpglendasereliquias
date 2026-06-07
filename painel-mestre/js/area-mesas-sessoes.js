@@ -53,8 +53,19 @@ window.openCreateSessionLogModal = async function() {
     let chars = S.mesaCharacters || [];
     if (!chars.length) {
         try {
-            const snap = await getDocs(collection(db, 'characters'));
-            snap.forEach(d => { const data = d.data(); if (data.mesaId === S.currentMesaId || (S.currentMesaData?.jogadores || []).includes(data.ownerUid)) chars.push({ id: d.id, ...data }); });
+            const snap = await getDocs(collection(db, 'char'));
+            snap.forEach(d => {
+                const raw = d.data();
+                const f = raw.fields || {};
+                if (raw.mesaId === S.currentMesaId || (S.currentMesaData?.jogadores || []).includes(raw.ownerUid)) {
+                    chars.push({
+                        id: d.id,
+                        nome: f.nome || raw.nome || '',
+                        ownerUid: raw.ownerUid || '',
+                        ...raw
+                    });
+                }
+            });
         } catch (e) { /* use empty */ }
     }
     const nextNum = (S.mesaSessionLogs.length > 0) ? Math.max(...S.mesaSessionLogs.map(l => l.sessionNumber || 0)) + 1 : 1;
@@ -128,14 +139,15 @@ window.saveSessionLog = async function() {
         // Apply EXP to characters
         for (const p of participants) {
             if (p.expAmount > 0) {
-                const charRef = doc(db, 'characters', p.characterId);
+                const charRef = doc(db, 'char', p.characterId);
                 const charSnap = await getDoc(charRef);
                 if (charSnap.exists()) {
                     const cd = charSnap.data();
+                    const f = cd.fields || {};
                     const isAdd = p.expType === 'add';
-                    const newExp = isAdd ? (cd.exp||0) + p.expAmount : Math.max(0, (cd.exp||0) - p.expAmount);
-                    const newTotal = isAdd ? (cd.exp_total||0) + p.expAmount : Math.max(0, (cd.exp_total||0) - p.expAmount);
-                    await updateDoc(charRef, { exp: newExp, exp_total: newTotal });
+                    const newExp = isAdd ? (f.exp||0) + p.expAmount : Math.max(0, (f.exp||0) - p.expAmount);
+                    const newTotal = isAdd ? (f.exp_total||0) + p.expAmount : Math.max(0, (f.exp_total||0) - p.expAmount);
+                    await updateDoc(charRef, { 'fields.exp': newExp, 'fields.exp_total': newTotal });
                     // Notify owner
                     if (p.ownerUid) {
                         try {

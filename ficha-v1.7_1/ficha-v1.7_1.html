@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ficha — Lendas e Relíquias v1.7</title>
     <link rel="stylesheet" href="css/styles_v2.css">
+    <link rel="stylesheet" href="css/inventory.css">
     <link rel="stylesheet" href="css/print.css">
 </head>
 
@@ -239,27 +240,17 @@
             <!-- ======== COMBATE ======== -->
             <div class="tab-content" id="tabCombate">
                 <div class="section">
-                    <div class="section-title">Armas Equipadas</div>
-                    <div class="equip-head weapons">
-                        <span>Nome</span><span>Tam</span><span>Dano</span><span>Integridade</span><span></span>
+                    <div class="section-title">⚔️ Equipamentos</div>
+                    <div class="inv-pressure-bar" id="invPressureBar">
+                        <span id="invPressureDisplay">⚖️ Pressão: 0</span>
                     </div>
-                    <div id="weaponsContainer"></div><button class="add-btn no-print" onclick="addWeapon()">+ Adicionar
-                        Arma</button>
-                </div>
-                <div class="section">
-                    <div class="section-title">Vestimentas</div>
-                    <div class="equip-head armor">
-                        <span>Nome</span><span>Rea</span><span>Bld</span><span>Integridade</span><span></span>
+                    <div class="inv-equipped-grid" id="equippedItemsGrid">
+                        <div class="inv-empty">
+                            <span class="inv-empty-icon">⚔️</span>
+                            <span>Nenhum item equipado</span>
+                            <small class="inv-empty-hint">Equipe itens na aba Inventário</small>
+                        </div>
                     </div>
-                    <div id="armorContainer"></div><button class="add-btn no-print" onclick="addArmor()">+ Adicionar
-                        Vestimenta</button>
-                </div>
-                <div class="section">
-                    <div class="section-title">Projéteis</div>
-                    <div class="equip-head projectiles"><span>Nome</span><span>Dano</span><span>Qtd</span><span></span>
-                    </div>
-                    <div id="projectilesContainer"></div><button class="add-btn no-print" onclick="addProjectile()">+
-                        Adicionar Projétil</button>
                 </div>
                 <div class="section">
                     <div class="section-title">Condições e Estados</div>
@@ -288,11 +279,17 @@
             <!-- ======== INVENTÁRIO ======== -->
             <div class="tab-content" id="tabInventario">
                 <div class="section">
-                    <div class="section-title">Inventário</div>
-                    <div class="inv-head"><span>Nome do Item</span><span>Descrição</span><span>Qtd</span><span></span>
+                    <div class="section-title">📋 Inventário
+                        <button class="add-btn no-print" onclick="openItemFormModal('Criar Item')" style="margin-left:auto;font-size:0.8rem;padding:4px 12px;">+ Criar Item</button>
                     </div>
-                    <div id="inventoryContainer"></div><button class="add-btn no-print" onclick="addInventoryItem()">+
-                        Adicionar Item</button>
+                    <div id="inventoryItemsGrid">
+                        <div class="inv-empty">
+                            <span class="inv-empty-icon">📦</span>
+                            <span>Inventário vazio</span>
+                            <small class="inv-empty-hint">Crie itens ou receba do Mestre</small>
+                        </div>
+                    </div>
+                    <div id="containerViewer"></div>
                 </div>
                 <div class="section">
                     <div class="section-title">💰 Luns — Moedas</div>
@@ -394,7 +391,7 @@
     <script src="js/core.js"></script>
     <script src="js/class-resources.js"></script>
     <script src="js/class-modules-renderer.js"></script>
-    <script src="js/equipment.js"></script>
+    <script src="js/inventory.js"></script>
     <script src="js/notes.js"></script>
     <script src="js/aura.js"></script>
     <script src="js/storage.js"></script>

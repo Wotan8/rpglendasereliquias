@@ -438,6 +438,14 @@ onAuthStateChanged(auth, async (user) => {
         // === SINCRONIZAR SESSÕES COM A MESA VINCULADA ===
         syncSessionCount(charId);
 
+        // === CARREGAR INVENTÁRIO DO PERSONAGEM ===
+        try {
+            if (typeof loadInventoryCatalog === 'function') await loadInventoryCatalog();
+            if (typeof loadCharacterItems === 'function') await loadCharacterItems(charId);
+        } catch (invErr) {
+            console.warn('⚠️ Erro ao carregar inventário:', invErr);
+        }
+
         // Esconder loading, mostrar conteúdo
         if (loadingScreen) loadingScreen.style.display = 'none';
         if (mainWrap) mainWrap.style.display = '';

@@ -196,27 +196,24 @@ const MODULE_DEFS = {
             { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Espada Longa, Cota de Malha' },
             {
                 key: 'tipo', label: 'Tipo', type: 'select', required: true, options: [
-                    { value: 'arma', label: 'Arma' },
-                    { value: 'armadura', label: 'Armadura' },
-                    { value: 'escudo', label: 'Escudo' },
-                    { value: 'consumivel', label: 'Consumível' },
-                    { value: 'geral', label: 'Geral' },
-                    { value: 'reliquia', label: 'Relíquia' }
+                    { value: 'Arma', label: '⚔️ Arma' },
+                    { value: 'Vestimenta', label: '🧥 Vestimenta' },
+                    { value: 'Projétil', label: '🎯 Projétil' },
+                    { value: 'Container', label: '📦 Container' },
+                    { value: 'Objeto', label: '📦 Objeto' },
+                    { value: 'Consumível', label: '🧪 Consumível' },
+                    { value: 'Relíquia', label: '✨ Relíquia' }
                 ]
             },
-            { key: 'subtipo', label: 'Subtipo', type: 'text', placeholder: 'Ex: Uma Mão, Pesada' },
-            { key: 'tier', label: 'Tier', type: 'number', required: true, placeholder: '0-5' },
-            { key: 'danoBase', label: 'Dano Base', type: 'text', placeholder: 'Ex: FOR + Arma + Espec.' },
-            { key: 'blindagem', label: 'Blindagem', type: 'number', placeholder: '0' },
-            { key: 'peso', label: 'Peso', type: 'number', required: true, placeholder: '1' },
-            { key: 'dureza', label: 'Dureza', type: 'number', placeholder: '5' },
-            { key: 'integridade', label: 'Integridade', type: 'number', placeholder: '10' },
-            { key: 'alcance', label: 'Alcance', type: 'text', placeholder: 'Para armas de distância' },
-            { key: 'penalidades', label: 'Penalidades', type: 'text', placeholder: 'Ex: -2 Furtividade' },
-            { key: 'propriedades', label: 'Propriedades', type: 'tags', placeholder: 'Ex: Versátil, Pesado' },
-            { key: 'preco', label: 'Preço (Luns)', type: 'number', placeholder: '100' },
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
-            { key: 'mecanicaIds', label: 'Mecânicas Especiais', type: 'mechanic_selector', fontePreFilter: 'item' },
+            { key: 'imagemUrl', label: 'Imagem (URL)', type: 'text', placeholder: 'https://...' },
+            { key: 'peso', label: 'Peso', type: 'number', required: true, placeholder: '1' },
+            { key: 'tamanho', label: 'Tamanho', type: 'number', required: true, placeholder: '1' },
+            { key: 'pressaoBase', label: 'Pressão Base (peso efetivo ao equipar)', type: 'number', placeholder: '0 = mesmo que Peso' },
+            { key: 'ehContainer', label: '📦 É Container?', type: 'boolean' },
+            { key: 'multiplicadorPressao', label: 'Multiplicador de Pressão (conteúdo)', type: 'number', placeholder: '1', showWhenBoolean: 'ehContainer' },
+            { key: 'capacidadeContainer', label: 'Capacidade do Container (itens)', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
+            { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: 'item' },
         ]
     },
     conditions: {
@@ -344,6 +341,17 @@ const MODULE_DEFS = {
             { key: 'conteudo', label: 'Conteúdo', type: 'textarea', required: true, placeholder: 'Texto completo da entrada' },
             { key: 'imagemUrl', label: 'URL da Imagem', type: 'text', placeholder: 'https://...' },
             { key: 'referencias', label: 'Referências (IDs)', type: 'tags', placeholder: 'IDs de lore relacionados' },
+        ]
+    },
+    itemRules: {
+        name: 'Regra de Item', namePlural: 'Regras de Itens', icon: '⚙️',
+        collection: 'system/data/itemRules',
+        fields: [
+            { key: 'nome', label: 'Nome da Regra', type: 'text', required: true, placeholder: 'Ex: Pressão soma na Carga' },
+            { key: 'descricao', label: 'Descrição', type: 'textarea', required: true, placeholder: 'Descreva quando e como esta regra se aplica' },
+            { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: 'item' },
+            { key: 'ativo', label: 'Regra Ativa?', type: 'boolean' },
+            { key: 'ordem', label: 'Ordem de Aplicação', type: 'number', placeholder: '0' },
         ]
     }
 };

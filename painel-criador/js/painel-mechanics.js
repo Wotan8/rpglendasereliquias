@@ -86,6 +86,13 @@ function getMechanicTargetsHTML() {
 <option value="Alvo de Ataque">Alvo de Ataque</option><option value="Alvo de Defesa">Alvo de Defesa</option>
 <option value="Dano">Dano</option><option value="Dano Crítico">Dano Crítico</option>
 </optgroup>
+<optgroup label="Propriedades de Item">
+<option value="Item: Peso/Pressão">⚖️ Peso / Pressão do Item</option>
+<option value="Item: Tamanho">📐 Tamanho do Item</option>
+<option value="Item: Multiplicador de Pressão">📦 Multiplicador de Pressão (conteúdo)</option>
+<option value="Item: Capacidade do Container">🎒 Capacidade do Container (itens)</option>
+<option value="Pressão Total (Equipados)">⚖️ Pressão Total (Itens Equipados)</option>
+</optgroup>
 <optgroup label="Experiência">
 <option value="EXP">⭐ EXP</option>
 </optgroup>
@@ -385,6 +392,14 @@ function getValueSourceHTML() {
             html += `\n</optgroup>`;
         }
     }
+
+    html += `\n<optgroup label="Propriedades de Item">
+<option value="Item: Peso/Pressão">⚖️ Peso / Pressão do Item</option>
+<option value="Item: Tamanho">📐 Tamanho do Item</option>
+<option value="Item: Multiplicador de Pressão">📦 Multiplicador de Pressão (conteúdo)</option>
+<option value="Item: Capacidade do Container">🎒 Capacidade do Container (itens)</option>
+<option value="Pressão Total (Equipados)">⚖️ Pressão Total (Itens Equipados)</option>
+</optgroup>`;
 
     html += `\n<optgroup label="Outros">\n<option value="Nível">Nível</option>\n</optgroup>`;
 

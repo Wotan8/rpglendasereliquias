@@ -12,8 +12,21 @@ export async function populateCharacterSelect() {
     const chars = S.allCharacters.length ? S.allCharacters : [];
     if (!chars.length) {
         try {
-            const snap = await getDocs(collection(db, 'characters'));
-            snap.forEach(d => { const c = { id: d.id, ...d.data() }; chars.push(c); });
+            const snap = await getDocs(collection(db, 'char'));
+            snap.forEach(d => {
+                const raw = d.data();
+                const f = raw.fields || {};
+                chars.push({
+                    id: d.id,
+                    nome: f.nome || raw.nome || '',
+                    jogador: raw.ownerEmail || f.jogador || '',
+                    classe: f.classe || raw.classe || '',
+                    raca: f.raca || raw.raca || '',
+                    ownerUid: raw.ownerUid || '',
+                    mesaId: raw.mesaId || '',
+                    ...raw
+                });
+            });
             S.setAllCharacters(chars);
         } catch(e) { console.error(e); }
     }
@@ -81,7 +94,7 @@ async function ensureEquipados(charId) {
     if (char.raca === 'Yotun') maxCap *= 2;
 
     let ownerId = S.currentUser?.uid || '';
-    try { const cd = await getDoc(doc(db,'characters',charId)); if(cd.exists()) ownerId = cd.data().ownerUid || ownerId; } catch(e){}
+    try { const cd = await getDoc(doc(db,'char',charId)); if(cd.exists()) ownerId = cd.data().ownerUid || ownerId; } catch(e){}
 
     const newEq = { id:'equipados-'+Date.now(), name:'Equipados', ownerId, characterId:charId, maxCapacity:maxCap, maxSize, itemIds:[] };
     await setDoc(doc(db,'containers',newEq.id), newEq);
@@ -131,9 +144,9 @@ function renderItemCard(item, eqCont) {
     return `<div onclick="editItemMestre('está com alguém','${item.id}')" style="background:rgba(15,23,42,.6);border:2px solid ${isOpen?'rgba(16,185,129,.6)':'var(--border)'};border-radius:10px;padding:15px;display:flex;align-items:center;gap:15px;cursor:pointer">
         ${img}
         <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;flex-wrap:wrap"><div style="font-size:1.1rem;font-weight:600;color:var(--light)">${item.equipado?'⚔️ ':''}${escapeHtml(item.name||'Sem nome')}</div>${badges}</div>
-            <div style="font-size:.85rem;color:var(--muted);margin-top:5px">${item.tipo||'-'} | Peso: ${item.totalWeight||0} | Tam: ${item.tamanho||0} | Qtd: ${item.quantity||1}${item.dureza!=null?' | Dur: '+item.dureza:''}${item.integridade!=null?' | Int: '+item.integridade:''}</div>
-            ${item.description?`<div style="font-size:.8rem;color:#64748b;margin-top:5px;font-style:italic">${escapeHtml((item.description||'').substring(0,100))}${(item.description||'').length>100?'...':''}</div>`:''}
+            <div style="display:flex;align-items:center;flex-wrap:wrap"><div style="font-size:1.1rem;font-weight:600;color:var(--light)">${item.equipado?'⚔️ ':''}${escapeHtml(item.nome||item.name||'Sem nome')}</div>${badges}</div>
+            <div style="font-size:.85rem;color:var(--muted);margin-top:5px">${item.tipo||'-'} | Peso: ${item.peso||item.totalWeight||0} | Tam: ${item.tamanho||0} | Qtd: ${item.quantity||1}</div>
+            ${(item.descricao||item.description)?`<div style="font-size:.8rem;color:#64748b;margin-top:5px;font-style:italic">${escapeHtml(((item.descricao||item.description)||'').substring(0,100))}${((item.descricao||item.description)||'').length>100?'...':''}</div>`:''}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap" onclick="event.stopPropagation()">
             ${openBtn}
@@ -161,7 +174,7 @@ function renderPersonagemContainerViewer() {
             return `<div style="background:rgba(15,23,42,.6);border:2px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="editItemMestre('${cid}','${i.id}')">
                 ${img2}
                 <div style="flex:1;min-width:0">
-                    <div style="font-weight:700;color:var(--light)">${escapeHtml(i.name||'Sem nome')} <span style="background:rgba(16,185,129,.2);color:#10b981;padding:2px 8px;border-radius:6px;font-size:.75rem">${i.tipo||'-'}</span></div>
+                    <div style="font-weight:700;color:var(--light)">${escapeHtml(i.nome||i.name||'Sem nome')} <span style="background:rgba(16,185,129,.2);color:#10b981;padding:2px 8px;border-radius:6px;font-size:.75rem">${i.tipo||'-'}</span></div>
                     <div style="font-size:.82rem;color:var(--muted);margin-top:4px">Peso: ${i.totalWeight||i.peso||0} | Tam: ${i.tamanho||0} | Qtd: ${i.quantity||1}</div>
                 </div>
                 <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
@@ -233,11 +246,11 @@ window.editItemMestre = function(containerId, itemId) {
 // ===== DELETE ITEM =====
 window.deleteItemMestre = async function(containerId, itemId) {
     const item = S.currentInventarioItems.find(i => i.id === itemId);
-    if (!item || !confirm(`Excluir "${item.name||'item'}"?`)) return;
+    if (!item || !confirm(`Excluir "${item.nome||item.name||'item'}"?`)) return;
     try {
         await deleteDoc(doc(db,'items',itemId));
         showAlert('✅ Item excluído','success');
-        await addLog(S.currentUser?.email, `excluiu item "${item.name}"`, '', 'items');
+        await addLog(S.currentUser?.email, `excluiu item "${item.nome||item.name}"`, '', 'items');
         if (S.currentInventarioPersonagemId) await loadInventarioFromFirebase(S.currentInventarioPersonagemId);
     } catch(e) { showAlert('❌ Erro','danger'); }
 };
@@ -248,31 +261,42 @@ function openItemFormModal(title, item) {
     if (existing) existing.remove();
 
     const isEdit = !!item;
+
+    // Build catalog picker (from system data if available)
+    const catalog = window._mestreCatalog || [];
+    let catalogHtml = '';
+    if (!isEdit && catalog.length > 0) {
+        catalogHtml = `<div class="form-group" style="grid-column:1/-1;margin-bottom:16px">
+            <label class="form-label">📚 Instanciar do Catálogo</label>
+            <select class="form-select" id="itemCatalogPickerMestre" onchange="fillItemFromCatalogMestre(this.value)">
+                <option value="">— Item personalizado —</option>
+                ${catalog.map(t => `<option value="${t.id}">${escapeHtml(t.nome)} (${t.tipo || '-'})</option>`).join('')}
+            </select>
+        </div>`;
+    }
+
     const m = document.createElement('div');
     m.className = 'modal active'; m.id = 'itemModalMestre';
     m.innerHTML = `<div class="modal-content" style="max-width:700px"><div class="modal-header"><span class="modal-title">${title}</span><button class="modal-close" onclick="closeItemModalMestre()">✕</button></div><div class="modal-body" style="max-height:70vh;overflow-y:auto">
+        ${catalogHtml}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="form-group"><label class="form-label">Nome *</label><input type="text" class="form-input" id="itemNameMestre" value="${escapeHtml(item?.name||'')}"></div>
-            <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="itemTipoMestre" ${isEdit?'disabled':''}><option value="Objeto" ${item?.tipo==='Objeto'?'selected':''}>📦 Objeto</option><option value="Arma" ${item?.tipo==='Arma'?'selected':''}>⚔️ Arma</option><option value="Vestimenta" ${item?.tipo==='Vestimenta'?'selected':''}>🧥 Vestimenta</option><option value="Projétil" ${item?.tipo==='Projétil'?'selected':''}>🎯 Projétil</option><option value="Container" ${item?.tipo==='Container'?'selected':''}>🗃️ Container</option><option value="Lunis" ${item?.tipo==='Lunis'?'selected':''}>💰 Lunis</option></select></div>
+            <div class="form-group"><label class="form-label">Nome *</label><input type="text" class="form-input" id="itemNameMestre" value="${escapeHtml(item?.name||item?.nome||'')}"></div>
+            <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="itemTipoMestre" ${isEdit?'disabled':''}><option value="Objeto" ${item?.tipo==='Objeto'?'selected':''}>📦 Objeto</option><option value="Arma" ${item?.tipo==='Arma'?'selected':''}>⚔️ Arma</option><option value="Vestimenta" ${item?.tipo==='Vestimenta'?'selected':''}>🧥 Vestimenta</option><option value="Projétil" ${item?.tipo==='Projétil'?'selected':''}>🎯 Projétil</option><option value="Container" ${item?.tipo==='Container'?'selected':''}>🗃️ Container</option><option value="Consumível" ${item?.tipo==='Consumível'?'selected':''}>🧪 Consumível</option><option value="Relíquia" ${item?.tipo==='Relíquia'?'selected':''}>✨ Relíquia</option></select></div>
         </div>
-        <div class="form-group"><label class="form-label">Descrição</label><textarea class="form-textarea" id="itemDescriptionMestre" rows="3">${escapeHtml(item?.description||'')}</textarea></div>
+        <div class="form-group"><label class="form-label">Descrição</label><textarea class="form-textarea" id="itemDescriptionMestre" rows="3">${escapeHtml(item?.description||item?.descricao||'')}</textarea></div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
             <div class="form-group"><label class="form-label">Peso</label><input type="number" class="form-input" id="itemPesoMestre" value="${item?.peso||1}" min="0" step="0.1"></div>
             <div class="form-group"><label class="form-label">Tamanho</label><input type="number" class="form-input" id="itemTamanhoMestre" value="${item?.tamanho||1}" min="0"></div>
-            <div class="form-group"><label class="form-label">Dureza</label><input type="number" class="form-input" id="itemDurezaMestre" value="${item?.dureza||0}" min="0"></div>
-            <div class="form-group"><label class="form-label">Integridade</label><input type="number" class="form-input" id="itemIntegridadeMestre" value="${item?.integridade||10}" min="0"></div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+            <div class="form-group"><label class="form-label">Pressão Base</label><input type="number" class="form-input" id="itemPressaoBaseMestre" value="${item?.pressaoBase||''}" min="0" step="0.1" placeholder="= Peso"></div>
             <div class="form-group"><label class="form-label">Quantidade</label><input type="number" class="form-input" id="itemQuantidadeMestre" value="${item?.quantity||1}" min="1"></div>
-            <div class="form-group"><label class="form-label">Pack Size</label><input type="number" class="form-input" id="itemPackSizeMestre" value="${item?.packSize||1}" min="1"></div>
-            <div class="form-group"><label class="form-label">Reforço</label><input type="number" class="form-input" id="itemReforcoMestre" value="${item?.reforco||0}" min="0"></div>
         </div>
-        <div id="conditionalFieldsMestre"></div>
-        <div class="form-group"><label class="form-label">Imagem (URL ou Base64)</label><input type="text" class="form-input" id="itemImagemMestre" value="${escapeHtml(item?.imagem||'')}"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="form-group"><label class="form-label">Categoria</label><input type="text" class="form-input" id="itemCategoriaMestre" value="${escapeHtml(item?.category||'')}"></div>
-            <div class="form-group"><label class="form-label">Preço Base</label><input type="number" class="form-input" id="itemPrecoBaseMestre" value="${item?.basePrice||0}" min="0"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+            <div class="form-group"><label class="form-label">📦 É Container?</label><select class="form-select" id="itemEhContainerMestre" onchange="toggleContainerFieldsMestre()"><option value="false" ${!item?.ehContainer?'selected':''}>Não</option><option value="true" ${item?.ehContainer?'selected':''}>Sim</option></select></div>
+            <div class="form-group" id="multPressaoGroupMestre" style="display:${item?.ehContainer?'block':'none'}"><label class="form-label">Multiplicador Pressão</label><input type="number" class="form-input" id="itemMultPressaoMestre" value="${item?.multiplicadorPressao||1}" min="0" step="0.1"></div>
+            <div class="form-group" id="capContainerGroupMestre" style="display:${item?.ehContainer?'block':'none'}"><label class="form-label">Capacidade</label><input type="number" class="form-input" id="itemCapContainerMestre" value="${item?.capacidadeContainer||10}" min="1"></div>
         </div>
+        <div class="form-group"><label class="form-label">Imagem (URL)</label><input type="text" class="form-input" id="itemImagemMestre" value="${escapeHtml(item?.imagem||item?.imagemUrl||'')}"></div>
+        <input type="hidden" id="itemModeloIdMestre" value="${item?.modeloId||''}">
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
             <button class="btn btn-secondary" onclick="closeItemModalMestre()">Cancelar</button>
             <button class="btn btn-success" onclick="saveItemMestre()">💾 Salvar</button>
@@ -290,27 +314,32 @@ window.saveItemMestre = async function() {
     const tipo = document.getElementById('itemTipoMestre')?.value || 'Objeto';
     const peso = parseFloat(document.getElementById('itemPesoMestre')?.value) || 1;
     const qty = parseInt(document.getElementById('itemQuantidadeMestre')?.value) || 1;
-    const packSize = parseInt(document.getElementById('itemPackSizeMestre')?.value) || 1;
-    const totalWeight = Math.ceil((qty / packSize) * peso);
+    const pressaoBaseVal = document.getElementById('itemPressaoBaseMestre')?.value;
+    const ehContainer = document.getElementById('itemEhContainerMestre')?.value === 'true';
 
     const charId = S.currentInventarioPersonagemId;
     let ownerId = S.currentUser?.uid || '';
-    try { const cd = await getDoc(doc(db,'characters',charId)); if(cd.exists()) ownerId = cd.data().ownerUid || ownerId; } catch(e){}
+    try { const cd = await getDoc(doc(db,'char',charId)); if(cd.exists()) ownerId = cd.data().ownerUid || ownerId; } catch(e){}
 
     const itemData = {
-        name, tipo,
+        nome: name,
+        name, // backward compat
+        tipo,
+        descricao: document.getElementById('itemDescriptionMestre')?.value?.trim() || '',
         description: document.getElementById('itemDescriptionMestre')?.value?.trim() || '',
         peso, tamanho: parseInt(document.getElementById('itemTamanhoMestre')?.value) || 1,
-        dureza: parseInt(document.getElementById('itemDurezaMestre')?.value) || 0,
-        integridade: parseInt(document.getElementById('itemIntegridadeMestre')?.value) || 10,
-        reforco: parseInt(document.getElementById('itemReforcoMestre')?.value) || 0,
-        quantity: qty, packSize, totalWeight,
+        pressaoBase: pressaoBaseVal !== '' ? parseFloat(pressaoBaseVal) : null,
+        ehContainer,
+        multiplicadorPressao: ehContainer ? (parseFloat(document.getElementById('itemMultPressaoMestre')?.value) || 1) : 1,
+        capacidadeContainer: ehContainer ? (parseInt(document.getElementById('itemCapContainerMestre')?.value) || 10) : null,
+        quantity: qty,
+        totalWeight: peso * qty,
         imagem: document.getElementById('itemImagemMestre')?.value?.trim() || '',
-        category: document.getElementById('itemCategoriaMestre')?.value?.trim() || '',
-        basePrice: parseInt(document.getElementById('itemPrecoBaseMestre')?.value) || 0,
+        modeloId: document.getElementById('itemModeloIdMestre')?.value || null,
         characterId: charId, ownerId,
         containerId: S.currentEditingContainerIdMestre || 'está com alguém',
         equipado: false, parentItemId: null,
+        criadoPor: 'mestre',
         lastModified: new Date().toISOString()
     };
 
@@ -326,22 +355,62 @@ window.saveItemMestre = async function() {
             showAlert('✅ Item atualizado','success');
             await addLog(S.currentUser?.email, `editou item "${name}"`, '', 'items');
         } else {
-            const newId = 'item-'+Date.now();
+            const newId = 'item-'+Date.now()+'-'+Math.random().toString(36).substr(2,6);
             itemData.id = newId;
             await setDoc(doc(db,'items',newId), itemData);
             showAlert('✅ Item criado','success');
             await addLog(S.currentUser?.email, `criou item "${name}"`, '', 'items');
-
-            if (tipo === 'Container') {
-                const cId = 'container-'+Date.now();
-                await setDoc(doc(db,'containers',cId), { id:cId, name, ownerId, characterId:charId, maxCapacity:10, maxSize:5, itemIds:[], description: itemData.description });
-                await setDoc(doc(db,'items',newId), { isContainerItem:true, linkedContainerId:cId }, { merge:true });
-            }
         }
         window.closeItemModalMestre();
         await loadInventarioFromFirebase(charId);
     } catch(e) { console.error(e); showAlert('❌ Erro ao salvar','danger'); }
 };
 
+// ===== CATALOG PICKER =====
+window.fillItemFromCatalogMestre = function(templateId) {
+    if (!templateId) return;
+    const tpl = (window._mestreCatalog || []).find(t => t.id === templateId);
+    if (!tpl) return;
+    document.getElementById('itemNameMestre').value = tpl.nome || '';
+    document.getElementById('itemTipoMestre').value = tpl.tipo || 'Objeto';
+    document.getElementById('itemPesoMestre').value = tpl.peso || 1;
+    document.getElementById('itemTamanhoMestre').value = tpl.tamanho || 1;
+    document.getElementById('itemPressaoBaseMestre').value = tpl.pressaoBase ?? '';
+    document.getElementById('itemDescriptionMestre').value = tpl.descricao || '';
+    document.getElementById('itemImagemMestre').value = tpl.imagemUrl || '';
+    document.getElementById('itemModeloIdMestre').value = tpl.id;
+    document.getElementById('itemEhContainerMestre').value = tpl.ehContainer ? 'true' : 'false';
+    toggleContainerFieldsMestre();
+    if (tpl.ehContainer) {
+        document.getElementById('itemMultPressaoMestre').value = tpl.multiplicadorPressao || 1;
+        document.getElementById('itemCapContainerMestre').value = tpl.capacidadeContainer || 10;
+    }
+};
+
+window.toggleContainerFieldsMestre = function() {
+    const isContainer = document.getElementById('itemEhContainerMestre')?.value === 'true';
+    const multG = document.getElementById('multPressaoGroupMestre');
+    const capG = document.getElementById('capContainerGroupMestre');
+    if (multG) multG.style.display = isContainer ? 'block' : 'none';
+    if (capG) capG.style.display = isContainer ? 'block' : 'none';
+};
+
+// ===== LOAD CATALOG FOR MESTRE =====
+export async function loadMestreCatalog() {
+    try {
+        const snap = await getDocs(collection(db, 'system/data/equipment'));
+        window._mestreCatalog = [];
+        snap.forEach(d => {
+            const data = d.data();
+            if (data.publicado !== false) {
+                window._mestreCatalog.push({ id: d.id, ...data });
+            }
+        });
+        window._mestreCatalog.sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
+        console.log(`✅ Catálogo do Mestre: ${window._mestreCatalog.length} template(s)`);
+    } catch(e) { console.error('❌ Erro catálogo:', e); }
+}
+
 // ===== TRANSFER STUBS =====
 window.openTransferItemModal = function(itemId, isAvulso) { showAlert('⚠️ Transferência — em migração','warning'); };
+

@@ -39,8 +39,7 @@ window.initApp = function () {
     _appInitialized = true;
 
     initTabs(); initDots(); initSkills(); initCharImg();
-    addWeapon(); addArmor(); addProjectile();
-    addInventoryItem(); addInventoryItem(); addInventoryItem();
+    addCondition();
 
     // Se o Firebase já carregou dados, não recarregar do localStorage
     if (!window._firebaseLoaded) {
