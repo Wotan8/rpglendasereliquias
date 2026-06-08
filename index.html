@@ -469,10 +469,10 @@
                     // Redirecionar baseado na role
                     if (role === 'mestre') {
                         console.log('👑 Redirecionando para painel do mestre...');
-                        window.location.href = 'mestre.html';
+                        window.location.href = 'painel-mestre/painel-mestre.html';
                     } else {
                         console.log('🎭 Redirecionando para ficha do jogador...');
-                        window.location.href = 'personagens.html';
+                        window.location.href = 'menu/menu.html';
                     }
                 } else {
                     // Se não encontrar o documento, assumir jogador (para contas antigas)
@@ -491,7 +491,7 @@
                     localStorage.setItem('authConfirmed', 'true');
                     localStorage.setItem('authTimestamp', Date.now().toString());
                     
-                    window.location.href = 'personagens.html';
+                    window.location.href = 'menu/menu.html';
                 }
             } catch (error) {
                 console.error('❌ Erro ao verificar role:', error);

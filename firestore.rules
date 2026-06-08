@@ -111,8 +111,8 @@ service cloud.firestore {
         (resource.data.ownerId == request.auth.uid && 
          request.resource.data.ownerId == resource.data.ownerId) ||
         // Dono do personagem vinculado pode atualizar (verificando via characterId)
-        (exists(/databases/$(database)/documents/characters/$(resource.data.characterId)) &&
-         get(/databases/$(database)/documents/characters/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
+        (exists(/databases/$(database)/documents/char/$(resource.data.characterId)) &&
+         get(/databases/$(database)/documents/char/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
         // Mestre pode sempre atualizar
         isMaster()
       );
@@ -120,8 +120,8 @@ service cloud.firestore {
       // ✅ Exclusão: dono do container, dono do personagem, OU mestre
       allow delete: if isSignedIn() && (
         resource.data.ownerId == request.auth.uid || 
-        (exists(/databases/$(database)/documents/characters/$(resource.data.characterId)) &&
-         get(/databases/$(database)/documents/characters/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
+        (exists(/databases/$(database)/documents/char/$(resource.data.characterId)) &&
+         get(/databases/$(database)/documents/char/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
         isMaster()
       );
     }
@@ -141,8 +141,8 @@ service cloud.firestore {
         (resource.data.ownerId == request.auth.uid && 
          request.resource.data.ownerId == resource.data.ownerId) ||
         // Dono do personagem vinculado pode atualizar (verificando via characterId)
-        (exists(/databases/$(database)/documents/characters/$(resource.data.characterId)) &&
-         get(/databases/$(database)/documents/characters/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
+        (exists(/databases/$(database)/documents/char/$(resource.data.characterId)) &&
+         get(/databases/$(database)/documents/char/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
         // Mestre pode sempre atualizar
         isMaster()
       );
@@ -150,8 +150,8 @@ service cloud.firestore {
       // ✅ Exclusão: dono do item, dono do personagem, OU mestre
       allow delete: if isSignedIn() && (
         resource.data.ownerId == request.auth.uid || 
-        (exists(/databases/$(database)/documents/characters/$(resource.data.characterId)) &&
-         get(/databases/$(database)/documents/characters/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
+        (exists(/databases/$(database)/documents/char/$(resource.data.characterId)) &&
+         get(/databases/$(database)/documents/char/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
         isMaster()
       );
     }

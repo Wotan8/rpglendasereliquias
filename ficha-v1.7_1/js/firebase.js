@@ -374,7 +374,7 @@ onAuthStateChanged(auth, async (user) => {
                     }
                     if (!isMestreOfMesa) {
                         alert('🚫 ACESSO NEGADO! Esta ficha não pertence a você.');
-                        window.location.href = '../personagens.html';
+                        window.location.href = '../menu/menu.html';
                         return;
                     }
                 }

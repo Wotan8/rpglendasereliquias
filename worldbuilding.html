@@ -4603,7 +4603,7 @@
         <div class="content-header">
             <h1 class="content-title" id="contentTitle">Dashboard</h1>
             <div class="header-actions">
-                <button class="btn-mestre" onclick="window.location.href='mestre.html'"
+                <button class="btn-mestre" onclick="window.location.href='painel-mestre/painel-mestre.html'"
                     title="Painel do Mestre">🎭</button>
                 <button class="btn-viewmap" onclick="window.location.href='viewmap.html'"
                     title="Navegador de Mapa">🌍</button>
@@ -4751,7 +4751,7 @@
 
             // Load characters for campaign player selection
             try {
-                const charactersSnapshot = await getDocs(collection(db, 'characters'));
+                const charactersSnapshot = await getDocs(collection(db, 'char'));
                 allCharacters = charactersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 console.log(`Loaded ${allCharacters.length} characters for campaigns`);
             } catch (e) { console.log('Error loading characters:', e); allCharacters = []; }
