@@ -244,6 +244,7 @@ function clearMechanicBonuses() {
     state.mecanicasPendentes = [];
     _derivedValueMechanicsRaw = [];
     _dynamicMechContributions = {};
+    state._invPressureContrib = 0;
 }
 
 /* ===== RESOLVER VALOR DINÂMICO DE CÁLCULO ===== */
@@ -290,6 +291,13 @@ function _resolveTermValue(term) {
 function _resolveSheetRef(ref, mult) {
     if (!ref) return 0;
     mult = mult || 1;
+
+    // Special: Pressão Total (Equipados) — reads from inventory module
+    if (ref === 'Pressão Total (Equipados)') {
+        const pressure = typeof calculateTotalPressure === 'function'
+            ? calculateTotalPressure() : 0;
+        return pressure * mult;
+    }
 
     // Check attributes (includes mechanic bonuses / highlighted levels)
     const attrKey = TARGET_MAP[ref];

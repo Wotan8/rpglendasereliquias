@@ -52,7 +52,7 @@ async function loadMesaInventarios() {
                 <div class="sessao-card-header">
                     <div class="sessao-titulo">🎭 ${escapeHtml(c.nome || 'Sem nome')}</div>
                     <div style="display:flex;gap:12px;align-items:center">
-                        <span style="background:rgba(245,158,11,.15);color:#f59e0b;padding:3px 10px;border-radius:8px;font-size:.78rem;font-weight:700">⚖️ Pressão: ${totalPressure}</span>
+                        <span style="background:rgba(245,158,11,.15);color:#f59e0b;padding:3px 10px;border-radius:8px;font-size:.78rem;font-weight:700">⚖️ Pressão: ${parseFloat(totalPressure).toFixed(2)}</span>
                         <span class="sessao-data">${charItems.length} item(ns)</span>
                     </div>
                 </div>`;
@@ -69,8 +69,8 @@ async function loadMesaInventarios() {
                             ${equipBadge}${containerBadge}
                         </div>
                         <div style="display:flex;gap:10px;align-items:center">
-                            <span style="color:var(--muted);font-size:.78rem">Peso: ${it.peso || 0}</span>
-                            ${it.equipado ? `<span style="color:#f59e0b;font-size:.78rem;font-weight:600">⚖️ ${pressure}</span>` : ''}
+                            <span style="color:var(--muted);font-size:.78rem">Peso: ${parseFloat(it.peso || 0).toFixed(2)}</span>
+                            ${it.equipado ? `<span style="color:#f59e0b;font-size:.78rem;font-weight:600">⚖️ ${parseFloat(pressure).toFixed(2)}</span>` : ''}
                         </div>
                     </div>`;
                 }

@@ -191,11 +191,8 @@ function renderDerivedValuesGrid() {
             atualInput.value = '0';
             atualInput.addEventListener('input', () => {
                 if (!state.dvAtual) state.dvAtual = {};
-                const maxVal = parseInt(input.value, 10) || 0;
-                const curVal = parseInt(atualInput.value, 10);
-                if (!isNaN(curVal) && curVal > maxVal) {
-                    atualInput.value = maxVal;
-                }
+                // Sem clamp automático: o valor digitado pelo jogador é preservado.
+                // Mecânicas do tipo "limitar" (teto/piso) tratam limites quando necessário.
                 state.dvAtual[dv.key] = atualInput.value;
                 if (typeof scheduleAutosave === 'function') scheduleAutosave();
             });
@@ -705,17 +702,13 @@ function recalcAll() {
             displayEl.value = Number.isInteger(value) ? value : parseFloat(value.toFixed(1));
         }
 
-        // Se DV tem campoAtual, atualizar max do campo Atual e clampar valor
+        // Se DV tem campoAtual, atualizar o atributo max (informativo) — sem clampar o valor atual.
+        // O valor digitado pelo jogador é preservado.
+        // Mecânicas do tipo "limitar" (teto/piso) tratam limites quando necessário.
         if (dvDef && dvDef.campoAtual) {
             const atualEl = document.getElementById(`dv_${dvKey}_atual`);
             if (atualEl) {
                 atualEl.max = value;
-                const curVal = parseInt(atualEl.value, 10);
-                if (!isNaN(curVal) && curVal > value) {
-                    atualEl.value = value;
-                    if (!state.dvAtual) state.dvAtual = {};
-                    state.dvAtual[dvKey] = String(value);
-                }
             }
         }
 
@@ -985,10 +978,8 @@ function updateDerivedField(key, value) {
         const atualEl = document.querySelector(`[data-key="${mapping.atual}"]`);
         if (atualEl) {
             atualEl.max = value;
-            const current = parseInt(atualEl.value, 10);
-            if (!isNaN(current) && current > value) {
-                atualEl.value = value;
-            }
+            // Sem clamp automático: o valor digitado pelo jogador é preservado.
+            // Mecânicas do tipo "limitar" (teto/piso) tratam limites quando necessário.
         }
     }
 
@@ -997,18 +988,13 @@ function updateDerivedField(key, value) {
     state.derived[key] = value;
 }
 
-/* Validação: ATUAL ≤ MAX ao digitar */
+/* Validação: ATUAL — sem clamp automático.
+ * O valor digitado pelo jogador é preservado como está.
+ * Mecânicas do tipo "limitar" (teto/piso) tratam limites quando necessário.
+ */
 function validateAtualField(atualKey, maxDisplayId) {
-    const atualEl = document.querySelector(`[data-key="${atualKey}"]`);
-    const maxEl = document.getElementById(maxDisplayId);
-    if (!atualEl || !maxEl) return;
-    atualEl.addEventListener('input', () => {
-        const maxVal = parseInt(maxEl.value, 10) || 0;
-        const curVal = parseInt(atualEl.value, 10);
-        if (!isNaN(curVal) && curVal > maxVal) {
-            atualEl.value = maxVal;
-        }
-    });
+    // No-op: removido clamp hardcoded para permitir que o jogador
+    // defina qualquer valor no campo atual.
 }
 
 /* Inicializar listeners e renderizar grid dinâmica */

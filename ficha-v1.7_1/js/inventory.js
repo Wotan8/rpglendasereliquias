@@ -60,7 +60,15 @@ async function loadCharacterItems(charId) {
         console.log(`✅ Inventário carregado: ${items.length} item(ns)`);
         renderEquippedItems();
         renderInventoryTab();
-        recalcInventoryPressure();
+        // Re-aplicar TODAS as mecânicas para que Regras de Item (itemRules)
+        // tenham acesso aos itens carregados e apliquem corretamente
+        // (ex: somar Pressão Total no valor atual de um DV).
+        if (typeof applyAllRaceMechanics === 'function') {
+            const raca = document.getElementById('selRaca')?.value;
+            applyAllRaceMechanics(raca);
+        }
+        if (typeof recalcAll === 'function') recalcAll();
+        if (typeof recalcMainTests === 'function') recalcMainTests();
     } catch (e) {
         console.error('❌ Erro ao carregar inventário:', e);
     } finally {
@@ -112,27 +120,19 @@ function calculateTotalPressure() {
 }
 
 /**
- * Recalcula a Pressão e injeta no mechanicBonuses para que o DV "Carga" capture.
+ * Recalcula a Pressão e dispara recalcAll para que mecânicas de Regra de Item
+ * atualizem o DV "Carga (Atual)" via _resolveSheetRef('Pressão Total (Equipados)').
+ * NÃO injeta pressão diretamente em DERIVED:CARGA (o máximo),
+ * pois o máximo é calculado por sua própria mecânica no Firebase.
  */
 function recalcInventoryPressure() {
     const totalPressure = calculateTotalPressure();
 
-    // Encontrar a key do DV "Carga" no TARGET_MAP
-    // Carga é um DV do Firebase, registrado via populateTargetMapFromDerivedValues
-    // Seu key seria algo como DERIVED:CARGA
-    const cargaKey = _findDerivedKey('Carga');
-    if (cargaKey) {
-        // Limpar contribuição anterior do inventário
-        const prevKey = '_INV_PRESSURE_' + cargaKey;
-        const prevVal = state._invPressureContrib || 0;
-        state.mechanicBonuses[cargaKey] = (state.mechanicBonuses[cargaKey] || 0) - prevVal + totalPressure;
-        state._invPressureContrib = totalPressure;
-    }
-
     // Atualizar indicador visual de pressão
     _updatePressureDisplay(totalPressure);
 
-    // Recalcular DVs e testes
+    // Recalcular DVs e testes — as mecânicas de Regra de Item capturam
+    // a pressão via _resolveSheetRef('Pressão Total (Equipados)')
     if (typeof recalcAll === 'function') recalcAll();
     if (typeof recalcMainTests === 'function') recalcMainTests();
 }
@@ -161,7 +161,6 @@ function _updatePressureDisplay(totalPressure) {
 function applyEquippedItemsMechanics() {
     const items = window._inventoryState.items;
     const equipped = items.filter(i => i.equipado === true && !i.parentItemId);
-    if (equipped.length === 0) return;
 
     const mechanicsById = {};
     if (window._systemData?.mechanics) {
@@ -170,8 +169,9 @@ function applyEquippedItemsMechanics() {
         }
     }
 
+    // 1) Mecânicas de itens equipados (modelo + próprias)
     for (const item of equipped) {
-        // 1) Mecânicas herdadas do modelo (catálogo)
+        // 1a) Mecânicas herdadas do modelo (catálogo)
         if (item.modeloId) {
             const template = window._inventoryState.catalog.find(t => t.id === item.modeloId);
             if (template?.mecanicaIds) {
@@ -182,7 +182,7 @@ function applyEquippedItemsMechanics() {
             }
         }
 
-        // 2) Mecânicas próprias da instância
+        // 1b) Mecânicas próprias da instância
         if (item.mecanicaIdsProprias) {
             for (const mechId of item.mecanicaIdsProprias) {
                 const mech = mechanicsById[mechId];
@@ -191,13 +191,36 @@ function applyEquippedItemsMechanics() {
         }
     }
 
-    // 3) Regras globais de item
+    // 2) Regras globais de item (aplicam independente de ter itens equipados)
     const rules = window._inventoryState.itemRules || [];
+    console.log(`🔧 [ItemRules] ${rules.length} regra(s) de item carregadas, ${equipped.length} item(ns) equipado(s)`);
     for (const rule of rules) {
+        console.log(`🔧 [ItemRule] "${rule.nome}": mecanicaIds =`, rule.mecanicaIds);
         if (rule.mecanicaIds) {
             for (const mechId of rule.mecanicaIds) {
                 const mech = mechanicsById[mechId];
-                if (mech) applyMechanicToSheet(mech, null);
+                if (!mech) {
+                    console.warn(`⚠️ [ItemRule] Mecânica "${mechId}" NÃO encontrada no cache de ${Object.keys(mechanicsById).length} mecânicas`);
+                    continue;
+                }
+                console.log(`🔧 [ItemRule] Aplicando mecânica "${mech.nome}" (tipo=${mech.tipo}, duracao=${mech.duracao})`);
+                if (mech.config?.calculos) {
+                    for (const calc of mech.config.calculos) {
+                        const targetKey = typeof TARGET_MAP !== 'undefined' ? TARGET_MAP[calc.alvo] : 'TARGET_MAP_UNDEFINED';
+                        console.log(`🔧 [ItemRule]   calc: alvo="${calc.alvo}" → targetKey="${targetKey}", op="${calc.operacao}"`);
+                        if (Array.isArray(calc.equacao)) {
+                            for (const term of calc.equacao) {
+                                if (term.tipo === 'ficha') {
+                                    const resolved = typeof _resolveSheetRef === 'function' ? _resolveSheetRef(term.ref, 1) : 'FUNC_NOT_FOUND';
+                                    console.log(`🔧 [ItemRule]   term: tipo=ficha, ref="${term.ref}" → resolved=${resolved}`);
+                                } else {
+                                    console.log(`🔧 [ItemRule]   term: tipo=${term.tipo}, valor=${term.valor}`);
+                                }
+                            }
+                        }
+                    }
+                }
+                applyMechanicToSheet(mech, null);
             }
         }
     }

@@ -145,7 +145,7 @@ function renderItemCard(item, eqCont) {
         ${img}
         <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;flex-wrap:wrap"><div style="font-size:1.1rem;font-weight:600;color:var(--light)">${item.equipado?'⚔️ ':''}${escapeHtml(item.nome||item.name||'Sem nome')}</div>${badges}</div>
-            <div style="font-size:.85rem;color:var(--muted);margin-top:5px">${item.tipo||'-'} | Peso: ${item.peso||item.totalWeight||0} | Tam: ${item.tamanho||0} | Qtd: ${item.quantity||1}</div>
+            <div style="font-size:.85rem;color:var(--muted);margin-top:5px">${item.tipo||'-'} | Peso: ${parseFloat(item.peso||item.totalWeight||0).toFixed(2)} | Tam: ${item.tamanho||0} | Qtd: ${item.quantity||1}</div>
             ${(item.descricao||item.description)?`<div style="font-size:.8rem;color:#64748b;margin-top:5px;font-style:italic">${escapeHtml(((item.descricao||item.description)||'').substring(0,100))}${((item.descricao||item.description)||'').length>100?'...':''}</div>`:''}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap" onclick="event.stopPropagation()">
@@ -175,7 +175,7 @@ function renderPersonagemContainerViewer() {
                 ${img2}
                 <div style="flex:1;min-width:0">
                     <div style="font-weight:700;color:var(--light)">${escapeHtml(i.nome||i.name||'Sem nome')} <span style="background:rgba(16,185,129,.2);color:#10b981;padding:2px 8px;border-radius:6px;font-size:.75rem">${i.tipo||'-'}</span></div>
-                    <div style="font-size:.82rem;color:var(--muted);margin-top:4px">Peso: ${i.totalWeight||i.peso||0} | Tam: ${i.tamanho||0} | Qtd: ${i.quantity||1}</div>
+                    <div style="font-size:.82rem;color:var(--muted);margin-top:4px">Peso: ${parseFloat(i.totalWeight||i.peso||0).toFixed(2)} | Tam: ${i.tamanho||0} | Qtd: ${i.quantity||1}</div>
                 </div>
                 <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
                     <button class="btn btn-warning btn-small" onclick="removeItemFromPersonagemContainer('${i.id}')">📤</button>

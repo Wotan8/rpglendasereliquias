@@ -47,7 +47,7 @@ function renderAvulsosItems() {
             <div style="width:50px;height:50px;background:rgba(245,158,11,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">📦</div>
             <div style="flex:1;min-width:0">
                 <div style="font-weight:700;color:var(--light)">${escapeHtml(item.name || 'Sem nome')} <span style="background:rgba(245,158,11,.2);color:#f59e0b;padding:2px 8px;border-radius:6px;font-size:.75rem">${item.tipo || '-'}</span></div>
-                <div style="font-size:.82rem;color:var(--muted);margin-top:4px">Peso: ${item.totalWeight || item.peso || 0} | Tam: ${item.tamanho || 0} | Qtd: ${item.quantity || 1}</div>
+                <div style="font-size:.82rem;color:var(--muted);margin-top:4px">Peso: ${parseFloat(item.totalWeight || item.peso || 0).toFixed(2)} | Tam: ${item.tamanho || 0} | Qtd: ${item.quantity || 1}</div>
             </div>
             <div style="display:flex;gap:8px">
                 <button class="btn btn-danger btn-small" onclick="event.stopPropagation();deleteAvulsoItem('${item.id}')">🗑️</button>
