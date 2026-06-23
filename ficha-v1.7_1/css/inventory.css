@@ -350,6 +350,20 @@
     border: 1px solid var(--line, rgba(139, 92, 246, 0.1));
     border-radius: 8px;
 }
+.inv-container-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    background: rgba(16, 185, 129, 0.06);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--muted, #94a3b8);
+}
+.inv-stat-ok { color: #10b981; font-weight: 600; }
+.inv-stat-over { color: #ef4444; font-weight: 700; }
+.inv-stat-pressure { color: #8b5cf6; font-weight: 500; }
 
 /* === MODAL === */
 .inv-modal {
@@ -525,6 +539,70 @@
     transition: all 0.2s;
 }
 .inv-btn-action:hover { background: rgba(139, 92, 246, 0.25); }
+
+/* === QUANTITY BADGE & INPUT === */
+.inv-badge-qty {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+    white-space: nowrap;
+}
+.inv-qty-input {
+    width: 48px;
+    padding: 3px 5px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1.5px solid rgba(99, 102, 241, 0.3);
+    border-radius: 6px;
+    color: #818cf8;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-align: center;
+    transition: border-color 0.2s;
+    -moz-appearance: textfield;
+}
+.inv-qty-input::-webkit-inner-spin-button,
+.inv-qty-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.inv-qty-input:focus {
+    outline: none;
+    border-color: #818cf8;
+}
+.inv-qty-input[readonly] {
+    opacity: 0.7;
+    cursor: default;
+    border-color: rgba(99, 102, 241, 0.15);
+}
+.inv-qty-label {
+    font-size: 0.68rem;
+    color: var(--muted, #64748b);
+    font-weight: 600;
+}
+
+/* === MOVE TO CONTAINER BUTTON === */
+.inv-btn-move-container {
+    background: none;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    transition: all 0.2s;
+    color: #10b981;
+    white-space: nowrap;
+}
+.inv-btn-move-container:hover {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: #10b981;
+    color: #34d399;
+}
 
 /* === RESPONSIVE === */
 @media (max-width: 600px) {

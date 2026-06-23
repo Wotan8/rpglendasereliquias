@@ -96,7 +96,7 @@ async function loadInventoryCatalog() {
 // ===== PRESSURE CALCULATION =====
 /**
  * Calcula a Pressão total de todos os itens equipados.
- * Pressão = peso efetivo. Para containers, inclui peso dos itens internos × multiplicador.
+ * Pressão = peso efetivo × quantidade. Para containers, inclui peso dos itens internos × multiplicador.
  */
 function calculateTotalPressure() {
     const items = window._inventoryState.items;
@@ -104,16 +104,20 @@ function calculateTotalPressure() {
     let total = 0;
 
     for (const item of equipped) {
-        const pressao = item.pressaoOverride != null ? item.pressaoOverride
+        const qty = Math.max(1, parseInt(item.quantidade) || 1);
+        const basePressao = item.pressaoOverride != null ? item.pressaoOverride
             : (item.pressaoBase != null ? item.pressaoBase : (item.peso || 0));
 
         if (item.ehContainer) {
             const insideItems = items.filter(i => i.parentItemId === item.id);
-            const insideWeight = insideItems.reduce((sum, i) => sum + (i.peso || 0), 0);
+            const insideWeight = insideItems.reduce((sum, i) => {
+                const iQty = Math.max(1, parseInt(i.quantidade) || 1);
+                return sum + ((i.peso || 0) * iQty);
+            }, 0);
             const mult = item.multiplicadorPressao || 1;
-            total += pressao + (insideWeight * mult);
+            total += (basePressao * qty) + (insideWeight * mult);
         } else {
-            total += pressao;
+            total += basePressao * qty;
         }
     }
     return total;
@@ -249,6 +253,7 @@ function renderEquippedItems() {
 function _renderEquipCard(item) {
     const pressao = _getItemPressure(item);
     const tipo = item.tipo || 'Objeto';
+    const qty = Math.max(1, parseInt(item.quantidade) || 1);
     const tipoEmoji = { 'Arma': '⚔️', 'Vestimenta': '🧥', 'Projétil': '🎯', 'Container': '📦', 'Objeto': '📦', 'Consumível': '🧪', 'Relíquia': '✨' }[tipo] || '📦';
     const img = item.imagem || item.imagemUrl;
     const imgHtml = img
@@ -262,6 +267,9 @@ function _renderEquipCard(item) {
         containerBadge = `<span class="inv-badge inv-badge-container">📦 ${inside.length} item(ns)</span>`;
     }
 
+    // Quantity badge
+    const qtyBadge = qty > 1 ? `<span class="inv-badge inv-badge-qty">×${qty}</span>` : '';
+
     // Mecânicas preview
     const mechPreview = _getMechPreview(item);
 
@@ -272,6 +280,7 @@ function _renderEquipCard(item) {
                 <span class="inv-card-name">${_escHtml(item.nome || 'Sem nome')}</span>
                 <span class="inv-badge inv-badge-type">${tipoEmoji} ${_escHtml(tipo)}</span>
                 <span class="inv-badge inv-badge-pressure">⚖️ ${parseFloat(pressao).toFixed(2)}</span>
+                ${qtyBadge}
                 ${containerBadge}
             </div>
             ${mechPreview ? `<div class="inv-card-mechs">${mechPreview}</div>` : ''}
@@ -281,14 +290,18 @@ function _renderEquipCard(item) {
 }
 
 function _getItemPressure(item) {
-    if (item.pressaoOverride != null) return item.pressaoOverride;
+    const qty = Math.max(1, parseInt(item.quantidade) || 1);
+    if (item.pressaoOverride != null) return item.pressaoOverride * qty;
     const base = item.pressaoBase != null ? item.pressaoBase : (item.peso || 0);
     if (item.ehContainer) {
         const inside = window._inventoryState.items.filter(i => i.parentItemId === item.id);
-        const insideWeight = inside.reduce((sum, i) => sum + (i.peso || 0), 0);
-        return base + (insideWeight * (item.multiplicadorPressao || 1));
+        const insideWeight = inside.reduce((sum, i) => {
+            const iQty = Math.max(1, parseInt(i.quantidade) || 1);
+            return sum + ((i.peso || 0) * iQty);
+        }, 0);
+        return (base * qty) + (insideWeight * (item.multiplicadorPressao || 1));
     }
-    return base;
+    return base * qty;
 }
 
 function _getMechPreview(item) {
@@ -368,6 +381,19 @@ function _renderInvItemRow(item, isEquipped) {
         containerBtn = `<button class="inv-btn ${isOpen ? 'inv-btn-open' : 'inv-btn-closed'}" onclick="event.stopPropagation();toggleContainer('${item.id}')" title="${isOpen ? 'Fechar' : 'Abrir'} container">${isOpen ? '📂' : '📁'}</button>`;
     }
 
+    // Move to Container button — only when a container is open and this item isn't the open container itself
+    let moveToContainerBtn = '';
+    if (window._openContainerId && window._openContainerId !== item.id) {
+        moveToContainerBtn = `<button class="inv-btn inv-btn-move-container" onclick="event.stopPropagation();moveToContainer('${item.id}')" title="Mover para container aberto">📦➡️</button>`;
+    }
+
+    // Quantity — editable if loose, or if equipped AND type is Projétil/Consumível
+    const qty = Math.max(1, parseInt(item.quantidade) || 1);
+    const canEditQty = !isEquipped || item.tipo === 'Projétil' || item.tipo === 'Consumível';
+    const qtyHtml = canEditQty
+        ? `<input type="number" class="inv-qty-input" value="${qty}" min="1" onclick="event.stopPropagation()" onchange="updateItemQuantity('${item.id}', this.value)" title="Quantidade">`
+        : `<span class="inv-badge inv-badge-qty" title="Quantidade">×${qty}</span>`;
+
     const pressao = isEquipped ? `<span class="inv-badge inv-badge-pressure-sm">⚖️ ${parseFloat(_getItemPressure(item)).toFixed(2)}</span>` : '';
 
     return `<div class="inv-item-row ${isEquipped ? 'inv-equipped' : ''}" onclick="openItemDetail('${item.id}')">
@@ -376,8 +402,10 @@ function _renderInvItemRow(item, isEquipped) {
             <span class="inv-item-name">${_escHtml(item.nome || 'Sem nome')}</span>
             <span class="inv-item-meta">${tipoEmoji} ${_escHtml(item.tipo || '')} | Peso: ${parseFloat(item.peso || 0).toFixed(2)} | Tam: ${item.tamanho || 0}</span>
         </div>
+        ${qtyHtml}
         ${pressao}
         <div class="inv-item-actions no-print" onclick="event.stopPropagation()">
+            ${moveToContainerBtn}
             ${containerBtn}
             ${equipBtn}
             <button class="inv-btn inv-btn-delete" onclick="event.stopPropagation();deleteInventoryItem('${item.id}')" title="Excluir">🗑️</button>
@@ -408,6 +436,15 @@ function _renderOpenContainers() {
 
     const inside = window._inventoryState.items.filter(i => i.parentItemId === cid);
     const cap = contItem.capacidadeContainer || 10;
+    const pesoMax = contItem.pesoMaximoContainer || null;
+    const insideWeight = inside.reduce((sum, i) => {
+        const iQty = Math.max(1, parseInt(i.quantidade) || 1);
+        return sum + ((i.peso || 0) * iQty);
+    }, 0);
+    const mult = contItem.multiplicadorPressao || 1;
+    const pesoBase = contItem.pressaoBase != null ? contItem.pressaoBase : (contItem.peso || 0);
+    const pressaoContainer = pesoBase + (insideWeight * mult);
+    const overWeight = pesoMax != null && insideWeight > pesoMax;
 
     let itemsHtml;
     if (inside.length === 0) {
@@ -415,9 +452,12 @@ function _renderOpenContainers() {
     } else {
         itemsHtml = inside.map(i => {
             const tipoEmoji = { 'Arma': '⚔️', 'Vestimenta': '🧥', 'Projétil': '🎯', 'Container': '📦', 'Objeto': '📦', 'Consumível': '🧪', 'Relíquia': '✨' }[i.tipo] || '📦';
+            const iQty = Math.max(1, parseInt(i.quantidade) || 1);
+            const iWeightTotal = ((i.peso || 0) * iQty).toFixed(2);
             return `<div class="inv-container-item">
                 <span class="inv-item-name">${_escHtml(i.nome || 'Sem nome')}</span>
-                <span class="inv-item-meta">${tipoEmoji} | Peso: ${parseFloat(i.peso || 0).toFixed(2)}</span>
+                <span class="inv-item-meta">${tipoEmoji} | Peso: ${iWeightTotal}${iQty > 1 ? ` (${parseFloat(i.peso || 0).toFixed(2)} × ${iQty})` : ''}</span>
+                <input type="number" class="inv-qty-input" value="${iQty}" min="1" onchange="updateItemQuantity('${i.id}', this.value)" title="Quantidade">
                 <div class="inv-item-actions no-print">
                     <button class="inv-btn inv-btn-remove" onclick="removeFromContainer('${i.id}')" title="Remover do container">📤</button>
                     <button class="inv-btn inv-btn-delete" onclick="deleteInventoryItem('${i.id}')" title="Excluir">🗑️</button>
@@ -426,11 +466,19 @@ function _renderOpenContainers() {
         }).join('');
     }
 
+    const weightDisplay = pesoMax != null
+        ? `⚖️ Peso: ${insideWeight.toFixed(2)} / ${parseFloat(pesoMax).toFixed(2)}${overWeight ? ' ⚠️' : ''}`
+        : `⚖️ Peso: ${insideWeight.toFixed(2)}`;
+
     viewer.innerHTML = `<div class="inv-container-viewer">
         <div class="inv-container-header">
             <span class="inv-container-title">📂 ${_escHtml(contItem.nome || 'Container')}</span>
             <span class="inv-container-cap">Itens: ${inside.length} / ${cap}</span>
             <button class="inv-btn inv-btn-close" onclick="toggleContainer('${cid}')">✕</button>
+        </div>
+        <div class="inv-container-stats">
+            <span class="${overWeight ? 'inv-stat-over' : 'inv-stat-ok'}">${weightDisplay}</span>
+            <span class="inv-stat-pressure">📐 Pressão: ${pressaoContainer.toFixed(2)} (${pesoBase.toFixed(2)} + ${insideWeight.toFixed(2)} × ${mult})</span>
         </div>
         <div class="inv-container-items">${itemsHtml}</div>
         <button class="inv-btn inv-btn-add-to-container" onclick="addItemToContainer('${cid}')">➕ Adicionar Item</button>
@@ -480,6 +528,49 @@ window.deleteInventoryItem = async function(itemId) {
     }
 };
 
+window.moveToContainer = async function(itemId) {
+    const containerId = window._openContainerId;
+    if (!containerId || containerId === itemId) return;
+    const contItem = window._inventoryState.items.find(i => i.id === containerId);
+    if (!contItem) return;
+    try {
+        await _firestoreSetDoc('items', itemId, { parentItemId: containerId, equipado: false, lastModified: new Date().toISOString() });
+        const item = window._inventoryState.items.find(i => i.id === itemId);
+        if (item) { item.parentItemId = containerId; item.equipado = false; }
+        renderEquippedItems();
+        renderInventoryTab();
+        recalcInventoryPressure();
+        // Re-apply mechanics since equipped items may have changed
+        if (typeof applyAllRaceMechanics === 'function') {
+            const raca = document.getElementById('selRaca')?.value;
+            applyAllRaceMechanics(raca);
+        }
+        if (typeof recalcAll === 'function') recalcAll();
+    } catch (e) {
+        console.error('❌ Erro ao mover para container:', e);
+    }
+};
+
+window.updateItemQuantity = async function(itemId, newQty) {
+    const qty = Math.max(1, parseInt(newQty) || 1);
+    try {
+        await _firestoreSetDoc('items', itemId, { quantidade: qty, lastModified: new Date().toISOString() });
+        const item = window._inventoryState.items.find(i => i.id === itemId);
+        if (item) item.quantidade = qty;
+        renderEquippedItems();
+        renderInventoryTab();
+        recalcInventoryPressure();
+        // Re-apply mechanics since pressure changed
+        if (typeof applyAllRaceMechanics === 'function') {
+            const raca = document.getElementById('selRaca')?.value;
+            applyAllRaceMechanics(raca);
+        }
+        if (typeof recalcAll === 'function') recalcAll();
+    } catch (e) {
+        console.error('❌ Erro ao atualizar quantidade:', e);
+    }
+};
+
 window.removeFromContainer = async function(itemId) {
     try {
         await _firestoreSetDoc('items', itemId, { parentItemId: null, equipado: false, lastModified: new Date().toISOString() });
@@ -506,6 +597,7 @@ window.openItemDetail = function(itemId) {
     if (existing) existing.remove();
 
     const pressao = _getItemPressure(item);
+    const qty = Math.max(1, parseInt(item.quantidade) || 1);
     const tipoEmoji = { 'Arma': '⚔️', 'Vestimenta': '🧥', 'Projétil': '🎯', 'Container': '📦', 'Objeto': '📦', 'Consumível': '🧪', 'Relíquia': '✨' }[item.tipo] || '📦';
     const img = item.imagem || item.imagemUrl;
     const mechPreview = _getMechPreview(item);
@@ -522,9 +614,11 @@ window.openItemDetail = function(itemId) {
             ${img ? `<img src="${_escHtml(img)}" class="inv-detail-img" alt="">` : ''}
             <div class="inv-detail-grid">
                 <div class="inv-detail-field"><span class="inv-detail-label">Tipo</span><span>${tipoEmoji} ${_escHtml(item.tipo || '-')}</span></div>
-                <div class="inv-detail-field"><span class="inv-detail-label">Peso</span><span>${parseFloat(item.peso || 0).toFixed(2)}</span></div>
+                <div class="inv-detail-field"><span class="inv-detail-label">Peso (un.)</span><span>${parseFloat(item.peso || 0).toFixed(2)}</span></div>
+                <div class="inv-detail-field"><span class="inv-detail-label">Quantidade</span><span>×${qty}</span></div>
                 <div class="inv-detail-field"><span class="inv-detail-label">Tamanho</span><span>${item.tamanho || 0}</span></div>
                 <div class="inv-detail-field"><span class="inv-detail-label">Pressão</span><span>⚖️ ${parseFloat(pressao).toFixed(2)}</span></div>
+                ${item.ehContainer ? `<div class="inv-detail-field"><span class="inv-detail-label">Peso Máximo</span><span>⚖️ ${item.pesoMaximoContainer || '∞'}</span></div>` : ''}
                 ${item.ehContainer ? `<div class="inv-detail-field"><span class="inv-detail-label">Multiplicador</span><span>×${item.multiplicadorPressao || 1}</span></div>` : ''}
             </div>
             ${item.descricao ? `<div class="inv-detail-desc">${_escHtml(item.descricao)}</div>` : ''}
@@ -580,7 +674,7 @@ window.openItemFormModal = function(title, item, containerId) {
                 </div>
                 <div class="inv-form-group">
                     <label class="inv-form-label">Tipo</label>
-                    <select id="invFormTipo" class="inv-form-select">
+                    <select id="invFormTipo" class="inv-form-select" onchange="_toggleContainerFields()">
                         <option value="Objeto" ${item?.tipo === 'Objeto' ? 'selected' : ''}>📦 Objeto</option>
                         <option value="Arma" ${item?.tipo === 'Arma' ? 'selected' : ''}>⚔️ Arma</option>
                         <option value="Vestimenta" ${item?.tipo === 'Vestimenta' ? 'selected' : ''}>🧥 Vestimenta</option>
@@ -597,6 +691,20 @@ window.openItemFormModal = function(title, item, containerId) {
                 <div class="inv-form-group">
                     <label class="inv-form-label">Tamanho</label>
                     <input type="number" id="invFormTamanho" class="inv-form-input" value="${item?.tamanho || 1}" min="0">
+                </div>
+                <div class="inv-form-group">
+                    <label class="inv-form-label">Quantidade</label>
+                    <input type="number" id="invFormQuantidade" class="inv-form-input" value="${item?.quantidade || 1}" min="1">
+                </div>
+                <div id="invContainerFields" class="inv-form-group inv-form-wide" style="display:${(item?.tipo === 'Container' || item?.ehContainer) ? 'grid' : 'none'}; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="inv-form-group">
+                        <label class="inv-form-label">⚖️ Peso Máximo</label>
+                        <input type="number" id="invFormPesoMaximo" class="inv-form-input" value="${item?.pesoMaximoContainer || 10}" min="0" step="0.1" placeholder="Limite de peso interno">
+                    </div>
+                    <div class="inv-form-group">
+                        <label class="inv-form-label">✖️ Multiplicador de Pressão</label>
+                        <input type="number" id="invFormMultPressao" class="inv-form-input" value="${item?.multiplicadorPressao || 1}" min="0" step="0.01" placeholder="Ex: 0.5">
+                    </div>
                 </div>
                 <div class="inv-form-group inv-form-wide">
                     <label class="inv-form-label">Descrição</label>
@@ -635,6 +743,14 @@ window.fillFromCatalog = function(templateId) {
     document.getElementById('invFormDesc').value = tpl.descricao || '';
     document.getElementById('invFormImagem').value = tpl.imagemUrl || '';
     document.getElementById('invFormModeloId').value = tpl.id;
+    document.getElementById('invFormQuantidade').value = 1;
+
+    // Preencher campos de container do catálogo
+    if (tpl.ehContainer || tpl.tipo === 'Container') {
+        document.getElementById('invFormPesoMaximo').value = tpl.pesoMaximoContainer || 10;
+        document.getElementById('invFormMultPressao').value = tpl.multiplicadorPressao || 1;
+    }
+    _toggleContainerFields();
 };
 
 window.saveInventoryItemForm = async function() {
@@ -648,11 +764,15 @@ window.saveInventoryItemForm = async function() {
     const containerId = document.getElementById('invFormContainerId')?.value || '';
     const editId = document.getElementById('invFormEditId')?.value || '';
 
+    const tipo = document.getElementById('invFormTipo')?.value || 'Objeto';
+    const isContainer = tipo === 'Container';
+
     const itemData = {
         nome,
-        tipo: document.getElementById('invFormTipo')?.value || 'Objeto',
+        tipo,
         peso: parseFloat(document.getElementById('invFormPeso')?.value) || 1,
         tamanho: parseInt(document.getElementById('invFormTamanho')?.value) || 1,
+        quantidade: Math.max(1, parseInt(document.getElementById('invFormQuantidade')?.value) || 1),
         descricao: document.getElementById('invFormDesc')?.value?.trim() || '',
         imagem: document.getElementById('invFormImagem')?.value?.trim() || '',
         modeloId: document.getElementById('invFormModeloId')?.value || null,
@@ -661,7 +781,12 @@ window.saveInventoryItemForm = async function() {
         equipado: !containerId,
         parentItemId: containerId || null,
         criadoPor: window.isCreator ? 'criador' : (window.isMestre ? 'mestre' : 'jogador'),
-        lastModified: new Date().toISOString()
+        lastModified: new Date().toISOString(),
+        // Campos de container
+        ehContainer: isContainer,
+        pesoMaximoContainer: isContainer ? (parseFloat(document.getElementById('invFormPesoMaximo')?.value) || 10) : null,
+        multiplicadorPressao: isContainer ? (parseFloat(document.getElementById('invFormMultPressao')?.value) || 1) : null,
+        pressaoBase: parseFloat(document.getElementById('invFormPeso')?.value) || 1
     };
 
     // Herdar campos do template se modeloId existe
@@ -711,6 +836,15 @@ function addCondition() {
     r.querySelectorAll('input').forEach(x => x.addEventListener('input', scheduleAutosave));
 }
 function addInventoryItem() {} // No-op: replaced by inventory system
+
+// ===== TOGGLE CONTAINER FIELDS =====
+window._toggleContainerFields = function() {
+    const tipo = document.getElementById('invFormTipo')?.value;
+    const fields = document.getElementById('invContainerFields');
+    if (fields) {
+        fields.style.display = tipo === 'Container' ? 'grid' : 'none';
+    }
+};
 
 // ===== UTILITY =====
 function _escHtml(str) {
