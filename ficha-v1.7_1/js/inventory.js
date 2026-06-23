@@ -625,7 +625,9 @@ window.openItemDetail = function(itemId) {
             ${mechPreview ? `<div class="inv-detail-mechs"><span class="inv-detail-label">Efeitos</span>${mechPreview}</div>` : ''}
         </div>
         <div class="inv-modal-footer">
-            <button class="inv-btn-action" onclick="closeItemDetail()">${item.equipado ? '⬇️ Desequipar' : '⬆️ Equipar'}</button>
+            <button class="inv-btn-action" onclick="toggleEquip('${item.id}',${!item.equipado});closeItemDetail()">${item.equipado ? '⬇️ Desequipar' : '⬆️ Equipar'}</button>
+            <button class="inv-btn-transfer" onclick="openTransferModal('${item.id}')">🔄 Transferir</button>
+            <button class="inv-btn-action" onclick="closeItemDetail();openItemFormModal('Editar Item', window._inventoryState.items.find(i=>i.id==='${item.id}'))" style="margin-left:auto">✏️ Editar</button>
         </div>
     </div>`;
     document.body.appendChild(modal);
@@ -635,6 +637,167 @@ window.openItemDetail = function(itemId) {
 window.closeItemDetail = function() {
     const m = document.getElementById('invDetailModal');
     if (m) { m.classList.remove('active'); setTimeout(() => m.remove(), 200); }
+};
+
+// ===== TRANSFER MODAL =====
+window.openTransferModal = async function(itemId) {
+    const item = window._inventoryState.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    // Close detail modal if open
+    closeItemDetail();
+
+    // Show loading modal
+    let existing = document.getElementById('invTransferModal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'inv-modal active';
+    modal.id = 'invTransferModal';
+    modal.innerHTML = `<div class="inv-modal-content" style="max-width:500px">
+        <div class="inv-modal-header">
+            <span class="inv-modal-title">🔄 Transferir: ${_escHtml(item.nome || 'Item')}</span>
+            <button class="inv-modal-close" onclick="closeTransferModal()">✕</button>
+        </div>
+        <div class="inv-modal-body">
+            <div style="text-align:center;padding:30px;color:var(--muted)">⏳ Carregando alvos...</div>
+        </div>
+    </div>`;
+    document.body.appendChild(modal);
+
+    try {
+        const { doc, getDoc, collection, getDocs, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const db = _getFirestore();
+        const charId = _getCurrentCharId();
+
+        // Get current character data to check mesaId
+        const charSnap = await getDoc(doc(db, 'char', charId));
+        const charData = charSnap.exists() ? charSnap.data() : {};
+        const mesaId = charData.mesaId || null;
+
+        let targets = [];
+
+        if (mesaId) {
+            // Character is in a mesa — show mesa characters + Caixa do Mestre
+            // Add Caixa do Mestre as first option
+            targets.push({
+                id: '__caixa_mestre__' + mesaId,
+                nome: '📦 Caixa do Mestre',
+                ownerUid: '__mestre__',
+                isCaixaMestre: true
+            });
+
+            // Get all characters in same mesa
+            const charSnaps = await getDocs(collection(db, 'char'));
+            charSnaps.forEach(d => {
+                const data = d.data();
+                if (data.mesaId === mesaId && d.id !== charId) {
+                    const f = data.fields || {};
+                    targets.push({
+                        id: d.id,
+                        nome: f.nome || data.nome || 'Sem nome',
+                        ownerUid: data.ownerUid || '',
+                        ownerEmail: data.ownerEmail || data.userEmail || ''
+                    });
+                }
+            });
+        } else {
+            // Character is avulso — show all avulso characters
+            const charSnaps = await getDocs(collection(db, 'char'));
+            charSnaps.forEach(d => {
+                const data = d.data();
+                if (!data.mesaId && d.id !== charId) {
+                    const f = data.fields || {};
+                    targets.push({
+                        id: d.id,
+                        nome: f.nome || data.nome || 'Sem nome',
+                        ownerUid: data.ownerUid || '',
+                        ownerEmail: data.ownerEmail || data.userEmail || ''
+                    });
+                }
+            });
+        }
+
+        // Render target list
+        const body = modal.querySelector('.inv-modal-body');
+        if (targets.length === 0) {
+            body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted)">
+                <div style="font-size:2rem;margin-bottom:8px">🚫</div>
+                Nenhum alvo disponível para transferência.
+            </div>`;
+            return;
+        }
+
+        body.innerHTML = `<div class="inv-transfer-list">
+            ${targets.map(t => `<div class="inv-transfer-target ${t.isCaixaMestre ? 'inv-transfer-target-master' : ''}"
+                onclick="transferItem('${itemId}', '${t.id}', '${t.ownerUid}')">
+                <div class="inv-transfer-target-name">${t.isCaixaMestre ? '📦' : '🎭'} ${_escHtml(t.nome)}</div>
+                ${t.ownerEmail ? `<div class="inv-transfer-target-meta">👤 ${_escHtml(t.ownerEmail)}</div>` : ''}
+            </div>`).join('')}
+        </div>`;
+
+    } catch (e) {
+        console.error('❌ Erro ao carregar alvos:', e);
+        const body = modal.querySelector('.inv-modal-body');
+        if (body) body.innerHTML = `<div style="text-align:center;padding:30px;color:#ef4444">❌ Erro ao carregar alvos: ${_escHtml(e.message)}</div>`;
+    }
+};
+
+window.closeTransferModal = function() {
+    const m = document.getElementById('invTransferModal');
+    if (m) { m.classList.remove('active'); setTimeout(() => m.remove(), 200); }
+};
+
+window.transferItem = async function(itemId, targetCharId, targetOwnerUid) {
+    const item = window._inventoryState.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    const targetName = targetCharId.startsWith('__caixa_mestre__') ? 'Caixa do Mestre' : targetCharId;
+    if (!confirm(`Transferir "${item.nome || 'item'}" para ${targetName}?`)) return;
+
+    try {
+        const updateData = {
+            characterId: targetCharId,
+            equipado: false,
+            parentItemId: null,
+            lastModified: new Date().toISOString()
+        };
+
+        // Only update ownerUid if target is a real character
+        if (!targetCharId.startsWith('__caixa_mestre__')) {
+            // Fetch target character to get ownerUid
+            const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+            const db = _getFirestore();
+            const targetSnap = await getDoc(doc(db, 'char', targetCharId));
+            if (targetSnap.exists()) {
+                const targetData = targetSnap.data();
+                updateData.ownerUid = targetData.ownerUid || targetOwnerUid;
+                updateData.ownerId = targetData.ownerUid || targetOwnerUid;
+            }
+        }
+
+        await _firestoreSetDoc('items', itemId, updateData);
+
+        // Remove from local cache
+        window._inventoryState.items = window._inventoryState.items.filter(i => i.id !== itemId);
+
+        closeTransferModal();
+        renderEquippedItems();
+        renderInventoryTab();
+        recalcInventoryPressure();
+
+        // Re-apply mechanics since equipped items may have changed
+        if (typeof applyAllRaceMechanics === 'function') {
+            const raca = document.getElementById('selRaca')?.value;
+            applyAllRaceMechanics(raca);
+        }
+        if (typeof recalcAll === 'function') recalcAll();
+
+        alert(`✅ Item "${item.nome}" transferido com sucesso!`);
+    } catch (e) {
+        console.error('❌ Erro ao transferir item:', e);
+        alert('❌ Erro ao transferir item: ' + e.message);
+    }
 };
 
 // ===== ITEM FORM MODAL (Create/Edit) =====
@@ -778,7 +941,7 @@ window.saveInventoryItemForm = async function() {
         modeloId: document.getElementById('invFormModeloId')?.value || null,
         characterId: charId,
         ownerUid: user.uid,
-        equipado: !containerId,
+        equipado: false,
         parentItemId: containerId || null,
         criadoPor: window.isCreator ? 'criador' : (window.isMestre ? 'mestre' : 'jogador'),
         lastModified: new Date().toISOString(),
@@ -860,3 +1023,6 @@ window.recalcInventoryPressure = recalcInventoryPressure;
 window.renderEquippedItems = renderEquippedItems;
 window.renderInventoryTab = renderInventoryTab;
 window.openItemFormModal = openItemFormModal;
+window.openTransferModal = openTransferModal;
+window.closeTransferModal = closeTransferModal;
+window.transferItem = transferItem;

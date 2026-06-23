@@ -604,9 +604,72 @@
     color: #34d399;
 }
 
+/* === TRANSFER BUTTON === */
+.inv-btn-transfer {
+    padding: 8px 16px;
+    background: rgba(6, 182, 212, 0.15);
+    border: 2px solid rgba(6, 182, 212, 0.35);
+    border-radius: 8px;
+    color: #06b6d4;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.inv-btn-transfer:hover {
+    background: rgba(6, 182, 212, 0.25);
+    border-color: #06b6d4;
+    box-shadow: 0 2px 12px rgba(6, 182, 212, 0.2);
+}
+
+/* === TRANSFER TARGET LIST === */
+.inv-transfer-list {
+    display: grid;
+    gap: 8px;
+    max-height: 50vh;
+    overflow-y: auto;
+    padding: 4px;
+}
+.inv-transfer-target {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px;
+    background: rgba(15, 23, 42, 0.5);
+    border: 2px solid var(--line, rgba(139, 92, 246, 0.12));
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.inv-transfer-target:hover {
+    border-color: var(--primary, #8b5cf6);
+    background: rgba(139, 92, 246, 0.08);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+}
+.inv-transfer-target-master {
+    border-color: rgba(245, 158, 11, 0.3);
+    background: rgba(245, 158, 11, 0.06);
+}
+.inv-transfer-target-master:hover {
+    border-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.12);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+}
+.inv-transfer-target-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--light, #e2e8f0);
+}
+.inv-transfer-target-meta {
+    font-size: 0.78rem;
+    color: var(--muted, #64748b);
+}
+
 /* === RESPONSIVE === */
 @media (max-width: 600px) {
     .inv-form-grid { grid-template-columns: 1fr; }
     .inv-card { flex-wrap: wrap; }
     .inv-detail-grid { grid-template-columns: 1fr 1fr; }
+    .inv-modal-footer { flex-wrap: wrap; }
 }
+
