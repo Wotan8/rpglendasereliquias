@@ -16,7 +16,7 @@ function scheduleAutosave() {
 document.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.key) scheduleAutosave(); });
 
 function gatherData() {
-    const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, locacoes: [], rituais: [], ritos: [], mecanicasAplicadas: state.mecanicasAplicadas || {}, fieldBaseValues: state.fieldBaseValues || {}, appliedFieldBonuses: state.appliedFieldBonuses || {}, derivedOverrides: state.derivedOverrides || {}, auras: state.auras || {}, expApplied: state.expApplied || {} };
+    const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, locacoes: [], rituais: [], ritos: [], mecanicasAplicadas: state.mecanicasAplicadas || {}, fieldBaseValues: state.fieldBaseValues || {}, appliedFieldBonuses: state.appliedFieldBonuses || {}, derivedOverrides: state.derivedOverrides || {}, auras: state.auras || {}, expApplied: state.expApplied || {}, dvAtual: state.dvAtual || {} };
     document.querySelectorAll('[data-key]').forEach(el => {
         // Salvar o valor do DOM como está (incluindo edições manuais do usuário).
         // O sistema de appliedFieldBonuses garante que o bônus não será re-aplicado no reload.
@@ -212,6 +212,8 @@ function loadFromData(d) {
         else state.classModuleData = {};
         if (d.expApplied) state.expApplied = d.expApplied;
         else state.expApplied = {};
+        if (d.dvAtual) state.dvAtual = d.dvAtual;
+        else state.dvAtual = {};
 
         // === INVENTÁRIO do wizard: carregar itens estruturados ou array de strings ===
         if (d.inventoryItems && Array.isArray(d.inventoryItems) && d.inventoryItems.length > 0) {

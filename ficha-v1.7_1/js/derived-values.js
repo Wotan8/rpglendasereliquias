@@ -275,6 +275,28 @@ function renderDerivedValuesGrid() {
         grid.appendChild(miniField);
     });
 
+    // Limpar cache de bônus para campos "Atual" recriados, forçando
+    // _applyFieldBonuses() a re-aplicar os bônus de mecânica.
+    // Sem isso, o sistema vê que previousBonus === bonus e pula a
+    // atualização do DOM, deixando o campo em '0'.
+    if (state.appliedFieldBonuses || state.fieldBaseValues) {
+        for (const dvKey of _dynamicDerivedKeys) {
+            const dataKey = `dv_${dvKey}_atual`;
+            if (state.appliedFieldBonuses) delete state.appliedFieldBonuses[dataKey];
+            if (state.fieldBaseValues) delete state.fieldBaseValues[dataKey];
+        }
+    }
+
+    // Restaurar valores de state.dvAtual nos campos "Atual" recém-criados
+    if (state.dvAtual) {
+        for (const [dvKey, val] of Object.entries(state.dvAtual)) {
+            const atualEl = document.getElementById(`dv_${dvKey}_atual`);
+            if (atualEl && val !== undefined && val !== '') {
+                atualEl.value = val;
+            }
+        }
+    }
+
     // Setup tooltips after rendering
     initDerivedTooltips();
 }
