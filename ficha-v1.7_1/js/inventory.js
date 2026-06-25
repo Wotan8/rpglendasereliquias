@@ -454,13 +454,27 @@ function _renderOpenContainers() {
             const tipoEmoji = { 'Arma': '⚔️', 'Vestimenta': '🧥', 'Projétil': '🎯', 'Container': '📦', 'Objeto': '📦', 'Consumível': '🧪', 'Relíquia': '✨' }[i.tipo] || '📦';
             const iQty = Math.max(1, parseInt(i.quantidade) || 1);
             const iWeightTotal = ((i.peso || 0) * iQty).toFixed(2);
-            return `<div class="inv-container-item">
-                <span class="inv-item-name">${_escHtml(i.nome || 'Sem nome')}</span>
-                <span class="inv-item-meta">${tipoEmoji} | Peso: ${iWeightTotal}${iQty > 1 ? ` (${parseFloat(i.peso || 0).toFixed(2)} × ${iQty})` : ''}</span>
-                <input type="number" class="inv-qty-input" value="${iQty}" min="1" onchange="updateItemQuantity('${i.id}', this.value)" title="Quantidade">
-                <div class="inv-item-actions no-print">
-                    <button class="inv-btn inv-btn-remove" onclick="removeFromContainer('${i.id}')" title="Remover do container">📤</button>
-                    <button class="inv-btn inv-btn-delete" onclick="deleteInventoryItem('${i.id}')" title="Excluir">🗑️</button>
+            const iImg = i.imagem || i.imagemUrl;
+            const iImgHtml = iImg
+                ? `<img src="${_escHtml(iImg)}" class="inv-row-img" alt="">`
+                : `<div class="inv-row-img inv-row-img-ph">${tipoEmoji}</div>`;
+
+            // Quantity input — disable for Container type items (same rule as loose items)
+            const canEditQty = i.tipo !== 'Container';
+            const qtyHtml = canEditQty
+                ? `<input type="number" class="inv-qty-input" value="${iQty}" min="1" onclick="event.stopPropagation()" onchange="updateItemQuantity('${i.id}', this.value)" title="Quantidade">`
+                : `<span class="inv-badge inv-badge-qty" title="Quantidade">×${iQty}</span>`;
+
+            return `<div class="inv-container-item inv-item-row" onclick="openItemDetail('${i.id}')">
+                ${iImgHtml}
+                <div class="inv-item-info">
+                    <span class="inv-item-name">${_escHtml(i.nome || 'Sem nome')}</span>
+                    <span class="inv-item-meta">${tipoEmoji} ${_escHtml(i.tipo || '')} | Peso: ${iWeightTotal}${iQty > 1 ? ` (${parseFloat(i.peso || 0).toFixed(2)} × ${iQty})` : ''} | Tam: ${i.tamanho || 0}</span>
+                </div>
+                ${qtyHtml}
+                <div class="inv-item-actions no-print" onclick="event.stopPropagation()">
+                    <button class="inv-btn inv-btn-remove" onclick="event.stopPropagation();removeFromContainer('${i.id}')" title="Remover do container">📤</button>
+                    <button class="inv-btn inv-btn-delete" onclick="event.stopPropagation();deleteInventoryItem('${i.id}')" title="Excluir">🗑️</button>
                 </div>
             </div>`;
         }).join('');
@@ -855,9 +869,9 @@ window.openItemFormModal = function(title, item, containerId) {
                     <label class="inv-form-label">Tamanho</label>
                     <input type="number" id="invFormTamanho" class="inv-form-input" value="${item?.tamanho || 1}" min="0">
                 </div>
-                <div class="inv-form-group">
+                <div class="inv-form-group" id="invFormQuantidadeGroup" style="display:${(item?.tipo === 'Container' || item?.ehContainer) ? 'none' : 'flex'}">
                     <label class="inv-form-label">Quantidade</label>
-                    <input type="number" id="invFormQuantidade" class="inv-form-input" value="${item?.quantidade || 1}" min="1">
+                    <input type="number" id="invFormQuantidade" class="inv-form-input" value="${(item?.tipo === 'Container' || item?.ehContainer) ? 1 : (item?.quantidade || 1)}" min="1">
                 </div>
                 <div id="invContainerFields" class="inv-form-group inv-form-wide" style="display:${(item?.tipo === 'Container' || item?.ehContainer) ? 'grid' : 'none'}; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div class="inv-form-group">
@@ -935,7 +949,8 @@ window.saveInventoryItemForm = async function() {
         tipo,
         peso: parseFloat(document.getElementById('invFormPeso')?.value) || 1,
         tamanho: parseInt(document.getElementById('invFormTamanho')?.value) || 1,
-        quantidade: Math.max(1, parseInt(document.getElementById('invFormQuantidade')?.value) || 1),
+        // Containers NÃO podem ser "stacados" — quantidade sempre 1
+        quantidade: isContainer ? 1 : Math.max(1, parseInt(document.getElementById('invFormQuantidade')?.value) || 1),
         descricao: document.getElementById('invFormDesc')?.value?.trim() || '',
         imagem: document.getElementById('invFormImagem')?.value?.trim() || '',
         modeloId: document.getElementById('invFormModeloId')?.value || null,
@@ -1007,6 +1022,16 @@ window._toggleContainerFields = function() {
     if (fields) {
         fields.style.display = tipo === 'Container' ? 'grid' : 'none';
     }
+    // Containers NÃO podem ser "stacados" — ocultar campo de quantidade
+    const qtyGroup = document.getElementById('invFormQuantidadeGroup');
+    if (qtyGroup) {
+        qtyGroup.style.display = tipo === 'Container' ? 'none' : 'flex';
+    }
+    // Resetar quantidade para 1 quando for Container
+    if (tipo === 'Container') {
+        const qtyInput = document.getElementById('invFormQuantidade');
+        if (qtyInput) qtyInput.value = 1;
+    }
 };
 
 // ===== UTILITY =====
@@ -1014,6 +1039,106 @@ function _escHtml(str) {
     if (!str) return '';
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+// ===== MERGE / STACK SYSTEM =====
+/**
+ * Mescla itens idênticos no inventário, somando suas quantidades.
+ * Itens são considerados "idênticos" se possuem o mesmo:
+ *   nome, tipo, modeloId, peso, tamanho, descricao, imagem, parentItemId, equipado.
+ * Containers NUNCA são mesclados (não podem ser stacados).
+ * Retorna a quantidade de merges realizados.
+ */
+window.mergeInventoryItems = async function() {
+    const charId = _getCurrentCharId();
+    if (!charId) { alert('Erro: personagem não carregado'); return 0; }
+
+    const items = window._inventoryState.items;
+    if (items.length < 2) {
+        alert('ℹ️ Não há itens suficientes para mesclar.');
+        return 0;
+    }
+
+    // Chave de identidade para comparar itens
+    function _itemKey(item) {
+        return [
+            (item.nome || '').trim().toLowerCase(),
+            (item.tipo || '').toLowerCase(),
+            item.modeloId || '',
+            parseFloat(item.peso || 0),
+            parseInt(item.tamanho || 0),
+            (item.descricao || '').trim().toLowerCase(),
+            (item.imagem || item.imagemUrl || '').trim(),
+            item.parentItemId || '__root__',
+            !!item.equipado
+        ].join('||');
+    }
+
+    // Agrupar por chave — excluir Containers (nunca mesclam)
+    const groups = {};
+    for (const item of items) {
+        if (item.ehContainer || item.tipo === 'Container') continue;
+        const key = _itemKey(item);
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(item);
+    }
+
+    // Filtrar apenas grupos com 2+ itens
+    const mergeableGroups = Object.values(groups).filter(g => g.length > 1);
+    if (mergeableGroups.length === 0) {
+        alert('ℹ️ Nenhum item idêntico encontrado para mesclar.');
+        return 0;
+    }
+
+    // Confirmar
+    const totalMerges = mergeableGroups.reduce((sum, g) => sum + g.length - 1, 0);
+    const groupNames = mergeableGroups.map(g => `"${g[0].nome}" (${g.length} → 1)`).join('\n');
+    if (!confirm(`🔀 Mesclar ${totalMerges} item(ns) em ${mergeableGroups.length} stack(s)?\n\n${groupNames}`)) {
+        return 0;
+    }
+
+    let mergeCount = 0;
+    try {
+        for (const group of mergeableGroups) {
+            // O primeiro item do grupo é o "sobrevivente"
+            const survivor = group[0];
+            let totalQty = 0;
+            for (const item of group) {
+                totalQty += Math.max(1, parseInt(item.quantidade) || 1);
+            }
+
+            // Atualizar quantidade do sobrevivente
+            await _firestoreSetDoc('items', survivor.id, {
+                quantidade: totalQty,
+                lastModified: new Date().toISOString()
+            });
+            survivor.quantidade = totalQty;
+
+            // Excluir os demais
+            for (let i = 1; i < group.length; i++) {
+                await _firestoreDeleteDoc('items', group[i].id);
+                window._inventoryState.items = window._inventoryState.items.filter(x => x.id !== group[i].id);
+                mergeCount++;
+            }
+        }
+
+        renderEquippedItems();
+        renderInventoryTab();
+        recalcInventoryPressure();
+
+        // Re-apply mechanics
+        if (typeof applyAllRaceMechanics === 'function') {
+            const raca = document.getElementById('selRaca')?.value;
+            applyAllRaceMechanics(raca);
+        }
+        if (typeof recalcAll === 'function') recalcAll();
+
+        alert(`✅ ${mergeCount} item(ns) mesclado(s) com sucesso!`);
+    } catch (e) {
+        console.error('❌ Erro ao mesclar itens:', e);
+        alert('❌ Erro ao mesclar itens: ' + e.message);
+    }
+    return mergeCount;
+};
 
 // ===== EXPOSE GLOBALLY =====
 window.loadCharacterItems = loadCharacterItems;
@@ -1026,3 +1151,4 @@ window.openItemFormModal = openItemFormModal;
 window.openTransferModal = openTransferModal;
 window.closeTransferModal = closeTransferModal;
 window.transferItem = transferItem;
+window.mergeInventoryItems = mergeInventoryItems;

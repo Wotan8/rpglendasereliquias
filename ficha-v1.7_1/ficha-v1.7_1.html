@@ -280,7 +280,8 @@
             <div class="tab-content" id="tabInventario">
                 <div class="section">
                     <div class="section-title">📋 Inventário
-                        <button class="add-btn no-print" onclick="openItemFormModal('Criar Item')" style="margin-left:auto;font-size:0.8rem;padding:4px 12px;">+ Criar Item</button>
+                        <button class="add-btn no-print" onclick="mergeInventoryItems()" style="margin-left:auto;font-size:0.8rem;padding:4px 12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:#818cf8;" title="Mesclar itens idênticos em stacks">🔀 Mesclar</button>
+                        <button class="add-btn no-print" onclick="openItemFormModal('Criar Item')" style="font-size:0.8rem;padding:4px 12px;">+ Criar Item</button>
                     </div>
                     <div id="inventoryItemsGrid">
                         <div class="inv-empty">
@@ -291,17 +292,7 @@
                     </div>
                     <div id="containerViewer"></div>
                 </div>
-                <div class="section">
-                    <div class="section-title">💰 Luns — Moedas</div>
-                    <div class="money-grid">
-                        <div class="field"><label>Luni (L$)</label><input type="text" data-key="money_luni"
-                                placeholder="0"></div>
-                        <div class="field"><label>Ka'Luni (kL$)</label><input type="text" data-key="money_kaluni"
-                                placeholder="0"></div>
-                        <div class="field"><label>Mi'Luni (mL$)</label><input type="text" data-key="money_miluni"
-                                placeholder="0"></div>
-                    </div>
-                </div>
+
             </div>
 
             <!-- ======== PECULIARIDADES ======== -->

@@ -879,11 +879,6 @@ html.dark .test-total-field {
     outline-offset: 2px
 }
 
-.money-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--gap)
-}
 
 /* NOTES */
 .note-card {
@@ -1811,9 +1806,6 @@ button:hover {
         grid-template-columns: 1fr
     }
 
-    .money-grid {
-        grid-template-columns: repeat(3, 1fr)
-    }
 
     .equip-head.conditions,
     .equip-row.conditions {

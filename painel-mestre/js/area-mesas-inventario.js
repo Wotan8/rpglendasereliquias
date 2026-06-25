@@ -166,7 +166,7 @@ window._openMestreItemFormModal = async function(mesaId, editItemId) {
                 </div>
                 <div class="form-group">
                     <label class="form-label">Tipo</label>
-                    <select class="form-select" id="mif_tipo">
+                    <select class="form-select" id="mif_tipo" onchange="_toggleMestreContainerQty()">
                         <option value="Objeto" ${item?.tipo==='Objeto'?'selected':''}>📦 Objeto</option>
                         <option value="Arma" ${item?.tipo==='Arma'?'selected':''}>⚔️ Arma</option>
                         <option value="Vestimenta" ${item?.tipo==='Vestimenta'?'selected':''}>🧥 Vestimenta</option>
@@ -184,9 +184,9 @@ window._openMestreItemFormModal = async function(mesaId, editItemId) {
                     <label class="form-label">Tamanho</label>
                     <input type="number" class="form-input" id="mif_tamanho" value="${item?.tamanho || 1}" min="0">
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="mif_quantidadeGroup" style="display:${(item?.tipo === 'Container' || item?.ehContainer) ? 'none' : 'flex'}">
                     <label class="form-label">Quantidade</label>
-                    <input type="number" class="form-input" id="mif_quantidade" value="${item?.quantidade || 1}" min="1">
+                    <input type="number" class="form-input" id="mif_quantidade" value="${(item?.tipo === 'Container' || item?.ehContainer) ? 1 : (item?.quantidade || 1)}" min="1">
                 </div>
                 <div class="form-group" style="grid-column:1/-1">
                     <label class="form-label">Descrição</label>
@@ -222,7 +222,8 @@ window._saveMestreItem = async function() {
         tipo,
         peso: parseFloat(document.getElementById('mif_peso')?.value) || 1,
         tamanho: parseInt(document.getElementById('mif_tamanho')?.value) || 1,
-        quantidade: Math.max(1, parseInt(document.getElementById('mif_quantidade')?.value) || 1),
+        // Containers NÃO podem ser "stacados" — quantidade sempre 1
+        quantidade: isContainer ? 1 : Math.max(1, parseInt(document.getElementById('mif_quantidade')?.value) || 1),
         descricao: document.getElementById('mif_descricao')?.value?.trim() || '',
         imagem: document.getElementById('mif_imagem')?.value?.trim() || '',
         characterId: _getCaixaMestreId(mesaId),
@@ -367,3 +368,17 @@ window._executeMestreTransfer = async function(itemId, targetCharId, targetOwner
         showAlert('❌ Erro: ' + e.message, 'danger');
     }
 };
+
+// ===== TOGGLE CONTAINER QUANTITY (Mestre) =====
+window._toggleMestreContainerQty = function() {
+    const tipo = document.getElementById('mif_tipo')?.value;
+    const qtyGroup = document.getElementById('mif_quantidadeGroup');
+    if (qtyGroup) {
+        qtyGroup.style.display = tipo === 'Container' ? 'none' : 'flex';
+    }
+    if (tipo === 'Container') {
+        const qtyInput = document.getElementById('mif_quantidade');
+        if (qtyInput) qtyInput.value = 1;
+    }
+};
+

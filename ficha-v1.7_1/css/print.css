@@ -330,9 +330,6 @@
         grid-template-columns: 1fr 1fr !important;
     }
 
-    .money-grid {
-        grid-template-columns: repeat(3, 1fr) !important;
-    }
 
     .equip-head.conditions,
     .equip-row.conditions {
