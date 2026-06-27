@@ -7,7 +7,7 @@ let state = {
     dots: {}, notes: [], charImg: '', customTests: [], mainTestsOrder: [],
     mechanicBonuses: {}, mechanicLimits: {}, mecanicasAplicadas: {},
     mecanicasPendentes: [], capacidades: [], auras: {}, classModuleData: {},
-    expApplied: {}, expSessionTriggers: []
+    expApplied: {}, expSessionTriggers: [], conditions: []
 };
 let editingNoteId = null, testCount = 3;
 
@@ -39,7 +39,7 @@ window.initApp = function () {
     _appInitialized = true;
 
     initTabs(); initDots(); initSkills(); initCharImg();
-    addCondition();
+    if (typeof renderConditions === 'function') renderConditions();
 
     // Se o Firebase já carregou dados, não recarregar do localStorage
     if (!window._firebaseLoaded) {

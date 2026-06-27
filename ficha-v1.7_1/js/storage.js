@@ -119,6 +119,7 @@ function gatherData() {
     d.customTests = state.customTests || [];
     d.mainTestsOrder = state.mainTestsOrder || [];
     d.testColors = state.testColors || {};
+    d.conditions = state.conditions || [];
 
     // Gather peculiaridade levels (race, class, tribe)
     d.peculiaridadeLevels = {};
@@ -214,6 +215,35 @@ function loadFromData(d) {
         else state.expApplied = {};
         if (d.dvAtual) state.dvAtual = d.dvAtual;
         else state.dvAtual = {};
+
+        // Restore conditions (novo sistema)
+        if (d.conditions && Array.isArray(d.conditions)) {
+            state.conditions = d.conditions;
+        } else {
+            state.conditions = [];
+            // === MIGRAÇÃO: converter campos antigos cond_name_X / cond_tipo_X / cond_desc_X / cond_tempo_X ===
+            if (d.fields) {
+                const migrated = [];
+                for (let i = 0; i < 50; i++) {
+                    const nome = d.fields['cond_name_' + i];
+                    if (!nome || !nome.trim()) continue;
+                    migrated.push({
+                        nome: nome.trim(),
+                        descricao: (d.fields['cond_desc_' + i] || '').trim(),
+                        tempoAtual: '',
+                        tempoRestante: d.fields['cond_tempo_' + i] || '',
+                        modeloId: null,
+                        efeitoMecanicaIds: [],
+                        icone: '💀'
+                    });
+                }
+                if (migrated.length > 0) {
+                    state.conditions = migrated;
+                    console.log(`🔄 Migradas ${migrated.length} condição(ões) do formato antigo.`);
+                }
+            }
+        }
+        if (typeof renderConditions === 'function') renderConditions();
 
         // === INVENTÁRIO do wizard: carregar itens estruturados ou array de strings ===
         if (d.inventoryItems && Array.isArray(d.inventoryItems) && d.inventoryItems.length > 0) {

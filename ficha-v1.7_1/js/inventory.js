@@ -824,16 +824,18 @@ window.openItemFormModal = function(title, item, containerId) {
     modal.className = 'inv-modal active';
     modal.id = 'invFormModal';
 
-    // Se temos catálogo, mostrar picker
+    // Se temos catálogo, mostrar picker com busca
     const catalog = window._inventoryState.catalog || [];
     let catalogHtml = '';
     if (!isEdit && catalog.length > 0) {
+        const options = catalog.map(t => ({
+            value: t.id,
+            label: `${_escHtml(t.nome)} (${t.tipo || '-'})`,
+            sub: t.descricao ? t.descricao.substring(0, 60) + (t.descricao.length > 60 ? '...' : '') : ''
+        }));
         catalogHtml = `<div class="inv-form-section">
             <label class="inv-form-label">📚 Criar a partir do catálogo</label>
-            <select id="invCatalogPicker" class="inv-form-select" onchange="fillFromCatalog(this.value)">
-                <option value="">— Item personalizado —</option>
-                ${catalog.map(t => `<option value="${t.id}">${_escHtml(t.nome)} (${t.tipo || '-'})</option>`).join('')}
-            </select>
+            ${_createSearchableSelectHTML('invCatalogPicker', options, '— Item personalizado —', 'Pesquisar item...')}
         </div>`;
     }
 
@@ -902,6 +904,13 @@ window.openItemFormModal = function(title, item, containerId) {
         </div>
     </div>`;
     document.body.appendChild(modal);
+
+    // Initialize searchable select for catalog after DOM insertion
+    if (!isEdit && catalog.length > 0) {
+        _initSearchableSelect('invCatalogPicker', (value) => {
+            fillFromCatalog(value);
+        });
+    }
 };
 
 window.closeItemFormModal = function() {
@@ -1004,16 +1013,359 @@ window.saveInventoryItemForm = async function() {
 function addWeapon() {} // No-op: replaced by inventory system
 function addArmor() {}
 function addProjectile() {}
-function addCondition() {
-    // Conditions still work the old way
-    const c = document.getElementById('conditionsContainer'), i = cC++;
-    if (!c) return;
-    const r = document.createElement('div'); r.className = 'equip-row conditions';
-    r.innerHTML = `<input type="text" data-key="cond_name_${i}" placeholder="Condição"><input type="text" data-key="cond_tipo_${i}" placeholder="Tipo"><input type="text" data-key="cond_desc_${i}" placeholder="Descrição"><input type="text" data-key="cond_tempo_${i}" placeholder="0/0"><button class="rm-btn no-print" onclick="this.parentElement.remove();scheduleAutosave()">✕</button>`;
-    c.appendChild(r);
-    r.querySelectorAll('input').forEach(x => x.addEventListener('input', scheduleAutosave));
-}
 function addInventoryItem() {} // No-op: replaced by inventory system
+
+// ===== SEARCHABLE SELECT UTILITY =====
+/**
+ * Creates a searchable select dropdown component.
+ * @param {string} containerId - ID for the container div
+ * @param {Array} options - Array of { value, label, sub? } objects
+ * @param {Function} onChange - Callback(value) when option is selected
+ * @param {string} placeholder - Placeholder text
+ * @param {string} defaultLabel - Label for the default/empty option
+ * @returns {string} HTML string for the component
+ */
+function _createSearchableSelectHTML(containerId, options, defaultLabel, placeholder) {
+    const optionsHtml = options.map(opt =>
+        `<div class="searchable-select-option" data-value="${_escHtml(opt.value)}">
+            <div>${_escHtml(opt.label)}</div>
+            ${opt.sub ? `<div class="searchable-select-option-sub">${_escHtml(opt.sub)}</div>` : ''}
+        </div>`
+    ).join('');
+
+    return `<div class="searchable-select" id="${containerId}">
+        <input type="text" class="searchable-select-input" placeholder="${_escHtml(placeholder || 'Selecionar...')}" readonly>
+        <span class="searchable-select-arrow">▼</span>
+        <div class="searchable-select-dropdown">
+            <div class="searchable-select-search">
+                <input type="text" placeholder="🔍 Pesquisar..." autocomplete="off">
+            </div>
+            <div class="searchable-select-default" data-value="">${_escHtml(defaultLabel || '— Nenhum —')}</div>
+            <div class="searchable-select-options-list">
+                ${optionsHtml}
+            </div>
+            <div class="searchable-select-empty" style="display:none">Nenhum resultado encontrado</div>
+        </div>
+    </div>`;
+}
+
+/**
+ * Initializes the searchable select behavior after it's been added to the DOM.
+ * @param {string} containerId - ID of the container div
+ * @param {Function} onChange - Callback(value) when an option is selected
+ */
+function _initSearchableSelect(containerId, onChange) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const input = container.querySelector('.searchable-select-input');
+    const arrow = container.querySelector('.searchable-select-arrow');
+    const dropdown = container.querySelector('.searchable-select-dropdown');
+    const searchInput = dropdown.querySelector('.searchable-select-search input');
+    const optionsList = container.querySelector('.searchable-select-options-list');
+    const emptyMsg = container.querySelector('.searchable-select-empty');
+    const defaultOpt = container.querySelector('.searchable-select-default');
+
+    function toggleOpen(open) {
+        if (open) {
+            container.classList.add('open');
+            searchInput.value = '';
+            _filterOptions('');
+            setTimeout(() => searchInput.focus(), 50);
+        } else {
+            container.classList.remove('open');
+        }
+    }
+
+    function _filterOptions(query) {
+        const q = query.toLowerCase().trim();
+        const options = optionsList.querySelectorAll('.searchable-select-option');
+        let visible = 0;
+        options.forEach(opt => {
+            const text = opt.textContent.toLowerCase();
+            const match = !q || text.includes(q);
+            opt.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        if (defaultOpt) defaultOpt.style.display = q ? 'none' : '';
+        emptyMsg.style.display = (visible === 0 && q) ? '' : 'none';
+    }
+
+    function selectOption(value, label) {
+        input.value = label || '';
+        container.dataset.selectedValue = value || '';
+        toggleOpen(false);
+        if (onChange) onChange(value);
+    }
+
+    // Toggle dropdown on input click
+    input.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleOpen(!container.classList.contains('open'));
+    });
+
+    // Search filtering
+    searchInput.addEventListener('input', () => {
+        _filterOptions(searchInput.value);
+    });
+    searchInput.addEventListener('click', (e) => e.stopPropagation());
+
+    // Default option click
+    if (defaultOpt) {
+        defaultOpt.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectOption('', '');
+        });
+    }
+
+    // Option clicks
+    optionsList.querySelectorAll('.searchable-select-option').forEach(opt => {
+        opt.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const val = opt.dataset.value;
+            const label = opt.querySelector('div').textContent;
+            selectOption(val, label);
+        });
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener('click', () => toggleOpen(false));
+    dropdown.addEventListener('click', (e) => e.stopPropagation());
+}
+
+// ===== CONDITION SYSTEM =====
+
+/**
+ * Opens the condition form modal (replaces old inline addCondition).
+ * Similar UX to openItemFormModal.
+ */
+function addCondition() {
+    openConditionFormModal('Criar Condição');
+}
+
+function openConditionFormModal(title, condition, editIndex) {
+    let existing = document.getElementById('condFormModal');
+    if (existing) existing.remove();
+
+    const isEdit = editIndex != null;
+    const modal = document.createElement('div');
+    modal.className = 'inv-modal active';
+    modal.id = 'condFormModal';
+
+    // Build template picker from system data
+    const templates = (window._systemData?.conditions || []).filter(c => c.publicado !== false);
+    let templatePickerHtml = '';
+    if (!isEdit && templates.length > 0) {
+        const options = templates.map(t => ({
+            value: t.id,
+            label: `${t.icone || '💀'} ${t.nome}`,
+            sub: t.duracao ? `Duração: ${t.duracao}` : ''
+        }));
+        templatePickerHtml = `<div class="inv-form-section">
+            <label class="inv-form-label">📚 Criar a partir de modelo (Painel do Mestre)</label>
+            ${_createSearchableSelectHTML('condTemplatePicker', options, '— Condição personalizada —', 'Pesquisar condição...')}
+        </div>`;
+    }
+
+    modal.innerHTML = `<div class="inv-modal-content" style="max-width:600px">
+        <div class="inv-modal-header">
+            <span class="inv-modal-title">${title || (isEdit ? 'Editar Condição' : 'Criar Condição')}</span>
+            <button class="inv-modal-close" onclick="closeConditionFormModal()">✕</button>
+        </div>
+        <div class="inv-modal-body">
+            ${templatePickerHtml}
+            <div class="inv-form-grid">
+                <div class="inv-form-group inv-form-wide">
+                    <label class="inv-form-label">Nome *</label>
+                    <input type="text" id="condFormNome" class="inv-form-input" value="${_escHtml(condition?.nome || '')}" placeholder="Nome da condição">
+                </div>
+                <div class="inv-form-group inv-form-wide">
+                    <label class="inv-form-label">Descrição</label>
+                    <textarea id="condFormDesc" class="inv-form-textarea" rows="3" placeholder="Descrição da condição">${_escHtml(condition?.descricao || '')}</textarea>
+                </div>
+                <div class="inv-form-group">
+                    <label class="inv-form-label">⏱️ Tempo Atual</label>
+                    <input type="text" id="condFormTempoAtual" class="inv-form-input" value="${_escHtml(condition?.tempoAtual || '')}" placeholder="0">
+                </div>
+                <div class="inv-form-group">
+                    <label class="inv-form-label">⏱️ Tempo Restante</label>
+                    <input type="text" id="condFormTempoRestante" class="inv-form-input" value="${_escHtml(condition?.tempoRestante || '')}" placeholder="0">
+                </div>
+                <div class="inv-form-group">
+                    <label class="inv-form-label">Ícone / Emoji</label>
+                    <input type="text" id="condFormIcone" class="inv-form-input" value="${_escHtml(condition?.icone || '💀')}" placeholder="💀" maxlength="4">
+                </div>
+            </div>
+            <input type="hidden" id="condFormModeloId" value="${condition?.modeloId || ''}">
+            <input type="hidden" id="condFormMechIds" value="${(condition?.efeitoMecanicaIds || []).join(',')}">
+            ${isEdit ? `<input type="hidden" id="condFormEditIndex" value="${editIndex}">` : ''}
+        </div>
+        <div class="inv-modal-footer">
+            <button class="inv-btn-cancel" onclick="closeConditionFormModal()">Cancelar</button>
+            <button class="inv-btn-save" onclick="saveConditionForm()">💾 Salvar</button>
+        </div>
+    </div>`;
+
+    document.body.appendChild(modal);
+
+    // Initialize searchable select after DOM insertion
+    if (!isEdit && templates.length > 0) {
+        _initSearchableSelect('condTemplatePicker', (value) => {
+            _fillConditionFromTemplate(value);
+        });
+    }
+}
+
+window.closeConditionFormModal = function() {
+    document.getElementById('condFormModal')?.remove();
+};
+
+function _fillConditionFromTemplate(templateId) {
+    if (!templateId) {
+        // Reset to empty
+        document.getElementById('condFormNome').value = '';
+        document.getElementById('condFormDesc').value = '';
+        document.getElementById('condFormTempoAtual').value = '';
+        document.getElementById('condFormTempoRestante').value = '';
+        document.getElementById('condFormIcone').value = '💀';
+        document.getElementById('condFormModeloId').value = '';
+        document.getElementById('condFormMechIds').value = '';
+        return;
+    }
+
+    const tpl = (window._systemData?.conditions || []).find(c => c.id === templateId);
+    if (!tpl) return;
+
+    document.getElementById('condFormNome').value = tpl.nome || '';
+    document.getElementById('condFormDesc').value = tpl.descricao || '';
+    document.getElementById('condFormTempoAtual').value = '';
+    document.getElementById('condFormTempoRestante').value = tpl.duracao || '';
+    document.getElementById('condFormIcone').value = tpl.icone || '💀';
+    document.getElementById('condFormModeloId').value = tpl.id;
+    document.getElementById('condFormMechIds').value = (tpl.efeitoMecanicaIds || []).join(',');
+}
+
+window.saveConditionForm = function() {
+    const nome = document.getElementById('condFormNome')?.value?.trim();
+    if (!nome) { alert('Nome obrigatório'); return; }
+
+    const condData = {
+        nome,
+        descricao: document.getElementById('condFormDesc')?.value?.trim() || '',
+        tempoAtual: document.getElementById('condFormTempoAtual')?.value?.trim() || '',
+        tempoRestante: document.getElementById('condFormTempoRestante')?.value?.trim() || '',
+        icone: document.getElementById('condFormIcone')?.value?.trim() || '💀',
+        modeloId: document.getElementById('condFormModeloId')?.value || null,
+        efeitoMecanicaIds: (document.getElementById('condFormMechIds')?.value || '').split(',').filter(Boolean)
+    };
+
+    const editIndexEl = document.getElementById('condFormEditIndex');
+    if (editIndexEl) {
+        const idx = parseInt(editIndexEl.value);
+        if (idx >= 0 && idx < state.conditions.length) {
+            state.conditions[idx] = condData;
+        }
+    } else {
+        state.conditions.push(condData);
+    }
+
+    closeConditionFormModal();
+    renderConditions();
+    scheduleAutosave();
+};
+
+window.removeCondition = function(idx) {
+    if (idx >= 0 && idx < state.conditions.length) {
+        state.conditions.splice(idx, 1);
+        renderConditions();
+        scheduleAutosave();
+    }
+};
+
+window.editCondition = function(idx) {
+    if (idx >= 0 && idx < state.conditions.length) {
+        openConditionFormModal('Editar Condição', state.conditions[idx], idx);
+    }
+};
+
+/**
+ * Renders all active conditions as cards in #conditionsContainer.
+ */
+function renderConditions() {
+    const container = document.getElementById('conditionsContainer');
+    if (!container) return;
+
+    const conditions = state.conditions || [];
+
+    if (conditions.length === 0) {
+        container.innerHTML = `<div class="cond-empty">
+            <span class="cond-empty-icon">💀</span>
+            <span>Nenhuma condição ativa</span>
+            <small style="color:var(--muted)">Adicione condições pelo botão abaixo</small>
+        </div>`;
+        return;
+    }
+
+    let html = '';
+    conditions.forEach((cond, idx) => {
+        const icon = cond.icone || '💀';
+        const nome = _escHtml(cond.nome || 'Sem nome');
+        const desc = cond.descricao ? `<div class="cond-card-desc">${_escHtml(cond.descricao)}</div>` : '';
+
+        // Mechanic preview tags
+        let mechHtml = '';
+        const mechIds = cond.efeitoMecanicaIds || [];
+        if (mechIds.length > 0) {
+            const tags = [];
+            for (const mid of mechIds) {
+                const m = window._systemData?.mechanics?.find(x => x.id === mid);
+                if (m && typeof generatePreviewText === 'function') {
+                    tags.push(`<span class="cond-mech-tag">${_escHtml(generatePreviewText(m))}</span>`);
+                }
+            }
+            if (tags.length > 0) {
+                mechHtml = `<div class="cond-card-mechs">
+                    <span class="cond-card-mechs-label">⚙️ Mecânicas:</span>
+                    ${tags.join('')}
+                </div>`;
+            }
+        }
+
+        // Time inputs
+        const tempoAtual = _escHtml(cond.tempoAtual || '');
+        const tempoRestante = _escHtml(cond.tempoRestante || '');
+        const timeHtml = `<div class="cond-card-time">
+            <span class="cond-card-time-label">⏱️ Tempo:</span>
+            <input type="text" class="cond-time-input" value="${tempoAtual}" placeholder="0"
+                data-cond-idx="${idx}" data-cond-field="tempoAtual"
+                oninput="updateConditionTime(${idx}, 'tempoAtual', this.value)">
+            <span class="cond-time-sep">/</span>
+            <input type="text" class="cond-time-input" value="${tempoRestante}" placeholder="0"
+                data-cond-idx="${idx}" data-cond-field="tempoRestante"
+                oninput="updateConditionTime(${idx}, 'tempoRestante', this.value)">
+        </div>`;
+
+        html += `<div class="cond-card">
+            <div class="cond-card-header">
+                <span class="cond-card-icon">${icon}</span>
+                <span class="cond-card-name">${nome}</span>
+                <button class="cond-card-remove no-print" onclick="removeCondition(${idx})" title="Remover condição">✕</button>
+            </div>
+            ${desc}
+            ${mechHtml}
+            ${timeHtml}
+        </div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+window.updateConditionTime = function(idx, field, value) {
+    if (idx >= 0 && idx < state.conditions.length) {
+        state.conditions[idx][field] = value;
+        scheduleAutosave();
+    }
+};
 
 // ===== TOGGLE CONTAINER FIELDS =====
 window._toggleContainerFields = function() {
@@ -1152,3 +1504,6 @@ window.openTransferModal = openTransferModal;
 window.closeTransferModal = closeTransferModal;
 window.transferItem = transferItem;
 window.mergeInventoryItems = mergeInventoryItems;
+window.renderConditions = renderConditions;
+window.addCondition = addCondition;
+window.openConditionFormModal = openConditionFormModal;
