@@ -373,6 +373,8 @@ function applyAllRaceMechanics(racaNome) {
     // Apply mechanics linked to vital stats (from Firebase)
     applyVitalStatsMechanics();
 
+    if (typeof applyConditionMechanics === 'function') applyConditionMechanics();
+
     if (!racaNome || !window.RACES) {
         // Even without a race, apply class and tribe peculiarity mechanics
         _applyClassPeculiarityMechanics();
@@ -541,6 +543,44 @@ function applyVitalStatsMechanics() {
             }
 
             applyMechanicToSheet(mech, null);
+        }
+    }
+}
+
+/* ===== APLICAR MECÂNICAS VINCULADAS A CONDIÇÕES ===== */
+function applyConditionMechanics() {
+    if (!state.conditions || !Array.isArray(state.conditions) || !window._systemData?.mechanics) return;
+
+    const mechanicsById = {};
+    for (const m of window._systemData.mechanics) {
+        mechanicsById[m.id] = m;
+    }
+
+    const processedMechIds = new Set();
+
+    for (const cond of state.conditions) {
+        if (!cond.efeitoMecanicaIds || !Array.isArray(cond.efeitoMecanicaIds)) continue;
+        for (const mechId of cond.efeitoMecanicaIds) {
+            // Note: we don't skip processedMechIds here because multiple conditions might apply the same mechanic.
+            // But we should track it if we want it to stack or not. Typically, mechanics from different sources stack unless specified.
+            const mech = mechanicsById[mechId];
+            if (!mech) continue;
+
+            if (mech.tipo === 'modificar'
+                && (!mech.duracao || mech.duracao === 'permanente')
+                && !mech.condicaoAplicacao?.trim()
+                && _mechHasSheetRefs(mech)) {
+                _derivedValueMechanicsRaw.push(mech);
+                continue;
+            }
+
+            const sourcePec = {
+                nome: `Condição: ${cond.nome}`,
+                id: cond.modeloId || 'cond_custom',
+                nivelAtual: 1
+            };
+
+            applyMechanicToSheet(mech, sourcePec);
         }
     }
 }
@@ -1446,6 +1486,31 @@ function getAffectingMechanics(propertyName, opts) {
                         tipo: 'vinculo_skill'
                     });
                 }
+            }
+        }
+    }
+
+    // ---- 7. Mecânicas vinculadas a Condições que afetam este alvo ----
+    if (state.conditions && Array.isArray(state.conditions)) {
+        for (const cond of state.conditions) {
+            if (!cond.efeitoMecanicaIds || !Array.isArray(cond.efeitoMecanicaIds)) continue;
+            for (const mechId of cond.efeitoMecanicaIds) {
+                // Allows same mechanic from different conditions by prefixing ID with condition index/name
+                const uniqueMechId = mechId + ':cond:' + cond.nome;
+                if (seenMechIds.has(uniqueMechId)) continue;
+                
+                const mech = (window._systemData?.mechanics || []).find(m => m.id === mechId);
+                if (!mech) continue;
+                if (!_mechAffectsTarget(mech)) continue;
+                
+                seenMechIds.add(uniqueMechId);
+                const preview = typeof generatePreviewText === 'function'
+                    ? generatePreviewText(mech) : (mech.descricao || '');
+                results.push({
+                    fonte: `Condição: ${cond.nome}`,
+                    preview: preview,
+                    tipo: 'vinculo_condicao'
+                });
             }
         }
     }

@@ -1271,6 +1271,7 @@ window.saveConditionForm = function() {
 
     closeConditionFormModal();
     renderConditions();
+    _triggerConditionMechanicsUpdate();
     scheduleAutosave();
 };
 
@@ -1278,6 +1279,7 @@ window.removeCondition = function(idx) {
     if (idx >= 0 && idx < state.conditions.length) {
         state.conditions.splice(idx, 1);
         renderConditions();
+        _triggerConditionMechanicsUpdate();
         scheduleAutosave();
     }
 };
@@ -1366,6 +1368,15 @@ window.updateConditionTime = function(idx, field, value) {
         scheduleAutosave();
     }
 };
+
+function _triggerConditionMechanicsUpdate() {
+    if (typeof applyAllRaceMechanics === 'function') {
+        const raca = document.getElementById('selRaca')?.value;
+        applyAllRaceMechanics(raca);
+    }
+    if (typeof recalcAll === 'function') recalcAll();
+    if (typeof recalcMainTests === 'function') recalcMainTests();
+}
 
 // ===== TOGGLE CONTAINER FIELDS =====
 window._toggleContainerFields = function() {
