@@ -138,8 +138,47 @@ function renderDerivedValuesGrid() {
     // Renderizar grid
     grid.innerHTML = '';
 
+    // Agrupar por Blocos
+    const blocksMap = new Map();
+
     applicableDVs.forEach(dv => {
-        const miniField = document.createElement('div');
+        const bId = dv.blocoId || 'geral';
+        if (!blocksMap.has(bId)) {
+            blocksMap.set(bId, {
+                id: bId,
+                nome: dv.blocoNome || (bId === 'geral' ? 'Geral' : bId),
+                ordem: (dv.blocoOrdem !== undefined && dv.blocoOrdem !== '') ? Number(dv.blocoOrdem) : 999,
+                dvs: []
+            });
+        }
+        blocksMap.get(bId).dvs.push(dv);
+    });
+
+    const blocksArray = Array.from(blocksMap.values());
+    blocksArray.sort((a, b) => {
+        if (a.id === 'geral') return 1;
+        if (b.id === 'geral') return -1;
+        return a.ordem - b.ordem;
+    });
+
+    blocksArray.forEach(block => {
+        const blockContainer = document.createElement('div');
+        blockContainer.className = 'dv-block-container';
+        blockContainer.style.marginBottom = '16px';
+
+        if (block.nome) {
+            const titleEl = document.createElement('div');
+            titleEl.className = 'attr-block-title';
+            titleEl.style.marginBottom = '8px';
+            titleEl.textContent = block.nome;
+            blockContainer.appendChild(titleEl);
+        }
+
+        const blockGrid = document.createElement('div');
+        blockGrid.className = 'combat-grid';
+
+        block.dvs.forEach(dv => {
+            const miniField = document.createElement('div');
         miniField.className = 'mini-field';
         miniField.dataset.dvId = dv.id;
         miniField.dataset.dvKey = dv.key;
@@ -272,7 +311,11 @@ function renderDerivedValuesGrid() {
             }
         }
 
-        grid.appendChild(miniField);
+        blockGrid.appendChild(miniField);
+        });
+
+        blockContainer.appendChild(blockGrid);
+        grid.appendChild(blockContainer);
     });
 
     // Limpar cache de bônus para campos "Atual" recriados, forçando

@@ -810,6 +810,9 @@ function buildDerivedValuesFromFirebase() {
             mechPreviews: mechPreviews,
             campoAtual: dv.campoAtual === true,
             campoEditavel: dv.campoEditavel === true,
+            blocoId: dv.blocoId || '',
+            blocoNome: dv.blocoNome || '',
+            blocoOrdem: dv.blocoOrdem,
         };
     });
 

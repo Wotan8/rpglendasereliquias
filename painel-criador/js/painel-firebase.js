@@ -240,6 +240,9 @@ const MODULE_DEFS = {
         collection: 'system/data/derivedValues',
         fields: [
             { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Percepção, Iniciativa, Carga' },
+            { key: 'blocoId', label: 'ID do Bloco', type: 'text', placeholder: 'ex: combat, senses, etc' },
+            { key: 'blocoNome', label: 'Nome do Bloco', type: 'text', placeholder: 'Ex: Combate, Sentidos' },
+            { key: 'blocoOrdem', label: 'Ordem do Bloco', type: 'number', placeholder: '1' },
             { key: 'ordem', label: 'Ordem na Ficha', type: 'number', required: true, placeholder: '1' },
             { key: 'icone', label: 'Ícone / Emoji', type: 'text', placeholder: 'Ex: 👁️, ⚡' },
             { key: 'prefixo', label: 'Prefixo (exibido antes do valor)', type: 'text', placeholder: 'Ex: +, ≥, ~' },
