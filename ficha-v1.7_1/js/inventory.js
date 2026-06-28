@@ -893,6 +893,10 @@ window.openItemFormModal = function(title, item, containerId) {
                     <label class="inv-form-label">Imagem (URL)</label>
                     <input type="text" id="invFormImagem" class="inv-form-input" value="${_escHtml(item?.imagem || item?.imagemUrl || '')}" placeholder="https://...">
                 </div>
+                <div class="inv-form-group inv-form-wide" id="invFormMechanicsGroup" style="display:none; margin-top: 8px;">
+                    <label class="inv-form-label" style="color: var(--accent-color);">✨ Efeitos do Item</label>
+                    <div id="invFormMechanicsPreview" style="background:var(--bg-lighter); padding:10px; border-radius:6px; font-size:0.9rem; color:var(--text-color); border: 1px solid var(--border-color); line-height: 1.4;"></div>
+                </div>
             </div>
             <input type="hidden" id="invFormModeloId" value="${item?.modeloId || ''}">
             <input type="hidden" id="invFormContainerId" value="${containerId || ''}">
@@ -937,6 +941,30 @@ window.fillFromCatalog = function(templateId) {
         document.getElementById('invFormMultPressao').value = tpl.multiplicadorPressao || 1;
     }
     _toggleContainerFields();
+
+    // Mostrar preview das mecânicas, se houver
+    const mechGroup = document.getElementById('invFormMechanicsGroup');
+    const mechPreview = document.getElementById('invFormMechanicsPreview');
+    if (mechGroup && mechPreview) {
+        if (tpl.mecanicaIds && tpl.mecanicaIds.length > 0 && window._systemData && window._systemData.mechanics) {
+            const previews = [];
+            for (const mechId of tpl.mecanicaIds) {
+                const mech = window._systemData.mechanics.find(m => m.id === mechId);
+                if (mech) {
+                    const txt = (typeof generatePreviewText === 'function') ? generatePreviewText(mech) : (mech.previewTexto || mech.descricao || '');
+                    if (txt) previews.push(`• ${_escHtml(txt)}`);
+                }
+            }
+            if (previews.length > 0) {
+                mechPreview.innerHTML = previews.join('<br>');
+                mechGroup.style.display = 'block';
+            } else {
+                mechGroup.style.display = 'none';
+            }
+        } else {
+            mechGroup.style.display = 'none';
+        }
+    }
 };
 
 window.saveInventoryItemForm = async function() {
