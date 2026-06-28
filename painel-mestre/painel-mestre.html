@@ -186,10 +186,122 @@
                     <button class="btn btn-secondary btn-small" onclick="bulkImportNpcs()">📥 Importar</button>
                     <button class="btn btn-danger btn-small" onclick="deleteSelectedNpcs()">🗑️ Deletar</button>
                 </div>
-                <div class="npc-filters">
-                    <div class="form-group"><label class="form-label">Buscar</label><input type="text" class="form-input" id="npcSearchInput" placeholder="Nome do NPC..." oninput="filterNpcs()"></div>
-                    <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="npcFilterType" onchange="filterNpcs()"><option value="">Todos</option><option value="npc">NPC</option><option value="criatura">Criatura</option></select></div>
-                    <div class="form-group"><label class="form-label">Tags</label><input type="text" class="form-input" id="npcFilterTags" placeholder="Tags..." oninput="filterNpcs()"></div>
+                <div class="npc-filters-advanced-container">
+                    <!-- Nível 1: Barra Principal -->
+                    <div class="npc-filters-main-bar" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:8px;">
+                        <div class="form-group" style="flex: 1; min-width: 200px;">
+                            <label class="form-label">Buscar Geral</label>
+                            <input type="text" class="form-input" id="npcSearchInput" placeholder="Nome, local, tags, história..." oninput="debounceFilterNpcs()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Ordenação</label>
+                            <select class="form-select" id="npcSortSelect" onchange="filterNpcs()">
+                                <option value="nome-asc">Nome A-Z</option>
+                                <option value="nome-desc">Nome Z-A</option>
+                                <option value="ai-desc">AI ↓</option>
+                                <option value="ai-asc">AI ↑</option>
+                                <option value="vit-desc">VIT ↓</option>
+                                <option value="vit-asc">VIT ↑</option>
+                                <option value="recente">Mais recente</option>
+                                <option value="antigo">Mais antigo</option>
+                                <option value="random">Aleatório</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="toggleAdvancedNpcFilters()" style="height: 38px; display:flex; align-items:center; gap:6px;">
+                            ⚙️ Filtros <span id="advFilterBadge" class="filter-badge" style="display:none">0</span>
+                        </button>
+                        <button class="btn btn-secondary" id="clearAdvFiltersBtn" onclick="clearAllNpcFilters()" style="height: 38px; display:none;">🧹 Limpar</button>
+                        <div style="margin-left:auto; font-size:0.85rem; color:var(--muted); font-weight:600; display:flex; align-items:center; height:38px;" id="npcCountDisplay">
+                            Carregando...
+                        </div>
+                    </div>
+                    
+                    <!-- Chips de Filtros Ativos -->
+                    <div id="npcActiveFilterChips" class="active-filter-chips" style="display:none; gap:6px; flex-wrap:wrap; margin-bottom:10px;"></div>
+
+                    <!-- Nível 2: Painel Avançado -->
+                    <div id="npcAdvancedPanel" class="npc-advanced-panel" style="display:none;">
+                        
+                        <div class="adv-filters-section">
+                            <div class="adv-filters-header">📋 Identificação</div>
+                            <div class="adv-filters-grid">
+                                <div class="form-group"><label class="form-label">Tipo</label><select class="form-select adv-filter" id="advF_tipo" onchange="filterNpcs()"><option value="">Todos</option><option value="npc">👤 NPC</option><option value="criatura">🐉 Criatura</option></select></div>
+                                <div class="form-group"><label class="form-label">Porte</label><select class="form-select adv-filter" id="advF_porte" onchange="filterNpcs()"><option value="">Todos</option><option value="Míudo">Míudo</option><option value="Pequeno">Pequeno</option><option value="Médio">Médio</option><option value="Grande">Grande</option><option value="Enorme">Enorme</option><option value="Colossal">Colossal</option></select></div>
+                                <div class="form-group"><label class="form-label">Papel</label><input type="text" class="form-input adv-filter" id="advF_papel" placeholder="Ex: Ferreiro" oninput="debounceFilterNpcs()"></div>
+                                <div class="form-group"><label class="form-label">Local</label><input type="text" class="form-input adv-filter" id="advF_local" placeholder="Ex: Kensari" oninput="debounceFilterNpcs()"></div>
+                                <div class="form-group"><label class="form-label">Raça</label><input type="text" class="form-input adv-filter" id="advF_raca" placeholder="Ex: Humano" oninput="debounceFilterNpcs()"></div>
+                                <div class="form-group"><label class="form-label">Tribo</label><input type="text" class="form-input adv-filter" id="advF_tribo" placeholder="Tribo..." oninput="debounceFilterNpcs()"></div>
+                                <div class="form-group"><label class="form-label">Classe</label><input type="text" class="form-input adv-filter" id="advF_classe" placeholder="Classe..." oninput="debounceFilterNpcs()"></div>
+                                <div class="form-group"><label class="form-label">Tags (CSV)</label><input type="text" class="form-input adv-filter" id="advF_tags" placeholder="tag1, tag2..." oninput="debounceFilterNpcs()"></div>
+                                <div class="form-group"><label class="form-label">Imagem</label><select class="form-select adv-filter" id="advF_imagem" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Com imagem</option><option value="nao">Sem imagem</option></select></div>
+                            </div>
+                        </div>
+
+                        <div class="adv-filters-section">
+                            <div class="adv-filters-header">💪 Atributos (Min/Max)</div>
+                            <div class="adv-filters-grid attrs-grid">
+                                <div class="form-group"><label class="form-label">INT</label><div class="range-inputs"><input type="number" id="advF_int_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_int_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">RAC</label><div class="range-inputs"><input type="number" id="advF_rac_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_rac_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">PRS</label><div class="range-inputs"><input type="number" id="advF_prs_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_prs_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">FOR</label><div class="range-inputs"><input type="number" id="advF_for_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_for_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">DES</label><div class="range-inputs"><input type="number" id="advF_des_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_des_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">VIG</label><div class="range-inputs"><input type="number" id="advF_vig_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_vig_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">PRE</label><div class="range-inputs"><input type="number" id="advF_pre_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_pre_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">MAN</label><div class="range-inputs"><input type="number" id="advF_man_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_man_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">AUT</label><div class="range-inputs"><input type="number" id="advF_aut_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_aut_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">AI</label><div class="range-inputs"><input type="number" id="advF_ai_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_ai_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                            </div>
+                        </div>
+
+                        <div class="adv-filters-section">
+                            <div class="adv-filters-header">📊 Valores Derivados (Min/Max)</div>
+                            <div class="adv-filters-grid">
+                                <div class="form-group"><label class="form-label">VIT</label><div class="range-inputs"><input type="number" id="advF_vit_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_vit_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">ENER</label><div class="range-inputs"><input type="number" id="advF_ener_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_ener_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">SAN</label><div class="range-inputs"><input type="number" id="advF_san_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_san_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                            </div>
+                        </div>
+
+                        <div class="adv-filters-section">
+                            <div class="adv-filters-header">🎭 Role-Play</div>
+                            <div class="adv-filters-grid">
+                                <div class="form-group"><label class="form-label">Motivação</label><select class="form-select adv-filter" id="advF_mot" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Tem</option><option value="nao">Não tem</option></select></div>
+                                <div class="form-group"><label class="form-label">Segredos</label><select class="form-select adv-filter" id="advF_seg" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Tem</option><option value="nao">Não tem</option></select></div>
+                                <div class="form-group"><label class="form-label">Aliado</label><select class="form-select adv-filter" id="advF_ali" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Tem</option><option value="nao">Não tem</option></select></div>
+                                <div class="form-group"><label class="form-label">Rival</label><select class="form-select adv-filter" id="advF_riv" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Tem</option><option value="nao">Não tem</option></select></div>
+                                <div class="form-group"><label class="form-label">Devedor</label><select class="form-select adv-filter" id="advF_dev" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Tem</option><option value="nao">Não tem</option></select></div>
+                                <div class="form-group" style="grid-column: 1 / -1;"><label class="form-label">Busca RP Livre</label><input type="text" class="form-input adv-filter" id="advF_rpBusca" placeholder="Pesquisa em toda história, motivações, segredos, falas..." oninput="debounceFilterNpcs()"></div>
+                            </div>
+                        </div>
+
+                        <div class="adv-filters-section">
+                            <div class="adv-filters-header">🎁 Loot</div>
+                            <div class="adv-filters-grid">
+                                <div class="form-group"><label class="form-label">Tem itens?</label><select class="form-select adv-filter" id="advF_lootItens" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Sim</option><option value="nao">Não</option></select></div>
+                                <div class="form-group"><label class="form-label">Tem pistas?</label><select class="form-select adv-filter" id="advF_lootPistas" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Sim</option><option value="nao">Não</option></select></div>
+                                <div class="form-group"><label class="form-label">Complicações?</label><select class="form-select adv-filter" id="advF_lootComp" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Sim</option><option value="nao">Não</option></select></div>
+                                <div class="form-group"><label class="form-label">Luns (Extração)</label><div class="range-inputs"><input type="number" id="advF_luns_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_luns_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                            </div>
+                        </div>
+
+                        <div class="adv-filters-section" id="advF_criaturaSection">
+                            <div class="adv-filters-header">🐉 Criatura</div>
+                            <div class="adv-filters-grid">
+                                <div class="form-group"><label class="form-label">Nível de Ameaça</label><select class="form-select adv-filter" id="advF_ameaca" onchange="filterNpcs()"><option value="">Todos</option><option value="inofensivo">Inofensivo</option><option value="baixo">Baixo</option><option value="medio">Médio</option><option value="alto">Alto</option><option value="letal">Letal</option></select></div>
+                                <div class="form-group"><label class="form-label">Habitat</label><input type="text" class="form-input adv-filter" id="advF_habitat" placeholder="Ex: Floresta" oninput="debounceFilterNpcs()"></div>
+                                <div class="form-group"><label class="form-label">Dieta</label><input type="text" class="form-input adv-filter" id="advF_dieta" placeholder="Ex: Carnívoro" oninput="debounceFilterNpcs()"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="adv-filters-section">
+                            <div class="adv-filters-header">🔗 Vínculo de Mesa</div>
+                            <div class="adv-filters-grid">
+                                <div class="form-group"><label class="form-label">Vínculo</label><select class="form-select adv-filter" id="advF_vinculo" onchange="onVinculoChange()"><option value="">Indiferente</option><option value="com_mesa">Vinculado a alguma</option><option value="sem_mesa">Sem vínculo</option><option value="especifica">Mesa específica...</option></select></div>
+                                <div class="form-group" id="advF_mesaEspecificaContainer" style="display:none;"><label class="form-label">Mesa Específica</label><select class="form-select adv-filter" id="advF_mesaEsp" onchange="filterNpcs()"><option value="">Selecione...</option></select></div>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
                 <div class="npcs-grid" id="npcsList"><div class="no-npcs">Carregando NPCs...</div></div>
             </div>

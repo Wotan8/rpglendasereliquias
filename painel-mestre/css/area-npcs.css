@@ -219,8 +219,54 @@
     .npcs-grid {
         grid-template-columns: 1fr;
     }
-
-    .npc-filters {
-        flex-direction: column;
-    }
+    .npc-filters-main-bar { flex-direction: column; align-items: stretch !important; }
+    .npc-filters-main-bar .form-group { width: 100%; }
+    .npc-filters-main-bar button { width: 100%; justify-content: center; }
 }
+
+/* ===== ADVANCED FILTERS ===== */
+.npc-advanced-panel {
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 14px;
+    animation: slideDown 0.3s ease-out;
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.adv-filters-section {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.adv-filters-section:last-child {
+    border-bottom: none; margin-bottom: 0; padding-bottom: 0;
+}
+.adv-filters-header {
+    font-size: 0.9rem; font-weight: 700; color: var(--primary); margin-bottom: 8px;
+}
+.adv-filters-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px;
+}
+.attrs-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+.range-inputs {
+    display: flex; gap: 4px;
+}
+.range-inputs input {
+    width: 50%; text-align: center;
+}
+.filter-badge {
+    background: var(--danger); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 12px; font-weight: bold;
+}
+.filter-chip {
+    display: inline-flex; align-items: center; gap: 6px; background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.4); color: #fff; font-size: 0.8rem; padding: 4px 10px; border-radius: 16px;
+}
+.filter-chip-close {
+    cursor: pointer; color: var(--muted); transition: color 0.2s;
+}
+.filter-chip-close:hover { color: #fff; }

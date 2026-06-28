@@ -11,7 +11,7 @@ async function loadAllNpcs() {
     try {
         const snap = await getDocs(collection(db, 'npcs'));
         const npcs = []; snap.forEach(d => npcs.push({ id: d.id, ...d.data() }));
-        S.setAllNpcs(npcs); renderNpcs(npcs);
+        S.setAllNpcs(npcs); window.restoreNpcFiltersState ? window.restoreNpcFiltersState() : window.filterNpcs();
     } catch (e) { console.error(e); showAlert('❌ Erro NPCs', 'danger'); }
 }
 window.loadAllNpcs = loadAllNpcs;
@@ -31,12 +31,223 @@ function renderNpcs(npcs) {
     }).join('');
 }
 
-window.filterNpcs = function() {
-    const s = (document.getElementById('npcSearchInput')?.value||'').toLowerCase();
-    const t = document.getElementById('npcFilterType')?.value||'';
-    const tg = (document.getElementById('npcFilterTags')?.value||'').toLowerCase();
-    renderNpcs(S.allNpcs.filter(n => { if (s && !(n.nome||'').toLowerCase().includes(s)) return false; if (t && n.tipo !== t) return false; if (tg && !(n.tags||'').toLowerCase().includes(tg)) return false; return true; }));
+// ===== ADVANCED FILTERS =====
+let npcFilterDebounce;
+window.debounceFilterNpcs = function() { clearTimeout(npcFilterDebounce); npcFilterDebounce = setTimeout(window.filterNpcs, 250); };
+
+window.toggleAdvancedNpcFilters = function() {
+    const panel = document.getElementById('npcAdvancedPanel');
+    if (!panel) return;
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
 };
+
+window.clearAllNpcFilters = function() {
+    document.getElementById('npcSearchInput').value = '';
+    document.getElementById('npcSortSelect').value = 'recente';
+    document.querySelectorAll('.adv-filter').forEach(el => {
+        if (el.tagName === 'SELECT') el.value = '';
+        else el.value = '';
+    });
+    localStorage.removeItem('npc_advanced_filter_v1');
+    window.filterNpcs();
+};
+
+window.onVinculoChange = function() {
+    const v = document.getElementById('advF_vinculo').value;
+    const cont = document.getElementById('advF_mesaEspecificaContainer');
+    const sel = document.getElementById('advF_mesaEsp');
+    if (v === 'especifica') {
+        cont.style.display = 'block';
+        if (S.allMesas && S.allMesas.length > 0 && sel.options.length <= 1) {
+            sel.innerHTML = '<option value="">Selecione...</option>' + S.allMesas.map(m => `<option value="${m.id}">${escapeHtml(m.nome||'Sem nome')}</option>`).join('');
+        }
+    } else { cont.style.display = 'none'; sel.value = ''; }
+    window.filterNpcs();
+};
+
+window.restoreNpcFiltersState = function() {
+    try {
+        const saved = localStorage.getItem('npc_advanced_filter_v1');
+        if (saved) {
+            const st = JSON.parse(saved);
+            if (st.search) document.getElementById('npcSearchInput').value = st.search;
+            if (st.sort) document.getElementById('npcSortSelect').value = st.sort;
+            if (st.adv) {
+                Object.keys(st.adv).forEach(k => {
+                    const el = document.getElementById(k);
+                    if (el) el.value = st.adv[k];
+                });
+            }
+            if (st.adv && st.adv.advF_vinculo === 'especifica') window.onVinculoChange(); // ensure dropdown is visible
+        }
+    } catch(e) { console.error('Erro ao restaurar filtros NPCs', e); }
+    window.filterNpcs();
+};
+
+window.filterNpcs = function() {
+    const searchStr = (document.getElementById('npcSearchInput')?.value||'').toLowerCase().trim();
+    const sortVal = document.getElementById('npcSortSelect')?.value || 'recente';
+    
+    // Coletar adv filters
+    const adv = {};
+    document.querySelectorAll('.adv-filter').forEach(el => {
+        if (el.value.trim() !== '') adv[el.id] = el.value.trim();
+    });
+    
+    // Save state
+    localStorage.setItem('npc_advanced_filter_v1', JSON.stringify({ search: searchStr, sort: sortVal, adv }));
+
+    let filtered = S.allNpcs.filter(n => {
+        // Global search
+        if (searchStr) {
+            const rpPers = Array.isArray(n.rolePlay?.personalidade) ? n.rolePlay.personalidade.join(' ') : (n.rolePlay?.personalidade || '');
+            const combined = [n.nome, n.papel, n.local, n.tribo, n.raca, n.tags, rpPers, n.rolePlay?.motivacao, n.rolePlay?.historia].filter(Boolean).join(' ').toLowerCase();
+            if (!combined.includes(searchStr)) return false;
+        }
+
+        // Tipo
+        if (adv.advF_tipo && n.tipo !== adv.advF_tipo) return false;
+        if (adv.advF_porte && (n.porte||'') !== adv.advF_porte) return false;
+        if (adv.advF_papel && !(n.papel||'').toLowerCase().includes(adv.advF_papel.toLowerCase())) return false;
+        if (adv.advF_local && !(n.local||'').toLowerCase().includes(adv.advF_local.toLowerCase())) return false;
+        if (adv.advF_raca && !(n.raca||'').toLowerCase().includes(adv.advF_raca.toLowerCase())) return false;
+        if (adv.advF_tribo && !(n.tribo||'').toLowerCase().includes(adv.advF_tribo.toLowerCase())) return false;
+        if (adv.advF_classe && !(n.classe||'').toLowerCase().includes(adv.advF_classe.toLowerCase())) return false;
+        
+        if (adv.advF_tags) {
+            const reqTags = adv.advF_tags.toLowerCase().split(',').map(t=>t.trim()).filter(Boolean);
+            const nTags = (n.tags||'').toLowerCase();
+            if (!reqTags.every(rt => nTags.includes(rt))) return false;
+        }
+        
+        if (adv.advF_imagem === 'sim' && !n.imagem) return false;
+        if (adv.advF_imagem === 'nao' && n.imagem) return false;
+
+        // Atributos (Ranges)
+        const checkRange = (val, min, max) => {
+            const v = Number(val||0);
+            if (min && v < Number(min)) return false;
+            if (max && v > Number(max)) return false;
+            return true;
+        };
+        const attrs = ['int','rac','prs','for','des','vig','pre','man','aut'];
+        for (let a of attrs) {
+            if (!checkRange(n.atributos?.[a.toUpperCase()], adv[`advF_${a}_min`], adv[`advF_${a}_max`])) return false;
+        }
+        if (!checkRange(n.ai, adv.advF_ai_min, adv.advF_ai_max)) return false;
+
+        // Derivados
+        const ders = ['vit','ener','san'];
+        for (let d of ders) {
+            if (!checkRange(n.valoresDer?.[d.toUpperCase()], adv[`advF_${d}_min`], adv[`advF_${d}_max`])) return false;
+        }
+
+        // Role-Play
+        const rp = n.rolePlay || {};
+        if (adv.advF_mot === 'sim' && !rp.motivacao) return false;
+        if (adv.advF_mot === 'nao' && rp.motivacao) return false;
+        if (adv.advF_seg === 'sim' && !rp.segredos) return false;
+        if (adv.advF_seg === 'nao' && rp.segredos) return false;
+        if (adv.advF_ali === 'sim' && !rp.relacoes?.aliado) return false;
+        if (adv.advF_ali === 'nao' && rp.relacoes?.aliado) return false;
+        if (adv.advF_riv === 'sim' && !rp.relacoes?.rival) return false;
+        if (adv.advF_riv === 'nao' && rp.relacoes?.rival) return false;
+        if (adv.advF_dev === 'sim' && !rp.relacoes?.devedor) return false;
+        if (adv.advF_dev === 'nao' && rp.relacoes?.devedor) return false;
+
+        if (adv.advF_rpBusca) {
+            const rpPers = Array.isArray(rp.personalidade) ? rp.personalidade.join(' ') : (rp.personalidade || '');
+            const rpStr = [rpPers, rp.trejeitos, rp.motivacao, rp.segredos, rp.frases, rp.historia].filter(Boolean).join(' ').toLowerCase();
+            if (!rpStr.includes(adv.advF_rpBusca.toLowerCase())) return false;
+        }
+
+        // Loot
+        const l = n.loot || {};
+        if (adv.advF_lootItens === 'sim' && (!l.itens || !l.itens.length)) return false;
+        if (adv.advF_lootItens === 'nao' && (l.itens && l.itens.length > 0)) return false;
+        if (adv.advF_lootPistas === 'sim' && (!l.pistas || !l.pistas.length)) return false;
+        if (adv.advF_lootPistas === 'nao' && (l.pistas && l.pistas.length > 0)) return false;
+        if (adv.advF_lootComp === 'sim' && (!l.complicacoes || !l.complicacoes.length)) return false;
+        if (adv.advF_lootComp === 'nao' && (l.complicacoes && l.complicacoes.length > 0)) return false;
+        
+        // Luns extraction
+        if (adv.advF_luns_min || adv.advF_luns_max) {
+            const lunStr = l.luns || '';
+            const num = Number(String(lunStr).replace(/\D/g, '')) || 0;
+            if (!checkRange(num, adv.advF_luns_min, adv.advF_luns_max)) return false;
+        }
+
+        // Criatura
+        if (n.tipo === 'criatura') {
+            const c = n.criatura || {};
+            if (adv.advF_ameaca && c.nivelAmeaca !== adv.advF_ameaca) return false;
+            if (adv.advF_habitat && !(c.habitat||'').toLowerCase().includes(adv.advF_habitat.toLowerCase())) return false;
+            if (adv.advF_dieta && !(c.dieta||'').toLowerCase().includes(adv.advF_dieta.toLowerCase())) return false;
+        }
+
+        // Vínculo
+        if (adv.advF_vinculo) {
+            if (adv.advF_vinculo === 'com_mesa' && !n.mesaId) return false;
+            if (adv.advF_vinculo === 'sem_mesa' && n.mesaId) return false;
+            if (adv.advF_vinculo === 'especifica' && adv.advF_mesaEsp && n.mesaId !== adv.advF_mesaEsp) return false;
+        }
+
+        return true;
+    });
+
+    // Ordenação
+    if (sortVal === 'nome-asc') filtered.sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
+    else if (sortVal === 'nome-desc') filtered.sort((a,b) => (b.nome||'').localeCompare(a.nome||''));
+    else if (sortVal === 'ai-desc') filtered.sort((a,b) => (b.ai||0) - (a.ai||0));
+    else if (sortVal === 'ai-asc') filtered.sort((a,b) => (a.ai||0) - (b.ai||0));
+    else if (sortVal === 'vit-desc') filtered.sort((a,b) => (b.valoresDer?.VIT||0) - (a.valoresDer?.VIT||0));
+    else if (sortVal === 'vit-asc') filtered.sort((a,b) => (a.valoresDer?.VIT||0) - (b.valoresDer?.VIT||0));
+    else if (sortVal === 'antigo') filtered.sort((a,b) => (a.lastUpdate||0) - (b.lastUpdate||0));
+    else if (sortVal === 'recente') filtered.sort((a,b) => (b.lastUpdate||0) - (a.lastUpdate||0));
+    else if (sortVal === 'random') filtered.sort(() => Math.random() - 0.5);
+
+    renderNpcs(filtered);
+    updateFilterUI(searchStr, adv, filtered.length);
+};
+
+function updateFilterUI(searchStr, adv, count) {
+    const display = document.getElementById('npcCountDisplay');
+    if (display) display.textContent = `${count} de ${S.allNpcs.length} NPCs`;
+
+    const activeKeys = Object.keys(adv);
+    const badge = document.getElementById('advFilterBadge');
+    if (badge) {
+        badge.textContent = activeKeys.length;
+        badge.style.display = activeKeys.length > 0 ? 'inline-block' : 'none';
+    }
+
+    const clearBtn = document.getElementById('clearAdvFiltersBtn');
+    if (clearBtn) clearBtn.style.display = (searchStr || activeKeys.length > 0) ? 'inline-block' : 'none';
+
+    // Chips
+    const chipsCont = document.getElementById('npcActiveFilterChips');
+    if (!chipsCont) return;
+    
+    let chipsHtml = '';
+    const addChip = (id, label) => {
+        chipsHtml += `<span class="filter-chip">${escapeHtml(label)} <span class="filter-chip-close" onclick="document.getElementById('${id}').value=''; window.filterNpcs();">×</span></span>`;
+    };
+
+    if (searchStr) addChip('npcSearchInput', `Busca: ${searchStr}`);
+    activeKeys.forEach(k => {
+        const el = document.getElementById(k);
+        if (!el) return;
+        let lbl = el.options ? (el.options[el.selectedIndex]?.text || el.value) : el.value;
+        const parentLabel = el.closest('.form-group')?.querySelector('label')?.textContent || k.replace('advF_','');
+        addChip(k, `${parentLabel}: ${lbl}`);
+    });
+
+    chipsCont.innerHTML = chipsHtml;
+    chipsCont.style.display = chipsHtml ? 'flex' : 'none';
+    
+    const cs = document.getElementById('advF_criaturaSection');
+    if (cs) cs.style.display = adv.advF_tipo === 'npc' ? 'none' : 'block';
+}
 
 // ===== NPC MODAL =====
 window.openNpcModal = function(npcId = null) {
