@@ -31,6 +31,14 @@ function initPhase6(container) {
 }
 
 function addNpc() {
+    if (wizardState.npcs.length > 0) {
+        const lastNpc = wizardState.npcs[wizardState.npcs.length - 1];
+        if (!lastNpc.confirmado) {
+            showWizardToast('Preencha e crie o NPC atual antes de adicionar outro.', 'error');
+            return;
+        }
+    }
+
     wizardState.npcs.push({
         nome: '',
         relacao: '',
