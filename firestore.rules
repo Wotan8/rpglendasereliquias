@@ -196,6 +196,12 @@ service cloud.firestore {
       allow create, update, delete: if isMaster();
     }
 
+    // ========== ADICIONADO: Coleção de Configurações do Mestre ==========
+    match /mestre-config/{docId} {
+      allow read: if isMaster();
+      allow create, update, delete: if isMaster();
+    }
+
     // ========== ADICIONADO: Coleção de ViewMaps (Navegador de Mapa) ==========
     match /viewmaps/{mapId} {
       allow read: if isSignedIn();

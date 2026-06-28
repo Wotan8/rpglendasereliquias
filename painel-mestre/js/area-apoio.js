@@ -17,23 +17,69 @@ async function loadApoioUsers() {
         const sel = document.getElementById('apoioUserSelect'); if (!sel) return;
         sel.innerHTML = '<option value="">Selecione um jogador...</option>';
         const users = []; snap.forEach(d => users.push({ id: d.id, ...d.data() }));
-        users.sort((a, b) => (a.nome||a.email||'').localeCompare(b.nome||b.email||''));
-        users.forEach(u => { const o = document.createElement('option'); o.value = u.id; o.textContent = `${u.nome||u.email||u.id} ${u.role?`(${u.role})`:''}`; sel.appendChild(o); });
+        users.sort((a, b) => (a.displayName||a.email||'').localeCompare(b.displayName||b.email||''));
+        users.forEach(u => { const o = document.createElement('option'); o.value = u.id; o.textContent = `${u.displayName||'Sem Nome'} (${u.email||u.id})`; sel.appendChild(o); });
         S.setNotificationUsersCache(users);
     } catch (e) { console.error(e); }
 }
 
 // ===== APOIOS =====
+window.switchInnerApoioTab = function(tabName) {
+    document.getElementById('btn-inner-apoios')?.classList.remove('active');
+    document.getElementById('btn-inner-repertorio')?.classList.remove('active');
+    document.getElementById('btn-inner-' + tabName)?.classList.add('active');
+
+    if (tabName === 'apoios') {
+        document.getElementById('inner-tab-apoios').style.display = 'block';
+        document.getElementById('inner-tab-repertorio').style.display = 'none';
+    } else {
+        document.getElementById('inner-tab-apoios').style.display = 'none';
+        document.getElementById('inner-tab-repertorio').style.display = 'block';
+    }
+};
+
 window.loadUserApoios = async function() {
     const uid = document.getElementById('apoioUserSelect')?.value;
     const el = document.getElementById('apoiosList');
-    if (!uid || !el) { if (el) el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Selecione um jogador</div>'; return; }
+    const menu = document.getElementById('apoiosStatusMenu');
+    const tabApoios = document.getElementById('inner-tab-apoios');
+    const tabRepertorio = document.getElementById('inner-tab-repertorio');
+    
+    if (!uid || !el) { 
+        if (el) el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Selecione um jogador</div>';
+        if (menu) menu.style.display = 'none';
+        if (tabApoios) tabApoios.style.display = 'none';
+        if (tabRepertorio) tabRepertorio.style.display = 'none';
+        
+        S.setCurrentSelectedUserId(null);
+        if (window.loadUserRepertorio) window.loadUserRepertorio();
+        return; 
+    }
+    
     S.setCurrentSelectedUserId(uid);
+    if (menu) menu.style.display = 'flex';
+    
+    if (tabApoios && tabRepertorio) {
+        if (tabApoios.style.display === 'none' && tabRepertorio.style.display === 'none') {
+            window.switchInnerApoioTab('apoios');
+        }
+    }
+
+    // Carregar repertório junto com os apoios (SEMPRE, independente se tem ou não apoios)
+    if (window.loadUserRepertorio) window.loadUserRepertorio();
+
     try {
         const d = await getDoc(doc(db, 'users', uid));
         if (!d.exists()) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Usuário não encontrado</div>'; return; }
         const apoios = d.data().apoios || [];
-        S.setTodosApoiosCarregados(apoios); renderApoios(apoios);
+        S.setTodosApoiosCarregados(apoios); 
+        
+        if (apoios.length === 0) {
+            el.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Este jogador ainda não possui apoios</div>';
+            return;
+        }
+
+        renderApoios(apoios);
     } catch (e) { showAlert('❌ Erro', 'danger'); }
 };
 
@@ -222,7 +268,17 @@ window.sendMasterNotification = async function() {
 
 // ===== PRODUÇÃO (migrado de area-mesas) =====
 async function carregarListaProducao() {
-    try { const d = await getDoc(doc(db, 'mestre-config', 'listaProducao')); if (d.exists()) S.setListaProducao(d.data().items||[]); renderProd(); } catch (e) { console.error(e); }
+    try { 
+        const d = await getDoc(doc(db, 'mestre-config', 'listaProducao')); 
+        if (d.exists()) S.setListaProducao(d.data().items||[]); 
+        renderProd(); 
+    } catch (e) { 
+        if (e.message && e.message.includes('permission')) {
+            console.warn('⚠️ Aviso: Sem permissão para carregar listaProducao. Ignorando...');
+        } else {
+            console.error(e); 
+        }
+    }
 }
 async function salvarProd() { try { await setDoc(doc(db, 'mestre-config', 'listaProducao'), { items: S.listaProducao }); } catch (e) { showAlert('❌ Erro', 'danger'); } }
 function renderProd() {
@@ -234,3 +290,366 @@ window.adicionarItemProducao = async function() { S.listaProducao.push({ nome: '
 window.remProd = async function(i) { if (confirm('Remover?')) { S.listaProducao.splice(i, 1); await salvarProd(); renderProd(); } };
 window.editProd = async function(i, f) { const v = prompt(`Editar ${f}:`, S.listaProducao[i][f]||''); if (v !== null) { S.listaProducao[i][f] = v; await salvarProd(); renderProd(); } };
 setTimeout(carregarListaProducao, 500);
+
+// ============= REPERTÓRIO =============
+function mergeRepertorioAndInventario(userData) {
+    let rawRep = userData.repertorio || [];
+    let rawInv = userData.inventario || [];
+    
+    let repArray = [];
+    if (typeof rawRep === 'object' && !Array.isArray(rawRep) && rawRep !== null) repArray = Object.values(rawRep);
+    else if (Array.isArray(rawRep)) repArray = rawRep;
+    else if (rawRep) repArray = [rawRep];
+    
+    let invArray = [];
+    if (typeof rawInv === 'object' && !Array.isArray(rawInv) && rawInv !== null) invArray = Object.values(rawInv);
+    else if (Array.isArray(rawInv)) invArray = rawInv;
+    else if (rawInv) invArray = [rawInv];
+
+    let repertorio = [...repArray];
+    invArray.forEach(invItem => {
+        let invNome = invItem.nome || invItem.name || invItem.titulo || invItem.item || (typeof invItem === 'string' ? invItem : 'Item sem nome');
+        if (!repertorio.find(r => {
+            let rNome = r.nome || r.name || r.titulo || r.item || (typeof r === 'string' ? r : 'Item sem nome');
+            return rNome === invNome;
+        })) {
+            repertorio.push(invItem);
+        }
+    });
+    return repertorio;
+}
+window.loadUserRepertorio = async function () {
+    const userId = S.currentSelectedUserId;
+    const repertorioSection = document.getElementById('repertorioSection');
+    const repertorioList = document.getElementById('repertorioList');
+
+    if (!repertorioSection || !repertorioList) return;
+
+    if (!userId) {
+        repertorioSection.style.display = 'none';
+        return;
+    }
+
+    repertorioSection.style.display = 'block';
+
+    try {
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (!userDoc.exists()) return;
+
+        const userData = userDoc.data();
+        let repertorio = mergeRepertorioAndInventario(userData);
+
+        if (repertorio.length === 0) {
+            repertorioList.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">O repertório está vazio</div>';
+            return;
+        }
+
+        let html = '';
+        repertorio.forEach((rawItem, index) => {
+            // Normalize item
+            let item = {};
+            if (typeof rawItem === 'string') {
+                item = { nome: rawItem, quantidade: 1 };
+            } else if (typeof rawItem === 'object' && rawItem !== null) {
+                item = {
+                    nome: rawItem.nome || rawItem.name || rawItem.titulo || rawItem.item || 'Item sem nome',
+                    descricao: rawItem.descricao || rawItem.description || rawItem.desc || '',
+                    quantidade: parseInt(rawItem.quantidade || rawItem.qtd || rawItem.amount) || 1,
+                    formaRecebimento: rawItem.formaRecebimento || rawItem.forma || rawItem.origem || ''
+                };
+            } else {
+                item = { nome: 'Item inválido', quantidade: 1 };
+            }
+
+            html += `
+                <div class="repertorio-item-card" style="background: rgba(15, 23, 42, 0.6); border: 2px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 10px;">
+                    <div class="repertorio-item-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div class="repertorio-item-nome" style="font-weight: 800; color: var(--light);">${escapeHtml(item.nome || 'Item sem nome')}</div>
+                        <div class="repertorio-item-actions">
+                            <button class="btn btn-danger" onclick="deleteItemRepertorio('${userId}', ${index})" style="padding: 5px 12px; font-size: 0.85rem;">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                    
+                    ${item.descricao ? `
+                        <div class="repertorio-item-field" style="margin-bottom: 8px;">
+                            <div class="repertorio-item-field-label" style="color: var(--muted); font-size: 0.85rem;">Descrição</div>
+                            <div class="repertorio-item-field-value" style="font-size: 0.9rem;">${escapeHtml(item.descricao)}</div>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="repertorio-item-field" style="margin-bottom: 8px;">
+                        <div class="repertorio-item-field-label" style="color: var(--muted); font-size: 0.85rem;">Quantidade</div>
+                        <div class="repertorio-item-quantidade">
+                            <input 
+                                type="number" 
+                                class="repertorio-quantidade-input form-input" 
+                                value="${item.quantidade || 1}" 
+                                min="1"
+                                style="width: 80px; padding: 4px 8px;"
+                                onchange="updateQuantidadeRepertorio('${userId}', ${index}, this.value)"
+                            >
+                        </div>
+                    </div>
+                    
+                    ${item.formaRecebimento ? `
+                        <div class="repertorio-item-field">
+                            <div class="repertorio-item-field-label" style="color: var(--muted); font-size: 0.85rem;">Forma de Recebimento/Uso</div>
+                            <div class="repertorio-item-field-value" style="font-size: 0.9rem;">${escapeHtml(item.formaRecebimento)}</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+
+        repertorioList.innerHTML = html;
+
+    } catch (error) {
+        console.error('❌ Erro ao carregar repertório:', error);
+        showAlert('❌ Erro ao carregar repertório', 'danger');
+    }
+};
+
+window.openAddItemRepertorioModal = function () {
+    if (!S.currentSelectedUserId) {
+        showAlert('⚠️ Selecione um jogador primeiro', 'warning');
+        return;
+    }
+
+    const modalHTML = `
+        <div id="itemRepertorioModal" class="modal active">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <div class="modal-title">➕ Adicionar Item ao Repertório</div>
+                    <button class="modal-close" onclick="closeItemRepertorioModal()">✕</button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Nome do Item *</label>
+                        <input type="text" class="form-input" id="item_nome" placeholder="Ex: Espada Lendária, Poção de Cura...">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Descrição</label>
+                        <textarea class="form-input" id="item_descricao" placeholder="Descreva o item..." rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Quantidade *</label>
+                        <input type="number" class="form-input" id="item_quantidade" placeholder="1" value="1" min="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Forma de Recebimento/Uso</label>
+                        <input type="text" class="form-input" id="item_formaRecebimento" placeholder="Ex: Recompensa da Quest X, Usado em combate...">
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                        <button class="btn btn-secondary" onclick="closeItemRepertorioModal()">Cancelar</button>
+                        <button class="btn btn-success" onclick="saveItemRepertorio()">💾 Salvar Item</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const existingModal = document.getElementById('itemRepertorioModal');
+    if (existingModal) existingModal.remove();
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+};
+
+window.saveItemRepertorio = async function () {
+    const nome = document.getElementById('item_nome').value.trim();
+    const quantidade = parseInt(document.getElementById('item_quantidade').value) || 1;
+
+    if (!nome) {
+        showAlert('⚠️ O nome do item é obrigatório', 'warning');
+        return;
+    }
+
+    const novoItem = {
+        nome: nome,
+        descricao: document.getElementById('item_descricao').value.trim(),
+        quantidade: quantidade,
+        formaRecebimento: document.getElementById('item_formaRecebimento').value.trim()
+    };
+
+    try {
+        const userDoc = await getDoc(doc(db, 'users', S.currentSelectedUserId));
+        if (!userDoc.exists()) {
+            showAlert('❌ Usuário não encontrado', 'danger');
+            return;
+        }
+
+        const userData = userDoc.data();
+        let repertorio = mergeRepertorioAndInventario(userData);
+        repertorio.push(novoItem);
+
+        await setDoc(doc(db, 'users', S.currentSelectedUserId), {
+            repertorio: repertorio
+        }, { merge: true });
+
+        showAlert('✅ Item adicionado ao repertório!', 'success');
+        closeItemRepertorioModal();
+        loadUserRepertorio();
+
+        // Log da ação
+        await addLog(S.currentUser?.email, `adicionou item "${nome}" ao repertório do jogador`, '', 'apoios');
+
+        // 📬 Enviar notificação ao jogador
+        try {
+            const notificationUserDoc = await getDoc(doc(db, 'users', S.currentSelectedUserId));
+            if (notificationUserDoc.exists()) {
+                const notifUserData = notificationUserDoc.data();
+                let notifications = notifUserData.notifications || [];
+
+                // Criar mensagem da notificação
+                let message = quantidade > 1
+                    ? `🎒 Você recebeu ${quantidade}x "${nome}" no seu Repertório do Jogador!`
+                    : `🎒 Você recebeu "${nome}" no seu Repertório do Jogador!`;
+
+                if (novoItem.formaRecebimento) {
+                    message += ` (${novoItem.formaRecebimento})`;
+                }
+
+                // Criar objeto de notificação
+                const notification = {
+                    id: `repertoire_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    type: 'repertoire_item_received',
+                    message: message,
+                    date: new Date().toISOString(), // Keeping format consistent with area-apoio
+                    read: false,
+                    data: {
+                        itemName: nome,
+                        quantity: quantidade,
+                        description: novoItem.descricao || '',
+                        formaRecebimento: novoItem.formaRecebimento || '',
+                        highlight: 'normal',
+                        sentBy: S.currentUser?.email || 'Mestre'
+                    }
+                };
+
+                // Adicionar nova notificação no início
+                notifications.unshift(notification);
+
+                // Limitar a 100 notificações
+                if (notifications.length > 100) {
+                    notifications = notifications.slice(0, 100);
+                }
+
+                await updateDoc(doc(db, 'users', S.currentSelectedUserId), { notifications: notifications });
+                console.log(`📬 Notificação de item enviada para o jogador: ${message}`);
+            }
+        } catch (notifError) {
+            console.error('❌ Erro ao enviar notificação (não afeta o salvamento):', notifError);
+        }
+
+    } catch (error) {
+        console.error('❌ Erro ao salvar item:', error);
+        showAlert('❌ Erro ao salvar item: ' + error.message, 'danger');
+    }
+};
+
+window.updateQuantidadeRepertorio = async function (userId, itemIndex, novaQuantidade) {
+    try {
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (!userDoc.exists()) return;
+
+        const userData = userDoc.data();
+        let repertorio = mergeRepertorioAndInventario(userData);
+
+        if (itemIndex >= 0 && itemIndex < repertorio.length) {
+            const item = repertorio[itemIndex];
+            const quantidadeAnterior = item.quantidade || 1;
+            const quantidadeNova = parseInt(novaQuantidade) || 1;
+            const diferenca = quantidadeNova - quantidadeAnterior;
+
+            repertorio[itemIndex].quantidade = quantidadeNova;
+
+            await setDoc(doc(db, 'users', userId), {
+                repertorio: repertorio
+            }, { merge: true });
+
+            showAlert('✅ Quantidade atualizada!', 'success');
+
+            // 📬 Enviar notificação se a quantidade aumentou
+            if (diferenca > 0) {
+                try {
+                    let notifications = userData.notifications || [];
+
+                    const message = diferenca > 1
+                        ? `🎒 Foram adicionados +${diferenca} "${item.nome}" ao seu Repertório do Jogador!`
+                        : `🎒 Foi adicionado +1 "${item.nome}" ao seu Repertório do Jogador!`;
+
+                    const notification = {
+                        id: `repertoire_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        type: 'repertoire_item_received',
+                        message: message,
+                        date: new Date().toISOString(),
+                        read: false,
+                        data: {
+                            itemName: item.nome,
+                            quantityAdded: diferenca,
+                            newTotal: quantidadeNova,
+                            highlight: 'normal',
+                            sentBy: S.currentUser?.email || 'Mestre'
+                        }
+                    };
+
+                    notifications.unshift(notification);
+                    if (notifications.length > 100) {
+                        notifications = notifications.slice(0, 100);
+                    }
+
+                    await updateDoc(doc(db, 'users', userId), { notifications: notifications });
+                    console.log(`📬 Notificação de quantidade enviada: ${message}`);
+                } catch (notifError) {
+                    console.error('❌ Erro ao enviar notificação:', notifError);
+                }
+            }
+        }
+
+    } catch (error) {
+        console.error('❌ Erro ao atualizar quantidade:', error);
+        showAlert('❌ Erro ao atualizar quantidade', 'danger');
+    }
+};
+
+window.deleteItemRepertorio = async function (userId, itemIndex) {
+    if (!confirm('Tem certeza que deseja deletar este item do repertório?')) return;
+
+    try {
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (!userDoc.exists()) return;
+
+        const userData = userDoc.data();
+        let repertorio = mergeRepertorioAndInventario(userData);
+
+        if (itemIndex >= 0 && itemIndex < repertorio.length) {
+            const itemNome = repertorio[itemIndex].nome;
+            repertorio.splice(itemIndex, 1);
+
+            await setDoc(doc(db, 'users', userId), {
+                repertorio: repertorio
+            }, { merge: true });
+
+            showAlert('✅ Item deletado do repertório!', 'success');
+            loadUserRepertorio();
+
+            // Log da ação
+            await addLog(S.currentUser?.email, `removeu item "${itemNome}" do repertório do jogador`, '', 'apoios');
+        }
+
+    } catch (error) {
+        console.error('❌ Erro ao deletar item:', error);
+        showAlert('❌ Erro ao deletar item', 'danger');
+    }
+};
+
+window.closeItemRepertorioModal = function () {
+    const modal = document.getElementById('itemRepertorioModal');
+    if (modal) modal.remove();
+};

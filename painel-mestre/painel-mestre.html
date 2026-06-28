@@ -197,15 +197,11 @@
             <!-- TAB: ECONÔMICA -->
             <div class="tab-content" id="tab-economica">
                 <div class="sub-tabs">
-                    <button class="sub-tab-btn active" data-subtab="repertorio" onclick="switchSubTab('economica','repertorio')">🗃️ Repertório</button>
-                    <button class="sub-tab-btn" data-subtab="avulsos" onclick="switchSubTab('economica','avulsos')">📦 Recursos Avulsos</button>
+                    <button class="sub-tab-btn active" data-subtab="avulsos" onclick="switchSubTab('economica','avulsos')">📦 Recursos Avulsos</button>
                     <button class="sub-tab-btn" data-subtab="criar" onclick="switchSubTab('economica','criar')">🛠️ Criar Recurso</button>
                     <button class="sub-tab-btn" data-subtab="economia" onclick="switchSubTab('economica','economia')">💹 Motor Econômico</button>
                 </div>
-                <div class="sub-tab-content active" id="subtab-repertorio">
-                    <div style="text-align:center;padding:50px;color:var(--muted)"><div style="font-size:2.5rem;margin-bottom:12px">🗃️</div>Selecione um personagem para ver seu Repertório</div>
-                </div>
-                <div class="sub-tab-content" id="subtab-avulsos">
+                <div class="sub-tab-content active" id="subtab-avulsos">
                     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
                         <button class="btn btn-success btn-small" onclick="openAddAvulsoItemModal()">➕ Novo Recurso</button>
                     </div>
@@ -257,16 +253,45 @@
                 <div class="sub-tab-content active" id="subtab-apoios">
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
                         <select class="form-select" id="apoioUserSelect" onchange="loadUserApoios()" style="flex:1;min-width:200px"><option value="">Selecione um jogador...</option></select>
-                        <button class="btn btn-success btn-small" onclick="openAddApoioModal()">➕ Novo Apoio</button>
                     </div>
-                    <div class="apoio-filters">
-                        <div class="form-group"><label class="form-label">Status</label><select class="form-select" id="filtroStatus" onchange="aplicarFiltrosApoios()"><option value="todos">Todos</option><option value="nao-recebidos">Não Recebidos</option><option value="recebidos">Recebidos</option></select></div>
-                        <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="filtroTipo" onchange="aplicarFiltrosApoios()"><option value="todos">Todos</option></select></div>
-                        <div class="form-group"><label class="form-label">Data Início</label><input type="date" class="form-input" id="filtroDataInicio" onchange="aplicarFiltrosApoios()"></div>
-                        <div class="form-group"><label class="form-label">Data Fim</label><input type="date" class="form-input" id="filtroDataFim" onchange="aplicarFiltrosApoios()"></div>
-                        <button class="btn btn-secondary btn-small" onclick="limparFiltrosApoios()" style="align-self:flex-end">🗑️ Limpar</button>
+
+                    <div id="apoiosStatusMenu" class="sub-tabs" style="display: none; margin-bottom: 20px;">
+                        <button class="sub-tab-btn active" id="btn-inner-apoios" onclick="switchInnerApoioTab('apoios')">🤝 Apoiadores</button>
+                        <button class="sub-tab-btn" id="btn-inner-repertorio" onclick="switchInnerApoioTab('repertorio')">🎒 Repertório</button>
                     </div>
-                    <div id="apoiosList"><div style="text-align:center;padding:40px;color:var(--muted)">Selecione um jogador para ver apoios</div></div>
+
+                    <div id="inner-tab-apoios" style="display: none;">
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                            <button class="btn btn-success btn-small" onclick="openAddApoioModal()">➕ Novo Apoio</button>
+                        </div>
+                        <div class="apoio-filters" id="apoiosFiltros">
+                            <div class="form-group"><label class="form-label">Status</label><select class="form-select" id="filtroStatus" onchange="aplicarFiltrosApoios()"><option value="todos">Todos</option><option value="nao-recebidos">Não Recebidos</option><option value="recebidos">Recebidos</option></select></div>
+                            <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="filtroTipo" onchange="aplicarFiltrosApoios()"><option value="todos">Todos</option></select></div>
+                            <div class="form-group"><label class="form-label">Data Início</label><input type="date" class="form-input" id="filtroDataInicio" onchange="aplicarFiltrosApoios()"></div>
+                            <div class="form-group"><label class="form-label">Data Fim</label><input type="date" class="form-input" id="filtroDataFim" onchange="aplicarFiltrosApoios()"></div>
+                            <button class="btn btn-secondary btn-small" onclick="limparFiltrosApoios()" style="align-self:flex-end">🗑️ Limpar</button>
+                        </div>
+                        <div id="apoiosList"><div style="text-align:center;padding:40px;color:var(--muted)">Selecione um jogador para ver apoios</div></div>
+                    </div>
+
+                    <div id="inner-tab-repertorio" style="display: none;">
+                        <!-- Sistema de Repertório -->
+                        <div id="repertorioSection" style="display: none; margin-bottom: 25px;">
+                            <div style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary);">🎒 Repertório do Jogador</div>
+                                    <button class="btn btn-success" onclick="openAddItemRepertorioModal()" style="padding: 8px 20px; font-size: 0.9rem;">
+                                        ➕ Adicionar Item
+                                    </button>
+                                </div>
+                                <div id="repertorioList">
+                                    <div style="text-align: center; padding: 40px; color: #64748b;">
+                                        O repertório está vazio
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="sub-tab-content" id="subtab-metas">
                     <div id="metasContent"><div style="text-align:center;padding:50px;color:var(--muted)">Carregando metas...</div></div>

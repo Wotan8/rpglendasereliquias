@@ -83,7 +83,7 @@ window.switchTab = async function (tabName) {
 
             case 'apoio':
                 if (!apoioModule) {
-                    apoioModule = await import('./area-apoio.js');
+                    apoioModule = await import('./area-apoio.js?v=' + Date.now() + '_3');
                 }
                 if (apoioModule.onTabActivated) apoioModule.onTabActivated();
                 break;
