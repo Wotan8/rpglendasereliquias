@@ -789,7 +789,40 @@ function renderItems() {
         return;
     }
 
+    // Derived Values: group by block
+    if (currentModule === 'derivedValues') {
+        const groups = {};
+        const blockOrders = {};
+        const blockNames = {};
 
+        filtered.forEach(item => {
+            const blockId = item.blocoId || 'uncategorized';
+            if (!groups[blockId]) {
+                groups[blockId] = [];
+                blockOrders[blockId] = item.blocoOrdem || 999;
+                blockNames[blockId] = item.blocoNome || 'Sem Bloco (Desagrupado)';
+            }
+            if (item.blocoOrdem && blockOrders[blockId] === 999) blockOrders[blockId] = item.blocoOrdem;
+            if (item.blocoNome && blockNames[blockId] === 'Sem Bloco (Desagrupado)') blockNames[blockId] = item.blocoNome;
+            
+            groups[blockId].push(item);
+        });
+
+        const sortedBlockIds = Object.keys(groups).sort((a, b) => {
+            if (blockOrders[a] !== blockOrders[b]) return blockOrders[a] - blockOrders[b];
+            return blockNames[a].localeCompare(blockNames[b]);
+        });
+
+        let html = '';
+        sortedBlockIds.forEach(blockId => {
+            const items = groups[blockId];
+            if (!items || items.length === 0) return;
+            html += `<div class="skills-category-header">${escapeHtml(blockNames[blockId])} <span class="skills-category-count">${items.length}</span></div>`;
+            html += items.map(item => buildItemCardHTML(item)).join('');
+        });
+        grid.innerHTML = html;
+        return;
+    }
 
     grid.innerHTML = filtered.map(item => buildItemCardHTML(item)).join('');
 }
