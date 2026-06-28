@@ -194,50 +194,144 @@ body {
 
 /* ===== TOOLBAR ===== */
 .toolbar {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 14px 16px 0;
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 8px;
     flex-wrap: wrap;
+    margin-bottom: 20px;
 }
 
 .toolbar button {
-    border: 1px solid rgba(255, 255, 255, .18);
-    background: rgba(255, 255, 255, .06);
-    color: #fff;
-    font-weight: 600;
-    padding: 8px 14px;
-    border-radius: 10px;
-    font-size: 12px;
+    border: 1px solid var(--line);
+    background: var(--chip);
+    color: var(--ink);
+    font-weight: 800;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 11px;
     cursor: pointer;
     font-family: var(--font);
-    transition: background .15s;
+    transition: all .15s;
+    text-transform: uppercase;
 }
 
 .toolbar button:hover {
-    background: rgba(255, 255, 255, .12)
+    background: var(--line);
+    color: var(--paper);
 }
 
-.toolbar .spacer {
-    flex: 1
+.btn-logout {
+    background: var(--danger);
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 11px;
+    font-family: var(--font);
+    transition: all .15s;
+    text-transform: uppercase;
+}
+
+.btn-logout:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+}
+
+.user-display {
+    color: var(--muted);
+    font-size: .8rem;
+    font-weight: 700;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .toolbar .hint-toolbar {
     font-size: 11px;
-    color: rgba(255, 255, 255, .45);
-    font-weight: 500
+    color: var(--muted);
+    font-weight: 700;
 }
 
 /* ===== WRAP + SHEET ===== */
 .wrap {
-    max-width: 1100px;
-    margin: 14px auto 0;
-    padding: 0 16px 32px
+    max-width: 100%;
+    margin: 0;
+    padding: 0 16px 32px 0;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: width 0.3s ease;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: 20px;
+}
+
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--soft); border-radius: 4px; }
+.sidebar:hover::-webkit-scrollbar-thumb { background: var(--muted); }
+
+.sidebar.collapsed {
+    width: 60px;
+}
+
+.sidebar-toggle {
+    background: var(--paper);
+    border: 2px solid var(--line);
+    color: var(--ink);
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 11px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    font-family: var(--font);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.sidebar-toggle:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.sidebar.collapsed .sidebar-toggle {
+    justify-content: center;
+}
+
+.sidebar.collapsed .sidebar-toggle .text {
+    display: none;
+}
+
+.sidebar-toggle .emoji {
+    font-size: 16px;
+    flex-shrink: 0;
 }
 
 .sheet {
+    flex: 1;
+    min-width: 0;
+    max-width: 1100px;
+    margin: 0 auto;
     background: var(--paper);
     color: var(--ink);
     border-radius: 14px;
@@ -268,20 +362,18 @@ body {
 /* ===== TABS ===== */
 .tabs {
     display: flex;
+    flex-direction: column;
     gap: 6px;
-    margin-bottom: 14px;
-    flex-wrap: wrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    padding-bottom: 4px;
+    margin-bottom: 0;
+    overflow-x: hidden;
+    padding-bottom: 0;
 }
 
 .tab {
     border: 2px solid var(--line);
     background: #fff;
     color: var(--ink);
-    padding: 8px 14px;
+    padding: 10px 14px;
     border-radius: 10px;
     font-weight: 800;
     font-size: 10px;
@@ -290,7 +382,27 @@ body {
     cursor: pointer;
     font-family: var(--font);
     transition: all .15s;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
     white-space: nowrap;
+    overflow: hidden;
+    flex-shrink: 0;
+    text-align: left;
+}
+
+.sidebar.collapsed .tab {
+    padding: 10px;
+    justify-content: center;
+}
+
+.sidebar.collapsed .tab .text {
+    display: none;
+}
+
+.tab .emoji {
+    font-size: 16px;
     flex-shrink: 0;
 }
 
