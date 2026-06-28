@@ -114,34 +114,6 @@
                 </div>
 
                 <div class="section">
-                    <div class="section-title">Status Vitais</div>
-                    <div class="vitals">
-                        <div class="vital-box"><label class="vital-label" data-vital-key="VIT_MAX">❤️ Vitalidade</label>
-                            <div class="vital-inputs"><input type="text" data-key="vit_atual" placeholder="0"><span
-                                    class="sep">/</span><input type="text" id="vit_max_display" class="derived-field"
-                                    title="Definido por mecânicas do sistema" value="0"></div>
-                        </div>
-                        <div class="vital-box"><label class="vital-label" data-vital-key="SAN_MAX">🧠 Sanidade</label>
-                            <div class="vital-inputs"><input type="text" data-key="san_atual" placeholder="0"><span
-                                    class="sep">/</span><input type="text" id="san_max_display" class="derived-field"
-                                    title="Definido por mecânicas do sistema" value="0"></div>
-                        </div>
-                        <div class="vital-box"><label class="vital-label" data-vital-key="ENER_MAX">⚡ Energia</label>
-                            <div class="vital-inputs"><input type="text" data-key="ener_atual" placeholder="0"><span
-                                    class="sep">/</span><input type="text" id="ener_max_display" class="derived-field"
-                                    title="Definido por mecânicas do sistema" value="0"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Valores Derivados</div>
-                    <div id="derivedValuesGrid">
-                        <!-- Populated dynamically from Firebase -->
-                    </div>
-                </div>
-
-                <div class="section">
                     <div class="section-title">Atributos <span class="exp-cost">5 EXP por nível</span></div>
                     <div class="attrs">
                         <div class="attr-block">
@@ -220,11 +192,39 @@
                     </div>
                 </div>
 
-
-
-                <!-- TESTES PRINCIPAIS -->
                 <div class="section">
-                    <div class="section-title">Testes Principais <button class="no-print" id="btnToggleColorMode"
+                    <div class="section-title">Status Vitais</div>
+                    <div class="vitals">
+                        <div class="vital-box"><label class="vital-label" data-vital-key="VIT_MAX">❤️ Vitalidade</label>
+                            <div class="vital-inputs"><input type="text" data-key="vit_atual" placeholder="0"><span
+                                    class="sep">/</span><input type="text" id="vit_max_display" class="derived-field"
+                                    title="Definido por mecânicas do sistema" value="0"></div>
+                        </div>
+                        <div class="vital-box"><label class="vital-label" data-vital-key="SAN_MAX">🧠 Sanidade</label>
+                            <div class="vital-inputs"><input type="text" data-key="san_atual" placeholder="0"><span
+                                    class="sep">/</span><input type="text" id="san_max_display" class="derived-field"
+                                    title="Definido por mecânicas do sistema" value="0"></div>
+                        </div>
+                        <div class="vital-box"><label class="vital-label" data-vital-key="ENER_MAX">⚡ Energia</label>
+                            <div class="vital-inputs"><input type="text" data-key="ener_atual" placeholder="0"><span
+                                    class="sep">/</span><input type="text" id="ener_max_display" class="derived-field"
+                                    title="Definido por mecânicas do sistema" value="0"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Valores Derivados</div>
+                    <div id="derivedValuesGrid">
+                        <!-- Populated dynamically from Firebase -->
+                    </div>
+                </div>
+
+
+
+                <!-- TESTES OPCIONAIS -->
+                <div class="section">
+                    <div class="section-title">Testes Opcionais <button class="no-print" id="btnToggleColorMode"
                             onclick="toggleGlobalColorMode()" title="Personalizar Cores"
                             style="background:none;border:none;cursor:pointer;font-size:1.2rem;margin-left:8px">🎨</button>
                     </div>

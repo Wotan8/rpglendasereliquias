@@ -367,7 +367,7 @@ function onClassChange() {
         if (ritosC) { ritosC.innerHTML = ''; state.ritos.forEach(r => addRito(r)); }
     }
 
-    /* Testes Principais por Classe */
+    /* Testes Opcionais por Classe */
     if (typeof renderMainTests === 'function') renderMainTests(cl);
 
     /* Módulos de classe dinâmicos (Firebase) */

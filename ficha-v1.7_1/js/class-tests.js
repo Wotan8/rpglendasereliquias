@@ -1,4 +1,4 @@
-/* ===== CLASS TESTS — Renderização e Cálculo de Testes Principais ===== */
+/* ===== CLASS TESTS — Renderização e Cálculo de Testes Opcionais ===== */
 
 /* Mapa de atributos para chaves de dots */
 const ATTR_MAP = {
