@@ -376,6 +376,7 @@ async function createCharacter() {
         notes,
         equipamento,
         inventoryItems,
+        peculiaridadesIndividuais: ws.peculiaridadesIndividuais || [],
         mecanicasAplicadas: {},
         mechanicBonuses: {},
         mecanicasPendentes: [],

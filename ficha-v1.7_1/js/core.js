@@ -379,6 +379,9 @@ function onClassChange() {
     /* Peculiaridades de Classe (bonusIniciais) */
     if (typeof renderClassPeculiaridades === 'function') renderClassPeculiaridades(cl);
 
+    /* Peculiaridades Individuais */
+    if (typeof renderIndividualPeculiaridades === 'function') renderIndividualPeculiaridades();
+
     /* Re-aplicar mecânicas (incluindo as de peculiaridades de classe) */
     if (typeof applyAllRaceMechanics === 'function') {
         const raca = document.getElementById('selRaca')?.value;

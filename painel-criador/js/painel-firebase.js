@@ -86,6 +86,7 @@ const MODULE_DEFS = {
                 ], maxItems: 1
             },
             { key: 'pericClasse', label: 'Perícias de Classe', type: 'mechanic_selector', selectorTarget: 'skills' },
+            { key: 'peculiaridadeIds', label: '✨ Peculiaridades da Classe', type: 'mechanic_selector', selectorTarget: 'peculiarities', fontePreFilter: 'classe' },
             { key: 'manobras', label: '💥 Manobras da Classe', type: 'mechanic_selector', selectorTarget: 'maneuvers' },
             { key: 'mecanicaIds', label: 'Mecânicas da Classe', type: 'mechanic_selector', fontePreFilter: 'classe' },
             { key: 'derivedValueIds', label: 'Valores Derivados da Classe', type: 'mechanic_selector', selectorTarget: 'derivedValues' },

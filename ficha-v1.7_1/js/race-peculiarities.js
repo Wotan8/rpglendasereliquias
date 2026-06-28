@@ -405,7 +405,7 @@ function _renderSingleSourceBlock(pecList, sourceKey, container, fonte) {
     if (!inserted) container.appendChild(block);
 }
 
-/* ===== RENDERIZAÇÃO DE PECULIARIDADES POR FONTE (CLASSE / TRIBO) ===== */
+/* ===== RENDERIZAÇÃO DE PECULIARIDADES POR FONTE (CLASSE / TRIBO / INDIVIDUAL) ===== */
 
 /**
  * Renderiza peculiaridades de classe no grid de peculiaridades.
@@ -415,22 +415,18 @@ function renderClassPeculiaridades(classeNome) {
     const grid = document.getElementById('peculiaridadesGrid');
     if (!grid) return;
 
-    // Limpar blocos de classe anteriores
     _clearPeculiaridadeBlocksByFonte(grid, 'classe');
 
-    // Esconder hint se houver classe com peculiaridades
     const hintEl = document.getElementById('raceHint');
-
-    if (!classeNome || !window.CLASS_PECULIARITIES || !window.CLASS_PECULIARITIES[classeNome]) {
-        // Mostrar hint se grid está vazio
-        if (hintEl && grid.children.length === 0) hintEl.style.display = '';
-        return;
-    }
-    const pecList = window.CLASS_PECULIARITIES[classeNome];
-    if (pecList.length === 0) return;
-
     if (hintEl) hintEl.style.display = 'none';
-    _renderSourceBlock(pecList, classeNome, grid, 'classe');
+
+    let pecList = [];
+    if (classeNome && window.CLASS_PECULIARITIES && window.CLASS_PECULIARITIES[classeNome]) {
+        pecList = window.CLASS_PECULIARITIES[classeNome];
+    }
+    
+    // Sempre renderiza o bloco, mesmo que vazio
+    _renderSingleSourceBlock(pecList, classeNome || 'Nenhuma', grid, 'classe');
 }
 
 /**
@@ -441,21 +437,53 @@ function renderTriboPeculiaridades(triboNome) {
     const grid = document.getElementById('peculiaridadesGrid');
     if (!grid) return;
 
-    // Limpar blocos de tribo anteriores
     _clearPeculiaridadeBlocksByFonte(grid, 'tribo');
 
-    // Esconder hint se houver tribo com peculiaridades
-    const hintEl = document.getElementById('raceHint');
-
     if (!triboNome || !window.TRIBES || !window.TRIBES[triboNome]) {
-        if (hintEl && grid.children.length === 0) hintEl.style.display = '';
         return;
     }
     const pecList = window.TRIBES[triboNome].peculiaridades;
     if (!pecList || pecList.length === 0) return;
 
-    if (hintEl) hintEl.style.display = 'none';
     _renderSourceBlock(pecList, triboNome, grid, 'tribo');
+}
+
+/**
+ * Renderiza peculiaridades individuais no grid de peculiaridades.
+ */
+function renderIndividualPeculiaridades() {
+    const grid = document.getElementById('peculiaridadesGrid');
+    if (!grid) return;
+
+    _clearPeculiaridadeBlocksByFonte(grid, 'individual');
+
+    if (!state.peculiaridadesIndividuais) {
+        state.peculiaridadesIndividuais = [];
+    }
+
+    // Auto-reconstruct from dots (backward compatibility)
+    const sysPecs = window._systemData?.peculiarities || [];
+    Object.keys(state.dots || {}).forEach(k => {
+        if (k.startsWith('pec_')) {
+            const id = k.replace('pec_', '');
+            const pData = sysPecs.find(p => p.id === id);
+            if (pData && (pData.fonte === 'individual' || pData.fonte === 'Individual')) {
+                const exists = state.peculiaridadesIndividuais.find(p => (typeof p === 'object' ? p.id === id : p === id));
+                if (!exists) {
+                    state.peculiaridadesIndividuais.push({ id: id, nivelInicial: state.dots[k] });
+                }
+            }
+        }
+    });
+
+    const indPecs = state.peculiaridadesIndividuais.map(p => {
+        if (typeof _resolvePeculiaridade === 'function') {
+            return _resolvePeculiaridade(p, 'Individual');
+        }
+        return null;
+    }).filter(Boolean);
+
+    _renderSingleSourceBlock(indPecs, 'Individual', grid, 'individual');
 }
 
 /* ===== RENDERIZAÇÃO COMPACTA (PILL/CHIP) ===== */

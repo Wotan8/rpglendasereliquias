@@ -704,8 +704,10 @@ function buildClassPeculiaritiesFromFirebase() {
 
     for (const cls of window._systemData.classes) {
         if (cls.publicado === false) continue;
-        const pecIds = cls.bonusIniciais || [];
-        if (!Array.isArray(pecIds) || pecIds.length === 0) continue;
+        const bonus = Array.isArray(cls.bonusIniciais) ? cls.bonusIniciais : [];
+        const pecs = Array.isArray(cls.peculiaridadeIds) ? cls.peculiaridadeIds : [];
+        const pecIds = [...bonus, ...pecs];
+        if (pecIds.length === 0) continue;
 
         const resolved = pecIds.map(pecData =>
             _resolvePeculiaridade(pecData, `classe "${cls.nome}"`)

@@ -1237,7 +1237,7 @@ function _reRenderPeculiaridades() {
 
     // Re-renderizar classe
     const classeNome = document.getElementById('selClasse')?.value;
-    if (classeNome && typeof renderClassPeculiaridades === 'function') {
+    if (typeof renderClassPeculiaridades === 'function') {
         renderClassPeculiaridades(classeNome);
     }
 
@@ -1245,6 +1245,11 @@ function _reRenderPeculiaridades() {
     const triboNome = document.getElementById('selTribo')?.value;
     if (triboNome && typeof renderTriboPeculiaridades === 'function') {
         renderTriboPeculiaridades(triboNome);
+    }
+
+    // Re-renderizar individuais
+    if (typeof renderIndividualPeculiaridades === 'function') {
+        renderIndividualPeculiaridades();
     }
 }
 
