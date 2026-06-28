@@ -225,6 +225,7 @@ async function createCharacter() {
         const result = validatePhase(i);
         if (!result.valid) {
             showWizardToast(`Fase "${FASES_WIZARD[i].titulo}" incompleta: ${result.reason}`, 'error');
+            goToPhase(i);
             return;
         }
     }
@@ -235,6 +236,7 @@ async function createCharacter() {
             const remaining = getGroupRemainingPoints(grupo);
             if (remaining > 0) {
                 showWizardToast(`Faltam pontos de atributos no grupo ${grupo}. Distribua todos os pontos antes de finalizar.`, 'error');
+                goToPhase(4); // Vai para a fase de Atributos (corpo)
                 return;
             }
         }

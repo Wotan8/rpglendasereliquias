@@ -138,8 +138,6 @@ function updateProgressBar() {
             step.classList.add('active');
         } else if (wizardState.fasesCompletas.has(idx)) {
             step.classList.add('completed');
-        } else if (idx > wizardState.faseAtual && !wizardState.fasesCompletas.has(idx - 1) && idx !== 0) {
-            step.classList.add('locked');
         }
 
         if (line) {
@@ -180,15 +178,8 @@ function goToPhase(index) {
 }
 
 function tryGoToPhase(index) {
-    // Can always go back to completed phases
-    if (wizardState.fasesCompletas.has(index) || index <= wizardState.faseAtual) {
-        goToPhase(index);
-        return;
-    }
-    // Can go forward only if current phase is valid
-    if (index === wizardState.faseAtual + 1) {
-        goNext();
-    }
+    // Navegação livre permitida
+    goToPhase(index);
 }
 
 function goNext() {
@@ -200,14 +191,14 @@ function goNext() {
         return;
     }
 
+    // Check validity just to mark visually as complete, but don't block navigation
     const result = validatePhase(current);
-
-    if (!result.valid) {
-        showWizardToast(result.reason, 'error');
-        return;
+    if (result.valid) {
+        setPhaseComplete(current);
+    } else {
+        wizardState.fasesCompletas.delete(current);
+        updateProgressBar();
     }
-
-    setPhaseComplete(current);
 
     if (current + 1 < FASES_WIZARD.length) {
         goToPhase(current + 1);
