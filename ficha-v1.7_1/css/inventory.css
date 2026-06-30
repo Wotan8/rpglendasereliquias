@@ -3,7 +3,115 @@
 /* === CARDS DE EQUIPAMENTO (Aba Combate) === */
 .inv-equipped-grid {
     display: grid;
-    gap: 10px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+/* === SLOT GROUPS — Agrupamentos anatômicos === */
+.inv-slot-group {
+    background: rgba(15, 23, 42, 0.35);
+    border: 1.5px solid var(--line, rgba(139, 92, 246, 0.12));
+    border-radius: var(--radius, 10px);
+    padding: 10px 12px;
+    transition: border-color 0.2s;
+}
+.inv-slot-group:hover {
+    border-color: rgba(139, 92, 246, 0.25);
+}
+
+.inv-slot-group-title {
+    font-family: var(--font, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--ink, #e5e7eb);
+    margin: 0 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 1.5px solid var(--line, rgba(139, 92, 246, 0.12));
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.inv-slot-group-content {
+    display: grid;
+    gap: 6px;
+}
+
+/* Cada slot anatômico individual */
+.inv-slot-container {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1.5px solid var(--line, rgba(139, 92, 246, 0.08));
+    border-radius: 8px;
+    padding: 6px 8px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.inv-slot-container:hover {
+    border-color: rgba(139, 92, 246, 0.2);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.06);
+}
+
+.inv-slot-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.inv-slot-icon {
+    font-size: 0.95rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.inv-slot-name {
+    font-family: var(--font, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--ink, #e2e8f0);
+    flex: 1;
+    min-width: 0;
+}
+
+.inv-slot-cap {
+    font-family: var(--font, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--muted, #94a3b8);
+    background: rgba(0, 0, 0, 0.3);
+    padding: 1px 7px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    letter-spacing: 0.2px;
+}
+.inv-slot-cap.full {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.inv-slot-items {
+    display: grid;
+    gap: 4px;
+}
+
+.inv-slot-empty {
+    font-family: var(--font, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+    font-size: 0.72rem;
+    color: var(--muted, #64748b);
+    font-style: italic;
+    padding: 4px 8px;
+    background: rgba(15, 23, 42, 0.25);
+    border-radius: 6px;
+    text-align: center;
+    opacity: 0.7;
+}
+
+/* Responsivo: 1 coluna em telas pequenas */
+@media (max-width: 600px) {
+    .inv-equipped-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .inv-card {
@@ -21,6 +129,43 @@
     border-color: var(--primary, #8b5cf6);
     transform: translateY(-1px);
     box-shadow: 0 4px 16px rgba(139, 92, 246, 0.15);
+}
+
+/* Cards compactos dentro dos slot groups */
+.inv-slot-items .inv-card {
+    padding: 6px 8px;
+    gap: 8px;
+    border-radius: 8px;
+    border-width: 1.5px;
+}
+.inv-slot-items .inv-card:hover {
+    transform: none;
+    box-shadow: 0 2px 10px rgba(139, 92, 246, 0.12);
+}
+.inv-slot-items .inv-card-img {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    padding: 2px;
+    border-width: 1.5px;
+}
+.inv-slot-items .inv-card-img-placeholder {
+    font-size: 1rem;
+}
+.inv-slot-items .inv-card-name {
+    font-size: 0.82rem;
+}
+.inv-slot-items .inv-card-top {
+    gap: 5px;
+}
+.inv-slot-items .inv-badge {
+    font-size: 0.65rem;
+    padding: 1px 5px;
+}
+.inv-slot-items .inv-btn-detail {
+    padding: 3px 6px;
+    font-size: 0.8rem;
+    border-radius: 6px;
 }
 
 .inv-card-img {

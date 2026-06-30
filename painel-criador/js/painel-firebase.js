@@ -199,12 +199,22 @@ const MODULE_DEFS = {
                 key: 'tipo', label: 'Tipo', type: 'select', required: true, options: [
                     { value: 'Arma', label: '⚔️ Arma' },
                     { value: 'Vestimenta', label: '🧥 Vestimenta' },
+                    { value: 'Acessório', label: '💍 Acessório' },
                     { value: 'Projétil', label: '🎯 Projétil' },
                     { value: 'Container', label: '📦 Container' },
                     { value: 'Objeto', label: '📦 Objeto' },
                     { value: 'Consumível', label: '🧪 Consumível' },
                     { value: 'Relíquia', label: '✨ Relíquia' }
                 ]
+            },
+            {
+                key: 'categoriaArma', label: 'Categoria da Arma', type: 'select', required: true, options: [
+                    { value: 'uma_mao', label: '🗡️ Arma de Uma Mão' },
+                    { value: 'duas_maos', label: '⚔️ Arma de Duas Mãos' },
+                    { value: 'versatil', label: '🔄 Arma Versátil' },
+                    { value: 'escudo', label: '🛡️ Escudo' },
+                    { value: 'distancia', label: '🏹 Arma a Distância' }
+                ], showWhen: { field: 'tipo', value: 'Arma' }
             },
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
             { key: 'imagemUrl', label: 'Imagem (URL)', type: 'text', placeholder: 'https://...' },
