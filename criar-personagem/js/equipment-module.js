@@ -31,57 +31,108 @@ function initPhase7(container) {
 
     html += `</div>`;
 
-    // Luns (dinheiro) — 1d100
-    html += `
-        <div class="section">
-            <div class="section-title">💰 Luns Iniciais</div>
-            <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
-                Role 1d100 para determinar seus Luns iniciais. Você também pode editar o valor manualmente caso prefira rolar o dado físico.
-            </p>
-            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-                <button class="btn btn-primary" onclick="rollLuns()">🎲 Rolar 1d100</button>
-                <div style="display:flex;align-items:center;gap:6px;">
-                    <span style="font-size:.9rem;color:var(--muted);">💰</span>
-                    <input type="number" id="lunsInput" min="0" max="100"
-                        value="${wizardState.luns || ''}"
-                        placeholder="0"
-                        style="width:80px;font-size:1.2rem;font-weight:900;text-align:center;color:var(--accent);border:2px solid var(--soft);border-radius:8px;padding:6px;background:var(--chip);font-family:var(--font);"
-                        oninput="updateLunsManual(this.value)">
-                    <span style="font-size:.9rem;font-weight:700;color:var(--accent);">Luns</span>
-                </div>
-            </div>
-            <div id="lunsRollResult" style="font-size:.85rem;color:var(--muted);margin-top:6px;">
-                ${wizardState.luns > 0 ? `Resultado: ${wizardState.luns}` : ''}
-            </div>
-        </div>
-    `;
+    // Item Customizado (Substitui Objeto Pessoal)
+    const slots = [
+        {v:'cabeca', l:'Cabeça'}, {v:'pescoco', l:'Pescoço'}, {v:'tronco', l:'Tronco'},
+        {v:'ombros', l:'Ombros'}, {v:'costas', l:'Costas'}, {v:'bracos', l:'Braços'},
+        {v:'mao_dir', l:'Mão Dir.'}, {v:'mao_esq', l:'Mão Esq.'},
+        {v:'dedo_1', l:'Anel 1'}, {v:'dedo_2', l:'Anel 2'}, {v:'dedo_3', l:'Anel 3'},
+        {v:'dedo_4', l:'Anel 4'}, {v:'dedo_5', l:'Anel 5'}, {v:'dedo_6', l:'Anel 6'},
+        {v:'dedo_7', l:'Anel 7'}, {v:'dedo_8', l:'Anel 8'}, {v:'dedo_9', l:'Anel 9'}, {v:'dedo_10', l:'Anel 10'},
+        {v:'cintura', l:'Cintura'}, {v:'pernas', l:'Pernas'}, {v:'pes', l:'Pés'}
+    ];
+    const restricoes = wizardState.customItem?.slotRestrito || [];
+    const slotsOptions = slots.map(s => `<option value="${s.v}" ${restricoes.includes(s.v) ? 'selected' : ''}>${s.l}</option>`).join('');
 
-    // Objeto Pessoal
     html += `
         <div class="section">
             <div class="section-title">🎒 Objeto Pessoal</div>
             <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
-                <strong>Opcional.</strong> Um objeto que não tem preço em ouro. Pode ser um amuleto, uma carta, uma ferramenta velha...
-                algo que conta uma história.
+                <strong>Opcional.</strong> Crie um item personalizado para começar sua jornada. Pode ser uma arma de herança, um amuleto, ou qualquer equipamento que conte uma história. Nota: Este item não terá um bônus efetivo no personagem, servindo apenas como um item de valor sentimental e narrativo.
             </p>
             <div class="row">
+                <div class="field" style="flex:2">
+                    <label>Nome do Item</label>
+                    <input type="text" id="customItemNome" placeholder="Ex: Espada enferrujada"
+                        value="${escHtml(wizardState.customItem?.nome || '')}"
+                        oninput="updateCustomItem()">
+                </div>
+                <div class="field" style="flex:1">
+                    <label>Tipo</label>
+                    <select id="customItemTipo" onchange="updateCustomItem(); toggleCustomItemFields();">
+                        <option value="Objeto" ${wizardState.customItem?.tipo === 'Objeto' ? 'selected' : ''}>📦 Objeto</option>
+                        <option value="Arma" ${wizardState.customItem?.tipo === 'Arma' ? 'selected' : ''}>⚔️ Arma</option>
+                        <option value="Vestimenta" ${wizardState.customItem?.tipo === 'Vestimenta' ? 'selected' : ''}>🧥 Vestimenta</option>
+                        <option value="Acessório" ${wizardState.customItem?.tipo === 'Acessório' ? 'selected' : ''}>💍 Acessório</option>
+                        <option value="Projétil" ${wizardState.customItem?.tipo === 'Projétil' ? 'selected' : ''}>🎯 Projétil</option>
+                        <option value="Container" ${wizardState.customItem?.tipo === 'Container' ? 'selected' : ''}>📦 Container</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="field" style="flex:1">
+                    <label>Vestir em (Restrição)</label>
+                    <select id="customItemSlotRestrito" multiple size="4" onchange="updateCustomItem()">
+                        ${slotsOptions}
+                    </select>
+                    <small style="color:var(--muted); font-size: 0.8rem;">Segure Ctrl/Cmd para selecionar vários. Deixe vazio para Livre.</small>
+                </div>
+            </div>
+            
+            <div class="row" id="customItemArmaRow" style="display:${wizardState.customItem?.tipo === 'Arma' ? 'flex' : 'none'};">
                 <div class="field">
-                    <label>Nome do Objeto</label>
-                    <input type="text" id="objetoNome" placeholder="Ex: Anel da minha avó"
-                        value="${escHtml(wizardState.objetoPessoal?.nome || '')}"
-                        oninput="updateObjeto()">
+                    <label>Categoria da Arma</label>
+                    <select id="customItemCategoriaArma" onchange="updateCustomItem()">
+                        <option value="uma_mao" ${wizardState.customItem?.categoriaArma === 'uma_mao' ? 'selected' : ''}>🗡️ Uma Mão</option>
+                        <option value="duas_maos" ${wizardState.customItem?.categoriaArma === 'duas_maos' ? 'selected' : ''}>⚔️ Duas Mãos</option>
+                        <option value="versatil" ${wizardState.customItem?.categoriaArma === 'versatil' ? 'selected' : ''}>🔄 Versátil</option>
+                        <option value="escudo" ${wizardState.customItem?.categoriaArma === 'escudo' ? 'selected' : ''}>🛡️ Escudo</option>
+                        <option value="distancia" ${wizardState.customItem?.categoriaArma === 'distancia' ? 'selected' : ''}>🏹 À Distância</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="field">
+                    <label>Peso</label>
+                    <input type="number" id="customItemPeso" value="${wizardState.customItem?.peso ?? 1}" min="0" step="0.1" oninput="updateCustomItem()">
                 </div>
                 <div class="field">
-                    <label>Descrição</label>
-                    <textarea id="objetoDesc" rows="2" placeholder="O que é? Por que é importante?"
-                        oninput="updateObjeto()">${escHtml(wizardState.objetoPessoal?.descricao || '')}</textarea>
+                    <label>Tamanho</label>
+                    <input type="number" id="customItemTamanho" value="${wizardState.customItem?.tamanho ?? 1}" min="0" oninput="updateCustomItem()">
                 </div>
+                <div class="field" id="customItemQtdField" style="display:${['Container','Arma'].includes(wizardState.customItem?.tipo) ? 'none' : 'block'}">
+                    <label>Quantidade</label>
+                    <input type="number" id="customItemQtd" value="${wizardState.customItem?.quantidade ?? 1}" min="1" oninput="updateCustomItem()">
+                </div>
+            </div>
+
+            <div class="row" id="customItemContainerRow" style="display:${wizardState.customItem?.tipo === 'Container' ? 'flex' : 'none'};">
+                <div class="field">
+                    <label>Peso Máximo</label>
+                    <input type="number" id="customItemPesoMax" value="${wizardState.customItem?.pesoMaximoContainer ?? 10}" min="0" step="0.1" oninput="updateCustomItem()">
+                </div>
+                <div class="field">
+                    <label>Multiplicador</label>
+                    <input type="number" id="customItemMult" value="${wizardState.customItem?.multiplicadorPressao ?? 1}" min="0" step="0.01" oninput="updateCustomItem()">
+                </div>
+            </div>
+
+            <div class="field">
+                <label>Descrição</label>
+                <textarea id="customItemDesc" rows="2" placeholder="O que é? Por que é importante?" oninput="updateCustomItem()">${escHtml(wizardState.customItem?.descricao || '')}</textarea>
+            </div>
+
+            <div class="field">
+                <label>Imagem (URL)</label>
+                <input type="text" id="customItemImagem" placeholder="https://..." value="${escHtml(wizardState.customItem?.imagemUrl || '')}" oninput="updateCustomItem()">
             </div>
         </div>
     `;
 
     // Memória condicional ao objeto
-    html += createMemoryBox('equipamento_objeto', 'Como este objeto chegou às suas mãos? Quem o possuía antes de você?', true);
+    html += createMemoryBox('equipamento_objeto', 'Como este item chegou às suas mãos? Quem o possuía antes de você?', true);
 
     container.innerHTML = html;
 }
@@ -97,46 +148,56 @@ function toggleEquipItem(itemName, checked) {
     saveWizardToStorage();
 }
 
-function rollLuns() {
-    const result = Math.floor(Math.random() * 100) + 1;
-    wizardState.luns = result;
+window.toggleCustomItemFields = function() {
+    const tipo = document.getElementById('customItemTipo')?.value;
+    const armaRow = document.getElementById('customItemArmaRow');
+    const contRow = document.getElementById('customItemContainerRow');
+    const qtdField = document.getElementById('customItemQtdField');
+    
+    if (armaRow) armaRow.style.display = tipo === 'Arma' ? 'flex' : 'none';
+    if (contRow) contRow.style.display = tipo === 'Container' ? 'flex' : 'none';
+    if (qtdField) qtdField.style.display = (tipo === 'Container' || tipo === 'Arma') ? 'none' : 'block';
+};
 
-    const input = document.getElementById('lunsInput');
-    if (input) {
-        input.value = result;
-        input.style.animation = 'none';
-        void input.offsetWidth;
-        input.style.animation = 'phaseIn .3s ease-out';
+window.updateCustomItem = function() {
+    const nome = document.getElementById('customItemNome')?.value || '';
+    if (!nome.trim()) {
+        wizardState.customItem = null;
+        saveWizardToStorage();
+        return;
     }
+    
+    const tipo = document.getElementById('customItemTipo')?.value || 'Objeto';
+    const selectSlot = document.getElementById('customItemSlotRestrito');
+    const slotRestrito = Array.from(selectSlot?.selectedOptions || []).map(opt => opt.value);
+    const categoriaArma = document.getElementById('customItemCategoriaArma')?.value || 'uma_mao';
+    const peso = parseFloat(document.getElementById('customItemPeso')?.value) || 0;
+    const tamanho = parseInt(document.getElementById('customItemTamanho')?.value) || 0;
+    const quantidade = parseInt(document.getElementById('customItemQtd')?.value) || 1;
+    const pesoMax = parseFloat(document.getElementById('customItemPesoMax')?.value) || 0;
+    const mult = parseFloat(document.getElementById('customItemMult')?.value) || 1;
+    const desc = document.getElementById('customItemDesc')?.value || '';
+    const imagemUrl = document.getElementById('customItemImagem')?.value || '';
 
-    const resultEl = document.getElementById('lunsRollResult');
-    if (resultEl) {
-        resultEl.textContent = `🎲 Resultado: ${result}`;
+    wizardState.customItem = {
+        nome,
+        tipo,
+        slotRestrito,
+        peso,
+        tamanho,
+        quantidade: (tipo === 'Container' || tipo === 'Arma') ? 1 : quantidade,
+        descricao: desc,
+        imagemUrl,
+        ehContainer: tipo === 'Container'
+    };
+
+    if (tipo === 'Arma') {
+        wizardState.customItem.categoriaArma = categoriaArma;
+    }
+    if (tipo === 'Container') {
+        wizardState.customItem.pesoMaximoContainer = pesoMax;
+        wizardState.customItem.multiplicadorPressao = mult;
     }
 
     saveWizardToStorage();
-}
-
-function updateLunsManual(value) {
-    const num = parseInt(value) || 0;
-    wizardState.luns = num;
-
-    const resultEl = document.getElementById('lunsRollResult');
-    if (resultEl) {
-        resultEl.textContent = num > 0 ? `Valor definido: ${num}` : '';
-    }
-
-    saveWizardToStorage();
-}
-
-function updateObjeto() {
-    const nome = document.getElementById('objetoNome')?.value || '';
-    const desc = document.getElementById('objetoDesc')?.value || '';
-
-    if (nome.trim() || desc.trim()) {
-        wizardState.objetoPessoal = { nome, descricao: desc };
-    } else {
-        wizardState.objetoPessoal = null;
-    }
-    saveWizardToStorage();
-}
+};

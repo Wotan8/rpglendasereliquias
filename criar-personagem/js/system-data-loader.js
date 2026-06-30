@@ -254,6 +254,7 @@ function buildSkillsFromFirebase() {
             key: key,
             attr: sk.atributo || '',
             attrLabel: sk.atributoLabel || sk.atributo || '',
+            atributoBase: sk.atributoBase,
             custoExp: sk.custoExp || 4,
             mecanicaIds: sk.mecanicaIds || [],
             descricao: sk.descricao || ''

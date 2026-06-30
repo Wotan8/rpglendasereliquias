@@ -153,6 +153,47 @@ function getSkillGroupPool(group) {
     return 0;
 }
 
+function getSkillParentAttributeLevel(sk) {
+    const attrSource = sk.atributoBase || sk.attr;
+    if (!attrSource) return Infinity;
+
+    // Use the first attribute if it's an array, or the string itself
+    const primaryAttr = Array.isArray(attrSource) ? attrSource[0] : String(attrSource).split('/')[0];
+    const upperAttr = String(primaryAttr).trim().toUpperCase();
+
+    const ATTR_KEY_MAP = {
+        'FOR': 'attr_for', 'DES': 'attr_des', 'VIG': 'attr_vig',
+        'INT': 'attr_int', 'RAC': 'attr_rac', 'PRS': 'attr_prs',
+        'PRE': 'attr_pre', 'MAN': 'attr_man', 'AUT': 'attr_aut'
+    };
+
+    let attrKey = null;
+
+    if (ATTR_KEY_MAP[upperAttr]) {
+        attrKey = ATTR_KEY_MAP[upperAttr];
+    } else if (upperAttr.startsWith('ATTR_')) {
+        attrKey = primaryAttr.toLowerCase();
+    } else {
+        for (const group of Object.values(ATRIBUTOS)) {
+            for (const attr of group) {
+                if (attr.id.toUpperCase() === upperAttr || attr.nome.toUpperCase() === upperAttr || attr.key.toUpperCase() === upperAttr) {
+                    attrKey = attr.key;
+                    break;
+                }
+            }
+            if (attrKey) break;
+        }
+    }
+
+    if (attrKey) {
+        const baseLevel = REGRAS_CRIACAO.atributos.base_inicial || 1;
+        const addedLevel = wizardState.atributos[attrKey] || 0;
+        return baseLevel + addedLevel;
+    }
+
+    return Infinity;
+}
+
 function renderSkillDistribution() {
     const container = document.getElementById('skillDistGrid');
     if (!container) return;
@@ -175,6 +216,8 @@ function renderSkillDistribution() {
             const dotKey = 'sk_' + sk.key;
             const val = wizardState.pericias[dotKey] || 0;
             const isClassSkill = classSkills.includes(sk.name);
+            const parentLevel = getSkillParentAttributeLevel(sk);
+            const maxAllowed = Math.min(REGRAS_CRIACAO.pericias.limite_max_por_pericia, parentLevel);
 
             html += `
                 <div class="attr-dist-row" title="${escHtml(sk.descricao || '')}">
@@ -185,7 +228,8 @@ function renderSkillDistribution() {
             `;
             for (let d = 1; d <= 5; d++) {
                 const filled = d <= val ? 'filled' : '';
-                html += `<button class="dot ${filled}" data-skill="${dotKey}" data-dot="${d}" onclick="clickSkillDot('${dotKey}', ${d}, '${grp}')"></button>`;
+                const disabled = d > maxAllowed ? 'disabled' : '';
+                html += `<button class="dot ${filled}" data-skill="${dotKey}" data-dot="${d}" onclick="${disabled ? '' : `clickSkillDot('${dotKey}', ${d}, '${grp}')`}" ${disabled}></button>`;
             }
             html += `</div></div>`;
         }
@@ -202,13 +246,21 @@ function clickSkillDot(dotKey, dotLevel, group) {
 
     const current = wizardState.pericias[dotKey] || 0;
     const max = REGRAS_CRIACAO.pericias.limite_max_por_pericia;
+    const skills = window.SKILLS?.[group] || [];
+    const sk = skills.find(s => 'sk_' + s.key === dotKey);
+    const parentLevel = sk ? getSkillParentAttributeLevel(sk) : Infinity;
+    const maxAllowed = Math.min(max, parentLevel);
 
     // Toggle off if same
     if (dotLevel === current) {
         wizardState.pericias[dotKey] = 0;
     } else {
-        if (dotLevel > max) {
-            showWizardToast(`Máximo ${max} por perícia na criação.`, 'error');
+        if (dotLevel > maxAllowed) {
+            if (dotLevel > parentLevel) {
+                showWizardToast(`Máximo ${parentLevel} por causa do atributo limitador.`, 'error');
+            } else {
+                showWizardToast(`Máximo ${max} por perícia na criação.`, 'error');
+            }
             return;
         }
 

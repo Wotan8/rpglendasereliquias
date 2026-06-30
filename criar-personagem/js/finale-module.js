@@ -325,7 +325,6 @@ async function createCharacter() {
         medo: ws.medo || '',
         virtude: ws.virtudeSelecionada || '',
         vicio: ws.vicioSelecionado || '',
-        luns: ws.luns || 0,
         sessoes: 0
     };
 
@@ -348,12 +347,12 @@ async function createCharacter() {
         });
     }
 
-    // Objeto pessoal note
-    if (ws.objetoPessoal?.nome) {
+    // Objeto pessoal note (legacy view, opcional, mas mantém a nota na ficha)
+    if (ws.customItem?.nome) {
         notes.push({
             id: 'note-objeto-' + Date.now(),
-            titulo: `🎒 ${ws.objetoPessoal.nome}`,
-            conteudo: ws.objetoPessoal.descricao || 'Objeto pessoal sem descrição.',
+            titulo: `🎒 ${ws.customItem.nome}`,
+            conteudo: ws.customItem.descricao || 'Item inicial personalizado.',
             criadoEm: new Date().toISOString(),
             atualizadoEm: new Date().toISOString()
         });
@@ -370,23 +369,13 @@ async function createCharacter() {
         });
     }
 
-    // Build equipment list (including Objeto Pessoal)
+    // Build equipment list (lista de nomes de itens pra compatibilidade)
     const equipamento = [...(ws.equipamentoSelecionado || [])];
-    if (ws.objetoPessoal?.nome) {
-        equipamento.push(ws.objetoPessoal.nome);
-    }
 
-    // Build structured inventory items (with name, desc, qtd) for ficha v1.7
+    // Build structured inventory items (with name, desc, qtd) for ficha v1.7 legacy
     const inventoryItems = (ws.equipamentoSelecionado || []).map(name => ({
         name: name, desc: '', qtd: '1'
     }));
-    if (ws.objetoPessoal?.nome) {
-        inventoryItems.push({
-            name: ws.objetoPessoal.nome,
-            desc: ws.objetoPessoal.descricao || '',
-            qtd: '1'
-        });
-    }
 
     // Assemble final charData
     const charData = {
@@ -420,6 +409,11 @@ async function createCharacter() {
             // === Save NPCs to Master Panel (collection 'npcs') ===
             await saveNpcsToMasterPanel(ws, charName, charId);
 
+            // === Save custom item to 'items' collection ===
+            if (ws.customItem) {
+                await saveCustomItemToFirebase(ws.customItem, charId);
+            }
+
             showConfetti();
             showWizardToast('🎉 Personagem criado com sucesso!', 'success');
             setTimeout(() => {
@@ -431,6 +425,35 @@ async function createCharacter() {
     } catch (e) {
         console.error('Erro ao criar personagem:', e);
         showWizardToast('❌ Erro ao salvar: ' + e.message, 'error');
+    }
+}
+
+async function saveCustomItemToFirebase(customItem, charId) {
+    if (!customItem || !customItem.nome) return;
+    try {
+        const { doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const db = window.db;
+        const itemId = 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        
+        const itemData = {
+            ...customItem,
+            id: itemId,
+            characterId: charId,
+            equipado: false,
+            parentItemId: null,
+            lastModified: new Date().toISOString()
+        };
+
+        const user = window.currentUser;
+        if (user) {
+            itemData.ownerUid = user.uid;
+            itemData.ownerId = user.uid;
+        }
+
+        await setDoc(doc(db, 'items', itemId), itemData);
+        console.log(`✅ Item customizado "${customItem.nome}" salvo no inventário`);
+    } catch (e) {
+        console.error('⚠️ Erro ao salvar item customizado:', e);
     }
 }
 

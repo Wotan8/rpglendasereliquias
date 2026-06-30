@@ -553,3 +553,5 @@ html.dark .dot.bonus.filled {
     .row.r3 { grid-template-columns: 1fr; }
     .detail-fields-grid { grid-template-columns: 1fr; }
 }
+
+.dot:disabled { opacity: 0.3; cursor: not-allowed; }
