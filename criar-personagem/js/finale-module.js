@@ -13,6 +13,12 @@ function initPhase8(container) {
                     oninput="wizardState.nomeCompleto = this.value; saveWizardToStorage();">
             </div>
             <div class="field" style="margin-bottom:8px;">
+                <label>Idade</label>
+                <input type="number" id="idade" value="${escHtml(wizardState.idade || '')}"
+                    placeholder="Idade do personagem"
+                    oninput="wizardState.idade = this.value; saveWizardToStorage();">
+            </div>
+            <div class="field" style="margin-bottom:8px;">
                 <label>Aparência</label>
                 <textarea id="aparencia" rows="3" placeholder="Descreva a aparência do seu personagem..."
                     oninput="wizardState.aparencia = this.value; saveWizardToStorage();">${escHtml(wizardState.aparencia)}</textarea>
@@ -97,6 +103,7 @@ function initResumo(container) {
         <div class="summary-title">📋 Identidade</div>
         <div class="summary-grid">
             <div class="summary-item"><div class="summary-item-label">Nome</div><div class="summary-item-value">${escHtml(ws.nomeCompleto || ws.nomePersonagem)}</div></div>
+            <div class="summary-item"><div class="summary-item-label">Idade</div><div class="summary-item-value">${escHtml(ws.idade || '—')}</div></div>
             <div class="summary-item"><div class="summary-item-label">Raça</div><div class="summary-item-value">${escHtml(ws.racaSelecionada || '—')}</div></div>
             <div class="summary-item"><div class="summary-item-label">Classe</div><div class="summary-item-value">${escHtml(ws.classeSelecionada || '—')}</div></div>
             <div class="summary-item"><div class="summary-item-label">Tribo</div><div class="summary-item-value">${escHtml(ws.triboSelecionada || '—')}</div></div>
@@ -276,6 +283,15 @@ async function createCharacter() {
     for (const pec of ws.peculiaridadesIndividuais) {
         dots['pec_' + pec.id] = pec.nivel || 1;
     }
+    
+    // Inherited peculiarity levels (upgrades)
+    if (ws.niveisPeculiaridadesHerdadas) {
+        for (const [pecId, nivel] of Object.entries(ws.niveisPeculiaridadesHerdadas)) {
+            if (nivel > 1) {
+                dots['pec_' + pecId] = nivel;
+            }
+        }
+    }
 
     // Build fields object
     const charName = ws.nomeCompleto || ws.nomePersonagem;
@@ -297,6 +313,7 @@ async function createCharacter() {
 
     const fields = {
         nome: charName,
+        idade: ws.idade || '',
         jogador: jogadorName,
         raca: ws.racaSelecionada || '',
         classe: ws.classeSelecionada || '',

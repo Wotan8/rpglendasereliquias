@@ -15,7 +15,8 @@ function initPhase5(container) {
     `;
 
     for (const v of VIRTUDES) {
-        const sel = wizardState.virtudeSelecionada === v.id ? 'selected' : '';
+        const isSelected = wizardState.virtudeSelecionada === v.id;
+        const sel = isSelected ? 'selected expanded' : '';
         html += `
             <div class="soul-card ${sel}" data-virtue="${v.id}" onclick="selectVirtue('${v.id}')">
                 <div class="soul-card-header">
@@ -51,7 +52,8 @@ function initPhase5(container) {
     `;
 
     for (const v of VICIOS) {
-        const sel = wizardState.vicioSelecionado === v.id ? 'selected' : '';
+        const isSelected = wizardState.vicioSelecionado === v.id;
+        const sel = isSelected ? 'selected expanded' : '';
         html += `
             <div class="soul-card ${sel}" data-vice="${v.id}" onclick="selectVice('${v.id}')">
                 <div class="soul-card-header">
@@ -79,20 +81,44 @@ function initPhase5(container) {
 }
 
 function selectVirtue(virtueId) {
+    const isSame = wizardState.virtudeSelecionada === virtueId;
     wizardState.virtudeSelecionada = virtueId;
 
     document.querySelectorAll('#virtueGrid .soul-card').forEach(c => {
-        c.classList.toggle('selected', c.dataset.virtue === virtueId);
+        const isThis = c.dataset.virtue === virtueId;
+        c.classList.toggle('selected', isThis);
+        
+        if (isThis) {
+            if (isSame) {
+                c.classList.toggle('expanded');
+            } else {
+                c.classList.add('expanded');
+            }
+        } else {
+            c.classList.remove('expanded');
+        }
     });
 
     saveWizardToStorage();
 }
 
 function selectVice(viceId) {
+    const isSame = wizardState.vicioSelecionado === viceId;
     wizardState.vicioSelecionado = viceId;
 
     document.querySelectorAll('#viceGrid .soul-card').forEach(c => {
-        c.classList.toggle('selected', c.dataset.vice === viceId);
+        const isThis = c.dataset.vice === viceId;
+        c.classList.toggle('selected', isThis);
+
+        if (isThis) {
+            if (isSame) {
+                c.classList.toggle('expanded');
+            } else {
+                c.classList.add('expanded');
+            }
+        } else {
+            c.classList.remove('expanded');
+        }
     });
 
     saveWizardToStorage();

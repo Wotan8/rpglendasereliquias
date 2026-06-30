@@ -107,13 +107,12 @@ const ExpTracker = {
         return total;
     },
 
-    /**
-     * Calcula o EXP Total completo.
-     * EXP Total = custo dos atributos + custo das perícias + pool atual de EXP.
-     * O pool atual já inclui todas as fontes (inicial, NPCs, memórias, peculiaridades).
-     */
     calcExpTotal() {
-        return this.calcAttrExpTotal() + this.calcSkillExpTotal() + this.getTotal();
+        let totalSourcesGained = 0;
+        for (const src of Object.values(wizardState.expSources)) {
+            if (src.amount > 0) totalSourcesGained += src.amount;
+        }
+        return this.calcAttrExpTotal() + this.calcSkillExpTotal() + totalSourcesGained;
     },
 
     /* ===== DISPLAY ===== */

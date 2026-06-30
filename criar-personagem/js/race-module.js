@@ -19,13 +19,14 @@ function initPhase1(container) {
                 ${race.imagemUrl ? `<img class="selection-card-img-full" src="${escHtml(race.imagemUrl)}" alt="${escHtml(race.nome)}" loading="lazy">` : '<div class="selection-card-img-placeholder">🧬</div>'}
                 <div class="selection-card-title">${escHtml(race.nome)}</div>
                 <div class="selection-card-subtitle">${escHtml(race.subtitulo || '')}</div>
+                <button class="selection-card-info-btn" onclick="openRaceModal('${escHtml(race.nome)}', event)">
+                    <span class="info-text">Mais Detalhes Clique Aqui ></span>
+                    <span class="info-icon">ℹ️</span>
+                </button>
             </div>
         `;
     }
     html += `</div>`;
-
-    // Expanded detail area
-    html += `<div id="raceExpandedDetail"></div>`;
     html += `</div>`;
 
     // Memory for race
@@ -50,23 +51,20 @@ function initPhase1(container) {
                 <div class="selection-card-title">${escHtml(cls.nome)}</div>
                 <div class="selection-card-subtitle">${escHtml(cls.arquetipo || '')}</div>
                 ${citacao ? `<div class="selection-card-quote">"${escHtml(citacao).substring(0, 60)}${citacao.length > 60 ? '...' : ''}"</div>` : ''}
+                <button class="selection-card-info-btn" onclick="openClassModal('${escHtml(cls.nome)}', event)">
+                    <span class="info-text">Mais Detalhes Clique Aqui ></span>
+                    <span class="info-icon">ℹ️</span>
+                </button>
             </div>
         `;
     }
     html += `</div>`;
-
-    // Expanded detail area
-    html += `<div id="classExpandedDetail"></div>`;
     html += `</div>`;
 
     // Memory for class
     html += createMemoryBox('linhagem_classe', 'Qual foi o momento em que você percebeu que esse era o seu caminho? Foi uma escolha ou uma imposição? Descreva. Quem te ensinou isso? Um mentor, um livro, a necessidade? Descreva essa pessoa ou momento.', false);
 
     container.innerHTML = html;
-
-    // Restore expanded details if selections exist
-    if (wizardState.racaSelecionada) showRaceDetail(wizardState.racaSelecionada);
-    if (wizardState.classeSelecionada) showClassDetail(wizardState.classeSelecionada);
 }
 
 function selectRace(raceName) {
@@ -77,23 +75,23 @@ function selectRace(raceName) {
         c.classList.toggle('selected', c.dataset.race === raceName);
     });
 
-    // Show detail
-    showRaceDetail(raceName);
     updateMiniPreview();
     saveWizardToStorage();
+    forceRerender(3); // Força atualização de Peculiaridades Herdadas
 }
 
-function showRaceDetail(raceName) {
-    const container = document.getElementById('raceExpandedDetail');
-    if (!container) return;
-
+function openRaceModal(raceName, event) {
+    if (event) event.stopPropagation();
+    
     const raceData = window._systemData.races.find(r => r.nome === raceName);
     const raceBuilt = window.RACES[raceName];
-    if (!raceData) { container.innerHTML = ''; return; }
+    if (!raceData) return;
 
-    let html = `<div class="expanded-detail" style="animation: expandIn .3s ease-out;">`;
-    html += `<button class="expanded-detail-close" onclick="this.parentElement.style.animation='expandOut .2s ease-in forwards'; setTimeout(()=>this.parentElement.remove(),200)">✕ Fechar</button>`;
-    html += `<h3 style="margin:0 0 8px;">${escHtml(raceData.nome)}</h3>`;
+    let html = `
+    <div class="detail-modal" id="raceModal" onclick="this.remove()">
+        <div class="detail-modal-content" onclick="event.stopPropagation()">
+            <button class="detail-modal-close" onclick="document.getElementById('raceModal').remove()">✕</button>
+            <h3 style="margin:0 0 8px;">${escHtml(raceData.nome)}</h3>`;
 
     if (raceData.subtitulo) html += `<p style="color:var(--muted);font-style:italic;margin:0 0 12px;">${escHtml(raceData.subtitulo)}</p>`;
 
@@ -138,8 +136,8 @@ function showRaceDetail(raceName) {
         html += `</div></div>`;
     }
 
-    html += `</div>`;
-    container.innerHTML = html;
+    html += `</div></div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
 }
 
 function selectClass(className) {
@@ -149,21 +147,23 @@ function selectClass(className) {
         c.classList.toggle('selected', c.dataset.class === className);
     });
 
-    showClassDetail(className);
     updateMiniPreview();
     saveWizardToStorage();
+    forceRerender(3); // Força atualização de Peculiaridades Herdadas
+    forceRerender(5); // Força atualização de Perícias de Classe
 }
 
-function showClassDetail(className) {
-    const container = document.getElementById('classExpandedDetail');
-    if (!container) return;
+function openClassModal(className, event) {
+    if (event) event.stopPropagation();
 
     const cls = window._systemData.classes.find(c => c.nome === className);
-    if (!cls) { container.innerHTML = ''; return; }
+    if (!cls) return;
 
-    let html = `<div class="expanded-detail" style="animation: expandIn .3s ease-out;">`;
-    html += `<button class="expanded-detail-close" onclick="this.parentElement.style.animation='expandOut .2s ease-in forwards'; setTimeout(()=>this.parentElement.remove(),200)">✕ Fechar</button>`;
-    html += `<h3 style="margin:0 0 8px;">${escHtml(cls.nome)}</h3>`;
+    let html = `
+    <div class="detail-modal" id="classModal" onclick="this.remove()">
+        <div class="detail-modal-content" onclick="event.stopPropagation()">
+            <button class="detail-modal-close" onclick="document.getElementById('classModal').remove()">✕</button>
+            <h3 style="margin:0 0 8px;">${escHtml(cls.nome)}</h3>`;
 
     if (cls.arquetipo) html += `<p style="color:var(--muted);font-style:italic;margin:0 0 12px;">${escHtml(cls.arquetipo)}</p>`;
 
@@ -228,8 +228,8 @@ function showClassDetail(className) {
         html += `</div></div>`;
     }
 
-    html += `</div>`;
-    container.innerHTML = html;
+    html += `</div></div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
 }
 
 /* ===== SHARED: Render a peculiarity with its linked mechanics ===== */

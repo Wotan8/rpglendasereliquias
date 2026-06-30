@@ -17,12 +17,14 @@ function initPhase2(container) {
                 ${tribe.imagemUrl ? `<img class="selection-card-img-full" src="${escHtml(tribe.imagemUrl)}" alt="${escHtml(tribe.nome)}" loading="lazy">` : '<div class="selection-card-img-placeholder">🏕️</div>'}
                 <div class="selection-card-title">${escHtml(tribe.nome)}</div>
                 <div class="selection-card-subtitle">${escHtml(tribe.subtitulo || tribe.lema || '')}</div>
+                <button class="selection-card-info-btn" onclick="openTribeModal('${escHtml(tribe.nome)}', event)">
+                    <span class="info-text">Mais Detalhes Clique Aqui ></span>
+                    <span class="info-icon">ℹ️</span>
+                </button>
             </div>
         `;
     }
 
-    html += `</div>`;
-    html += `<div id="tribeExpandedDetail"></div>`;
     html += `</div>`;
 
     // Memória principal
@@ -43,22 +45,23 @@ function selectTribe(tribeName) {
         c.classList.toggle('selected', c.dataset.tribe === tribeName);
     });
 
-    showTribeDetail(tribeName);
     updateMiniPreview();
     saveWizardToStorage();
+    forceRerender(3); // Força atualização de Peculiaridades Herdadas
 }
 
-function showTribeDetail(tribeName) {
-    const container = document.getElementById('tribeExpandedDetail');
-    if (!container) return;
+function openTribeModal(tribeName, event) {
+    if (event) event.stopPropagation();
 
     const tribeData = window._systemData.tribes.find(t => t.nome === tribeName);
     const tribeBuilt = window.TRIBES[tribeName];
-    if (!tribeData) { container.innerHTML = ''; return; }
+    if (!tribeData) return;
 
-    let html = `<div class="expanded-detail" style="animation: expandIn .3s ease-out;">`;
-    html += `<button class="expanded-detail-close" onclick="this.parentElement.style.animation='expandOut .2s ease-in forwards'; setTimeout(()=>this.parentElement.remove(),200)">✕ Fechar</button>`;
-    html += `<h3 style="margin:0 0 8px;">${escHtml(tribeData.nome)}</h3>`;
+    let html = `
+    <div class="detail-modal" id="tribeModal" onclick="this.remove()">
+        <div class="detail-modal-content" onclick="event.stopPropagation()">
+            <button class="detail-modal-close" onclick="document.getElementById('tribeModal').remove()">✕</button>
+            <h3 style="margin:0 0 8px;">${escHtml(tribeData.nome)}</h3>`;
 
     if (tribeData.subtitulo || tribeData.lema) {
         html += `<p style="color:var(--muted);font-style:italic;margin:0 0 12px;">${escHtml(tribeData.subtitulo || tribeData.lema)}</p>`;
@@ -120,8 +123,8 @@ function showTribeDetail(tribeName) {
         html += `</div></div>`;
     }
 
-    html += `</div>`;
-    container.innerHTML = html;
+    html += `</div></div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
 }
 
 function getFieldIcon(label) {

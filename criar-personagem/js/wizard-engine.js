@@ -16,6 +16,7 @@ window.wizardState = {
 
     // Fase 2B
     peculiaridadesIndividuais: [], // [{ id, nome, nivel }]
+    niveisPeculiaridadesHerdadas: {}, // { id: nivel }
 
     // Fase 3
     grupoPrimario: null,       // 'Mental' | 'Fisico' | 'Social'
@@ -47,6 +48,7 @@ window.wizardState = {
 
     // Fase 8
     nomeCompleto: '',
+    idade: '',
     aparencia: '',
     imagemPersonagem: null, // base64 data URL da imagem do personagem
     motivacao: '',
