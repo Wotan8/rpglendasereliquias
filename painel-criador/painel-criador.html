@@ -7,6 +7,7 @@
     <title>Painel de Criador — Lendas e Relíquias</title>
     <meta name="description" content="Painel de Criador — Onde o mundo de Vasteluna é forjado.">
     <link rel="stylesheet" href="css/painel-criador.css?v=3">
+    <script type="module" src="/js/global-favicon.js"></script>
 </head>
 
 <body>
@@ -53,7 +54,7 @@
                 <span class="hint-toolbar" style="margin-right: auto;">Lendas e Relíquias — Painel de Criador</span>
                 <span id="userDisplayName" class="user-display" title=""></span>
                 <button onclick="goToMenu()">← Menu</button>
-                <button id="btnThemeToggle" onclick="toggleTheme()">🌙</button>
+                <button id="btnSettings" onclick="document.getElementById('settingsModal').style.display='flex'">⚙️</button>
                 <button class="btn-logout" onclick="logout()">🚪</button>
             </div>
 
@@ -134,8 +135,72 @@
         </div>
     </div>
 
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content settings-modal-content">
+            <div class="form-header">
+                <h2>⚙️ Configurações do Sistema</h2>
+                <button class="btn-close-form" onclick="document.getElementById('settingsModal').style.display='none'">✕</button>
+            </div>
+            
+            <div class="settings-tabs">
+                <button class="settings-tab active" data-target="settings-theme">🎨 Tema</button>
+                <button class="settings-tab" data-target="settings-favicons">🖼️ Favicons</button>
+                <button class="settings-tab" data-target="settings-permissions">🔐 Permissões</button>
+            </div>
+
+            <div class="settings-body">
+                <!-- Theme Section -->
+                <div id="settings-theme" class="settings-section active">
+                    <h3>Aparência do Painel</h3>
+                    <p class="subtitle">Alterne entre o modo claro e escuro para a interface do Painel do Criador.</p>
+                    <button class="btn-theme-large" id="btnThemeToggleModal">🌙 Alternar Tema</button>
+                </div>
+
+                <!-- Favicons Section -->
+                <div id="settings-favicons" class="settings-section">
+                    <h3>Gerenciador de Favicons</h3>
+                    <p class="subtitle">Faça upload da imagem de ícone para as páginas do sistema. (Máx: 2MB, .png/.ico)</p>
+                    
+                    <div class="favicon-grid" id="faviconUploadsContainer">
+                        <!-- Gerado dinamicamente via JS -->
+                    </div>
+                </div>
+
+                <!-- Permissions Section -->
+                <div id="settings-permissions" class="settings-section">
+                    <h3>Controle de Acesso (RBAC)</h3>
+                    <p class="subtitle">Gerencie os papéis dos usuários cadastrados no sistema.</p>
+                    
+                    <div class="filter-bar" style="margin-bottom: 10px; margin-top: 10px;">
+                        <input type="text" id="userSearchInput" placeholder="🔍 Buscar usuário por nome ou email...">
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="users-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome / Email</th>
+                                    <th>Data Cadastro</th>
+                                    <th>Cargo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <!-- Preenchido dinamicamente -->
+                                <tr>
+                                    <td colspan="3" style="text-align:center">Carregando usuários...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase Module -->
     <script type="module" src="js/painel-firebase.js?v=3"></script>
+    <script type="module" src="js/settings-manager.js"></script>
 
     <script>
         function toggleSidebar() {

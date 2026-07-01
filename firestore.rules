@@ -202,6 +202,12 @@ service cloud.firestore {
       allow create, update, delete: if isMaster();
     }
 
+    // ========== ADICIONADO: Configurações Globais (Ex: Favicons) ==========
+    match /app-config/{docId} {
+      allow read: if true;
+      allow write: if isCriador();
+    }
+
     // ========== ADICIONADO: Coleção de Configurações do Mestre ==========
     match /mestre-config/{docId} {
       allow read: if isMaster();

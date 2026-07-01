@@ -2415,4 +2415,186 @@ html.dark .calc-row:hover {
 html.dark #mech_duracao_exp_wrap {
     background: rgba(250, 204, 21, .06);
     border-color: rgba(250, 204, 21, .3);
-}
+}
+
+/* ===== SETTINGS MODAL ===== */
+.settings-modal-content {
+    max-width: 800px;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.settings-modal-content .form-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--line);
+    background: var(--chip);
+}
+.settings-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--line);
+    background: var(--chip);
+}
+.settings-tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 12px;
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+}
+.settings-tab:hover {
+    color: var(--ink);
+    background: rgba(0,0,0,0.05);
+}
+html.dark .settings-tab:hover {
+    background: rgba(255,255,255,0.05);
+}
+.settings-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+.settings-body {
+    padding: 1.5rem;
+    max-height: 60vh;
+    overflow-y: auto;
+    text-align: left;
+}
+.settings-section {
+    display: none;
+}
+.settings-section.active {
+    display: block;
+}
+.settings-section h3 {
+    margin-bottom: 5px;
+    font-size: 1.2rem;
+    color: var(--ink);
+}
+.settings-section .subtitle {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+}
+
+/* Theme Tab */
+.btn-theme-large {
+    background: var(--chip);
+    border: 2px solid var(--primary);
+    color: var(--ink);
+    padding: 15px 30px;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+.btn-theme-large:hover {
+    background: var(--primary);
+    color: #fff;
+}
+
+/* Favicons Tab */
+.favicon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+.favicon-card {
+    background: var(--chip);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+.favicon-preview {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px dashed var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.favicon-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+.favicon-card h4 {
+    font-size: 0.9rem;
+    color: var(--ink);
+    margin: 0;
+}
+.favicon-card input[type=\
+file\] {
+    display: none;
+}
+.btn-upload {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.btn-upload:hover {
+    background: #4338ca;
+}
+.btn-upload:disabled {
+    background: var(--muted);
+    cursor: not-allowed;
+}
+
+/* Permissions Tab */
+.table-container {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+}
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+.users-table th, .users-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+}
+.users-table th {
+    background: var(--chip);
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+.users-table tr:last-child td {
+    border-bottom: none;
+}
+.role-select {
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    font-weight: 600;
+}
+

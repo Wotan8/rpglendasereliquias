@@ -417,6 +417,9 @@ onAuthStateChanged(auth, async (user) => {
 
             // Build auras
             if (typeof buildAurasFromFirebase === 'function') buildAurasFromFirebase();
+            
+            window._systemDataLoaded = true;
+            document.dispatchEvent(new CustomEvent('systemDataReady'));
         } catch (err) {
             console.error('❌ Falha ao carregar dados do sistema:', err);
             if (loadingText) {
