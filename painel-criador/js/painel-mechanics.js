@@ -59,6 +59,18 @@ function getMechanicTargetsHTML() {
 <option value="Tamanho">Tamanho</option>
 </optgroup>`;
 
+    // Partes do Corpo — dinâmico do Firebase
+    const bpCache = window._bodyPartsCache || [];
+    if (bpCache.length > 0) {
+        bpCache.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
+        html += `\n<optgroup label="Partes do Corpo (Slots)">`;
+        for (const bp of bpCache) {
+            const icon = bp.icone || '🦴';
+            html += `\n<option value="Parte do Corpo: ${esc(bp.nome)}">${icon} Parte do Corpo: ${esc(bp.nome)}</option>`;
+        }
+        html += `\n</optgroup>`;
+    }
+
     // Build skill options dynamically from skills cache
     const cache = window._skillsCache || [];
     if (cache.length > 0) {
@@ -369,6 +381,18 @@ function getValueSourceHTML() {
 <option value="Blindagem">Blindagem</option>
 <option value="Tamanho">Tamanho</option>
 </optgroup>`;
+
+    // Partes do Corpo — dinâmico do Firebase
+    const bpCache2 = window._bodyPartsCache || [];
+    if (bpCache2.length > 0) {
+        bpCache2.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
+        html += `\n<optgroup label="Partes do Corpo (Slots)">`;
+        for (const bp of bpCache2) {
+            const icon = bp.icone || '🦴';
+            html += `\n<option value="Parte do Corpo: ${esc(bp.nome)}">${icon} Parte do Corpo: ${esc(bp.nome)}</option>`;
+        }
+        html += `\n</optgroup>`;
+    }
 
     // Build skill options dynamically from skills cache
     const cache = window._skillsCache || [];

@@ -713,6 +713,7 @@ async function refreshBodyPartsCache() {
         bodyPartsCache = [];
         snap.forEach(d => bodyPartsCache.push({ id: d.id, ...d.data() }));
         bodyPartsCache.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
+        window._bodyPartsCache = bodyPartsCache;
     } catch (e) { console.error('Erro cache bodyParts:', e); }
 }
 

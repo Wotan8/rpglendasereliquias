@@ -168,6 +168,18 @@ function populateTargetMapFromVitalStats() {
 }
 
 /**
+ * Popula TARGET_MAP com partes do corpo do Firebase.
+ * Permite que mecânicas alterem dinamicamente o número de slots anatômicos.
+ */
+function populateTargetMapFromBodyParts() {
+    if (!window._systemData || !window._systemData.bodyParts) return;
+    for (const bp of window._systemData.bodyParts) {
+        TARGET_MAP[`Parte do Corpo: ${bp.nome}`] = `slot_${bp.id}`;
+    }
+    console.log('✅ TARGET_MAP atualizado com partes do corpo do Firebase');
+}
+
+/**
  * Popula TARGET_MAP com entradas MODULE_LIMIT para módulos de classe.
  * Permite que mecânicas usem "Limite: [titulo]" como alvo.
  * Chamada por buildClassModulesFromFirebase() após carregar os módulos.
@@ -342,6 +354,15 @@ function _resolveSheetRef(ref, mult) {
         const fieldEl = document.querySelector(`[data-key="${fieldKey}"]`);
         const fieldVal = parseFloat(String(fieldEl?.value || '0').replace(',', '.')) || 0;
         return fieldVal * mult;
+    }
+
+    // Check body part slots
+    if (attrKey && attrKey.startsWith('slot_')) {
+        const slotKey = attrKey.replace('slot_', '');
+        const slotDef = typeof BODY_SLOTS !== 'undefined' ? BODY_SLOTS[slotKey] : null;
+        const base = slotDef ? slotDef.max : 0;
+        const bonus = state.mechanicBonuses?.[attrKey] || 0;
+        return (base + bonus) * mult;
     }
 
     return 0;

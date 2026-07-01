@@ -347,13 +347,15 @@ function renderEquippedItems() {
             // Para Dedos, se não houver item, nem renderiza o placeholder para não poluir
             if (slotDef.isDedo && slotItems.length === 0) continue;
 
-            const isFull = slotItems.length >= slotDef.max;
+            const mechBonus = typeof state !== 'undefined' && state.mechanicBonuses ? (state.mechanicBonuses['slot_' + slotKey] || 0) : 0;
+            const dynamicMax = slotDef.max + mechBonus;
+            const isFull = slotItems.length >= dynamicMax;
             
             groupHtml += `<div class="inv-slot-container">
                 <div class="inv-slot-header">
                     <span class="inv-slot-icon">${slotDef.icon}</span>
                     <span class="inv-slot-name">${slotDef.label}</span>
-                    <span class="inv-slot-cap ${isFull ? 'full' : ''}">${slotItems.length}/${slotDef.max}</span>
+                    <span class="inv-slot-cap ${isFull ? 'full' : ''}">${slotItems.length}/${dynamicMax}</span>
                 </div>
                 <div class="inv-slot-items">`;
             

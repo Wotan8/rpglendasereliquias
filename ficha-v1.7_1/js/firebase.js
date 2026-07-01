@@ -406,6 +406,8 @@ onAuthStateChanged(auth, async (user) => {
             if (typeof populateTargetMapFromDerivedValues === 'function') populateTargetMapFromDerivedValues();
             buildVitalStatsFromFirebase();
             if (typeof populateTargetMapFromVitalStats === 'function') populateTargetMapFromVitalStats();
+            if (typeof populateTargetMapFromBodyParts === 'function') populateTargetMapFromBodyParts();
+            if (typeof populateDistribuirPools === 'function') populateDistribuirPools();
             populateRaceSelect();
             populateClassSelect();
             buildTribesFromFirebase();
