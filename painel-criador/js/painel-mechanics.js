@@ -252,7 +252,13 @@ export function generatePreviewText(data) {
         }
     } else if (tipo === 'conceder') {
         const label = { capacidade: 'Concede', imunidade: 'Imunidade', vulnerabilidade: 'Vulnerabilidade', resistencia: 'Resistência', vantagem: 'Vantagem', desvantagem: 'Desvantagem', acesso: 'Acesso', remover_acesso: 'Remove acesso' };
-        text = `${label[config.tipoConcessao] || 'Concede'}: ${config.descricaoConcessao || '?'}`;
+        if (config.tipoConcessao === 'adicionar_parte_corpo' || config.tipoConcessao === 'remover_parte_corpo') {
+            const verb = config.tipoConcessao === 'adicionar_parte_corpo' ? 'Adiciona' : 'Remove';
+            const count = Array.isArray(config.partesCorpo) ? config.partesCorpo.length : 0;
+            text = `${verb} ${count} Parte(s) do Corpo`;
+        } else {
+            text = `${label[config.tipoConcessao] || 'Concede'}: ${config.descricaoConcessao || '?'}`;
+        }
     } else if (tipo === 'condicional') {
         // Build conditional preview with resolved sub-mechanic previews
         const parts = [];
@@ -632,7 +638,7 @@ function renderConfigConceder(config) {
     return `
     <div class="form-grid">
         <div class="form-group"><label>O que concede? <span class="required">*</span></label>
-            <select id="mech_config_tipoConcessao" onchange="window._mechUpdatePreview()">
+            <select id="mech_config_tipoConcessao" onchange="window._mechTipoConcessaoChange()">
                 <option value="">— Selecionar —</option>
                 <option value="capacidade" ${tc === 'capacidade' ? 'selected' : ''}>Capacidade especial</option>
                 <option value="imunidade" ${tc === 'imunidade' ? 'selected' : ''}>Imunidade</option>
@@ -642,12 +648,58 @@ function renderConfigConceder(config) {
                 <option value="desvantagem" ${tc === 'desvantagem' ? 'selected' : ''}>Desvantagem em testes</option>
                 <option value="acesso" ${tc === 'acesso' ? 'selected' : ''}>Acesso a recurso</option>
                 <option value="remover_acesso" ${tc === 'remover_acesso' ? 'selected' : ''}>Remove acesso</option>
+                <option value="adicionar_parte_corpo" ${tc === 'adicionar_parte_corpo' ? 'selected' : ''}>Adicionar Parte do Corpo</option>
+                <option value="remover_parte_corpo" ${tc === 'remover_parte_corpo' ? 'selected' : ''}>Remover Parte do Corpo</option>
             </select>
         </div>
         <div class="form-group"><label>Descrição da concessão <span class="required">*</span></label>
             <input type="text" id="mech_config_descricaoConcessao" value="${esc(config?.descricaoConcessao || '')}" placeholder="Ex: Voo, Visão de Essência" oninput="window._mechUpdatePreview()">
         </div>
+        </div>
+    </div>
+    <div id="mech_bodyParts_container" style="display: ${(tc === 'adicionar_parte_corpo' || tc === 'remover_parte_corpo') ? 'block' : 'none'}">
+        ${_renderBodyPartsConcessao(config)}
     </div>`;
+}
+
+function _renderBodyPartsConcessao(config) {
+    const bpCache = window._bodyPartsCache || [];
+    if (bpCache.length === 0) return '<div class="alert alert-warning" style="margin-top:12px">Nenhuma parte do corpo cadastrada no sistema.</div>';
+    
+    // config.partesCorpo may look like [{ id: 'cabeca', slots: 1 }, { id: 'bracos', slots: null }]
+    const savedParts = config?.partesCorpo || [];
+    const getSavedSlots = (id) => {
+        const found = savedParts.find(p => p.id === id);
+        return found && found.slots !== null && found.slots !== undefined ? found.slots : '';
+    };
+    const isChecked = (id) => savedParts.some(p => p.id === id);
+
+    let html = `<div style="margin-top:16px"><label>Selecione as Partes do Corpo e a quantidade opcional de Slots: <span class="required">*</span></label>
+    <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px; background:var(--bg-panel); padding:12px; border-radius:6px; border:1px solid var(--border-color);">`;
+    
+    // Sort by order or name
+    const sorted = [...bpCache].sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
+    
+    for (const bp of sorted) {
+        const icon = bp.icone || '🦴';
+        const checked = isChecked(bp.id) ? 'checked' : '';
+        const slotsVal = getSavedSlots(bp.id);
+        
+        html += `
+        <div class="mech-bp-concessao-item" style="display:flex; align-items:center; gap:12px;">
+            <label style="flex:1; display:flex; align-items:center; gap:8px; margin:0; cursor:pointer;">
+                <input type="checkbox" value="${esc(bp.id)}" ${checked} onchange="window._mechUpdatePreview()">
+                <span>${icon} ${esc(bp.nome)}</span>
+            </label>
+            <div style="display:flex; align-items:center; gap:8px; flex:1">
+                <span style="font-size:12px; color:var(--text-muted)">Slots (opcional):</span>
+                <input type="number" class="bp-slots-input" placeholder="Vazio" value="${slotsVal}" 
+                    style="width:80px; padding:4px 8px; font-size:13px;" oninput="window._mechUpdatePreview()">
+            </div>
+        </div>`;
+    }
+    html += `</div></div>`;
+    return html;
 }
 
 function renderConfigCondicional(config, mechanicsCache) {
@@ -1256,6 +1308,19 @@ window._mechRemoveTerm = function (calcIndex, termIndex) {
     window._mechUpdatePreview();
 };
 
+window._mechTipoConcessaoChange = function() {
+    window._mechUpdatePreview();
+    const tc = document.getElementById('mech_config_tipoConcessao')?.value;
+    const container = document.getElementById('mech_bodyParts_container');
+    if (container) {
+        if (tc === 'adicionar_parte_corpo' || tc === 'remover_parte_corpo') {
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
+        }
+    }
+};
+
 // ===== COLLECT EQUATION FROM A CALC ROW =====
 function _collectEquacaoFromRow(row) {
     const container = row.querySelector('.eq-terms-container');
@@ -1482,9 +1547,23 @@ function collectMechFormData() {
         });
         data.config = { calculos };
     } else if (tipo === 'conceder') {
+        const tc = document.getElementById('mech_config_tipoConcessao')?.value || '';
+        let partesCorpo = undefined;
+        if (tc === 'adicionar_parte_corpo' || tc === 'remover_parte_corpo') {
+            partesCorpo = [];
+            document.querySelectorAll('.mech-bp-concessao-item').forEach(el => {
+                const cb = el.querySelector('input[type="checkbox"]');
+                if (cb && cb.checked) {
+                    const numInput = el.querySelector('input[type="number"]');
+                    const slots = numInput && numInput.value !== '' ? parseInt(numInput.value, 10) : null;
+                    partesCorpo.push({ id: cb.value, slots });
+                }
+            });
+        }
         data.config = {
-            tipoConcessao: document.getElementById('mech_config_tipoConcessao')?.value || '',
-            descricaoConcessao: document.getElementById('mech_config_descricaoConcessao')?.value || ''
+            tipoConcessao: tc,
+            descricaoConcessao: document.getElementById('mech_config_descricaoConcessao')?.value || '',
+            ...(partesCorpo !== undefined ? { partesCorpo } : {})
         };
     } else if (tipo === 'condicional') {
         data.config = {

@@ -901,11 +901,31 @@ function applyMechanicToSheet(mech, parentPec) {
 
     // === TIPO: CONCEDER ===
     if (tipo === 'conceder') {
-        state.capacidades.push({
-            tipo: config.tipoConcessao,
-            descricao: config.descricaoConcessao,
-            fonte: parentPec?.nome || mech.nome
-        });
+        if (config.tipoConcessao === 'adicionar_parte_corpo' || config.tipoConcessao === 'remover_parte_corpo') {
+            state.partesCorpoModificadas = state.partesCorpoModificadas || [];
+            state.partesCorpoModificadas.push({
+                acao: config.tipoConcessao,
+                partes: config.partesCorpo || [],
+                fonte: parentPec?.nome || mech.nome
+            });
+            
+            // Integrar os slots na state.mechanicBonuses se definidos
+            if (config.partesCorpo) {
+                for (const p of config.partesCorpo) {
+                    if (p.slots !== null && p.slots !== undefined) {
+                        const key = 'slot_' + p.id;
+                        const factor = config.tipoConcessao === 'adicionar_parte_corpo' ? 1 : -1;
+                        state.mechanicBonuses[key] = (state.mechanicBonuses[key] || 0) + (p.slots * factor);
+                    }
+                }
+            }
+        } else {
+            state.capacidades.push({
+                tipo: config.tipoConcessao,
+                descricao: config.descricaoConcessao,
+                fonte: parentPec?.nome || mech.nome
+            });
+        }
     }
 
     // === TIPO: DISTRIBUIR ===
