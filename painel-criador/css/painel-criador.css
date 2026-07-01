@@ -2598,3 +2598,103 @@ file\] {
     font-weight: 600;
 }
 
+/* ===== BODY PARTS EDITOR ===== */
+.bp-editor {
+    background: var(--chip);
+    border-radius: var(--radius);
+    padding: 12px;
+    border: 1px solid var(--line);
+}
+.bp-linked-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+.bp-linked-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 12px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.bp-linked-item:hover {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(79, 110, 247, 0.15);
+}
+.bp-linked-name {
+    flex: 1;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--ink);
+}
+.bp-linked-slots {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.bp-linked-slots label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--muted);
+    white-space: nowrap;
+}
+.bp-slot-input {
+    width: 56px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--chip);
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 0.82rem;
+    text-align: center;
+}
+.bp-slot-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(79, 110, 247, 0.2);
+}
+.bp-linked-remove {
+    background: none;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.2s, color 0.2s;
+    flex-shrink: 0;
+}
+.bp-linked-remove:hover {
+    background: var(--danger);
+    color: #fff;
+}
+.bp-add-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.bp-add-select {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 0.82rem;
+}
+.bp-empty-hint {
+    text-align: center;
+    padding: 16px;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-style: italic;
+}

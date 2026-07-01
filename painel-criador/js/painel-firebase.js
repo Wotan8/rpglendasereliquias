@@ -36,6 +36,7 @@ let peculiaritiesCache = [];
 let skillsCache = [];
 let derivedValuesCache = [];
 let vitalStatsCache = [];
+let bodyPartsCache = [];
 
 let aurasCache = [];
 let maneuversCache = [];
@@ -60,6 +61,7 @@ const MODULE_DEFS = {
             { key: 'curiosidades', label: 'Curiosidades', type: 'tags', placeholder: 'Digite e pressione Enter' },
             { key: 'imagemUrl', label: 'URL da Imagem', type: 'text', placeholder: 'https://...' },
             { key: 'ordem', label: 'Ordem no Select', type: 'number', placeholder: '0' },
+            { key: 'partesDoCorpo', label: '🦴 Anatomia — Partes do Corpo', type: 'body_parts_editor' },
         ]
     },
     classes: {
@@ -367,6 +369,17 @@ const MODULE_DEFS = {
             { key: 'ativo', label: 'Regra Ativa?', type: 'boolean' },
             { key: 'ordem', label: 'Ordem de Aplicação', type: 'number', placeholder: '0' },
         ]
+    },
+    bodyParts: {
+        name: 'Parte do Corpo', namePlural: 'Partes do Corpo', icon: '🦴',
+        collection: 'system/data/bodyParts',
+        fields: [
+            { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Cabeça, Braço, Perna, Torso' },
+            { key: 'descricao', label: 'Descrição', type: 'textarea', placeholder: 'Descreva esta parte do corpo e sua função anatômica' },
+            { key: 'icone', label: 'Ícone / Emoji', type: 'text', placeholder: 'Ex: 🗣️, 💪, 🦵' },
+            { key: 'ordem', label: 'Ordem de Exibição', type: 'number', placeholder: '0' },
+            { key: 'ehPadrao', label: 'Esta é uma parte padrão?', type: 'boolean' },
+        ]
     }
 };
 
@@ -592,6 +605,7 @@ async function loadModule(moduleName) {
     if (moduleName === 'classes') await refreshManeuversCache();
     if (moduleName === 'auras') { await refreshSkillsCache(); }
     if (moduleName === 'peculiarities') await refreshAurasCache();
+    if (moduleName === 'races') await refreshBodyPartsCache();
 
     const grid = document.getElementById('itemsGrid');
     const emptyState = document.getElementById('emptyState');
@@ -691,6 +705,15 @@ async function refreshManeuversCache() {
         maneuversCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
         window._maneuversCache = maneuversCache;
     } catch (e) { console.error('Erro cache maneuvers:', e); }
+}
+
+async function refreshBodyPartsCache() {
+    try {
+        const snap = await getDocs(collection(db, 'system/data/bodyParts'));
+        bodyPartsCache = [];
+        snap.forEach(d => bodyPartsCache.push({ id: d.id, ...d.data() }));
+        bodyPartsCache.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
+    } catch (e) { console.error('Erro cache bodyParts:', e); }
 }
 
 // ===== RENDER ITEMS =====
@@ -959,7 +982,7 @@ window.closeForm = function () {
 function buildField(field, value, existingData) {
     const wrap = document.createElement('div');
     wrap.className = 'form-group' + (
-        ['textarea', 'array', 'json', 'tags', 'mechanic_selector', 'aura_graus_editor', 'class_tests_editor', 'class_modules_editor'].includes(field.type) ? ' full-width' : ''
+        ['textarea', 'array', 'json', 'tags', 'mechanic_selector', 'aura_graus_editor', 'class_tests_editor', 'class_modules_editor', 'body_parts_editor'].includes(field.type) ? ' full-width' : ''
     );
     if (field.showWhen) {
         wrap.dataset.showWhenField = field.showWhen.field;
@@ -982,6 +1005,13 @@ function buildField(field, value, existingData) {
         } else {
             wrap.innerHTML = buildMechanicSelectorHTML(field.key, field.label, ids, mechanicsCache, field.fontePreFilter);
         }
+        return wrap;
+    }
+
+    // === BODY PARTS EDITOR (for races) ===
+    if (field.type === 'body_parts_editor') {
+        const parts = Array.isArray(value) ? value : [];
+        wrap.innerHTML = _buildBodyPartsEditorHTML(field.key, field.label, parts);
         return wrap;
     }
 
@@ -1850,6 +1880,8 @@ window.handleFormSubmit = async function (e) {
                 try { data[field.key] = JSON.parse(el.value || '[]'); }
                 catch { data[field.key] = []; }
             } else { data[field.key] = []; }
+        } else if (field.type === 'body_parts_editor') {
+            data[field.key] = _collectBodyPartsData(field.key);
         } else if (field.type === 'multi_select') {
             const el = document.getElementById(`field_${field.key}`);
             if (el) {
@@ -1904,9 +1936,19 @@ window.handleFormSubmit = async function (e) {
         if (editingItemId) {
             await updateDoc(doc(db, modDef.collection, editingItemId), data);
             showAlert('✅ Registro atualizado!', 'success');
+
+            // === AUTO-LINK on update: vincular parte padrão a todas as raças ===
+            if (currentModule === 'bodyParts' && data.ehPadrao === true) {
+                await _autoLinkBodyPartToAllRaces(editingItemId);
+            }
         } else {
-            await addDoc(collection(db, modDef.collection), data);
+            const newDocRef = await addDoc(collection(db, modDef.collection), data);
             showAlert('✅ Registro criado!', 'success');
+
+            // === AUTO-LINK: vincular parte padrão a todas as raças ===
+            if (currentModule === 'bodyParts' && data.ehPadrao === true) {
+                await _autoLinkBodyPartToAllRaces(newDocRef.id);
+            }
         }
         closeForm();
         await loadModule(currentModule);
@@ -2087,6 +2129,179 @@ window.duplicateItem = async function (itemId) {
         showAlert('❌ Erro ao duplicar: ' + e.message, 'danger');
     }
 };
+
+// ===== BODY PARTS EDITOR (for Races form) =====
+
+function _buildBodyPartsEditorHTML(fieldKey, label, linkedParts) {
+    // linkedParts = [{ id: 'docId', slots: 2 }, ...]
+    const partsHtml = linkedParts.map((lp, idx) => {
+        const bp = bodyPartsCache.find(b => b.id === lp.id);
+        const nome = bp ? (bp.icone ? bp.icone + ' ' : '') + (bp.nome || lp.id) : '⚠️ ' + lp.id;
+        const slots = lp.slots ?? 1;
+        return `
+            <div class="bp-linked-item" data-bp-id="${escapeHtml(lp.id)}" data-bp-index="${idx}">
+                <div class="bp-linked-name">${escapeHtml(nome)}</div>
+                <div class="bp-linked-slots">
+                    <label>Slots:</label>
+                    <input type="number" class="bp-slot-input" value="${slots}" min="0" max="99"
+                        onchange="window._bpUpdateSlot(this)">
+                </div>
+                <button type="button" class="bp-linked-remove" onclick="window._bpRemovePart(this)"
+                    title="Desvincular parte">✕</button>
+            </div>
+        `;
+    }).join('');
+
+    // Build dropdown of available parts (not yet linked)
+    const linkedIds = new Set(linkedParts.map(lp => lp.id));
+    const availableParts = bodyPartsCache.filter(bp => !linkedIds.has(bp.id));
+    const optionsHtml = availableParts.map(bp => {
+        const icon = bp.icone ? bp.icone + ' ' : '';
+        return `<option value="${bp.id}">${escapeHtml(icon + (bp.nome || bp.id))}</option>`;
+    }).join('');
+
+    return `
+        <div class="bp-editor" id="bpEditor_${fieldKey}" data-field-key="${fieldKey}">
+            <div class="array-editor-header">
+                <label>${escapeHtml(label)}</label>
+            </div>
+            <div class="bp-linked-list" id="bpLinkedList_${fieldKey}">
+                ${partsHtml || '<div class="bp-empty-hint">Nenhuma parte do corpo vinculada. Use o seletor abaixo para adicionar.</div>'}
+            </div>
+            <div class="bp-add-bar">
+                <select id="bpAddSelect_${fieldKey}" class="bp-add-select">
+                    <option value="">+ Vincular Parte do Corpo...</option>
+                    ${optionsHtml}
+                </select>
+                <button type="button" class="btn-array-add" onclick="window._bpAddPart('${fieldKey}')">➕ Vincular</button>
+            </div>
+        </div>
+    `;
+}
+
+window._bpAddPart = function(fieldKey) {
+    const select = document.getElementById(`bpAddSelect_${fieldKey}`);
+    if (!select || !select.value) return;
+    const bpId = select.value;
+
+    // Check if already linked
+    const list = document.getElementById(`bpLinkedList_${fieldKey}`);
+    if (!list) return;
+    if (list.querySelector(`[data-bp-id="${bpId}"]`)) {
+        select.value = '';
+        return;
+    }
+
+    // Remove empty hint
+    const hint = list.querySelector('.bp-empty-hint');
+    if (hint) hint.remove();
+
+    // Find body part info
+    const bp = bodyPartsCache.find(b => b.id === bpId);
+    const nome = bp ? (bp.icone ? bp.icone + ' ' : '') + (bp.nome || bpId) : bpId;
+    const idx = list.children.length;
+
+    const div = document.createElement('div');
+    div.className = 'bp-linked-item';
+    div.dataset.bpId = bpId;
+    div.dataset.bpIndex = idx;
+    div.innerHTML = `
+        <div class="bp-linked-name">${escapeHtml(nome)}</div>
+        <div class="bp-linked-slots">
+            <label>Slots:</label>
+            <input type="number" class="bp-slot-input" value="1" min="0" max="99"
+                onchange="window._bpUpdateSlot(this)">
+        </div>
+        <button type="button" class="bp-linked-remove" onclick="window._bpRemovePart(this)"
+            title="Desvincular parte">✕</button>
+    `;
+    list.appendChild(div);
+
+    // Remove option from dropdown
+    const option = select.querySelector(`option[value="${bpId}"]`);
+    if (option) option.remove();
+    select.value = '';
+};
+
+window._bpRemovePart = function(btn) {
+    const item = btn.closest('.bp-linked-item');
+    if (!item) return;
+    const bpId = item.dataset.bpId;
+    const editor = item.closest('.bp-editor');
+    const fieldKey = editor?.dataset.fieldKey;
+
+    // Add back to dropdown
+    if (fieldKey) {
+        const select = document.getElementById(`bpAddSelect_${fieldKey}`);
+        if (select) {
+            const bp = bodyPartsCache.find(b => b.id === bpId);
+            const icon = bp?.icone ? bp.icone + ' ' : '';
+            const opt = document.createElement('option');
+            opt.value = bpId;
+            opt.textContent = icon + (bp?.nome || bpId);
+            select.appendChild(opt);
+        }
+    }
+
+    item.remove();
+
+    // Show empty hint if no parts left
+    const list = editor?.querySelector('.bp-linked-list');
+    if (list && list.children.length === 0) {
+        list.innerHTML = '<div class="bp-empty-hint">Nenhuma parte do corpo vinculada. Use o seletor abaixo para adicionar.</div>';
+    }
+};
+
+window._bpUpdateSlot = function(input) {
+    // No extra logic needed — value is collected on save
+};
+
+function _collectBodyPartsData(fieldKey) {
+    const list = document.getElementById(`bpLinkedList_${fieldKey}`);
+    if (!list) return [];
+    const result = [];
+    list.querySelectorAll('.bp-linked-item').forEach(item => {
+        const id = item.dataset.bpId;
+        const slotsInput = item.querySelector('.bp-slot-input');
+        const slots = slotsInput ? parseInt(slotsInput.value, 10) || 0 : 1;
+        if (id) result.push({ id, slots });
+    });
+    return result;
+}
+
+// ===== AUTO-LINK: Body Part padrão → todas as raças =====
+async function _autoLinkBodyPartToAllRaces(bodyPartId) {
+    try {
+        const racesSnap = await getDocs(collection(db, 'system/data/races'));
+        let linked = 0;
+        const promises = [];
+
+        racesSnap.forEach(raceDoc => {
+            const raceData = raceDoc.data();
+            const partes = Array.isArray(raceData.partesDoCorpo) ? raceData.partesDoCorpo : [];
+            const alreadyLinked = partes.some(p => p.id === bodyPartId);
+
+            if (!alreadyLinked) {
+                const updatedPartes = [...partes, { id: bodyPartId, slots: 1 }];
+                promises.push(
+                    updateDoc(doc(db, 'system/data/races', raceDoc.id), {
+                        partesDoCorpo: updatedPartes,
+                        atualizadoEm: Timestamp.now()
+                    })
+                );
+                linked++;
+            }
+        });
+
+        if (promises.length > 0) {
+            await Promise.all(promises);
+            showAlert(`🦴 Parte padrão vinculada automaticamente a ${linked} raça(s)!`, 'success');
+        }
+    } catch (e) {
+        console.error('Erro ao auto-vincular parte do corpo:', e);
+        showAlert('⚠️ Parte criada, mas houve erro na vinculação automática: ' + e.message, 'danger');
+    }
+}
 
 // ===== HELPERS =====
 function showAlert(message, type) {
