@@ -379,6 +379,10 @@ const MODULE_DEFS = {
             { key: 'icone', label: 'Ícone / Emoji', type: 'text', placeholder: 'Ex: 🗣️, 💪, 🦵' },
             { key: 'ordem', label: 'Ordem de Exibição', type: 'number', placeholder: '0' },
             { key: 'ehPadrao', label: 'Esta é uma parte padrão?', type: 'boolean' },
+            { key: 'podeSegurar', label: 'Pode Segurar?', type: 'boolean' },
+            { key: 'podeEmpunhar', label: 'Pode Empunhar?', type: 'boolean' },
+            { key: 'podeVestir', label: 'Pode Vestir?', type: 'boolean' },
+            { key: 'podeFixar', label: 'Pode Fixar?', type: 'boolean' },
         ]
     }
 };

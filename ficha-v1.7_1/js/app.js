@@ -7,7 +7,7 @@ let state = {
     dots: {}, notes: [], charImg: '', customTests: [], mainTestsOrder: [],
     mechanicBonuses: {}, mechanicLimits: {}, mecanicasAplicadas: {},
     mecanicasPendentes: [], capacidades: [], auras: {}, classModuleData: {},
-    expApplied: {}, expSessionTriggers: [], conditions: []
+    expApplied: {}, expSessionTriggers: [], conditions: [], partesDoCorpo: []
 };
 let editingNoteId = null, testCount = 3;
 

@@ -359,7 +359,8 @@ function _resolveSheetRef(ref, mult) {
     // Check body part slots
     if (attrKey && attrKey.startsWith('slot_')) {
         const slotKey = attrKey.replace('slot_', '');
-        const slotDef = typeof BODY_SLOTS !== 'undefined' ? BODY_SLOTS[slotKey] : null;
+        const bodySlots = typeof _getCharacterBodySlots === 'function' ? _getCharacterBodySlots() : (typeof BODY_SLOTS !== 'undefined' ? BODY_SLOTS : {});
+        const slotDef = bodySlots[slotKey];
         const base = slotDef ? slotDef.max : 0;
         const bonus = state.mechanicBonuses?.[attrKey] || 0;
         return (base + bonus) * mult;

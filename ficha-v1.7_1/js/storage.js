@@ -16,7 +16,7 @@ function scheduleAutosave() {
 document.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.key) scheduleAutosave(); });
 
 function gatherData() {
-    const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, locacoes: [], rituais: [], ritos: [], mecanicasAplicadas: state.mecanicasAplicadas || {}, fieldBaseValues: state.fieldBaseValues || {}, appliedFieldBonuses: state.appliedFieldBonuses || {}, derivedOverrides: state.derivedOverrides || {}, auras: state.auras || {}, expApplied: state.expApplied || {}, dvAtual: state.dvAtual || {}, peculiaridadesIndividuais: state.peculiaridadesIndividuais || [] };
+    const d = { dots: state.dots, notes: state.notes, charImg: state.charImg, fields: {}, locacoes: [], rituais: [], ritos: [], mecanicasAplicadas: state.mecanicasAplicadas || {}, fieldBaseValues: state.fieldBaseValues || {}, appliedFieldBonuses: state.appliedFieldBonuses || {}, derivedOverrides: state.derivedOverrides || {}, auras: state.auras || {}, expApplied: state.expApplied || {}, dvAtual: state.dvAtual || {}, peculiaridadesIndividuais: state.peculiaridadesIndividuais || [], partesDoCorpo: state.partesDoCorpo || [] };
     document.querySelectorAll('[data-key]').forEach(el => {
         // Salvar o valor do DOM como está (incluindo edições manuais do usuário).
         // O sistema de appliedFieldBonuses garante que o bônus não será re-aplicado no reload.
@@ -217,6 +217,27 @@ function loadFromData(d) {
         else state.expApplied = {};
         if (d.dvAtual) state.dvAtual = d.dvAtual;
         else state.dvAtual = {};
+
+        // Restore partesDoCorpo
+        if (d.partesDoCorpo && d.partesDoCorpo.length > 0) {
+            state.partesDoCorpo = d.partesDoCorpo;
+        } else {
+            // Fallback for characters without body parts: load from race, else standard parts
+            state.partesDoCorpo = [];
+            const racaNome = d.fields && d.fields['raca'] ? d.fields['raca'] : null;
+            let partsToLoad = null;
+
+            if (racaNome && window.RACES && window.RACES[racaNome] && window.RACES[racaNome].partesDoCorpo && window.RACES[racaNome].partesDoCorpo.length > 0) {
+                partsToLoad = window.RACES[racaNome].partesDoCorpo;
+            } else if (window._systemData && window._systemData.bodyParts) {
+                partsToLoad = window._systemData.bodyParts.filter(bp => bp.ehPadrao);
+            }
+
+            if (partsToLoad) {
+                state.partesDoCorpo = JSON.parse(JSON.stringify(partsToLoad));
+            }
+        }
+
 
         // Restore conditions (novo sistema)
         if (d.conditions && Array.isArray(d.conditions)) {

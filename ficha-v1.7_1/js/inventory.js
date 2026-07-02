@@ -4,38 +4,32 @@
    Pressão = peso efetivo de itens equipados, alimenta o DV "Carga" via mechanicBonuses. */
 
 // ===== BODY SLOTS — Configuração de Slots Anatômicos =====
-const BODY_SLOTS = {
-    cabeca:   { label: 'Cabeça',  icon: '🪖', max: 1,  accepts: ['Vestimenta', 'Acessório'] },
-    pescoco:  { label: 'Pescoço', icon: '📿', max: 3,  accepts: ['Vestimenta', 'Acessório'] },
-    tronco:   { label: 'Tronco',  icon: '🧥', max: 2,  accepts: ['Vestimenta', 'Acessório'] },
-    ombros:   { label: 'Ombros',  icon: '🛡️', max: 2,  accepts: ['Vestimenta', 'Acessório'] },
-    costas:   { label: 'Costas',  icon: '🎒', max: 2,  accepts: ['Acessório', 'Container'] },
-    bracos:   { label: 'Braços',  icon: '💪', max: 2,  accepts: ['Vestimenta', 'Acessório', 'Arma'] },
-    mao_dir:  { label: 'Mão Dir.',icon: '🤚', max: 1,  accepts: ['Vestimenta', 'Acessório', 'Arma', 'Container', 'Objeto', 'Projétil', 'Consumível', 'Relíquia'] },
-    mao_esq:  { label: 'Mão Esq.',icon: '✋', max: 1,  accepts: ['Vestimenta', 'Acessório', 'Arma', 'Container', 'Objeto', 'Projétil', 'Consumível', 'Relíquia'] },
-    dedo_1:   { label: 'Anel 1',  icon: '💍', max: 1,  accepts: ['Acessório'], isDedo: true },
-    dedo_2:   { label: 'Anel 2',  icon: '💍', max: 1,  accepts: ['Acessório'], isDedo: true },
-    dedo_3:   { label: 'Anel 3',  icon: '💍', max: 1,  accepts: ['Acessório'], isDedo: true },
-    dedo_4:   { label: 'Anel 4',  icon: '💍', max: 1,  accepts: ['Acessório'], isDedo: true },
-    dedo_5:   { label: 'Anel 5',  icon: '💍', max: 1,  accepts: ['Acessório'], isDedo: true },
-    dedo_6:   { label: 'Anel 6',  icon: '💍', max: 1,  accepts: ['Acessório'], isDedo: true },
-    dedo_7:   { label: 'Anel 7',  icon: '💍', max: 1,  accepts: ['Acessório'], isDedo: true },
-    dedo_8:   { label: 'Anel 8',  icon: '💍', max: 1,  accepts: ['Acessório'], isDedo: true },
-    dedo_9:   { label: 'Anel 9',  icon: '💍', max: 1,  accepts: ['Acessório'], isDedo: true },
-    dedo_10:  { label: 'Anel 10', icon: '💍', max: 1,  accepts: ['Acessório'], isDedo: true },
-    cintura:  { label: 'Cintura', icon: '🔗', max: 3,  accepts: ['Vestimenta', 'Acessório', 'Container'] },
-    pernas:   { label: 'Pernas',  icon: '🦵', max: 1,  accepts: ['Vestimenta', 'Acessório'] },
-    pes:      { label: 'Pés',     icon: '👢', max: 1,  accepts: ['Vestimenta', 'Acessório'] }
-};
+// ===== BODY SLOTS — Dinâmico =====
+function _getCharacterBodySlots() {
+    const slots = {};
+    if (!window.state || !window.state.partesDoCorpo) return slots;
+    
+    window.state.partesDoCorpo.forEach((bp) => {
+        const qty = bp.slots || 1;
+        for (let i = 0; i < qty; i++) {
+            const slotKey = qty > 1 ? `${bp.id}_${i+1}` : bp.id;
+            slots[slotKey] = {
+                label: qty > 1 ? `${bp.nome} ${i+1}` : bp.nome,
+                icon: bp.icone || '🦴',
+                max: 1, // dynamically 1 item per generated slot instance
+                partId: bp.id,
+                podeSegurar: !!bp.podeSegurar,
+                podeEmpunhar: !!bp.podeEmpunhar,
+                podeVestir: !!bp.podeVestir,
+                podeFixar: !!bp.podeFixar,
+                // Mantém compatibilidade com selects de UI iterativos
+                accepts: [] 
+            };
+        }
+    });
+    return slots;
+}
 
-// Agrupamento visual dos slots (para render)
-const SLOT_GROUPS = [
-    { label: 'Cabeça & Pescoço', slots: ['cabeca', 'pescoco'] },
-    { label: 'Tronco & Ombros',  slots: ['tronco', 'ombros', 'costas'] },
-    { label: 'Braços & Mãos',    slots: ['bracos', 'mao_dir', 'mao_esq'] },
-    { label: 'Dedos',            slots: ['dedo_1','dedo_2','dedo_3','dedo_4','dedo_5','dedo_6','dedo_7','dedo_8','dedo_9','dedo_10'] },
-    { label: 'Cintura & Pernas', slots: ['cintura', 'pernas', 'pes'] }
-];
 
 // ===== EQUIP STATES — Estados de Equipamento =====
 const EQUIP_STATES = {
@@ -229,11 +223,34 @@ function applyEquippedItemsMechanics() {
     // Itens antigos (legado) sem estado definido mas equipados=true continuam aplicando mecânicas (tratados como vestido por padrão).
     const equipped = items.filter(i => {
         if (!i.equipado || i.parentItemId) return false;
-        if (i.estadoEquip === 'fixado' || i.estadoEquip === 'armazenado') return false;
+        if (i.estadoEquip === 'fixado' || i.estadoEquip === 'armazenado' || i.estadoEquip === 'segurar') return false;
         
-        // NOVO: Se está restrito a um slot, mas está equipado em outro, não aplica mecânicas
-        const restricoes = Array.isArray(i.slotRestrito) ? i.slotRestrito : (i.slotRestrito ? [i.slotRestrito] : null);
-        if (restricoes && restricoes.length > 0 && !restricoes.includes(i.slotAnatomico)) return false;
+        // NOVO: Apenas aplica mecânicas se o item estiver no estado exato definido na sua "Forma de equipar"
+        // (Retrocompatibilidade: se i.formaEquipar não estiver definido, permite empunhado/vestido)
+        if (i.formaEquipar && i.estadoEquip !== i.formaEquipar) {
+            // Conversão de estado legado para comparativo: 'empunhado' form 'empunhar' etc.
+            // i.formaEquipar usa os valores do select form (segurar, empunhar, vestir, fixar)
+            // mas i.estadoEquip no select de equipar usa os values de _updateFormaEquiparOptions.
+            // Oh, wait, in _updateFormaEquiparOptions we used 'empunhar', 'vestir' as values!
+            // Wait, in my _updateFormaEquiparOptions replacement:
+            // `<option value="empunhar" ...>`
+            // But in _getAvailableStates I pushed 'empunhado', 'vestido', 'fixado'.
+            // I should make sure I match them correctly.
+            // formaEquipar === 'empunhar' -> estadoEquip === 'empunhado'
+            const equipToStateMap = {
+                'segurar': 'segurar',
+                'empunhar': 'empunhado',
+                'vestir': 'vestido',
+                'fixar': 'fixado'
+            };
+            if (i.estadoEquip !== equipToStateMap[i.formaEquipar]) return false;
+        }
+        
+        // NOVO: Se está restrito a partes específicas (equipavelEm), verifica se o slot atual é de uma dessas partes
+        const equipavelEm = Array.isArray(i.equipavelEm) ? i.equipavelEm : (i.equipavelEm ? [i.equipavelEm] : []);
+        const bodySlots = _getCharacterBodySlots();
+        const slotDef = bodySlots[i.slotAnatomico];
+        if (equipavelEm.length > 0 && slotDef && !equipavelEm.includes(slotDef.partId)) return false;
 
         return true;
     });
@@ -330,22 +347,27 @@ function renderEquippedItems() {
         itemsBySlot[slot].push(item);
     }
 
-    // Renderizar por grupos de slots (cabeça/pescoço, tronco/ombros, etc)
-    for (const group of SLOT_GROUPS) {
+    const bodySlots = typeof _getCharacterBodySlots === 'function' ? _getCharacterBodySlots() : {};
+    const partesDoCorpo = window.state?.partesDoCorpo || [];
+
+    // Renderizar por Partes do Corpo cadastradas na ficha
+    for (const bp of partesDoCorpo) {
         let groupHasAnyItems = false;
         let groupHtml = `<div class="inv-slot-group">
-            <h4 class="inv-slot-group-title">${group.label}</h4>
+            <h4 class="inv-slot-group-title">${bp.nome}</h4>
             <div class="inv-slot-group-content">`;
             
-        for (const slotKey of group.slots) {
-            const slotDef = BODY_SLOTS[slotKey];
+        const qty = bp.slots || 1;
+        for (let i = 0; i < qty; i++) {
+            const slotKey = qty > 1 ? `${bp.id}_${i+1}` : bp.id;
+            const slotDef = bodySlots[slotKey];
             if (!slotDef) continue;
             
             const slotItems = itemsBySlot[slotKey] || [];
             if (slotItems.length > 0) groupHasAnyItems = true;
             
             // Para Dedos, se não houver item, nem renderiza o placeholder para não poluir
-            if (slotDef.isDedo && slotItems.length === 0) continue;
+            if (bp.id.toLowerCase().includes('dedo') && slotItems.length === 0) continue;
 
             const mechBonus = typeof state !== 'undefined' && state.mechanicBonuses ? (state.mechanicBonuses['slot_' + slotKey] || 0) : 0;
             const dynamicMax = slotDef.max + mechBonus;
@@ -370,7 +392,7 @@ function renderEquippedItems() {
         groupHtml += `</div></div>`;
         
         // Só renderiza o grupo se tiver algum item equipado (ou se não for dedos)
-        if (groupHasAnyItems || !group.slots[0].startsWith('dedo')) {
+        if (groupHasAnyItems || !bp.id.toLowerCase().includes('dedo')) {
             html += groupHtml;
         }
     }
@@ -539,7 +561,8 @@ function _renderInvItemRow(item, isEquipped) {
     let stateBadge = '';
     if (isEquipped && item.estadoEquip && EQUIP_STATES[item.estadoEquip]) {
         const st = EQUIP_STATES[item.estadoEquip];
-        const slotLabel = item.slotAnatomico && BODY_SLOTS[item.slotAnatomico] ? BODY_SLOTS[item.slotAnatomico].label : '';
+        const bodySlots = typeof _getCharacterBodySlots === 'function' ? _getCharacterBodySlots() : {};
+        const slotLabel = item.slotAnatomico && bodySlots[item.slotAnatomico] ? bodySlots[item.slotAnatomico].label : '';
         stateBadge = `<span class="inv-badge inv-badge-state inv-badge-state-${item.estadoEquip}" title="${st.description}">${st.icon} ${st.label}${slotLabel ? ' — ' + slotLabel : ''}</span>`;
     }
 
@@ -674,11 +697,15 @@ function _renderOpenContainers() {
  * Verifica quais slots estão compatíveis com um tipo de item e retorna lista
  * com informação de capacidade atual.
  */
-function _getCompatibleSlots(itemTipo) {
+function _getCompatibleSlots(item) {
     const items = window._inventoryState.items;
     const compatSlots = [];
-    for (const [slotKey, slotDef] of Object.entries(BODY_SLOTS)) {
-        if (!slotDef.accepts.includes(itemTipo)) continue;
+    const bodySlots = _getCharacterBodySlots();
+    const equipavelEm = Array.isArray(item.equipavelEm) ? item.equipavelEm : (item.equipavelEm ? [item.equipavelEm] : []);
+
+    for (const [slotKey, slotDef] of Object.entries(bodySlots)) {
+        if (equipavelEm.length > 0 && !equipavelEm.includes(slotDef.partId)) continue;
+        
         // Contar itens no slot
         const inSlot = items.filter(i => i.slotAnatomico === slotKey && i.equipado && i.estadoEquip !== 'armazenado');
         compatSlots.push({
@@ -696,26 +723,26 @@ function _getCompatibleSlots(itemTipo) {
  */
 function _getAvailableStates(item, slotKey) {
     const states = [];
-    const itemTipo = item.tipo;
-    const restricoes = Array.isArray(item.slotRestrito) ? item.slotRestrito : (item.slotRestrito ? [item.slotRestrito] : null);
-    const isRestrictedToOtherSlot = restricoes && restricoes.length > 0 && !restricoes.includes(slotKey);
+    const bodySlots = _getCharacterBodySlots();
+    const slotDef = bodySlots[slotKey];
+    if (!slotDef) return states;
 
-    // Empunhado — só para mãos
-    if (slotKey === 'mao_dir' || slotKey === 'mao_esq') {
-        states.push('empunhado');
+    const forma = item.formaEquipar;
+
+    // Se o item tem uma forma de equipar definida, o estado deve respeitá-la
+    if (forma === 'segurar' && slotDef.podeSegurar) states.push('segurar');
+    if (forma === 'empunhar' && slotDef.podeEmpunhar) states.push('empunhado');
+    if (forma === 'vestir' && slotDef.podeVestir) states.push('vestido');
+    if (forma === 'fixar' && slotDef.podeFixar) states.push('fixado');
+
+    // Retrocompatibilidade para itens antigos ou sem formaEquipar:
+    if (!forma) {
+        if (slotDef.podeEmpunhar) states.push('empunhado');
+        if (slotDef.podeVestir) states.push('vestido');
+        if (slotDef.podeFixar) states.push('fixado');
+        if (slotDef.podeSegurar) states.push('segurar');
     }
-    // Vestido — para slots de corpo (não mãos)
-    if (slotKey !== 'mao_dir' && slotKey !== 'mao_esq') {
-        if (!isRestrictedToOtherSlot) states.push('vestido');
-    }
-    // Vestido também disponível para mãos (ex: luvas)
-    if ((slotKey === 'mao_dir' || slotKey === 'mao_esq') && (itemTipo === 'Vestimenta' || itemTipo === 'Acessório')) {
-        if (!isRestrictedToOtherSlot) states.push('vestido');
-    }
-    // Fixado — para ombros, costas
-    if (['ombros', 'costas'].includes(slotKey)) {
-        if (!isRestrictedToOtherSlot) states.push('fixado');
-    }
+
     return [...new Set(states)]; // Remove duplicatas
 }
 
@@ -729,27 +756,13 @@ window.openEquipModal = function(itemId) {
     let existing = document.getElementById('invEquipModal');
     if (existing) existing.remove();
 
-    const compatSlots = _getCompatibleSlots(item.tipo || 'Objeto');
+    const compatSlots = _getCompatibleSlots(item);
     const isWeapon = item.tipo === 'Arma';
     const weapCat = item.categoriaArma;
     const isVersatil = weapCat === 'versatil';
     const isDuasMaos = weapCat === 'duas_maos';
 
-    // Filtrar slots para armas com base na categoria, ou por restrição de slot
     let slotsToShow = compatSlots;
-    const restricoes = Array.isArray(item.slotRestrito) ? item.slotRestrito : (item.slotRestrito ? [item.slotRestrito] : null);
-    if (restricoes && restricoes.length > 0) {
-        slotsToShow = compatSlots.filter(s =>
-            restricoes.includes(s.key) || s.key === 'mao_dir' || s.key === 'mao_esq'
-        );
-    } else if (isWeapon) {
-        // Armas só vão em mãos e braços
-        slotsToShow = compatSlots.filter(s =>
-            s.key === 'mao_dir' || s.key === 'mao_esq' || s.key === 'bracos' ||
-            // ombros/costas/cintura
-            s.key === 'ombros' || s.key === 'costas' || s.key === 'cintura'
-        );
-    }
 
     if (slotsToShow.length === 0) {
         alert('Nenhum slot compatível encontrado para este tipo de item.');
@@ -932,26 +945,23 @@ window.confirmEquip = async function(itemId) {
     const stateKey = st.selectedState;
     const hands = st.selectedHands || 1;
 
-    // Validação: para arma de duas mãos, verificar que ambas as mãos estão livres
-    if (st.isDuasMaos && (slotKey === 'mao_dir' || slotKey === 'mao_esq')) {
-        const otherHand = slotKey === 'mao_dir' ? 'mao_esq' : 'mao_dir';
-        const otherOccupied = window._inventoryState.items.filter(i =>
-            i.slotAnatomico === otherHand && i.equipado && i.estadoEquip !== 'armazenado'
-        );
-        if (otherOccupied.length > 0) {
-            alert(`A outra mão (${BODY_SLOTS[otherHand].label}) está ocupada. Desequipe antes.`);
-            return;
-        }
-    }
+    const bodySlots = _getCharacterBodySlots();
+    
+    // Validação: para arma de duas mãos ou versátil com 2 mãos
+    let otherHand = null;
+    if ((st.isDuasMaos || (st.isVersatil && hands === 2)) && bodySlots[slotKey]?.podeEmpunhar) {
+        // Encontrar outro slot que pode empunhar e não está ocupado
+        const items = window._inventoryState.items;
+        otherHand = Object.keys(bodySlots).find(k => {
+            if (k === slotKey) return false;
+            if (!bodySlots[k].podeEmpunhar) return false;
+            // Verificar se está ocupado
+            const isOccupied = items.some(i => (i.slotAnatomico === k || i.slotAnatomico2 === k) && i.equipado && i.estadoEquip !== 'armazenado');
+            return !isOccupied;
+        });
 
-    // Validação: arma versátil com 2 mãos
-    if (st.isVersatil && hands === 2 && (slotKey === 'mao_dir' || slotKey === 'mao_esq')) {
-        const otherHand = slotKey === 'mao_dir' ? 'mao_esq' : 'mao_dir';
-        const otherOccupied = window._inventoryState.items.filter(i =>
-            i.slotAnatomico === otherHand && i.equipado && i.estadoEquip !== 'armazenado'
-        );
-        if (otherOccupied.length > 0) {
-            alert(`A outra mão (${BODY_SLOTS[otherHand].label}) está ocupada. Desequipe antes para usar com 2 mãos.`);
+        if (!otherHand) {
+            alert(`Não há outra mão/slot livre que possa empunhar a arma. Desequipe algo antes.`);
             return;
         }
     }
@@ -987,13 +997,8 @@ window.confirmEquip = async function(itemId) {
             updateData.ownerId = user.uid;
         }
 
-        // Se arma de 2 mãos ou versátil com 2 mãos, marcar que ocupa a outra mão também
-        if ((st.isDuasMaos || (st.isVersatil && hands === 2)) && (slotKey === 'mao_dir' || slotKey === 'mao_esq')) {
-            const otherHand = slotKey === 'mao_dir' ? 'mao_esq' : 'mao_dir';
-            updateData.slotAnatomico2 = otherHand;
-        } else {
-            updateData.slotAnatomico2 = null;
-        }
+        // Se arma de 2 mãos ou versátil com 2 mãos, marcar que ocupa o outro slot
+        updateData.slotAnatomico2 = otherHand;
 
         console.log('⬆️ Equipando item:', itemId, 'Slot:', slotKey, 'Estado:', stateKey, 'Data:', updateData);
 
@@ -1194,7 +1199,11 @@ window.openItemDetail = function(itemId) {
                 <div class="inv-detail-field"><span class="inv-detail-label">Quantidade</span><span>×${qty}</span></div>
                 <div class="inv-detail-field"><span class="inv-detail-label">Tamanho</span><span>${item.tamanho || 0}</span></div>
                 <div class="inv-detail-field"><span class="inv-detail-label">Pressão</span><span>⚖️ ${parseFloat(pressao).toFixed(2)}</span></div>
-                ${item.equipado ? `<div class="inv-detail-field"><span class="inv-detail-label">Slot</span><span>${item.slotAnatomico ? BODY_SLOTS[item.slotAnatomico]?.label || item.slotAnatomico : 'Sem Slot'}</span></div>` : ''}
+                ${item.equipado ? (() => {
+                    const bodySlots = typeof _getCharacterBodySlots === 'function' ? _getCharacterBodySlots() : {};
+                    const slotLabel = item.slotAnatomico ? bodySlots[item.slotAnatomico]?.label || item.slotAnatomico : 'Sem Slot';
+                    return `<div class="inv-detail-field"><span class="inv-detail-label">Slot</span><span>${slotLabel}</span></div>`;
+                })() : ''}
                 ${item.equipado && item.estadoEquip ? `<div class="inv-detail-field"><span class="inv-detail-label">Estado</span><span>${EQUIP_STATES[item.estadoEquip]?.label || item.estadoEquip}</span></div>` : ''}
                 ${item.ehContainer ? `<div class="inv-detail-field"><span class="inv-detail-label">Peso Máximo</span><span>⚖️ ${item.pesoMaximoContainer || '∞'}</span></div>` : ''}
                 ${item.ehContainer ? `<div class="inv-detail-field"><span class="inv-detail-label">Multiplicador</span><span>×${item.multiplicadorPressao || 1}</span></div>` : ''}
@@ -1432,6 +1441,23 @@ window.openItemFormModal = function(title, item, containerId) {
     let existing = document.getElementById('invFormModal');
     if (existing) existing.remove();
 
+    // ====== VALIDAÇÃO E INJEÇÃO AUTOMÁTICA DE DEPENDÊNCIAS ======
+    if (!window.state) window.state = {};
+    if (!window.state.partesDoCorpo || window.state.partesDoCorpo.length === 0) {
+        const racaNome = document.getElementById('selRaca')?.value || (window.state.fields && window.state.fields['raca']);
+        let partsToLoad = null;
+        if (racaNome && window.RACES && window.RACES[racaNome] && window.RACES[racaNome].partesDoCorpo && window.RACES[racaNome].partesDoCorpo.length > 0) {
+            partsToLoad = window.RACES[racaNome].partesDoCorpo;
+        } else if (window._systemData && window._systemData.bodyParts) {
+            partsToLoad = window._systemData.bodyParts.filter(bp => bp.ehPadrao);
+        }
+        if (partsToLoad) {
+            window.state.partesDoCorpo = JSON.parse(JSON.stringify(partsToLoad));
+            if (typeof scheduleAutosave === 'function') scheduleAutosave();
+        }
+    }
+    // =============================================================
+
     const isEdit = !!item;
     const modal = document.createElement('div');
     modal.className = 'inv-modal active';
@@ -1478,10 +1504,24 @@ window.openItemFormModal = function(title, item, containerId) {
                     </select>
                 </div>
                 <div class="inv-form-group">
-                    <label class="inv-form-label">Vestir em (Restrição)</label>
-                    <select id="invFormSlotRestrito" class="inv-form-select" multiple size="4" data-value='${JSON.stringify(Array.isArray(item?.slotRestrito) ? item.slotRestrito : (item?.slotRestrito ? [item.slotRestrito] : []))}'>
+                    <label class="inv-form-label">Equipável em</label>
+                    <select id="invFormEquipavelEm" class="inv-form-select" multiple size="4" onchange="_updateFormaEquiparOptions()">
+                        ${(window.state?.partesDoCorpo || []).map(bp => {
+                            const selected = Array.isArray(item?.equipavelEm) && item.equipavelEm.includes(bp.id) ? 'selected' : '';
+                            return `<option value="${bp.id}" data-segurar="${!!bp.podeSegurar}" data-empunhar="${!!bp.podeEmpunhar}" data-vestir="${!!bp.podeVestir}" data-fixar="${!!bp.podeFixar}" ${selected}>${bp.icone || '🦴'} ${bp.nome}</option>`;
+                        }).join('')}
                     </select>
-                    <small style="color:var(--muted); font-size: 0.8rem;">Segure Ctrl/Cmd para selecionar vários. Deixe vazio para Livre.</small>
+                    <small style="color:var(--muted); font-size: 0.8rem;">Segure Ctrl/Cmd p/ selecionar vários. Deixe vazio para Livre.</small>
+                </div>
+                <div class="inv-form-group">
+                    <label class="inv-form-label">Forma de equipar</label>
+                    <select id="invFormFormaEquipar" class="inv-form-select">
+                        <option value="" ${!item?.formaEquipar ? 'selected' : ''}>— Livre —</option>
+                        <option value="segurar" ${item?.formaEquipar === 'segurar' ? 'selected' : ''}>Segurar</option>
+                        <option value="empunhar" ${item?.formaEquipar === 'empunhar' ? 'selected' : ''}>Empunhar</option>
+                        <option value="vestir" ${item?.formaEquipar === 'vestir' ? 'selected' : ''}>Vestir</option>
+                        <option value="fixar" ${item?.formaEquipar === 'fixar' ? 'selected' : ''}>Fixar</option>
+                    </select>
                 </div>
                 <div class="inv-form-group" id="invFormCategoriaArmaGroup" style="display:${item?.tipo === 'Arma' ? 'flex' : 'none'}">
                     <label class="inv-form-label">Categoria da Arma *</label>
@@ -1540,6 +1580,15 @@ window.openItemFormModal = function(title, item, containerId) {
     </div>`;
     document.body.appendChild(modal);
 
+    if (window._updateFormaEquiparOptions) {
+        window._updateFormaEquiparOptions();
+        // Se for edição, garantir que a forma de equipar antiga está selecionada, se possível
+        if (isEdit && item?.formaEquipar) {
+            const formaSelect = document.getElementById('invFormFormaEquipar');
+            if (formaSelect) formaSelect.value = item.formaEquipar;
+        }
+    }
+
     // Initialize searchable select for catalog after DOM insertion
     if (!isEdit && catalog.length > 0) {
         _initSearchableSelect('invCatalogPicker', (value) => {
@@ -1580,10 +1629,17 @@ window.fillFromCatalog = function(templateId) {
         document.getElementById('invFormMultPressao').value = tpl.multiplicadorPressao || 1;
     }
     
-    const slotSelect = document.getElementById('invFormSlotRestrito');
-    if (slotSelect) {
-        const slots = Array.isArray(tpl.slotRestrito) ? tpl.slotRestrito : (tpl.slotRestrito ? [tpl.slotRestrito] : []);
-        slotSelect.dataset.value = JSON.stringify(slots);
+    const equipSelect = document.getElementById('invFormEquipavelEm');
+    if (equipSelect) {
+        const slots = Array.isArray(tpl.equipavelEm) ? tpl.equipavelEm : (tpl.equipavelEm ? [tpl.equipavelEm] : []);
+        Array.from(equipSelect.options).forEach(opt => {
+            opt.selected = slots.includes(opt.value);
+        });
+        if (window._updateFormaEquiparOptions) window._updateFormaEquiparOptions();
+    }
+    const formaSelect = document.getElementById('invFormFormaEquipar');
+    if (formaSelect && tpl.formaEquipar) {
+        formaSelect.value = tpl.formaEquipar;
     }
     
     _toggleContainerFields();
@@ -1613,6 +1669,40 @@ window.fillFromCatalog = function(templateId) {
     }
 };
 
+window._updateFormaEquiparOptions = function() {
+    const equipSelect = document.getElementById('invFormEquipavelEm');
+    const formaSelect = document.getElementById('invFormFormaEquipar');
+    if (!equipSelect || !formaSelect) return;
+
+    let canSegurar = false;
+    let canEmpunhar = false;
+    let canVestir = false;
+    let canFixar = false;
+
+    if (equipSelect.selectedOptions.length === 0) {
+        canSegurar = canEmpunhar = canVestir = canFixar = true;
+    } else {
+        Array.from(equipSelect.selectedOptions).forEach(opt => {
+            if (opt.dataset.segurar === 'true') canSegurar = true;
+            if (opt.dataset.empunhar === 'true') canEmpunhar = true;
+            if (opt.dataset.vestir === 'true') canVestir = true;
+            if (opt.dataset.fixar === 'true') canFixar = true;
+        });
+    }
+
+    const currentVal = formaSelect.value;
+    let html = '<option value="">— Livre —</option>';
+    if (canSegurar) html += `<option value="segurar" ${currentVal === 'segurar' ? 'selected' : ''}>Segurar</option>`;
+    if (canEmpunhar) html += `<option value="empunhar" ${currentVal === 'empunhar' ? 'selected' : ''}>Empunhar</option>`;
+    if (canVestir) html += `<option value="vestir" ${currentVal === 'vestir' ? 'selected' : ''}>Vestir</option>`;
+    if (canFixar) html += `<option value="fixar" ${currentVal === 'fixar' ? 'selected' : ''}>Fixar</option>`;
+
+    formaSelect.innerHTML = html;
+    if (currentVal && !html.includes(`value="${currentVal}"`)) {
+        formaSelect.value = '';
+    }
+};
+
 window.saveInventoryItemForm = async function() {
     const nome = document.getElementById('invFormName')?.value?.trim();
     if (!nome) { alert('Nome obrigatório'); return; }
@@ -1633,8 +1723,9 @@ window.saveInventoryItemForm = async function() {
         alert('Selecione a categoria da arma'); return;
     }
 
-        const slotSelect = document.getElementById('invFormSlotRestrito');
-        const slotRestrito = slotSelect ? Array.from(slotSelect.selectedOptions).map(o => o.value) : [];
+        const equipSelect = document.getElementById('invFormEquipavelEm');
+        const equipavelEm = equipSelect ? Array.from(equipSelect.selectedOptions).map(o => o.value) : [];
+        const formaEquipar = document.getElementById('invFormFormaEquipar')?.value || null;
 
         const itemData = {
             nome,
@@ -1647,7 +1738,8 @@ window.saveInventoryItemForm = async function() {
             descricao: document.getElementById('invFormDesc')?.value?.trim() || '',
             imagem: document.getElementById('invFormImagem')?.value?.trim() || '',
             modeloId: document.getElementById('invFormModeloId')?.value || null,
-            slotRestrito: slotRestrito.length > 0 ? slotRestrito : null,
+            equipavelEm: equipavelEm.length > 0 ? equipavelEm : null,
+            formaEquipar,
         characterId: charId,
         ownerUid: user.uid,
         equipado: false,
@@ -2101,7 +2193,8 @@ window._toggleContainerFields = function() {
         let targetVals = currentVals.length > 0 ? currentVals : initialVal;
         
         let html = '';
-        for (const [key, def] of Object.entries(BODY_SLOTS)) {
+        const bodySlots = typeof _getCharacterBodySlots === 'function' ? _getCharacterBodySlots() : {};
+        for (const [key, def] of Object.entries(bodySlots)) {
             if (def.accepts && def.accepts.includes(tipo)) {
                 html += `<option value="${key}">${def.label}</option>`;
             }

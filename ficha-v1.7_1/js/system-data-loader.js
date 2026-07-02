@@ -681,12 +681,22 @@ function buildRacesFromFirebase() {
         const parsedDVIds = (race.derivedValueIds || []).map(item =>
             typeof item === 'object' ? item : { id: item, valorInicial: 0 }
         );
+        // Resolver partes do corpo
+        const partesDoCorpo = (race.partesDoCorpo || []).map(pRef => {
+            const bp = window._systemData.bodyParts.find(b => b.id === pRef.id);
+            if (!bp) return null;
+            return {
+                ...bp,
+                slots: pRef.slots || 1
+            };
+        }).filter(Boolean);
 
         RACES[race.nome] = {
             id: race.id,
             subtitulo: race.subtitulo || '',
             peculiaridades: peculiaridades,
             derivedValueIds: parsedDVIds,
+            partesDoCorpo: partesDoCorpo,
         };
     }
 
