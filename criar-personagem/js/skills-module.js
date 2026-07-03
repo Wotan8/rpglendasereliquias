@@ -8,7 +8,10 @@ function initPhase4(container) {
     // Step 1: Select highest (6 points)
     html += `
         <div class="section" id="skillStep1">
-            <div class="section-title">Passo 1 — A Maior (${regras.primario} pontos)</div>
+            <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Passo 1 — A Maior (${regras.primario} pontos)</span>
+                <button class="btn btn-primary" style="font-size: 0.75rem; padding: 4px 8px; background: var(--primary); border: none; border-radius: 4px; color: #fff; cursor: pointer;" onclick="window.randomizeSkills()">🎲 Aleatorizar Perícias</button>
+            </div>
             <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
                 Qual grupo de perícias define você? Esse grupo recebe <strong>${regras.primario} pontos</strong>.
             </p>
@@ -306,3 +309,42 @@ function updateSkillCounters() {
         el.style.color = remaining === 0 ? 'var(--success)' : 'var(--accent)';
     }
 }
+
+window.randomizeSkills = function() {
+    const shuffled = [..._skillGroups].sort(() => Math.random() - 0.5);
+    wizardState.grupoPericiaPrimario = shuffled[0];
+    wizardState.grupoPericia2 = shuffled[1];
+    wizardState.grupoPericiaFraco = shuffled[2];
+    wizardState.grupoPericia3 = shuffled[3];
+    
+    if (!wizardState.pericias) wizardState.pericias = {};
+    for (const key of Object.keys(wizardState.pericias)) {
+        wizardState.pericias[key] = 0;
+    }
+    
+    for (const grp of _skillGroups) {
+        const skills = window.SKILLS?.[grp] || [];
+        if (skills.length === 0) continue;
+        
+        let attempts = 0;
+        while (getSkillGroupRemaining(grp) > 0 && attempts < 100) {
+            attempts++;
+            const sk = skills[Math.floor(Math.random() * skills.length)];
+            const dotKey = 'sk_' + sk.key;
+            const currentLevel = wizardState.pericias[dotKey] || 0;
+            const targetLevel = currentLevel + 1;
+            
+            const parentLevel = getSkillParentAttributeLevel(sk);
+            const maxAllowed = Math.min(REGRAS_CRIACAO.pericias.limite_max_por_pericia, parentLevel);
+            
+            if (targetLevel > maxAllowed) continue;
+            
+            wizardState.pericias[dotKey] = targetLevel;
+            attempts = 0;
+        }
+    }
+    
+    renderSkillStepSelectors();
+    renderSkillDistribution();
+    saveWizardToStorage();
+};

@@ -40,6 +40,7 @@ let bodyPartsCache = [];
 
 let aurasCache = [];
 let maneuversCache = [];
+let equipmentCache = [];
 
 // ====================================================================
 // MODULE DEFINITIONS — each module defines its fields and Firestore path
@@ -92,6 +93,7 @@ const MODULE_DEFS = {
             { key: 'manobras', label: '💥 Manobras da Classe', type: 'mechanic_selector', selectorTarget: 'maneuvers' },
             { key: 'mecanicaIds', label: 'Mecânicas da Classe', type: 'mechanic_selector', fontePreFilter: 'classe' },
             { key: 'derivedValueIds', label: 'Valores Derivados da Classe', type: 'mechanic_selector', selectorTarget: 'derivedValues' },
+            { key: 'kitsIniciais', label: '🎒 Kits Iniciais', type: 'class_kits_editor' },
             { key: 'testesDeClasse', label: '🎯 Testes de Classe (Rolagens)', type: 'class_tests_editor' },
             { key: 'modulosDaClasse', label: '📦 Módulos da Classe', type: 'class_modules_editor' },
             { key: 'imagemUrl', label: 'URL da Imagem', type: 'text', placeholder: 'https://...' },
@@ -606,7 +608,10 @@ async function loadModule(moduleName) {
     if (moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'skills') await refreshSkillsCache();
     if (moduleName === 'races' || moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'derivedValues') await refreshDerivedValuesCache();
     if (moduleName === 'mechanics' || moduleName === 'vitalStats') await refreshVitalStatsCache();
-    if (moduleName === 'classes') await refreshManeuversCache();
+    if (moduleName === 'classes') {
+        await refreshManeuversCache();
+        await refreshEquipmentCache();
+    }
     if (moduleName === 'auras') { await refreshSkillsCache(); }
     if (moduleName === 'peculiarities') await refreshAurasCache();
     if (moduleName === 'races') await refreshBodyPartsCache();
@@ -709,6 +714,16 @@ async function refreshManeuversCache() {
         maneuversCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
         window._maneuversCache = maneuversCache;
     } catch (e) { console.error('Erro cache maneuvers:', e); }
+}
+
+async function refreshEquipmentCache() {
+    try {
+        const snap = await getDocs(collection(db, 'system/data/equipment'));
+        equipmentCache = [];
+        snap.forEach(d => equipmentCache.push({ id: d.id, ...d.data() }));
+        equipmentCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        window._equipmentCache = equipmentCache;
+    } catch (e) { console.error('Erro cache equipment:', e); }
 }
 
 async function refreshBodyPartsCache() {
@@ -987,7 +1002,7 @@ window.closeForm = function () {
 function buildField(field, value, existingData) {
     const wrap = document.createElement('div');
     wrap.className = 'form-group' + (
-        ['textarea', 'array', 'json', 'tags', 'mechanic_selector', 'aura_graus_editor', 'class_tests_editor', 'class_modules_editor', 'body_parts_editor'].includes(field.type) ? ' full-width' : ''
+        ['textarea', 'array', 'json', 'tags', 'mechanic_selector', 'aura_graus_editor', 'class_tests_editor', 'class_modules_editor', 'body_parts_editor', 'class_kits_editor'].includes(field.type) ? ' full-width' : ''
     );
     if (field.showWhen) {
         wrap.dataset.showWhenField = field.showWhen.field;
@@ -1058,6 +1073,12 @@ function buildField(field, value, existingData) {
     // === CLASS MODULES EDITOR ===
     if (field.type === 'class_modules_editor') {
         wrap.innerHTML = _buildClassModulesEditorHTML(field.key, field.label, Array.isArray(value) ? value : []);
+        return wrap;
+    }
+
+    // === CLASS KITS EDITOR ===
+    if (field.type === 'class_kits_editor') {
+        wrap.innerHTML = _buildClassKitsEditorHTML(field.key, field.label, Array.isArray(value) ? value : []);
         return wrap;
     }
 
@@ -1625,6 +1646,117 @@ function _collectClassTestsData(fieldKey) {
 }
 
 
+// ===== CLASS KITS EDITOR =====
+function _buildClassKitsEditorHTML(fieldKey, label, kits) {
+    const kitsHtml = kits.map((k, idx) => _buildClassKitRow(idx, k)).join('');
+    return `
+        <div class="class-kits-editor" id="classKits_${fieldKey}" data-field-key="${fieldKey}">
+            <div class="array-editor-header">
+                <label>${escapeHtml(label)}</label>
+                <button type="button" class="btn-array-add" onclick="addClassKit('${fieldKey}')">➕ Adicionar Kit</button>
+            </div>
+            <div class="class-kits-items" id="classKitsItems_${fieldKey}">${kitsHtml}</div>
+        </div>
+    `;
+}
+
+function _buildClassKitRow(idx, data) {
+    data = data || {};
+    const equipmentIds = Array.isArray(data.equipamentos) ? data.equipamentos : [];
+    
+    const eqChips = equipmentIds.map(eqId => {
+        const eq = (typeof equipmentCache !== 'undefined' ? equipmentCache : []).find(x => x.id === eqId);
+        if (!eq) return `<span class="mech-tag" data-id="${escapeHtml(eqId)}">⚠️ Desconhecido <button type="button" onclick="this.parentElement.remove()">✕</button></span>`;
+        return `<span class="mech-tag" data-id="${escapeHtml(eqId)}">${escapeHtml(eq.nome)} <button type="button" onclick="this.parentElement.remove()">✕</button></span>`;
+    }).join('');
+
+    return `
+        <div class="array-item class-kit-item" data-index="${idx}" data-kit-id="${escapeHtml(data.id || '')}">
+            <div class="array-item-header">
+                <span class="array-item-number">#${idx + 1}</span>
+                <button type="button" class="btn-array-remove" onclick="removeClassKit(this)">✕</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label>Nome do Kit <span class="required">*</span></label>
+                    <input type="text" data-ck-key="nome" value="${escapeHtml(data.nome || '')}" placeholder="Ex: Kit de Aventureiro Básico">
+                </div>
+                <div class="form-group full-width">
+                    <label>Equipamentos</label>
+                    <div class="aura-grau-mechs ck-eq-container" data-ck-key="equipamentos">
+                        <div class="mech-tags-container ck-eq-tags">${eqChips}</div>
+                        <select class="aura-mech-select" onchange="addClassKitEquip(this)">
+                            <option value="">+ Vincular Equipamento...</option>
+                            ${(typeof equipmentCache !== 'undefined' ? equipmentCache : []).map(e => `<option value="${e.id}">${escapeHtml(e.nome)}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+window.addClassKit = function(fieldKey) {
+    const container = document.getElementById(`classKitsItems_${fieldKey}`);
+    if (!container) return;
+    const idx = container.children.length;
+    const temp = document.createElement('div');
+    temp.innerHTML = _buildClassKitRow(idx, {});
+    container.appendChild(temp.firstElementChild);
+};
+
+window.removeClassKit = function(btn) {
+    const item = btn.closest('.class-kit-item');
+    if (!item) return;
+    const container = item.parentElement;
+    item.remove();
+    if (container) {
+        container.querySelectorAll('.class-kit-item').forEach((el, i) => {
+            el.dataset.index = i;
+            const num = el.querySelector('.array-item-number');
+            if (num) num.textContent = `#${i + 1}`;
+        });
+    }
+};
+
+window.addClassKitEquip = function(select) {
+    const eqId = select.value;
+    if (!eqId) return;
+    const eq = equipmentCache.find(e => e.id === eqId);
+    if (!eq) return;
+    const container = select.closest('[data-ck-key="equipamentos"]')?.querySelector('.ck-eq-tags');
+    if (!container) return;
+    if (container.querySelector(`[data-id="${eqId}"]`)) { select.value = ''; return; }
+    const tag = document.createElement('span');
+    tag.className = 'mech-tag';
+    tag.dataset.id = eqId;
+    tag.innerHTML = `${escapeHtml(eq.nome || eqId)} <button type="button" onclick="this.parentElement.remove()">✕</button>`;
+    container.appendChild(tag);
+    select.value = '';
+};
+
+function _collectClassKitsData(fieldKey) {
+    const container = document.getElementById(`classKitsItems_${fieldKey}`);
+    if (!container) return [];
+    const kits = [];
+    container.querySelectorAll('.class-kit-item').forEach(item => {
+        const nome = (item.querySelector('[data-ck-key="nome"]')?.value || '').trim();
+        if (!nome) return; // Skip empty kits
+        
+        const equipamentos = [];
+        item.querySelectorAll('.ck-eq-tags .mech-tag').forEach(tag => {
+            if (tag.dataset.id) equipamentos.push(tag.dataset.id);
+        });
+        
+        // Preserve existing ID from DOM dataset if available, otherwise generate new one
+        const existingId = item.dataset.kitId;
+        const kitId = existingId && existingId !== 'undefined' ? existingId : 'kit_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        
+        kits.push({ id: kitId, nome, equipamentos });
+    });
+    return kits;
+}
+
 // ===== CLASS MODULES EDITOR =====
 
 function _buildClassModulesEditorHTML(fieldKey, label, modules) {
@@ -1859,6 +1991,8 @@ window.handleFormSubmit = async function (e) {
             data[field.key] = _collectClassTestsData(field.key);
         } else if (field.type === 'class_modules_editor') {
             data[field.key] = _collectClassModulesData(field.key);
+        } else if (field.type === 'class_kits_editor') {
+            data[field.key] = _collectClassKitsData(field.key);
         } else if (field.type === 'aura_graus_editor') {
             data[field.key] = collectAuraGrausData(field.key);
         } else if (field.type === 'aura_property_selector' || field.type === 'aura_selector') {

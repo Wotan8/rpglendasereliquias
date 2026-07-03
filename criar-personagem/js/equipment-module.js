@@ -6,43 +6,81 @@ function initPhase7(container) {
     // Equipment from class
     const className = wizardState.classeSelecionada;
     const classData = className ? window._systemData.classes.find(c => c.nome === className) : null;
-    const equipList = classData?.equipamentoInicial || classData?.equipInicial || [];
+    const kitsIniciais = classData?.kitsIniciais || [];
 
     html += `
         <div class="section">
             <div class="section-title">⚔️ Equipamento Inicial da Classe</div>
     `;
 
-    if (equipList.length > 0) {
-        html += `<p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">Marque os itens que deseja levar:</p>`;
-        for (const item of equipList) {
-            const itemName = typeof item === 'object' ? item.nome : item;
-            const checked = wizardState.equipamentoSelecionado.includes(itemName) ? 'checked' : '';
-            html += `
-                <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:.9rem;">
-                    <input type="checkbox" ${checked} onchange="toggleEquipItem('${escHtml(itemName)}', this.checked)">
-                    <span>${escHtml(itemName)}</span>
-                </label>
-            `;
+    try {
+        const safeKitsIniciais = Array.isArray(kitsIniciais) ? kitsIniciais : [];
+        if (safeKitsIniciais.length > 0) {
+            html += `<p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">Escolha um dos kits iniciais para a sua classe:</p>`;
+            
+            html += `<div class="kits-selection-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">`;
+            safeKitsIniciais.forEach((kit, index) => {
+                if (!kit || typeof kit !== 'object') return;
+
+                const kitId = kit.id || `kit_${index}`;
+                const isSelected = wizardState.kitInicialSelecionado === kitId;
+                const checked = isSelected ? 'checked' : '';
+                
+                html += `
+                    <div class="kit-card" id="kit-card-${escHtml(kitId)}" style="border: 1px solid ${isSelected ? 'var(--accent)' : 'var(--soft)'}; border-radius: 8px; background: ${isSelected ? 'var(--bg-card)' : 'transparent'}; transition: all 0.2s;">
+                        <label style="display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer;margin:0;">
+                            <input type="radio" name="kitInicial" value="${escHtml(kitId)}" ${checked} onchange="window.selectKitInicial('${escHtml(kitId)}')" style="margin: 0; flex-shrink: 0;">
+                            <div style="font-weight:bold; font-size:1rem; color:var(--text);">${escHtml(kit.nome || 'Kit Desconhecido')}</div>
+                        </label>
+                `;
+
+                // Detalhes do kit, ocultos se não selecionado
+                html += `<div class="kit-details" id="kit-details-${escHtml(kitId)}" style="display: ${isSelected ? 'block' : 'none'}; padding: 0 16px 16px 16px; border-top: 1px dashed var(--soft); margin-top: 4px; padding-top: 16px;">`;
+                
+                const safeEquipamentos = Array.isArray(kit.equipamentos) ? kit.equipamentos : [];
+                if (safeEquipamentos.length > 0) {
+                    html += `<div style="display:flex; flex-direction:column;">`;
+                    for (const eqId of safeEquipamentos) {
+                        try {
+                            const eq = window._systemData?.equipment?.find(e => e.id === eqId);
+                            if (eq) {
+                                html += window.renderEquipmentItemDetails(eq);
+                            } else {
+                                html += `<div style="color: var(--danger); font-size: 0.9rem; padding: 8px; margin-bottom: 12px; border: 1px dashed var(--danger); border-radius: 4px;">Item Desconhecido (ID: ${escHtml(String(eqId))})</div>`;
+                            }
+                        } catch (e) {
+                            console.error('Erro ao renderizar item do kit:', e);
+                            html += `<div style="color: var(--danger); font-size: 0.9rem; padding: 8px; margin-bottom: 12px;">Erro ao carregar item (ID: ${escHtml(String(eqId))})</div>`;
+                        }
+                    }
+                    html += `</div>`;
+                } else {
+                    html += `<div style="color: var(--muted); font-size: 0.9rem;">Este kit está vazio.</div>`;
+                }
+                html += `</div></div>`; // fecha kit-details e kit-card
+            });
+            html += `</div>`;
+
+        } else {
+            html += `<p style="color:var(--muted);font-size:.85rem;">Nenhum kit inicial definido para ${escHtml(className || 'esta classe')}. Converse com seu Narrador.</p>`;
         }
-    } else {
-        html += `<p style="color:var(--muted);font-size:.85rem;">Nenhum equipamento inicial definido para ${escHtml(className || 'esta classe')}. Converse com seu Narrador.</p>`;
+    } catch (errKit) {
+        console.error("Erro fatal ao processar kits:", errKit);
+        html += `<div style="color:var(--danger); padding:12px; border:1px solid var(--danger); border-radius:8px;">Erro ao carregar os kits da classe. Verifique o console.</div>`;
     }
 
     html += `</div>`;
 
     // Item Customizado (Substitui Objeto Pessoal)
-    const slots = [
-        {v:'cabeca', l:'Cabeça'}, {v:'pescoco', l:'Pescoço'}, {v:'tronco', l:'Tronco'},
-        {v:'ombros', l:'Ombros'}, {v:'costas', l:'Costas'}, {v:'bracos', l:'Braços'},
-        {v:'mao_dir', l:'Mão Dir.'}, {v:'mao_esq', l:'Mão Esq.'},
-        {v:'dedo_1', l:'Anel 1'}, {v:'dedo_2', l:'Anel 2'}, {v:'dedo_3', l:'Anel 3'},
-        {v:'dedo_4', l:'Anel 4'}, {v:'dedo_5', l:'Anel 5'}, {v:'dedo_6', l:'Anel 6'},
-        {v:'dedo_7', l:'Anel 7'}, {v:'dedo_8', l:'Anel 8'}, {v:'dedo_9', l:'Anel 9'}, {v:'dedo_10', l:'Anel 10'},
-        {v:'cintura', l:'Cintura'}, {v:'pernas', l:'Pernas'}, {v:'pes', l:'Pés'}
-    ];
-    const restricoes = wizardState.customItem?.slotRestrito || [];
-    const slotsOptions = slots.map(s => `<option value="${s.v}" ${restricoes.includes(s.v) ? 'selected' : ''}>${s.l}</option>`).join('');
+    const racaClassData = wizardState.racaSelecionada ? window._systemData.races?.find(r => r.nome === wizardState.racaSelecionada) : null;
+    const partesDoCorpo = (racaClassData?.partesDoCorpo && racaClassData.partesDoCorpo.length > 0) ? racaClassData.partesDoCorpo : (window._systemData.bodyParts?.filter(bp => bp.ehPadrao) || []);
+    
+    const equipavelEm = wizardState.customItem?.equipavelEm || [];
+    const slotsOptions = partesDoCorpo.map(bpItem => {
+        const bp = window._systemData.bodyParts?.find(b => b.id === bpItem.id) || bpItem;
+        const selected = equipavelEm.includes(bp.id) ? 'selected' : '';
+        return `<option value="${bp.id}" data-segurar="${!!bp.podeSegurar}" data-empunhar="${!!bp.podeEmpunhar}" data-vestir="${!!bp.podeVestir}" data-fixar="${!!bp.podeFixar}" ${selected}>${bp.icone || '🦴'} ${bp.nome || bp.id}</option>`;
+    }).join('');
 
     html += `
         <div class="section">
@@ -66,17 +104,24 @@ function initPhase7(container) {
                         <option value="Acessório" ${wizardState.customItem?.tipo === 'Acessório' ? 'selected' : ''}>💍 Acessório</option>
                         <option value="Projétil" ${wizardState.customItem?.tipo === 'Projétil' ? 'selected' : ''}>🎯 Projétil</option>
                         <option value="Container" ${wizardState.customItem?.tipo === 'Container' ? 'selected' : ''}>📦 Container</option>
+                        <option value="Consumível" ${wizardState.customItem?.tipo === 'Consumível' ? 'selected' : ''}>🧪 Consumível</option>
                     </select>
                 </div>
             </div>
 
             <div class="row">
                 <div class="field" style="flex:1">
-                    <label>Vestir em (Restrição)</label>
-                    <select id="customItemSlotRestrito" multiple size="4" onchange="updateCustomItem()">
+                    <label>Equipável em</label>
+                    <select id="customItemEquipavelEm" multiple size="4" onchange="window.updateCustomItemFormaEquiparOptions(); updateCustomItem();">
                         ${slotsOptions}
                     </select>
                     <small style="color:var(--muted); font-size: 0.8rem;">Segure Ctrl/Cmd para selecionar vários. Deixe vazio para Livre.</small>
+                </div>
+                <div class="field" style="flex:1">
+                    <label>Forma de equipar</label>
+                    <select id="customItemFormaEquipar" onchange="updateCustomItem()">
+                        <!-- Preenchido dinamicamente por updateCustomItemFormaEquiparOptions() na carga inicial -->
+                    </select>
                 </div>
             </div>
             
@@ -135,18 +180,78 @@ function initPhase7(container) {
     html += createMemoryBox('equipamento_objeto', 'Como este item chegou às suas mãos? Quem o possuía antes de você?', true);
 
     container.innerHTML = html;
+
+    // Atualiza opções da forma de equipar com base nas seleções atuais (ou livre se vazio)
+    setTimeout(() => {
+        if (window.updateCustomItemFormaEquiparOptions) {
+            window.updateCustomItemFormaEquiparOptions(wizardState.customItem?.formaEquipar);
+        }
+    }, 0);
 }
 
-function toggleEquipItem(itemName, checked) {
-    if (checked) {
-        if (!wizardState.equipamentoSelecionado.includes(itemName)) {
-            wizardState.equipamentoSelecionado.push(itemName);
-        }
+window.updateCustomItemFormaEquiparOptions = function(savedValue) {
+    const equipSelect = document.getElementById('customItemEquipavelEm');
+    const formaSelect = document.getElementById('customItemFormaEquipar');
+    if (!equipSelect || !formaSelect) return;
+
+    let canSegurar = false;
+    let canEmpunhar = false;
+    let canVestir = false;
+    let canFixar = false;
+
+    if (equipSelect.selectedOptions.length === 0) {
+        canSegurar = canEmpunhar = canVestir = canFixar = true;
     } else {
-        wizardState.equipamentoSelecionado = wizardState.equipamentoSelecionado.filter(i => i !== itemName);
+        Array.from(equipSelect.selectedOptions).forEach(opt => {
+            if (opt.dataset.segurar === 'true') canSegurar = true;
+            if (opt.dataset.empunhar === 'true') canEmpunhar = true;
+            if (opt.dataset.vestir === 'true') canVestir = true;
+            if (opt.dataset.fixar === 'true') canFixar = true;
+        });
     }
+
+    const currentVal = savedValue !== undefined ? savedValue : formaSelect.value;
+    let html = '<option value="">— Livre —</option>';
+    if (canSegurar) html += `<option value="segurar" ${currentVal === 'segurar' ? 'selected' : ''}>Segurar</option>`;
+    if (canEmpunhar) html += `<option value="empunhar" ${currentVal === 'empunhar' ? 'selected' : ''}>Empunhar</option>`;
+    if (canVestir) html += `<option value="vestir" ${currentVal === 'vestir' ? 'selected' : ''}>Vestir</option>`;
+    if (canFixar) html += `<option value="fixar" ${currentVal === 'fixar' ? 'selected' : ''}>Fixar</option>`;
+
+    formaSelect.innerHTML = html;
+    if (currentVal && !html.includes(`value="${currentVal}"`)) {
+        formaSelect.value = '';
+        if (savedValue === undefined) updateCustomItem(); // Forma antiga inválida, atualiza state
+    }
+};
+
+window.selectKitInicial = function(kitId) {
+    wizardState.kitInicialSelecionado = kitId;
     saveWizardToStorage();
-}
+    
+    // Toggle UI without rerendering the whole phase
+    const allCards = document.querySelectorAll('.kit-card');
+    const allDetails = document.querySelectorAll('.kit-details');
+    
+    allCards.forEach(card => {
+        card.style.border = '1px solid var(--soft)';
+        card.style.background = 'transparent';
+    });
+    
+    allDetails.forEach(detail => {
+        detail.style.display = 'none';
+    });
+    
+    const selectedCard = document.getElementById(`kit-card-${kitId}`);
+    const selectedDetails = document.getElementById(`kit-details-${kitId}`);
+    
+    if (selectedCard) {
+        selectedCard.style.border = '1px solid var(--accent)';
+        selectedCard.style.background = 'var(--bg-card)';
+    }
+    if (selectedDetails) {
+        selectedDetails.style.display = 'block';
+    }
+};
 
 window.toggleCustomItemFields = function() {
     const tipo = document.getElementById('customItemTipo')?.value;
@@ -168,8 +273,9 @@ window.updateCustomItem = function() {
     }
     
     const tipo = document.getElementById('customItemTipo')?.value || 'Objeto';
-    const selectSlot = document.getElementById('customItemSlotRestrito');
-    const slotRestrito = Array.from(selectSlot?.selectedOptions || []).map(opt => opt.value);
+    const selectEquip = document.getElementById('customItemEquipavelEm');
+    const equipavelEm = Array.from(selectEquip?.selectedOptions || []).map(opt => opt.value);
+    const formaEquipar = document.getElementById('customItemFormaEquipar')?.value || null;
     const categoriaArma = document.getElementById('customItemCategoriaArma')?.value || 'uma_mao';
     const peso = parseFloat(document.getElementById('customItemPeso')?.value) || 0;
     const tamanho = parseInt(document.getElementById('customItemTamanho')?.value) || 0;
@@ -182,13 +288,16 @@ window.updateCustomItem = function() {
     wizardState.customItem = {
         nome,
         tipo,
-        slotRestrito,
+        equipavelEm: equipavelEm.length > 0 ? equipavelEm : null,
+        formaEquipar,
         peso,
         tamanho,
         quantidade: (tipo === 'Container' || tipo === 'Arma') ? 1 : quantidade,
         descricao: desc,
-        imagemUrl,
-        ehContainer: tipo === 'Container'
+        imagem: imagemUrl,
+        imagemUrl, // mantemos por compatibilidade com legado
+        ehContainer: tipo === 'Container',
+        pressaoBase: peso
     };
 
     if (tipo === 'Arma') {
@@ -200,4 +309,77 @@ window.updateCustomItem = function() {
     }
 
     saveWizardToStorage();
+};
+
+window.renderEquipmentItemDetails = function(eq) {
+    let html = `<div class="equipment-item-detail" style="border-left: 3px solid var(--accent); padding-left: 12px; margin-bottom: 16px;">`;
+    
+    // Header (Name + Type)
+    html += `<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 4px;">`;
+    html += `<div style="font-weight:bold; font-size:.95rem; color:var(--text);">${escHtml(eq.nome)}</div>`;
+    html += `<div style="font-size:.75rem; color:var(--muted); text-transform:uppercase;">${escHtml(eq.tipo || 'Item')}</div>`;
+    html += `</div>`;
+    
+    // Description
+    if (eq.descricao) {
+        html += `<div style="font-size:.85rem; color:var(--muted); margin-bottom: 8px;">${escHtml(eq.descricao)}</div>`;
+    }
+    
+    // Stats grid
+    const stats = [];
+    if (eq.peso) stats.push(`Peso: ${eq.peso}`);
+    if (eq.tamanho) stats.push(`Tam: ${eq.tamanho}`);
+    if (eq.categoriaArma) stats.push(`Arma: ${escHtml(eq.categoriaArma.replace('_', ' '))}`);
+    if (eq.danoFisico) stats.push(`Dano Fís: ${escHtml(eq.danoFisico)}`);
+    if (eq.danoMagico) stats.push(`Dano Mág: ${escHtml(eq.danoMagico)}`);
+    if (eq.alcance) stats.push(`Alcance: ${escHtml(eq.alcance)}`);
+    if (eq.protecaoFisica) stats.push(`Prot. Fís: ${eq.protecaoFisica}`);
+    if (eq.protecaoMagica) stats.push(`Prot. Mág: ${eq.protecaoMagica}`);
+    if (eq.propriedadesArma && Array.isArray(eq.propriedadesArma) && eq.propriedadesArma.length > 0) {
+        stats.push(`Propriedades: ${eq.propriedadesArma.join(', ')}`);
+    }
+    
+    if (stats.length > 0) {
+        html += `<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom: 8px;">`;
+        for (const stat of stats) {
+            html += `<span style="font-size:.75rem; background:var(--bg-secondary); border: 1px solid var(--soft); padding:2px 6px; border-radius:4px; color:var(--text);">${stat}</span>`;
+        }
+        html += `</div>`;
+    }
+    
+    // Mechanics
+    if (Array.isArray(eq.mecanicaIds) && eq.mecanicaIds.length > 0) {
+        html += `<div class="detail-pec-mechanics" style="margin-top: 8px; display: flex; flex-direction: column; gap: 4px;">`;
+        for (const mechId of eq.mecanicaIds) {
+            try {
+                const mech = window._systemData?.mechanics?.find(m => m.id === mechId);
+                if (mech) {
+                    const isNeg = mech.tipo === 'modificar' && mech.config?.operacao === '-';
+                    const color = isNeg ? 'var(--danger)' : 'var(--success)';
+                    const icon = isNeg ? '⚠️' : '⚡';
+                    
+                    html += `<div class="detail-mechanic-item" style="border-left: 2px solid ${color}; padding-left: 8px; background: rgba(0,0,0,0.1); border-radius: 0 4px 4px 0; padding-top: 4px; padding-bottom: 4px;">`;
+                    html += `<div style="font-size:.8rem; font-weight:bold; color:var(--text);">${icon} ${escHtml(mech.nome || 'Efeito Especial')}</div>`;
+                    
+                    const parts = [];
+                    if (mech.tipo) parts.push(`Tipo: ${escHtml(mech.tipo)}`);
+                    if (mech.config?.alvo) parts.push(`Alvo: ${escHtml(mech.config.alvo)}`);
+                    if (mech.config?.operacao) parts.push(`Op: ${escHtml(mech.config.operacao)}`);
+                    if (mech.config?.valor != null) parts.push(`Valor: ${escHtml(String(mech.config.valor))}`);
+                    if (mech.config?.textoEfeito) parts.push(`Efeito: ${escHtml(mech.config.textoEfeito)}`);
+                    
+                    if (parts.length > 0) {
+                        html += `<div style="font-size:.75rem; color:var(--muted); margin-top:2px;">${parts.join(' · ')}</div>`;
+                    }
+                    html += `</div>`;
+                }
+            } catch (errMech) {
+                console.error("Erro ao renderizar mecânica:", errMech);
+            }
+        }
+        html += `</div>`;
+    }
+    
+    html += `</div>`;
+    return html;
 };

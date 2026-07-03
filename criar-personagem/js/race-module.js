@@ -142,6 +142,7 @@ function openRaceModal(raceName, event) {
 
 function selectClass(className) {
     wizardState.classeSelecionada = className;
+    wizardState.kitInicialSelecionado = null; // Reseta o kit ao trocar de classe
 
     document.querySelectorAll('#classGrid .selection-card').forEach(c => {
         c.classList.toggle('selected', c.dataset.class === className);
@@ -151,6 +152,7 @@ function selectClass(className) {
     saveWizardToStorage();
     forceRerender(3); // Força atualização de Peculiaridades Herdadas
     forceRerender(5); // Força atualização de Perícias de Classe
+    forceRerender(8); // Força atualização do Equipamento (Kits Iniciais)
 }
 
 function openClassModal(className, event) {

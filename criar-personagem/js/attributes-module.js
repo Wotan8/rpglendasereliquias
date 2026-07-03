@@ -6,7 +6,10 @@ function initPhase3(container) {
     // Step 1: Select primary group
     html += `
         <div class="section" id="attrStep1">
-            <div class="section-title">Passo 1 — Grupo Primário (${REGRAS_CRIACAO.atributos.primario} pontos)</div>
+            <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Passo 1 — Grupo Primário (${REGRAS_CRIACAO.atributos.primario} pontos)</span>
+                <button class="btn btn-primary" style="font-size: 0.75rem; padding: 4px 8px; background: var(--primary); border: none; border-radius: 4px; color: #fff; cursor: pointer;" onclick="window.randomizeAttributes()">🎲 Aleatorizar Atributos</button>
+            </div>
             <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
                 Qual área define você? O grupo primário recebe <strong>${REGRAS_CRIACAO.atributos.primario} pontos</strong>,
                 o intermediário <strong>${REGRAS_CRIACAO.atributos.intermediario}</strong>,
@@ -204,3 +207,36 @@ function updateAllAttrCounters() {
         el.style.color = remaining === 0 ? 'var(--success)' : 'var(--accent)';
     }
 }
+
+window.randomizeAttributes = function() {
+    const groups = [...GRUPOS_ATRIBUTOS];
+    groups.sort(() => Math.random() - 0.5);
+    wizardState.grupoPrimario = groups[0];
+    wizardState.grupoFraco = groups[1];
+    
+    resetAttrPoints();
+    
+    for (const grupo of GRUPOS_ATRIBUTOS) {
+        const maxPerAttr = REGRAS_CRIACAO.atributos.limite_max_por_atributo;
+        const attrs = ATRIBUTOS[grupo].map(a => a.key);
+        
+        let attempts = 0;
+        while (getGroupRemainingPoints(grupo) > 0 && attempts < 100) {
+            attempts++;
+            const attrKey = attrs[Math.floor(Math.random() * attrs.length)];
+            const currentLevel = wizardState.atributos[attrKey] || 0;
+            const targetLevel = currentLevel + 1;
+            
+            if (targetLevel > maxPerAttr) continue;
+            
+            const costDelta = calcAttrCost(targetLevel) - calcAttrCost(currentLevel);
+            if (costDelta <= getGroupRemainingPoints(grupo)) {
+                wizardState.atributos[attrKey] = targetLevel;
+                attempts = 0; // reset attempts when successful
+            }
+        }
+    }
+    
+    forceRerender(getPhaseIndex(3));
+    saveWizardToStorage();
+};

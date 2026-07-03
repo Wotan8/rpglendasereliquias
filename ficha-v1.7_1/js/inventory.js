@@ -700,6 +700,26 @@ function _renderOpenContainers() {
 function _getCompatibleSlots(item) {
     const items = window._inventoryState.items;
     const compatSlots = [];
+
+    // === FALLBACK: Garantir partesDoCorpo carregadas ===
+    if (!window.state || !window.state.partesDoCorpo || window.state.partesDoCorpo.length === 0) {
+        const racaNome = document.getElementById('selRaca')?.value;
+        let partsToLoad = null;
+        if (racaNome && window.RACES && window.RACES[racaNome]
+            && window.RACES[racaNome].partesDoCorpo
+            && window.RACES[racaNome].partesDoCorpo.length > 0) {
+            partsToLoad = window.RACES[racaNome].partesDoCorpo;
+        } else if (window._systemData && window._systemData.bodyParts) {
+            partsToLoad = window._systemData.bodyParts.filter(bp => bp.ehPadrao);
+        }
+        if (partsToLoad && partsToLoad.length > 0) {
+            if (!window.state) window.state = {};
+            window.state.partesDoCorpo = JSON.parse(JSON.stringify(partsToLoad));
+            console.log('🔧 partesDoCorpo restaurado via fallback no _getCompatibleSlots:',
+                window.state.partesDoCorpo.length, 'partes');
+        }
+    }
+
     const bodySlots = _getCharacterBodySlots();
     const equipavelEm = Array.isArray(item.equipavelEm) ? item.equipavelEm : (item.equipavelEm ? [item.equipavelEm] : []);
 
@@ -752,6 +772,26 @@ function _getAvailableStates(item, slotKey) {
 window.openEquipModal = function(itemId) {
     const item = window._inventoryState.items.find(i => i.id === itemId);
     if (!item) return;
+
+    // === FALLBACK: Garantir partesDoCorpo carregadas (mesmo padrão de openItemFormModal) ===
+    if (!window.state) window.state = {};
+    if (!window.state.partesDoCorpo || window.state.partesDoCorpo.length === 0) {
+        const racaNome = document.getElementById('selRaca')?.value;
+        let partsToLoad = null;
+        if (racaNome && window.RACES && window.RACES[racaNome]
+            && window.RACES[racaNome].partesDoCorpo
+            && window.RACES[racaNome].partesDoCorpo.length > 0) {
+            partsToLoad = window.RACES[racaNome].partesDoCorpo;
+        } else if (window._systemData && window._systemData.bodyParts) {
+            partsToLoad = window._systemData.bodyParts.filter(bp => bp.ehPadrao);
+        }
+        if (partsToLoad && partsToLoad.length > 0) {
+            window.state.partesDoCorpo = JSON.parse(JSON.stringify(partsToLoad));
+            console.log('🔧 partesDoCorpo restaurado via fallback no openEquipModal:',
+                window.state.partesDoCorpo.length, 'partes');
+            if (typeof scheduleAutosave === 'function') scheduleAutosave();
+        }
+    }
 
     let existing = document.getElementById('invEquipModal');
     if (existing) existing.remove();

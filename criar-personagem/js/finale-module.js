@@ -377,6 +377,129 @@ async function createCharacter() {
         name: name, desc: '', qtd: '1'
     }));
 
+    // Injeta os itens do kit inicial diretamente na ficha (embedded)
+    if (ws.kitInicialSelecionado && ws.classeSelecionada) {
+        const classData = window._systemData?.classes?.find(c => c.nome === ws.classeSelecionada);
+        if (classData && classData.kitsIniciais) {
+            const kit = classData.kitsIniciais.find((k, index) => {
+                const kid = k.id || `kit_${index}`;
+                return kid === ws.kitInicialSelecionado;
+            });
+            if (kit && kit.equipamentos) {
+                for (const eqId of kit.equipamentos) {
+                    const eqData = window._systemData?.equipment?.find(e => e.id === eqId);
+                    if (eqData) {
+                        equipamento.push(eqData.nome);
+                        inventoryItems.push({
+                            name: eqData.nome,
+                            desc: eqData.descricao || '',
+                            qtd: String(eqData.quantidade || '1')
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    // === Consolidar Partes do Corpo (Raça + Peculiaridades) ===
+    let partesDoCorpo = [];
+    const racaData = window._systemData?.races?.find(r => r.nome === ws.racaSelecionada);
+    
+    // Extrair partes base e garantir que são objetos completos
+    let baseParts = [];
+    if (racaData && racaData.partesDoCorpo && racaData.partesDoCorpo.length > 0) {
+        baseParts = racaData.partesDoCorpo.map(p => {
+            const id = typeof p === 'string' ? p : p.id;
+            const slots = typeof p === 'object' ? (p.slots || 1) : 1;
+            const bpDef = window._systemData?.bodyParts?.find(b => b.id === id);
+            return bpDef ? { ...JSON.parse(JSON.stringify(bpDef)), slots } : null;
+        }).filter(Boolean);
+    }
+    
+    if (baseParts.length > 0) {
+        partesDoCorpo = baseParts;
+    } else {
+        const defaultParts = window._systemData?.bodyParts?.filter(bp => bp.ehPadrao) || [];
+        partesDoCorpo = JSON.parse(JSON.stringify(defaultParts));
+    }
+    
+    // Assegurar que cada parte tenha .slots base, padrão 1 se não definido
+    partesDoCorpo.forEach(bp => {
+        if (typeof bp.slots === 'undefined') bp.slots = 1;
+    });
+
+    // Coletar peculiaridades da Raça, Classe, Tribo e Individuais
+    const allPecIds = [];
+    if (racaData && racaData.peculiaridadeIds) allPecIds.push(...racaData.peculiaridadeIds);
+    
+    const classData = window._systemData?.classes?.find(c => c.nome === ws.classeSelecionada);
+    if (classData && classData.peculiaridadeIds) allPecIds.push(...classData.peculiaridadeIds);
+    if (classData && classData.bonusIniciais) allPecIds.push(...classData.bonusIniciais);
+
+    const triboData = window._systemData?.tribes?.find(t => t.nome === ws.triboSelecionada);
+    if (triboData && triboData.peculiaridadeIds) allPecIds.push(...triboData.peculiaridadeIds);
+
+    if (ws.peculiaridadesIndividuais) {
+        ws.peculiaridadesIndividuais.forEach(pec => allPecIds.push(pec.id));
+    }
+
+    // Avaliar mecânicas que afetam Partes do Corpo (ex: 'Parte do Corpo: Braço')
+    if (window._systemData && window._systemData.peculiarities && window._systemData.mechanics) {
+        const uniquePecs = [...new Set(allPecIds)];
+        uniquePecs.forEach(pecId => {
+            const pec = window._systemData.peculiarities.find(p => p.id === pecId);
+            if (pec && pec.mecanicaIds && pec.mecanicaIds.length > 0) {
+                pec.mecanicaIds.forEach(mId => {
+                    const mech = window._systemData.mechanics.find(m => m.id === mId);
+                    if (mech && mech.tipo === 'modificar' && mech.config && mech.config.alvo && mech.config.alvo.startsWith('Parte do Corpo: ')) {
+                        const targetName = mech.config.alvo.replace('Parte do Corpo: ', '').trim();
+                        
+                        // Parse da expressão do valor
+                        let calcStr = String(mech.config.calculo || mech.config.valorFixo || '0');
+                        calcStr = calcStr.replace(/\b(FOR|DES|VIG|INT|RAC|PRS|PRE|MAN|AUT)\b/g, match => {
+                            const attrKey = 'attr_' + match.toLowerCase();
+                            return (dots[attrKey] || 0);
+                        });
+                        let val = 0;
+                        try { val = Math.floor(new Function('"use strict"; return (' + calcStr + ')')()); } catch(e) {}
+                        
+                        const bpIndex = partesDoCorpo.findIndex(bp => bp.nome === targetName);
+                        if (bpIndex !== -1) {
+                            if (mech.config.operacao === '+') partesDoCorpo[bpIndex].slots += val;
+                            else if (mech.config.operacao === '-') partesDoCorpo[bpIndex].slots -= val;
+                            else if (mech.config.operacao === '=') partesDoCorpo[bpIndex].slots = val;
+                            
+                            if (partesDoCorpo[bpIndex].slots < 0) partesDoCorpo[bpIndex].slots = 0;
+                        } else {
+                            // Adicionar a parte se não existia na base da raça, pegando dados canônicos
+                            const globalBp = window._systemData.bodyParts?.find(bp => bp.nome === targetName);
+                            if (globalBp) {
+                                const newBp = JSON.parse(JSON.stringify(globalBp));
+                                newBp.slots = mech.config.operacao === '=' ? val : Math.max(0, val);
+                                if (newBp.slots > 0) {
+                                    partesDoCorpo.push(newBp);
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    // Limpar partes com 0 slots para não poluir UI de equipar
+    partesDoCorpo = partesDoCorpo.filter(bp => bp.slots > 0);
+
+    // === GUARD: Garantir partes do corpo nunca vazias ===
+    if (partesDoCorpo.length === 0) {
+        console.warn('⚠️ partesDoCorpo vazio após consolidação! Usando fallback padrão.');
+        const defaultParts = window._systemData?.bodyParts?.filter(bp => bp.ehPadrao) || [];
+        partesDoCorpo = JSON.parse(JSON.stringify(defaultParts));
+        partesDoCorpo.forEach(bp => { if (typeof bp.slots === 'undefined') bp.slots = 1; });
+    }
+    console.log('🦴 partesDoCorpo consolidado:', partesDoCorpo.length, 'parte(s)',
+        partesDoCorpo.map(bp => `${bp.nome}(${bp.slots})`).join(', '));
+
     // Assemble final charData
     const charData = {
         dots,
@@ -385,6 +508,7 @@ async function createCharacter() {
         equipamento,
         inventoryItems,
         peculiaridadesIndividuais: ws.peculiaridadesIndividuais || [],
+        partesDoCorpo, // <== Injetado no momento da criação
         mecanicasAplicadas: {},
         mechanicBonuses: {},
         mecanicasPendentes: [],
@@ -460,17 +584,42 @@ async function createCharacter() {
 
     // Show saving indicator
     showWizardToast('💾 Salvando personagem...', 'info');
+    // Capture state variables BEFORE createCharacterInFirebase clears the wizardState!
+    const savedKitId = ws.kitInicialSelecionado;
+    const savedClass = ws.classeSelecionada;
+    const savedCustomItem = ws.customItem;
+    const savedNpcs = ws.npcs ? JSON.parse(JSON.stringify(ws.npcs)) : [];
+    const savedCharName = charName;
 
     try {
         if (typeof window.createCharacterInFirebase === 'function') {
             const charId = await window.createCharacterInFirebase(charData);
 
             // === Save NPCs to Master Panel (collection 'npcs') ===
-            await saveNpcsToMasterPanel(ws, charName, charId);
+            await saveNpcsToMasterPanel(savedNpcs, savedCharName, charId, ws.mesaVinculada);
 
             // === Save custom item to 'items' collection ===
-            if (ws.customItem) {
-                await saveCustomItemToFirebase(ws.customItem, charId);
+            if (savedCustomItem) {
+                await saveCustomItemToFirebase(savedCustomItem, charId);
+            }
+
+            // === Save starter kit items to 'items' collection ===
+            if (savedKitId && savedClass) {
+                const classData = window._systemData?.classes?.find(c => c.nome === savedClass);
+                if (classData && classData.kitsIniciais) {
+                    const kit = classData.kitsIniciais.find((k, index) => {
+                        const kid = k.id || `kit_${index}`;
+                        return kid === savedKitId;
+                    });
+                    if (kit && kit.equipamentos) {
+                        for (const eqId of kit.equipamentos) {
+                            const eqData = window._systemData?.equipment?.find(e => e.id === eqId);
+                            if (eqData) {
+                                await saveEquipmentAsItemToFirebase(eqData, charId);
+                            }
+                        }
+                    }
+                }
             }
 
             showConfetti();
@@ -499,7 +648,11 @@ async function saveCustomItemToFirebase(customItem, charId) {
             id: itemId,
             characterId: charId,
             equipado: false,
+            estadoEquip: null,
+            slotAnatomico: null,
+            maosUsadas: null,
             parentItemId: null,
+            criadoPor: 'jogador',
             lastModified: new Date().toISOString()
         };
 
@@ -516,10 +669,41 @@ async function saveCustomItemToFirebase(customItem, charId) {
     }
 }
 
+async function saveEquipmentAsItemToFirebase(equipData, charId) {
+    if (!equipData) return;
+    try {
+        const { doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const db = window.db;
+        const itemId = 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        
+        const itemData = {
+            ...JSON.parse(JSON.stringify(equipData)), // clonagem segura
+            id: itemId,
+            originalEquipId: equipData.id,
+            characterId: charId,
+            equipado: false,
+            parentItemId: null,
+            quantidade: equipData.quantidade || 1,
+            lastModified: new Date().toISOString()
+        };
+
+        const user = window.currentUser;
+        if (user) {
+            itemData.ownerUid = user.uid;
+            itemData.ownerId = user.uid;
+        }
+
+        await setDoc(doc(db, 'items', itemId), itemData);
+        console.log(`✅ Item de kit "${equipData.nome}" salvo no inventário`);
+    } catch (e) {
+        console.error('⚠️ Erro ao salvar item de kit:', e);
+    }
+}
+
 /* ===== SAVE NPCS TO MASTER PANEL ===== */
 
-async function saveNpcsToMasterPanel(ws, charName, charId) {
-    const confirmedNpcs = ws.npcs.filter(n => n.confirmado && n.nome);
+async function saveNpcsToMasterPanel(npcsList, charName, charId, mesaVinculada) {
+    const confirmedNpcs = npcsList.filter(n => n.confirmado && n.nome);
     if (confirmedNpcs.length === 0) return;
 
     try {
@@ -536,9 +720,9 @@ async function saveNpcsToMasterPanel(ws, charName, charId) {
             const tags = [];
             tags.push(`Vinculado com o Personagem ${charName}`);
 
-            if (ws.mesaVinculada) {
-                if (ws.mesaVinculada.nome) tags.push(`MESA: ${ws.mesaVinculada.nome}`);
-                if (ws.mesaVinculada.mestreNome) tags.push(`MESTRE: ${ws.mesaVinculada.mestreNome}`);
+            if (mesaVinculada) {
+                if (mesaVinculada.nome) tags.push(`MESA: ${mesaVinculada.nome}`);
+                if (mesaVinculada.mestreNome) tags.push(`MESTRE: ${mesaVinculada.mestreNome}`);
             }
 
             // Build history string: 3 lines

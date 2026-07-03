@@ -81,6 +81,7 @@ function resetWizardState() {
     wizardState.virtudeSelecionada = null;
     wizardState.vicioSelecionado = null;
     wizardState.npcs = [];
+    wizardState.kitInicialSelecionado = null;
     wizardState.equipamentoSelecionado = [];
     wizardState.luns = 0;
     wizardState.objetoPessoal = null;

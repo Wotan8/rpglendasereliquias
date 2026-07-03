@@ -32,7 +32,7 @@ window.loadSystemData = async function () {
     const collections = [
         'races', 'classes', 'tribes', 'peculiarities', 'mechanics',
         'skills', 'conditions', 'equipment', 'maneuvers', 'spells',
-        'derivedValues', 'vitalStats', 'auras'
+        'derivedValues', 'vitalStats', 'auras', 'bodyParts'
     ];
 
     try {

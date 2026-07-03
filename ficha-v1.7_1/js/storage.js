@@ -221,6 +221,8 @@ function loadFromData(d) {
         // Restore partesDoCorpo
         if (d.partesDoCorpo && d.partesDoCorpo.length > 0) {
             state.partesDoCorpo = d.partesDoCorpo;
+            console.log('✅ partesDoCorpo carregado do documento:', state.partesDoCorpo.length, 'parte(s)',
+                state.partesDoCorpo.map(bp => bp.nome || bp.id).join(', '));
         } else {
             // Fallback for characters without body parts: load from race, else standard parts
             state.partesDoCorpo = [];

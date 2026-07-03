@@ -61,8 +61,10 @@ window.initApp = function () {
     if (typeof recalcAll === 'function') recalcAll();
 
     // Garantir que _dataReady é setado mesmo se loadFromData nunca foi chamado
-    // (personagem novo ou localStorage vazio)
-    if (!window._dataReady) {
+    // (personagem novo ou localStorage vazio).
+    // GUARD: Quando o Firebase está carregando (_firebaseLoaded=true), o loadFromData()
+    // definirá _dataReady ao final. Liberar aqui causaria race condition com scheduleAutosave().
+    if (!window._dataReady && !window._firebaseLoaded) {
         window._dataReady = true;
         console.log('✅ _dataReady = true (initApp fallback — nenhum dado carregado).');
     }

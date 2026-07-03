@@ -42,6 +42,7 @@ window.wizardState = {
     npcs: [], // [{ nome, relacao, memoria, vinculo, confirmado }]
 
     // Fase 7
+    kitInicialSelecionado: null,
     equipamentoSelecionado: [], // [string]
     luns: 0,
     objetoPessoal: null, // { nome, descricao } ou null
