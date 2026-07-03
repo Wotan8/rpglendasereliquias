@@ -145,8 +145,10 @@ window.saveSessionLog = async function() {
                     const cd = charSnap.data();
                     const f = cd.fields || {};
                     const isAdd = p.expType === 'add';
-                    const newExp = isAdd ? (f.exp||0) + p.expAmount : Math.max(0, (f.exp||0) - p.expAmount);
-                    const newTotal = isAdd ? (f.exp_total||0) + p.expAmount : Math.max(0, (f.exp_total||0) - p.expAmount);
+                    const curExp = parseInt(f.exp || 0, 10) || 0;
+                    const curExpTotal = parseInt(f.exp_total || 0, 10) || 0;
+                    const newExp = isAdd ? curExp + p.expAmount : Math.max(0, curExp - p.expAmount);
+                    const newTotal = isAdd ? curExpTotal + p.expAmount : Math.max(0, curExpTotal - p.expAmount);
                     await updateDoc(charRef, { 'fields.exp': newExp, 'fields.exp_total': newTotal });
                     // Notify owner
                     if (p.ownerUid) {

@@ -318,8 +318,8 @@ window.applyExpBulk = async function(isAdd) {
         const c = S.mesaCharacters.find(x => x.id === charId);
         if (!c) continue;
         const f = c.fields || {};
-        const curExp = f.exp ?? c.exp ?? 0;
-        const curExpTotal = f.exp_total ?? c.exp_total ?? 0;
+        const curExp = parseInt(f.exp ?? c.exp ?? 0, 10) || 0;
+        const curExpTotal = parseInt(f.exp_total ?? c.exp_total ?? 0, 10) || 0;
         const nome = f.nome || c.nome || 'Sem nome';
         const newExp = isAdd ? curExp + v : Math.max(0, curExp - v);
         const newExpTotal = isAdd ? curExpTotal + v : Math.max(0, curExpTotal - v);
