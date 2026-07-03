@@ -297,7 +297,7 @@ function displayMesaCharacters() {
 
 window.openCharacter = function(id) { window.open(`../ficha-v1.7_1/ficha-v1.7_1.html?id=${id}`, '_blank'); };
 
-// ===== EXP MODE =====
+// ===== EXP MODE & INVENTORY MODE =====
 window.toggleExpMode = function() {
     S.setIsExpMode(!S.isExpMode);
     const actions = document.getElementById('expBulkActions');
@@ -305,6 +305,45 @@ window.toggleExpMode = function() {
     if (actions) actions.style.display = S.isExpMode ? 'flex' : 'none';
     if (btn) btn.style.display = S.isExpMode ? 'none' : '';
     displayMesaCharacters();
+};
+
+window.toggleMesaInventoryMode = async function() {
+    try { await import('./area-mesas-inventario.js'); } catch(e) { console.error('Erro ao importar inventario:', e); }
+
+    const grid = document.getElementById('mesaCharactersGrid');
+    const invContainer = document.getElementById('mesaCharactersInventoryContainer');
+    const btnInv = document.getElementById('btnToggleInventario');
+    const btnExp = document.getElementById('btnToggleExp');
+    
+    // Default to empty or explicit none
+    const isCurrentlyHidden = (invContainer.style.display === 'none' || invContainer.style.display === '');
+    
+    if (isCurrentlyHidden) {
+        // Entra no modo inventário
+        grid.style.display = 'none';
+        invContainer.style.display = 'block';
+        if (btnInv) {
+            btnInv.classList.remove('btn-primary');
+            btnInv.classList.add('btn-secondary');
+            btnInv.textContent = 'Voltar para Personagens';
+        }
+        if (btnExp) btnExp.style.display = 'none';
+        
+        // Renderiza inventários (implementado em area-mesas-inventario.js)
+        if (window._loadPersonagensInventario) {
+            window._loadPersonagensInventario();
+        }
+    } else {
+        // Sai do modo inventário
+        grid.style.display = 'grid'; // Volta o grid pro padrao
+        invContainer.style.display = 'none';
+        if (btnInv) {
+            btnInv.classList.remove('btn-secondary');
+            btnInv.classList.add('btn-primary');
+            btnInv.textContent = '🎒 Inventário';
+        }
+        if (btnExp) btnExp.style.display = '';
+    }
 };
 
 window.applyExpBulk = async function(isAdd) {

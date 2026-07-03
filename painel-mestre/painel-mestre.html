@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="css/area-economica.css">
     <link rel="stylesheet" href="css/area-apoio.css">
     <link rel="stylesheet" href="css/area-historico.css">
+    <link rel="stylesheet" href="../ficha-v1.7_1/css/inventory.css">
+    <link rel="stylesheet" href="../ficha-v1.7_1/css/equip-modal.css">
 <script type="module" src="/js/global-favicon.js"></script>
 </head>
 <body>
@@ -90,7 +92,7 @@
                         <button class="sub-tab-btn" data-subtab="m-sessoes" onclick="switchMesaSubTab('m-sessoes')">📝 Sessões</button>
                         <button class="sub-tab-btn" data-subtab="m-config" onclick="switchMesaSubTab('m-config')">⚙️ Config</button>
                         <button class="sub-tab-btn" data-subtab="m-npcs" onclick="switchMesaSubTab('m-npcs')">👹 NPCs</button>
-                        <button class="sub-tab-btn" data-subtab="m-inventario" onclick="switchMesaSubTab('m-inventario')">📦 Inventário</button>
+                        <button class="sub-tab-btn" data-subtab="m-inventario" onclick="switchMesaSubTab('m-inventario')">📦 Kits</button>
                         <button class="sub-tab-btn" data-subtab="m-notas" onclick="switchMesaSubTab('m-notas')">📝 Notas</button>
                         <button class="sub-tab-btn" data-subtab="m-combate" onclick="switchMesaSubTab('m-combate')">⚔️ Combate</button>
                     </div>
@@ -110,6 +112,7 @@
                     <div class="sub-tab-content" id="subtab-m-personagens">
                         <div class="exp-controls">
                             <button class="btn btn-warning btn-small" id="btnToggleExp" onclick="toggleExpMode()">⭐ +EXP</button>
+                            <button class="btn btn-primary btn-small" id="btnToggleInventario" onclick="toggleMesaInventoryMode()" style="margin-left: 8px;">🎒 Inventário</button>
                         </div>
                         <div id="expBulkActions" style="display:none;gap:8px;margin-bottom:12px">
                             <button class="btn btn-success btn-small" onclick="applyExpBulk(true)">✅ +ADD</button>
@@ -118,6 +121,9 @@
                         </div>
                         <div class="player-list" id="mesaCharactersGrid">
                             <div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Carregando personagens...</div>
+                        </div>
+                        <div id="mesaCharactersInventoryContainer" style="display:none; margin-top: 16px;">
+                            <div style="text-align:center;padding:40px;color:var(--muted)">Carregando inventários...</div>
                         </div>
                     </div>
 
@@ -448,6 +454,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
     <!-- MAIN MODULE -->
+    <script src="../ficha-v1.7_1/js/system-data-loader.js"></script>
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
