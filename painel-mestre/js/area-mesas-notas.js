@@ -7,6 +7,12 @@ import { showAlert, escapeHtml } from './ui-utils.js';
 
 window._loadMesaNotas = loadMesaNotas;
 
+window.toggleNotasAccordion = function(elId) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+};
+
 async function loadMesaNotas() {
     if (!S.currentMesaId) return;
     const el = document.getElementById('mesaNotasContent'); if (!el) return;
@@ -36,14 +42,20 @@ async function loadMesaNotas() {
                     </div>`;
                 }).join('')
                 : '<div style="color:var(--muted);font-size:.82rem;padding:8px 0;text-align:center">Nenhuma nota ainda.</div>';
+            const bodyId = `notas_body_${c.id}`;
             return `
-            <div class="sessao-card" style="margin-bottom:14px">
-                <div class="sessao-card-header">
-                    <div class="sessao-titulo">🎭 ${escapeHtml(nome)}</div>
-                    <button class="btn btn-success btn-small" onclick="addNewNote('${c.id}')" title="Adicionar nova nota">➕ Nova Nota</button>
+            <div class="accordion-item" style="margin-bottom:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:8px;">
+                <div class="accordion-header" style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleNotasAccordion('${bodyId}')">
+                    <div style="font-weight:bold; color:var(--light);">🎭 ${escapeHtml(nome)}</div>
+                    <div style="font-size:0.8rem; color:var(--muted);">${charNotes.length} nota(s)</div>
                 </div>
-                <div id="note-display-${c.id}" style="padding:8px 0">
-                    ${notesHtml}
+                <div class="accordion-body" id="${bodyId}" style="display:none; padding:12px 16px; border-top:1px solid var(--border);">
+                    <div style="margin-bottom:12px; display:flex; justify-content:flex-end;">
+                        <button class="btn btn-success btn-small" onclick="addNewNote('${c.id}')" title="Adicionar nova nota">➕ Nova Nota</button>
+                    </div>
+                    <div id="note-display-${c.id}">
+                        ${notesHtml}
+                    </div>
                 </div>
             </div>`;
         }).join('');
