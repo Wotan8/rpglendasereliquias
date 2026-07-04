@@ -113,6 +113,7 @@
                         <div class="exp-controls">
                             <button class="btn btn-warning btn-small" id="btnToggleExp" onclick="toggleExpMode()">⭐ +EXP</button>
                             <button class="btn btn-primary btn-small" id="btnToggleInventario" onclick="toggleMesaInventoryMode()" style="margin-left: 8px;">🎒 Inventário</button>
+                            <button class="btn btn-primary btn-small" id="btnToggleCondicoes" onclick="toggleMesaConditionsMode()" style="margin-left: 8px;">💀 Condições</button>
                         </div>
                         <div id="expBulkActions" style="display:none;gap:8px;margin-bottom:12px">
                             <button class="btn btn-success btn-small" onclick="applyExpBulk(true)">✅ +ADD</button>
@@ -124,6 +125,9 @@
                         </div>
                         <div id="mesaCharactersInventoryContainer" style="display:none; margin-top: 16px;">
                             <div style="text-align:center;padding:40px;color:var(--muted)">Carregando inventários...</div>
+                        </div>
+                        <div id="mesaCharactersConditionsContainer" style="display:none; margin-top: 16px;">
+                            <div style="text-align:center;padding:40px;color:var(--muted)">Carregando condições...</div>
                         </div>
                     </div>
 

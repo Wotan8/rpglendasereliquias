@@ -312,7 +312,9 @@ window.toggleMesaInventoryMode = async function() {
 
     const grid = document.getElementById('mesaCharactersGrid');
     const invContainer = document.getElementById('mesaCharactersInventoryContainer');
+    const condContainer = document.getElementById('mesaCharactersConditionsContainer');
     const btnInv = document.getElementById('btnToggleInventario');
+    const btnCond = document.getElementById('btnToggleCondicoes');
     const btnExp = document.getElementById('btnToggleExp');
     
     // Default to empty or explicit none
@@ -322,10 +324,17 @@ window.toggleMesaInventoryMode = async function() {
         // Entra no modo inventário
         grid.style.display = 'none';
         invContainer.style.display = 'block';
+        if (condContainer) condContainer.style.display = 'none';
+        
         if (btnInv) {
             btnInv.classList.remove('btn-primary');
             btnInv.classList.add('btn-secondary');
             btnInv.textContent = 'Voltar para Personagens';
+        }
+        if (btnCond) {
+            btnCond.classList.remove('btn-secondary');
+            btnCond.classList.add('btn-primary');
+            btnCond.textContent = '💀 Condições';
         }
         if (btnExp) btnExp.style.display = 'none';
         
@@ -341,6 +350,54 @@ window.toggleMesaInventoryMode = async function() {
             btnInv.classList.remove('btn-secondary');
             btnInv.classList.add('btn-primary');
             btnInv.textContent = '🎒 Inventário';
+        }
+        if (btnExp) btnExp.style.display = '';
+    }
+};
+
+window.toggleMesaConditionsMode = async function() {
+    try { await import('./area-mesas-condicoes.js?v=' + Date.now()); } catch(e) { console.error('Erro ao importar condicoes:', e); }
+
+    const grid = document.getElementById('mesaCharactersGrid');
+    const invContainer = document.getElementById('mesaCharactersInventoryContainer');
+    const condContainer = document.getElementById('mesaCharactersConditionsContainer');
+    const btnInv = document.getElementById('btnToggleInventario');
+    const btnCond = document.getElementById('btnToggleCondicoes');
+    const btnExp = document.getElementById('btnToggleExp');
+    
+    // Default to empty or explicit none
+    const isCurrentlyHidden = (condContainer.style.display === 'none' || condContainer.style.display === '');
+    
+    if (isCurrentlyHidden) {
+        // Entra no modo condições
+        grid.style.display = 'none';
+        condContainer.style.display = 'block';
+        if (invContainer) invContainer.style.display = 'none';
+        
+        if (btnCond) {
+            btnCond.classList.remove('btn-primary');
+            btnCond.classList.add('btn-secondary');
+            btnCond.textContent = 'Voltar para Personagens';
+        }
+        if (btnInv) {
+            btnInv.classList.remove('btn-secondary');
+            btnInv.classList.add('btn-primary');
+            btnInv.textContent = '🎒 Inventário';
+        }
+        if (btnExp) btnExp.style.display = 'none';
+        
+        // Renderiza condições (implementado em area-mesas-condicoes.js)
+        if (window._loadPersonagensCondicoes) {
+            window._loadPersonagensCondicoes();
+        }
+    } else {
+        // Sai do modo condições
+        grid.style.display = 'grid'; // Volta o grid pro padrao
+        condContainer.style.display = 'none';
+        if (btnCond) {
+            btnCond.classList.remove('btn-secondary');
+            btnCond.classList.add('btn-primary');
+            btnCond.textContent = '💀 Condições';
         }
         if (btnExp) btnExp.style.display = '';
     }
