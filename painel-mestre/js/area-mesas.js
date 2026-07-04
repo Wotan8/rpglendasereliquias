@@ -308,7 +308,7 @@ window.toggleExpMode = function() {
 };
 
 window.toggleMesaInventoryMode = async function() {
-    try { await import('./area-mesas-inventario.js'); } catch(e) { console.error('Erro ao importar inventario:', e); }
+    try { await import('./area-mesas-inventario.js?v=' + Date.now()); } catch(e) { console.error('Erro ao importar inventario:', e); }
 
     const grid = document.getElementById('mesaCharactersGrid');
     const invContainer = document.getElementById('mesaCharactersInventoryContainer');

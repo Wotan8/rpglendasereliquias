@@ -34,11 +34,11 @@ document.addEventListener('keydown', (e) => {
 // ===== MESA SUB-MODULE LOADER =====
 async function ensureMesaSubModules() {
     try {
-        if (!mesaSessoesLoaded) { await import('./area-mesas-sessoes.js'); mesaSessoesLoaded = true; }
-        if (!mesaConfigLoaded) { await import('./area-mesas-config.js'); mesaConfigLoaded = true; }
-        if (!mesaNpcsLoaded) { await import('./area-mesas-npcs.js'); mesaNpcsLoaded = true; }
-        if (!mesaInventarioLoaded) { await import('./area-mesas-inventario.js'); mesaInventarioLoaded = true; }
-        if (!mesaNotasLoaded) { await import('./area-mesas-notas.js'); mesaNotasLoaded = true; }
+        if (!mesaSessoesLoaded) { await import('./area-mesas-sessoes.js?v=' + Date.now()); mesaSessoesLoaded = true; }
+        if (!mesaConfigLoaded) { await import('./area-mesas-config.js?v=' + Date.now()); mesaConfigLoaded = true; }
+        if (!mesaNpcsLoaded) { await import('./area-mesas-npcs.js?v=' + Date.now()); mesaNpcsLoaded = true; }
+        if (!mesaInventarioLoaded) { await import('./area-mesas-inventario.js?v=' + Date.now()); mesaInventarioLoaded = true; }
+        if (!mesaNotasLoaded) { await import('./area-mesas-notas.js?v=' + Date.now()); mesaNotasLoaded = true; }
     } catch (error) {
         console.error('❌ Erro ao carregar sub-módulos de mesa:', error);
     }

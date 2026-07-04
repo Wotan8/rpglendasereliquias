@@ -75,7 +75,10 @@ async function loadPersonagensInventario() {
             html += '<div style="text-align:center;padding:30px;color:var(--muted)">Nenhum personagem nesta mesa</div>';
         } else {
             html += `<div style="margin-top: 20px;">
-                        <h3 style="color:var(--light);margin-bottom:10px;padding-left:10px;border-left:4px solid var(--primary)">Inventário dos Personagens</h3>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-left:10px; border-left:4px solid var(--primary);">
+                            <h3 style="color:var(--light); margin:0;">Inventário dos Personagens</h3>
+                            <button onclick="_transferAllLooseItems()" style="background:rgba(6,182,212,.15);border:1px solid rgba(6,182,212,.35);color:#06b6d4;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:700;transition:all .2s">Pegar Itens Soltos</button>
+                        </div>
                         <div class="accordion-group">`;
             for (const c of chars) {
                 const charItems = allItems.filter(it => it.characterId === c.id);
@@ -122,7 +125,7 @@ function _buildCaixaDoMestreHTML(caixaItems, allItems) {
         </div>
         <div style="padding: 10px;">`;
     
-    html += _buildInventoryListHTML(caixaItems, allItems, caixaId);
+    html += _buildInventoryListHTML(caixaItems, allItems, caixaId, true);
     html += '</div></div>';
     return html;
 }
@@ -156,30 +159,35 @@ function _buildCharacterInventoryAccordionHTML(char, charItems, allItems) {
             <div style="margin-bottom:12px; text-align:right;">
                 <button class="btn btn-secondary btn-small" onclick="_openMestreItemFormModal('${S.currentMesaId}', null, '${cid}')">➕ Criar Item p/ Personagem</button>
             </div>
-            ${_buildInventoryListHTML(charItems, allItems, cid)}
+            ${_buildInventoryListHTML(charItems, allItems, cid, false)}
         </div>
     </div>`;
 }
 
-function _buildInventoryListHTML(items, allItems, ownerId) {
+function _buildInventoryListHTML(items, allItems, ownerId, isCaixaMestre = false) {
     const topLevel = items.filter(i => !i.parentItemId);
     const equipped = topLevel.filter(i => i.equipado);
     const loose = topLevel.filter(i => !i.equipado);
 
     let html = '';
 
-    html += `<div class="inv-section">
-        <div class="inv-section-title">🎒 Equipados <span class="inv-section-count">${equipped.length}</span></div>
-        <div class="inv-section-grid">`;
-    if (equipped.length === 0) {
-        html += '<div class="inv-empty-small">Nenhum item equipado</div>';
-    } else {
-        html += equipped.map(i => _renderInvItemRow(i, true, items)).join('');
+    if (!isCaixaMestre) {
+        html += `<div class="inv-section">
+            <div class="inv-section-title">🎒 Equipados <span class="inv-section-count">${equipped.length}</span></div>
+            <div class="inv-section-grid">`;
+        if (equipped.length === 0) {
+            html += '<div class="inv-empty-small">Nenhum item equipado</div>';
+        } else {
+            html += equipped.map(i => _renderInvItemRow(i, true, items)).join('');
+        }
+        html += '</div></div>';
     }
-    html += '</div></div>';
 
-    html += `<div class="inv-section" style="margin-top:16px;">
-        <div class="inv-section-title">📋 Itens Soltos <span class="inv-section-count">${loose.length}</span></div>
+    html += `<div class="inv-section" style="${!isCaixaMestre ? 'margin-top:16px;' : ''}">
+        <div class="inv-section-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>📋 Itens Soltos <span class="inv-section-count">${loose.length}</span></div>
+            ${!isCaixaMestre ? `<button onclick="event.stopPropagation(); _transferCharacterLooseItems('${ownerId}')" style="background:rgba(6,182,212,.15);border:1px solid rgba(6,182,212,.35);color:#06b6d4;padding:2px 8px;border-radius:6px;cursor:pointer;font-size:.7rem;font-weight:700;transition:all .2s">Pegar Itens Soltos</button>` : ''}
+        </div>
         <div class="inv-section-grid">`;
     if (loose.length === 0) {
         html += '<div class="inv-empty-small">Nenhum item solto</div>';
@@ -669,3 +677,73 @@ window._executeMestreTransfer = async function(itemId, targetCharId, targetOwner
         showAlert('❌ Erro: ' + e.message, 'danger');
     }
 };
+
+window._transferCharacterLooseItems = async function(charId) {
+    if (!confirm('Transferir todos os itens soltos deste personagem para a Caixa do Mestre?')) return;
+    try {
+        const allItems = await _fetchAllItems();
+        const charItems = allItems.filter(it => it.characterId === charId && !it.parentItemId && !it.equipado);
+        
+        if(charItems.length === 0) {
+            showAlert('Não há itens soltos para transferir.', 'info');
+            return;
+        }
+
+        const caixaId = _getCaixaMestreId(S.currentMesaId);
+        const promises = charItems.map(item => {
+            return setDoc(doc(db, 'items', item.id), {
+                characterId: caixaId,
+                ownerUid: S.currentUser?.uid || '',
+                ownerId: S.currentUser?.uid || '',
+                lastModified: new Date().toISOString()
+            }, { merge: true });
+        });
+
+        await Promise.all(promises);
+        showAlert('✅ Itens transferidos com sucesso!', 'success');
+        loadMesaInventarios();
+        if (document.getElementById('mesaCharactersInventoryContainer')?.style.display !== 'none') {
+            loadPersonagensInventario();
+        }
+    } catch (e) {
+        console.error('❌ Erro ao transferir itens soltos:', e);
+        showAlert('❌ Erro: ' + e.message, 'danger');
+    }
+};
+
+window._transferAllLooseItems = async function() {
+    if (!confirm('Transferir todos os itens soltos de TODOS os personagens para a Caixa do Mestre?')) return;
+    try {
+        const allItems = await _fetchAllItems();
+        const chars = S.mesaCharacters || [];
+        const charIds = chars.map(c => c.id);
+        
+        const looseItems = allItems.filter(it => charIds.includes(it.characterId) && !it.parentItemId && !it.equipado);
+        
+        if(looseItems.length === 0) {
+            showAlert('Não há itens soltos para transferir.', 'info');
+            return;
+        }
+
+        const caixaId = _getCaixaMestreId(S.currentMesaId);
+        const promises = looseItems.map(item => {
+            return setDoc(doc(db, 'items', item.id), {
+                characterId: caixaId,
+                ownerUid: S.currentUser?.uid || '',
+                ownerId: S.currentUser?.uid || '',
+                lastModified: new Date().toISOString()
+            }, { merge: true });
+        });
+
+        await Promise.all(promises);
+        showAlert('✅ Itens transferidos com sucesso!', 'success');
+        loadMesaInventarios();
+        if (document.getElementById('mesaCharactersInventoryContainer')?.style.display !== 'none') {
+            loadPersonagensInventario();
+        }
+    } catch (e) {
+        console.error('❌ Erro ao transferir itens soltos:', e);
+        showAlert('❌ Erro: ' + e.message, 'danger');
+    }
+};
+
