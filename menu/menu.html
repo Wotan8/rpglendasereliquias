@@ -53,6 +53,7 @@
             <div class="tabs" id="tabBar">
                 <button class="tab active" onclick="switchTab('personagens')">👥 Personagens</button>
                 <button class="tab" onclick="switchTab('inventario')">🎒 Repertório</button>
+                <button class="tab" onclick="switchTab('loja')">🛒 Loja</button>
                 <button class="tab" onclick="switchTab('notificacoes')" style="position:relative">
                     🔔 Notificações
                     <span class="badge" id="notificationBadge" style="display:none">0</span>
@@ -107,6 +108,22 @@
                 </div>
             </div>
 
+            <!-- ======== ABA LOJA ======== -->
+            <div class="tab-content" id="tab-loja">
+                <div class="menu-header" style="margin-bottom:10px">
+                    <h1 style="font-size:1.2rem">🛒 Loja de Recompensas</h1>
+                </div>
+                <p class="notifications-info" style="margin-bottom:20px;">Use seus Fragmentos para adquirir itens e fortalecer suas histórias.</p>
+
+                <div class="inventory-grid" id="lojaGrid"></div>
+
+                <div class="empty-state" id="emptyLoja" style="display:none">
+                    <div class="icon">🛒</div>
+                    <div class="text">A loja está vazia</div>
+                    <div class="hint">Não há itens disponíveis para venda no momento.</div>
+                </div>
+            </div>
+
             <!-- ======== ABA NOTIFICAÇÕES ======== -->
             <div class="tab-content" id="tab-notificacoes">
                 <div class="menu-header" style="margin-bottom:10px">
@@ -142,6 +159,27 @@
             <div class="modal-buttons">
                 <button class="btn-modal btn-cancel" onclick="closeDeleteModal()">❌ Cancelar</button>
                 <button class="btn-modal btn-confirm" onclick="confirmDelete()">🗑️ Sim, Apagar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Checkout Loja -->
+    <div class="modal" id="lojaCheckoutModal">
+        <div class="modal-content" style="max-width:500px;text-align:left;">
+            <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                <span class="modal-title" style="font-size:1.2rem;font-weight:700;">🛒 Confirmar Compra</span>
+                <button class="modal-close" onclick="document.getElementById('lojaCheckoutModal').style.display='none'" style="background:transparent;border:none;color:var(--text);font-size:1.2rem;cursor:pointer;">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="lojaCheckoutItemInfo" style="margin-bottom:15px;background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;"></div>
+                <div id="lojaCheckoutMetaSelector" style="display:none;margin-bottom:15px;">
+                    <div style="font-weight:600;margin-bottom:8px;">Escolha a(s) Meta(s) para atrelar o apoio:</div>
+                    <div id="lojaCheckoutMetaList" style="display:flex;flex-direction:column;gap:8px;max-height:150px;overflow-y:auto;background:rgba(0,0,0,0.1);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);"></div>
+                </div>
+            </div>
+            <div class="modal-buttons" style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                <button class="btn-modal btn-cancel" onclick="document.getElementById('lojaCheckoutModal').style.display='none'">Cancelar</button>
+                <button class="btn-modal btn-confirm" id="btnConfirmPurchase" onclick="confirmPurchaseFrag()">✔️ Confirmar Compra</button>
             </div>
         </div>
     </div>

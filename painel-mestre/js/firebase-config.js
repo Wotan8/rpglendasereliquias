@@ -8,7 +8,7 @@ import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/fi
 import {
     getFirestore, collection, query, where, orderBy, limit,
     onSnapshot, doc, getDoc, getDocs, setDoc, deleteDoc,
-    addDoc, updateDoc
+    addDoc, updateDoc, runTransaction
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
@@ -33,6 +33,6 @@ export {
     onAuthStateChanged, signOut,
     collection, query, where, orderBy, limit,
     onSnapshot, doc, getDoc, getDocs, setDoc,
-    deleteDoc, addDoc, updateDoc,
+    deleteDoc, addDoc, updateDoc, runTransaction,
     ref, uploadBytes, getDownloadURL
 };

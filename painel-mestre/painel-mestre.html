@@ -384,13 +384,19 @@
                     </div>
 
                     <div id="apoiosStatusMenu" class="sub-tabs" style="display: none; margin-bottom: 20px;">
-                        <button class="sub-tab-btn active" id="btn-inner-apoios" onclick="switchInnerApoioTab('apoios')">🤝 Apoiadores</button>
+                        <button class="sub-tab-btn" id="btn-inner-compras" onclick="switchInnerApoioTab('compras')">🛒 Logs de Compra</button>
+                        <button class="sub-tab-btn active" id="btn-inner-apoios" onclick="switchInnerApoioTab('apoios')">🤝 Logs de Apoio</button>
                         <button class="sub-tab-btn" id="btn-inner-repertorio" onclick="switchInnerApoioTab('repertorio')">🎒 Repertório</button>
+                    </div>
+
+                    <div id="inner-tab-compras" style="display: none;">
+                        <div id="comprasList"><div style="text-align:center;padding:40px;color:var(--muted)">Selecione um jogador para ver as compras</div></div>
                     </div>
 
                     <div id="inner-tab-apoios" style="display: none;">
                         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
                             <button class="btn btn-success btn-small" onclick="openAddApoioModal()">➕ Novo Apoio</button>
+                            <button class="btn btn-primary btn-small" id="btnManageFrag" onclick="openManageFragModal()" style="display:none">💎 Fragmentos</button>
                         </div>
                         <div class="apoio-filters" id="apoiosFiltros">
                             <div class="form-group"><label class="form-label">Status</label><select class="form-select" id="filtroStatus" onchange="aplicarFiltrosApoios()"><option value="todos">Todos</option><option value="nao-recebidos">Não Recebidos</option><option value="recebidos">Recebidos</option></select></div>
@@ -654,6 +660,29 @@
         </div>
     </div>
 
+    <!-- Modal Fragmentos -->
+    <div id="manageFragModal" class="modal">
+        <div class="modal-content" style="max-width:400px">
+            <div class="modal-header">
+                <span class="modal-title">💎 Gerenciar Fragmentos</span>
+                <button class="modal-close" onclick="closeManageFragModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom:15px">
+                    Saldo atual do jogador: <strong id="fragCurrentBalance" style="color:var(--primary);font-size:1.2rem">0</strong>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Quantidade</label>
+                    <input type="number" id="fragAmount" class="form-input" placeholder="Ex: 50" min="1">
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:15px">
+                <button class="btn btn-danger" onclick="updatePlayerFrag('remove')">➖ Remover</button>
+                <button class="btn btn-success" onclick="updatePlayerFrag('add')">➕ Adicionar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- JSZip -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
@@ -662,4 +691,3 @@
     <script type="module" src="js/main.js?v=1.1"></script>
 </body>
 </html>
-

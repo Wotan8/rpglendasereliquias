@@ -1,5 +1,5 @@
 // ÁREA APOIO — Apoios, Metas, Notificações (Full Migration)
-import { db, collection, getDocs, getDoc, setDoc, doc, updateDoc, addDoc, deleteDoc, storage, ref, uploadBytes, getDownloadURL } from './firebase-config.js';
+import { db, collection, getDocs, getDoc, setDoc, doc, updateDoc, addDoc, deleteDoc, storage, ref, uploadBytes, getDownloadURL, runTransaction } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
@@ -7,7 +7,26 @@ import { addLog } from './logs.js';
 let dynamicMetas = [];
 let legacyTotais = {};
 
-export async function onTabActivated() { await loadApoioUsers(); await carregarSistemaMetas(); await carregarSistemaLoja(); }
+export async function onTabActivated() { 
+    await checkCriadorRole();
+    await loadApoioUsers(); 
+    await carregarSistemaMetas(); 
+    await carregarSistemaLoja(); 
+}
+
+async function checkCriadorRole() {
+    if (!S.currentUser) return;
+    try {
+        const docRef = doc(db, 'users', S.currentUser.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().role === 'criador') {
+            const btn = document.getElementById('btnManageFrag');
+            if (btn) btn.style.display = 'inline-block';
+        }
+    } catch (e) {
+        console.error('Error checking role:', e);
+    }
+}
 
 // ===== USERS =====
 async function loadApoioUsers() {
@@ -24,31 +43,35 @@ async function loadApoioUsers() {
 
 // ===== APOIOS =====
 window.switchInnerApoioTab = function(tabName) {
+    document.getElementById('btn-inner-compras')?.classList.remove('active');
     document.getElementById('btn-inner-apoios')?.classList.remove('active');
     document.getElementById('btn-inner-repertorio')?.classList.remove('active');
     document.getElementById('btn-inner-' + tabName)?.classList.add('active');
 
-    if (tabName === 'apoios') {
-        document.getElementById('inner-tab-apoios').style.display = 'block';
-        document.getElementById('inner-tab-repertorio').style.display = 'none';
-    } else {
-        document.getElementById('inner-tab-apoios').style.display = 'none';
-        document.getElementById('inner-tab-repertorio').style.display = 'block';
-    }
+    document.getElementById('inner-tab-compras').style.display = 'none';
+    document.getElementById('inner-tab-apoios').style.display = 'none';
+    document.getElementById('inner-tab-repertorio').style.display = 'none';
+
+    document.getElementById('inner-tab-' + tabName).style.display = 'block';
 };
 
 window.loadUserApoios = async function() {
     const uid = document.getElementById('apoioUserSelect')?.value;
     const el = document.getElementById('apoiosList');
     const menu = document.getElementById('apoiosStatusMenu');
+    const tabCompras = document.getElementById('inner-tab-compras');
     const tabApoios = document.getElementById('inner-tab-apoios');
     const tabRepertorio = document.getElementById('inner-tab-repertorio');
     
     if (!uid || !el) { 
         if (el) el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Selecione um jogador</div>';
+        const comprasEl = document.getElementById('comprasList');
+        if (comprasEl) comprasEl.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Selecione um jogador</div>';
         if (menu) menu.style.display = 'none';
-        if (tabApoios) tabApoios.style.display = 'none';
-        if (tabRepertorio) tabRepertorio.style.display = 'none';
+        
+        document.getElementById('inner-tab-compras').style.display = 'none';
+        document.getElementById('inner-tab-apoios').style.display = 'none';
+        document.getElementById('inner-tab-repertorio').style.display = 'none';
         
         S.setCurrentSelectedUserId(null);
         if (window.loadUserRepertorio) window.loadUserRepertorio();
@@ -58,8 +81,9 @@ window.loadUserApoios = async function() {
     S.setCurrentSelectedUserId(uid);
     if (menu) menu.style.display = 'flex';
     
-    if (tabApoios && tabRepertorio) {
-        if (tabApoios.style.display === 'none' && tabRepertorio.style.display === 'none') {
+    // Default to apoios if none active
+    if (tabCompras && tabApoios && tabRepertorio) {
+        if (tabCompras.style.display === 'none' && tabApoios.style.display === 'none' && tabRepertorio.style.display === 'none') {
             window.switchInnerApoioTab('apoios');
         }
     }
@@ -70,17 +94,47 @@ window.loadUserApoios = async function() {
     try {
         const d = await getDoc(doc(db, 'users', uid));
         if (!d.exists()) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Usuário não encontrado</div>'; return; }
+        
         const apoios = d.data().apoios || [];
+        const logsCompra = d.data().logsCompra || [];
+        
         S.setTodosApoiosCarregados(apoios); 
         
+        // Render apoios
         if (apoios.length === 0) {
             el.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Este jogador ainda não possui apoios</div>';
-            return;
+        } else {
+            renderApoios(apoios);
         }
 
-        renderApoios(apoios);
+        // Render logsCompra
+        renderLogsCompra(logsCompra);
+
     } catch (e) { showAlert('❌ Erro', 'danger'); }
 };
+
+function renderLogsCompra(logs) {
+    const el = document.getElementById('comprasList'); 
+    if (!el) return;
+    if (!logs || !logs.length) { 
+        el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Nenhuma compra realizada</div>'; 
+        return; 
+    }
+    
+    el.innerHTML = logs.map(l => {
+        const dateStr = l.data ? new Date(l.data).toLocaleString('pt-BR') : '-';
+        return `
+        <div style="background:rgba(15,23,42,.6);border:2px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div style="font-weight:800;color:var(--light)">${escapeHtml(l.nome || 'Item Desconhecido')}</div>
+                <div style="color:var(--primary);font-weight:800;background:rgba(99,102,241,0.2);padding:4px 8px;border-radius:6px;">${l.valorPago} ${l.moeda}</div>
+            </div>
+            <div style="font-size:.85rem;color:var(--muted);">
+                Data: ${dateStr}
+            </div>
+        </div>`;
+    }).join('');
+}
 
 function renderApoios(apoios) {
     const el = document.getElementById('apoiosList'); if (!el) return;
@@ -460,32 +514,8 @@ window.editProd = async function(i, f) { const v = prompt(`Editar ${f}:`, S.list
 setTimeout(carregarListaProducao, 500);
 
 // ============= REPERTÓRIO =============
-function mergeRepertorioAndInventario(userData) {
-    let rawRep = userData.repertorio || [];
-    let rawInv = userData.inventario || [];
-    
-    let repArray = [];
-    if (typeof rawRep === 'object' && !Array.isArray(rawRep) && rawRep !== null) repArray = Object.values(rawRep);
-    else if (Array.isArray(rawRep)) repArray = rawRep;
-    else if (rawRep) repArray = [rawRep];
-    
-    let invArray = [];
-    if (typeof rawInv === 'object' && !Array.isArray(rawInv) && rawInv !== null) invArray = Object.values(rawInv);
-    else if (Array.isArray(rawInv)) invArray = rawInv;
-    else if (rawInv) invArray = [rawInv];
 
-    let repertorio = [...repArray];
-    invArray.forEach(invItem => {
-        let invNome = invItem.nome || invItem.name || invItem.titulo || invItem.item || (typeof invItem === 'string' ? invItem : 'Item sem nome');
-        if (!repertorio.find(r => {
-            let rNome = r.nome || r.name || r.titulo || r.item || (typeof r === 'string' ? r : 'Item sem nome');
-            return rNome === invNome;
-        })) {
-            repertorio.push(invItem);
-        }
-    });
-    return repertorio;
-}
+
 window.loadUserRepertorio = async function () {
     const userId = S.currentSelectedUserId;
     const repertorioSection = document.getElementById('repertorioSection');
@@ -505,15 +535,37 @@ window.loadUserRepertorio = async function () {
         if (!userDoc.exists()) return;
 
         const userData = userDoc.data();
-        let repertorio = mergeRepertorioAndInventario(userData);
+        let inventario = userData.inventario || [];
 
-        if (repertorio.length === 0) {
+        // ON-THE-FLY MIGRATION: If legacy 'repertorio' exists, merge it into 'inventario' and delete 'repertorio'
+        if (userData.repertorio && userData.repertorio.length > 0) {
+            let hasChanges = false;
+            userData.repertorio.forEach(repItem => {
+                let repNome = repItem.nome || repItem.name || repItem.titulo || repItem.item || (typeof repItem === 'string' ? repItem : 'Item sem nome');
+                if (!inventario.find(i => {
+                    let iNome = i.nome || i.name || i.titulo || i.item || (typeof i === 'string' ? i : 'Item sem nome');
+                    return iNome === repNome;
+                })) {
+                    inventario.push(repItem);
+                    hasChanges = true;
+                }
+            });
+
+            if (hasChanges) {
+                await updateDoc(doc(db, 'users', userId), {
+                    inventario: inventario,
+                    repertorio: []
+                });
+            }
+        }
+
+        if (inventario.length === 0) {
             repertorioList.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">O repertório está vazio</div>';
             return;
         }
 
         let html = '';
-        repertorio.forEach((rawItem, index) => {
+        inventario.forEach((rawItem, index) => {
             // Normalize item
             let item = {};
             if (typeof rawItem === 'string') {
@@ -653,11 +705,11 @@ window.saveItemRepertorio = async function () {
         }
 
         const userData = userDoc.data();
-        let repertorio = mergeRepertorioAndInventario(userData);
-        repertorio.push(novoItem);
+        let inventario = userData.inventario || [];
+        inventario.push(novoItem);
 
         await setDoc(doc(db, 'users', S.currentSelectedUserId), {
-            repertorio: repertorio
+            inventario: inventario
         }, { merge: true });
 
         showAlert('✅ Item adicionado ao repertório!', 'success');
@@ -727,18 +779,18 @@ window.updateQuantidadeRepertorio = async function (userId, itemIndex, novaQuant
         if (!userDoc.exists()) return;
 
         const userData = userDoc.data();
-        let repertorio = mergeRepertorioAndInventario(userData);
+        let inventario = userData.inventario || [];
 
-        if (itemIndex >= 0 && itemIndex < repertorio.length) {
-            const item = repertorio[itemIndex];
+        if (itemIndex >= 0 && itemIndex < inventario.length) {
+            const item = inventario[itemIndex];
             const quantidadeAnterior = item.quantidade || 1;
             const quantidadeNova = parseInt(novaQuantidade) || 1;
             const diferenca = quantidadeNova - quantidadeAnterior;
 
-            repertorio[itemIndex].quantidade = quantidadeNova;
+            inventario[itemIndex].quantidade = quantidadeNova;
 
             await setDoc(doc(db, 'users', userId), {
-                repertorio: repertorio
+                inventario: inventario
             }, { merge: true });
 
             showAlert('✅ Quantidade atualizada!', 'success');
@@ -794,14 +846,14 @@ window.deleteItemRepertorio = async function (userId, itemIndex) {
         if (!userDoc.exists()) return;
 
         const userData = userDoc.data();
-        let repertorio = mergeRepertorioAndInventario(userData);
+        let inventario = userData.inventario || [];
 
-        if (itemIndex >= 0 && itemIndex < repertorio.length) {
-            const itemNome = repertorio[itemIndex].nome;
-            repertorio.splice(itemIndex, 1);
+        if (itemIndex >= 0 && itemIndex < inventario.length) {
+            const itemNome = inventario[itemIndex].nome;
+            inventario.splice(itemIndex, 1);
 
             await setDoc(doc(db, 'users', userId), {
-                repertorio: repertorio
+                inventario: inventario
             }, { merge: true });
 
             showAlert('✅ Item deletado do repertório!', 'success');
@@ -1207,10 +1259,82 @@ window.deleteLojaItem = async function(id) {
     if (!confirm('Tem certeza que deseja excluir este item? Essa ação não pode ser desfeita.')) return;
     try {
         await deleteDoc(doc(db, 'loja_itens', id));
-        showAlert('Item excluído.', 'success');
+        showAlert('✅ Item excluído.', 'success');
         await carregarSistemaLoja();
-    } catch (e) {
-        console.error('❌ Erro ao deletar:', e);
-        showAlert('Erro ao excluir', 'danger');
+    } catch(e) {
+        showAlert('❌ Erro ao excluir', 'danger');
+    }
+};
+
+window.openManageFragModal = async function() {
+    if (!S.currentSelectedUserId) {
+        showAlert('Selecione um jogador primeiro!', 'warning');
+        return;
+    }
+    try {
+        const userDoc = await getDoc(doc(db, 'users', S.currentSelectedUserId));
+        if(userDoc.exists()){
+            document.getElementById('fragCurrentBalance').textContent = userDoc.data().fragmentos || 0;
+            document.getElementById('fragAmount').value = '';
+            document.getElementById('manageFragModal').classList.add('active');
+        }
+    } catch(e) {
+        showAlert('Erro ao buscar saldo', 'danger');
+    }
+};
+
+window.closeManageFragModal = function() {
+    document.getElementById('manageFragModal').classList.remove('active');
+};
+
+window.updatePlayerFrag = async function(action) {
+    if (!S.currentSelectedUserId) return;
+    const amount = parseInt(document.getElementById('fragAmount').value);
+    if (!amount || amount <= 0) {
+        showAlert('Insira uma quantidade válida', 'warning');
+        return;
+    }
+    
+    try {
+        const userRef = doc(db, 'users', S.currentSelectedUserId);
+        let newBalance = 0;
+        await runTransaction(db, async (t) => {
+            const sfDoc = await t.get(userRef);
+            if (!sfDoc.exists()) throw "User not found";
+            const data = sfDoc.data();
+            let current = data.fragmentos || 0;
+            
+            if (action === 'add') {
+                newBalance = current + amount;
+            } else {
+                newBalance = current - amount;
+                if (newBalance < 0) newBalance = 0;
+            }
+            
+            t.update(userRef, { fragmentos: newBalance });
+        });
+        
+        // Push notification
+        const notification = {
+            id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2,9),
+            type: 'master_message',
+            message: action === 'add' ? `💎 Você recebeu ${amount} Fragmentos da administração!` : `💎 Foram removidos ${amount} Fragmentos da sua conta.`,
+            timestamp: Date.now(),
+            isNew: true,
+            data: { highlight: 'importante' }
+        };
+        
+        const userDoc = await getDoc(userRef);
+        let notifs = userDoc.data().notifications || [];
+        notifs.unshift(notification);
+        if (notifs.length > 100) notifs = notifs.slice(0, 100);
+        await updateDoc(userRef, { notifications: notifs });
+        
+        document.getElementById('fragCurrentBalance').textContent = newBalance;
+        document.getElementById('fragAmount').value = '';
+        showAlert('✅ Saldo atualizado e jogador notificado!', 'success');
+        
+    } catch(e) {
+        showAlert('❌ Erro na transação: ' + e, 'danger');
     }
 };

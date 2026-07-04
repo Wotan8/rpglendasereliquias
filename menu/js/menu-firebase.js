@@ -15,7 +15,8 @@ import {
     deleteDoc,
     updateDoc,
     addDoc,
-    doc
+    doc,
+    runTransaction
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 // ===== CONFIG =====
@@ -89,6 +90,7 @@ onAuthStateChanged(auth, async (user) => {
         await loadCharacters();
         await loadNotifications();
         await loadInventory();
+        await loadLojaItens();
 
         // Check for mestre or criador role and show respective buttons
         try {
@@ -695,3 +697,299 @@ function escapeHtmlWithBreaks(text) {
     if (!text) return '';
     return escapeHtml(text).replace(/\n/g, '<br>');
 }
+
+// =============================================
+// LOJA (JOGADOR)
+// =============================================
+
+let lojaItensData = [];
+let metasData = [];
+let currentCheckoutItem = null;
+
+async function loadLojaItens() {
+    try {
+        // Load active items from loja_itens
+        const qItems = query(collection(db, 'loja_itens'), where('isVendaAtiva', '==', true));
+        const snapItems = await getDocs(qItems);
+        lojaItensData = [];
+        snapItems.forEach(docSnap => {
+            lojaItensData.push({ id: docSnap.id, ...docSnap.data() });
+        });
+
+        // Load metas for checkout options
+        const snapMetas = await getDocs(collection(db, 'metas'));
+        metasData = [];
+        snapMetas.forEach(docSnap => {
+            metasData.push({ id: docSnap.id, ...docSnap.data() });
+        });
+
+        renderLojaItens();
+    } catch (e) {
+        console.error('Erro ao carregar loja:', e);
+        showAlert('❌ Erro ao carregar itens da loja.', 'danger');
+    }
+}
+window.loadLojaItens = loadLojaItens;
+
+function renderLojaItens() {
+    const grid = document.getElementById('lojaGrid');
+    const emptyState = document.getElementById('emptyLoja');
+    if (!grid) return;
+
+    if (lojaItensData.length === 0) {
+        grid.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+
+    emptyState.style.display = 'none';
+    let html = '';
+
+    lojaItensData.forEach(item => {
+        let tagsHtml = '';
+        if (item.isExp) tagsHtml += `<span style="background:var(--primary);color:#fff;padding:4px 8px;border-radius:6px;font-size:0.75rem;font-weight:600;">⭐ EXP: ${item.expAmount}${item.isExpVip ? ' (VIP)' : ''}</span>`;
+        if (item.isRoleta) tagsHtml += `<span style="background:var(--secondary);color:#fff;padding:4px 8px;border-radius:6px;font-size:0.75rem;font-weight:600;">🎰 Roleta: ${item.roletaGiros}x</span>`;
+        if (item.isRerolagem) tagsHtml += `<span style="background:#f59e0b;color:#fff;padding:4px 8px;border-radius:6px;font-size:0.75rem;font-weight:600;">🎲 Re-roll: ${item.rerolagensAmount}x</span>`;
+        if (item.isNarrativo) tagsHtml += `<span style="background:#10b981;color:#fff;padding:4px 8px;border-radius:6px;font-size:0.75rem;font-weight:600;">📜 Benefício Narrativo</span>`;
+        if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span style="background:#8b5cf6;color:#fff;padding:4px 8px;border-radius:6px;font-size:0.75rem;font-weight:600;">🎒 Equipamentos Especiais</span>`;
+
+        let metasLabel = 'Nenhuma meta vinculada';
+        if (item.modoSelecaoMeta) {
+            metasLabel = `Pode ser atrelado a até ${item.qtdSelecaoMeta || 1} Meta(s)`;
+        } else if (item.metasVinculadas && item.metasVinculadas.length > 0) {
+            const mNames = item.metasVinculadas.map(mId => {
+                const f = metasData.find(m => m.id === mId);
+                return f ? f.nome : 'Meta desconhecida';
+            });
+            metasLabel = `Ajuda automaticamente: ${mNames.join(', ')}`;
+        }
+
+        const imgHtml = item.imagem ? `<div style="height:140px;width:100%;background-image:url('${escapeHtml(item.imagem)}');background-size:contain;background-repeat:no-repeat;background-position:center;border-radius:8px;background-color:rgba(0,0,0,0.4);margin-bottom:12px;"></div>` : '';
+
+        html += `
+            <div class="inventory-card" style="display:flex;flex-direction:column;">
+                ${imgHtml}
+                <div class="item-name" style="font-size:1.1rem;margin-bottom:8px;">${escapeHtml(item.nome)}</div>
+                ${item.descricao ? `<div class="item-desc" style="font-size:0.85rem;margin-bottom:12px;color:var(--muted);">${escapeHtml(item.descricao)}</div>` : ''}
+                
+                <div style="font-size:0.8rem;color:var(--muted);background:rgba(255,255,255,0.05);padding:6px;border-radius:4px;margin-bottom:12px;">
+                    🎯 ${escapeHtml(metasLabel)}
+                </div>
+
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+                    ${tagsHtml}
+                </div>
+                
+                <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;">
+                    ${item.valorFrag > 0 ? `
+                        <button class="btn btn-primary" style="width:100%;font-weight:700;display:flex;justify-content:center;gap:6px;" onclick="openCheckoutFrag('${item.id}')">
+                            💎 Comprar por ${item.valorFrag} Frag$
+                        </button>
+                    ` : ''}
+                    ${item.valorRs > 0 ? `
+                        <button class="btn btn-success" style="width:100%;font-weight:700;" onclick="buyItemWithRS('${item.id}')">
+                            💳 Comprar por R$ ${Number(item.valorRs).toFixed(2)}
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    });
+
+    grid.innerHTML = html;
+}
+
+window.buyItemWithRS = function(id) {
+    showAlert('💳 Esta modalidade de pagamento em Dinheiro Real ainda não está disponível!', 'warning');
+};
+
+window.openCheckoutFrag = async function(itemId) {
+    const item = lojaItensData.find(i => i.id === itemId);
+    if (!item) return;
+
+    // Check frontend balance first
+    try {
+        const userDoc = await findUserDoc();
+        const currentFrag = userDoc ? (userDoc.data().fragmentos || 0) : 0;
+        if (currentFrag < item.valorFrag) {
+            showAlert(`❌ Você não tem Fragmentos suficientes. Custo: ${item.valorFrag} Frag$.`, 'danger');
+            return;
+        }
+    } catch (e) {}
+
+    currentCheckoutItem = item;
+
+    const infoDiv = document.getElementById('lojaCheckoutItemInfo');
+    infoDiv.innerHTML = `
+        <div style="font-weight:700;color:var(--primary);font-size:1.1rem;margin-bottom:4px;">${escapeHtml(item.nome)}</div>
+        <div style="font-size:0.9rem;color:var(--muted);margin-bottom:8px;">Custo: <span style="color:#6366f1;font-weight:700;">${item.valorFrag} Frag$</span></div>
+    `;
+
+    const metaSelector = document.getElementById('lojaCheckoutMetaSelector');
+    const metaList = document.getElementById('lojaCheckoutMetaList');
+    
+    if (item.modoSelecaoMeta) {
+        metaSelector.style.display = 'block';
+        metaList.innerHTML = '';
+        const limit = item.qtdSelecaoMeta || 1;
+        document.getElementById('lojaCheckoutMetaSelector').firstElementChild.textContent = `Escolha até ${limit} Meta(s) para atrelar o apoio:`;
+        const allowedMetasIds = item.metasVinculadas || [];
+        const allowedMetas = metasData.filter(m => allowedMetasIds.includes(m.id));
+
+        if (allowedMetas.length === 0) {
+             metaList.innerHTML = '<div style="color:var(--muted);font-size:0.9rem;">Nenhuma meta vinculada configurada pelo mestre.</div>';
+        } else {
+            allowedMetas.forEach(meta => {
+                const idCheckbox = 'chk_meta_' + meta.id;
+                metaList.innerHTML += `
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox" value="${meta.id}" class="loja-checkout-meta-chk" style="width:16px;height:16px;accent-color:var(--primary);">
+                        <span>${escapeHtml(meta.nome)}</span>
+                    </label>
+                `;
+            });
+        }
+    } else {
+        metaSelector.style.display = 'none';
+    }
+
+    document.getElementById('lojaCheckoutModal').style.display = 'flex';
+};
+
+window.confirmPurchaseFrag = async function() {
+    if (!currentCheckoutItem) return;
+    const item = currentCheckoutItem;
+
+    // Verify metas selection if applicable
+    let selectedMetas = [];
+    if (item.modoSelecaoMeta) {
+        const limit = item.qtdSelecaoMeta || 1;
+        const checkboxes = document.querySelectorAll('.loja-checkout-meta-chk:checked');
+        if (checkboxes.length > limit) {
+            showAlert(`❌ Você pode escolher no máximo ${limit} meta(s).`, 'warning');
+            return;
+        }
+        
+        const allowedMetasIds = item.metasVinculadas || [];
+        for (let i = 0; i < checkboxes.length; i++) {
+            const val = checkboxes[i].value;
+            if (!allowedMetasIds.includes(val)) {
+                showAlert(`❌ Meta inválida selecionada.`, 'danger');
+                return;
+            }
+            selectedMetas.push(val);
+        }
+    } else {
+        selectedMetas = item.metasVinculadas || [];
+    }
+
+    const btn = document.getElementById('btnConfirmPurchase');
+    btn.disabled = true;
+    btn.innerHTML = 'Processando...';
+
+    try {
+        const userDocRefToUpdate = doc(db, 'users', currentUser.uid);
+
+        await runTransaction(db, async (transaction) => {
+            const sfDoc = await transaction.get(userDocRefToUpdate);
+            if (!sfDoc.exists()) {
+                throw "Documento de usuário não existe!";
+            }
+
+            const data = sfDoc.data();
+            const currentBalance = data.fragmentos || 0;
+
+            if (currentBalance < item.valorFrag) {
+                throw "Saldo insuficiente.";
+            }
+
+            // Subtrair fragmentos
+            const newBalance = currentBalance - item.valorFrag;
+
+            // Criar entrada no inventario (onde o Repertório lê)
+            const currentInventario = data.inventario || [];
+            currentInventario.push({
+                nome: item.nome,
+                descricao: item.descricao || '',
+                quantidade: 1,
+                formaRecebimento: 'Comprado na Loja (Frag$)'
+            });
+
+            // Log de Compra exato
+            const currentLogsCompra = data.logsCompra || [];
+            currentLogsCompra.push({
+                itemId: item.id,
+                nome: item.nome,
+                valorPago: item.valorFrag,
+                moeda: 'Frag$',
+                data: new Date().toISOString()
+            });
+
+            // Criar entrada no apoio Historico (para meta), montante fixo em 1 por item
+            const currentApoios = data.apoios || [];
+            
+            // Map selected metas IDs to names for the log
+            let metasNamesStr = '';
+            if (selectedMetas.length > 0) {
+                const names = selectedMetas.map(mId => {
+                    const found = metasData.find(m => m.id === mId);
+                    return found ? found.nome : mId;
+                });
+                metasNamesStr = names.join(', ');
+            }
+
+            const logNome = item.nome + (metasNamesStr ? ` [Metas: ${metasNamesStr}]` : '');
+
+            currentApoios.push({
+                nome: logNome,
+                tipo: 'Loja (Frag$)',
+                montante: 1,
+                meta: selectedMetas.join(','), // store IDs or legacy names if needed
+                valor: '',
+                dataInicio: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+                recebido: true
+            });
+
+            // Add notification
+            const currentNotifications = data.notifications || [];
+            currentNotifications.unshift({
+                id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2,9),
+                type: 'master_message',
+                message: `💎 Compra Aprovada: Você adquiriu ${item.nome} por ${item.valorFrag} Frag$.`,
+                timestamp: Date.now(),
+                isNew: true,
+                data: { highlight: 'importante' }
+            });
+            
+            if (currentNotifications.length > 100) {
+                currentNotifications.length = 100;
+            }
+
+            transaction.update(userDocRefToUpdate, {
+                fragmentos: newBalance,
+                inventario: currentInventario,
+                apoios: currentApoios,
+                logsCompra: currentLogsCompra,
+                notifications: currentNotifications
+            });
+        });
+
+        // Success
+        showAlert('✅ Compra realizada com sucesso! Item enviado ao seu Repertório.', 'success');
+        document.getElementById('lojaCheckoutModal').style.display = 'none';
+        
+        // Update local UI
+        const fragEl = document.getElementById('fragmentosValue');
+        if (fragEl) fragEl.textContent = parseInt(fragEl.textContent) - item.valorFrag;
+        
+        await loadInventory();
+
+    } catch (error) {
+        console.error("Transação falhou: ", error);
+        showAlert(`❌ Erro na compra: ${error}`, 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '✔️ Confirmar Compra';
+        currentCheckoutItem = null;
+    }
+};
