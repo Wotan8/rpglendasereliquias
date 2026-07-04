@@ -1,12 +1,11 @@
 // ÁREA APOIO — Apoios, Metas, Notificações (Full Migration)
-import { db, collection, getDocs, getDoc, setDoc, doc, updateDoc } from './firebase-config.js';
+import { db, collection, getDocs, getDoc, setDoc, doc, updateDoc, addDoc, deleteDoc } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 
-let metasData = { classe: [5,11,22,30,40,50,60], raca: [5,10,20,30,40,50,60,70,80,90,100], lore: [10,20,30,40,50,60,70,80,90,100,110] };
-let desbloquearMetas = { classe: 'Monge', raca: '', lore: 'Conto Canônico: referente a algo da Campanha atual' };
-let totaisApoios = { classe: 0, raca: 0, lore: 0 };
+let dynamicMetas = [];
+let legacyTotais = {};
 
 export async function onTabActivated() { await loadApoioUsers(); await carregarSistemaMetas(); }
 
@@ -174,73 +173,242 @@ window.deleteApoio = async function(i) {
     try { S.todosApoiosCarregados.splice(i, 1); await updateDoc(doc(db, 'users', S.currentSelectedUserId), { apoios: S.todosApoiosCarregados }); showAlert('✅ Removido', 'success'); renderApoios(S.todosApoiosCarregados); } catch (e) { showAlert('❌ Erro', 'danger'); }
 };
 
-// ===== METAS =====
+// ===== METAS DINÂMICAS =====
 async function carregarSistemaMetas() {
-    try { await calcularTotaisApoios(); } catch (e) { console.error(e); }
-    try { const d = await getDoc(doc(db, 'config', 'metas')); if (d.exists()) { const data = d.data(); if (data.classe) metasData.classe = data.classe; if (data.raca) metasData.raca = data.raca; if (data.lore) metasData.lore = data.lore; if (data.desbloquear) desbloquearMetas = data.desbloquear; } } catch (e) { console.warn('⚠️ Metas padrão'); }
-    renderMetasUI(); renderizarTabelaMetas(); atualizarResumoMetas();
+    try {
+        await calcularLegadoTotais();
+        const snap = await getDocs(collection(db, 'metas'));
+        dynamicMetas = [];
+        snap.forEach(doc => {
+            dynamicMetas.push({ id: doc.id, ...doc.data() });
+        });
+        
+        // Ordenar as metas alfabeticamente
+        dynamicMetas.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        
+        renderMetasUI();
+    } catch (error) {
+        console.error('❌ Erro ao carregar metas:', error);
+        showAlert('❌ Erro ao carregar metas', 'danger');
+    }
 }
 window.carregarSistemaMetas = carregarSistemaMetas;
 
-async function calcularTotaisApoios() {
-    totaisApoios = { classe: 0, raca: 0, lore: 0 };
-    const snap = await getDocs(collection(db, 'users'));
-    snap.forEach(d => { (d.data().apoios||[]).forEach(a => { const m = parseInt(a.montante)||1, mt = a.meta||''; if (mt==='Classe') totaisApoios.classe += m; else if (mt==='Raça') totaisApoios.raca += m; else if (mt==='Lore') totaisApoios.lore += m; }); });
+async function calcularLegadoTotais() {
+    legacyTotais = {};
+    try {
+        const snap = await getDocs(collection(db, 'users'));
+        snap.forEach(d => {
+            const apoios = d.data().apoios || [];
+            apoios.forEach(a => {
+                const montante = parseInt(a.montante) || 1;
+                const metaLegado = (a.meta || '').toLowerCase().trim();
+                
+                // Mapeia os slugs legados para manter o tracking
+                let slug = metaLegado;
+                if (metaLegado === 'raça') slug = 'raca';
+                
+                if (slug) {
+                    if (!legacyTotais[slug]) legacyTotais[slug] = 0;
+                    legacyTotais[slug] += montante;
+                }
+            });
+        });
+    } catch (error) {
+        console.error('❌ Erro ao calcular legado:', error);
+    }
 }
 
 function renderMetasUI() {
-    const el = document.getElementById('metasContent'); if (!el) return;
-    el.innerHTML = `
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
-            <div style="background:rgba(234,179,8,.1);border:2px solid #eab308;border-radius:12px;padding:16px;text-align:center"><div style="font-weight:800;color:#eab308;font-size:1.1rem">🏰 Classe</div><div style="font-size:.85rem;color:var(--muted);margin-top:6px">Apoios: <span id="totalApoiosClasse">0</span> / Meta: <span id="metaAtualClasse">0</span></div><div style="font-size:.85rem;color:var(--muted)">Progresso: <span id="progressoClasse">0%</span></div><div style="font-size:.82rem;color:#eab308;margin-top:6px">🔓 <span id="desbloquearClasse">-</span></div></div>
-            <div style="background:rgba(34,197,94,.1);border:2px solid #22c55e;border-radius:12px;padding:16px;text-align:center"><div style="font-weight:800;color:#22c55e;font-size:1.1rem">🎭 Raça</div><div style="font-size:.85rem;color:var(--muted);margin-top:6px">Apoios: <span id="totalApoiosRaca">0</span> / Meta: <span id="metaAtualRaca">0</span></div><div style="font-size:.85rem;color:var(--muted)">Progresso: <span id="progressoRaca">0%</span></div><div style="font-size:.82rem;color:#22c55e;margin-top:6px">🔓 <span id="desbloquearRaca">-</span></div></div>
-            <div style="background:rgba(59,130,246,.1);border:2px solid #3b82f6;border-radius:12px;padding:16px;text-align:center"><div style="font-weight:800;color:#3b82f6;font-size:1.1rem">📖 Lore</div><div style="font-size:.85rem;color:var(--muted);margin-top:6px">Apoios: <span id="totalApoiosLore">0</span> / Meta: <span id="metaAtualLore">0</span></div><div style="font-size:.85rem;color:var(--muted)">Progresso: <span id="progressoLore">0%</span></div><div style="font-size:.82rem;color:#3b82f6;margin-top:6px">🔓 <span id="desbloquearLore">-</span></div></div>
+    const container = document.getElementById('metasContainer');
+    if (!container) return;
+
+    if (dynamicMetas.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:50px;color:var(--muted);grid-column:1/-1">Nenhuma meta cadastrada.</div>';
+        return;
+    }
+
+    let html = '';
+    
+    dynamicMetas.forEach(meta => {
+        // Cálculo de progresso
+        const slugStr = (meta.slug || '').toLowerCase().trim();
+        const totalApoios = legacyTotais[slugStr] || 0;
+        
+        let saldo = totalApoios;
+        let etapasHtml = '';
+        
+        const etapas = meta.etapas || [];
+        
+        etapas.forEach((etapa, idx) => {
+            const necessarios = parseInt(etapa.necessarios) || 1;
+            let progressoEtapa = 0;
+            let concluida = false;
+            
+            if (saldo >= necessarios) {
+                concluida = true;
+                progressoEtapa = necessarios;
+                saldo -= necessarios;
+            } else {
+                progressoEtapa = saldo;
+                saldo = 0;
+            }
+            
+            const pct = Math.min(100, Math.round((progressoEtapa / necessarios) * 100));
+            const barColor = concluida ? '#22c55e' : (progressoEtapa > 0 ? '#eab308' : 'rgba(255,255,255,0.1)');
+            
+            etapasHtml += `
+                <div style="margin-bottom:8px;font-size:0.85rem;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--light);">
+                        <span><strong style="color:${concluida ? '#22c55e' : 'inherit'}">Etapa ${idx + 1}</strong>: ${escapeHtml(etapa.descricao || '...')}</span>
+                        <span style="color:var(--muted)">${progressoEtapa} / ${necessarios}</span>
+                    </div>
+                    <div style="background:rgba(0,0,0,0.3);height:6px;border-radius:3px;overflow:hidden;border:1px solid rgba(255,255,255,0.05)">
+                        <div style="width:${pct}%;height:100%;background:${barColor};transition:width 0.3s"></div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+            <div style="background:rgba(15,23,42,0.6);border:2px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                    <div>
+                        <div style="font-weight:800;color:var(--primary);font-size:1.1rem">${escapeHtml(meta.nome || 'Sem Nome')}</div>
+                        ${meta.slug ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:2px">Slug: ${escapeHtml(meta.slug)}</div>` : ''}
+                    </div>
+                    <div style="display:flex;gap:6px">
+                        <button class="btn btn-primary btn-small" onclick="openMetaModal('${meta.id}')">✏️</button>
+                        <button class="btn btn-danger btn-small" onclick="deleteMeta('${meta.id}')">🗑️</button>
+                    </div>
+                </div>
+                
+                <div style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;background:rgba(0,0,0,0.2);padding:8px;border-radius:6px;">
+                    Total de Apoios Históricos: <strong style="color:var(--light)">${totalApoios}</strong>
+                </div>
+                
+                <div style="flex-grow:1;display:flex;flex-direction:column;gap:4px;">
+                    ${etapas.length > 0 ? etapasHtml : '<div style="color:var(--muted);font-size:0.85rem;text-align:center;">Nenhuma etapa definida</div>'}
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+window.openMetaModal = function(metaId = null) {
+    const modal = document.getElementById('metaModal');
+    if (!modal) return;
+    
+    document.getElementById('metaEtapasContainer').innerHTML = '';
+    
+    if (metaId) {
+        const meta = dynamicMetas.find(m => m.id === metaId);
+        if (meta) {
+            document.getElementById('metaModalTitle').textContent = '✏️ Editar Meta';
+            document.getElementById('meta_id').value = meta.id;
+            document.getElementById('meta_nome').value = meta.nome || '';
+            document.getElementById('meta_slug').value = meta.slug || '';
+            
+            if (meta.etapas && meta.etapas.length > 0) {
+                meta.etapas.forEach(etapa => window.addMetaEtapa(etapa.necessarios, etapa.descricao));
+            } else {
+                window.addMetaEtapa();
+            }
+        }
+    } else {
+        document.getElementById('metaModalTitle').textContent = '➕ Nova Meta';
+        document.getElementById('meta_id').value = '';
+        document.getElementById('meta_nome').value = '';
+        document.getElementById('meta_slug').value = '';
+        window.addMetaEtapa();
+    }
+    
+    modal.classList.add('active');
+};
+
+window.closeMetaModal = function() {
+    const modal = document.getElementById('metaModal');
+    if (modal) modal.classList.remove('active');
+};
+
+window.addMetaEtapa = function(necessarios = 10, descricao = '') {
+    const container = document.getElementById('metaEtapasContainer');
+    const div = document.createElement('div');
+    div.style.cssText = "display:flex;gap:8px;align-items:flex-start;background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);margin-bottom:8px;";
+    
+    div.innerHTML = `
+        <div style="flex:0 0 80px">
+            <label class="form-label" style="font-size:0.75rem">Apoios</label>
+            <input type="number" class="form-input meta-etapa-necessarios" value="${necessarios}" min="1">
         </div>
-        <div style="overflow-x:auto;margin-bottom:16px"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:2px solid var(--line)"><th style="padding:8px;text-align:left;color:var(--muted);font-size:.78rem">TIPO</th><th style="padding:8px;text-align:left;color:var(--muted);font-size:.78rem" colspan="20">METAS (clique para editar)</th></tr></thead><tbody>
-            <tr style="border-bottom:1px solid var(--line)"><td style="padding:10px;font-weight:700;color:#eab308">🏰 Classe</td><td colspan="20"><div style="display:flex;gap:2px;flex-wrap:wrap" id="linhaMetaClasse"></div></td></tr>
-            <tr style="border-bottom:1px solid var(--line)"><td style="padding:10px;font-weight:700;color:#22c55e">🎭 Raça</td><td colspan="20"><div style="display:flex;gap:2px;flex-wrap:wrap" id="linhaMetaRaca"></div></td></tr>
-            <tr><td style="padding:10px;font-weight:700;color:#3b82f6">📖 Lore</td><td colspan="20"><div style="display:flex;gap:2px;flex-wrap:wrap" id="linhaMetaLore"></div></td></tr>
-        </tbody></table></div>
-        <button class="btn btn-primary btn-small" onclick="adicionarColunaMeta()">➕ Nova Meta</button>`;
-}
+        <div style="flex:1">
+            <label class="form-label" style="font-size:0.75rem">Descrição / Benefício</label>
+            <input type="text" class="form-input meta-etapa-descricao" value="${escapeHtml(descricao)}" placeholder="O que desbloqueia?">
+        </div>
+        <button class="btn btn-danger btn-small" style="margin-top:22px;padding:8px" onclick="this.closest('div').remove()">🗑️</button>
+    `;
+    
+    container.appendChild(div);
+};
 
-function renderizarTabelaMetas() {
-    const render = (id, arr, total, colors) => {
-        const el = document.getElementById(id); if (!el) return;
-        el.innerHTML = arr.map((v, i) => { const hit = total >= v; return `<span onclick="editarCelulaMeta('${id.replace('linhaMeta','').toLowerCase()}',${i})" style="padding:8px 14px;text-align:center;cursor:pointer;background:${hit?colors[1]:colors[0]};border:1px solid rgba(0,0,0,.3);border-radius:6px;font-weight:700;color:${hit&&colors[2]?colors[2]:'#fff'};font-size:.85rem;min-width:40px;display:inline-block">${v}</span>`; }).join('');
+window.saveMeta = async function() {
+    const id = document.getElementById('meta_id').value;
+    const nome = document.getElementById('meta_nome').value.trim();
+    const slug = document.getElementById('meta_slug').value.trim().toLowerCase();
+    
+    if (!nome) {
+        showAlert('⚠️ Nome da meta é obrigatório!', 'warning');
+        return;
+    }
+    
+    const etapasElements = document.getElementById('metaEtapasContainer').children;
+    const etapas = [];
+    
+    for (let el of etapasElements) {
+        const necessarios = parseInt(el.querySelector('.meta-etapa-necessarios').value) || 1;
+        const descricao = el.querySelector('.meta-etapa-descricao').value.trim();
+        etapas.push({ necessarios, descricao });
+    }
+    
+    const metaData = {
+        nome,
+        slug,
+        etapas,
+        updatedAt: new Date().toISOString()
     };
-    render('linhaMetaClasse', metasData.classe, totaisApoios.classe, ['#7c2d12','#eab308','#000']);
-    render('linhaMetaRaca', metasData.raca, totaisApoios.raca, ['#991b1b','#22c55e','#fff']);
-    render('linhaMetaLore', metasData.lore, totaisApoios.lore, ['#064e3b','#3b82f6','#fff']);
-}
-
-function atualizarResumoMetas() {
-    const calc = (arr, total) => { const last = arr.filter(m => m <= total).pop()||0; const next = arr.find(m => m > total)||arr[arr.length-1]; const rel = total-last, meta = next-last; return { rel, meta, pct: meta > 0 ? Math.min(100, Math.round((rel/meta)*100)) : 100 }; };
-    const c = calc(metasData.classe, totaisApoios.classe), r = calc(metasData.raca, totaisApoios.raca), l = calc(metasData.lore, totaisApoios.lore);
-    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    set('totalApoiosClasse', c.rel); set('metaAtualClasse', c.meta); set('progressoClasse', c.pct+'%');
-    set('totalApoiosRaca', r.rel); set('metaAtualRaca', r.meta); set('progressoRaca', r.pct+'%');
-    set('totalApoiosLore', l.rel); set('metaAtualLore', l.meta); set('progressoLore', l.pct+'%');
-    set('desbloquearClasse', desbloquearMetas.classe||'-'); set('desbloquearRaca', desbloquearMetas.raca||'-'); set('desbloquearLore', desbloquearMetas.lore||'-');
-}
-
-window.editarCelulaMeta = function(tipo, i) {
-    const map = { classe: 'classe', raca: 'raca', lore: 'lore' };
-    const t = map[tipo]; if (!t) return;
-    const v = prompt(`Editar meta de ${t}:`, metasData[t][i]);
-    if (v !== null && !isNaN(parseInt(v))) { metasData[t][i] = parseInt(v); metasData[t].sort((a,b) => a-b); renderizarTabelaMetas(); atualizarResumoMetas(); salvarMetas(); }
+    
+    try {
+        if (id) {
+            await updateDoc(doc(db, 'metas', id), metaData);
+            showAlert('✅ Meta atualizada!', 'success');
+        } else {
+            metaData.createdAt = new Date().toISOString();
+            await addDoc(collection(db, 'metas'), metaData);
+            showAlert('✅ Meta criada!', 'success');
+        }
+        
+        window.closeMetaModal();
+        await carregarSistemaMetas();
+    } catch (error) {
+        console.error('❌ Erro ao salvar meta:', error);
+        showAlert('❌ Erro ao salvar meta', 'danger');
+    }
 };
 
-window.adicionarColunaMeta = async function() {
-    const tipo = prompt('Tipo (classe, raca, lore):', 'classe');
-    if (!tipo || !['classe','raca','lore'].includes(tipo.toLowerCase())) { showAlert('⚠️ Tipo inválido', 'warning'); return; }
-    const v = prompt('Valor:', '100');
-    if (v !== null && !isNaN(parseInt(v))) { metasData[tipo.toLowerCase()].push(parseInt(v)); metasData[tipo.toLowerCase()].sort((a,b)=>a-b); renderizarTabelaMetas(); atualizarResumoMetas(); await salvarMetas(); showAlert('✅ Meta adicionada', 'success'); }
+window.deleteMeta = async function(id) {
+    if (!confirm('Tem certeza que deseja excluir esta meta? Todas as configurações de etapas serão perdidas!')) return;
+    
+    try {
+        await deleteDoc(doc(db, 'metas', id));
+        showAlert('✅ Meta excluída!', 'success');
+        await carregarSistemaMetas();
+    } catch (error) {
+        console.error('❌ Erro ao excluir meta:', error);
+        showAlert('❌ Erro ao excluir meta', 'danger');
+    }
 };
-
-async function salvarMetas() {
-    try { await setDoc(doc(db, 'config', 'metas'), { classe: metasData.classe, raca: metasData.raca, lore: metasData.lore, desbloquear: desbloquearMetas }); } catch (e) { showAlert('❌ Erro salvar metas', 'danger'); }
-}
 
 // ===== NOTIFICATIONS =====
 window.openSendNotificationModal = function() {

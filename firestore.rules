@@ -196,8 +196,14 @@ service cloud.firestore {
       allow create, update, delete: if isMaster();
     }
 
-    // ========== ADICIONADO: Coleção de Configurações (Metas e Lista de Produção) ==========
+    // ========== ADICIONADO: Coleção de Configurações (Metas antigas e Lista de Produção) ==========
     match /config/{configId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    // ========== ADICIONADO: Coleção de Metas Dinâmicas ==========
+    match /metas/{metaId} {
       allow read: if isSignedIn();
       allow create, update, delete: if isMaster();
     }
