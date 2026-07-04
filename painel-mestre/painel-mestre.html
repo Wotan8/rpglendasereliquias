@@ -112,7 +112,7 @@
                     <div class="sub-tab-content" id="subtab-m-personagens">
                         <div class="exp-controls">
                             <button class="btn btn-warning btn-small" id="btnToggleExp" onclick="toggleExpMode()">⭐ +EXP</button>
-                            <button class="btn btn-primary btn-small" id="btnToggleInventario" onclick="toggleMesaInventoryMode()" style="margin-left: 8px;">🎒 Inventário</button>
+                            <button class="btn btn-primary btn-small" id="btnToggleInventario" onclick="toggleMesaInventoryMode()" style="margin-left: 8px;">🎒 Repertório</button>
                             <button class="btn btn-primary btn-small" id="btnToggleCondicoes" onclick="toggleMesaConditionsMode()" style="margin-left: 8px;">💀 Condições</button>
                             <button class="btn btn-primary btn-small" id="btnTogglePeculiaridades" onclick="toggleMesaPeculiaridadesMode()" style="margin-left: 8px;">✨ Peculiaridades</button>
                         </div>
@@ -163,7 +163,7 @@
                         </div>
                     </div>
 
-                    <!-- Sub-tab: Inventário -->
+                    <!-- Sub-tab: Repertório -->
                     <div class="sub-tab-content" id="subtab-m-inventario">
                         <div id="mesaInventarioContent">
                             <div style="text-align:center;padding:50px;color:var(--muted)">Carregando inventários...</div>
@@ -525,6 +525,11 @@
                     <div class="form-group">
                         <label class="form-label">Nome *</label>
                         <input type="text" class="form-input" id="loja_nome" placeholder="Ex: Baú de Ouro">
+                        <div style="margin-top:10px;">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                <input type="checkbox" id="loja_is_venda_ativa" style="width:18px;height:18px" checked> <strong>À Venda (Ativo na Loja)</strong>
+                            </label>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Imagem</label>

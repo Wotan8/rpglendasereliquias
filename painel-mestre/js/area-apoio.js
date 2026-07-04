@@ -906,9 +906,16 @@ function renderLojaUI() {
         
         const imgHtml = item.imagem ? `<div style="height:120px;width:100%;background-image:url('${escapeHtml(item.imagem)}');background-size:contain;background-repeat:no-repeat;background-position:center;border-radius:8px;background-color:rgba(0,0,0,0.2);"></div>` : '';
 
+        const isVendaAtiva = item.isVendaAtiva !== false; // Default true if undefined
+        
         card.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div style="font-weight:700;font-size:1.1rem;color:var(--primary);">${escapeHtml(item.nome)}</div>
+                <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;background:rgba(0,0,0,0.3);padding:4px 8px;border-radius:12px;">
+                    <input type="checkbox" onchange="toggleLojaVendaAtiva('${item.id}', this.checked)" ${isVendaAtiva ? 'checked' : ''} style="width:14px;height:14px;accent-color:var(--primary);"> À Venda
+                </label>
+            </div>
             ${imgHtml}
-            <div style="font-weight:700;font-size:1.1rem;color:var(--primary);">${escapeHtml(item.nome)}</div>
             ${item.descricao ? `<div style="font-size:0.85rem;color:var(--muted);">${escapeHtml(item.descricao)}</div>` : ''}
             <div style="display:flex;gap:10px;font-size:0.9rem;font-weight:600;">
                 ${item.valorRs > 0 ? `<span style="color:#10b981;">R$ ${Number(item.valorRs).toFixed(2)}</span>` : ''}
@@ -992,6 +999,8 @@ window.openLojaModal = async function(itemId = null) {
     document.getElementById('loja_is_rerolagem').checked = false;
     document.getElementById('loja_rerolagem_amount').value = '';
     
+    document.getElementById('loja_is_venda_ativa').checked = true;
+
     document.getElementById('loja_is_narrativo').checked = false;
     document.getElementById('loja_narrativo_aplicacoes').value = '';
     document.getElementById('loja_narrativo_beneficio').value = '';
@@ -1028,6 +1037,7 @@ window.openLojaModal = async function(itemId = null) {
             document.getElementById('loja_descricao').value = item.descricao || '';
             document.getElementById('loja_valor_rs').value = item.valorRs || '';
             document.getElementById('loja_valor_frag').value = item.valorFrag || '';
+            document.getElementById('loja_is_venda_ativa').checked = item.isVendaAtiva !== false;
             
             if (item.imagem) {
                 const preview = document.getElementById('loja_imagem_preview');
@@ -1118,6 +1128,7 @@ window.saveLojaItem = async function() {
             isRerolagem: document.getElementById('loja_is_rerolagem').checked,
             isNarrativo: document.getElementById('loja_is_narrativo').checked,
             isItemPersonagem: document.getElementById('loja_is_item_personagem').checked,
+            isVendaAtiva: document.getElementById('loja_is_venda_ativa').checked,
             
             modoSelecaoMeta: document.getElementById('loja_modo_meta_selecao').checked,
             metasVinculadas: []
@@ -1175,6 +1186,20 @@ window.saveLojaItem = async function() {
     } finally {
         btn.disabled = false;
         btn.innerText = '💾 Salvar Item';
+    }
+};
+
+window.toggleLojaVendaAtiva = async function(id, isAtiva) {
+    try {
+        await updateDoc(doc(db, 'loja_itens', id), { isVendaAtiva: isAtiva });
+        // Update local state to prevent re-fetching unnecessarily, though a fetch wouldn't hurt
+        const item = lojaItens.find(i => i.id === id);
+        if(item) item.isVendaAtiva = isAtiva;
+    } catch (e) {
+        console.error('❌ Erro ao alterar status de venda:', e);
+        showAlert('Erro ao salvar disponibilidade.', 'danger');
+        // Revert toggle visually
+        await carregarSistemaLoja();
     }
 };
 

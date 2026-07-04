@@ -94,7 +94,13 @@ onAuthStateChanged(auth, async (user) => {
         try {
             const userDoc = await findUserDoc();
             if (userDoc) {
-                const role = userDoc.data().role;
+                const data = userDoc.data();
+                const role = data.role;
+                
+                const fragmentos = data.fragmentos || 0;
+                const fragEl = document.getElementById('fragmentosValue');
+                if (fragEl) fragEl.textContent = fragmentos;
+
                 const btnMestre = document.getElementById('btnPainelMestre');
                 const btnCriador = document.getElementById('btnPainelCriador');
                 

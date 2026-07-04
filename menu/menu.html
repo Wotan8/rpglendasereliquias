@@ -52,11 +52,14 @@
             <!-- Tabs -->
             <div class="tabs" id="tabBar">
                 <button class="tab active" onclick="switchTab('personagens')">👥 Personagens</button>
-                <button class="tab" onclick="switchTab('inventario')">🎒 Inventário</button>
+                <button class="tab" onclick="switchTab('inventario')">🎒 Repertório</button>
                 <button class="tab" onclick="switchTab('notificacoes')" style="position:relative">
                     🔔 Notificações
                     <span class="badge" id="notificationBadge" style="display:none">0</span>
                 </button>
+                <div class="fragmentos-display" style="margin-left: auto; display: flex; align-items: center; font-weight: 800; color: var(--primary); font-size: 13px; gap: 6px; padding: 0 10px; background: rgba(79, 110, 247, 0.1); border-radius: 10px; border: 1px solid var(--primary);">
+                    Fragmentos: <span id="fragmentosValue">0</span>
+                </div>
             </div>
 
             <!-- ======== ABA PERSONAGENS ======== -->
@@ -86,14 +89,14 @@
                 </div>
             </div>
 
-            <!-- ======== ABA INVENTÁRIO ======== -->
+            <!-- ======== ABA REPERTÓRIO ======== -->
             <div class="tab-content" id="tab-inventario">
                 <div class="inventory-header">
                     <div class="total-apoios-label">Total de Apoios</div>
                     <div class="total-apoios" id="totalApoios">0</div>
                 </div>
 
-                <div class="inventory-title">🎒 Inventário de Jogador</div>
+                <div class="inventory-title">🎒 Repertório de Jogador</div>
 
                 <div class="inventory-grid" id="inventoryGrid"></div>
 
