@@ -60,7 +60,7 @@ window.switchTab = async function (tabName) {
         switch (tabName) {
             case 'mesas':
                 if (!mesasModule) {
-                    mesasModule = await import('./area-mesas.js');
+                    mesasModule = await import('./area-mesas.js?v=' + Date.now());
                     // Also load sub-modules for mesa content
                     await ensureMesaSubModules();
                 }

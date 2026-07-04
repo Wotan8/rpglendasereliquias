@@ -313,8 +313,10 @@ window.toggleMesaInventoryMode = async function() {
     const grid = document.getElementById('mesaCharactersGrid');
     const invContainer = document.getElementById('mesaCharactersInventoryContainer');
     const condContainer = document.getElementById('mesaCharactersConditionsContainer');
+    const pecContainer = document.getElementById('mesaCharactersPeculiaridadesContainer');
     const btnInv = document.getElementById('btnToggleInventario');
     const btnCond = document.getElementById('btnToggleCondicoes');
+    const btnPec = document.getElementById('btnTogglePeculiaridades');
     const btnExp = document.getElementById('btnToggleExp');
     
     // Default to empty or explicit none
@@ -325,6 +327,7 @@ window.toggleMesaInventoryMode = async function() {
         grid.style.display = 'none';
         invContainer.style.display = 'block';
         if (condContainer) condContainer.style.display = 'none';
+        if (pecContainer) pecContainer.style.display = 'none';
         
         if (btnInv) {
             btnInv.classList.remove('btn-primary');
@@ -335,6 +338,11 @@ window.toggleMesaInventoryMode = async function() {
             btnCond.classList.remove('btn-secondary');
             btnCond.classList.add('btn-primary');
             btnCond.textContent = '💀 Condições';
+        }
+        if (btnPec) {
+            btnPec.classList.remove('btn-secondary');
+            btnPec.classList.add('btn-primary');
+            btnPec.textContent = '✨ Peculiaridades';
         }
         if (btnExp) btnExp.style.display = 'none';
         
@@ -361,8 +369,10 @@ window.toggleMesaConditionsMode = async function() {
     const grid = document.getElementById('mesaCharactersGrid');
     const invContainer = document.getElementById('mesaCharactersInventoryContainer');
     const condContainer = document.getElementById('mesaCharactersConditionsContainer');
+    const pecContainer = document.getElementById('mesaCharactersPeculiaridadesContainer');
     const btnInv = document.getElementById('btnToggleInventario');
     const btnCond = document.getElementById('btnToggleCondicoes');
+    const btnPec = document.getElementById('btnTogglePeculiaridades');
     const btnExp = document.getElementById('btnToggleExp');
     
     // Default to empty or explicit none
@@ -373,6 +383,7 @@ window.toggleMesaConditionsMode = async function() {
         grid.style.display = 'none';
         condContainer.style.display = 'block';
         if (invContainer) invContainer.style.display = 'none';
+        if (pecContainer) pecContainer.style.display = 'none';
         
         if (btnCond) {
             btnCond.classList.remove('btn-primary');
@@ -383,6 +394,11 @@ window.toggleMesaConditionsMode = async function() {
             btnInv.classList.remove('btn-secondary');
             btnInv.classList.add('btn-primary');
             btnInv.textContent = '🎒 Inventário';
+        }
+        if (btnPec) {
+            btnPec.classList.remove('btn-secondary');
+            btnPec.classList.add('btn-primary');
+            btnPec.textContent = '✨ Peculiaridades';
         }
         if (btnExp) btnExp.style.display = 'none';
         
@@ -398,6 +414,61 @@ window.toggleMesaConditionsMode = async function() {
             btnCond.classList.remove('btn-secondary');
             btnCond.classList.add('btn-primary');
             btnCond.textContent = '💀 Condições';
+        }
+        if (btnExp) btnExp.style.display = '';
+    }
+};
+
+window.toggleMesaPeculiaridadesMode = async function() {
+    try { await import('./area-mesas-peculiaridades.js?v=' + Date.now()); } catch(e) { console.error('Erro ao importar peculiaridades:', e); }
+
+    const grid = document.getElementById('mesaCharactersGrid');
+    const invContainer = document.getElementById('mesaCharactersInventoryContainer');
+    const condContainer = document.getElementById('mesaCharactersConditionsContainer');
+    const pecContainer = document.getElementById('mesaCharactersPeculiaridadesContainer');
+    const btnInv = document.getElementById('btnToggleInventario');
+    const btnCond = document.getElementById('btnToggleCondicoes');
+    const btnPec = document.getElementById('btnTogglePeculiaridades');
+    const btnExp = document.getElementById('btnToggleExp');
+    
+    const isCurrentlyHidden = (pecContainer.style.display === 'none' || pecContainer.style.display === '');
+    
+    if (isCurrentlyHidden) {
+        // Entra no modo peculiaridades
+        grid.style.display = 'none';
+        pecContainer.style.display = 'block';
+        if (invContainer) invContainer.style.display = 'none';
+        if (condContainer) condContainer.style.display = 'none';
+        
+        if (btnPec) {
+            btnPec.classList.remove('btn-primary');
+            btnPec.classList.add('btn-secondary');
+            btnPec.textContent = 'Voltar para Personagens';
+        }
+        if (btnInv) {
+            btnInv.classList.remove('btn-secondary');
+            btnInv.classList.add('btn-primary');
+            btnInv.textContent = '🎒 Inventário';
+        }
+        if (btnCond) {
+            btnCond.classList.remove('btn-secondary');
+            btnCond.classList.add('btn-primary');
+            btnCond.textContent = '💀 Condições';
+        }
+        if (btnExp) btnExp.style.display = 'none';
+        
+        // Renderiza peculiaridades
+        if (window._loadPersonagensPeculiaridades) {
+            window._loadPersonagensPeculiaridades();
+        }
+    } else {
+        // Sai do modo peculiaridades
+        grid.style.display = 'grid';
+        pecContainer.style.display = 'none';
+        if (btnPec) {
+            btnPec.classList.remove('btn-secondary');
+            btnPec.classList.add('btn-primary');
+            btnPec.textContent = '✨ Peculiaridades';
         }
         if (btnExp) btnExp.style.display = '';
     }
