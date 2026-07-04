@@ -600,7 +600,7 @@ async function createCharacter() {
 
             // === Save custom item to 'items' collection ===
             if (savedCustomItem) {
-                await saveCustomItemToFirebase(savedCustomItem, charId);
+                await saveCustomItemToFirebase(savedCustomItem, charId, ws.mesaVinculada?.id);
             }
 
             // === Save starter kit items to 'items' collection ===
@@ -636,12 +636,22 @@ async function createCharacter() {
     }
 }
 
-async function saveCustomItemToFirebase(customItem, charId) {
+async function saveCustomItemToFirebase(customItem, charId, mesaId) {
     if (!customItem || !customItem.nome) return;
     try {
-        const { doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const { doc, setDoc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
         const db = window.db;
         const itemId = 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        
+        let mecanicasDaMesa = [];
+        if (mesaId) {
+            try {
+                const mesaSnap = await getDoc(doc(db, 'mesas', mesaId));
+                if (mesaSnap.exists()) {
+                    mecanicasDaMesa = mesaSnap.data().config?.mecanicasObjetoPessoal || [];
+                }
+            } catch(e) { console.warn('Erro ao buscar mesa para objeto pessoal', e); }
+        }
         
         const itemData = {
             ...customItem,
@@ -653,6 +663,7 @@ async function saveCustomItemToFirebase(customItem, charId) {
             maosUsadas: null,
             parentItemId: null,
             criadoPor: 'jogador',
+            mecanicaIdsProprias: mecanicasDaMesa,
             lastModified: new Date().toISOString()
         };
 

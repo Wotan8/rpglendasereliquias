@@ -34,6 +34,7 @@ function _getCharacterBodySlots() {
 // ===== EQUIP STATES — Estados de Equipamento =====
 const EQUIP_STATES = {
     empunhado:  { label: 'Empunhado',  icon: '✊', appliesMechanics: true,  description: 'Segurado ativamente nas mãos' },
+    segurar:    { label: 'Segurado',   icon: '🖐️', appliesMechanics: false, description: 'Apenas segurado/carregado, sem uso mecânico' },
     vestido:    { label: 'Vestido',     icon: '👕', appliesMechanics: true,  description: 'Colocado junto ao corpo' },
     fixado:     { label: 'Fixado',      icon: '📌', appliesMechanics: false, description: 'Pendurado/anexado para saque rápido' },
     armazenado: { label: 'Armazenado',  icon: '📦', appliesMechanics: false, description: 'Guardado dentro de um contêiner' }
@@ -371,13 +372,14 @@ function renderEquippedItems() {
 
             const mechBonus = typeof state !== 'undefined' && state.mechanicBonuses ? (state.mechanicBonuses['slot_' + slotKey] || 0) : 0;
             const dynamicMax = slotDef.max + mechBonus;
-            const isFull = slotItems.length >= dynamicMax;
+            const inSlotNormal = slotItems.filter(i => i.estadoEquip !== 'fixado');
+            const isFull = inSlotNormal.length >= dynamicMax;
             
             groupHtml += `<div class="inv-slot-container">
                 <div class="inv-slot-header">
                     <span class="inv-slot-icon">${slotDef.icon}</span>
                     <span class="inv-slot-name">${slotDef.label}</span>
-                    <span class="inv-slot-cap ${isFull ? 'full' : ''}">${slotItems.length}/${dynamicMax}</span>
+                    <span class="inv-slot-cap ${isFull ? 'full' : ''}">${inSlotNormal.length}/${dynamicMax}</span>
                 </div>
                 <div class="inv-slot-items">`;
             
@@ -722,17 +724,29 @@ function _getCompatibleSlots(item) {
 
     const bodySlots = _getCharacterBodySlots();
     const equipavelEm = Array.isArray(item.equipavelEm) ? item.equipavelEm : (item.equipavelEm ? [item.equipavelEm] : []);
+    const slotRestritoLegacy = Array.isArray(item.slotRestrito) ? item.slotRestrito : (item.slotRestrito ? [item.slotRestrito] : []);
+    const restricoes = equipavelEm.length > 0 ? equipavelEm : slotRestritoLegacy;
 
     for (const [slotKey, slotDef] of Object.entries(bodySlots)) {
-        if (equipavelEm.length > 0 && !equipavelEm.includes(slotDef.partId)) continue;
+        const isNative = restricoes.length === 0 || restricoes.includes(slotDef.partId);
+        const canHold = !!slotDef.podeSegurar;
+
+        // Adiciona à lista se for slot nativo OU se o slot permitir segurar itens
+        if (!isNative && !canHold) continue;
         
-        // Contar itens no slot
-        const inSlot = items.filter(i => i.slotAnatomico === slotKey && i.equipado && i.estadoEquip !== 'armazenado');
+        // Contar itens no slot (ignorando 'armazenado' e 'fixado')
+        const inSlot = items.filter(i => i.slotAnatomico === slotKey && i.equipado && i.estadoEquip !== 'armazenado' && i.estadoEquip !== 'fixado');
+        
+        // mechanicBonuses
+        const mechBonus = typeof state !== 'undefined' && state.mechanicBonuses ? (state.mechanicBonuses['slot_' + slotKey] || 0) : 0;
+        const dynamicMax = slotDef.max + mechBonus;
+
         compatSlots.push({
             key: slotKey,
             ...slotDef,
+            max: dynamicMax,
             current: inSlot.length,
-            full: inSlot.length >= slotDef.max
+            full: inSlot.length >= dynamicMax
         });
     }
     return compatSlots;
@@ -748,19 +762,30 @@ function _getAvailableStates(item, slotKey) {
     if (!slotDef) return states;
 
     const forma = item.formaEquipar;
+    const equipavelEm = Array.isArray(item.equipavelEm) ? item.equipavelEm : (item.equipavelEm ? [item.equipavelEm] : []);
+    const slotRestritoLegacy = Array.isArray(item.slotRestrito) ? item.slotRestrito : (item.slotRestrito ? [item.slotRestrito] : []);
+    const restricoes = equipavelEm.length > 0 ? equipavelEm : slotRestritoLegacy;
+    const isNative = restricoes.length === 0 || restricoes.includes(slotDef.partId);
 
-    // Se o item tem uma forma de equipar definida, o estado deve respeitá-la
-    if (forma === 'segurar' && slotDef.podeSegurar) states.push('segurar');
-    if (forma === 'empunhar' && slotDef.podeEmpunhar) states.push('empunhado');
-    if (forma === 'vestir' && slotDef.podeVestir) states.push('vestido');
-    if (forma === 'fixar' && slotDef.podeFixar) states.push('fixado');
+    // Se é o slot nativo dele
+    if (isNative) {
+        if (forma === 'segurar' && slotDef.podeSegurar) states.push('segurar');
+        if (forma === 'empunhar' && slotDef.podeEmpunhar) states.push('empunhado');
+        if (forma === 'vestir' && slotDef.podeVestir) states.push('vestido');
+        if (forma === 'fixar' && slotDef.podeFixar) states.push('fixado');
 
-    // Retrocompatibilidade para itens antigos ou sem formaEquipar:
-    if (!forma) {
-        if (slotDef.podeEmpunhar) states.push('empunhado');
-        if (slotDef.podeVestir) states.push('vestido');
-        if (slotDef.podeFixar) states.push('fixado');
-        if (slotDef.podeSegurar) states.push('segurar');
+        // Retrocompatibilidade
+        if (!forma) {
+            if (slotDef.podeEmpunhar) states.push('empunhado');
+            if (slotDef.podeVestir) states.push('vestido');
+            if (slotDef.podeFixar) states.push('fixado');
+            if (slotDef.podeSegurar) states.push('segurar');
+        }
+    } else {
+        // Se NÃO é nativo, a única forma que permitimos estar aqui é porque tem "podeSegurar"
+        if (slotDef.podeSegurar) {
+            states.push('segurar');
+        }
     }
 
     return [...new Set(states)]; // Remove duplicatas
@@ -816,7 +841,12 @@ window.openEquipModal = function(itemId) {
     let slotsHtml = slotsToShow.map(s => {
         const fullClass = s.full ? 'inv-slot-full' : '';
         const icon = s.icon;
-        return `<div class="inv-equip-slot-option ${fullClass}" data-slot="${s.key}" onclick="${s.full ? '' : `selectEquipSlot('${s.key}')`}">
+        
+        // Permite clicar mesmo se cheio, caso o slot suporte "fixar"
+        const canFixItem = s.podeFixar && (!item.formaEquipar || item.formaEquipar === 'fixar');
+        const clickable = !s.full || canFixItem;
+
+        return `<div class="inv-equip-slot-option ${fullClass}" data-slot="${s.key}" onclick="${clickable ? `selectEquipSlot('${s.key}')` : ''}">
             <span class="inv-equip-slot-icon">${icon}</span>
             <span class="inv-equip-slot-label">${s.label}</span>
             <span class="inv-equip-slot-cap">${s.current}/${s.max}</span>
@@ -880,7 +910,7 @@ window.openEquipModal = function(itemId) {
         isVersatil: isVersatil,
         isDuasMaos: isDuasMaos,
         itemTipo: item.tipo,
-        itemSlotRestrito: item.slotRestrito
+        itemSlotRestrito: (item.equipavelEm && item.equipavelEm.length > 0) ? item.equipavelEm : item.slotRestrito
     };
 };
 
@@ -901,7 +931,23 @@ window.selectEquipSlot = function(slotKey) {
     
     // We need to pass the full item object mock or properties to _getAvailableStates
     const tempItem = { tipo: st.itemTipo, slotRestrito: st.itemSlotRestrito };
-    const availableStates = _getAvailableStates(tempItem, slotKey);
+    let availableStates = _getAvailableStates(tempItem, slotKey);
+
+    // Filtrar availableStates: se o slot estiver cheio para itens normais, só permite 'fixado'
+    const items = window._inventoryState.items;
+    const inSlot = items.filter(i => (i.slotAnatomico === slotKey || i.slotAnatomico2 === slotKey) && i.equipado && i.estadoEquip !== 'armazenado' && i.estadoEquip !== 'fixado');
+    const bodySlots = typeof _getCharacterBodySlots === 'function' ? _getCharacterBodySlots() : {};
+    const slotDef = bodySlots[slotKey];
+    
+    if (slotDef) {
+        const mechBonus = typeof state !== 'undefined' && state.mechanicBonuses ? (state.mechanicBonuses['slot_' + slotKey] || 0) : 0;
+        const dynamicMax = slotDef.max + mechBonus;
+        const isFullForNormal = inSlot.length >= dynamicMax;
+        
+        if (isFullForNormal) {
+            availableStates = availableStates.filter(state => state === 'fixado');
+        }
+    }
 
     if (availableStates.length === 0) {
         stateSection.style.display = 'none';
@@ -911,7 +957,9 @@ window.selectEquipSlot = function(slotKey) {
     statesGrid.innerHTML = availableStates.map(sKey => {
         const s = EQUIP_STATES[sKey];
         const restricoes = Array.isArray(st.itemSlotRestrito) ? st.itemSlotRestrito : (st.itemSlotRestrito ? [st.itemSlotRestrito] : null);
-        const isRestrictedToOtherSlot = restricoes && restricoes.length > 0 && !restricoes.includes(slotKey);
+        const bodySlots = typeof _getCharacterBodySlots === 'function' ? _getCharacterBodySlots() : {};
+        const partId = bodySlots[slotKey] ? bodySlots[slotKey].partId : slotKey;
+        const isRestrictedToOtherSlot = restricoes && restricoes.length > 0 && !restricoes.includes(slotKey) && !restricoes.includes(partId);
         const willApplyMechanics = s.appliesMechanics && !isRestrictedToOtherSlot;
 
         return `<div class="inv-equip-state-option" data-state="${sKey}" onclick="selectEquipState('${sKey}')">
