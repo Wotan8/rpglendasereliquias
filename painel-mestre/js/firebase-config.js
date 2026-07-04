@@ -10,6 +10,7 @@ import {
     onSnapshot, doc, getDoc, getDocs, setDoc, deleteDoc,
     addDoc, updateDoc
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 // ===== CONFIG =====
 const firebaseConfig = {
@@ -24,12 +25,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 // ===== RE-EXPORT =====
 export {
-    app, auth, db,
+    app, auth, db, storage,
     onAuthStateChanged, signOut,
     collection, query, where, orderBy, limit,
     onSnapshot, doc, getDoc, getDocs, setDoc,
-    deleteDoc, addDoc, updateDoc
+    deleteDoc, addDoc, updateDoc,
+    ref, uploadBytes, getDownloadURL
 };

@@ -208,6 +208,12 @@ service cloud.firestore {
       allow create, update, delete: if isMaster();
     }
 
+    // ========== ADICIONADO: Coleção da Loja (Itens de Repertório) ==========
+    match /loja_itens/{itemId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
     // ========== ADICIONADO: Configurações Globais (Ex: Favicons) ==========
     match /app-config/{docId} {
       allow read: if true;

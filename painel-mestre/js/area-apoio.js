@@ -1,5 +1,5 @@
 // ÁREA APOIO — Apoios, Metas, Notificações (Full Migration)
-import { db, collection, getDocs, getDoc, setDoc, doc, updateDoc, addDoc, deleteDoc } from './firebase-config.js';
+import { db, collection, getDocs, getDoc, setDoc, doc, updateDoc, addDoc, deleteDoc, storage, ref, uploadBytes, getDownloadURL } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
@@ -7,7 +7,7 @@ import { addLog } from './logs.js';
 let dynamicMetas = [];
 let legacyTotais = {};
 
-export async function onTabActivated() { await loadApoioUsers(); await carregarSistemaMetas(); }
+export async function onTabActivated() { await loadApoioUsers(); await carregarSistemaMetas(); await carregarSistemaLoja(); }
 
 // ===== USERS =====
 async function loadApoioUsers() {
@@ -820,4 +820,372 @@ window.deleteItemRepertorio = async function (userId, itemIndex) {
 window.closeItemRepertorioModal = function () {
     const modal = document.getElementById('itemRepertorioModal');
     if (modal) modal.remove();
+};
+
+// ==========================================
+// ABA LOJA (ITENS DE REPERTÓRIO)
+// ==========================================
+
+let lojaItens = [];
+let cachedEquipamentos = null;
+
+window.addLojaItemPersonagemRow = function(itemId = '', qtd = 1) {
+    const list = document.getElementById('loja_item_personagem_list');
+    const select = document.getElementById('loja_item_personagem_select');
+    
+    let selectedId = itemId;
+    let selectedName = '';
+    
+    if (!selectedId) {
+        if (!select.value) return;
+        selectedId = select.value;
+        selectedName = select.options[select.selectedIndex].text;
+    } else {
+        const item = cachedEquipamentos.find(i => i.id === selectedId);
+        selectedName = item ? escapeHtml(item.nome) : 'Item Desconhecido';
+    }
+
+    const rowId = 'loja-item-row-' + Date.now() + '-' + Math.random().toString(36).substr(2,5);
+    
+    const row = document.createElement('div');
+    row.id = rowId;
+    row.className = 'loja-item-personagem-row';
+    row.dataset.itemId = selectedId;
+    row.style = 'display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.3);padding:6px 10px;border-radius:4px;';
+    
+    row.innerHTML = `
+        <div style="flex:1;font-size:0.85rem;color:var(--light);">${selectedName}</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+            <label style="font-size:0.75rem;color:var(--muted);">Qtd:</label>
+            <input type="number" class="form-input loja-item-personagem-qtd" value="${qtd}" min="1" style="width:60px;padding:2px 6px;height:28px;">
+        </div>
+        <button class="btn btn-danger btn-small" onclick="document.getElementById('${rowId}').remove()" style="padding:2px 8px;height:28px;">✕</button>
+    `;
+    
+    list.appendChild(row);
+    if(!itemId) select.value = '';
+};
+
+window.carregarSistemaLoja = async function() {
+    try {
+        const snap = await getDocs(collection(db, 'loja_itens'));
+        lojaItens = [];
+        snap.forEach(doc => {
+            lojaItens.push({ id: doc.id, ...doc.data() });
+        });
+        renderLojaUI();
+    } catch (e) {
+        console.error('❌ Erro ao carregar itens da loja:', e);
+        showAlert('Erro ao carregar Loja', 'danger');
+    }
+};
+
+function renderLojaUI() {
+    const container = document.getElementById('lojaContainer');
+    if (!container) return;
+    
+    if (lojaItens.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:50px;color:var(--muted);grid-column:1/-1;">Nenhum item cadastrado na loja.</div>';
+        return;
+    }
+
+    container.innerHTML = '';
+    lojaItens.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'apoio-card';
+        card.style.display = 'flex';
+        card.style.flexDirection = 'column';
+        card.style.gap = '12px';
+        
+        let tagsHtml = '';
+        if (item.isExp) tagsHtml += `<span style="background:var(--primary);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">EXP: ${item.expAmount}${item.isExpVip ? ' (VIP)' : ''}</span>`;
+        if (item.isRoleta) tagsHtml += `<span style="background:var(--secondary);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Roleta: ${item.roletaGiros}x</span>`;
+        if (item.isRerolagem) tagsHtml += `<span style="background:#f59e0b;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Re-roll: ${item.rerolagensAmount}x</span>`;
+        if (item.isNarrativo) tagsHtml += `<span style="background:#10b981;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Narrativo</span>`;
+        if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span style="background:#8b5cf6;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">🎒 Itens: ${item.personagemItensVinculados.length}</span>`;
+        
+        const imgHtml = item.imagem ? `<div style="height:120px;width:100%;background-image:url('${escapeHtml(item.imagem)}');background-size:contain;background-repeat:no-repeat;background-position:center;border-radius:8px;background-color:rgba(0,0,0,0.2);"></div>` : '';
+
+        card.innerHTML = `
+            ${imgHtml}
+            <div style="font-weight:700;font-size:1.1rem;color:var(--primary);">${escapeHtml(item.nome)}</div>
+            ${item.descricao ? `<div style="font-size:0.85rem;color:var(--muted);">${escapeHtml(item.descricao)}</div>` : ''}
+            <div style="display:flex;gap:10px;font-size:0.9rem;font-weight:600;">
+                ${item.valorRs > 0 ? `<span style="color:#10b981;">R$ ${Number(item.valorRs).toFixed(2)}</span>` : ''}
+                ${item.valorFrag > 0 ? `<span style="color:#6366f1;">${item.valorFrag} Frag$</span>` : ''}
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">${tagsHtml}</div>
+            
+            <div style="margin-top:auto;display:flex;gap:8px;border-top:1px solid var(--border);padding-top:12px;">
+                <button class="btn btn-secondary btn-small" onclick="openLojaModal('${item.id}')" style="flex:1;">✏️ Editar</button>
+                <button class="btn btn-danger btn-small" onclick="deleteLojaItem('${item.id}')">🗑️</button>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+window.toggleLojaFields = function() {
+    const isExp = document.getElementById('loja_is_exp').checked;
+    document.getElementById('loja_exp_fields').style.display = isExp ? 'grid' : 'none';
+    
+    const isRoleta = document.getElementById('loja_is_roleta').checked;
+    document.getElementById('loja_roleta_fields').style.display = isRoleta ? 'block' : 'none';
+    
+    const isRerolagem = document.getElementById('loja_is_rerolagem').checked;
+    document.getElementById('loja_rerolagem_fields').style.display = isRerolagem ? 'block' : 'none';
+    
+    const isNarrativo = document.getElementById('loja_is_narrativo').checked;
+    document.getElementById('loja_narrativo_fields').style.display = isNarrativo ? 'grid' : 'none';
+
+    const isItemPersonagem = document.getElementById('loja_is_item_personagem').checked;
+    document.getElementById('loja_item_personagem_fields').style.display = isItemPersonagem ? 'block' : 'none';
+
+    const modoSelecao = document.getElementById('loja_modo_meta_selecao').checked;
+    document.getElementById('loja_modo_meta_fields').style.display = modoSelecao ? 'block' : 'none';
+};
+
+window.openLojaModal = async function(itemId = null) {
+    document.getElementById('lojaModal').style.display = 'flex';
+    
+    // Buscar equipamentos se não estiver no cache
+    if (cachedEquipamentos === null) {
+        try {
+            const snap = await getDocs(collection(db, 'system/data/equipment'));
+            cachedEquipamentos = [];
+            snap.forEach(doc => {
+                const data = doc.data();
+                if (data.publicado !== false) {
+                    cachedEquipamentos.push({ id: doc.id, nome: data.nome || 'Sem nome' });
+                }
+            });
+            cachedEquipamentos.sort((a,b) => a.nome.localeCompare(b.nome));
+            
+            const select = document.getElementById('loja_item_personagem_select');
+            select.innerHTML = '<option value="">-- Escolha um Equipamento --</option>';
+            cachedEquipamentos.forEach(eq => {
+                select.innerHTML += `<option value="${eq.id}">${escapeHtml(eq.nome)}</option>`;
+            });
+        } catch (e) {
+            console.error("Erro ao carregar equipamentos:", e);
+            cachedEquipamentos = [];
+            document.getElementById('loja_item_personagem_select').innerHTML = '<option value="">Erro ao carregar</option>';
+        }
+    }
+    
+    // Limpar campos
+    document.getElementById('loja_id').value = '';
+    document.getElementById('loja_nome').value = '';
+    document.getElementById('loja_imagem').value = '';
+    document.getElementById('loja_imagem_preview').style.display = 'none';
+    document.getElementById('loja_descricao').value = '';
+    document.getElementById('loja_valor_rs').value = '';
+    document.getElementById('loja_valor_frag').value = '';
+    
+    document.getElementById('loja_is_exp').checked = false;
+    document.getElementById('loja_exp_amount').value = '';
+    document.getElementById('loja_exp_vip').checked = false;
+    
+    document.getElementById('loja_is_roleta').checked = false;
+    document.getElementById('loja_roleta_giros').value = '';
+    
+    document.getElementById('loja_is_rerolagem').checked = false;
+    document.getElementById('loja_rerolagem_amount').value = '';
+    
+    document.getElementById('loja_is_narrativo').checked = false;
+    document.getElementById('loja_narrativo_aplicacoes').value = '';
+    document.getElementById('loja_narrativo_beneficio').value = '';
+    document.getElementById('loja_narrativo_quando').value = '';
+
+    document.getElementById('loja_is_item_personagem').checked = false;
+    document.getElementById('loja_item_personagem_list').innerHTML = '';
+
+    document.getElementById('loja_modo_meta_selecao').checked = true;
+    document.getElementById('loja_meta_selecionaveis').value = '1';
+
+    // Popular Metas Checkboxes
+    const metasList = document.getElementById('loja_metas_list');
+    metasList.innerHTML = '';
+    if (dynamicMetas.length === 0) {
+        metasList.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;grid-column:1/-1;">Nenhuma meta cadastrada no sistema.</div>';
+    } else {
+        dynamicMetas.forEach(meta => {
+            metasList.innerHTML += `
+                <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer;">
+                    <input type="checkbox" class="loja-meta-cb" value="${meta.id}"> ${escapeHtml(meta.nome)}
+                </label>
+            `;
+        });
+    }
+    
+    // Se for edição, preencher dados
+    if (itemId) {
+        const item = lojaItens.find(i => i.id === itemId);
+        if (item) {
+            document.getElementById('lojaModalTitle').innerText = 'Editar Item da Loja';
+            document.getElementById('loja_id').value = item.id;
+            document.getElementById('loja_nome').value = item.nome || '';
+            document.getElementById('loja_descricao').value = item.descricao || '';
+            document.getElementById('loja_valor_rs').value = item.valorRs || '';
+            document.getElementById('loja_valor_frag').value = item.valorFrag || '';
+            
+            if (item.imagem) {
+                const preview = document.getElementById('loja_imagem_preview');
+                preview.innerHTML = `<img src="${escapeHtml(item.imagem)}" style="max-height:80px;border-radius:4px;">`;
+                preview.style.display = 'block';
+                // Armazena URL original no dataset para caso não mude a imagem
+                preview.dataset.url = item.imagem;
+            } else {
+                document.getElementById('loja_imagem_preview').dataset.url = '';
+            }
+
+            document.getElementById('loja_is_exp').checked = !!item.isExp;
+            document.getElementById('loja_exp_amount').value = item.expAmount || '';
+            document.getElementById('loja_exp_vip').checked = !!item.isExpVip;
+            
+            document.getElementById('loja_is_roleta').checked = !!item.isRoleta;
+            document.getElementById('loja_roleta_giros').value = item.roletaGiros || '';
+            
+            document.getElementById('loja_is_rerolagem').checked = !!item.isRerolagem;
+            document.getElementById('loja_rerolagem_amount').value = item.rerolagensAmount || '';
+            
+            document.getElementById('loja_is_narrativo').checked = !!item.isNarrativo;
+            document.getElementById('loja_narrativo_aplicacoes').value = item.narrativoAplicacoes || '';
+            document.getElementById('loja_narrativo_beneficio').value = item.narrativoBeneficio || '';
+            document.getElementById('loja_narrativo_quando').value = item.narrativoQuando || '';
+
+            document.getElementById('loja_is_item_personagem').checked = !!item.isItemPersonagem;
+            if (item.personagemItensVinculados && Array.isArray(item.personagemItensVinculados)) {
+                item.personagemItensVinculados.forEach(v => {
+                    addLojaItemPersonagemRow(v.itemId, v.quantidade);
+                });
+            }
+
+            document.getElementById('loja_modo_meta_selecao').checked = item.modoSelecaoMeta !== false;
+            document.getElementById('loja_meta_selecionaveis').value = item.quantidadeMetasSelecionaveis || '1';
+
+            // Check metas vinculadas
+            if (item.metasVinculadas && Array.isArray(item.metasVinculadas)) {
+                const cbs = document.querySelectorAll('.loja-meta-cb');
+                cbs.forEach(cb => {
+                    if (item.metasVinculadas.includes(cb.value)) cb.checked = true;
+                });
+            }
+        }
+    } else {
+        document.getElementById('lojaModalTitle').innerText = 'Novo Item da Loja';
+        document.getElementById('loja_imagem_preview').dataset.url = '';
+    }
+    
+    toggleLojaFields();
+};
+
+window.closeLojaModal = function() {
+    document.getElementById('lojaModal').style.display = 'none';
+};
+
+window.saveLojaItem = async function() {
+    const btn = document.querySelector('#lojaModal .btn-success');
+    btn.disabled = true;
+    btn.innerText = '⏳ Salvando...';
+
+    try {
+        const id = document.getElementById('loja_id').value;
+        const nome = document.getElementById('loja_nome').value.trim();
+        if (!nome) throw new Error("O nome do item é obrigatório.");
+
+        const fileInput = document.getElementById('loja_imagem');
+        let imageUrl = document.getElementById('loja_imagem_preview').dataset.url || '';
+
+        // Se houver arquivo selecionado, fazer upload
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const fileName = `loja-itens/${Date.now()}_${file.name}`;
+            const storageRef = ref(storage, fileName);
+            await uploadBytes(storageRef, file);
+            imageUrl = await getDownloadURL(storageRef);
+        }
+
+        const data = {
+            nome,
+            imagem: imageUrl,
+            descricao: document.getElementById('loja_descricao').value.trim(),
+            valorRs: parseFloat(document.getElementById('loja_valor_rs').value) || 0,
+            valorFrag: parseFloat(document.getElementById('loja_valor_frag').value) || 0,
+            
+            isExp: document.getElementById('loja_is_exp').checked,
+            isRoleta: document.getElementById('loja_is_roleta').checked,
+            isRerolagem: document.getElementById('loja_is_rerolagem').checked,
+            isNarrativo: document.getElementById('loja_is_narrativo').checked,
+            isItemPersonagem: document.getElementById('loja_is_item_personagem').checked,
+            
+            modoSelecaoMeta: document.getElementById('loja_modo_meta_selecao').checked,
+            metasVinculadas: []
+        };
+
+        // Campos Condicionais
+        if (data.isExp) {
+            data.expAmount = parseFloat(document.getElementById('loja_exp_amount').value) || 0;
+            data.isExpVip = document.getElementById('loja_exp_vip').checked;
+        }
+        if (data.isRoleta) {
+            data.roletaGiros = parseFloat(document.getElementById('loja_roleta_giros').value) || 0;
+        }
+        if (data.isRerolagem) {
+            data.rerolagensAmount = parseFloat(document.getElementById('loja_rerolagem_amount').value) || 0;
+        }
+        if (data.isNarrativo) {
+            data.narrativoAplicacoes = parseFloat(document.getElementById('loja_narrativo_aplicacoes').value) || 0;
+            data.narrativoBeneficio = document.getElementById('loja_narrativo_beneficio').value.trim();
+            data.narrativoQuando = document.getElementById('loja_narrativo_quando').value.trim();
+        }
+        
+        data.personagemItensVinculados = [];
+        if (data.isItemPersonagem) {
+            const rows = document.querySelectorAll('.loja-item-personagem-row');
+            rows.forEach(r => {
+                const itemId = r.dataset.itemId;
+                const qtd = parseInt(r.querySelector('.loja-item-personagem-qtd').value) || 1;
+                data.personagemItensVinculados.push({ itemId, quantidade: Math.max(1, qtd) });
+            });
+        }
+        if (data.modoSelecaoMeta) {
+            data.quantidadeMetasSelecionaveis = parseFloat(document.getElementById('loja_meta_selecionaveis').value) || 1;
+        }
+
+        const cbs = document.querySelectorAll('.loja-meta-cb');
+        cbs.forEach(cb => {
+            if (cb.checked) data.metasVinculadas.push(cb.value);
+        });
+
+        if (id) {
+            await updateDoc(doc(db, 'loja_itens', id), data);
+            showAlert('Item atualizado com sucesso!', 'success');
+        } else {
+            await addDoc(collection(db, 'loja_itens'), data);
+            showAlert('Item criado com sucesso!', 'success');
+        }
+        
+        closeLojaModal();
+        await carregarSistemaLoja();
+
+    } catch (e) {
+        console.error('❌ Erro ao salvar item da loja:', e);
+        showAlert(e.message || 'Erro ao salvar item', 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.innerText = '💾 Salvar Item';
+    }
+};
+
+window.deleteLojaItem = async function(id) {
+    if (!confirm('Tem certeza que deseja excluir este item? Essa ação não pode ser desfeita.')) return;
+    try {
+        await deleteDoc(doc(db, 'loja_itens', id));
+        showAlert('Item excluído.', 'success');
+        await carregarSistemaLoja();
+    } catch (e) {
+        console.error('❌ Erro ao deletar:', e);
+        showAlert('Erro ao excluir', 'danger');
+    }
 };

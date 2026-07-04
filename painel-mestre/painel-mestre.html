@@ -374,6 +374,7 @@
                 <div class="sub-tabs">
                     <button class="sub-tab-btn active" data-subtab="apoios" onclick="switchSubTab('apoio','apoios')">🤝 Apoios</button>
                     <button class="sub-tab-btn" data-subtab="metas" onclick="switchSubTab('apoio','metas')">🎯 Metas</button>
+                    <button class="sub-tab-btn" data-subtab="loja" onclick="switchSubTab('apoio','loja')">🛒 Loja</button>
                     <button class="sub-tab-btn" data-subtab="notificacoes" onclick="switchSubTab('apoio','notificacoes')">📢 Notificações</button>
                     <button class="sub-tab-btn" data-subtab="producao" onclick="switchSubTab('apoio','producao')">🏭 Produção</button>
                 </div>
@@ -426,6 +427,14 @@
                     </div>
                     <div id="metasContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
                         <div style="text-align:center;padding:50px;color:var(--muted);grid-column:1/-1;">Carregando metas...</div>
+                    </div>
+                </div>
+                <div class="sub-tab-content" id="subtab-loja">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                        <button class="btn btn-success btn-small" onclick="openLojaModal()">➕ Novo Item</button>
+                    </div>
+                    <div id="lojaContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+                        <div style="text-align:center;padding:50px;color:var(--muted);grid-column:1/-1;">Carregando loja...</div>
                     </div>
                 </div>
                 <div class="sub-tab-content" id="subtab-notificacoes">
@@ -497,6 +506,144 @@
                 <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
                     <button class="btn btn-secondary" onclick="closeMetaModal()">Cancelar</button>
                     <button class="btn btn-success" onclick="saveMeta()">💾 Salvar Meta</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loja Modal -->
+    <div id="lojaModal" class="modal">
+        <div class="modal-content" style="max-width:750px;max-height:90vh;overflow-y:auto;">
+            <div class="modal-header">
+                <span class="modal-title" id="lojaModalTitle">Novo Item da Loja</span>
+                <button class="modal-close" onclick="closeLojaModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="loja_id">
+                
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Nome *</label>
+                        <input type="text" class="form-input" id="loja_nome" placeholder="Ex: Baú de Ouro">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Imagem</label>
+                        <input type="file" class="form-input" id="loja_imagem" accept="image/*">
+                        <div id="loja_imagem_preview" style="margin-top:6px;max-height:80px;display:none;"></div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label class="form-label">Descrição</label>
+                    <textarea class="form-textarea" id="loja_descricao" rows="2" placeholder="Descrição do item..."></textarea>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                    <div class="form-group">
+                        <label class="form-label">Valor R$</label>
+                        <input type="number" class="form-input" id="loja_valor_rs" placeholder="0" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Valor Frag$</label>
+                        <input type="number" class="form-input" id="loja_valor_frag" placeholder="0" min="0">
+                    </div>
+                </div>
+                
+                <!-- Propriedades Condicionais -->
+                <div style="border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:12px;margin-bottom:16px;background:rgba(0,0,0,0.1);">
+                    <div style="font-weight:700;color:var(--primary);margin-bottom:12px;">⚙️ Recompensas Específicas</div>
+                    
+                    <!-- EXP -->
+                    <div style="margin-bottom:10px;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="loja_is_exp" onchange="toggleLojaFields()" style="width:18px;height:18px"> <strong>É EXP?</strong>
+                        </label>
+                        <div id="loja_exp_fields" style="display:none;margin-top:8px;padding-left:26px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="form-group"><label class="form-label">Quantidade de EXP</label><input type="number" class="form-input" id="loja_exp_amount" min="1"></div>
+                            <div class="form-group" style="display:flex;align-items:flex-end;"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;"><input type="checkbox" id="loja_exp_vip" style="width:18px;height:18px"> É EXP VIP?</label></div>
+                        </div>
+                    </div>
+
+                    <!-- Roleta -->
+                    <div style="margin-bottom:10px;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="loja_is_roleta" onchange="toggleLojaFields()" style="width:18px;height:18px"> <strong>É Roleta?</strong>
+                        </label>
+                        <div id="loja_roleta_fields" style="display:none;margin-top:8px;padding-left:26px;">
+                            <div class="form-group"><label class="form-label">Quantidade de Giros</label><input type="number" class="form-input" id="loja_roleta_giros" min="1"></div>
+                        </div>
+                    </div>
+
+                    <!-- Re-rolagem -->
+                    <div style="margin-bottom:10px;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="loja_is_rerolagem" onchange="toggleLojaFields()" style="width:18px;height:18px"> <strong>É Re-rolagem?</strong>
+                        </label>
+                        <div id="loja_rerolagem_fields" style="display:none;margin-top:8px;padding-left:26px;">
+                            <div class="form-group"><label class="form-label">Quantidade de Re-rolagens</label><input type="number" class="form-input" id="loja_rerolagem_amount" min="1"></div>
+                        </div>
+                    </div>
+
+                    <!-- Narrativo -->
+                    <div style="margin-bottom:10px;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="loja_is_narrativo" onchange="toggleLojaFields()" style="width:18px;height:18px"> <strong>É Narrativo?</strong>
+                        </label>
+                        <div id="loja_narrativo_fields" style="display:none;margin-top:8px;padding-left:26px;display:grid;grid-template-columns:1fr;gap:10px;">
+                            <div class="form-group"><label class="form-label">Quantidade de Aplicações</label><input type="number" class="form-input" id="loja_narrativo_aplicacoes" min="1"></div>
+                            <div class="form-group"><label class="form-label">Descrição do Benefício</label><input type="text" class="form-input" id="loja_narrativo_beneficio"></div>
+                            <div class="form-group"><label class="form-label">Quando pode ser aplicado</label><input type="text" class="form-input" id="loja_narrativo_quando"></div>
+                        </div>
+                    </div>
+
+                    <!-- Item de Personagem -->
+                    <div>
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="loja_is_item_personagem" onchange="toggleLojaFields()" style="width:18px;height:18px"> <strong>É Item de Personagem?</strong>
+                        </label>
+                        <div id="loja_item_personagem_fields" style="display:none;margin-top:8px;padding-left:26px;">
+                            <div class="form-group" style="margin-bottom:10px;">
+                                <label class="form-label">Adicionar Item Físico</label>
+                                <div style="display:flex;gap:8px;">
+                                    <select class="form-select" id="loja_item_personagem_select" style="flex:1;">
+                                        <option value="">Carregando equipamentos...</option>
+                                    </select>
+                                    <button class="btn btn-primary btn-small" onclick="addLojaItemPersonagemRow()">Adicionar</button>
+                                </div>
+                            </div>
+                            <div id="loja_item_personagem_list" style="display:grid;gap:8px;max-height:150px;overflow-y:auto;background:rgba(0,0,0,0.2);padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.05);">
+                                <!-- Linhas dinâmicas -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metas -->
+                <div style="border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:12px;background:rgba(0,0,0,0.1);">
+                    <div style="font-weight:700;color:var(--primary);margin-bottom:12px;">🎯 Integração com Metas</div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Metas Vinculadas</label>
+                        <div id="loja_metas_list" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:150px;overflow-y:auto;background:rgba(0,0,0,0.2);padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.05);">
+                            <!-- Dinâmico -->
+                            <div style="color:var(--muted);font-size:0.8rem;">Carregando metas...</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:10px;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;">
+                            <input type="checkbox" id="loja_modo_meta_selecao" onchange="toggleLojaFields()" checked style="width:18px;height:18px"> 
+                            <strong>O Jogador escolhe a Meta?</strong> <span style="font-size:0.75rem;color:var(--muted)">(OFF = Bate todas as vinculadas)</span>
+                        </label>
+                        <div id="loja_modo_meta_fields" style="display:none;padding-left:26px;">
+                            <div class="form-group"><label class="form-label">Qtd. de Metas Selecionáveis</label><input type="number" class="form-input" id="loja_meta_selecionaveis" min="1" value="1"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+                    <button class="btn btn-secondary" onclick="closeLojaModal()">Cancelar</button>
+                    <button class="btn btn-success" onclick="saveLojaItem()">💾 Salvar Item</button>
                 </div>
             </div>
         </div>
