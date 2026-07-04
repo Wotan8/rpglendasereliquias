@@ -179,3 +179,223 @@
         border-radius: 10px;
     }
 }
+.mechsel-wrap {
+    margin-bottom: 12px;
+}
+
+.mechsel-label {
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    display: block;
+}
+
+.mechsel-chips {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.mechsel-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: var(--chip);
+    border: 1px solid var(--soft);
+    border-left: 4px solid var(--type-modificar);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: .78rem;
+    transition: all .15s;
+}
+
+html.dark .mechsel-chip {
+    background: #0f1120;
+    border-color: var(--line);
+}
+
+.mechsel-chip-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.mechsel-chip-name {
+    font-weight: 800;
+    color: var(--ink);
+    font-size: .8rem;
+}
+
+.mechsel-chip-preview {
+    color: var(--muted);
+    font-style: italic;
+    font-size: .72rem;
+    margin-top: 2px;
+}
+
+.mechsel-chip-remove {
+    background: transparent;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: .7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all .15s;
+}
+
+.mechsel-chip-remove:hover {
+    background: var(--danger);
+    color: #fff;
+}
+
+.mechsel-add-btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: .72rem;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: var(--font);
+    text-transform: uppercase;
+    transition: background .15s;
+}
+
+.mechsel-add-btn:hover {
+    background: #3b5ae6;
+}
+
+.mechsel-search {
+    margin-top: 8px;
+    border: 2px solid var(--soft);
+    border-radius: 8px;
+    padding: 10px;
+    max-height: 280px;
+    overflow-y: auto;
+    display: none;
+}
+
+.mechsel-search.open {
+    display: block;
+}
+
+html.dark .mechsel-search {
+    background: #0f1120;
+    border-color: var(--line);
+}
+
+.mechsel-search-bar {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.mechsel-search-bar input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 2px solid var(--soft);
+    border-radius: 6px;
+    font-size: .78rem;
+    font-family: var(--font);
+    background: #fff;
+    color: var(--ink);
+}
+
+html.dark .mechsel-search-bar input {
+    background: #151829;
+    border-color: var(--line);
+    color: var(--ink);
+}
+
+.mechsel-search-bar select {
+    padding: 6px 8px;
+    border: 2px solid var(--soft);
+    border-radius: 6px;
+    font-size: .72rem;
+    font-weight: 700;
+    font-family: var(--font);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+}
+
+html.dark .mechsel-search-bar select {
+    background: #151829;
+    border-color: var(--line);
+    color: var(--ink);
+}
+
+.mechsel-results {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mechsel-result {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background .1s;
+    font-size: .78rem;
+}
+
+.mechsel-result:hover {
+    background: rgba(79, 110, 247, .08);
+}
+
+.mechsel-result input[type="checkbox"] {
+    accent-color: var(--primary);
+    flex-shrink: 0;
+}
+
+.mechsel-result-name {
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.mechsel-result-preview {
+    font-size: .68rem;
+    color: var(--muted);
+    font-style: italic;
+    margin-left: auto;
+}
+
+.mechsel-confirm {
+    margin-top: 8px;
+    background: var(--success);
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: .72rem;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: var(--font);
+    text-transform: uppercase;
+    width: 100%;
+    transition: background .15s;
+}
+
+.mechsel-confirm:hover {
+    background: #059669;
+}
+
+/* -- Grouped Select styling -- */
+.mech-form-section select optgroup {
+    font-weight: 800;
+    font-style: normal;
+    color: var(--muted);

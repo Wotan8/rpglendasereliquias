@@ -4,6 +4,7 @@
 import { db, collection, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
+import { buildMechanicSelectorHTML } from '../../painel-criador/js/painel-mechanics.js';
 
 window._loadMesaInventarios = loadMesaInventarios;
 window._loadPersonagensInventario = loadPersonagensInventario;
@@ -335,6 +336,36 @@ window._openMestreItemFormModal = async function(mesaId, editItemId, targetCharI
     }
 
     const isEdit = !!item;
+
+    if (!window._systemData) window._systemData = {};
+    if (!window._systemData.mechanics || window._systemData.mechanics.length === 0) {
+        try {
+            const snap = await getDocs(collection(db, 'system/data/mechanics'));
+            window._systemData.mechanics = [];
+            snap.forEach(d => {
+                const data = d.data();
+                if (data.publicado !== false) window._systemData.mechanics.push({ id: d.id, ...data });
+            });
+        } catch(e) {
+            console.error("Erro ao carregar mecânicas do sistema:", e);
+            window._systemData.mechanics = [];
+        }
+    }
+
+    if (!window._systemData.bodyParts || window._systemData.bodyParts.length === 0) {
+        try {
+            const snap = await getDocs(collection(db, 'system/data/bodyParts'));
+            window._systemData.bodyParts = [];
+            snap.forEach(d => {
+                const data = d.data();
+                if (data.publicado !== false) window._systemData.bodyParts.push({ id: d.id, ...data });
+            });
+        } catch(e) {
+            console.error("Erro ao carregar partes do corpo do sistema:", e);
+            window._systemData.bodyParts = [];
+        }
+    }
+
     const bodyParts = window._systemData?.bodyParts || []; 
 
     const modal = document.createElement('div');
@@ -426,6 +457,12 @@ window._openMestreItemFormModal = async function(mesaId, editItemId, targetCharI
                     <label class="inv-form-label">Imagem (URL)</label>
                     <input type="text" id="invFormImagem" class="inv-form-input" value="${escapeHtml(item?.imagem || item?.imagemUrl || '')}" placeholder="https://...">
                 </div>
+                <div class="inv-form-group inv-form-wide">
+                    ${(() => {
+                        window._mechCache = window._systemData?.mechanics || [];
+                        return buildMechanicSelectorHTML('mecanicaIds', 'Mecânicas Vinculadas', item?.mecanicaIdsProprias || [], window._mechCache, 'item');
+                    })()}
+                </div>
             </div>
             <input type="hidden" id="mif_mesaId" value="${mesaId}">
             <input type="hidden" id="mif_targetCharId" value="${targetCharId}">
@@ -473,6 +510,13 @@ window._saveMestreItem = async function() {
     const equipOpts = document.getElementById('invFormEquipavelEm')?.selectedOptions;
     const equipavelEm = equipOpts ? Array.from(equipOpts).map(o => o.value) : [];
 
+    const mecanicaIdsEl = document.getElementById('field_mecanicaIds');
+    let mecanicaIds = [];
+    if (mecanicaIdsEl) {
+        try { mecanicaIds = JSON.parse(mecanicaIdsEl.value || '[]'); }
+        catch { mecanicaIds = []; }
+    }
+
     const itemData = {
         nome,
         tipo,
@@ -484,6 +528,7 @@ window._saveMestreItem = async function() {
         quantidade: (isContainer || tipo === 'Arma') ? 1 : Math.max(1, parseInt(document.getElementById('invFormQuantidade')?.value) || 1),
         descricao: document.getElementById('invFormDesc')?.value?.trim() || '',
         imagem: document.getElementById('invFormImagem')?.value?.trim() || '',
+        mecanicaIdsProprias: mecanicaIds,
         characterId: targetCharId,
         ownerUid: S.currentUser?.uid || '', // Might update below
         ehContainer: isContainer,
