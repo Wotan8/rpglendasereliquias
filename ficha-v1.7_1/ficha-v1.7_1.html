@@ -70,19 +70,25 @@
 
             <!-- ======== PRINCIPAL ======== -->
             <div class="tab-content active" id="tabPrincipal">
-
                 <div class="section">
                     <div class="section-title">Identificação</div>
                     <div class="id-wrapper">
-                        <div class="id-fields">
+                                                <div class="id-fields">
                             <div class="row" style="grid-template-columns: 1.5fr 1fr 60px;">
-                                <div class="field"><label>Nome</label><input type="text" data-key="nome"
+                                <div class="field"><label>Nome <span class="info-btn" id="infoIdentity" onclick="openIdentityDetail()" title="Ver Identidade do Personagem">ℹ️</span></label><input type="text" data-key="nome"
                                         placeholder="Nome do personagem"></div>
                                 <div class="field"><label>Jogador</label><input type="text" data-key="jogador"
                                         placeholder="Nome do jogador"></div>
                                 <div class="field"><label>Sessões</label><input type="text" data-key="sessoes"
                                         placeholder="0" maxlength="3" style="text-align: center;"></div>
                             </div>
+                            
+                            <!-- Hidden fields for Identity Data -->
+                            <input type="hidden" data-key="aparencia">
+                            <input type="hidden" data-key="motivacao">
+                            <input type="hidden" data-key="medo">
+                            <input type="hidden" data-key="arrependimento">
+
                             <div class="row" style="grid-template-columns: 0.25fr 1fr 1fr 1fr;">
                                 <div class="field"><label>Idade</label><input type="text" data-key="idade" placeholder="0" maxlength="4" style="text-align: center;"></div>
                                 <div class="field"><label>Raça <span class="info-btn" id="infoRaca" onclick="openRaceDetail()" title="Ver detalhes da raça">ℹ️</span></label><select id="selRaca" data-key="raca">

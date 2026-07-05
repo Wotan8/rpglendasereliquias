@@ -527,3 +527,138 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+
+/* ===== IDENTITY MODAL ===== */
+
+function openIdentityDetail() {
+    const modal = document.getElementById('detailModal');
+    const body = document.getElementById('detailModalBody');
+    if (!modal || !body) return;
+
+    let html = buildIdentityDetailHTML();
+    if (!html) return;
+
+    body.innerHTML = html;
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function updateIdentityField(key, value) {
+    // Update the hidden input in the main DOM so gatherData picks it up
+    const el = document.querySelector(`input[type="hidden"][data-key="${key}"]`) || document.querySelector(`[data-key="${key}"]`);
+    if (el) {
+        el.value = value;
+    }
+    // Update state directly just in case
+    if (typeof state !== 'undefined' && state.fields) {
+        state.fields[key] = value;
+    }
+    
+    // Trigger autosave
+    if (typeof scheduleAutosave === 'function') scheduleAutosave();
+}
+
+function buildIdentityDetailHTML() {
+    // Pega os valores direto do DOM (já que state.fields não é populado no load inicial)
+    const getField = (key) => document.querySelector(`[data-key="${key}"]`)?.value || '';
+    
+    let nome = getField('nome');
+    let idade = getField('idade');
+    let aparencia = getField('aparencia');
+    let motivacao = getField('motivacao');
+    let medo = getField('medo');
+    let arrependimento = getField('arrependimento');
+
+    // Parse arrependimento fallback
+    if (!arrependimento && typeof state !== 'undefined' && state.notes) {
+        const vesperaNote = state.notes.find(n => n.titulo === '🌅 A Véspera da Partida' || n.titulo === '💭 Últimas Reflexões');
+        if (vesperaNote && vesperaNote.conteudo) {
+            const match = vesperaNote.conteudo.match(/<b>Arrependimento:<\/b>\s*(.*?)(?:<br>|$)/);
+            if (match && match[1] && match[1] !== '—') {
+                arrependimento = match[1].trim();
+                const hiddenInput = document.querySelector('input[type="hidden"][data-key="arrependimento"]');
+                if (hiddenInput) hiddenInput.value = arrependimento;
+            }
+        }
+    }
+
+    const nomeLabel = (nome.trim().indexOf(' ') !== -1) ? 'Nome Completo' : 'Nome';
+    
+    // Using the same layout structure as other modals
+    let html = `
+        <div class="detail-header" style="margin-bottom: 24px;">
+            <div class="detail-title">Identidade Final</div>
+            <div class="detail-subtitle">Conheça os detalhes mais profundos de ${nome}</div>
+        </div>
+        
+        <div class="detail-section" style="margin-bottom: 20px; text-align: center;">
+            <label style="display:block; margin-bottom: 8px; color: var(--muted); font-size: 0.85rem; font-weight: bold;">Imagem do Personagem</label>
+            <div id="identityImgWrap">
+                ${state.charImg ? '<img id="identityImgPreview" src="' + state.charImg + '" style="max-width: 100%; max-height: 300px; border-radius: 12px; object-fit: cover; border: 2px solid var(--soft);">' : '<div style="padding: 40px; border: 2px dashed var(--soft); border-radius: 12px; color: var(--muted);">Nenhuma imagem definida</div>'}
+            </div>
+            <div style="margin-top: 10px;">
+                <input type="file" id="identityImgUpload" accept="image/*" onchange="handleIdentityImgUpload(this)" style="display:none;">
+                <button class="btn" style="font-size: 0.8rem; padding: 6px 12px;" onclick="document.getElementById('identityImgUpload').click()">📷 Alterar Imagem</button>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <div class="field" style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom: 4px; color: var(--muted); font-weight: bold;">${nomeLabel}</label>
+                <input type="text" value="${nome}" readonly disabled style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--soft); background: rgba(0,0,0,0.3); color: var(--text); font-family: inherit;">
+            </div>
+            
+            <div class="field" style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom: 4px; color: var(--muted); font-weight: bold;">Idade</label>
+                <input type="number" value="${idade}" placeholder="Sua idade" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--soft); background: var(--bg); color: var(--text); font-family: inherit;" oninput="updateIdentityField('idade', this.value)">
+            </div>
+            
+            <div class="field" style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom: 4px; color: var(--muted); font-weight: bold;">Aparência</label>
+                <textarea rows="3" placeholder="Descreva a aparência..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--soft); background: var(--bg); color: var(--text); resize: vertical; font-family: inherit;" oninput="updateIdentityField('aparencia', this.value)">${aparencia}</textarea>
+            </div>
+            
+            <div class="field" style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom: 4px; color: var(--muted); font-weight: bold;">Motivação</label>
+                <textarea rows="2" placeholder="O que te faz levantar toda manhã?" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--soft); background: var(--bg); color: var(--text); resize: vertical; font-family: inherit;" oninput="updateIdentityField('motivacao', this.value)">${motivacao}</textarea>
+            </div>
+            
+            <div class="field" style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom: 4px; color: var(--muted); font-weight: bold;">Medo</label>
+                <textarea rows="2" placeholder="O que te mantém acordado à noite?" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--soft); background: var(--bg); color: var(--text); resize: vertical; font-family: inherit;" oninput="updateIdentityField('medo', this.value)">${medo}</textarea>
+            </div>
+            
+            <div class="field" style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom: 4px; color: var(--muted); font-weight: bold;">Arrependimento</label>
+                <textarea rows="2" placeholder="Do que você se arrepende?" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--soft); background: var(--bg); color: var(--text); resize: vertical; font-family: inherit;" oninput="updateIdentityField('arrependimento', this.value)">${arrependimento}</textarea>
+            </div>
+        </div>
+    `;
+
+    return html;
+}
+
+function handleIdentityImgUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (ev) {
+        state.charImg = ev.target.result;
+        
+        // Atualiza a imagem na ficha principal caso exista e seja visível
+        const mainImg = document.getElementById('charImgPreview');
+        if (mainImg) {
+            mainImg.src = state.charImg;
+            mainImg.style.display = 'block';
+            const placeholder = document.getElementById('charImgPlaceholder');
+            if (placeholder) placeholder.style.display = 'none';
+        }
+
+        // Reabre o modal para atualizar a visualização da imagem
+        openIdentityDetail();
+        if (typeof scheduleAutosave === 'function') scheduleAutosave();
+    };
+    reader.readAsDataURL(file);
+}
