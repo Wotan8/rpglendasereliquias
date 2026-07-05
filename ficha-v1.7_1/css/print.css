@@ -127,6 +127,7 @@
     .tabs,
     .add-btn,
     .rm-btn,
+    .info-btn,
     .note-editor-modal,
     #printOverlay {
         display: none !important;
@@ -257,11 +258,22 @@
         grid-template-columns: 1fr 1fr 1fr !important;
     }
 
+    .attr-block, .skill-block {
+        padding: 2px 4px !important;
+        margin-bottom: 2px !important;
+    }
+    
+    .attr-block-title, .skill-block-title {
+        font-size: 9px !important;
+        padding: 1px 0 !important;
+        margin-bottom: 1px !important;
+    }
+
     .attr-item .print-abbr {
         display: inline !important;
         font-weight: 1000;
         letter-spacing: .4px;
-        font-size: 12px;
+        font-size: 10px !important;
         text-transform: uppercase;
     }
 
@@ -271,6 +283,32 @@
 
     .skills-row {
         grid-template-columns: repeat(5, 1fr) !important;
+        gap: 5px !important;
+    }
+    
+    .sk-name {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        font-size: 8.5px !important;
+        line-height: 1.1 !important;
+    }
+    
+    .dots5, .dots3 {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+    }
+    
+    .dots5 .dot, .dots3 .dot {
+        display: none !important;
+    }
+    
+    .dots5::after, .dots3::after {
+        content: attr(data-print-val);
+        font-weight: 800 !important;
+        font-size: 11px !important;
+        color: var(--ink, #000) !important;
     }
 
     .mini {
@@ -324,6 +362,57 @@
         font-weight: bold !important;
         font-size: 14px !important;
         margin: 0 4px !important;
+    }
+    
+    /* VALORES DERIVADOS */
+    #derivedValuesGrid {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 6px !important;
+        align-items: start !important;
+    }
+    
+    .dv-block-container {
+        border: 1px solid var(--line, #ccc) !important;
+        padding: 4px !important;
+        border-radius: 6px !important;
+        margin-bottom: 0 !important;
+        page-break-inside: avoid !important;
+    }
+    
+    .dv-block-container .combat-grid {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+    
+    .dv-block-container .mini-field {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        border: none !important;
+        padding: 0 !important;
+        background: transparent !important;
+        flex: 1 1 auto !important;
+        min-width: 40px !important;
+    }
+    
+    .dv-block-container .dv-label {
+        font-size: 11px !important;
+        font-weight: bold !important;
+        color: var(--ink) !important;
+        margin-bottom: 2px !important;
+    }
+    
+    .dv-block-container .derived-field {
+        border: none !important;
+        background: transparent !important;
+        font-size: 13px !important;
+        color: var(--ink) !important;
+        text-align: center !important;
+        padding: 0 !important;
+        font-weight: normal !important;
+        width: 100% !important;
     }
 
     .class-resources {

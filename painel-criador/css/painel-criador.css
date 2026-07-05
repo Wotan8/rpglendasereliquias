@@ -2541,8 +2541,7 @@ html.dark .settings-tab:hover {
     color: var(--ink);
     margin: 0;
 }
-.favicon-card input[type=\
-file\] {
+.favicon-card input[type="file"] {
     display: none;
 }
 .btn-upload {
@@ -2606,52 +2605,60 @@ file\] {
     border: 1px solid var(--line);
 }
 .bp-linked-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 10px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
 }
 .bp-linked-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    gap: 12px;
     background: var(--paper);
     border: 1px solid var(--line);
     border-radius: 8px;
-    padding: 8px 12px;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    padding: 10px 14px;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    min-width: 0;
 }
 .bp-linked-item:hover {
     border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(79, 110, 247, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transform: translateY(-2px);
 }
 .bp-linked-name {
     flex: 1;
     font-weight: 700;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .bp-linked-slots {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    flex-shrink: 0;
 }
 .bp-linked-slots label {
-    font-size: 0.72rem;
+    font-size: 0.8rem;
     font-weight: 700;
     color: var(--muted);
     white-space: nowrap;
 }
 .bp-slot-input {
-    width: 56px;
-    padding: 4px 6px;
+    width: 60px;
+    padding: 6px 8px;
     border-radius: 6px;
     border: 1px solid var(--line);
     background: var(--chip);
     color: var(--ink);
     font-weight: 700;
-    font-size: 0.82rem;
+    font-size: 0.9rem;
     text-align: center;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 .bp-slot-input:focus {
     outline: none;
@@ -2659,23 +2666,25 @@ file\] {
     box-shadow: 0 0 0 2px rgba(79, 110, 247, 0.2);
 }
 .bp-linked-remove {
-    background: none;
-    border: 1px solid var(--danger);
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid transparent;
     color: var(--danger);
-    border-radius: 6px;
-    width: 28px;
-    height: 28px;
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 0.8rem;
-    transition: background 0.2s, color 0.2s;
+    font-size: 1rem;
+    font-weight: bold;
+    transition: all 0.2s ease;
     flex-shrink: 0;
 }
 .bp-linked-remove:hover {
     background: var(--danger);
     color: #fff;
+    transform: scale(1.05);
 }
 .bp-add-bar {
     display: flex;

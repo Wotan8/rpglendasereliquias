@@ -185,6 +185,13 @@ function initDots() {
 function refreshDots(c, k) {
     const v = state.dots[k] || 0;
     const auraInfo = typeof getAuraInfoForDot === 'function' ? getAuraInfoForDot(k) : null;
+    let finalPrintValue = v;
+
+    if (auraInfo && auraInfo.grauDesbloqueado > 0) {
+        const floorVal = _getFloorForRefresh(k);
+        finalPrintValue = v + floorVal;
+    }
+    c.setAttribute('data-print-val', finalPrintValue);
 
     if (auraInfo && auraInfo.grauDesbloqueado > 0) {
         const baseDots = typeof getPropertyBaseDots === 'function' ? getPropertyBaseDots(k) : 5;

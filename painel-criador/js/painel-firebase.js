@@ -922,6 +922,441 @@ window.confirmDelete = async function () {
     }
 };
 
+// ===== SUB-FORM MODAL (PECULIARIDADES) =====
+window._openSubFormPeculiaridade = function (pid, parentFieldKey = null) {
+    // Mascarar temporariamente os IDs do modal principal para evitar colisão no DOM
+    const mainForm = document.getElementById('formModal');
+    if (mainForm) {
+        mainForm.querySelectorAll('[id]').forEach(el => {
+            if (el.id.startsWith('field_') || el.id.startsWith('tags_') || el.id.startsWith('img_preview_') || el.id.startsWith('multisel_') || el.id === 'btnSave') {
+                el.dataset.tempId = el.id;
+                el.id = 'temp_' + el.id;
+            }
+        });
+    }
+
+    // Criar overlay do sub-modal
+    const overlay = document.createElement('div');
+    overlay.className = 'modal form-modal active';
+    overlay.id = 'subFormModalPeculiaridade';
+    overlay.style.zIndex = '999999'; // Sobrescreve o formModal (que usa 9999/99999)
+    
+    const isEdit = !!pid;
+    overlay.innerHTML = `
+      <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+          <div class="form-header">
+              <h2>${isEdit ? '✏️ Editar Peculiaridade' : '➕ Criar Peculiaridade'}</h2>
+              <button type="button" class="btn-close-form" onclick="window.closeSubFormPeculiaridade()">✕</button>
+          </div>
+          <form onsubmit="window.saveSubFormPeculiaridade(event, '${pid || ''}', '${parentFieldKey || ''}')">
+              <div id="subFormFieldsWrapper">
+                  <div id="subFormFields" class="form-grid"></div>
+              </div>
+              <div class="full-width" style="margin-top: 15px;">
+                 <div class="form-toggle">
+                     <label class="toggle-publish">
+                         <input type="checkbox" id="field_publicado">
+                         <span class="slider"></span>
+                         Publicado
+                     </label>
+                 </div>
+              </div>
+              <div class="form-actions">
+                  <button type="button" class="btn-modal btn-cancel" onclick="window.closeSubFormPeculiaridade()">Cancelar</button>
+                  <button type="submit" class="btn-save" id="btnSaveSub">💾 Salvar Alterações</button>
+              </div>
+          </form>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Carregar os campos com buildField()
+    const modDef = MODULE_DEFS['peculiarities'];
+    const existingData = peculiaritiesCache.find(p => p.id === pid) || {};
+    const container = overlay.querySelector('#subFormFields');
+
+    // Precisamos ajustar o currentModule para o mechanic_selector interno funcionar
+    window._prevModuleForSubForm = currentModule;
+    currentModule = 'peculiarities';
+
+    modDef.fields.forEach(field => {
+        let value = existingData[field.key];
+        if (value === undefined && field.defaultValue !== undefined) {
+            value = field.defaultValue;
+        }
+        if (field.key === 'concedeAura' && value === undefined && existingData.auraVinculadaId) {
+            value = true;
+        }
+        const el = buildField(field, value, existingData);
+        container.appendChild(el);
+    });
+
+    if(existingData.publicado) {
+        overlay.querySelector('#field_publicado').checked = true;
+    }
+};
+
+window.closeSubFormPeculiaridade = function () {
+    const overlay = document.getElementById('subFormModalPeculiaridade');
+    if (overlay) overlay.remove();
+
+    // Restaurar currentModule
+    if (window._prevModuleForSubForm) {
+        currentModule = window._prevModuleForSubForm;
+        window._prevModuleForSubForm = null;
+    }
+
+    // Desmascarar IDs do modal principal
+    const mainForm = document.getElementById('formModal');
+    if (mainForm) {
+        mainForm.querySelectorAll('[data-temp-id]').forEach(el => {
+            el.id = el.dataset.tempId;
+            delete el.dataset.tempId;
+        });
+    }
+};
+
+window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSaveSub');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
+
+    try {
+        const modDef = MODULE_DEFS['peculiarities'];
+        const data = {};
+
+        modDef.fields.forEach(field => {
+            if (field.type === 'aura_property_selector' || field.type === 'aura_selector') {
+                const el = document.getElementById(`field_${field.key}`);
+                data[field.key] = el ? el.value : '';
+            } else if (field.type === 'array') {
+                data[field.key] = collectArrayData(field);
+            } else if (field.type === 'tags') {
+                const container = document.getElementById(`tags_${field.key}`);
+                if (container) {
+                    data[field.key] = Array.from(container.querySelectorAll('.tag')).map(t =>
+                        t.textContent.replace('×', '').trim()
+                    );
+                } else {
+                    data[field.key] = [];
+                }
+            } else if (field.type === 'mechanic_selector') {
+                const el = document.getElementById(`field_${field.key}`);
+                data[field.key] = el ? JSON.parse(el.value || '[]') : [];
+            } else if (field.type === 'boolean') {
+                const el = document.getElementById(`field_${field.key}`);
+                data[field.key] = el ? el.checked : false;
+            } else if (field.type === 'multi_select') {
+                const el = document.getElementById(`field_${field.key}`);
+                data[field.key] = el ? JSON.parse(el.value || '[]') : [];
+            } else if (field.type === 'number') {
+                const el = document.getElementById(`field_${field.key}`);
+                data[field.key] = el && el.value !== '' ? Number(el.value) : null;
+            } else {
+                const el = document.getElementById(`field_${field.key}`);
+                if (el) {
+                    if (field.type === 'textarea') {
+                        data[field.key] = el.value.replace(/\\r\\n/g, '\\n');
+                    } else {
+                        data[field.key] = el.value;
+                    }
+                }
+            }
+        });
+
+        data.publicado = document.getElementById('field_publicado').checked;
+        
+        let savedPid = pid;
+        if (pid) {
+            data.updatedAt = Timestamp.now();
+            await updateDoc(doc(db, modDef.collection, pid), data);
+        } else {
+            data.createdAt = Timestamp.now();
+            data.updatedAt = Timestamp.now();
+            const newDocRef = await addDoc(collection(db, modDef.collection), data);
+            savedPid = newDocRef.id;
+        }
+
+        // Atualizar cache local
+        const idx = peculiaritiesCache.findIndex(p => p.id === savedPid);
+        if (idx >= 0) {
+            peculiaritiesCache[idx] = { id: savedPid, ...data, updatedAt: new Date() };
+        } else {
+            peculiaritiesCache.push({ id: savedPid, ...data, createdAt: new Date(), updatedAt: new Date() });
+        }
+
+        // Fechar sub-modal
+        window.closeSubFormPeculiaridade();
+
+        // Se parentFieldKey foi fornecido
+        if (parentFieldKey && parentFieldKey !== 'null') {
+            const parentFieldPeculiaridade = document.getElementById('temp_field_' + parentFieldKey) || document.getElementById('field_' + parentFieldKey);
+            if (parentFieldPeculiaridade) {
+                let currentIds = JSON.parse(parentFieldPeculiaridade.value || '[]');
+                
+                if (!pid) {
+                    const isObjectFormat = currentIds.length > 0 && typeof currentIds[0] === 'object';
+                    if (isObjectFormat || currentIds.length === 0) {
+                        currentIds.push({ id: savedPid, nivelInicial: 1 });
+                    } else {
+                        currentIds.push(savedPid);
+                    }
+                    parentFieldPeculiaridade.value = JSON.stringify(currentIds);
+                }
+                
+                const wrap = document.getElementById('temp_field_' + parentFieldKey + '_wrap') || document.getElementById('field_' + parentFieldKey + '_wrap');
+                if (wrap) {
+                    import('./painel-mechanics.js?v=2').then(m => {
+                        const labelSpan = wrap.querySelector('.mechsel-label');
+                        const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
+                        
+                        const tempId = parentFieldPeculiaridade.id.startsWith('temp_') ? 'temp_' : '';
+                        
+                        let modifiedHtml = m.buildPecSelectorHTML(parentFieldKey, labelText, currentIds, peculiaritiesCache, '');
+                        if (tempId) {
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`id="field_${parentFieldKey}`, 'g'), `id="temp_field_${parentFieldKey}`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelFilter\\('field_${parentFieldKey}'`, 'g'), `window._mechSelFilter('temp_field_${parentFieldKey}'`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelRemove\\('field_${parentFieldKey}'`, 'g'), `window._mechSelRemove('temp_field_${parentFieldKey}'`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._pecSelLevelChange\\('field_${parentFieldKey}'`, 'g'), `window._pecSelLevelChange('temp_field_${parentFieldKey}'`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._pecSelConfirm\\('field_${parentFieldKey}'`, 'g'), `window._pecSelConfirm('temp_field_${parentFieldKey}'`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelConfirm\\('field_${parentFieldKey}'`, 'g'), `window._mechSelConfirm('temp_field_${parentFieldKey}'`);
+                        }
+                        
+                        wrap.outerHTML = modifiedHtml;
+                    });
+                }
+            }
+        } else {
+            // Fallback for generic peculiaridadeIds field if no parentFieldKey is provided
+            const legacyField = document.getElementById('temp_field_peculiaridadeIds') || document.getElementById('field_peculiaridadeIds');
+            const wrap = document.getElementById('temp_field_peculiaridadeIds_wrap') || document.getElementById('field_peculiaridadeIds_wrap');
+            if (wrap && legacyField) {
+                const currentIds = JSON.parse(legacyField.value || '[]');
+                import('./painel-mechanics.js?v=2').then(m => {
+                    const labelSpan = wrap.querySelector('.mechsel-label');
+                    const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
+                    
+                    const tempId = legacyField.id.startsWith('temp_') ? 'temp_' : '';
+                    
+                    let newHtml = m.buildPecSelectorHTML('peculiaridadeIds', labelText, currentIds, peculiaritiesCache, '');
+                    if (tempId) {
+                        newHtml = newHtml.replace(new RegExp(`id="field_peculiaridadeIds`, 'g'), `id="temp_field_peculiaridadeIds`);
+                    }
+                    wrap.outerHTML = newHtml;
+                });
+            }
+        }
+        
+        showAlert('✅ Peculiaridade atualizada com sucesso!', 'success');
+    } catch (e) {
+        console.error('Erro ao salvar sub-form:', e);
+        showAlert('❌ Erro ao salvar: ' + e.message, 'danger');
+        if (btn) { btn.disabled = false; btn.textContent = '💾 Salvar Alterações'; }
+    }
+};
+
+// ===== SUB-FORM MODAL (VALORES DERIVADOS) =====
+window._openSubFormValorDerivado = function (vid, parentFieldKey = null) {
+    const mainForm = document.getElementById('formModal');
+    if (mainForm) {
+        mainForm.querySelectorAll('[id]').forEach(el => {
+            if (el.id.startsWith('field_') || el.id.startsWith('tags_') || el.id.startsWith('img_preview_') || el.id.startsWith('multisel_') || el.id === 'btnSave') {
+                el.dataset.tempId = el.id;
+                el.id = 'temp_' + el.id;
+            }
+        });
+    }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal form-modal active';
+    overlay.id = 'subFormModalValorDerivado';
+    overlay.style.zIndex = '999999';
+    
+    const isEdit = !!vid;
+    overlay.innerHTML = `
+      <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+          <div class="form-header">
+              <h2>${isEdit ? '✏️ Editar Valor Derivado' : '➕ Criar Valor Derivado'}</h2>
+              <button type="button" class="btn-close-form" onclick="window.closeSubFormValorDerivado()">✕</button>
+          </div>
+          <form onsubmit="window.saveSubFormValorDerivado(event, '${vid || ''}', '${parentFieldKey || ''}')">
+              <div id="subFormFieldsWrapper">
+                  <div id="subFormFields" class="form-grid"></div>
+              </div>
+              <div class="full-width" style="margin-top: 15px;">
+                 <div class="form-toggle">
+                     <label class="toggle-publish">
+                         <input type="checkbox" id="field_publicado">
+                         <span class="slider"></span>
+                         Publicado
+                     </label>
+                 </div>
+              </div>
+              <div class="form-actions">
+                  <button type="button" class="btn-modal btn-cancel" onclick="window.closeSubFormValorDerivado()">Cancelar</button>
+                  <button type="submit" class="btn-save" id="btnSaveSub">💾 Salvar Alterações</button>
+              </div>
+          </form>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const modDef = MODULE_DEFS['derivedValues'];
+    const existingData = derivedValuesCache.find(p => p.id === vid) || {};
+    const container = overlay.querySelector('#subFormFields');
+
+    window._prevModuleForSubForm = currentModule;
+    currentModule = 'derivedValues';
+
+    modDef.fields.forEach(field => {
+        let value = existingData[field.key];
+        if (value === undefined && field.defaultValue !== undefined) {
+            value = field.defaultValue;
+        }
+        const el = buildField(field, value, existingData);
+        container.appendChild(el);
+    });
+
+    if(existingData.publicado) {
+        overlay.querySelector('#field_publicado').checked = true;
+    }
+};
+
+window.closeSubFormValorDerivado = function () {
+    const overlay = document.getElementById('subFormModalValorDerivado');
+    if (overlay) overlay.remove();
+
+    if (window._prevModuleForSubForm) {
+        currentModule = window._prevModuleForSubForm;
+        window._prevModuleForSubForm = null;
+    }
+
+    const mainForm = document.getElementById('formModal');
+    if (mainForm) {
+        mainForm.querySelectorAll('[data-temp-id]').forEach(el => {
+            el.id = el.dataset.tempId;
+            delete el.dataset.tempId;
+        });
+    }
+};
+
+window.saveSubFormValorDerivado = async function (e, vid, parentFieldKey) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSaveSub');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
+
+    try {
+        const modDef = MODULE_DEFS['derivedValues'];
+        const data = {};
+
+        modDef.fields.forEach(field => {
+            if (field.type === 'aura_property_selector' || field.type === 'aura_selector') {
+                const el = document.getElementById(`field_${field.key}`);
+                data[field.key] = el ? el.value : '';
+            } else if (field.type === 'array') {
+                data[field.key] = collectArrayData(field);
+            } else if (field.type === 'tags') {
+                const container = document.getElementById(`tags_${field.key}`);
+                if (container) {
+                    data[field.key] = Array.from(container.querySelectorAll('.tag')).map(t =>
+                        t.textContent.replace('×', '').trim()
+                    );
+                } else {
+                    data[field.key] = [];
+                }
+            } else if (field.type === 'mechanic_selector') {
+                const el = document.getElementById(`field_${field.key}`);
+                data[field.key] = el ? JSON.parse(el.value || '[]') : [];
+            } else if (field.type === 'boolean') {
+                const el = document.getElementById(`field_${field.key}`);
+                data[field.key] = el ? el.checked : false;
+            } else if (field.type === 'multi_select') {
+                const el = document.getElementById(`field_${field.key}`);
+                data[field.key] = el ? JSON.parse(el.value || '[]') : [];
+            } else if (field.type === 'number') {
+                const el = document.getElementById(`field_${field.key}`);
+                data[field.key] = el && el.value !== '' ? Number(el.value) : null;
+            } else {
+                const el = document.getElementById(`field_${field.key}`);
+                if (el) {
+                    if (field.type === 'textarea') {
+                        data[field.key] = el.value.replace(/\\r\\n/g, '\\n');
+                    } else {
+                        data[field.key] = el.value;
+                    }
+                }
+            }
+        });
+
+        data.publicado = document.getElementById('field_publicado').checked;
+        
+        let savedVid = vid;
+        if (vid) {
+            data.updatedAt = Timestamp.now();
+            await updateDoc(doc(db, modDef.collection, vid), data);
+        } else {
+            data.createdAt = Timestamp.now();
+            data.updatedAt = Timestamp.now();
+            const newDocRef = await addDoc(collection(db, modDef.collection), data);
+            savedVid = newDocRef.id;
+        }
+
+        const idx = derivedValuesCache.findIndex(p => p.id === savedVid);
+        if (idx >= 0) {
+            derivedValuesCache[idx] = { id: savedVid, ...data, updatedAt: new Date() };
+        } else {
+            derivedValuesCache.push({ id: savedVid, ...data, createdAt: new Date(), updatedAt: new Date() });
+        }
+
+        window.closeSubFormValorDerivado();
+
+        if (parentFieldKey && parentFieldKey !== 'null') {
+            const parentFieldValorDerivado = document.getElementById('temp_field_' + parentFieldKey) || document.getElementById('field_' + parentFieldKey);
+            if (parentFieldValorDerivado) {
+                let currentIds = JSON.parse(parentFieldValorDerivado.value || '[]');
+                
+                if (!vid) {
+                    const isObjectFormat = currentIds.length > 0 && typeof currentIds[0] === 'object';
+                    if (isObjectFormat || currentIds.length === 0) {
+                        currentIds.push({ id: savedVid, valorInicial: data.valorInicial || 0 });
+                    } else {
+                        currentIds.push(savedVid);
+                    }
+                    parentFieldValorDerivado.value = JSON.stringify(currentIds);
+                }
+                
+                const wrap = document.getElementById('temp_field_' + parentFieldKey + '_wrap') || document.getElementById('field_' + parentFieldKey + '_wrap');
+                if (wrap) {
+                    import('./painel-mechanics.js?v=2').then(m => {
+                        const labelSpan = wrap.querySelector('.mechsel-label');
+                        const labelText = labelSpan ? labelSpan.textContent : 'Valores Derivados';
+                        
+                        const tempId = parentFieldValorDerivado.id.startsWith('temp_') ? 'temp_' : '';
+                        
+                        let modifiedHtml = m.buildDerivedValueSelectorHTML(parentFieldKey, labelText, currentIds, derivedValuesCache, '');
+                        if (tempId) {
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`id="field_${parentFieldKey}`, 'g'), `id="temp_field_${parentFieldKey}`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelFilter\\('field_${parentFieldKey}'`, 'g'), `window._mechSelFilter('temp_field_${parentFieldKey}'`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelRemove\\('field_${parentFieldKey}'`, 'g'), `window._mechSelRemove('temp_field_${parentFieldKey}'`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._dvSelLevelChange\\('field_${parentFieldKey}'`, 'g'), `window._dvSelLevelChange('temp_field_${parentFieldKey}'`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._dvSelConfirm\\('field_${parentFieldKey}'`, 'g'), `window._dvSelConfirm('temp_field_${parentFieldKey}'`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelConfirm\\('field_${parentFieldKey}'`, 'g'), `window._mechSelConfirm('temp_field_${parentFieldKey}'`);
+                        }
+                        
+                        wrap.outerHTML = modifiedHtml;
+                    });
+                }
+            }
+        }
+        
+        showAlert('✅ Valor Derivado atualizado com sucesso!', 'success');
+    } catch (e) {
+        console.error('Erro ao salvar sub-form:', e);
+        showAlert('❌ Erro ao salvar: ' + e.message, 'danger');
+        if (btn) { btn.disabled = false; btn.textContent = '💾 Salvar Alterações'; }
+    }
+};
+
 // ===== FORM MODAL =====
 window.openForm = function (itemId) {
     const modDef = MODULE_DEFS[currentModule];
@@ -2145,15 +2580,15 @@ function collectArrayData(field) {
 }
 
 // ===== MECHANICS EDITOR BRIDGE =====
-function _openMechEditor(itemId) {
+function _openMechEditor(itemId, parentFieldKey = null) {
     // When creating a new mechanic, pass currently selected filter tags
     const initialTags = (!itemId && currentModule === 'mechanics') ? [...getSelectedTags()] : [];
     openMechanicEditor(itemId, allItems, mechanicsCache, {
         db, collection, addDoc, updateDoc, doc, Timestamp,
         currentUser, showAlert, loadModule, escapeHtml
-    }, initialTags);
+    }, initialTags, parentFieldKey);
 }
-window.openMechanicEditor = function (itemId) { _openMechEditor(itemId); };
+window.openMechanicEditor = function (itemId, parentFieldKey) { _openMechEditor(itemId, parentFieldKey); };
 
 // ===== DUPLICATE ITEM =====
 window.duplicateItem = async function (itemId) {

@@ -976,14 +976,24 @@ function buildInlineMechSelector(id, label, currentIds, cache, excludeCondiciona
 }
 
 // ===== OPEN MECHANIC EDITOR (inline) =====
-export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, initialTags) {
+export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, initialTags, parentFieldKey = null) {
     const { db, collection: col, addDoc, updateDoc, doc, Timestamp, currentUser, showAlert, loadModule, escapeHtml } = callbacks;
     const isEditing = !!itemId;
-    const existingData = isEditing ? allItems.find(i => i.id === itemId) : {};
+    // When opened from another module, allItems contains the other module's items.
+    // So we must also check mechanicsCache to find the mechanic data.
+    const existingData = isEditing ? (mechanicsCache.find(i => i.id === itemId) || allItems.find(i => i.id === itemId)) : {};
     const data = existingData || {};
+
+    // Store parent field key globally for when we save/back
+    window._mechParentFieldKey = parentFieldKey;
 
     // Hide standard content, show editor
     document.getElementById('moduleContent').style.display = 'none';
+    const formModal = document.getElementById('formModal');
+    if (formModal && parentFieldKey) {
+        formModal.style.display = 'none';
+    }
+    
     const area = document.getElementById('mechanicsEditorArea');
     area.style.display = '';
 
@@ -1155,13 +1165,23 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, 
 // ===== GLOBAL HANDLERS (attached to window) =====
 window._mechBack = function () {
     document.getElementById('mechanicsEditorArea').style.display = 'none';
+    
+    if (window._mechParentFieldKey) {
+        const formModal = document.getElementById('formModal');
+        if (formModal) formModal.style.display = '';
+        window._mechParentFieldKey = null; // Clear flag
+    }
+    
+    // Always restore moduleContent because formModal is just an overlay on top of it.
     document.getElementById('moduleContent').style.display = '';
 };
 
 window._mechTipoChange = function () {
     const tipo = document.getElementById('mech_tipo')?.value || 'modificar';
     const area = document.getElementById('mechConfigArea');
-    const data = window._mechAllItems?.find(i => i.id === window._mechEditingId);
+    const cacheData = window._mechCache?.find(i => i.id === window._mechEditingId);
+    const allData = window._mechAllItems?.find(i => i.id === window._mechEditingId);
+    const data = cacheData || allData;
     const config = (data && data.tipo === tipo) ? (data.config || {}) : {};
 
     if (tipo === 'modificar') area.innerHTML = renderConfigModificar(config);
@@ -1667,7 +1687,9 @@ window._mechSave = async function () {
         data.criadoEm = cb.Timestamp.now();
         data.versao = 1;
     } else {
-        const ex = window._mechAllItems?.find(i => i.id === editId);
+        const cacheEx = window._mechCache?.find(i => i.id === editId);
+        const allEx = window._mechAllItems?.find(i => i.id === editId);
+        const ex = cacheEx || allEx;
         data.versao = (ex?.versao || 0) + 1;
     }
 
@@ -1675,15 +1697,53 @@ window._mechSave = async function () {
     btn.disabled = true; btn.textContent = '⏳ Salvando...';
 
     try {
+        let savedId = editId;
         if (editId) {
             await cb.updateDoc(cb.doc(cb.db, 'system/data/mechanics', editId), data);
             cb.showAlert('✅ Mecânica atualizada!', 'success');
         } else {
-            await cb.addDoc(cb.collection(cb.db, 'system/data/mechanics'), data);
+            const docRef = await cb.addDoc(cb.collection(cb.db, 'system/data/mechanics'), data);
+            savedId = docRef.id;
             cb.showAlert('✅ Mecânica criada!', 'success');
         }
+        
+        // Cache update for immediate rendering in sub-modal return
+        if (window._mechCache) {
+            const idx = window._mechCache.findIndex(m => m.id === savedId);
+            if (idx >= 0) window._mechCache[idx] = { id: savedId, ...data };
+            else window._mechCache.push({ id: savedId, ...data });
+        }
+
+        if (window._mechParentFieldKey && window._mechParentFieldKey !== 'null') {
+            const parentField = document.getElementById('temp_field_' + window._mechParentFieldKey) || document.getElementById('field_' + window._mechParentFieldKey);
+            if (parentField) {
+                let currentIds = JSON.parse(parentField.value || '[]');
+                if (!editId) {
+                    currentIds.push(savedId);
+                    parentField.value = JSON.stringify(currentIds);
+                }
+                const wrap = document.getElementById('temp_field_' + window._mechParentFieldKey + '_wrap') || document.getElementById('field_' + window._mechParentFieldKey + '_wrap');
+                if (wrap) {
+                    const labelSpan = wrap.querySelector('.mechsel-label');
+                    const labelText = labelSpan ? labelSpan.textContent : 'Mecânicas';
+                    const tempId = parentField.id.startsWith('temp_') ? 'temp_' : '';
+                    let modifiedHtml = buildMechanicSelectorHTML(window._mechParentFieldKey, labelText, currentIds, window._mechCache || []);
+                    if (tempId) {
+                        modifiedHtml = modifiedHtml.replace(new RegExp(`id="field_${window._mechParentFieldKey}`, 'g'), `id="temp_field_${window._mechParentFieldKey}`);
+                        modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelFilter\\('field_${window._mechParentFieldKey}'`, 'g'), `window._mechSelFilter('temp_field_${window._mechParentFieldKey}'`);
+                        modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelRemove\\('field_${window._mechParentFieldKey}'`, 'g'), `window._mechSelRemove('temp_field_${window._mechParentFieldKey}'`);
+                        modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelConfirm\\('field_${window._mechParentFieldKey}'`, 'g'), `window._mechSelConfirm('temp_field_${window._mechParentFieldKey}'`);
+                    }
+                    wrap.outerHTML = modifiedHtml;
+                }
+            }
+        }
+
+        const wasSubModal = !!window._mechParentFieldKey;
         window._mechBack();
-        await cb.loadModule('mechanics');
+        if (!wasSubModal) {
+            await cb.loadModule('mechanics');
+        }
     } catch (e) {
         console.error('Erro ao salvar mecânica:', e);
         cb.showAlert('❌ Erro ao salvar: ' + e.message, 'danger');
@@ -1736,10 +1796,11 @@ window._mechSelConfirm = function (fieldId) {
         if (!checked.length) {
             chipsEl.innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhuma mecânica vinculada</span>';
         } else {
+            const pKey = fieldId.replace(/^field_/, '');
             chipsEl.innerHTML = checked.map(mid => {
                 const m = cache.find(x => x.id === mid);
                 if (!m) return '';
-                return `<div class="mechsel-chip" style="border-left-color:var(--type-${m.tipo || 'modificar'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${TIPO_ICONS[m.tipo] || '🔧'} ${esc(m.nome)}</div><div class="mechsel-chip-preview">${esc(m.previewTexto || '')}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${mid}')">✕</button></div>`;
+                return `<div class="mechsel-chip" style="border-left-color:var(--type-${m.tipo || 'modificar'}); cursor:pointer;" onclick="if(event.target.tagName !== 'INPUT' && event.target.tagName !== 'BUTTON') window.openMechanicEditor('${mid}', '${pKey}')" title="Editar Mecânica"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${TIPO_ICONS[m.tipo] || '🔧'} ${esc(m.nome)}</div><div class="mechsel-chip-preview">${esc(m.previewTexto || '')}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${mid}')">✕</button></div>`;
             }).join('');
         }
     }
@@ -1750,14 +1811,17 @@ export function buildMechanicSelectorHTML(fieldKey, label, currentIds, cache, fo
     const published = cache.filter(m => m.publicado);
     const chips = (currentIds || []).map(mid => {
         const m = cache.find(x => x.id === mid);
-        return m ? `<div class="mechsel-chip" style="border-left-color:var(--type-${m.tipo || 'modificar'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${TIPO_ICONS[m.tipo] || '🔧'} ${esc(m.nome)}</div><div class="mechsel-chip-preview">${esc(m.previewTexto || '')}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${mid}')">✕</button></div>` : '';
+        return m ? `<div class="mechsel-chip" style="border-left-color:var(--type-${m.tipo || 'modificar'}); cursor:pointer;" onclick="if(event.target.tagName !== 'INPUT' && event.target.tagName !== 'BUTTON') window.openMechanicEditor('${mid}', '${fieldKey}')" title="Editar Mecânica"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${TIPO_ICONS[m.tipo] || '🔧'} ${esc(m.nome)}</div><div class="mechsel-chip-preview">${esc(m.previewTexto || '')}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${mid}')">✕</button></div>` : '';
     }).join('');
     const opts = published.map(m => `<label class="mechsel-result" data-fonte="${m.fonte || ''}"><input type="checkbox" value="${m.id}" ${(currentIds || []).includes(m.id) ? 'checked' : ''}><span class="mechsel-result-name">${TIPO_ICONS[m.tipo] || '🔧'} ${esc(m.nome)}</span><span class="mechsel-result-preview">${esc(m.previewTexto || '')}</span></label>`).join('');
     return `
     <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
         <span class="mechsel-label">${esc(label)}</span>
         <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhuma mecânica vinculada</span>'}</div>
-        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Mecânica</button>
+        <div>
+            <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Mecânica</button>
+            <button type="button" class="mechsel-add-btn" style="margin-left:5px;" onclick="window.openMechanicEditor(null, '${fieldKey}')">➕ Criar Mecânica</button>
+        </div>
         <div class="mechsel-search" id="field_${fieldKey}_search">
             <div class="mechsel-search-bar">
                 <input type="text" placeholder="🔍 Buscar..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
@@ -1782,14 +1846,17 @@ export function buildPecSelectorHTML(fieldKey, label, currentIds, cache, fontePr
     const chips = parsedIds.map(pObj => {
         const pid = pObj.id;
         const p = cache.find(x => x.id === pid);
-        return p ? `<div class="mechsel-chip" style="border-left-color:var(--fonte-${p.fonte || 'generica'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">✨ ${esc(p.nome)}</div><div class="mechsel-chip-preview">${esc(p.fonte || '')} — Nível Inicial: <input type="number" value="${pObj.nivelInicial || 1}" min="1" max="10" style="width:40px;padding:2px;font-size:0.7rem;" onchange="window._pecSelLevelChange('field_${fieldKey}', '${pid}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${pid}')">✕</button></div>` : '';
+        return p ? `<div class="mechsel-chip" style="border-left-color:var(--fonte-${p.fonte || 'generica'}); cursor:pointer;" onclick="if(event.target.tagName !== 'INPUT' && event.target.tagName !== 'BUTTON') window._openSubFormPeculiaridade('${pid}')" title="Editar Peculiaridade"><div class="mechsel-chip-info"><div class="mechsel-chip-name">✨ ${esc(p.nome)}</div><div class="mechsel-chip-preview">${esc(p.fonte || '')} — Nível Inicial: <input type="number" value="${pObj.nivelInicial || 1}" min="1" max="10" style="width:40px;padding:2px;font-size:0.7rem;" onchange="window._pecSelLevelChange('field_${fieldKey}', '${pid}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${pid}')">✕</button></div>` : '';
     }).join('');
     const opts = published.map(p => `<label class="mechsel-result"><input type="checkbox" value="${p.id}" ${selectedIds.includes(p.id) ? 'checked' : ''}><span class="mechsel-result-name">✨ ${esc(p.nome)}</span><span class="mechsel-result-preview">${esc(p.fonte || '')}</span></label>`).join('');
     return `
     <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
         <span class="mechsel-label">${esc(label)}</span>
         <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhuma peculiaridade vinculada</span>'}</div>
-        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Peculiaridade</button>
+        <div>
+            <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Peculiaridade</button>
+            <button type="button" class="mechsel-add-btn" style="margin-left:5px;" onclick="window._openSubFormPeculiaridade(null, '${fieldKey}')">➕ Criar Peculiaridade</button>
+        </div>
         <div class="mechsel-search" id="field_${fieldKey}_search">
             <div class="mechsel-search-bar">
                 <input type="text" placeholder="🔍 Buscar peculiaridade..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
@@ -1839,7 +1906,7 @@ window._pecSelConfirm = function (fieldId) {
                 // To be safe, wait for visual update or use simple names based on existing cache.
                 const p = window._mechAllItems ? window._mechAllItems.find(x => x.id === mid) : { nome: "Carregando...", fonte: "?" };
                 if (!p && globals_for_cache) return ''; // just a fallback
-                return `<div class="mechsel-chip" style="border-left-color:var(--fonte-${p?.fonte || 'generica'})"><div class="mechsel-chip-info"><div class="mechsel-chip-name">✨ ${esc(p?.nome || mid)}</div><div class="mechsel-chip-preview">${esc(p?.fonte || '')} — Nível Inicial: <input type="number" value="${pObj.nivelInicial || 1}" min="1" max="10" style="width:40px;padding:2px;font-size:0.7rem;" onchange="window._pecSelLevelChange('${fieldId}', '${mid}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${mid}')">✕</button></div>`;
+                return `<div class="mechsel-chip" style="border-left-color:var(--fonte-${p?.fonte || 'generica'}); cursor:pointer;" onclick="if(event.target.tagName !== 'INPUT' && event.target.tagName !== 'BUTTON') window._openSubFormPeculiaridade('${mid}')" title="Editar Peculiaridade"><div class="mechsel-chip-info"><div class="mechsel-chip-name">✨ ${esc(p?.nome || mid)}</div><div class="mechsel-chip-preview">${esc(p?.fonte || '')} — Nível Inicial: <input type="number" value="${pObj.nivelInicial || 1}" min="1" max="10" style="width:40px;padding:2px;font-size:0.7rem;" onchange="window._pecSelLevelChange('${fieldId}', '${mid}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${mid}')">✕</button></div>`;
             }).join('');
         }
     }
@@ -1955,7 +2022,10 @@ export function buildDerivedValueSelectorHTML(fieldKey, label, currentIds, cache
     <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
         <span class="mechsel-label">${esc(label)}</span>
         <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhum valor derivado vinculado</span>'}</div>
-        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Valor Derivado</button>
+        <div>
+            <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Valor Derivado</button>
+            <button type="button" class="mechsel-add-btn" style="margin-left:5px;" onclick="window._openSubFormValorDerivado(null, '${fieldKey}')">➕ Criar Valor Derivado</button>
+        </div>
         <div class="mechsel-search" id="field_${fieldKey}_search">
             <div class="mechsel-search-bar">
                 <input type="text" placeholder="🔍 Buscar valor derivado..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
