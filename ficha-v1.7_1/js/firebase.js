@@ -107,6 +107,9 @@ async function loadFromFirebase(charId) {
             if (typeof loadFromData === 'function') {
                 loadFromData(data);
             }
+            if (typeof state !== 'undefined') {
+                state.mesaId = data.mesaId;
+            }
             return true;
         } else {
             console.log('📝 Nenhuma ficha v1.7 encontrada no Firebase. Criando nova...');
@@ -259,6 +262,53 @@ window.saveToFirebase = async function () {
         _saving = false; // Garantir que libera o lock
     } finally {
         _saving = false;
+    }
+};
+
+// ===== NOTAS COMPARTILHADAS =====
+window.loadSharedNotes = async function() {
+    if (!window.currentCharacterId || typeof state === 'undefined' || !state.mesaId) return;
+    try {
+        const mesaId = state.mesaId;
+        const q = query(collection(db, 'char'), where('mesaId', '==', mesaId));
+        const snap = await getDocs(q);
+        const sharedNotes = [];
+        snap.forEach(d => {
+            if (d.id === window.currentCharacterId) return;
+            const data = d.data();
+            if (data.notes && Array.isArray(data.notes)) {
+                data.notes.forEach(n => {
+                    if (n.sharedWith && n.sharedWith[window.currentCharacterId]) {
+                        sharedNotes.push(n);
+                    }
+                });
+            }
+        });
+        state.sharedNotes = sharedNotes;
+        if (typeof renderNotes === 'function') renderNotes();
+    } catch (e) {
+        console.error('Erro ao carregar notas compartilhadas:', e);
+    }
+};
+
+window.updateSharedNoteInFirebase = async function(ownerId, noteData) {
+    if (!ownerId) return;
+    try {
+        const docRef = doc(db, 'char', ownerId);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+            const data = snap.data();
+            const notes = data.notes || [];
+            const idx = notes.findIndex(n => n.id === noteData.id);
+            if (idx !== -1) {
+                notes[idx] = noteData;
+                await setDoc(docRef, { notes }, { merge: true });
+                console.log('✅ Nota compartilhada atualizada no documento do dono.');
+            }
+        }
+    } catch (e) {
+        console.error('Erro ao atualizar nota compartilhada:', e);
+        throw e;
     }
 };
 
@@ -442,6 +492,11 @@ onAuthStateChanged(auth, async (user) => {
 
         // === SINCRONIZAR SESSÕES COM A MESA VINCULADA ===
         syncSessionCount(charId);
+        
+        // === CARREGAR NOTAS COMPARTILHADAS ===
+        if (typeof window.loadSharedNotes === 'function') {
+            await window.loadSharedNotes();
+        }
 
         // === CARREGAR INVENTÁRIO DO PERSONAGEM ===
         try {

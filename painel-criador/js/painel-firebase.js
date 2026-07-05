@@ -212,7 +212,7 @@ const MODULE_DEFS = {
                 ]
             },
             {
-                key: 'categoriaArma', label: 'Categoria da Arma', type: 'select', required: true, options: [
+                key: 'categoriaArma', label: 'Categoria da Arma', type: 'select', options: [
                     { value: 'uma_mao', label: '🗡️ Arma de Uma Mão' },
                     { value: 'duas_maos', label: '⚔️ Arma de Duas Mãos' },
                     { value: 'versatil', label: '🔄 Arma Versátil' },
@@ -1164,7 +1164,9 @@ function buildField(field, value, existingData) {
             wrap.innerHTML = `${labelHtml}<input type="${field.type}" id="field_${field.key}" value="${escapeHtml(value ?? '')}" placeholder="${escapeHtml(field.placeholder || '')}" ${field.required ? 'required' : ''} oninput="document.getElementById('img_preview_${field.key}').src = this.value; document.getElementById('img_preview_${field.key}').style.display = this.value ? 'block' : 'none';">
             <img id="img_preview_${field.key}" src="${escapeHtml(value ?? '')}" style="display: ${value ? 'block' : 'none'}; width: 100%; height: 260px; margin-top: 8px; border-radius: 4px; object-fit: cover; object-position: top;">`;
         } else {
-            wrap.innerHTML = `${labelHtml}<input type="${field.type}" id="field_${field.key}" value="${escapeHtml(value ?? '')}" placeholder="${escapeHtml(field.placeholder || '')}" ${field.required ? 'required' : ''}>`;
+            let extraAttrs = '';
+            if (field.type === 'number') extraAttrs = 'step="0.01"';
+            wrap.innerHTML = `${labelHtml}<input type="${field.type}" id="field_${field.key}" value="${escapeHtml(value ?? '')}" placeholder="${escapeHtml(field.placeholder || '')}" ${field.required ? 'required' : ''} ${extraAttrs}>`;
         }
     }
 
@@ -2057,7 +2059,26 @@ window.handleFormSubmit = async function (e) {
 
     // Validate required
     for (const field of modDef.fields) {
-        if (field.required) {
+        let isRequired = field.required;
+
+        // Custom validation for categoriaArma (Tipo de Arma)
+        if (field.key === 'categoriaArma' && data.tipo === 'Arma') {
+            isRequired = true;
+        }
+
+        // Ignore required if field is hidden by conditional logic
+        if (isRequired && field.showWhen) {
+            if (data[field.showWhen.field] !== field.showWhen.value) {
+                isRequired = false;
+            }
+        }
+        if (isRequired && field.showWhenBoolean) {
+            if (!data[field.showWhenBoolean]) {
+                isRequired = false;
+            }
+        }
+
+        if (isRequired) {
             const val = data[field.key];
             if (val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0)) {
                 showAlert(`⚠️ Campo obrigatório: ${field.label}`, 'danger');
