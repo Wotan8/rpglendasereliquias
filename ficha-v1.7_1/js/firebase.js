@@ -110,6 +110,9 @@ async function loadFromFirebase(charId) {
             if (typeof state !== 'undefined') {
                 state.mesaId = data.mesaId;
             }
+            if (window.initMesaTab && data.mesaId) {
+                window.initMesaTab(data.mesaId);
+            }
             return true;
         } else {
             console.log('📝 Nenhuma ficha v1.7 encontrada no Firebase. Criando nova...');
