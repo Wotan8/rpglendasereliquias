@@ -63,7 +63,8 @@ onAuthStateChanged(auth, async (user) => {
                         nome: mesaData.nome || 'Mesa',
                         mestreNome: mesaData.createdBy || 'Mestre',
                         expInicial: cfg.expInicial ?? 100,
-                        introducao: cfg.textoIntroducao || ''
+                        introducao: cfg.textoIntroducao || '',
+                        mecanicasObjetoPessoal: cfg.mecanicasObjetoPessoal || []
                     };
                     // Pre-set EXP from mesa config
                     window.wizardState.expInicial = cfg.expInicial ?? 100;

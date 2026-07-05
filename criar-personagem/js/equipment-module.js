@@ -82,12 +82,52 @@ function initPhase7(container) {
         return `<option value="${bp.id}" data-segurar="${!!bp.podeSegurar}" data-empunhar="${!!bp.podeEmpunhar}" data-vestir="${!!bp.podeVestir}" data-fixar="${!!bp.podeFixar}" ${selected}>${bp.icone || '🦴'} ${bp.nome || bp.id}</option>`;
     }).join('');
 
+    let mecanicasMesaHtml = '';
+    const mecanicasMesa = wizardState.mesaVinculada?.mecanicasObjetoPessoal || [];
+    if (mecanicasMesa.length > 0 && window._systemData.mechanics) {
+        // mecanicasMesa pode ser array de strings (IDs) ou objetos (caso tenha sido salvo diferente). Tratar ambos:
+        const mechs = mecanicasMesa.map(idOuObj => {
+            const idStr = typeof idOuObj === 'object' ? idOuObj.id : idOuObj;
+            return window._systemData.mechanics.find(m => m.id === idStr);
+        }).filter(Boolean);
+        
+        if (mechs.length > 0) {
+            mecanicasMesaHtml = `
+            <div style="background: rgba(0, 150, 255, 0.1); border: 1px solid rgba(0, 150, 255, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                <div style="font-size: 0.9rem; font-weight: bold; color: #4dabf7; margin-bottom: 8px;">
+                    ✨ Bônus da Campanha (${escHtml(wizardState.mesaVinculada.nome || 'Mesa')})
+                </div>
+                <div style="font-size: 0.85rem; color: var(--light); margin-bottom: 8px;">
+                    O seu Objeto Pessoal receberá automaticamente as seguintes mecânicas ao concluir a criação do personagem:
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    ${mechs.map(m => {
+                        let icone = '⚙️';
+                        if (m.tipo === 'conceder') icone = '✨';
+                        if (m.tipo === 'modificar') icone = '⚡';
+                        if (m.tipo === 'limitar') icone = '🔒';
+                        return `
+                        <div style="display: flex; align-items: flex-start; gap: 8px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px;">
+                            <span style="font-size: 1.1rem; line-height: 1;">${icone}</span>
+                            <div>
+                                <strong style="color: var(--light); font-size: 0.85rem;">${escHtml(m.nome)}</strong>
+                                <div style="font-size: 0.8rem; color: var(--muted); margin-top: 2px;">${escHtml(m.descricao)}</div>
+                            </div>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>`;
+        }
+    }
+
     html += `
         <div class="section">
             <div class="section-title">🎒 Objeto Pessoal</div>
             <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
-                <strong>Opcional.</strong> Crie um item personalizado para começar sua jornada. Pode ser uma arma de herança, um amuleto, ou qualquer equipamento que conte uma história. Nota: Este item não terá um bônus efetivo no personagem, servindo apenas como um item de valor sentimental e narrativo.
+                <strong>Opcional.</strong> Crie um item personalizado para começar sua jornada. Pode ser uma arma de herança, um amuleto, ou qualquer equipamento que conte uma história.${mecanicasMesa.length > 0 ? '' : ' Nota: Este item não terá um bônus efetivo no personagem, servindo apenas como um item de valor sentimental e narrativo.'}
             </p>
+            ${mecanicasMesaHtml}
             <div class="row">
                 <div class="field" style="flex:2">
                     <label>Nome do Item</label>
