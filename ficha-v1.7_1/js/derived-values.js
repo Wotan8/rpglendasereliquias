@@ -628,6 +628,13 @@ function showDvTooltip(e) {
         if (dv.descricao) {
             html += `<div class="dv-tooltip-desc">${_escHtml(dv.descricao)}</div>`;
         }
+        // Constante de Criação (modificador definido no slider da Véspera da Partida)
+        const creationMod = state.derivedModifiers?.[dvId];
+        if (creationMod && creationMod !== 0) {
+            const sign = creationMod > 0 ? '+' : '';
+            const fmtMod = Number.isInteger(creationMod) ? String(creationMod) : creationMod.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+            html += `<div class="dv-tooltip-creation-const">🎯 Constante de Criação: <span class="dv-tooltip-creation-val">${sign}${fmtMod}</span></div>`;
+        }
         // Mecânicas vinculadas
         if (dv.mechPreviews && dv.mechPreviews.length) {
             html += '<div class="dv-tooltip-mechs">';
@@ -757,6 +764,11 @@ function recalcAll() {
         const dvDef = (window.DERIVED_VALUES || []).find(d => d.key === dvKey);
         if (dvDef && initials[dvDef.id]) {
             value = initials[dvDef.id];
+        }
+
+        // Aplicar modificador constante da Véspera da Partida (Criar Personagem)
+        if (dvDef && state.derivedModifiers && state.derivedModifiers[dvDef.id]) {
+            value += state.derivedModifiers[dvDef.id];
         }
 
         value = _applyMechanicModifiers(dvKey, value, bonuses, limits);

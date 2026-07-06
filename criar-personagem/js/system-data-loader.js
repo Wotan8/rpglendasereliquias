@@ -283,11 +283,16 @@ function buildDerivedValuesFromFirebase() {
         .filter(dv => dv.publicado !== false)
         .sort((a, b) => (a.ordem || 99) - (b.ordem || 99))
         .map(dv => ({
+            id: dv.id,
             key: dv.key || dv.id,
             nome: dv.nome,
             formula: dv.formula || '',
             mecanicaIds: dv.mecanicaIds || [],
-            campoAtual: dv.campoAtual || false
+            campoAtual: dv.campoAtual || false,
+            characterCreationRule: dv.characterCreationRule || false,
+            characterCreationMin: dv.characterCreationMin !== undefined ? dv.characterCreationMin : -20,
+            characterCreationMax: dv.characterCreationMax !== undefined ? dv.characterCreationMax : 20,
+            todoPersonagem: dv.todoPersonagem || false
         }));
     console.log(`✅ Valores derivados: ${window.DERIVED_VALUES.length}`);
 }

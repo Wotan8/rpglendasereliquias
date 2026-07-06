@@ -59,6 +59,9 @@ window.wizardState = {
     // Memórias
     memorias: {}, // phaseKey → texto
 
+    // Modificadores de Valores Derivados (Fase 8)
+    derivedModifiers: {},
+
     // Controle
     faseAtual: 0,
     fasesCompletas: new Set(),

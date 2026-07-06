@@ -162,6 +162,13 @@ function goToPhase(index) {
     const target = document.getElementById(`phase${index}`);
     if (target) {
         target.classList.add('active');
+        
+        // Auto re-render dynamic phases to guarantee they use the latest state from previous phases
+        const fase = FASES_WIZARD[index];
+        if (fase && ['corpo', 'habilidades', 'vespera', 'resumo'].includes(fase.key)) {
+            target.dataset.rendered = '';
+            target.innerHTML = '';
+        }
     }
 
     wizardState.faseAtual = index;

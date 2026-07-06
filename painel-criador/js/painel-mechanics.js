@@ -2010,7 +2010,13 @@ export function buildDerivedValueSelectorHTML(fieldKey, label, currentIds, cache
         const d = cache.find(x => x.id === did);
         if (!d) return '';
         const icon = d.icone || '📊';
-        return `<div class="mechsel-chip" style="border-left-color:#8b5cf6"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${d.todoPersonagem ? '🌐 Universal' : '🔗 Vinculado'} — Valor Inicial: <input type="text" inputmode="decimal" value="${dvObj.valorInicial || 0}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('field_${fieldKey}', '${did}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${did}')">✕</button></div>`;
+        
+        const minVal = dvObj.characterCreationMin !== undefined ? dvObj.characterCreationMin : -20;
+        const maxVal = dvObj.characterCreationMax !== undefined ? dvObj.characterCreationMax : 20;
+        const ruleInputs = ` Min: <input type="number" step="0.01" value="${minVal}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('field_${fieldKey}', '${did}', 'characterCreationMin', this.value)"> Max: <input type="number" step="0.01" value="${maxVal}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('field_${fieldKey}', '${did}', 'characterCreationMax', this.value)">`;
+
+        
+        return `<div class="mechsel-chip" style="border-left-color:#8b5cf6"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${d.todoPersonagem ? '🌐 Universal' : '🔗 Vinculado'} — Valor Inicial: <input type="text" inputmode="decimal" value="${dvObj.valorInicial || 0}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('field_${fieldKey}', '${did}', 'valorInicial', this.value)">${ruleInputs}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${did}')">✕</button></div>`;
     }).join('');
 
     const opts = published.map(d => {
@@ -2042,18 +2048,21 @@ window._dvSelConfirm = function (fieldId) {
     const hidden = document.getElementById(fieldId);
     if (!results || !hidden) return;
 
-    // Preserve existing valorInicial
+    // Preserve existing valorInicial, min, max
     const existingIds = JSON.parse(hidden.value || '[]');
     const existingMap = new Map();
     existingIds.forEach(item => {
-        if (typeof item === 'object') existingMap.set(item.id, item.valorInicial);
-        else existingMap.set(item, 0);
+        if (typeof item === 'object') existingMap.set(item.id, item);
+        else existingMap.set(item, { id: item, valorInicial: 0 });
     });
 
     const checked = Array.from(results.querySelectorAll('input[type="checkbox"]:checked')).map(cb => {
+        const ex = existingMap.get(cb.value);
         return {
             id: cb.value,
-            valorInicial: existingMap.has(cb.value) ? existingMap.get(cb.value) : 0
+            valorInicial: ex ? (ex.valorInicial || 0) : 0,
+            characterCreationMin: ex && ex.characterCreationMin !== undefined ? ex.characterCreationMin : undefined,
+            characterCreationMax: ex && ex.characterCreationMax !== undefined ? ex.characterCreationMax : undefined
         };
     });
 
@@ -2072,13 +2081,24 @@ window._dvSelConfirm = function (fieldId) {
                 const d = cache.find(x => x.id === did);
                 if (!d) return '';
                 const icon = d.icone || '📊';
-                return `<div class="mechsel-chip" style="border-left-color:#8b5cf6"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${d.todoPersonagem ? '🌐 Universal' : '🔗 Vinculado'} — Valor Inicial: <input type="text" inputmode="decimal" value="${dvObj.valorInicial || 0}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('${fieldId}', '${did}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${did}')">✕</button></div>`;
+                
+                const minVal = dvObj.characterCreationMin !== undefined ? dvObj.characterCreationMin : -20;
+                const maxVal = dvObj.characterCreationMax !== undefined ? dvObj.characterCreationMax : 20;
+                const ruleInputs = ` Min: <input type="number" step="0.01" value="${minVal}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('${fieldId}', '${did}', 'characterCreationMin', this.value)"> Max: <input type="number" step="0.01" value="${maxVal}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('${fieldId}', '${did}', 'characterCreationMax', this.value)">`;
+
+                
+                return `<div class="mechsel-chip" style="border-left-color:#8b5cf6"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${d.todoPersonagem ? '🌐 Universal' : '🔗 Vinculado'} — Valor Inicial: <input type="text" inputmode="decimal" value="${dvObj.valorInicial || 0}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('${fieldId}', '${did}', 'valorInicial', this.value)">${ruleInputs}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${did}')">✕</button></div>`;
             }).join('');
         }
     }
 };
 
-window._dvSelLevelChange = function (fieldId, dvId, newValue) {
+window._dvSelLevelChange = function (fieldId, dvId, prop, newValue) {
+    if (newValue === undefined) {
+        // Suporte para assinatura antiga: (fieldId, dvId, newValue)
+        newValue = prop;
+        prop = 'valorInicial';
+    }
     const hidden = document.getElementById(fieldId);
     if (!hidden) return;
     // Suportar vírgula como separador decimal (ex: 1,75 → 1.75)
@@ -2086,10 +2106,14 @@ window._dvSelLevelChange = function (fieldId, dvId, newValue) {
     let ids = JSON.parse(hidden.value || '[]');
     ids = ids.map(item => {
         if (typeof item === 'object' && item.id === dvId) {
-            return { ...item, valorInicial: parsed };
+            const newItem = { ...item };
+            newItem[prop] = parsed;
+            return newItem;
         }
         if (typeof item === 'string' && item === dvId) {
-            return { id: item, valorInicial: parsed };
+            const newItem = { id: item, valorInicial: 0 };
+            newItem[prop] = parsed;
+            return newItem;
         }
         return item;
     });

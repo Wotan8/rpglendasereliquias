@@ -107,6 +107,7 @@ const MODULE_DEFS = {
             { key: 'lema', label: 'Lema / Citação', type: 'text', placeholder: 'Lema da tribo' },
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
             { key: 'peculiaridadeIds', label: '✨ Peculiaridades da Tribo', type: 'mechanic_selector', selectorTarget: 'peculiarities', fontePreFilter: 'tribo' },
+            { key: 'derivedValueIds', label: 'Valores Derivados da Tribo', type: 'mechanic_selector', selectorTarget: 'derivedValues' },
             {
                 key: 'pericias', label: 'Perícias Tribais', type: 'array', arrayFields: [
                     { key: 'nome', label: 'Perícia', type: 'text', required: true },
@@ -266,6 +267,9 @@ const MODULE_DEFS = {
             { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: '' },
             { key: 'campoAtual', label: 'Tem campo "Atual" (editável)?', type: 'boolean' },
             { key: 'campoEditavel', label: 'Campo editável pelo jogador?', type: 'boolean' },
+            { key: 'characterCreationRule', label: 'Regra de Criação de Personagem', type: 'boolean' },
+            { key: 'characterCreationMin', label: 'Valor Mínimo', type: 'number', showWhenBoolean: 'characterCreationRule' },
+            { key: 'characterCreationMax', label: 'Valor Máximo', type: 'number', showWhenBoolean: 'characterCreationRule' },
         ]
     },
     vitalStats: {

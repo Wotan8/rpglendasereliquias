@@ -1,7 +1,128 @@
 /* ===== PHASE 8 — A Véspera da Partida ===== */
 
 function initPhase8(container) {
-    let html = createNarratorBox(NARRADOR_TEXTOS.vespera);
+        let html = createNarratorBox(NARRADOR_TEXTOS.vespera);
+
+    // Ajustes Finos (Valores Derivados)
+    if (typeof window.simulateDerivedValues === 'function') {
+        const simulatedValues = window.simulateDerivedValues();
+        const raca = window._systemData?.races?.find(r => r.nome === wizardState.racaSelecionada);
+        const classe = window._systemData?.classes?.find(c => c.nome === wizardState.classeSelecionada);
+        const tribo = window._systemData?.tribes?.find(t => t.nome === wizardState.triboSelecionada);
+
+        const elegiveis = (window.DERIVED_VALUES || []).filter(dv => {
+            const checkSource = (source) => {
+                if (!source || !source.derivedValueIds) return false;
+                return source.derivedValueIds.some(x => typeof x === 'object' ? x.id === dv.id : x === dv.id);
+            };
+            
+            const isLinked = checkSource(raca) || checkSource(classe) || checkSource(tribo);
+            
+            return isLinked || (dv.todoPersonagem && dv.characterCreationRule);
+        });
+
+        if (elegiveis.length > 0) {
+            html += `
+                <div class="section">
+                    <div class="section-title">⚙️ Ajustes de Personagem</div>
+                    <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
+                        Distribua os modificadores iniciais para os seguintes valores. Os limites dependem da sua Raça, Classe ou Tribo.
+                    </p>
+            `;
+            
+            elegiveis.forEach(dv => {
+                const baseVal = parseFloat((simulatedValues[dv.id] || 0).toFixed(2));
+                
+                let linkedMin = null;
+                let linkedMax = null;
+                let hasLink = false;
+                
+                const checkBounds = (source) => {
+                    if (!source || !source.derivedValueIds) return;
+                    const match = source.derivedValueIds.find(x => typeof x === 'object' ? x.id === dv.id : x === dv.id);
+                    if (match) {
+                        hasLink = true;
+                        if (typeof match === 'object') {
+                            if (match.characterCreationMin !== undefined) {
+                                linkedMin = linkedMin === null ? match.characterCreationMin : Math.min(linkedMin, match.characterCreationMin);
+                            }
+                            if (match.characterCreationMax !== undefined) {
+                                linkedMax = linkedMax === null ? match.characterCreationMax : Math.max(linkedMax, match.characterCreationMax);
+                            }
+                        }
+                    }
+                };
+                
+                checkBounds(raca);
+                checkBounds(classe);
+                checkBounds(tribo);
+                
+                let minBound, maxBound;
+                if (hasLink) {
+                    minBound = linkedMin !== null ? linkedMin : 0;
+                    maxBound = linkedMax !== null ? linkedMax : 0;
+                } else {
+                    minBound = dv.characterCreationMin !== undefined ? dv.characterCreationMin : -20;
+                    maxBound = dv.characterCreationMax !== undefined ? dv.characterCreationMax : 20;
+                }
+                
+                const minVal = parseFloat((baseVal + minBound).toFixed(2));
+                const maxVal = parseFloat((baseVal + maxBound).toFixed(2));
+                
+                wizardState.derivedModifiers = wizardState.derivedModifiers || {};
+                let currentMod = wizardState.derivedModifiers[dv.id] || 0;
+                // Clampar o modificador se os limites mudaram (ex: seleção de raça/classe/tribo)
+                if (currentMod < minBound) currentMod = minBound;
+                if (currentMod > maxBound) currentMod = maxBound;
+                wizardState.derivedModifiers[dv.id] = currentMod;
+                const currentSliderVal = parseFloat((baseVal + currentMod).to                // Formatar valores para exibição (até 2 decimais, sem zeros desnecessários)
+                const fmtVal = (v) => Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+                const stepVal = (Number.isInteger(minVal) && Number.isInteger(maxVal) && Number.isInteger(baseVal)) ? '1' : '0.01';
+                const modSign = currentMod > 0 ? '+' : '';
+                const modDisplay = currentMod === 0 ? '±0' : `${modSign}${fmtVal(currentMod)}`;
+
+                html += `
+                    <div class="field" style="margin-bottom:16px; background:rgba(79,110,247,0.04); border-radius:10px; padding:12px 14px; border:1px solid rgba(79,110,247,0.12);">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                            <label style="margin:0; font-weight:600; font-size:.95rem;">${escHtml(dv.nome)}</label>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span id="dv_mod_${dv.id}" style="font-size:.75rem; padding:2px 8px; border-radius:6px; font-weight:700;
+                                    background:${currentMod === 0 ? 'rgba(107,114,128,0.15)' : currentMod > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'};
+                                    color:${currentMod === 0 ? 'var(--muted)' : currentMod > 0 ? 'var(--success)' : 'var(--danger)'};">${modDisplay}</span>
+                                <span id="dv_val_${dv.id}" style="font-size:1.3rem; font-weight:900; color:var(--accent); min-width:36px; text-align:right;">${fmtVal(currentSliderVal)}</span>
+                            </div>
+                        </div>
+                        <input type="range" 
+                               min="${minVal}" max="${maxVal}" step="${stepVal}" 
+                               value="${currentSliderVal}"
+                               oninput="
+                                    const val = parseFloat(this.value);
+                                    const mod = parseFloat((val - ${baseVal}).toFixed(2));
+                                    const fmt = Number.isInteger(val) ? String(val) : val.toFixed(2).replace(/0+$/, '').replace(/\\\\.$/, '');
+                                    const modSign = mod > 0 ? '+' : '';
+                                    const modFmt = mod === 0 ? '±0' : modSign + (Number.isInteger(mod) ? String(mod) : mod.toFixed(2).replace(/0+$/, '').replace(/\\\\.$/, ''));
+                                    document.getElementById('dv_val_${dv.id}').textContent = fmt;
+                                    const modEl = document.getElementById('dv_mod_${dv.id}');
+                                    modEl.textContent = modFmt;
+                                    modEl.style.background = mod === 0 ? 'rgba(107,114,128,0.15)' : mod > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
+                                    modEl.style.color = mod === 0 ? 'var(--muted)' : mod > 0 ? 'var(--success)' : 'var(--danger)';
+                                    const breakdownEl = document.getElementById('dv_breakdown_${dv.id}');
+                                    if (breakdownEl) breakdownEl.textContent = '${fmtVal(baseVal)} ' + (mod >= 0 ? '+ ' + (Number.isInteger(mod) ? String(mod) : mod.toFixed(2).replace(/0+$/, '').replace(/\\\\.$/, '')) : '− ' + (Number.isInteger(Math.abs(mod)) ? String(Math.abs(mod)) : Math.abs(mod).toFixed(2).replace(/0+$/, '').replace(/\\\\.$/, ''))) + ' = ' + fmt;
+                                    wizardState.derivedModifiers['${dv.id}'] = mod;
+                                    saveWizardToStorage();
+                                "
+                               style="width:100%;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.72rem; color:var(--muted); margin-top:2px;">
+                            <span>Min: ${fmtVal(minVal)}</span>
+                            <span id="dv_breakdown_${dv.id}" style="font-weight:600; color:var(--ink); opacity:0.7;">${fmtVal(baseVal)} ${currentMod >= 0 ? '+ ' + fmtVal(currentMod) : '− ' + fmtVal(Math.abs(currentMod))} = ${fmtVal(currentSliderVal)}</span>
+                            <span>Max: ${fmtVal(maxVal)}</span>
+                        </div>
+                    </div>
+                `;             `;
+            });
+            html += `</div>`;
+        }
+    }
 
     html += `
         <div class="section">
@@ -511,6 +632,7 @@ async function createCharacter() {
         partesDoCorpo, // <== Injetado no momento da criação
         mecanicasAplicadas: {},
         mechanicBonuses: {},
+        derivedModifiers: ws.derivedModifiers || {},
         mecanicasPendentes: [],
         nivelInicio: ws.nivelInicio?.id || 'iniciante',
         expInicial: ws.expInicial || (ws.nivelInicio?.exp || 0),

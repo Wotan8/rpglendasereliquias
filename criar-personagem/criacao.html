@@ -99,6 +99,10 @@
     <script src="js/npcs-module.js"></script>
     <script src="js/equipment-module.js"></script>
     <script src="js/finale-module.js"></script>
+    <script type="module">
+        import { simulateDerivedValues } from './js/mechanics-simulator.js';
+        window.simulateDerivedValues = simulateDerivedValues;
+    </script>
 
     <!-- Firebase Module (ESM) -->
     <script type="module" src="js/firebase.js"></script>

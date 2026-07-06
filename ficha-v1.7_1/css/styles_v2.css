@@ -2800,6 +2800,22 @@ html.dark .pec-capacidade {
     font-size: 10px;
 }
 
+.dv-tooltip-creation-const {
+    border-top: 1px solid #374151;
+    padding-top: 6px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #5eead4;
+}
+
+.dv-tooltip-creation-val {
+    font-weight: 900;
+    color: #2dd4bf;
+    font-size: 12px;
+}
+
 @keyframes dvTooltipIn {
     from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
