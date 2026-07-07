@@ -270,3 +270,121 @@
     cursor: pointer; color: var(--muted); transition: color 0.2s;
 }
 .filter-chip-close:hover { color: #fff; }
+
+/* ============================================================
+   FICHA DE NPC v2 — modo Rápido/Mecânico, campos híbridos,
+   peculiaridades, valores derivados com override e vínculos
+   ============================================================ */
+.npcv2-toolbar {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.npcv2-mode-toggle {
+    display: inline-flex; border: 1px solid var(--line);
+    border-radius: 10px; overflow: hidden;
+}
+.npcv2-mode-btn {
+    background: transparent; border: none; color: var(--muted);
+    padding: 8px 14px; font-weight: 800; font-size: .85rem; cursor: pointer;
+    transition: all .15s ease;
+}
+.npcv2-mode-btn.active { background: var(--primary); color: #fff; }
+
+.npcv2-sections {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--line); margin-bottom: 16px; padding-bottom: 8px;
+}
+.npcv2-section-btn {
+    background: transparent; border: 1px solid var(--line); border-radius: 8px;
+    color: var(--muted); padding: 6px 12px; font-size: .82rem; font-weight: 700; cursor: pointer;
+}
+.npcv2-section-btn.active { background: var(--primary-glow); border-color: var(--primary); color: var(--primary); }
+.npcv2-section { display: none; }
+.npcv2-section.active { display: block; }
+
+.npcv2-block-title {
+    font-weight: 800; color: var(--primary); margin-bottom: 10px;
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+}
+.npcv2-hint { font-size: .75rem; font-weight: 500; color: var(--muted); }
+
+/* Modo rápido esconde tudo que depende dos registros */
+.npcv2-modo-rapido .npcv2-only-mecanico { display: none !important; }
+
+/* Peculiaridades */
+.npcv2-pec-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px;
+    margin-bottom: 6px; font-size: .85rem;
+}
+.npcv2-pec-nome { font-weight: 700; flex: 1; min-width: 120px; }
+.npcv2-pec-fonte {
+    font-size: .7rem; font-weight: 800; text-transform: uppercase;
+    color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px;
+}
+.npcv2-pec-nivel { font-size: .78rem; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+.npcv2-pec-nivel input { width: 52px; text-align: center; background: transparent; border: 1px solid var(--line); border-radius: 6px; color: inherit; padding: 2px 4px; }
+.npcv2-pec-del {
+    background: transparent; border: none; color: var(--muted);
+    cursor: pointer; font-size: .9rem; padding: 2px 6px; border-radius: 6px;
+}
+.npcv2-pec-del:hover { color: #ef4444; background: rgba(239, 68, 68, .12); }
+.npcv2-pec-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.npcv2-pec-add .form-input, .npcv2-pec-add .form-select { flex: 1; min-width: 160px; }
+
+/* Atributos */
+.npcv2-attrs-grid {
+    display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; margin-bottom: 8px;
+}
+@media (max-width: 760px) { .npcv2-attrs-grid { grid-template-columns: repeat(3, 1fr); } }
+.npcv2-attr-cell { text-align: center; }
+.npcv2-attr-label { font-size: .72rem; font-weight: 800; color: var(--muted); margin-bottom: 4px; }
+.npcv2-attr-input { text-align: center; font-weight: 800; color: var(--primary); }
+.npcv2-attr-eff { font-size: .72rem; color: var(--success, #22c55e); min-height: 16px; margin-top: 2px; }
+
+/* Valores derivados */
+.npcv2-dv-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;
+}
+.npcv2-dv-cell {
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px;
+}
+.npcv2-dv-cell.locked { border-color: var(--warning, #f59e0b); }
+.npcv2-dv-label {
+    font-size: .72rem; font-weight: 800; color: var(--muted); margin-bottom: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help;
+}
+.npcv2-dv-value { display: flex; align-items: center; gap: 4px; }
+.npcv2-dv-input { text-align: center; font-weight: 800; }
+.npcv2-dv-cell.locked .npcv2-dv-input { color: var(--warning, #f59e0b); }
+.npcv2-dv-reset {
+    background: transparent; border: 1px solid var(--line); border-radius: 6px;
+    color: var(--muted); cursor: pointer; padding: 4px 6px; font-size: .8rem;
+}
+.npcv2-dv-reset:hover { color: var(--primary); border-color: var(--primary); }
+.npcv2-dv-atual {
+    width: 100%; margin-top: 6px; text-align: center;
+    background: transparent; border: 1px dashed var(--line); border-radius: 6px;
+    color: inherit; padding: 3px; font-size: .8rem;
+}
+
+/* Extras */
+.npcv2-extra-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.npcv2-extra-row .form-input:first-child { flex: 2; }
+.npcv2-extra-row .form-input:nth-child(2) { flex: 1; }
+
+/* Infos / avisos */
+.npcv2-info-row {
+    font-size: .82rem; padding: 6px 10px; border-left: 3px solid var(--primary);
+    background: var(--primary-glow); border-radius: 0 8px 8px 0; margin-bottom: 6px;
+}
+.npcv2-avisos { font-size: .78rem; color: var(--warning, #f59e0b); margin-top: 10px; }
+
+/* Vínculos */
+.npcv2-vinc-list { display: flex; flex-direction: column; gap: 4px; }
+.npcv2-check {
+    display: flex; align-items: center; gap: 8px; font-size: .85rem; cursor: pointer;
+    padding: 4px 0;
+}
+.npcv2-vinc-rel { max-width: 200px; font-size: .8rem; padding: 4px 8px; }
+.npcv2-funcoes { margin-top: 4px; }
