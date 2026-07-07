@@ -3,8 +3,8 @@ import { db, collection, getDocs, setDoc, deleteDoc, doc, addDoc } from './fireb
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
-import { ensureNpcSystemData, pecsDaOrigem } from './npc-system-data.js';
-import { calcularNpc, ATTR_SIGLAS } from './npc-calc-engine.js';
+import { ensureNpcSystemData, pecsDaOrigem } from './npc-system-data.js?v=1.3';
+import { calcularNpc, ATTR_SIGLAS } from './npc-calc-engine.js?v=1.3';
 
 let currentEditingNpc = null;
 export async function onTabActivated() { await loadAllNpcs(); }
@@ -12,11 +12,61 @@ export async function onTabActivated() { await loadAllNpcs(); }
 async function loadAllNpcs() {
     try {
         const snap = await getDocs(collection(db, 'npcs'));
-        const npcs = []; snap.forEach(d => npcs.push({ id: d.id, ...d.data() }));
+        const npcs = []; 
+        snap.forEach(d => {
+            const data = d.data();
+            npcs.push({ id: d.id, ...data });
+        });
         S.setAllNpcs(npcs); window.restoreNpcFiltersState ? window.restoreNpcFiltersState() : window.filterNpcs();
     } catch (e) { console.error(e); showAlert('❌ Erro NPCs', 'danger'); }
 }
 window.loadAllNpcs = loadAllNpcs;
+
+/* ===== TOOLTIP ENGINE PARA NPCS ===== */
+let npcTooltipEl = null;
+function ensureNpcTooltip() {
+    if (!npcTooltipEl) {
+        npcTooltipEl = document.createElement('div');
+        npcTooltipEl.id = 'npcHoverTooltip';
+        Object.assign(npcTooltipEl.style, {
+            position: 'fixed', display: 'none', backgroundColor: 'var(--bg-panel, #1e1e2e)',
+            color: 'var(--text, #e2e8f0)', border: '1px solid var(--primary, #8b5cf6)',
+            borderRadius: '6px', padding: '10px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            zIndex: '99999', maxWidth: '300px', pointerEvents: 'none', fontSize: '0.85rem',
+            lineHeight: '1.4', transition: 'opacity 0.15s ease-in-out'
+        });
+        document.body.appendChild(npcTooltipEl);
+    }
+    return npcTooltipEl;
+}
+window.handleNpcTooltipEnter = function(event, el) {
+    const title = el.getAttribute('data-tt-title');
+    const desc = el.getAttribute('data-tt-desc');
+    const extra = el.getAttribute('data-tt-extra');
+    const tipEl = ensureNpcTooltip();
+    let html = '';
+    if (title) html += `<div style="font-weight:bold;margin-bottom:6px;color:var(--primary);font-size:0.95rem">${escapeHtml(title)}</div>`;
+    if (desc) html += `<div style="margin-bottom:6px;color:var(--text-muted, #94a3b8)">${escapeHtml(desc)}</div>`;
+    if (extra) html += `<div style="border-top:1px solid var(--line, #334155);padding-top:6px;margin-top:6px;font-size:0.8rem;white-space:pre-wrap;">${escapeHtml(extra)}</div>`;
+    tipEl.innerHTML = html;
+    tipEl.style.opacity = '0'; tipEl.style.display = 'block';
+    window.moveNpcTooltip(event);
+    void tipEl.offsetWidth; tipEl.style.opacity = '1';
+};
+window.hideNpcTooltip = function() {
+    if (npcTooltipEl) {
+        npcTooltipEl.style.opacity = '0';
+        setTimeout(() => { if (npcTooltipEl.style.opacity === '0') npcTooltipEl.style.display = 'none'; }, 150);
+    }
+};
+window.moveNpcTooltip = function(event) {
+    if (!npcTooltipEl || npcTooltipEl.style.display === 'none') return;
+    const rect = npcTooltipEl.getBoundingClientRect();
+    let top = event.clientY + 15; let left = event.clientX + 15;
+    if (left + rect.width > window.innerWidth) left = window.innerWidth - rect.width - 10;
+    if (top + rect.height > window.innerHeight) top = event.clientY - rect.height - 10;
+    npcTooltipEl.style.top = top + 'px'; npcTooltipEl.style.left = left + 'px';
+};
 
 function renderNpcs(npcs) {
     const el = document.getElementById('npcsList'); if (!el) return;
@@ -294,6 +344,7 @@ function normalizeNpc(raw, sys) {
     n.nivel = parseInt(n.nivel) || 1;
     n.atributos = n.atributos || {};
     n.peculiaridades = Array.isArray(n.peculiaridades) ? n.peculiaridades : [];
+    n.periciasEstruturadas = Array.isArray(n.periciasEstruturadas) ? n.periciasEstruturadas : [];
 
     n.racaRef = n.racaRef || hybFromLegacy(n.raca, sys.racesByNome, sys);
     n.classeRef = n.classeRef || hybFromLegacy(n.classe, sys.classesByNome, sys);
@@ -406,8 +457,11 @@ function buildNpcForm() {
             <div class="form-group"><label class="form-label">Tamanho</label><input type="text" class="form-input" id="npcTamanho"></div>
             <div class="form-group"><label class="form-label">🏷️ Tags (separadas por vírgula)</label><input type="text" class="form-input" id="npcTags" placeholder="tag1, tag2"></div>
         </div>
-        <div class="form-group npcv2-funcoes"><label class="form-label">Funções</label>
-            <label class="npcv2-check"><input type="checkbox" id="npcFuncAliado"> 🤝 Aliado (poderá ser vinculado à ficha de personagens)</label>
+        <div class="form-group npcv2-funcoes npcv2-only-mecanico"><label class="form-label">Funções</label>
+            <label class="npcv2-check"><input type="checkbox" id="npcFuncAliado" onchange="document.getElementById('npcAliadoProprioWrap').style.display = this.checked ? 'block' : 'none'"> 🤝 Aliado (poderá ser vinculado à ficha de personagens)</label>
+            <div id="npcAliadoProprioWrap" style="display:none; margin-left: 24px; margin-top: 8px;">
+                <label class="npcv2-check"><input type="checkbox" id="npcAliadoProprio"> É o próprio? <span class="npcv2-hint">(se OFF, a vinculação gera um clone independente)</span></label>
+            </div>
         </div>
         <div id="creatureFieldsSection" style="display:none"><hr style="border-color:var(--line);margin:16px 0"><div style="font-weight:800;color:var(--warning);margin-bottom:10px">🐉 Campos de Criatura</div>
             <div class="form-group"><label class="form-label">Habitat</label><input type="text" class="form-input" id="npcHabitat"></div>
@@ -443,6 +497,11 @@ function buildNpcForm() {
                 </div>`).join('')}
         </div>
 
+        <div class="npcv2-block-title" style="margin-top:14px">❤️ Status Vitais
+            <span class="npcv2-hint npcv2-only-mecanico">calculados pelas mecânicas — clique em um valor para travar um override 🔒</span>
+        </div>
+        <div class="npcv2-dv-grid" id="npcVitalStatsGrid"></div>
+
         <div class="npcv2-block-title" style="margin-top:14px">📊 Valores Derivados
             <span class="npcv2-hint npcv2-only-mecanico">calculados pelas mecânicas — clique em um valor para travar um override 🔒</span>
         </div>
@@ -459,7 +518,35 @@ function buildNpcForm() {
         <div id="npcAvisosWrap" style="display:none"><div id="npcAvisosList" class="npcv2-avisos"></div></div>
 
         <div class="form-group" style="margin-top:14px"><label class="form-label">⚔️ Ataques</label><textarea class="form-textarea" id="npcAtaques" rows="3" placeholder="Ataques e danos..."></textarea></div>
-        <div class="form-group"><label class="form-label">📚 Perícias</label><textarea class="form-textarea" id="npcSkills" rows="2" placeholder="Perícias relevantes..."></textarea></div>
+        <div class="form-group"><label class="form-label">📚 Perícias</label><textarea class="form-textarea" id="npcSkills" rows="2" placeholder="Perícias relevantes... (Texto Livre)"></textarea></div>
+
+        <!-- ============ SEÇÃO: PERÍCIAS ESTRUTURADAS ============ -->
+        <div id="npcStructuredSkillsWrap" style="margin-top: 14px;">
+            <div class="npcv2-block-title" style="margin-bottom:8px">🎯 Perícias Estruturadas</div>
+            
+            <div class="npcv2-only-mecanico" style="margin-bottom:12px">
+                <label class="npcv2-check">
+                    <input type="checkbox" id="npcHasDefaultSkills" onchange="toggleDefaultSkills(this.checked)"> Tem todas as Perícias Padrões?
+                </label>
+            </div>
+            
+            <div class="npcv2-pec-add npcv2-only-mecanico" style="margin-bottom:12px; display:flex; gap:10px;">
+                <select class="form-select" id="npcSkillPicker" style="flex:1"></select>
+                <button class="btn btn-secondary btn-small" onclick="addSkillIndividual()">➕ Adicionar</button>
+                
+                <select class="form-select" id="npcSkillCategoryPicker" style="flex:1;">
+                    <option value="">-- Adicionar por Categoria --</option>
+                    <option value="físico">Físico</option>
+                    <option value="mental">Mental</option>
+                    <option value="social">Social</option>
+                    <option value="exclusivo">Exclusivo</option>
+                    <option value="combate">Combate</option>
+                </select>
+                <button class="btn btn-secondary btn-small" onclick="addSkillByCategory()">➕ Categoria</button>
+            </div>
+            
+            <div class="npcv2-attrs-grid" id="npcStructuredSkillsGrid" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));"></div>
+        </div>
     </div>
 
     <!-- ============ SEÇÃO: ROLE PLAY ============ -->
@@ -491,14 +578,24 @@ function buildNpcForm() {
     <div class="npcv2-section" id="npcSec_vinculos">
         <div class="npcv2-block-title">🗺️ Mesas</div>
         <div id="npcVincMesas" class="npcv2-vinc-list"><div style="color:var(--muted);font-size:.85rem">Carregando mesas...</div></div>
-        <div class="npcv2-block-title" style="margin-top:14px">👥 Personagens</div>
+        
+        <div class="npcv2-block-title" style="margin-top:14px; color: var(--primary);">🤝 Aliados (Personagens)</div>
+        <div id="npcVincAliados"></div>
+        <div class="npcv2-pec-add" style="margin-top:8px; display:flex; gap:10px;">
+            <select class="form-select" id="vincAliadoMesaPicker" style="max-width:180px" onchange="filterVincAliadoChars(this.value)"><option value="">Filtrar Mesa...</option></select>
+            <select class="form-select" id="vincAliadoCharPicker" style="flex:1"><option value="">Selecione a Mesa primeiro...</option></select>
+            <button class="btn btn-primary btn-small" onclick="addVincAliado()">➕ Vincular como Aliado</button>
+        </div>
+        <div class="npcv2-hint" style="margin-top:4px">O sistema respeitará a configuração "É o próprio?" da aba Identidade (Mecânico).</div>
+
+        <div class="npcv2-block-title" style="margin-top:14px">👥 Vínculos Gerais (Não Aliados)</div>
         <div id="npcVincChars"></div>
-        <div class="npcv2-pec-add" style="margin-top:8px">
-            <select class="form-select" id="vincCharPicker"><option value="">Carregando personagens...</option></select>
-            <input type="text" class="form-input" id="vincCharRelacao" placeholder="Relação (Mentor, Irmã, Contato...)">
+        <div class="npcv2-pec-add" style="margin-top:8px; display:flex; gap:10px;">
+            <select class="form-select" id="vincCharPicker" style="flex:1"><option value="">Carregando personagens...</option></select>
+            <input type="text" class="form-input" id="vincCharRelacao" style="flex:1" placeholder="Relação (Mentor, Irmã...)">
             <button class="btn btn-secondary btn-small" onclick="addVincChar()">➕ Vincular</button>
         </div>
-        <div class="npcv2-hint" style="margin-top:8px">Vínculos criados na criação de personagem aparecerão aqui com a origem "criação".</div>
+        <div class="npcv2-hint" style="margin-top:4px">Vínculos criados na criação de personagem aparecerão aqui com a origem "criação".</div>
     </div>
 
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px"><button class="btn btn-secondary" onclick="closeNpcModal()">Cancelar</button><button class="btn btn-success" onclick="saveNpc()">💾 Salvar</button></div>`;
@@ -591,6 +688,7 @@ window.setNpcModo = function(modo) {
             custom.value = F.npc[campo + 'Ref'].custom || '';
         }
     });
+    renderStructuredSkills();
     recalcStats();
 };
 
@@ -674,32 +772,53 @@ function renderAttrEffects() {
 }
 
 function renderDvGrid() {
-    const grid = document.getElementById('npcDvGrid'); if (!grid) return;
+    const vGrid = document.getElementById('npcVitalStatsGrid');
+    const dGrid = document.getElementById('npcDvGrid');
+    if (!vGrid || !dGrid) return;
+    
     const rapido = F.npc.modoFicha === 'rapido';
-    const dvs = Object.values(F.calc.derived);
-    if (!dvs.length) { grid.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Nenhum valor derivado cadastrado no Painel de Criador.</div>'; return; }
+    const allDvs = Object.values(F.calc.derived);
+    const vitals = allDvs.filter(dv => dv.isVital);
+    const dvs = allDvs.filter(dv => !dv.isVital);
 
-    grid.innerHTML = dvs.map(dv => {
-        const locked = dv.override !== null;
-        const tip = dv.fontes.length ? dv.fontes.map(f => `${f.fonte}: ${f.texto}`).join('\n') : 'Sem mecânicas aplicáveis (base 0)';
-        const editable = rapido || locked;
-        const atual = dv.campoAtual
-            ? `<input type="number" class="npcv2-dv-atual" title="Valor atual" placeholder="atual"
-                 value="${F.npc.valoresDer.atual?.[dv.key] ?? ''}"
-                 oninput="F.npc.valoresDer.atual['${dv.key}']=this.value===''?null:parseFloat(this.value)">`
-            : '';
-        return `<div class="npcv2-dv-cell ${locked ? 'locked' : ''}" data-dvkey="${dv.key}">
-            <div class="npcv2-dv-label" title="${escapeHtml(tip)}">${dv.icone ? dv.icone + ' ' : ''}${escapeHtml(dv.nome)}${locked ? ' 🔒' : ''}</div>
-            <div class="npcv2-dv-value">
-                <input type="number" class="form-input npcv2-dv-input" value="${dv.final}" ${editable ? '' : 'readonly'}
-                    onfocus="if(!${rapido}&&!${locked})startDvOverride('${dv.key}',this)"
-                    oninput="setDvOverride('${dv.key}',this.value)"
-                    onchange="recalcStats()">
-                ${locked ? `<button class="npcv2-dv-reset" title="Voltar ao cálculo automático (${dv.auto})" onclick="clearDvOverride('${dv.key}')">↺</button>` : ''}
-            </div>
-            ${atual}
-        </div>`;
-    }).join('');
+    const renderFn = (list, container, emptyMsg) => {
+        if (!list.length) { container.innerHTML = `<div style="color:var(--muted);font-size:.85rem">${emptyMsg}</div>`; return; }
+        container.innerHTML = list.map(dv => {
+            const locked = dv.override !== null;
+            const sysRef = (F.sys.vitalStats || []).find(x => x.key === dv.key) || (F.sys.derivedValues || []).find(x => x.key === dv.key) || {};
+            const desc = sysRef.descricao || 'Sem descrição cadastrada.';
+            const tip = dv.fontes.length ? dv.fontes.map(f => `${f.fonte}: ${f.texto}`).join('\n') : 'Sem mecânicas aplicáveis (base 0)';
+            const editable = rapido || locked;
+            const atual = dv.campoAtual
+                ? `<input type="number" class="npcv2-dv-atual" title="Valor atual" placeholder="atual"
+                     value="${F.npc.valoresDer.atual?.[dv.key] ?? ''}"
+                     oninput="F.npc.valoresDer.atual['${dv.key}']=this.value===''?null:parseFloat(this.value)">`
+                : '';
+            return `<div class="npcv2-dv-cell ${locked ? 'locked' : ''}" data-dvkey="${dv.key}">
+                <div class="npcv2-dv-label" 
+                     data-tt-title="${escapeHtml(dv.nome)}" 
+                     data-tt-desc="${escapeHtml(desc)}" 
+                     data-tt-extra="${escapeHtml(tip)}"
+                     onmouseenter="handleNpcTooltipEnter(event, this)" 
+                     onmouseleave="hideNpcTooltip()" 
+                     onmousemove="moveNpcTooltip(event)">
+                     ${dv.icone ? dv.icone + ' ' : ''}${escapeHtml(dv.nome)}${locked ? ' 🔒' : ''}
+                </div>
+                <div class="npcv2-dv-value">
+                    <input type="number" class="form-input npcv2-dv-input" value="${dv.final}" ${editable ? '' : 'readonly'}
+                        onfocus="if(!${rapido}&&!${locked})startDvOverride('${dv.key}',this)"
+                        oninput="setDvOverride('${dv.key}',this.value)"
+                        onchange="recalcStats()">
+                    ${locked ? `<button class="npcv2-dv-reset" title="Voltar ao cálculo automático (${dv.auto})" onclick="clearDvOverride('${dv.key}')">↺</button>` : ''}
+                </div>
+                ${atual}
+            </div>`;
+        }).join('');
+    };
+
+    renderFn(vitals, vGrid, 'Nenhum status vital cadastrado no Painel de Criador.');
+    renderFn(dvs, dGrid, 'Nenhum valor derivado cadastrado no Painel de Criador.');
+
     renderExtras();
 }
 
@@ -780,6 +899,12 @@ async function loadVinculosUI() {
                 return `<label class="npcv2-check"><input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleVincMesa('${m.id}',this.checked)"> 🗺️ ${escapeHtml(m.nome || 'Sem nome')}</label>`;
             }).join('') : '<div style="color:var(--muted);font-size:.85rem">Nenhuma mesa cadastrada.</div>';
         }
+        
+        const aliadoMesaPicker = document.getElementById('vincAliadoMesaPicker');
+        if (aliadoMesaPicker) {
+            aliadoMesaPicker.innerHTML = '<option value="">Filtrar Mesa...</option>' + 
+                mesas.sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).map(m => `<option value="${m.id}">${escapeHtml(m.nome || 'Sem nome')}</option>`).join('');
+        }
     } catch (e) { if (mesasEl) mesasEl.innerHTML = '<div style="color:var(--danger)">Erro ao carregar mesas.</div>'; }
 
     // Personagens
@@ -788,7 +913,7 @@ async function loadVinculosUI() {
         let chars = S.allCharacters && S.allCharacters.length ? S.allCharacters : null;
         if (!chars) {
             const snap = await getDocs(collection(db, 'char'));
-            chars = []; snap.forEach(d => { const raw = d.data(); const f = raw.fields || {}; chars.push({ id: d.id, nome: f.nome || raw.nome || 'Sem nome', jogador: raw.ownerEmail || f.jogador || '' }); });
+            chars = []; snap.forEach(d => { const raw = d.data(); const f = raw.fields || {}; chars.push({ id: d.id, nome: f.nome || raw.nome || 'Sem nome', jogador: raw.ownerEmail || f.jogador || '', mesaId: raw.mesaId || f.mesaId || '' }); });
         }
         window._npcVincChars = chars;
         if (picker) picker.innerHTML = '<option value="">Selecione um personagem...</option>' +
@@ -800,21 +925,93 @@ async function loadVinculosUI() {
 
 function renderVincChars() {
     const el = document.getElementById('npcVincChars'); if (!el) return;
-    const vincs = F.npc.vinculos.filter(v => v.tipo === 'personagem');
-    if (!vincs.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:6px 0">Nenhum personagem vinculado.</div>'; return; }
+    const vincs = F.npc.vinculos.filter(v => v.tipo === 'personagem' && String(v.relacao).toLowerCase() !== 'aliado');
+    if (!vincs.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:6px 0">Nenhum personagem vinculado.</div>'; } else {
+        el.innerHTML = vincs.map(v => {
+            const c = (window._npcVincChars || []).find(x => x.id === v.id);
+            const idx = F.npc.vinculos.indexOf(v);
+            return `<div class="npcv2-pec-row">
+                <span class="npcv2-pec-nome">👤 ${escapeHtml(c?.nome || v.id)}</span>
+                ${v.origem ? `<span class="npcv2-pec-fonte">${escapeHtml(v.origem)}</span>` : ''}
+                <input type="text" class="form-input npcv2-vinc-rel" placeholder="Relação" value="${escapeHtml(v.relacao || '')}"
+                    oninput="F.npc.vinculos[${idx}].relacao=this.value">
+                <button class="npcv2-pec-del" onclick="F.npc.vinculos.splice(${idx},1);window._renderVincChars()">✕</button>
+            </div>`;
+        }).join('');
+    }
+    window.renderVincAliados();
+}
+window._renderVincChars = renderVincChars;
+
+window.renderVincAliados = function() {
+    const el = document.getElementById('npcVincAliados'); if (!el) return;
+    const vincs = F.npc.vinculos.filter(v => v.tipo === 'personagem' && String(v.relacao).toLowerCase() === 'aliado');
+    if (!vincs.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:6px 0">Nenhum aliado vinculado.</div>'; return; }
     el.innerHTML = vincs.map(v => {
         const c = (window._npcVincChars || []).find(x => x.id === v.id);
         const idx = F.npc.vinculos.indexOf(v);
-        return `<div class="npcv2-pec-row">
-            <span class="npcv2-pec-nome">👤 ${escapeHtml(c?.nome || v.id)}</span>
+        return `<div class="npcv2-pec-row" style="background: rgba(var(--primary-rgb), 0.1); border: 1px solid var(--primary); padding-left: 10px;">
+            <span class="npcv2-pec-nome" style="color: var(--primary);">🤝 ${escapeHtml(c?.nome || v.id)}</span>
             ${v.origem ? `<span class="npcv2-pec-fonte">${escapeHtml(v.origem)}</span>` : ''}
-            <input type="text" class="form-input npcv2-vinc-rel" placeholder="Relação" value="${escapeHtml(v.relacao || '')}"
-                oninput="F.npc.vinculos[${idx}].relacao=this.value">
+            <span style="font-size: 0.8rem; margin-left: auto; margin-right: 10px; color: var(--primary);">Aliado</span>
             <button class="npcv2-pec-del" onclick="F.npc.vinculos.splice(${idx},1);window._renderVincChars()">✕</button>
         </div>`;
     }).join('');
-}
-window._renderVincChars = renderVincChars;
+};
+
+window.filterVincAliadoChars = function(mesaId) {
+    const picker = document.getElementById('vincAliadoCharPicker');
+    if (!picker || !window._npcVincChars) return;
+    if (!mesaId) {
+        picker.innerHTML = '<option value="">Selecione a Mesa primeiro...</option>';
+        return;
+    }
+    const filtered = window._npcVincChars.filter(c => c.mesaId === mesaId);
+    if (!filtered.length) {
+        picker.innerHTML = '<option value="">Nenhum personagem nesta mesa.</option>';
+        return;
+    }
+    picker.innerHTML = '<option value="">Selecione um personagem...</option>' +
+        filtered.sort((a,b) => (a.nome||'').localeCompare(b.nome||'')).map(c => `<option value="${c.id}">${escapeHtml(c.nome||'Sem nome')}${c.jogador ? ` (${escapeHtml(c.jogador)})` : ''}</option>`).join('');
+};
+
+window.addVincAliado = async function() {
+    const charId = document.getElementById('vincAliadoCharPicker')?.value;
+    if (!charId) { showAlert('⚠️ Selecione um personagem', 'warning'); return; }
+
+    const isProprio = document.getElementById('npcAliadoProprio')?.checked || false;
+    
+    // Se não for o próprio, gerar clone:
+    if (!isProprio) {
+        if (!confirm('Isto criará um CLONE INDEPENDENTE deste NPC para vincular a este personagem. Deseja prosseguir?')) return;
+        
+        try {
+            const cloneData = JSON.parse(JSON.stringify(collectNpcData()));
+            cloneData.isClone = true;
+            cloneData.cloneOf = F.npc.id || null;
+            
+            // Adicionar vínculo de aliado ao clone
+            cloneData.vinculos = cloneData.vinculos || [];
+            cloneData.vinculos.push({ tipo: 'personagem', id: charId, relacao: 'Aliado', origem: 'manual' });
+            
+            const docRef = await addDoc(collection(db, 'npcs'), cloneData);
+            showAlert('✅ Aliado vinculado com sucesso! (Cópia Independente Gerada)', 'success');
+            document.getElementById('vincAliadoCharPicker').value = '';
+        } catch (e) {
+            console.error(e);
+            showAlert('❌ Erro ao criar cópia do NPC', 'danger');
+        }
+    } else {
+        // Vínculo no próprio NPC original
+        if (F.npc.vinculos.some(v => v.tipo === 'personagem' && v.id === charId && String(v.relacao).toLowerCase() === 'aliado')) { 
+            showAlert('⚠️ Personagem já é Aliado', 'warning'); return; 
+        }
+        F.npc.vinculos.push({ tipo: 'personagem', id: charId, relacao: 'Aliado', origem: 'manual' });
+        showAlert('✅ Aliado vinculado à ficha original do NPC', 'success');
+        document.getElementById('vincAliadoCharPicker').value = '';
+        window._renderVincChars();
+    }
+};
 
 window.toggleVincMesa = function(mesaId, checked) {
     F.npc.vinculos = F.npc.vinculos.filter(v => !(v.tipo === 'mesa' && v.id === mesaId));
@@ -848,7 +1045,14 @@ function fillNpcForm(n) {
     set('npcNivel', n.nivel || 1);
     set('npcPorte', n.porte); set('npcPapel', n.papel); set('npcLocal', n.local);
     set('npcTamanho', n.tamanho); set('npcTags', n.tags);
-    const fa = document.getElementById('npcFuncAliado'); if (fa) fa.checked = (n.funcao || []).includes('aliado');
+    const fa = document.getElementById('npcFuncAliado'); 
+    if (fa) {
+        fa.checked = (n.funcao || []).includes('aliado');
+        const wrap = document.getElementById('npcAliadoProprioWrap');
+        if (wrap) wrap.style.display = fa.checked ? 'block' : 'none';
+    }
+    const fap = document.getElementById('npcAliadoProprio');
+    if (fap) fap.checked = !!n.aliadoProprio;
 
     ATTR_SIGLAS.forEach(a => set('npcAttr_' + a, n.atributos?.[a] || 0));
     set('npcAtaques', n.ataques); set('npcSkills', n.skills);
@@ -869,7 +1073,156 @@ function fillNpcForm(n) {
     setNpcModo(n.modoFicha || 'rapido');
     renderPecs();
     renderPecPicker();
+    renderSkillPickers();
+    renderStructuredSkills();
 }
+
+/* ===== PERÍCIAS ESTRUTURADAS ===== */
+window.renderSkillPickers = function() {
+    const picker = document.getElementById('npcSkillPicker');
+    if (!picker || !F.sys || !F.sys.skills) return;
+    const skills = F.sys.skills.slice().sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
+    picker.innerHTML = '<option value="">-- Selecione uma Perícia --</option>' + 
+        skills.map(s => `<option value="${s.id}">${escapeHtml(s.nome)} (${escapeHtml(s.categoria || '')})</option>`).join('');
+};
+
+window.renderStructuredSkills = function() {
+    const grid = document.getElementById('npcStructuredSkillsGrid');
+    if (!grid || !F.npc || !F.sys) return;
+    const rapido = F.npc.modoFicha === 'rapido';
+    
+    // Atualiza checkbox de defaults
+    const checkDefaults = document.getElementById('npcHasDefaultSkills');
+    if (checkDefaults) {
+        const defaultSkills = F.sys.skills.filter(s => s.todoPersonagem);
+        const hasAllDefaults = defaultSkills.length > 0 && defaultSkills.every(ds => F.npc.periciasEstruturadas.some(ps => ps.refId === ds.id));
+        checkDefaults.checked = hasAllDefaults;
+    }
+
+    if (!F.npc.periciasEstruturadas.length) {
+        grid.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Nenhuma perícia adicionada.</div>';
+        grid.style.display = 'block';
+        return;
+    }
+
+    grid.style.display = 'block';
+
+    const grouped = {};
+    F.npc.periciasEstruturadas.forEach((ps, idx) => {
+        const s = F.sys.skills.find(x => x.id === ps.refId);
+        if (!s) return;
+        const cat = s.categoria ? s.categoria.trim() : 'Outros';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push({ ps, s, idx });
+    });
+
+    const catKeys = Object.keys(grouped).sort((a,b) => a.localeCompare(b));
+
+    let html = '';
+    for (const cat of catKeys) {
+        html += `<div style="margin-top:10px; margin-bottom: 5px; font-weight: bold; color: var(--primary); text-transform: uppercase; font-size: 0.8rem; border-bottom: 1px solid var(--line); padding-bottom: 3px;">${escapeHtml(cat)}</div>`;
+        html += `<div class="npcv2-attrs-grid" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); margin-bottom: 12px;">`;
+        
+        grouped[cat].sort((a,b) => (a.s.nome||'').localeCompare(b.s.nome||'')).forEach(item => {
+            const { ps, s, idx } = item;
+            html += `<div class="npcv2-attr-cell" style="flex-direction: row; align-items: center; justify-content: space-between; padding: 4px 8px;">
+                <div class="npcv2-attr-label" style="text-align:left; flex:1; font-size: 0.85rem;" 
+                     data-tt-title="${escapeHtml(s.nome)}"
+                     data-tt-desc="${escapeHtml(s.descricao || 'Sem descrição.')}"
+                     onmouseenter="handleNpcTooltipEnter(event, this)" 
+                     onmouseleave="hideNpcTooltip()" 
+                     onmousemove="moveNpcTooltip(event)">
+                     ${escapeHtml(s.nome)}
+                </div>
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <input type="number" class="form-input npcv2-attr-input" value="${ps.nivel}" min="0" max="10" style="width:40px; height:24px; padding:2px;"
+                        oninput="F.npc.periciasEstruturadas[${idx}].nivel=parseInt(this.value)||0;recalcStats()">
+                    ${!rapido ? `<button type="button" class="npcv2-pec-del" onclick="removeSkill(${idx})" style="width:24px;height:24px;font-size:12px;margin:0;padding:0;">✕</button>` : ''}
+                </div>
+            </div>`;
+        });
+        
+        html += `</div>`;
+    }
+    grid.innerHTML = html;
+};
+
+window.toggleDefaultSkills = function(checked) {
+    const defaultSkills = F.sys.skills.filter(s => s.todoPersonagem);
+    if (!defaultSkills.length) return;
+
+    if (checked) {
+        defaultSkills.forEach(ds => {
+            if (!F.npc.periciasEstruturadas.some(ps => ps.refId === ds.id)) {
+                F.npc.periciasEstruturadas.push({ refId: ds.id, nivel: 0 });
+            }
+        });
+        renderStructuredSkills();
+        recalcStats();
+    } else {
+        if (!confirm('Desmarcar esta opção irá desvincular TODAS as perícias padrões deste NPC. Quaisquer níveis aplicados a elas serão perdidos. Deseja continuar?')) {
+            document.getElementById('npcHasDefaultSkills').checked = true;
+            return;
+        }
+        F.npc.periciasEstruturadas = F.npc.periciasEstruturadas.filter(ps => {
+            return !defaultSkills.some(ds => ds.id === ps.refId);
+        });
+        renderStructuredSkills();
+        recalcStats();
+    }
+};
+
+window.addSkillIndividual = function() {
+    const picker = document.getElementById('npcSkillPicker');
+    const id = picker?.value;
+    if (!id) return;
+    if (F.npc.periciasEstruturadas.some(ps => ps.refId === id)) {
+        showAlert('⚠️ Perícia já adicionada.', 'warning');
+        return;
+    }
+    F.npc.periciasEstruturadas.push({ refId: id, nivel: 1 });
+    picker.value = '';
+    renderStructuredSkills();
+    recalcStats();
+};
+
+window.addSkillByCategory = function() {
+    const catPicker = document.getElementById('npcSkillCategoryPicker');
+    if (!catPicker || !catPicker.value) return;
+    
+    const normStr = str => String(str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+    const cat = normStr(catPicker.value);
+    
+    const catSkills = F.sys.skills.filter(s => normStr(s.categoria) === cat);
+    if (!catSkills.length) {
+        showAlert('⚠️ Nenhuma perícia encontrada nesta categoria.', 'warning');
+        return;
+    }
+    
+    let added = 0;
+    catSkills.forEach(s => {
+        if (!F.npc.periciasEstruturadas.some(ps => ps.refId === s.id)) {
+            F.npc.periciasEstruturadas.push({ refId: s.id, nivel: 0 });
+            added++;
+        }
+    });
+    
+    catPicker.value = '';
+    if (added > 0) {
+        showAlert(`✅ ${added} perícia(s) de '${cat}' adicionada(s).`, 'success');
+        renderStructuredSkills();
+        recalcStats();
+    } else {
+        showAlert('⚠️ Todas as perícias dessa categoria já estão no NPC.', 'warning');
+    }
+};
+
+window.removeSkill = function(idx) {
+    if (!confirm('Remover esta perícia? Os níveis aplicados a ela serão perdidos.')) return;
+    F.npc.periciasEstruturadas.splice(idx, 1);
+    renderStructuredSkills();
+    recalcStats();
+};
 
 window.F_set = function(campo, valor) { if (F.npc) F.npc[campo] = valor; };
 
@@ -908,12 +1261,14 @@ function collectNpcData() {
         porte: g('npcPorte'), papel: g('npcPapel'), local: g('npcLocal'),
         tamanho: g('npcTamanho'), tags: g('npcTags'),
         funcao,
+        aliadoProprio: document.getElementById('npcAliadoProprio')?.checked || false,
 
         // v2: referências híbridas + espelho legado em string
         racaRef: n.racaRef, classeRef: n.classeRef, triboRef: n.triboRef,
         raca: racaNome, classe: classeNome, tribo: triboNome,
 
         peculiaridades: n.peculiaridades,
+        periciasEstruturadas: n.periciasEstruturadas,
         atributos: { ...Object.fromEntries(ATTR_SIGLAS.map(a => [a, parseInt(n.atributos?.[a]) || 0])) },
         valoresDer: {
             overrides: n.valoresDer.overrides || {},

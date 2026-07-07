@@ -69,14 +69,14 @@ window.switchTab = async function (tabName) {
 
             case 'npcs':
                 if (!npcsModule) {
-                    npcsModule = await import('./area-npcs.js');
+                    npcsModule = await import('./area-npcs.js?v=' + Date.now());
                 }
                 if (npcsModule.onTabActivated) npcsModule.onTabActivated();
                 break;
 
             case 'economica':
                 if (!economicaModule) {
-                    economicaModule = await import('./area-economica.js');
+                    economicaModule = await import('./area-economica.js?v=' + Date.now());
                 }
                 if (economicaModule.onTabActivated) economicaModule.onTabActivated();
                 break;
@@ -90,7 +90,7 @@ window.switchTab = async function (tabName) {
 
             case 'historico':
                 if (!historicoModule) {
-                    historicoModule = await import('./area-historico.js');
+                    historicoModule = await import('./area-historico.js?v=' + Date.now());
                 }
                 if (historicoModule.onTabActivated) historicoModule.onTabActivated();
                 break;

@@ -31,9 +31,23 @@ function buildTargetMap(sys) {
     const map = {};
     ATTR_SIGLAS.forEach(s => map[s] = 'ATTR:' + s);
     Object.entries(ATTR_NOMES).forEach(([nome, sigla]) => map[nome] = 'ATTR:' + sigla);
-    Object.entries(VITAL_ALIASES).forEach(([nome, key]) => map[nome] = 'DV:' + key);
-    (sys.vitalStats || []).forEach(vs => { map[vs.nome] = 'DV:' + vs.key; map[vs.key] = 'DV:' + vs.key; });
+    
+    (sys.vitalStats || []).forEach(vs => { 
+        map[vs.nome] = 'DV:' + vs.key; 
+        map[vs.key] = 'DV:' + vs.key; 
+        map[`${vs.nome} Máxima`] = 'DV:' + vs.key;
+        map[`${vs.nome} Máximo`] = 'DV:' + vs.key;
+    });
     (sys.derivedValues || []).forEach(dv => { map[dv.nome] = 'DV:' + dv.key; map[dv.key] = 'DV:' + dv.key; });
+    
+    (sys.skills || []).forEach(s => {
+        map[s.nome] = 'SKILL:' + s.id;
+    });
+
+    Object.entries(VITAL_ALIASES).forEach(([nome, key]) => {
+        if (!map[nome]) map[nome] = 'DV:' + key;
+    });
+    
     return map;
 }
 
@@ -77,7 +91,15 @@ function resolveRef(ref, ctx) {
     if (target && target.startsWith('DV:')) {
         return ctx.derivedFinais[target.slice(3)] || 0;
     }
-    // Perícias / campos da ficha não modelados no NPC → 0 (com aviso)
+    if (target && target.startsWith('SKILL:')) {
+        return ctx.skillLevels[target.slice(6)] || 0;
+    }
+    // Perícias não vinculadas retornam 0 sem gerar aviso de erro para não poluir
+    if (target && target.startsWith('SKILL:')) {
+        return 0; // Já tratado acima, mas mantido por segurança. (Fallback para skills é 0 natural).
+    }
+
+    // Outros campos da ficha não modelados no NPC → 0 (com aviso)
     ctx.avisos.add(`Referência "${ref}" não se aplica a NPCs — tratada como 0.`);
     return 0;
 }
@@ -272,7 +294,14 @@ export function calcularNpc(npc, sys) {
     const { ops, limites, infos } = gatherOperations(npc, sys, targetMap, avisos);
 
     // --- Contexto compartilhado pelas equações ---
-    const ctx = { nivel, targetMap, attrsFinais: {}, derivedFinais: {}, avisos };
+    const ctx = { nivel, targetMap, attrsFinais: {}, derivedFinais: {}, skillLevels: {}, avisos };
+    
+    // Alimenta o contexto com os níveis das perícias estruturadas do NPC
+    if (Array.isArray(npc.periciasEstruturadas)) {
+        npc.periciasEstruturadas.forEach(ps => {
+            if (ps.refId) ctx.skillLevels[ps.refId] = ps.nivel || 0;
+        });
+    }
 
     // --- 1) Atributos: base (dots do NPC) + operações de mecânicas ---
     const attrs = {};
@@ -306,9 +335,8 @@ export function calcularNpc(npc, sys) {
                 ? config.calculos
                 : [{ alvo: config.alvo, operacao: config.operacao, valor: config.valor, valorTipo: config.valorTipo || 'fixo', valorRef: config.valorRef, valorMultiplicador: config.valorMultiplicador, equacao: config.equacao }];
             for (const calc of calculos) {
-                // Alvo implícito: o próprio DV, quando a mecânica está vinculada a ele
-                const alvoTarget = calc.alvo ? targetMap[calc.alvo] : ('DV:' + def.key);
-                if (!alvoTarget) continue;
+                // Alvo implícito e explícito das intrínsecas: SEMPRE o próprio DV
+                const alvoTarget = 'DV:' + def.key;
                 intrinsecas.push({ target: alvoTarget, op: calc.operacao || '+', calc, fonte: `Fórmula (${def.nome})` });
             }
         }

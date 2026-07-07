@@ -54,6 +54,7 @@ export async function ensureNpcSystemData() {
                     id: dv.id,
                     key: dv.key || dv.id,
                     nome: dv.nome,
+                    descricao: dv.descricao,
                     mecanicaIds: dv.mecanicaIds || [],
                     campoAtual: dv.campoAtual || false,
                     todoPersonagem: dv.todoPersonagem || false
@@ -64,6 +65,7 @@ export async function ensureNpcSystemData() {
                     id: vs.id,
                     key: vs.key || vs.id,
                     nome: vs.nome,
+                    descricao: vs.descricao,
                     icone: vs.icone || '❤️',
                     mecanicaIds: vs.mecanicaIds || []
                 })),
