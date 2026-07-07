@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ᛟ Laboratorium Runarum — Lendas & Relíquias</title>
+    <link rel="stylesheet" href="css/laboratorium.css">
+</head>
+<body>
+    <!-- LOADING -->
+    <div id="labLoading" class="lab-loading">
+        <div class="lab-loading-runa">ᛟ</div>
+        <span>Acendendo os lumes do Laboratorium…</span>
+    </div>
+
+    <!-- APP -->
+    <div id="labWrap" class="lab-wrap" style="display:none">
+        <header class="lab-topo">
+            <button class="lab-voltar" onclick="history.length > 1 ? history.back() : location.href='../menu/menu.html'" title="Voltar à ficha">←</button>
+            <h1>ᛟ Laboratorium Runarum</h1>
+            <div id="labCharInfo" class="lab-char"></div>
+        </header>
+
+        <nav class="lab-tabs">
+            <button class="lab-tab ativo" data-tab="montagem">🛠️ Montagem</button>
+            <button class="lab-tab" data-tab="grimorio">📖 Grimório</button>
+            <button class="lab-tab" data-tab="compendio">📜 Compêndio</button>
+        </nav>
+
+        <!-- ===== MONTAGEM ===== -->
+        <main class="lab-pane lab-montagem" data-pane="montagem">
+            <aside class="lab-col lab-col-paleta">
+                <div class="lab-col-titulo">Elementos Rúnicos <small>(do Painel do Criador)</small></div>
+                <input id="labSearch" type="search" placeholder="🔎 Buscar elemento…">
+                <div id="labPalette" class="lab-paleta"></div>
+                <div class="lab-legenda">
+                    <span><i class="dot dom"></i> dominado</span>
+                    <span><i class="dot sim"></i> simulação</span>
+                </div>
+            </aside>
+
+            <section class="lab-col lab-col-canvas">
+                <div class="lab-canvas-barra">
+                    <input id="labRunaNome" type="text" placeholder="Nome da runa (ex.: Lanterna Perene)">
+                    <button id="labBtnSalvar" disabled>📖 Gravar no Grimório</button>
+                    <button id="labBtnLimpar" class="perigo">🧹</button>
+                </div>
+                <div id="labSimAviso" class="lab-sim-aviso" style="display:none"></div>
+                <div id="labCanvas" class="lab-canvas"></div>
+                <div class="lab-canvas-dica">
+                    Clique num elemento da paleta para adicioná-lo · arraste para posicionar · aproxime
+                    <b style="color:#f59e0b">saída</b> de <b style="color:#38bdf8">entrada</b> (ou
+                    <b style="color:#a78bfa">sinal↔sinal</b>) para encaixar · clique numa ligação para rompê-la ·
+                    clique em <b>NvX</b> para mudar o nível · duplo clique abre os detalhes.
+                </div>
+            </section>
+
+            <aside class="lab-col lab-col-audit">
+                <div class="lab-col-titulo">Auditoria do Projeto <small>(§6 — ao vivo)</small></div>
+                <div id="labAudit"></div>
+            </aside>
+        </main>
+
+        <!-- ===== GRIMÓRIO ===== -->
+        <main class="lab-pane" data-pane="grimorio" style="display:none">
+            <div id="labGrimorio" class="lab-grimorio"></div>
+        </main>
+
+        <!-- ===== COMPÊNDIO ===== -->
+        <main class="lab-pane" data-pane="compendio" style="display:none">
+            <div id="labCompendio" class="lab-compendio"></div>
+        </main>
+    </div>
+
+    <!-- MODAL DE ELEMENTO -->
+    <div id="labModal" class="lab-modal" style="display:none">
+        <div class="lab-modal-caixa">
+            <button class="lab-modal-x">✕</button>
+            <div class="lab-modal-corpo"></div>
+        </div>
+    </div>
+
+    <!-- Scripts (ordem importa) -->
+    <script src="js/compendium-data.js"></script>
+    <script src="js/rune-engine.js"></script>
+    <script src="js/canvas.js"></script>
+    <script src="js/lab-app.js"></script>
+    <script type="module" src="js/lab-firebase.js"></script>
+</body>
+</html>

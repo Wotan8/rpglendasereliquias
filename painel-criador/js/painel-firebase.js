@@ -4,6 +4,7 @@
 // =============================================
 
 import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildManeuverSelectorHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=2';
+import { RUNIC_MODULE_DEF, buildRunicField, collectRunicField, importRunicSeed } from './painel-runic.js?v=1';
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -95,6 +96,7 @@ const MODULE_DEFS = {
             { key: 'derivedValueIds', label: 'Valores Derivados da Classe', type: 'mechanic_selector', selectorTarget: 'derivedValues' },
             { key: 'kitsIniciais', label: '🎒 Kits Iniciais', type: 'class_kits_editor' },
             { key: 'testesDeClasse', label: '🎯 Testes de Classe (Rolagens)', type: 'class_tests_editor' },
+            { key: 'usaRunomancia', label: 'ᛟ Usa Runomancia? (ON/OFF)', type: 'boolean' },
             { key: 'modulosDaClasse', label: '📦 Módulos da Classe', type: 'class_modules_editor' },
             { key: 'imagemUrl', label: 'URL da Imagem', type: 'text', placeholder: 'https://...' },
         ]
@@ -390,7 +392,8 @@ const MODULE_DEFS = {
             { key: 'podeVestir', label: 'Pode Vestir?', type: 'boolean' },
             { key: 'podeFixar', label: 'Pode Fixar?', type: 'boolean' },
         ]
-    }
+    },
+    runicElements: RUNIC_MODULE_DEF
 };
 
 // ===== THEME =====
@@ -503,6 +506,10 @@ window.switchModule = function (moduleName, btnEl) {
     // Remove/add tag filter for modules that have tags
     const oldTagFilter = document.getElementById('tagFilterArea');
     if (oldTagFilter) oldTagFilter.remove();
+
+    // Botão de importação do Compêndio (Elementos Rúnicos)
+    const seedBtn = document.getElementById('runicSeedBtn');
+    if (seedBtn) seedBtn.style.display = moduleName === 'runicElements' ? '' : 'none';
 
     loadModule(moduleName);
 };
@@ -1451,6 +1458,16 @@ function buildField(field, value, existingData) {
         wrap.dataset.showWhenBoolean = field.showWhenBoolean;
     }
 
+    // === CAMPOS RÚNICOS (Runomancia) ===
+    if (field.type && field.type.startsWith('runic_')) {
+        wrap.classList.add('full-width');
+        wrap.innerHTML = buildRunicField(field, value);
+        if (field.type === 'runic_connection_points') {
+            setTimeout(() => window.runicCPInit && window.runicCPInit(field.key), 0);
+        }
+        return wrap;
+    }
+
     if (field.type === 'mechanic_selector') {
         const ids = Array.isArray(value) ? value : [];
         if (field.selectorTarget === 'peculiarities') {
@@ -2232,9 +2249,10 @@ function _buildClassModuleEditorRow(idx, data) {
                 </div>
                 <div class="form-group">
                     <label>Tipo</label>
-                    <select data-cm-key="tipo">
+                    <select data-cm-key="tipo" onchange="this.closest('.class-module-editor-item').querySelector('.runo-config').style.display = this.value === 'runomancia' ? '' : 'none'">
                         <option value="lista" ${data.tipo === 'lista' || !data.tipo ? 'selected' : ''}>Lista</option>
                         <option value="grimorio" ${data.tipo === 'grimorio' ? 'selected' : ''}>Grimório</option>
+                        <option value="runomancia" ${data.tipo === 'runomancia' ? 'selected' : ''}>ᛟ Runomancia — Lista de Estudo</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -2262,6 +2280,41 @@ function _buildClassModuleEditorRow(idx, data) {
                         ${limitMechName ? `<span style="font-size:.72rem;color:var(--accent)">${escapeHtml(limitMechName)}</span>` : ''}
                     </div>
                     <div style="font-size:.65rem;color:var(--muted);margin-top:2px">Crie uma mecânica "modificar" com operação "=" (definir fixo) apontando para "Limite: Título". Cole o ID aqui.</div>
+                </div>
+                <div class="runo-config full-width" style="display:${data.tipo === 'runomancia' ? '' : 'none'};grid-column:1/-1;border:1px dashed rgba(139,92,246,.4);border-radius:8px;padding:8px;margin-top:4px">
+                    <div style="font-weight:700;font-size:.75rem;color:#a78bfa;margin-bottom:6px">ᛟ Parâmetros da Lista de Estudo (Compêndio, Parte XI)</div>
+                    <div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">
+                        <div class="form-group">
+                            <label>Slots Base</label>
+                            <input type="number" min="0" data-cm-key="runoSlotsBase" value="${data.runoSlotsBase ?? 2}" placeholder="2">
+                            <div style="font-size:.6rem;color:var(--muted)">§11.1: todo Runomago começa com 2 slots.</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Perícia/Atributo dos Slots (dotKey)</label>
+                            <input type="text" data-cm-key="runoSlotsDotKey" value="${escapeHtml(data.runoSlotsDotKey || '')}" placeholder="Ex: sk_classe_erudi__o_r_nica">
+                            <div style="font-size:.6rem;color:var(--muted)">Cada nível expande a Lista de Estudo (§11.3).</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Slots por Nível</label>
+                            <input type="number" min="0" step="0.5" data-cm-key="runoSlotsPorNivel" value="${data.runoSlotsPorNivel ?? 1}" placeholder="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Perícia/Atributo de Desconto (dotKey)</label>
+                            <input type="text" data-cm-key="runoDescontoDotKey" value="${escapeHtml(data.runoDescontoDotKey || '')}" placeholder="Ex: sk_classe_erudi__o_r_nica">
+                            <div style="font-size:.6rem;color:var(--muted)">Reduz o tempo de estudo dos elementos.</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Sessões Descontadas por Nível</label>
+                            <input type="number" min="0" step="0.5" data-cm-key="runoDescontoPorNivel" value="${data.runoDescontoPorNivel ?? 1}" placeholder="1">
+                            <div style="font-size:.6rem;color:var(--muted)">Tempo mínimo: 1 sessão.</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Multiplicador de EXP</label>
+                            <input type="number" min="0" step="0.1" data-cm-key="runoCustoExpMult" value="${data.runoCustoExpMult ?? 1}" placeholder="1">
+                            <div style="font-size:.6rem;color:var(--muted)">Multiplica o EXP definido em cada Elemento Rúnico.</div>
+                        </div>
+                    </div>
+                    <div style="font-size:.62rem;color:var(--muted);margin-top:4px">O módulo lê dinamicamente todos os Elementos Rúnicos cadastrados (ᛟ) e seus custos de EXP/tempo por nível — nada é fixo no código.</div>
                 </div>
             </div>
             <div style="padding:0 10px 10px">
@@ -2354,6 +2407,16 @@ function _collectClassModulesData(fieldKey) {
             mecanicaLimiteId: (item.querySelector('[data-cm-key="mecanicaLimiteId"]')?.value || '').trim() || null,
             schema: []
         };
+        // Parâmetros do módulo Runomancia (Lista de Estudo)
+        if (mod.tipo === 'runomancia') {
+            const g = k => item.querySelector(`[data-cm-key="${k}"]`)?.value ?? '';
+            mod.runoSlotsBase = parseInt(g('runoSlotsBase'), 10) || 0;
+            mod.runoSlotsDotKey = (g('runoSlotsDotKey') || '').trim();
+            mod.runoSlotsPorNivel = parseFloat(g('runoSlotsPorNivel')) || 0;
+            mod.runoDescontoDotKey = (g('runoDescontoDotKey') || '').trim();
+            mod.runoDescontoPorNivel = parseFloat(g('runoDescontoPorNivel')) || 0;
+            mod.runoCustoExpMult = parseFloat(g('runoCustoExpMult')) || 1;
+        }
         // Collect schema fields
         const schemaContainer = item.querySelector('.schema-fields-container');
         if (schemaContainer) {
@@ -2469,6 +2532,8 @@ window.handleFormSubmit = async function (e) {
                 catch { data[field.key] = []; }
             } else { data[field.key] = []; }
 
+        } else if (field.type && field.type.startsWith('runic_')) {
+            data[field.key] = collectRunicField(field);
         } else if (field.type === 'boolean') {
             const el = document.getElementById(`field_${field.key}`);
             data[field.key] = el ? el.checked : false;
@@ -2924,3 +2989,24 @@ function truncate(str, maxLen) {
     if (!str) return '';
     return str.length > maxLen ? str.substring(0, maxLen) + '...' : str;
 }
+
+// =====================================================================
+// ᛟ RUNOMANCIA — Importação do Compêndio (5 Artus + 14 Aspectus + 45 Sigilus)
+// =====================================================================
+window.runicImportSeed = async function () {
+    if (!confirm('Importar os 64 Elementos Rúnicos do Compêndio da Magia Rúnica?\n(Reimportar sobrescreve os elementos importados anteriormente, preservando os criados manualmente.)')) return;
+    const btn = document.getElementById('runicSeedBtn');
+    try {
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Importando…'; }
+        const total = await importRunicSeed(db, { doc, setDoc }, (done, all, nome) => {
+            if (btn) btn.textContent = `⏳ ${done}/${all} — ${nome}`;
+        });
+        showAlert(`✅ ${total} Elementos Rúnicos importados do Compêndio.`, 'success');
+        loadModule('runicElements');
+    } catch (e) {
+        console.error(e);
+        showAlert('❌ Falha na importação: ' + e.message, 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '📥 Importar Compêndio (64 elementos)'; }
+    }
+};

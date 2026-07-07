@@ -75,7 +75,8 @@ function initPhase8(container) {
                 if (currentMod < minBound) currentMod = minBound;
                 if (currentMod > maxBound) currentMod = maxBound;
                 wizardState.derivedModifiers[dv.id] = currentMod;
-                const currentSliderVal = parseFloat((baseVal + currentMod).to                // Formatar valores para exibição (até 2 decimais, sem zeros desnecessários)
+                const currentSliderVal = parseFloat((baseVal + currentMod).toFixed(2));
+                // Formatar valores para exibição (até 2 decimais, sem zeros desnecessários)
                 const fmtVal = (v) => Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
                 const stepVal = (Number.isInteger(minVal) && Number.isInteger(maxVal) && Number.isInteger(baseVal)) ? '1' : '0.01';
                 const modSign = currentMod > 0 ? '+' : '';
@@ -118,7 +119,7 @@ function initPhase8(container) {
                             <span>Max: ${fmtVal(maxVal)}</span>
                         </div>
                     </div>
-                `;             `;
+                `;
             });
             html += `</div>`;
         }

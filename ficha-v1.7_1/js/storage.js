@@ -161,6 +161,10 @@ function gatherData() {
     d.classModuleData = typeof gatherClassModuleData === 'function'
         ? gatherClassModuleData()
         : (state.classModuleData || {});
+    // ᛟ Runomancia (Lista de Estudo, elementos aprendidos e Grimório)
+    d.runomancia = typeof gatherRunomanciaData === 'function'
+        ? gatherRunomanciaData()
+        : (state.runomancia || { estudos: [], aprendidos: {}, grimorio: [] });
     return d;
 }
 
@@ -180,6 +184,9 @@ function loadFromData(d) {
         if (d.fields) Object.entries(d.fields).forEach(([k, v]) => { const el = document.querySelector(`[data-key="${k}"]`); if (el) el.value = v; });
         if (d.notes) { state.notes = d.notes; renderNotes(); }
         if (d.charImg) { state.charImg = d.charImg; const img = document.getElementById('charImgPreview'); img.src = state.charImg; img.style.display = 'block'; document.getElementById('charImgPlaceholder').style.display = 'none'; }
+
+        // ᛟ Runomancia — restaurar antes de onClassChange (que re-renderiza o módulo)
+        if (typeof applyRunomanciaData === 'function') applyRunomanciaData(d.runomancia);
 
         if (d.locacoes) state.locacoes = d.locacoes;
         if (d.rituais) state.rituais = d.rituais;

@@ -45,6 +45,7 @@
                 <button class="tab" data-module="auras" onclick="switchModule('auras', this)"><span class="emoji">🌟</span><span class="text"> Auras</span></button>
                 <button class="tab" data-module="itemRules" onclick="switchModule('itemRules', this)"><span class="emoji">⚙️</span><span class="text"> Regras de Item</span></button>
                 <button class="tab" data-module="bodyParts" onclick="switchModule('bodyParts', this)"><span class="emoji">🦴</span><span class="text"> Partes do Corpo</span></button>
+                <button class="tab" data-module="runicElements" onclick="switchModule('runicElements', this)"><span class="emoji">ᛟ</span><span class="text"> Elementos Rúnicos</span></button>
                 <button class="tab" data-module="lore" onclick="switchModule('lore', this)"><span class="emoji">🌍</span><span class="text"> Lore</span></button>
             </div>
         </div>
@@ -84,6 +85,9 @@
                     <div class="title" id="createCardTitle">Criar Novo Registro</div>
                     <div class="desc">Adicione um novo item ao cenário</div>
                 </div>
+
+                <!-- ᛟ Importação do Compêndio (visível só em Elementos Rúnicos) -->
+                <button id="runicSeedBtn" onclick="runicImportSeed()" style="display:none;margin:0 0 14px;padding:10px 16px;border-radius:10px;border:1px dashed rgba(139,92,246,.5);background:rgba(139,92,246,.1);color:#a78bfa;font-weight:700;cursor:pointer;width:100%">📥 Importar Compêndio (64 elementos)</button>
 
                 <!-- Items Grid -->
                 <div class="items-grid" id="itemsGrid"></div>

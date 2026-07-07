@@ -367,6 +367,8 @@ function onClassChange() {
         const sec = document.getElementById('runimagoSection');
         if (sec) sec.style.display = 'none';
     }
+    // ᛟ Runomancia — renderização condicional pelo flag usaRunomancia da classe (Firebase)
+    if (typeof renderRunomanciaModule === 'function') renderRunomanciaModule(cl);
     if (cl === 'Pallacerdote') {
         renderRitos(extraRes);
         ritoCount = 0;
