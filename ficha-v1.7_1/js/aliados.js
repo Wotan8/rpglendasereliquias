@@ -1,0 +1,482 @@
+import { collection, getDocs, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+let _aliadosLoaded = false;
+let currentAliadoNpc = null;
+
+// Escutar clique na aba
+document.addEventListener('DOMContentLoaded', () => {
+    // Usar mutation observer caso a aba não exista no carregamento ou bind imediato
+    const bindTab = () => {
+        const tabAliados = document.querySelector('.tab[data-tab="tabAliados"]');
+        if (tabAliados) {
+            tabAliados.addEventListener('click', () => {
+                if (!_aliadosLoaded && window.currentCharacterId) {
+                    loadAliados(window.currentCharacterId);
+                }
+            });
+            return true;
+        }
+        return false;
+    };
+    
+    if (!bindTab()) {
+        setTimeout(bindTab, 1000);
+    }
+});
+
+// Listener global caso a aba não precise ser clicada mas queiramos recarregar
+document.addEventListener('systemDataReady', () => {
+    _aliadosLoaded = false;
+});
+
+async function loadAliados(charId) {
+    const grid = document.getElementById('aliadosGrid');
+    if (!grid) return;
+    grid.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;grid-column: 1/-1;padding:20px;">Carregando aliados...</div>';
+
+    try {
+        const snap = await getDocs(collection(window.db, 'npcs'));
+        const npcs = [];
+        snap.forEach(d => {
+            const data = d.data();
+            npcs.push({ id: d.id, ...data });
+        });
+        
+        // Filtra NPCs que possuem vinculo com este charId e tipo 'personagem'
+        const vinculados = npcs.filter(n => {
+            if (!n.vinculos || !Array.isArray(n.vinculos)) return false;
+            return n.vinculos.some(v => v.tipo === 'personagem' && v.id === charId);
+        });
+
+        renderAliados(vinculados);
+        _aliadosLoaded = true;
+    } catch (e) {
+        console.error("Erro ao buscar aliados", e);
+        grid.innerHTML = '<div style="color:var(--danger);grid-column:1/-1;text-align:center;">❌ Erro ao carregar aliados.</div>';
+    }
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function renderAliados(aliados) {
+    const grid = document.getElementById('aliadosGrid');
+    if (!grid) return;
+
+    if (!aliados.length) {
+        grid.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;grid-column: 1/-1;padding:20px;">Nenhum aliado vinculado.</div>';
+        return;
+    }
+
+    grid.innerHTML = aliados.map(n => {
+        const hasImg = !!n.imagem;
+        return `
+        <div class="npc-card" style="background:var(--bg-panel, #1e293b); border:1px solid var(--border, #334155); border-radius:8px; padding:10px; cursor:pointer; transition:transform 0.1s;"
+             onclick="window.openAliadoModal('${n.id}')"
+             onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border, #334155); padding-bottom:6px; margin-bottom:8px;">
+                <div style="font-weight:bold; color:var(--primary, #8b5cf6); font-size:1rem;">${escapeHtml(n.nome || 'Sem Nome')}</div>
+                <div style="font-size:0.75rem; background:#334155; padding:2px 6px; border-radius:4px; color:white;">Nível ${n.nivel || 1}</div>
+            </div>
+            ${hasImg ? `<div style="text-align:center; margin-bottom:8px;"><img src="${escapeHtml(n.imagem)}" style="max-width:100%; max-height:100px; border-radius:4px; object-fit:cover;"></div>` : ''}
+            <div style="font-size:0.8rem; color:var(--text, #e2e8f0); opacity:0.8;">
+                ${n.tipo === 'criatura' ? '🐉 Criatura' : '👤 NPC'} ${n.classe?.custom ? ' - ' + escapeHtml(n.classe.custom) : ''}
+            </div>
+            <div style="font-size:0.75rem; color:var(--muted, #94a3b8); margin-top:4px;">
+                <em>Clique para visualizar a ficha</em>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+window.openAliadoModal = async function(npcId) {
+    const modal = document.getElementById('aliadoNpcModal');
+    const body = document.getElementById('aliadoNpcModalBody');
+    if (!modal || !body) return;
+
+    body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">⏳ Carregando dados do aliado...</div>';
+    modal.classList.remove('hidden');
+
+    try {
+        // Busca o documento atualizado
+        const snap = await getDocs(collection(window.db, 'npcs'));
+        const npcs = [];
+        snap.forEach(d => {
+            const data = d.data();
+            npcs.push({ id: d.id, ...data });
+        });
+        
+        currentAliadoNpc = npcs.find(n => n.id === npcId);
+        if (!currentAliadoNpc) throw new Error("NPC não encontrado");
+
+        body.innerHTML = buildAliadoForm();
+        fillAliadoForm(currentAliadoNpc);
+    } catch (e) {
+        console.error(e);
+        body.innerHTML = '<div style="color:var(--danger);padding:20px;text-align:center;">❌ Erro ao carregar dados do aliado.</div>';
+    }
+};
+
+window.closeAliadoModal = function() {
+    const modal = document.getElementById('aliadoNpcModal');
+    if (modal) modal.classList.add('hidden');
+    currentAliadoNpc = null;
+};
+
+window.aliadoSwitchSection = function(secId) {
+    const modal = document.getElementById('aliadoNpcModal');
+    if (!modal) return;
+    
+    // As abas usam a classe .tab do styles_v2.css
+    modal.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    // Os conteúdos usam .tab-content
+    modal.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
+    
+    const btn = modal.querySelector(`.tab[data-sec="${secId}"]`);
+    const sec = document.getElementById(`alSec_${secId}`);
+    
+    if (btn) btn.classList.add('active');
+    if (sec) sec.classList.add('active');
+};
+
+function buildAliadoForm() {
+    return `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="margin:0; font-size:1.3rem;">Ficha do Aliado</h3>
+        <button class="btn" style="background:var(--success, #10b981); color:white; border-color:var(--success, #10b981);" onclick="window.saveAliadoNpc()">💾 Salvar Alterações</button>
+    </div>
+
+    <div class="tabs" style="margin-bottom: 16px;">
+        <button type="button" class="tab active" data-sec="identidade" onclick="aliadoSwitchSection('identidade')">Identidade</button>
+        <button type="button" class="tab" data-sec="mecanica" onclick="aliadoSwitchSection('mecanica')">Mecânica</button>
+        <button type="button" class="tab" data-sec="roleplay" onclick="aliadoSwitchSection('roleplay')">Role Play</button>
+        <button type="button" class="tab" data-sec="loot" onclick="aliadoSwitchSection('loot')">Loot</button>
+    </div>
+
+    <!-- ============ SEÇÃO: IDENTIDADE ============ -->
+    <div class="tab-content active" id="alSec_identidade">
+        <div class="section">
+            <div class="section-title">Informações Básicas</div>
+            <div class="row">
+                <div class="field"><label>🖼️ Imagem URL</label><input type="text" id="al_imagem" placeholder="https://..."></div>
+            </div>
+            <div class="row" style="grid-template-columns: 2fr 1fr 1fr;">
+                <div class="field"><label>Nome *</label><input type="text" id="al_nome" placeholder="Nome do NPC"></div>
+                <div class="field">
+                    <label>Tipo *</label>
+                    <select id="al_tipo">
+                        <option value="npc">👤 NPC</option>
+                        <option value="criatura">🐉 Criatura</option>
+                    </select>
+                </div>
+                <div class="field"><label>Nível</label><input type="number" id="al_nivel" value="1" min="1" style="text-align: center;"></div>
+            </div>
+            
+            <div class="row" style="grid-template-columns: 1fr 1fr 1fr;">
+                <div class="field"><label>Raça</label><input type="text" id="al_raca"></div>
+                <div class="field"><label>Classe</label><input type="text" id="al_classe"></div>
+                <div class="field"><label>Tribo</label><input type="text" id="al_tribo"></div>
+            </div>
+            
+            <div class="row" style="grid-template-columns: 1fr 1fr 1fr;">
+                <div class="field">
+                    <label>Porte</label>
+                    <select id="al_porte">
+                        <option value="">Selecione</option>
+                        <option>Minúsculo</option><option>Pequeno</option><option>Médio</option>
+                        <option>Grande</option><option>Enorme</option><option>Colossal</option>
+                    </select>
+                </div>
+                <div class="field"><label>Papel</label><input type="text" id="al_papel" placeholder="Comerciante, Guarda..."></div>
+                <div class="field"><label>Local</label><input type="text" id="al_local"></div>
+            </div>
+            
+            <div class="row" style="grid-template-columns: 1fr 1fr;">
+                <div class="field"><label>Tamanho</label><input type="text" id="al_tamanho"></div>
+                <div class="field"><label>Tags (separadas por vírgula)</label><input type="text" id="al_tags" placeholder="tag1, tag2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ SEÇÃO: MECÂNICA ============ -->
+    <div class="tab-content" id="alSec_mecanica">
+        <div class="section">
+            <div class="section-title">Atributos</div>
+            <div class="row" style="grid-template-columns: repeat(9, 1fr);">
+                ${['FOR','DES','VIG','INT','RAC','PRS','PRE','MAN','AUT'].map(a => `
+                    <div class="field">
+                        <label style="text-align:center">${a}</label>
+                        <input type="number" id="al_attr_${a}" value="0" style="text-align:center">
+                    </div>`).join('')}
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Status Vitais</div>
+            <div class="row" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="field"><label style="color: #ef4444;">❤️ VIT Máx.</label><input type="number" id="al_vit" value="0" style="text-align:center"></div>
+                <div class="field"><label style="color: #eab308;">⚡ ENER Máx.</label><input type="number" id="al_ener" value="0" style="text-align:center"></div>
+                <div class="field"><label style="color: #3b82f6;">🧠 SAN Máx.</label><input type="number" id="al_san" value="0" style="text-align:center"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Combate e Perícias Livres</div>
+            <div class="row">
+                <div class="field"><label>⚔️ Ataques</label><textarea id="al_ataques" rows="3" placeholder="Ataques e danos..."></textarea></div>
+            </div>
+            <div class="row">
+                <div class="field"><label>📚 Perícias</label><textarea id="al_skills" rows="2" placeholder="Perícias relevantes (Texto Livre)..."></textarea></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🎯 Perícias Estruturadas</div>
+            <div id="al_structured_skills_grid"></div>
+        </div>
+    </div>
+
+    <!-- ============ SEÇÃO: ROLE PLAY ============ -->
+    <div class="tab-content" id="alSec_roleplay">
+        <div class="section">
+            <div class="section-title">Role Play</div>
+            
+            <div class="row" style="grid-template-columns: 1fr 1fr 1fr;">
+                <div class="field"><label>Personalidade 1</label><input type="text" id="al_personalidade1"></div>
+                <div class="field"><label>Personalidade 2</label><input type="text" id="al_personalidade2"></div>
+                <div class="field"><label>Personalidade 3</label><input type="text" id="al_personalidade3"></div>
+            </div>
+            
+            <div class="row">
+                <div class="field"><label>Trejeitos</label><input type="text" id="al_trejeitos"></div>
+            </div>
+            
+            <div class="row">
+                <div class="field"><label>Motivação</label><textarea id="al_motivacao" rows="2"></textarea></div>
+            </div>
+            
+            <div class="row">
+                <div class="field"><label>Segredos</label><textarea id="al_segredos" rows="2"></textarea></div>
+            </div>
+            
+            <div class="row" style="grid-template-columns: 1fr 1fr 1fr;">
+                <div class="field"><label>Aliado</label><input type="text" id="al_aliado"></div>
+                <div class="field"><label>Rival</label><input type="text" id="al_rival"></div>
+                <div class="field"><label>Devedor</label><input type="text" id="al_devedor"></div>
+            </div>
+            
+            <div class="row">
+                <div class="field"><label>💬 Frases</label><textarea id="al_frases" rows="2"></textarea></div>
+            </div>
+            
+            <div class="row">
+                <div class="field"><label>📖 História</label><textarea id="al_historia" rows="3"></textarea></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ SEÇÃO: LOOT ============ -->
+    <div class="tab-content" id="alSec_loot">
+        <div class="section">
+            <div class="section-title">Loot</div>
+            <div class="row">
+                <div class="field"><label>Itens</label><textarea id="al_itens" rows="2"></textarea></div>
+            </div>
+            <div class="row">
+                <div class="field"><label>Luns</label><input type="text" id="al_luns"></div>
+            </div>
+            <div class="row">
+                <div class="field"><label>Pistas</label><textarea id="al_pistas" rows="2"></textarea></div>
+            </div>
+            <div class="row">
+                <div class="field"><label>Complicações</label><textarea id="al_complicacoes" rows="2"></textarea></div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="font-size:0.75rem; color:var(--muted); text-align:center; margin-top:20px; padding-top:10px;">
+        <strong>Nota:</strong> Mecânicas complexas, peculiaridades e vínculos estendidos devem ser gerenciados pelo Mestre no painel dedicado.
+    </div>
+    `;
+}
+
+function fillAliadoForm(npc) {
+    document.getElementById('al_imagem').value = npc.imagem || '';
+    document.getElementById('al_nome').value = npc.nome || '';
+    document.getElementById('al_tipo').value = npc.tipo || 'npc';
+    document.getElementById('al_nivel').value = npc.nivel || 1;
+    
+    document.getElementById('al_raca').value = (npc.racaRef && npc.racaRef.custom) ? npc.racaRef.custom : (npc.raca || '');
+    document.getElementById('al_classe').value = (npc.classeRef && npc.classeRef.custom) ? npc.classeRef.custom : (npc.classe || '');
+    document.getElementById('al_tribo').value = (npc.triboRef && npc.triboRef.custom) ? npc.triboRef.custom : (npc.tribo || '');
+    
+    document.getElementById('al_porte').value = npc.porte || '';
+    document.getElementById('al_papel').value = npc.papel || '';
+    document.getElementById('al_local').value = npc.local || '';
+    document.getElementById('al_tamanho').value = npc.tamanho || '';
+    document.getElementById('al_tags').value = npc.tags || '';
+
+    ['FOR','DES','VIG','INT','RAC','PRS','PRE','MAN','AUT'].forEach(a => {
+        document.getElementById('al_attr_' + a).value = (npc.atributos && npc.atributos[a]) || 0;
+    });
+
+    const vd = npc.valoresDer || { overrides: {} };
+    document.getElementById('al_vit').value = vd.overrides?.VIT || vd.VIT || 0;
+    document.getElementById('al_ener').value = vd.overrides?.ENER || vd.ENER || 0;
+    document.getElementById('al_san').value = vd.overrides?.SAN || vd.SAN || 0;
+
+    document.getElementById('al_ataques').value = npc.ataques || '';
+    document.getElementById('al_skills').value = npc.skillsTexto || '';
+
+    // Perícias Estruturadas
+    const skillsGrid = document.getElementById('al_structured_skills_grid');
+    const psList = npc.periciasEstruturadas || [];
+    if (!psList.length) {
+        skillsGrid.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Nenhuma perícia adicionada (Acesse o Painel do Mestre para vincular perícias do sistema).</div>';
+    } else {
+        const sysSkills = window._systemData?.skills || [];
+        const grouped = {};
+        psList.forEach((ps, idx) => {
+            const s = sysSkills.find(x => x.id === ps.refId) || { nome: 'Desconhecida', categoria: 'Outros' };
+            const cat = s.categoria ? s.categoria.trim() : 'Outros';
+            if (!grouped[cat]) grouped[cat] = [];
+            grouped[cat].push({ ps, s, idx });
+        });
+
+        const catKeys = Object.keys(grouped).sort((a,b) => a.localeCompare(b));
+        let html = '';
+        for (const cat of catKeys) {
+            html += `<div style="margin-top:10px; margin-bottom: 5px; font-weight: bold; color: var(--muted); text-transform: uppercase; font-size: 0.8rem; padding-bottom: 3px;">${escapeHtml(cat)}</div>`;
+            html += `<div class="row" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));">`;
+            
+            grouped[cat].sort((a,b) => (a.s.nome||'').localeCompare(b.s.nome||'')).forEach(item => {
+                const { ps, s, idx } = item;
+                html += `
+                <div class="field" style="display:flex; flex-direction:row; align-items:center; justify-content:space-between; padding: 4px 8px;">
+                    <label style="margin:0;">${escapeHtml(s.nome)}</label>
+                    <input type="number" class="al_skill_input" data-idx="${idx}" value="${ps.nivel}" min="0" max="10" style="width: 50px; text-align: center;">
+                </div>`;
+            });
+            html += `</div>`;
+        }
+        skillsGrid.innerHTML = html;
+    }
+
+    if (npc.rolePlay) {
+        document.getElementById('al_personalidade1').value = npc.rolePlay.personalidade?.[0] || '';
+        document.getElementById('al_personalidade2').value = npc.rolePlay.personalidade?.[1] || '';
+        document.getElementById('al_personalidade3').value = npc.rolePlay.personalidade?.[2] || '';
+        document.getElementById('al_trejeitos').value = npc.rolePlay.trejeitos || '';
+        document.getElementById('al_motivacao').value = npc.rolePlay.motivacao || '';
+        document.getElementById('al_segredos').value = npc.rolePlay.segredos || '';
+        document.getElementById('al_aliado').value = npc.rolePlay.aliado || '';
+        document.getElementById('al_rival').value = npc.rolePlay.rival || '';
+        document.getElementById('al_devedor').value = npc.rolePlay.devedor || '';
+        document.getElementById('al_frases').value = npc.rolePlay.frases || '';
+        document.getElementById('al_historia').value = npc.rolePlay.historia || '';
+    }
+
+    if (npc.loot) {
+        document.getElementById('al_itens').value = npc.loot.itens || '';
+        document.getElementById('al_luns').value = npc.loot.luns || '';
+        document.getElementById('al_pistas').value = npc.loot.pistas || '';
+        document.getElementById('al_complicacoes').value = npc.loot.complicacoes || '';
+    }
+}
+
+window.saveAliadoNpc = async function() {
+    if (!currentAliadoNpc) return;
+
+    const btn = event.currentTarget;
+    btn.textContent = '⏳ Salvando...';
+    btn.disabled = true;
+
+    try {
+        const updateData = {
+            imagem: document.getElementById('al_imagem').value.trim(),
+            nome: document.getElementById('al_nome').value.trim(),
+            tipo: document.getElementById('al_tipo').value,
+            nivel: parseInt(document.getElementById('al_nivel').value) || 1,
+            'racaRef.custom': document.getElementById('al_raca').value.trim(),
+            'classeRef.custom': document.getElementById('al_classe').value.trim(),
+            'triboRef.custom': document.getElementById('al_tribo').value.trim(),
+            porte: document.getElementById('al_porte').value,
+            papel: document.getElementById('al_papel').value.trim(),
+            local: document.getElementById('al_local').value.trim(),
+            tamanho: document.getElementById('al_tamanho').value.trim(),
+            tags: document.getElementById('al_tags').value.trim(),
+            atributos: {}
+        };
+
+        ['FOR','DES','VIG','INT','RAC','PRS','PRE','MAN','AUT'].forEach(a => {
+            updateData.atributos[a] = parseInt(document.getElementById('al_attr_' + a).value) || 0;
+        });
+
+        updateData['valoresDer.overrides.VIT'] = parseInt(document.getElementById('al_vit').value) || 0;
+        updateData['valoresDer.overrides.ENER'] = parseInt(document.getElementById('al_ener').value) || 0;
+        updateData['valoresDer.overrides.SAN'] = parseInt(document.getElementById('al_san').value) || 0;
+        
+        updateData['valoresDer.VIT'] = parseInt(document.getElementById('al_vit').value) || 0;
+        updateData['valoresDer.ENER'] = parseInt(document.getElementById('al_ener').value) || 0;
+        updateData['valoresDer.SAN'] = parseInt(document.getElementById('al_san').value) || 0;
+
+        updateData.ataques = document.getElementById('al_ataques').value.trim();
+        updateData.skillsTexto = document.getElementById('al_skills').value.trim();
+
+        if (currentAliadoNpc.periciasEstruturadas) {
+            const newPs = JSON.parse(JSON.stringify(currentAliadoNpc.periciasEstruturadas));
+            document.querySelectorAll('.al_skill_input').forEach(input => {
+                const idx = parseInt(input.getAttribute('data-idx'));
+                if (newPs[idx]) {
+                    newPs[idx].nivel = parseInt(input.value) || 0;
+                }
+            });
+            updateData.periciasEstruturadas = newPs;
+        }
+
+        updateData['rolePlay.personalidade'] = [
+            document.getElementById('al_personalidade1').value.trim(),
+            document.getElementById('al_personalidade2').value.trim(),
+            document.getElementById('al_personalidade3').value.trim()
+        ].filter(p => p);
+        updateData['rolePlay.trejeitos'] = document.getElementById('al_trejeitos').value.trim();
+        updateData['rolePlay.motivacao'] = document.getElementById('al_motivacao').value.trim();
+        updateData['rolePlay.segredos'] = document.getElementById('al_segredos').value.trim();
+        updateData['rolePlay.aliado'] = document.getElementById('al_aliado').value.trim();
+        updateData['rolePlay.rival'] = document.getElementById('al_rival').value.trim();
+        updateData['rolePlay.devedor'] = document.getElementById('al_devedor').value.trim();
+        updateData['rolePlay.frases'] = document.getElementById('al_frases').value.trim();
+        updateData['rolePlay.historia'] = document.getElementById('al_historia').value.trim();
+
+        updateData['loot.itens'] = document.getElementById('al_itens').value.trim();
+        updateData['loot.luns'] = document.getElementById('al_luns').value.trim();
+        updateData['loot.pistas'] = document.getElementById('al_pistas').value.trim();
+        updateData['loot.complicacoes'] = document.getElementById('al_complicacoes').value.trim();
+
+        const npcRef = doc(window.db, 'npcs', currentAliadoNpc.id);
+        await updateDoc(npcRef, updateData);
+
+        btn.textContent = '✅ Salvo!';
+        setTimeout(() => {
+            btn.textContent = '💾 Salvar Alterações';
+            btn.disabled = false;
+        }, 2000);
+        
+        if (window.currentCharacterId) loadAliados(window.currentCharacterId);
+
+    } catch (e) {
+        console.error("Erro ao salvar Aliado:", e);
+        btn.textContent = '❌ Erro';
+        setTimeout(() => {
+            btn.textContent = '💾 Salvar Alterações';
+            btn.disabled = false;
+        }, 2000);
+    }
+};

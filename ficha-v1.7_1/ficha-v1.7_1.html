@@ -65,6 +65,7 @@
                 <button class="tab" data-tab="tabInventario">Inventário</button>
                 <button class="tab" data-tab="tabPeculiaridades">Peculiaridades</button>
                 <button class="tab" data-tab="tabAura">Aura</button>
+                <button class="tab" data-tab="tabAliados">Aliados</button>
                 <button class="tab" data-tab="tabNotas">Notas</button>
             </div>
 
@@ -327,6 +328,18 @@
                 </div>
             </div>
 
+            <!-- ======== ALIADOS ======== -->
+            <div class="tab-content" id="tabAliados">
+                <div class="section">
+                    <div class="section-title">🤝 Aliados</div>
+                    <div id="aliadosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; padding: 12px 0;">
+                        <div style="font-size:12px;color:var(--muted);text-align:center;grid-column: 1/-1;padding:20px;">
+                            Carregando aliados...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- ======== NOTAS ======== -->
             <div class="tab-content" id="tabNotas">
                 <div class="section">
@@ -373,6 +386,16 @@
         </div>
     </div>
 
+    <!-- ALIADO MODAL (Fast Mode) -->
+    <div class="detail-modal hidden" id="aliadoNpcModal">
+        <div class="detail-modal-content" style="max-width: 700px;">
+            <button class="detail-modal-close" onclick="closeAliadoModal()">✕</button>
+            <div class="detail-modal-body" id="aliadoNpcModalBody" style="padding: 20px;">
+                <!-- Content injected by aliados.js -->
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts externos -->
     <script src="js/data.js"></script>
     <script src="js/system-data-loader.js"></script>
@@ -396,6 +419,7 @@
     <script src="js/drag-drop.js"></script>
     <script src="js/print.js"></script>
     <script src="js/mesa-tab.js"></script>
+    <script type="module" src="js/aliados.js"></script>
     <script type="module" src="js/firebase.js"></script>
 </body>
 

@@ -155,7 +155,7 @@ function calculateTotalPressure() {
     const items = window._inventoryState.items;
     // Itens armazenados (mesmo que marcados como equipados num container) não somam pressão aqui;
     // O peso deles já é contabilizado via peso do container em si.
-    const equipped = items.filter(i => i.equipado === true && i.estadoEquip !== 'armazenado' && !i.parentItemId);
+    const equipped = items.filter(i => i.equipado && i.estadoEquip !== 'armazenado' && !i.parentItemId);
     let total = 0;
 
     for (const item of equipped) {
@@ -326,7 +326,7 @@ function renderEquippedItems() {
     if (!container) return;
 
     const items = window._inventoryState.items;
-    const equipped = items.filter(i => i.equipado === true && !i.parentItemId);
+    const equipped = items.filter(i => i.equipado && !i.parentItemId);
 
     if (equipped.length === 0) {
         container.innerHTML = `<div class="inv-empty">
@@ -348,15 +348,31 @@ function renderEquippedItems() {
         itemsBySlot[slot].push(item);
     }
 
+    // === FALLBACK: Garantir partesDoCorpo carregadas (evita falha no carregamento inicial) ===
+    if (!window.state.partesDoCorpo || window.state.partesDoCorpo.length === 0) {
+        const racaNome = document.getElementById('selRaca')?.value;
+        if (racaNome && window.RACES && window.RACES[racaNome]) {
+            let partsToLoad = null;
+            if (window.RACES[racaNome].partesDoCorpo && window.RACES[racaNome].partesDoCorpo.length > 0) {
+                partsToLoad = window.RACES[racaNome].partesDoCorpo;
+            } else if (window._systemData && window._systemData.bodyParts) {
+                partsToLoad = window._systemData.bodyParts.filter(bp => bp.ehPadrao);
+            }
+            if (partsToLoad) {
+                window.state.partesDoCorpo = JSON.parse(JSON.stringify(partsToLoad));
+            }
+        } else if (window._systemData && window._systemData.bodyParts) {
+            window.state.partesDoCorpo = JSON.parse(JSON.stringify(window._systemData.bodyParts.filter(bp => bp.ehPadrao)));
+        }
+    }
+
     const bodySlots = typeof _getCharacterBodySlots === 'function' ? _getCharacterBodySlots() : {};
     const partesDoCorpo = window.state?.partesDoCorpo || [];
 
     // Renderizar por Partes do Corpo cadastradas na ficha
     for (const bp of partesDoCorpo) {
         let groupHasAnyItems = false;
-        let groupHtml = `<div class="inv-slot-group">
-            <h4 class="inv-slot-group-title">${bp.nome}</h4>
-            <div class="inv-slot-group-content">`;
+        let slotsHtml = '';
             
         const qty = bp.slots || 1;
         for (let i = 0; i < qty; i++) {
@@ -365,38 +381,39 @@ function renderEquippedItems() {
             if (!slotDef) continue;
             
             const slotItems = itemsBySlot[slotKey] || [];
-            if (slotItems.length > 0) groupHasAnyItems = true;
-            
-            // Para Dedos, se não houver item, nem renderiza o placeholder para não poluir
-            if (bp.id.toLowerCase().includes('dedo') && slotItems.length === 0) continue;
-
-            const mechBonus = typeof state !== 'undefined' && state.mechanicBonuses ? (state.mechanicBonuses['slot_' + slotKey] || 0) : 0;
-            const dynamicMax = slotDef.max + mechBonus;
-            const inSlotNormal = slotItems.filter(i => i.estadoEquip !== 'fixado');
-            const isFull = inSlotNormal.length >= dynamicMax;
-            
-            groupHtml += `<div class="inv-slot-container">
-                <div class="inv-slot-header">
-                    <span class="inv-slot-icon">${slotDef.icon}</span>
-                    <span class="inv-slot-name">${slotDef.label}</span>
-                    <span class="inv-slot-cap ${isFull ? 'full' : ''}">${inSlotNormal.length}/${dynamicMax}</span>
-                </div>
-                <div class="inv-slot-items">`;
-            
-            if (slotItems.length === 0) {
-                groupHtml += `<div class="inv-slot-empty">Slot Vazio</div>`;
-            } else {
-                groupHtml += slotItems.map(item => _renderEquipCard(item, slotDef)).join('');
+            if (slotItems.length > 0) {
+                groupHasAnyItems = true;
+                
+                const mechBonus = typeof state !== 'undefined' && state.mechanicBonuses ? (state.mechanicBonuses['slot_' + slotKey] || 0) : 0;
+                const dynamicMax = slotDef.max + mechBonus;
+                const inSlotNormal = slotItems.filter(i => i.estadoEquip !== 'fixado');
+                const isFull = inSlotNormal.length >= dynamicMax;
+                
+                slotsHtml += `<div class="inv-slot-container">
+                    <div class="inv-slot-header">
+                        <span class="inv-slot-icon">${slotDef.icon}</span>
+                        <span class="inv-slot-name">${slotDef.label}</span>
+                        <span class="inv-slot-cap ${isFull ? 'full' : ''}">${inSlotNormal.length}/${dynamicMax}</span>
+                    </div>
+                    <div class="inv-slot-items">
+                        ${slotItems.map(item => _renderEquipCard(item, slotDef)).join('')}
+                    </div>
+                </div>`;
             }
-            
-            groupHtml += `</div></div>`;
         }
-        groupHtml += `</div></div>`;
         
-        // Só renderiza o grupo se tiver algum item equipado (ou se não for dedos)
-        if (groupHasAnyItems || !bp.id.toLowerCase().includes('dedo')) {
-            html += groupHtml;
-        }
+        let groupHtml = `<div class="inv-slot-group ${groupHasAnyItems ? '' : 'collapsed'}">
+            <h4 class="inv-slot-group-title" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span class="group-toggle-icon">▶</span>
+                ${bp.nome}
+                ${groupHasAnyItems ? `<span class="group-has-items-dot"></span>` : ''}
+            </h4>
+            <div class="inv-slot-group-content">
+                ${slotsHtml !== '' ? slotsHtml : `<div class="inv-slot-empty" style="text-align:center;color:var(--muted);font-size:0.8rem;padding:8px;border:1px dashed var(--line);border-radius:6px;">Nenhum item equipado neste local.</div>`}
+            </div>
+        </div>`;
+        
+        html += groupHtml;
     }
 
     // Identificar itens equipados sem slot anatômico definido (legado ou armas de duas mãos em slot secundário)
@@ -405,7 +422,11 @@ function renderEquippedItems() {
     const noSlotItems = equipped.filter(i => !i.slotAnatomico);
     if (noSlotItems.length > 0) {
         html += `<div class="inv-slot-group">
-            <h4 class="inv-slot-group-title">Sem Slot (Legado)</h4>
+            <h4 class="inv-slot-group-title" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span class="group-toggle-icon">▶</span>
+                Sem Slot (Legado)
+                <span class="group-has-items-dot"></span>
+            </h4>
             <div class="inv-slot-group-content">
                 <div class="inv-slot-container">
                     <div class="inv-slot-items">
@@ -599,6 +620,7 @@ function _renderInvItemRow(item, isEquipped) {
         ${pressao}
         ${stateBadge}
         <div class="inv-item-actions no-print" onclick="event.stopPropagation()">
+            ${qty > 1 && !item.ehContainer && item.tipo !== 'Container' ? `<button class="inv-btn inv-btn-split" onclick="event.stopPropagation();openSplitModal('${item.id}')" title="Dividir">➗</button>` : ''}
             ${moveToContainerBtn}
             ${containerBtn}
             ${equipBtn}
@@ -667,6 +689,7 @@ function _renderOpenContainers() {
                 </div>
                 ${qtyHtml}
                 <div class="inv-item-actions no-print" onclick="event.stopPropagation()">
+                    ${iQty > 1 && !i.ehContainer && i.tipo !== 'Container' ? `<button class="inv-btn inv-btn-split" onclick="event.stopPropagation();openSplitModal('${i.id}')" title="Dividir">➗</button>` : ''}
                     <button class="inv-btn inv-btn-remove" onclick="event.stopPropagation();removeFromContainer('${i.id}')" title="Remover do container">📤</button>
                     <button class="inv-btn inv-btn-delete" onclick="event.stopPropagation();deleteInventoryItem('${i.id}')" title="Excluir">🗑️</button>
                 </div>
@@ -1302,6 +1325,7 @@ window.openItemDetail = function(itemId) {
         <div class="inv-modal-footer">
             <button class="inv-btn-action" onclick="toggleEquip('${item.id}',${!item.equipado});closeItemDetail()">${item.equipado ? '⬇️ Desequipar' : '⬆️ Equipar'}</button>
             <button class="inv-btn-transfer" onclick="openTransferModal('${item.id}')">🔄 Transferir</button>
+            ${qty > 1 && !item.ehContainer && item.tipo !== 'Container' ? `<button class="inv-btn-action" onclick="closeItemDetail();openSplitModal('${item.id}')">➗ Dividir</button>` : ''}
             <button class="inv-btn-action" onclick="closeItemDetail();openItemFormModal('Editar Item', window._inventoryState.items.find(i=>i.id==='${item.id}'))" style="margin-left:auto">✏️ Editar</button>
         </div>
     </div>`;
@@ -1312,6 +1336,116 @@ window.openItemDetail = function(itemId) {
 window.closeItemDetail = function() {
     const m = document.getElementById('invDetailModal');
     if (m) { m.classList.remove('active'); setTimeout(() => m.remove(), 200); }
+};
+
+// ===== SPLIT MODAL =====
+window.openSplitModal = function(itemId) {
+    const item = window._inventoryState.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    let existing = document.getElementById('invSplitModal');
+    if (existing) existing.remove();
+
+    const maxQty = Math.max(1, parseInt(item.quantidade) || 1);
+    if (maxQty <= 1) return; // Cannot split
+
+    const half = Math.floor(maxQty / 2);
+    const remain = maxQty - half;
+
+    const modal = document.createElement('div');
+    modal.className = 'inv-modal';
+    modal.id = 'invSplitModal';
+    modal.innerHTML = `<div class="inv-modal-content" style="max-width: 400px;">
+        <div class="inv-modal-header">
+            <span class="inv-modal-title">➗ Dividir: ${_escHtml(item.nome || 'Item')}</span>
+            <button class="inv-modal-close" onclick="closeSplitModal()">✕</button>
+        </div>
+        <div class="inv-modal-body" style="text-align:center;">
+            <p style="margin-bottom: 15px; color: var(--text-muted);">Dividindo pilha de <b style="color:var(--text-color);">${maxQty}</b> itens</p>
+            <div class="inv-split-container" style="display: flex; gap: 10px; justify-content: center; margin-bottom: 20px;">
+                <div class="inv-split-field" style="flex: 1;">
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Pilha Original</label>
+                    <input type="number" id="splitRemainInput" class="inv-form-input" min="1" max="${maxQty - 1}" value="${remain}" oninput="syncSplitInputs('remain', ${maxQty})" style="text-align: center; font-size: 1.1rem; padding: 8px;">
+                </div>
+                <div class="inv-split-field" style="flex: 1;">
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Nova Pilha</label>
+                    <input type="number" id="splitNewInput" class="inv-form-input" min="1" max="${maxQty - 1}" value="${half}" oninput="syncSplitInputs('new', ${maxQty})" style="text-align: center; font-size: 1.1rem; padding: 8px;">
+                </div>
+            </div>
+            <input type="range" id="splitSlider" class="inv-split-slider" min="1" max="${maxQty - 1}" value="${half}" oninput="syncSplitInputs('slider', ${maxQty})" style="width:100%; cursor: pointer;">
+        </div>
+        <div class="inv-modal-footer">
+            <button class="inv-btn-cancel" onclick="closeSplitModal()">Cancelar</button>
+            <button class="inv-btn-save" onclick="confirmSplitItem('${item.id}', ${maxQty})">Confirmar Divisão</button>
+        </div>
+    </div>`;
+    document.body.appendChild(modal);
+    requestAnimationFrame(() => modal.classList.add('active'));
+};
+
+window.closeSplitModal = function() {
+    const m = document.getElementById('invSplitModal');
+    if (m) { m.classList.remove('active'); setTimeout(() => m.remove(), 200); }
+};
+
+window.syncSplitInputs = function(source, maxQty) {
+    const remainInput = document.getElementById('splitRemainInput');
+    const newInput = document.getElementById('splitNewInput');
+    const slider = document.getElementById('splitSlider');
+    
+    let newVal, remainVal;
+    if (source === 'slider') {
+        newVal = parseInt(slider.value) || 1;
+        remainVal = maxQty - newVal;
+    } else if (source === 'new') {
+        newVal = parseInt(newInput.value) || 1;
+        if (newVal >= maxQty) newVal = maxQty - 1;
+        if (newVal < 1) newVal = 1;
+        remainVal = maxQty - newVal;
+    } else if (source === 'remain') {
+        remainVal = parseInt(remainInput.value) || 1;
+        if (remainVal >= maxQty) remainVal = maxQty - 1;
+        if (remainVal < 1) remainVal = 1;
+        newVal = maxQty - remainVal;
+    }
+    
+    remainInput.value = remainVal;
+    newInput.value = newVal;
+    slider.value = newVal;
+};
+
+window.confirmSplitItem = async function(itemId, maxQty) {
+    const item = window._inventoryState.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    const newInput = document.getElementById('splitNewInput');
+    const newQty = parseInt(newInput.value);
+    if (!newQty || newQty < 1 || newQty >= maxQty) return;
+    const remainQty = maxQty - newQty;
+
+    try {
+        // Create new item
+        const newId = 'item-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+        const newItemData = { ...item, id: newId, quantidade: newQty, lastModified: new Date().toISOString() };
+        await _firestoreSetDoc('items', newId, newItemData);
+
+        // Update original item
+        await _firestoreSetDoc('items', itemId, { quantidade: remainQty, lastModified: new Date().toISOString() });
+        item.quantidade = remainQty;
+
+        // Add to local state
+        window._inventoryState.items.push(newItemData);
+
+        closeSplitModal();
+        renderEquippedItems();
+        renderInventoryTab();
+        recalcInventoryPressure();
+        
+        alert(`✅ Pilha dividida com sucesso! (${remainQty} e ${newQty})`);
+    } catch (e) {
+        console.error('❌ Erro ao dividir item:', e);
+        alert('❌ Erro ao dividir item: ' + e.message);
+    }
 };
 
 // ===== TRANSFER MODAL =====
