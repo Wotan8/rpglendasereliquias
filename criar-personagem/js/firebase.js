@@ -64,13 +64,18 @@ onAuthStateChanged(auth, async (user) => {
                         mestreNome: mesaData.createdBy || 'Mestre',
                         expInicial: cfg.expInicial ?? 100,
                         introducao: cfg.textoIntroducao || '',
-                        mecanicasObjetoPessoal: cfg.mecanicasObjetoPessoal || []
+                        mecanicasObjetoPessoal: cfg.mecanicasObjetoPessoal || [],
+                        sessoes: mesaData.sessoes || 0
                     };
                     // Pre-set EXP from mesa config
                     window.wizardState.expInicial = cfg.expInicial ?? 100;
                     // Register EXP source (will be picked up by ExpTracker on init)
                     if (typeof ExpTracker !== 'undefined' && ExpTracker.addSource) {
                         ExpTracker.addSource('exp_inicial', cfg.expInicial ?? 100, 'EXP Inicial (Mesa)');
+                        const sessoes = mesaData.sessoes || 0;
+                        if (sessoes > 0) {
+                            ExpTracker.addSource('exp_sessoes', sessoes * 10, `Nível da sessão da mesa (${sessoes} sessões)`);
+                        }
                     }
                     console.log('✅ Config da mesa carregada:', window.wizardState.mesaVinculada);
                 } else {
