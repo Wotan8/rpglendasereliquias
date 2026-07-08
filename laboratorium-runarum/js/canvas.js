@@ -22,8 +22,26 @@ const LabCanvas = (() => {
         default: [{ x: 8, y: 50, tipo: 'entrada', rotulo: 'in' }, { x: 92, y: 50, tipo: 'saida', rotulo: 'out' }],
     };
 
-    const state = { nodes: [], links: [], seq: 1 };
-    let host = null, svg = null, elementsById = {}, onChange = null, aprendidos = {};
+    const state = { nodes: [], links: [], seq: 1, selected: new Set() };
+    let host = null, inner = null, svg = null, elementsById = {}, onChange = null, aprendidos = {};
+    let zoom = 1;
+
+    function toggleSelection(nodeId, force) {
+        if (force === true) state.selected.add(nodeId);
+        else if (force === false) state.selected.delete(nodeId);
+        else {
+            if (state.selected.has(nodeId)) state.selected.delete(nodeId);
+            else state.selected.add(nodeId);
+        }
+        state.nodes.forEach(n => {
+            n.dom?.classList.toggle('lab-node--selected', state.selected.has(n.id));
+        });
+    }
+
+    function clearSelection() {
+        state.selected.clear();
+        state.nodes.forEach(n => n.dom?.classList.remove('lab-node--selected'));
+    }
 
     // ---------- API ----------
     function init(hostEl, catalog, learnedMap, changeCb) {
@@ -31,9 +49,135 @@ const LabCanvas = (() => {
         elementsById = catalog || {};
         aprendidos = learnedMap || {};
         onChange = changeCb || (() => { });
-        host.innerHTML = '<svg class="lab-links"></svg><div class="lab-hint">Arraste elementos da paleta para cá.<br>Aproxime um ponto <b style="color:#f59e0b">saída</b> de um ponto <b style="color:#38bdf8">entrada</b> para encaixar.</div>';
-        svg = host.querySelector('svg');
+        
+        host.innerHTML = '<div class="lab-canvas-inner" style="transform-origin: 0 0; position: relative; width: 100%; height: 100%;"><svg class="lab-links"></svg><div class="lab-hint">Arraste elementos da paleta para cá.<br>Aproxime um ponto <b style="color:#f59e0b">saída</b> de um ponto <b style="color:#38bdf8">entrada</b> para encaixar.</div></div>';
+        inner = host.querySelector('.lab-canvas-inner');
+        svg = inner.querySelector('svg');
+        
+        host.addEventListener('wheel', handleWheel, { passive: false });
+        host.addEventListener('pointerdown', startPan);
+        
         renderAll();
+    }
+
+    function startPan(e) {
+        if (e.button !== 0 || e.target.closest('.lab-node') || e.target.closest('.lab-link')) {
+            if (!e.target.closest('.lab-node') && e.button === 0) clearSelection();
+            return;
+        }
+        
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const scrollStartX = host.scrollLeft;
+        const scrollStartY = host.scrollTop;
+        const isModifier = e.shiftKey || e.ctrlKey || e.metaKey;
+        let isDrag = false, isSelectionBox = isModifier;
+        let longPressed = false, selBox = null, initialSelection = null;
+
+        const longPressTimer = setTimeout(() => {
+            if (!isDrag && !isSelectionBox) {
+                isSelectionBox = true;
+                longPressed = true;
+                if (navigator.vibrate) navigator.vibrate(50);
+            }
+        }, 500);
+        
+        host.setPointerCapture(e.pointerId);
+        
+        const move = ev => {
+            if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 5) {
+                if (!isDrag) {
+                    isDrag = true;
+                    clearTimeout(longPressTimer);
+                    if (isSelectionBox) {
+                        initialSelection = new Set(isModifier || longPressed ? state.selected : []);
+                    } else {
+                        host.style.cursor = 'grabbing';
+                    }
+                }
+            }
+
+            if (!isDrag) return;
+
+            if (isSelectionBox) {
+                if (!selBox) {
+                    selBox = document.createElement('div');
+                    selBox.className = 'lab-selection-box';
+                    inner.appendChild(selBox);
+                }
+                const rect = inner.getBoundingClientRect();
+                const x1 = (Math.min(startX, ev.clientX) - rect.left) / zoom;
+                const y1 = (Math.min(startY, ev.clientY) - rect.top) / zoom;
+                const x2 = (Math.max(startX, ev.clientX) - rect.left) / zoom;
+                const y2 = (Math.max(startY, ev.clientY) - rect.top) / zoom;
+                
+                selBox.style.left = x1 + 'px';
+                selBox.style.top = y1 + 'px';
+                selBox.style.width = (x2 - x1) + 'px';
+                selBox.style.height = (y2 - y1) + 'px';
+
+                state.nodes.forEach(n => {
+                    const nx = n.x, ny = n.y, nw = NODE_W, nh = NODE_H;
+                    const intersects = !(nx > x2 || nx + nw < x1 || ny > y2 || ny + nh < y1);
+                    if (intersects || initialSelection.has(n.id)) {
+                        state.selected.add(n.id);
+                        n.dom?.classList.add('lab-node--selected');
+                    } else {
+                        state.selected.delete(n.id);
+                        n.dom?.classList.remove('lab-node--selected');
+                    }
+                });
+            } else {
+                host.scrollLeft = scrollStartX - (ev.clientX - startX);
+                host.scrollTop = scrollStartY - (ev.clientY - startY);
+            }
+        };
+        
+        const up = ev => {
+            clearTimeout(longPressTimer);
+            host.releasePointerCapture(ev.pointerId);
+            host.style.cursor = '';
+            selBox?.remove();
+            host.removeEventListener('pointermove', move);
+            host.removeEventListener('pointerup', up);
+            host.removeEventListener('pointercancel', up);
+
+            if (!isDrag && !longPressed && !isModifier) {
+                clearSelection();
+            }
+        };
+        
+        host.addEventListener('pointermove', move);
+        host.addEventListener('pointerup', up);
+        host.addEventListener('pointercancel', up);
+    }
+
+    function handleWheel(e) {
+        e.preventDefault();
+        
+        const zoomStep = 0.1;
+        const minZoom = 0.2;
+        const maxZoom = 2.0;
+
+        const oldZoom = zoom;
+        if (e.deltaY < 0) {
+            zoom = Math.min(maxZoom, zoom + zoomStep);
+        } else {
+            zoom = Math.max(minZoom, zoom - zoomStep);
+        }
+        
+        if (zoom !== oldZoom) {
+            const rect = inner.getBoundingClientRect();
+            const localX = (e.clientX - rect.left) / oldZoom;
+            const localY = (e.clientY - rect.top) / oldZoom;
+            
+            inner.style.transform = `scale(${zoom})`;
+            drawLinks();
+            
+            const hostRect = host.getBoundingClientRect();
+            host.scrollLeft = (localX * zoom) - (e.clientX - hostRect.left);
+            host.scrollTop = (localY * zoom) - (e.clientY - hostRect.top);
+        }
     }
 
     function setLearned(map) { aprendidos = map || {}; state.nodes.forEach(paintLearnState); }
@@ -136,7 +280,7 @@ const LabCanvas = (() => {
             <button class="lab-node-del" title="Remover">✕</button>
             <button class="lab-node-nivel" title="Nível (clique para mudar — custos recalculam ao vivo)">Nv${node.nivel}</button>
             <span class="lab-node-custo"></span>`;
-        host.appendChild(d);
+        inner.appendChild(d);
         node.dom = d;
 
         d.querySelector('.lab-node-del').addEventListener('pointerdown', e => e.stopPropagation());
@@ -176,33 +320,98 @@ const LabCanvas = (() => {
     function startDrag(node, ev) {
         if (ev.button !== 0) return;
         ev.preventDefault();
-        const rect = host.getBoundingClientRect();
-        const offX = ev.clientX - rect.left - node.x + host.scrollLeft;
-        const offY = ev.clientY - rect.top - node.y + host.scrollTop;
+        
+        const isModifier = ev.shiftKey || ev.ctrlKey || ev.metaKey;
+        let isDrag = false, longPressed = false;
+        let startX = ev.clientX, startY = ev.clientY;
+        const wasSelected = state.selected.has(node.id);
+        let offsets = [];
+        const rect = inner.getBoundingClientRect();
+
+        if (isModifier) toggleSelection(node.id);
+
+        const longPressTimer = setTimeout(() => {
+            if (!isDrag && !isModifier) {
+                longPressed = true;
+                toggleSelection(node.id);
+                if (navigator.vibrate) navigator.vibrate(50);
+            }
+        }, 500);
+
         node.dom.classList.add('lab-node--drag');
         node.dom.setPointerCapture(ev.pointerId);
 
-        const move = e => {
-            node.x = Math.max(0, e.clientX - rect.left - offX + host.scrollLeft);
-            node.y = Math.max(0, e.clientY - rect.top - offY + host.scrollTop);
-            node.dom.style.left = node.x + 'px'; node.dom.style.top = node.y + 'px';
-            drawLinks(); previewSnap(node);
+        const setupOffsets = () => {
+            offsets = [];
+            state.selected.forEach(id => {
+                const n = byId(id);
+                if (n) offsets.push({ n, offX: (ev.clientX - rect.left) / zoom - n.x, offY: (ev.clientY - rect.top) / zoom - n.y });
+            });
         };
+
+        const move = e => {
+            if (!isDrag && Math.hypot(e.clientX - startX, e.clientY - startY) > 5) {
+                isDrag = true;
+                clearTimeout(longPressTimer);
+                
+                if (!isModifier && !state.selected.has(node.id)) {
+                    clearSelection();
+                    toggleSelection(node.id, true);
+                } else if (!state.selected.has(node.id) && isModifier) {
+                    toggleSelection(node.id, true);
+                }
+                if (state.selected.size === 0) toggleSelection(node.id, true);
+                
+                state.selected.forEach(id => byId(id)?.dom?.classList.add('lab-node--drag'));
+                setupOffsets();
+            }
+
+            if (isDrag) {
+                offsets.forEach(item => {
+                    item.n.x = Math.max(0, (e.clientX - rect.left) / zoom - item.offX);
+                    item.n.y = Math.max(0, (e.clientY - rect.top) / zoom - item.offY);
+                    item.n.dom.style.left = item.n.x + 'px';
+                    item.n.dom.style.top = item.n.y + 'px';
+                });
+                drawLinks(); 
+                previewSnap(node);
+            }
+        };
+
         const up = e => {
+            clearTimeout(longPressTimer);
             node.dom.releasePointerCapture(ev.pointerId);
             node.dom.classList.remove('lab-node--drag');
+            state.nodes.forEach(n => n.dom?.classList.remove('lab-node--drag'));
             node.dom.removeEventListener('pointermove', move);
             node.dom.removeEventListener('pointerup', up);
-            clearPreview();
-            // 1) romper ligações esticadas demais
-            state.links = state.links.filter(l => {
-                if (l.a.nodeId !== node.id && l.b.nodeId !== node.id) return true;
-                const pa = ptPos(byId(l.a.nodeId), l.a.pt), pb = ptPos(byId(l.b.nodeId), l.b.pt);
-                return dist(pa, pb) <= UNSNAP_DIST;
-            });
-            // 2) tentar encaixar
-            trySnap(node);
-            drawLinks(); emitChange();
+            
+            if (!isDrag && !longPressed && !isModifier) {
+                clearSelection();
+                toggleSelection(node.id, true);
+            }
+
+            if (isDrag) {
+                clearPreview();
+                state.links = state.links.filter(l => {
+                    const aSel = state.selected.has(l.a.nodeId);
+                    const bSel = state.selected.has(l.b.nodeId);
+                    if (!aSel && !bSel) return true;
+                    const pa = ptPos(byId(l.a.nodeId), l.a.pt), pb = ptPos(byId(l.b.nodeId), l.b.pt);
+                    return dist(pa, pb) <= UNSNAP_DIST;
+                });
+                const oldX = node.x, oldY = node.y;
+                trySnap(node);
+                const dx = node.x - oldX, dy = node.y - oldY;
+                if (dx !== 0 || dy !== 0) {
+                    state.selected.forEach(id => {
+                        if (id === node.id) return;
+                        const n = byId(id);
+                        if (n) { n.x += dx; n.y += dy; n.dom.style.left = n.x + 'px'; n.dom.style.top = n.y + 'px'; }
+                    });
+                }
+                drawLinks(); emitChange();
+            }
         };
         node.dom.addEventListener('pointermove', move);
         node.dom.addEventListener('pointerup', up);
@@ -275,9 +484,13 @@ const LabCanvas = (() => {
             svg.appendChild(line);
         });
         // dimensionar o svg à área usada
-        const maxX = Math.max(host.clientWidth, ...state.nodes.map(n => n.x + NODE_W + 40));
-        const maxY = Math.max(host.clientHeight, ...state.nodes.map(n => n.y + NODE_H + 40));
+        const maxX = Math.max(host.clientWidth / zoom, ...state.nodes.map(n => n.x + NODE_W + 40));
+        const maxY = Math.max(host.clientHeight / zoom, ...state.nodes.map(n => n.y + NODE_H + 40));
         svg.setAttribute('width', maxX); svg.setAttribute('height', maxY);
+        if (inner) {
+            inner.style.width = maxX + 'px';
+            inner.style.height = maxY + 'px';
+        }
     }
 
     function mkLine(a, b, preview, sinal) {
@@ -301,7 +514,7 @@ const LabCanvas = (() => {
     // ---------- util ----------
     function renderAll() { state.nodes.forEach(renderNode); drawLinks(); toggleHint(); }
     function toggleHint() {
-        const h = host?.querySelector('.lab-hint');
+        const h = inner?.querySelector('.lab-hint');
         if (h) h.style.display = state.nodes.length ? 'none' : '';
     }
     function emitChange() { onChange?.(getState()); }

@@ -111,7 +111,7 @@ body {
 .lab-legenda .dot.sim { background: var(--sinal); }
 
 /* ---------- CANVAS ---------- */
-.lab-col-canvas { padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+.lab-col-canvas { padding: 8px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .lab-canvas-barra { display: flex; gap: 8px; }
 #labRunaNome {
     flex: 1; background: var(--pedra); border: 1px solid var(--borda); color: var(--ink);
@@ -162,6 +162,16 @@ body {
 .lab-node--sim::after {
     content: "simulação"; position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%);
     font-size: .55rem; color: var(--sinal); font-style: italic; white-space: nowrap;
+}
+.lab-node--selected .lab-node-box {
+    border-color: var(--lume);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--lume) 40%, transparent), inset 0 0 20px rgba(0,0,0,.45);
+}
+.lab-node--selected .lab-node-img {
+    filter: drop-shadow(0 0 8px var(--lume)) drop-shadow(0 0 12px var(--lume));
+}
+.lab-selection-box {
+    position: absolute; border: 1px dashed var(--lume); background: rgba(245, 158, 11, 0.15); z-index: 50; pointer-events: none;
 }
 .lab-cp {
     position: absolute; width: 12px; height: 12px; border-radius: 50%;
