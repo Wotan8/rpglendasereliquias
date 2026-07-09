@@ -306,8 +306,15 @@ export function getDynamicCreationLimit(targetKey, defaultLimit, state) {
             
             const alvos = Array.isArray(calc.alvo) ? calc.alvo : [calc.alvo];
             if (alvos.includes(targetKey)) {
-                // Obter valor fixo (só suportamos valor fixo para limite de distribuição inicial no momento)
-                const valor = calc.valor !== undefined ? Number(calc.valor) : (calc.valorMaximo !== undefined ? Number(calc.valorMaximo) : null);
+                // Suporte para o novo formato de equações, caso seja um valor fixo
+                let rawValor = null;
+                if (Array.isArray(calc.equacao) && calc.equacao.length > 0 && calc.equacao[0].tipo === 'fixo') {
+                    rawValor = calc.equacao[0].valor;
+                } else {
+                    rawValor = (calc.valor !== undefined && calc.valor !== "") ? calc.valor : calc.valorMaximo;
+                }
+                
+                const valor = rawValor !== undefined && rawValor !== null ? Number(rawValor) : null;
                 if (valor !== null && !isNaN(valor) && valor > dynamicMax) {
                     dynamicMax = valor;
                 }
@@ -320,8 +327,9 @@ export function getDynamicCreationLimit(targetKey, defaultLimit, state) {
         pecIds.forEach(pecIdEntry => {
             const pecId = typeof pecIdEntry === 'object' ? pecIdEntry.id : pecIdEntry;
             const pec = window._systemData.peculiarities.find(p => p.id === pecId);
-            if (pec && pec.mecanicaIds) {
-                pec.mecanicaIds.forEach(applyMechForLimit);
+            if (pec) {
+                if (pec.mecanicaIds) pec.mecanicaIds.forEach(applyMechForLimit);
+                if (pec.mecanicaExpCriacao) pec.mecanicaExpCriacao.forEach(applyMechForLimit);
             }
         });
     };

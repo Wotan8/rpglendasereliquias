@@ -221,11 +221,16 @@ function renderSkillDistribution() {
             const isClassSkill = classSkills.includes(sk.name);
             const parentLevel = getSkillParentAttributeLevel(sk);
             let defaultMax = REGRAS_CRIACAO.pericias.limite_max_por_pericia;
+            let wasModified = false;
             if (window.getDynamicCreationLimit) {
-                defaultMax = window.getDynamicCreationLimit('Perícias (qualquer)', defaultMax, wizardState);
-                defaultMax = window.getDynamicCreationLimit(sk.name, defaultMax, wizardState);
+                const dynamicGroup = window.getDynamicCreationLimit('Perícias (qualquer)', defaultMax, wizardState);
+                const dynamicSpecific = window.getDynamicCreationLimit(sk.name, dynamicGroup, wizardState);
+                if (dynamicSpecific > defaultMax) {
+                    defaultMax = dynamicSpecific;
+                    wasModified = true;
+                }
             }
-            const maxAllowed = Math.min(defaultMax, parentLevel);
+            const maxAllowed = wasModified ? defaultMax : Math.min(defaultMax, parentLevel);
 
             html += `
                 <div class="attr-dist-row" title="${escHtml(sk.descricao || '')}">
@@ -258,12 +263,17 @@ function clickSkillDot(dotKey, dotLevel, group) {
     const sk = skills.find(s => 'sk_' + s.key === dotKey);
     const parentLevel = sk ? getSkillParentAttributeLevel(sk) : Infinity;
     
+    let wasModified = false;
     if (sk && window.getDynamicCreationLimit) {
-        max = window.getDynamicCreationLimit('Perícias (qualquer)', max, wizardState);
-        max = window.getDynamicCreationLimit(sk.name, max, wizardState);
+        const dynamicGroup = window.getDynamicCreationLimit('Perícias (qualquer)', max, wizardState);
+        const dynamicSpecific = window.getDynamicCreationLimit(sk.name, dynamicGroup, wizardState);
+        if (dynamicSpecific > max) {
+            max = dynamicSpecific;
+            wasModified = true;
+        }
     }
     
-    const maxAllowed = Math.min(max, parentLevel);
+    const maxAllowed = wasModified ? max : Math.min(max, parentLevel);
 
     // Toggle off if same
     if (dotLevel === current) {
@@ -347,11 +357,16 @@ window.randomizeSkills = function() {
             
             const parentLevel = getSkillParentAttributeLevel(sk);
             let defaultMax = REGRAS_CRIACAO.pericias.limite_max_por_pericia;
+            let wasModified = false;
             if (window.getDynamicCreationLimit) {
-                defaultMax = window.getDynamicCreationLimit('Perícias (qualquer)', defaultMax, wizardState);
-                defaultMax = window.getDynamicCreationLimit(sk.name, defaultMax, wizardState);
+                const dynamicGroup = window.getDynamicCreationLimit('Perícias (qualquer)', defaultMax, wizardState);
+                const dynamicSpecific = window.getDynamicCreationLimit(sk.name, dynamicGroup, wizardState);
+                if (dynamicSpecific > defaultMax) {
+                    defaultMax = dynamicSpecific;
+                    wasModified = true;
+                }
             }
-            const maxAllowed = Math.min(defaultMax, parentLevel);
+            const maxAllowed = wasModified ? defaultMax : Math.min(defaultMax, parentLevel);
             
             if (targetLevel > maxAllowed) continue;
             

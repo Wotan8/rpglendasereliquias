@@ -149,18 +149,18 @@ function clickAttrDot(attrKey, dotLevel, grupo) {
     const targetLevel = dotLevel - base; // Points to distribute (0 = just base)
     const currentLevel = wizardState.atributos[attrKey] || 0;
     
-    // Dynamic Max Limit calculation
-    const defaultMax = REGRAS_CRIACAO.atributos.limite_max_por_atributo;
+    // Dynamic Max Limit calculation (in Dots)
+    const defaultMaxDots = REGRAS_CRIACAO.atributos.limite_max_por_atributo + base;
     const attrTargetKey = attrKey.toUpperCase().replace('ATTR_', '');
-    const maxPerAttr = window.getDynamicCreationLimit ? window.getDynamicCreationLimit(attrTargetKey, defaultMax, wizardState) : defaultMax;
+    const maxAllowedDots = window.getDynamicCreationLimit ? window.getDynamicCreationLimit(attrTargetKey, defaultMaxDots, wizardState) : defaultMaxDots;
 
     // Toggle off if clicking the same level
     if (targetLevel === currentLevel) {
         wizardState.atributos[attrKey] = 0;
     } else {
         // Check max per attribute
-        if (targetLevel > maxPerAttr) {
-            showWizardToast(`Máximo ${maxPerAttr + base} por atributo na criação.`, 'error');
+        if (dotLevel > maxAllowedDots) {
+            showWizardToast(`Máximo ${maxAllowedDots} por atributo na criação.`, 'error');
             return;
         }
 
@@ -230,11 +230,13 @@ window.randomizeAttributes = function() {
             const attrKey = attrs[Math.floor(Math.random() * attrs.length)];
             const currentLevel = wizardState.atributos[attrKey] || 0;
             const targetLevel = currentLevel + 1;
+            const dotLevel = targetLevel + REGRAS_CRIACAO.atributos.base_inicial;
             
             const attrTargetKey = attrKey.toUpperCase().replace('ATTR_', '');
-            const maxPerAttr = window.getDynamicCreationLimit ? window.getDynamicCreationLimit(attrTargetKey, defaultMax, wizardState) : defaultMax;
+            const defaultMaxDots = REGRAS_CRIACAO.atributos.limite_max_por_atributo + REGRAS_CRIACAO.atributos.base_inicial;
+            const maxAllowedDots = window.getDynamicCreationLimit ? window.getDynamicCreationLimit(attrTargetKey, defaultMaxDots, wizardState) : defaultMaxDots;
             
-            if (targetLevel > maxPerAttr) continue;
+            if (dotLevel > maxAllowedDots) continue;
             
             const costDelta = calcAttrCost(targetLevel) - calcAttrCost(currentLevel);
             if (costDelta <= getGroupRemainingPoints(grupo)) {
