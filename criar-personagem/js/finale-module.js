@@ -22,105 +22,158 @@ function initPhase8(container) {
         });
 
         if (elegiveis.length > 0) {
+            // Sort by blocoOrdem and then by ordem
+            elegiveis.sort((a, b) => {
+                const bOrdemA = a.blocoOrdem || 99;
+                const bOrdemB = b.blocoOrdem || 99;
+                if (bOrdemA !== bOrdemB) return bOrdemA - bOrdemB;
+                const ordemA = a.ordem || 99;
+                const ordemB = b.ordem || 99;
+                return ordemA - ordemB;
+            });
+            
+            // Group by blocoNome
+            const grupos = {};
+            elegiveis.forEach(dv => {
+                const bNome = dv.blocoNome || 'Geral';
+                if (!grupos[bNome]) grupos[bNome] = [];
+                grupos[bNome].push(dv);
+            });
+
             html += `
                 <div class="section">
                     <div class="section-title">⚙️ Ajustes de Personagem</div>
                     <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
-                        Distribua os modificadores iniciais para os seguintes valores. Os limites dependem da sua Raça, Classe ou Tribo.
+                        Distribua os modificadores iniciais para os seguintes valores. Os limites dependem da sua Raça, Classe ou Tribo. Valores fixos serão exibidos automaticamente.
                     </p>
             `;
             
-            elegiveis.forEach(dv => {
-                const baseVal = parseFloat((simulatedValues[dv.id] || 0).toFixed(2));
+            for (const [bloco, dvs] of Object.entries(grupos)) {
+                html += `
+                    <div style="margin-bottom:20px; border-left: 3px solid rgba(79,110,247,0.4); padding-left:12px; margin-top: 16px;">
+                        <h4 style="margin:0 0 12px 0; font-size:.95rem; color:var(--accent); text-transform:uppercase; letter-spacing:1px; opacity:0.8;">
+                            ${escHtml(bloco)}
+                        </h4>
+                `;
                 
-                let linkedMin = null;
-                let linkedMax = null;
-                let hasLink = false;
-                
-                const checkBounds = (source) => {
-                    if (!source || !source.derivedValueIds) return;
-                    const match = source.derivedValueIds.find(x => typeof x === 'object' ? x.id === dv.id : x === dv.id);
-                    if (match) {
-                        hasLink = true;
-                        if (typeof match === 'object') {
-                            if (match.characterCreationMin !== undefined) {
-                                linkedMin = linkedMin === null ? match.characterCreationMin : Math.min(linkedMin, match.characterCreationMin);
-                            }
-                            if (match.characterCreationMax !== undefined) {
-                                linkedMax = linkedMax === null ? match.characterCreationMax : Math.max(linkedMax, match.characterCreationMax);
+                dvs.forEach(dv => {
+                    const baseVal = parseFloat((simulatedValues[dv.id] || 0).toFixed(2));
+                    
+                    let linkedMin = null;
+                    let linkedMax = null;
+                    let hasLink = false;
+                    
+                    const checkBounds = (source) => {
+                        if (!source || !source.derivedValueIds) return;
+                        const match = source.derivedValueIds.find(x => typeof x === 'object' ? x.id === dv.id : x === dv.id);
+                        if (match) {
+                            hasLink = true;
+                            if (typeof match === 'object') {
+                                if (match.characterCreationMin !== undefined) {
+                                    linkedMin = linkedMin === null ? match.characterCreationMin : Math.min(linkedMin, match.characterCreationMin);
+                                }
+                                if (match.characterCreationMax !== undefined) {
+                                    linkedMax = linkedMax === null ? match.characterCreationMax : Math.max(linkedMax, match.characterCreationMax);
+                                }
                             }
                         }
+                    };
+                    
+                    checkBounds(raca);
+                    checkBounds(classe);
+                    checkBounds(tribo);
+                    
+                    let minBound, maxBound;
+                    if (hasLink) {
+                        minBound = linkedMin !== null ? linkedMin : 0;
+                        maxBound = linkedMax !== null ? linkedMax : 0;
+                    } else {
+                        minBound = dv.characterCreationMin !== undefined ? dv.characterCreationMin : -20;
+                        maxBound = dv.characterCreationMax !== undefined ? dv.characterCreationMax : 20;
                     }
-                };
-                
-                checkBounds(raca);
-                checkBounds(classe);
-                checkBounds(tribo);
-                
-                let minBound, maxBound;
-                if (hasLink) {
-                    minBound = linkedMin !== null ? linkedMin : 0;
-                    maxBound = linkedMax !== null ? linkedMax : 0;
-                } else {
-                    minBound = dv.characterCreationMin !== undefined ? dv.characterCreationMin : -20;
-                    maxBound = dv.characterCreationMax !== undefined ? dv.characterCreationMax : 20;
-                }
-                
-                const minVal = parseFloat((baseVal + minBound).toFixed(2));
-                const maxVal = parseFloat((baseVal + maxBound).toFixed(2));
-                
-                wizardState.derivedModifiers = wizardState.derivedModifiers || {};
-                let currentMod = wizardState.derivedModifiers[dv.id] || 0;
-                // Clampar o modificador se os limites mudaram (ex: seleção de raça/classe/tribo)
-                if (currentMod < minBound) currentMod = minBound;
-                if (currentMod > maxBound) currentMod = maxBound;
-                wizardState.derivedModifiers[dv.id] = currentMod;
-                const currentSliderVal = parseFloat((baseVal + currentMod).toFixed(2));
-                // Formatar valores para exibição (até 2 decimais, sem zeros desnecessários)
-                const fmtVal = (v) => Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-                const stepVal = (Number.isInteger(minVal) && Number.isInteger(maxVal) && Number.isInteger(baseVal)) ? '1' : '0.01';
-                const modSign = currentMod > 0 ? '+' : '';
-                const modDisplay = currentMod === 0 ? '±0' : `${modSign}${fmtVal(currentMod)}`;
-
-                html += `
-                    <div class="field" style="margin-bottom:16px; background:rgba(79,110,247,0.04); border-radius:10px; padding:12px 14px; border:1px solid rgba(79,110,247,0.12);">
-                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                            <label style="margin:0; font-weight:600; font-size:.95rem;">${escHtml(dv.nome)}</label>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <span id="dv_mod_${dv.id}" style="font-size:.75rem; padding:2px 8px; border-radius:6px; font-weight:700;
-                                    background:${currentMod === 0 ? 'rgba(107,114,128,0.15)' : currentMod > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'};
-                                    color:${currentMod === 0 ? 'var(--muted)' : currentMod > 0 ? 'var(--success)' : 'var(--danger)'};">${modDisplay}</span>
-                                <span id="dv_val_${dv.id}" style="font-size:1.3rem; font-weight:900; color:var(--accent); min-width:36px; text-align:right;">${fmtVal(currentSliderVal)}</span>
+                    
+                    const minVal = parseFloat((baseVal + minBound).toFixed(2));
+                    const maxVal = parseFloat((baseVal + maxBound).toFixed(2));
+                    
+                    // Condição de Leitura: Se limites efetivos (Min e Max) são ambos 0
+                    const readOnly = (minBound === 0 && maxBound === 0);
+                    
+                    wizardState.derivedModifiers = wizardState.derivedModifiers || {};
+                    let currentMod = wizardState.derivedModifiers[dv.id] || 0;
+                    
+                    if (readOnly) {
+                        currentMod = 0; // Força modificador a 0 se for readonly
+                    } else {
+                        if (currentMod < minBound) currentMod = minBound;
+                        if (currentMod > maxBound) currentMod = maxBound;
+                    }
+                    
+                    wizardState.derivedModifiers[dv.id] = currentMod;
+                    const currentSliderVal = parseFloat((baseVal + currentMod).toFixed(2));
+                    const fmtVal = (v) => Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+                    
+                    if (readOnly) {
+                        html += `
+                            <div class="field" style="margin-bottom:16px; background:rgba(79,110,247,0.02); border-radius:10px; padding:12px 14px; border:1px solid rgba(79,110,247,0.08);">
+                                <div style="display:flex; align-items:center; justify-content:space-between;">
+                                    <label style="margin:0; font-weight:600; font-size:.95rem; color:var(--text); opacity:0.9;">${escHtml(dv.nome)}</label>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <span style="font-size:1.3rem; font-weight:900; color:var(--accent); min-width:36px; text-align:right;">${fmtVal(baseVal)}</span>
+                                    </div>
+                                </div>
+                                <div style="font-size:0.75rem; color:var(--muted); margin-top:4px; opacity:0.8;">
+                                    Valor Calculado Automático
+                                </div>
                             </div>
-                        </div>
-                        <input type="range" 
-                               min="${minVal}" max="${maxVal}" step="${stepVal}" 
-                               value="${currentSliderVal}"
-                               oninput="
-                                    const val = parseFloat(this.value);
-                                    const mod = parseFloat((val - ${baseVal}).toFixed(2));
-                                    const fmt = Number.isInteger(val) ? String(val) : val.toFixed(2).replace(/0+$/, '').replace(/\\\\.$/, '');
-                                    const modSign = mod > 0 ? '+' : '';
-                                    const modFmt = mod === 0 ? '±0' : modSign + (Number.isInteger(mod) ? String(mod) : mod.toFixed(2).replace(/0+$/, '').replace(/\\\\.$/, ''));
-                                    document.getElementById('dv_val_${dv.id}').textContent = fmt;
-                                    const modEl = document.getElementById('dv_mod_${dv.id}');
-                                    modEl.textContent = modFmt;
-                                    modEl.style.background = mod === 0 ? 'rgba(107,114,128,0.15)' : mod > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
-                                    modEl.style.color = mod === 0 ? 'var(--muted)' : mod > 0 ? 'var(--success)' : 'var(--danger)';
-                                    const breakdownEl = document.getElementById('dv_breakdown_${dv.id}');
-                                    if (breakdownEl) breakdownEl.textContent = '${fmtVal(baseVal)} ' + (mod >= 0 ? '+ ' + (Number.isInteger(mod) ? String(mod) : mod.toFixed(2).replace(/0+$/, '').replace(/\\\\.$/, '')) : '− ' + (Number.isInteger(Math.abs(mod)) ? String(Math.abs(mod)) : Math.abs(mod).toFixed(2).replace(/0+$/, '').replace(/\\\\.$/, ''))) + ' = ' + fmt;
-                                    wizardState.derivedModifiers['${dv.id}'] = mod;
-                                    saveWizardToStorage();
-                                "
-                               style="width:100%;">
-                        <div style="display:flex; justify-content:space-between; font-size:0.72rem; color:var(--muted); margin-top:2px;">
-                            <span>Min: ${fmtVal(minVal)}</span>
-                            <span id="dv_breakdown_${dv.id}" style="font-weight:600; color:var(--ink); opacity:0.7;">${fmtVal(baseVal)} ${currentMod >= 0 ? '+ ' + fmtVal(currentMod) : '− ' + fmtVal(Math.abs(currentMod))} = ${fmtVal(currentSliderVal)}</span>
-                            <span>Max: ${fmtVal(maxVal)}</span>
-                        </div>
-                    </div>
-                `;
-            });
+                        `;
+                    } else {
+                        const stepVal = (Number.isInteger(minVal) && Number.isInteger(maxVal) && Number.isInteger(baseVal)) ? '1' : '0.01';
+                        const modSign = currentMod > 0 ? '+' : '';
+                        const modDisplay = currentMod === 0 ? '±0' : `${modSign}${fmtVal(currentMod)}`;
+
+                        html += `
+                            <div class="field" style="margin-bottom:16px; background:rgba(79,110,247,0.04); border-radius:10px; padding:12px 14px; border:1px solid rgba(79,110,247,0.12);">
+                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                                    <label style="margin:0; font-weight:600; font-size:.95rem;">${escHtml(dv.nome)}</label>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <span id="dv_mod_${dv.id}" style="font-size:.75rem; padding:2px 8px; border-radius:6px; font-weight:700;
+                                            background:${currentMod === 0 ? 'rgba(107,114,128,0.15)' : currentMod > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'};
+                                            color:${currentMod === 0 ? 'var(--muted)' : currentMod > 0 ? 'var(--success)' : 'var(--danger)'};">${modDisplay}</span>
+                                        <span id="dv_val_${dv.id}" style="font-size:1.3rem; font-weight:900; color:var(--accent); min-width:36px; text-align:right;">${fmtVal(currentSliderVal)}</span>
+                                    </div>
+                                </div>
+                                <input type="range" 
+                                       min="${minVal}" max="${maxVal}" step="${stepVal}" 
+                                       value="${currentSliderVal}"
+                                       oninput="
+                                            const val = parseFloat(this.value);
+                                            const mod = parseFloat((val - ${baseVal}).toFixed(2));
+                                            const fmt = Number.isInteger(val) ? String(val) : val.toFixed(2).replace(/0+$/, '').replace(/\\\\.$/, '');
+                                            const modSign = mod > 0 ? '+' : '';
+                                            const modFmt = mod === 0 ? '±0' : modSign + (Number.isInteger(mod) ? String(mod) : mod.toFixed(2).replace(/0+$/, '').replace(/\\\\.$/, ''));
+                                            document.getElementById('dv_val_${dv.id}').textContent = fmt;
+                                            const modEl = document.getElementById('dv_mod_${dv.id}');
+                                            modEl.textContent = modFmt;
+                                            modEl.style.background = mod === 0 ? 'rgba(107,114,128,0.15)' : mod > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
+                                            modEl.style.color = mod === 0 ? 'var(--muted)' : mod > 0 ? 'var(--success)' : 'var(--danger)';
+                                            const breakdownEl = document.getElementById('dv_breakdown_${dv.id}');
+                                            if (breakdownEl) breakdownEl.textContent = '${fmtVal(baseVal)} ' + (mod >= 0 ? '+ ' + (Number.isInteger(mod) ? String(mod) : mod.toFixed(2).replace(/0+$/, '').replace(/\\\\.$/, '')) : '− ' + (Number.isInteger(Math.abs(mod)) ? String(Math.abs(mod)) : Math.abs(mod).toFixed(2).replace(/0+$/, '').replace(/\\\\.$/, ''))) + ' = ' + fmt;
+                                            wizardState.derivedModifiers['${dv.id}'] = mod;
+                                            saveWizardToStorage();
+                                        "
+                                       style="width:100%;">
+                                <div style="display:flex; justify-content:space-between; font-size:0.72rem; color:var(--muted); margin-top:2px;">
+                                    <span>Min: ${fmtVal(minVal)}</span>
+                                    <span id="dv_breakdown_${dv.id}" style="font-weight:600; color:var(--ink); opacity:0.7;">${fmtVal(baseVal)} ${currentMod >= 0 ? '+ ' + fmtVal(currentMod) : '− ' + fmtVal(Math.abs(currentMod))} = ${fmtVal(currentSliderVal)}</span>
+                                    <span>Max: ${fmtVal(maxVal)}</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+                
+                html += `</div>`;
+            }
             html += `</div>`;
         }
     }

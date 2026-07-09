@@ -160,6 +160,7 @@ const MODULE_DEFS = {
             { key: 'auraVinculadaId', label: '🌟 Aura Vinculada', type: 'aura_selector', showWhenBoolean: 'concedeAura' },
             { key: 'auraGrauConcedido', label: 'Grau Concedido da Aura', type: 'number', placeholder: '1', showWhenBoolean: 'concedeAura' },
             { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: '' },
+            { key: 'derivedValueIds', label: '📊 Valores Derivados Vinculados', type: 'mechanic_selector', selectorTarget: 'derivedValues' },
             { key: 'tags', label: 'Tags', type: 'tags', placeholder: 'Ex: bônus, racial' },
         ]
     },
@@ -936,15 +937,18 @@ window.confirmDelete = async function () {
 // ===== SUB-FORM MODAL (PECULIARIDADES) =====
 window._openSubFormPeculiaridade = function (pid, parentFieldKey = null) {
     // Mascarar temporariamente os IDs do modal principal para evitar colisão no DOM
-    const mainForm = document.getElementById('formModal');
-    if (mainForm) {
-        mainForm.querySelectorAll('[id]').forEach(el => {
-            if (el.id.startsWith('field_') || el.id.startsWith('tags_') || el.id.startsWith('img_preview_') || el.id.startsWith('multisel_') || el.id === 'btnSave') {
-                el.dataset.tempId = el.id;
-                el.id = 'temp_' + el.id;
-            }
-        });
-    }
+    document.querySelectorAll('.form-modal, #formModal').forEach(modal => {
+        if (modal.id !== 'subFormModalPeculiaridade') {
+            modal.querySelectorAll('[id]').forEach(el => {
+                if (el.id.startsWith('field_') || el.id.startsWith('tags_') || el.id.startsWith('img_preview_') || el.id.startsWith('multisel_') || el.id.startsWith('btnSave')) {
+                    if (!el.hasAttribute('data-temp-id-pec')) {
+                        el.dataset.tempIdPec = el.id;
+                        el.id = 'temp_pec_' + el.id;
+                    }
+                }
+            });
+        }
+    });
 
     // Criar overlay do sub-modal
     const overlay = document.createElement('div');
@@ -974,7 +978,7 @@ window._openSubFormPeculiaridade = function (pid, parentFieldKey = null) {
               </div>
               <div class="form-actions">
                   <button type="button" class="btn-modal btn-cancel" onclick="window.closeSubFormPeculiaridade()">Cancelar</button>
-                  <button type="submit" class="btn-save" id="btnSaveSub">💾 Salvar Alterações</button>
+                  <button type="submit" class="btn-save" id="btnSaveSubPec">💾 Salvar Alterações</button>
               </div>
           </form>
       </div>
@@ -1017,19 +1021,18 @@ window.closeSubFormPeculiaridade = function () {
         window._prevModuleForSubForm = null;
     }
 
-    // Desmascarar IDs do modal principal
-    const mainForm = document.getElementById('formModal');
-    if (mainForm) {
-        mainForm.querySelectorAll('[data-temp-id]').forEach(el => {
-            el.id = el.dataset.tempId;
-            delete el.dataset.tempId;
+    // Desmascarar IDs
+    document.querySelectorAll('.form-modal, #formModal').forEach(modal => {
+        modal.querySelectorAll('[data-temp-id-pec]').forEach(el => {
+            el.id = el.dataset.tempIdPec;
+            el.removeAttribute('data-temp-id-pec');
         });
-    }
+    });
 };
 
 window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
     e.preventDefault();
-    const btn = document.getElementById('btnSaveSub');
+    const btn = document.getElementById('btnSaveSubPec');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
 
     try {
@@ -1101,7 +1104,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
 
         // Se parentFieldKey foi fornecido
         if (parentFieldKey && parentFieldKey !== 'null') {
-            const parentFieldPeculiaridade = document.getElementById('temp_field_' + parentFieldKey) || document.getElementById('field_' + parentFieldKey);
+            const parentFieldPeculiaridade = document.getElementById('temp_pec_field_' + parentFieldKey) || document.getElementById('temp_vd_field_' + parentFieldKey) || document.getElementById('temp_field_' + parentFieldKey) || document.getElementById('field_' + parentFieldKey);
             if (parentFieldPeculiaridade) {
                 let currentIds = JSON.parse(parentFieldPeculiaridade.value || '[]');
                 
@@ -1115,7 +1118,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                     parentFieldPeculiaridade.value = JSON.stringify(currentIds);
                 }
                 
-                const wrap = document.getElementById('temp_field_' + parentFieldKey + '_wrap') || document.getElementById('field_' + parentFieldKey + '_wrap');
+                const wrap = document.getElementById('temp_pec_field_' + parentFieldKey + '_wrap') || document.getElementById('temp_vd_field_' + parentFieldKey + '_wrap') || document.getElementById('temp_field_' + parentFieldKey + '_wrap') || document.getElementById('field_' + parentFieldKey + '_wrap');
                 if (wrap) {
                     import('./painel-mechanics.js?v=2').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
@@ -1139,8 +1142,8 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
             }
         } else {
             // Fallback for generic peculiaridadeIds field if no parentFieldKey is provided
-            const legacyField = document.getElementById('temp_field_peculiaridadeIds') || document.getElementById('field_peculiaridadeIds');
-            const wrap = document.getElementById('temp_field_peculiaridadeIds_wrap') || document.getElementById('field_peculiaridadeIds_wrap');
+            const legacyField = document.getElementById('temp_pec_field_peculiaridadeIds') || document.getElementById('temp_field_peculiaridadeIds') || document.getElementById('field_peculiaridadeIds');
+            const wrap = document.getElementById('temp_pec_field_peculiaridadeIds_wrap') || document.getElementById('temp_field_peculiaridadeIds_wrap') || document.getElementById('field_peculiaridadeIds_wrap');
             if (wrap && legacyField) {
                 const currentIds = JSON.parse(legacyField.value || '[]');
                 import('./painel-mechanics.js?v=2').then(m => {
@@ -1168,15 +1171,18 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
 
 // ===== SUB-FORM MODAL (VALORES DERIVADOS) =====
 window._openSubFormValorDerivado = function (vid, parentFieldKey = null) {
-    const mainForm = document.getElementById('formModal');
-    if (mainForm) {
-        mainForm.querySelectorAll('[id]').forEach(el => {
-            if (el.id.startsWith('field_') || el.id.startsWith('tags_') || el.id.startsWith('img_preview_') || el.id.startsWith('multisel_') || el.id === 'btnSave') {
-                el.dataset.tempId = el.id;
-                el.id = 'temp_' + el.id;
-            }
-        });
-    }
+    document.querySelectorAll('.form-modal, #formModal').forEach(modal => {
+        if (modal.id !== 'subFormModalValorDerivado') {
+            modal.querySelectorAll('[id]').forEach(el => {
+                if (el.id.startsWith('field_') || el.id.startsWith('tags_') || el.id.startsWith('img_preview_') || el.id.startsWith('multisel_') || el.id.startsWith('btnSave')) {
+                    if (!el.hasAttribute('data-temp-id-vd')) {
+                        el.dataset.tempIdVd = el.id;
+                        el.id = 'temp_vd_' + el.id;
+                    }
+                }
+            });
+        }
+    });
 
     const overlay = document.createElement('div');
     overlay.className = 'modal form-modal active';
@@ -1205,7 +1211,7 @@ window._openSubFormValorDerivado = function (vid, parentFieldKey = null) {
               </div>
               <div class="form-actions">
                   <button type="button" class="btn-modal btn-cancel" onclick="window.closeSubFormValorDerivado()">Cancelar</button>
-                  <button type="submit" class="btn-save" id="btnSaveSub">💾 Salvar Alterações</button>
+                  <button type="submit" class="btn-save" id="btnSaveSubVD">💾 Salvar Alterações</button>
               </div>
           </form>
       </div>
@@ -1242,18 +1248,17 @@ window.closeSubFormValorDerivado = function () {
         window._prevModuleForSubForm = null;
     }
 
-    const mainForm = document.getElementById('formModal');
-    if (mainForm) {
-        mainForm.querySelectorAll('[data-temp-id]').forEach(el => {
-            el.id = el.dataset.tempId;
-            delete el.dataset.tempId;
+    document.querySelectorAll('.form-modal, #formModal').forEach(modal => {
+        modal.querySelectorAll('[data-temp-id-vd]').forEach(el => {
+            el.id = el.dataset.tempIdVd;
+            el.removeAttribute('data-temp-id-vd');
         });
-    }
+    });
 };
 
 window.saveSubFormValorDerivado = async function (e, vid, parentFieldKey) {
     e.preventDefault();
-    const btn = document.getElementById('btnSaveSub');
+    const btn = document.getElementById('btnSaveSubVD');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
 
     try {
@@ -1336,7 +1341,7 @@ window.saveSubFormValorDerivado = async function (e, vid, parentFieldKey) {
                     parentFieldValorDerivado.value = JSON.stringify(currentIds);
                 }
                 
-                const wrap = document.getElementById('temp_field_' + parentFieldKey + '_wrap') || document.getElementById('field_' + parentFieldKey + '_wrap');
+                const wrap = document.getElementById('temp_pec_field_' + parentFieldKey + '_wrap') || document.getElementById('temp_vd_field_' + parentFieldKey + '_wrap') || document.getElementById('temp_field_' + parentFieldKey + '_wrap') || document.getElementById('field_' + parentFieldKey + '_wrap');
                 if (wrap) {
                     import('./painel-mechanics.js?v=2').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');

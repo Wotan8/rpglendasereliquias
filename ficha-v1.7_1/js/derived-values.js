@@ -121,13 +121,53 @@ function renderDerivedValuesGrid() {
         }
     }
 
-    // Filtrar: universais OU vinculados à raça/classe
+    // IDs de valores derivados vinculados às peculiaridades ativas
+    const pecDVIds = new Set();
+    const pecDVInitials = {};
+    const processPecDV = (pecList) => {
+        if (!pecList) return;
+        pecList.forEach(pecObj => {
+            let pecData = null;
+            if (typeof _resolvePeculiaridade === 'function') {
+                pecData = _resolvePeculiaridade(pecObj);
+            } else {
+                const pId = typeof pecObj === 'object' ? pecObj.id : pecObj;
+                pecData = (window._systemData?.peculiarities || []).find(p => p.id === pId);
+            }
+            if (pecData?.derivedValueIds) {
+                pecData.derivedValueIds.forEach(item => {
+                    const isObj = typeof item === 'object' && item !== null;
+                    const dvId = isObj ? item.id : item;
+                    pecDVIds.add(dvId);
+                    if (isObj && item.valorInicial) {
+                        pecDVInitials[dvId] = item.valorInicial;
+                    }
+                });
+            }
+        });
+    };
+
+    if (racaNome && window.RACES?.[racaNome]?.peculiaridades) {
+        processPecDV(window.RACES[racaNome].peculiaridades);
+    }
+    if (classeNome && window.CLASSES?.[classeNome]?.peculiaridades) {
+        processPecDV(window.CLASSES[classeNome].peculiaridades);
+    }
+    const triboNome = document.getElementById('selTribo')?.value || '';
+    if (triboNome && window.TRIBES?.[triboNome]?.peculiaridades) {
+        processPecDV(window.TRIBES[triboNome].peculiaridades);
+    }
+    if (window.state?.peculiaridadesIndividuais) {
+        processPecDV(window.state.peculiaridadesIndividuais);
+    }
+
+    // Filtrar: universais OU vinculados à raça/classe/peculiaridades
     const applicableDVs = allDVs.filter(dv =>
-        dv.todoPersonagem || raceDVIds.has(dv.id) || classDVIds.has(dv.id)
+        dv.todoPersonagem || raceDVIds.has(dv.id) || classDVIds.has(dv.id) || pecDVIds.has(dv.id)
     );
 
     // Guardar mapa de valores iniciais para uso no recalcAll
-    window._dvInitialValues = { ...raceDVInitials, ...classDVInitials };
+    window._dvInitialValues = { ...raceDVInitials, ...classDVInitials, ...pecDVInitials };
 
     // Ordenar por ordem
     applicableDVs.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));

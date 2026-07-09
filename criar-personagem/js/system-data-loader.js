@@ -292,7 +292,10 @@ function buildDerivedValuesFromFirebase() {
             characterCreationRule: dv.characterCreationRule || false,
             characterCreationMin: dv.characterCreationMin !== undefined ? dv.characterCreationMin : -20,
             characterCreationMax: dv.characterCreationMax !== undefined ? dv.characterCreationMax : 20,
-            todoPersonagem: dv.todoPersonagem || false
+            todoPersonagem: dv.todoPersonagem || false,
+            blocoId: dv.blocoId || '',
+            blocoNome: dv.blocoNome || 'Geral',
+            blocoOrdem: dv.blocoOrdem || 99
         }));
     console.log(`✅ Valores derivados: ${window.DERIVED_VALUES.length}`);
 }

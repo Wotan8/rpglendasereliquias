@@ -72,6 +72,28 @@ onAuthStateChanged(auth, async (user) => {
                     if (typeof ExpTracker !== 'undefined' && ExpTracker.addSource) {
                         ExpTracker.addSource('exp_inicial', cfg.expInicial ?? 100, 'EXP Inicial (Mesa)');
                     }
+
+                    // Recuperar o nível da sessão atual da mesa (maior número de sessão)
+                    try {
+                        const logsQuery = query(collection(db, 'session-logs'), where('mesaId', '==', mesaId));
+                        const logsSnap = await getDocs(logsQuery);
+                        let maxSession = 0;
+                        logsSnap.forEach(d => {
+                            const data = d.data();
+                            const num = data.sessionNumber || 0;
+                            if (num > maxSession) maxSession = num;
+                        });
+                        
+                        if (maxSession > 0) {
+                            window.wizardState.mesaVinculada.sessaoAtual = maxSession;
+                            if (typeof ExpTracker !== 'undefined' && ExpTracker.addSource) {
+                                ExpTracker.addSource('exp_sessao', maxSession, 'Nível da sessão da mesa');
+                            }
+                        }
+                    } catch (err) {
+                        console.warn('⚠️ Erro ao recuperar sessões da mesa:', err);
+                    }
+
                     console.log('✅ Config da mesa carregada:', window.wizardState.mesaVinculada);
                 } else {
                     console.warn('⚠️ Mesa não encontrada:', mesaId);

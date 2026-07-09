@@ -660,6 +660,7 @@ function _resolvePeculiaridade(pecData, sourceLabel) {
         niveis: niveis,
         auraVinculadaId: pec.auraVinculadaId || null,
         auraGrauConcedido: pec.auraGrauConcedido || 1,
+        derivedValueIds: pec.derivedValueIds || [],
     };
 }
 
