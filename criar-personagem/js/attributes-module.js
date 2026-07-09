@@ -59,7 +59,7 @@ function initPhase3(container) {
             <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
                 Todos os atributos começam com 1 (grátis). Distribua os pontos restantes.
                 A 5ª bolinha custa <strong>2 pontos</strong> em vez de 1.
-                Máximo: <strong>${REGRAS_CRIACAO.atributos.limite_max_por_atributo}</strong> por atributo na criação.
+                Máximo padrão: <strong>${REGRAS_CRIACAO.atributos.limite_max_por_atributo}</strong> por atributo na criação (Peculiaridades podem alterar esse teto).
             </p>
             <div class="attr-dist-grid" id="attrDistGrid">
     `;
@@ -148,7 +148,11 @@ function clickAttrDot(attrKey, dotLevel, grupo) {
     const base = REGRAS_CRIACAO.atributos.base_inicial;
     const targetLevel = dotLevel - base; // Points to distribute (0 = just base)
     const currentLevel = wizardState.atributos[attrKey] || 0;
-    const maxPerAttr = REGRAS_CRIACAO.atributos.limite_max_por_atributo;
+    
+    // Dynamic Max Limit calculation
+    const defaultMax = REGRAS_CRIACAO.atributos.limite_max_por_atributo;
+    const attrTargetKey = attrKey.toUpperCase().replace('ATTR_', '');
+    const maxPerAttr = window.getDynamicCreationLimit ? window.getDynamicCreationLimit(attrTargetKey, defaultMax, wizardState) : defaultMax;
 
     // Toggle off if clicking the same level
     if (targetLevel === currentLevel) {
@@ -217,7 +221,7 @@ window.randomizeAttributes = function() {
     resetAttrPoints();
     
     for (const grupo of GRUPOS_ATRIBUTOS) {
-        const maxPerAttr = REGRAS_CRIACAO.atributos.limite_max_por_atributo;
+        const defaultMax = REGRAS_CRIACAO.atributos.limite_max_por_atributo;
         const attrs = ATRIBUTOS[grupo].map(a => a.key);
         
         let attempts = 0;
@@ -226,6 +230,9 @@ window.randomizeAttributes = function() {
             const attrKey = attrs[Math.floor(Math.random() * attrs.length)];
             const currentLevel = wizardState.atributos[attrKey] || 0;
             const targetLevel = currentLevel + 1;
+            
+            const attrTargetKey = attrKey.toUpperCase().replace('ATTR_', '');
+            const maxPerAttr = window.getDynamicCreationLimit ? window.getDynamicCreationLimit(attrTargetKey, defaultMax, wizardState) : defaultMax;
             
             if (targetLevel > maxPerAttr) continue;
             

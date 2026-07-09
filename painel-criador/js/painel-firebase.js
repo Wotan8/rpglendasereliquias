@@ -967,15 +967,7 @@ window._openSubFormPeculiaridade = function (pid, parentFieldKey = null) {
               <div id="subFormFieldsWrapper">
                   <div id="subFormFields" class="form-grid"></div>
               </div>
-              <div class="full-width" style="margin-top: 15px;">
-                 <div class="form-toggle">
-                     <label class="toggle-publish">
-                         <input type="checkbox" id="field_publicado">
-                         <span class="slider"></span>
-                         Publicado
-                     </label>
-                 </div>
-              </div>
+              <!-- Controle visual de 'Publicado' removido em sub-modais (salvo como true automaticamente) -->
               <div class="form-actions">
                   <button type="button" class="btn-modal btn-cancel" onclick="window.closeSubFormPeculiaridade()">Cancelar</button>
                   <button type="submit" class="btn-save" id="btnSaveSubPec">💾 Salvar Alterações</button>
@@ -1006,9 +998,6 @@ window._openSubFormPeculiaridade = function (pid, parentFieldKey = null) {
         container.appendChild(el);
     });
 
-    if(existingData.publicado) {
-        overlay.querySelector('#field_publicado').checked = true;
-    }
 };
 
 window.closeSubFormPeculiaridade = function () {
@@ -1078,7 +1067,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
             }
         });
 
-        data.publicado = document.getElementById('field_publicado').checked;
+        data.publicado = true;
         
         let savedPid = pid;
         if (pid) {
@@ -1200,15 +1189,7 @@ window._openSubFormValorDerivado = function (vid, parentFieldKey = null) {
               <div id="subFormFieldsWrapper">
                   <div id="subFormFields" class="form-grid"></div>
               </div>
-              <div class="full-width" style="margin-top: 15px;">
-                 <div class="form-toggle">
-                     <label class="toggle-publish">
-                         <input type="checkbox" id="field_publicado">
-                         <span class="slider"></span>
-                         Publicado
-                     </label>
-                 </div>
-              </div>
+              <!-- Controle visual de 'Publicado' removido em sub-modais (salvo como true automaticamente) -->
               <div class="form-actions">
                   <button type="button" class="btn-modal btn-cancel" onclick="window.closeSubFormValorDerivado()">Cancelar</button>
                   <button type="submit" class="btn-save" id="btnSaveSubVD">💾 Salvar Alterações</button>
@@ -1234,9 +1215,6 @@ window._openSubFormValorDerivado = function (vid, parentFieldKey = null) {
         container.appendChild(el);
     });
 
-    if(existingData.publicado) {
-        overlay.querySelector('#field_publicado').checked = true;
-    }
 };
 
 window.closeSubFormValorDerivado = function () {
@@ -1304,7 +1282,7 @@ window.saveSubFormValorDerivado = async function (e, vid, parentFieldKey) {
             }
         });
 
-        data.publicado = document.getElementById('field_publicado').checked;
+        data.publicado = true;
         
         let savedVid = vid;
         if (vid) {

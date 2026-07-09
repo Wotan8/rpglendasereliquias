@@ -278,3 +278,68 @@ export function simulateDerivedValues() {
 
     return results;
 }
+
+export function getDynamicCreationLimit(targetKey, defaultLimit, state) {
+    if (!state || !window._systemData || !window._systemData.mechanics) return defaultLimit;
+
+    let dynamicMax = defaultLimit;
+    const processedMechIds = new Set();
+
+    const applyMechForLimit = (mechId) => {
+        if (processedMechIds.has(mechId)) return;
+        processedMechIds.add(mechId);
+        
+        const mech = window._systemData.mechanics.find(m => m.id === mechId);
+        if (!mech || mech.tipo !== 'limitar' || !mech.config) return;
+        
+        // Verifica se a mecânica se aplica na criação ou permanente
+        const isCreation = mech.duracao === 'criacao' || mech.quandoAplica === 'na_criacao' || !mech.duracao || mech.duracao === 'permanente';
+        const isConditional = mech.condicaoAplicacao && mech.condicaoAplicacao.trim() !== '';
+        if (!isCreation || isConditional) return;
+
+        const calculos = Array.isArray(mech.config.calculos) ? mech.config.calculos 
+            : mech.config.alvo ? [mech.config] 
+            : [];
+            
+        calculos.forEach(calc => {
+            if (calc.tipoLimite !== 'maximo') return;
+            
+            const alvos = Array.isArray(calc.alvo) ? calc.alvo : [calc.alvo];
+            if (alvos.includes(targetKey)) {
+                // Obter valor fixo (só suportamos valor fixo para limite de distribuição inicial no momento)
+                const valor = calc.valor !== undefined ? Number(calc.valor) : (calc.valorMaximo !== undefined ? Number(calc.valorMaximo) : null);
+                if (valor !== null && !isNaN(valor) && valor > dynamicMax) {
+                    dynamicMax = valor;
+                }
+            }
+        });
+    };
+
+    const applyPecMechanicsForLimit = (pecIds) => {
+        if (!pecIds || pecIds.length === 0) return;
+        pecIds.forEach(pecIdEntry => {
+            const pecId = typeof pecIdEntry === 'object' ? pecIdEntry.id : pecIdEntry;
+            const pec = window._systemData.peculiarities.find(p => p.id === pecId);
+            if (pec && pec.mecanicaIds) {
+                pec.mecanicaIds.forEach(applyMechForLimit);
+            }
+        });
+    };
+
+    const raca = window._systemData.races?.find(r => r.nome === state.racaSelecionada);
+    const classe = window._systemData.classes?.find(c => c.nome === state.classeSelecionada);
+    const tribo = window._systemData.tribes?.find(t => t.nome === state.triboSelecionada);
+
+    if (raca && raca.peculiaridadeIds) applyPecMechanicsForLimit(raca.peculiaridadeIds);
+    if (classe) {
+        if (classe.peculiaridadeIds) applyPecMechanicsForLimit(classe.peculiaridadeIds);
+        if (classe.bonusIniciais) applyPecMechanicsForLimit(classe.bonusIniciais);
+    }
+    if (tribo && tribo.peculiaridadeIds) applyPecMechanicsForLimit(tribo.peculiaridadeIds);
+    
+    if (state.peculiaridadesIndividuais && state.peculiaridadesIndividuais.length > 0) {
+        applyPecMechanicsForLimit(state.peculiaridadesIndividuais.map(p => p.id));
+    }
+
+    return dynamicMax;
+}
