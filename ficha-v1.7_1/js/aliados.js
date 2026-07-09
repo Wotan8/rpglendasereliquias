@@ -209,7 +209,7 @@ function buildAliadoForm() {
     <div class="tab-content" id="alSec_mecanica">
         <div class="section">
             <div class="section-title">Atributos</div>
-            <div class="row" style="grid-template-columns: repeat(9, 1fr);">
+            <div class="row" id="al_attr_grid" style="grid-template-columns: repeat(9, 1fr);">
                 ${['FOR','DES','VIG','INT','RAC','PRS','PRE','MAN','AUT'].map(a => `
                     <div class="field">
                         <label style="text-align:center">${a}</label>

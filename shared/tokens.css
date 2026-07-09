@@ -1,0 +1,69 @@
+/* =====================================================================
+   LENDAS & RELÍQUIAS — TOKENS DE DESIGN COMPARTILHADOS
+   Fonte única de verdade para cores, tipografia e raio de borda.
+   Carregar DEPOIS do CSS de cada página (as declarações daqui vencem
+   duplicatas antigas e mantêm todas as páginas idênticas).
+   ===================================================================== */
+
+/* ---------- TEMA CLARO (padrão) ---------- */
+:root {
+    --bg: #0b0c10;
+    --bg-gradient: linear-gradient(180deg, #0b0c10, #111827);
+    --paper: #ffffff;
+    --ink: #111827;
+    --muted: #6b7280;
+    --line: #111827;
+    --soft: #e5e7eb;
+    --chip: #f3f4f6;
+    --radius: 10px;
+    --gap: 10px;
+    --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+    /* Ação primária — mesmo azul em todas as páginas.
+       (--primary e --accent são sinônimos; páginas antigas usam nomes diferentes) */
+    --accent: #4f6ef7;
+    --primary: var(--accent);
+    --accent-glow: rgba(79, 110, 247, 0.35);
+
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --secondary: #ec4899;
+}
+
+/* ---------- TEMA ESCURO ---------- */
+html.dark {
+    --bg: #0b0c10;
+    --bg-gradient: linear-gradient(180deg, #0b0c10, #111827);
+    --paper: #1a1d2e;
+    --ink: #e5e7eb;
+    --muted: #9ca3af;
+    --line: #374151;
+    --soft: #374151;
+    --chip: #232740;
+}
+
+/* =====================================================================
+   BASE CROSS-PLATFORM (vale para todas as páginas)
+   ===================================================================== */
+
+/* iOS/Android: impedir que o navegador "infle" o texto ao girar a tela */
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+/* iOS Safari dá zoom automático ao focar campos com fonte < 16px.
+   Em telas de celular, garantimos 16px em todo campo de formulário. */
+@media (max-width: 768px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+}
+
+/* Rolagem mais estável no celular (sem "puxão" da página inteira) */
+body {
+    overscroll-behavior-y: none;
+}

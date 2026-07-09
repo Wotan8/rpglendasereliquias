@@ -29,9 +29,6 @@ window.initWizard = function () {
     // If mesa is linked (from URL), ensure EXP is registered
     if (wizardState.mesaVinculada) {
         ExpTracker.addSource('exp_inicial', wizardState.mesaVinculada.expInicial ?? 100, 'EXP Inicial (Mesa)');
-        if (wizardState.mesaVinculada.sessoes > 0) {
-            ExpTracker.addSource('exp_sessoes', wizardState.mesaVinculada.sessoes * 10, `Nível da sessão da mesa (${wizardState.mesaVinculada.sessoes} sessões)`);
-        }
     }
 
     // Initialize EXP display

@@ -1158,7 +1158,51 @@
 /* === RESPONSIVE === */
 @media (max-width: 600px) {
     .inv-form-grid { grid-template-columns: 1fr; }
-    .inv-card { flex-wrap: wrap; }
+    
+    .inv-card,
+    .inv-item-row { 
+        flex-wrap: wrap; 
+        max-width: 100%;
+        box-sizing: border-box;
+        gap: 12px;
+    }
+    
+    .inv-card-body,
+    .inv-item-info {
+        flex: 1 1 50%; /* Force it to take up remaining space but wrap if needed */
+        max-width: 100%;
+        min-width: 0;
+    }
+    
+    .inv-card-name,
+    .inv-item-name {
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    /* Force action buttons to a new line, taking full width */
+    .inv-item-actions {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: flex-end; /* Align buttons to the right (or flex-start for left) */
+        margin-top: 4px;
+        border-top: 1px solid rgba(139, 92, 246, 0.1);
+        padding-top: 10px;
+    }
+    
+    .inv-slot-group,
+    .inv-slot-container,
+    .inv-slot-items {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .inv-equipped-grid { 
+        grid-template-columns: 1fr; 
+        max-width: 100%;
+        box-sizing: border-box;
+    }
     .inv-detail-grid { grid-template-columns: 1fr 1fr; }
     .inv-modal-footer { flex-wrap: wrap; }
     .cond-card-time { flex-wrap: wrap; }

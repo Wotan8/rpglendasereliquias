@@ -1208,3 +1208,35 @@ body {
     max-height: 300px;
     overflow-y: auto;
 }
+/* =====================================================================
+   TOQUE (celulares/tablets) — alvos de toque confortáveis (≥ 40px)
+   ===================================================================== */
+@media (pointer: coarse) {
+    .tab {
+        min-height: 40px;
+    }
+
+    .toolbar button {
+        min-height: 40px;
+        min-width: 40px;
+    }
+
+    .modal-close-btn {
+        width: 40px;
+        height: 40px;
+    }
+}
+
+/* Área segura de aparelhos com notch (iPhone etc.) */
+@media (max-width: 950px) {
+    @supports (padding: env(safe-area-inset-left)) {
+        .wrap {
+            padding-left: max(8px, env(safe-area-inset-left));
+            padding-right: max(8px, env(safe-area-inset-right));
+        }
+
+        body {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+    }
+}

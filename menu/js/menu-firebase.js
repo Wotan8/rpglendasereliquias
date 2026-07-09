@@ -45,30 +45,8 @@ const NOTIFICATIONS_PER_PAGE = 10;
 const MAX_NOTIFICATIONS = 100;
 
 // ===== DARK THEME =====
-function initTheme() {
-    const saved = localStorage.getItem('menu-theme');
-    if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-        updateThemeBtn();
-    }
-}
-
-window.toggleTheme = function () {
-    document.documentElement.classList.toggle('dark');
-    const isDark = document.documentElement.classList.contains('dark');
-    localStorage.setItem('menu-theme', isDark ? 'dark' : 'light');
-    updateThemeBtn();
-};
-
-function updateThemeBtn() {
-    const btn = document.getElementById('btnThemeToggle');
-    if (btn) {
-        const isDark = document.documentElement.classList.contains('dark');
-        btn.textContent = isDark ? '☀️' : '🌙';
-    }
-}
-
-initTheme();
+// A lógica de tema agora é compartilhada por todo o site: /shared/theme.js
+// (chave única 'lr_theme'; window.toggleTheme é definido lá).
 
 // ===== AUTH STATE =====
 onAuthStateChanged(auth, async (user) => {

@@ -1,18 +1,10 @@
-/* ===== THEME TOGGLE ===== */
-function toggleTheme() {
-    const html = document.documentElement;
-    const btn = document.getElementById('btnThemeToggle');
-    html.classList.toggle('dark');
-    const isDark = html.classList.contains('dark');
-    btn.textContent = isDark ? '☀️' : '🌙';
-    localStorage.setItem('lr_theme', isDark ? 'dark' : 'light');
-}
-
-(function loadTheme() {
-    const saved = localStorage.getItem('lr_theme');
-    if (saved === 'dark') {
-        document.documentElement.classList.add('dark');
-        const btn = document.getElementById('btnThemeToggle');
-        if (btn) btn.textContent = '☀️';
-    }
+/* ===== THEME TOGGLE — Criação de Personagem =====
+   DESATIVADO: a lógica de tema foi unificada em /shared/theme.js
+   (chave única 'lr_theme' para todo o site). Este arquivo permanece
+   apenas para compatibilidade caso alguma página antiga ainda o carregue. */
+(function () {
+    if (typeof window.toggleTheme === 'function') return; // shared/theme.js já cuidou de tudo
+    var s = document.createElement('script');
+    s.src = '../shared/theme.js';
+    document.head.appendChild(s);
 })();

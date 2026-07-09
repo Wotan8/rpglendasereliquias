@@ -1,10 +1,14 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b0c10">
     <title>ᛟ Laboratorium Runarum — Lendas & Relíquias</title>
     <link rel="stylesheet" href="css/laboratorium.css">
+    <link rel="stylesheet" href="../shared/tokens.css">
+    <script src="../shared/theme.js"></script>
+    <script type="module" src="/js/global-favicon.js"></script>
 </head>
 <body>
     <!-- LOADING -->
@@ -17,7 +21,8 @@
     <div id="labWrap" class="lab-wrap" style="display:none">
         <header class="lab-topo">
             <button class="lab-voltar" onclick="history.length > 1 ? history.back() : location.href='../menu/menu.html'" title="Voltar à ficha">←</button>
-            <h1>ᛟ Laboratorium Runarum</h1>
+            <h1><span class="runa">ᛟ</span> Laboratorium Runarum</h1>
+            <button id="btnThemeToggle" class="theme-toggle" onclick="toggleTheme()" title="Alternar tema claro/escuro">🌙</button>
             <div id="labCharInfo" class="lab-char"></div>
         </header>
 
