@@ -1240,3 +1240,90 @@ body {
         }
     }
 }
+
+/* ===== CARTEIRA DE FRAGMENTOS (Frag$) ===== */
+.frag-wallet {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 14px 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    user-select: none;
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #1e1b4b 100%);
+    border: 1px solid rgba(129, 140, 248, 0.55);
+    box-shadow:
+        inset 0 1px 0 rgba(199, 210, 254, 0.25),
+        0 2px 8px rgba(49, 46, 129, 0.35);
+    transition: box-shadow .2s, border-color .2s, transform .15s;
+}
+
+.frag-wallet:hover {
+    border-color: rgba(165, 180, 252, 0.9);
+    box-shadow:
+        inset 0 1px 0 rgba(199, 210, 254, 0.35),
+        0 2px 14px rgba(99, 102, 241, 0.45);
+    transform: translateY(-1px);
+}
+
+.frag-gem {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 4px rgba(129, 140, 248, 0.55));
+}
+
+.frag-amount {
+    font-weight: 800;
+    font-size: 14px;
+    line-height: 1;
+    color: #e0e7ff;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.3px;
+    text-shadow: 0 0 8px rgba(129, 140, 248, 0.45);
+}
+
+.frag-label {
+    font-weight: 700;
+    font-size: 10px;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #a5b4fc;
+    padding-left: 7px;
+    border-left: 1px solid rgba(165, 180, 252, 0.35);
+}
+
+/* brilho ao atualizar o saldo */
+@keyframes fragPulse {
+    0%   { box-shadow: inset 0 1px 0 rgba(199,210,254,.25), 0 0 0 0 rgba(129,140,248,.65); }
+    60%  { box-shadow: inset 0 1px 0 rgba(199,210,254,.25), 0 0 0 9px rgba(129,140,248,0); }
+    100% { box-shadow: inset 0 1px 0 rgba(199,210,254,.25), 0 2px 8px rgba(49,46,129,.35); }
+}
+
+.frag-wallet.frag-pulse {
+    animation: fragPulse .7s ease-out;
+}
+
+.frag-wallet.frag-pulse .frag-amount {
+    animation: fragAmountPop .45s ease-out;
+}
+
+@keyframes fragAmountPop {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.18); }
+    100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .frag-wallet, .frag-wallet.frag-pulse, .frag-wallet.frag-pulse .frag-amount {
+        animation: none;
+        transition: none;
+    }
+}
+
+@media (max-width: 560px) {
+    .frag-wallet { padding: 5px 11px 5px 8px; }
+    .frag-amount { font-size: 13px; }
+}

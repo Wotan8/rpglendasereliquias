@@ -1311,7 +1311,18 @@ window.updatePlayerFrag = async function(action) {
                 if (newBalance < 0) newBalance = 0;
             }
             
-            t.update(userRef, { fragmentos: newBalance });
+            t.update(userRef, {
+                fragmentos: newBalance,
+                // Marcador lido pela Cloud Function de auditoria (frag_logs)
+                fragLastOp: {
+                    origem: 'Painel do Mestre',
+                    detalhe: action === 'add'
+                        ? `Concessão de ${amount} Frag$`
+                        : `Remoção de ${amount} Frag$`,
+                    autor: S.currentUser?.email || 'Mestre',
+                    ts: Date.now()
+                }
+            });
         });
         
         // Push notification

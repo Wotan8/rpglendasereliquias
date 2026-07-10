@@ -17,6 +17,12 @@ service cloud.firestore {
           .data.role == 'criador';
     }
 
+    // Campos que só o servidor (Cloud Functions) e mestres podem alterar
+    function naoMexeuEmCamposProtegidos() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['fragmentos', 'inventario', 'apoios', 'logsCompra', 'fragLastOp']);
+    }
+
     // ========== Coleções do Painel de Criador (system/data/*) ==========
     match /system/data/{collection}/{document} {
       allow read: if isSignedIn();
@@ -29,11 +35,31 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Coleção de usuários (ATUALIZADA - permite mestres editarem apoios)
+    // Coleção de usuários (TRANCADA — Frag$/inventário só via Cloud Function ou mestre)
     match /users/{userId} {
       allow read: if isSignedIn();
-      // ✅ Usuários podem editar seus próprios dados OU mestres podem editar qualquer usuário
-      allow write: if isSignedIn() && (request.auth.uid == userId || isMaster());
+
+      // Criação do próprio doc: não pode nascer com saldo/inventário
+      allow create: if isSignedIn() && (
+        isMaster() ||
+        (request.auth.uid == userId &&
+         !request.resource.data.keys().hasAny(['fragmentos', 'inventario', 'apoios', 'logsCompra', 'fragLastOp']))
+      );
+
+      // Mestre mantém escrita total (painel-mestre concede Frag$ e apoios pelo cliente)
+      allow update: if isSignedIn() && (
+        isMaster() ||
+        (request.auth.uid == userId && naoMexeuEmCamposProtegidos())
+      );
+
+      allow delete: if isMaster();
+    }
+
+    // Auditoria de Fragmentos — escrita SOMENTE pelo servidor (Admin SDK ignora rules)
+    match /frag_logs/{logId} {
+      // Mestres veem tudo; jogador pode ver os logs da própria conta
+      allow read: if isSignedIn() && (isMaster() || resource.data.uid == request.auth.uid);
+      allow create, update, delete: if false;
     }
 
     // Coleção de personagens (CORRIGIDA)

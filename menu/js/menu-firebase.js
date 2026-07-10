@@ -15,9 +15,9 @@ import {
     deleteDoc,
     updateDoc,
     addDoc,
-    doc,
-    runTransaction
+    doc
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
 
 // ===== CONFIG =====
 const firebaseConfig = {
@@ -32,6 +32,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const functions = getFunctions(app, 'southamerica-east1');
 
 let currentUser = null;
 let characters = [];
@@ -43,6 +44,21 @@ let userNotifications = [];
 let currentNotificationPage = 1;
 const NOTIFICATIONS_PER_PAGE = 10;
 const MAX_NOTIFICATIONS = 100;
+
+// ===== SALDO DE FRAGMENTOS (exibição) =====
+function updateFragDisplay(valor) {
+    const fragEl = document.getElementById('fragmentosValue');
+    if (!fragEl) return;
+    const n = Number(valor) || 0;
+    fragEl.textContent = n.toLocaleString('pt-BR');
+    const chip = fragEl.closest('.frag-wallet');
+    if (chip) {
+        chip.classList.remove('frag-pulse');
+        void chip.offsetWidth; // reinicia a animação
+        chip.classList.add('frag-pulse');
+    }
+}
+window.updateFragDisplay = updateFragDisplay;
 
 // ===== DARK THEME =====
 // A lógica de tema agora é compartilhada por todo o site: /shared/theme.js
@@ -77,9 +93,7 @@ onAuthStateChanged(auth, async (user) => {
                 const data = userDoc.data();
                 const role = data.role;
                 
-                const fragmentos = data.fragmentos || 0;
-                const fragEl = document.getElementById('fragmentosValue');
-                if (fragEl) fragEl.textContent = fragmentos;
+                updateFragDisplay(data.fragmentos || 0);
 
                 const btnMestre = document.getElementById('btnPainelMestre');
                 const btnCriador = document.getElementById('btnPainelCriador');
@@ -838,7 +852,7 @@ window.confirmPurchaseFrag = async function() {
     if (!currentCheckoutItem) return;
     const item = currentCheckoutItem;
 
-    // Verify metas selection if applicable
+    // Pré-checagem de UX — a validação de verdade acontece no servidor
     let selectedMetas = [];
     if (item.modoSelecaoMeta) {
         const limit = item.qtdSelecaoMeta || 1;
@@ -847,18 +861,7 @@ window.confirmPurchaseFrag = async function() {
             showAlert(`❌ Você pode escolher no máximo ${limit} meta(s).`, 'warning');
             return;
         }
-        
-        const allowedMetasIds = item.metasVinculadas || [];
-        for (let i = 0; i < checkboxes.length; i++) {
-            const val = checkboxes[i].value;
-            if (!allowedMetasIds.includes(val)) {
-                showAlert(`❌ Meta inválida selecionada.`, 'danger');
-                return;
-            }
-            selectedMetas.push(val);
-        }
-    } else {
-        selectedMetas = item.metasVinculadas || [];
+        selectedMetas = [...checkboxes].map(c => c.value);
     }
 
     const btn = document.getElementById('btnConfirmPurchase');
@@ -866,105 +869,18 @@ window.confirmPurchaseFrag = async function() {
     btn.innerHTML = 'Processando...';
 
     try {
-        const userDocRefToUpdate = doc(db, 'users', currentUser.uid);
+        const comprar = httpsCallable(functions, 'comprarComFragmentos');
+        const result = await comprar({ itemId: item.id, selectedMetas });
 
-        await runTransaction(db, async (transaction) => {
-            const sfDoc = await transaction.get(userDocRefToUpdate);
-            if (!sfDoc.exists()) {
-                throw "Documento de usuário não existe!";
-            }
-
-            const data = sfDoc.data();
-            const currentBalance = data.fragmentos || 0;
-
-            if (currentBalance < item.valorFrag) {
-                throw "Saldo insuficiente.";
-            }
-
-            // Subtrair fragmentos
-            const newBalance = currentBalance - item.valorFrag;
-
-            // Criar entrada no inventario (onde o Repertório lê)
-            const currentInventario = data.inventario || [];
-            currentInventario.push({
-                nome: item.nome,
-                descricao: item.descricao || '',
-                quantidade: 1,
-                formaRecebimento: 'Comprado na Loja (Frag$)'
-            });
-
-            // Log de Compra exato
-            const currentLogsCompra = data.logsCompra || [];
-            currentLogsCompra.push({
-                itemId: item.id,
-                nome: item.nome,
-                valorPago: item.valorFrag,
-                moeda: 'Frag$',
-                data: new Date().toISOString()
-            });
-
-            // Criar entrada no apoio Historico (para meta), montante fixo em 1 por item
-            const currentApoios = data.apoios || [];
-            
-            // Map selected metas IDs to names for the log
-            let metasNamesStr = '';
-            if (selectedMetas.length > 0) {
-                const names = selectedMetas.map(mId => {
-                    const found = metasData.find(m => m.id === mId);
-                    return found ? found.nome : mId;
-                });
-                metasNamesStr = names.join(', ');
-            }
-
-            const logNome = item.nome + (metasNamesStr ? ` [Metas: ${metasNamesStr}]` : '');
-
-            currentApoios.push({
-                nome: logNome,
-                tipo: 'Loja (Frag$)',
-                montante: 1,
-                meta: selectedMetas.join(','), // store IDs or legacy names if needed
-                valor: '',
-                dataInicio: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-                recebido: true
-            });
-
-            // Add notification
-            const currentNotifications = data.notifications || [];
-            currentNotifications.unshift({
-                id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2,9),
-                type: 'master_message',
-                message: `💎 Compra Aprovada: Você adquiriu ${item.nome} por ${item.valorFrag} Frag$.`,
-                timestamp: Date.now(),
-                isNew: true,
-                data: { highlight: 'importante' }
-            });
-            
-            if (currentNotifications.length > 100) {
-                currentNotifications.length = 100;
-            }
-
-            transaction.update(userDocRefToUpdate, {
-                fragmentos: newBalance,
-                inventario: currentInventario,
-                apoios: currentApoios,
-                logsCompra: currentLogsCompra,
-                notifications: currentNotifications
-            });
-        });
-
-        // Success
         showAlert('✅ Compra realizada com sucesso! Item enviado ao seu Repertório.', 'success');
         document.getElementById('lojaCheckoutModal').style.display = 'none';
-        
-        // Update local UI
-        const fragEl = document.getElementById('fragmentosValue');
-        if (fragEl) fragEl.textContent = parseInt(fragEl.textContent) - item.valorFrag;
-        
-        await loadInventory();
 
+        updateFragDisplay(result.data.novoSaldo);
+
+        await loadInventory();
     } catch (error) {
-        console.error("Transação falhou: ", error);
-        showAlert(`❌ Erro na compra: ${error}`, 'danger');
+        console.error('Compra falhou:', error);
+        showAlert(`❌ Erro na compra: ${error.message}`, 'danger');
     } finally {
         btn.disabled = false;
         btn.innerHTML = '✔️ Confirmar Compra';
