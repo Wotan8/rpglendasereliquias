@@ -369,6 +369,21 @@ window._saveMestreCondition = async function() {
 
         await updateDoc(doc(db, 'char', charId), { conditions });
 
+        // 📜 Log da alteração
+        if (window.addLog) {
+            const charNome = (charData.fields && charData.fields.nome) || charData.nome || 'Sem nome';
+            window.addLog(S.currentUser?.email,
+                isEdit ? `💀 Condição "${nome}" editada pelo Mestre` : `💀 Condição "${nome}" aplicada pelo Mestre`,
+                charNome, 'characters', {
+                    charId, mesaId: S.currentMesaId, category: 'Condições',
+                    changes: [
+                        { label: 'Condição', from: isEdit ? nome : '—', to: nome },
+                        { label: 'Descrição', from: '', to: condData.descricao || '—' },
+                        { label: 'Tempo Restante', from: '', to: condData.tempoRestante || '—' }
+                    ]
+                });
+        }
+
         const charInCache = (S.mesaCharacters || []).find(c => c.id === charId);
         if (charInCache) {
             charInCache.conditions = conditions;
@@ -394,9 +409,20 @@ window._deleteMestreCondition = async function(charId, idx) {
         let conditions = charData.conditions || [];
 
         if (idx >= 0 && idx < conditions.length) {
+            const removida = conditions[idx];
             conditions.splice(idx, 1);
             await updateDoc(doc(db, 'char', charId), { conditions });
-            
+
+            // 📜 Log da remoção
+            if (window.addLog) {
+                const charNome = (charData.fields && charData.fields.nome) || charData.nome || 'Sem nome';
+                window.addLog(S.currentUser?.email, `💀 Condição "${removida?.nome || ''}" removida pelo Mestre`,
+                    charNome, 'characters', {
+                        charId, mesaId: S.currentMesaId, category: 'Condições',
+                        changes: [{ label: 'Condição', from: removida?.nome || '—', to: '—' }]
+                    });
+            }
+
             const charInCache = (S.mesaCharacters || []).find(c => c.id === charId);
             if (charInCache) {
                 charInCache.conditions = conditions;

@@ -362,6 +362,12 @@ function initResumo(container) {
         }
         html += `<tr><td style="padding:4px 0;padding-left:12px;font-weight:700;">Pool Restante</td><td style="text-align:right;font-weight:700;">${ExpTracker.getTotal()} EXP</td></tr>`;
     }
+    
+    // VIP EXP (Repertório)
+    if (ws.expVip > 0) {
+        html += `<tr style="border-top:1px solid var(--soft);"><td colspan="2" style="padding:6px 0;font-weight:700;color:var(--muted);">👑 Bônus VIP</td></tr>`;
+        html += `<tr><td style="padding:4px 0;padding-left:12px;">EXP VIP (Repertório)</td><td style="text-align:right;font-weight:700;color:var(--success);">+${ws.expVip} EXP</td></tr>`;
+    }
 
     // Attribute & Skill costs
     html += `<tr style="border-top:1px solid var(--soft);border-bottom:1px solid var(--soft);"><td colspan="2" style="padding:6px 0;font-weight:700;color:var(--muted);">📊 Custo de Criação (calculado)</td></tr>`;
@@ -408,6 +414,13 @@ async function createCharacter() {
         if (!result.valid) {
             showWizardToast(`Fase "${FASES_WIZARD[i].titulo}" incompleta: ${result.reason}`, 'error');
             goToPhase(i);
+            return;
+        }
+    }
+    
+    // Validar Itens de Repertório
+    if (wizardState.itensRepertorioSelecionados && wizardState.itensRepertorioSelecionados.length > 0) {
+        if (!confirm('Você selecionou Itens de Repertório.\nAo confirmar a criação do personagem, estes itens serão deduzidos definitivamente do inventário da sua conta.\n\nDeseja continuar?')) {
             return;
         }
     }
@@ -576,6 +589,25 @@ async function createCharacter() {
         }
     }
 
+    // Injeta os itens de Repertório no inventário (se houver)
+    if (ws.itensRepertorioSelecionados && ws.itensRepertorioSelecionados.length > 0) {
+        ws.itensRepertorioSelecionados.forEach(repItem => {
+            if (repItem.personagemItensVinculados && repItem.personagemItensVinculados.length > 0) {
+                repItem.personagemItensVinculados.forEach(eqId => {
+                    const eqData = window._systemData?.equipment?.find(e => String(e.id) === String(eqId));
+                    if (eqData) {
+                        equipamento.push(eqData.nome);
+                        inventoryItems.push({
+                            name: eqData.nome,
+                            desc: eqData.descricao || `Vindo de pacote: ${repItem.nome}`,
+                            qtd: String(eqData.quantidade || '1')
+                        });
+                    }
+                });
+            }
+        });
+    }
+
     // === Consolidar Partes do Corpo (Raça + Peculiaridades) ===
     let partesDoCorpo = [];
     const racaData = window._systemData?.races?.find(r => r.nome === ws.racaSelecionada);
@@ -690,6 +722,8 @@ async function createCharacter() {
         mecanicasPendentes: [],
         nivelInicio: ws.nivelInicio?.id || 'iniciante',
         expInicial: ws.expInicial || (ws.nivelInicio?.exp || 0),
+        expVip: ws.expVip || 0,
+        itensRepertorioSelecionados: ws.itensRepertorioSelecionados || [], // Armazenado para rastreabilidade
         mesaVinculada: ws.mesaVinculada ? { id: ws.mesaVinculada.id, nome: ws.mesaVinculada.nome } : null,
         mesaId: ws.mesaVinculada?.id || null
     };
@@ -766,6 +800,7 @@ async function createCharacter() {
     const savedCustomItem = ws.customItem;
     const savedNpcs = ws.npcs ? JSON.parse(JSON.stringify(ws.npcs)) : [];
     const savedCharName = charName;
+    const savedItensRepertorio = ws.itensRepertorioSelecionados ? JSON.parse(JSON.stringify(ws.itensRepertorioSelecionados)) : [];
 
     try {
         if (typeof window.createCharacterInFirebase === 'function') {
@@ -790,6 +825,20 @@ async function createCharacter() {
                     if (kit && kit.equipamentos) {
                         for (const eqId of kit.equipamentos) {
                             const eqData = window._systemData?.equipment?.find(e => e.id === eqId);
+                            if (eqData) {
+                                await saveEquipmentAsItemToFirebase(eqData, charId);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // === Save Repertory items to 'items' collection ===
+            if (savedItensRepertorio.length > 0) {
+                for (const repItem of savedItensRepertorio) {
+                    if (repItem.personagemItensVinculados && repItem.personagemItensVinculados.length > 0) {
+                        for (const eqId of repItem.personagemItensVinculados) {
+                            const eqData = window._systemData?.equipment?.find(e => String(e.id) === String(eqId));
                             if (eqData) {
                                 await saveEquipmentAsItemToFirebase(eqData, charId);
                             }

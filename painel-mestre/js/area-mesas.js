@@ -27,6 +27,7 @@ window.switchMesaSubTab = function(subTabName) {
     if (subTabName === 'm-npcs' && window._loadMesaNpcs) window._loadMesaNpcs();
     if (subTabName === 'm-inventario' && window._loadMesaInventarios) window._loadMesaInventarios();
     if (subTabName === 'm-notas' && window._loadMesaNotas) window._loadMesaNotas();
+    if (subTabName === 'm-logs' && window._loadMesaLogs) window._loadMesaLogs();
 };
 
 // ===== SCREEN MANAGEMENT =====
@@ -114,6 +115,7 @@ function openMesa() {
 }
 
 window.closeMesa = function() {
+    if (window._stopMesaLogs) window._stopMesaLogs();
     S.setCurrentMesaId(null);
     S.setCurrentMesaData(null);
     S.setMesaCharacters([]);
@@ -492,7 +494,13 @@ window.applyExpBulk = async function(isAdd) {
         const newExpTotal = isAdd ? curExpTotal + v : Math.max(0, curExpTotal - v);
         // Update in 'char' collection using nested fields path
         await updateDoc(doc(db, 'char', charId), { 'fields.exp': newExp, 'fields.exp_total': newExpTotal });
-        await addLog(S.currentUser?.email, `${isAdd?'+':'-'}${v} EXP`, nome, 'characters');
+        await addLog(S.currentUser?.email, `⭐ ${isAdd?'+':'-'}${v} EXP concedido pelo Mestre`, nome, 'characters', {
+            charId, mesaId: S.currentMesaId, category: 'Progressão & EXP',
+            changes: [
+                { label: 'EXP Disponível', from: String(curExp), to: String(newExp) },
+                { label: 'EXP Total', from: String(curExpTotal), to: String(newExpTotal) }
+            ]
+        });
         // Send notification to player
         if (c.ownerUid) {
             try {

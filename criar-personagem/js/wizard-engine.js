@@ -5,7 +5,9 @@ window.wizardState = {
     nomePersonagem: '',
     nivelInicio: null, // { id, nome, exp } — legado, mantido para compat
     expInicial: 0,     // EXP manual ou da mesa
+    expVip: 0,
     mesaVinculada: null, // { id, nome, mestreNome, expInicial, introducao } ou null
+    itensRepertorioSelecionados: [], // Itens de repertório utilizados
 
     // Fase 1
     racaSelecionada: null,   // nome da raça

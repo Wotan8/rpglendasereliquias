@@ -10,3 +10,53 @@
 .log-count{font-size:.78rem;color:var(--muted);margin-bottom:10px;font-weight:600}
 .no-logs{text-align:center;padding:50px 20px;color:var(--muted);font-size:1rem}
 @media(max-width:768px){.log-filters{flex-direction:column}}
+
+/* ============ LOG VIEWER (Histórico + Mesa>Logs) ============ */
+.lv-panel{background:rgba(15,23,42,.55);border:2px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px}
+.lv-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.lv-row-secondary{margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)}
+.lv-field{display:flex;flex-direction:column;min-width:130px}
+.lv-field .form-label{margin-bottom:4px;font-size:.72rem}
+.lv-grow{flex:1;min-width:220px}
+.lv-date{min-width:170px}
+.lv-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-right:auto}
+.lv-chip{background:rgba(139,92,246,.08);border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:6px 12px;font-size:.75rem;font-weight:700;cursor:pointer;transition:all .2s}
+.lv-chip:hover{border-color:var(--primary);color:var(--ink)}
+.lv-chip.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.lv-statusbar{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+.lv-live{display:inline-flex;align-items:center;gap:6px;font-size:.68rem;font-weight:800;color:#10b981;letter-spacing:.5px}
+.lv-live-dot{width:8px;height:8px;border-radius:50%;background:#10b981;animation:lvPulse 1.6s infinite}
+@keyframes lvPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(16,185,129,.5)}50%{opacity:.5;box-shadow:0 0 0 5px rgba(16,185,129,0)}}
+
+.lv-day-header{font-size:.72rem;font-weight:800;color:var(--muted);text-transform:capitalize;letter-spacing:.5px;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.lv-entry{cursor:default}
+.lv-entry.lv-clickable{cursor:pointer}
+.lv-entry-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.lv-time{font-size:.72rem;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums}
+.lv-badge{font-size:.66rem;font-weight:800;padding:2px 9px;border-radius:999px;border:1px solid;letter-spacing:.4px;text-transform:uppercase}
+.lv-char{font-size:.78rem;font-weight:700;color:var(--primary)}
+.lv-user{font-size:.74rem;color:var(--muted)}
+.lv-expander{margin-left:auto;font-size:.7rem;color:var(--muted);font-weight:700;display:inline-flex;align-items:center;gap:4px}
+.lv-chevron{display:inline-block;transition:transform .25s}
+.lv-entry.expanded .lv-chevron{transform:rotate(180deg)}
+.lv-action{font-size:.88rem}
+
+.lv-details{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);animation:lvFade .2s ease}
+.lv-entry.expanded .lv-details{display:block}
+@keyframes lvFade{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.lv-changes-table{width:100%;border-collapse:collapse;font-size:.8rem;margin-bottom:8px}
+.lv-changes-table th{text-align:left;padding:5px 8px;color:var(--muted);font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+.lv-changes-table td{padding:6px 8px;border-bottom:1px solid rgba(148,163,184,.08);vertical-align:top;word-break:break-word}
+.lv-ch-label{font-weight:700;color:var(--ink);width:32%}
+.lv-ch-from{color:#f87171}
+.lv-ch-arrow{color:var(--muted);width:20px;text-align:center}
+.lv-ch-to{color:#34d399}
+.lv-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:.7rem;color:var(--muted)}
+.lv-meta b{color:var(--ink);font-weight:700}
+
+@media(max-width:768px){
+  .lv-row{flex-direction:column;align-items:stretch}
+  .lv-field{min-width:0}
+  .lv-chips{margin-right:0}
+  .lv-expander{margin-left:0}
+}

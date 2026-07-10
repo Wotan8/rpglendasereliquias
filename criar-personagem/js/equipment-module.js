@@ -3,6 +3,48 @@
 function initPhase7(container) {
     let html = createNarratorBox(NARRADOR_TEXTOS.equipamento);
 
+    // === KITS DE REPERTÓRIO ===
+    const itensRepertorioEquip = wizardState.itensRepertorioSelecionados?.filter(i => i.personagemItensVinculados?.length > 0) || [];
+    
+    if (itensRepertorioEquip.length > 0) {
+        html += `<div class="section">`;
+        html += `<div class="section-title">🎒 Equipamentos de Repertório</div>`;
+        html += `<p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">Os seguintes pacotes de equipamento foram adquiridos através do seu repertório e serão adicionados ao seu inventário:</p>`;
+        html += `<div class="kits-selection-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">`;
+        
+        itensRepertorioEquip.forEach((repItem, index) => {
+            html += `
+                <div class="kit-card" style="border: 1px solid var(--accent); border-radius: 8px; background: var(--bg-card); padding: 12px;">
+                    <div style="font-weight:bold; font-size:1rem; color:var(--text); display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:1.2rem;">✨</span> ${escHtml(repItem.nome)}
+                    </div>
+                    <div class="kit-details" style="display: block; padding-top: 12px; margin-top: 8px; border-top: 1px dashed var(--soft);">
+                        <div style="display:flex; flex-direction:column;">
+            `;
+            
+            for (const eqId of repItem.personagemItensVinculados) {
+                try {
+                    const eq = window._systemData?.equipment?.find(e => String(e.id) === String(eqId));
+                    if (eq) {
+                        html += window.renderEquipmentItemDetails(eq);
+                    } else {
+                        html += `<div style="color: var(--danger); font-size: 0.9rem; padding: 8px; margin-bottom: 12px; border: 1px dashed var(--danger); border-radius: 4px;">Item Desconhecido (ID: ${escHtml(String(eqId))})</div>`;
+                    }
+                } catch (e) {
+                    console.error('Erro ao renderizar item do repertório:', e);
+                }
+            }
+            
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `</div></div>`;
+    }
+
     // Equipment from class
     const className = wizardState.classeSelecionada;
     const classData = className ? window._systemData.classes.find(c => c.nome === className) : null;

@@ -552,6 +552,20 @@ window._saveMestreItem = async function() {
             itemData.id = newId;
             await setDoc(doc(db, 'items', newId), itemData);
         }
+        // 📜 Log da alteração de inventário
+        if (window.addLog) {
+            window.addLog(S.currentUser?.email,
+                editId ? `🎒 Item "${nome}" editado pelo Mestre` : `🎒 Item "${nome}" adicionado pelo Mestre`,
+                '', 'items', {
+                    charId: targetCharId || null, mesaId: mesaId || S.currentMesaId, category: 'Inventário',
+                    changes: [
+                        { label: 'Item', from: editId ? nome : '—', to: nome },
+                        { label: 'Tipo', from: '', to: tipo },
+                        { label: 'Quantidade', from: '', to: String(itemData.quantidade) }
+                    ]
+                });
+        }
+
         showAlert('✅ Item salvo!', 'success');
         document.getElementById('invFormModal')?.remove();
         
@@ -568,7 +582,28 @@ window._saveMestreItem = async function() {
 window._deleteMestreItem = async function(itemId) {
     if (!confirm('Excluir este item?')) return;
     try {
+        // Capturar dados do item ANTES de deletar (para o log)
+        let itemInfo = null;
+        try {
+            const snap = await getDoc(doc(db, 'items', itemId));
+            if (snap.exists()) itemInfo = snap.data();
+        } catch (e) { /* ignore */ }
+
         await deleteDoc(doc(db, 'items', itemId));
+
+        // 📜 Log da remoção
+        if (window.addLog) {
+            window.addLog(S.currentUser?.email,
+                `🗑️ Item "${itemInfo?.nome || itemId}" excluído pelo Mestre`,
+                '', 'items', {
+                    charId: itemInfo?.characterId || null, mesaId: S.currentMesaId, category: 'Inventário',
+                    changes: [
+                        { label: 'Item', from: itemInfo?.nome || itemId, to: '—' },
+                        { label: 'Quantidade', from: String(itemInfo?.quantidade ?? '—'), to: '—' }
+                    ]
+                });
+        }
+
         showAlert('✅ Item excluído', 'success');
         loadMesaInventarios();
         if (document.getElementById('mesaCharactersInventoryContainer')?.style.display !== 'none') {
@@ -701,6 +736,13 @@ window._filterMestreTransfer = function() {
 window._executeMestreTransfer = async function(itemId, targetCharId, targetOwnerUid) {
     if (!confirm('Transferir este item para o destino selecionado?')) return;
     try {
+        // Capturar item ANTES da transferência (para o log)
+        let itemInfo = null;
+        try {
+            const snap = await getDoc(doc(db, 'items', itemId));
+            if (snap.exists()) itemInfo = snap.data();
+        } catch (e) { /* ignore */ }
+
         await setDoc(doc(db, 'items', itemId), {
             characterId: targetCharId,
             ownerUid: targetOwnerUid,
@@ -709,6 +751,24 @@ window._executeMestreTransfer = async function(itemId, targetCharId, targetOwner
             parentItemId: null,
             lastModified: new Date().toISOString()
         }, { merge: true });
+
+        // 📜 Log da transferência (um log para a origem e outro para o destino)
+        if (window.addLog) {
+            const nomeItem = itemInfo?.nome || itemId;
+            const origemCharId = itemInfo?.characterId || null;
+            const changes = [
+                { label: 'Item', from: nomeItem, to: nomeItem },
+                { label: 'Personagem (ID)', from: String(origemCharId || '—'), to: String(targetCharId || '—') }
+            ];
+            window.addLog(S.currentUser?.email, `🔁 Item "${nomeItem}" transferido pelo Mestre`, '', 'items', {
+                charId: targetCharId || null, mesaId: S.currentMesaId, category: 'Inventário', changes
+            });
+            if (origemCharId && origemCharId !== targetCharId) {
+                window.addLog(S.currentUser?.email, `🔁 Item "${nomeItem}" saiu do inventário (transferência)`, '', 'items', {
+                    charId: origemCharId, mesaId: S.currentMesaId, category: 'Inventário', changes
+                });
+            }
+        }
 
         showAlert('✅ Item transferido com sucesso!', 'success');
         document.getElementById('mestreTransferModal')?.remove();

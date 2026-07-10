@@ -95,6 +95,7 @@
                         <button class="sub-tab-btn" data-subtab="m-inventario" onclick="switchMesaSubTab('m-inventario')">📦 Kits</button>
                         <button class="sub-tab-btn" data-subtab="m-notas" onclick="switchMesaSubTab('m-notas')">📝 Notas</button>
                         <button class="sub-tab-btn" data-subtab="m-combate" onclick="switchMesaSubTab('m-combate')">⚔️ Combate</button>
+                        <button class="sub-tab-btn" data-subtab="m-logs" onclick="switchMesaSubTab('m-logs')">📜 Logs</button>
                     </div>
 
                     <!-- Sub-tab: Jogadores -->
@@ -187,6 +188,12 @@
                             <button class="btn btn-danger btn-small" onclick="clearCombat()">🗑️ Limpar</button>
                         </div>
                         <div id="combatList" class="combat-list"><div class="no-combat">Nenhum participante no combate</div></div>
+                    </div>
+
+                    <!-- Sub-tab: Logs -->
+                    <div class="sub-tab-content" id="subtab-m-logs">
+                        <div id="mesaLogsFilters"></div>
+                        <div id="mesaLogsList"><div class="no-logs">Carregando logs da mesa...</div></div>
                     </div>
                 </div>
             </div>
@@ -456,10 +463,7 @@
 
             <!-- TAB: HISTÓRICO -->
             <div class="tab-content" id="tab-historico">
-                <div class="log-filters">
-                    <div class="form-group"><label class="form-label">Buscar</label><input type="text" class="form-input" id="logSearchInput" placeholder="Buscar nos logs..." oninput="filterLogs()"></div>
-                    <div class="form-group"><label class="form-label">Seção</label><select class="form-select" id="logFilterSection" onchange="filterLogs()"><option value="">Todas</option><option value="characters">Personagens</option><option value="npcs">NPCs</option><option value="items">Itens</option><option value="notifications">Notificações</option></select></div>
-                </div>
+                <div id="historicoFilters"></div>
                 <div id="logsList"><div class="no-logs">Carregando histórico...</div></div>
             </div>
         </div>

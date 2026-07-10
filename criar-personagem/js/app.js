@@ -67,6 +67,8 @@ function resetWizardState() {
     wizardState.nomePersonagem = '';
     wizardState.nivelInicio = null;
     wizardState.expInicial = 0;
+    wizardState.expVip = 0;
+    wizardState.itensRepertorioSelecionados = [];
     wizardState.mesaVinculada = null;
     wizardState.racaSelecionada = null;
     wizardState.classeSelecionada = null;
@@ -469,10 +471,256 @@ function renderPhase0(container) {
         </div>
     `;
 
+    // Itens de Repertório
+    html += `
+        <div class="section">
+            <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>🎒 Itens de Repertório</span>
+                <button class="btn btn-secondary" onclick="openRepertorioModal()" style="padding: 6px 12px; font-size: 0.85rem;">Adicionar Repertório</button>
+            </div>
+            <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
+                Você pode consumir Itens de Repertório da sua conta (como consumíveis de EXP ou Pacotes Especiais) para iniciar com vantagens.
+            </p>
+            <div id="repertorioSelecionadoContainer">
+                <!-- Preenchido via JS se houver itens -->
+            </div>
+        </div>
+    `;
+
     // SEM memória na Etapa 0
 
     container.innerHTML = html;
+    
+    // Atualizar UI dos itens de repertório
+    renderRepertorioSelecionado();
 }
+
+function renderRepertorioSelecionado() {
+    const container = document.getElementById('repertorioSelecionadoContainer');
+    if (!container) return;
+
+    const itens = wizardState.itensRepertorioSelecionados || [];
+    if (itens.length === 0) {
+        container.innerHTML = '<div style="color:var(--muted); font-size:0.85rem; font-style:italic;">Nenhum item selecionado.</div>';
+        return;
+    }
+
+    let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
+    itens.forEach((item, idx) => {
+        let tagHtml = '';
+        if (item.isExp) tagHtml += `<span style="background:var(--primary);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;">+${item.expAmount * item.quantidadeConsumida} EXP${item.isExpVip ? ' (VIP)' : ''}</span>`;
+        if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagHtml += `<span style="background:#8b5cf6;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;">🎒 Equipamentos: ${item.personagemItensVinculados.length}</span>`;
+
+        html += `
+            <div style="background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:6px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <span style="font-weight:bold; font-size:0.9rem;">${item.quantidadeConsumida}x ${escHtml(item.nome)}</span>
+                    ${tagHtml}
+                </div>
+                <button class="btn btn-danger" style="padding:4px 8px; font-size:0.75rem;" onclick="removeRepertorioSelecionado(${idx})">Remover</button>
+            </div>
+        `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+window.openRepertorioModal = async function() {
+    if (!window.currentUser) {
+        showWizardToast('Você precisa estar logado para acessar o repertório.', 'error');
+        return;
+    }
+
+    const modalExistente = document.getElementById('wizardRepertorioModal');
+    if (modalExistente) modalExistente.remove();
+
+    const modalHtml = `
+        <div id="wizardRepertorioModal" class="modal active" style="z-index: 10000; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; justify-content:center; align-items:center;">
+            <div class="modal-content" style="background:var(--paper); border:1px solid var(--soft); border-radius:12px; max-width:500px; width:90%; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+                <div class="modal-header" style="padding:16px; border-bottom:1px solid var(--soft); display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin:0; font-size:1.1rem; color:var(--ink);">🎒 Seu Repertório</h3>
+                    <button class="btn" style="background:transparent; border:none; color:var(--muted); font-size:1.2rem; cursor:pointer;" onclick="document.getElementById('wizardRepertorioModal').remove()">✕</button>
+                </div>
+                <div class="modal-body" id="wizardRepertorioBody" style="padding:16px; overflow-y:auto; flex:1;">
+                    <div style="text-align:center; padding:20px; color:var(--muted);">Carregando itens...</div>
+                </div>
+                <div class="modal-footer" style="padding:16px; border-top:1px solid var(--soft); display:flex; justify-content:flex-end;">
+                    <button class="btn btn-secondary" onclick="document.getElementById('wizardRepertorioModal').remove()">Fechar</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    try {
+        const inventario = await window.getUserInventory(window.currentUser.uid);
+        const body = document.getElementById('wizardRepertorioBody');
+        
+        // Filtrar roleta, rerolagem e narrativo
+        const itensValidos = inventario.map((item, idx) => ({...item, originalIndex: idx}))
+            .filter(item => !item.isRoleta && !item.isRerolagem && !item.isNarrativo);
+
+        if (itensValidos.length === 0) {
+            body.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted);">Você não possui itens consumíveis no repertório.</div>';
+            return;
+        }
+
+        let html = '<div style="display:flex; flex-direction:column; gap:12px;">';
+        
+        itensValidos.forEach(item => {
+            // Checar quantos já foram selecionados
+            const selItem = (wizardState.itensRepertorioSelecionados || []).find(i => i.originalIndex === item.originalIndex);
+            const qtdSelecionada = selItem ? selItem.quantidadeConsumida : 0;
+            const qtdDisponivel = item.quantidade - qtdSelecionada;
+
+            if (qtdDisponivel <= 0) return; // Pula se já consumiu tudo
+
+            let descHtml = item.descricao ? `<div style="font-size:0.8rem; color:var(--muted); margin-bottom:8px;">${escHtml(item.descricao)}</div>` : '';
+            
+            let tagsHtml = '';
+            if (item.isExp) tagsHtml += `<span style="background:var(--primary);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-right:4px;">⭐ +${item.expAmount} EXP${item.isExpVip ? ' (VIP)' : ''}</span>`;
+            if (item.personagemItensVinculados?.length > 0) tagsHtml += `<span style="background:#8b5cf6;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">🎒 Equipamentos Especiais</span>`;
+
+            html += `
+                <div style="background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:8px; padding:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                        <div style="font-weight:bold; color:var(--light); font-size:1rem;">${escHtml(item.nome)} <span style="color:var(--muted); font-size:0.8rem;">(Possui: ${qtdDisponivel})</span></div>
+                    </div>
+                    ${descHtml}
+                    <div style="margin-bottom:12px;">${tagsHtml}</div>
+                    
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="number" id="qtd_repertorio_${item.originalIndex}" value="1" min="1" max="${qtdDisponivel}" class="form-input" style="width:70px; padding:6px; text-align:center;">
+                        <button class="btn btn-success" style="padding:6px 16px; font-size:0.85rem;" onclick="addRepertorioSelecionado(${item.originalIndex})">Adicionar</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        
+        if (html === '<div style="display:flex; flex-direction:column; gap:12px;"></div>') {
+            body.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted);">Você não possui mais itens disponíveis para seleção.</div>';
+        } else {
+            body.innerHTML = html;
+        }
+
+    } catch (err) {
+        document.getElementById('wizardRepertorioBody').innerHTML = '<div style="color:var(--danger); padding:20px;">Erro ao carregar repertório.</div>';
+    }
+};
+
+window.addRepertorioSelecionado = async function(originalIndex) {
+    try {
+        if (!window.currentUser) return;
+        
+        const inventario = await window.getUserInventory(window.currentUser.uid);
+        let item = inventario[originalIndex];
+        
+        // --- ENRIQUECIMENTO DE DADOS PARA ITENS ANTIGOS ---
+        // Se o item veio quebrado do banco (sem as props de sistema), buscar a fonte na Loja
+        if (item && item.nome && item.isExp === undefined && item.isItemPersonagem === undefined) {
+            try {
+                showWizardToast('Sincronizando item com o servidor...', 'info');
+                const { collection, getDocs, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+                const lojaRef = collection(window.db, 'loja');
+                const q = query(lojaRef, where('nome', '==', item.nome));
+                const lojaSnap = await getDocs(q);
+                
+                if (!lojaSnap.empty) {
+                    const lojaData = lojaSnap.docs[0].data();
+                    if (lojaData.isExp !== undefined) item.isExp = lojaData.isExp;
+                    if (lojaData.expAmount !== undefined) item.expAmount = lojaData.expAmount;
+                    if (lojaData.isExpVip !== undefined) item.isExpVip = lojaData.isExpVip;
+                    if (lojaData.isItemPersonagem !== undefined) item.isItemPersonagem = lojaData.isItemPersonagem;
+                    if (lojaData.personagemItensVinculados !== undefined) item.personagemItensVinculados = lojaData.personagemItensVinculados;
+                    console.log('✅ Item enriquecido com dados da loja:', item);
+                }
+            } catch (e) {
+                console.warn('Erro ao tentar enriquecer item do repertório:', e);
+            }
+        }
+        
+        const maxQtd = item.quantidade || 1;
+        const input = document.getElementById(`qtd_repertorio_${originalIndex}`);
+        const qtdStr = input ? input.value : '1';
+        const qtdToConsume = parseInt(qtdStr, 10);
+
+        if (isNaN(qtdToConsume) || qtdToConsume <= 0) return;
+
+        wizardState.itensRepertorioSelecionados = wizardState.itensRepertorioSelecionados || [];
+        
+        let existing = wizardState.itensRepertorioSelecionados.find(i => i.originalIndex === originalIndex);
+        
+        if (existing) {
+            if (existing.quantidadeConsumida + qtdToConsume > item.quantidade) {
+                showWizardToast('Quantidade insuficiente no repertório.', 'error');
+                return;
+            }
+            existing.quantidadeConsumida += qtdToConsume;
+        } else {
+            if (qtdToConsume > item.quantidade) {
+                showWizardToast('Quantidade insuficiente no repertório.', 'error');
+                return;
+            }
+            wizardState.itensRepertorioSelecionados.push({
+                ...item,
+                originalIndex: originalIndex,
+                quantidadeConsumida: qtdToConsume
+            });
+        }
+
+        window.updateRepertorioExpTracker();
+        saveWizardToStorage();
+        document.getElementById('wizardRepertorioModal').remove();
+        renderRepertorioSelecionado();
+        showWizardToast('Item adicionado!', 'success');
+        
+    } catch (e) {
+        console.error(e);
+        showWizardToast('Erro ao processar item.', 'error');
+    }
+};
+
+window.removeRepertorioSelecionado = function(idx) {
+    if (!wizardState.itensRepertorioSelecionados || !wizardState.itensRepertorioSelecionados[idx]) return;
+    
+    wizardState.itensRepertorioSelecionados.splice(idx, 1);
+    
+    window.updateRepertorioExpTracker();
+    saveWizardToStorage();
+    renderRepertorioSelecionado();
+};
+
+window.updateRepertorioExpTracker = function() {
+    wizardState.expVip = 0;
+    
+    // Rastrear todas as sources de repertório ativas
+    const activeSources = [];
+    
+    (wizardState.itensRepertorioSelecionados || []).forEach(item => {
+        if (item.isExp) {
+            const amount = parseFloat(item.expAmount) || 0;
+            const expTotalAdicionada = amount * item.quantidadeConsumida;
+            const sourceId = `repertorio_${item.originalIndex}`;
+            
+            ExpTracker.addSource(sourceId, expTotalAdicionada, `Item: ${item.nome}`);
+            activeSources.push(sourceId);
+            
+            if (item.isExpVip) {
+                wizardState.expVip += expTotalAdicionada;
+            }
+        }
+    });
+    
+    // Remover sources que não estão mais na lista de selecionados
+    for (const key in wizardState.expSources) {
+        if (key.startsWith('repertorio_') && !activeSources.includes(key)) {
+            ExpTracker.removeSource(key);
+        }
+    }
+};
 
 function setExpInicial(value) {
     wizardState.expInicial = value;

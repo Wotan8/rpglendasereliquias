@@ -113,6 +113,10 @@ async function loadFromFirebase(charId) {
             if (window.initMesaTab && data.mesaId) {
                 window.initMesaTab(data.mesaId);
             }
+            // 📜 CharLogger: registrar snapshot inicial (após a UI assentar)
+            if (window.CharLogger) {
+                setTimeout(() => window.CharLogger.primeFromGather(), 700);
+            }
             return true;
         } else {
             console.log('📝 Nenhuma ficha v1.7 encontrada no Firebase. Criando nova...');
@@ -256,6 +260,11 @@ window.saveToFirebase = async function () {
         }
 
         await setDoc(docRef, data, { merge: true });
+
+        // 📜 CharLogger: registrar TODAS as alterações desta gravação (diff vs snapshot)
+        if (window.CharLogger) {
+            try { window.CharLogger.afterSave(data); } catch (logErr) { console.warn('CharLogger:', logErr); }
+        }
 
         showSaveIndicator('✅ Salvo na nuvem!', 'saved');
         console.log('✅ Ficha v1.7 salva no Firebase (Tamanho payload: ' + payloadSize + ' bytes)');

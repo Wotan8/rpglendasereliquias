@@ -91,15 +91,27 @@ async function _firestoreQuery(colPath, field, op, value) {
 }
 
 async function _firestoreSetDoc(colPath, docId, data, merge = true) {
+    // 📜 Log de inventário: comparar com o cache local ANTES de gravar
+    let _logEntry = null;
+    if (colPath === 'items' && window.CharLogger) {
+        try { _logEntry = window.CharLogger.buildItemLog(docId, data); } catch (e) { /* ignore */ }
+    }
     const { doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
     const db = _getFirestore();
     await setDoc(doc(db, colPath, docId), data, { merge });
+    if (_logEntry) { try { window.CharLogger.logEvent(_logEntry); } catch (e) { /* ignore */ } }
 }
 
 async function _firestoreDeleteDoc(colPath, docId) {
+    // 📜 Log de inventário: capturar dados do item ANTES de deletar
+    let _logEntry = null;
+    if (colPath === 'items' && window.CharLogger) {
+        try { _logEntry = window.CharLogger.buildItemDeleteLog(docId); } catch (e) { /* ignore */ }
+    }
     const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
     const db = _getFirestore();
     await deleteDoc(doc(db, colPath, docId));
+    if (_logEntry) { try { window.CharLogger.logEvent(_logEntry); } catch (e) { /* ignore */ } }
 }
 
 // ===== LOAD CHARACTER ITEMS =====

@@ -126,6 +126,24 @@ window.logout = async function () {
 };
 
 // ===== CRIAR PERSONAGEM NO FIREBASE =====
+
+/**
+ * Retorna o inventário do usuário atual (Itens de Repertório).
+ */
+window.getUserInventory = async function (uid) {
+    if (!uid) return [];
+    try {
+        const userRef = doc(db, 'users', uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+            return userSnap.data().inventario || [];
+        }
+    } catch (e) {
+        console.error('Erro ao carregar inventário:', e);
+    }
+    return [];
+};
+
 /**
  * Cria um novo documento char/{id} no Firestore com os dados do wizard.
  * @param {object} charData - Dados completos do personagem (formato gatherData da ficha v1.7)
@@ -160,6 +178,43 @@ window.createCharacterInFirebase = async function (charData) {
             // Remove the image to prevent Firestore size limit error
             delete saveData.charImg;
             console.warn('⚠️ Imagem removida dos dados para evitar erro de tamanho.');
+        }
+    }
+
+    // Processar dedução de Itens de Repertório da conta do jogador
+    if (charData.itensRepertorioSelecionados && charData.itensRepertorioSelecionados.length > 0) {
+        try {
+            console.log('🔄 Processando dedução de Itens de Repertório...');
+            const userRef = doc(db, 'users', window.currentUser.uid);
+            const userSnap = await getDoc(userRef);
+            
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
+                let inventarioGeral = userData.inventario || [];
+                let hasChanges = false;
+                
+                // Deduzir os itens selecionados baseados no originalIndex
+                // Fazer isso na ordem inversa ou mapear diretamente para evitar erros de índice, 
+                // mas como sabemos os índices, precisamos apenas abater a quantidade.
+                charData.itensRepertorioSelecionados.forEach(itemUsado => {
+                    const idx = itemUsado.originalIndex;
+                    if (inventarioGeral[idx]) {
+                        inventarioGeral[idx].quantidade -= itemUsado.quantidadeConsumida;
+                        hasChanges = true;
+                    }
+                });
+                
+                // Limpar itens cuja quantidade chegou a zero ou menor
+                inventarioGeral = inventarioGeral.filter(item => item.quantidade > 0);
+                
+                if (hasChanges) {
+                    await setDoc(userRef, { inventario: inventarioGeral }, { merge: true });
+                    console.log('✅ Itens de Repertório deduzidos da conta com sucesso.');
+                }
+            }
+        } catch (repErr) {
+            console.error('❌ Erro ao deduzir Itens de Repertório da conta:', repErr);
+            // Non-blocking error. Ideally should be an atomic transaction, but for this context a try/catch prevents blocking char creation.
         }
     }
 

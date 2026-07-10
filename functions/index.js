@@ -111,8 +111,7 @@ exports.comprarComFragmentos = onCall(
 
       const inventario = data.inventario || [];
       inventario.push({
-        nome: item.nome,
-        descricao: item.descricao || "",
+        ...item,
         quantidade: 1,
         formaRecebimento: "Comprado na Loja (Frag$)",
       });

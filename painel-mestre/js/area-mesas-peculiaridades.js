@@ -485,6 +485,20 @@ window._saveMestrePeculiaridade = async function() {
 
         await updateDoc(doc(db, 'char', charId), { peculiaridadesIndividuais });
 
+        // 📜 Log da alteração
+        if (window.addLog) {
+            const charNome = (charData.fields && charData.fields.nome) || charData.nome || 'Sem nome';
+            window.addLog(S.currentUser?.email,
+                isEdit ? `✨ Peculiaridade "${pecId}" editada pelo Mestre` : `✨ Peculiaridade "${pecId}" atribuída pelo Mestre`,
+                charNome, 'characters', {
+                    charId, mesaId: S.currentMesaId, category: 'Peculiaridades',
+                    changes: [
+                        { label: 'Peculiaridade', from: isEdit ? pecId : '—', to: pecId },
+                        { label: 'Nível Inicial', from: '', to: String(nivelInicial) }
+                    ]
+                });
+        }
+
         const charInCache = (S.mesaCharacters || []).find(c => c.id === charId);
         if (charInCache) {
             charInCache.peculiaridadesIndividuais = peculiaridadesIndividuais;
@@ -512,9 +526,21 @@ window._deleteMestrePeculiaridade = async function(charId, idx) {
         let peculiaridadesIndividuais = charData.peculiaridadesIndividuais || [];
 
         if (idx >= 0 && idx < peculiaridadesIndividuais.length) {
+            const removida = peculiaridadesIndividuais[idx];
+            const removidaId = typeof removida === 'object' ? removida.id : removida;
             peculiaridadesIndividuais.splice(idx, 1);
             await updateDoc(doc(db, 'char', charId), { peculiaridadesIndividuais });
-            
+
+            // 📜 Log da remoção
+            if (window.addLog) {
+                const charNome = (charData.fields && charData.fields.nome) || charData.nome || 'Sem nome';
+                window.addLog(S.currentUser?.email, `✨ Peculiaridade "${removidaId}" removida pelo Mestre`,
+                    charNome, 'characters', {
+                        charId, mesaId: S.currentMesaId, category: 'Peculiaridades',
+                        changes: [{ label: 'Peculiaridade', from: String(removidaId || '—'), to: '—' }]
+                    });
+            }
+
             const charInCache = (S.mesaCharacters || []).find(c => c.id === charId);
             if (charInCache) {
                 charInCache.peculiaridadesIndividuais = peculiaridadesIndividuais;

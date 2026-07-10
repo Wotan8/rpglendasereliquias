@@ -20,6 +20,7 @@ let mesaConfigLoaded = false;
 let mesaNpcsLoaded = false;
 let mesaInventarioLoaded = false;
 let mesaNotasLoaded = false;
+let mesaLogsLoaded = false;
 
 // ===== KEYBOARD SHORTCUTS =====
 document.addEventListener('keydown', (e) => {
@@ -39,6 +40,7 @@ async function ensureMesaSubModules() {
         if (!mesaNpcsLoaded) { await import('./area-mesas-npcs.js?v=' + Date.now()); mesaNpcsLoaded = true; }
         if (!mesaInventarioLoaded) { await import('./area-mesas-inventario.js?v=' + Date.now()); mesaInventarioLoaded = true; }
         if (!mesaNotasLoaded) { await import('./area-mesas-notas.js?v=' + Date.now()); mesaNotasLoaded = true; }
+        if (!mesaLogsLoaded) { await import('./area-mesas-logs.js?v=' + Date.now()); mesaLogsLoaded = true; }
     } catch (error) {
         console.error('❌ Erro ao carregar sub-módulos de mesa:', error);
     }
