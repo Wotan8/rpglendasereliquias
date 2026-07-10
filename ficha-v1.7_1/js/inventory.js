@@ -1539,6 +1539,42 @@ window.openTransferModal = async function(itemId) {
             });
         }
 
+        // ===== ALIADOS (NPCs) =====
+        // O jogador pode transferir apenas para SEUS próprios aliados ou para
+        // aliados de personagens da MESMA MESA.
+        try {
+            // IDs de personagens permitidos: o próprio + (se em mesa) os da mesa
+            const allowedCharIds = new Set([charId]);
+            if (mesaId) {
+                const charSnaps2 = await getDocs(collection(db, 'char'));
+                charSnaps2.forEach(d => {
+                    const data = d.data();
+                    if (data.mesaId === mesaId) allowedCharIds.add(d.id);
+                });
+            }
+            const npcSnaps = await getDocs(collection(db, 'npcs'));
+            npcSnaps.forEach(d => {
+                const n = d.data();
+                const vincs = Array.isArray(n.vinculos) ? n.vinculos : [];
+                const ehAliadoPermitido = vincs.some(v =>
+                    v.tipo === 'personagem' &&
+                    String(v.relacao || '').toLowerCase() === 'aliado' &&
+                    allowedCharIds.has(v.id)
+                );
+                if (ehAliadoPermitido) {
+                    targets.push({
+                        id: d.id,
+                        nome: n.nome || 'Sem nome',
+                        ownerUid: '',
+                        ownerEmail: n.papel || (n.tipo === 'criatura' ? 'Criatura aliada' : 'NPC aliado'),
+                        isNpc: true
+                    });
+                }
+            });
+        } catch (eNpc) {
+            console.warn('⚠️ Não foi possível carregar aliados (NPCs) para transferência:', eNpc);
+        }
+
         // Render target list
         const body = modal.querySelector('.inv-modal-body');
         if (targets.length === 0) {
@@ -1558,14 +1594,28 @@ window.openTransferModal = async function(itemId) {
             </div>`;
         }
 
+        // Cache dos alvos para o transferItem (nome, tipo do destino, etc.)
+        window._invTransferTargets = {};
+        targets.forEach(t => { window._invTransferTargets[t.id] = t; });
+
+        const charTargets = targets.filter(t => !t.isNpc);
+        const npcTargets = targets.filter(t => t.isNpc);
+
+        const renderTarget = t => `<div class="inv-transfer-target ${t.isCaixaMestre ? 'inv-transfer-target-master' : ''}"
+                onclick="transferItem('${itemId}', '${t.id}', '${t.ownerUid}')">
+                <div class="inv-transfer-target-name">${t.isCaixaMestre ? '📦' : (t.isNpc ? '🤝' : '🎭')} ${_escHtml(t.nome)}</div>
+                ${t.ownerEmail ? `<div class="inv-transfer-target-meta">${t.isNpc ? '' : '👤 '}${_escHtml(t.ownerEmail)}</div>` : ''}
+            </div>`;
+
         body.innerHTML = `
             ${qtyHtml}
             <div class="inv-transfer-list">
-            ${targets.map(t => `<div class="inv-transfer-target ${t.isCaixaMestre ? 'inv-transfer-target-master' : ''}"
-                onclick="transferItem('${itemId}', '${t.id}', '${t.ownerUid}')">
-                <div class="inv-transfer-target-name">${t.isCaixaMestre ? '📦' : '🎭'} ${_escHtml(t.nome)}</div>
-                ${t.ownerEmail ? `<div class="inv-transfer-target-meta">👤 ${_escHtml(t.ownerEmail)}</div>` : ''}
-            </div>`).join('')}
+            ${charTargets.map(renderTarget).join('')}
+            ${npcTargets.length ? `
+                <div style="margin:10px 0 4px 0;font-weight:700;font-size:.85rem;color:var(--primary,#8b5cf6);border-top:1px solid var(--border-color,#334155);padding-top:8px">
+                    🤝 Aliados (NPCs) — seus aliados e aliados da sua mesa
+                </div>
+                ${npcTargets.map(renderTarget).join('')}` : ''}
         </div>`;
 
     } catch (e) {
@@ -1584,7 +1634,11 @@ window.transferItem = async function(itemId, targetCharId, targetOwnerUid) {
     const item = window._inventoryState.items.find(i => i.id === itemId);
     if (!item) return;
 
-    const targetName = targetCharId.startsWith('__caixa_mestre__') ? 'Caixa do Mestre' : targetCharId;
+    const targetInfo = (window._invTransferTargets || {})[targetCharId] || null;
+    const isNpcTarget = !!targetInfo?.isNpc;
+    const targetName = targetCharId.startsWith('__caixa_mestre__')
+        ? 'Caixa do Mestre'
+        : (targetInfo?.nome ? (isNpcTarget ? `Aliado "${targetInfo.nome}"` : targetInfo.nome) : targetCharId);
     
     let transferQty = item.quantidade || 1;
     let isPartialTransfer = false;
@@ -1621,12 +1675,19 @@ window.transferItem = async function(itemId, targetCharId, targetOwnerUid) {
         const updateData = {
             characterId: targetCharId,
             equipado: false,
+            slotAnatomico: null,
+            estadoEquip: null,
             parentItemId: null,
             lastModified: new Date().toISOString()
         };
 
-        // Only update ownerUid if target is a real character
-        if (!targetCharId.startsWith('__caixa_mestre__')) {
+        if (isNpcTarget) {
+            // Destino é um NPC aliado: o item passa a "pertencer" ao NPC,
+            // mas o ownerUid NÃO muda (regras do Firestore: o jogador só pode
+            // atualizar itens dos quais é dono ou que estejam em NPCs).
+            updateData.ownerType = 'npc';
+        } else if (!targetCharId.startsWith('__caixa_mestre__')) {
+            // Only update ownerUid if target is a real character
             // Fetch target character to get ownerUid
             const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
             const db = _getFirestore();
@@ -1649,6 +1710,21 @@ window.transferItem = async function(itemId, targetCharId, targetOwnerUid) {
         } else {
             await _firestoreSetDoc('items', itemId, updateData);
             window._inventoryState.items = window._inventoryState.items.filter(i => i.id !== itemId);
+        }
+
+        // 📜 Log dedicado da transferência (respeita a lógica do CharLogger)
+        if (window.CharLogger) {
+            try {
+                window.CharLogger.logEvent({
+                    category: 'Inventário',
+                    action: `🔁 Item "${item.nome || 'item'}"${transferQty > 1 ? ` (x${transferQty})` : ''} transferido para ${targetName}`,
+                    changes: [
+                        { label: 'Item', from: item.nome || '(item)', to: item.nome || '(item)' },
+                        { label: 'Quantidade transferida', from: '—', to: String(transferQty) },
+                        { label: 'Destino', from: '—', to: targetName }
+                    ]
+                });
+            } catch (e) { /* ignore */ }
         }
 
         closeTransferModal();

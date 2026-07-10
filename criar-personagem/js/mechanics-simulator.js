@@ -10,6 +10,7 @@ export function simulateDerivedValues() {
     if (!window.DERIVED_VALUES || window.DERIVED_VALUES.length === 0) return {};
 
     const results = {};
+    const initialConstants = {};
     const baseStats = { ...state.atributos };
     
     // Add base_inicial to attributes to get absolute values (normally 1)
@@ -25,12 +26,13 @@ export function simulateDerivedValues() {
 
     window.DERIVED_VALUES.forEach(dv => {
         results[dv.id] = 0;
+        initialConstants[dv.id] = 0;
         
         const sumFromSource = (source) => {
             if (!source || !source.derivedValueIds) return;
             const match = source.derivedValueIds.find(x => typeof x === 'object' ? x.id === dv.id : x === dv.id);
             if (match) {
-                results[dv.id] += (typeof match === 'object' ? (match.valorInicial || 0) : 0);
+                initialConstants[dv.id] += (typeof match === 'object' ? (match.valorInicial || 0) : 0);
             }
         };
 
@@ -268,6 +270,13 @@ export function simulateDerivedValues() {
                     });
                 }
             }
+        }
+    }
+
+    // Aplicar as Constantes Iniciais de Raça/Classe/Tribo APÓS todas as mecânicas
+    for (const key in initialConstants) {
+        if (results[key] !== undefined) {
+            results[key] += initialConstants[key];
         }
     }
 

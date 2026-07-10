@@ -644,6 +644,8 @@ window._openMestreTransferModal = async function(itemId, mesaId) {
                     <button class="sub-tab-btn" onclick="window._setMestreTransferScope('caixa', this)" style="padding:6px 10px; font-size:0.85rem;">Caixa do Mestre</button>
                     <button class="sub-tab-btn" onclick="window._setMestreTransferScope('todas', this)" style="padding:6px 10px; font-size:0.85rem;">Todas as Mesas</button>
                     <button class="sub-tab-btn" onclick="window._setMestreTransferScope('avulsos', this)" style="padding:6px 10px; font-size:0.85rem;">Avulsos</button>
+                    <button class="sub-tab-btn" onclick="window._setMestreTransferScope('npcs_mesa', this)" style="padding:6px 10px; font-size:0.85rem;">NPCs da Mesa</button>
+                    <button class="sub-tab-btn" onclick="window._setMestreTransferScope('npcs_todos', this)" style="padding:6px 10px; font-size:0.85rem;">Todos os NPCs</button>
                 </div>
                 <div id="mt_results" style="display:grid; gap:8px; max-height:40vh; overflow-y:auto; padding:4px;">
                     <div style="text-align:center;color:var(--muted)">Carregando...</div>
@@ -657,11 +659,15 @@ window._openMestreTransferModal = async function(itemId, mesaId) {
         itemId: itemId,
         mesaId: mesaId,
         scope: 'mesa',
-        chars: []
+        chars: [],
+        npcs: []
     };
 
     try {
-        const snap = await getDocs(collection(db, 'char'));
+        const [snap, npcSnap] = await Promise.all([
+            getDocs(collection(db, 'char')),
+            getDocs(collection(db, 'npcs'))
+        ]);
         const allChars = [];
         snap.forEach(d => {
             const data = d.data();
@@ -674,7 +680,20 @@ window._openMestreTransferModal = async function(itemId, mesaId) {
                 mesaId: data.mesaId || null
             });
         });
+        const allNpcs = [];
+        npcSnap.forEach(d => {
+            const data = d.data();
+            allNpcs.push({
+                id: d.id,
+                nome: data.nome || 'Sem nome',
+                papel: data.papel || '',
+                tipo: data.tipo || 'npc',
+                mesaId: data.mesaId || null,
+                vinculos: Array.isArray(data.vinculos) ? data.vinculos : []
+            });
+        });
         window._mestreTransferData.chars = allChars;
+        window._mestreTransferData.npcs = allNpcs;
         window._filterMestreTransfer();
     } catch (e) {
         document.getElementById('mt_results').innerHTML = `<div style="text-align:center;color:#ef4444">❌ Erro: ${e.message}</div>`;
@@ -700,6 +719,33 @@ window._filterMestreTransfer = function() {
             <div style="font-weight:700;font-size:.95rem;color:#f59e0b">📦 Caixa do Mestre</div>
             <div style="font-size:.78rem;color:var(--muted)">Mesa Atual</div>
         </div>`;
+        return;
+    }
+
+    // Escopos de NPC — o mestre pode buscar/filtrar qualquer NPC cadastrado
+    // ou apenas os vinculados à mesa atual.
+    if (data.scope === 'npcs_mesa' || data.scope === 'npcs_todos') {
+        let npcs = data.npcs || [];
+        if (data.scope === 'npcs_mesa') {
+            npcs = npcs.filter(n => n.mesaId === data.mesaId || (n.vinculos || []).some(v => v.tipo === 'mesa' && v.id === data.mesaId));
+        }
+        if (search) {
+            npcs = npcs.filter(n => n.nome.toLowerCase().includes(search) || (n.papel || '').toLowerCase().includes(search));
+        }
+        if (!npcs.length) {
+            resultsContainer.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Nenhum NPC encontrado</div>';
+            return;
+        }
+        resultsContainer.innerHTML = npcs.slice(0, 100).map(n => `
+            <div style="display:flex;flex-direction:column;gap:4px;padding:14px 16px;background:rgba(15,23,42,.5);border:2px solid rgba(16,185,129,.15);border-radius:10px;cursor:pointer;transition:all .2s"
+                onmouseenter="this.style.borderColor='#10b981';this.style.background='rgba(16,185,129,.08)'"
+                onmouseleave="this.style.borderColor='rgba(16,185,129,.15)';this.style.background='rgba(15,23,42,.5)'"
+                onclick="_executeMestreTransfer('${data.itemId}','${n.id}','', true)">
+                <div style="font-weight:700;font-size:.95rem;color:var(--light)">${n.tipo === 'criatura' ? '🐉' : '👤'} ${escapeHtml(n.nome)}</div>
+                ${n.papel ? `<div style="font-size:.78rem;color:var(--muted)">${escapeHtml(n.papel)}</div>` : ''}
+                ${n.mesaId && data.scope === 'npcs_todos' ? `<div style="font-size:.7rem;color:#06b6d4">Mesa ID: ${n.mesaId}</div>` : ''}
+            </div>
+        `).join('');
         return;
     }
 
@@ -733,7 +779,7 @@ window._filterMestreTransfer = function() {
     `).join('');
 };
 
-window._executeMestreTransfer = async function(itemId, targetCharId, targetOwnerUid) {
+window._executeMestreTransfer = async function(itemId, targetCharId, targetOwnerUid, isNpc = false) {
     if (!confirm('Transferir este item para o destino selecionado?')) return;
     try {
         // Capturar item ANTES da transferência (para o log)
@@ -743,14 +789,23 @@ window._executeMestreTransfer = async function(itemId, targetCharId, targetOwner
             if (snap.exists()) itemInfo = snap.data();
         } catch (e) { /* ignore */ }
 
-        await setDoc(doc(db, 'items', itemId), {
+        const updateData = {
             characterId: targetCharId,
-            ownerUid: targetOwnerUid,
-            ownerId: targetOwnerUid,
             equipado: false,
+            slotAnatomico: null,
+            estadoEquip: null,
             parentItemId: null,
             lastModified: new Date().toISOString()
-        }, { merge: true });
+        };
+        if (isNpc) {
+            // Destino é um NPC: preserva o ownerUid atual do item
+            updateData.ownerType = 'npc';
+        } else {
+            updateData.ownerType = targetCharId.startsWith('__caixa_mestre__') ? 'caixa' : 'char';
+            updateData.ownerUid = targetOwnerUid;
+            updateData.ownerId = targetOwnerUid;
+        }
+        await setDoc(doc(db, 'items', itemId), updateData, { merge: true });
 
         // 📜 Log da transferência (um log para a origem e outro para o destino)
         if (window.addLog) {

@@ -758,9 +758,16 @@ function recalcAll() {
         const prevContributions = _getDynamicMechContributions();
         const bonuses = state.mechanicBonuses || {};
         for (const [key, contribution] of Object.entries(prevContributions)) {
-            if (key.startsWith('SET:') || key.startsWith('MULT:') || key.startsWith('DIV:')) {
-                // Para SET/MULT/DIV, remover a chave inteira (são overrides, não somas)
+            if (key.startsWith('SET:')) {
+                // Para SET, remover a chave inteira (são overrides absolutos)
                 delete bonuses[key];
+            } else if (key.startsWith('MULT:') || key.startsWith('DIV:')) {
+                // Para MULT e DIV dinâmicos, desfazer dividindo pela contribuição anterior
+                if (contribution && contribution !== 0) {
+                    bonuses[key] = (bonuses[key] || 1) / contribution;
+                } else {
+                    delete bonuses[key];
+                }
             } else {
                 // Para + e -, subtrair a contribuição anterior
                 bonuses[key] = (bonuses[key] || 0) - contribution;
@@ -798,20 +805,25 @@ function recalcAll() {
         }
 
         let value = 0;
+        let initialConstant = 0;
 
-        // Usar valorInicial de raça/classe como base (se definido)
+        // Usar valorInicial de raça/classe como constante (se definido)
         const initials = window._dvInitialValues || {};
         const dvDef = (window.DERIVED_VALUES || []).find(d => d.key === dvKey);
         if (dvDef && initials[dvDef.id]) {
-            value = initials[dvDef.id];
+            initialConstant = initials[dvDef.id];
         }
 
-        // Aplicar modificador constante da Véspera da Partida (Criar Personagem)
+        // Aplicar mecânicas (bônus, penalidades, equações, multiplicadores)
+        value = _applyMechanicModifiers(dvKey, value, bonuses, limits);
+
+        // Aplicar constante inicial (Raça/Classe/Tribo)
+        value += initialConstant;
+
+        // Aplicar modificador constante da Véspera da Partida (Criar Personagem) SEMPRE após as mecânicas
         if (dvDef && state.derivedModifiers && state.derivedModifiers[dvDef.id]) {
             value += state.derivedModifiers[dvDef.id];
         }
-
-        value = _applyMechanicModifiers(dvKey, value, bonuses, limits);
 
         // Atualizar campo na grid dinâmica
         const displayEl = document.getElementById(`dv_${dvKey}_display`);

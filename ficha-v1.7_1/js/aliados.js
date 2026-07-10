@@ -144,6 +144,11 @@ window.aliadoSwitchSection = function(secId) {
     
     if (btn) btn.classList.add('active');
     if (sec) sec.classList.add('active');
+
+    // Carrega o inventário do aliado sob demanda
+    if (secId === 'inventario' && currentAliadoNpc && window.renderAliadoInventario) {
+        window.renderAliadoInventario(currentAliadoNpc);
+    }
 };
 
 function buildAliadoForm() {
@@ -156,6 +161,7 @@ function buildAliadoForm() {
     <div class="tabs" style="margin-bottom: 16px;">
         <button type="button" class="tab active" data-sec="identidade" onclick="aliadoSwitchSection('identidade')">Identidade</button>
         <button type="button" class="tab" data-sec="mecanica" onclick="aliadoSwitchSection('mecanica')">Mecânica</button>
+        <button type="button" class="tab" data-sec="inventario" onclick="aliadoSwitchSection('inventario')">Inventário</button>
         <button type="button" class="tab" data-sec="roleplay" onclick="aliadoSwitchSection('roleplay')">Role Play</button>
         <button type="button" class="tab" data-sec="loot" onclick="aliadoSwitchSection('loot')">Loot</button>
     </div>
@@ -221,9 +227,33 @@ function buildAliadoForm() {
         <div class="section">
             <div class="section-title">Status Vitais</div>
             <div class="row" style="grid-template-columns: repeat(3, 1fr);">
-                <div class="field"><label style="color: #ef4444;">❤️ VIT Máx.</label><input type="number" id="al_vit" value="0" style="text-align:center"></div>
-                <div class="field"><label style="color: #eab308;">⚡ ENER Máx.</label><input type="number" id="al_ener" value="0" style="text-align:center"></div>
-                <div class="field"><label style="color: #3b82f6;">🧠 SAN Máx.</label><input type="number" id="al_san" value="0" style="text-align:center"></div>
+                <div class="field">
+                    <label style="color: #ef4444;">❤️ Vitalidade</label>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <input type="number" id="al_vit_atual" value="0" style="text-align:center" title="Atual" placeholder="Atual">
+                        <span style="color:var(--muted);">/</span>
+                        <input type="number" id="al_vit" value="0" style="text-align:center" title="Máximo" placeholder="Máx.">
+                    </div>
+                    <small style="color:var(--muted); font-size:.7rem; display:block; text-align:center;">Atual / Máx.</small>
+                </div>
+                <div class="field">
+                    <label style="color: #eab308;">⚡ Energia</label>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <input type="number" id="al_ener_atual" value="0" style="text-align:center" title="Atual" placeholder="Atual">
+                        <span style="color:var(--muted);">/</span>
+                        <input type="number" id="al_ener" value="0" style="text-align:center" title="Máximo" placeholder="Máx.">
+                    </div>
+                    <small style="color:var(--muted); font-size:.7rem; display:block; text-align:center;">Atual / Máx.</small>
+                </div>
+                <div class="field">
+                    <label style="color: #3b82f6;">🧠 Sanidade</label>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <input type="number" id="al_san_atual" value="0" style="text-align:center" title="Atual" placeholder="Atual">
+                        <span style="color:var(--muted);">/</span>
+                        <input type="number" id="al_san" value="0" style="text-align:center" title="Máximo" placeholder="Máx.">
+                    </div>
+                    <small style="color:var(--muted); font-size:.7rem; display:block; text-align:center;">Atual / Máx.</small>
+                </div>
             </div>
         </div>
 
@@ -240,6 +270,16 @@ function buildAliadoForm() {
         <div class="section">
             <div class="section-title">🎯 Perícias Estruturadas</div>
             <div id="al_structured_skills_grid"></div>
+        </div>
+    </div>
+
+    <!-- ============ SEÇÃO: INVENTÁRIO ============ -->
+    <div class="tab-content" id="alSec_inventario">
+        <div class="section">
+            <div class="section-title">Inventário do Aliado</div>
+            <div id="aliadoInvRoot">
+                <div style="color:var(--muted);font-size:.85rem;padding:8px">Abra esta aba para carregar o inventário.</div>
+            </div>
         </div>
     </div>
 
@@ -307,6 +347,36 @@ function buildAliadoForm() {
     `;
 }
 
+// Resolve a chave do registro (Painel de Criador) correspondente a uma sigla
+// legada (VIT/ENER/SAN), para ler/gravar overrides e valores atuais no mesmo
+// formato usado pelo Painel do Mestre.
+function _vitalKeyFor(sigla) {
+    const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+    const vs = (window._systemData?.vitalStats || []);
+    const s = norm(sigla);
+    let hit = vs.find(d => norm(d.key || d.id) === s || norm(d.nome) === s);
+    if (!hit) hit = vs.find(d => norm(d.key || d.id).startsWith(s) || norm(d.nome).startsWith(s));
+    return hit ? (hit.key || hit.id) : null;
+}
+
+function _vitalMax(npc, sigla) {
+    const vd = npc.valoresDer || {};
+    const ov = vd.overrides || {};
+    if (ov[sigla] != null && ov[sigla] !== '') return ov[sigla];
+    const k = _vitalKeyFor(sigla);
+    if (k && ov[k] != null && ov[k] !== '') return ov[k];
+    if (vd[sigla] != null && vd[sigla] !== '') return vd[sigla];
+    return 0;
+}
+
+function _vitalAtual(npc, sigla) {
+    const at = (npc.valoresDer || {}).atual || {};
+    if (at[sigla] != null && at[sigla] !== '') return at[sigla];
+    const k = _vitalKeyFor(sigla);
+    if (k && at[k] != null && at[k] !== '') return at[k];
+    return '';
+}
+
 function fillAliadoForm(npc) {
     document.getElementById('al_imagem').value = npc.imagem || '';
     document.getElementById('al_nome').value = npc.nome || '';
@@ -328,9 +398,17 @@ function fillAliadoForm(npc) {
     });
 
     const vd = npc.valoresDer || { overrides: {} };
-    document.getElementById('al_vit').value = vd.overrides?.VIT || vd.VIT || 0;
-    document.getElementById('al_ener').value = vd.overrides?.ENER || vd.ENER || 0;
-    document.getElementById('al_san').value = vd.overrides?.SAN || vd.SAN || 0;
+    document.getElementById('al_vit').value = _vitalMax(npc, 'VIT');
+    document.getElementById('al_ener').value = _vitalMax(npc, 'ENER');
+    document.getElementById('al_san').value = _vitalMax(npc, 'SAN');
+
+    // ✅ Status Vitais ATUAIS (antes, a ficha só exibia o Máx.)
+    const vitAt = _vitalAtual(npc, 'VIT');
+    const enerAt = _vitalAtual(npc, 'ENER');
+    const sanAt = _vitalAtual(npc, 'SAN');
+    document.getElementById('al_vit_atual').value = vitAt !== '' ? vitAt : _vitalMax(npc, 'VIT');
+    document.getElementById('al_ener_atual').value = enerAt !== '' ? enerAt : _vitalMax(npc, 'ENER');
+    document.getElementById('al_san_atual').value = sanAt !== '' ? sanAt : _vitalMax(npc, 'SAN');
 
     document.getElementById('al_ataques').value = npc.ataques || '';
     document.getElementById('al_skills').value = npc.skillsTexto || '';
@@ -426,6 +504,18 @@ window.saveAliadoNpc = async function() {
         updateData['valoresDer.VIT'] = parseInt(document.getElementById('al_vit').value) || 0;
         updateData['valoresDer.ENER'] = parseInt(document.getElementById('al_ener').value) || 0;
         updateData['valoresDer.SAN'] = parseInt(document.getElementById('al_san').value) || 0;
+
+        // ✅ Status Vitais ATUAIS — grava na sigla legada E na chave do registro
+        // (mesmo formato que o Painel do Mestre usa em valoresDer.atual)
+        [['VIT', 'al_vit_atual'], ['ENER', 'al_ener_atual'], ['SAN', 'al_san_atual']].forEach(([sigla, inputId]) => {
+            const val = parseInt(document.getElementById(inputId)?.value);
+            const atual = isNaN(val) ? 0 : val;
+            updateData[`valoresDer.atual.${sigla}`] = atual;
+            const regKey = _vitalKeyFor(sigla);
+            if (regKey && regKey !== sigla) {
+                updateData[`valoresDer.atual.${regKey}`] = atual;
+            }
+        });
 
         updateData.ataques = document.getElementById('al_ataques').value.trim();
         updateData.skillsTexto = document.getElementById('al_skills').value.trim();

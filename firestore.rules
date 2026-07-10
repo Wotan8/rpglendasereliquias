@@ -175,6 +175,9 @@ service cloud.firestore {
         // Dono do personagem vinculado pode atualizar (verificando via characterId)
         (exists(/databases/$(database)/documents/char/$(resource.data.characterId)) &&
          get(/databases/$(database)/documents/char/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
+        // Item vinculado a um NPC (aliado): segue a permissão da coleção 'npcs'
+        // (qualquer usuário autenticado pode atualizar NPCs, então idem para seus itens)
+        exists(/databases/$(database)/documents/npcs/$(resource.data.characterId)) ||
         // Mestre pode sempre atualizar
         isMaster()
       );
@@ -185,6 +188,8 @@ service cloud.firestore {
         resource.data.ownerUid == request.auth.uid || 
         (exists(/databases/$(database)/documents/char/$(resource.data.characterId)) &&
          get(/databases/$(database)/documents/char/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
+        // Item vinculado a um NPC (aliado): segue a permissão da coleção 'npcs'
+        exists(/databases/$(database)/documents/npcs/$(resource.data.characterId)) ||
         isMaster()
       );
     }

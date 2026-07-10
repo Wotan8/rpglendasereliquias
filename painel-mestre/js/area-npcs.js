@@ -5,6 +5,7 @@ import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { ensureNpcSystemData, pecsDaOrigem } from './npc-system-data.js?v=1.3';
 import { calcularNpc, ATTR_SIGLAS } from './npc-calc-engine.js?v=1.3';
+import './npc-inventario.js?v=1.0'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
 
 let currentEditingNpc = null;
 export async function onTabActivated() { await loadAllNpcs(); }
@@ -345,6 +346,7 @@ function normalizeNpc(raw, sys) {
     n.atributos = n.atributos || {};
     n.peculiaridades = Array.isArray(n.peculiaridades) ? n.peculiaridades : [];
     n.periciasEstruturadas = Array.isArray(n.periciasEstruturadas) ? n.periciasEstruturadas : [];
+    n.partesDoCorpo = Array.isArray(n.partesDoCorpo) ? n.partesDoCorpo : [];
 
     n.racaRef = n.racaRef || hybFromLegacy(n.raca, sys.racesByNome, sys);
     n.classeRef = n.classeRef || hybFromLegacy(n.classe, sys.classesByNome, sys);
@@ -430,6 +432,7 @@ function buildNpcForm() {
     <div class="npcv2-sections">
         <button type="button" class="npcv2-section-btn" data-sec="identidade" onclick="npcSwitchSection('identidade')">📋 Identidade</button>
         <button type="button" class="npcv2-section-btn" data-sec="mecanica" onclick="npcSwitchSection('mecanica')">⚙️ Mecânica</button>
+        <button type="button" class="npcv2-section-btn" data-sec="inventario" onclick="npcSwitchSection('inventario')">🎒 Inventário</button>
         <button type="button" class="npcv2-section-btn" data-sec="roleplay" onclick="npcSwitchSection('roleplay')">🎭 Role Play</button>
         <button type="button" class="npcv2-section-btn" data-sec="loot" onclick="npcSwitchSection('loot')">🎁 Loot</button>
         <button type="button" class="npcv2-section-btn" data-sec="vinculos" onclick="npcSwitchSection('vinculos')">🔗 Vínculos</button>
@@ -547,6 +550,27 @@ function buildNpcForm() {
             
             <div class="npcv2-attrs-grid" id="npcStructuredSkillsGrid" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));"></div>
         </div>
+    </div>
+
+    <!-- ============ SEÇÃO: INVENTÁRIO ============ -->
+    <div class="npcv2-section" id="npcSec_inventario">
+        <div class="npcv2-block-title">🦴 Partes do Corpo & Slots
+            <span class="npcv2-hint">NPCs comuns usam a anatomia padrão (humanoide); criaturas podem ter anatomias personalizadas</span>
+        </div>
+        <div class="npcv2-pec-add" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+            <button class="btn btn-secondary btn-small" onclick="npcApplyDefaultBodyParts()" title="Aplica as partes marcadas como padrão no Painel de Criador (mesmas de Humano)">🧍 Aplicar Padrão Humanoide</button>
+            <select class="form-select" id="npcBodyPartPicker" style="max-width:220px"></select>
+            <button class="btn btn-secondary btn-small" onclick="npcAddBodyPartFromRegistry()">➕ Do registro</button>
+            <button class="btn btn-secondary btn-small" onclick="npcAddBodyPartCustom()">✏️ Parte personalizada</button>
+        </div>
+        <div id="npcBodyPartsList"></div>
+
+        <hr style="border-color:var(--line);margin:16px 0">
+
+        <div class="npcv2-block-title">🎒 Itens do NPC
+            <span class="npcv2-hint">criação e gerenciamento completo — os itens ficam na coleção de itens e podem ser transferidos</span>
+        </div>
+        <div id="npcInventoryList"></div>
     </div>
 
     <!-- ============ SEÇÃO: ROLE PLAY ============ -->
@@ -1034,6 +1058,7 @@ window.npcSwitchSection = function(sec) {
     document.querySelectorAll('.npcv2-section-btn').forEach(b => b.classList.toggle('active', b.dataset.sec === sec));
     document.getElementById('npcSec_' + sec)?.classList.add('active');
     if (sec === 'vinculos' && !window._npcVincLoaded) { window._npcVincLoaded = true; loadVinculosUI(); }
+    if (sec === 'inventario' && typeof window._npcInvOnSectionOpen === 'function') { window._npcInvOnSectionOpen(); }
 };
 
 /* ===== PREENCHIMENTO DO FORMULÁRIO ===== */
@@ -1269,6 +1294,7 @@ function collectNpcData() {
 
         peculiaridades: n.peculiaridades,
         periciasEstruturadas: n.periciasEstruturadas,
+        partesDoCorpo: Array.isArray(n.partesDoCorpo) ? n.partesDoCorpo : [],
         atributos: { ...Object.fromEntries(ATTR_SIGLAS.map(a => [a, parseInt(n.atributos?.[a]) || 0])) },
         valoresDer: {
             overrides: n.valoresDer.overrides || {},
@@ -1293,6 +1319,30 @@ function collectNpcData() {
 window.saveNpc = async function() {
     const data = collectNpcData(); if (!data.nome) { showAlert('⚠️ Nome obrigatório', 'warning'); return; }
     try {
+        if (!currentEditingNpc) {
+            // ✅ Garantia: ao CRIAR um NPC, os Status Vitais ATUAIS nascem iguais ao MÁXIMO
+            const calcNovo = calcularNpc(F.npc, F.sys);
+            data.valoresDer.atual = data.valoresDer.atual || {};
+            for (const dv of Object.values(calcNovo.derived)) {
+                if (dv.isVital && (data.valoresDer.atual[dv.key] === undefined || data.valoresDer.atual[dv.key] === null || data.valoresDer.atual[dv.key] === '')) {
+                    data.valoresDer.atual[dv.key] = dv.final;
+                }
+            }
+            // Espelho legado (VIT/ENER/SAN...) para módulos que leem siglas fixas
+            for (const legacy of ['VIT', 'ENER', 'SAN']) {
+                const key = findDvKeyLike(legacy, F.sys);
+                if (key && data.valoresDer.atual[legacy] === undefined && data.valoresDer.atual[key] !== undefined) {
+                    data.valoresDer.atual[legacy] = data.valoresDer.atual[key];
+                }
+            }
+            // ✅ NPCs "comuns" (bípedes) nascem com anatomia padrão (mesma de Humano)
+            if ((!data.partesDoCorpo || !data.partesDoCorpo.length) && data.tipo === 'npc') {
+                try {
+                    if (window._npcEnsureBodyPartsRegistry) await window._npcEnsureBodyPartsRegistry();
+                    if (window._npcDefaultHumanoidParts) data.partesDoCorpo = window._npcDefaultHumanoidParts();
+                } catch (e) { /* segue sem partes; mestre pode aplicar depois */ }
+            }
+        }
         if (currentEditingNpc) { await setDoc(doc(db, 'npcs', currentEditingNpc.id), data, { merge: true }); await addLog(S.currentUser?.email, 'Editou NPC', data.nome, 'npcs'); showAlert('✅ NPC atualizado!', 'success'); }
         else { await setDoc(doc(collection(db, 'npcs')), data); await addLog(S.currentUser?.email, 'Criou NPC', data.nome, 'npcs'); showAlert('✅ NPC criado!', 'success'); }
         closeNpcModal(); await loadAllNpcs(); if (window._loadMesaNpcs) await window._loadMesaNpcs();
