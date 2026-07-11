@@ -187,28 +187,61 @@ export function simulateDerivedValues() {
             else if (op === '/' || op === '÷') results[targetDv.id] = val !== 0 ? results[targetDv.id] / val : 0;
         };
 
-        // Helper: aplicar uma mecânica completa (tipo modificar com calculos)
-        // Suporta novo formato multi-calc E formato legacy de calc único
+        // Helper: aplicar uma mecânica completa
         const applyMechanic = (mech) => {
-            if (!mech || mech.tipo !== 'modificar' || !mech.config) return;
+            if (!mech || !mech.config) return;
             // Verificar condições — só aplica permanentes e sem condição
             const isConditional = mech.condicaoAplicacao && mech.condicaoAplicacao.trim() !== '';
             const isPermanent = !mech.duracao || mech.duracao === 'permanente';
             if (!isPermanent || isConditional) return;
 
-            const calculos = Array.isArray(mech.config.calculos) ? mech.config.calculos
-                : mech.config.alvo ? [{ alvo: mech.config.alvo, operacao: mech.config.operacao, valor: mech.config.valor, valorTipo: mech.config.valorTipo || 'fixo', valorRef: mech.config.valorRef, valorMultiplicador: mech.config.valorMultiplicador, equacao: mech.config.equacao }]
-                : [];
-            calculos.forEach(calc => {
-                // Ignorar mecânicas de EXP (não afetam DVs)
-                if (calc.alvo === 'EXP') return;
-                const alvos = Array.isArray(calc.alvo) ? calc.alvo : [calc.alvo];
-                alvos.forEach(alvo => {
-                    if (!alvo) return;
-                    const field = targetMap[alvo];
-                    if (field) applyCalcToDV(calc, field);
+            if (mech.tipo === 'modificar') {
+                const calculos = Array.isArray(mech.config.calculos) ? mech.config.calculos
+                    : mech.config.alvo ? [{ alvo: mech.config.alvo, operacao: mech.config.operacao, valor: mech.config.valor, valorTipo: mech.config.valorTipo || 'fixo', valorRef: mech.config.valorRef, valorMultiplicador: mech.config.valorMultiplicador, equacao: mech.config.equacao }]
+                    : [];
+                calculos.forEach(calc => {
+                    // Ignorar mecânicas de EXP (não afetam DVs)
+                    if (calc.alvo === 'EXP') return;
+                    const alvos = Array.isArray(calc.alvo) ? calc.alvo : [calc.alvo];
+                    alvos.forEach(alvo => {
+                        if (!alvo) return;
+                        const field = targetMap[alvo];
+                        if (field) applyCalcToDV(calc, field);
+                    });
                 });
-            });
+            } else if (mech.tipo === 'condicional') {
+                const config = mech.config;
+                const condicaoMecanica = config.condicaoMecanica || false;
+                if (condicaoMecanica && config.condicaoMecanicaIds && config.condicaoMecanicaIds.length > 0) {
+                    let allTrue = true;
+                    for (const boolId of config.condicaoMecanicaIds) {
+                        const boolMech = window._systemData?.mechanics?.find(m => m.id === boolId);
+                        if (boolMech && boolMech.tipo === 'booleano') {
+                            const eqA = Array.isArray(boolMech.config.equacaoA) ? boolMech.config.equacaoA : [];
+                            const eqB = Array.isArray(boolMech.config.equacaoB) ? boolMech.config.equacaoB : [];
+                            const valA = resolveEquation(eqA);
+                            const valB = resolveEquation(eqB);
+                            const op = boolMech.config.operadorComparacao || '>=';
+                            let res = false;
+                            if (op === '==') res = valA === valB;
+                            else if (op === '!=') res = valA !== valB;
+                            else if (op === '>') res = valA > valB;
+                            else if (op === '>=') res = valA >= valB;
+                            else if (op === '<') res = valA < valB;
+                            else if (op === '<=') res = valA <= valB;
+                            
+                            if (!res) allTrue = false;
+                        } else {
+                            allTrue = false;
+                        }
+                    }
+                    const targetIds = allTrue ? (config.efeitoSucessoIds || []) : (config.efeitoFalhaIds || []);
+                    for (const targetId of targetIds) {
+                        const targetMech = window._systemData?.mechanics?.find(m => m.id === targetId);
+                        if (targetMech) applyMechanic(targetMech);
+                    }
+                }
+            }
         };
 
         // 2a. Mecânicas vinculadas diretamente aos DVs (via dv.mecanicaIds)

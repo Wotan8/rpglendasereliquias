@@ -254,6 +254,7 @@ function clearMechanicBonuses() {
     state.mechanicLimits = {};
     state.capacidades = [];
     state.mecanicasPendentes = [];
+    state.booleanResults = {};
     _derivedValueMechanicsRaw = [];
     _dynamicMechContributions = {};
     state._invPressureContrib = 0;
@@ -950,7 +951,64 @@ function applyMechanicToSheet(mech, parentPec) {
         }
     }
 
-    // Condicional e Narrativo: apenas informativo (exibido no card)
+    // === TIPO: BOOLEANO ===
+    if (tipo === 'booleano') {
+        const eqA = Array.isArray(config.equacaoA) ? config.equacaoA : [];
+        const eqB = Array.isArray(config.equacaoB) ? config.equacaoB : [];
+        const valA = resolveEquation(eqA);
+        const valB = resolveEquation(eqB);
+        const op = config.operadorComparacao || '>=';
+        let resultadoBooleano = false;
+        if (op === '==') resultadoBooleano = valA === valB;
+        else if (op === '!=') resultadoBooleano = valA !== valB;
+        else if (op === '>') resultadoBooleano = valA > valB;
+        else if (op === '>=') resultadoBooleano = valA >= valB;
+        else if (op === '<') resultadoBooleano = valA < valB;
+        else if (op === '<=') resultadoBooleano = valA <= valB;
+
+        const valorSaida = resultadoBooleano
+            ? (parseFloat(config.valorVerdadeiro) || config.valorVerdadeiro || 0)
+            : (parseFloat(config.valorFalso) || config.valorFalso || 0);
+
+        if (!state.booleanResults) state.booleanResults = {};
+        state.booleanResults[mech.id] = { valorSaida, resultadoBooleano, valA, valB, op };
+        console.log(`🔀 Booleano "${mech.nome}": ${valA} ${op} ${valB} → ${resultadoBooleano} (saída: ${valorSaida})`);
+    }
+
+    // === TIPO: CONDICIONAL ===
+    if (tipo === 'condicional') {
+        const condicaoMecanica = config.condicaoMecanica || false;
+        if (condicaoMecanica && config.condicaoMecanicaIds && config.condicaoMecanicaIds.length > 0) {
+            let allTrue = true;
+            
+            // Avaliar mecânicas booleanas vinculadas
+            for (const boolId of config.condicaoMecanicaIds) {
+                const boolMech = window._systemData?.mechanics?.find(m => m.id === boolId);
+                if (boolMech && boolMech.tipo === 'booleano') {
+                    // Executar a mecânica booleana para atualizar state.booleanResults
+                    applyMechanicToSheet(boolMech, parentPec);
+                    
+                    if (!state.booleanResults || !state.booleanResults[boolId] || !state.booleanResults[boolId].resultadoBooleano) {
+                        allTrue = false;
+                    }
+                } else {
+                    // Se não encontrar a mecânica booleana, falha a condição por segurança
+                    allTrue = false;
+                }
+            }
+            
+            // Aplicar mecânicas de sucesso ou falha baseando-se no resultado
+            const targetIds = allTrue ? (config.efeitoSucessoIds || []) : (config.efeitoFalhaIds || []);
+            for (const targetId of targetIds) {
+                const targetMech = window._systemData?.mechanics?.find(m => m.id === targetId);
+                if (targetMech) {
+                    applyMechanicToSheet(targetMech, parentPec);
+                }
+            }
+        }
+    }
+
+    // Narrativo: apenas informativo (exibido no card)
 }
 /* ===== FORMAT EQUATION PREVIEW ===== */
 function _formatEquationPreview(equacao) {
@@ -1050,25 +1108,39 @@ function generatePreviewText(mech) {
     if (tipo === 'condicional') {
         // Build conditional preview with resolved sub-mechanic previews
         const parts = [];
-        parts.push(config.gatilho || '');
+        
         const allMechanics = window._systemData?.mechanics || [];
+        if (config.condicaoMecanica && config.condicaoMecanicaIds && config.condicaoMecanicaIds.length > 0) {
+            const boolNames = config.condicaoMecanicaIds.map(id => {
+                const m = allMechanics.find(x => x.id === id);
+                return m ? m.nome : '?';
+            }).join(', ');
+            parts.push(`🔀 Condição: ${boolNames}`);
+        } else {
+            parts.push(config.gatilho || '');
+        }
+
         const sucessoIds = config.efeitoSucessoIds || [];
         const falhaIds = config.efeitoFalhaIds || [];
-        if (sucessoIds.length > 0) {
-            const sucessoPreviews = sucessoIds.map(id => {
-                const m = allMechanics.find(x => x.id === id);
-                if (!m) return '?';
+        
+        const resolveSub = (id) => {
+            let m = allMechanics.find(x => x.id === id);
+            if (!m) return '?';
+            
+            // If parent has a previewLevel and the adjustment function is available, adjust sub-mechanic
+            if (mech._previewLevel && typeof window._adjustMechanicForLevel === 'function') {
+                m = window._adjustMechanicForLevel(m, mech._previewLevel);
+                // m._previewLevel is already set by _adjustMechanicForLevel, so it propagates recursively
                 return m.previewTexto || generatePreviewText(m);
-            }).join('; ');
-            parts.push(`Se Sucesso: ${sucessoPreviews}`);
+            }
+            return m.previewTexto || generatePreviewText(m);
+        };
+
+        if (sucessoIds.length > 0) {
+            parts.push(`Se Sucesso: ${sucessoIds.map(resolveSub).join('; ')}`);
         }
         if (falhaIds.length > 0) {
-            const falhaPreviews = falhaIds.map(id => {
-                const m = allMechanics.find(x => x.id === id);
-                if (!m) return '?';
-                return m.previewTexto || generatePreviewText(m);
-            }).join('; ');
-            parts.push(`Se Falha: ${falhaPreviews}`);
+            parts.push(`Se Falha: ${falhaIds.map(resolveSub).join('; ')}`);
         }
         return parts.filter(Boolean).join(' — ');
     }

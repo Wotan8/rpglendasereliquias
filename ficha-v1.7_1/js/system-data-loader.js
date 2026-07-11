@@ -3,6 +3,72 @@
    As funções ficam disponíveis globalmente. O firebase.js (module)
    chama loadSystemData() passando db/collection/getDocs. */
 
+window._adjustMechanicForLevel = function(m, level) {
+    const prog = m.progressao?.[String(level)];
+    if (!prog) return m;
+
+    const adjustedMech = JSON.parse(JSON.stringify(m));
+    delete adjustedMech.previewTexto;
+    adjustedMech._previewLevel = level;
+
+    if (m.tipo === 'modificar' || m.tipo === 'limitar') {
+        if (prog.termos && Array.isArray(adjustedMech.config?.calculos)) {
+            for (const calc of adjustedMech.config.calculos) {
+                if (Array.isArray(calc.equacao)) {
+                    let fixoIdx = 0;
+                    for (const term of calc.equacao) {
+                        if (!term.tipo || term.tipo === 'fixo') {
+                            const overrideVal = prog.termos[String(fixoIdx)];
+                            if (overrideVal !== undefined && overrideVal !== '') {
+                                term.valor = overrideVal;
+                            }
+                            fixoIdx++;
+                        }
+                    }
+                }
+            }
+        } else if (m.tipo === 'modificar') {
+            if (prog.valor !== undefined) {
+                adjustedMech.config = { ...adjustedMech.config, valor: prog.valor };
+            }
+        } else if (m.tipo === 'limitar') {
+            const limVal = prog.valorLimite !== undefined ? prog.valorLimite : prog.valor;
+            if (limVal !== undefined) {
+                if (!adjustedMech.config) adjustedMech.config = {};
+                const tipoLim = adjustedMech.config.tipoLimite;
+                if (tipoLim === 'maximo' || adjustedMech.config.valorMaximo !== undefined) {
+                    adjustedMech.config.valorMaximo = limVal;
+                }
+                if (tipoLim === 'minimo' || adjustedMech.config.valorMinimo !== undefined) {
+                    adjustedMech.config.valorMinimo = limVal;
+                }
+                if (adjustedMech.config.valorMaximo === undefined && adjustedMech.config.valorMinimo === undefined) {
+                    adjustedMech.config.valorMaximo = limVal;
+                }
+            }
+        }
+    } else if (m.tipo === 'distribuir') {
+        if (prog.valorPorAlvo !== undefined) adjustedMech.config = { ...adjustedMech.config, valorPorAlvo: prog.valorPorAlvo };
+        if (prog.quantidadeAlvos !== undefined) adjustedMech.config = { ...adjustedMech.config, quantidadeAlvos: prog.quantidadeAlvos };
+    } else if (m.tipo === 'narrativo') {
+        if (prog.textoEfeito) {
+            adjustedMech.config = { ...adjustedMech.config, textoEfeito: prog.textoEfeito };
+        } else if (prog.descricao && adjustedMech.config) {
+            delete adjustedMech.config.textoEfeito;
+        }
+    } else if (m.tipo === 'conceder') {
+        if (prog.descricaoConcessao !== undefined) adjustedMech.config = { ...adjustedMech.config, descricaoConcessao: prog.descricaoConcessao };
+        if (prog.tipoConcessao !== undefined) adjustedMech.config = { ...adjustedMech.config, tipoConcessao: prog.tipoConcessao };
+    } else if (m.tipo === 'condicional') {
+        if (prog.gatilho !== undefined) adjustedMech.config = { ...adjustedMech.config, gatilho: prog.gatilho };
+    }
+    if (prog.descricao) {
+        adjustedMech.descricao = prog.descricao;
+    }
+
+    return adjustedMech;
+};
+
 window._systemData = {
     races: [],
     classes: [],
@@ -576,24 +642,42 @@ function _resolvePeculiaridade(pecData, sourceLabel) {
                     custoTotal += (prog.custoExp || 0);
                     const adjustedMech = JSON.parse(JSON.stringify(m));
                     delete adjustedMech.previewTexto;
+                    adjustedMech._previewLevel = i;
 
-                    if (m.tipo === 'modificar') {
-                        if (prog.valor !== undefined) {
-                            adjustedMech.config = { ...adjustedMech.config, valor: prog.valor };
-                        }
-                    } else if (m.tipo === 'limitar') {
-                        const limVal = prog.valorLimite !== undefined ? prog.valorLimite : prog.valor;
-                        if (limVal !== undefined) {
-                            if (!adjustedMech.config) adjustedMech.config = {};
-                            const tipoLim = adjustedMech.config.tipoLimite;
-                            if (tipoLim === 'maximo' || adjustedMech.config.valorMaximo !== undefined) {
-                                adjustedMech.config.valorMaximo = limVal;
+                    if (m.tipo === 'modificar' || m.tipo === 'limitar') {
+                        if (prog.termos && Array.isArray(adjustedMech.config?.calculos)) {
+                            for (const calc of adjustedMech.config.calculos) {
+                                if (Array.isArray(calc.equacao)) {
+                                    let fixoIdx = 0;
+                                    for (const term of calc.equacao) {
+                                        if (!term.tipo || term.tipo === 'fixo') {
+                                            const overrideVal = prog.termos[String(fixoIdx)];
+                                            if (overrideVal !== undefined && overrideVal !== '') {
+                                                term.valor = overrideVal;
+                                            }
+                                            fixoIdx++;
+                                        }
+                                    }
+                                }
                             }
-                            if (tipoLim === 'minimo' || adjustedMech.config.valorMinimo !== undefined) {
-                                adjustedMech.config.valorMinimo = limVal;
+                        } else if (m.tipo === 'modificar') {
+                            if (prog.valor !== undefined) {
+                                adjustedMech.config = { ...adjustedMech.config, valor: prog.valor };
                             }
-                            if (adjustedMech.config.valorMaximo === undefined && adjustedMech.config.valorMinimo === undefined) {
-                                adjustedMech.config.valorMaximo = limVal;
+                        } else if (m.tipo === 'limitar') {
+                            const limVal = prog.valorLimite !== undefined ? prog.valorLimite : prog.valor;
+                            if (limVal !== undefined) {
+                                if (!adjustedMech.config) adjustedMech.config = {};
+                                const tipoLim = adjustedMech.config.tipoLimite;
+                                if (tipoLim === 'maximo' || adjustedMech.config.valorMaximo !== undefined) {
+                                    adjustedMech.config.valorMaximo = limVal;
+                                }
+                                if (tipoLim === 'minimo' || adjustedMech.config.valorMinimo !== undefined) {
+                                    adjustedMech.config.valorMinimo = limVal;
+                                }
+                                if (adjustedMech.config.valorMaximo === undefined && adjustedMech.config.valorMinimo === undefined) {
+                                    adjustedMech.config.valorMaximo = limVal;
+                                }
                             }
                         }
                     } else if (m.tipo === 'distribuir') {

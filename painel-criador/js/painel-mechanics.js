@@ -123,9 +123,9 @@ function getMechanicTargetsHTML() {
     return html;
 }
 
-export const FONTE_LABELS = { raca: '🧬 Raça', classe: '⚔️ Classe', tribo: '🏕️ Tribo', peculiaridade: '✨ Pecul.', item: '🗡️ Item', condicao: '💀 Condição', manobra: '💥 Manobra', magia: '🔮 Magia', individual: '👤 Individual', generica: '⚙️ Genérica' };
-export const TIPO_ICONS = { modificar: '➕', limitar: '🔒', conceder: '🎁', condicional: '⚡', narrativo: '📝', distribuir: '🎲' };
-export const TIPO_LABELS = { modificar: 'Modificar', limitar: 'Limitar', conceder: 'Conceder', condicional: 'Condicional', narrativo: 'Narrativo', distribuir: 'Distribuir' };
+export const FONTE_LABELS = { raca: '🧬 Raça', classe: '⚔️ Classe', tribo: '🏕️ Tribo', peculiaridade: '✨ Pecul.', item: '🗡️ Item', condicao: '💀 Condição', booleana: '🔀 Booleana', manobra: '💥 Manobra', magia: '🔮 Magia', individual: '👤 Individual', generica: '⚙️ Genérica' };
+export const TIPO_ICONS = { modificar: '➕', limitar: '🔒', conceder: '🎁', condicional: '⚡', narrativo: '📝', distribuir: '🎲', booleano: '🔀' };
+export const TIPO_LABELS = { modificar: 'Modificar', limitar: 'Limitar', conceder: 'Conceder', condicional: 'Condicional', narrativo: 'Narrativo', distribuir: 'Distribuir', booleano: 'Booleano' };
 
 function esc(text) {
     if (text === null || text === undefined) return '';
@@ -262,7 +262,16 @@ export function generatePreviewText(data) {
     } else if (tipo === 'condicional') {
         // Build conditional preview with resolved sub-mechanic previews
         const parts = [];
-        parts.push(config.gatilho || '?');
+        if (config.condicaoMecanica && config.condicaoMecanicaIds && config.condicaoMecanicaIds.length > 0) {
+            const cache = window._mechCache || [];
+            const boolNames = config.condicaoMecanicaIds.map(id => {
+                const m = cache.find(x => x.id === id);
+                return m ? m.nome : '?';
+            }).join(', ');
+            parts.push(`🔀 Condição: ${boolNames}`);
+        } else {
+            parts.push(config.gatilho || '?');
+        }
         const cache = window._mechCache || [];
         const sucessoIds = config.efeitoSucessoIds || [];
         const falhaIds = config.efeitoFalhaIds || [];
@@ -295,6 +304,14 @@ export function generatePreviewText(data) {
         const poolLabel = pool === 'Personalizado' && Array.isArray(config.poolPersonalizado) && config.poolPersonalizado.length
             ? `Personalizado: ${config.poolPersonalizado.join(', ')}` : pool;
         text = `Distribuir: ${op}${val} em ${qty} alvos${rest} de [${poolLabel}]`;
+    } else if (tipo === 'booleano') {
+        const sideA = _formatEquation(config.equacaoA || []);
+        const opLabel = { '==': '==', '!=': '!=', '>': '>', '>=': '≥', '<': '<', '<=': '≤' };
+        const op = opLabel[config.operadorComparacao] || config.operadorComparacao || '?';
+        const sideB = _formatEquation(config.equacaoB || []);
+        const vTrue = config.valorVerdadeiro ?? '?';
+        const vFalse = config.valorFalso ?? '?';
+        text = `${sideA} ${op} ${sideB} ? ✅${vTrue} : ❌${vFalse}`;
     }
     return text + evo + cond + dur || 'Efeito não definido';
 }
@@ -706,10 +723,23 @@ function renderConfigCondicional(config, mechanicsCache) {
     const gatilho = config?.gatilho || '';
     const sucessoIds = config?.efeitoSucessoIds || [];
     const falhaIds = config?.efeitoFalhaIds || [];
+    const condicaoMecanica = config?.condicaoMecanica || false;
+    const condicaoMecanicaIds = config?.condicaoMecanicaIds || [];
+
+    // Filter cache to only show mechanics with fonte === 'booleana'
+    const boolCache = mechanicsCache.filter(m => m.fonte === 'booleana' && m.publicado);
+
     return `
+    <div class="mech-condicao-toggle-row">
+        <label class="toggle-publish"><input type="checkbox" id="mech_condicaoMecanica" ${condicaoMecanica ? 'checked' : ''} onchange="window._mechCondicaoMecanicaToggle()"><span class="toggle-slider"></span></label>
+        <span class="toggle-label">🔀 Condição mecânica?</span>
+    </div>
     <div class="form-grid">
-        <div class="form-group full-width"><label>Gatilho / Quando se aplica <span class="required">*</span></label>
+        <div class="form-group full-width" id="mech_gatilho_wrap" style="display:${condicaoMecanica ? 'none' : ''}"><label>Gatilho / Quando se aplica <span class="required">*</span></label>
             <textarea id="mech_config_gatilho" placeholder="Ex: Teste de AUT por cena" oninput="window._mechUpdatePreview()">${esc(gatilho)}</textarea>
+        </div>
+        <div class="form-group full-width" id="mech_condicaoMecanicaSelector_wrap" style="display:${condicaoMecanica ? '' : 'none'}">
+            ${buildInlineMechSelector('mech_config_condicaoMecanicaIds', '🔀 Vincular Mecânica Booleana (fonte: Booleana)', condicaoMecanicaIds, boolCache, false)}
         </div>
         <div class="form-group full-width">
             ${buildInlineMechSelector('mech_config_efeitoSucessoIds', 'Efeito Sucesso (mecânicas)', sucessoIds, mechanicsCache, true)}
@@ -787,13 +817,123 @@ function renderConfigDistribuir(config) {
     </div>`;
 }
 
+// ===== RENDER A BOOLEAN EQUATION TERM (for side A or B) =====
+function _renderBoolEquationTerm(term, side, termIndex) {
+    const t = term || { tipo: 'fixo', valor: '' };
+    const showOp = termIndex > 0;
+    const opHtml = showOp ? `
+        <select class="eq-term-op" onchange="window._mechUpdatePreview()">
+            <optgroup label="Aritméticos">
+            <option value="+" ${t.op === '+' ? 'selected' : ''}>+</option>
+            <option value="-" ${t.op === '-' ? 'selected' : ''}>−</option>
+            <option value="×" ${t.op === '×' ? 'selected' : ''}>×</option>
+            <option value="÷" ${t.op === '÷' ? 'selected' : ''}>÷</option>
+            </optgroup>
+            <optgroup label="Lógicos">
+            <option value="min" ${t.op === 'min' ? 'selected' : ''}>↓ Menor entre</option>
+            <option value="max" ${t.op === 'max' ? 'selected' : ''}>↑ Maior entre</option>
+            </optgroup>
+        </select>` : '';
+
+    return `
+    <div class="eq-term" data-term-index="${termIndex}">
+        ${opHtml}
+        <select class="eq-term-tipo" onchange="window._mechBoolTermTipoChange('${side}', ${termIndex}); window._mechUpdatePreview()">
+            <option value="fixo" ${t.tipo !== 'ficha' ? 'selected' : ''}>🔢 Fixo</option>
+            <option value="ficha" ${t.tipo === 'ficha' ? 'selected' : ''}>📋 Ficha</option>
+        </select>
+        <div class="eq-term-fixo-wrap" style="display:${t.tipo !== 'ficha' ? '' : 'none'}">
+            <input type="text" class="eq-term-valor" value="${esc(String(t.valor ?? ''))}" placeholder="Valor" oninput="window._mechUpdatePreview()">
+        </div>
+        <div class="eq-term-ficha-wrap" style="display:${t.tipo === 'ficha' ? '' : 'none'}">
+            <select class="eq-term-ref" onchange="window._mechUpdatePreview()">
+                <option value="">— Ref —</option>${getValueSourceHTML()}
+            </select>
+        </div>
+        ${termIndex > 0 ? `<button type="button" class="eq-term-remove" onclick="window._mechBoolRemoveTerm('${side}', ${termIndex})" title="Remover termo">✕</button>` : ''}
+    </div>`;
+}
+
+function renderConfigBooleano(config) {
+    const equacaoA = config?.equacaoA || [{ tipo: 'fixo', valor: '' }];
+    const equacaoB = config?.equacaoB || [{ tipo: 'fixo', valor: '' }];
+    const operador = config?.operadorComparacao || '>=';
+    const valTrue = config?.valorVerdadeiro ?? '';
+    const valFalse = config?.valorFalso ?? '';
+
+    const termsA = equacaoA.map((t, i) => _renderBoolEquationTerm(t, 'A', i)).join('');
+    const termsB = equacaoB.map((t, i) => _renderBoolEquationTerm(t, 'B', i)).join('');
+
+    return `
+    <div class="bool-equation-wrap">
+        <div class="bool-equation-side">
+            <div class="bool-equation-side-label">Lado Esquerdo (A)</div>
+            <div class="eq-terms-container" id="boolEquacaoA">
+                ${termsA}
+            </div>
+            <button type="button" class="eq-add-term-btn" onclick="window._mechBoolAddTerm('A')">➕ Adicionar Termo</button>
+        </div>
+
+        <div class="bool-comparator-row">
+            <div class="bool-vs-label">COMPARAR COM</div>
+            <select class="bool-comparator" id="mech_config_operadorComparacao" onchange="window._mechUpdatePreview()">
+                <option value="==" ${operador === '==' ? 'selected' : ''}>== Igual</option>
+                <option value="!=" ${operador === '!=' ? 'selected' : ''}>!= Diferente</option>
+                <option value=">" ${operador === '>' ? 'selected' : ''}>> Maior que</option>
+                <option value=">=" ${operador === '>=' ? 'selected' : ''}>≥ Maior ou igual</option>
+                <option value="<" ${operador === '<' ? 'selected' : ''}>< Menor que</option>
+                <option value="<=" ${operador === '<=' ? 'selected' : ''}>≤ Menor ou igual</option>
+            </select>
+        </div>
+
+        <div class="bool-equation-side">
+            <div class="bool-equation-side-label">Lado Direito (B)</div>
+            <div class="eq-terms-container" id="boolEquacaoB">
+                ${termsB}
+            </div>
+            <button type="button" class="eq-add-term-btn" onclick="window._mechBoolAddTerm('B')">➕ Adicionar Termo</button>
+        </div>
+    </div>
+
+    <div class="bool-output-section">
+        <div class="bool-output-card true-card">
+            <label>✅ Valor se Verdadeiro</label>
+            <input type="text" id="mech_config_valorVerdadeiro" value="${esc(String(valTrue))}" placeholder="Ex: 2" oninput="window._mechUpdatePreview()">
+        </div>
+        <div class="bool-output-card false-card">
+            <label>❌ Valor se Falso</label>
+            <input type="text" id="mech_config_valorFalso" value="${esc(String(valFalse))}" placeholder="Ex: -1" oninput="window._mechUpdatePreview()">
+        </div>
+    </div>`;
+}
+
 // ===== PROGRESSION / LEVEL TABLE =====
 
 // Returns indices and labels of fixo terms across all calc rows for progression columns
-function _getEquacaoFixoTerms() {
+function _getEquacaoFixoTerms(config) {
+    const fixoTerms = [];
+    
+    // If config is provided, build from data (used during initial render before DOM is ready)
+    if (config) {
+        const calculos = Array.isArray(config.calculos) ? config.calculos : [];
+        if (calculos.length === 0 && (config.alvo || config.equacao || config.valor !== undefined)) {
+            calculos.push(config);
+        }
+        calculos.forEach((c, ci) => {
+            const equacao = c.equacao || (typeof _migrateCalcToEquacao === 'function' ? _migrateCalcToEquacao(c) : []);
+            equacao.forEach((t, ti) => {
+                if (!t || t.tipo === 'fixo' || !t.tipo) {
+                    const calcNum = calculos.length > 1 ? `C${ci + 1}.` : '';
+                    fixoTerms.push({ calcIndex: ci, termIndex: ti, label: `${calcNum}Termo ${fixoTerms.length + 1}` });
+                }
+            });
+        });
+        if (fixoTerms.length > 0) return fixoTerms;
+    }
+
+    // Otherwise build from DOM
     const list = document.getElementById('mechCalcList');
     if (!list) return [];
-    const fixoTerms = [];
     const calcRows = list.querySelectorAll('.calc-row');
     calcRows.forEach((row, ci) => {
         const terms = row.querySelectorAll('.eq-term');
@@ -853,10 +993,10 @@ function renderConfigProgressao(data, tipo) {
     const apenasCriacao = data?.progressaoApenasCriacao || false;
     const tipoExp = data?.progressaoTipoExp || 'custo';
     tipo = tipo || data?.tipo || 'modificar';
+    const config = data?.config || {};
 
-    // fixoTerms will be empty on initial render (calc rows not in DOM yet)
-    // _mechRefreshProgressao will re-render with correct terms later
-    const fixoTerms = _getEquacaoFixoTerms();
+    // fixoTerms will be built from config if provided (initial load) or DOM (refresh)
+    const fixoTerms = _getEquacaoFixoTerms(config);
     const headers = _getProgressaoHeaders(tipo, tipoExp, fixoTerms);
     let tabelaRows = '';
     if (evoluivel) {
@@ -1036,6 +1176,7 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, 
                         <option value="condicional" ${tipo === 'condicional' ? 'selected' : ''}>⚡ Condicional (efeito com gatilho)</option>
                         <option value="narrativo" ${tipo === 'narrativo' ? 'selected' : ''}>📝 Narrativo (efeito descritivo)</option>
                         <option value="distribuir" ${tipo === 'distribuir' ? 'selected' : ''}>🎲 Distribuir (distribui pontos entre múltiplos alvos)</option>
+                        <option value="booleano" ${tipo === 'booleano' ? 'selected' : ''}>🔀 Booleano (equação comparativa)</option>
                     </select>
                 </div>
                 <div class="mech-config-area" id="mechConfigArea"></div>
@@ -1190,6 +1331,7 @@ window._mechTipoChange = function () {
     else if (tipo === 'condicional') area.innerHTML = renderConfigCondicional(config, window._mechCache || []);
     else if (tipo === 'narrativo') area.innerHTML = renderConfigNarrativo(config);
     else if (tipo === 'distribuir') area.innerHTML = renderConfigDistribuir(config);
+    else if (tipo === 'booleano') area.innerHTML = renderConfigBooleano(config);
 
     // Set alvo values and ficha refs in calc rows after DOM is ready
     if (tipo === 'modificar' || tipo === 'limitar') {
@@ -1241,6 +1383,18 @@ window._mechTipoChange = function () {
             window._mechSyncDuracaoForExp();
             // Refresh progression after equacao is set in DOM
             window._mechRefreshProgressao(tipo);
+        }, 0);
+    }
+
+    // Restore booleano equation ficha refs after DOM is ready
+    if (tipo === 'booleano') {
+        setTimeout(() => {
+            ['A', 'B'].forEach(side => {
+                const container = document.getElementById('boolEquacao' + side);
+                if (!container) return;
+                const equacao = side === 'A' ? (config?.equacaoA || []) : (config?.equacaoB || []);
+                _restoreEquacaoRefs(container, equacao);
+            });
         }, 0);
     }
 
@@ -1339,6 +1493,52 @@ window._mechTipoConcessaoChange = function() {
             container.style.display = 'none';
         }
     }
+};
+
+// ===== BOOLEAN EQUATION HANDLERS =====
+window._mechBoolTermTipoChange = function (side, termIndex) {
+    const container = document.getElementById('boolEquacao' + side);
+    if (!container) return;
+    const term = container.querySelectorAll('.eq-term')[termIndex];
+    if (!term) return;
+    const tipo = term.querySelector('.eq-term-tipo')?.value || 'fixo';
+    const fixoWrap = term.querySelector('.eq-term-fixo-wrap');
+    const fichaWrap = term.querySelector('.eq-term-ficha-wrap');
+    if (fixoWrap) fixoWrap.style.display = tipo === 'fixo' ? '' : 'none';
+    if (fichaWrap) fichaWrap.style.display = tipo === 'ficha' ? '' : 'none';
+};
+
+window._mechBoolAddTerm = function (side) {
+    const container = document.getElementById('boolEquacao' + side);
+    if (!container) return;
+    const termIndex = container.querySelectorAll('.eq-term').length;
+    const html = _renderBoolEquationTerm({ op: '+', tipo: 'fixo', valor: '' }, side, termIndex);
+    container.insertAdjacentHTML('beforeend', html);
+    window._mechUpdatePreview();
+};
+
+window._mechBoolRemoveTerm = function (side, termIndex) {
+    const container = document.getElementById('boolEquacao' + side);
+    if (!container) return;
+    const terms = container.querySelectorAll('.eq-term');
+    if (terms.length <= 1) return;
+    if (terms[termIndex]) terms[termIndex].remove();
+    // Re-render to fix onclick indices
+    const currentEquacao = _collectEquacaoFromContainer(container);
+    container.innerHTML = currentEquacao.map((t, ti) => _renderBoolEquationTerm(t, side, ti)).join('');
+    // Restore ficha ref values after re-render
+    _restoreEquacaoRefs(container, currentEquacao);
+    window._mechUpdatePreview();
+};
+
+// ===== CONDIÇÃO MECÂNICA TOGGLE HANDLER =====
+window._mechCondicaoMecanicaToggle = function () {
+    const checked = document.getElementById('mech_condicaoMecanica')?.checked || false;
+    const gatilhoWrap = document.getElementById('mech_gatilho_wrap');
+    const selectorWrap = document.getElementById('mech_condicaoMecanicaSelector_wrap');
+    if (gatilhoWrap) gatilhoWrap.style.display = checked ? 'none' : '';
+    if (selectorWrap) selectorWrap.style.display = checked ? '' : 'none';
+    window._mechUpdatePreview();
 };
 
 // ===== COLLECT EQUATION FROM A CALC ROW =====
@@ -1586,8 +1786,11 @@ function collectMechFormData() {
             ...(partesCorpo !== undefined ? { partesCorpo } : {})
         };
     } else if (tipo === 'condicional') {
+        const condicaoMecanica = document.getElementById('mech_condicaoMecanica')?.checked || false;
         data.config = {
-            gatilho: document.getElementById('mech_config_gatilho')?.value || '',
+            condicaoMecanica,
+            gatilho: condicaoMecanica ? '' : (document.getElementById('mech_config_gatilho')?.value || ''),
+            condicaoMecanicaIds: condicaoMecanica ? JSON.parse(document.getElementById('mech_config_condicaoMecanicaIds')?.value || '[]') : [],
             efeitoSucessoIds: JSON.parse(document.getElementById('mech_config_efeitoSucessoIds')?.value || '[]'),
             efeitoFalhaIds: JSON.parse(document.getElementById('mech_config_efeitoFalhaIds')?.value || '[]')
         };
@@ -1608,6 +1811,18 @@ function collectMechFormData() {
             operacao: document.getElementById('mech_config_operacao_dist')?.value || '+',
             restricao: document.getElementById('mech_config_restricao')?.value || 'diferentes',
             poolPersonalizado
+        };
+    } else if (tipo === 'booleano') {
+        const containerA = document.getElementById('boolEquacaoA');
+        const containerB = document.getElementById('boolEquacaoB');
+        const rawTrue = document.getElementById('mech_config_valorVerdadeiro')?.value?.trim() ?? '';
+        const rawFalse = document.getElementById('mech_config_valorFalso')?.value?.trim() ?? '';
+        data.config = {
+            equacaoA: containerA ? _collectEquacaoFromContainer(containerA) : [{ tipo: 'fixo', valor: '' }],
+            operadorComparacao: document.getElementById('mech_config_operadorComparacao')?.value || '>=',
+            equacaoB: containerB ? _collectEquacaoFromContainer(containerB) : [{ tipo: 'fixo', valor: '' }],
+            valorVerdadeiro: isNaN(Number(rawTrue)) || rawTrue === '' ? rawTrue : Number(rawTrue),
+            valorFalso: isNaN(Number(rawFalse)) || rawFalse === '' ? rawFalse : Number(rawFalse)
         };
     }
 

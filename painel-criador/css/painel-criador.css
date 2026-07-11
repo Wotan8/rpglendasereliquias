@@ -1280,12 +1280,14 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     --type-condicional: #EC4899;
     --type-narrativo: #6B7280;
     --type-distribuir: #8B5CF6;
+    --type-booleano: #14B8A6;
     --fonte-raca: #10B981;
     --fonte-classe: #4F6EF7;
     --fonte-tribo: #F59E0B;
     --fonte-peculiaridade: #a78bfa;
     --fonte-item: #8B5CF6;
     --fonte-condicao: #EF4444;
+    --fonte-booleana: #14B8A6;
     --fonte-manobra: #EC4899;
     --fonte-magia: #06B6D4;
     --fonte-individual: #F97316;
@@ -1481,6 +1483,10 @@ html.dark .mech-card {
 
 .mech-card[data-type="distribuir"] {
     border-left-color: var(--type-distribuir);
+}
+
+.mech-card[data-type="booleano"] {
+    border-left-color: var(--type-booleano);
 }
 
 .mech-card-header {
@@ -2706,4 +2712,151 @@ html.dark .settings-tab:hover {
     color: var(--muted);
     font-size: 0.78rem;
     font-style: italic;
+}
+
+/* =============================================
+   BOOLEANO EQUATION BUILDER — Styles
+   ============================================= */
+
+.bool-equation-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background: var(--chip);
+    border: 2px solid var(--type-booleano);
+    border-radius: 10px;
+    margin-top: 8px;
+}
+
+html.dark .bool-equation-wrap {
+    background: #151829;
+}
+
+.bool-equation-side {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.bool-equation-side-label {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--type-booleano);
+}
+
+.bool-comparator-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 6px 0;
+}
+
+.bool-comparator {
+    padding: 6px 16px;
+    font-size: 1rem;
+    font-weight: 900;
+    border: 2px solid var(--type-booleano);
+    border-radius: 8px;
+    background: rgba(20, 184, 166, 0.08);
+    color: var(--type-booleano);
+    cursor: pointer;
+    text-align: center;
+    min-width: 120px;
+    transition: all 0.2s;
+}
+
+.bool-comparator:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2);
+}
+
+.bool-vs-label {
+    font-size: 0.7rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-align: center;
+    padding: 2px 0;
+}
+
+.bool-output-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.bool-output-card {
+    padding: 12px;
+    border-radius: 8px;
+    border: 2px solid var(--soft);
+    background: var(--chip);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+html.dark .bool-output-card {
+    background: #151829;
+}
+
+.bool-output-card.true-card {
+    border-color: #10B981;
+}
+
+.bool-output-card.false-card {
+    border-color: #EF4444;
+}
+
+.bool-output-card label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.bool-output-card.true-card label {
+    color: #10B981;
+}
+
+.bool-output-card.false-card label {
+    color: #EF4444;
+}
+
+.bool-output-card input {
+    width: 100%;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 0.85rem;
+}
+
+/* =============================================
+   CONDIÇÃO MECÂNICA TOGGLE — Styles
+   ============================================= */
+
+.mech-condicao-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: rgba(20, 184, 166, 0.06);
+    border: 1px solid rgba(20, 184, 166, 0.25);
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+html.dark .mech-condicao-toggle-row {
+    background: rgba(20, 184, 166, 0.08);
+}
+
+.mech-condicao-toggle-row .toggle-label {
+    font-weight: 700;
+    font-size: 0.85rem;
 }

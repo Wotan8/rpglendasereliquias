@@ -766,23 +766,40 @@ function _generatePecEffectText(pec) {
                         const adjustedMech = JSON.parse(JSON.stringify(m));
                         delete adjustedMech.previewTexto;
 
-                        if (m.tipo === 'modificar') {
-                            if (prog.valor !== undefined) {
-                                adjustedMech.config = { ...adjustedMech.config, valor: prog.valor };
-                            }
-                        } else if (m.tipo === 'limitar') {
-                            const limVal = prog.valorLimite !== undefined ? prog.valorLimite : prog.valor;
-                            if (limVal !== undefined) {
-                                if (!adjustedMech.config) adjustedMech.config = {};
-                                const tipoLim = adjustedMech.config.tipoLimite;
-                                if (tipoLim === 'maximo' || adjustedMech.config.valorMaximo !== undefined) {
-                                    adjustedMech.config.valorMaximo = limVal;
+                        if (m.tipo === 'modificar' || m.tipo === 'limitar') {
+                            if (prog.termos && Array.isArray(adjustedMech.config?.calculos)) {
+                                for (const calc of adjustedMech.config.calculos) {
+                                    if (Array.isArray(calc.equacao)) {
+                                        let fixoIdx = 0;
+                                        for (const term of calc.equacao) {
+                                            if (!term.tipo || term.tipo === 'fixo') {
+                                                const overrideVal = prog.termos[String(fixoIdx)];
+                                                if (overrideVal !== undefined && overrideVal !== '') {
+                                                    term.valor = overrideVal;
+                                                }
+                                                fixoIdx++;
+                                            }
+                                        }
+                                    }
                                 }
-                                if (tipoLim === 'minimo' || adjustedMech.config.valorMinimo !== undefined) {
-                                    adjustedMech.config.valorMinimo = limVal;
+                            } else if (m.tipo === 'modificar') {
+                                if (prog.valor !== undefined) {
+                                    adjustedMech.config = { ...adjustedMech.config, valor: prog.valor };
                                 }
-                                if (adjustedMech.config.valorMaximo === undefined && adjustedMech.config.valorMinimo === undefined) {
-                                    adjustedMech.config.valorMaximo = limVal;
+                            } else if (m.tipo === 'limitar') {
+                                const limVal = prog.valorLimite !== undefined ? prog.valorLimite : prog.valor;
+                                if (limVal !== undefined) {
+                                    if (!adjustedMech.config) adjustedMech.config = {};
+                                    const tipoLim = adjustedMech.config.tipoLimite;
+                                    if (tipoLim === 'maximo' || adjustedMech.config.valorMaximo !== undefined) {
+                                        adjustedMech.config.valorMaximo = limVal;
+                                    }
+                                    if (tipoLim === 'minimo' || adjustedMech.config.valorMinimo !== undefined) {
+                                        adjustedMech.config.valorMinimo = limVal;
+                                    }
+                                    if (adjustedMech.config.valorMaximo === undefined && adjustedMech.config.valorMinimo === undefined) {
+                                        adjustedMech.config.valorMaximo = limVal;
+                                    }
                                 }
                             }
                         } else if (m.tipo === 'distribuir') {

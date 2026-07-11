@@ -92,6 +92,39 @@ function initPhase2B(container) {
     }
 }
 
+function generatePecDetailsHtml(pec, level = 1) {
+    let mecsHtml = '';
+    if (pec.mecanicas && pec.mecanicas.length > 0) {
+        mecsHtml = `<div style="margin-top:12px; border-top:1px solid var(--line); padding-top:8px;">
+            <strong style="color:var(--accent); font-size:0.8rem; text-transform:uppercase;">⚙️ Efeitos Vinculados (Nv. ${level}):</strong>
+            <ul style="margin:4px 0 0 16px; padding:0; color:var(--text); font-size:0.8rem; list-style-type:circle;">`;
+            
+        const niveisData = pec.niveis && pec.niveis[level];
+        if (niveisData && niveisData.efeitosArray && niveisData.efeitosArray.length > 0) {
+            niveisData.efeitosArray.forEach(txt => {
+                mecsHtml += `<li style="margin-bottom:4px;">${escHtml(txt)}</li>`;
+            });
+        } else {
+            pec.mecanicas.forEach(m => {
+                const mText = m.previewTexto || (typeof generatePreviewText === 'function' ? generatePreviewText(m) : m.nome);
+                mecsHtml += `<li style="margin-bottom:4px;">${escHtml(mText)}</li>`;
+            });
+        }
+        mecsHtml += `</ul></div>`;
+    }
+    
+    let desc = pec.descricao || 'Sem descrição.';
+    if (pec.descricaoNivel && pec.descricaoNivel[level]) {
+        desc = pec.descricaoNivel[level];
+    }
+    
+    return `
+        <strong>${escHtml(pec.nome)}</strong><br>
+        <div style="margin-top:8px;">${escHtml(desc)}</div>
+        ${mecsHtml}
+    `;
+}
+
 /**
  * Resolve the EXP mechanic linked via mecanicaExpCriacao.
  * Extracts the operation (+/-) and the value from the mechanic's config.calculos structure.
@@ -198,20 +231,31 @@ function buildPecCard2(pec, selectedClass) {
         levelSelectorHtml += `</div>`;
     }
 
+    let apenasCriacaoBadge = '';
+    
+    if (pec.mecanicas && pec.mecanicas.length > 0) {
+        const apenasCriacao = pec.mecanicas.some(m => m.progressaoApenasCriacao === true);
+        if (apenasCriacao) {
+            apenasCriacaoBadge = `<div style="font-size:0.75rem; color:var(--warning); margin-top:2px;" title="Esta peculiaridade só pode ser aprimorada durante a criação do personagem.">🏗️ Apenas na Criação</div>`;
+        }
+    }
+
+    const detailsHtml = generatePecDetailsHtml(pec, currentLevel);
+
     return `
         <div class="pec-list-item-wrapper" style="width:100%; display:flex; flex-direction:column; gap:4px;">
             <div class="pec-list-item ${selectedClass}" data-pec-id="${pec.id}" onclick="togglePeculiarity2('${pec.id}')">
                 <div class="pec-list-icon">${pec.icone || '✨'}</div>
                 <div class="pec-list-content">
                     <div class="pec-list-title">${escHtml(pec.nome)}</div>
+                    ${apenasCriacaoBadge}
                     ${levelSelectorHtml}
                 </div>
                 ${expText ? `<div class="pec-list-cost ${expClass}" style="color:${isVantagem ? 'var(--success)' : 'var(--danger)'};">${expText}</div>` : ''}
                 <button class="pec-info-btn" style="background:none; border:none; cursor:pointer; font-size:1.2rem; margin-left:8px; padding:4px; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" onclick="togglePecInfo(event, '${pec.id}')" title="Ver detalhes">ℹ️</button>
             </div>
             <div class="pec-details-panel" id="pec-details-${pec.id}" style="display:none; padding:12px; background:var(--bg); border:1px dashed var(--soft); border-radius:8px; font-size:0.85rem; color:var(--text);">
-                <strong>${escHtml(pec.nome)}</strong><br>
-                <div style="margin-top:8px;">${escHtml(pec.descricao || 'Sem descrição.')}</div>
+                ${detailsHtml}
             </div>
         </div>
     `;
@@ -342,6 +386,12 @@ function setPecLevel(pecId, level) {
         const btnLevel = parseInt(btn.textContent);
         btn.classList.toggle('active', btnLevel <= level);
     });
+    
+    // Update details panel dynamically
+    const detailsPanel = document.getElementById(`pec-details-${pecId}`);
+    if (detailsPanel) {
+        detailsPanel.innerHTML = generatePecDetailsHtml(pec, level);
+    }
 
     saveWizardToStorage();
 }
@@ -352,13 +402,25 @@ function buildInheritedPecCard(pec, sourceLabel) {
     const hasLevels = pec.tipo === 'evolutivo' && pec.nivelMax > 1;
     const baseLevel = pec.nivelAtual || 1;
     const currentLevel = (wizardState.niveisPeculiaridadesHerdadas || {})[pec.id] || baseLevel;
+    
+    let apenasCriacaoBadge = '';
+    
+    if (pec.mecanicas && pec.mecanicas.length > 0) {
+        const apenasCriacao = pec.mecanicas.some(m => m.progressaoApenasCriacao === true);
+        if (apenasCriacao) {
+            apenasCriacaoBadge = `<div style="font-size:0.75rem; color:var(--warning); margin-top:2px;" title="Esta peculiaridade só pode ser aprimorada durante a criação do personagem.">🏗️ Apenas na Criação</div>`;
+        }
+    }
+
+    const detailsHtml = generatePecDetailsHtml(pec, currentLevel);
 
     let html = `
-        <div class="pec-list-item-wrapper" style="width:100%; display:flex; flex-direction:column; gap:4px;">
+        <div class="pec-list-item-wrapper" style="width:100%; display:flex; flex-direction:column; gap:4px; margin-bottom:8px;">
             <div class="pec-list-item pec-list-item-inherited" data-inherited-pec-id="${pec.id}">
                 <div class="pec-list-icon">${pec.icone || '🧬'}</div>
                 <div class="pec-list-content">
                     <div class="pec-list-title">${escHtml(pec.nome)} <span style="font-size:.7rem;padding:2px 6px;background:var(--line);border-radius:4px;margin-left:6px;vertical-align:middle;">${escHtml(sourceLabel)}</span></div>
+                    ${apenasCriacaoBadge}
     `;
 
     if (hasLevels) {
@@ -391,8 +453,7 @@ function buildInheritedPecCard(pec, sourceLabel) {
                 <button class="pec-info-btn" style="background:none; border:none; cursor:pointer; font-size:1.2rem; margin-left:8px; padding:4px; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" onclick="togglePecInfo(event, '${pec.id}')" title="Ver detalhes">ℹ️</button>
             </div>
             <div class="pec-details-panel" id="pec-details-${pec.id}" style="display:none; padding:12px; background:var(--bg); border:1px dashed var(--soft); border-radius:8px; font-size:0.85rem; color:var(--text);">
-                <strong>${escHtml(pec.nome)}</strong><br>
-                <div style="margin-top:8px;">${escHtml(pec.descricao || 'Sem descrição.')}</div>
+                ${detailsHtml}
             </div>
         </div>
     `;
@@ -467,6 +528,12 @@ function setInheritedPecLevel(pecId, level) {
         const btnLevel = parseInt(btn.textContent);
         btn.classList.toggle('active', btnLevel <= targetLevel);
     });
+
+    // Update details panel dynamically
+    const detailsPanel = document.getElementById(`pec-details-${pecId}`);
+    if (detailsPanel) {
+        detailsPanel.innerHTML = generatePecDetailsHtml(pec, targetLevel);
+    }
 
     saveWizardToStorage();
 }
