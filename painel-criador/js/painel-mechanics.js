@@ -129,7 +129,14 @@ export const TIPO_LABELS = { modificar: 'Modificar', limitar: 'Limitar', concede
 
 function esc(text) {
     if (text === null || text === undefined) return '';
-    const d = document.createElement('div'); d.textContent = String(text); return d.innerHTML;
+    // Escapa também aspas — este helper é usado dentro de atributos HTML
+    // (value="...", onclick='...'); sem isso, nomes com aspas quebravam o DOM.
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 /**
@@ -337,7 +344,7 @@ export function renderMechanicCard(item) {
                 <div class="item-card-actions">
                     <button class="btn-edit" onclick="event.stopPropagation(); openMechanicEditor('${item.id}')" title="Editar">✏️</button>
                     <button class="btn-edit" onclick="event.stopPropagation(); duplicateItem('${item.id}')" title="Duplicar" style="border-color:var(--warning);color:var(--warning)">📋</button>
-                    <button class="btn-delete-card" onclick="event.stopPropagation(); openDeleteModal('${item.id}','${esc(name).replace(/'/g, "\\'")}')" title="Excluir">🗑️</button>
+                    <button class="btn-delete-card" onclick="event.stopPropagation(); openDeleteModal('${item.id}')" title="Excluir">🗑️</button>
                 </div>
                 <span class="badge-status ${isPublished ? 'badge-published' : 'badge-draft'}">${isPublished ? '✅ Pub' : '📝 Rasc'}</span>
             </div>
@@ -1133,6 +1140,17 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, 
     if (formModal && parentFieldKey) {
         formModal.style.display = 'none';
     }
+
+    // Esconde também sub-modais abertos (Peculiaridade / Valor Derivado):
+    // sem isso, eles ficavam sobre o editor inline, cobrindo-o e bloqueando cliques.
+    window._mechHiddenOverlays = [];
+    ['subFormModalPeculiaridade', 'subFormModalValorDerivado'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.style.display !== 'none') {
+            el.style.display = 'none';
+            window._mechHiddenOverlays.push(id);
+        }
+    });
     
     const area = document.getElementById('mechanicsEditorArea');
     area.style.display = '';
@@ -1311,6 +1329,19 @@ window._mechBack = function () {
         const formModal = document.getElementById('formModal');
         if (formModal) formModal.style.display = '';
         window._mechParentFieldKey = null; // Clear flag
+    }
+
+    // Restaura sub-modais que foram escondidos ao abrir o editor,
+    // trazendo-os de volta ao topo da pilha de camadas.
+    if (Array.isArray(window._mechHiddenOverlays)) {
+        window._mechHiddenOverlays.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.display = '';
+                if (window.bringModalToTop) window.bringModalToTop(el);
+            }
+        });
+        window._mechHiddenOverlays = [];
     }
     
     // Always restore moduleContent because formModal is just an overlay on top of it.

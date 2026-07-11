@@ -3,7 +3,7 @@
 // Lendas e Relíquias (ficha-v1.7_1 style)
 // =============================================
 
-import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildManeuverSelectorHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=2';
+import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildManeuverSelectorHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=3';
 import { RUNIC_MODULE_DEF, buildRunicField, collectRunicField, importRunicSeed } from './painel-runic.js?v=1';
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -417,6 +417,70 @@ function updateThemeBtn() {
 }
 initTheme();
 
+// =====================================================================
+// GERENCIADOR DE CAMADAS DE MODAIS (Z-INDEX STACK)
+// Garante que todo modal recém-aberto SEMPRE fique acima dos demais,
+// independentemente da ordem no DOM ou de valores fixos de z-index.
+// =====================================================================
+let _modalZTop = 10000;
+window.bringModalToTop = function (el) {
+    if (!el) return;
+    _modalZTop += 10;
+    el.style.zIndex = String(_modalZTop);
+    return _modalZTop;
+};
+
+// Lista de overlays conhecidos com sua função de fechamento.
+// Usado por closeTopModal() (tecla ESC / clique fora) para fechar
+// sempre o modal que estiver visualmente no topo.
+function _getOpenOverlays() {
+    const candidates = [
+        { el: document.getElementById('ctMechModal'), close: () => document.getElementById('ctMechModal')?.remove() },
+        { el: document.getElementById('subFormModalPeculiaridade'), close: () => window.closeSubFormPeculiaridade && window.closeSubFormPeculiaridade() },
+        { el: document.getElementById('subFormModalValorDerivado'), close: () => window.closeSubFormValorDerivado && window.closeSubFormValorDerivado() },
+        { el: document.getElementById('settingsModal'), close: () => window.closeSettingsModal && window.closeSettingsModal() },
+        { el: document.getElementById('deleteModal'), close: () => window.closeDeleteModal && window.closeDeleteModal() },
+        { el: document.getElementById('formModal'), close: () => window.closeForm && window.closeForm() },
+    ];
+    return candidates.filter(c => {
+        if (!c.el) return false;
+        const style = window.getComputedStyle(c.el);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+    });
+}
+
+// Fecha o modal visível com maior z-index (o que está no topo da pilha)
+window.closeTopModal = function () {
+    const open = _getOpenOverlays();
+    if (open.length === 0) {
+        // Fallback: editor inline de mecânicas
+        const editorArea = document.getElementById('mechanicsEditorArea');
+        if (editorArea && editorArea.style.display !== 'none') {
+            window._mechBack && window._mechBack();
+            return true;
+        }
+        return false;
+    }
+    open.sort((a, b) => (parseInt(b.el.style.zIndex || 0, 10)) - (parseInt(a.el.style.zIndex || 0, 10)));
+    open[0].close();
+    return true;
+};
+
+// ===== SETTINGS MODAL (abre/fecha com controle de camada) =====
+window.openSettingsModal = function () {
+    const m = document.getElementById('settingsModal');
+    if (!m) return;
+    m.style.display = 'flex';
+    m.classList.add('active');
+    window.bringModalToTop(m);
+};
+window.closeSettingsModal = function () {
+    const m = document.getElementById('settingsModal');
+    if (!m) return;
+    m.style.display = 'none';
+    m.classList.remove('active');
+};
+
 // ===== AUTH STATE =====
 onAuthStateChanged(auth, async (user) => {
     const loadingScreen = document.getElementById('loadingScreen');
@@ -487,9 +551,14 @@ window.switchModule = function (moduleName, btnEl) {
     const titleEl = document.getElementById('createCardTitle');
     if (titleEl) titleEl.textContent = `Criar ${modDef.name}`;
 
-    // Hide mechanics editor when switching away
+    // Limpar busca da aba anterior (evita filtro "fantasma" ao trocar de módulo)
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = '';
+
+    // Hide mechanics editor when switching away + limpar estado residual
     const mechArea = document.getElementById('mechanicsEditorArea');
     if (mechArea) mechArea.style.display = 'none';
+    window._mechParentFieldKey = null;
     document.getElementById('moduleContent').style.display = '';
 
     // Remove/add mechanic extra filters
@@ -620,7 +689,8 @@ async function loadModule(moduleName) {
         refreshSkillsCache(),
         refreshDerivedValuesCache(),
         refreshVitalStatsCache(),
-        refreshBodyPartsCache()
+        refreshBodyPartsCache(),
+        refreshClassesCache()
     ]);
 
     // Module-specific caches
@@ -742,6 +812,18 @@ async function refreshEquipmentCache() {
     } catch (e) { console.error('Erro cache equipment:', e); }
 }
 
+async function refreshClassesCache() {
+    try {
+        const snap = await getDocs(collection(db, 'system/data/classes'));
+        const classes = [];
+        snap.forEach(d => classes.push({ id: d.id, ...d.data() }));
+        classes.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        // Consumido por _getModuleLimitOptions() no editor de mecânicas
+        // (opções "Limite: <módulo>") — antes nunca era populado.
+        window._classesCache = classes;
+    } catch (e) { console.error('Erro cache classes:', e); }
+}
+
 async function refreshBodyPartsCache() {
     try {
         const snap = await getDocs(collection(db, 'system/data/bodyParts'));
@@ -753,29 +835,153 @@ async function refreshBodyPartsCache() {
 }
 
 // ===== RENDER ITEMS =====
+
+// Meta-chips específicos por módulo — mostram só o que importa em cada aba,
+// tornando os cards mais informativos sem abrir o formulário.
+const SKILL_CAT_SHORT = { fisico: '💪 Físico', mental: '🧠 Mental', social: '🗣️ Social', combate: '⚔️ Combate', exclusivo: '🌟 Exclusivo' };
+const PEC_FONTE_SHORT = { raca: '🧬 Raça', classe: '⚔️ Classe', tribo: '🏕️ Tribo', condicao: '💀 Condição', individual: '👤 Individual', generica: '⚙️ Genérica' };
+
+function _countLinks(item, keys) {
+    let n = 0;
+    keys.forEach(k => { if (Array.isArray(item[k])) n += item[k].length; });
+    return n;
+}
+
+function _buildCardMetaChips(item) {
+    const chips = [];
+    const add = (text, cls = '') => { if (text) chips.push(`<span class="meta-chip ${cls}">${text}</span>`); };
+    const mechCount = _countLinks(item, ['mecanicaIds', 'efeitoMecanicaIds']);
+    const pecCount = _countLinks(item, ['peculiaridadeIds', 'bonusIniciais']);
+
+    switch (currentModule) {
+        case 'races':
+            add(item.expectativaVida ? `⏳ ${escapeHtml(item.expectativaVida)}` : '');
+            if (pecCount) add(`✨ ${pecCount} pecul.`);
+            if (Array.isArray(item.partesDoCorpo) && item.partesDoCorpo.length) add(`🦴 ${item.partesDoCorpo.length} partes`);
+            break;
+        case 'classes':
+            add(item.usaRunomancia ? 'ᛟ Runomancia' : '', 'chip-accent');
+            if (pecCount) add(`✨ ${pecCount} pecul.`);
+            if (Array.isArray(item.manobras) && item.manobras.length) add(`💥 ${item.manobras.length} manobras`);
+            if (Array.isArray(item.modulosDaClasse) && item.modulosDaClasse.length) add(`📦 ${item.modulosDaClasse.length} módulos`);
+            break;
+        case 'tribes':
+            if (pecCount) add(`✨ ${pecCount} pecul.`);
+            if (Array.isArray(item.unidadesMilitares) && item.unidadesMilitares.length) add(`🛡️ ${item.unidadesMilitares.length} unidades`);
+            break;
+        case 'peculiarities':
+            add(PEC_FONTE_SHORT[item.fonte] || '', 'chip-accent');
+            add(item.quandoSeAplica === 'na_criacao' ? '🎲 Na criação' : '♻️ Passivo');
+            if (item.concedeAura || item.auraVinculadaId) add('🌟 Concede Aura', 'chip-gold');
+            if (mechCount) add(`🔧 ${mechCount}`);
+            break;
+        case 'skills':
+            add(SKILL_CAT_SHORT[(item.categoria || '').toLowerCase()] || '', 'chip-accent');
+            if (Array.isArray(item.atributoBase) && item.atributoBase.length) add(`🎯 ${item.atributoBase.map(escapeHtml).join('/')}`);
+            if (item.custoEvolucao != null && item.custoEvolucao !== '') add(`⭐ ${escapeHtml(item.custoEvolucao)} EXP/nv`);
+            if (item.todoPersonagem) add('👥 Todos', 'chip-gold');
+            break;
+        case 'equipment':
+            add(item.tipo ? escapeHtml(item.tipo) : '', 'chip-accent');
+            if (item.peso != null) add(`⚖️ ${escapeHtml(item.peso)}`);
+            if (item.tamanho != null) add(`📐 ${escapeHtml(item.tamanho)}`);
+            if (item.ehContainer) add(`📦 Container${item.capacidadeContainer ? ' ×' + escapeHtml(item.capacidadeContainer) : ''}`, 'chip-gold');
+            if (mechCount) add(`🔧 ${mechCount}`);
+            break;
+        case 'conditions':
+            add(item.duracao ? `⏱️ ${escapeHtml(item.duracao)}` : '');
+            add(item.removivel ? '🔓 Removível' : '🔒 Permanente');
+            if (mechCount) add(`🔧 ${mechCount}`);
+            break;
+        case 'derivedValues':
+            add(item.blocoNome ? `🗂️ ${escapeHtml(item.blocoNome)}` : '', 'chip-accent');
+            if (item.ordem != null) add(`#${escapeHtml(item.ordem)}`);
+            if (item.todoPersonagem) add('👥 Todos', 'chip-gold');
+            if (item.campoAtual) add('✏️ Atual');
+            if (mechCount) add(`🔧 ${mechCount}`);
+            break;
+        case 'vitalStats':
+            add(item.chaveInterna ? `🔑 ${escapeHtml(item.chaveInterna)}` : '', 'chip-accent');
+            if (item.ordem != null) add(`#${escapeHtml(item.ordem)}`);
+            if (mechCount) add(`🔧 ${mechCount}`);
+            break;
+        case 'maneuvers':
+            add(item.classe ? `⚔️ ${escapeHtml(item.classe)}` : '', 'chip-accent');
+            add(item.custo ? `⚡ ${escapeHtml(item.custo)}` : '');
+            if (mechCount) add(`🔧 ${mechCount}`);
+            break;
+        case 'spells':
+            add(item.escola ? `🔮 ${escapeHtml(item.escola)}` : '', 'chip-accent');
+            if (item.nivel != null) add(`Nv ${escapeHtml(item.nivel)}`);
+            add(item.custo ? `⚡ ${escapeHtml(item.custo)}` : '');
+            add(item.alcance ? `📏 ${escapeHtml(item.alcance)}` : '');
+            break;
+        case 'auras':
+            add(item.tipo === 'mortalidade' ? '💀 Mortalidade' : '📊 Propriedade', 'chip-accent');
+            if (item.propriedadeVinculada) add(`🔗 ${escapeHtml(item.propriedadeVinculada)}`);
+            if (Array.isArray(item.graus) && item.graus.length) add(`🌟 ${item.graus.length} graus`);
+            break;
+        case 'itemRules':
+            add(item.ativo ? '🟢 Ativa' : '🔴 Inativa', item.ativo ? 'chip-gold' : '');
+            if (item.ordem != null) add(`#${escapeHtml(item.ordem)}`);
+            if (mechCount) add(`🔧 ${mechCount}`);
+            break;
+        case 'bodyParts':
+            if (item.ehPadrao) add('⭐ Padrão', 'chip-gold');
+            if (item.podeSegurar) add('🤲 Segura');
+            if (item.podeEmpunhar) add('🗡️ Empunha');
+            if (item.podeVestir) add('🧥 Veste');
+            if (item.podeFixar) add('📌 Fixa');
+            break;
+        case 'lore':
+            add(item.categoria ? `🗂️ ${escapeHtml(item.categoria)}` : '', 'chip-accent');
+            if (Array.isArray(item.referencias) && item.referencias.length) add(`🔗 ${item.referencias.length} refs`);
+            break;
+        case 'runicElements': {
+            const fam = { artus: 'ᛞ Artus', aspectus: 'ᛟ Aspectus', sigilus: 'ᛝ Sigilus' };
+            add(fam[item.tipoElemento] || '', 'chip-accent');
+            if (item.categoria) add(`⚙️ ${escapeHtml(item.categoria)}`);
+            if (item.complexidade) add(`🎓 ${escapeHtml(item.complexidade)}`);
+            if (item.maxNivel != null) add(`📈 Máx Nv ${escapeHtml(item.maxNivel)}`);
+            if (item.nomeLatim) add(`🏛️ ${escapeHtml(item.nomeLatim)}`, 'chip-tag');
+            break;
+        }
+    }
+
+    // Tags (comum a vários módulos) — mostra até 3
+    if (Array.isArray(item.tags) && item.tags.length) {
+        item.tags.slice(0, 3).forEach(t => add(`🏷️ ${escapeHtml(t)}`, 'chip-tag'));
+        if (item.tags.length > 3) add(`+${item.tags.length - 3}`, 'chip-tag');
+    }
+
+    return chips.length ? `<div class="item-card-meta">${chips.join('')}</div>` : '';
+}
+
 function buildItemCardHTML(item) {
     const name = escapeHtml(item.nome || item.titulo || 'Sem nome');
-    const subtitle = item.subtitulo || item.arquetipo || item.categoria || item.escola || item.classe || '';
+    const subtitle = item.subtitulo || item.arquetipo || '';
     const desc = item.descricao || item.conteudo || item.efeito || '';
     const isPublished = item.publicado === true;
     const badgeClass = isPublished ? 'badge-published' : 'badge-draft';
     const badgeText = isPublished ? '✅ Publicado' : '📝 Rascunho';
     const imageUrl = item.imagemUrl || '';
+    const icon = item.icone ? `<span class="item-card-icon">${escapeHtml(item.icone)}</span> ` : '';
 
     return `
         <div class="item-card" onclick="openForm('${item.id}')">
             <div class="item-card-header">
-                <div class="item-card-name">${name}</div>
+                <div class="item-card-name">${icon}${name}</div>
                 <span class="badge-status ${badgeClass}">${badgeText}</span>
             </div>
             ${subtitle ? `<div class="item-card-subtitle">${escapeHtml(subtitle)}</div>` : ''}
-            ${imageUrl ? `<div class="item-card-image" style="margin-top:8px; border-radius:4px; overflow:hidden; height:150px; background:#000;"><img src="${escapeHtml(imageUrl)}" alt="Preview" style="width:100%; height:100%; object-fit:cover; object-position:top;"></div>` : ''}
-            ${desc ? `<div class="item-card-desc">${escapeHtml(truncate(desc, 100))}</div>` : ''}
+            ${_buildCardMetaChips(item)}
+            ${imageUrl ? `<div class="item-card-image"><img src="${escapeHtml(imageUrl)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : ''}
+            ${desc ? `<div class="item-card-desc">${escapeHtml(truncate(desc, 120))}</div>` : ''}
             <div class="item-card-footer">
                 <div class="item-card-actions">
                     <button class="btn-edit" onclick="event.stopPropagation(); openForm('${item.id}')" title="Editar">✏️</button>
                     <button class="btn-edit" onclick="event.stopPropagation(); duplicateItem('${item.id}')" title="Duplicar" style="border-color:var(--warning);color:var(--warning)">📋</button>
-                    <button class="btn-delete-card" onclick="event.stopPropagation(); openDeleteModal('${item.id}', '${escapeHtml(name).replace(/'/g, "\\'")}')" title="Excluir">🗑️</button>
+                    <button class="btn-delete-card" onclick="event.stopPropagation(); openDeleteModal('${item.id}')" title="Excluir">🗑️</button>
                 </div>
                 <label onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:6px;cursor:pointer">
                     <span style="font-size:.68rem;color:var(--muted);font-weight:700">PUB</span>
@@ -789,15 +995,76 @@ function buildItemCardHTML(item) {
     `;
 }
 
+// Normaliza texto para busca: minúsculas + remove acentos (ex.: "condição" ⇔ "condicao")
+function _norm(str) {
+    return String(str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+// Retorna true se algum filtro estiver ativo (usado no empty-state inteligente)
+function _hasActiveFilters() {
+    if ((document.getElementById('searchInput')?.value || '').trim()) return true;
+    if (document.getElementById('filterPublished')?.checked) return true;
+    if (document.getElementById('mechFilterFonte')?.value) return true;
+    if (document.getElementById('mechFilterTipo')?.value) return true;
+    if (document.getElementById('skillFilterCategoria')?.value) return true;
+    if (getSelectedTags().size > 0) return true;
+    return false;
+}
+
+window.clearAllFilters = function () {
+    const search = document.getElementById('searchInput');
+    if (search) search.value = '';
+    const pub = document.getElementById('filterPublished');
+    if (pub) pub.checked = false;
+    const fonte = document.getElementById('mechFilterFonte');
+    if (fonte) fonte.value = '';
+    const tipo = document.getElementById('mechFilterTipo');
+    if (tipo) tipo.value = '';
+    const cat = document.getElementById('skillFilterCategoria');
+    if (cat) cat.value = '';
+    getSelectedTags().clear();
+    document.querySelectorAll('#tagFilterArea .tag-filter-chip.active').forEach(b => b.classList.remove('active'));
+    renderItems();
+};
+
+window.clearSearch = function () {
+    const search = document.getElementById('searchInput');
+    if (search) { search.value = ''; search.focus(); }
+    renderItems();
+};
+
+function _updateResultsCount(shown, total) {
+    const el = document.getElementById('resultsCount');
+    if (!el) return;
+    if (total === 0) { el.textContent = ''; return; }
+    el.textContent = shown === total ? `${total} registro(s)` : `${shown} de ${total}`;
+}
+
+function _updateClearSearchBtn() {
+    const btn = document.getElementById('btnClearSearch');
+    const search = document.getElementById('searchInput');
+    if (btn) btn.style.display = (search && search.value) ? '' : 'none';
+}
+
 function renderItems() {
     const grid = document.getElementById('itemsGrid');
     const emptyState = document.getElementById('emptyState');
-    const searchVal = (document.getElementById('searchInput')?.value || '').toLowerCase();
+    const searchVal = _norm(document.getElementById('searchInput')?.value || '').trim();
     const onlyPublished = document.getElementById('filterPublished')?.checked || false;
 
+    _updateClearSearchBtn();
+
     let filtered = allItems.filter(item => {
-        const name = (item.nome || item.titulo || '').toLowerCase();
-        if (searchVal && !name.includes(searchVal)) return false;
+        // Busca profunda: nome/título, subtítulo, descrição, conteúdo, efeito e tags
+        if (searchVal) {
+            const haystack = _norm([
+                item.nome, item.titulo, item.subtitulo, item.arquetipo,
+                item.descricao, item.conteudo, item.efeito, item.categoria,
+                item.escola, item.classe, item.fonte,
+                Array.isArray(item.tags) ? item.tags.join(' ') : ''
+            ].filter(Boolean).join(' '));
+            if (!haystack.includes(searchVal)) return false;
+        }
         if (onlyPublished && !item.publicado) return false;
         // Extra mechanic filters
         if (currentModule === 'mechanics') {
@@ -821,9 +1088,36 @@ function renderItems() {
         return true;
     });
 
+    // Ordenação escolhida pelo usuário
+    const sortVal = document.getElementById('sortSelect')?.value || 'padrao';
+    if (sortVal === 'nome') {
+        filtered = [...filtered].sort((a, b) => _norm(a.nome || a.titulo).localeCompare(_norm(b.nome || b.titulo)));
+    } else if (sortVal === 'recente') {
+        filtered = [...filtered].sort((a, b) => {
+            const ta = a.atualizadoEm?.seconds || a.updatedAt?.seconds || 0;
+            const tb = b.atualizadoEm?.seconds || b.updatedAt?.seconds || 0;
+            return tb - ta;
+        });
+    }
+
+    _updateResultsCount(filtered.length, allItems.length);
+
     if (filtered.length === 0) {
         grid.innerHTML = '';
         emptyState.style.display = 'block';
+        // Estado vazio inteligente: distingue "nenhum registro" de "nenhum resultado"
+        const emptyIcon = emptyState.querySelector('.icon');
+        const emptyText = emptyState.querySelector('.text');
+        const emptyHint = emptyState.querySelector('.hint');
+        if (_hasActiveFilters() && allItems.length > 0) {
+            if (emptyIcon) emptyIcon.textContent = '🔍';
+            if (emptyText) emptyText.textContent = 'Nenhum resultado para os filtros aplicados';
+            if (emptyHint) emptyHint.innerHTML = '<button type="button" class="btn-clear-filters" onclick="clearAllFilters()">🧹 Limpar filtros</button>';
+        } else {
+            if (emptyIcon) emptyIcon.textContent = '📭';
+            if (emptyText) emptyText.textContent = 'Nenhum registro encontrado';
+            if (emptyHint) emptyHint.textContent = 'Clique no card acima para criar o primeiro!';
+        }
         return;
     }
 
@@ -917,8 +1211,14 @@ window.togglePublish = async function (itemId, value) {
 // ===== DELETE MODAL =====
 window.openDeleteModal = function (id, name) {
     itemToDelete = id;
-    document.getElementById('deleteItemName').textContent = name;
-    document.getElementById('deleteModal').classList.add('active');
+    // Busca o nome direto do item (fonte da verdade) — o parâmetro `name`
+    // fica como fallback para chamadas legadas.
+    const item = allItems.find(i => i.id === id);
+    const displayName = item ? (item.nome || item.titulo || name || 'Sem nome') : (name || 'Sem nome');
+    document.getElementById('deleteItemName').textContent = displayName;
+    const modal = document.getElementById('deleteModal');
+    modal.classList.add('active');
+    window.bringModalToTop(modal);
 };
 window.closeDeleteModal = function () {
     itemToDelete = null;
@@ -958,7 +1258,7 @@ window._openSubFormPeculiaridade = function (pid, parentFieldKey = null) {
     const overlay = document.createElement('div');
     overlay.className = 'modal form-modal active';
     overlay.id = 'subFormModalPeculiaridade';
-    overlay.style.zIndex = '999999'; // Sobrescreve o formModal (que usa 9999/99999)
+    window.bringModalToTop(overlay); // Sempre acima do modal atualmente no topo
     
     const isEdit = !!pid;
     overlay.innerHTML = `
@@ -1049,13 +1349,13 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                 }
             } else if (field.type === 'mechanic_selector') {
                 const el = document.getElementById(`field_${field.key}`);
-                data[field.key] = el ? JSON.parse(el.value || '[]') : [];
+                data[field.key] = el ? safeJsonParse(el.value || '[]', []) : [];
             } else if (field.type === 'boolean') {
                 const el = document.getElementById(`field_${field.key}`);
                 data[field.key] = el ? el.checked : false;
             } else if (field.type === 'multi_select') {
                 const el = document.getElementById(`field_${field.key}`);
-                data[field.key] = el ? JSON.parse(el.value || '[]') : [];
+                data[field.key] = el ? safeJsonParse(el.value || '[]', []) : [];
             } else if (field.type === 'number') {
                 const el = document.getElementById(`field_${field.key}`);
                 data[field.key] = el && el.value !== '' ? Number(el.value) : null;
@@ -1063,7 +1363,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                 const el = document.getElementById(`field_${field.key}`);
                 if (el) {
                     if (field.type === 'textarea') {
-                        data[field.key] = el.value.replace(/\\r\\n/g, '\\n');
+                        data[field.key] = el.value.replace(/\r\n/g, '\n');
                     } else {
                         data[field.key] = el.value;
                     }
@@ -1113,7 +1413,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                 
                 const wrap = document.getElementById('temp_pec_field_' + parentFieldKey + '_wrap') || document.getElementById('temp_vd_field_' + parentFieldKey + '_wrap') || document.getElementById('temp_field_' + parentFieldKey + '_wrap') || document.getElementById('field_' + parentFieldKey + '_wrap');
                 if (wrap) {
-                    import('./painel-mechanics.js?v=2').then(m => {
+                    import('./painel-mechanics.js?v=3').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
                         
@@ -1139,7 +1439,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
             const wrap = document.getElementById('temp_pec_field_peculiaridadeIds_wrap') || document.getElementById('temp_field_peculiaridadeIds_wrap') || document.getElementById('field_peculiaridadeIds_wrap');
             if (wrap && legacyField) {
                 const currentIds = JSON.parse(legacyField.value || '[]');
-                import('./painel-mechanics.js?v=2').then(m => {
+                import('./painel-mechanics.js?v=3').then(m => {
                     const labelSpan = wrap.querySelector('.mechsel-label');
                     const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
                     
@@ -1180,7 +1480,7 @@ window._openSubFormValorDerivado = function (vid, parentFieldKey = null) {
     const overlay = document.createElement('div');
     overlay.className = 'modal form-modal active';
     overlay.id = 'subFormModalValorDerivado';
-    overlay.style.zIndex = '999999';
+    window.bringModalToTop(overlay); // Sempre acima do modal atualmente no topo
     
     const isEdit = !!vid;
     overlay.innerHTML = `
@@ -1264,13 +1564,13 @@ window.saveSubFormValorDerivado = async function (e, vid, parentFieldKey) {
                 }
             } else if (field.type === 'mechanic_selector') {
                 const el = document.getElementById(`field_${field.key}`);
-                data[field.key] = el ? JSON.parse(el.value || '[]') : [];
+                data[field.key] = el ? safeJsonParse(el.value || '[]', []) : [];
             } else if (field.type === 'boolean') {
                 const el = document.getElementById(`field_${field.key}`);
                 data[field.key] = el ? el.checked : false;
             } else if (field.type === 'multi_select') {
                 const el = document.getElementById(`field_${field.key}`);
-                data[field.key] = el ? JSON.parse(el.value || '[]') : [];
+                data[field.key] = el ? safeJsonParse(el.value || '[]', []) : [];
             } else if (field.type === 'number') {
                 const el = document.getElementById(`field_${field.key}`);
                 data[field.key] = el && el.value !== '' ? Number(el.value) : null;
@@ -1278,7 +1578,7 @@ window.saveSubFormValorDerivado = async function (e, vid, parentFieldKey) {
                 const el = document.getElementById(`field_${field.key}`);
                 if (el) {
                     if (field.type === 'textarea') {
-                        data[field.key] = el.value.replace(/\\r\\n/g, '\\n');
+                        data[field.key] = el.value.replace(/\r\n/g, '\n');
                     } else {
                         data[field.key] = el.value;
                     }
@@ -1325,7 +1625,7 @@ window.saveSubFormValorDerivado = async function (e, vid, parentFieldKey) {
                 
                 const wrap = document.getElementById('temp_pec_field_' + parentFieldKey + '_wrap') || document.getElementById('temp_vd_field_' + parentFieldKey + '_wrap') || document.getElementById('temp_field_' + parentFieldKey + '_wrap') || document.getElementById('field_' + parentFieldKey + '_wrap');
                 if (wrap) {
-                    import('./painel-mechanics.js?v=2').then(m => {
+                    import('./painel-mechanics.js?v=3').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Valores Derivados';
                         
@@ -1415,7 +1715,12 @@ window.openForm = function (itemId) {
     // Wire up showWhenBoolean visibility for boolean toggle conditional fields
     _wireShowWhenBooleanFields(modDef, formGrid);
 
-    document.getElementById('formModal').classList.add('active');
+    const formModal = document.getElementById('formModal');
+    formModal.classList.add('active');
+    window.bringModalToTop(formModal);
+    // Reset scroll do corpo do form (evita abrir no meio ao reutilizar o modal)
+    const formBody = formModal.querySelector('.form-body');
+    if (formBody) formBody.scrollTop = 0;
 };
 
 window.closeForm = function () {
@@ -2032,6 +2337,7 @@ window._classTestSelectMech = function(idx) {
     `;
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
     document.body.appendChild(modal);
+    window.bringModalToTop(modal); // Sempre acima do modal atual (mesmo dentro de sub-modais)
 };
 
 window._classTestFilterMech = function(text) {
@@ -2525,6 +2831,18 @@ window.handleFormSubmit = async function (e) {
         }
     });
 
+    // Limpar valores obsoletos de campos condicionais ocultos.
+    // Ex.: equipamento era "Arma" (categoriaArma preenchida) e virou "Vestimenta" —
+    // sem isso, categoriaArma antiga era salva junto.
+    modDef.fields.forEach(field => {
+        if (field.showWhen && data[field.showWhen.field] !== field.showWhen.value) {
+            data[field.key] = Array.isArray(data[field.key]) ? [] : (typeof data[field.key] === 'boolean' ? false : null);
+        }
+        if (field.showWhenBoolean && !data[field.showWhenBoolean]) {
+            data[field.key] = Array.isArray(data[field.key]) ? [] : (typeof data[field.key] === 'boolean' ? false : null);
+        }
+    });
+
     // Publicado
     const pubEl = document.getElementById('field_publicado');
     data.publicado = pubEl ? pubEl.checked : false;
@@ -2959,9 +3277,20 @@ function showAlert(message, type) {
 
 function escapeHtml(text) {
     if (text === null || text === undefined) return '';
-    const div = document.createElement('div');
-    div.textContent = String(text);
-    return div.innerHTML;
+    // Escapa também aspas (simples e duplas): essencial porque este helper é
+    // usado dentro de atributos HTML (value="...", data-*="..."). Sem isso,
+    // valores contendo aspas quebravam o atributo e corrompiam dados
+    // (ex.: o input hidden do multi_select com JSON ["FOR","DES"]).
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function safeJsonParse(str, fallback) {
+    try { return JSON.parse(str); } catch { return fallback; }
 }
 
 function truncate(str, maxLen) {

@@ -125,9 +125,13 @@ function executeAction(actionId, e) {
 
     switch(actionId) {
         case 'close_modal':
+            // Usa o gerenciador de camadas: fecha sempre o modal que está no topo
+            // da pilha (maior z-index), independente da ordem de abertura.
+            if (window.closeTopModal && window.closeTopModal()) return true;
+            // Fallback legado (caso o gerenciador não esteja disponível)
             if (subPeculiaridade) { window.closeSubFormPeculiaridade && window.closeSubFormPeculiaridade(); return true; }
             if (subValorDerivado) { window.closeSubFormValorDerivado && window.closeSubFormValorDerivado(); return true; }
-            if (settingsModal && settingsModal.style.display === 'flex') { settingsModal.style.display = 'none'; return true; }
+            if (settingsModal && (settingsModal.style.display === 'flex' || settingsModal.classList.contains('active'))) { settingsModal.style.display = 'none'; settingsModal.classList.remove('active'); return true; }
             if (deleteModal && deleteModal.classList.contains('active')) { window.closeDeleteModal && window.closeDeleteModal(); return true; }
             if (editorArea && editorArea.style.display !== 'none') { window._mechBack && window._mechBack(); return true; }
             if (formModal && formModal.classList.contains('active')) { window.closeForm && window.closeForm(); return true; }
