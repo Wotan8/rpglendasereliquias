@@ -2107,7 +2107,7 @@ window._pecSelConfirm = function (fieldId) {
     document.getElementById(`${fieldId}_search`).classList.remove('open');
 
     // Refresh chips
-    const cache = window._mechCache || []; // Usually peculiarities cache, handled well enough here
+    const cache = window._peculiaritiesCache || window._mechCache || []; 
     const chipsEl = document.getElementById(`${fieldId}_chips`);
     if (chipsEl) {
         if (!checked.length) {
@@ -2115,12 +2115,7 @@ window._pecSelConfirm = function (fieldId) {
         } else {
             chipsEl.innerHTML = checked.map(pObj => {
                 const mid = pObj.id;
-                // Try from both cache in case since _mechCache might be mechanics...
-                // Firebase sets peculiaritiesCache but we only pass it to buildPecSelectorHTML.  
-                // Assuming reload works if we close the modal and reopen it, or we rely on DOM reload.
-                // To be safe, wait for visual update or use simple names based on existing cache.
-                const p = window._mechAllItems ? window._mechAllItems.find(x => x.id === mid) : { nome: "Carregando...", fonte: "?" };
-                if (!p && globals_for_cache) return ''; // just a fallback
+                const p = cache.find(x => x.id === mid) || { nome: "Carregando...", fonte: "?" };
                 return `<div class="mechsel-chip" style="border-left-color:var(--fonte-${p?.fonte || 'generica'}); cursor:pointer;" onclick="if(event.target.tagName !== 'INPUT' && event.target.tagName !== 'BUTTON') window._openSubFormPeculiaridade('${mid}')" title="Editar Peculiaridade"><div class="mechsel-chip-info"><div class="mechsel-chip-name">✨ ${esc(p?.nome || mid)}</div><div class="mechsel-chip-preview">${esc(p?.fonte || '')} — Nível Inicial: <input type="number" value="${pObj.nivelInicial || 1}" min="1" max="10" style="width:40px;padding:2px;font-size:0.7rem;" onchange="window._pecSelLevelChange('${fieldId}', '${mid}', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${mid}')">✕</button></div>`;
             }).join('');
         }
@@ -2231,7 +2226,7 @@ export function buildDerivedValueSelectorHTML(fieldKey, label, currentIds, cache
         const ruleInputs = ` Min: <input type="number" step="0.01" value="${minVal}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('field_${fieldKey}', '${did}', 'characterCreationMin', this.value)"> Max: <input type="number" step="0.01" value="${maxVal}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('field_${fieldKey}', '${did}', 'characterCreationMax', this.value)">`;
 
         
-        return `<div class="mechsel-chip" style="border-left-color:#8b5cf6"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${d.todoPersonagem ? '🌐 Universal' : '🔗 Vinculado'} — Valor Inicial: <input type="text" inputmode="decimal" value="${dvObj.valorInicial || 0}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('field_${fieldKey}', '${did}', 'valorInicial', this.value)">${ruleInputs}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${did}')">✕</button></div>`;
+        return `<div class="mechsel-chip" style="border-left-color:#8b5cf6; cursor:pointer;" onclick="if(event.target.tagName !== 'INPUT' && event.target.tagName !== 'BUTTON') window._openSubFormValorDerivado('${did}', '${fieldKey}')" title="Editar Valor Derivado"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${d.todoPersonagem ? '🌐 Universal' : '🔗 Vinculado'} — Valor Inicial: <input type="text" inputmode="decimal" value="${dvObj.valorInicial || 0}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('field_${fieldKey}', '${did}', 'valorInicial', this.value)">${ruleInputs}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${did}')">✕</button></div>`;
     }).join('');
 
     const opts = published.map(d => {
@@ -2302,7 +2297,7 @@ window._dvSelConfirm = function (fieldId) {
                 const ruleInputs = ` Min: <input type="number" step="0.01" value="${minVal}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('${fieldId}', '${did}', 'characterCreationMin', this.value)"> Max: <input type="number" step="0.01" value="${maxVal}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('${fieldId}', '${did}', 'characterCreationMax', this.value)">`;
 
                 
-                return `<div class="mechsel-chip" style="border-left-color:#8b5cf6"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${d.todoPersonagem ? '🌐 Universal' : '🔗 Vinculado'} — Valor Inicial: <input type="text" inputmode="decimal" value="${dvObj.valorInicial || 0}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('${fieldId}', '${did}', 'valorInicial', this.value)">${ruleInputs}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${did}')">✕</button></div>`;
+                return `<div class="mechsel-chip" style="border-left-color:#8b5cf6; cursor:pointer;" onclick="if(event.target.tagName !== 'INPUT' && event.target.tagName !== 'BUTTON') window._openSubFormValorDerivado('${did}', '${fieldId.replace('field_', '')}')" title="Editar Valor Derivado"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${d.todoPersonagem ? '🌐 Universal' : '🔗 Vinculado'} — Valor Inicial: <input type="text" inputmode="decimal" value="${dvObj.valorInicial || 0}" style="width:50px;padding:2px;font-size:0.7rem;" onchange="window._dvSelLevelChange('${fieldId}', '${did}', 'valorInicial', this.value)">${ruleInputs}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${did}')">✕</button></div>`;
             }).join('');
         }
     }

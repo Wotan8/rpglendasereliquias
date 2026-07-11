@@ -614,19 +614,22 @@ async function loadModule(moduleName) {
     const modDef = MODULE_DEFS[moduleName];
     if (!modDef) return;
 
-    // Always refresh mechanics cache (needed for selectors in all modules)
-    await refreshMechanicsCache();
+    // Always refresh essential caches used by Mechanics Editor across any module
+    await Promise.all([
+        refreshMechanicsCache(),
+        refreshSkillsCache(),
+        refreshDerivedValuesCache(),
+        refreshVitalStatsCache(),
+        refreshBodyPartsCache()
+    ]);
+
+    // Module-specific caches
     if (moduleName === 'races' || moduleName === 'classes' || moduleName === 'tribes') await refreshPeculiaritiesCache();
-    if (moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'skills') await refreshSkillsCache();
-    if (moduleName === 'races' || moduleName === 'classes' || moduleName === 'mechanics' || moduleName === 'derivedValues') await refreshDerivedValuesCache();
-    if (moduleName === 'mechanics' || moduleName === 'vitalStats') await refreshVitalStatsCache();
     if (moduleName === 'classes') {
         await refreshManeuversCache();
         await refreshEquipmentCache();
     }
-    if (moduleName === 'auras') { await refreshSkillsCache(); }
     if (moduleName === 'peculiarities') await refreshAurasCache();
-    if (moduleName === 'races') await refreshBodyPartsCache();
 
     const grid = document.getElementById('itemsGrid');
     const emptyState = document.getElementById('emptyState');
@@ -674,6 +677,7 @@ async function refreshPeculiaritiesCache() {
         peculiaritiesCache = [];
         snap.forEach(d => peculiaritiesCache.push({ id: d.id, ...d.data() }));
         peculiaritiesCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        window._peculiaritiesCache = peculiaritiesCache;
     } catch (e) { console.error('Erro cache peculiaridades:', e); }
 }
 
@@ -958,17 +962,17 @@ window._openSubFormPeculiaridade = function (pid, parentFieldKey = null) {
     
     const isEdit = !!pid;
     overlay.innerHTML = `
-      <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+      <div class="modal-content" style="max-height: 90vh; overflow: hidden; padding: 0;">
           <div class="form-header">
               <h2>${isEdit ? '✏️ Editar Peculiaridade' : '➕ Criar Peculiaridade'}</h2>
               <button type="button" class="btn-close-form" onclick="window.closeSubFormPeculiaridade()">✕</button>
           </div>
-          <form onsubmit="window.saveSubFormPeculiaridade(event, '${pid || ''}', '${parentFieldKey || ''}')">
-              <div id="subFormFieldsWrapper">
+          <form onsubmit="window.saveSubFormPeculiaridade(event, '${pid || ''}', '${parentFieldKey || ''}')" style="display: flex; flex-direction: column; overflow: hidden; flex: 1;">
+              <div class="form-body">
                   <div id="subFormFields" class="form-grid"></div>
               </div>
               <!-- Controle visual de 'Publicado' removido em sub-modais (salvo como true automaticamente) -->
-              <div class="form-actions">
+              <div class="form-actions" style="justify-content: flex-end;">
                   <button type="button" class="btn-modal btn-cancel" onclick="window.closeSubFormPeculiaridade()">Cancelar</button>
                   <button type="submit" class="btn-save" id="btnSaveSubPec">💾 Salvar Alterações</button>
               </div>
@@ -1117,12 +1121,12 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                         
                         let modifiedHtml = m.buildPecSelectorHTML(parentFieldKey, labelText, currentIds, peculiaritiesCache, '');
                         if (tempId) {
-                            modifiedHtml = modifiedHtml.replace(new RegExp(`id="field_${parentFieldKey}`, 'g'), `id="temp_field_${parentFieldKey}`);
-                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelFilter\\('field_${parentFieldKey}'`, 'g'), `window._mechSelFilter('temp_field_${parentFieldKey}'`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`id="field_${parentFieldKey}"`, 'g'), `id="temp_field_${parentFieldKey}"`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelFilter\\('field_${parentFieldKey}'\\)`, 'g'), `window._mechSelFilter('temp_field_${parentFieldKey}')`);
                             modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelRemove\\('field_${parentFieldKey}'`, 'g'), `window._mechSelRemove('temp_field_${parentFieldKey}'`);
                             modifiedHtml = modifiedHtml.replace(new RegExp(`window._pecSelLevelChange\\('field_${parentFieldKey}'`, 'g'), `window._pecSelLevelChange('temp_field_${parentFieldKey}'`);
-                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._pecSelConfirm\\('field_${parentFieldKey}'`, 'g'), `window._pecSelConfirm('temp_field_${parentFieldKey}'`);
-                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelConfirm\\('field_${parentFieldKey}'`, 'g'), `window._mechSelConfirm('temp_field_${parentFieldKey}'`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._pecSelConfirm\\('field_${parentFieldKey}'\\)`, 'g'), `window._pecSelConfirm('temp_field_${parentFieldKey}')`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelConfirm\\('field_${parentFieldKey}'\\)`, 'g'), `window._mechSelConfirm('temp_field_${parentFieldKey}')`);
                         }
                         
                         wrap.outerHTML = modifiedHtml;
@@ -1143,7 +1147,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                     
                     let newHtml = m.buildPecSelectorHTML('peculiaridadeIds', labelText, currentIds, peculiaritiesCache, '');
                     if (tempId) {
-                        newHtml = newHtml.replace(new RegExp(`id="field_peculiaridadeIds`, 'g'), `id="temp_field_peculiaridadeIds`);
+                        newHtml = newHtml.replace(new RegExp(`id="field_peculiaridadeIds"`, 'g'), `id="temp_field_peculiaridadeIds"`);
                     }
                     wrap.outerHTML = newHtml;
                 });
@@ -1180,17 +1184,17 @@ window._openSubFormValorDerivado = function (vid, parentFieldKey = null) {
     
     const isEdit = !!vid;
     overlay.innerHTML = `
-      <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+      <div class="modal-content" style="max-height: 90vh; overflow: hidden; padding: 0;">
           <div class="form-header">
               <h2>${isEdit ? '✏️ Editar Valor Derivado' : '➕ Criar Valor Derivado'}</h2>
               <button type="button" class="btn-close-form" onclick="window.closeSubFormValorDerivado()">✕</button>
           </div>
-          <form onsubmit="window.saveSubFormValorDerivado(event, '${vid || ''}', '${parentFieldKey || ''}')">
-              <div id="subFormFieldsWrapper">
+          <form onsubmit="window.saveSubFormValorDerivado(event, '${vid || ''}', '${parentFieldKey || ''}')" style="display: flex; flex-direction: column; overflow: hidden; flex: 1;">
+              <div class="form-body">
                   <div id="subFormFields" class="form-grid"></div>
               </div>
               <!-- Controle visual de 'Publicado' removido em sub-modais (salvo como true automaticamente) -->
-              <div class="form-actions">
+              <div class="form-actions" style="justify-content: flex-end;">
                   <button type="button" class="btn-modal btn-cancel" onclick="window.closeSubFormValorDerivado()">Cancelar</button>
                   <button type="submit" class="btn-save" id="btnSaveSubVD">💾 Salvar Alterações</button>
               </div>
@@ -1397,19 +1401,11 @@ window.openForm = function (itemId) {
         formGrid.appendChild(el);
     });
 
-    // Publicado toggle (always)
-    const pubDiv = document.createElement('div');
-    pubDiv.className = 'full-width';
-    pubDiv.innerHTML = `
-        <div class="form-toggle">
-            <label class="toggle-publish">
-                <input type="checkbox" id="field_publicado" ${existingData?.publicado ? 'checked' : ''}>
-                <span class="toggle-slider"></span>
-            </label>
-            <span class="toggle-label">Publicado (visível nas fichas)</span>
-        </div>
-    `;
-    formGrid.appendChild(pubDiv);
+    // Publicado toggle (statically in form-actions)
+    const pubField = document.getElementById('field_publicado');
+    if (pubField) {
+        pubField.checked = existingData ? !!existingData.publicado : false;
+    }
 
     container.appendChild(formGrid);
 

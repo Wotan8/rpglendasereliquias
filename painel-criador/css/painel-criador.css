@@ -1,5 +1,5 @@
 /* =============================================
-   PAINEL DE CRIADOR — Lendas e Relíquias
+   PAINEL DE CRIADOR â€” Lendas e RelÃ­quias
    Design System: ficha-v1.7_1 (Dark-first)
    ============================================= */
 
@@ -182,6 +182,81 @@ body {
     font-weight: 600
 }
 
+/* ===== SHORTCUTS ===== */
+.shortcuts-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.shortcut-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--chip);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+
+.shortcut-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.shortcut-title {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--ink);
+}
+
+.shortcut-desc {
+    font-size: 0.72rem;
+    color: var(--muted);
+}
+
+.shortcut-btn {
+    background: var(--paper);
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    cursor: pointer;
+    min-width: 120px;
+    text-align: center;
+    font-family: monospace;
+    transition: all 0.2s;
+}
+
+.shortcut-btn:hover {
+    background: var(--primary);
+    color: #fff;
+}
+
+.shortcut-btn.listening {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
 @keyframes spin {
     0% {
         transform: rotate(0)
@@ -281,10 +356,22 @@ body {
     padding-bottom: 20px;
 }
 
-.sidebar::-webkit-scrollbar { width: 4px; }
-.sidebar::-webkit-scrollbar-track { background: transparent; }
-.sidebar::-webkit-scrollbar-thumb { background: var(--soft); border-radius: 4px; }
-.sidebar:hover::-webkit-scrollbar-thumb { background: var(--muted); }
+.sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: var(--soft);
+    border-radius: 4px;
+}
+
+.sidebar:hover::-webkit-scrollbar-thumb {
+    background: var(--muted);
+}
 
 .sidebar.collapsed {
     width: 60px;
@@ -306,7 +393,7 @@ body {
     text-transform: uppercase;
     transition: all 0.2s;
     font-family: var(--font);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .sidebar-toggle:hover {
@@ -722,6 +809,9 @@ body {
     max-width: 460px;
     width: 100%;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
 }
 
 .modal-icon {
@@ -781,13 +871,13 @@ body {
 }
 
 /* ===== FORM MODAL ===== */
-.form-modal .modal-content {
+.form-modal .modal-content,
+.settings-modal-content {
     border-color: var(--primary);
     max-width: 720px;
-    max-height: 90vh;
-    overflow-y: auto;
+    overflow: hidden;
     text-align: left;
-    padding: 1.5rem;
+    padding: 0;
 }
 
 .form-modal .modal-title {
@@ -798,9 +888,10 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
+    padding: 1.5rem 1.5rem 12px 1.5rem;
     border-bottom: 2px solid var(--soft);
+    background: var(--paper);
+    flex-shrink: 0;
 }
 
 .form-header h2 {
@@ -941,13 +1032,13 @@ body {
 }
 
 .btn-array-add:hover {
-    background: #3b5ae6
+    background: #3b5ae6;
 }
 
 .array-items {
     display: flex;
     flex-direction: column;
-    gap: 8px
+    gap: 8px;
 }
 
 .array-item {
@@ -1008,14 +1099,29 @@ body {
     font-size: .8rem
 }
 
+/* ===== FORM BODY ===== */
+#dynamicForm {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex: 1;
+}
+
+.form-body {
+    padding: 16px 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
 /* ===== FORM ACTIONS ===== */
 .form-actions {
     display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    padding-top: 16px;
-    margin-top: 12px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 1.5rem;
     border-top: 2px solid var(--soft);
+    background: var(--paper);
+    flex-shrink: 0;
 }
 
 .btn-save {
@@ -1047,13 +1153,27 @@ body {
 }
 
 /* ===== ALERT ===== */
+#alertArea {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+    max-width: 400px;
+}
+
 .alert {
     padding: 10px 14px;
     border-radius: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 0;
     font-weight: 700;
     font-size: .82rem;
     animation: slideDown .3s;
+    pointer-events: auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .alert-success {
@@ -1269,7 +1389,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 }
 
 /* =============================================
-   VISUAL MECHANICS EDITOR — New Styles
+   VISUAL MECHANICS EDITOR â€” New Styles
    ============================================= */
 
 /* -- Type Colors -- */
@@ -2251,7 +2371,7 @@ html.dark .calc-row:hover {
     color: #fff;
     text-transform: uppercase;
     letter-spacing: .4px;
-    text-shadow: 0 1px 3px rgba(0,0,0,.4);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .4);
 }
 
 .aura-grau-fields {
@@ -2389,7 +2509,7 @@ html.dark .calc-row:hover {
     min-height: 32px;
 }
 
-/* ===== EXP CONFIG (mechanic type Modificar → EXP) ===== */
+/* ===== EXP CONFIG (mechanic type Modificar â†’ EXP) ===== */
 .calc-exp-qual-wrap {
     border-left: 3px solid #facc15;
     padding: 6px 0 6px 12px;
@@ -2414,8 +2534,15 @@ html.dark .calc-row:hover {
 }
 
 @keyframes expFieldReveal {
-    from { opacity: 0; transform: translateY(-6px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 html.dark #mech_duracao_exp_wrap {
@@ -2431,17 +2558,21 @@ html.dark #mech_duracao_exp_wrap {
     display: flex;
     flex-direction: column;
 }
+
 .settings-modal-content .form-header {
     padding: 1.5rem;
     border-bottom: 1px solid var(--line);
     background: var(--chip);
 }
+
 .settings-tabs {
     display: flex;
     gap: 0;
     border-bottom: 1px solid var(--line);
     background: var(--chip);
+    flex-shrink: 0;
 }
+
 .settings-tab {
     flex: 1;
     background: transparent;
@@ -2455,34 +2586,42 @@ html.dark #mech_duracao_exp_wrap {
     transition: all 0.2s;
     text-transform: uppercase;
 }
+
 .settings-tab:hover {
     color: var(--ink);
-    background: rgba(0,0,0,0.05);
+    background: rgba(0, 0, 0, 0.05);
 }
+
 html.dark .settings-tab:hover {
-    background: rgba(255,255,255,0.05);
+    background: rgba(255, 255, 255, 0.05);
 }
+
 .settings-tab.active {
     color: var(--primary);
     border-bottom-color: var(--primary);
 }
+
 .settings-body {
     padding: 1.5rem;
-    max-height: 60vh;
     overflow-y: auto;
     text-align: left;
+    flex: 1;
 }
+
 .settings-section {
     display: none;
 }
+
 .settings-section.active {
     display: block;
 }
+
 .settings-section h3 {
     margin-bottom: 5px;
     font-size: 1.2rem;
     color: var(--ink);
 }
+
 .settings-section .subtitle {
     color: var(--muted);
     font-size: 0.85rem;
@@ -2504,6 +2643,7 @@ html.dark .settings-tab:hover {
     align-items: center;
     gap: 10px;
 }
+
 .btn-theme-large:hover {
     background: var(--primary);
     color: #fff;
@@ -2515,6 +2655,7 @@ html.dark .settings-tab:hover {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 15px;
 }
+
 .favicon-card {
     background: var(--chip);
     border: 1px solid var(--line);
@@ -2526,6 +2667,7 @@ html.dark .settings-tab:hover {
     align-items: center;
     gap: 10px;
 }
+
 .favicon-preview {
     width: 64px;
     height: 64px;
@@ -2537,19 +2679,23 @@ html.dark .settings-tab:hover {
     justify-content: center;
     overflow: hidden;
 }
+
 .favicon-preview img {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
 }
+
 .favicon-card h4 {
     font-size: 0.9rem;
     color: var(--ink);
     margin: 0;
 }
+
 .favicon-card input[type="file"] {
     display: none;
 }
+
 .btn-upload {
     background: var(--primary);
     color: #fff;
@@ -2561,9 +2707,11 @@ html.dark .settings-tab:hover {
     cursor: pointer;
     transition: 0.2s;
 }
+
 .btn-upload:hover {
     background: #4338ca;
 }
+
 .btn-upload:disabled {
     background: var(--muted);
     cursor: not-allowed;
@@ -2575,25 +2723,31 @@ html.dark .settings-tab:hover {
     border: 1px solid var(--line);
     border-radius: 10px;
 }
+
 .users-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.85rem;
 }
-.users-table th, .users-table td {
+
+.users-table th,
+.users-table td {
     padding: 12px;
     text-align: left;
     border-bottom: 1px solid var(--line);
 }
+
 .users-table th {
     background: var(--chip);
     font-weight: 800;
     text-transform: uppercase;
     color: var(--muted);
 }
+
 .users-table tr:last-child td {
     border-bottom: none;
 }
+
 .role-select {
     padding: 6px;
     border-radius: 6px;
@@ -2610,12 +2764,14 @@ html.dark .settings-tab:hover {
     padding: 12px;
     border: 1px solid var(--line);
 }
+
 .bp-linked-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 12px;
     margin-bottom: 12px;
 }
+
 .bp-linked-item {
     display: flex;
     align-items: center;
@@ -2628,11 +2784,13 @@ html.dark .settings-tab:hover {
     transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
     min-width: 0;
 }
+
 .bp-linked-item:hover {
     border-color: var(--primary);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     transform: translateY(-2px);
 }
+
 .bp-linked-name {
     flex: 1;
     font-weight: 700;
@@ -2642,18 +2800,21 @@ html.dark .settings-tab:hover {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
 .bp-linked-slots {
     display: flex;
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
 }
+
 .bp-linked-slots label {
     font-size: 0.8rem;
     font-weight: 700;
     color: var(--muted);
     white-space: nowrap;
 }
+
 .bp-slot-input {
     width: 60px;
     padding: 6px 8px;
@@ -2666,11 +2827,13 @@ html.dark .settings-tab:hover {
     text-align: center;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
+
 .bp-slot-input:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 2px rgba(79, 110, 247, 0.2);
 }
+
 .bp-linked-remove {
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid transparent;
@@ -2687,16 +2850,19 @@ html.dark .settings-tab:hover {
     transition: all 0.2s ease;
     flex-shrink: 0;
 }
+
 .bp-linked-remove:hover {
     background: var(--danger);
     color: #fff;
     transform: scale(1.05);
 }
+
 .bp-add-bar {
     display: flex;
     gap: 8px;
     align-items: center;
 }
+
 .bp-add-select {
     flex: 1;
     padding: 8px 10px;
@@ -2706,6 +2872,7 @@ html.dark .settings-tab:hover {
     color: var(--ink);
     font-size: 0.82rem;
 }
+
 .bp-empty-hint {
     text-align: center;
     padding: 16px;
@@ -2715,7 +2882,7 @@ html.dark .settings-tab:hover {
 }
 
 /* =============================================
-   BOOLEANO EQUATION BUILDER — Styles
+   BOOLEANO EQUATION BUILDER â€” Styles
    ============================================= */
 
 .bool-equation-wrap {
@@ -2726,7 +2893,7 @@ html.dark .settings-tab:hover {
     background: var(--chip);
     border: 2px solid var(--type-booleano);
     border-radius: 10px;
-    margin-top: 8px;
+html.dark .bool-output-card { background: rgba(20, 184, 166, 0.08); }
 }
 
 html.dark .bool-equation-wrap {
@@ -2802,61 +2969,80 @@ html.dark .bool-equation-wrap {
 }
 
 html.dark .bool-output-card {
-    background: #151829;
-}
-
-.bool-output-card.true-card {
-    border-color: #10B981;
-}
-
-.bool-output-card.false-card {
-    border-color: #EF4444;
-}
-
-.bool-output-card label {
-    font-size: 0.78rem;
-    font-weight: 700;
-    margin: 0;
-}
-
-.bool-output-card.true-card label {
-    color: #10B981;
-}
-
-.bool-output-card.false-card label {
-    color: #EF4444;
-}
-
-.bool-output-card input {
-    width: 100%;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid var(--line);
-    background: var(--paper);
-    color: var(--ink);
-    font-size: 0.85rem;
-}
-
-/* =============================================
-   CONDIÇÃO MECÂNICA TOGGLE — Styles
-   ============================================= */
-
-.mech-condicao-toggle-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    background: rgba(20, 184, 166, 0.06);
-    border: 1px solid rgba(20, 184, 166, 0.25);
-    border-radius: 8px;
-    margin-bottom: 12px;
-}
-
-html.dark .mech-condicao-toggle-row {
     background: rgba(20, 184, 166, 0.08);
 }
 
-.mech-condicao-toggle-row .toggle-label {
-    font-weight: 700;
-    font-size: 0.85rem;
-}
+/* ===== SHORTCUTS ===== */
+.shortcuts-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 16px;
+    }
+
+    .shortcut-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        background: var(--chip);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+    }
+
+    .shortcut-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .shortcut-title {
+        font-size: 0.85rem;
+        font-weight: 800;
+        color: var(--ink);
+    }
+
+    .shortcut-desc {
+        font-size: 0.72rem;
+        color: var(--muted);
+    }
+
+    .shortcut-btn {
+        background: var(--paper);
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        padding: 6px 16px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 800;
+        cursor: pointer;
+        min-width: 120px;
+        text-align: center;
+        font-family: monospace;
+        transition: all 0.2s;
+    }
+
+    .shortcut-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+    .shortcut-btn.listening {
+        background: var(--danger);
+        border-color: var(--danger);
+        color: #fff;
+        animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+        0% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.7;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }

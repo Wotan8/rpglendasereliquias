@@ -131,10 +131,19 @@
                 <button class="btn-close-form" onclick="closeForm()">✕</button>
             </div>
             <form id="dynamicForm" onsubmit="handleFormSubmit(event)">
-                <div id="formFields"></div>
+                <div id="formFields" class="form-body"></div>
                 <div class="form-actions">
-                    <button type="button" class="btn-modal btn-cancel" onclick="closeForm()">Cancelar</button>
-                    <button type="submit" class="btn-save" id="btnSave">💾 Salvar</button>
+                    <div class="form-toggle toggle-publicado-container" style="padding:0">
+                        <label class="toggle-publish">
+                            <input type="checkbox" id="field_publicado">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label">Publicado</span>
+                    </div>
+                    <div class="buttons-group" style="display:flex; gap:10px;">
+                        <button type="button" class="btn-modal btn-cancel" onclick="closeForm()">Cancelar</button>
+                        <button type="submit" class="btn-save" id="btnSave">💾 Salvar</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -152,6 +161,7 @@
                 <button class="settings-tab active" data-target="settings-theme">🎨 Tema</button>
                 <button class="settings-tab" data-target="settings-favicons">🖼️ Favicons</button>
                 <button class="settings-tab" data-target="settings-permissions">🔐 Permissões</button>
+                <button class="settings-tab" data-target="settings-shortcuts">⌨️ Atalhos</button>
             </div>
 
             <div class="settings-body">
@@ -199,6 +209,21 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- Shortcuts Section -->
+                <div id="settings-shortcuts" class="settings-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3>Atalhos no Criador</h3>
+                            <p class="subtitle">Personalize os botões de acesso rápido e navegação do Painel.</p>
+                        </div>
+                        <button class="btn-theme-large" id="btnResetShortcuts" style="font-size: 0.75rem; padding: 6px 12px;">🔄 Restaurar Padrões</button>
+                    </div>
+
+                    <div class="shortcuts-grid" id="shortcutsContainer">
+                        <!-- Gerado dinamicamente via JS -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -206,6 +231,7 @@
     <!-- Firebase Module -->
     <script type="module" src="js/painel-firebase.js?v=3"></script>
     <script type="module" src="js/settings-manager.js"></script>
+    <script type="module" src="js/shortcuts-manager.js"></script>
 
     <script>
         function toggleSidebar() {
