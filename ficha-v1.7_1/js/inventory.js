@@ -295,6 +295,33 @@ function applyEquippedItemsMechanics() {
                 if (mech) applyMechanicToSheet(mech, null);
             }
         }
+
+        // 1c) Valores Derivados Vinculados
+        let dvList = item.valoresDerivadosVinculados || [];
+        if (item.modeloId) {
+            const template = window._inventoryState.catalog.find(t => t.id === item.modeloId);
+            if (template && template.valoresDerivadosVinculados) {
+                if (!item.valoresDerivadosVinculados) {
+                    dvList = template.valoresDerivadosVinculados;
+                }
+            }
+        }
+        
+        if (dvList && dvList.length > 0 && window.DERIVED_VALUES) {
+            for (const dvObj of dvList) {
+                const dvId = dvObj.id || dvObj;
+                const dvMod = dvObj.modificador || 0;
+                
+                if (dvMod != 0) {
+                    const dvDef = window.DERIVED_VALUES.find(d => d.id === dvId);
+                    if (dvDef) {
+                        const targetKey = `DERIVED:${dvDef.key}`;
+                        if (!window.state.mechanicBonuses) window.state.mechanicBonuses = {};
+                        window.state.mechanicBonuses[targetKey] = (window.state.mechanicBonuses[targetKey] || 0) + Number(dvMod);
+                    }
+                }
+            }
+        }
     }
 
     // 2) Regras globais de item (aplicam independente de ter itens equipados)

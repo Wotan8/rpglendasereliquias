@@ -2379,6 +2379,100 @@ window._dvSelLevelChange = function (fieldId, dvId, prop, newValue) {
     hidden.value = JSON.stringify(ids);
 };
 
+// ===== EQUIPMENT DERIVED VALUE SELECTOR (for equipment modifiers) =====
+export function buildEquipmentDerivedValueSelectorHTML(fieldKey, label, currentIds, cache) {
+    const published = cache.filter(d => d.publicado !== false);
+    const parsedIds = (currentIds || []).map(item => typeof item === 'object' ? item : { id: item, modificador: 0 });
+    const selectedIds = parsedIds.map(p => p.id);
+
+    const chips = parsedIds.map(dvObj => {
+        const did = dvObj.id;
+        const d = cache.find(x => x.id === did);
+        if (!d) return '';
+        const icon = d.icone || '📊';
+        
+        return `<div class="mechsel-chip" style="border-left-color:#3b82f6;"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">Modificador: <input type="number" step="0.01" value="${dvObj.modificador || 0}" style="width:60px;padding:2px;font-size:0.7rem;" onchange="window._eqDvSelLevelChange('field_${fieldKey}', '${did}', 'modificador', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${did}')">✕</button></div>`;
+    }).join('');
+
+    const opts = published.map(d => {
+        const icon = d.icone || '📊';
+        return `<label class="mechsel-result"><input type="checkbox" value="${d.id}" ${selectedIds.includes(d.id) ? 'checked' : ''}><span class="mechsel-result-name">${icon} ${esc(d.nome)}</span></label>`;
+    }).join('');
+
+    return `
+    <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
+        <span class="mechsel-label">${esc(label)}</span>
+        <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhum valor derivado vinculado</span>'}</div>
+        <div>
+            <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Valor Derivado</button>
+        </div>
+        <div class="mechsel-search" id="field_${fieldKey}_search">
+            <div class="mechsel-search-bar">
+                <input type="text" placeholder="🔍 Buscar valor derivado..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
+            </div>
+            <div class="mechsel-results" id="field_${fieldKey}_results">${opts}</div>
+            <button type="button" class="mechsel-confirm" onclick="window._eqDvSelConfirm('field_${fieldKey}')">✔️ Vincular Selecionados</button>
+        </div>
+        <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(parsedIds)}'>
+    </div>`;
+}
+
+window._eqDvSelConfirm = function (fieldId) {
+    const results = document.getElementById(`${fieldId}_results`);
+    const hidden = document.getElementById(fieldId);
+    if (!results || !hidden) return;
+
+    const existingIds = JSON.parse(hidden.value || '[]');
+    const existingMap = new Map();
+    existingIds.forEach(item => {
+        if (typeof item === 'object') existingMap.set(item.id, item);
+        else existingMap.set(item, { id: item, modificador: 0 });
+    });
+
+    const checked = Array.from(results.querySelectorAll('input[type="checkbox"]:checked')).map(cb => {
+        const ex = existingMap.get(cb.value);
+        return {
+            id: cb.value,
+            modificador: ex ? (ex.modificador || 0) : 0
+        };
+    });
+
+    hidden.value = JSON.stringify(checked);
+    document.getElementById(`${fieldId}_search`).classList.remove('open');
+
+    // Refresh chips
+    const cache = window._derivedValuesCache || [];
+    const chipsEl = document.getElementById(`${fieldId}_chips`);
+    if (chipsEl) {
+        if (!checked.length) {
+            chipsEl.innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhum valor derivado vinculado</span>';
+        } else {
+            chipsEl.innerHTML = checked.map(dvObj => {
+                const did = dvObj.id;
+                const d = cache.find(x => x.id === did);
+                if (!d) return '';
+                const icon = d.icone || '📊';
+                return `<div class="mechsel-chip" style="border-left-color:#3b82f6;"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">Modificador: <input type="number" step="0.01" value="${dvObj.modificador || 0}" style="width:60px;padding:2px;font-size:0.7rem;" onchange="window._eqDvSelLevelChange('${fieldId}', '${did}', 'modificador', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${did}')">✕</button></div>`;
+            }).join('');
+        }
+    }
+};
+
+window._eqDvSelLevelChange = function (fieldId, did, prop, val) {
+    const hidden = document.getElementById(fieldId);
+    if (!hidden) return;
+    const parsed = parseFloat(String(val).replace(',', '.')) || 0;
+    let data = JSON.parse(hidden.value || '[]');
+    const idx = data.findIndex(p => (typeof p === 'object' ? p.id === did : p === did));
+    if (idx >= 0) {
+        if (typeof data[idx] !== 'object') {
+            data[idx] = { id: did, modificador: 0 };
+        }
+        data[idx][prop] = parsed;
+        hidden.value = JSON.stringify(data);
+    }
+};
+
 export function buildManeuverSelectorHTML(fieldKey, label, currentIds, cache) {
     const published = cache.filter(m => m.publicado !== false);
     const ids = currentIds || [];

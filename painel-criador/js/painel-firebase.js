@@ -3,7 +3,7 @@
 // Lendas e Relíquias (ficha-v1.7_1 style)
 // =============================================
 
-import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildManeuverSelectorHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=3';
+import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildManeuverSelectorHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=3';
 import { RUNIC_MODULE_DEF, buildRunicField, collectRunicField, importRunicSeed } from './painel-runic.js?v=1';
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -215,6 +215,15 @@ const MODULE_DEFS = {
                     { value: 'Relíquia', label: '✨ Relíquia' }
                 ]
             },
+            { key: 'equipavelEm', label: 'Equipável em', type: 'body_parts_selector' },
+            {
+                key: 'formaEquipar', label: 'Forma de equipar', type: 'select', options: [
+                    { value: 'segurar', label: 'Segurar' },
+                    { value: 'empunhar', label: 'Empunhar' },
+                    { value: 'vestir', label: 'Vestir' },
+                    { value: 'fixar', label: 'Fixar' }
+                ]
+            },
             {
                 key: 'categoriaArma', label: 'Categoria da Arma', type: 'select', options: [
                     { value: 'uma_mao', label: '🗡️ Arma de Uma Mão' },
@@ -229,10 +238,13 @@ const MODULE_DEFS = {
             { key: 'peso', label: 'Peso', type: 'number', required: true, placeholder: '1' },
             { key: 'tamanho', label: 'Tamanho', type: 'number', required: true, placeholder: '1' },
             { key: 'pressaoBase', label: 'Pressão Base (peso efetivo ao equipar)', type: 'number', placeholder: '0 = mesmo que Peso' },
+            { key: 'quantidade', label: 'Quantidade (Padrão ao instanciar)', type: 'number', placeholder: '1' },
             { key: 'ehContainer', label: '📦 É Container?', type: 'boolean' },
             { key: 'multiplicadorPressao', label: 'Multiplicador de Pressão (conteúdo)', type: 'number', placeholder: '1', showWhenBoolean: 'ehContainer' },
-            { key: 'capacidadeContainer', label: 'Capacidade do Container (itens)', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
+            { key: 'pesoMaximoContainer', label: 'Peso Máximo Suportado (Container)', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
+            { key: 'capacidadeContainer', label: 'Capacidade do Container (slots antigos)', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
             { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: 'item' },
+            { key: 'valoresDerivadosVinculados', label: 'Valores Derivados Vinculados', type: 'mechanic_selector', selectorTarget: 'equipmentDerivedValues' },
         ]
     },
     conditions: {
@@ -1670,6 +1682,11 @@ window.openForm = function (itemId) {
         return;
     }
 
+    const dynamicForm = document.getElementById('dynamicForm');
+    if (dynamicForm) {
+        dynamicForm.dataset.module = currentModule;
+    }
+
     // Aura uses standard form but with custom field types
     // (handled by buildField)
 
@@ -1720,6 +1737,9 @@ window.openForm = function (itemId) {
     // Wire up showWhenBoolean visibility for boolean toggle conditional fields
     _wireShowWhenBooleanFields(modDef, formGrid);
 
+    // Wire up showWhenNotNull visibility
+    _wireShowWhenNotNullFields(modDef, formGrid);
+
     const formModal = document.getElementById('formModal');
     formModal.classList.add('active');
     window.bringModalToTop(formModal);
@@ -1746,6 +1766,9 @@ function buildField(field, value, existingData) {
     if (field.showWhenBoolean) {
         wrap.dataset.showWhenBoolean = field.showWhenBoolean;
     }
+    if (field.showWhenNotNull) {
+        wrap.dataset.showWhenNotNull = field.showWhenNotNull;
+    }
 
     // === CAMPOS RÚNICOS (Runomancia) ===
     if (field.type && field.type.startsWith('runic_')) {
@@ -1765,6 +1788,8 @@ function buildField(field, value, existingData) {
             wrap.innerHTML = buildSkillSelectorHTML(field.key, field.label, ids, skillsCache);
         } else if (field.selectorTarget === 'derivedValues') {
             wrap.innerHTML = buildDerivedValueSelectorHTML(field.key, field.label, ids, derivedValuesCache);
+        } else if (field.selectorTarget === 'equipmentDerivedValues') {
+            wrap.innerHTML = buildEquipmentDerivedValueSelectorHTML(field.key, field.label, ids, derivedValuesCache);
         } else if (field.selectorTarget === 'maneuvers') {
             wrap.innerHTML = buildManeuverSelectorHTML(field.key, field.label, ids, maneuversCache);
         } else {
@@ -1836,6 +1861,31 @@ function buildField(field, value, existingData) {
         wrap.innerHTML = `
             <label>${escapeHtml(field.label)} ${field.required ? '<span class="required">*</span>' : ''}</label>
             <div class="multi-select-container" id="multisel_${field.key}">${checkboxes}</div>
+            <input type="hidden" id="field_${field.key}" value="${escapeHtml(JSON.stringify(selected))}">
+        `;
+        // Sync hidden input on change
+        setTimeout(() => {
+            const container = document.getElementById(`multisel_${field.key}`);
+            if (container) {
+                container.addEventListener('change', () => {
+                    const vals = Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value);
+                    document.getElementById(`field_${field.key}`).value = JSON.stringify(vals);
+                });
+            }
+        }, 0);
+        return wrap;
+    }
+
+    // === BODY PARTS SELECTOR ===
+    if (field.type === 'body_parts_selector') {
+        const selected = Array.isArray(value) ? value : [];
+        const checkboxes = bodyPartsCache.map(bp => {
+            const checked = selected.includes(bp.id) ? 'checked' : '';
+            return `<label class="multi-select-option"><input type="checkbox" value="${bp.id}" ${checked} data-multiselect="${field.key}"> ${escapeHtml(bp.icone || '🦴')} ${escapeHtml(bp.nome)}</label>`;
+        }).join('');
+        wrap.innerHTML = `
+            <label>${escapeHtml(field.label)} ${field.required ? '<span class="required">*</span>' : ''}</label>
+            <div class="multi-select-container" style="max-height: 150px; overflow-y: auto;" id="multisel_${field.key}">${checkboxes}</div>
             <input type="hidden" id="field_${field.key}" value="${escapeHtml(JSON.stringify(selected))}">
         `;
         // Sync hidden input on change
@@ -2042,6 +2092,31 @@ function _wireShowWhenBooleanFields(modDef, container) {
     setTimeout(updateVisibility, 0);
 
     // Listen for changes on checkbox triggers
+    triggerKeys.forEach(key => {
+        const el = document.getElementById(`field_${key}`);
+        if (el) el.addEventListener('change', updateVisibility);
+    });
+}
+
+// ===== SHOW-WHEN-NOT-NULL: FIELD VISIBILITY =====
+function _wireShowWhenNotNullFields(modDef, container) {
+    const conditionalFields = container.querySelectorAll('[data-show-when-not-null]');
+    if (conditionalFields.length === 0) return;
+
+    const triggerKeys = new Set();
+    conditionalFields.forEach(el => triggerKeys.add(el.dataset.showWhenNotNull));
+
+    function updateVisibility() {
+        conditionalFields.forEach(wrap => {
+            const triggerKey = wrap.dataset.showWhenNotNull;
+            const triggerEl = document.getElementById(`field_${triggerKey}`);
+            if (!triggerEl) return;
+            wrap.style.display = (triggerEl.value && String(triggerEl.value).trim() !== '') ? '' : 'none';
+        });
+    }
+
+    setTimeout(updateVisibility, 0);
+
     triggerKeys.forEach(key => {
         const el = document.getElementById(`field_${key}`);
         if (el) el.addEventListener('change', updateVisibility);
@@ -2773,11 +2848,15 @@ window.previewMechanics = function (textarea) {
     }
 };
 
-// ===== FORM SUBMIT =====
+// ===== CREATE/UPDATE ITEM =====
 window.handleFormSubmit = async function (e) {
     e.preventDefault();
-    const modDef = MODULE_DEFS[currentModule];
+    
+    // Fallback to currentModule if dataset is empty (though it should be set by openForm)
+    const targetModule = e.target.dataset.module || currentModule;
+    const modDef = MODULE_DEFS[targetModule];
     const data = {};
+    const btn = document.getElementById('btnSave');
 
     // Collect field values
     modDef.fields.forEach(field => {
@@ -2815,7 +2894,7 @@ window.handleFormSubmit = async function (e) {
             } else { data[field.key] = []; }
         } else if (field.type === 'body_parts_editor') {
             data[field.key] = _collectBodyPartsData(field.key);
-        } else if (field.type === 'multi_select') {
+        } else if (field.type === 'multi_select' || field.type === 'body_parts_selector') {
             const el = document.getElementById(`field_${field.key}`);
             if (el) {
                 try { data[field.key] = JSON.parse(el.value || '[]'); }
@@ -2853,7 +2932,7 @@ window.handleFormSubmit = async function (e) {
     data.publicado = pubEl ? pubEl.checked : false;
 
     // Metadata
-    data.atualizadoEm = Timestamp.now();
+    data.updatedAt = Timestamp.now();
     if (!editingItemId) {
         data.criadoPor = currentUser.uid;
         data.criadoEm = Timestamp.now();
@@ -2904,7 +2983,7 @@ window.handleFormSubmit = async function (e) {
             showAlert('✅ Registro atualizado!', 'success');
 
             // === AUTO-LINK on update: vincular parte padrão a todas as raças ===
-            if (currentModule === 'bodyParts' && data.ehPadrao === true) {
+            if (targetModule === 'bodyParts' && data.ehPadrao === true) {
                 await _autoLinkBodyPartToAllRaces(editingItemId);
             }
         } else {
@@ -2912,7 +2991,7 @@ window.handleFormSubmit = async function (e) {
             showAlert('✅ Registro criado!', 'success');
 
             // === AUTO-LINK: vincular parte padrão a todas as raças ===
-            if (currentModule === 'bodyParts' && data.ehPadrao === true) {
+            if (targetModule === 'bodyParts' && data.ehPadrao === true) {
                 await _autoLinkBodyPartToAllRaces(newDocRef.id);
             }
         }
