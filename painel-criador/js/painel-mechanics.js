@@ -730,6 +730,8 @@ function renderConfigCondicional(config, mechanicsCache) {
     const gatilho = config?.gatilho || '';
     const sucessoIds = config?.efeitoSucessoIds || [];
     const falhaIds = config?.efeitoFalhaIds || [];
+    const textoSucesso = config?.textoSucesso || '';
+    const textoFalha = config?.textoFalha || '';
     const condicaoMecanica = config?.condicaoMecanica || false;
     const condicaoMecanicaIds = config?.condicaoMecanicaIds || [];
 
@@ -749,10 +751,18 @@ function renderConfigCondicional(config, mechanicsCache) {
             ${buildInlineMechSelector('mech_config_condicaoMecanicaIds', '🔀 Vincular Mecânica Booleana (fonte: Booleana)', condicaoMecanicaIds, boolCache, false)}
         </div>
         <div class="form-group full-width">
+            <label>Texto de Sucesso (Narrativo)</label>
+            <textarea id="mech_config_textoSucesso" placeholder="Ex: O alvo fica atordoado com o impacto" oninput="window._mechUpdatePreview()">${esc(textoSucesso)}</textarea>
+        </div>
+        <div class="form-group full-width">
             ${buildInlineMechSelector('mech_config_efeitoSucessoIds', 'Efeito Sucesso (mecânicas)', sucessoIds, mechanicsCache, true)}
         </div>
         <div class="form-group full-width">
-            ${buildInlineMechSelector('mech_config_efeitoFalhaIds', 'Efeito Falha (opcional)', falhaIds, mechanicsCache, true)}
+            <label>Texto de Falha (Opcional)</label>
+            <textarea id="mech_config_textoFalha" placeholder="Ex: O alvo resiste e nada acontece" oninput="window._mechUpdatePreview()">${esc(textoFalha)}</textarea>
+        </div>
+        <div class="form-group full-width">
+            ${buildInlineMechSelector('mech_config_efeitoFalhaIds', 'Efeito Falha (mecânicas, opcional)', falhaIds, mechanicsCache, true)}
         </div>
     </div>`;
 }
@@ -965,6 +975,7 @@ function _getProgressaoHeaders(tipo, tipoExp, fixoTerms) {
         return ['Nível', expLabel, tipo === 'limitar' ? 'Valor do Limite' : 'Valor'];
     }
     if (tipo === 'distribuir') return ['Nível', expLabel, 'Qtd Alvos', 'Valor por Alvo'];
+    if (tipo === 'condicional') return ['Nível', expLabel, 'Texto Sucesso', 'Texto Falha'];
     return ['Nível', expLabel, 'Descrição do Efeito'];
 }
 
@@ -988,6 +999,8 @@ function _renderProgressaoRow(i, p, tipo, fixoTerms) {
         return `<tr>${nvCell}${custoCell}<td><input type="text" class="prog-valor" data-nivel="${i}" value="${esc(String(p.valor ?? ''))}" placeholder="Ex: ${i}" style="width:100%" oninput="window._mechUpdatePreview()"></td></tr>`;
     } else if (tipo === 'distribuir') {
         return `<tr>${nvCell}${custoCell}<td><input type="number" class="prog-quantidadeAlvos" data-nivel="${i}" value="${p.quantidadeAlvos ?? ''}" placeholder="Ex: ${i + 1}" min="1" style="width:100%" oninput="window._mechUpdatePreview()"></td><td><input type="text" class="prog-valorPorAlvo" data-nivel="${i}" value="${esc(String(p.valorPorAlvo ?? ''))}" placeholder="Ex: 1" style="width:100%" oninput="window._mechUpdatePreview()"></td></tr>`;
+    } else if (tipo === 'condicional') {
+        return `<tr>${nvCell}${custoCell}<td><input type="text" class="prog-textoSucesso" data-nivel="${i}" value="${esc(String(p.textoSucesso ?? ''))}" placeholder="Texto de Sucesso" style="width:100%" oninput="window._mechUpdatePreview()"></td><td><input type="text" class="prog-textoFalha" data-nivel="${i}" value="${esc(String(p.textoFalha ?? ''))}" placeholder="Texto de Falha (opcional)" style="width:100%" oninput="window._mechUpdatePreview()"></td></tr>`;
     } else {
         return `<tr>${nvCell}${custoCell}<td><input type="text" class="prog-descricao" data-nivel="${i}" value="${esc(String(p.descricao ?? ''))}" placeholder="Descrever o efeito neste nível" style="width:100%" oninput="window._mechUpdatePreview()"></td></tr>`;
     }
@@ -1822,6 +1835,8 @@ function collectMechFormData() {
             condicaoMecanica,
             gatilho: condicaoMecanica ? '' : (document.getElementById('mech_config_gatilho')?.value || ''),
             condicaoMecanicaIds: condicaoMecanica ? JSON.parse(document.getElementById('mech_config_condicaoMecanicaIds')?.value || '[]') : [],
+            textoSucesso: document.getElementById('mech_config_textoSucesso')?.value || '',
+            textoFalha: document.getElementById('mech_config_textoFalha')?.value || '',
             efeitoSucessoIds: JSON.parse(document.getElementById('mech_config_efeitoSucessoIds')?.value || '[]'),
             efeitoFalhaIds: JSON.parse(document.getElementById('mech_config_efeitoFalhaIds')?.value || '[]')
         };
@@ -1892,6 +1907,9 @@ function collectMechFormData() {
                     entry.quantidadeAlvos = parseInt(row.querySelector('.prog-quantidadeAlvos')?.value) || null;
                     const v = row.querySelector('.prog-valorPorAlvo')?.value?.trim() ?? '';
                     entry.valorPorAlvo = isNaN(Number(v)) || v === '' ? v : Number(v);
+                } else if (tipo === 'condicional') {
+                    entry.textoSucesso = row.querySelector('.prog-textoSucesso')?.value?.trim() ?? '';
+                    entry.textoFalha = row.querySelector('.prog-textoFalha')?.value?.trim() ?? '';
                 } else {
                     entry.descricao = row.querySelector('.prog-descricao')?.value?.trim() ?? '';
                 }

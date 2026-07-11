@@ -1122,6 +1122,8 @@ function generatePreviewText(mech) {
 
         const sucessoIds = config.efeitoSucessoIds || [];
         const falhaIds = config.efeitoFalhaIds || [];
+        const textoSucesso = config.textoSucesso || '';
+        const textoFalha = config.textoFalha || '';
         
         const resolveSub = (id) => {
             let m = allMechanics.find(x => x.id === id);
@@ -1136,11 +1138,16 @@ function generatePreviewText(mech) {
             return m.previewTexto || generatePreviewText(m);
         };
 
-        if (sucessoIds.length > 0) {
-            parts.push(`Se Sucesso: ${sucessoIds.map(resolveSub).join('; ')}`);
+        const successSubTexts = sucessoIds.map(resolveSub);
+        if (textoSucesso) successSubTexts.unshift(textoSucesso);
+        if (successSubTexts.length > 0) {
+            parts.push(`Se Sucesso: ${successSubTexts.join('; ')}`);
         }
-        if (falhaIds.length > 0) {
-            parts.push(`Se Falha: ${falhaIds.map(resolveSub).join('; ')}`);
+
+        const failSubTexts = falhaIds.map(resolveSub);
+        if (textoFalha) failSubTexts.unshift(textoFalha);
+        if (failSubTexts.length > 0) {
+            parts.push(`Se Falha: ${failSubTexts.join('; ')}`);
         }
         return parts.filter(Boolean).join(' — ');
     }

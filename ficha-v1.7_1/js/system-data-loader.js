@@ -61,6 +61,8 @@ window._adjustMechanicForLevel = function(m, level) {
         if (prog.tipoConcessao !== undefined) adjustedMech.config = { ...adjustedMech.config, tipoConcessao: prog.tipoConcessao };
     } else if (m.tipo === 'condicional') {
         if (prog.gatilho !== undefined) adjustedMech.config = { ...adjustedMech.config, gatilho: prog.gatilho };
+        if (prog.textoSucesso !== undefined) adjustedMech.config = { ...adjustedMech.config, textoSucesso: prog.textoSucesso };
+        if (prog.textoFalha !== undefined) adjustedMech.config = { ...adjustedMech.config, textoFalha: prog.textoFalha };
     }
     if (prog.descricao) {
         adjustedMech.descricao = prog.descricao;

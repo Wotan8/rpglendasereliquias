@@ -1287,7 +1287,8 @@ window._openSubFormPeculiaridade = function (pid, parentFieldKey = null) {
     const container = overlay.querySelector('#subFormFields');
 
     // Precisamos ajustar o currentModule para o mechanic_selector interno funcionar
-    window._prevModuleForSubForm = currentModule;
+    window._moduleStack = window._moduleStack || [];
+    window._moduleStack.push(currentModule);
     currentModule = 'peculiarities';
 
     modDef.fields.forEach(field => {
@@ -1309,9 +1310,8 @@ window.closeSubFormPeculiaridade = function () {
     if (overlay) overlay.remove();
 
     // Restaurar currentModule
-    if (window._prevModuleForSubForm) {
-        currentModule = window._prevModuleForSubForm;
-        window._prevModuleForSubForm = null;
+    if (window._moduleStack && window._moduleStack.length > 0) {
+        currentModule = window._moduleStack.pop();
     }
 
     // Desmascarar IDs
@@ -1397,7 +1397,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
 
         // Se parentFieldKey foi fornecido
         if (parentFieldKey && parentFieldKey !== 'null') {
-            const parentFieldPeculiaridade = document.getElementById('temp_pec_field_' + parentFieldKey) || document.getElementById('temp_vd_field_' + parentFieldKey) || document.getElementById('temp_field_' + parentFieldKey) || document.getElementById('field_' + parentFieldKey);
+            const parentFieldPeculiaridade = document.getElementById('temp_vd_temp_pec_field_' + parentFieldKey) || document.getElementById('temp_vd_field_' + parentFieldKey) || document.getElementById('temp_pec_field_' + parentFieldKey) || document.getElementById('temp_field_' + parentFieldKey) || document.getElementById('field_' + parentFieldKey);
             if (parentFieldPeculiaridade) {
                 let currentIds = JSON.parse(parentFieldPeculiaridade.value || '[]');
                 
@@ -1411,22 +1411,23 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                     parentFieldPeculiaridade.value = JSON.stringify(currentIds);
                 }
                 
-                const wrap = document.getElementById('temp_pec_field_' + parentFieldKey + '_wrap') || document.getElementById('temp_vd_field_' + parentFieldKey + '_wrap') || document.getElementById('temp_field_' + parentFieldKey + '_wrap') || document.getElementById('field_' + parentFieldKey + '_wrap');
+                const wrap = document.getElementById(parentFieldPeculiaridade.id + '_wrap');
                 if (wrap) {
                     import('./painel-mechanics.js?v=3').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
                         
-                        const tempId = parentFieldPeculiaridade.id.startsWith('temp_') ? 'temp_' : '';
+                        const prefixMatch = parentFieldPeculiaridade.id.match(/^(temp_vd_temp_pec_|temp_vd_|temp_pec_|temp_)/);
+                        const tempId = prefixMatch ? prefixMatch[1] : '';
                         
                         let modifiedHtml = m.buildPecSelectorHTML(parentFieldKey, labelText, currentIds, peculiaritiesCache, '');
                         if (tempId) {
-                            modifiedHtml = modifiedHtml.replace(new RegExp(`id="field_${parentFieldKey}"`, 'g'), `id="temp_field_${parentFieldKey}"`);
-                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelFilter\\('field_${parentFieldKey}'\\)`, 'g'), `window._mechSelFilter('temp_field_${parentFieldKey}')`);
-                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelRemove\\('field_${parentFieldKey}'`, 'g'), `window._mechSelRemove('temp_field_${parentFieldKey}'`);
-                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._pecSelLevelChange\\('field_${parentFieldKey}'`, 'g'), `window._pecSelLevelChange('temp_field_${parentFieldKey}'`);
-                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._pecSelConfirm\\('field_${parentFieldKey}'\\)`, 'g'), `window._pecSelConfirm('temp_field_${parentFieldKey}')`);
-                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelConfirm\\('field_${parentFieldKey}'\\)`, 'g'), `window._mechSelConfirm('temp_field_${parentFieldKey}')`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`id="field_${parentFieldKey}"`, 'g'), `id="${tempId}field_${parentFieldKey}"`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelFilter\\('field_${parentFieldKey}'\\)`, 'g'), `window._mechSelFilter('${tempId}field_${parentFieldKey}')`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelRemove\\('field_${parentFieldKey}'`, 'g'), `window._mechSelRemove('${tempId}field_${parentFieldKey}'`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._pecSelLevelChange\\('field_${parentFieldKey}'`, 'g'), `window._pecSelLevelChange('${tempId}field_${parentFieldKey}'`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._pecSelConfirm\\('field_${parentFieldKey}'\\)`, 'g'), `window._pecSelConfirm('${tempId}field_${parentFieldKey}')`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelConfirm\\('field_${parentFieldKey}'\\)`, 'g'), `window._mechSelConfirm('${tempId}field_${parentFieldKey}')`);
                         }
                         
                         wrap.outerHTML = modifiedHtml;
@@ -1435,22 +1436,25 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
             }
         } else {
             // Fallback for generic peculiaridadeIds field if no parentFieldKey is provided
-            const legacyField = document.getElementById('temp_pec_field_peculiaridadeIds') || document.getElementById('temp_field_peculiaridadeIds') || document.getElementById('field_peculiaridadeIds');
-            const wrap = document.getElementById('temp_pec_field_peculiaridadeIds_wrap') || document.getElementById('temp_field_peculiaridadeIds_wrap') || document.getElementById('field_peculiaridadeIds_wrap');
-            if (wrap && legacyField) {
-                const currentIds = JSON.parse(legacyField.value || '[]');
-                import('./painel-mechanics.js?v=3').then(m => {
-                    const labelSpan = wrap.querySelector('.mechsel-label');
-                    const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
-                    
-                    const tempId = legacyField.id.startsWith('temp_') ? 'temp_' : '';
-                    
-                    let newHtml = m.buildPecSelectorHTML('peculiaridadeIds', labelText, currentIds, peculiaritiesCache, '');
-                    if (tempId) {
-                        newHtml = newHtml.replace(new RegExp(`id="field_peculiaridadeIds"`, 'g'), `id="temp_field_peculiaridadeIds"`);
-                    }
-                    wrap.outerHTML = newHtml;
-                });
+            const legacyField = document.getElementById('temp_vd_temp_pec_field_peculiaridadeIds') || document.getElementById('temp_vd_field_peculiaridadeIds') || document.getElementById('temp_pec_field_peculiaridadeIds') || document.getElementById('temp_field_peculiaridadeIds') || document.getElementById('field_peculiaridadeIds');
+            if (legacyField) {
+                const wrap = document.getElementById(legacyField.id + '_wrap');
+                if (wrap) {
+                    const currentIds = JSON.parse(legacyField.value || '[]');
+                    import('./painel-mechanics.js?v=3').then(m => {
+                        const labelSpan = wrap.querySelector('.mechsel-label');
+                        const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
+                        
+                        const prefixMatch = legacyField.id.match(/^(temp_vd_temp_pec_|temp_vd_|temp_pec_|temp_)/);
+                        const tempId = prefixMatch ? prefixMatch[1] : '';
+                        
+                        let newHtml = m.buildPecSelectorHTML('peculiaridadeIds', labelText, currentIds, peculiaritiesCache, '');
+                        if (tempId) {
+                            newHtml = newHtml.replace(new RegExp(`id="field_peculiaridadeIds"`, 'g'), `id="${tempId}field_peculiaridadeIds"`);
+                        }
+                        wrap.outerHTML = newHtml;
+                    });
+                }
             }
         }
         
@@ -1507,7 +1511,8 @@ window._openSubFormValorDerivado = function (vid, parentFieldKey = null) {
     const existingData = derivedValuesCache.find(p => p.id === vid) || {};
     const container = overlay.querySelector('#subFormFields');
 
-    window._prevModuleForSubForm = currentModule;
+    window._moduleStack = window._moduleStack || [];
+    window._moduleStack.push(currentModule);
     currentModule = 'derivedValues';
 
     modDef.fields.forEach(field => {
@@ -1525,9 +1530,8 @@ window.closeSubFormValorDerivado = function () {
     const overlay = document.getElementById('subFormModalValorDerivado');
     if (overlay) overlay.remove();
 
-    if (window._prevModuleForSubForm) {
-        currentModule = window._prevModuleForSubForm;
-        window._prevModuleForSubForm = null;
+    if (window._moduleStack && window._moduleStack.length > 0) {
+        currentModule = window._moduleStack.pop();
     }
 
     document.querySelectorAll('.form-modal, #formModal').forEach(modal => {
@@ -1609,7 +1613,7 @@ window.saveSubFormValorDerivado = async function (e, vid, parentFieldKey) {
         window.closeSubFormValorDerivado();
 
         if (parentFieldKey && parentFieldKey !== 'null') {
-            const parentFieldValorDerivado = document.getElementById('temp_field_' + parentFieldKey) || document.getElementById('field_' + parentFieldKey);
+            const parentFieldValorDerivado = document.getElementById('temp_vd_temp_pec_field_' + parentFieldKey) || document.getElementById('temp_vd_field_' + parentFieldKey) || document.getElementById('temp_pec_field_' + parentFieldKey) || document.getElementById('temp_field_' + parentFieldKey) || document.getElementById('field_' + parentFieldKey);
             if (parentFieldValorDerivado) {
                 let currentIds = JSON.parse(parentFieldValorDerivado.value || '[]');
                 
@@ -1623,22 +1627,23 @@ window.saveSubFormValorDerivado = async function (e, vid, parentFieldKey) {
                     parentFieldValorDerivado.value = JSON.stringify(currentIds);
                 }
                 
-                const wrap = document.getElementById('temp_pec_field_' + parentFieldKey + '_wrap') || document.getElementById('temp_vd_field_' + parentFieldKey + '_wrap') || document.getElementById('temp_field_' + parentFieldKey + '_wrap') || document.getElementById('field_' + parentFieldKey + '_wrap');
+                const wrap = document.getElementById(parentFieldValorDerivado.id + '_wrap');
                 if (wrap) {
                     import('./painel-mechanics.js?v=3').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Valores Derivados';
                         
-                        const tempId = parentFieldValorDerivado.id.startsWith('temp_') ? 'temp_' : '';
+                        const prefixMatch = parentFieldValorDerivado.id.match(/^(temp_vd_temp_pec_|temp_vd_|temp_pec_|temp_)/);
+                        const tempId = prefixMatch ? prefixMatch[1] : '';
                         
                         let modifiedHtml = m.buildDerivedValueSelectorHTML(parentFieldKey, labelText, currentIds, derivedValuesCache, '');
                         if (tempId) {
-                            modifiedHtml = modifiedHtml.replace(new RegExp(`id="field_${parentFieldKey}`, 'g'), `id="temp_field_${parentFieldKey}`);
-                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelFilter\\('field_${parentFieldKey}'`, 'g'), `window._mechSelFilter('temp_field_${parentFieldKey}'`);
-                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelRemove\\('field_${parentFieldKey}'`, 'g'), `window._mechSelRemove('temp_field_${parentFieldKey}'`);
-                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._dvSelLevelChange\\('field_${parentFieldKey}'`, 'g'), `window._dvSelLevelChange('temp_field_${parentFieldKey}'`);
-                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._dvSelConfirm\\('field_${parentFieldKey}'`, 'g'), `window._dvSelConfirm('temp_field_${parentFieldKey}'`);
-                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelConfirm\\('field_${parentFieldKey}'`, 'g'), `window._mechSelConfirm('temp_field_${parentFieldKey}'`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`id="field_${parentFieldKey}"`, 'g'), `id="${tempId}field_${parentFieldKey}"`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelFilter\\('field_${parentFieldKey}'\\)`, 'g'), `window._mechSelFilter('${tempId}field_${parentFieldKey}')`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelRemove\\('field_${parentFieldKey}'`, 'g'), `window._mechSelRemove('${tempId}field_${parentFieldKey}'`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._dvSelLevelChange\\('field_${parentFieldKey}'`, 'g'), `window._dvSelLevelChange('${tempId}field_${parentFieldKey}'`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._dvSelConfirm\\('field_${parentFieldKey}'\\)`, 'g'), `window._dvSelConfirm('${tempId}field_${parentFieldKey}')`);
+                            modifiedHtml = modifiedHtml.replace(new RegExp(`window._mechSelConfirm\\('field_${parentFieldKey}'\\)`, 'g'), `window._mechSelConfirm('${tempId}field_${parentFieldKey}')`);
                         }
                         
                         wrap.outerHTML = modifiedHtml;
