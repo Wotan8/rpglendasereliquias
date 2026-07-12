@@ -702,7 +702,10 @@ async function loadModule(moduleName) {
         refreshDerivedValuesCache(),
         refreshVitalStatsCache(),
         refreshBodyPartsCache(),
-        refreshClassesCache()
+        refreshClassesCache(),
+        // Equipamentos agora são usados pelo editor de Módulos da Classe (custos)
+        // e pelo editor de Mecânicas (Conceder Equipamento) em qualquer aba
+        refreshEquipmentCache()
     ]);
 
     // Module-specific caches
@@ -2487,10 +2490,13 @@ function _buildClassKitRow(idx, data) {
     data = data || {};
     const equipmentIds = Array.isArray(data.equipamentos) ? data.equipamentos : [];
     
-    const eqChips = equipmentIds.map(eqId => {
+    const eqChips = equipmentIds.map(eqItem => {
+        const eqId = typeof eqItem === 'string' ? eqItem : eqItem.id;
+        const eqQtd = typeof eqItem === 'string' ? 1 : (eqItem.qtd || 1);
         const eq = (typeof equipmentCache !== 'undefined' ? equipmentCache : []).find(x => x.id === eqId);
-        if (!eq) return `<span class="mech-tag" data-id="${escapeHtml(eqId)}">⚠️ Desconhecido <button type="button" onclick="this.parentElement.remove()">✕</button></span>`;
-        return `<span class="mech-tag" data-id="${escapeHtml(eqId)}">${escapeHtml(eq.nome)} <button type="button" onclick="this.parentElement.remove()">✕</button></span>`;
+        const qtyInput = `<input type="number" class="ck-eq-qtd" style="width: 45px; padding: 2px 4px; margin: 0 6px; border-radius: 4px; border: 1px solid var(--soft); background: var(--bg-card); color: var(--text);" value="${eqQtd}" min="1" onchange="this.parentElement.dataset.qtd = this.value" title="Quantidade">`;
+        if (!eq) return `<span class="mech-tag" data-id="${escapeHtml(eqId)}" data-qtd="${eqQtd}">⚠️ Desconhecido ${qtyInput} <button type="button" onclick="this.parentElement.remove()">✕</button></span>`;
+        return `<span class="mech-tag" data-id="${escapeHtml(eqId)}" data-qtd="${eqQtd}">${escapeHtml(eq.nome)} ${qtyInput} <button type="button" onclick="this.parentElement.remove()">✕</button></span>`;
     }).join('');
 
     return `
@@ -2553,7 +2559,9 @@ window.addClassKitEquip = function(select) {
     const tag = document.createElement('span');
     tag.className = 'mech-tag';
     tag.dataset.id = eqId;
-    tag.innerHTML = `${escapeHtml(eq.nome || eqId)} <button type="button" onclick="this.parentElement.remove()">✕</button>`;
+    tag.dataset.qtd = "1";
+    const qtyInput = `<input type="number" class="ck-eq-qtd" style="width: 45px; padding: 2px 4px; margin: 0 6px; border-radius: 4px; border: 1px solid var(--soft); background: var(--bg-card); color: var(--text);" value="1" min="1" onchange="this.parentElement.dataset.qtd = this.value" title="Quantidade">`;
+    tag.innerHTML = `${escapeHtml(eq.nome || eqId)} ${qtyInput} <button type="button" onclick="this.parentElement.remove()">✕</button>`;
     container.appendChild(tag);
     select.value = '';
 };
@@ -2568,7 +2576,12 @@ function _collectClassKitsData(fieldKey) {
         
         const equipamentos = [];
         item.querySelectorAll('.ck-eq-tags .mech-tag').forEach(tag => {
-            if (tag.dataset.id) equipamentos.push(tag.dataset.id);
+            if (tag.dataset.id) {
+                equipamentos.push({
+                    id: tag.dataset.id,
+                    qtd: parseInt(tag.dataset.qtd || 1, 10)
+                });
+            }
         });
         
         // Preserve existing ID from DOM dataset if available, otherwise generate new one
@@ -2581,6 +2594,38 @@ function _collectClassKitsData(fieldKey) {
 }
 
 // ===== CLASS MODULES EDITOR =====
+
+// --- Tipos de campo disponíveis no Schema de Campos ---
+const CM_SCHEMA_TIPOS = [
+    { v: 'text', label: 'Texto' },
+    { v: 'number', label: 'Número' },
+    { v: 'textarea', label: 'Texto Longo' },
+    { v: 'select', label: 'Seleção' },
+    { v: 'progress', label: 'Progresso (x/y)' },
+    { v: 'steps', label: 'Passos' },
+    { v: 'contador', label: '🔢 Contador (+/−)' },
+    { v: 'checkbox', label: '☑️ Checkbox' },
+    { v: 'avaliacao', label: '⭐ Avaliação (0–5)' },
+    { v: 'tags', label: '🏷️ Tags' },
+    { v: 'data', label: '📅 Data' },
+    { v: 'cor', label: '🎨 Cor' },
+    { v: 'link', label: '🔗 Link' },
+    { v: 'imagem', label: '🖼️ Imagem (URL)' },
+    { v: 'dado', label: '🎲 Dado (rolagem)' },
+    { v: 'botao', label: '🔘 Botão (mecânicas)' },
+    { v: 'separador', label: '➖ Separador de seção' },
+    { v: 'valor_derivado', label: '📊 Valor Derivado' },
+    { v: 'select_vd', label: '📊 Select VD (Valor Derivado)' }
+];
+
+const CM_LARGURAS = [
+    { v: '', label: '½ (padrão)' },
+    { v: 'terco', label: '⅓' },
+    { v: 'quarto', label: '¼' },
+    { v: 'dois_tercos', label: '⅔' },
+    { v: 'tres_quartos', label: '¾' },
+    { v: 'full', label: 'Largura total' }
+];
 
 function _buildClassModulesEditorHTML(fieldKey, label, modules) {
     const modulesHtml = modules.map((m, idx) => _buildClassModuleEditorRow(idx, m)).join('');
@@ -2595,104 +2640,339 @@ function _buildClassModulesEditorHTML(fieldKey, label, modules) {
     `;
 }
 
+// --- Chips helpers ---
+function _cmMechChip(mechId) {
+    const m = (typeof mechanicsCache !== 'undefined' ? mechanicsCache : []).find(x => x.id === mechId);
+    const nome = m ? m.nome : `⚠️ ${mechId}`;
+    return `<span class="mech-tag" data-id="${escapeHtml(mechId)}">⚙️ ${escapeHtml(nome)} <button type="button" onclick="this.parentElement.remove()">✕</button></span>`;
+}
+
+function _cmMechSelectOptionsBooleana() {
+    return (typeof mechanicsCache !== 'undefined' ? mechanicsCache : [])
+        .filter(m => m.tipo === 'booleano')
+        .map(m => `<option value="${m.id}">${escapeHtml(m.nome)}</option>`).join('');
+}
+
+function _cmMechSelectOptions() {
+    return (typeof mechanicsCache !== 'undefined' ? mechanicsCache : [])
+        .map(m => `<option value="${m.id}">${escapeHtml(m.nome)}</option>`).join('');
+}
+
+function _cmEquipSelectOptions() {
+    return (typeof equipmentCache !== 'undefined' ? equipmentCache : [])
+        .map(e => `<option value="${e.id}">${escapeHtml(e.nome)}</option>`).join('');
+}
+
+function _cmEquipName(eqId) {
+    const e = (typeof equipmentCache !== 'undefined' ? equipmentCache : []).find(x => x.id === eqId);
+    return e ? e.nome : `⚠️ ${eqId}`;
+}
+
+// --- Derived Value chips helpers ---
+function _cmDVChip(dvId) {
+    const d = (typeof derivedValuesCache !== 'undefined' ? derivedValuesCache : []).find(x => x.id === dvId);
+    const nome = d ? d.nome : `⚠️ ${dvId}`;
+    const icon = d ? (d.icone || '📊') : '📊';
+    return `<span class="mech-tag" data-id="${escapeHtml(dvId)}">${icon} ${escapeHtml(nome)} <button type="button" onclick="this.parentElement.remove()">✕</button></span>`;
+}
+
+function _cmDVChipReadOnly(dvId) {
+    const d = (typeof derivedValuesCache !== 'undefined' ? derivedValuesCache : []).find(x => x.id === dvId);
+    if (!d) return `<span style="color:#ef4444;font-size:.72rem">⚠️ DV não encontrado</span>`;
+    const icon = d.icone || '📊';
+    return `<span class="mech-tag" style="cursor:default">${icon} ${escapeHtml(d.nome)}</span>`;
+}
+
+function _cmDVSelectOptions() {
+    return (typeof derivedValuesCache !== 'undefined' ? derivedValuesCache : [])
+        .filter(d => d.publicado !== false)
+        .map(d => `<option value="${d.id}">${escapeHtml((d.icone || '📊') + ' ' + (d.nome || d.id))}</option>`).join('');
+}
+
+/**
+ * Linha de custo de equipamento — chip expandido com configurações:
+ * consumir (sim/não), quantidade mínima, exigência de "Efeitos ON".
+ * req = { equipamentoId, quantidade, consumir, exigeEfeitosOn }
+ */
+function _buildEquipCostRow(req) {
+    req = req || {};
+    const eqId = req.equipamentoId || req.id || '';
+    const consumir = req.consumir === true;
+    const efeitosOn = req.exigeEfeitosOn === true;
+    return `
+        <div class="cm-equip-cost-row" data-eq-id="${escapeHtml(eqId)}">
+            <span class="cm-equip-cost-name">🎒 ${escapeHtml(_cmEquipName(eqId))}</span>
+            <label class="cm-mini-label">Qtd mín.
+                <input type="number" min="1" data-ce-key="quantidade" value="${Math.max(1, parseInt(req.quantidade, 10) || 1)}">
+            </label>
+            <label class="cm-mini-label">Modo
+                <select data-ce-key="consumir" onchange="this.closest('.cm-equip-cost-row').querySelector('[data-ce-key=efeitosOn]').disabled = this.value === 'consumir'">
+                    <option value="equipado" ${!consumir ? 'selected' : ''}>Precisa estar equipado</option>
+                    <option value="consumir" ${consumir ? 'selected' : ''}>Será consumido</option>
+                </select>
+            </label>
+            <label class="cm-mini-label">Forma de equipar
+                <select data-ce-key="efeitosOn" ${consumir ? 'disabled' : ''}>
+                    <option value="qualquer" ${!efeitosOn ? 'selected' : ''}>Qualquer forma equipada</option>
+                    <option value="on" ${efeitosOn ? 'selected' : ''}>Efeitos = ON</option>
+                </select>
+            </label>
+            <button type="button" class="cm-chip-remove" onclick="this.closest('.cm-equip-cost-row').remove()">✕</button>
+        </div>
+    `;
+}
+
+function _buildEquipCostArea(reqs, cssClass) {
+    reqs = Array.isArray(reqs) ? reqs : [];
+    const rows = reqs.map(r => _buildEquipCostRow(r)).join('');
+    return `
+        <div class="cm-equip-cost-area ${cssClass || ''}">
+            <div class="cm-equip-cost-list">${rows}</div>
+            <select class="aura-mech-select" onchange="cmAddEquipCost(this)">
+                <option value="">+ Vincular Equipamento (custo)...</option>
+                ${_cmEquipSelectOptions()}
+            </select>
+        </div>
+    `;
+}
+
+window.cmAddEquipCost = function (select) {
+    const eqId = select.value;
+    if (!eqId) return;
+    const area = select.closest('.cm-equip-cost-area');
+    const list = area?.querySelector('.cm-equip-cost-list');
+    if (!list) { select.value = ''; return; }
+    if (list.querySelector(`.cm-equip-cost-row[data-eq-id="${eqId}"]`)) { select.value = ''; return; }
+    const temp = document.createElement('div');
+    temp.innerHTML = _buildEquipCostRow({ equipamentoId: eqId, quantidade: 1, consumir: false, exigeEfeitosOn: false });
+    list.appendChild(temp.firstElementChild);
+    select.value = '';
+};
+
+function _collectEquipCostArea(areaEl) {
+    if (!areaEl) return [];
+    const reqs = [];
+    areaEl.querySelectorAll('.cm-equip-cost-row').forEach(row => {
+        const eqId = row.dataset.eqId;
+        if (!eqId) return;
+        reqs.push({
+            equipamentoId: eqId,
+            quantidade: Math.max(1, parseInt(row.querySelector('[data-ce-key="quantidade"]')?.value, 10) || 1),
+            consumir: row.querySelector('[data-ce-key="consumir"]')?.value === 'consumir',
+            exigeEfeitosOn: row.querySelector('[data-ce-key="efeitosOn"]')?.value === 'on'
+        });
+    });
+    return reqs;
+}
+
+/**
+ * Linha completa de um Módulo da Classe no editor.
+ */
 function _buildClassModuleEditorRow(idx, data) {
     data = data || {};
     const schemaArr = Array.isArray(data.schema) ? data.schema : [];
     const schemaRowsHtml = schemaArr.map((sf, si) => _buildSchemaFieldRow(idx, si, sf)).join('');
-    const limitId = data.mecanicaLimiteId || '';
-    const limitMechName = limitId ? _findMechName(limitId) : '';
+
+    // Limite: mecânicas vinculadas (novo) + compatibilidade com mecanicaLimiteId legado
+    const limiteMecIds = Array.isArray(data.limiteMecanicaIds) ? data.limiteMecanicaIds.slice() : [];
+    if (data.mecanicaLimiteId && !limiteMecIds.includes(data.mecanicaLimiteId)) limiteMecIds.push(data.mecanicaLimiteId);
+    const limiteChips = limiteMecIds.map(id => _cmMechChip(id)).join('');
+
+    const bloqueioMecIds = Array.isArray(data.bloqueioMecanicaIds) ? data.bloqueioMecanicaIds.slice() : [];
+    const bloqueioChips = bloqueioMecIds.map(id => _cmMechChip(id)).join('');
+
+    const permitirCriacao = data.permitirCriacaoJogador !== false;
+    const predefArr = Array.isArray(data.itensPredefinidos) ? data.itensPredefinidos : [];
+    const predefHtml = predefArr.map((it, pi) => _buildPredefItemRow(idx, pi, it, schemaArr)).join('');
+
     return `
         <div class="array-item class-module-editor-item" data-index="${idx}">
             <div class="array-item-header">
-                <span class="array-item-number">📦 Módulo #${idx + 1}</span>
+                <span class="array-item-number">📦 Módulo #${idx + 1}${data.titulo ? ` — ${escapeHtml(data.titulo)}` : ''}</span>
                 <button type="button" class="btn-array-remove" onclick="removeClassModule(this)">✕</button>
             </div>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>ID do Módulo <span class="required">*</span></label>
-                    <input type="text" data-cm-key="id" value="${escapeHtml(data.id || '')}" placeholder="Ex: mod_locoes">
-                </div>
-                <div class="form-group">
-                    <label>Tipo</label>
-                    <select data-cm-key="tipo" onchange="this.closest('.class-module-editor-item').querySelector('.runo-config').style.display = this.value === 'runomancia' ? '' : 'none'">
-                        <option value="lista" ${data.tipo === 'lista' || !data.tipo ? 'selected' : ''}>Lista</option>
-                        <option value="grimorio" ${data.tipo === 'grimorio' ? 'selected' : ''}>Grimório</option>
-                        <option value="runomancia" ${data.tipo === 'runomancia' ? 'selected' : ''}>ᛟ Runomancia — Lista de Estudo</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Título <span class="required">*</span></label>
-                    <input type="text" data-cm-key="titulo" value="${escapeHtml(data.titulo || '')}" placeholder="Ex: Receita de Loções">
-                </div>
-                <div class="form-group">
-                    <label>Ícone</label>
-                    <input type="text" data-cm-key="icone" value="${escapeHtml(data.icone || '')}"
-                        placeholder="🧪" style="max-width:60px">
-                </div>
-                <div class="form-group">
-                    <label>Custo EXP por Item</label>
-                    <input type="number" data-cm-key="custoExpPorItem" value="${data.custoExpPorItem ?? 0}" placeholder="0" min="0">
-                </div>
-                <div class="form-group">
-                    <label>Label de Custo</label>
-                    <input type="text" data-cm-key="custoExpLabel" value="${escapeHtml(data.custoExpLabel || '')}" placeholder="Ex: 5 EXP por receita">
-                </div>
-                <div class="form-group full-width">
-                    <label>Mecânica de Limite (define máx. de itens)</label>
-                    <div style="display:flex;gap:8px;align-items:center">
-                        <input type="text" data-cm-key="mecanicaLimiteId" value="${escapeHtml(limitId)}" 
-                            placeholder="ID da mecânica ou deixe vazio (ilimitado)" style="flex:1">
-                        ${limitMechName ? `<span style="font-size:.72rem;color:var(--accent)">${escapeHtml(limitMechName)}</span>` : ''}
+
+            <div class="cm-section">
+                <div class="cm-section-title">🪪 Identidade</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>ID do Módulo <span class="required">*</span></label>
+                        <input type="text" data-cm-key="id" value="${escapeHtml(data.id || '')}" placeholder="Ex: mod_locoes">
                     </div>
-                    <div style="font-size:.65rem;color:var(--muted);margin-top:2px">Crie uma mecânica "modificar" com operação "=" (definir fixo) apontando para "Limite: Título". Cole o ID aqui.</div>
-                </div>
-                <div class="runo-config full-width" style="display:${data.tipo === 'runomancia' ? '' : 'none'};grid-column:1/-1;border:1px dashed rgba(139,92,246,.4);border-radius:8px;padding:8px;margin-top:4px">
-                    <div style="font-weight:700;font-size:.75rem;color:#a78bfa;margin-bottom:6px">ᛟ Parâmetros da Lista de Estudo (Compêndio, Parte XI)</div>
-                    <div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">
-                        <div class="form-group">
-                            <label>Slots Base</label>
-                            <input type="number" min="0" data-cm-key="runoSlotsBase" value="${data.runoSlotsBase ?? 2}" placeholder="2">
-                            <div style="font-size:.6rem;color:var(--muted)">§11.1: todo Runomago começa com 2 slots.</div>
-                        </div>
-                        <div class="form-group">
-                            <label>Perícia/Atributo dos Slots (dotKey)</label>
-                            <input type="text" data-cm-key="runoSlotsDotKey" value="${escapeHtml(data.runoSlotsDotKey || '')}" placeholder="Ex: sk_classe_erudi__o_r_nica">
-                            <div style="font-size:.6rem;color:var(--muted)">Cada nível expande a Lista de Estudo (§11.3).</div>
-                        </div>
-                        <div class="form-group">
-                            <label>Slots por Nível</label>
-                            <input type="number" min="0" step="0.5" data-cm-key="runoSlotsPorNivel" value="${data.runoSlotsPorNivel ?? 1}" placeholder="1">
-                        </div>
-                        <div class="form-group">
-                            <label>Perícia/Atributo de Desconto (dotKey)</label>
-                            <input type="text" data-cm-key="runoDescontoDotKey" value="${escapeHtml(data.runoDescontoDotKey || '')}" placeholder="Ex: sk_classe_erudi__o_r_nica">
-                            <div style="font-size:.6rem;color:var(--muted)">Reduz o tempo de estudo dos elementos.</div>
-                        </div>
-                        <div class="form-group">
-                            <label>Sessões Descontadas por Nível</label>
-                            <input type="number" min="0" step="0.5" data-cm-key="runoDescontoPorNivel" value="${data.runoDescontoPorNivel ?? 1}" placeholder="1">
-                            <div style="font-size:.6rem;color:var(--muted)">Tempo mínimo: 1 sessão.</div>
-                        </div>
-                        <div class="form-group">
-                            <label>Multiplicador de EXP</label>
-                            <input type="number" min="0" step="0.1" data-cm-key="runoCustoExpMult" value="${data.runoCustoExpMult ?? 1}" placeholder="1">
-                            <div style="font-size:.6rem;color:var(--muted)">Multiplica o EXP definido em cada Elemento Rúnico.</div>
-                        </div>
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <select data-cm-key="tipo" onchange="this.closest('.class-module-editor-item').querySelector('.runo-config').style.display = this.value === 'runomancia' ? '' : 'none'">
+                            <option value="lista" ${data.tipo === 'lista' || !data.tipo ? 'selected' : ''}>Lista</option>
+                            <option value="grimorio" ${data.tipo === 'grimorio' ? 'selected' : ''}>Grimório</option>
+                            <option value="runomancia" ${data.tipo === 'runomancia' ? 'selected' : ''}>ᛟ Runomancia — Lista de Estudo</option>
+                        </select>
                     </div>
-                    <div style="font-size:.62rem;color:var(--muted);margin-top:4px">O módulo lê dinamicamente todos os Elementos Rúnicos cadastrados (ᛟ) e seus custos de EXP/tempo por nível — nada é fixo no código.</div>
+                    <div class="form-group">
+                        <label>Título <span class="required">*</span></label>
+                        <input type="text" data-cm-key="titulo" value="${escapeHtml(data.titulo || '')}" placeholder="Ex: Receita de Loções">
+                    </div>
+                    <div class="form-group">
+                        <label>Ícone</label>
+                        <input type="text" data-cm-key="icone" value="${escapeHtml(data.icone || '')}" placeholder="🧪" style="max-width:60px">
+                    </div>
                 </div>
             </div>
-            <div style="padding:0 10px 10px">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-                    <label style="font-weight:700;font-size:.78rem;color:var(--text)">📋 Schema de Campos</label>
-                    <button type="button" class="btn-array-add" style="font-size:.7rem;padding:3px 8px" onclick="addSchemaField(${idx})">+ Campo</button>
+
+            <div class="cm-section">
+                <div class="cm-section-title">🎯 Limite de Itens</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Limite Fixo (nº de itens)</label>
+                        <input type="number" min="0" data-cm-key="limiteFixo" value="${data.limiteFixo ?? ''}" placeholder="Vazio = sem limite fixo">
+                    </div>
+                    <div class="form-group">
+                        <label>⚙️ Mecânicas de Limite</label>
+                        <div class="aura-grau-mechs cm-limite-mechs" data-cm-key="limiteMecanicaIds">
+                            <div class="mech-tags-container cm-limite-tags">${limiteChips}</div>
+                            <select class="aura-mech-select" onchange="cmAddLimitMech(this)">
+                                <option value="">+ Vincular Mecânica...</option>
+                                ${_cmMechSelectOptions()}
+                            </select>
+                        </div>
+                    </div>
                 </div>
-                <div style="font-size:.6rem;color:var(--muted);margin-bottom:6px">key · label · tipo · largura · placeholder · opções (para select) · remover</div>
+                <div class="cm-hint">O valor resolvido das mecânicas vinculadas (somadas) define o máximo de itens. Se houver limite fixo <b>e</b> mecânicas, a ficha usa <b>o maior valor</b>. Sem nada configurado = ilimitado.</div>
+            </div>
+
+            <div class="cm-section">
+                <div class="cm-section-title">🔒 Bloqueio de Módulo</div>
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label class="switch-label" style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                            <label class="switch">
+                                <input type="checkbox" data-cm-key="cadastrarBloqueio" ${data.cadastrarBloqueio ? 'checked' : ''} onchange="this.closest('.cm-section').querySelector('.cm-bloqueio-area').style.display = this.checked ? 'block' : 'none'">
+                                <span class="slider round"></span>
+                            </label>
+                            <span>Cadastrar Bloqueio no Módulo?</span>
+                        </label>
+                    </div>
+                    <div class="form-group full-width cm-bloqueio-area" style="display: ${data.cadastrarBloqueio ? 'block' : 'none'}">
+                        <label>⚙️ Mecânicas de Bloqueio (Requisitos)</label>
+                        <div class="aura-grau-mechs cm-bloqueio-mechs" data-cm-key="bloqueioMecanicaIds">
+                            <div class="mech-tags-container cm-bloqueio-tags">${bloqueioChips}</div>
+                            <select class="aura-mech-select" onchange="cmAddBlockMech(this)">
+                                <option value="">+ Vincular Mecânica (Booleana)...</option>
+                                ${_cmMechSelectOptionsBooleana()}
+                            </select>
+                        </div>
+                        <div class="cm-hint">Apenas mecânicas do tipo <b>Booleana</b>. Se qualquer uma falhar, o módulo inteiro ficará bloqueado na Ficha de Personagem.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cm-section">
+                <div class="cm-section-title">💰 Custos por Item</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Custo EXP por Item</label>
+                        <input type="number" data-cm-key="custoExpPorItem" value="${data.custoExpPorItem ?? 0}" placeholder="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Label de Custo</label>
+                        <input type="text" data-cm-key="custoExpLabel" value="${escapeHtml(data.custoExpLabel || '')}" placeholder="Ex: 5 EXP por receita">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>🎒 Custo de Equipamento</label>
+                        ${_buildEquipCostArea(data.custoEquipamentos, 'cm-custo-eq-modulo')}
+                        <div class="cm-hint">O jogador só poderá adicionar um novo item se possuir <b>todos</b> os equipamentos configurados. "Será consumido" remove do inventário; "Precisa estar equipado" apenas exige o item vestido/empunhado (com ou sem Efeitos = ON).</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cm-section">
+                <div class="cm-section-title">🎛️ Comportamento</div>
+                <label class="cm-toggle-row">
+                    <input type="checkbox" data-cm-key="permitirCriacaoJogador" ${permitirCriacao ? 'checked' : ''}>
+                    <span>✏️ Jogador pode criar itens livremente neste módulo</span>
+                </label>
+                <div class="cm-hint">Desmarcado: o jogador só poderá <b>selecionar</b> itens pré-cadastrados (seção 🗂️ abaixo).</div>
+            </div>
+
+            <div class="runo-config full-width" style="display:${data.tipo === 'runomancia' ? '' : 'none'};grid-column:1/-1;border:1px dashed rgba(139,92,246,.4);border-radius:8px;padding:8px;margin:4px 10px">
+                <div style="font-weight:700;font-size:.75rem;color:#a78bfa;margin-bottom:6px">ᛟ Parâmetros da Lista de Estudo (Compêndio, Parte XI)</div>
+                <div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">
+                    <div class="form-group">
+                        <label>Slots Base</label>
+                        <input type="number" min="0" data-cm-key="runoSlotsBase" value="${data.runoSlotsBase ?? 2}" placeholder="2">
+                        <div style="font-size:.6rem;color:var(--muted)">§11.1: todo Runomago começa com 2 slots.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Perícia/Atributo dos Slots (dotKey)</label>
+                        <input type="text" data-cm-key="runoSlotsDotKey" value="${escapeHtml(data.runoSlotsDotKey || '')}" placeholder="Ex: sk_classe_erudi__o_r_nica">
+                        <div style="font-size:.6rem;color:var(--muted)">Cada nível expande a Lista de Estudo (§11.3).</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Slots por Nível</label>
+                        <input type="number" min="0" step="0.5" data-cm-key="runoSlotsPorNivel" value="${data.runoSlotsPorNivel ?? 1}" placeholder="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Perícia/Atributo de Desconto (dotKey)</label>
+                        <input type="text" data-cm-key="runoDescontoDotKey" value="${escapeHtml(data.runoDescontoDotKey || '')}" placeholder="Ex: sk_classe_erudi__o_r_nica">
+                        <div style="font-size:.6rem;color:var(--muted)">Reduz o tempo de estudo dos elementos.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Sessões Descontadas por Nível</label>
+                        <input type="number" min="0" step="0.5" data-cm-key="runoDescontoPorNivel" value="${data.runoDescontoPorNivel ?? 1}" placeholder="1">
+                        <div style="font-size:.6rem;color:var(--muted)">Tempo mínimo: 1 sessão.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Multiplicador de EXP</label>
+                        <input type="number" min="0" step="0.1" data-cm-key="runoCustoExpMult" value="${data.runoCustoExpMult ?? 1}" placeholder="1">
+                        <div style="font-size:.6rem;color:var(--muted)">Multiplica o EXP definido em cada Elemento Rúnico.</div>
+                    </div>
+                </div>
+                <div style="font-size:.62rem;color:var(--muted);margin-top:4px">O módulo lê dinamicamente todos os Elementos Rúnicos cadastrados (ᛟ) e seus custos de EXP/tempo por nível — nada é fixo no código.</div>
+            </div>
+
+            <div class="cm-section">
+                <div class="cm-section-title-row">
+                    <div class="cm-section-title">📋 Schema de Campos</div>
+                    <button type="button" class="btn-array-add" style="font-size:.7rem;padding:3px 8px" onclick="addSchemaField(${idx}, this)">+ Campo</button>
+                </div>
+                <div class="cm-hint">key · label · tipo · largura · placeholder/fórmula · opções · 🔒 somente leitura. Tipos especiais: <b>Botão</b> aplica mecânicas ao clicar; <b>Dado</b> usa fórmula no campo "opções/fórmula" (ex: 2d6+1); <b>Imagem/Link</b> recebem URL do jogador.</div>
                 <div class="schema-fields-container" id="schemaFields_${idx}">${schemaRowsHtml}</div>
+            </div>
+
+            <div class="cm-section">
+                <div class="cm-section-title-row">
+                    <div class="cm-section-title">🗂️ Itens Pré-cadastrados</div>
+                    <button type="button" class="btn-array-add" style="font-size:.7rem;padding:3px 8px" onclick="addPredefItem(this)">+ Item</button>
+                </div>
+                <div class="cm-hint">Opções que o jogador pode escolher ao adicionar itens neste módulo. Cada item pode ter custos próprios (EXP / equipamentos) que substituem os custos padrão do módulo.</div>
+                <div class="cm-predef-items">${predefHtml}</div>
             </div>
         </div>
     `;
 }
+
+window.cmAddBlockMech = function (select) {
+    const mechId = select.value;
+    if (!mechId) return;
+    const container = select.closest('[data-cm-key="bloqueioMecanicaIds"]')?.querySelector('.cm-bloqueio-tags');
+    if (!container) { select.value = ''; return; }
+    if (container.querySelector(`[data-id="${mechId}"]`)) { select.value = ''; return; }
+    const temp = document.createElement('div');
+    temp.innerHTML = _cmMechChip(mechId);
+    container.appendChild(temp.firstElementChild);
+    select.value = '';
+};
+
+window.cmAddLimitMech = function (select) {
+    const mechId = select.value;
+    if (!mechId) return;
+    const container = select.closest('[data-cm-key="limiteMecanicaIds"]')?.querySelector('.cm-limite-tags');
+    if (!container) { select.value = ''; return; }
+    if (container.querySelector(`[data-id="${mechId}"]`)) { select.value = ''; return; }
+    const temp = document.createElement('div');
+    temp.innerHTML = _cmMechChip(mechId);
+    container.appendChild(temp.firstElementChild);
+    select.value = '';
+};
 
 function _findMechName(mechId) {
     if (!mechId) return '';
@@ -2700,29 +2980,300 @@ function _findMechName(mechId) {
     return m ? m.nome : '';
 }
 
+// --- Schema field row ---
 function _buildSchemaFieldRow(moduleIdx, fieldIdx, data) {
     data = data || {};
-    const tipoOpts = ['text', 'number', 'textarea', 'select', 'progress', 'steps'].map(t =>
-        `<option value="${t}" ${data.tipo === t ? 'selected' : ''}>${t}</option>`
+    const tipoOpts = CM_SCHEMA_TIPOS.map(t =>
+        `<option value="${t.v}" ${data.tipo === t.v ? 'selected' : ''}>${t.label}</option>`
     ).join('');
+    const largOpts = CM_LARGURAS.map(l =>
+        `<option value="${l.v}" ${(data.largura || '') === l.v ? 'selected' : ''}>${l.label}</option>`
+    ).join('');
+    const extraVal = data.tipo === 'dado'
+        ? (data.formula || '')
+        : (Array.isArray(data.opcoes) ? data.opcoes.join(', ') : (data.opcoes || ''));
+    const btnMechIds = Array.isArray(data.mecanicaIds) ? data.mecanicaIds : [];
+    const btnChips = btnMechIds.map(id => _cmMechChip(id)).join('');
+    const dvChip = data.tipo === 'valor_derivado' && data.derivedValueId ? _cmDVChip(data.derivedValueId) : '';
     return `
-        <div class="schema-field-row" data-field-index="${fieldIdx}" style="display:flex;gap:4px;align-items:center;margin-bottom:4px;flex-wrap:wrap">
-            <input type="text" data-sf-key="key" value="${escapeHtml(data.key || '')}" placeholder="key" style="width:80px;font-size:.72rem">
-            <input type="text" data-sf-key="label" value="${escapeHtml(data.label || '')}" placeholder="label" style="width:100px;font-size:.72rem">
-            <select data-sf-key="tipo" style="width:80px;font-size:.72rem">${tipoOpts}</select>
-            <select data-sf-key="largura" style="width:65px;font-size:.72rem">
-                <option value="" ${!data.largura ? 'selected' : ''}>½</option>
-                <option value="full" ${data.largura === 'full' ? 'selected' : ''}>Full</option>
-            </select>
-            <input type="text" data-sf-key="placeholder" value="${escapeHtml(data.placeholder || '')}" placeholder="placeholder" style="width:80px;font-size:.72rem">
-            <input type="text" data-sf-key="opcoes" value="${escapeHtml(Array.isArray(data.opcoes) ? data.opcoes.join(', ') : (data.opcoes || ''))}"
-                placeholder="opções (vírgula)" style="width:100px;font-size:.72rem" title="Apenas para tipo select">
-            <button type="button" onclick="this.closest('.schema-field-row').remove()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:.8rem;padding:2px 4px">✕</button>
+        <div class="schema-field-row" data-field-index="${fieldIdx}">
+            <div class="schema-field-main">
+                <input type="text" data-sf-key="key" value="${escapeHtml(data.key || '')}" placeholder="key" style="width:80px">
+                <input type="text" data-sf-key="label" value="${escapeHtml(data.label || '')}" placeholder="label" style="width:100px">
+                <select data-sf-key="tipo" style="width:130px" onchange="cmSchemaTipoChange(this)">${tipoOpts}</select>
+                <select data-sf-key="largura" style="width:95px">${largOpts}</select>
+                <input type="text" data-sf-key="placeholder" value="${escapeHtml(data.placeholder || '')}" placeholder="placeholder" style="width:85px">
+                <input type="text" data-sf-key="opcoes" value="${escapeHtml(extraVal)}"
+                    placeholder="opções/fórmula" style="width:105px" title="select: opções separadas por vírgula · dado: fórmula fixa (ex: 2d6+1)">
+                <label class="cm-sf-ro" title="Somente leitura para o jogador">🔒<input type="checkbox" data-sf-key="somenteLeitura" ${data.somenteLeitura ? 'checked' : ''}></label>
+                <label class="cm-sf-ro" title="Ocultar se vazio na ficha de personagem" style="margin-left:4px">👁️<input type="checkbox" data-sf-key="ocultarSeVazio" ${data.ocultarSeVazio ? 'checked' : ''}></label>
+                <button type="button" class="cm-chip-remove" onclick="this.closest('.schema-field-row').remove()">✕</button>
+            </div>
+            <div class="schema-field-botao-mechs" style="display:${data.tipo === 'botao' ? '' : 'none'}">
+                <div class="aura-grau-mechs" data-sf-key="mecanicaIds">
+                    <span class="cm-mini-title">⚙️ Mecânicas aplicadas ao clicar:</span>
+                    <div class="mech-tags-container sf-botao-tags">${btnChips}</div>
+                    <select class="aura-mech-select" onchange="cmAddSchemaBtnMech(this)">
+                        <option value="">+ Vincular Mecânica...</option>
+                        ${_cmMechSelectOptions()}
+                    </select>
+                </div>
+            </div>
+            <div class="schema-field-dv-selector" style="display:${data.tipo === 'valor_derivado' ? '' : 'none'}">
+                <div class="aura-grau-mechs" data-sf-key="derivedValueId">
+                    <span class="cm-mini-title">📊 Valor Derivado vinculado:</span>
+                    <div class="mech-tags-container sf-dv-tag">${dvChip}</div>
+                    <select class="aura-mech-select" onchange="cmSetSchemaDV(this)">
+                        <option value="">+ Vincular Valor Derivado...</option>
+                        ${_cmDVSelectOptions()}
+                    </select>
+                </div>
+            </div>
         </div>
     `;
 }
 
-window.addClassModule = function(fieldKey) {
+window.cmSchemaTipoChange = function (select) {
+    const row = select.closest('.schema-field-row');
+    if (!row) return;
+    const btnArea = row.querySelector('.schema-field-botao-mechs');
+    if (btnArea) btnArea.style.display = select.value === 'botao' ? '' : 'none';
+    const dvArea = row.querySelector('.schema-field-dv-selector');
+    if (dvArea) dvArea.style.display = select.value === 'valor_derivado' ? '' : 'none';
+};
+
+window.cmSetSchemaDV = function (select) {
+    const dvId = select.value;
+    if (!dvId) return;
+    const container = select.closest('[data-sf-key="derivedValueId"]')?.querySelector('.sf-dv-tag');
+    if (!container) { select.value = ''; return; }
+    // Substituir: apenas 1 DV vinculado por vez
+    container.innerHTML = '';
+    const temp = document.createElement('div');
+    temp.innerHTML = _cmDVChip(dvId);
+    container.appendChild(temp.firstElementChild);
+    select.value = '';
+};
+
+window.cmAddSchemaBtnMech = function (select) {
+    const mechId = select.value;
+    if (!mechId) return;
+    const container = select.closest('[data-sf-key="mecanicaIds"]')?.querySelector('.sf-botao-tags');
+    if (!container) { select.value = ''; return; }
+    if (container.querySelector(`[data-id="${mechId}"]`)) { select.value = ''; return; }
+    const temp = document.createElement('div');
+    temp.innerHTML = _cmMechChip(mechId);
+    container.appendChild(temp.firstElementChild);
+    select.value = '';
+};
+
+// --- Itens pré-cadastrados ---
+function _buildPredefValoresGrid(schema, valores) {
+    valores = valores || {};
+    schema = Array.isArray(schema) ? schema : [];
+    const editaveis = schema.filter(f => f.key && !['botao', 'separador'].includes(f.tipo));
+    if (editaveis.length === 0) {
+        return '<div class="cm-hint" style="margin:4px 0">Nenhum campo do schema disponível. Adicione campos ao 📋 Schema e clique em 🔄 Sincronizar.</div>';
+    }
+    return editaveis.map(f => {
+        const lbl = escapeHtml(f.label || f.key);
+        if (f.tipo === 'textarea') {
+            return `<div class="cm-pv-field full"><label>${lbl}</label><textarea data-pv-key="${escapeHtml(f.key)}">${escapeHtml(valores[f.key] || '')}</textarea></div>`;
+        }
+        if (f.tipo === 'select') {
+            const opts = (Array.isArray(f.opcoes) ? f.opcoes : []).map(o =>
+                `<option value="${escapeHtml(o)}" ${valores[f.key] === o ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
+            return `<div class="cm-pv-field"><label>${lbl}</label><select data-pv-key="${escapeHtml(f.key)}"><option value="">—</option>${opts}</select></div>`;
+        }
+        if (f.tipo === 'checkbox') {
+            return `<div class="cm-pv-field"><label>${lbl}</label><input type="checkbox" data-pv-key="${escapeHtml(f.key)}" ${valores[f.key] ? 'checked' : ''}></div>`;
+        }
+        if (f.tipo === 'progress') {
+            return `<div class="cm-pv-field"><label>${lbl} (atual/total)</label>
+                <div style="display:flex;gap:4px;align-items:center">
+                    <input type="text" data-pv-key="${escapeHtml(f.key)}_atual" value="${escapeHtml(valores[f.key + '_atual'] || '')}" placeholder="0" style="width:50px">
+                    <span>/</span>
+                    <input type="text" data-pv-key="${escapeHtml(f.key)}_total" value="${escapeHtml(valores[f.key + '_total'] || '')}" placeholder="0" style="width:50px">
+                </div></div>`;
+        }
+        if (f.tipo === 'steps') {
+            const steps = Array.isArray(valores[f.key]) ? valores[f.key] : [];
+            const stepsHtml = steps.map((s, i) => {
+                const sObj = (typeof s === 'object' && s !== null) ? s : {};
+                return `<div class="cm-pv-step" style="border:1px solid rgba(148,163,184,.1);border-radius:6px;padding:6px 8px;margin-bottom:4px;background:rgba(30,41,59,.25)">
+                    <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
+                        <input type="text" data-pv-step-name placeholder="Passo ${i + 1}" value="${escapeHtml(sObj.name || '')}" style="flex:1">
+                        <button type="button" class="cm-chip-remove" onclick="cmPredefRemoveStep(this)">✕</button>
+                    </div>
+                    <textarea data-pv-step-desc placeholder="Descrição do passo..." style="width:100%;min-height:32px;resize:vertical;box-sizing:border-box">${escapeHtml(sObj.desc || '')}</textarea>
+                </div>`;
+            }).join('');
+            return `<div class="cm-pv-field full"><label>${lbl}</label>
+                <div class="cm-pv-steps" data-pv-steps-key="${escapeHtml(f.key)}">
+                    ${stepsHtml}
+                    <button type="button" class="btn-array-add" style="font-size:.65rem;padding:3px 8px" onclick="cmPredefAddStep(this, '${escapeHtml(f.key)}')">+ Passo</button>
+                </div></div>`;
+        }
+        if (f.tipo === 'valor_derivado') {
+            const dvId = f.derivedValueId || '';
+            const dvChipHtml = dvId ? _cmDVChipReadOnly(dvId) : '<span style="color:var(--muted);font-size:.72rem">Nenhum DV vinculado no schema</span>';
+            return `<div class="cm-pv-field"><label>${lbl}</label>${dvChipHtml}</div>`;
+        }
+        if (f.tipo === 'select_vd') {
+            const dvArr = (typeof derivedValuesCache !== 'undefined' ? derivedValuesCache : []).filter(d => d.publicado !== false);
+            const dvOpts = dvArr.map(d => {
+                const icon = d.icone || '📊';
+                return `<option value="${escapeHtml(d.id)}" ${valores[f.key] === d.id ? 'selected' : ''}>${escapeHtml(icon + ' ' + (d.nome || d.id))}</option>`;
+            }).join('');
+            return `<div class="cm-pv-field"><label>${lbl}</label><select data-pv-key="${escapeHtml(f.key)}"><option value="">— Selecionar Valor Derivado —</option>${dvOpts}</select></div>`;
+        }
+        const inputType = f.tipo === 'number' || f.tipo === 'contador' || f.tipo === 'avaliacao' ? 'number'
+            : f.tipo === 'data' ? 'date'
+            : f.tipo === 'cor' ? 'color' : 'text';
+        const val = valores[f.key] !== undefined && valores[f.key] !== null ? valores[f.key] : (inputType === 'color' ? '#8b5cf6' : '');
+        return `<div class="cm-pv-field"><label>${lbl}</label><input type="${inputType}" data-pv-key="${escapeHtml(f.key)}" value="${escapeHtml(String(val))}"></div>`;
+    }).join('');
+}
+
+function _buildPredefItemRow(moduleIdx, itemIdx, data, schema) {
+    data = data || {};
+    const usaCustoEq = Array.isArray(data.custoEquipamentos);
+    const predefId = data.id || '';
+    return `
+        <div class="cm-predef-item" data-predef-id="${escapeHtml(predefId)}">
+            <div class="cm-predef-header">
+                <span class="cm-predef-num">🗂️ Item #${itemIdx + 1}</span>
+                <button type="button" class="cm-chip-remove" onclick="removePredefItem(this)">✕</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Nome <span class="required">*</span></label>
+                    <input type="text" data-pd-key="nome" value="${escapeHtml(data.nome || '')}" placeholder="Ex: Loção Revigorante">
+                </div>
+                <div class="form-group">
+                    <label>Custo EXP próprio</label>
+                    <input type="number" min="0" data-pd-key="custoExpProprio" value="${data.custoExpProprio ?? ''}" placeholder="Vazio = usa custo do módulo">
+                </div>
+                <div class="form-group full-width">
+                    <label>Descrição (exibida na seleção)</label>
+                    <textarea data-pd-key="descricao" rows="2" placeholder="Descrição curta do item...">${escapeHtml(data.descricao || '')}</textarea>
+                </div>
+            </div>
+            <label class="cm-toggle-row">
+                <input type="checkbox" data-pd-key="usarCustoEqProprio" ${usaCustoEq ? 'checked' : ''} onchange="cmPredefToggleCustoEq(this)">
+                <span>🎒 Definir Custos de Equipamento próprios (substituem os do módulo)</span>
+            </label>
+            <div class="cm-predef-custo-eq" style="display:${usaCustoEq ? '' : 'none'}">
+                ${_buildEquipCostArea(usaCustoEq ? data.custoEquipamentos : [], 'cm-custo-eq-predef')}
+            </div>
+            <div class="cm-predef-valores">
+                <div class="cm-section-title-row">
+                    <span class="cm-mini-title">🧬 Valores dos Campos (pré-preenchidos na ficha)</span>
+                    <button type="button" class="btn-array-add" style="font-size:.65rem;padding:2px 6px" onclick="cmSyncPredefFields(this)">🔄 Sincronizar com Schema</button>
+                </div>
+                <div class="cm-pv-grid">${_buildPredefValoresGrid(schema, data.valores)}</div>
+            </div>
+        </div>
+    `;
+}
+
+window.addPredefItem = function (btn) {
+    const modItem = btn.closest('.class-module-editor-item');
+    const container = modItem?.querySelector('.cm-predef-items');
+    if (!container) return;
+    const idx = container.children.length;
+    const schema = _readSchemaFromDOM(modItem);
+    const temp = document.createElement('div');
+    temp.innerHTML = _buildPredefItemRow(0, idx, {}, schema);
+    container.appendChild(temp.firstElementChild);
+};
+
+window.removePredefItem = function (btn) {
+    const item = btn.closest('.cm-predef-item');
+    const container = item?.parentElement;
+    if (item) item.remove();
+    if (container) {
+        container.querySelectorAll('.cm-predef-item').forEach((el, i) => {
+            const num = el.querySelector('.cm-predef-num');
+            if (num) num.textContent = `🗂️ Item #${i + 1}`;
+        });
+    }
+};
+
+window.cmPredefToggleCustoEq = function (checkbox) {
+    const area = checkbox.closest('.cm-predef-item')?.querySelector('.cm-predef-custo-eq');
+    if (area) area.style.display = checkbox.checked ? '' : 'none';
+};
+
+window.cmPredefAddStep = function (btn, fieldKey) {
+    const wrap = btn.closest('[data-pv-steps-key]');
+    if (!wrap) return;
+    const idx = wrap.querySelectorAll('.cm-pv-step').length;
+    const temp = document.createElement('div');
+    temp.innerHTML = `<div class="cm-pv-step" style="border:1px solid rgba(148,163,184,.1);border-radius:6px;padding:6px 8px;margin-bottom:4px;background:rgba(30,41,59,.25)">
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
+            <input type="text" data-pv-step-name placeholder="Passo ${idx + 1}" value="" style="flex:1">
+            <button type="button" class="cm-chip-remove" onclick="cmPredefRemoveStep(this)">✕</button>
+        </div>
+        <textarea data-pv-step-desc placeholder="Descrição do passo..." style="width:100%;min-height:32px;resize:vertical;box-sizing:border-box"></textarea>
+    </div>`;
+    wrap.insertBefore(temp.firstElementChild, btn);
+};
+
+window.cmPredefRemoveStep = function (btn) {
+    const step = btn.closest('.cm-pv-step');
+    if (step) step.remove();
+};
+
+/** Lê o schema atual diretamente das linhas do DOM (para sincronizar itens pré-cadastrados). */
+function _readSchemaFromDOM(modItemEl) {
+    const schema = [];
+    modItemEl?.querySelectorAll('.schema-fields-container .schema-field-row').forEach(row => {
+        const key = (row.querySelector('[data-sf-key="key"]')?.value || '').trim();
+        if (!key) return;
+        const tipo = row.querySelector('[data-sf-key="tipo"]')?.value || 'text';
+        const sf = {
+            key,
+            label: (row.querySelector('[data-sf-key="label"]')?.value || '').trim(),
+            tipo
+        };
+        const raw = (row.querySelector('[data-sf-key="opcoes"]')?.value || '').trim();
+        if (raw && tipo === 'select') sf.opcoes = raw.split(',').map(o => o.trim()).filter(Boolean);
+        if (row.querySelector('[data-sf-key="somenteLeitura"]')?.checked) sf.somenteLeitura = true;
+        if (row.querySelector('[data-sf-key="ocultarSeVazio"]')?.checked) sf.ocultarSeVazio = true;
+        schema.push(sf);
+    });
+    return schema;
+}
+
+window.cmSyncPredefFields = function (btn) {
+    const predefItem = btn.closest('.cm-predef-item');
+    const modItem = btn.closest('.class-module-editor-item');
+    if (!predefItem || !modItem) return;
+    const grid = predefItem.querySelector('.cm-pv-grid');
+    if (!grid) return;
+    // Preservar valores atuais
+    const valores = {};
+    grid.querySelectorAll('[data-pv-key]').forEach(el => {
+        valores[el.dataset.pvKey] = el.type === 'checkbox' ? el.checked : el.value;
+    });
+    // Preservar steps
+    grid.querySelectorAll('[data-pv-steps-key]').forEach(stepsWrap => {
+        const stepsKey = stepsWrap.dataset.pvStepsKey;
+        const stepsArr = [];
+        stepsWrap.querySelectorAll('.cm-pv-step').forEach(stepEl => {
+            stepsArr.push({
+                name: stepEl.querySelector('[data-pv-step-name]')?.value || '',
+                desc: stepEl.querySelector('[data-pv-step-desc]')?.value || ''
+            });
+        });
+        valores[stepsKey] = stepsArr;
+    });
+    const schema = _readSchemaFromDOM(modItem);
+    grid.innerHTML = _buildPredefValoresGrid(schema, valores);
+};
+
+window.addClassModule = function (fieldKey) {
     const container = document.getElementById(`classModulesItems_${fieldKey}`);
     if (!container) return;
     const idx = container.children.length;
@@ -2731,7 +3282,7 @@ window.addClassModule = function(fieldKey) {
     container.appendChild(temp.firstElementChild);
 };
 
-window.removeClassModule = function(btn) {
+window.removeClassModule = function (btn) {
     const item = btn.closest('.class-module-editor-item');
     if (!item) return;
     const container = item.parentElement;
@@ -2745,8 +3296,10 @@ window.removeClassModule = function(btn) {
     }
 };
 
-window.addSchemaField = function(moduleIdx) {
-    const container = document.getElementById(`schemaFields_${moduleIdx}`);
+window.addSchemaField = function (moduleIdx, btnEl) {
+    // Preferir contexto do botão (índices podem mudar após remoções)
+    let container = btnEl ? btnEl.closest('.class-module-editor-item')?.querySelector('.schema-fields-container') : null;
+    if (!container) container = document.getElementById(`schemaFields_${moduleIdx}`);
     if (!container) return;
     const fieldIdx = container.children.length;
     const temp = document.createElement('div');
@@ -2762,6 +3315,23 @@ function _collectClassModulesData(fieldKey) {
         const id = (item.querySelector('[data-cm-key="id"]')?.value || '').trim();
         const titulo = (item.querySelector('[data-cm-key="titulo"]')?.value || '').trim();
         if (!id && !titulo) return; // skip empty
+
+        // Mecânicas de limite (chips)
+        const limiteMecanicaIds = [];
+        item.querySelectorAll('.cm-limite-tags .mech-tag').forEach(tag => {
+            if (tag.dataset.id) limiteMecanicaIds.push(tag.dataset.id);
+        });
+        const limiteFixoRaw = item.querySelector('[data-cm-key="limiteFixo"]')?.value ?? '';
+        const limiteFixo = limiteFixoRaw !== '' ? Math.max(0, parseInt(limiteFixoRaw, 10) || 0) : null;
+
+        const cadastrarBloqueio = item.querySelector('[data-cm-key="cadastrarBloqueio"]')?.checked || false;
+        const bloqueioMecanicaIds = [];
+        if (cadastrarBloqueio) {
+            item.querySelectorAll('.cm-bloqueio-tags .mech-tag').forEach(tag => {
+                if (tag.dataset.id) bloqueioMecanicaIds.push(tag.dataset.id);
+            });
+        }
+
         const mod = {
             id: id || ('mod_' + titulo.toLowerCase().replace(/[^a-z0-9]/g, '_')),
             tipo: item.querySelector('[data-cm-key="tipo"]')?.value || 'lista',
@@ -2769,9 +3339,18 @@ function _collectClassModulesData(fieldKey) {
             icone: (item.querySelector('[data-cm-key="icone"]')?.value || '').trim() || '📦',
             custoExpPorItem: parseInt(item.querySelector('[data-cm-key="custoExpPorItem"]')?.value || '0', 10) || 0,
             custoExpLabel: (item.querySelector('[data-cm-key="custoExpLabel"]')?.value || '').trim(),
-            mecanicaLimiteId: (item.querySelector('[data-cm-key="mecanicaLimiteId"]')?.value || '').trim() || null,
-            schema: []
+            cadastrarBloqueio: cadastrarBloqueio,
+            bloqueioMecanicaIds: bloqueioMecanicaIds,
+            limiteFixo: limiteFixo,
+            limiteMecanicaIds: limiteMecanicaIds,
+            // Compatibilidade legada: primeira mecânica vinculada
+            mecanicaLimiteId: limiteMecanicaIds[0] || null,
+            custoEquipamentos: _collectEquipCostArea(item.querySelector('.cm-custo-eq-modulo')),
+            permitirCriacaoJogador: item.querySelector('[data-cm-key="permitirCriacaoJogador"]')?.checked !== false,
+            schema: [],
+            itensPredefinidos: []
         };
+
         // Parâmetros do módulo Runomancia (Lista de Estudo)
         if (mod.tipo === 'runomancia') {
             const g = k => item.querySelector(`[data-cm-key="${k}"]`)?.value ?? '';
@@ -2782,26 +3361,81 @@ function _collectClassModulesData(fieldKey) {
             mod.runoDescontoPorNivel = parseFloat(g('runoDescontoPorNivel')) || 0;
             mod.runoCustoExpMult = parseFloat(g('runoCustoExpMult')) || 1;
         }
+
         // Collect schema fields
         const schemaContainer = item.querySelector('.schema-fields-container');
         if (schemaContainer) {
             schemaContainer.querySelectorAll('.schema-field-row').forEach(row => {
                 const key = (row.querySelector('[data-sf-key="key"]')?.value || '').trim();
-                if (!key) return;
+                const tipo = row.querySelector('[data-sf-key="tipo"]')?.value || 'text';
+                if (!key && tipo !== 'separador') return;
                 const sf = {
-                    key: key,
+                    key: key || ('sep_' + Math.random().toString(36).substr(2, 5)),
                     label: (row.querySelector('[data-sf-key="label"]')?.value || '').trim(),
-                    tipo: row.querySelector('[data-sf-key="tipo"]')?.value || 'text',
+                    tipo: tipo,
                     largura: row.querySelector('[data-sf-key="largura"]')?.value || '',
                     placeholder: (row.querySelector('[data-sf-key="placeholder"]')?.value || '').trim()
                 };
+                if (row.querySelector('[data-sf-key="somenteLeitura"]')?.checked) sf.somenteLeitura = true;
+                if (row.querySelector('[data-sf-key="ocultarSeVazio"]')?.checked) sf.ocultarSeVazio = true;
                 const opcoesRaw = (row.querySelector('[data-sf-key="opcoes"]')?.value || '').trim();
                 if (opcoesRaw && sf.tipo === 'select') {
                     sf.opcoes = opcoesRaw.split(',').map(o => o.trim()).filter(Boolean);
                 }
+                if (opcoesRaw && sf.tipo === 'dado') {
+                    sf.formula = opcoesRaw;
+                }
+                if (sf.tipo === 'botao') {
+                    const mecanicaIds = [];
+                    row.querySelectorAll('.sf-botao-tags .mech-tag').forEach(tag => {
+                        if (tag.dataset.id) mecanicaIds.push(tag.dataset.id);
+                    });
+                    sf.mecanicaIds = mecanicaIds;
+                }
+                if (sf.tipo === 'valor_derivado') {
+                    const dvTag = row.querySelector('.sf-dv-tag .mech-tag');
+                    sf.derivedValueId = dvTag?.dataset.id || '';
+                }
                 mod.schema.push(sf);
             });
         }
+
+        // Collect itens pré-cadastrados
+        item.querySelectorAll('.cm-predef-items .cm-predef-item').forEach(pd => {
+            const nome = (pd.querySelector('[data-pd-key="nome"]')?.value || '').trim();
+            if (!nome) return;
+            const existingId = pd.dataset.predefId;
+            const pdId = existingId && existingId !== 'undefined' && existingId !== ''
+                ? existingId
+                : 'pdi_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+            const custoExpRaw = pd.querySelector('[data-pd-key="custoExpProprio"]')?.value ?? '';
+            const usarCustoEq = pd.querySelector('[data-pd-key="usarCustoEqProprio"]')?.checked === true;
+            const valores = {};
+            pd.querySelectorAll('.cm-pv-grid [data-pv-key]').forEach(el => {
+                valores[el.dataset.pvKey] = el.type === 'checkbox' ? el.checked : el.value;
+            });
+            // Coletar steps pré-cadastrados
+            pd.querySelectorAll('.cm-pv-grid [data-pv-steps-key]').forEach(stepsWrap => {
+                const stepsKey = stepsWrap.dataset.pvStepsKey;
+                const stepsArr = [];
+                stepsWrap.querySelectorAll('.cm-pv-step').forEach(stepEl => {
+                    stepsArr.push({
+                        name: stepEl.querySelector('[data-pv-step-name]')?.value || '',
+                        desc: stepEl.querySelector('[data-pv-step-desc]')?.value || ''
+                    });
+                });
+                valores[stepsKey] = stepsArr;
+            });
+            mod.itensPredefinidos.push({
+                id: pdId,
+                nome,
+                descricao: (pd.querySelector('[data-pd-key="descricao"]')?.value || '').trim(),
+                custoExpProprio: custoExpRaw !== '' ? Math.max(0, parseInt(custoExpRaw, 10) || 0) : null,
+                custoEquipamentos: usarCustoEq ? _collectEquipCostArea(pd.querySelector('.cm-custo-eq-predef')) : null,
+                valores
+            });
+        });
+
         modules.push(mod);
     });
     return modules;

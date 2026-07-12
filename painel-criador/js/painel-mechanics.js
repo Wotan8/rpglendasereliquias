@@ -263,6 +263,14 @@ export function generatePreviewText(data) {
             const verb = config.tipoConcessao === 'adicionar_parte_corpo' ? 'Adiciona' : 'Remove';
             const count = Array.isArray(config.partesCorpo) ? config.partesCorpo.length : 0;
             text = `${verb} ${count} Parte(s) do Corpo`;
+        } else if (config.tipoConcessao === 'conceder_equipamento') {
+            const eqCache = window._equipmentCache || [];
+            const lista = (Array.isArray(config.equipamentosConcedidos) ? config.equipamentosConcedidos : [])
+                .map(g => {
+                    const eq = eqCache.find(e => e.id === g.id);
+                    return `${eq ? eq.nome : g.id}${(g.quantidade || 1) > 1 ? ` ×${g.quantidade}` : ''}`;
+                }).join(', ');
+            text = `🎒 Concede como Item Solto: ${lista || '?'}`;
         } else {
             text = `${label[config.tipoConcessao] || 'Concede'}: ${config.descricaoConcessao || '?'}`;
         }
@@ -674,6 +682,7 @@ function renderConfigConceder(config) {
                 <option value="remover_acesso" ${tc === 'remover_acesso' ? 'selected' : ''}>Remove acesso</option>
                 <option value="adicionar_parte_corpo" ${tc === 'adicionar_parte_corpo' ? 'selected' : ''}>Adicionar Parte do Corpo</option>
                 <option value="remover_parte_corpo" ${tc === 'remover_parte_corpo' ? 'selected' : ''}>Remover Parte do Corpo</option>
+                <option value="conceder_equipamento" ${tc === 'conceder_equipamento' ? 'selected' : ''}>🎒 Conceder Equipamento (cria Item Solto)</option>
             </select>
         </div>
         <div class="form-group"><label>Descrição da concessão <span class="required">*</span></label>
@@ -683,8 +692,65 @@ function renderConfigConceder(config) {
     </div>
     <div id="mech_bodyParts_container" style="display: ${(tc === 'adicionar_parte_corpo' || tc === 'remover_parte_corpo') ? 'block' : 'none'}">
         ${_renderBodyPartsConcessao(config)}
+    </div>
+    <div id="mech_equipConcessao_container" style="display: ${tc === 'conceder_equipamento' ? 'block' : 'none'}">
+        ${_renderEquipamentosConcessao(config)}
     </div>`;
 }
+
+function _renderEquipamentosConcessao(config) {
+    const eqCache = window._equipmentCache || [];
+    const concedidos = Array.isArray(config?.equipamentosConcedidos) ? config.equipamentosConcedidos : [];
+
+    const rows = concedidos.map(g => {
+        const eq = eqCache.find(e => e.id === g.id);
+        const nome = eq ? eq.nome : `⚠️ ${g.id}`;
+        return `
+        <div class="mech-equip-conc-row" data-eq-id="${esc(g.id)}" style="display:flex;align-items:center;gap:10px;padding:5px 8px;margin-bottom:5px;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-panel)">
+            <span style="flex:1;font-size:13px;font-weight:600">🎒 ${esc(nome)}</span>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)">Quantidade:
+                <input type="number" class="eq-conc-qtd" min="1" value="${Math.max(1, parseInt(g.quantidade, 10) || 1)}" style="width:70px;padding:3px 6px;font-size:13px" oninput="window._mechUpdatePreview()">
+            </label>
+            <button type="button" onclick="this.closest('.mech-equip-conc-row').remove();window._mechUpdatePreview()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px">✕</button>
+        </div>`;
+    }).join('');
+
+    const options = eqCache.map(e => `<option value="${esc(e.id)}">${esc(e.nome)}</option>`).join('');
+    const warning = eqCache.length === 0 ? '<div class="alert alert-warning" style="margin-top:12px">Nenhum equipamento cadastrado no sistema.</div>' : '';
+
+    return `
+    <div style="margin-top:16px">
+        <label>🎒 Equipamentos concedidos (criados como <b>Item Solto</b> na ficha ao aplicar a mecânica): <span class="required">*</span></label>
+        ${warning}
+        <div id="mech_equipConc_list" style="margin-top:8px">${rows}</div>
+        <select onchange="window._mechAddEquipConcessao(this)" style="margin-top:6px;width:100%;padding:6px 8px;font-size:13px">
+            <option value="">+ Vincular Equipamento...</option>
+            ${options}
+        </select>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">A concessão acontece <b>uma única vez</b> por personagem (rastreada na ficha). Os itens ficam em "📋 Itens Soltos" no inventário.</div>
+    </div>`;
+}
+
+window._mechAddEquipConcessao = function (select) {
+    const eqId = select.value;
+    if (!eqId) return;
+    const list = document.getElementById('mech_equipConc_list');
+    if (!list) { select.value = ''; return; }
+    if (list.querySelector(`.mech-equip-conc-row[data-eq-id="${eqId}"]`)) { select.value = ''; return; }
+    const eq = (window._equipmentCache || []).find(e => e.id === eqId);
+    const temp = document.createElement('div');
+    temp.innerHTML = `
+        <div class="mech-equip-conc-row" data-eq-id="${esc(eqId)}" style="display:flex;align-items:center;gap:10px;padding:5px 8px;margin-bottom:5px;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-panel)">
+            <span style="flex:1;font-size:13px;font-weight:600">🎒 ${esc(eq?.nome || eqId)}</span>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)">Quantidade:
+                <input type="number" class="eq-conc-qtd" min="1" value="1" style="width:70px;padding:3px 6px;font-size:13px" oninput="window._mechUpdatePreview()">
+            </label>
+            <button type="button" onclick="this.closest('.mech-equip-conc-row').remove();window._mechUpdatePreview()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px">✕</button>
+        </div>`;
+    list.appendChild(temp.firstElementChild);
+    select.value = '';
+    window._mechUpdatePreview();
+};
 
 function _renderBodyPartsConcessao(config) {
     const bpCache = window._bodyPartsCache || [];
@@ -1537,6 +1603,10 @@ window._mechTipoConcessaoChange = function() {
             container.style.display = 'none';
         }
     }
+    const eqContainer = document.getElementById('mech_equipConcessao_container');
+    if (eqContainer) {
+        eqContainer.style.display = tc === 'conceder_equipamento' ? 'block' : 'none';
+    }
 };
 
 // ===== BOOLEAN EQUATION HANDLERS =====
@@ -1824,10 +1894,21 @@ function collectMechFormData() {
                 }
             });
         }
+        let equipamentosConcedidos = undefined;
+        if (tc === 'conceder_equipamento') {
+            equipamentosConcedidos = [];
+            document.querySelectorAll('#mech_equipConc_list .mech-equip-conc-row').forEach(row => {
+                const eqId = row.dataset.eqId;
+                if (!eqId) return;
+                const qtd = Math.max(1, parseInt(row.querySelector('.eq-conc-qtd')?.value, 10) || 1);
+                equipamentosConcedidos.push({ id: eqId, quantidade: qtd });
+            });
+        }
         data.config = {
             tipoConcessao: tc,
             descricaoConcessao: document.getElementById('mech_config_descricaoConcessao')?.value || '',
-            ...(partesCorpo !== undefined ? { partesCorpo } : {})
+            ...(partesCorpo !== undefined ? { partesCorpo } : {}),
+            ...(equipamentosConcedidos !== undefined ? { equipamentosConcedidos } : {})
         };
     } else if (tipo === 'condicional') {
         const condicaoMecanica = document.getElementById('mech_condicaoMecanica')?.checked || false;

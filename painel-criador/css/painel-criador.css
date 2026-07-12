@@ -3212,3 +3212,206 @@ html.dark .meta-chip.chip-tag {
     background: var(--primary);
     color: #fff;
 }
+
+/* ===== CLASS MODULES EDITOR — visual profissional ===== */
+.class-module-editor-item {
+    border: 1px solid rgba(139, 92, 246, .25);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.cm-section {
+    margin: 8px 10px;
+    padding: 10px 12px;
+    border: 1px solid rgba(148, 163, 184, .12);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, .25);
+}
+
+.cm-section-title {
+    font-weight: 700;
+    font-size: .78rem;
+    color: #a78bfa;
+    letter-spacing: .02em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.cm-section-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.cm-section-title-row .cm-section-title { margin-bottom: 0; }
+
+.cm-hint {
+    font-size: .65rem;
+    color: var(--muted, #94a3b8);
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+.cm-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .78rem;
+    cursor: pointer;
+    margin: 4px 0;
+}
+
+.cm-toggle-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #8b5cf6;
+}
+
+.cm-mini-title {
+    font-size: .68rem;
+    font-weight: 700;
+    color: var(--muted, #94a3b8);
+}
+
+.cm-chip-remove {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: .8rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background .15s;
+}
+
+.cm-chip-remove:hover { background: rgba(239, 68, 68, .15); }
+
+/* Custo de Equipamento — chips expandidos */
+.cm-equip-cost-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+    border: 1px solid rgba(139, 92, 246, .25);
+    border-radius: 8px;
+    background: rgba(139, 92, 246, .06);
+}
+
+.cm-equip-cost-name {
+    font-size: .75rem;
+    font-weight: 700;
+    color: var(--text, #e2e8f0);
+    flex: 1 1 140px;
+    align-self: center;
+}
+
+.cm-mini-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: .6rem;
+    font-weight: 600;
+    color: var(--muted, #94a3b8);
+    text-transform: uppercase;
+}
+
+.cm-mini-label input,
+.cm-mini-label select {
+    font-size: .72rem;
+    padding: 3px 6px;
+}
+
+.cm-mini-label input[type="number"] { width: 64px; }
+
+/* Schema field rows */
+.schema-field-row {
+    border: 1px solid rgba(148, 163, 184, .1);
+    border-radius: 6px;
+    padding: 5px 6px;
+    margin-bottom: 5px;
+    background: rgba(30, 41, 59, .3);
+}
+
+.schema-field-main {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.schema-field-main input,
+.schema-field-main select { font-size: .72rem; }
+
+.cm-sf-ro {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: .72rem;
+    cursor: pointer;
+}
+
+.schema-field-botao-mechs {
+    margin-top: 5px;
+    padding: 5px 6px;
+    border: 1px dashed rgba(139, 92, 246, .3);
+    border-radius: 6px;
+}
+
+/* Itens pré-cadastrados */
+.cm-predef-item {
+    border: 1px solid rgba(56, 189, 248, .25);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    background: rgba(56, 189, 248, .04);
+}
+
+.cm-predef-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.cm-predef-num {
+    font-size: .75rem;
+    font-weight: 700;
+    color: #7dd3fc;
+}
+
+.cm-predef-valores {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(148, 163, 184, .15);
+}
+
+.cm-pv-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.cm-pv-field label {
+    display: block;
+    font-size: .6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--muted, #94a3b8);
+    margin-bottom: 2px;
+}
+
+.cm-pv-field input,
+.cm-pv-field select,
+.cm-pv-field textarea {
+    width: 100%;
+    font-size: .72rem;
+    padding: 3px 6px;
+    box-sizing: border-box;
+}
+
+.cm-pv-field.full { grid-column: 1 / -1; }

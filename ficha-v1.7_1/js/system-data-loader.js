@@ -466,6 +466,8 @@ function buildClassModulesFromFirebase() {
         window._classModules[cls.nome] = cls.modulosDaClasse.map(mod => {
             totalModules++;
             return {
+                // Preserva campos extras (parâmetros de Runomancia, etc.)
+                ...mod,
                 id: mod.id || ('mod_' + (mod.titulo || '').toLowerCase().replace(/[^a-z0-9]/g, '_')),
                 tipo: mod.tipo || 'lista',
                 titulo: mod.titulo || 'Módulo',
@@ -473,6 +475,12 @@ function buildClassModulesFromFirebase() {
                 custoExpPorItem: mod.custoExpPorItem ?? 0,
                 custoExpLabel: mod.custoExpLabel || '',
                 mecanicaLimiteId: mod.mecanicaLimiteId || null,
+                // Novos campos de configuração avançada
+                limiteFixo: (mod.limiteFixo === undefined || mod.limiteFixo === null || mod.limiteFixo === '') ? null : Number(mod.limiteFixo),
+                limiteMecanicaIds: Array.isArray(mod.limiteMecanicaIds) ? mod.limiteMecanicaIds : [],
+                custoEquipamentos: Array.isArray(mod.custoEquipamentos) ? mod.custoEquipamentos : [],
+                permitirCriacaoJogador: mod.permitirCriacaoJogador !== false,
+                itensPredefinidos: Array.isArray(mod.itensPredefinidos) ? mod.itensPredefinidos : [],
                 schema: Array.isArray(mod.schema) ? mod.schema : []
             };
         });

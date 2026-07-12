@@ -82,11 +82,14 @@ function initPhase7(container) {
                 const safeEquipamentos = Array.isArray(kit.equipamentos) ? kit.equipamentos : [];
                 if (safeEquipamentos.length > 0) {
                     html += `<div style="display:flex; flex-direction:column;">`;
-                    for (const eqId of safeEquipamentos) {
+                    for (const eqItem of safeEquipamentos) {
+                        const eqId = typeof eqItem === 'string' ? eqItem : eqItem.id;
+                        const eqQtd = typeof eqItem === 'string' ? 1 : (eqItem.qtd || 1);
                         try {
                             const eq = window._systemData?.equipment?.find(e => e.id === eqId);
                             if (eq) {
-                                html += window.renderEquipmentItemDetails(eq);
+                                const eqClone = { ...eq, quantidade: eqQtd };
+                                html += window.renderEquipmentItemDetails(eqClone);
                             } else {
                                 html += `<div style="color: var(--danger); font-size: 0.9rem; padding: 8px; margin-bottom: 12px; border: 1px dashed var(--danger); border-radius: 4px;">Item Desconhecido (ID: ${escHtml(String(eqId))})</div>`;
                             }

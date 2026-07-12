@@ -462,6 +462,8 @@ onAuthStateChanged(auth, async (user) => {
 
             // Construir dados dinâmicos
             buildSkillsFromFirebase();
+            populateRaceSelect();
+            populateClassSelect();
             if (typeof populateTargetMapFromSkills === 'function') populateTargetMapFromSkills();
             window.RACES = buildRacesFromFirebase();
             buildDerivedValuesFromFirebase();
@@ -470,8 +472,6 @@ onAuthStateChanged(auth, async (user) => {
             if (typeof populateTargetMapFromVitalStats === 'function') populateTargetMapFromVitalStats();
             if (typeof populateTargetMapFromBodyParts === 'function') populateTargetMapFromBodyParts();
             if (typeof populateDistribuirPools === 'function') populateDistribuirPools();
-            populateRaceSelect();
-            populateClassSelect();
             buildTribesFromFirebase();
             if (typeof populateTribesSelect === 'function') populateTribesSelect();
 

@@ -758,10 +758,10 @@ function recalcAll() {
         const prevContributions = _getDynamicMechContributions();
         const bonuses = state.mechanicBonuses || {};
         for (const [key, contribution] of Object.entries(prevContributions)) {
-            if (key.startsWith('SET:')) {
+            if (key.startsWith('SET:') || key.startsWith('BASE_SET:')) {
                 // Para SET, remover a chave inteira (são overrides absolutos)
                 delete bonuses[key];
-            } else if (key.startsWith('MULT:') || key.startsWith('DIV:')) {
+            } else if (key.startsWith('MULT:') || key.startsWith('DIV:') || key.startsWith('BASE_MULT:') || key.startsWith('BASE_DIV:')) {
                 // Para MULT e DIV dinâmicos, desfazer dividindo pela contribuição anterior
                 if (contribution && contribution !== 0) {
                     bonuses[key] = (bonuses[key] || 1) / contribution;
@@ -889,6 +889,26 @@ function recalcAll() {
 function _applyMechanicModifiers(key, value, bonuses, limits) {
     const bonusKey = `DERIVED:${key}`;
 
+    // === 1. AVALIAR MECÂNICAS BASE (Vinculadas) ===
+    const baseSetKey = `BASE_SET:${bonusKey}`;
+    if (bonuses[baseSetKey] !== undefined) {
+        value = bonuses[baseSetKey];
+    }
+
+    const baseAddKey = `BASE:${bonusKey}`;
+    value += (bonuses[baseAddKey] || 0);
+
+    const baseMultKey = `BASE_MULT:${bonusKey}`;
+    if (bonuses[baseMultKey]) {
+        value = Math.floor(value * bonuses[baseMultKey]);
+    }
+
+    const baseDivKey = `BASE_DIV:${bonusKey}`;
+    if (bonuses[baseDivKey] && bonuses[baseDivKey] !== 0) {
+        value = Math.floor(value / bonuses[baseDivKey]);
+    }
+
+    // === 2. AVALIAR MODIFICADORES GERAIS (Peculiaridades, Itens, Condições) ===
     // "Definir fixo" (=) — overrides the base formula entirely
     const setKey = `SET:${bonusKey}`;
     if (bonuses[setKey] !== undefined) {
@@ -898,7 +918,7 @@ function _applyMechanicModifiers(key, value, bonuses, limits) {
     value += (bonuses[bonusKey] || 0);
 
     // Multiplicadores de mecânicas
-    const multKey = `MULT:DERIVED:${key}`;
+    const multKey = `MULT:${bonusKey}`;
     if (bonuses[multKey]) {
         value = Math.floor(value * bonuses[multKey]);
     }

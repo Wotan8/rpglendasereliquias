@@ -218,10 +218,18 @@ function refreshDots(c, k) {
         // Show current grade indicator
         _updateGradeIndicator(c, k, currentGrade, auraInfo, baseDots, totalLevel);
     } else {
+        const finalVal = typeof getEffectiveDotValue === 'function' ? getEffectiveDotValue(k) : v;
         c.querySelectorAll('.dot').forEach(d => {
-            d.classList.toggle('filled', +d.dataset.val <= v);
-            d.classList.remove('aura-filled');
+            const val = +d.dataset.val;
+            d.classList.remove('aura-filled', 'bonus', 'filled');
             d.style.removeProperty('--aura-color');
+            
+            if (val <= finalVal) {
+                d.classList.add('filled');
+                if (val > v) {
+                    d.classList.add('bonus');
+                }
+            }
         });
     }
 }

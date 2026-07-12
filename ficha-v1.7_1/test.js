@@ -111,29 +111,21 @@ const TARGET_MAP = {
  * Chamada após buildSkillsFromFirebase() para registrar skills criadas no painel.
  */
 function populateTargetMapFromSkills() {
-    if (!window.SKILLS) return;
+    if (!global.SKILLS) return;
     const CATEGORY_PREFIX = {
         'mental': 'sk_mental_', 'fisico': 'sk_fisico_',
         'social': 'sk_social_', 'combate': 'sk_combate_',
         'exclusivo': 'sk_exclusivo_'
     };
-    for (const cat of Object.keys(window.SKILLS)) {
+    for (const cat of Object.keys(global.SKILLS)) {
         const pfx = CATEGORY_PREFIX[cat] || 'sk_mental_';
-        for (const sk of window.SKILLS[cat]) {
+        for (const sk of global.SKILLS[cat]) {
             // SEMPRE sobrescreve para garantir que o key dinâmico (Firebase)
             // coincida com o key usado nos dots/state (pode ter acentos)
             TARGET_MAP[sk.name] = pfx + sk.key;
         }
     }
-    if (window.CLASS_SKILLS) {
-        for (const cl of Object.keys(window.CLASS_SKILLS)) {
-            for (const sk of window.CLASS_SKILLS[cl]) {
-                const key = 'sk_classe_' + sk.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                TARGET_MAP[sk] = key;
-            }
-        }
-    }
-    console.log('✅ TARGET_MAP atualizado com perícias do Firebase (incluindo de classe)');
+    console.log('✅ TARGET_MAP atualizado com perícias do Firebase');
 }
 
 /**
@@ -141,8 +133,8 @@ function populateTargetMapFromSkills() {
  * Chamada após buildDerivedValuesFromFirebase().
  */
 function populateTargetMapFromDerivedValues() {
-    if (!window.DERIVED_VALUES) return;
-    for (const dv of window.DERIVED_VALUES) {
+    if (!global.DERIVED_VALUES) return;
+    for (const dv of global.DERIVED_VALUES) {
         // Registrar/sobrescrever por nome legível → DERIVED:KEY
         // SEMPRE sobrescreve para garantir que o key dinâmico (Firebase)
         // coincida com o key usado em recalcAll/_applyMechanicModifiers
@@ -166,8 +158,8 @@ function populateTargetMapFromDerivedValues() {
  * que nomes do Firebase sobrescrevam corretamente.
  */
 function populateTargetMapFromVitalStats() {
-    if (!window.VITAL_STATS) return;
-    for (const vs of window.VITAL_STATS) {
+    if (!global.VITAL_STATS) return;
+    for (const vs of global.VITAL_STATS) {
         // Registrar como DERIVED:KEY (mesma lógica dos DVs)
         TARGET_MAP[`${vs.nome} Máxima`] = `DERIVED:${vs.key}`;
         TARGET_MAP[`${vs.nome} Máximo`] = `DERIVED:${vs.key}`;
@@ -180,8 +172,8 @@ function populateTargetMapFromVitalStats() {
  * Permite que mecânicas alterem dinamicamente o número de slots anatômicos.
  */
 function populateTargetMapFromBodyParts() {
-    if (!window._systemData || !window._systemData.bodyParts) return;
-    for (const bp of window._systemData.bodyParts) {
+    if (!global._systemData || !global._systemData.bodyParts) return;
+    for (const bp of global._systemData.bodyParts) {
         TARGET_MAP[`Parte do Corpo: ${bp.nome}`] = `slot_${bp.id}`;
     }
     console.log('✅ TARGET_MAP atualizado com partes do corpo do Firebase');
@@ -193,10 +185,10 @@ function populateTargetMapFromBodyParts() {
  * Chamada por buildClassModulesFromFirebase() após carregar os módulos.
  */
 function populateTargetMapFromClassModules() {
-    if (!window._classModules) return;
+    if (!global._classModules) return;
     let count = 0;
-    for (const classeNome of Object.keys(window._classModules)) {
-        for (const mod of window._classModules[classeNome]) {
+    for (const classeNome of Object.keys(global._classModules)) {
+        for (const mod of global._classModules[classeNome]) {
             if (mod.mecanicaLimiteId) {
                 TARGET_MAP['Limite: ' + mod.titulo] = 'MODULE_LIMIT:' + mod.id;
                 count++;
@@ -284,9 +276,9 @@ function _concederEquipamentosDeMecanica(mech, config, parentPec) {
     state.mecanicasAplicadas = state.mecanicasAplicadas || {};
     if (state.mecanicasAplicadas[mech.id]?.equipamentosConcedidos) return; // já concedido
 
-    const charId = window.currentCharacterId;
-    const user = window.currentUser;
-    const invPronto = window._inventoryState?.loaded === true;
+    const charId = global.currentCharacterId;
+    const user = global.currentUser;
+    const invPronto = global._inventoryState?.loaded === true;
 
     // Ficha/inventário ainda não carregados: agendar nova tentativa
     if (!charId || !user || !invPronto) {
@@ -310,7 +302,7 @@ function _concederEquipamentosDeMecanica(mech, config, parentPec) {
     };
     if (typeof scheduleAutosave === 'function') scheduleAutosave();
 
-    const catalog = window._inventoryState.catalog || [];
+    const catalog = global._inventoryState.catalog || [];
 
     (async () => {
         for (const g of lista) {
@@ -357,7 +349,7 @@ function _concederEquipamentosDeMecanica(mech, config, parentPec) {
                 } catch (e) {
                     console.error('❌ Erro ao criar item concedido:', e);
                 }
-                window._inventoryState.items.push(itemData);
+                global._inventoryState.items.push(itemData);
             }
         }
         if (typeof renderInventoryTab === 'function') renderInventoryTab();
@@ -439,7 +431,7 @@ function _resolveSheetRef(ref, mult) {
 
     // Check Nível
     if (ref === 'Nível') {
-        const nivel = parseInt(document.querySelector('[data-key="nivel"]')?.value) || 1;
+        const nivel = parseInt(global.document.querySelector('[data-key="nivel"]')?.value) || 1;
         return nivel * mult;
     }
 
@@ -460,7 +452,7 @@ function _resolveSheetRef(ref, mult) {
     // Check field values
     if (attrKey && attrKey.startsWith('field:')) {
         const fieldKey = attrKey.replace('field:', '');
-        const fieldEl = document.querySelector(`[data-key="${fieldKey}"]`);
+        const fieldEl = global.document.querySelector(`[data-key="${fieldKey}"]`);
         const fieldVal = parseFloat(String(fieldEl?.value || '0').replace(',', '.')) || 0;
         return fieldVal * mult;
     }
@@ -506,17 +498,16 @@ function applyAllRaceMechanics(racaNome) {
 
     if (typeof applyConditionMechanics === 'function') applyConditionMechanics();
 
-    if (!racaNome || !window.RACES) {
+    if (!racaNome || !global.RACES) {
         // Even without a race, apply class and tribe peculiarity mechanics
         _applyClassPeculiarityMechanics();
         _applyTribePeculiarityMechanics();
-        _applyIndividualPeculiarityMechanics();
         if (typeof applyEquippedItemsMechanics === 'function') applyEquippedItemsMechanics();
         if (typeof recalcInventoryPressure === 'function') recalcInventoryPressure();
         if (typeof renderAurasTab === 'function') renderAurasTab();
         return;
     }
-    const raca = window.RACES[racaNome];
+    const raca = global.RACES[racaNome];
     if (!raca) {
         _applyClassPeculiarityMechanics();
         _applyTribePeculiarityMechanics();
@@ -534,8 +525,8 @@ function applyAllRaceMechanics(racaNome) {
         }
 
         // === AURA SYSTEM: apply linked aura from peculiarity ===
-        if (pec.auraVinculadaId && window.AURAS) {
-            const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
+        if (pec.auraVinculadaId && global.AURAS) {
+            const auraDef = global.AURAS.find(a => a.id === pec.auraVinculadaId);
             if (auraDef) {
                 const grau = pec.auraGrauConcedido || 1;
                 if (!state.auras) state.auras = {};
@@ -552,9 +543,6 @@ function applyAllRaceMechanics(racaNome) {
 
     // === Aplicar mecânicas de peculiaridades de TRIBO ===
     _applyTribePeculiarityMechanics();
-
-    // === Aplicar mecânicas de peculiaridades INDIVIDUAIS (Avulsas) ===
-    _applyIndividualPeculiarityMechanics();
 
     // === Aplicar mecânicas dos ITENS EQUIPADOS ===
     if (typeof applyEquippedItemsMechanics === 'function') {
@@ -573,18 +561,18 @@ function applyAllRaceMechanics(racaNome) {
  * Aplica mecânicas das peculiaridades da classe selecionada.
  */
 function _applyClassPeculiarityMechanics() {
-    const classeNome = document.getElementById('selClasse')?.value;
-    if (!classeNome || !window.CLASS_PECULIARITIES || !window.CLASS_PECULIARITIES[classeNome]) return;
+    const classeNome = global.document.getElementById('selClasse')?.value;
+    if (!classeNome || !global.CLASS_PECULIARITIES || !global.CLASS_PECULIARITIES[classeNome]) return;
 
-    for (const pec of window.CLASS_PECULIARITIES[classeNome]) {
+    for (const pec of global.CLASS_PECULIARITIES[classeNome]) {
         if (pec.mecanicas) {
             for (const mech of pec.mecanicas) {
                 applyMechanicToSheet(mech, pec);
             }
         }
         // Aura from class peculiarity
-        if (pec.auraVinculadaId && window.AURAS) {
-            const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
+        if (pec.auraVinculadaId && global.AURAS) {
+            const auraDef = global.AURAS.find(a => a.id === pec.auraVinculadaId);
             if (auraDef) {
                 const grau = pec.auraGrauConcedido || 1;
                 if (!state.auras) state.auras = {};
@@ -601,54 +589,18 @@ function _applyClassPeculiarityMechanics() {
  * Aplica mecânicas das peculiaridades da tribo selecionada.
  */
 function _applyTribePeculiarityMechanics() {
-    const triboNome = document.getElementById('selTribo')?.value;
-    if (!triboNome || !window.TRIBES || !window.TRIBES[triboNome]) return;
+    const triboNome = global.document.getElementById('selTribo')?.value;
+    if (!triboNome || !global.TRIBES || !global.TRIBES[triboNome]) return;
 
-    for (const pec of window.TRIBES[triboNome].peculiaridades) {
+    for (const pec of global.TRIBES[triboNome].peculiaridades) {
         if (pec.mecanicas) {
             for (const mech of pec.mecanicas) {
                 applyMechanicToSheet(mech, pec);
             }
         }
         // Aura from tribe peculiarity
-        if (pec.auraVinculadaId && window.AURAS) {
-            const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
-            if (auraDef) {
-                const grau = pec.auraGrauConcedido || 1;
-                if (!state.auras) state.auras = {};
-                const existing = state.auras[pec.auraVinculadaId];
-                if (!existing || existing.grauDesbloqueado < grau) {
-                    state.auras[pec.auraVinculadaId] = { grauDesbloqueado: grau, fonte: 'peculiaridade', fonteId: pec.id };
-                }
-            }
-        }
-    }
-}
-
-/**
- * Aplica mecânicas das peculiaridades individuais (avulsas).
- */
-function _applyIndividualPeculiarityMechanics() {
-    if (!state.peculiaridadesIndividuais || !window._systemData?.peculiarities) return;
-    
-    // Assegura que resolvePeculiaridade existe (de race-peculiarities.js)
-    if (typeof _resolvePeculiaridade !== 'function') return;
-
-    // Resgata o objeto completo de peculiaridade usando o _resolvePeculiaridade
-    const indPecs = state.peculiaridadesIndividuais.map(p => {
-        return _resolvePeculiaridade(p, 'Individual');
-    }).filter(Boolean);
-
-    for (const pec of indPecs) {
-        if (pec.mecanicas) {
-            for (const mech of pec.mecanicas) {
-                applyMechanicToSheet(mech, pec);
-            }
-        }
-        
-        // Aura from individual peculiarity
-        if (pec.auraVinculadaId && window.AURAS) {
-            const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
+        if (pec.auraVinculadaId && global.AURAS) {
+            const auraDef = global.AURAS.find(a => a.id === pec.auraVinculadaId);
             if (auraDef) {
                 const grau = pec.auraGrauConcedido || 1;
                 if (!state.auras) state.auras = {};
@@ -663,15 +615,15 @@ function _applyIndividualPeculiarityMechanics() {
 
 /* ===== APLICAR MECÂNICAS VINCULADAS A PERÍCIAS ===== */
 function applySkillMechanics() {
-    if (!window.SKILLS || !window._systemData?.mechanics) return;
+    if (!global.SKILLS || !global._systemData?.mechanics) return;
 
     const mechanicsById = {};
-    for (const m of window._systemData.mechanics) {
+    for (const m of global._systemData.mechanics) {
         mechanicsById[m.id] = m;
     }
 
-    for (const cat of Object.keys(window.SKILLS)) {
-        for (const skill of window.SKILLS[cat]) {
+    for (const cat of Object.keys(global.SKILLS)) {
+        for (const skill of global.SKILLS[cat]) {
             if (!skill.mecanicaIds || skill.mecanicaIds.length === 0) continue;
             for (const mechId of skill.mecanicaIds) {
                 const mech = mechanicsById[mechId];
@@ -686,16 +638,16 @@ function applySkillMechanics() {
 
 /* ===== APLICAR MECÂNICAS VINCULADAS A STATUS VITAIS (Firebase) ===== */
 function applyVitalStatsMechanics() {
-    if (!window.VITAL_STATS || !window._systemData?.mechanics) return;
+    if (!global.VITAL_STATS || !global._systemData?.mechanics) return;
 
     const mechanicsById = {};
-    for (const m of window._systemData.mechanics) {
+    for (const m of global._systemData.mechanics) {
         mechanicsById[m.id] = m;
     }
 
     const processedMechIds = new Set();
 
-    for (const vs of window.VITAL_STATS) {
+    for (const vs of global.VITAL_STATS) {
         if (!vs.mecanicaIds || vs.mecanicaIds.length === 0) continue;
         for (const mechId of vs.mecanicaIds) {
             if (processedMechIds.has(mechId)) continue;
@@ -704,28 +656,26 @@ function applyVitalStatsMechanics() {
             const mech = mechanicsById[mechId];
             if (!mech) continue;
 
-            const mechToApply = { ...mech, _isBaseCalc: true };
-
             // Se a mecânica tem referências à ficha, armazenar para re-avaliação dinâmica
             if (mech.tipo === 'modificar'
                 && (!mech.duracao || mech.duracao === 'permanente')
                 && !mech.condicaoAplicacao?.trim()
                 && _mechHasSheetRefs(mech)) {
-                _derivedValueMechanicsRaw.push(mechToApply);
+                _derivedValueMechanicsRaw.push(mech);
                 continue;
             }
 
-            applyMechanicToSheet(mechToApply, null);
+            applyMechanicToSheet(mech, null);
         }
     }
 }
 
 /* ===== APLICAR MECÂNICAS VINCULADAS A CONDIÇÕES ===== */
 function applyConditionMechanics() {
-    if (!state.conditions || !Array.isArray(state.conditions) || !window._systemData?.mechanics) return;
+    if (!state.conditions || !Array.isArray(state.conditions) || !global._systemData?.mechanics) return;
 
     const mechanicsById = {};
-    for (const m of window._systemData.mechanics) {
+    for (const m of global._systemData.mechanics) {
         mechanicsById[m.id] = m;
     }
 
@@ -760,10 +710,10 @@ function applyConditionMechanics() {
 
 /* ===== APLICAR MECÂNICAS VINCULADAS A VALORES DERIVADOS ===== */
 function applyDerivedValueMechanics() {
-    if (!window.DERIVED_VALUES || !window._systemData?.mechanics) return;
+    if (!global.DERIVED_VALUES || !global._systemData?.mechanics) return;
 
     const mechanicsById = {};
-    for (const m of window._systemData.mechanics) {
+    for (const m of global._systemData.mechanics) {
         mechanicsById[m.id] = m;
     }
 
@@ -771,7 +721,7 @@ function applyDerivedValueMechanics() {
     // processar apenas uma vez.
     const processedMechIds = new Set();
 
-    for (const dv of window.DERIVED_VALUES) {
+    for (const dv of global.DERIVED_VALUES) {
         if (!dv.mecanicaIds || dv.mecanicaIds.length === 0) continue;
         for (const mechId of dv.mecanicaIds) {
             if (processedMechIds.has(mechId)) continue;
@@ -780,39 +730,37 @@ function applyDerivedValueMechanics() {
             const mech = mechanicsById[mechId];
             if (!mech) continue;
 
-            const mechToApply = { ...mech, _isBaseCalc: true };
-
             // Se a mecânica é "modificar" permanente com equação que referencia a ficha,
             // armazenar para re-avaliação dinâmica em recalcAll()
             if (mech.tipo === 'modificar'
                 && (!mech.duracao || mech.duracao === 'permanente')
                 && !mech.condicaoAplicacao?.trim()
                 && _mechHasSheetRefs(mech)) {
-                _derivedValueMechanicsRaw.push(mechToApply);
+                _derivedValueMechanicsRaw.push(mech);
                 // Não chamar applyMechanicToSheet — será resolvido em recalcAll
                 continue;
             }
 
-            applyMechanicToSheet(mechToApply, null);
+            applyMechanicToSheet(mech, null);
         }
     }
 }
 
 /* ===== APLICAR MECÂNICAS DE LIMITE DE MÓDULOS DE CLASSE ===== */
 function applyClassModuleLimitMechanics() {
-    if (!window._classModules || !window._systemData?.mechanics) return;
+    if (!global._classModules || !global._systemData?.mechanics) return;
 
     // Descobrir classe selecionada
-    const classeEl = document.getElementById('selClasse');
+    const classeEl = global.document.getElementById('selClasse');
     const classeNome = classeEl ? classeEl.value : '';
-    if (!classeNome || !window._classModules[classeNome]) return;
+    if (!classeNome || !global._classModules[classeNome]) return;
 
     const mechanicsById = {};
-    for (const m of window._systemData.mechanics) {
+    for (const m of global._systemData.mechanics) {
         mechanicsById[m.id] = m;
     }
 
-    for (const mod of window._classModules[classeNome]) {
+    for (const mod of global._classModules[classeNome]) {
         if (!mod.mecanicaLimiteId) continue;
         const mech = mechanicsById[mod.mecanicaLimiteId];
         if (!mech) {
@@ -862,13 +810,11 @@ function resolveDerivedValueMechanicsLive() {
             const alvos = Array.isArray(calc.alvo) ? calc.alvo : [calc.alvo];
             for (const alvo of alvos) {
                 if (!alvo) continue;
-                const rawField = TARGET_MAP[alvo];
-                if (!rawField) {
+                const field = TARGET_MAP[alvo];
+                if (!field) {
                     console.warn(`⚠️ Mecânica DV "${mech.nome}": alvo "${alvo}" não encontrado no TARGET_MAP`);
                     continue;
                 }
-
-                const field = mech._isBaseCalc ? 'BASE:' + rawField : rawField;
 
                 const val = resolveCalcValue(calc);
                 const op = calc.operacao;
@@ -884,17 +830,17 @@ function resolveDerivedValueMechanicsLive() {
                     _dynamicMechContributions[field] = (_dynamicMechContributions[field] || 0) - val;
                 }
                 else if (op === '×' || op === '*') {
-                    const multKey = (mech._isBaseCalc ? 'BASE_MULT:' : 'MULT:') + rawField;
+                    const multKey = 'MULT:' + field;
                     state.mechanicBonuses[multKey] = (state.mechanicBonuses[multKey] || 1) * val;
                     _dynamicMechContributions[multKey] = val;
                 }
                 else if (op === '=') {
-                    const setKey = (mech._isBaseCalc ? 'BASE_SET:' : 'SET:') + rawField;
+                    const setKey = 'SET:' + field;
                     state.mechanicBonuses[setKey] = val;
                     _dynamicMechContributions[setKey] = val;
                 }
                 else if (op === '÷' || op === '/') {
-                    const divKey = (mech._isBaseCalc ? 'BASE_DIV:' : 'DIV:') + rawField;
+                    const divKey = 'DIV:' + field;
                     state.mechanicBonuses[divKey] = (state.mechanicBonuses[divKey] || 1) * val;
                     _dynamicMechContributions[divKey] = val;
                 }
@@ -1003,13 +949,11 @@ function applyMechanicToSheet(mech, parentPec) {
             const alvos = Array.isArray(calc.alvo) ? calc.alvo : [calc.alvo];
             for (const alvo of alvos) {
                 if (!alvo) continue;
-                const rawField = TARGET_MAP[alvo];
-                if (!rawField) {
+                const field = TARGET_MAP[alvo];
+                if (!field) {
                     console.warn(`⚠️ Mecânica "${mech.nome}": alvo "${alvo}" não encontrado no TARGET_MAP`);
                     continue;
                 }
-
-                const field = mech._isBaseCalc ? 'BASE:' + rawField : rawField;
 
                 const val = resolveCalcValue(calc);
                 const op = calc.operacao;
@@ -1017,16 +961,16 @@ function applyMechanicToSheet(mech, parentPec) {
                 if (op === '+') state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) + val;
                 else if (op === '-') state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) - val;
                 else if (op === '×' || op === '*') {
-                    const multKey = (mech._isBaseCalc ? 'BASE_MULT:' : 'MULT:') + rawField;
+                    const multKey = 'MULT:' + field;
                     state.mechanicBonuses[multKey] = (state.mechanicBonuses[multKey] || 1) * val;
                 }
                 else if (op === '=') {
                     // "Definir fixo": overrides the base formula entirely
-                    const setKey = (mech._isBaseCalc ? 'BASE_SET:' : 'SET:') + rawField;
+                    const setKey = 'SET:' + field;
                     state.mechanicBonuses[setKey] = val;
                 }
                 else if (op === '÷' || op === '/') {
-                    const divKey = (mech._isBaseCalc ? 'BASE_DIV:' : 'DIV:') + rawField;
+                    const divKey = 'DIV:' + field;
                     state.mechanicBonuses[divKey] = (state.mechanicBonuses[divKey] || 1) * val;
                 }
             }
@@ -1155,7 +1099,7 @@ function applyMechanicToSheet(mech, parentPec) {
             
             // Avaliar mecânicas booleanas vinculadas
             for (const boolId of config.condicaoMecanicaIds) {
-                const boolMech = window._systemData?.mechanics?.find(m => m.id === boolId);
+                const boolMech = global._systemData?.mechanics?.find(m => m.id === boolId);
                 if (boolMech && boolMech.tipo === 'booleano') {
                     // Executar a mecânica booleana para atualizar state.booleanResults
                     applyMechanicToSheet(boolMech, parentPec);
@@ -1172,7 +1116,7 @@ function applyMechanicToSheet(mech, parentPec) {
             // Aplicar mecânicas de sucesso ou falha baseando-se no resultado
             const targetIds = allTrue ? (config.efeitoSucessoIds || []) : (config.efeitoFalhaIds || []);
             for (const targetId of targetIds) {
-                const targetMech = window._systemData?.mechanics?.find(m => m.id === targetId);
+                const targetMech = global._systemData?.mechanics?.find(m => m.id === targetId);
                 if (targetMech) {
                     applyMechanicToSheet(targetMech, parentPec);
                 }
@@ -1273,7 +1217,7 @@ function generatePreviewText(mech) {
     }
     if (tipo === 'conceder') {
         if (config.tipoConcessao === 'conceder_equipamento') {
-            const catalog = window._inventoryState?.catalog || window._systemData?.equipment || [];
+            const catalog = global._inventoryState?.catalog || global._systemData?.equipment || [];
             const lista = (Array.isArray(config.equipamentosConcedidos) ? config.equipamentosConcedidos : [])
                 .map(g => {
                     const eq = catalog.find(e => e.id === (g.id || g.equipamentoId));
@@ -1293,7 +1237,7 @@ function generatePreviewText(mech) {
         // Build conditional preview with resolved sub-mechanic previews
         const parts = [];
         
-        const allMechanics = window._systemData?.mechanics || [];
+        const allMechanics = global._systemData?.mechanics || [];
         if (config.condicaoMecanica && config.condicaoMecanicaIds && config.condicaoMecanicaIds.length > 0) {
             const boolNames = config.condicaoMecanicaIds.map(id => {
                 const m = allMechanics.find(x => x.id === id);
@@ -1314,8 +1258,8 @@ function generatePreviewText(mech) {
             if (!m) return '?';
             
             // If parent has a previewLevel and the adjustment function is available, adjust sub-mechanic
-            if (mech._previewLevel && typeof window._adjustMechanicForLevel === 'function') {
-                m = window._adjustMechanicForLevel(m, mech._previewLevel);
+            if (mech._previewLevel && typeof global._adjustMechanicForLevel === 'function') {
+                m = global._adjustMechanicForLevel(m, mech._previewLevel);
                 // m._previewLevel is already set by _adjustMechanicForLevel, so it propagates recursively
                 return m.previewTexto || generatePreviewText(m);
             }
@@ -1382,13 +1326,13 @@ function renderDistribuirUI(container, mech, parentPec) {
     const jaEscolhidos = dados?.alvosEscolhidos || [];
     const remaining = totalQty - jaEscolhidos.length;
 
-    const wrapper = document.createElement('div');
+    const wrapper = global.document.createElement('div');
     wrapper.className = 'distribuir-ui';
     wrapper.dataset.mechId = mech.id;
 
     // --- Resumo do que já foi escolhido ---
     if (jaEscolhidos.length > 0) {
-        const resumo = document.createElement('div');
+        const resumo = global.document.createElement('div');
         resumo.className = 'distribuir-resumo';
         const linhas = jaEscolhidos.map(a => `${a.nome} (+${a.valor})`).join(', ');
         resumo.innerHTML = `<strong>✅ Distribuído:</strong> ${linhas}`;
@@ -1402,26 +1346,26 @@ function renderDistribuirUI(container, mech, parentPec) {
     }
 
     // --- Título ---
-    const titulo = document.createElement('div');
+    const titulo = global.document.createElement('div');
     titulo.className = 'distribuir-titulo';
     titulo.innerHTML = `⚠️ <strong>DISTRIBUIÇÃO PENDENTE</strong><br>
         Escolha até ${remaining} ${restricao === 'diferentes' ? 'perícias diferentes' : 'alvos'} para receber +${valorPorAlvo} (${jaEscolhidos.length}/${totalQty} distribuído${jaEscolhidos.length !== 1 ? 's' : ''}):`;
     wrapper.appendChild(titulo);
 
     // --- Selects apenas para os slots restantes ---
-    const selectsContainer = document.createElement('div');
+    const selectsContainer = global.document.createElement('div');
     selectsContainer.className = 'distribuir-selects';
 
     // Nomes já escolhidos (para desabilitar em restricao="diferentes")
     const nomesJaEscolhidos = jaEscolhidos.map(a => a.nome);
 
     for (let i = 0; i < remaining; i++) {
-        const sel = document.createElement('select');
+        const sel = global.document.createElement('select');
         sel.className = 'distribuir-select';
         sel.dataset.slotIndex = i;
         sel.innerHTML = `<option value="">— Selecione —</option>`;
         pool.forEach(alvoName => {
-            const opt = document.createElement('option');
+            const opt = global.document.createElement('option');
             opt.value = alvoName;
             opt.textContent = alvoName;
             // Desabilitar nomes que já foram confirmados anteriormente
@@ -1442,7 +1386,7 @@ function renderDistribuirUI(container, mech, parentPec) {
     wrapper.appendChild(selectsContainer);
 
     // --- Botão de confirmar ---
-    const btnConfirmar = document.createElement('button');
+    const btnConfirmar = global.document.createElement('button');
     btnConfirmar.className = 'btn-distribuir-confirmar';
     btnConfirmar.textContent = '✅ Confirmar Distribuição';
     btnConfirmar.addEventListener('click', () => confirmarDistribuicao(mech, wrapper, parentPec));
@@ -1534,31 +1478,31 @@ function confirmarDistribuicao(mech, wrapper, parentPec) {
  * Inclui peculiaridades de raça, classe e tribo.
  */
 function _reRenderPeculiaridades() {
-    const grid = document.getElementById('peculiaridadesGrid');
+    const grid = global.document.getElementById('peculiaridadesGrid');
     if (!grid) return;
 
     // Re-renderizar raça
-    const racaNome = document.getElementById('selRaca')?.value;
-    if (racaNome && window.RACES?.[racaNome]) {
+    const racaNome = global.document.getElementById('selRaca')?.value;
+    if (racaNome && global.RACES?.[racaNome]) {
         if (typeof _clearPeculiaridadeBlocksByFonte === 'function') {
             _clearPeculiaridadeBlocksByFonte(grid, 'raca');
         }
         if (typeof _renderSourceBlock === 'function') {
-            _renderSourceBlock(window.RACES[racaNome].peculiaridades, racaNome, grid, 'raca');
+            _renderSourceBlock(global.RACES[racaNome].peculiaridades, racaNome, grid, 'raca');
         } else if (typeof renderPeculiaridadesGrouped === 'function') {
             // Fallback: render all in grid (legacy)
-            renderPeculiaridadesGrouped(window.RACES[racaNome].peculiaridades, racaNome, grid);
+            renderPeculiaridadesGrouped(global.RACES[racaNome].peculiaridades, racaNome, grid);
         }
     }
 
     // Re-renderizar classe
-    const classeNome = document.getElementById('selClasse')?.value;
+    const classeNome = global.document.getElementById('selClasse')?.value;
     if (typeof renderClassPeculiaridades === 'function') {
         renderClassPeculiaridades(classeNome);
     }
 
     // Re-renderizar tribo
-    const triboNome = document.getElementById('selTribo')?.value;
+    const triboNome = global.document.getElementById('selTribo')?.value;
     if (triboNome && typeof renderTriboPeculiaridades === 'function') {
         renderTriboPeculiaridades(triboNome);
     }
@@ -1659,9 +1603,9 @@ function getAffectingMechanics(propertyName, opts) {
     }
 
     // ---- 1. Peculiaridades da raça selecionada ----
-    const racaNome = document.getElementById('selRaca')?.value || '';
-    if (racaNome && window.RACES && window.RACES[racaNome]) {
-        const raca = window.RACES[racaNome];
+    const racaNome = global.document.getElementById('selRaca')?.value || '';
+    if (racaNome && global.RACES && global.RACES[racaNome]) {
+        const raca = global.RACES[racaNome];
         for (const pec of raca.peculiaridades) {
             if (!pec.mecanicas) continue;
             for (const mech of pec.mecanicas) {
@@ -1726,12 +1670,12 @@ function getAffectingMechanics(propertyName, opts) {
 
     // ---- 3. Mecânicas de distribuição aplicadas ----
     if (state.mecanicasAplicadas) {
-        const allMechanics = window._systemData?.mechanics || [];
+        const allMechanics = global._systemData?.mechanics || [];
         for (const [mechId, dados] of Object.entries(state.mecanicasAplicadas)) {
             if (!dados || !dados.alvosEscolhidos) continue;
             for (const alvo of dados.alvosEscolhidos) {
                 const field = TARGET_MAP[alvo.nome];
-                if (!field || !targetField || field !== targetField) continue;
+                if (field !== targetField) continue;
                 // Encontrar a mecânica original para pegar o nome
                 const mech = allMechanics.find(m => m.id === mechId);
                 const mechNome = mech?.nome || dados.fonte || 'Distribuição';
@@ -1747,12 +1691,12 @@ function getAffectingMechanics(propertyName, opts) {
     }
 
     // ---- 4. Mecânicas vinculadas a OUTROS Valores Derivados que afetam este alvo ----
-    if (window.DERIVED_VALUES) {
-        for (const dv of window.DERIVED_VALUES) {
+    if (global.DERIVED_VALUES) {
+        for (const dv of global.DERIVED_VALUES) {
             if (!dv.mecanicaIds || dv.mecanicaIds.length === 0) continue;
             for (const mechId of dv.mecanicaIds) {
                 if (seenMechIds.has(mechId)) continue;
-                const mech = (window._systemData?.mechanics || []).find(m => m.id === mechId);
+                const mech = (global._systemData?.mechanics || []).find(m => m.id === mechId);
                 if (!mech) continue;
                 if (!_mechAffectsTarget(mech)) continue;
                 seenMechIds.add(mechId);
@@ -1768,12 +1712,12 @@ function getAffectingMechanics(propertyName, opts) {
     }
 
     // ---- 5. Mecânicas vinculadas a Status Vitais que afetam este alvo ----
-    if (window.VITAL_STATS) {
-        for (const vs of window.VITAL_STATS) {
+    if (global.VITAL_STATS) {
+        for (const vs of global.VITAL_STATS) {
             if (!vs.mecanicaIds || vs.mecanicaIds.length === 0) continue;
             for (const mechId of vs.mecanicaIds) {
                 if (seenMechIds.has(mechId)) continue;
-                const mech = (window._systemData?.mechanics || []).find(m => m.id === mechId);
+                const mech = (global._systemData?.mechanics || []).find(m => m.id === mechId);
                 if (!mech) continue;
                 if (!_mechAffectsTarget(mech)) continue;
                 seenMechIds.add(mechId);
@@ -1789,13 +1733,13 @@ function getAffectingMechanics(propertyName, opts) {
     }
 
     // ---- 6. Mecânicas vinculadas a Perícias que afetam este alvo ----
-    if (window.SKILLS) {
-        for (const cat of Object.keys(window.SKILLS)) {
-            for (const skill of window.SKILLS[cat]) {
+    if (global.SKILLS) {
+        for (const cat of Object.keys(global.SKILLS)) {
+            for (const skill of global.SKILLS[cat]) {
                 if (!skill.mecanicaIds || skill.mecanicaIds.length === 0) continue;
                 for (const mechId of skill.mecanicaIds) {
                     if (seenMechIds.has(mechId)) continue;
-                    const mech = (window._systemData?.mechanics || []).find(m => m.id === mechId);
+                    const mech = (global._systemData?.mechanics || []).find(m => m.id === mechId);
                     if (!mech) continue;
                     if (!_mechAffectsTarget(mech)) continue;
                     seenMechIds.add(mechId);
@@ -1820,7 +1764,7 @@ function getAffectingMechanics(propertyName, opts) {
                 const uniqueMechId = mechId + ':cond:' + cond.nome;
                 if (seenMechIds.has(uniqueMechId)) continue;
                 
-                const mech = (window._systemData?.mechanics || []).find(m => m.id === mechId);
+                const mech = (global._systemData?.mechanics || []).find(m => m.id === mechId);
                 if (!mech) continue;
                 if (!_mechAffectsTarget(mech)) continue;
                 
@@ -1921,8 +1865,8 @@ function _handleExpCalc(calc, mech, parentPec) {
  * @returns {boolean} - True if applied successfully
  */
 function applyExpModification(valor, qualExp, fonte, gatilho) {
-    const expEl = document.querySelector('[data-key="exp"]');
-    const expTotalEl = document.querySelector('[data-key="exp_total"]');
+    const expEl = global.document.querySelector('[data-key="exp"]');
+    const expTotalEl = global.document.querySelector('[data-key="exp_total"]');
     if (!expEl || !expTotalEl) return false;
 
     const currentRestante = parseInt(expEl.value || '0', 10) || 0;
@@ -1961,7 +1905,7 @@ function applyExpModification(valor, qualExp, fonte, gatilho) {
  */
 function collectAllExpMechanics() {
     const results = [];
-    const mechanics = window._systemData?.mechanics || [];
+    const mechanics = global._systemData?.mechanics || [];
 
     function _processMechanics(mechIds, source) {
         if (!Array.isArray(mechIds)) return;
@@ -1980,25 +1924,25 @@ function collectAllExpMechanics() {
     }
 
     // From race peculiarities
-    const raca = document.getElementById('selRaca')?.value;
-    if (raca && window.RACES && window.RACES[raca]) {
-        for (const pec of window.RACES[raca].peculiaridades || []) {
+    const raca = global.document.getElementById('selRaca')?.value;
+    if (raca && global.RACES && global.RACES[raca]) {
+        for (const pec of global.RACES[raca].peculiaridades || []) {
             _processMechanics(pec.mecanicaIds || pec.mecanicas?.map(m => m.id) || [], pec.nome);
         }
     }
 
     // From class peculiarities
-    const classe = document.getElementById('selClasse')?.value;
-    if (classe && window.CLASS_PECULIARITIES && window.CLASS_PECULIARITIES[classe]) {
-        for (const pec of window.CLASS_PECULIARITIES[classe]) {
+    const classe = global.document.getElementById('selClasse')?.value;
+    if (classe && global.CLASS_PECULIARITIES && global.CLASS_PECULIARITIES[classe]) {
+        for (const pec of global.CLASS_PECULIARITIES[classe]) {
             _processMechanics(pec.mecanicaIds || pec.mecanicas?.map(m => m.id) || [], pec.nome);
         }
     }
 
     // From tribe peculiarities
-    const tribo = document.getElementById('selTribo')?.value;
-    if (tribo && window.TRIBES && window.TRIBES[tribo]) {
-        for (const pec of window.TRIBES[tribo].peculiaridades || []) {
+    const tribo = global.document.getElementById('selTribo')?.value;
+    if (tribo && global.TRIBES && global.TRIBES[tribo]) {
+        for (const pec of global.TRIBES[tribo].peculiaridades || []) {
             _processMechanics(pec.mecanicaIds || pec.mecanicas?.map(m => m.id) || [], pec.nome);
         }
     }
@@ -2014,9 +1958,9 @@ function collectAllExpMechanics() {
 (function initSessionExpListener() {
     let _lastSessionValue = null;
 
-    document.addEventListener('DOMContentLoaded', () => {
+    global.document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
-            const sessoesEl = document.querySelector('[data-key="sessoes"]');
+            const sessoesEl = global.document.querySelector('[data-key="sessoes"]');
             if (!sessoesEl) return;
 
             // Capture initial value
@@ -2052,3 +1996,27 @@ function collectAllExpMechanics() {
         }
     }
 })();
+
+global.document = { querySelectorAll: () => [], getElementById: () => null };
+global.state = {
+    mecanicasAplicadas: {
+        'mech1': {
+            aplicada: true,
+            alvosEscolhidos: [ { nome: 'Atletismo', valor: '1' } ]
+        }
+    },
+    mechanicBonuses: {}
+};
+global.TARGET_MAP = {
+    'Atletismo': 'sk_fisico_atletismo'
+};
+const mech = {
+    id: 'mech1',
+    tipo: 'distribuir',
+    duracao: 'permanente',
+    config: { operacao: '+' }
+};
+
+// run
+applyMechanicToSheet(mech, null);
+console.log('Result bonuses:', state.mechanicBonuses);

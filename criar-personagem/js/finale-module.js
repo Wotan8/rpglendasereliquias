@@ -574,14 +574,16 @@ async function createCharacter() {
                 return kid === ws.kitInicialSelecionado;
             });
             if (kit && kit.equipamentos) {
-                for (const eqId of kit.equipamentos) {
+                for (const eqItem of kit.equipamentos) {
+                    const eqId = typeof eqItem === 'string' ? eqItem : eqItem.id;
+                    const eqQtd = typeof eqItem === 'string' ? 1 : (eqItem.qtd || 1);
                     const eqData = window._systemData?.equipment?.find(e => e.id === eqId);
                     if (eqData) {
                         equipamento.push(eqData.nome);
                         inventoryItems.push({
                             name: eqData.nome,
                             desc: eqData.descricao || '',
-                            qtd: String(eqData.quantidade || '1')
+                            qtd: String(eqQtd)
                         });
                     }
                 }
@@ -823,10 +825,13 @@ async function createCharacter() {
                         return kid === savedKitId;
                     });
                     if (kit && kit.equipamentos) {
-                        for (const eqId of kit.equipamentos) {
+                        for (const eqItem of kit.equipamentos) {
+                            const eqId = typeof eqItem === 'string' ? eqItem : eqItem.id;
+                            const eqQtd = typeof eqItem === 'string' ? 1 : (eqItem.qtd || 1);
                             const eqData = window._systemData?.equipment?.find(e => e.id === eqId);
                             if (eqData) {
-                                await saveEquipmentAsItemToFirebase(eqData, charId);
+                                const eqToSave = { ...eqData, quantidade: eqQtd };
+                                await saveEquipmentAsItemToFirebase(eqToSave, charId);
                             }
                         }
                     }
