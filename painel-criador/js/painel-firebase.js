@@ -3301,9 +3301,19 @@ window.addSchemaField = function (moduleIdx, btnEl) {
     let container = btnEl ? btnEl.closest('.class-module-editor-item')?.querySelector('.schema-fields-container') : null;
     if (!container) container = document.getElementById(`schemaFields_${moduleIdx}`);
     if (!container) return;
+    
+    let maxKey = 0;
+    container.querySelectorAll('input[data-sf-key="key"]').forEach(input => {
+        const val = parseInt(input.value, 10);
+        if (!isNaN(val) && val > maxKey) {
+            maxKey = val;
+        }
+    });
+    const nextKey = (maxKey + 1).toString();
+
     const fieldIdx = container.children.length;
     const temp = document.createElement('div');
-    temp.innerHTML = _buildSchemaFieldRow(moduleIdx, fieldIdx, {});
+    temp.innerHTML = _buildSchemaFieldRow(moduleIdx, fieldIdx, { key: nextKey });
     container.appendChild(temp.firstElementChild);
 };
 
