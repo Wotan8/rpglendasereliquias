@@ -785,12 +785,7 @@ function _cmFormatarCustos(custoExp, reqs) {
         if (req.consumir) partes.push(`🔥 Consome ${nome}${qtd > 1 ? ` ×${qtd}` : ''}`);
         else partes.push(`🎒 Requer ${nome}${qtd > 1 ? ` ×${qtd}` : ''} equipado${req.exigeEfeitosOn ? ' (Efeitos ON)' : ''}`);
     });
-
-    if (isCustomNew) {
-        item.dataset.isCustomEdit = "true";
-    }
-
-    return item;
+    return partes;
 }
 
 /* ===== ADIÇÃO DE ITENS ===== */
@@ -1552,6 +1547,11 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false) {
     });
 
     item.appendChild(fieldsDiv);
+
+    if (isCustomNew) {
+        item.dataset.isCustomEdit = "true";
+    }
+
     return item;
 }
 

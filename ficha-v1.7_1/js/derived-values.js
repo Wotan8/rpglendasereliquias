@@ -405,6 +405,7 @@ function initDerivedTooltips() {
         label.addEventListener('mouseenter', showDvTooltip);
         label.addEventListener('mouseleave', hideDvTooltip);
         label.addEventListener('touchstart', showDvTooltip, { passive: true });
+        label.addEventListener('touchend', hideDvTooltip);
     });
 }
 
@@ -445,6 +446,7 @@ function initVitalStatsTooltips() {
         label.addEventListener('mouseenter', showDvTooltip);
         label.addEventListener('mouseleave', hideDvTooltip);
         label.addEventListener('touchstart', showDvTooltip, { passive: true });
+        label.addEventListener('touchend', hideDvTooltip);
     });
 }
 
@@ -463,6 +465,7 @@ function initSkillTooltips() {
         nameEl.addEventListener('mouseenter', showDvTooltip);
         nameEl.addEventListener('mouseleave', hideDvTooltip);
         nameEl.addEventListener('touchstart', showDvTooltip, { passive: true });
+        nameEl.addEventListener('touchend', hideDvTooltip);
     });
 
     // Verificar skills SEM has-tooltip mas que são afetadas por mecânicas externas
@@ -479,6 +482,7 @@ function initSkillTooltips() {
                 nameEl.addEventListener('mouseenter', showDvTooltip);
                 nameEl.addEventListener('mouseleave', hideDvTooltip);
                 nameEl.addEventListener('touchstart', showDvTooltip, { passive: true });
+                nameEl.addEventListener('touchend', hideDvTooltip);
             }
         });
     }
@@ -527,6 +531,7 @@ function initAttributeTooltips() {
         nameEl.addEventListener('mouseenter', showDvTooltip);
         nameEl.addEventListener('mouseleave', hideDvTooltip);
         nameEl.addEventListener('touchstart', showDvTooltip, { passive: true });
+        nameEl.addEventListener('touchend', hideDvTooltip);
     });
 }
 

@@ -313,9 +313,26 @@ function onClassChange() {
             const key = 'sk_classe_' + sk.toLowerCase().replace(/[^a-z0-9]/g, '_');
             const row = document.createElement('div'); row.className = 'sk-row'; row.dataset.classSkill = '1';
             const lbl = document.createElement('div'); lbl.className = 'sk-label';
-            lbl.innerHTML = `<div class="sk-name">${sk}</div><div class="sk-attr">Classe</div>`;
+            
+            // Verificar se a perícia possui descrição em window.SKILLS
+            let hasDesc = false;
+            const allSkills = window.SKILLS || {};
+            for (const cat of Object.values(allSkills)) {
+                const sObj = cat.find(x => x.name === sk);
+                if (sObj && sObj.descricao) {
+                    hasDesc = true;
+                    break;
+                }
+            }
+            
+            lbl.innerHTML = `<div class="sk-name${hasDesc ? ' has-tooltip' : ''}">${sk}</div><div class="sk-attr">Classe</div>`;
             row.appendChild(lbl); row.appendChild(createDotsHTML(key)); g.appendChild(row);
         });
+        
+        // Re-bind tooltips para as perícias recém-adicionadas
+        if (typeof initSkillTooltips === 'function') {
+            initSkillTooltips();
+        }
     }
 
 

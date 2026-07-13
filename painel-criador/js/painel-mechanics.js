@@ -1202,16 +1202,18 @@ function buildInlineMechSelector(id, label, currentIds, cache, excludeCondiciona
 }
 
 // ===== OPEN MECHANIC EDITOR (inline) =====
-export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, initialTags, parentFieldKey = null) {
+export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, initialTags, parentFieldKey = null, clonedData = null) {
     const { db, collection: col, addDoc, updateDoc, doc, Timestamp, currentUser, showAlert, loadModule, escapeHtml } = callbacks;
     const isEditing = !!itemId;
     // When opened from another module, allItems contains the other module's items.
     // So we must also check mechanicsCache to find the mechanic data.
     const existingData = isEditing ? (mechanicsCache.find(i => i.id === itemId) || allItems.find(i => i.id === itemId)) : {};
-    const data = existingData || {};
+    const data = clonedData || existingData || {};
 
     // Store parent field key globally for when we save/back
     window._mechParentFieldKey = parentFieldKey;
+    window._mechEditingId = itemId || null;
+    window._mechClonedData = clonedData || null;
 
     // Hide standard content, show editor
     document.getElementById('moduleContent').style.display = 'none';
@@ -1390,7 +1392,6 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, 
     </div>`;
 
     // Store editing state
-    window._mechEditingId = itemId || null;
     window._mechCallbacks = callbacks;
     window._mechAllItems = allItems;
     window._mechCache = mechanicsCache;
@@ -1432,7 +1433,7 @@ window._mechTipoChange = function () {
     const area = document.getElementById('mechConfigArea');
     const cacheData = window._mechCache?.find(i => i.id === window._mechEditingId);
     const allData = window._mechAllItems?.find(i => i.id === window._mechEditingId);
-    const data = cacheData || allData;
+    const data = window._mechClonedData || cacheData || allData;
     const config = (data && data.tipo === tipo) ? (data.config || {}) : {};
 
     if (tipo === 'modificar') area.innerHTML = renderConfigModificar(config);
