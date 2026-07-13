@@ -123,6 +123,7 @@ function populateTargetMapFromSkills() {
             // SEMPRE sobrescreve para garantir que o key dinâmico (Firebase)
             // coincida com o key usado nos dots/state (pode ter acentos)
             TARGET_MAP[sk.name] = pfx + sk.key;
+            TARGET_MAP['Perícia: ' + sk.name] = pfx + sk.key;
         }
     }
     if (window.CLASS_SKILLS) {
@@ -130,6 +131,7 @@ function populateTargetMapFromSkills() {
             for (const sk of window.CLASS_SKILLS[cl]) {
                 const key = 'sk_classe_' + sk.toLowerCase().replace(/[^a-z0-9]/g, '_');
                 TARGET_MAP[sk] = key;
+                TARGET_MAP['Perícia: ' + sk] = key;
             }
         }
     }
@@ -386,19 +388,19 @@ function resolveCalcValue(calc) {
 /* ===== RESOLVER EQUAÇÃO MULTI-TERMO ===== */
 function resolveEquation(equacao) {
     if (!Array.isArray(equacao) || equacao.length === 0) return 0;
-    let result = _resolveTermValue(equacao[0]);
+    let result = _resolveTermValue(equacao[0]) || 0;
     for (let i = 1; i < equacao.length; i++) {
         const t = equacao[i];
-        const val = _resolveTermValue(t);
+        const val = _resolveTermValue(t) || 0;
         const op = t.op || '+';
         if (op === '+') result += val;
         else if (op === '-') result -= val;
         else if (op === '×' || op === '*') result *= val;
-        else if (op === '÷' || op === '/') result = val !== 0 ? result / val : result;
+        else if (op === '÷' || op === '/') result = val !== 0 ? result / val : 0;
         else if (op === 'min') result = Math.min(result, val);
         else if (op === 'max') result = Math.max(result, val);
     }
-    return result;
+    return isNaN(result) ? 0 : result;
 }
 
 function _resolveTermValue(term) {
@@ -431,9 +433,26 @@ function _resolveSheetRef(ref, mult) {
 
     // Check skills (includes mechanic bonuses / highlighted levels)
     if (attrKey && attrKey.startsWith('sk_')) {
-        const skVal = typeof getEffectiveDotValue === 'function'
+        let skVal = typeof getEffectiveDotValue === 'function'
             ? getEffectiveDotValue(attrKey)
             : (state.dots[attrKey] || 0) + (state.mechanicBonuses?.[attrKey] || 0);
+
+        // Fallback robusto: se a perícia base estiver zerada (ex: sk_exclusivo_contracanto),
+        // verificar se o personagem a possui como perícia de classe (sk_classe_contracanto).
+        // Isso resolve o conflito onde a mecânica global salva "Perícia: X", mas a ficha tem a versão de classe.
+        if (!attrKey.startsWith('sk_classe_') && skVal === 0) {
+            const parts = attrKey.split('_');
+            if (parts.length >= 3) {
+                const suffix = parts.slice(2).join('_');
+                const classKey = 'sk_classe_' + suffix;
+                const classVal = typeof getEffectiveDotValue === 'function'
+                    ? getEffectiveDotValue(classKey)
+                    : (state.dots[classKey] || 0) + (state.mechanicBonuses?.[classKey] || 0);
+                if (classVal > 0) {
+                    skVal = classVal;
+                }
+            }
+        }
         return skVal * mult;
     }
 

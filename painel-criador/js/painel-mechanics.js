@@ -87,7 +87,7 @@ function getMechanicTargetsHTML() {
             const label = CATEGORY_LABELS[cat] || cat;
             html += `\n<optgroup label="${label}">`;
             for (const nome of skills) {
-                html += `\n<option value="${esc(nome)}">${esc(nome)}</option>`;
+                html += `\n<option value="Perícia: ${esc(nome)}">${esc(nome)}</option>`;
             }
             html += `\n</optgroup>`;
         }
@@ -449,7 +449,7 @@ function getValueSourceHTML() {
             const label = CATEGORY_LABELS[cat] || cat;
             html += `\n<optgroup label="${label}">`;
             for (const nome of skills) {
-                html += `\n<option value="${esc(nome)}">${esc(nome)}</option>`;
+                html += `\n<option value="Perícia: ${esc(nome)}">${esc(nome)}</option>`;
             }
             html += `\n</optgroup>`;
         }
@@ -1466,7 +1466,7 @@ window._mechTipoChange = function () {
             rows.forEach((row, i) => {
                 const c = calculos[i] || {};
                 const alvoSel = row.querySelector('.calc-alvo');
-                if (alvoSel && c.alvo) alvoSel.value = c.alvo;
+                if (alvoSel && c.alvo) window._setSelectValueWithFallback(alvoSel, c.alvo);
 
                 // Toggle qualExp selector visibility
                 const isEXP = c.alvo === 'EXP';
@@ -1486,7 +1486,7 @@ window._mechTipoChange = function () {
                     const t = equacao[ti];
                     if (t && t.tipo === 'ficha' && t.ref) {
                         const refSel = termEl.querySelector('.eq-term-ref');
-                        if (refSel) refSel.value = t.ref;
+                        if (refSel) window._setSelectValueWithFallback(refSel, t.ref);
                     }
                 });
             });
@@ -1679,6 +1679,17 @@ function _collectEquacaoFromContainer(container) {
     });
 }
 
+window._setSelectValueWithFallback = function(selectEl, value) {
+    if (!selectEl) return;
+    if (Array.from(selectEl.options).some(o => o.value === value)) {
+        selectEl.value = value;
+    } else if (Array.from(selectEl.options).some(o => o.value === 'Perícia: ' + value)) {
+        selectEl.value = 'Perícia: ' + value;
+    } else {
+        selectEl.value = value;
+    }
+};
+
 function _restoreEquacaoRefs(container, equacao) {
     const terms = container.querySelectorAll('.eq-term');
     terms.forEach((term, i) => {
@@ -1686,7 +1697,7 @@ function _restoreEquacaoRefs(container, equacao) {
         if (!t) return;
         if (t.tipo === 'ficha') {
             const refSel = term.querySelector('.eq-term-ref');
-            if (refSel && t.ref) refSel.value = t.ref;
+            if (refSel && t.ref) window._setSelectValueWithFallback(refSel, t.ref);
         }
     });
 }
