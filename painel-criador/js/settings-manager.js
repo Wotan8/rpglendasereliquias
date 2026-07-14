@@ -16,6 +16,7 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 
 const faviconsConfig = [
+    { id: 'pwa-icon', name: 'Ícone do App (PWA - 512x512)' },
     { id: 'index', name: 'Login (index.html)' },
     { id: 'menu', name: 'Menu Principal' },
     { id: 'criar-personagem', name: 'Criar Personagem' },

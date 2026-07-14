@@ -31,14 +31,15 @@ else if (path.includes('painel-mestre.html')) pageId = 'painel-mestre';
 else if (path.includes('painel-criador.html')) pageId = 'painel-criador';
 else if (path.includes('mapa') || path.includes('hexmap') || path.includes('viewmap')) pageId = 'mapa';
 
-async function updateFavicon() {
+async function updateFaviconAndPWA() {
     if(!db) return;
     try {
         const configDoc = await getDoc(doc(db, 'app-config', 'favicons'));
         if (configDoc.exists()) {
             const urls = configDoc.data();
-            const faviconUrl = urls[pageId];
             
+            // 1. Atualizar Favicon
+            const faviconUrl = urls[pageId];
             if (faviconUrl) {
                 let link = document.querySelector("link[rel~='icon']");
                 if (!link) {
@@ -48,11 +49,67 @@ async function updateFavicon() {
                 }
                 link.href = faviconUrl;
             }
+
+            // 2. Configurar PWA (Manifest dinâmico + Service Worker)
+            setupPWA(urls['pwa-icon']);
         }
     } catch (e) {
-        console.error("Error loading favicon:", e);
+        console.error("Error loading favicon or PWA config:", e);
+    }
+}
+
+function setupPWA(pwaIconUrl) {
+    const defaultIcon = "/favicon.ico"; // Fallback caso não haja ícone customizado
+    const finalIcon = pwaIconUrl || defaultIcon;
+
+    const manifest = {
+        name: "Lendas e Relíquias",
+        short_name: "L&R",
+        start_url: "/",
+        display: "standalone",
+        background_color: "#0f172a",
+        theme_color: "#8b5cf6",
+        icons: [
+            {
+                src: finalIcon,
+                sizes: "192x192",
+                type: "image/png",
+                purpose: "any maskable"
+            },
+            {
+                src: finalIcon,
+                sizes: "512x512",
+                type: "image/png",
+                purpose: "any maskable"
+            }
+        ]
+    };
+
+    const stringManifest = JSON.stringify(manifest);
+    const blob = new Blob([stringManifest], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(blob);
+    
+    let link = document.querySelector("link[rel~='manifest']");
+    if (!link) {
+        link = document.createElement('link');
+        link.rel = 'manifest';
+        document.head.appendChild(link);
+    }
+    link.href = manifestURL;
+    
+    // Registrar Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('SW Registered com sucesso:', registration.scope);
+            })
+            .catch(err => {
+                console.error('Falha no registro do Service Worker', err);
+            });
+        });
     }
 }
 
 // Execute
-updateFavicon();
+updateFaviconAndPWA();
