@@ -2881,6 +2881,57 @@ function _buildClassModuleEditorRow(idx, data) {
                         ${_buildEquipCostArea(data.custoEquipamentos, 'cm-custo-eq-modulo')}
                         <div class="cm-hint">O jogador só poderá adicionar um novo item se possuir <b>todos</b> os equipamentos configurados. "Será consumido" remove do inventário; "Precisa estar equipado" apenas exige o item vestido/empunhado (com ou sem Efeitos = ON).</div>
                     </div>
+                    <div class="form-group full-width" style="margin-top: 10px;">
+                        <label>Mecânica de Custo (Aplicada ao adicionar/criar item)</label>
+                        <select class="aura-mech-select" data-cm-key="custoCriacaoMecanicaId">
+                            <option value="">— Sem mecânica vinculada —</option>
+                            ${_cmMechSelectOptions().replace(`value="${data.custoCriacaoMecanicaId}"`, `value="${data.custoCriacaoMecanicaId}" selected`)}
+                        </select>
+                        <div class="cm-hint">A adição do item será bloqueada se o jogador não tiver saldo suficiente para esta mecânica. Mecânicas de soma ou bônus também podem ser atreladas aqui e serão aplicadas na criação.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cm-section">
+                <div class="cm-section-title">⚙️ Custos Condicionais de Ação</div>
+                <div class="form-grid">
+                    <!-- Custo de Edição -->
+                    <div class="form-group full-width" style="margin-bottom: 12px; padding: 10px; background: rgba(0,0,0,0.15); border-radius: 6px; border: 1px solid rgba(139,92,246,0.2);">
+                        <label class="switch-label" style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                            <label class="switch">
+                                <input type="checkbox" data-cm-key="custoEdicaoAtivo" ${data.custoEdicaoAtivo ? 'checked' : ''} onchange="this.closest('.form-group').querySelector('.cm-edicao-mech').style.display = this.checked ? 'block' : 'none'">
+                                <span class="slider round"></span>
+                            </label>
+                            <span style="font-weight: 600;">Custo por Edição</span>
+                        </label>
+                        <div class="cm-edicao-mech" style="display: ${data.custoEdicaoAtivo ? 'block' : 'none'}">
+                            <label style="font-size: 0.75rem;">Mecânica de Custo (Aplicada ao editar um item na ficha)</label>
+                            <select class="aura-mech-select" data-cm-key="custoEdicaoMecanicaId">
+                                <option value="">— Selecione uma Mecânica —</option>
+                                ${_cmMechSelectOptions().replace(`value="${data.custoEdicaoMecanicaId}"`, `value="${data.custoEdicaoMecanicaId}" selected`)}
+                            </select>
+                            <div class="cm-hint">Ao habilitar, a edição de itens na ficha ficará bloqueada até o jogador pagar este custo. Mecânicas de subtração irão deduzir valores; outras serão apenas aplicadas.</div>
+                        </div>
+                    </div>
+
+                    <!-- Custo de Remoção -->
+                    <div class="form-group full-width" style="padding: 10px; background: rgba(0,0,0,0.15); border-radius: 6px; border: 1px solid rgba(239,68,68,0.2);">
+                        <label class="switch-label" style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                            <label class="switch">
+                                <input type="checkbox" data-cm-key="custoRemocaoAtivo" ${data.custoRemocaoAtivo ? 'checked' : ''} onchange="this.closest('.form-group').querySelector('.cm-remocao-mech').style.display = this.checked ? 'block' : 'none'">
+                                <span class="slider round"></span>
+                            </label>
+                            <span style="font-weight: 600;">Custo de Remoção</span>
+                        </label>
+                        <div class="cm-remocao-mech" style="display: ${data.custoRemocaoAtivo ? 'block' : 'none'}">
+                            <label style="font-size: 0.75rem;">Mecânica de Custo (Aplicada ao excluir um item da ficha)</label>
+                            <select class="aura-mech-select" data-cm-key="custoRemocaoMecanicaId">
+                                <option value="">— Selecione uma Mecânica —</option>
+                                ${_cmMechSelectOptions().replace(`value="${data.custoRemocaoMecanicaId}"`, `value="${data.custoRemocaoMecanicaId}" selected`)}
+                            </select>
+                            <div class="cm-hint">Se a mecânica definida subtrair recursos, o jogador não poderá deletar o item caso não tenha saldo suficiente.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -3357,6 +3408,11 @@ function _collectClassModulesData(fieldKey) {
             mecanicaLimiteId: limiteMecanicaIds[0] || null,
             custoEquipamentos: _collectEquipCostArea(item.querySelector('.cm-custo-eq-modulo')),
             permitirCriacaoJogador: item.querySelector('[data-cm-key="permitirCriacaoJogador"]')?.checked !== false,
+            custoEdicaoAtivo: item.querySelector('[data-cm-key="custoEdicaoAtivo"]')?.checked || false,
+            custoEdicaoMecanicaId: item.querySelector('[data-cm-key="custoEdicaoMecanicaId"]')?.value || '',
+            custoRemocaoAtivo: item.querySelector('[data-cm-key="custoRemocaoAtivo"]')?.checked || false,
+            custoRemocaoMecanicaId: item.querySelector('[data-cm-key="custoRemocaoMecanicaId"]')?.value || '',
+            custoCriacaoMecanicaId: item.querySelector('[data-cm-key="custoCriacaoMecanicaId"]')?.value || '',
             schema: [],
             itensPredefinidos: []
         };

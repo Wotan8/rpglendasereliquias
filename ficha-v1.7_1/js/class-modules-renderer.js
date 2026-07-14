@@ -895,7 +895,7 @@ function _cmAbrirSelecaoPredef(mod, predefs, podeCriar) {
     document.body.appendChild(overlay);
 }
 
-/** Valida EXP + equipamentos, confirma, cobra e adiciona o item. */
+/** Valida EXP + equipamentos + mecânicas, confirma, cobra e adiciona o item. */
 function _cmValidarECobrar(mod, predef) {
     const custoExp = predef && predef.custoExpProprio !== null && predef.custoExpProprio !== undefined
         ? predef.custoExpProprio : (mod.custoExpPorItem || 0);
@@ -924,20 +924,52 @@ function _cmValidarECobrar(mod, predef) {
         }
     }
 
+    // 3) Verificar Mecânica de Criação
+    let mechCheck = { ok: true, label: '' };
+    if (mod.custoCriacaoMecanicaId) {
+        mechCheck = _cmCheckMechanicCost(mod.custoCriacaoMecanicaId);
+        if (!mechCheck.ok) {
+            if (typeof showUpgradeBlocked === 'function') {
+                showUpgradeBlocked(`Bloqueado: ${mechCheck.label}`);
+            } else {
+                alert(`Bloqueado: ${mechCheck.label}`);
+            }
+            return;
+        }
+    }
+
     const executar = () => {
         if (custoExp > 0 && typeof spendExp === 'function') spendExp(custoExp);
         if (check.consumos.length > 0) _cmConsumirEquipamentos(check.consumos);
+        if (mod.custoCriacaoMecanicaId) _cmApplyMechanicCost(mod.custoCriacaoMecanicaId);
         _doAddModuleItem(mod, predef);
     };
 
     const nomeItem = predef ? predef.nome : `Nova ${mod.titulo || 'item'}`;
     const currentItems = state.classModuleData?.[mod.id] || [];
 
+    // Montar texto de custos adicionais se existirem
+    let extraCosts = [];
+    if (check.consumos.length > 0) {
+        extraCosts.push('Equipamentos: ' + check.consumos.map(c => `${c.nome} ×${c.qtd}`).join(', '));
+    }
+    if (mod.custoCriacaoMecanicaId && mechCheck.label && mechCheck.label !== 'Sem custo' && !mechCheck.label.includes('não encontrada')) {
+        extraCosts.push(mechCheck.label.replace('Custo: ', 'Mecânica: '));
+    }
+
     if (custoExp > 0 && typeof showUpgradeConfirm === 'function') {
-        showUpgradeConfirm(nomeItem, currentItems.length + 1, custoExp, executar);
-    } else if (check.consumos.length > 0) {
-        const resumo = check.consumos.map(c => `${c.nome} ×${c.qtd}`).join(', ');
-        if (confirm(`Adicionar "${nomeItem}"?\nOs seguintes equipamentos serão consumidos: ${resumo}`)) executar();
+        if (extraCosts.length > 0) {
+             // Exibe o confirm do navegador por causa dos custos extras não suportados nativamente pelo showUpgradeConfirm
+             if (confirm(`Adicionar "${nomeItem}"?\n\nCustos:\n- ${custoExp} EXP\n- ${extraCosts.join('\n- ')}`)) {
+                 executar();
+             }
+        } else {
+             showUpgradeConfirm(nomeItem, currentItems.length + 1, custoExp, executar);
+        }
+    } else if (extraCosts.length > 0) {
+        if (confirm(`Adicionar "${nomeItem}"?\n\nCustos adicionais:\n- ${extraCosts.join('\n- ')}`)) {
+            executar();
+        }
     } else {
         executar();
     }
@@ -1055,13 +1087,18 @@ function _cmRolarDado(formula) {
 /**
  * Constrói o DOM de um item de módulo.
  */
-function _buildModuleItem(mod, idx, data, isCustomNew = false) {
+function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = false) {
     data = data || {};
 
     const item = document.createElement('div');
     item.className = 'class-module-item';
     item.dataset.moduleId = mod.id;
     item.dataset.itemIndex = idx;
+
+    const isLocked = mod.custoEdicaoAtivo && !isCustomNew && !isUnlocked;
+    if (isLocked) {
+        item.classList.add('locked-for-edit');
+    }
 
     // Item header
     const header = document.createElement('div');
@@ -1085,12 +1122,62 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false) {
         header.appendChild(predefNomeHidden);
     }
 
+    const btnGroup = document.createElement('div');
+    btnGroup.style.display = 'flex';
+    btnGroup.style.gap = '8px';
+
+    if (mod.custoEdicaoAtivo) {
+        if (isLocked) {
+            const editBtn = document.createElement('button');
+            editBtn.className = 'no-print cm-edit-btn';
+            editBtn.textContent = '✏️ Editar';
+            editBtn.title = 'Desbloquear edição (Sujeito a custo)';
+            editBtn.addEventListener('click', () => {
+                if (mod.custoEdicaoMecanicaId) {
+                    const check = _cmCheckMechanicCost(mod.custoEdicaoMecanicaId);
+                    if (!check.ok) {
+                        if (typeof showUpgradeBlocked === 'function') {
+                            showUpgradeBlocked(`Bloqueado: ${check.label}`);
+                        } else {
+                            alert(`Bloqueado: ${check.label}`);
+                        }
+                        return;
+                    }
+                    if (!confirm(`Desbloquear edição deste item?\nIsso consumirá: ${check.label.replace('Custo: ', '')}`)) return;
+                    _cmApplyMechanicCost(mod.custoEdicaoMecanicaId);
+                }
+                
+                // Repintar item destrancado
+                const newItem = _buildModuleItem(mod, idx, data, false, true);
+                item.replaceWith(newItem);
+            });
+            btnGroup.appendChild(editBtn);
+        } else {
+            const doneBtn = document.createElement('button');
+            doneBtn.className = 'no-print cm-done-btn';
+            doneBtn.textContent = '✅ Concluir';
+            doneBtn.title = 'Salvar e trancar edição';
+            doneBtn.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
+            doneBtn.style.color = '#10b981';
+            doneBtn.style.border = '1px solid rgba(16, 185, 129, 0.5)';
+            doneBtn.addEventListener('click', () => {
+                _saveModuleData(mod.id);
+                // Repintar item trancado
+                const newItem = _buildModuleItem(mod, idx, data, false, false);
+                item.replaceWith(newItem);
+            });
+            btnGroup.appendChild(doneBtn);
+        }
+    }
+
     const rmBtn = document.createElement('button');
     rmBtn.className = 'no-print';
     rmBtn.textContent = '✕';
     rmBtn.title = 'Remover item';
     rmBtn.addEventListener('click', () => _removeModuleItem(mod, item));
-    header.appendChild(rmBtn);
+    btnGroup.appendChild(rmBtn);
+    
+    header.appendChild(btnGroup);
 
     item.appendChild(header);
 
@@ -1098,7 +1185,11 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false) {
     const fieldsDiv = document.createElement('div');
     fieldsDiv.className = 'class-module-fields';
 
-    (mod.schema || []).forEach(field => {
+    (mod.schema || []).forEach(originalField => {
+        const field = { ...originalField };
+        if (isLocked) {
+            field.somenteLeitura = true;
+        }
         // Check "Hide if empty" (👁️) logic
         if (field.ocultarSeVazio) {
             let isEmpty = false;
@@ -1600,10 +1691,93 @@ function _buildModuleStep(moduleId, fieldKey, stepIdx, data, readOnly = false) {
 }
 
 /**
- * Remove um item de módulo com confirmação.
+ * Verifica se o personagem possui saldo suficiente para a mecânica de custo.
+ */
+function _cmCheckMechanicCost(mechId) {
+    if (!mechId) return { ok: true, label: 'Sem custo' };
+    const mech = (window._systemData?.mechanics || []).find(m => m.id === mechId);
+    if (!mech) return { ok: true, label: 'Mecânica não encontrada' };
+    
+    let isSubtracao = false;
+    let requiredVal = 0;
+    let fieldKey = '';
+    
+    if (mech.tipo === 'modificar' && mech.config?.calculos) {
+        for (const calc of mech.config.calculos) {
+            if (calc.operacao === '-') {
+                isSubtracao = true;
+                requiredVal = typeof resolveCalcValue === 'function' ? resolveCalcValue(calc) : 0;
+                fieldKey = calc.alvo;
+                break;
+            }
+        }
+    } else if (mech.tipo === 'modificar' && mech.config?.operacao === '-') {
+        isSubtracao = true;
+        requiredVal = parseInt(mech.config.valor || 0, 10);
+        fieldKey = mech.config.alvo;
+    }
+
+    if (isSubtracao && fieldKey) {
+        let current = 0;
+        // O valor pode estar em diferentes locais do state
+        const targetMap = window.TARGET_MAP || {};
+        const rawTarget = targetMap[fieldKey] || fieldKey;
+        const cleanKey = rawTarget.replace(/^(DERIVED|BASE|INFO|SET|MULT|DIV):/, '');
+        
+        if (state.derived && state.derived[cleanKey] !== undefined) {
+            current = state.derived[cleanKey];
+        } else if (state.atributos && state.atributos[cleanKey] !== undefined) {
+            current = state.atributos[cleanKey];
+        } else if (state.vitalStats && state.vitalStats[cleanKey] !== undefined) {
+            current = state.vitalStats[cleanKey];
+        } else if (cleanKey.toLowerCase() === 'exp' || fieldKey.toLowerCase() === 'exp') {
+            current = typeof getCurrentExp === 'function' ? getCurrentExp() : 0;
+        } else if (fieldKey.toLowerCase() === 'ouro' || fieldKey.toLowerCase() === 'dinheiro') {
+            current = window._inventoryState?.dinheiro || 0;
+        }
+
+        if (current < requiredVal) {
+            return { ok: false, label: `Saldo insuficiente de ${fieldKey} (Requer ${requiredVal}, possui ${current})` };
+        }
+    }
+
+    return { ok: true, label: `Custo: ${mech.nome}` };
+}
+
+/**
+ * Aplica a mecânica de custo.
+ */
+function _cmApplyMechanicCost(mechId) {
+    if (!mechId) return;
+    const mech = (window._systemData?.mechanics || []).find(m => m.id === mechId);
+    if (mech && typeof applyMechanicToSheet === 'function') {
+        applyMechanicToSheet(mech, null);
+        if (typeof recalcAll === 'function') recalcAll();
+        if (typeof scheduleAutosave === 'function') scheduleAutosave();
+        console.log(`💸 Custo condicional pago: ${mech.nome}`);
+    }
+}
+
+/**
+ * Remove um item de módulo com confirmação e validação de custo.
  */
 function _removeModuleItem(mod, itemEl) {
-    if (!confirm('Remover este item?')) return;
+    if (mod.custoRemocaoAtivo && mod.custoRemocaoMecanicaId) {
+        const check = _cmCheckMechanicCost(mod.custoRemocaoMecanicaId);
+        if (!check.ok) {
+            if (typeof showUpgradeBlocked === 'function') {
+                showUpgradeBlocked(`Bloqueado: ${check.label}`);
+            } else {
+                alert(`Bloqueado: ${check.label}`);
+            }
+            return; // Impede exclusão
+        }
+        
+        if (!confirm(`Remover este item?\nIsso consumirá: ${check.label.replace('Custo: ', '')}`)) return;
+        _cmApplyMechanicCost(mod.custoRemocaoMecanicaId);
+    } else {
+        if (!confirm('Remover este item?')) return;
+    }
 
     const container = itemEl.parentElement;
     itemEl.remove();
