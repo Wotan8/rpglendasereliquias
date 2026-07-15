@@ -944,26 +944,26 @@ function _cmValidarECobrar(mod, predef) {
     const nomeItem = predef ? predef.nome : `Nova ${mod.titulo || 'item'}`;
     const currentItems = state.classModuleData?.[mod.id] || [];
 
-    // Montar texto de custos adicionais se existirem
+    // Montar texto de custos de adição (previews dos efeitos, não nomes internos)
     let extraCosts = [];
     if (check.consumos.length > 0) {
         extraCosts.push('Equipamentos: ' + check.consumos.map(c => `${c.nome} ×${c.qtd}`).join(', '));
     }
     if (mechCheck.costs.length > 0) {
-        extraCosts.push(...mechCheck.costs.map(c => `Mecânica: ${c}`));
+        extraCosts.push(...mechCheck.costs);
     }
 
     if (custoExp > 0 && typeof showUpgradeConfirm === 'function') {
         if (extraCosts.length > 0) {
              // Exibe o confirm do navegador por causa dos custos extras não suportados nativamente pelo showUpgradeConfirm
-             if (confirm(`Adicionar "${nomeItem}"?\n\nCustos:\n- ${custoExp} EXP\n- ${extraCosts.join('\n- ')}`)) {
+             if (confirm(`Adicionar "${nomeItem}"?\n\nCusto para Adicionar:\n- ${custoExp} EXP\n- ${extraCosts.join('\n- ')}`)) {
                  executar();
              }
         } else {
              showUpgradeConfirm(nomeItem, currentItems.length + 1, custoExp, executar);
         }
     } else if (extraCosts.length > 0) {
-        if (confirm(`Adicionar "${nomeItem}"?\n\nCustos adicionais:\n- ${extraCosts.join('\n- ')}`)) {
+        if (confirm(`Adicionar "${nomeItem}"?\n\nCusto para Adicionar:\n- ${extraCosts.join('\n- ')}`)) {
             executar();
         }
     } else {
@@ -1747,7 +1747,26 @@ function _cmCheckMechanicCost(mechId) {
         }
     }
 
-    return { ok: true, label: `Custo: ${mech.nome}` };
+    return { ok: true, label: `Custo: ${_cmMechPreviewLabel(mech)}` };
+}
+
+/**
+ * Rótulo de custo de uma mecânica: usa o PREVIEW (resumo dos efeitos,
+ * ex: "-1 em Presas") em vez do nome interno, deixando claro quais
+ * atributos/status do personagem sofrerão mutação.
+ */
+function _cmMechPreviewLabel(mech) {
+    if (!mech) return '';
+    let preview = '';
+    try {
+        if (typeof generatePreviewText === 'function') {
+            preview = generatePreviewText(mech) || '';
+        }
+    } catch (e) {
+        preview = '';
+    }
+    if (!preview && mech.previewTexto) preview = mech.previewTexto;
+    return preview || mech.nome || 'Custo';
 }
 
 /**

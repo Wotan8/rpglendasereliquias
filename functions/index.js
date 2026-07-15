@@ -4,13 +4,55 @@
 // - registrarLogFragmentos: auditoria automática de TODA alteração de Frag$
 // =============================================
 
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, HttpsError, onRequest } = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 
 initializeApp();
 const db = getFirestore();
+
+// ---------------------------------------------
+// PagBank — configuração
+// ---------------------------------------------
+// Token fica em um Secret do Firebase (NUNCA no código nem no frontend):
+//   firebase functions:secrets:set PAGBANK_TOKEN
+const PAGBANK_TOKEN = defineSecret("PAGBANK_TOKEN");
+
+// Trocar para "https://api.pagseguro.com" quando for para produção (pós-homologação)
+const PAGBANK_API = "https://sandbox.api.pagseguro.com";
+
+// URL pública do Hosting (projeto rpg-lendasereliquias)
+const SITE_URL = "https://rpg-lendasereliquias.web.app";
+
+// URL pública do webhook (formato determinístico das functions gen2 no
+// cloudfunctions.net). Após o primeiro deploy, confirme com a URL impressa
+// pelo `firebase deploy --only functions` — se vier no formato *.run.app,
+// qualquer uma das duas funciona.
+const WEBHOOK_URL =
+  "https://southamerica-east1-rpg-lendasereliquias.cloudfunctions.net/pagbankWebhook";
+
+// Helper: resolve o valor em centavos de um item da loja.
+// Canônico: `valorReal` (inteiro, centavos). Fallback: `valorRs` (reais, legado).
+function getValorCentavos(item) {
+  if (Number.isInteger(item.valorReal) && item.valorReal > 0) return item.valorReal;
+  const rs = Number(item.valorRs);
+  if (Number.isFinite(rs) && rs > 0) return Math.round(rs * 100);
+  return 0;
+}
+
+// Helper: nomes das metas para os logs (mesmo comportamento da compra com Frag$)
+async function getMetasNames(metas) {
+  if (!metas || metas.length === 0) return "";
+  const nomes = await Promise.all(
+    metas.map(async (mId) => {
+      const m = await db.collection("metas").doc(mId).get();
+      return m.exists ? (m.data().nome || mId) : mId;
+    })
+  );
+  return nomes.join(", ");
+}
 
 // ---------------------------------------------
 // Helper: localizar o documento do usuário
@@ -212,5 +254,280 @@ exports.registrarLogFragmentos = onDocumentWritten(
       autor,
       criadoEm: FieldValue.serverTimestamp(),
     });
+  }
+);
+
+// =============================================
+// PAGBANK — CRIAÇÃO DO CHECKOUT (callable)
+// O jogador clica em "Comprar por R$" → esta função valida tudo,
+// registra a intenção de compra e devolve o link seguro do PagBank.
+// O preço vem SEMPRE do Firestore; o navegador envia só itemId + metas.
+// =============================================
+exports.criarCheckoutPagBank = onCall(
+  { secrets: [PAGBANK_TOKEN], region: "southamerica-east1" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Você precisa estar logado para comprar.");
+    }
+
+    const uid = request.auth.uid;
+    const email = request.auth.token.email || "";
+    const { itemId, selectedMetas } = request.data || {};
+    if (!itemId || typeof itemId !== "string") {
+      throw new HttpsError("invalid-argument", "itemId é obrigatório.");
+    }
+
+    const itemSnap = await db.collection("loja_itens").doc(itemId).get();
+    if (!itemSnap.exists) {
+      throw new HttpsError("not-found", "Item não encontrado.");
+    }
+    const item = itemSnap.data();
+
+    const valorCentavos = getValorCentavos(item);
+    if (valorCentavos <= 0) {
+      throw new HttpsError("failed-precondition", "Este item não está à venda por dinheiro real.");
+    }
+    // Campo real usado pelo projeto é `isVendaAtiva` (default true quando ausente)
+    if (item.isVendaAtiva === false) {
+      throw new HttpsError("failed-precondition", "Este item não está à venda no momento.");
+    }
+
+    // Mesma validação de metas de comprarComFragmentos
+    let metas = [];
+    if (item.modoSelecaoMeta) {
+      const limit = item.qtdSelecaoMeta || item.quantidadeMetasSelecionaveis || 1;
+      const allowed = item.metasVinculadas || [];
+      metas = Array.isArray(selectedMetas) ? selectedMetas : [];
+      if (metas.length > limit) {
+        throw new HttpsError("invalid-argument", `Você pode escolher no máximo ${limit} meta(s).`);
+      }
+      if (metas.some((m) => typeof m !== "string" || !allowed.includes(m))) {
+        throw new HttpsError("invalid-argument", "Meta inválida selecionada.");
+      }
+    } else {
+      metas = item.metasVinculadas || [];
+    }
+
+    // Registro da intenção de compra (também serve de trilha de auditoria)
+    const pendingRef = db.collection("compras_pendentes").doc();
+    await pendingRef.set({
+      uid,
+      email,
+      itemId,
+      itemNome: item.nome,
+      valorCentavos,
+      selectedMetas: metas,
+      status: "AGUARDANDO_PAGAMENTO",
+      criadoEm: FieldValue.serverTimestamp(),
+    });
+
+    const body = {
+      reference_id: pendingRef.id,
+      items: [{
+        reference_id: itemId,
+        name: String(item.nome).slice(0, 100),
+        description: String(item.descricao || item.nome).slice(0, 255),
+        quantity: 1,
+        unit_amount: valorCentavos,
+      }],
+      shipping: { type: "FREE" },
+      redirect_url: `${SITE_URL}/menu/menu.html?compra=${pendingRef.id}`,
+      return_url: `${SITE_URL}/menu/menu.html`,
+      payment_notification_urls: [WEBHOOK_URL],
+      notification_urls: [WEBHOOK_URL],
+      payment_methods: [{ type: "PIX" }, { type: "CREDIT_CARD" }, { type: "BOLETO" }],
+    };
+
+    const resp = await fetch(`${PAGBANK_API}/checkouts`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${PAGBANK_TOKEN.value()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error("Erro PagBank ao criar checkout:", resp.status, errText);
+      await pendingRef.update({ status: "ERRO_CRIACAO", erro: errText.slice(0, 1000) });
+      throw new HttpsError("internal", "Falha ao criar o checkout no PagBank.");
+    }
+
+    const checkout = await resp.json();
+    const payLink = (checkout.links || []).find((l) => l.rel === "PAY");
+    if (!payLink) {
+      console.error("Resposta sem link PAY:", JSON.stringify(checkout).slice(0, 2000));
+      await pendingRef.update({ status: "ERRO_CRIACAO", erro: "Sem link PAY na resposta." });
+      throw new HttpsError("internal", "PagBank não retornou o link de pagamento.");
+    }
+
+    await pendingRef.update({ checkoutId: checkout.id });
+    return { paymentUrl: payLink.href, compraId: pendingRef.id };
+  }
+);
+
+// =============================================
+// PAGBANK — WEBHOOK DE CONFIRMAÇÃO
+// O PagBank chama esta URL quando o pagamento muda de status.
+// NUNCA confia no corpo da notificação: sempre reconsulta a API
+// com o token para confirmar `PAID` antes de entregar o item.
+// Idempotente: compra CONCLUIDA nunca é aplicada de novo.
+// Toda entrega gera um log imutável em `real_logs`.
+// =============================================
+exports.pagbankWebhook = onRequest(
+  { secrets: [PAGBANK_TOKEN], region: "southamerica-east1" },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).send("Method not allowed");
+      return;
+    }
+
+    try {
+      const payload = req.body || {};
+      console.log("Webhook recebido:", JSON.stringify(payload).slice(0, 2000));
+
+      const referenceId =
+        payload.reference_id ||
+        payload?.checkout?.reference_id ||
+        payload?.order?.reference_id ||
+        null;
+
+      const orderId =
+        typeof payload.id === "string" && payload.id.startsWith("ORDE_") ? payload.id : null;
+      const checkoutId =
+        (typeof payload.id === "string" && payload.id.startsWith("CHEC_") && payload.id) ||
+        payload?.checkout?.id || null;
+
+      if (!referenceId) {
+        res.status(200).send("ignored: sem reference_id");
+        return;
+      }
+
+      const pendingRef = db.collection("compras_pendentes").doc(referenceId);
+      const pendingSnap = await pendingRef.get();
+      if (!pendingSnap.exists) {
+        res.status(200).send("ignored: compra desconhecida");
+        return;
+      }
+      const pending = pendingSnap.data();
+
+      if (pending.status === "CONCLUIDA") {
+        res.status(200).send("ok: já processada");
+        return;
+      }
+
+      // Confirmação server-to-server — nunca confiar apenas no payload
+      let pago = false;
+      if (orderId) {
+        const r = await fetch(`${PAGBANK_API}/orders/${orderId}`, {
+          headers: { Authorization: `Bearer ${PAGBANK_TOKEN.value()}` },
+        });
+        if (r.ok) {
+          const order = await r.json();
+          pago = (order.charges || []).some((c) => c.status === "PAID");
+        }
+      } else if (checkoutId || pending.checkoutId) {
+        const cid = checkoutId || pending.checkoutId;
+        const r = await fetch(`${PAGBANK_API}/checkouts/${cid}`, {
+          headers: { Authorization: `Bearer ${PAGBANK_TOKEN.value()}` },
+        });
+        if (r.ok) {
+          const chk = await r.json();
+          pago = chk.status === "PAID" || (chk.charges || []).some((c) => c.status === "PAID");
+        }
+      }
+
+      if (!pago) {
+        await pendingRef.update({ ultimaNotificacao: FieldValue.serverTimestamp() });
+        res.status(200).send("ok: ainda não pago");
+        return;
+      }
+
+      // Aplica os benefícios — MESMOS formatos da compra com Frag$
+      const itemSnap = await db.collection("loja_itens").doc(pending.itemId).get();
+      const item = itemSnap.exists ? itemSnap.data() : { nome: pending.itemNome, descricao: "" };
+      const metasNamesStr = await getMetasNames(pending.selectedMetas || []);
+      const userRef = await resolveUserRef(pending.uid, pending.email || "");
+
+      await db.runTransaction(async (tx) => {
+        const pSnap = await tx.get(pendingRef);
+        if (pSnap.data().status === "CONCLUIDA") return; // corrida entre notificações
+
+        const uSnap = await tx.get(userRef);
+        if (!uSnap.exists) throw new Error("Usuário não encontrado: " + pending.uid);
+        const data = uSnap.data();
+
+        const valorReais = (pending.valorCentavos / 100).toFixed(2).replace(".", ",");
+
+        const inventario = data.inventario || [];
+        inventario.push({
+          ...item,
+          quantidade: 1,
+          formaRecebimento: "Comprado na Loja (PagBank)",
+        });
+
+        const logsCompra = data.logsCompra || [];
+        logsCompra.push({
+          itemId: pending.itemId,
+          nome: item.nome,
+          valorPago: pending.valorCentavos,
+          moeda: "BRL",
+          compraId: pendingRef.id,
+          data: new Date().toISOString(),
+        });
+
+        const apoios = data.apoios || [];
+        const logNome = item.nome + (metasNamesStr ? ` [Metas: ${metasNamesStr}]` : "");
+        apoios.push({
+          nome: logNome,
+          tipo: "Loja (PagBank)",
+          montante: 1,
+          meta: (pending.selectedMetas || []).join(","),
+          valor: valorReais,
+          dataInicio: new Date().toISOString().split("T")[0],
+          recebido: true,
+        });
+
+        const notifications = data.notifications || [];
+        notifications.unshift({
+          id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
+          type: "master_message",
+          message: `💳 Compra Aprovada: Você adquiriu ${item.nome} por R$ ${valorReais}.`,
+          timestamp: Date.now(),
+          isNew: true,
+          data: { highlight: "importante" },
+        });
+        if (notifications.length > 100) notifications.length = 100;
+
+        tx.update(userRef, { inventario, logsCompra, apoios, notifications });
+        tx.update(pendingRef, {
+          status: "CONCLUIDA",
+          concluidaEm: FieldValue.serverTimestamp(),
+        });
+
+        // Log imutável de transação em dinheiro real (equivalente ao frag_logs)
+        tx.set(db.collection("real_logs").doc(), {
+          uid: pending.uid,
+          jogador: data.displayName || data.email || pending.email || "",
+          itemId: pending.itemId,
+          itemNome: item.nome,
+          valorCentavos: pending.valorCentavos,
+          moeda: "BRL",
+          compraId: pendingRef.id,
+          checkoutId: pending.checkoutId || checkoutId || "",
+          orderId: orderId || "",
+          origem: "Compra na Loja (PagBank)",
+          detalhe: metasNamesStr ? `Metas: ${metasNamesStr}` : "",
+          criadoEm: FieldValue.serverTimestamp(),
+        });
+      });
+
+      res.status(200).send("ok: benefícios aplicados");
+    } catch (e) {
+      console.error("Erro no webhook:", e);
+      // 500 → o PagBank reenviará a notificação (a idempotência protege contra duplicação)
+      res.status(500).send("erro interno");
+    }
   }
 );

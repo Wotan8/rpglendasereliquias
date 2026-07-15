@@ -12,6 +12,7 @@ import {
     getFirestore, collection, query, where, getDocs, getDoc, setDoc,
     deleteDoc, updateDoc, doc, orderBy, Timestamp, addDoc
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 // ===== CONFIG =====
 const firebaseConfig = {
@@ -25,7 +26,19 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+// 💾 PERSISTÊNCIA OFFLINE (Firebase v10+): cache local em IndexedDB.
+// Leituras funcionam offline e escritas ficam na fila e sincronizam
+// automaticamente quando a conexão voltar. Multi-tab habilitado.
+let db;
+try {
+    db = initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    });
+    console.log('💾 Firestore: cache offline (IndexedDB) ativado.');
+} catch (e) {
+    console.warn('💾 Firestore: cache offline indisponível, usando memória.', e);
+    db = getFirestore(app);
+}
 
 let currentUser = null;
 let currentModule = 'races';
@@ -2644,7 +2657,9 @@ function _buildClassModulesEditorHTML(fieldKey, label, modules) {
 function _cmMechChip(mechId) {
     const m = (typeof mechanicsCache !== 'undefined' ? mechanicsCache : []).find(x => x.id === mechId);
     const nome = m ? m.nome : `⚠️ ${mechId}`;
-    return `<span class="mech-tag" data-id="${escapeHtml(mechId)}">⚙️ ${escapeHtml(nome)} <button type="button" onclick="this.parentElement.remove()">✕</button></span>`;
+    // Tooltip com o preview (resumo dos efeitos) — é este texto que o jogador verá na ficha
+    const preview = m && m.previewTexto ? ` title="${escapeHtml(m.previewTexto)}"` : '';
+    return `<span class="mech-tag" data-id="${escapeHtml(mechId)}"${preview}>⚙️ ${escapeHtml(nome)} <button type="button" onclick="this.parentElement.remove()">✕</button></span>`;
 }
 
 function _cmMechSelectOptionsBooleana() {
@@ -2902,7 +2917,7 @@ function _buildClassModuleEditorRow(idx, data) {
                                 ${_cmMechSelectOptions()}
                             </select>
                         </div>
-                        <div class="cm-hint">A adição do item será bloqueada se o jogador não tiver saldo suficiente para as mecânicas vinculadas. Mecânicas de soma ou bônus também podem ser atreladas aqui e serão aplicadas na criação.</div>
+                        <div class="cm-hint">A adição do item será bloqueada se o jogador não tiver saldo suficiente para as mecânicas vinculadas. Mecânicas de soma ou bônus também podem ser atreladas aqui e serão aplicadas na criação. Na confirmação, o jogador vê o <b>preview dos efeitos</b> de cada mecânica (ex: "-1 em Presas"), não o nome interno.</div>
                     </div>
                 </div>
             </div>
@@ -2928,7 +2943,7 @@ function _buildClassModuleEditorRow(idx, data) {
                                     ${_cmMechSelectOptions()}
                                 </select>
                             </div>
-                            <div class="cm-hint">Ao habilitar, a edição de itens na ficha ficará bloqueada até o jogador pagar este custo. Mecânicas de subtração irão deduzir valores; outras serão apenas aplicadas.</div>
+                            <div class="cm-hint">Ao habilitar, a edição de itens na ficha ficará bloqueada até o jogador pagar este custo. Mecânicas de subtração irão deduzir valores; outras serão apenas aplicadas. O jogador vê o <b>preview dos efeitos</b> ao confirmar.</div>
                         </div>
                     </div>
 

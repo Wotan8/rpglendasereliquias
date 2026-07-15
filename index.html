@@ -265,6 +265,8 @@
         }
     </style>
 <script type="module" src="/js/global-favicon.js"></script>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#8b5cf6">
 </head>
 <body>
     <div class="login-container">
@@ -359,6 +361,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // ============= CONFIGURAÇÃO =============
         // 🔐 ALTERE ESTE CÓDIGO PARA O SEU CÓDIGO SECRETO DE MESTRE
@@ -379,7 +382,19 @@
         // Inicializar Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
+        // 💾 PERSISTÊNCIA OFFLINE (Firebase v10+): cache local em IndexedDB.
+        // Leituras funcionam offline e escritas ficam na fila e sincronizam
+        // automaticamente quando a conexão voltar. Multi-tab habilitado.
+        let db;
+        try {
+            db = initializeFirestore(app, {
+                localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+            });
+            console.log('💾 Firestore: cache offline (IndexedDB) ativado.');
+        } catch (e) {
+            console.warn('💾 Firestore: cache offline indisponível, usando memória.', e);
+            db = getFirestore(app);
+        }
 
         // Funções auxiliares
         function showAlert(message, type) {

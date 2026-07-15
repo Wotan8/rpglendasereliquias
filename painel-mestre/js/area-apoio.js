@@ -970,7 +970,7 @@ function renderLojaUI() {
             ${imgHtml}
             ${item.descricao ? `<div style="font-size:0.85rem;color:var(--muted);">${escapeHtml(item.descricao)}</div>` : ''}
             <div style="display:flex;gap:10px;font-size:0.9rem;font-weight:600;">
-                ${item.valorRs > 0 ? `<span style="color:#10b981;">R$ ${Number(item.valorRs).toFixed(2)}</span>` : ''}
+                ${(item.valorReal > 0 || item.valorRs > 0) ? `<span style="color:#10b981;">R$ ${(item.valorReal > 0 ? (item.valorReal / 100) : Number(item.valorRs)).toFixed(2).replace('.', ',')}</span>` : ''}
                 ${item.valorFrag > 0 ? `<span style="color:#6366f1;">${item.valorFrag} Frag$</span>` : ''}
             </div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;">${tagsHtml}</div>
@@ -1087,7 +1087,7 @@ window.openLojaModal = async function(itemId = null) {
             document.getElementById('loja_id').value = item.id;
             document.getElementById('loja_nome').value = item.nome || '';
             document.getElementById('loja_descricao').value = item.descricao || '';
-            document.getElementById('loja_valor_rs').value = item.valorRs || '';
+            document.getElementById('loja_valor_rs').value = item.valorRs || (item.valorReal ? (item.valorReal / 100).toFixed(2) : '');
             document.getElementById('loja_valor_frag').value = item.valorFrag || '';
             document.getElementById('loja_is_venda_ativa').checked = item.isVendaAtiva !== false;
             
@@ -1173,6 +1173,8 @@ window.saveLojaItem = async function() {
             imagem: imageUrl,
             descricao: document.getElementById('loja_descricao').value.trim(),
             valorRs: parseFloat(document.getElementById('loja_valor_rs').value) || 0,
+            // Formato canônico para o pagamento via PagBank: centavos como inteiro (R$ 15,00 → 1500)
+            valorReal: Math.round((parseFloat(document.getElementById('loja_valor_rs').value) || 0) * 100),
             valorFrag: parseFloat(document.getElementById('loja_valor_frag').value) || 0,
             
             isExp: document.getElementById('loja_is_exp').checked,

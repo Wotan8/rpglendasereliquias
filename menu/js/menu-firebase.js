@@ -17,6 +17,7 @@ import {
     addDoc,
     doc
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
 
 // ===== CONFIG =====
@@ -31,7 +32,19 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+// 💾 PERSISTÊNCIA OFFLINE (Firebase v10+): cache local em IndexedDB.
+// Leituras funcionam offline e escritas ficam na fila e sincronizam
+// automaticamente quando a conexão voltar. Multi-tab habilitado.
+let db;
+try {
+    db = initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    });
+    console.log('💾 Firestore: cache offline (IndexedDB) ativado.');
+} catch (e) {
+    console.warn('💾 Firestore: cache offline indisponível, usando memória.', e);
+    db = getFirestore(app);
+}
 const functions = getFunctions(app, 'southamerica-east1');
 
 let currentUser = null;
@@ -667,7 +680,7 @@ function getCpColor(letra) {
     return cores[letra] || '#94a3b8';
 }
 
-function showAlert(message, type) {
+function showAlert(message, type, duration = 3000) {
     const alertArea = document.getElementById('alertArea');
     if (!alertArea) return;
     const alert = document.createElement('div');
@@ -676,7 +689,7 @@ function showAlert(message, type) {
     alertArea.appendChild(alert);
     setTimeout(() => {
         if (alert.parentNode === alertArea) alertArea.removeChild(alert);
-    }, 3000);
+    }, duration);
 }
 
 function escapeHtml(text) {
@@ -739,15 +752,15 @@ function renderLojaItens() {
 
     lojaItensData.forEach(item => {
         let tagsHtml = '';
-        if (item.isExp) tagsHtml += `<span style="background:var(--primary);color:#fff;padding:4px 8px;border-radius:6px;font-size:0.75rem;font-weight:600;">⭐ EXP: ${item.expAmount}${item.isExpVip ? ' (VIP)' : ''}</span>`;
-        if (item.isRoleta) tagsHtml += `<span style="background:var(--secondary);color:#fff;padding:4px 8px;border-radius:6px;font-size:0.75rem;font-weight:600;">🎰 Roleta: ${item.roletaGiros}x</span>`;
-        if (item.isRerolagem) tagsHtml += `<span style="background:#f59e0b;color:#fff;padding:4px 8px;border-radius:6px;font-size:0.75rem;font-weight:600;">🎲 Re-roll: ${item.rerolagensAmount}x</span>`;
-        if (item.isNarrativo) tagsHtml += `<span style="background:#10b981;color:#fff;padding:4px 8px;border-radius:6px;font-size:0.75rem;font-weight:600;">📜 Benefício Narrativo</span>`;
-        if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span style="background:#8b5cf6;color:#fff;padding:4px 8px;border-radius:6px;font-size:0.75rem;font-weight:600;">🎒 Equipamentos Especiais</span>`;
+        if (item.isExp) tagsHtml += `<span class="loja-tag" style="background:var(--primary);">⭐ EXP: ${item.expAmount}${item.isExpVip ? ' (VIP)' : ''}</span>`;
+        if (item.isRoleta) tagsHtml += `<span class="loja-tag" style="background:var(--secondary, #8b5cf6);">🎰 Roleta: ${item.roletaGiros}x</span>`;
+        if (item.isRerolagem) tagsHtml += `<span class="loja-tag" style="background:#f59e0b;">🎲 Re-roll: ${item.rerolagensAmount}x</span>`;
+        if (item.isNarrativo) tagsHtml += `<span class="loja-tag" style="background:#10b981;">📜 Benefício Narrativo</span>`;
+        if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span class="loja-tag" style="background:#8b5cf6;">🎒 Equipamentos Especiais</span>`;
 
         let metasLabel = 'Nenhuma meta vinculada';
         if (item.modoSelecaoMeta) {
-            metasLabel = `Pode ser atrelado a até ${item.qtdSelecaoMeta || 1} Meta(s)`;
+            metasLabel = `Pode ser atrelado a até ${item.qtdSelecaoMeta || item.quantidadeMetasSelecionaveis || 1} Meta(s)`;
         } else if (item.metasVinculadas && item.metasVinculadas.length > 0) {
             const mNames = item.metasVinculadas.map(mId => {
                 const f = metasData.find(m => m.id === mId);
@@ -756,33 +769,37 @@ function renderLojaItens() {
             metasLabel = `Ajuda automaticamente: ${mNames.join(', ')}`;
         }
 
-        const imgHtml = item.imagem ? `<div style="height:140px;width:100%;background-image:url('${escapeHtml(item.imagem)}');background-size:contain;background-repeat:no-repeat;background-position:center;border-radius:8px;background-color:rgba(0,0,0,0.4);margin-bottom:12px;"></div>` : '';
+        const valorCentavos = getItemValorCentavos(item);
+        const precoReal = valorCentavos > 0 ? (valorCentavos / 100).toFixed(2).replace('.', ',') : null;
+
+        const imgHtml = item.imagem
+            ? `<div class="loja-card-media">
+                   <img src="${escapeHtml(item.imagem)}" alt="${escapeHtml(item.nome)}" loading="lazy"
+                        onerror="this.parentElement.classList.add('loja-media-fallback');this.remove();">
+               </div>`
+            : `<div class="loja-card-media loja-media-fallback"></div>`;
 
         html += `
-            <div class="inventory-card" style="display:flex;flex-direction:column;">
+            <div class="loja-card">
                 ${imgHtml}
-                <div class="item-name" style="font-size:1.1rem;margin-bottom:8px;">${escapeHtml(item.nome)}</div>
-                ${item.descricao ? `<div class="item-desc" style="font-size:0.85rem;margin-bottom:12px;color:var(--muted);">${escapeHtml(item.descricao)}</div>` : ''}
-                
-                <div style="font-size:0.8rem;color:var(--muted);background:rgba(255,255,255,0.05);padding:6px;border-radius:4px;margin-bottom:12px;">
-                    🎯 ${escapeHtml(metasLabel)}
-                </div>
-
-                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
-                    ${tagsHtml}
-                </div>
-                
-                <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;">
-                    ${item.valorFrag > 0 ? `
-                        <button class="btn btn-primary" style="width:100%;font-weight:700;display:flex;justify-content:center;gap:6px;" onclick="openCheckoutFrag('${item.id}')">
-                            💎 Comprar por ${item.valorFrag} Frag$
-                        </button>
-                    ` : ''}
-                    ${item.valorRs > 0 ? `
-                        <button class="btn btn-success" style="width:100%;font-weight:700;" onclick="buyItemWithRS('${item.id}')">
-                            💳 Comprar por R$ ${Number(item.valorRs).toFixed(2)}
-                        </button>
-                    ` : ''}
+                <div class="loja-card-body">
+                    <div class="loja-card-title">${escapeHtml(item.nome)}</div>
+                    ${item.descricao ? `<div class="loja-card-desc">${escapeHtml(item.descricao)}</div>` : ''}
+                    <div class="loja-card-meta">🎯 ${escapeHtml(metasLabel)}</div>
+                    ${tagsHtml ? `<div class="loja-card-tags">${tagsHtml}</div>` : ''}
+                    <div class="loja-card-actions">
+                        ${item.valorFrag > 0 ? `
+                            <button class="loja-btn loja-btn-frag" onclick="openCheckoutFrag('${item.id}')">
+                                <span>💎 ${item.valorFrag} Frag$</span>
+                                <small>Comprar com Fragmentos</small>
+                            </button>` : ''}
+                        ${precoReal ? `
+                            <button class="loja-btn loja-btn-real" onclick="openCheckoutPagBank('${item.id}')">
+                                <span>💳 R$ ${precoReal}</span>
+                                <small>PIX · Cartão · Boleto</small>
+                            </button>` : ''}
+                    </div>
+                    ${precoReal ? `<div class="loja-card-secure">🔒 Pagamento processado no ambiente seguro do PagBank</div>` : ''}
                 </div>
             </div>
         `;
@@ -791,9 +808,83 @@ function renderLojaItens() {
     grid.innerHTML = html;
 }
 
-window.buyItemWithRS = function(id) {
-    showAlert('💳 Esta modalidade de pagamento em Dinheiro Real ainda não está disponível!', 'warning');
-};
+// Valor em centavos do item: canônico `valorReal` (inteiro), fallback `valorRs` (legado)
+function getItemValorCentavos(item) {
+    if (Number.isInteger(item.valorReal) && item.valorReal > 0) return item.valorReal;
+    const rs = Number(item.valorRs);
+    if (Number.isFinite(rs) && rs > 0) return Math.round(rs * 100);
+    return 0;
+}
+
+let currentCheckoutMode = 'frag'; // 'frag' | 'pagbank'
+
+// Abre o modal de confirmação de compra (usado pelos dois meios de pagamento)
+function openCheckoutModal(item, mode) {
+    currentCheckoutItem = item;
+    currentCheckoutMode = mode;
+
+    const isPagBank = mode === 'pagbank';
+    const valorCentavos = getItemValorCentavos(item);
+    const precoLabel = isPagBank
+        ? `<span style="color:#10b981;font-weight:700;">R$ ${(valorCentavos / 100).toFixed(2).replace('.', ',')}</span>`
+        : `<span style="color:#6366f1;font-weight:700;">${item.valorFrag} Frag$</span>`;
+
+    const infoDiv = document.getElementById('lojaCheckoutItemInfo');
+    infoDiv.innerHTML = `
+        <div style="display:flex;gap:12px;align-items:center;">
+            ${item.imagem ? `<img src="${escapeHtml(item.imagem)}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;background:rgba(0,0,0,0.3);" onerror="this.remove();">` : ''}
+            <div>
+                <div style="font-weight:700;color:var(--primary);font-size:1.1rem;margin-bottom:4px;">${escapeHtml(item.nome)}</div>
+                <div style="font-size:0.9rem;color:var(--muted);">Custo: ${precoLabel}</div>
+            </div>
+        </div>
+        ${isPagBank ? `<div style="font-size:0.8rem;color:var(--muted);margin-top:10px;border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;">🔒 Você será redirecionado ao ambiente <strong>seguro do PagBank</strong> para pagar com PIX, Cartão ou Boleto. O item é entregue automaticamente após a confirmação do pagamento.</div>` : ''}
+    `;
+
+    const metaSelector = document.getElementById('lojaCheckoutMetaSelector');
+    const metaList = document.getElementById('lojaCheckoutMetaList');
+
+    if (item.modoSelecaoMeta) {
+        metaSelector.style.display = 'block';
+        metaList.innerHTML = '';
+        const limit = item.qtdSelecaoMeta || item.quantidadeMetasSelecionaveis || 1;
+        metaSelector.firstElementChild.textContent = `Escolha até ${limit} Meta(s) para atrelar o apoio:`;
+        const allowedMetasIds = item.metasVinculadas || [];
+        const allowedMetas = metasData.filter(m => allowedMetasIds.includes(m.id));
+
+        if (allowedMetas.length === 0) {
+             metaList.innerHTML = '<div style="color:var(--muted);font-size:0.9rem;">Nenhuma meta vinculada configurada pelo mestre.</div>';
+        } else {
+            allowedMetas.forEach(meta => {
+                metaList.innerHTML += `
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox" value="${meta.id}" class="loja-checkout-meta-chk" style="width:16px;height:16px;accent-color:var(--primary);">
+                        <span>${escapeHtml(meta.nome)}</span>
+                    </label>
+                `;
+            });
+        }
+    } else {
+        metaSelector.style.display = 'none';
+    }
+
+    const btn = document.getElementById('btnConfirmPurchase');
+    btn.innerHTML = isPagBank ? '💳 Ir para o Pagamento' : '✔️ Confirmar Compra';
+
+    document.getElementById('lojaCheckoutModal').style.display = 'flex';
+}
+
+// Coleta as metas marcadas no modal; retorna null se exceder o limite
+function collectSelectedMetas(item) {
+    if (!item.modoSelecaoMeta) return [];
+    const limit = item.qtdSelecaoMeta || item.quantidadeMetasSelecionaveis || 1;
+    const checkboxes = document.querySelectorAll('.loja-checkout-meta-chk:checked');
+    if (checkboxes.length > limit) {
+        showAlert(`❌ Você pode escolher no máximo ${limit} meta(s).`, 'warning');
+        return null;
+    }
+    return [...checkboxes].map(c => c.value);
+}
 
 window.openCheckoutFrag = async function(itemId) {
     const item = lojaItensData.find(i => i.id === itemId);
@@ -809,43 +900,13 @@ window.openCheckoutFrag = async function(itemId) {
         }
     } catch (e) {}
 
-    currentCheckoutItem = item;
+    openCheckoutModal(item, 'frag');
+};
 
-    const infoDiv = document.getElementById('lojaCheckoutItemInfo');
-    infoDiv.innerHTML = `
-        <div style="font-weight:700;color:var(--primary);font-size:1.1rem;margin-bottom:4px;">${escapeHtml(item.nome)}</div>
-        <div style="font-size:0.9rem;color:var(--muted);margin-bottom:8px;">Custo: <span style="color:#6366f1;font-weight:700;">${item.valorFrag} Frag$</span></div>
-    `;
-
-    const metaSelector = document.getElementById('lojaCheckoutMetaSelector');
-    const metaList = document.getElementById('lojaCheckoutMetaList');
-    
-    if (item.modoSelecaoMeta) {
-        metaSelector.style.display = 'block';
-        metaList.innerHTML = '';
-        const limit = item.qtdSelecaoMeta || 1;
-        document.getElementById('lojaCheckoutMetaSelector').firstElementChild.textContent = `Escolha até ${limit} Meta(s) para atrelar o apoio:`;
-        const allowedMetasIds = item.metasVinculadas || [];
-        const allowedMetas = metasData.filter(m => allowedMetasIds.includes(m.id));
-
-        if (allowedMetas.length === 0) {
-             metaList.innerHTML = '<div style="color:var(--muted);font-size:0.9rem;">Nenhuma meta vinculada configurada pelo mestre.</div>';
-        } else {
-            allowedMetas.forEach(meta => {
-                const idCheckbox = 'chk_meta_' + meta.id;
-                metaList.innerHTML += `
-                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                        <input type="checkbox" value="${meta.id}" class="loja-checkout-meta-chk" style="width:16px;height:16px;accent-color:var(--primary);">
-                        <span>${escapeHtml(meta.nome)}</span>
-                    </label>
-                `;
-            });
-        }
-    } else {
-        metaSelector.style.display = 'none';
-    }
-
-    document.getElementById('lojaCheckoutModal').style.display = 'flex';
+window.openCheckoutPagBank = function(itemId) {
+    const item = lojaItensData.find(i => i.id === itemId);
+    if (!item) return;
+    openCheckoutModal(item, 'pagbank');
 };
 
 window.confirmPurchaseFrag = async function() {
@@ -853,21 +914,31 @@ window.confirmPurchaseFrag = async function() {
     const item = currentCheckoutItem;
 
     // Pré-checagem de UX — a validação de verdade acontece no servidor
-    let selectedMetas = [];
-    if (item.modoSelecaoMeta) {
-        const limit = item.qtdSelecaoMeta || 1;
-        const checkboxes = document.querySelectorAll('.loja-checkout-meta-chk:checked');
-        if (checkboxes.length > limit) {
-            showAlert(`❌ Você pode escolher no máximo ${limit} meta(s).`, 'warning');
-            return;
-        }
-        selectedMetas = [...checkboxes].map(c => c.value);
-    }
+    const selectedMetas = collectSelectedMetas(item);
+    if (selectedMetas === null) return;
 
     const btn = document.getElementById('btnConfirmPurchase');
     btn.disabled = true;
     btn.innerHTML = 'Processando...';
 
+    // ---- Fluxo PagBank: cria o checkout no servidor e redireciona ----
+    if (currentCheckoutMode === 'pagbank') {
+        try {
+            showAlert('⏳ Gerando pagamento seguro no PagBank...', 'info');
+            const criarCheckout = httpsCallable(functions, 'criarCheckoutPagBank');
+            const result = await criarCheckout({ itemId: item.id, selectedMetas });
+            window.location.href = result.data.paymentUrl; // ambiente seguro do PagBank
+            return; // a página vai navegar; não reabilita o botão
+        } catch (error) {
+            console.error('Erro ao criar checkout:', error);
+            showAlert(`❌ Não foi possível iniciar o pagamento: ${error.message}`, 'danger');
+            btn.disabled = false;
+            btn.innerHTML = '💳 Ir para o Pagamento';
+            return;
+        }
+    }
+
+    // ---- Fluxo Frag$ (inalterado) ----
     try {
         const comprar = httpsCallable(functions, 'comprarComFragmentos');
         const result = await comprar({ itemId: item.id, selectedMetas });
@@ -887,3 +958,22 @@ window.confirmPurchaseFrag = async function() {
         currentCheckoutItem = null;
     }
 };
+
+// =============================================
+// RETORNO DO PAGBANK (?compra=...)
+// Nenhum benefício é aplicado aqui — a entrega é exclusiva
+// do webhook no servidor (PIX confirma em segundos; boleto pode levar dias).
+// =============================================
+(function verificarRetornoCompra() {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get('compra')) return;
+    showAlert(
+        '✅ Pagamento em processamento! Assim que o PagBank confirmar, o item aparecerá ' +
+        'automaticamente no seu Repertório e você receberá uma notificação.',
+        'success',
+        10000
+    );
+    const url = new URL(window.location.href);
+    url.searchParams.delete('compra');
+    window.history.replaceState({}, '', url);
+})();
