@@ -173,6 +173,9 @@ function populateTargetMapFromVitalStats() {
         // Registrar como DERIVED:KEY (mesma lógica dos DVs)
         TARGET_MAP[`${vs.nome} Máxima`] = `DERIVED:${vs.key}`;
         TARGET_MAP[`${vs.nome} Máximo`] = `DERIVED:${vs.key}`;
+        
+        let baseKey = vs.key.replace(/_MAX$/i, '').replace(/_MAXIMO$/i, '').toLowerCase();
+        TARGET_MAP[`${vs.nome} Atual`] = `ATUAL:${baseKey}_atual`;
     }
     console.log('✅ TARGET_MAP atualizado com status vitais do Firebase');
 }
@@ -437,20 +440,18 @@ function _resolveSheetRef(ref, mult) {
             ? getEffectiveDotValue(attrKey)
             : (state.dots[attrKey] || 0) + (state.mechanicBonuses?.[attrKey] || 0);
 
-        // Fallback robusto: se a perícia base estiver zerada (ex: sk_exclusivo_contracanto),
-        // verificar se o personagem a possui como perícia de classe (sk_classe_contracanto).
-        // Isso resolve o conflito onde a mecânica global salva "Perícia: X", mas a ficha tem a versão de classe.
-        if (!attrKey.startsWith('sk_classe_') && skVal === 0) {
-            const parts = attrKey.split('_');
-            if (parts.length >= 3) {
-                const suffix = parts.slice(2).join('_');
-                const classKey = 'sk_classe_' + suffix;
-                const classVal = typeof getEffectiveDotValue === 'function'
-                    ? getEffectiveDotValue(classKey)
-                    : (state.dots[classKey] || 0) + (state.mechanicBonuses?.[classKey] || 0);
-                if (classVal > 0) {
-                    skVal = classVal;
-                }
+        // Fallback robusto: se a perícia for validada por mecânica global, mas o personagem a possui 
+        // como perícia de classe, compara as duas e pega o maior valor (Nível Total = Base + Bônus).
+        // Isso resolve o conflito onde a mecânica salva "Perícia: X", mas a ficha tem a versão de classe, 
+        // além de evitar falhas caso a perícia genérica tenha bônus isolados mas a de classe seja a verdadeira.
+        if (!attrKey.startsWith('sk_classe_')) {
+            const rawName = ref.replace(/^Perícia:\s*/i, '');
+            const classKey = 'sk_classe_' + rawName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            const classVal = typeof getEffectiveDotValue === 'function'
+                ? getEffectiveDotValue(classKey)
+                : (state.dots[classKey] || 0) + (state.mechanicBonuses?.[classKey] || 0);
+            if (classVal > skVal) {
+                skVal = classVal;
             }
         }
         return skVal * mult;
@@ -954,7 +955,7 @@ function _getDerivedMechKeys() {
 }
 
 /* ===== APLICAR UMA MECÂNICA INDIVIDUAL ===== */
-function applyMechanicToSheet(mech, parentPec) {
+function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
     const tipo = mech.tipo;
 
     // Se a mecânica é evoluível, resolver o valor com base no nível atual da peculiaridade
@@ -1032,6 +1033,21 @@ function applyMechanicToSheet(mech, parentPec) {
 
                 const val = resolveCalcValue(calc);
                 const op = calc.operacao;
+
+                if (field.startsWith('ATUAL:')) {
+                    if (isOneOff) {
+                        const cleanKey = field.replace('ATUAL:', '');
+                        const input = document.querySelector(`[data-key="${cleanKey}"]`);
+                        if (input) {
+                            let currentVal = Number(input.value) || 0;
+                            if (op === '+') input.value = currentVal + val;
+                            else if (op === '-') input.value = Math.max(0, currentVal - val);
+                            else if (op === '=') input.value = val;
+                            input.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    }
+                    continue;
+                }
 
                 if (op === '+') state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) + val;
                 else if (op === '-') state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) - val;

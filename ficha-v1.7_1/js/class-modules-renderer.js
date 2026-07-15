@@ -1722,9 +1722,13 @@ function _cmCheckMechanicCost(mechId) {
         // O valor pode estar em diferentes locais do state
         const targetMap = window.TARGET_MAP || {};
         const rawTarget = targetMap[fieldKey] || fieldKey;
-        const cleanKey = rawTarget.replace(/^(DERIVED|BASE|INFO|SET|MULT|DIV):/, '');
+        const cleanKey = rawTarget.replace(/^(DERIVED|BASE|INFO|SET|MULT|DIV|ATUAL):/, '');
         
-        if (state.derived && state.derived[cleanKey] !== undefined) {
+        if (rawTarget.startsWith('ATUAL:')) {
+            const input = document.querySelector(`[data-key="${cleanKey}"]`);
+            if (input) current = Number(input.value) || 0;
+            else if (state.derivedValues && state.derivedValues[cleanKey] !== undefined) current = Number(state.derivedValues[cleanKey]) || 0;
+        } else if (state.derived && state.derived[cleanKey] !== undefined) {
             current = state.derived[cleanKey];
         } else if (state.atributos && state.atributos[cleanKey] !== undefined) {
             current = state.atributos[cleanKey];
@@ -1751,7 +1755,7 @@ function _cmApplyMechanicCost(mechId) {
     if (!mechId) return;
     const mech = (window._systemData?.mechanics || []).find(m => m.id === mechId);
     if (mech && typeof applyMechanicToSheet === 'function') {
-        applyMechanicToSheet(mech, null);
+        applyMechanicToSheet(mech, null, true);
         if (typeof recalcAll === 'function') recalcAll();
         if (typeof scheduleAutosave === 'function') scheduleAutosave();
         console.log(`💸 Custo condicional pago: ${mech.nome}`);

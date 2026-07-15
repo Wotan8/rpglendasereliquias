@@ -25,14 +25,18 @@ function getMechanicTargetsHTML() {
         for (const vs of publishedVS) {
             const icon = vs.icone || '❤️';
             html += `\n<option value="${esc(vs.nome)} Máxima">${icon} ${esc(vs.nome)} Máxima</option>`;
+            html += `\n<option value="${esc(vs.nome)} Atual">${icon} ${esc(vs.nome)} Atual</option>`;
         }
         html += `\n</optgroup>`;
     } else {
         // Fallback hardcoded para quando cache não carregou
         html += `\n<optgroup label="Status Vitais">`;
         html += `\n<option value="Vitalidade Máxima">Vitalidade Máxima</option>`;
+        html += `\n<option value="Vitalidade Atual">Vitalidade Atual</option>`;
         html += `\n<option value="Energia Máxima">Energia Máxima</option>`;
+        html += `\n<option value="Energia Atual">Energia Atual</option>`;
         html += `\n<option value="Sanidade Máxima">Sanidade Máxima</option>`;
+        html += `\n<option value="Sanidade Atual">Sanidade Atual</option>`;
         html += `\n</optgroup>`;
     }
 
@@ -386,14 +390,18 @@ function getValueSourceHTML() {
         for (const vs of publishedVS3) {
             const icon = vs.icone || '❤️';
             html += `\n<option value="${esc(vs.nome)} Máxima">${icon} ${esc(vs.nome)} Máxima</option>`;
+            html += `\n<option value="${esc(vs.nome)} Atual">${icon} ${esc(vs.nome)} Atual</option>`;
         }
         html += `\n</optgroup>`;
     } else {
         // Fallback hardcoded para quando cache não carregou
         html += `\n<optgroup label="Status Vitais">`;
         html += `\n<option value="Vitalidade Máxima">Vitalidade Máxima</option>`;
+        html += `\n<option value="Vitalidade Atual">Vitalidade Atual</option>`;
         html += `\n<option value="Energia Máxima">Energia Máxima</option>`;
+        html += `\n<option value="Energia Atual">Energia Atual</option>`;
         html += `\n<option value="Sanidade Máxima">Sanidade Máxima</option>`;
+        html += `\n<option value="Sanidade Atual">Sanidade Atual</option>`;
         html += `\n</optgroup>`;
     }
 
