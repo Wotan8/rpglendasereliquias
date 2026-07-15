@@ -16,6 +16,9 @@ window.toggleNotasAccordion = function(elId) {
 async function loadMesaNotas() {
     if (!S.currentMesaId) return;
     const el = document.getElementById('mesaNotasContent'); if (!el) return;
+    
+    el.innerHTML = '<div style="text-align:center;padding:50px;color:var(--muted)">Carregando notas...</div>';
+    
     try {
         let chars = S.mesaCharacters || [];
         if (!chars.length) {
@@ -27,7 +30,7 @@ async function loadMesaNotas() {
         el.innerHTML = chars.map(c => {
             const f = c.fields || {};
             const nome = f.nome || c.nome || 'Sem nome';
-            let charNotes = c.notes || [];
+            let charNotes = [...(c.notes || [])];
             
             charNotes.sort((a, b) => {
                 if (a.pinned && !b.pinned) return -1;
@@ -41,40 +44,44 @@ async function loadMesaNotas() {
             const notesHtml = charNotes.length
                 ? charNotes.map((n, index) => {
                     const prev = (n.conteudo || '').replace(/<[^>]*>/g, '').substring(0, 120);
-                    return \`<div class="mesa-note-card \${n.pinned ? 'pinned' : ''}">
+                    return `<div class="mesa-note-card ${n.pinned ? 'pinned' : ''}">
                         <div class="mesa-note-title-row">
-                            <span>\${n.pinned ? '📌' : '📄'} \${escapeHtml(n.titulo || 'Sem título')}</span>
+                            <span>${n.pinned ? '📌' : '📄'} ${escapeHtml(n.titulo || 'Sem título')}</span>
                             <div class="mesa-note-actions">
-                                <button onclick="moveNoteUpMesa('\${c.id}','\${n.id}');event.stopPropagation()" title="Mover para Cima" \${index === 0 ? 'disabled style="opacity:0.3"' : ''}>🔼</button>
-                                <button onclick="moveNoteDownMesa('\${c.id}','\${n.id}');event.stopPropagation()" title="Mover para Baixo" \${index === charNotes.length - 1 ? 'disabled style="opacity:0.3"' : ''}>🔽</button>
-                                <button onclick="togglePinNoteMesa('\${c.id}','\${n.id}');event.stopPropagation()" title="Fixar/Desfixar">\${n.pinned ? '📌' : '📍'}</button>
-                                <button onclick="openShareModalMesa('\${c.id}','\${n.id}');event.stopPropagation()" title="Compartilhar">👥</button>
-                                <button onclick="editSingleNote('\${c.id}','\${n.id}');event.stopPropagation()" title="Editar nota">✏️</button>
-                                <button class="mesa-note-del" onclick="deleteSingleNote('\${c.id}','\${n.id}');event.stopPropagation()" title="Excluir nota">🗑️</button>
+                                <button onclick="moveNoteUpMesa('${c.id}','${n.id}');event.stopPropagation()" title="Mover para Cima" ${index === 0 ? 'disabled style="opacity:0.3"' : ''}>🔼</button>
+                                <button onclick="moveNoteDownMesa('${c.id}','${n.id}');event.stopPropagation()" title="Mover para Baixo" ${index === charNotes.length - 1 ? 'disabled style="opacity:0.3"' : ''}>🔽</button>
+                                <button onclick="togglePinNoteMesa('${c.id}','${n.id}');event.stopPropagation()" title="Fixar/Desfixar">${n.pinned ? '📌' : '📍'}</button>
+                                <button onclick="openShareModalMesa('${c.id}','${n.id}');event.stopPropagation()" title="Compartilhar">👥</button>
+                                <button onclick="editSingleNote('${c.id}','${n.id}');event.stopPropagation()" title="Editar nota">✏️</button>
+                                <button class="mesa-note-del" onclick="deleteSingleNote('${c.id}','${n.id}');event.stopPropagation()" title="Excluir nota">🗑️</button>
                             </div>
                         </div>
-                        <div class="mesa-note-preview">\${prev || 'Nota vazia...'}</div>
-                    </div>\`;
+                        <div class="mesa-note-preview">${prev || 'Nota vazia...'}</div>
+                    </div>`;
                 }).join('')
                 : '<div style="color:var(--muted);font-size:.82rem;padding:8px 0;text-align:center">Nenhuma nota ainda.</div>';
-            const bodyId = \`notas_body_\${c.id}\`;
-            return \`
+            const bodyId = `notas_body_${c.id}`;
+            return `
             <div class="accordion-item" style="margin-bottom:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:8px;">
-                <div class="accordion-header" style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleNotasAccordion('\${bodyId}')">
-                    <div style="font-weight:bold; color:var(--light);">🎭 \${escapeHtml(nome)}</div>
-                    <div style="font-size:0.8rem; color:var(--muted);">\${charNotes.length} nota(s)</div>
+                <div class="accordion-header" style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleNotasAccordion('${bodyId}')">
+                    <div style="font-weight:bold; color:var(--light);">🎭 ${escapeHtml(nome)}</div>
+                    <div style="font-size:0.8rem; color:var(--muted);">${charNotes.length} nota(s)</div>
                 </div>
-                <div class="accordion-body" id="\${bodyId}" style="display:none; padding:12px 16px; border-top:1px solid var(--border);">
+                <div class="accordion-body" id="${bodyId}" style="display:none; padding:12px 16px; border-top:1px solid var(--border);">
                     <div style="margin-bottom:12px; display:flex; justify-content:flex-end;">
-                        <button class="btn btn-success btn-small" onclick="addNewNote('\${c.id}')" title="Adicionar nova nota">➕ Nova Nota</button>
+                        <button class="btn btn-success btn-small" onclick="addNewNote('${c.id}')" title="Adicionar nova nota">➕ Nova Nota</button>
                     </div>
-                    <div id="note-display-\${c.id}">
-                        \${notesHtml}
+                    <div id="note-display-${c.id}">
+                        ${notesHtml}
                     </div>
                 </div>
-            </div>\`;
+            </div>`;
         }).join('');
-    } catch (e) { console.error(e); showAlert('❌ Erro ao carregar notas', 'danger'); }
+    } catch (e) {
+        console.error(e);
+        showAlert('❌ Erro ao carregar notas', 'danger');
+        el.innerHTML = '<div style="text-align:center;padding:50px;color:var(--danger)">Erro ao carregar as notas. Verifique a conexão ou tente novamente.</div>';
+    }
 }
 
 // Re-render a single character's notes display
@@ -82,7 +89,7 @@ function rerenderCharNotes(charId) {
     const chars = S.mesaCharacters || [];
     const c = chars.find(x => x.id === charId);
     if (!c) return;
-    const display = document.getElementById(\`note-display-\${charId}\`);
+    const display = document.getElementById(`note-display-${charId}`);
     if (!display) return;
     
     let charNotes = c.notes || [];
@@ -101,20 +108,20 @@ function rerenderCharNotes(charId) {
     }
     display.innerHTML = charNotes.map((n, index) => {
         const prev = (n.conteudo || '').replace(/<[^>]*>/g, '').substring(0, 120);
-        return \`<div class="mesa-note-card \${n.pinned ? 'pinned' : ''}">
+        return `<div class="mesa-note-card ${n.pinned ? 'pinned' : ''}">
             <div class="mesa-note-title-row">
-                <span>\${n.pinned ? '📌' : '📄'} \${escapeHtml(n.titulo || 'Sem título')}</span>
+                <span>${n.pinned ? '📌' : '📄'} ${escapeHtml(n.titulo || 'Sem título')}</span>
                 <div class="mesa-note-actions">
-                    <button onclick="moveNoteUpMesa('\${charId}','\${n.id}');event.stopPropagation()" title="Mover para Cima" \${index === 0 ? 'disabled style="opacity:0.3"' : ''}>🔼</button>
-                    <button onclick="moveNoteDownMesa('\${charId}','\${n.id}');event.stopPropagation()" title="Mover para Baixo" \${index === charNotes.length - 1 ? 'disabled style="opacity:0.3"' : ''}>🔽</button>
-                    <button onclick="togglePinNoteMesa('\${charId}','\${n.id}');event.stopPropagation()" title="Fixar/Desfixar">\${n.pinned ? '📌' : '📍'}</button>
-                    <button onclick="openShareModalMesa('\${charId}','\${n.id}');event.stopPropagation()" title="Compartilhar">👥</button>
-                    <button onclick="editSingleNote('\${charId}','\${n.id}');event.stopPropagation()" title="Editar nota">✏️</button>
-                    <button class="mesa-note-del" onclick="deleteSingleNote('\${charId}','\${n.id}');event.stopPropagation()" title="Excluir nota">🗑️</button>
+                    <button onclick="moveNoteUpMesa('${charId}','${n.id}');event.stopPropagation()" title="Mover para Cima" ${index === 0 ? 'disabled style="opacity:0.3"' : ''}>🔼</button>
+                    <button onclick="moveNoteDownMesa('${charId}','${n.id}');event.stopPropagation()" title="Mover para Baixo" ${index === charNotes.length - 1 ? 'disabled style="opacity:0.3"' : ''}>🔽</button>
+                    <button onclick="togglePinNoteMesa('${charId}','${n.id}');event.stopPropagation()" title="Fixar/Desfixar">${n.pinned ? '📌' : '📍'}</button>
+                    <button onclick="openShareModalMesa('${charId}','${n.id}');event.stopPropagation()" title="Compartilhar">👥</button>
+                    <button onclick="editSingleNote('${charId}','${n.id}');event.stopPropagation()" title="Editar nota">✏️</button>
+                    <button class="mesa-note-del" onclick="deleteSingleNote('${charId}','${n.id}');event.stopPropagation()" title="Excluir nota">🗑️</button>
                 </div>
             </div>
-            <div class="mesa-note-preview">\${prev || 'Nota vazia...'}</div>
-        </div>\`;
+            <div class="mesa-note-preview">${prev || 'Nota vazia...'}</div>
+        </div>`;
     }).join('');
 }
 
@@ -223,15 +230,15 @@ function openNoteEditorModal(charId, note, isNew) {
     const m = document.createElement('div');
     m.className = 'modal active';
     m.id = 'editNoteModal';
-    m.innerHTML = \`<div class="modal-content" style="max-width:700px">
+    m.innerHTML = `<div class="modal-content" style="max-width:700px">
         <div class="modal-header">
-            <span class="modal-title">\${isNew ? '➕ Nova Nota' : '✏️ Editar Nota'} — \${escapeHtml(nome)}</span>
+            <span class="modal-title">${isNew ? '➕ Nova Nota' : '✏️ Editar Nota'} — ${escapeHtml(nome)}</span>
             <button class="modal-close" onclick="this.closest('.modal').remove()">✕</button>
         </div>
         <div class="modal-body">
             <div class="form-group">
                 <label class="form-label">Título</label>
-                <input type="text" class="form-input" id="en_titulo" placeholder="Título da nota..." value="\${escapeHtml(note.titulo || '')}">
+                <input type="text" class="form-input" id="en_titulo" placeholder="Título da nota..." value="${escapeHtml(note.titulo || '')}">
             </div>
             <div class="form-group">
                 <label class="form-label">Conteúdo</label>
@@ -241,14 +248,14 @@ function openNoteEditorModal(charId, note, isNew) {
                     <button type="button" onclick="document.execCommand('underline',false,null);document.getElementById('en_conteudo').focus()" title="Sublinhado"><u>U</u></button>
                     <button type="button" onclick="document.execCommand('insertUnorderedList',false,null);document.getElementById('en_conteudo').focus()" title="Lista">☰</button>
                 </div>
-                <div contenteditable="true" class="form-textarea mesa-note-editor-body" id="en_conteudo" style="min-height:180px;max-height:400px;overflow-y:auto;padding:12px">\${note.conteudo || ''}</div>
+                <div contenteditable="true" class="form-textarea mesa-note-editor-body" id="en_conteudo" style="min-height:180px;max-height:400px;overflow-y:auto;padding:12px">${note.conteudo || ''}</div>
             </div>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
                 <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancelar</button>
-                <button class="btn btn-success" onclick="saveNoteFromEditor('\${charId}','\${note.id}',\${isNew})">💾 Salvar</button>
+                <button class="btn btn-success" onclick="saveNoteFromEditor('${charId}','${note.id}',${isNew})">💾 Salvar</button>
             </div>
         </div>
-    </div>\`;
+    </div>`;
     document.body.appendChild(m);
 }
 
@@ -304,19 +311,19 @@ window.openShareModalMesa = function(charId, noteId) {
     const listHtml = chars.filter(x => x.id !== charId).map(otherChar => {
         const currentPerm = (n.sharedWith && n.sharedWith[otherChar.id]) || 'none';
         const nome = (otherChar.fields && otherChar.fields.nome) || otherChar.nome || 'Desconhecido';
-        return \`
+        return `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid var(--border)">
-                <span style="font-weight:bold">\${escapeHtml(nome)}</span>
-                <select class="form-input share-perm-select-mesa" data-charid="\${otherChar.id}" style="width:auto; padding:4px 8px; margin-bottom:0;">
-                    <option value="none" \${currentPerm === 'none' ? 'selected' : ''}>Nenhum</option>
-                    <option value="view" \${currentPerm === 'view' ? 'selected' : ''}>Visualizar</option>
-                    <option value="edit" \${currentPerm === 'edit' ? 'selected' : ''}>Editar</option>
+                <span style="font-weight:bold">${escapeHtml(nome)}</span>
+                <select class="form-input share-perm-select-mesa" data-charid="${otherChar.id}" style="width:auto; padding:4px 8px; margin-bottom:0;">
+                    <option value="none" ${currentPerm === 'none' ? 'selected' : ''}>Nenhum</option>
+                    <option value="view" ${currentPerm === 'view' ? 'selected' : ''}>Visualizar</option>
+                    <option value="edit" ${currentPerm === 'edit' ? 'selected' : ''}>Editar</option>
                 </select>
             </div>
-        \`;
+        `;
     }).join('');
     
-    m.innerHTML = \`<div class="modal-content" style="max-width:500px">
+    m.innerHTML = `<div class="modal-content" style="max-width:500px">
         <div class="modal-header">
             <span class="modal-title">👥 Compartilhar Nota</span>
             <button class="modal-close" onclick="this.closest('.modal').remove()">✕</button>
@@ -324,14 +331,14 @@ window.openShareModalMesa = function(charId, noteId) {
         <div class="modal-body">
             <p style="font-size:12px;color:var(--muted);margin-bottom:15px;">Mestre, defina as permissões de acesso para os outros jogadores da mesa.</p>
             <div id="shareCharsListMesa">
-                \${listHtml || '<div style="color:var(--muted)">Nenhum outro jogador na mesa.</div>'}
+                ${listHtml || '<div style="color:var(--muted)">Nenhum outro jogador na mesa.</div>'}
             </div>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
                 <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancelar</button>
-                <button class="btn btn-success" onclick="saveShareSettingsMesa('\${charId}','\${noteId}')">💾 Salvar Permissões</button>
+                <button class="btn btn-success" onclick="saveShareSettingsMesa('${charId}','${noteId}')">💾 Salvar Permissões</button>
             </div>
         </div>
-    </div>\`;
+    </div>`;
     document.body.appendChild(m);
 };
 
