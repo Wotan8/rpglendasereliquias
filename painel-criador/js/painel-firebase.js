@@ -2781,6 +2781,18 @@ function _buildClassModuleEditorRow(idx, data) {
     const bloqueioMecIds = Array.isArray(data.bloqueioMecanicaIds) ? data.bloqueioMecanicaIds.slice() : [];
     const bloqueioChips = bloqueioMecIds.map(id => _cmMechChip(id)).join('');
 
+    const custoCriacaoMecIds = Array.isArray(data.custoCriacaoMecanicaIds) ? data.custoCriacaoMecanicaIds.slice() : [];
+    if (data.custoCriacaoMecanicaId && !custoCriacaoMecIds.includes(data.custoCriacaoMecanicaId)) custoCriacaoMecIds.push(data.custoCriacaoMecanicaId);
+    const custoCriacaoChips = custoCriacaoMecIds.map(id => _cmMechChip(id)).join('');
+
+    const custoEdicaoMecIds = Array.isArray(data.custoEdicaoMecanicaIds) ? data.custoEdicaoMecanicaIds.slice() : [];
+    if (data.custoEdicaoMecanicaId && !custoEdicaoMecIds.includes(data.custoEdicaoMecanicaId)) custoEdicaoMecIds.push(data.custoEdicaoMecanicaId);
+    const custoEdicaoChips = custoEdicaoMecIds.map(id => _cmMechChip(id)).join('');
+
+    const custoRemocaoMecIds = Array.isArray(data.custoRemocaoMecanicaIds) ? data.custoRemocaoMecanicaIds.slice() : [];
+    if (data.custoRemocaoMecanicaId && !custoRemocaoMecIds.includes(data.custoRemocaoMecanicaId)) custoRemocaoMecIds.push(data.custoRemocaoMecanicaId);
+    const custoRemocaoChips = custoRemocaoMecIds.map(id => _cmMechChip(id)).join('');
+
     const permitirCriacao = data.permitirCriacaoJogador !== false;
     const predefArr = Array.isArray(data.itensPredefinidos) ? data.itensPredefinidos : [];
     const predefHtml = predefArr.map((it, pi) => _buildPredefItemRow(idx, pi, it, schemaArr)).join('');
@@ -2883,11 +2895,14 @@ function _buildClassModuleEditorRow(idx, data) {
                     </div>
                     <div class="form-group full-width" style="margin-top: 10px;">
                         <label>Mecânica de Custo (Aplicada ao adicionar/criar item)</label>
-                        <select class="aura-mech-select" data-cm-key="custoCriacaoMecanicaId">
-                            <option value="">— Sem mecânica vinculada —</option>
-                            ${_cmMechSelectOptions().replace(`value="${data.custoCriacaoMecanicaId}"`, `value="${data.custoCriacaoMecanicaId}" selected`)}
-                        </select>
-                        <div class="cm-hint">A adição do item será bloqueada se o jogador não tiver saldo suficiente para esta mecânica. Mecânicas de soma ou bônus também podem ser atreladas aqui e serão aplicadas na criação.</div>
+                        <div class="aura-grau-mechs cm-custo-criacao-mechs" data-cm-key="custoCriacaoMecanicaIds">
+                            <div class="mech-tags-container cm-custo-criacao-tags">${custoCriacaoChips}</div>
+                            <select class="aura-mech-select" onchange="cmAddModuleMech(this, '.cm-custo-criacao-tags')">
+                                <option value="">+ Vincular Mecânica...</option>
+                                ${_cmMechSelectOptions()}
+                            </select>
+                        </div>
+                        <div class="cm-hint">A adição do item será bloqueada se o jogador não tiver saldo suficiente para as mecânicas vinculadas. Mecânicas de soma ou bônus também podem ser atreladas aqui e serão aplicadas na criação.</div>
                     </div>
                 </div>
             </div>
@@ -2906,10 +2921,13 @@ function _buildClassModuleEditorRow(idx, data) {
                         </label>
                         <div class="cm-edicao-mech" style="display: ${data.custoEdicaoAtivo ? 'block' : 'none'}">
                             <label style="font-size: 0.75rem;">Mecânica de Custo (Aplicada ao editar um item na ficha)</label>
-                            <select class="aura-mech-select" data-cm-key="custoEdicaoMecanicaId">
-                                <option value="">— Selecione uma Mecânica —</option>
-                                ${_cmMechSelectOptions().replace(`value="${data.custoEdicaoMecanicaId}"`, `value="${data.custoEdicaoMecanicaId}" selected`)}
-                            </select>
+                            <div class="aura-grau-mechs cm-custo-edicao-mechs" data-cm-key="custoEdicaoMecanicaIds">
+                                <div class="mech-tags-container cm-custo-edicao-tags">${custoEdicaoChips}</div>
+                                <select class="aura-mech-select" onchange="cmAddModuleMech(this, '.cm-custo-edicao-tags')">
+                                    <option value="">+ Vincular Mecânica...</option>
+                                    ${_cmMechSelectOptions()}
+                                </select>
+                            </div>
                             <div class="cm-hint">Ao habilitar, a edição de itens na ficha ficará bloqueada até o jogador pagar este custo. Mecânicas de subtração irão deduzir valores; outras serão apenas aplicadas.</div>
                         </div>
                     </div>
@@ -2925,11 +2943,14 @@ function _buildClassModuleEditorRow(idx, data) {
                         </label>
                         <div class="cm-remocao-mech" style="display: ${data.custoRemocaoAtivo ? 'block' : 'none'}">
                             <label style="font-size: 0.75rem;">Mecânica de Custo (Aplicada ao excluir um item da ficha)</label>
-                            <select class="aura-mech-select" data-cm-key="custoRemocaoMecanicaId">
-                                <option value="">— Selecione uma Mecânica —</option>
-                                ${_cmMechSelectOptions().replace(`value="${data.custoRemocaoMecanicaId}"`, `value="${data.custoRemocaoMecanicaId}" selected`)}
-                            </select>
-                            <div class="cm-hint">Se a mecânica definida subtrair recursos, o jogador não poderá deletar o item caso não tenha saldo suficiente.</div>
+                            <div class="aura-grau-mechs cm-custo-remocao-mechs" data-cm-key="custoRemocaoMecanicaIds">
+                                <div class="mech-tags-container cm-custo-remocao-tags">${custoRemocaoChips}</div>
+                                <select class="aura-mech-select" onchange="cmAddModuleMech(this, '.cm-custo-remocao-tags')">
+                                    <option value="">+ Vincular Mecânica...</option>
+                                    ${_cmMechSelectOptions()}
+                                </select>
+                            </div>
+                            <div class="cm-hint">Se as mecânicas definidas subtraírem recursos, o jogador não poderá deletar o item caso não tenha saldo suficiente para todas elas.</div>
                         </div>
                     </div>
                 </div>
@@ -3017,6 +3038,18 @@ window.cmAddLimitMech = function (select) {
     const mechId = select.value;
     if (!mechId) return;
     const container = select.closest('[data-cm-key="limiteMecanicaIds"]')?.querySelector('.cm-limite-tags');
+    if (!container) { select.value = ''; return; }
+    if (container.querySelector(`[data-id="${mechId}"]`)) { select.value = ''; return; }
+    const temp = document.createElement('div');
+    temp.innerHTML = _cmMechChip(mechId);
+    container.appendChild(temp.firstElementChild);
+    select.value = '';
+};
+
+window.cmAddModuleMech = function (select, containerSelector) {
+    const mechId = select.value;
+    if (!mechId) return;
+    const container = select.parentElement.querySelector(containerSelector);
     if (!container) { select.value = ''; return; }
     if (container.querySelector(`[data-id="${mechId}"]`)) { select.value = ''; return; }
     const temp = document.createElement('div');
@@ -3409,10 +3442,13 @@ function _collectClassModulesData(fieldKey) {
             custoEquipamentos: _collectEquipCostArea(item.querySelector('.cm-custo-eq-modulo')),
             permitirCriacaoJogador: item.querySelector('[data-cm-key="permitirCriacaoJogador"]')?.checked !== false,
             custoEdicaoAtivo: item.querySelector('[data-cm-key="custoEdicaoAtivo"]')?.checked || false,
-            custoEdicaoMecanicaId: item.querySelector('[data-cm-key="custoEdicaoMecanicaId"]')?.value || '',
+            custoEdicaoMecanicaIds: Array.from(item.querySelectorAll('[data-cm-key="custoEdicaoMecanicaIds"] .mech-tag')).map(t => t.dataset.id).filter(Boolean),
+            custoEdicaoMecanicaId: null, // Legado compatível, não salva mais string única
             custoRemocaoAtivo: item.querySelector('[data-cm-key="custoRemocaoAtivo"]')?.checked || false,
-            custoRemocaoMecanicaId: item.querySelector('[data-cm-key="custoRemocaoMecanicaId"]')?.value || '',
-            custoCriacaoMecanicaId: item.querySelector('[data-cm-key="custoCriacaoMecanicaId"]')?.value || '',
+            custoRemocaoMecanicaIds: Array.from(item.querySelectorAll('[data-cm-key="custoRemocaoMecanicaIds"] .mech-tag')).map(t => t.dataset.id).filter(Boolean),
+            custoRemocaoMecanicaId: null,
+            custoCriacaoMecanicaIds: Array.from(item.querySelectorAll('[data-cm-key="custoCriacaoMecanicaIds"] .mech-tag')).map(t => t.dataset.id).filter(Boolean),
+            custoCriacaoMecanicaId: null,
             schema: [],
             itensPredefinidos: []
         };

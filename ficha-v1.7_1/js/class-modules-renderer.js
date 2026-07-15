@@ -924,16 +924,12 @@ function _cmValidarECobrar(mod, predef) {
         }
     }
 
-    // 3) Verificar Mecânica de Criação
-    let mechCheck = { ok: true, label: '' };
-    if (mod.custoCriacaoMecanicaId) {
-        mechCheck = _cmCheckMechanicCost(mod.custoCriacaoMecanicaId);
+    const criacaoIds = _cmGetCostMechanics(mod, 'custoCriacao');
+    let mechCheck = { ok: true, label: 'Sem custo', costs: [] };
+    if (criacaoIds.length > 0) {
+        mechCheck = _cmCheckMechanicsCosts(criacaoIds);
         if (!mechCheck.ok) {
-            if (typeof showUpgradeBlocked === 'function') {
-                showUpgradeBlocked(`Bloqueado: ${mechCheck.label}`);
-            } else {
-                alert(`Bloqueado: ${mechCheck.label}`);
-            }
+            showUpgradeBlocked(`Bloqueado: ${mechCheck.label}`);
             return;
         }
     }
@@ -941,7 +937,7 @@ function _cmValidarECobrar(mod, predef) {
     const executar = () => {
         if (custoExp > 0 && typeof spendExp === 'function') spendExp(custoExp);
         if (check.consumos.length > 0) _cmConsumirEquipamentos(check.consumos);
-        if (mod.custoCriacaoMecanicaId) _cmApplyMechanicCost(mod.custoCriacaoMecanicaId);
+        if (criacaoIds.length > 0) _cmApplyMechanicsCosts(criacaoIds);
         _doAddModuleItem(mod, predef);
     };
 
@@ -953,8 +949,8 @@ function _cmValidarECobrar(mod, predef) {
     if (check.consumos.length > 0) {
         extraCosts.push('Equipamentos: ' + check.consumos.map(c => `${c.nome} ×${c.qtd}`).join(', '));
     }
-    if (mod.custoCriacaoMecanicaId && mechCheck.label && mechCheck.label !== 'Sem custo' && !mechCheck.label.includes('não encontrada')) {
-        extraCosts.push(mechCheck.label.replace('Custo: ', 'Mecânica: '));
+    if (mechCheck.costs.length > 0) {
+        extraCosts.push(...mechCheck.costs.map(c => `Mecânica: ${c}`));
     }
 
     if (custoExp > 0 && typeof showUpgradeConfirm === 'function') {
@@ -1128,28 +1124,34 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
 
     if (mod.custoEdicaoAtivo) {
         if (isLocked) {
-            const editBtn = document.createElement('button');
-            editBtn.className = 'no-print cm-edit-btn';
-            editBtn.textContent = '✏️ Editar';
-            editBtn.title = 'Desbloquear edição (Sujeito a custo)';
-            editBtn.addEventListener('click', () => {
-                if (mod.custoEdicaoMecanicaId) {
-                    const check = _cmCheckMechanicCost(mod.custoEdicaoMecanicaId);
+            const btnUnlock = document.createElement('button');
+            btnUnlock.className = 'no-print cm-edit-btn';
+            btnUnlock.textContent = '✏️ Editar';
+            btnUnlock.title = 'Desbloquear edição (Sujeito a custo)';
+            btnUnlock.addEventListener('click', () => {
+                const edIds = _cmGetCostMechanics(mod, 'custoEdicao');
+                if (edIds.length > 0) {
+                    const check = _cmCheckMechanicsCosts(edIds);
                     if (!check.ok) {
-                        if (typeof showUpgradeBlocked === 'function') {
-                            showUpgradeBlocked(`Bloqueado: ${check.label}`);
-                        } else {
-                            alert(`Bloqueado: ${check.label}`);
-                        }
+                        showUpgradeBlocked(`Edição Bloqueada: ${check.label}`);
                         return;
                     }
-                    if (!confirm(`Desbloquear edição deste item?\nIsso consumirá: ${check.label.replace('Custo: ', '')}`)) return;
-                    _cmApplyMechanicCost(mod.custoEdicaoMecanicaId);
+                    if (confirm(`Desbloquear edição?\nCusto: ${check.label.replace('Custo: ', '')}`)) {
+                        _cmApplyMechanicsCosts(edIds);
+                        
+                        // Recriar o item no DOM como editável
+                        const parent = item.parentElement;
+                        const unlockedItem = _buildModuleItem(mod, idx, data, isCustomNew, true);
+                        parent.insertBefore(unlockedItem, item);
+                        item.remove();
+                    }
+                } else {
+                    // Sem mecânica vinculada, desbloqueia direto
+                    const parent = item.parentElement;
+                    const unlockedItem = _buildModuleItem(mod, idx, data, isCustomNew, true);
+                    parent.insertBefore(unlockedItem, item);
+                    item.remove();
                 }
-                
-                // Repintar item destrancado
-                const newItem = _buildModuleItem(mod, idx, data, false, true);
-                item.replaceWith(newItem);
             });
             btnGroup.appendChild(editBtn);
         } else {
@@ -1720,7 +1722,7 @@ function _cmCheckMechanicCost(mechId) {
     if (isSubtracao && fieldKey) {
         let current = 0;
         // O valor pode estar em diferentes locais do state
-        const targetMap = window.TARGET_MAP || {};
+        const targetMap = (typeof TARGET_MAP !== 'undefined') ? TARGET_MAP : (window.TARGET_MAP || {});
         const rawTarget = targetMap[fieldKey] || fieldKey;
         const cleanKey = rawTarget.replace(/^(DERIVED|BASE|INFO|SET|MULT|DIV|ATUAL):/, '');
         
@@ -1763,11 +1765,47 @@ function _cmApplyMechanicCost(mechId) {
 }
 
 /**
+ * Obtém a lista de mecânicas de custo de um módulo (suporta legado e novo array).
+ */
+function _cmGetCostMechanics(mod, type) {
+    const ids = Array.isArray(mod[`${type}MecanicaIds`]) ? mod[`${type}MecanicaIds`].slice() : [];
+    if (mod[`${type}MecanicaId`] && !ids.includes(mod[`${type}MecanicaId`])) ids.push(mod[`${type}MecanicaId`]);
+    return ids;
+}
+
+/**
+ * Verifica os custos de um array de mecânicas.
+ */
+function _cmCheckMechanicsCosts(mechIds) {
+    if (!mechIds || mechIds.length === 0) return { ok: true, label: 'Sem custo', costs: [] };
+    const labels = [];
+    for (const id of mechIds) {
+        const check = _cmCheckMechanicCost(id);
+        if (!check.ok) return check; 
+        if (check.label !== 'Sem custo' && !check.label.includes('não encontrada')) {
+            labels.push(check.label.replace('Custo: ', ''));
+        }
+    }
+    return { ok: true, label: labels.length ? `Custo: ${labels.join(' · ')}` : 'Sem custo', costs: labels };
+}
+
+/**
+ * Aplica os custos de um array de mecânicas.
+ */
+function _cmApplyMechanicsCosts(mechIds) {
+    if (!mechIds || mechIds.length === 0) return;
+    for (const id of mechIds) {
+        _cmApplyMechanicCost(id);
+    }
+}
+
+/**
  * Remove um item de módulo com confirmação e validação de custo.
  */
 function _removeModuleItem(mod, itemEl) {
-    if (mod.custoRemocaoAtivo && mod.custoRemocaoMecanicaId) {
-        const check = _cmCheckMechanicCost(mod.custoRemocaoMecanicaId);
+    const remIds = _cmGetCostMechanics(mod, 'custoRemocao');
+    if (mod.custoRemocaoAtivo && remIds.length > 0) {
+        const check = _cmCheckMechanicsCosts(remIds);
         if (!check.ok) {
             if (typeof showUpgradeBlocked === 'function') {
                 showUpgradeBlocked(`Bloqueado: ${check.label}`);
@@ -1778,7 +1816,7 @@ function _removeModuleItem(mod, itemEl) {
         }
         
         if (!confirm(`Remover este item?\nIsso consumirá: ${check.label.replace('Custo: ', '')}`)) return;
-        _cmApplyMechanicCost(mod.custoRemocaoMecanicaId);
+        _cmApplyMechanicsCosts(remIds);
     } else {
         if (!confirm('Remover este item?')) return;
     }
