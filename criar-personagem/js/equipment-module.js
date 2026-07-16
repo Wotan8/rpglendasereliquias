@@ -13,22 +13,29 @@ function initPhase7(container) {
         html += `<div class="kits-selection-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">`;
         
         itensRepertorioEquip.forEach((repItem, index) => {
+            const repCardId = `rep-kit-details-${index}`;
             html += `
-                <div class="kit-card" style="border: 1px solid var(--accent); border-radius: 8px; background: var(--bg-card); padding: 12px;">
-                    <div style="font-weight:bold; font-size:1rem; color:var(--text); display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:1.2rem;">✨</span> ${escHtml(repItem.nome)}
+                <div class="rep-kit-card" style="border: 1px solid var(--accent); border-radius: 8px; background: var(--bg-card); padding: 12px; margin-bottom: 8px;">
+                    <div style="font-weight:bold; font-size:1rem; color:var(--text); display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="const el = document.getElementById('${repCardId}'); el.style.display = el.style.display === 'none' ? 'block' : 'none';">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:1.2rem;">✨</span> ${escHtml(repItem.nome)}
+                        </div>
+                        <span style="font-size:0.8rem; color:var(--muted);">▼ Detalhes</span>
                     </div>
-                    <div class="kit-details" style="display: block; padding-top: 12px; margin-top: 8px; border-top: 1px dashed var(--soft);">
+                    <div id="${repCardId}" class="rep-kit-details" style="display: block; padding-top: 12px; margin-top: 8px; border-top: 1px dashed var(--soft);">
                         <div style="display:flex; flex-direction:column;">
             `;
             
-            for (const eqId of repItem.personagemItensVinculados) {
+            for (const eqObj of repItem.personagemItensVinculados) {
+                const eqId = typeof eqObj === 'string' ? eqObj : (eqObj.itemId || eqObj.id);
+                const baseQtd = typeof eqObj === 'string' ? 1 : (eqObj.quantidade || 1);
+                const packageQtd = repItem.quantidadeConsumida || 1;
+                const eqQtd = baseQtd * packageQtd;
                 try {
                     const eq = window._systemData?.equipment?.find(e => String(e.id) === String(eqId));
                     if (eq) {
-                        html += window.renderEquipmentItemDetails(eq);
-                    } else {
-                        html += `<div style="color: var(--danger); font-size: 0.9rem; padding: 8px; margin-bottom: 12px; border: 1px dashed var(--danger); border-radius: 4px;">Item Desconhecido (ID: ${escHtml(String(eqId))})</div>`;
+                        const eqClone = { ...eq, quantidade: eqQtd };
+                        html += window.renderEquipmentItemDetails(eqClone);
                     }
                 } catch (e) {
                     console.error('Erro ao renderizar item do repertório:', e);
@@ -83,15 +90,13 @@ function initPhase7(container) {
                 if (safeEquipamentos.length > 0) {
                     html += `<div style="display:flex; flex-direction:column;">`;
                     for (const eqItem of safeEquipamentos) {
-                        const eqId = typeof eqItem === 'string' ? eqItem : eqItem.id;
-                        const eqQtd = typeof eqItem === 'string' ? 1 : (eqItem.qtd || 1);
+                        const eqId = typeof eqItem === 'string' ? eqItem : (eqItem.itemId || eqItem.id);
+                        const eqQtd = typeof eqItem === 'string' ? 1 : (eqItem.quantidade || eqItem.qtd || 1);
                         try {
-                            const eq = window._systemData?.equipment?.find(e => e.id === eqId);
+                            const eq = window._systemData?.equipment?.find(e => String(e.id) === String(eqId));
                             if (eq) {
                                 const eqClone = { ...eq, quantidade: eqQtd };
                                 html += window.renderEquipmentItemDetails(eqClone);
-                            } else {
-                                html += `<div style="color: var(--danger); font-size: 0.9rem; padding: 8px; margin-bottom: 12px; border: 1px dashed var(--danger); border-radius: 4px;">Item Desconhecido (ID: ${escHtml(String(eqId))})</div>`;
                             }
                         } catch (e) {
                             console.error('Erro ao renderizar item do kit:', e);
@@ -396,12 +401,35 @@ window.updateCustomItem = function() {
     saveWizardToStorage();
 };
 
+window.viewImageModal = function(url) {
+    const modalExistente = document.getElementById('imageViewerModal');
+    if (modalExistente) modalExistente.remove();
+
+    const modalHtml = `
+        <div id="imageViewerModal" class="detail-modal" onclick="this.remove()" style="display:flex; justify-content:center; align-items:center; z-index:99999; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); cursor:pointer;">
+            <img src="${escHtml(url)}" style="max-width:90%; max-height:90%; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.9);" onclick="event.stopPropagation()">
+            <button class="detail-modal-close" style="position:absolute; top:20px; right:20px; background:var(--danger); color:#fff; border:none; border-radius:50%; width:40px; height:40px; font-size:20px; cursor:pointer;" onclick="document.getElementById('imageViewerModal').remove()">✕</button>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
 window.renderEquipmentItemDetails = function(eq) {
-    let html = `<div class="equipment-item-detail" style="border-left: 3px solid var(--accent); padding-left: 12px; margin-bottom: 16px;">`;
+    const imgUrl = eq.imagem || eq.imagemUrl || eq.iconeUrl;
+    const imgHtml = imgUrl ? `<img src="${escHtml(imgUrl)}" onclick="window.viewImageModal('${escHtml(imgUrl)}')" title="Clique para ampliar" style="cursor:pointer; width:48px; height:48px; object-fit:contain; border-radius:6px; margin-right:12px; background:rgba(0,0,0,0.3); padding:4px; border:1px solid var(--soft); transition: transform 0.2s, border-color 0.2s;" onmouseover="this.style.transform='scale(1.1)'; this.style.borderColor='var(--accent)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='var(--soft)';" onerror="this.style.display='none'">` : '';
+
+    let html = `<div class="equipment-item-detail" style="border-left: 3px solid var(--accent); padding-left: 12px; margin-bottom: 16px; display: flex; align-items: flex-start;">`;
+    
+    if (imgUrl) {
+        html += imgHtml;
+    }
+    
+    html += `<div style="flex:1;">`;
     
     // Header (Name + Type)
     html += `<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 4px;">`;
-    html += `<div style="font-weight:bold; font-size:.95rem; color:var(--text);">${escHtml(eq.nome)}</div>`;
+    const qtdStr = eq.quantidade && eq.quantidade > 1 ? `<span style="color:var(--primary); margin-right:4px;">${eq.quantidade}x</span>` : '';
+    html += `<div style="font-weight:bold; font-size:.95rem; color:var(--text);">${qtdStr}${escHtml(eq.nome)}</div>`;
     html += `<div style="font-size:.75rem; color:var(--muted); text-transform:uppercase;">${escHtml(eq.tipo || 'Item')}</div>`;
     html += `</div>`;
     
@@ -465,6 +493,6 @@ window.renderEquipmentItemDetails = function(eq) {
         html += `</div>`;
     }
     
-    html += `</div>`;
+    html += `</div></div>`;
     return html;
 };

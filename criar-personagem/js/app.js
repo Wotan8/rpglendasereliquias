@@ -505,19 +505,37 @@ function renderRepertorioSelecionado() {
         return;
     }
 
+    const gruposAgrupados = {};
+    itens.forEach(item => {
+        const key = item.nome;
+        if (!gruposAgrupados[key]) {
+            gruposAgrupados[key] = { ...item, quantidadeTotalConsumida: 0 };
+        } else {
+            if (item.isExp && !gruposAgrupados[key].isExp) gruposAgrupados[key].isExp = true;
+            if (item.expAmount && !gruposAgrupados[key].expAmount) gruposAgrupados[key].expAmount = item.expAmount;
+            if (item.isExpVip && !gruposAgrupados[key].isExpVip) gruposAgrupados[key].isExpVip = true;
+            if (item.isItemPersonagem && !gruposAgrupados[key].isItemPersonagem) gruposAgrupados[key].isItemPersonagem = true;
+            if (item.personagemItensVinculados && !gruposAgrupados[key].personagemItensVinculados) gruposAgrupados[key].personagemItensVinculados = item.personagemItensVinculados;
+        }
+        gruposAgrupados[key].quantidadeTotalConsumida += item.quantidadeConsumida;
+    });
+
     let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
-    itens.forEach((item, idx) => {
+    Object.keys(gruposAgrupados).forEach(key => {
+        const item = gruposAgrupados[key];
         let tagHtml = '';
-        if (item.isExp) tagHtml += `<span style="background:var(--primary);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;">+${item.expAmount * item.quantidadeConsumida} EXP${item.isExpVip ? ' (VIP)' : ''}</span>`;
+        if (item.isExp) tagHtml += `<span style="background:var(--primary);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;">+${item.expAmount * item.quantidadeTotalConsumida} EXP${item.isExpVip ? ' (VIP)' : ''}</span>`;
         if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagHtml += `<span style="background:#8b5cf6;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;">🎒 Equipamentos: ${item.personagemItensVinculados.length}</span>`;
+
+        const encodedKey = escHtml(key).replace(/'/g, "\\'");
 
         html += `
             <div style="background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:6px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                    <span style="font-weight:bold; font-size:0.9rem;">${item.quantidadeConsumida}x ${escHtml(item.nome)}</span>
+                    <span style="font-weight:bold; font-size:0.9rem;">${item.quantidadeTotalConsumida}x ${escHtml(item.nome)}</span>
                     ${tagHtml}
                 </div>
-                <button class="btn btn-danger" style="padding:4px 8px; font-size:0.75rem;" onclick="removeRepertorioSelecionado(${idx})">Remover</button>
+                <button class="btn btn-danger" style="padding:4px 8px; font-size:0.75rem;" onclick="removeRepertorioSelecionadoGroup('${encodedKey}')">Remover</button>
             </div>
         `;
     });
@@ -561,114 +579,136 @@ window.openRepertorioModal = async function() {
         const itensValidos = inventario.map((item, idx) => ({...item, originalIndex: idx}))
             .filter(item => !item.isRoleta && !item.isRerolagem && !item.isNarrativo);
 
-        if (itensValidos.length === 0) {
-            body.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted);">Você não possui itens consumíveis no repertório.</div>';
+        const gruposMap = {};
+        itensValidos.forEach(item => {
+            const key = item.nome;
+            
+            const selItem = (wizardState.itensRepertorioSelecionados || []).find(i => i.originalIndex === item.originalIndex);
+            const qtdSelecionada = selItem ? selItem.quantidadeConsumida : 0;
+            const qtdDisponivel = (item.quantidade || 1) - qtdSelecionada;
+            
+            if (qtdDisponivel <= 0) return;
+
+            if (!gruposMap[key]) {
+                gruposMap[key] = {
+                    ...item,
+                    quantidadeDisponivelAgrupada: 0,
+                    indicesRelacionados: []
+                };
+            } else {
+                if (item.isExp && !gruposMap[key].isExp) gruposMap[key].isExp = true;
+                if (item.expAmount && !gruposMap[key].expAmount) gruposMap[key].expAmount = item.expAmount;
+                if (item.isExpVip && !gruposMap[key].isExpVip) gruposMap[key].isExpVip = true;
+                if (item.isItemPersonagem && !gruposMap[key].isItemPersonagem) gruposMap[key].isItemPersonagem = true;
+                if (item.personagemItensVinculados && !gruposMap[key].personagemItensVinculados) gruposMap[key].personagemItensVinculados = item.personagemItensVinculados;
+                if (item.descricao && !gruposMap[key].descricao) gruposMap[key].descricao = item.descricao;
+            }
+            
+            gruposMap[key].quantidadeDisponivelAgrupada += qtdDisponivel;
+            gruposMap[key].indicesRelacionados.push({
+                originalIndex: item.originalIndex,
+                disponivel: qtdDisponivel
+            });
+        });
+
+        const grupos = Object.values(gruposMap);
+
+        if (grupos.length === 0) {
+            body.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted);">Você não possui mais itens disponíveis para seleção.</div>';
             return;
         }
 
+        window._tempGruposIndices = {};
+
         let html = '<div style="display:flex; flex-direction:column; gap:12px;">';
         
-        itensValidos.forEach(item => {
-            // Checar quantos já foram selecionados
-            const selItem = (wizardState.itensRepertorioSelecionados || []).find(i => i.originalIndex === item.originalIndex);
-            const qtdSelecionada = selItem ? selItem.quantidadeConsumida : 0;
-            const qtdDisponivel = item.quantidade - qtdSelecionada;
-
-            if (qtdDisponivel <= 0) return; // Pula se já consumiu tudo
-
-            let descHtml = item.descricao ? `<div style="font-size:0.8rem; color:var(--muted); margin-bottom:8px;">${escHtml(item.descricao)}</div>` : '';
+        grupos.forEach((grupo, groupIndex) => {
+            let descHtml = grupo.descricao ? `<div style="font-size:0.8rem; color:var(--muted); margin-bottom:8px;">${escHtml(grupo.descricao)}</div>` : '';
             
             let tagsHtml = '';
-            if (item.isExp) tagsHtml += `<span style="background:var(--primary);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-right:4px;">⭐ +${item.expAmount} EXP${item.isExpVip ? ' (VIP)' : ''}</span>`;
-            if (item.personagemItensVinculados?.length > 0) tagsHtml += `<span style="background:#8b5cf6;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">🎒 Equipamentos Especiais</span>`;
+            if (grupo.isExp) tagsHtml += `<span style="background:var(--primary);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-right:4px;">⭐ +${grupo.expAmount} EXP${grupo.isExpVip ? ' (VIP)' : ''}</span>`;
+            if (grupo.personagemItensVinculados?.length > 0) tagsHtml += `<span style="background:#8b5cf6;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">🎒 Equipamentos Especiais</span>`;
+
+            window._tempGruposIndices = window._tempGruposIndices || {};
+            window._tempGruposDados = window._tempGruposDados || {};
+            window._tempGruposIndices[groupIndex] = grupo.indicesRelacionados;
+            window._tempGruposDados[groupIndex] = grupo;
 
             html += `
                 <div style="background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:8px; padding:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
-                        <div style="font-weight:bold; color:var(--light); font-size:1rem;">${escHtml(item.nome)} <span style="color:var(--muted); font-size:0.8rem;">(Possui: ${qtdDisponivel})</span></div>
+                        <div style="font-weight:bold; color:var(--light); font-size:1rem;">${escHtml(grupo.nome)} <span style="color:var(--muted); font-size:0.8rem;">(Possui: ${grupo.quantidadeDisponivelAgrupada})</span></div>
                     </div>
                     ${descHtml}
                     <div style="margin-bottom:12px;">${tagsHtml}</div>
                     
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <input type="number" id="qtd_repertorio_${item.originalIndex}" value="1" min="1" max="${qtdDisponivel}" class="form-input" style="width:70px; padding:6px; text-align:center;">
-                        <button class="btn btn-success" style="padding:6px 16px; font-size:0.85rem;" onclick="addRepertorioSelecionado(${item.originalIndex})">Adicionar</button>
+                        <input type="number" id="qtd_repertorio_group_${groupIndex}" value="1" min="1" max="${grupo.quantidadeDisponivelAgrupada}" class="form-input" style="width:70px; padding:6px; text-align:center;">
+                        <button class="btn btn-success" style="padding:6px 16px; font-size:0.85rem;" onclick="addRepertorioSelecionadoAgrupado(${groupIndex})" id="btn_add_group_${groupIndex}">Adicionar</button>
                     </div>
                 </div>
             `;
         });
 
         html += '</div>';
-        
-        if (html === '<div style="display:flex; flex-direction:column; gap:12px;"></div>') {
-            body.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted);">Você não possui mais itens disponíveis para seleção.</div>';
-        } else {
-            body.innerHTML = html;
-        }
+        body.innerHTML = html;
 
     } catch (err) {
         document.getElementById('wizardRepertorioBody').innerHTML = '<div style="color:var(--danger); padding:20px;">Erro ao carregar repertório.</div>';
     }
 };
 
-window.addRepertorioSelecionado = async function(originalIndex) {
+window.addRepertorioSelecionadoAgrupado = async function(groupIndex) {
     try {
         if (!window.currentUser) return;
         
-        const inventario = await window.getUserInventory(window.currentUser.uid);
-        let item = inventario[originalIndex];
-        
-        // --- ENRIQUECIMENTO DE DADOS PARA ITENS ANTIGOS ---
-        // Se o item veio quebrado do banco (sem as props de sistema), buscar a fonte na Loja
-        if (item && item.nome && item.isExp === undefined && item.isItemPersonagem === undefined) {
-            try {
-                showWizardToast('Sincronizando item com o servidor...', 'info');
-                const { collection, getDocs, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-                const lojaRef = collection(window.db, 'loja');
-                const q = query(lojaRef, where('nome', '==', item.nome));
-                const lojaSnap = await getDocs(q);
-                
-                if (!lojaSnap.empty) {
-                    const lojaData = lojaSnap.docs[0].data();
-                    if (lojaData.isExp !== undefined) item.isExp = lojaData.isExp;
-                    if (lojaData.expAmount !== undefined) item.expAmount = lojaData.expAmount;
-                    if (lojaData.isExpVip !== undefined) item.isExpVip = lojaData.isExpVip;
-                    if (lojaData.isItemPersonagem !== undefined) item.isItemPersonagem = lojaData.isItemPersonagem;
-                    if (lojaData.personagemItensVinculados !== undefined) item.personagemItensVinculados = lojaData.personagemItensVinculados;
-                    console.log('✅ Item enriquecido com dados da loja:', item);
-                }
-            } catch (e) {
-                console.warn('Erro ao tentar enriquecer item do repertório:', e);
-            }
-        }
-        
-        const maxQtd = item.quantidade || 1;
-        const input = document.getElementById(`qtd_repertorio_${originalIndex}`);
+        const indicesRelacionados = window._tempGruposIndices ? window._tempGruposIndices[groupIndex] : null;
+        const grupoDados = window._tempGruposDados ? window._tempGruposDados[groupIndex] : null;
+        if (!indicesRelacionados || !grupoDados) return;
+
+        const input = document.getElementById(`qtd_repertorio_group_${groupIndex}`);
         const qtdStr = input ? input.value : '1';
-        const qtdToConsume = parseInt(qtdStr, 10);
+        let qtdToConsume = parseInt(qtdStr, 10);
 
         if (isNaN(qtdToConsume) || qtdToConsume <= 0) return;
-
+        
+        const inventario = await window.getUserInventory(window.currentUser.uid);
         wizardState.itensRepertorioSelecionados = wizardState.itensRepertorioSelecionados || [];
         
-        let existing = wizardState.itensRepertorioSelecionados.find(i => i.originalIndex === originalIndex);
+        showWizardToast('Adicionando...', 'info');
         
-        if (existing) {
-            if (existing.quantidadeConsumida + qtdToConsume > item.quantidade) {
-                showWizardToast('Quantidade insuficiente no repertório.', 'error');
-                return;
+        for (const rel of indicesRelacionados) {
+            if (qtdToConsume <= 0) break;
+            
+            const toConsumeHere = Math.min(qtdToConsume, rel.disponivel);
+            qtdToConsume -= toConsumeHere;
+            
+            const originalIndex = rel.originalIndex;
+            let item = inventario[originalIndex] || {};
+            
+            let existing = wizardState.itensRepertorioSelecionados.find(i => i.originalIndex === originalIndex);
+            
+            if (existing) {
+                existing.quantidadeConsumida += toConsumeHere;
+                if (grupoDados.isExp) existing.isExp = true;
+                if (grupoDados.expAmount) existing.expAmount = grupoDados.expAmount;
+                if (grupoDados.isExpVip) existing.isExpVip = true;
+                if (grupoDados.isItemPersonagem) existing.isItemPersonagem = true;
+                if (grupoDados.personagemItensVinculados) existing.personagemItensVinculados = grupoDados.personagemItensVinculados;
+                if (grupoDados.descricao) existing.descricao = grupoDados.descricao;
+            } else {
+                wizardState.itensRepertorioSelecionados.push({
+                    ...item,
+                    isExp: grupoDados.isExp,
+                    expAmount: grupoDados.expAmount,
+                    isExpVip: grupoDados.isExpVip,
+                    isItemPersonagem: grupoDados.isItemPersonagem,
+                    personagemItensVinculados: grupoDados.personagemItensVinculados,
+                    descricao: grupoDados.descricao,
+                    originalIndex: originalIndex,
+                    quantidadeConsumida: toConsumeHere
+                });
             }
-            existing.quantidadeConsumida += qtdToConsume;
-        } else {
-            if (qtdToConsume > item.quantidade) {
-                showWizardToast('Quantidade insuficiente no repertório.', 'error');
-                return;
-            }
-            wizardState.itensRepertorioSelecionados.push({
-                ...item,
-                originalIndex: originalIndex,
-                quantidadeConsumida: qtdToConsume
-            });
         }
 
         window.updateRepertorioExpTracker();
@@ -683,10 +723,12 @@ window.addRepertorioSelecionado = async function(originalIndex) {
     }
 };
 
-window.removeRepertorioSelecionado = function(idx) {
-    if (!wizardState.itensRepertorioSelecionados || !wizardState.itensRepertorioSelecionados[idx]) return;
+window.removeRepertorioSelecionadoGroup = function(groupKey) {
+    if (!wizardState.itensRepertorioSelecionados) return;
     
-    wizardState.itensRepertorioSelecionados.splice(idx, 1);
+    wizardState.itensRepertorioSelecionados = wizardState.itensRepertorioSelecionados.filter(item => {
+        return item.nome !== groupKey;
+    });
     
     window.updateRepertorioExpTracker();
     saveWizardToStorage();

@@ -595,14 +595,16 @@ async function createCharacter() {
     if (ws.itensRepertorioSelecionados && ws.itensRepertorioSelecionados.length > 0) {
         ws.itensRepertorioSelecionados.forEach(repItem => {
             if (repItem.personagemItensVinculados && repItem.personagemItensVinculados.length > 0) {
-                repItem.personagemItensVinculados.forEach(eqId => {
+                repItem.personagemItensVinculados.forEach(eqObj => {
+                    const eqId = typeof eqObj === 'string' ? eqObj : (eqObj.itemId || eqObj.id);
+                    const eqQtd = typeof eqObj === 'string' ? 1 : (eqObj.quantidade || 1);
                     const eqData = window._systemData?.equipment?.find(e => String(e.id) === String(eqId));
                     if (eqData) {
                         equipamento.push(eqData.nome);
                         inventoryItems.push({
                             name: eqData.nome,
                             desc: eqData.descricao || `Vindo de pacote: ${repItem.nome}`,
-                            qtd: String(eqData.quantidade || '1')
+                            qtd: String(eqQtd)
                         });
                     }
                 });
@@ -842,10 +844,13 @@ async function createCharacter() {
             if (savedItensRepertorio.length > 0) {
                 for (const repItem of savedItensRepertorio) {
                     if (repItem.personagemItensVinculados && repItem.personagemItensVinculados.length > 0) {
-                        for (const eqId of repItem.personagemItensVinculados) {
+                        for (const eqObj of repItem.personagemItensVinculados) {
+                            const eqId = typeof eqObj === 'string' ? eqObj : (eqObj.itemId || eqObj.id);
+                            const eqQtd = typeof eqObj === 'string' ? 1 : (eqObj.quantidade || 1);
                             const eqData = window._systemData?.equipment?.find(e => String(e.id) === String(eqId));
                             if (eqData) {
-                                await saveEquipmentAsItemToFirebase(eqData, charId);
+                                const eqToSave = { ...eqData, quantidade: eqQtd };
+                                await saveEquipmentAsItemToFirebase(eqToSave, charId);
                             }
                         }
                     }
