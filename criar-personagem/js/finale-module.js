@@ -85,8 +85,8 @@ function initPhase8(container) {
                     
                     let minBound, maxBound;
                     if (hasLink) {
-                        minBound = linkedMin !== null ? linkedMin : 0;
-                        maxBound = linkedMax !== null ? linkedMax : 0;
+                        minBound = linkedMin !== null ? linkedMin : (dv.characterCreationMin !== undefined ? dv.characterCreationMin : -20);
+                        maxBound = linkedMax !== null ? linkedMax : (dv.characterCreationMax !== undefined ? dv.characterCreationMax : 20);
                     } else {
                         minBound = dv.characterCreationMin !== undefined ? dv.characterCreationMin : -20;
                         maxBound = dv.characterCreationMax !== undefined ? dv.characterCreationMax : 20;
@@ -597,7 +597,9 @@ async function createCharacter() {
             if (repItem.personagemItensVinculados && repItem.personagemItensVinculados.length > 0) {
                 repItem.personagemItensVinculados.forEach(eqObj => {
                     const eqId = typeof eqObj === 'string' ? eqObj : (eqObj.itemId || eqObj.id);
-                    const eqQtd = typeof eqObj === 'string' ? 1 : (eqObj.quantidade || 1);
+                    const baseQtd = typeof eqObj === 'string' ? 1 : (eqObj.quantidade || 1);
+                    const packageQtd = repItem.quantidadeConsumida || 1;
+                    const eqQtd = baseQtd * packageQtd;
                     const eqData = window._systemData?.equipment?.find(e => String(e.id) === String(eqId));
                     if (eqData) {
                         equipamento.push(eqData.nome);
@@ -846,7 +848,10 @@ async function createCharacter() {
                     if (repItem.personagemItensVinculados && repItem.personagemItensVinculados.length > 0) {
                         for (const eqObj of repItem.personagemItensVinculados) {
                             const eqId = typeof eqObj === 'string' ? eqObj : (eqObj.itemId || eqObj.id);
-                            const eqQtd = typeof eqObj === 'string' ? 1 : (eqObj.quantidade || 1);
+                            const baseQtd = typeof eqObj === 'string' ? 1 : (eqObj.quantidade || 1);
+                            const packageQtd = repItem.quantidadeConsumida || 1;
+                            const eqQtd = baseQtd * packageQtd;
+                            
                             const eqData = window._systemData?.equipment?.find(e => String(e.id) === String(eqId));
                             if (eqData) {
                                 const eqToSave = { ...eqData, quantidade: eqQtd };

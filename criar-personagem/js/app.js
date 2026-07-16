@@ -697,17 +697,19 @@ window.addRepertorioSelecionadoAgrupado = async function(groupIndex) {
                 if (grupoDados.personagemItensVinculados) existing.personagemItensVinculados = grupoDados.personagemItensVinculados;
                 if (grupoDados.descricao) existing.descricao = grupoDados.descricao;
             } else {
-                wizardState.itensRepertorioSelecionados.push({
+                const newItem = {
                     ...item,
-                    isExp: grupoDados.isExp,
-                    expAmount: grupoDados.expAmount,
-                    isExpVip: grupoDados.isExpVip,
-                    isItemPersonagem: grupoDados.isItemPersonagem,
-                    personagemItensVinculados: grupoDados.personagemItensVinculados,
-                    descricao: grupoDados.descricao,
                     originalIndex: originalIndex,
                     quantidadeConsumida: toConsumeHere
-                });
+                };
+                if (grupoDados.isExp !== undefined) newItem.isExp = grupoDados.isExp;
+                if (grupoDados.expAmount !== undefined) newItem.expAmount = grupoDados.expAmount;
+                if (grupoDados.isExpVip !== undefined) newItem.isExpVip = grupoDados.isExpVip;
+                if (grupoDados.isItemPersonagem !== undefined) newItem.isItemPersonagem = grupoDados.isItemPersonagem;
+                if (grupoDados.personagemItensVinculados !== undefined) newItem.personagemItensVinculados = grupoDados.personagemItensVinculados;
+                if (grupoDados.descricao !== undefined) newItem.descricao = grupoDados.descricao;
+                
+                wizardState.itensRepertorioSelecionados.push(newItem);
             }
         }
 

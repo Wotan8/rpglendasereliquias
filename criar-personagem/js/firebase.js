@@ -231,7 +231,8 @@ window.createCharacterInFirebase = async function (charData) {
         }
     }
 
-    await setDoc(docRef, saveData);
+    const finalSaveData = JSON.parse(JSON.stringify(saveData)); // Remove any undefined fields to prevent Firebase errors
+    await setDoc(docRef, finalSaveData);
     console.log('✅ Personagem criado no Firebase:', charId);
 
     // Clean up wizard storage
