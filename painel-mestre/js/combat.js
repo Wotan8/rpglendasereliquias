@@ -1,11 +1,42 @@
 // =============================================
 // COMBAT SYSTEM — Full migration from mestre.html
 // =============================================
-import { db, collection, getDocs, doc, onSnapshot, query, where } from './firebase-config.js';
+import { db, collection, getDocs, getDoc, setDoc, doc, onSnapshot, query, where } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 
 let combatListeners = {};
+
+// ===== PERSISTÊNCIA (sincroniza com o Tabuleiro/VTT) =====
+let _persistTimer = null;
+function persistCombat() {
+    if (!S.currentMesaId) return;
+    clearTimeout(_persistTimer);
+    _persistTimer = setTimeout(async () => {
+        try {
+            const participantes = S.combatParticipants.map(p => ({ ...p }));
+            await setDoc(doc(db, 'mesas', S.currentMesaId, 'tabuleiro-meta', 'combate'),
+                { participantes, atualizadoEm: Date.now() }, { merge: true });
+        } catch (e) { console.warn('persistCombat', e); }
+    }, 400);
+}
+
+window._loadCombatFromMesa = async function() {
+    if (!S.currentMesaId) return;
+    try {
+        const snap = await getDoc(doc(db, 'mesas', S.currentMesaId, 'tabuleiro-meta', 'combate'));
+        Object.values(combatListeners).forEach(u => { if (typeof u === 'function') u(); });
+        combatListeners = {};
+        if (snap.exists()) {
+            const parts = snap.data().participantes || [];
+            S.setCombatParticipants(parts);
+            parts.forEach(p => { if (p.characterId) setupCombatListener(p.characterId, p.id); });
+        } else {
+            S.setCombatParticipants([]);
+        }
+        renderCombatList();
+    } catch (e) { console.warn('loadCombat', e); }
+};
 
 // ===== ADD TO COMBAT =====
 window.addCharacterToCombat = async function() {
@@ -61,6 +92,7 @@ function setupCombatListener(charId, pid) {
         p.enerCurrent = d.enerCurrent !== undefined ? d.enerCurrent : em; p.enerMax = em;
         p.sanCurrent = d.sanCurrent !== undefined ? d.sanCurrent : 80; p.name = f.nome || d.nome || p.name;
         updateParticipantStats(pid);
+        persistCombat();
     }); combatListeners[pid] = unsub;
 }
 
@@ -126,10 +158,11 @@ window.adjustCombatStat = function(pid, stat, amt, ev) {
     else if (stat === 'ener') p.enerCurrent = Math.max(0, Math.min(p.enerCurrent + amt, p.enerMax));
     else if (stat === 'san') p.sanCurrent = Math.max(0, Math.min(p.sanCurrent + amt, p.sanMax));
     updateParticipantStats(pid);
+    persistCombat();
 };
 
-window.updateInitiative = function(pid, v) { const p = S.combatParticipants.find(x => x.id === pid); if (p) p.initiative = parseInt(v)||0; };
-window.updateCustomAbilities = function(pid, v) { const p = S.combatParticipants.find(x => x.id === pid); if (p) p.combatAbilities = v; };
+window.updateInitiative = function(pid, v) { const p = S.combatParticipants.find(x => x.id === pid); if (p) p.initiative = parseInt(v)||0; persistCombat(); };
+window.updateCustomAbilities = function(pid, v) { const p = S.combatParticipants.find(x => x.id === pid); if (p) p.combatAbilities = v; persistCombat(); };
 
 window.sortCombatByInitiative = function() { S.combatParticipants.sort((a, b) => b.initiative - a.initiative); renderCombatList(); showAlert('✅ Ordenado!', 'success'); };
 
@@ -148,6 +181,7 @@ window.openCombatNpcModal = function(pid) { const p = S.combatParticipants.find(
 
 // ===== RENDER =====
 export function renderCombatList() {
+    persistCombat();
     const el = document.getElementById('combatList'); if (!el) return;
     if (!S.combatParticipants.length) { el.innerHTML = '<div class="no-combat">Nenhum participante no combate</div>'; return; }
     el.innerHTML = S.combatParticipants.map(p => {

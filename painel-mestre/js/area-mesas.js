@@ -28,6 +28,7 @@ window.switchMesaSubTab = function(subTabName) {
     if (subTabName === 'm-inventario' && window._loadMesaInventarios) window._loadMesaInventarios();
     if (subTabName === 'm-notas' && window._loadMesaNotas) window._loadMesaNotas();
     if (subTabName === 'm-logs' && window._loadMesaLogs) window._loadMesaLogs();
+    if (subTabName === 'm-combate' && window._loadCombatFromMesa) window._loadCombatFromMesa();
 };
 
 // ===== SCREEN MANAGEMENT =====
@@ -112,7 +113,15 @@ function openMesa() {
     // Reset to first subtab
     switchMesaSubTab('m-jogadores');
     loadMesaPlayers();
+    // Carrega combate persistido (sincronizado com o Tabuleiro)
+    if (window._loadCombatFromMesa) window._loadCombatFromMesa();
 }
+
+// ===== TABULEIRO (VTT) =====
+window.openTabuleiro = function() {
+    if (!S.currentMesaId) return;
+    window.open(`../tabuleiro/tabuleiro.html?mesa=${S.currentMesaId}&mode=secret`, '_blank');
+};
 
 window.closeMesa = function() {
     if (window._stopMesaLogs) window._stopMesaLogs();

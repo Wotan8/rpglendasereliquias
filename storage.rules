@@ -30,6 +30,12 @@ service firebase.storage {
       allow write: if request.auth != null;
     }
 
+    // Tabuleiro (VTT) — mapas, tokens e imagens do canva
+    match /tabuleiro-images/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
     // Runic element glyph images (Painel do Criador → Elementos Rúnicos)
     match /runic-elements/{allPaths=**} {
       allow read: if request.auth != null;

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🗺️ Tabuleiro — Lendas e Relíquias</title>
+    <link rel="stylesheet" href="css/tabuleiro.css">
+    <script src="../js/global-favicon.js"></script>
+</head>
+<body>
+    <canvas id="tbCanvas"></canvas>
+
+    <!-- Loading -->
+    <div id="tbLoading">
+        <div class="tb-spinner"></div>
+        <div>Carregando o Tabuleiro...</div>
+    </div>
+
+    <!-- Barra superior -->
+    <div class="tb-topbar">
+        <span id="tbModeBadge" class="tb-mode-badge"></span>
+        <span id="tbMesaNome"></span>
+        <span id="tbCanvasNome" onclick="if(window.tbAbrirCanvases)tbAbrirCanvases()" title="Trocar de canvas"></span>
+        <span class="tb-spacer"></span>
+        <button class="tb-btn tb-btn-small" id="btnCombate" onclick="tbToggleCombate()" title="Janela de Combate">⚔️ Combate</button>
+        <button class="tb-btn tb-btn-small" id="btnMostrar" onclick="tbAbrirMostrar()" title="Mostrar NPC / Item">🎁 Mostrar</button>
+        <button class="tb-btn tb-btn-small" id="btnCanvases" onclick="tbAbrirCanvases()" title="Gerenciar canvases">🗂️</button>
+        <button class="tb-btn tb-btn-small" id="btnCamadas" onclick="tbToggleCamadas()" title="Camadas">🥞 Camadas</button>
+        <button class="tb-btn tb-btn-small" id="btnPerms" onclick="tbAbrirPermissoes()" title="Permissões dos jogadores">🔑</button>
+        <button class="tb-btn tb-btn-small" id="btnConfig" onclick="tbAbrirConfig()" title="Configurações do canvas">⚙️</button>
+        <button class="tb-btn tb-btn-small tb-btn-primary" id="tbBtnAbrirPublico" style="display:none" title="Abrir a visão pública em outra aba">👁️ Abrir Público</button>
+    </div>
+
+    <!-- Ferramentas -->
+    <div class="tb-toolbar">
+        <button class="tb-tool" id="toolSelect" data-tool="select" data-tip="Selecionar (Ctrl+S)">▶</button>
+        <button class="tb-tool" id="toolMove" data-tool="move" data-tip="Mover — arraste itens · Botão direito arrasta o canva">✋</button>
+        <div class="tb-sep"></div>
+        <button class="tb-tool" id="toolDraw" data-tool="draw" data-tip="Desenho Livre (Ctrl+F)">🖌️</button>
+        <button class="tb-tool" id="toolText" data-tool="text" data-tip="Texto (Ctrl+G)">🔤</button>
+        <button class="tb-tool" id="toolMeasure" data-tool="measure" data-tip="Medir (Ctrl+M) — botão direito cria vértices">📏</button>
+        <div class="tb-sep"></div>
+        <button class="tb-tool" id="toolPin" data-tool="pin" data-tip="Alfinetes">📌</button>
+        <button class="tb-tool" id="toolLight" data-tool="light" data-tip="Iluminação — luz, portas e janelas">💡</button>
+        <div class="tb-sep"></div>
+        <button class="tb-tool" id="btnUploadImg" onclick="tbUploadImagem()" data-tip="Adicionar imagem / mapa">🖼️</button>
+        <button class="tb-tool" id="btnToken" onclick="tbAbrirToken()" data-tip="Novo token (personagem, NPC ou custom)">🎭</button>
+        <div class="tb-sep"></div>
+        <button class="tb-tool" onclick="tbCentralizar()" data-tip="Centralizar no conteúdo">🎯</button>
+    </div>
+
+    <!-- Sub-barra: Desenho -->
+    <div class="tb-subbar" id="tbDrawBar" style="top:120px">
+        <div class="tb-subrow">
+            <button data-shape="livre" class="active">🖌️ À Mão Livre</button>
+            <button data-shape="linha">✒️ Caneta/Linha</button>
+        </div>
+        <div class="tb-subrow">
+            <button data-shape="ret">⬜ Retângulo</button>
+            <button data-shape="elipse">⚪ Elipse</button>
+        </div>
+        <div class="tb-subrow">
+            <label>Cor<input type="color" id="drawColor" value="#3b82f6"></label>
+            <label>Grossura<input type="number" id="drawWidth" value="4" min="1" max="60" style="width:64px"></label>
+            <label class="tb-check" style="flex-direction:row"><input type="checkbox" id="drawFill"> Preencher</label>
+        </div>
+        <div class="tb-subrow"><span class="tb-danger-link" onclick="tbLimparDesenhos()">🗑️ Limpar desenhos e texto</span></div>
+    </div>
+
+    <!-- Sub-barra: Régua -->
+    <div class="tb-subbar" id="tbMeasureBar" style="top:170px">
+        <div class="tb-section-title" style="margin:0">📏 Medir</div>
+        <div class="tb-subrow">
+            <label>Forma<select id="mFormaSel">
+                <option value="linha">📐 Linha (botão direito = vértice)</option>
+                <option value="caneta">🖊️ Caneta (riscar o mapa)</option>
+            </select></label>
+        </div>
+        <div class="tb-subrow">
+            <label>Ajuste no Grid<select id="mSnapSel">
+                <option value="centro">Ajustar ao Centro</option>
+                <option value="canto">Ajustar ao Canto</option>
+                <option value="livre">Livre</option>
+            </select></label>
+            <label>Tempo de Exibição<select id="mExibSel">
+                <option value="instantaneo">Instantâneo</option>
+                <option value="permanente">Permanente</option>
+            </select></label>
+        </div>
+        <label class="tb-check" style="flex-direction:row"><input type="checkbox" id="mMedirToken" checked> Sempre meça o movimento dos tokens</label>
+        <label class="tb-check" style="flex-direction:row"><input type="checkbox" id="mMostrarOutros" checked> Mostrar Para Outros</label>
+    </div>
+
+    <!-- Sub-barra: Luz -->
+    <div class="tb-subbar" id="tbLuzBar" style="top:265px">
+        <div class="tb-section-title" style="margin:0">💡 Iluminação · FX</div>
+        <div class="tb-subrow" style="flex-direction:column;align-items:stretch">
+            <button data-luz="luz" class="active">💡 Inserir Luz</button>
+            <button data-luz="porta">🚪 Inserir Porta</button>
+            <button data-luz="janela">🪟 Inserir Janela</button>
+        </div>
+        <div class="tb-muted" style="font-size:.7rem;max-width:200px">Desenhe (🖌️) na camada <b>💡 Luz</b> para criar paredes que bloqueiam a visão. Duplo clique na porta abre/fecha.</div>
+    </div>
+
+    <!-- Painel de camadas -->
+    <div class="tb-side-panel" id="tbCamadasPanel">
+        <div class="tb-side-head">🥞 Camadas <button class="tb-mini-btn" onclick="tbToggleCamadas()">✕</button></div>
+        <div class="tb-side-body" id="tbCamadasBody"></div>
+    </div>
+
+    <!-- Painel de propriedades -->
+    <div class="tb-side-panel" id="tbPropsPanel">
+        <div class="tb-side-head">⚙️ Propriedades <button class="tb-mini-btn" onclick="document.getElementById('tbPropsPanel').classList.remove('open')">✕</button></div>
+        <div class="tb-side-body" id="tbPropsBody"></div>
+    </div>
+
+    <!-- Janela de combate -->
+    <div class="tb-window" id="tbCombatWin">
+        <div class="tb-win-head">⚔️ Combate <button class="tb-mini-btn" onclick="tbToggleCombate()">✕</button></div>
+        <div class="tb-win-body" id="tbCombatBody"></div>
+    </div>
+
+    <!-- Menu de contexto / popup / toasts -->
+    <div class="tb-ctx" id="tbCtxMenu"></div>
+    <div id="tbPinPopup"></div>
+    <div id="tbToasts"></div>
+    <div id="tbCoords"></div>
+
+    <!-- Zoom -->
+    <div class="tb-zoombar">
+        <button onclick="tbZoom(1.2)" title="Aproximar">➕</button>
+        <button onclick="tbZoom(1/1.2)" title="Afastar">➖</button>
+    </div>
+
+    <!-- Modal genérico -->
+    <div class="tb-modal" id="tbModal">
+        <div class="tb-modal-content">
+            <div class="tb-modal-header">
+                <span class="tb-modal-title"></span>
+                <button class="tb-modal-close" onclick="tbFecharModal()">✕</button>
+            </div>
+            <div class="tb-modal-body"></div>
+        </div>
+    </div>
+
+    <input type="file" id="tbFileInput" accept="image/*" style="display:none">
+
+    <script type="module" src="js/tab-main.js"></script>
+</body>
+</html>

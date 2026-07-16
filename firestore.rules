@@ -346,6 +346,16 @@ service cloud.firestore {
     match /mesas/{mesaId} {
       allow read: if isSignedIn();
       allow create, update, delete: if isMaster();
+
+      // Subcoleções do Tabuleiro (VTT): tabuleiros/{canvasId}/objetos e tabuleiro-meta
+      // Leitura: qualquer usuário autenticado (o modo público filtra a visibilidade no cliente).
+      // Escrita: mestre OU jogador vinculado à mesa (permissões finas são aplicadas no cliente).
+      match /{document=**} {
+        allow read: if isSignedIn();
+        allow write: if isMaster() ||
+          (isSignedIn() &&
+           request.auth.uid in get(/databases/$(database)/documents/mesas/$(mesaId)).data.jogadores);
+      }
     }
 
     // ========== ADICIONADO: Coleções do Submundo ==========

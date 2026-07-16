@@ -23,9 +23,28 @@ window.initMesaTab = async function(mesaId) {
     mesaTabContent.className = 'tab-content';
     mesaTabContent.id = 'tabMesa';
     
+    // Botão "Tabuleiro" na barra de abas (abre o VTT da mesa em modo público)
+    if (!document.getElementById('btnTabuleiroFicha')) {
+        const btnTab = document.createElement('button');
+        btnTab.id = 'btnTabuleiroFicha';
+        btnTab.className = 'tab';
+        btnTab.type = 'button';
+        btnTab.textContent = '🗺️ Tabuleiro';
+        btnTab.style.cssText = 'background:linear-gradient(135deg,#7c3aed,#8b5cf6);color:#fff;font-weight:700;';
+        btnTab.title = 'Abrir o Tabuleiro (VTT) da sua mesa';
+        btnTab.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.open(`../tabuleiro/tabuleiro.html?mesa=${encodeURIComponent(mesaId)}&mode=public`, '_blank');
+        });
+        mesaTabBtn.after(btnTab);
+    }
+
     mesaTabContent.innerHTML = `
         <div class="section">
-            <div class="section-title">Companheiros de Mesa</div>
+            <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                <span>Companheiros de Mesa</span>
+                <button type="button" onclick="window.open('../tabuleiro/tabuleiro.html?mesa=${mesaId}&mode=public','_blank')" style="background:linear-gradient(135deg,#7c3aed,#8b5cf6);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-weight:700;cursor:pointer;font-size:.85rem">🗺️ Abrir Tabuleiro da Mesa</button>
+            </div>
             <div id="mesaCompanionsContainer" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:16px; margin-top:10px;">
                 <div style="color:var(--muted); font-style:italic;">Carregando companheiros...</div>
             </div>
