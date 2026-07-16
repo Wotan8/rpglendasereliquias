@@ -105,12 +105,12 @@ onAuthStateChanged(auth, async (user) => {
             if (userDoc) {
                 const data = userDoc.data();
                 const role = data.role;
-                
+
                 updateFragDisplay(data.fragmentos || 0);
 
                 const btnMestre = document.getElementById('btnPainelMestre');
                 const btnCriador = document.getElementById('btnPainelCriador');
-                
+
                 if (role === 'mestre') {
                     if (btnMestre) btnMestre.style.display = '';
                 } else if (role === 'criador') {
@@ -340,7 +340,7 @@ window.createNewCharacter = async function () {
     }
 };
 
-window.selectMesaForCreation = function(mesaId) {
+window.selectMesaForCreation = function (mesaId) {
     const modal = document.getElementById('createCharModal');
     if (modal) modal.remove();
 
@@ -403,7 +403,7 @@ async function loadInventory() {
         const userData = userSnapshot.data();
         const apoios = userData.apoios || [];
         const inventarioRaw = userData.inventario || [];
-        
+
         // Frontend Stacking (Agrupa itens idênticos)
         const inventario = [];
         inventarioRaw.forEach(item => {
@@ -853,6 +853,22 @@ function getItemValorCentavos(item) {
 
 let currentCheckoutMode = 'frag'; // 'frag' | 'pagbank'
 
+// ⚠️ Substitua pela sua Site Key do reCAPTCHA v3 (a MESMA usada no menu.html).
+const RECAPTCHA_SITE_KEY = '6Lc3_lUtAAAAAFhlPCUXgJSdL3zLnzFUwx_ZbIzT';
+
+// Gera um token reCAPTCHA v3 para a ação informada. Retorna '' se o
+// reCAPTCHA não carregou (rede/offline) — o servidor decide se aceita.
+async function getRecaptchaToken(action) {
+    try {
+        if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) return '';
+        await new Promise(resolve => grecaptcha.ready(resolve));
+        return await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action });
+    } catch (e) {
+        console.warn('reCAPTCHA indisponível:', e);
+        return '';
+    }
+}
+
 // Abre o modal de confirmação de compra (usado pelos dois meios de pagamento)
 function openCheckoutModal(item, mode) {
     currentCheckoutItem = item;
@@ -892,7 +908,7 @@ function openCheckoutModal(item, mode) {
         const allowedMetas = metasData.filter(m => allowedMetasIds.includes(m.id));
 
         if (allowedMetas.length === 0) {
-             metaList.innerHTML = '<div style="color:var(--muted);font-size:0.9rem;">Nenhuma meta vinculada configurada pelo mestre.</div>';
+            metaList.innerHTML = '<div style="color:var(--muted);font-size:0.9rem;">Nenhuma meta vinculada configurada pelo mestre.</div>';
         } else {
             allowedMetas.forEach(meta => {
                 metaList.innerHTML += `
@@ -913,19 +929,19 @@ function openCheckoutModal(item, mode) {
     document.getElementById('lojaCheckoutModal').style.display = 'flex';
 }
 
-window.updateCheckoutTotal = function() {
+window.updateCheckoutTotal = function () {
     if (!currentCheckoutItem) return;
     const qtyInput = document.getElementById('lojaCheckoutQuantity');
     if (!qtyInput) return;
-    
+
     let qty = parseInt(qtyInput.value) || 1;
     if (qty < 1) qty = 1;
     if (qty > 99) qty = 99;
-    
+
     const isPagBank = currentCheckoutMode === 'pagbank';
     const valorCentavos = getItemValorCentavos(currentCheckoutItem);
     const totalCentavos = valorCentavos * qty;
-    
+
     const priceDisplay = document.getElementById('lojaCheckoutPriceDisplay');
     if (priceDisplay) {
         if (isPagBank) {
@@ -948,7 +964,7 @@ function collectSelectedMetas(item) {
     return [...checkboxes].map(c => c.value);
 }
 
-window.openCheckoutFrag = async function(itemId) {
+window.openCheckoutFrag = async function (itemId) {
     const item = lojaItensData.find(i => i.id === itemId);
     if (!item) return;
 
@@ -960,18 +976,18 @@ window.openCheckoutFrag = async function(itemId) {
             showAlert(`❌ Você não tem Fragmentos suficientes. Custo: ${item.valorFrag} Frag$.`, 'danger');
             return;
         }
-    } catch (e) {}
+    } catch (e) { }
 
     openCheckoutModal(item, 'frag');
 };
 
-window.openCheckoutPagBank = function(itemId) {
+window.openCheckoutPagBank = function (itemId) {
     const item = lojaItensData.find(i => i.id === itemId);
     if (!item) return;
     openCheckoutModal(item, 'pagbank');
 };
 
-window.confirmPurchaseFrag = async function() {
+window.confirmPurchaseFrag = async function () {
     if (!currentCheckoutItem) return;
     const item = currentCheckoutItem;
 
@@ -992,8 +1008,9 @@ window.confirmPurchaseFrag = async function() {
     if (currentCheckoutMode === 'pagbank') {
         try {
             showAlert('⏳ Gerando pagamento seguro no PagBank...', 'info');
+            const recaptchaToken = await getRecaptchaToken('comprar_loja');
             const criarCheckout = httpsCallable(functions, 'criarCheckoutPagBank');
-            const result = await criarCheckout({ itemId: item.id, selectedMetas, quantidade });
+            const result = await criarCheckout({ itemId: item.id, selectedMetas, quantidade, recaptchaToken });
             window.location.href = result.data.paymentUrl; // ambiente seguro do PagBank
             return; // a página vai navegar; não reabilita o botão
         } catch (error) {

@@ -20,6 +20,47 @@ const db = getFirestore();
 //   firebase functions:secrets:set PAGBANK_TOKEN
 const PAGBANK_TOKEN = defineSecret("PAGBANK_TOKEN");
 
+// Chave SECRETA do reCAPTCHA v3 (nunca vai para o frontend):
+//   firebase functions:secrets:set RECAPTCHA_SECRET
+const RECAPTCHA_SECRET = defineSecret("RECAPTCHA_SECRET");
+
+// Nota mínima aceita (0.0 = provável bot, 1.0 = provável humano).
+// 0.5 é o padrão recomendado pelo Google.
+const RECAPTCHA_MIN_SCORE = 0.5;
+
+// Verifica o token reCAPTCHA v3 no servidor. Lança HttpsError se reprovar.
+async function verificarRecaptcha(token, acaoEsperada) {
+  const secret = RECAPTCHA_SECRET.value();
+  // Se o secret não estiver configurado, não bloqueia (permite operar antes do setup).
+  if (!secret) {
+    console.warn("RECAPTCHA_SECRET não configurado — verificação ignorada.");
+    return;
+  }
+  if (!token) {
+    throw new HttpsError("failed-precondition", "Verificação de segurança ausente. Recarregue a página e tente novamente.");
+  }
+
+  const resp = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `secret=${encodeURIComponent(secret)}&response=${encodeURIComponent(token)}`,
+  });
+  const data = await resp.json();
+
+  if (!data.success) {
+    console.warn("reCAPTCHA falhou:", data["error-codes"]);
+    throw new HttpsError("permission-denied", "Falha na verificação de segurança. Tente novamente.");
+  }
+  if (typeof data.score === "number" && data.score < RECAPTCHA_MIN_SCORE) {
+    console.warn("reCAPTCHA score baixo:", data.score);
+    throw new HttpsError("permission-denied", "Não foi possível validar sua solicitação. Tente novamente.");
+  }
+  if (acaoEsperada && data.action && data.action !== acaoEsperada) {
+    console.warn("reCAPTCHA action divergente:", data.action);
+    throw new HttpsError("permission-denied", "Verificação de segurança inválida.");
+  }
+}
+
 // Trocar para "https://api.pagseguro.com" quando for para produção (pós-homologação)
 const PAGBANK_API = "https://sandbox.api.pagseguro.com";
 
@@ -274,7 +315,7 @@ exports.registrarLogFragmentos = onDocumentWritten(
 // O preço vem SEMPRE do Firestore; o navegador envia só itemId + metas.
 // =============================================
 exports.criarCheckoutPagBank = onCall(
-  { secrets: [PAGBANK_TOKEN], region: "southamerica-east1" },
+  { secrets: [PAGBANK_TOKEN, RECAPTCHA_SECRET], region: "southamerica-east1" },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Você precisa estar logado para comprar.");
@@ -282,7 +323,11 @@ exports.criarCheckoutPagBank = onCall(
 
     const uid = request.auth.uid;
     const email = request.auth.token.email || "";
-    const { itemId, selectedMetas, quantidade: reqQuantidade } = request.data || {};
+    const { itemId, selectedMetas, quantidade: reqQuantidade, recaptchaToken } = request.data || {};
+
+    // Verificação anti-bot ANTES de qualquer operação de pagamento
+    await verificarRecaptcha(recaptchaToken, "comprar_loja");
+
     let quantidade = parseInt(reqQuantidade) || 1;
     if (quantidade < 1) quantidade = 1;
     if (quantidade > 99) quantidade = 99;
