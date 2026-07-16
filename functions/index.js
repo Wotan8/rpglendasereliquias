@@ -83,7 +83,11 @@ exports.comprarComFragmentos = onCall(
 
     const uid = request.auth.uid;
     const email = request.auth.token.email || "";
-    const { itemId, selectedMetas } = request.data || {};
+    const { itemId, selectedMetas, quantidade: reqQuantidade } = request.data || {};
+    let quantidade = parseInt(reqQuantidade) || 1;
+    if (quantidade < 1) quantidade = 1;
+    if (quantidade > 99) quantidade = 99;
+
     if (!itemId || typeof itemId !== "string") {
       throw new HttpsError("invalid-argument", "itemId é obrigatório.");
     }
@@ -142,27 +146,33 @@ exports.comprarComFragmentos = onCall(
       }
       const data = uSnap.data();
 
+      const totalFrag = valorFrag * quantidade;
       const saldoAtual = data.fragmentos || 0;
-      if (saldoAtual < valorFrag) {
+      if (saldoAtual < totalFrag) {
         throw new HttpsError(
           "failed-precondition",
-          `Você não tem Fragmentos suficientes. Custo: ${valorFrag} Frag$.`
+          `Você não tem Fragmentos suficientes. Custo total: ${totalFrag} Frag$.`
         );
       }
-      novoSaldo = saldoAtual - valorFrag;
+      novoSaldo = saldoAtual - totalFrag;
 
       const inventario = data.inventario || [];
-      inventario.push({
-        ...item,
-        quantidade: 1,
-        formaRecebimento: "Comprado na Loja (Frag$)",
-      });
+      const existingItemIndex = inventario.findIndex(i => i.nome === item.nome);
+      if (existingItemIndex !== -1) {
+        inventario[existingItemIndex].quantidade = (inventario[existingItemIndex].quantidade || 1) + quantidade;
+      } else {
+        inventario.push({
+          ...item,
+          quantidade: quantidade,
+          formaRecebimento: "Comprado na Loja (Frag$)",
+        });
+      }
 
       const logsCompra = data.logsCompra || [];
       logsCompra.push({
         itemId,
         nome: item.nome,
-        valorPago: valorFrag,
+        valorPago: totalFrag,
         moeda: "Frag$",
         data: new Date().toISOString(),
       });
@@ -172,7 +182,7 @@ exports.comprarComFragmentos = onCall(
       apoios.push({
         nome: logNome,
         tipo: "Loja (Frag$)",
-        montante: 1,
+        montante: quantidade,
         meta: metas.join(","),
         valor: "",
         dataInicio: new Date().toISOString().split("T")[0],
@@ -183,7 +193,7 @@ exports.comprarComFragmentos = onCall(
       notifications.unshift({
         id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
         type: "master_message",
-        message: `💎 Compra Aprovada: Você adquiriu ${item.nome} por ${valorFrag} Frag$.`,
+        message: `💎 Compra Aprovada: Você adquiriu ${quantidade}x ${item.nome} por ${totalFrag} Frag$.`,
         timestamp: Date.now(),
         isNew: true,
         data: { highlight: "importante" },
@@ -199,7 +209,7 @@ exports.comprarComFragmentos = onCall(
         // Marcador de atribuição lido pelo gatilho de auditoria (registrarLogFragmentos)
         fragLastOp: {
           origem: "Compra na Loja (Frag$)",
-          detalhe: `${item.nome} (itemId: ${itemId})`,
+          detalhe: `${quantidade}x ${item.nome} (itemId: ${itemId})`,
           autor: email || uid,
           ts: Date.now(),
         },
@@ -272,7 +282,11 @@ exports.criarCheckoutPagBank = onCall(
 
     const uid = request.auth.uid;
     const email = request.auth.token.email || "";
-    const { itemId, selectedMetas } = request.data || {};
+    const { itemId, selectedMetas, quantidade: reqQuantidade } = request.data || {};
+    let quantidade = parseInt(reqQuantidade) || 1;
+    if (quantidade < 1) quantidade = 1;
+    if (quantidade > 99) quantidade = 99;
+
     if (!itemId || typeof itemId !== "string") {
       throw new HttpsError("invalid-argument", "itemId é obrigatório.");
     }
@@ -309,6 +323,7 @@ exports.criarCheckoutPagBank = onCall(
     }
 
     // Registro da intenção de compra (também serve de trilha de auditoria)
+    const totalCentavos = valorCentavos * quantidade;
     const pendingRef = db.collection("compras_pendentes").doc();
     await pendingRef.set({
       uid,
@@ -316,6 +331,8 @@ exports.criarCheckoutPagBank = onCall(
       itemId,
       itemNome: item.nome,
       valorCentavos,
+      quantidade,
+      totalCentavos,
       selectedMetas: metas,
       status: "AGUARDANDO_PAGAMENTO",
       criadoEm: FieldValue.serverTimestamp(),
@@ -327,7 +344,7 @@ exports.criarCheckoutPagBank = onCall(
         reference_id: itemId,
         name: String(item.nome).slice(0, 100),
         description: String(item.descricao || item.nome).slice(0, 255),
-        quantity: 1,
+        quantity: quantidade,
         unit_amount: valorCentavos,
       }],
       shipping: { type: "FREE" },
@@ -458,20 +475,27 @@ exports.pagbankWebhook = onRequest(
         if (!uSnap.exists) throw new Error("Usuário não encontrado: " + pending.uid);
         const data = uSnap.data();
 
-        const valorReais = (pending.valorCentavos / 100).toFixed(2).replace(".", ",");
+        const quantidade = pending.quantidade || 1;
+        const totalCentavos = pending.totalCentavos || pending.valorCentavos;
+        const valorReais = (totalCentavos / 100).toFixed(2).replace(".", ",");
 
         const inventario = data.inventario || [];
-        inventario.push({
-          ...item,
-          quantidade: 1,
-          formaRecebimento: "Comprado na Loja (PagBank)",
-        });
+        const existingItemIndex = inventario.findIndex(i => i.nome === item.nome);
+        if (existingItemIndex !== -1) {
+          inventario[existingItemIndex].quantidade = (inventario[existingItemIndex].quantidade || 1) + quantidade;
+        } else {
+          inventario.push({
+            ...item,
+            quantidade: quantidade,
+            formaRecebimento: "Comprado na Loja (PagBank)",
+          });
+        }
 
         const logsCompra = data.logsCompra || [];
         logsCompra.push({
           itemId: pending.itemId,
           nome: item.nome,
-          valorPago: pending.valorCentavos,
+          valorPago: totalCentavos,
           moeda: "BRL",
           compraId: pendingRef.id,
           data: new Date().toISOString(),
@@ -482,7 +506,7 @@ exports.pagbankWebhook = onRequest(
         apoios.push({
           nome: logNome,
           tipo: "Loja (PagBank)",
-          montante: 1,
+          montante: quantidade,
           meta: (pending.selectedMetas || []).join(","),
           valor: valorReais,
           dataInicio: new Date().toISOString().split("T")[0],
@@ -493,7 +517,7 @@ exports.pagbankWebhook = onRequest(
         notifications.unshift({
           id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
           type: "master_message",
-          message: `💳 Compra Aprovada: Você adquiriu ${item.nome} por R$ ${valorReais}.`,
+          message: `💳 Compra Aprovada: Você adquiriu ${quantidade}x ${item.nome} por R$ ${valorReais}.`,
           timestamp: Date.now(),
           isNew: true,
           data: { highlight: "importante" },
@@ -512,13 +536,13 @@ exports.pagbankWebhook = onRequest(
           jogador: data.displayName || data.email || pending.email || "",
           itemId: pending.itemId,
           itemNome: item.nome,
-          valorCentavos: pending.valorCentavos,
+          valorCentavos: totalCentavos,
           moeda: "BRL",
           compraId: pendingRef.id,
           checkoutId: pending.checkoutId || checkoutId || "",
           orderId: orderId || "",
           origem: "Compra na Loja (PagBank)",
-          detalhe: metasNamesStr ? `Metas: ${metasNamesStr}` : "",
+          detalhe: `${quantidade}x - ` + (metasNamesStr ? `Metas: ${metasNamesStr}` : ""),
           criadoEm: FieldValue.serverTimestamp(),
         });
       });

@@ -402,7 +402,24 @@ async function loadInventory() {
 
         const userData = userSnapshot.data();
         const apoios = userData.apoios || [];
-        const inventario = userData.inventario || [];
+        const inventarioRaw = userData.inventario || [];
+        
+        // Frontend Stacking (Agrupa itens idênticos)
+        const inventario = [];
+        inventarioRaw.forEach(item => {
+            const existing = inventario.find(i => i.nome === item.nome);
+            if (existing) {
+                existing.quantidade = (existing.quantidade || 1) + (item.quantidade || 1);
+                if (!existing.imagem && item.imagem) {
+                    existing.imagem = item.imagem;
+                }
+                if (!existing.descricao && item.descricao) {
+                    existing.descricao = item.descricao;
+                }
+            } else {
+                inventario.push({ ...item, quantidade: item.quantidade || 1 });
+            }
+        });
 
         // Calcular Total de Apoios
         let totalApoios = 0;
@@ -427,21 +444,39 @@ async function loadInventory() {
             emptyState.style.display = 'block';
         } else {
             emptyState.style.display = 'none';
-            grid.innerHTML = inventario.map(item => `
-                <div class="inventory-item">
-                    <div class="inventory-item-header">
-                        <div class="inventory-item-name">${escapeHtml(item.nome || 'Item sem nome')}</div>
-                        <div class="inventory-item-quantity">x${item.quantidade || 0}</div>
-                    </div>
-                    <div class="inventory-item-desc">
-                        ${escapeHtmlWithBreaks(item.descricao || item['descrição'] || 'Sem descrição')}
-                    </div>
-                    <div class="inventory-item-footer">
-                        <div class="inventory-item-label">Forma de Recebimento/Uso</div>
-                        <div class="inventory-item-value">${escapeHtml(item.formaRecebimento || 'Não especificado')}</div>
+            grid.innerHTML = inventario.map(item => {
+                const imgHtml = item.imagem
+                    ? `<div class="loja-card-media">
+                           <img src="${escapeHtml(item.imagem)}" alt="${escapeHtml(item.nome || 'Item')}" loading="lazy"
+                                onerror="this.parentElement.classList.add('inventory-media-fallback');this.remove();">
+                       </div>`
+                    : `<div class="loja-card-media inventory-media-fallback"></div>`;
+
+                let tagsHtml = '';
+                if (item.isExp) tagsHtml += `<span class="loja-tag" style="background:var(--primary);">⭐ EXP: ${item.expAmount}${item.isExpVip ? ' (VIP)' : ''}</span>`;
+                if (item.isRoleta) tagsHtml += `<span class="loja-tag" style="background:var(--secondary, #8b5cf6);">🎰 Roleta: ${item.roletaGiros}x</span>`;
+                if (item.isRerolagem) tagsHtml += `<span class="loja-tag" style="background:#f59e0b;">🎲 Re-roll: ${item.rerolagensAmount}x</span>`;
+                if (item.isNarrativo) tagsHtml += `<span class="loja-tag" style="background:#10b981;">📜 Benefício Narrativo</span>`;
+                if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span class="loja-tag" style="background:#8b5cf6;">🎒 Equipamentos Especiais</span>`;
+
+                return `
+                <div class="loja-card">
+                    ${imgHtml}
+                    <div class="loja-card-body">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <div class="loja-card-title" style="margin-bottom: 0;">${escapeHtml(item.nome || 'Item sem nome')}</div>
+                            <div class="inventory-item-quantity" style="margin-left: 8px; flex-shrink: 0; background: var(--primary); color: #fff; padding: 2px 10px; border-radius: 20px; font-weight: 700; font-size: 0.8rem;">x${item.quantidade || 0}</div>
+                        </div>
+                        ${item.descricao || item['descrição'] ? `<div class="loja-card-desc" style="margin-bottom: 8px;">${escapeHtmlWithBreaks(item.descricao || item['descrição'])}</div>` : ''}
+                        ${tagsHtml ? `<div class="loja-card-tags" style="margin-bottom: 12px;">${tagsHtml}</div>` : ''}
+                        <div style="margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+                            <div style="font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 800; margin-bottom: 2px;">Forma de Recebimento</div>
+                            <div style="font-size: 0.82rem; font-weight: 600; color: var(--ink);">${escapeHtml(item.formaRecebimento || 'Não especificado')}</div>
+                        </div>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
     } catch (error) {
@@ -833,9 +868,13 @@ function openCheckoutModal(item, mode) {
     infoDiv.innerHTML = `
         <div style="display:flex;gap:12px;align-items:center;">
             ${item.imagem ? `<img src="${escapeHtml(item.imagem)}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;background:rgba(0,0,0,0.3);" onerror="this.remove();">` : ''}
-            <div>
+            <div style="flex:1;">
                 <div style="font-weight:700;color:var(--primary);font-size:1.1rem;margin-bottom:4px;">${escapeHtml(item.nome)}</div>
-                <div style="font-size:0.9rem;color:var(--muted);">Custo: ${precoLabel}</div>
+                <div style="font-size:0.9rem;color:var(--muted);">Custo: <span id="lojaCheckoutPriceDisplay">${precoLabel}</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;">
+                <label for="lojaCheckoutQuantity" style="font-size:0.75rem;color:var(--muted);margin-bottom:2px;font-weight:700;">Quantidade</label>
+                <input type="number" id="lojaCheckoutQuantity" value="1" min="1" max="99" oninput="updateCheckoutTotal()" style="width:60px;text-align:center;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:6px;padding:4px;font-family:var(--font);font-size:0.9rem;font-weight:600;">
             </div>
         </div>
         ${isPagBank ? `<div style="font-size:0.8rem;color:var(--muted);margin-top:10px;border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;">🔒 Você será redirecionado ao ambiente <strong>seguro do PagBank</strong> para pagar com PIX, Cartão ou Boleto. O item é entregue automaticamente após a confirmação do pagamento.</div>` : ''}
@@ -873,6 +912,29 @@ function openCheckoutModal(item, mode) {
 
     document.getElementById('lojaCheckoutModal').style.display = 'flex';
 }
+
+window.updateCheckoutTotal = function() {
+    if (!currentCheckoutItem) return;
+    const qtyInput = document.getElementById('lojaCheckoutQuantity');
+    if (!qtyInput) return;
+    
+    let qty = parseInt(qtyInput.value) || 1;
+    if (qty < 1) qty = 1;
+    if (qty > 99) qty = 99;
+    
+    const isPagBank = currentCheckoutMode === 'pagbank';
+    const valorCentavos = getItemValorCentavos(currentCheckoutItem);
+    const totalCentavos = valorCentavos * qty;
+    
+    const priceDisplay = document.getElementById('lojaCheckoutPriceDisplay');
+    if (priceDisplay) {
+        if (isPagBank) {
+            priceDisplay.innerHTML = `<span style="color:#10b981;font-weight:700;">R$ ${(totalCentavos / 100).toFixed(2).replace('.', ',')}</span>`;
+        } else {
+            priceDisplay.innerHTML = `<span style="color:#6366f1;font-weight:700;">${currentCheckoutItem.valorFrag * qty} Frag$</span>`;
+        }
+    }
+};
 
 // Coleta as metas marcadas no modal; retorna null se exceder o limite
 function collectSelectedMetas(item) {
@@ -913,6 +975,11 @@ window.confirmPurchaseFrag = async function() {
     if (!currentCheckoutItem) return;
     const item = currentCheckoutItem;
 
+    const qtyInput = document.getElementById('lojaCheckoutQuantity');
+    let quantidade = qtyInput ? parseInt(qtyInput.value) : 1;
+    if (isNaN(quantidade) || quantidade < 1) quantidade = 1;
+    if (quantidade > 99) quantidade = 99;
+
     // Pré-checagem de UX — a validação de verdade acontece no servidor
     const selectedMetas = collectSelectedMetas(item);
     if (selectedMetas === null) return;
@@ -926,7 +993,7 @@ window.confirmPurchaseFrag = async function() {
         try {
             showAlert('⏳ Gerando pagamento seguro no PagBank...', 'info');
             const criarCheckout = httpsCallable(functions, 'criarCheckoutPagBank');
-            const result = await criarCheckout({ itemId: item.id, selectedMetas });
+            const result = await criarCheckout({ itemId: item.id, selectedMetas, quantidade });
             window.location.href = result.data.paymentUrl; // ambiente seguro do PagBank
             return; // a página vai navegar; não reabilita o botão
         } catch (error) {
@@ -938,10 +1005,10 @@ window.confirmPurchaseFrag = async function() {
         }
     }
 
-    // ---- Fluxo Frag$ (inalterado) ----
+    // ---- Fluxo Frag$ (inalterado no geral, mas envia quantidade) ----
     try {
         const comprar = httpsCallable(functions, 'comprarComFragmentos');
-        const result = await comprar({ itemId: item.id, selectedMetas });
+        const result = await comprar({ itemId: item.id, selectedMetas, quantidade });
 
         showAlert('✅ Compra realizada com sucesso! Item enviado ao seu Repertório.', 'success');
         document.getElementById('lojaCheckoutModal').style.display = 'none';

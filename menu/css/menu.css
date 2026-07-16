@@ -1392,6 +1392,17 @@ html:not(.dark) .loja-card {
     opacity: .45;
 }
 
+.inventory-media-fallback::before {
+    content: '📦';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.4rem;
+    opacity: .45;
+}
+
 .loja-card-body {
     display: flex;
     flex-direction: column;
