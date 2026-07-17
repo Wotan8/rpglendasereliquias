@@ -751,7 +751,7 @@ async function loadModule(moduleName) {
         const colRef = collection(db, modDef.collection);
         const snapshot = await getDocs(colRef);
         allItems = [];
-        snapshot.forEach(d => allItems.push({ id: d.id, ...d.data() }));
+        snapshot.forEach(d => allItems.push({ ...d.data(), id: d.id }));
 
         // Sort by ordem or nome
         allItems.sort((a, b) => {
@@ -776,7 +776,7 @@ async function refreshMechanicsCache() {
     try {
         const snap = await getDocs(collection(db, 'system/data/mechanics'));
         mechanicsCache = [];
-        snap.forEach(d => mechanicsCache.push({ id: d.id, ...d.data() }));
+        snap.forEach(d => mechanicsCache.push({ ...d.data(), id: d.id }));
         mechanicsCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
         window._mechCache = mechanicsCache;
     } catch (e) { console.error('Erro cache mecânicas:', e); }
@@ -786,7 +786,7 @@ async function refreshPeculiaritiesCache() {
     try {
         const snap = await getDocs(collection(db, 'system/data/peculiarities'));
         peculiaritiesCache = [];
-        snap.forEach(d => peculiaritiesCache.push({ id: d.id, ...d.data() }));
+        snap.forEach(d => peculiaritiesCache.push({ ...d.data(), id: d.id }));
         peculiaritiesCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
         window._peculiaritiesCache = peculiaritiesCache;
     } catch (e) { console.error('Erro cache peculiaridades:', e); }
@@ -796,7 +796,7 @@ async function refreshSkillsCache() {
     try {
         const snap = await getDocs(collection(db, 'system/data/skills'));
         skillsCache = [];
-        snap.forEach(d => skillsCache.push({ id: d.id, ...d.data() }));
+        snap.forEach(d => skillsCache.push({ ...d.data(), id: d.id }));
         skillsCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
         window._skillsCache = skillsCache;
     } catch (e) { console.error('Erro cache skills:', e); }
@@ -806,7 +806,7 @@ async function refreshDerivedValuesCache() {
     try {
         const snap = await getDocs(collection(db, 'system/data/derivedValues'));
         derivedValuesCache = [];
-        snap.forEach(d => derivedValuesCache.push({ id: d.id, ...d.data() }));
+        snap.forEach(d => derivedValuesCache.push({ ...d.data(), id: d.id }));
         derivedValuesCache.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
         window._derivedValuesCache = derivedValuesCache;
     } catch (e) { console.error('Erro cache derivedValues:', e); }
@@ -816,7 +816,7 @@ async function refreshVitalStatsCache() {
     try {
         const snap = await getDocs(collection(db, 'system/data/vitalStats'));
         vitalStatsCache = [];
-        snap.forEach(d => vitalStatsCache.push({ id: d.id, ...d.data() }));
+        snap.forEach(d => vitalStatsCache.push({ ...d.data(), id: d.id }));
         vitalStatsCache.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
         window._vitalStatsCache = vitalStatsCache;
     } catch (e) { console.error('Erro cache vitalStats:', e); }
@@ -828,7 +828,7 @@ async function refreshAurasCache() {
     try {
         const snap = await getDocs(collection(db, 'system/data/auras'));
         aurasCache = [];
-        snap.forEach(d => aurasCache.push({ id: d.id, ...d.data() }));
+        snap.forEach(d => aurasCache.push({ ...d.data(), id: d.id }));
         aurasCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
     } catch (e) { console.error('Erro cache auras:', e); }
 }
@@ -837,7 +837,7 @@ async function refreshManeuversCache() {
     try {
         const snap = await getDocs(collection(db, 'system/data/maneuvers'));
         maneuversCache = [];
-        snap.forEach(d => maneuversCache.push({ id: d.id, ...d.data() }));
+        snap.forEach(d => maneuversCache.push({ ...d.data(), id: d.id }));
         maneuversCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
         window._maneuversCache = maneuversCache;
     } catch (e) { console.error('Erro cache maneuvers:', e); }
@@ -847,7 +847,7 @@ async function refreshEquipmentCache() {
     try {
         const snap = await getDocs(collection(db, 'system/data/equipment'));
         equipmentCache = [];
-        snap.forEach(d => equipmentCache.push({ id: d.id, ...d.data() }));
+        snap.forEach(d => equipmentCache.push({ ...d.data(), id: d.id }));
         equipmentCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
         window._equipmentCache = equipmentCache;
     } catch (e) { console.error('Erro cache equipment:', e); }
@@ -857,7 +857,7 @@ async function refreshClassesCache() {
     try {
         const snap = await getDocs(collection(db, 'system/data/classes'));
         const classes = [];
-        snap.forEach(d => classes.push({ id: d.id, ...d.data() }));
+        snap.forEach(d => classes.push({ ...d.data(), id: d.id }));
         classes.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
         // Consumido por _getModuleLimitOptions() no editor de mecânicas
         // (opções "Limite: <módulo>") — antes nunca era populado.
@@ -869,7 +869,7 @@ async function refreshClassModulesCache() {
     try {
         const snap = await getDocs(collection(db, 'system/data/classModules'));
         classModulesCache = [];
-        snap.forEach(d => classModulesCache.push({ id: d.id, ...d.data() }));
+        snap.forEach(d => classModulesCache.push({ ...d.data(), id: d.id }));
         classModulesCache.sort((a, b) => (a.titulo || '').localeCompare(b.titulo || ''));
         window._classModulesCache = classModulesCache;
     } catch (e) { console.error('Erro cache classModules:', e); }
@@ -879,7 +879,7 @@ async function refreshBodyPartsCache() {
     try {
         const snap = await getDocs(collection(db, 'system/data/bodyParts'));
         bodyPartsCache = [];
-        snap.forEach(d => bodyPartsCache.push({ id: d.id, ...d.data() }));
+        snap.forEach(d => bodyPartsCache.push({ ...d.data(), id: d.id }));
         bodyPartsCache.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
         window._bodyPartsCache = bodyPartsCache;
     } catch (e) { console.error('Erro cache bodyParts:', e); }
@@ -3752,6 +3752,10 @@ window._saveClassModuleSubForm = async function (e) {
     if (!moduleItem) { window._closeClassModuleSubForm(); return; }
     const modData = _collectSingleModuleData(moduleItem);
     if (!modData) { window._closeClassModuleSubForm(); return; }
+    
+    // Forçar ID a permanecer o mesmo do documento que está sendo editado
+    modData.id = editingItemId;
+    
     const pubEl = overlay.querySelector('#field_publicado');
     modData.publicado = pubEl ? pubEl.checked : false;
     modData.updatedAt = Timestamp.now();
@@ -3804,7 +3808,7 @@ async function _migrateInlineModulesToCollection() {
     try {
         const classesSnap = await getDocs(collection(db, 'system/data/classes'));
         const classes = [];
-        classesSnap.forEach(d => classes.push({ id: d.id, ...d.data() }));
+        classesSnap.forEach(d => classes.push({ ...d.data(), id: d.id }));
         let totalMigrated = 0;
         for (const cls of classes) {
             if (!Array.isArray(cls.modulosDaClasse) || cls.modulosDaClasse.length === 0) continue;
@@ -4031,6 +4035,11 @@ window.handleFormSubmit = async function (e) {
 
     try {
         if (editingItemId) {
+            // Impedir que o ID mude durante a edição (quebra de referências)
+            if (targetModule === 'classModules') {
+                data.id = editingItemId;
+            }
+
             await updateDoc(doc(db, modDef.collection, editingItemId), data);
             showAlert('✅ Registro atualizado!', 'success');
 
@@ -4039,12 +4048,29 @@ window.handleFormSubmit = async function (e) {
                 await _autoLinkBodyPartToAllRaces(editingItemId);
             }
         } else {
-            const newDocRef = await addDoc(collection(db, modDef.collection), data);
+            let newDocId;
+            if (targetModule === 'classModules' && data.id) {
+                // Usar setDoc com o ID manual provido pelo usuário
+                const docRef = doc(db, modDef.collection, data.id);
+                const existing = await getDoc(docRef);
+                if (existing.exists()) {
+                    showAlert('❌ Já existe um módulo com esse ID.', 'danger');
+                    btnSave.disabled = false;
+                    btnSave.textContent = '💾 Salvar';
+                    return;
+                }
+                await setDoc(docRef, data);
+                newDocId = data.id;
+            } else {
+                // Criar com ID aleatório gerado pelo Firebase
+                const newDocRef = await addDoc(collection(db, modDef.collection), data);
+                newDocId = newDocRef.id;
+            }
             showAlert('✅ Registro criado!', 'success');
 
             // === AUTO-LINK: vincular parte padrão a todas as raças ===
             if (targetModule === 'bodyParts' && data.ehPadrao === true) {
-                await _autoLinkBodyPartToAllRaces(newDocRef.id);
+                await _autoLinkBodyPartToAllRaces(newDocId);
             }
         }
         closeForm();
