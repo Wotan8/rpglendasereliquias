@@ -1153,7 +1153,7 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
                     item.remove();
                 }
             });
-            btnGroup.appendChild(editBtn);
+            btnGroup.appendChild(btnUnlock);
         } else {
             const doneBtn = document.createElement('button');
             doneBtn.className = 'no-print cm-done-btn';
@@ -1164,8 +1164,19 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
             doneBtn.style.border = '1px solid rgba(16, 185, 129, 0.5)';
             doneBtn.addEventListener('click', () => {
                 _saveModuleData(mod.id);
-                // Repintar item trancado
-                const newItem = _buildModuleItem(mod, idx, data, false, false);
+                
+                // Buscar o index atual do item no DOM
+                const currentItems = Array.from(item.parentElement.querySelectorAll('.class-module-item'));
+                const myIdx = currentItems.indexOf(item);
+                
+                // Usar os dados recém-salvos (que incluem as edições) em vez da variável 'data' obsoleta
+                let updatedData = data;
+                if (myIdx >= 0 && state.classModuleData && state.classModuleData[mod.id]) {
+                    updatedData = state.classModuleData[mod.id][myIdx] || data;
+                }
+
+                // Repintar item trancado com os dados atualizados
+                const newItem = _buildModuleItem(mod, myIdx >= 0 ? myIdx : idx, updatedData, false, false);
                 item.replaceWith(newItem);
             });
             btnGroup.appendChild(doneBtn);

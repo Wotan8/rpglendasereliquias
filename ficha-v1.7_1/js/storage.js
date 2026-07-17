@@ -318,9 +318,11 @@ function loadFromData(d) {
             }
         }
 
-        onClassChange();
-        onRaceChange();
-        if (typeof onTriboChange === 'function') onTriboChange();
+        try { onClassChange(); } catch (e) { console.error('Erro em onClassChange:', e); }
+        try { onRaceChange(); } catch (e) { console.error('Erro em onRaceChange:', e); }
+        if (typeof onTriboChange === 'function') {
+            try { onTriboChange(); } catch (e) { console.error('Erro em onTriboChange:', e); }
+        }
 
         // Force render main tests with restored data
         const cl = document.getElementById('selClasse').value;

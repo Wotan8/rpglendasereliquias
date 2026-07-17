@@ -611,13 +611,15 @@ function determineIcon(pec, mecanicas) {
  * @returns {object|null} - Objeto de peculiaridade resolvido ou null
  */
 function _resolvePeculiaridade(pecData, sourceLabel) {
+    if (!pecData) return null;
     const isObject = typeof pecData === 'object' && pecData !== null;
     const pecId = isObject ? pecData.id : pecData;
+    if (!pecId) return null;
     const nivelInicial = isObject ? (pecData.nivelInicial || 1) : 1;
 
     const pec = window._systemData.peculiarities.find(p => p.id === pecId);
     if (!pec) {
-        console.error(`⚠️ Peculiaridade ID "${pecId}" não encontrada para ${sourceLabel}`);
+        console.warn(`⚠️ Peculiaridade ID "${pecId}" não encontrada para ${sourceLabel}`);
         return null;
     }
 

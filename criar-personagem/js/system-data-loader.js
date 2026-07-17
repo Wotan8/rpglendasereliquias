@@ -148,8 +148,10 @@ window.loadSystemData = async function () {
 
 /* ===== _resolvePeculiaridade ===== */
 function _resolvePeculiaridade(pecData, sourceLabel) {
+    if (!pecData) return null;
     const isObject = typeof pecData === 'object' && pecData !== null;
     const pecId = isObject ? pecData.id : pecData;
+    if (!pecId) return null;
     const nivelInicial = isObject ? (pecData.nivelInicial || 1) : 1;
 
     const pec = window._systemData.peculiarities.find(p => p.id === pecId);
