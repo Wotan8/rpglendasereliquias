@@ -439,24 +439,28 @@
 })();
 
 /**
- * Renderiza os módulos de classe no container #classExtraResources.
+ * Renderiza os módulos de classe no container #classModulesContainer.
  * Chamada por onClassChange().
  * @param {string} classeNome - Nome da classe selecionada
  */
 function renderClassModules(classeNome) {
-    const container = document.getElementById('classExtraResources');
+    const container = document.getElementById('classModulesContainer');
     if (!container) return;
 
-    // Remove módulos anteriores (keep other extra resources intact)
-    container.querySelectorAll('.class-module-section').forEach(el => el.remove());
+    // Remove APENAS os elementos com a classe 'class-module-container'
+    // preservando outros componentes (como loções, ritos)
+    container.querySelectorAll('.class-module-container').forEach(e => e.remove());
 
-    if (!classeNome || !window._classModules || !window._classModules[classeNome]) return;
-
+    if (!classeNome) return;
     const modules = window._classModules[classeNome];
-    if (!modules || modules.length === 0) return;
+    if (!modules || modules.length === 0) {
+        const sec = document.getElementById('classModulesSection');
+        if (sec) sec.style.display = 'none';
+        return;
+    }
 
     // Ensure section is visible
-    const resSection = document.getElementById('classResourcesSection');
+    const resSection = document.getElementById('classModulesSection');
     if (resSection) resSection.style.display = '';
 
     modules.forEach(mod => {

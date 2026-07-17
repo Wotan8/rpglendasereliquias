@@ -336,70 +336,8 @@ function onClassChange() {
     }
 
 
-    /* Resources */
-    const resSection = document.getElementById('classResourcesSection');
-    const resGrid = document.getElementById('classResourcesGrid');
-    const extraRes = document.getElementById('classExtraResources');
-    if (resGrid) resGrid.innerHTML = '';
-    if (extraRes) extraRes.innerHTML = '';
-
-    const res = (cl && CLASS_RESOURCES[cl]) ? CLASS_RESOURCES[cl] : [];
-    if (res.length > 0 || (cl === 'Caçador') || (cl === 'Druida') || (cl === 'Adepto') || (cl === 'Invocador') || (cl === 'Pallacerdote') || (cl === 'Runimago')) {
-        if (resSection) resSection.style.display = '';
-    } else {
-        if (resSection) resSection.style.display = 'none';
-    }
-
-    if (resGrid) {
-        res.forEach(r => {
-            const box = document.createElement('div'); box.className = 'vital-box';
-            if (r.single) {
-                box.innerHTML = `<label>${r.label}</label><div class="vital-inputs"><input type="text" data-key="${r.keys[0]}" placeholder="${r.placeholder || '0'}"></div>`;
-            } else {
-                box.innerHTML = `<label>${r.label}</label><div class="vital-inputs"><input type="text" data-key="${r.keys[0]}" placeholder="0"><span class="sep">/</span><input type="text" data-key="${r.keys[1]}" placeholder="0"></div>`;
-            }
-            resGrid.appendChild(box);
-        });
-
-        // Load saved values for class resources
-        resGrid.querySelectorAll('[data-key]').forEach(el => {
-            const sv = localStorage.getItem('lr_' + el.dataset.key);
-            if (sv) el.value = sv;
-            el.addEventListener('input', scheduleAutosave);
-        });
-    }
-
-    // Extra resources per class
-    if (cl === 'Caçador' || cl === 'Druida') {
-        renderReceitaLocoes(extraRes);
-        renderMarcaCaca(extraRes);
-        // reload loções saved
-        locaoCount = 0;
-        const locoesC = document.getElementById('locoesContainer');
-        if (locoesC) { locoesC.innerHTML = ''; state.locacoes.forEach(l => addLocao(l)); }
-    }
-    if (cl === 'Adepto' || cl === 'Invocador') {
-        const sec = document.getElementById('rituaisSection');
-        if (sec) { sec.style.display = ''; renderRituais(); }
-    } else {
-        const sec = document.getElementById('rituaisSection');
-        if (sec) sec.style.display = 'none';
-    }
-    if (cl === 'Runimago') {
-        const sec = document.getElementById('runimagoSection');
-        if (sec) { sec.style.display = ''; renderRunimago(document.getElementById('runimagoContent')); }
-    } else {
-        const sec = document.getElementById('runimagoSection');
-        if (sec) sec.style.display = 'none';
-    }
     // ᛟ Runomancia — renderização condicional pelo flag usaRunomancia da classe (Firebase)
     if (typeof renderRunomanciaModule === 'function') renderRunomanciaModule(cl);
-    if (cl === 'Pallacerdote') {
-        renderRitos(extraRes);
-        ritoCount = 0;
-        const ritosC = document.getElementById('ritosContainer');
-        if (ritosC) { ritosC.innerHTML = ''; state.ritos.forEach(r => addRito(r)); }
-    }
 
     /* Testes Opcionais por Classe */
     if (typeof renderMainTests === 'function') renderMainTests(cl);

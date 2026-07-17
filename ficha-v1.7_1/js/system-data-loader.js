@@ -92,10 +92,9 @@ window._systemData = {
     error: null
 };
 
-/* Inicializar CLASS_SKILLS, CLASS_RESOURCES e CLASS_TESTS como globais vazios
+/* Inicializar CLASS_SKILLS e CLASS_TESTS como globais vazios
    (anteriormente hardcoded em data.js / class-tests-data.js, agora vêm do Firebase) */
 window.CLASS_SKILLS = {};
-window.CLASS_RESOURCES = {};
 // CLASS_TESTS será populado por buildClassTestsFromFirebase() ou pelo fallback em class-tests-data.js
 window._classModules = {};
 
@@ -116,25 +115,26 @@ async function loadSystemData(db, collectionFn, getDocsFn) {
             window._systemData[col] = [];
             snap.forEach(d => {
                 const data = d.data();
-                if (data.publicado !== false) {
-                    window._systemData[col].push({ id: d.id, ...data });
-                }
+                data.id = d.id;
+                window._systemData[col].push(data);
             });
         }));
 
         window._systemData.loaded = true;
-        console.log('✅ Dados do sistema carregados do Firebase:', {
-            races: window._systemData.races.length,
-            classes: window._systemData.classes.length,
-            peculiarities: window._systemData.peculiarities.length,
-            mechanics: window._systemData.mechanics.length,
-        });
+        console.log("🟢 System Data carregado no cliente.");
+
+        // Disparar evento para scripts antigos saberem que os dados chegaram
+        document.dispatchEvent(new Event('systemDataLoaded'));
+
+        // Preencher options dos selects (Raças e Classes) se existirem
+        populateRaceSelect();
+        populateClassSelect();
 
         return true;
-    } catch (err) {
-        window._systemData.error = err;
-        console.error('❌ Erro ao carregar dados do sistema:', err);
-        throw err; // Re-throw para o firebase.js tratar
+    } catch (e) {
+        window._systemData.error = e.message;
+        console.error("🔴 Erro ao carregar System Data:", e);
+        throw e;
     }
 }
 
@@ -145,8 +145,8 @@ function populateRaceSelect() {
     const racaEl = document.getElementById('selRaca');
     if (!racaEl) return;
 
-    // Limpar options existentes (exceto a primeira "Selecione")
-    racaEl.querySelectorAll('option:not(:first-child)').forEach(o => o.remove());
+    // Limpar options existentes
+    racaEl.innerHTML = '<option value="">(Raça)</option>';
 
     const racas = window._systemData.races
         .filter(r => r.publicado !== false)
@@ -159,8 +159,6 @@ function populateRaceSelect() {
         opt.dataset.raceId = r.id;
         racaEl.appendChild(opt);
     });
-
-    console.log(`✅ Select de raças populado: ${racas.length} raças`);
 }
 
 /**
@@ -170,8 +168,8 @@ function populateClassSelect() {
     const classeEl = document.getElementById('selClasse');
     if (!classeEl) return;
 
-    // Limpar options existentes (exceto a primeira "Selecione")
-    classeEl.querySelectorAll('option:not(:first-child)').forEach(o => o.remove());
+    // Limpar options existentes
+    classeEl.innerHTML = '<option value="">(Classe)</option>';
 
     const classes = window._systemData.classes
         .filter(c => c.publicado !== false)
@@ -185,18 +183,15 @@ function populateClassSelect() {
         classeEl.appendChild(opt);
     });
 
-    // Construir CLASS_SKILLS e CLASS_RESOURCES a partir do Firebase
+    // Construir CLASS_SKILLS a partir do Firebase
     buildClassDataFromFirebase();
-
-    console.log(`✅ Select de classes populado: ${classes.length} classes`);
 }
 
 /**
- * Constrói CLASS_SKILLS e CLASS_RESOURCES globais a partir dos dados do Firebase.
+ * Constrói CLASS_SKILLS global a partir dos dados do Firebase.
  */
 function buildClassDataFromFirebase() {
     window.CLASS_SKILLS = {};
-    window.CLASS_RESOURCES = {};
 
     for (const cls of window._systemData.classes) {
         if (cls.publicado === false) continue;
@@ -210,19 +205,6 @@ function buildClassDataFromFirebase() {
                 const skill = window._systemData.skills.find(s => s.id === skillId);
                 return skill ? skill.nome : skillId;
             });
-        }
-
-        // Recursos de classe
-        if (cls.recursosDaClasse && Array.isArray(cls.recursosDaClasse)) {
-            window.CLASS_RESOURCES[cls.nome] = cls.recursosDaClasse.map(r => {
-                // Adaptar formato do Firebase para o formato esperado pelo core.js
-                if (typeof r === 'string') {
-                    return { label: r, keys: [`cr_${r.toLowerCase()}`], single: true };
-                }
-                return r; // Já está no formato correto
-            });
-        } else {
-            window.CLASS_RESOURCES[cls.nome] = [];
         }
     }
 

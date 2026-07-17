@@ -15,7 +15,6 @@ window.RACES = {};
 window.TRIBES = {};
 window.SKILLS = {};
 window.CLASS_SKILLS = {};
-window.CLASS_RESOURCES = {};
 window.CLASS_PECULIARITIES = {};
 window.DERIVED_VALUES = [];
 window.VITAL_STATS = [];
@@ -310,7 +309,6 @@ function buildRacesFromFirebase() {
 /* ===== buildClassDataFromFirebase ===== */
 function buildClassDataFromFirebase() {
     window.CLASS_SKILLS = {};
-    window.CLASS_RESOURCES = {};
     window.CLASS_PECULIARITIES = {};
 
     for (const cls of window._systemData.classes) {
@@ -321,11 +319,6 @@ function buildClassDataFromFirebase() {
             window.CLASS_SKILLS[cls.nome] = cls.periciasDaClasse.map(sk =>
                 typeof sk === 'object' ? sk.nome : sk
             ).filter(Boolean);
-        }
-
-        // Resources
-        if (cls.recursosDaClasse && Array.isArray(cls.recursosDaClasse)) {
-            window.CLASS_RESOURCES[cls.nome] = cls.recursosDaClasse;
         }
 
         // Peculiarities (bonusIniciais)

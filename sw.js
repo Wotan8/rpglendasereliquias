@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v14';
+const VERSION = 'v15';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -55,7 +55,6 @@ const PRECACHE_URLS = [
   '/ficha-v1.7_1/js/aura.js',
   '/ficha-v1.7_1/js/char-logger.js',
   '/ficha-v1.7_1/js/class-modules-renderer.js',
-  '/ficha-v1.7_1/js/class-resources.js',
   '/ficha-v1.7_1/js/class-tests-data.js',
   '/ficha-v1.7_1/js/class-tests.js',
   '/ficha-v1.7_1/js/core.js',
