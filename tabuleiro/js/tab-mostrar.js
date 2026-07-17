@@ -126,6 +126,7 @@ function menuMostrar(objId, x, y) {
         ${check('mostrarNome', 'Nome abaixo da imagem')}
         ${extras}
         <div class="tb-ctx-item" data-acao="abrir">${o.refTipo === 'npc' ? '👹 Abrir ficha do NPC' : '🎒 Adicionar ao inventário...'}</div>
+        ${o.refTipo !== 'npc' ? '<div class="tb-ctx-item" data-acao="loot">📦 Transformar em loot no mapa</div>' : ''}
         <div class="tb-ctx-item tb-danger" data-acao="del">🗑️ Remover do canva</div>`;
     menu.style.left = Math.min(x, window.innerWidth - 260) + 'px';
     menu.style.top = Math.min(y, window.innerHeight - 320) + 'px';
@@ -139,6 +140,21 @@ function menuMostrar(objId, x, y) {
         await aplicarOpcoes(objId, novo);
     });
     menu.querySelector('[data-acao="abrir"]').onclick = () => { menu.classList.remove('open'); clickMostrar(objId); };
+    const lootBtn = menu.querySelector('[data-acao="loot"]');
+    if (lootBtn) lootBtn.onclick = async () => {
+        menu.classList.remove('open');
+        const src = T.objects.get(objId); if (!src) return;
+        // vira um token de loot arrastável; entrega ao soltar sobre um token
+        await addObj({
+            tipo: 'loot', layerId: 'tokens',
+            x: src.x + (src.w || 200) / 2, y: src.y + (src.h || 200) + 40,
+            nome: src.nome, url: src.url || '',
+            refTipo: src.refTipo, refId: src.refId,
+            visivelPublico: true,
+        });
+        delObj(objId);
+        toast('📦 Loot criado — arraste sobre um token para entregar');
+    };
     menu.querySelector('[data-acao="del"]').onclick = () => { menu.classList.remove('open'); delObj(objId); };
     setTimeout(() => document.addEventListener('pointerdown', function fecha(ev) {
         if (!menu.contains(ev.target)) { menu.classList.remove('open'); document.removeEventListener('pointerdown', fecha); }
@@ -238,7 +254,25 @@ function abrirEntregaItem(o) {
         </div>
         <div class="tb-modal-actions"><button class="tb-btn tb-btn-success" onclick="tbEntregarItem('${o.id}')">✅ Entregar</button></div>`);
 }
-window.tbEntregarItem = async function(objId) {
+/** F5.4: loot arrastado e solto sobre um token → fluxo de entrega pré-selecionado. */
+window.tbEntregarLoot = function(lootId, tokenAlvo) {
+    const loot = T.objects.get(lootId); if (!loot) return;
+    const alvos = [
+        ...T.chars.map(c => `<option value="char:${c.id}" ${tokenAlvo.vinculo?.tipo==='char'&&tokenAlvo.vinculo.id===c.id?'selected':''}>🎭 ${esc(c.nome)}</option>`),
+        ...T.npcs.map(n => `<option value="npc:${n.id}" ${tokenAlvo.vinculo?.tipo==='npc'&&tokenAlvo.vinculo.id===n.id?'selected':''}>👹 ${esc(n.nome || 'NPC')}</option>`),
+    ].join('');
+    abrirModal(`📦 Entregar "${esc(loot.nome)}" para ${esc(tokenAlvo.nome || 'token')}`, `
+        <div class="tb-form-grid tb-form-grid-1">
+            <label>Adicionar ao inventário de<select id="ei_alvo">${alvos}</select></label>
+            <label>Quantidade<input type="number" id="ei_qtd" value="1" min="1"></label>
+        </div>
+        <div class="tb-modal-actions">
+            <button class="tb-btn" onclick="tbFecharModal()">Cancelar</button>
+            <button class="tb-btn tb-btn-success" onclick="tbEntregarItem('${lootId}', true)">✅ Entregar e remover loot</button>
+        </div>`);
+};
+
+window.tbEntregarItem = async function(objId, removerLoot) {
     const o = T.objects.get(objId); if (!o) return;
     const alvo = document.getElementById('ei_alvo').value;
     const qtd = parseInt(document.getElementById('ei_qtd').value) || 1;
@@ -259,6 +293,7 @@ window.tbEntregarItem = async function(objId) {
                 createdAt: new Date().toISOString(), createdBy: T.user?.email || null, ownerUid: T.user?.uid || null,
             });
         }
+        if (removerLoot) delObj(objId);
         fecharModal(); toast('✅ Item entregue ao inventário!');
     } catch (e) { console.error(e); toast('❌ Erro ao entregar item', 'danger'); }
 };

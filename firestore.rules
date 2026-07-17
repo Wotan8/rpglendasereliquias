@@ -347,14 +347,47 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create, update, delete: if isMaster();
 
-      // Subcoleções do Tabuleiro (VTT): tabuleiros/{canvasId}/objetos e tabuleiro-meta
+      // ===== Subcoleções do Tabuleiro (VTT) — FASE 7.1 =====
       // Leitura: qualquer usuário autenticado (o modo público filtra a visibilidade no cliente).
-      // Escrita: mestre OU jogador vinculado à mesa (permissões finas são aplicadas no cliente).
+      //
+      // LIMITAÇÃO HONESTA: as permissões finas por ferramenta (desenhar, medir, mover
+      // token específico...) vivem no doc do canvas e mudam com frequência; espelhá-las
+      // 1:1 nas rules exigiria múltiplos get() por write (custo e latência). O modelo
+      // adotado: jogador vinculado à mesa pode escrever nas subcoleções do tabuleiro,
+      // mas NÃO pode alterar a configuração dos canvases (grid, permissões, camadas,
+      // fog) — apenas o campo de exploração compartilhada.
+      function ehJogadorDaMesa() {
+        return isSignedIn() &&
+          request.auth.uid in get(/databases/$(database)/documents/mesas/$(mesaId)).data.jogadores;
+      }
+
+      // Doc do canvas: só o mestre configura; jogadores só atualizam a exploração (fog persistente)
+      match /tabuleiros/{canvasId} {
+        allow read: if isSignedIn();
+        allow create, delete: if isMaster();
+        allow update: if isMaster() ||
+          (ehJogadorDaMesa() &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['exploracao']));
+
+        // Objetos do canvas: mestre ou jogador da mesa (regras finas no cliente)
+        match /objetos/{objId} {
+          allow read: if isSignedIn();
+          allow write: if isMaster() || ehJogadorDaMesa();
+        }
+      }
+
+      // Metadados ao vivo: estado/combate/réguas/presença/pings/legenda
+      match /tabuleiro-meta/{docId} {
+        allow read: if isSignedIn();
+        // legenda (teleprompter) e estado (canvas ativo) são só do mestre
+        allow write: if isMaster() ||
+          (ehJogadorDaMesa() && docId != 'legenda' && docId != 'estado');
+      }
+
+      // Demais subcoleções futuras da mesa
       match /{document=**} {
         allow read: if isSignedIn();
-        allow write: if isMaster() ||
-          (isSignedIn() &&
-           request.auth.uid in get(/databases/$(database)/documents/mesas/$(mesaId)).data.jogadores);
+        allow write: if isMaster() || ehJogadorDaMesa();
       }
     }
 

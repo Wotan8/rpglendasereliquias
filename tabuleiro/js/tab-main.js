@@ -4,14 +4,21 @@
 import {
     db, auth, onAuthStateChanged,
     collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc,
-    onSnapshot, query, where
+    onSnapshot, query, where, writeBatch
 } from '../../painel-mestre/js/firebase-config.js';
 import { T, CAMADAS_PADRAO, PERMISSOES_LISTA, esc, uid, toast, markDirty, camadasVisiveis } from './tab-state.js';
+import { notifyObjectChange, notifyCanvasConfigChange } from './tab-perf.js';
 import { startRenderLoop, centerCamera } from './tab-render.js';
 import { initTools } from './tab-tools.js';
-import { initObjects, abrirPropriedades } from './tab-objects.js';
+import { initObjects, abrirPropriedades, addObj } from './tab-objects.js';
 import { initCombat } from './tab-combat.js';
 import { initMostrar } from './tab-mostrar.js';
+import { initPresenca } from './tab-presenca.js';
+import { initHud } from './tab-hud.js';
+import { initCena, transicaoDeCena } from './tab-cena.js';
+import { initTemplates } from './tab-templates.js';
+import { carregarExploracao } from './tab-fog.js';
+import { posDisplay, screenToWorld } from './tab-render.js';
 
 // ===== Refs Firestore =====
 export const refCanvases = () => collection(db, 'mesas', T.mesaId, 'tabuleiros');
@@ -21,6 +28,9 @@ export const refObjeto = (objId) => doc(db, 'mesas', T.mesaId, 'tabuleiros', T.c
 export const refEstado = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'estado');
 export const refCombate = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'combate');
 export const refReguas = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'reguas');
+export const refPresenca = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'presenca');
+export const refPings = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'pings');
+export const refLegenda = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'legenda');
 
 // ===== BOOT =====
 window.addEventListener('DOMContentLoaded', () => {
@@ -55,6 +65,10 @@ window.addEventListener('DOMContentLoaded', () => {
             initObjects();
             initCombat();
             initMostrar();
+            initPresenca();
+            initHud();
+            initCena();
+            initTemplates();
             startRenderLoop();
             document.getElementById('tbLoading').style.display = 'none';
         } catch (e) {
@@ -75,7 +89,8 @@ async function carregarChars() {
     T.chars = [];
     snap.forEach(d => {
         const raw = d.data(); const f = raw.fields || {};
-        T.chars.push({ id: d.id, nome: f.nome || raw.nome || 'Sem nome', charImg: raw.charImg || '', ownerUid: raw.ownerUid, ownerEmail: raw.ownerEmail, raca: f.raca, classe: f.classe });
+        const desloc = parseFloat(f.deslocamento ?? raw.deslocamento);
+        T.chars.push({ id: d.id, nome: f.nome || raw.nome || 'Sem nome', charImg: raw.charImg || '', ownerUid: raw.ownerUid, ownerEmail: raw.ownerEmail, raca: f.raca, classe: f.classe, desloc: isNaN(desloc) ? null : desloc });
     });
 }
 async function carregarNpcs() {
@@ -102,7 +117,11 @@ async function iniciarSync() {
         T.estado = s.exists() ? s.data() : {};
         if (T.mode === 'public') {
             const alvo = T.estado.canvasAtivoId;
-            if (alvo && alvo !== T.canvasId) trocarCanvas(alvo, false);
+            if (alvo && alvo !== T.canvasId && T.canvasId) {
+                transicaoDeCena(() => trocarCanvas(alvo, false)); // fade + pré-carregamento
+            } else if (alvo && alvo !== T.canvasId) {
+                trocarCanvas(alvo, false);
+            }
         }
         atualizarBarraCanvas();
         markDirty();
@@ -148,12 +167,16 @@ export async function trocarCanvas(id, escreverEstado) {
     if (T.unsubObjetos) { T.unsubObjetos(); T.unsubObjetos = null; }
     T.canvasId = id;
     T.objects = new Map();
+    T.anims = new Map();
+    notifyCanvasConfigChange();
     T.selection = null;
     abrirPropriedades(null);
 
     T.unsubCanvasDoc = onSnapshot(refCanvas(id), s => {
         if (!s.exists()) return;
         T.canvas = { id: s.id, ...s.data() };
+        carregarExploracao(); // F3.1: memória de exploração (merge entre clientes)
+        notifyCanvasConfigChange();
         resolverPermissoes();
         atualizarBarraCanvas();
         window._renderCamadasPanel && window._renderCamadasPanel();
@@ -162,13 +185,29 @@ export async function trocarCanvas(id, escreverEstado) {
     });
     T.unsubObjetos = onSnapshot(refObjetos(id), s => {
         s.docChanges().forEach(ch => {
-            if (ch.type === 'removed') { T.objects.delete(ch.doc.id); if (T.selection === ch.doc.id) { T.selection = null; abrirPropriedades(null); } }
+            if (ch.type === 'removed') {
+                notifyObjectChange(T.objects.get(ch.doc.id) || ch.doc.data());
+                T.objects.delete(ch.doc.id);
+                if (T.selection === ch.doc.id) { T.selection = null; abrirPropriedades(null); }
+            }
             else {
+                notifyObjectChange(ch.doc.data());
                 const local = T.objects.get(ch.doc.id);
                 const novo = { id: ch.doc.id, ...ch.doc.data() };
                 // Não sobrescrever objeto que estou arrastando agora
-                if (local && local.__dragging) { Object.assign(local, novo, { x: local.x, y: local.y, __dragging: true }); }
-                else T.objects.set(ch.doc.id, novo);
+                if (local && local.__dragging) {
+                    Object.assign(local, novo, { x: local.x, y: local.y, __dragging: true, __fogPos: local.__fogPos });
+                } else {
+                    // F2.1: lerp — token movido por OUTRO usuário anima até a nova posição
+                    if (local && novo.tipo === 'token' && novo.lastWriter && novo.lastWriter !== T.user?.uid &&
+                        (Math.abs((novo.x||0) - (local.x||0)) > 0.5 || Math.abs((novo.y||0) - (local.y||0)) > 0.5)) {
+                        const de = posDisplay(local);
+                        T.anims.set(ch.doc.id, { x0: de.x, y0: de.y, t0: Date.now(), dur: 200 });
+                    }
+                    // preserva a posição confirmada do fog enquanto `movendo` estiver ativo (F2.3)
+                    if (local && local.__fogPos && novo.movendo) novo.__fogPos = local.__fogPos;
+                    T.objects.set(ch.doc.id, novo);
+                }
                 if (T.selection === ch.doc.id) abrirPropriedades(ch.doc.id, true);
             }
         });
@@ -237,7 +276,41 @@ export function aplicarModoUI() {
     show('btnPerms', secret);
     show('btnCanvases', secret);
     show('btnCombate', secret || !!(T.estado?.combateVisivelPublico));
+    // FASES 2–6
+    show('toolTemplate', secret);
+    show('toolTerreno', secret);
+    show('btnRelogio', secret);
+    show('btnTeleprompter', secret);
+    show('btnCursores', true);
 }
+
+// ===== RELÓGIOS (F6.2) =====
+window.tbNovoRelogio = function() {
+    if (T.mode !== 'secret') return;
+    abrirModal('⏱️ Novo Relógio de Progresso', `
+        <div class="tb-form-grid">
+            <label>Nome<input type="text" id="rl_nome" placeholder="Ex: Alarme da fortaleza"></label>
+            <label>Fatias<select id="rl_fatias">${[4,6,8,10,12].map(f=>`<option ${f===6?'selected':''}>${f}</option>`).join('')}</select></label>
+            <label>Cor<input type="color" id="rl_cor" value="#ef4444"></label>
+            <label class="tb-check"><input type="checkbox" id="rl_pub"> Visível ao público</label>
+        </div>
+        <div class="tb-muted" style="font-size:.75rem;margin-top:6px">Clique no relógio para avançar uma fatia; botão direito para voltar/zerar.</div>
+        <div class="tb-modal-actions"><button class="tb-btn tb-btn-success" onclick="tbCriarRelogio()">✅ Criar</button></div>
+    `);
+};
+window.tbCriarRelogio = async function() {
+    const centro = screenToWorld({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+    await addObj({
+        tipo: 'relogio', layerId: 'tokens',
+        x: centro.x, y: centro.y,
+        nome: document.getElementById('rl_nome').value.trim(),
+        fatias: parseInt(document.getElementById('rl_fatias').value) || 6,
+        cheias: 0,
+        cor: document.getElementById('rl_cor').value,
+        visivelPublico: document.getElementById('rl_pub').checked,
+    });
+    fecharModal(); toast('⏱️ Relógio criado no centro da tela');
+};
 
 function atualizarBarraCanvas() {
     const el = document.getElementById('tbCanvasNome');
@@ -289,7 +362,13 @@ window.tbExcluirCanvas = async (id) => {
     if (!confirm('Excluir este canvas e TODO o seu conteúdo?')) return;
     try {
         const objs = await getDocs(refObjetos(id));
-        for (const d of objs.docs) await deleteDoc(d.ref);
+        // F7.2: exclusão em lote (1 commit a cada 400 docs)
+        const docs = objs.docs;
+        for (let i = 0; i < docs.length; i += 400) {
+            const lote = writeBatch(db);
+            docs.slice(i, i + 400).forEach(d => lote.delete(d.ref));
+            await lote.commit();
+        }
         await deleteDoc(refCanvas(id));
         if (T.canvasId === id) await trocarCanvas(T.canvases.find(c => c.id !== id).id, false);
         fecharModal(); toast('🗑️ Canvas excluído');
@@ -309,6 +388,31 @@ window.tbAbrirConfig = function() {
             </select></label>
             <label class="tb-check"><input type="checkbox" id="cfg_show" ${g.show!==false?'checked':''}> Mostrar grid</label>
             <label class="tb-check"><input type="checkbox" id="cfg_snap" ${g.snap!==false?'checked':''}> Encaixar tokens no grid</label>
+            <label>Tipo de grid<select id="cfg_gtipo">
+                <option value="quad" ${(g.tipo||'quad')==='quad'?'selected':''}>◻️ Quadrada</option>
+                <option value="hexP" ${g.tipo==='hexP'?'selected':''}>⬡ Hexagonal (ponta p/ cima)</option>
+                <option value="hexF" ${g.tipo==='hexF'?'selected':''}>⬣ Hexagonal (lado p/ cima)</option>
+                <option value="none" ${g.tipo==='none'?'selected':''}>🚫 Sem grid</option>
+            </select></label>
+            <label>Diagonais (grid quadrada)<select id="cfg_diag">
+                <option value="eucl" ${(g.diagonal||'eucl')==='eucl'?'selected':''}>📐 Euclidiana (real)</option>
+                <option value="cheb" ${g.diagonal==='cheb'?'selected':''}>♟️ 5-5-5 (Chebyshev)</option>
+                <option value="alt" ${g.diagonal==='alt'?'selected':''}>🎲 5-10-5 (alternada)</option>
+            </select></label>
+        </div>
+        <hr class="tb-hr">
+        <div class="tb-section-title">🚶 Movimento & Andares</div>
+        <div class="tb-form-grid">
+            <label class="tb-check"><input type="checkbox" id="cfg_lock" ${c.bloquearMovimento?'checked':''}> 🧱 Bloquear movimento através de paredes (jogadores)</label>
+            <label>Altura de cada andar (elevação)<input type="number" id="cfg_andar" value="${c.andarAltura||5}" min="1" step="0.5"></label>
+        </div>
+        <hr class="tb-hr">
+        <div class="tb-section-title">🌦️ Clima</div>
+        <div class="tb-form-grid">
+            <label>Tipo<select id="cfg_clima">
+                ${[['nenhum','— Nenhum —'],['chuva','🌧️ Chuva'],['neve','❄️ Neve'],['cinzas','🌋 Cinzas'],['nevoa','🌫️ Névoa']].map(x=>`<option value="${x[0]}" ${((c.clima?.tipo)||'nenhum')===x[0]?'selected':''}>${x[1]}</option>`).join('')}
+            </select></label>
+            <label>Intensidade<input type="number" id="cfg_climaInt" value="${c.clima?.intensidade||1}" min="0.2" max="2" step="0.2"></label>
         </div>
         <hr class="tb-hr">
         <div class="tb-section-title">🌗 Iluminação Dinâmica</div>
@@ -322,7 +426,11 @@ window.tbAbrirConfig = function() {
                 <input type="range" id="cfg_fog" min="0" max="100" value="${Math.round((l.fogSecretOpacity??0.6)*100)}">
             </label>
         </div>
-        <div class="tb-muted" style="font-size:.78rem;margin-top:6px">No modo público o fog é sempre 100% quando ativo. Riscos na camada <b>💡 Luz</b> bloqueiam a visão dos tokens.</div>
+        <div class="tb-form-grid" style="margin-top:6px">
+            <label class="tb-check"><input type="checkbox" id="cfg_memoria" ${l.memoria!==false?'checked':''}> 🗺️ Memória de exploração (áreas já vistas ficam semivisíveis)</label>
+            <button class="tb-btn tb-btn-small tb-btn-danger" type="button" onclick="tbResetExploracao()">🌫️ Resetar exploração da mesa</button>
+        </div>
+        <div class="tb-muted" style="font-size:.78rem;margin-top:6px">No modo público o fog é sempre 100% quando ativo. Riscos na camada <b>💡 Luz</b> bloqueiam a visão dos tokens; 🪟 janelas deixam a luz passar mas bloqueiam movimento; 🚪 portas abertas liberam os dois.</div>
         <div class="tb-modal-actions"><button class="tb-btn tb-btn-success" onclick="tbSalvarConfig()">💾 Salvar</button></div>
     `);
 };
@@ -330,9 +438,12 @@ window.tbSalvarConfig = async function() {
     const v = id => document.getElementById(id);
     try {
         await updateDoc(refCanvas(), {
-            grid: { size: parseInt(v('cfg_grid').value)||70, show: v('cfg_show').checked, snap: v('cfg_snap').checked },
+            grid: { size: parseInt(v('cfg_grid').value)||70, show: v('cfg_show').checked, snap: v('cfg_snap').checked, tipo: v('cfg_gtipo').value, diagonal: v('cfg_diag').value },
             escala: { valorPorCelula: parseFloat(v('cfg_vpc').value)||1.5, unidade: v('cfg_un').value },
-            luzDinamica: { ativa: v('cfg_luz').checked, modo: v('cfg_modo').value, fogSecretOpacity: (parseInt(v('cfg_fog').value)||0)/100 },
+            luzDinamica: { ativa: v('cfg_luz').checked, modo: v('cfg_modo').value, fogSecretOpacity: (parseInt(v('cfg_fog').value)||0)/100, memoria: v('cfg_memoria').checked },
+            bloquearMovimento: v('cfg_lock').checked,
+            andarAltura: parseFloat(v('cfg_andar').value)||5,
+            clima: { tipo: v('cfg_clima').value, intensidade: parseFloat(v('cfg_climaInt').value)||1 },
         });
         fecharModal(); toast('✅ Configurações salvas');
     } catch (e) { console.error(e); toast('❌ Erro ao salvar', 'danger'); }

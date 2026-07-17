@@ -1,10 +1,14 @@
 // =============================================
 // TABULEIRO — Objetos (CRUD), Uploads, Tokens, Camadas, Propriedades
 // =============================================
-import { db, storage, ref, uploadBytes, getDownloadURL, setDoc, updateDoc, deleteDoc, doc } from '../../painel-mestre/js/firebase-config.js';
+import { db, storage, ref, uploadBytes, getDownloadURL, setDoc, updateDoc, deleteDoc, doc, writeBatch } from '../../painel-mestre/js/firebase-config.js';
 import { T, esc, uid, toast, markDirty, gridSize, getCamada, escalaCanvas } from './tab-state.js';
 import { refObjeto, refObjetos, refCanvas, abrirModal, fecharModal } from './tab-main.js';
+import { notifyObjectChange } from './tab-perf.js';
 import { bboxOf, centerCamera, screenToWorld } from './tab-render.js';
+import { detectarGradeDeArquivo, faixaDe } from './tab-grid.js';
+import { registrarOp } from './tab-undo.js';
+import { SENSORES } from './tab-fog.js';
 
 // ===== CRUD =====
 export async function addObj(data) {
@@ -13,20 +17,33 @@ export async function addObj(data) {
         z: Date.now(),
         visivelPublico: data.layerId === 'dm' ? false : true,
         criadoPor: T.user?.uid || null,
+        lastWriter: T.user?.uid || null,
         atualizadoEm: Date.now(),
         ...data,
     };
-    T.objects.set(id, { id, ...obj }); markDirty();
+    T.objects.set(id, { id, ...obj });
+    registrarOp({ tipo: 'add', id, dados: obj });
+    notifyObjectChange(obj);
+    markDirty();
     try { await setDoc(refObjeto(id), obj); } catch (e) { console.error(e); toast('❌ Erro ao salvar objeto', 'danger'); T.objects.delete(id); markDirty(); }
     return id;
 }
 
 const _throttles = new Map();
+const CAMPOS_MOVIMENTO = new Set(['x', 'y', 'pontos', 'movendo']);
 export function updObj(id, patch, throttleMs = 0) {
     const o = T.objects.get(id);
-    if (o) { Object.assign(o, patch); markDirty(); }
+    // F7.3: undo automático para patches de PROPRIEDADES (movimento é registrado nas tools)
+    if (o && !throttleMs && !Object.keys(patch).some(k => CAMPOS_MOVIMENTO.has(k))) {
+        const antes = {};
+        for (const k of Object.keys(patch)) antes[k] = o[k] !== undefined ? o[k] : null;
+        registrarOp({ tipo: 'patch', id, antes, depois: { ...patch } });
+    }
+    if (o) { Object.assign(o, patch); notifyObjectChange(o); markDirty(); }
+    // F2.2: todo write carrega lastWriter (anti-eco do lerp) e timestamp
+    const meta = () => ({ atualizadoEm: Date.now(), lastWriter: T.user?.uid || null });
     const write = async () => {
-        try { await updateDoc(refObjeto(id), { ...patch, atualizadoEm: Date.now() }); }
+        try { await updateDoc(refObjeto(id), { ...patch, ...meta() }); }
         catch (e) { console.warn('updObj', e); }
     };
     if (!throttleMs) { write(); return; }
@@ -36,12 +53,15 @@ export function updObj(id, patch, throttleMs = 0) {
     if (agora - th.t > throttleMs) { th.t = agora; write(); }
     else {
         clearTimeout(th.timer);
-        th.timer = setTimeout(() => { th.t = Date.now(); updateDoc(refObjeto(id), { ...th.last, atualizadoEm: Date.now() }).catch(()=>{}); }, throttleMs);
+        th.timer = setTimeout(() => { th.t = Date.now(); updateDoc(refObjeto(id), { ...th.last, ...meta() }).catch(()=>{}); }, throttleMs);
     }
     _throttles.set(id, th);
 }
 
 export async function delObj(id) {
+    const atual = T.objects.get(id);
+    if (atual) registrarOp({ tipo: 'del', id, dados: { ...atual } });
+    notifyObjectChange(atual);
     T.objects.delete(id);
     if (T.selection === id) { T.selection = null; abrirPropriedades(null); }
     markDirty();
@@ -73,7 +93,12 @@ export function initObjects() {
         if (!file) return;
         toast('⏳ Enviando imagem...', 'warning');
         try {
-            const url = await uploadArquivo(file);
+            // F7.5: detecta a grade no ARQUIVO local (o Storage devolve imagem "tainted")
+            const [grade, url] = await Promise.all([
+                detectarGradeDeArquivo(file).catch(() => null),
+                uploadArquivo(file),
+            ]);
+            window._tbGradeDetectada = (grade && grade.forca > 0.2 && grade.cell >= 20) ? grade : null;
             abrirModalNovaImagem(url);
         } catch (err) { console.error(err); toast('❌ Erro no upload', 'danger'); }
     });
@@ -95,6 +120,8 @@ function abrirModalNovaImagem(url) {
                 <input type="number" id="ni_larguraReal" value="0" min="0" step="0.5">
             </label>
             <label>Unidade<select id="ni_un">${['m','cm','ft'].map(u=>`<option ${escalaCanvas().unidade===u?'selected':''}>${u}</option>`).join('')}</select></label>
+            ${window._tbGradeDetectada ? `<label class="tb-check"><input type="checkbox" id="ni_useGrade" checked> 🧮 Detectamos grade de ~${window._tbGradeDetectada.cell}px — dimensionar para casar com o grid</label>` : ''}
+            ${T.mode === 'secret' ? `<label class="tb-check"><input type="checkbox" id="ni_telhado"> 🏠 É um telhado (fica acima dos tokens e some quando alguém entra)</label>` : ''}
         </div>
         <div class="tb-modal-actions"><button class="tb-btn tb-btn-success" onclick="tbConfirmarImagem('${url}')">✅ Adicionar</button></div>
     `);
@@ -106,13 +133,21 @@ window.tbConfirmarImagem = async function(url) {
     const dim = await lerDimensoes(url);
     const centro = screenToWorld({ x: window.innerWidth/2, y: window.innerHeight/2 });
     let w = dim.w, h = dim.h;
+    const useGrade = document.getElementById('ni_useGrade')?.checked && window._tbGradeDetectada;
+    if (useGrade && larguraReal <= 0) {
+        // dimensiona para que a célula detectada = célula do grid
+        w = (dim.w / window._tbGradeDetectada.cell) * gridSize();
+        h = w * (dim.h / dim.w);
+    }
     if (larguraReal > 0) {
         // dimensiona para que a escala do grid bata: larguraReal unidades => (larguraReal/vpc)*gridSize px
         const e = escalaCanvas();
         w = (larguraReal / (e.valorPorCelula || 1)) * gridSize();
         h = w * (dim.h / dim.w);
     }
-    await addObj({ tipo: 'imagem', layerId, url, x: centro.x - w/2, y: centro.y - h/2, w, h, larguraReal, unidade, propW: dim.w, propH: dim.h });
+    const telhado = document.getElementById('ni_telhado')?.checked || false;
+    await addObj({ tipo: 'imagem', layerId, url, x: centro.x - w/2, y: centro.y - h/2, w, h, larguraReal, unidade, propW: dim.w, propH: dim.h, telhado });
+    window._tbGradeDetectada = null;
     fecharModal(); toast('✅ Imagem adicionada');
 };
 
@@ -141,6 +176,7 @@ window.tbAbrirToken = function() {
             <label class="tb-check"><input type="checkbox" id="tk_visao" checked> Tem visão</label>
             <label>Alcance da visão (${escalaCanvas().unidade})<input type="number" id="tk_alcance" value="9" min="0" step="0.5"></label>
             <label>Amplitude (graus)<input type="number" id="tk_angulo" value="360" min="10" max="360"></label>
+            <label>Tipo de visão<select id="tk_sensor">${SENSORES.map(x => `<option value="${x.id}">${x.nome}</option>`).join('')}</select></label>
         </div>
         <div class="tb-form-grid" style="margin-top:6px">
             <label class="tb-check"><input type="checkbox" id="tk_temImg"> Usar imagem personalizada (upload)</label>
@@ -170,7 +206,7 @@ window.tbCriarToken = async function() {
             tamanhoCelulas: parseFloat(document.getElementById('tk_tam').value) || 1,
             visivelPublico: document.getElementById('tk_visPub').checked,
             vinculo, rot: 0,
-            visao: { ativa: document.getElementById('tk_visao').checked, alcance: parseFloat(document.getElementById('tk_alcance').value) || 9, angulo: parseInt(document.getElementById('tk_angulo').value) || 360 },
+            visao: { ativa: document.getElementById('tk_visao').checked, alcance: parseFloat(document.getElementById('tk_alcance').value) || 9, angulo: parseInt(document.getElementById('tk_angulo').value) || 360, tipo: document.getElementById('tk_sensor').value || 'padrao' },
             luz: { ativa: false, alcance: 3 },
             mostrarNome: true,
         });
@@ -208,10 +244,24 @@ export function renderCamadasPanel() {
                 ${c.tipo === 'custom' ? `<button class="tb-mini-btn" title="Configurar" onclick="tbConfigCamada('${c.id}')">⚙️</button><button class="tb-mini-btn tb-danger" onclick="tbExcluirCamada('${c.id}')">🗑️</button>` : ''}
             </span>
         </div>`).join('') +
+        (T.mode === 'secret' ? `<div style="margin-top:8px"><label class="tb-muted" style="font-size:.72rem">🪜 Andar ativo (filtra tokens/paredes por elevação)</label>
+        <select style="width:100%" onchange="tbSetAndarAtivo(this.value)">
+            <option value="" ${T.andarAtivo==null?'selected':''}>Todos os andares</option>
+            ${andaresDisponiveis().map(a => `<option value="${a}" ${T.andarAtivo===a?'selected':''}>Andar ${a} (${a*(T.canvas?.andarAltura||5)}–${(a+1)*(T.canvas?.andarAltura||5)})</option>`).join('')}
+        </select></div>` : '') +
         `<button class="tb-btn tb-btn-small" style="width:100%;margin-top:8px" onclick="tbNovaCamada()">➕ Nova camada</button>
         <div class="tb-muted" style="font-size:.72rem;margin-top:6px">Camada ativa recebe desenhos, textos e uploads. Riscos na camada 💡 Luz bloqueiam a visão.</div>`;
 }
 window.tbSetCamadaAtiva = (id) => { T.activeLayerId = id; renderCamadasPanel(); toast('Camada ativa: ' + (getCamada(id)?.nome || id)); };
+function andaresDisponiveis() {
+    const alt = T.canvas?.andarAltura || 5;
+    const set = new Set([0]);
+    for (const o of T.objects.values()) {
+        if (o.elev != null) set.add(faixaDe(o.elev, alt));
+    }
+    return [...set].sort((a, b) => a - b);
+}
+window.tbSetAndarAtivo = (v) => { T.andarAtivo = v === '' ? null : parseInt(v); markDirty(); };
 window.tbToggleCamadaPub = async (id) => {
     const cs = (T.canvas.camadas || []).map(c => c.id === id ? { ...c, visivelPublico: !(c.visivelPublico !== false) } : c);
     await updateDoc(refCanvas(), { camadas: cs });
@@ -302,7 +352,8 @@ export function abrirPropriedades(id, soAtualizar) {
         <label>Largura (px)<input type="number" id="pr_w" value="${Math.round(o.w||0)}" onchange="tbProp('${id}','w',parseFloat(this.value)||10,true)"></label>
         <label>Altura (px)<input type="number" id="pr_h" value="${Math.round(o.h||0)}" onchange="tbProp('${id}','h',parseFloat(this.value)||10)"></label>
         <label>Largura real p/ régua (0 = não é mapa)<input type="number" id="pr_lr" value="${o.larguraReal||0}" step="0.5" onchange="tbProp('${id}','larguraReal',parseFloat(this.value)||0)"></label>
-        <label>Unidade<select onchange="tbProp('${id}','unidade',this.value)">${['m','cm','ft'].map(u=>`<option ${o.unidade===u?'selected':''}>${u}</option>`).join('')}</select></label>`;
+        <label>Unidade<select onchange="tbProp('${id}','unidade',this.value)">${['m','cm','ft'].map(u=>`<option ${o.unidade===u?'selected':''}>${u}</option>`).join('')}</select></label>
+        <label class="tb-check"><input type="checkbox" ${o.telhado?'checked':''} onchange="tbProp('${id}','telhado',this.checked)"> 🏠 Telhado (acima dos tokens; some quando alguém entra)</label>`;
     if (o.tipo === 'token') extra = `
         <label>Nome<input type="text" value="${esc(o.nome||'')}" onchange="tbProp('${id}','nome',this.value)"></label>
         <label>Tamanho (células)<input type="number" step="0.25" min="0.25" value="${o.tamanhoCelulas||1}" onchange="tbProp('${id}','tamanhoCelulas',parseFloat(this.value)||1)"></label>
@@ -311,8 +362,15 @@ export function abrirPropriedades(id, soAtualizar) {
         <label>Alcance visão<input type="number" step="0.5" value="${o.visao?.alcance||9}" onchange="tbPropDeep('${id}','visao','alcance',parseFloat(this.value)||0)"></label>
         <label>Amplitude (°)<input type="number" min="10" max="360" value="${o.visao?.angulo||360}" onchange="tbPropDeep('${id}','visao','angulo',parseInt(this.value)||360)"></label>
         <label>Direção (°)<input type="number" value="${o.rot||0}" onchange="tbProp('${id}','rot',parseFloat(this.value)||0)"></label>
+        <label>Tipo de visão<select onchange="tbPropDeep('${id}','visao','tipo',this.value)">${SENSORES.map(x=>`<option value="${x.id}" ${((o.visao?.tipo)||'padrao')===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></label>
+        <label class="tb-check"><input type="checkbox" ${o.invisivel?'checked':''} onchange="tbProp('${id}','invisivel',this.checked)"> 👻 Invisível</label>
+        <label>Elevação<input type="number" step="0.5" value="${o.elev||0}" onchange="tbProp('${id}','elev',parseFloat(this.value)||0)"></label>
+        <label>Barras de vitais<select onchange="tbProp('${id}','barras',this.value)">${[['todos','Todos veem'],['dono','Só o dono'],['mestre','Só o mestre'],['off','Ocultas']].map(x=>`<option value="${x[0]}" ${((o.barras)||'todos')===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
         <label class="tb-check"><input type="checkbox" ${o.luz?.ativa?'checked':''} onchange="tbPropDeep('${id}','luz','ativa',this.checked)"> Emite luz</label>
-        <label>Alcance luz<input type="number" step="0.5" value="${o.luz?.alcance||3}" onchange="tbPropDeep('${id}','luz','alcance',parseFloat(this.value)||0)"></label>`;
+        <label>Alcance luz<input type="number" step="0.5" value="${o.luz?.alcance||3}" onchange="tbPropDeep('${id}','luz','alcance',parseFloat(this.value)||0)"></label>
+        <label>Cor da luz<input type="color" value="${o.luz?.cor||'#ffdd99'}" onchange="tbPropDeep('${id}','luz','cor',this.value)"></label>
+        <label>Ângulo da luz (° · 360 = tudo)<input type="number" min="10" max="360" value="${o.luz?.angulo||360}" onchange="tbPropDeep('${id}','luz','angulo',parseInt(this.value)||360)"></label>
+        <label>Animação da luz<select onchange="tbPropDeep('${id}','luz','animacao',this.value)">${[['nenhuma','Nenhuma'],['tocha','🔥 Tocha'],['pulso','💗 Pulso'],['estrobo','⚡ Estroboscópica']].map(x=>`<option value="${x[0]}" ${((o.luz?.animacao)||'nenhuma')===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>`;
     if (o.tipo === 'texto') extra = `
         <label>Texto<textarea rows="3" onchange="tbProp('${id}','texto',this.value)">${esc(o.texto||'')}</textarea></label>
         <label>Cor<input type="color" value="${o.cor||'#ffffff'}" onchange="tbProp('${id}','cor',this.value)"></label>
@@ -325,14 +383,38 @@ export function abrirPropriedades(id, soAtualizar) {
     if (o.tipo === 'alfinete') extra = `
         <label>Título<input type="text" value="${esc(o.titulo||'')}" onchange="tbProp('${id}','titulo',this.value)"></label>
         <label>Descrição<textarea rows="3" onchange="tbProp('${id}','descricao',this.value)">${esc(o.descricao||'')}</textarea></label>
-        <label>Cor<input type="color" value="${o.cor||'#ef4444'}" onchange="tbProp('${id}','cor',this.value)"></label>`;
+        <label>Cor<input type="color" value="${o.cor||'#ef4444'}" onchange="tbProp('${id}','cor',this.value)"></label>
+        <button class="tb-btn tb-btn-small" onclick="tbEditarAlfinete('${id}')">📝 Editar completo (imagem/vínculo)</button>`;
     if (o.tipo === 'luz') extra = `
-        <label>Alcance (${escalaCanvas().unidade})<input type="number" step="0.5" value="${o.alcance||6}" onchange="tbProp('${id}','alcance',parseFloat(this.value)||1)"></label>`;
+        <label>Alcance (${escalaCanvas().unidade})<input type="number" step="0.5" value="${o.alcance||6}" onchange="tbProp('${id}','alcance',parseFloat(this.value)||1)"></label>
+        <label>Cor<input type="color" value="${o.cor||'#ffdd99'}" onchange="tbProp('${id}','cor',this.value)"></label>
+        <label>Animação<select onchange="tbProp('${id}','animacao',this.value)">${[['nenhuma','Nenhuma'],['tocha','🔥 Tocha'],['pulso','💗 Pulso'],['estrobo','⚡ Estroboscópica']].map(x=>`<option value="${x[0]}" ${((o.animacao)||'nenhuma')===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+        <label>Intensidade da animação<input type="number" min="0.1" max="1" step="0.1" value="${o.intensidadeAnim||0.5}" onchange="tbProp('${id}','intensidadeAnim',parseFloat(this.value)||0.5)"></label>
+        <label>Elevação<input type="number" step="0.5" value="${o.elev||0}" onchange="tbProp('${id}','elev',parseFloat(this.value)||0)"></label>`;
     if (o.tipo === 'porta') extra = `
-        <label class="tb-check"><input type="checkbox" ${o.aberta?'checked':''} onchange="tbProp('${id}','aberta',this.checked)"> Porta aberta (não bloqueia a luz)</label>`;
+        <label class="tb-check"><input type="checkbox" ${o.aberta?'checked':''} onchange="tbProp('${id}','aberta',this.checked)"> Porta aberta (não bloqueia luz nem movimento)</label>
+        <label>Elevação<input type="number" step="0.5" value="${o.elev||0}" onchange="tbProp('${id}','elev',parseFloat(this.value)||0)"></label>`;
+    if (o.tipo === 'janela') extra = `
+        <label class="tb-muted" style="font-size:.72rem">🪟 Janela: deixa a luz passar, mas bloqueia o movimento.</label>
+        <label>Elevação<input type="number" step="0.5" value="${o.elev||0}" onchange="tbProp('${id}','elev',parseFloat(this.value)||0)"></label>`;
     if (o.tipo === 'desenho') extra = `
         <label>Cor<input type="color" value="${o.cor||'#3b82f6'}" onchange="tbProp('${id}','cor',this.value)"></label>
-        <label>Grossura<input type="number" min="1" max="60" value="${o.grossura||4}" onchange="tbProp('${id}','grossura',parseInt(this.value)||4)"></label>`;
+        <label>Grossura<input type="number" min="1" max="60" value="${o.grossura||4}" onchange="tbProp('${id}','grossura',parseInt(this.value)||4)"></label>
+        ${o.layerId === 'luz' ? `<label>Elevação da parede<input type="number" step="0.5" value="${o.elev||0}" onchange="tbProp('${id}','elev',parseFloat(this.value)||0)"></label>` : ''}`;
+    if (o.tipo === 'template') extra = `
+        <label>Cor<input type="color" value="${o.cor||'#f97316'}" onchange="tbProp('${id}','cor',this.value)"></label>
+        <label>Opacidade (%)<input type="number" min="5" max="90" value="${Math.round((o.alpha??0.35)*100)}" onchange="tbProp('${id}','alpha',(parseInt(this.value)||35)/100)"></label>
+        <label>Duração (rodadas · 0 = permanente)<input type="number" min="0" value="${o.duracao||0}" onchange="tbProp('${id}','duracao',parseInt(this.value)||0)"></label>`;
+    if (o.tipo === 'relogio') extra = `
+        <label>Nome<input type="text" value="${esc(o.nome||'')}" onchange="tbProp('${id}','nome',this.value)"></label>
+        <label>Fatias<select onchange="tbProp('${id}','fatias',parseInt(this.value))">${[4,6,8,10,12].map(f=>`<option ${((o.fatias)||6)===f?'selected':''}>${f}</option>`).join('')}</select></label>
+        <label>Preenchidas<input type="number" min="0" value="${o.cheias||0}" onchange="tbProp('${id}','cheias',parseInt(this.value)||0)"></label>
+        <label>Cor<input type="color" value="${o.cor||'#ef4444'}" onchange="tbProp('${id}','cor',this.value)"></label>`;
+    if (o.tipo === 'terreno') extra = `
+        <label>Multiplicador de movimento<select onchange="tbProp('${id}','mult',parseFloat(this.value))">${[1.5,2,3,4].map(m=>`<option ${((o.mult)||2)===m?'selected':''}>x${m}</option>`).join('')}</select></label>`;
+    if (o.tipo === 'loot') extra = `
+        <label>Nome do item<input type="text" value="${esc(o.nome||'')}" onchange="tbProp('${id}','nome',this.value)"></label>
+        <label class="tb-muted" style="font-size:.72rem">📦 Arraste o loot sobre um token para entregá-lo.</label>`;
 
     document.getElementById('tbPropsBody').innerHTML = `
         <div class="tb-props-title">${iconeTipo(o.tipo)} ${esc(o.nome || o.titulo || o.tipo)}</div>
@@ -348,7 +430,7 @@ export function abrirPropriedades(id, soAtualizar) {
             <button class="tb-btn tb-btn-small tb-btn-danger" onclick="tbExcluirObj('${id}')">🗑️ Excluir</button>
         </div>`;
 }
-function iconeTipo(t) { return { imagem:'🖼️', token:'🎭', texto:'🔤', desenho:'✏️', medida:'📏', alfinete:'📌', luz:'💡', porta:'🚪', janela:'🪟', mostrar:'🎁' }[t] || '⬜'; }
+function iconeTipo(t) { return { imagem:'🖼️', token:'🎭', texto:'🔤', desenho:'✏️', medida:'📏', alfinete:'📌', luz:'💡', porta:'🚪', janela:'🪟', mostrar:'🎁', template:'🎯', terreno:'⛰️', relogio:'⏱️', loot:'📦' }[t] || '⬜'; }
 
 window.tbProp = function(id, campo, valor, manterProporcao) {
     const patch = { [campo]: valor };
@@ -373,11 +455,19 @@ window.tbExcluirObj = (id) => { delObj(id); };
 // ===== LIMPAR DESENHOS E TEXTO =====
 window.tbLimparDesenhos = async function() {
     if (!confirm('Limpar todos os desenhos, textos e medições permanentes (exceto camada Luz)?')) return;
-    for (const o of [...T.objects.values()]) {
-        if (o.layerId === 'luz') continue;
-        if (['desenho', 'texto', 'medida'].includes(o.tipo)) await delObj(o.id);
+    const alvos = [...T.objects.values()].filter(o => o.layerId !== 'luz' && ['desenho', 'texto', 'medida'].includes(o.tipo));
+    // F7.2: exclusão em LOTE (1 commit a cada 400 docs em vez de 1 write por doc)
+    for (let i = 0; i < alvos.length; i += 400) {
+        const lote = writeBatch(db);
+        for (const o of alvos.slice(i, i + 400)) {
+            lote.delete(refObjeto(o.id));
+            T.objects.delete(o.id);
+        }
+        await lote.commit().catch(e => console.warn('batch', e));
     }
-    toast('🧹 Desenhos e textos limpos');
+    if (T.selection && !T.objects.has(T.selection)) { T.selection = null; abrirPropriedades(null); }
+    markDirty();
+    toast(`🧹 ${alvos.length} objeto(s) limpos em lote`);
 };
 
 window.tbCentralizar = () => centerCamera();

@@ -22,6 +22,9 @@
         <span id="tbMesaNome"></span>
         <span id="tbCanvasNome" onclick="if(window.tbAbrirCanvases)tbAbrirCanvases()" title="Trocar de canvas"></span>
         <span class="tb-spacer"></span>
+        <button class="tb-btn tb-btn-small" id="btnCursores" title="Cursores ao vivo">👥</button>
+        <button class="tb-btn tb-btn-small" id="btnRelogio" onclick="tbNovoRelogio()" title="Relógio de progresso">⏱️</button>
+        <button class="tb-btn tb-btn-small" id="btnTeleprompter" title="Teleprompter / Legendas">🎬</button>
         <button class="tb-btn tb-btn-small" id="btnCombate" onclick="tbToggleCombate()" title="Janela de Combate">⚔️ Combate</button>
         <button class="tb-btn tb-btn-small" id="btnMostrar" onclick="tbAbrirMostrar()" title="Mostrar NPC / Item">🎁 Mostrar</button>
         <button class="tb-btn tb-btn-small" id="btnCanvases" onclick="tbAbrirCanvases()" title="Gerenciar canvases">🗂️</button>
@@ -42,6 +45,8 @@
         <div class="tb-sep"></div>
         <button class="tb-tool" id="toolPin" data-tool="pin" data-tip="Alfinetes">📌</button>
         <button class="tb-tool" id="toolLight" data-tool="light" data-tip="Iluminação — luz, portas e janelas">💡</button>
+        <button class="tb-tool" id="toolTemplate" data-tool="template" data-tip="Templates de área (círculo, cone, linha, retângulo)">🎯</button>
+        <button class="tb-tool" id="toolTerreno" data-tool="terreno" data-tip="Terreno difícil — clique nos vértices, duplo-clique fecha">⛰️</button>
         <div class="tb-sep"></div>
         <button class="tb-tool" id="btnUploadImg" onclick="tbUploadImagem()" data-tip="Adicionar imagem / mapa">🖼️</button>
         <button class="tb-tool" id="btnToken" onclick="tbAbrirToken()" data-tip="Novo token (personagem, NPC ou custom)">🎭</button>
@@ -99,7 +104,25 @@
             <button data-luz="porta">🚪 Inserir Porta</button>
             <button data-luz="janela">🪟 Inserir Janela</button>
         </div>
-        <div class="tb-muted" style="font-size:.7rem;max-width:200px">Desenhe (🖌️) na camada <b>💡 Luz</b> para criar paredes que bloqueiam a visão. Duplo clique na porta abre/fecha.</div>
+        <div class="tb-muted" style="font-size:.7rem;max-width:200px">Desenhe (🖌️) na camada <b>💡 Luz</b> para criar paredes que bloqueiam a visão. Duplo clique na porta abre/fecha. 🪟 Janelas: luz passa, movimento não.</div>
+    </div>
+    <div class="tb-subbar" id="tbTemplateBar" style="top:305px">
+        <div class="tb-section-title" style="margin:0">🎯 Templates de Área</div>
+        <div class="tb-subrow" style="flex-direction:column;align-items:stretch">
+            <button data-tpl="circulo" class="active">⭕ Círculo (arraste o raio)</button>
+            <button data-tpl="cone">📐 Cone</button>
+            <button data-tpl="linha">➖ Linha</button>
+            <button data-tpl="ret">▭ Retângulo</button>
+        </div>
+        <div class="tb-subrow"><label>Ângulo cone°<input type="number" id="tplAng" value="60" min="10" max="180" style="width:56px"></label></div>
+        <div class="tb-subrow"><label>Largura linha (cel)<input type="number" id="tplLarg" value="1" min="0.5" step="0.5" style="width:56px"></label></div>
+        <div class="tb-subrow"><label>Cor<input type="color" id="tplCor" value="#f97316"></label><label>Alpha%<input type="number" id="tplAlpha" value="35" min="5" max="90" style="width:52px"></label></div>
+        <div class="tb-subrow"><label>Duração (rodadas · 0=∞)<input type="number" id="tplDur" value="0" min="0" style="width:56px"></label></div>
+    </div>
+    <div class="tb-subbar" id="tbTerrenoBar" style="top:345px">
+        <div class="tb-section-title" style="margin:0">⛰️ Terreno Difícil</div>
+        <div class="tb-subrow"><label>Multiplicador<select id="terMult"><option value="1.5">x1.5</option><option value="2" selected>x2</option><option value="3">x3</option><option value="4">x4</option></select></label></div>
+        <div class="tb-muted" style="font-size:.7rem;max-width:200px">Clique para adicionar vértices; duplo-clique ou Enter fecha o polígono. Só o mestre vê; réguas e movimento pagam o custo.</div>
     </div>
 
     <!-- Painel de camadas -->
@@ -131,6 +154,10 @@
         <button onclick="tbZoom(1.2)" title="Aproximar">➕</button>
         <button onclick="tbZoom(1/1.2)" title="Afastar">➖</button>
     </div>
+
+    <!-- FX de cena (F6): fade de transição + teleprompter -->
+    <div id="tbFadeOverlay"></div>
+    <div id="tbLegenda"></div>
 
     <!-- Modal genérico -->
     <div class="tb-modal" id="tbModal">

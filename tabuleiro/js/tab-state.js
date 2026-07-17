@@ -49,6 +49,17 @@ export const T = {
     imgCache: new Map(),
     dirty: true,
 
+    // FASE 2 — sincronização
+    anims: new Map(),        // id -> { x0, y0, t0, dur } (lerp de tokens remotos)
+    camTween: null,          // tween de câmera em andamento
+    cursoresRemotos: {},     // uid -> cursor
+    pingsAtivos: [],         // pings em animação
+
+    // FASE 3 — visão
+    visiveisAgora: null,     // [{ poly, sensor, precisaLuz }] (público)
+    _litPolys: null,         // 'dia' | [poly]
+    andarAtivo: null,        // filtro de andar (secreto); null = todos
+
     unsubs: [],
     unsubObjetos: null,
     unsubCanvasDoc: null,
@@ -122,6 +133,34 @@ export function mapaSobPonto(pt) {
         }
     }
     return melhor;
+}
+
+/** Configuração de grid consolidada (F4). */
+export function cfgGrid() {
+    const g = T.canvas?.grid || {};
+    return { gs: gridSize(), tipo: g.tipo || 'quad', diagonal: g.diagonal || 'eucl' };
+}
+
+/** Unidades por CÉLULA no ponto dado (usa a escala do mapa sob o ponto, se houver). */
+export function upcEm(pt) {
+    const e = escalaCanvas();
+    if (pt) {
+        const mapa = mapaSobPonto(pt);
+        if (mapa && mapa.larguraReal > 0 && mapa.w > 0) {
+            return (mapa.larguraReal / mapa.w) * gridSize();
+        }
+    }
+    return e.valorPorCelula || 1;
+}
+
+/** Unidade de medida no ponto dado. */
+export function unidadeEm(pt) {
+    const e = escalaCanvas();
+    if (pt) {
+        const mapa = mapaSobPonto(pt);
+        if (mapa && mapa.larguraReal > 0) return mapa.unidade || e.unidade;
+    }
+    return e.unidade;
 }
 
 export function fmtDist(d) {

@@ -1,23 +1,37 @@
 // =============================================
-// TABULEIRO — Ferramentas & Interações
-// Seleção, Mover, Desenho, Texto, Régua, Alfinetes, Luz, Pan/Zoom
+// TABULEIRO — Ferramentas & Interações (FASES 1–7)
+// Seleção, Mover (waypoints+custo+lock), Desenho, Texto, Régua (hex/diagonal/terreno),
+// Alfinetes avançados, Luz, Templates AoE, Terreno difícil, Pan/Zoom/Pinch,
+// Cursores/Pings, Menu radial, Undo/Redo, Atalhos e toque.
 // =============================================
 import { setDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, markDirty, gridSize, can, camadasVisiveis, objVisivel, tokenDoUsuario, pxParaUnidades, fmtDist, getCamada } from './tab-state.js';
+import { T, esc, toast, markDirty, gridSize, can, camadasVisiveis, objVisivel, tokenDoUsuario, pxParaUnidades, fmtDist, getCamada, cfgGrid, upcEm, unidadeEm } from './tab-state.js';
 import { refReguas, abrirModal, fecharModal } from './tab-main.js';
-import { screenToWorld, worldToScreen, bboxOf, handlesOf, centerCamera } from './tab-render.js';
-import { addObj, updObj, delObj, maxZ, abrirPropriedades } from './tab-objects.js';
+import { screenToWorld, worldToScreen, bboxOf, handlesOf, centerCamera, paredesDeMovimento, getImg } from './tab-render.js';
+import { addObj, updObj, delObj, maxZ, abrirPropriedades, uploadArquivo } from './tab-objects.js';
+import { snapPonto, medirTrajeto, trajetoColide } from './tab-grid.js';
+import { publicarCursor, enviarPing } from './tab-presenca.js';
+import { abrirMenuRadial } from './tab-hud.js';
+import { confirmarTemplate, confirmarTerreno, terrenosDoCanvas, tplCfg } from './tab-templates.js';
+import { desfazer, refazer, registrarOp } from './tab-undo.js';
 
 let cv;
-let ponteiro = null;   // estado do gesto atual
+let ponteiro = null;    // estado do gesto atual
 let luzSubTool = 'luz'; // luz | porta | janela
 let reguaTimer = 0;
+const DRAG_THROTTLE = 100; // F2.2: padronizado
+
+// Toque: pinch + long-press
+const pointersAtivos = new Map();
+let pinch = null;
+let longPressTimer = null;
 
 export function initTools() {
     cv = document.getElementById('tbCanvas');
     cv.addEventListener('pointerdown', onDown);
     cv.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
     cv.addEventListener('wheel', onWheel, { passive: false });
     cv.addEventListener('contextmenu', e => e.preventDefault());
     cv.addEventListener('dblclick', onDblClick);
@@ -39,9 +53,7 @@ export function initTools() {
     const mc = T.measureCfg;
     const bind = (id, campo, tipo) => {
         const el = document.getElementById(id); if (!el) return;
-        el.addEventListener(tipo === 'check' ? 'change' : 'change', () => {
-            mc[campo] = tipo === 'check' ? el.checked : el.value;
-        });
+        el.addEventListener('change', () => { mc[campo] = tipo === 'check' ? el.checked : el.value; });
     };
     bind('mFormaSel', 'forma'); bind('mSnapSel', 'snap'); bind('mExibSel', 'exib');
     bind('mMedirToken', 'medirToken', 'check'); bind('mMostrarOutros', 'mostrarOutros', 'check');
@@ -60,10 +72,14 @@ export function setTool(t) {
     T.tool = t;
     T.temp = null;
     document.querySelectorAll('.tb-tool[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === t));
-    document.getElementById('tbDrawBar').classList.toggle('open', t === 'draw');
-    document.getElementById('tbMeasureBar').classList.toggle('open', t === 'measure');
-    document.getElementById('tbLuzBar').classList.toggle('open', t === 'light');
-    cv.style.cursor = { select: 'default', move: 'grab', draw: 'crosshair', text: 'text', measure: 'crosshair', pin: 'copy', light: 'crosshair' }[t] || 'default';
+    const barra = (id, aberto) => { const el = document.getElementById(id); if (el) el.classList.toggle('open', aberto); };
+    barra('tbDrawBar', t === 'draw');
+    barra('tbMeasureBar', t === 'measure');
+    barra('tbLuzBar', t === 'light');
+    barra('tbTemplateBar', t === 'template');
+    barra('tbTerrenoBar', t === 'terreno');
+    cv.style.cursor = { select: 'default', move: 'grab', draw: 'crosshair', text: 'text', measure: 'crosshair', pin: 'copy', light: 'crosshair', template: 'crosshair', terreno: 'crosshair' }[t] || 'default';
+    if (t === 'terreno') toast('⛰️ Clique para adicionar vértices · duplo-clique/Enter fecha · Esc cancela');
     markDirty();
 }
 
@@ -72,33 +88,39 @@ function evPos(e) { const r = cv.getBoundingClientRect(); return { x: e.clientX 
 function evWorld(e) { return screenToWorld(evPos(e)); }
 
 function snapMedida(p) {
-    const gs = gridSize(), s = T.measureCfg.snap;
-    if (s === 'centro') return { x: Math.floor(p.x / gs) * gs + gs / 2, y: Math.floor(p.y / gs) * gs + gs / 2 };
-    if (s === 'canto') return { x: Math.round(p.x / gs) * gs, y: Math.round(p.y / gs) * gs };
-    return p;
+    const s = T.measureCfg.snap;
+    return snapPonto(p, cfgGrid(), s === 'centro' ? 'centro' : s === 'canto' ? 'canto' : 'livre');
 }
 function snapToken(p) {
     if (T.canvas?.grid?.snap === false) return p;
-    const gs = gridSize();
-    return { x: Math.floor(p.x / gs) * gs + gs / 2, y: Math.floor(p.y / gs) * gs + gs / 2 };
+    return snapPonto(p, cfgGrid(), 'centro');
 }
 
-function distPontos(pts) {
-    let d = 0;
-    for (let i = 1; i < pts.length; i++) d += Math.hypot(pts[i].x - pts[i-1].x, pts[i].y - pts[i-1].y);
-    return d;
-}
-
+/** Medição completa (F4): grid hex/quad, regra de diagonal, terreno difícil e escala do mapa. */
 function labelMedida(pts) {
-    const d = distPontos(pts);
-    const info = pxParaUnidades(d, pts[0]);
-    return { label: fmtDist(info), sub: `${Math.round(info.celulas * 10) / 10} qd` };
+    const cfg = cfgGrid();
+    const info = medirTrajeto(pts, {
+        ...cfg,
+        upc: (pt) => upcEm(pt),
+        unidade: unidadeEm(pts[0]),
+        terrenos: terrenosDoCanvas(),
+    });
+    return { label: fmtDist(info), sub: `${Math.round(info.celulas * 10) / 10} cel`, info };
+}
+
+function deslocDoToken(o) {
+    // limite de deslocamento vindo da ficha (se existir)
+    if (o.vinculo?.tipo === 'char') {
+        const ch = T.chars.find(c => c.id === o.vinculo.id);
+        if (ch && ch.desloc != null && !isNaN(ch.desloc)) return ch.desloc;
+    }
+    return null;
 }
 
 function podeMoverObj(o) {
-    if (T.isMaster && T.mode === 'secret') return true;
     if (T.isMaster) return true;
     if (o.tipo === 'token' && tokenDoUsuario(o)) return can('moverToken');
+    if (o.tipo === 'loot') return can('moverToken');
     if (o.criadoPor === T.user?.uid) return true;
     return false;
 }
@@ -127,8 +149,12 @@ function hitObj(o, w) {
     const dentro = w.x >= b.x && w.x <= b.x + b.w && w.y >= b.y && w.y <= b.y + b.h;
     if (!dentro) return false;
     if (o.tipo === 'token') return Math.hypot(w.x - o.x, w.y - o.y) <= ((o.tamanhoCelulas || 1) * gridSize()) / 2 + 4;
+    if (o.tipo === 'loot') return Math.hypot(w.x - o.x, w.y - o.y) <= gridSize() * 0.45;
+    if (o.tipo === 'relogio') return Math.hypot(w.x - o.x, w.y - o.y) <= gridSize() * 0.75;
     if (o.tipo === 'alfinete') return Math.hypot(w.x - o.x, w.y - (o.y - 16)) <= 20 || Math.hypot(w.x - o.x, w.y - o.y) <= 12;
     if (o.tipo === 'luz') return Math.hypot(w.x - o.x, w.y - o.y) <= 18;
+    if (o.tipo === 'template') return true; // bbox já filtra (seleção p/ mestre)
+    if (o.tipo === 'terreno') return T.mode === 'secret';
     if (o.tipo === 'porta' || o.tipo === 'janela') {
         const p = o.pontos || []; if (p.length < 2) return false;
         return distSeg(p[0], p[1], w) <= 10 / T.cam.z + 4;
@@ -163,11 +189,36 @@ function onDown(e) {
     cv.setPointerCapture(e.pointerId);
     const scr = evPos(e), w = evWorld(e);
 
-    // Botão do meio ou direito = pan (ou vértice na régua)
+    // ---- Pinch-zoom (2 dedos) — F7.4 ----
+    pointersAtivos.set(e.pointerId, scr);
+    if (pointersAtivos.size === 2) {
+        cancelarLongPress();
+        const [p1, p2] = [...pointersAtivos.values()];
+        pinch = { d0: Math.hypot(p2.x - p1.x, p2.y - p1.y), z0: T.cam.z, c0: { x: (p1.x+p2.x)/2, y: (p1.y+p2.y)/2 }, cam0: { ...T.cam } };
+        ponteiro = null; T.temp = null;
+        return;
+    }
+
+    // ---- Long-press (toque) = menu de contexto — F7.4 ----
+    if (e.pointerType === 'touch') {
+        cancelarLongPress();
+        longPressTimer = setTimeout(() => {
+            const o = pickObject(w);
+            if (o) { ponteiro = null; abrirCtxOuRadial(o, e.clientX, e.clientY); }
+        }, 550);
+    }
+
+    // Botão do meio ou direito = pan (ou vértice na régua / waypoint no arrasto)
     if (e.button === 2) {
         if (T.temp?.tipo === 'medida' && T.measureCfg.forma !== 'caneta') {
             T.temp.pontos.push(snapMedida(w));
             markDirty();
+            return;
+        }
+        // F4.4: waypoint durante arrasto de token
+        if (ponteiro?.tipo === 'dragObj' && ponteiro.trail) {
+            const o = T.objects.get(ponteiro.id);
+            if (o) { ponteiro.trail.push({ x: o.x, y: o.y }); markDirty(); }
             return;
         }
         ponteiro = { tipo: 'pan', scr, cam: { ...T.cam }, botao: 2, moveu: false, alvoCtx: pickObject(w), w0: w };
@@ -182,12 +233,18 @@ function onDown(e) {
             if (h) { ponteiro = { tipo: 'resize', id: T.selection, handle: h.k, b0: h.b, w0: w }; return; }
             const o = pickObject(w);
             if (o) {
+                // Relógio: clique do mestre = avançar fatia (F6.2)
+                if (o.tipo === 'relogio' && T.isMaster && T.mode === 'secret' && !e.shiftKey) {
+                    const cheias = Math.min((o.cheias || 0) + 1, o.fatias || 6);
+                    updObj(o.id, { cheias });
+                    T.selection = o.id; markDirty();
+                    return;
+                }
                 T.selection = o.id;
                 abrirPropriedades(o.id);
                 markDirty();
                 if (podeMoverObj(o)) {
-                    ponteiro = { tipo: 'dragObj', id: o.id, w0: w, x0: o.x, y0: o.y, pontos0: o.pontos ? o.pontos.map(p => ({...p})) : null, moveu: false };
-                    const lo = T.objects.get(o.id); if (lo) lo.__dragging = true;
+                    iniciarDragObj(o, w);
                 } else ponteiro = { tipo: 'clickObj', id: o.id };
                 if (o.tipo === 'alfinete') mostrarPopupAlfinete(o);
             } else {
@@ -200,8 +257,7 @@ function onDown(e) {
             const o = pickObject(w);
             if (o && podeMoverObj(o)) {
                 T.selection = o.id; abrirPropriedades(o.id);
-                ponteiro = { tipo: 'dragObj', id: o.id, w0: w, x0: o.x, y0: o.y, pontos0: o.pontos ? o.pontos.map(p => ({...p})) : null, moveu: false };
-                const lo = T.objects.get(o.id); if (lo) lo.__dragging = true;
+                iniciarDragObj(o, w);
                 cv.style.cursor = 'grabbing';
             } else ponteiro = { tipo: 'pan', scr, cam: { ...T.cam }, botao: 0, moveu: false };
             break;
@@ -239,21 +295,77 @@ function onDown(e) {
             }
             break;
         }
+        case 'template': { // F4.3
+            if (T.mode !== 'secret') return;
+            const p0 = snapMedida(w);
+            T.temp = { tipo: 'template', pontos: [p0], atual: p0, dados: { ...tplCfg, forma: tplCfg.forma, raio: tplCfg.forma === 'circulo' ? 0 : tplCfg.largura * gridSize(), ang: tplCfg.ang, cor: tplCfg.cor, alpha: tplCfg.alpha } };
+            ponteiro = { tipo: 'template' };
+            break;
+        }
+        case 'terreno': { // F4.5 — cliques adicionam vértices
+            if (T.mode !== 'secret') return;
+            if (!T.temp || T.temp.tipo !== 'terreno') T.temp = { tipo: 'terreno', pontos: [] };
+            T.temp.pontos.push(w);
+            T.temp.atual = w;
+            markDirty();
+            break;
+        }
     }
 }
 
+function iniciarDragObj(o, w) {
+    ponteiro = {
+        tipo: 'dragObj', id: o.id, w0: w, x0: o.x, y0: o.y,
+        pontos0: o.pontos ? o.pontos.map(p => ({ ...p })) : null,
+        moveu: false, ultimoWrite: 0,
+        trail: o.tipo === 'token' ? [{ x: o.x, y: o.y }] : null, // waypoints
+    };
+    const lo = T.objects.get(o.id);
+    if (lo) {
+        lo.__dragging = true;
+        if (lo.tipo === 'token') lo.__fogPos = { x: lo.x, y: lo.y }; // F2.3: fog congelado no ponto de partida
+    }
+}
+
+function cancelarLongPress() { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; } }
+
 function onMove(e) {
-    const w = evWorld(e);
-    document.getElementById('tbCoords').textContent = `${Math.round(w.x)}, ${Math.round(w.y)} · ${Math.round(T.cam.z * 100)}%`;
+    const scr = evPos(e), w = evWorld(e);
+    const coords = document.getElementById('tbCoords');
+    if (coords) coords.textContent = `${Math.round(w.x)}, ${Math.round(w.y)} · ${Math.round(T.cam.z * 100)}%`;
+
+    // Cursor ao vivo (F2.4)
+    publicarCursor(w);
+
+    // Pinch em andamento
+    if (pinch && pointersAtivos.has(e.pointerId)) {
+        pointersAtivos.set(e.pointerId, scr);
+        if (pointersAtivos.size === 2) {
+            const [p1, p2] = [...pointersAtivos.values()];
+            const d = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+            const c = { x: (p1.x+p2.x)/2, y: (p1.y+p2.y)/2 };
+            const alvo0 = { x: (pinch.c0.x - cv.getBoundingClientRect().width/2) / pinch.z0 + pinch.cam0.x, y: (pinch.c0.y - cv.getBoundingClientRect().height/2) / pinch.z0 + pinch.cam0.y };
+            T.cam.z = Math.max(0.04, Math.min(6, pinch.z0 * (d / Math.max(20, pinch.d0))));
+            T.cam.x = alvo0.x - (c.x - cv.getBoundingClientRect().width/2) / T.cam.z;
+            T.cam.y = alvo0.y - (c.y - cv.getBoundingClientRect().height/2) / T.cam.z;
+            clampCamera(); markDirty();
+        }
+        return;
+    }
+    if (longPressTimer && ponteiro) {
+        // mover além de um limiar cancela o long-press
+        if (Math.abs(scr.x - (ponteiro.scr?.x ?? scr.x)) + Math.abs(scr.y - (ponteiro.scr?.y ?? scr.y)) > 12) cancelarLongPress();
+    }
+
     if (!ponteiro) {
         if (T.temp?.tipo === 'medida' && !T.temp.caneta) { atualizarMedida(w); }
+        if (T.temp?.tipo === 'terreno') { T.temp.atual = w; markDirty(); }
         return;
     }
     switch (ponteiro.tipo) {
         case 'pan': {
-            const scr = evPos(e);
             const dx = (scr.x - ponteiro.scr.x) / T.cam.z, dy = (scr.y - ponteiro.scr.y) / T.cam.z;
-            if (Math.abs(scr.x - ponteiro.scr.x) + Math.abs(scr.y - ponteiro.scr.y) > 4) ponteiro.moveu = true;
+            if (Math.abs(scr.x - ponteiro.scr.x) + Math.abs(scr.y - ponteiro.scr.y) > 4) { ponteiro.moveu = true; cancelarLongPress(); }
             T.cam.x = ponteiro.cam.x - dx; T.cam.y = ponteiro.cam.y - dy;
             clampCamera();
             markDirty();
@@ -262,20 +374,28 @@ function onMove(e) {
         case 'dragObj': {
             const o = T.objects.get(ponteiro.id); if (!o) break;
             const dx = w.x - ponteiro.w0.x, dy = w.y - ponteiro.w0.y;
-            if (Math.abs(dx) + Math.abs(dy) > 2) ponteiro.moveu = true;
+            if (Math.abs(dx) + Math.abs(dy) > 2) { ponteiro.moveu = true; cancelarLongPress(); }
             if (ponteiro.pontos0) {
                 o.pontos = ponteiro.pontos0.map(p => ({ x: p.x + dx, y: p.y + dy }));
-                updObj(o.id, { pontos: o.pontos }, 150);
+                updObj(o.id, { pontos: o.pontos }, DRAG_THROTTLE);
             } else {
                 let nx = ponteiro.x0 + dx, ny = ponteiro.y0 + dy;
                 if (o.tipo === 'token') { const s = snapToken({ x: nx, y: ny }); nx = s.x; ny = s.y; }
                 o.x = nx; o.y = ny;
-                updObj(o.id, { x: nx, y: ny }, 150);
-                // Medir movimento do token
+                // F2.2/F2.3: deltas com flag `movendo` (clientes remotos seguram o fog)
+                updObj(o.id, o.tipo === 'token' ? { x: nx, y: ny, movendo: true } : { x: nx, y: ny }, DRAG_THROTTLE);
+                // F4.4: preview de custo com waypoints e terreno
                 if (o.tipo === 'token' && T.measureCfg.medirToken) {
-                    const pts = [{ x: ponteiro.x0, y: ponteiro.y0 }, { x: nx, y: ny }];
+                    const pts = [...ponteiro.trail, { x: nx, y: ny }];
                     const l = labelMedida(pts);
-                    T.temp = { tipo: 'medida', pontos: pts, atual: null, label: l.label, labelSub: l.sub };
+                    const limite = deslocDoToken(o);
+                    const excede = limite != null && l.info.valor > limite + 1e-9;
+                    T.temp = {
+                        tipo: 'medida', pontos: pts, atual: null,
+                        label: l.label + (limite != null ? ` / ${limite}` : ''),
+                        labelSub: excede ? '⚠️ excede o deslocamento!' : l.sub,
+                        cor: excede ? '#ef4444' : '#22d3ee',
+                    };
                     compartilharRegua(pts, l.label);
                 }
             }
@@ -293,7 +413,7 @@ function onMove(e) {
             if (k.includes('n')) { hgt = Math.max(20, b0.h - dy); y = b0.y + b0.h - hgt; }
             if (e.shiftKey && o.propW) { hgt = wdt * (o.propH / o.propW); }
             o.x = x; o.y = y; o.w = wdt; o.h = hgt;
-            updObj(o.id, { x, y, w: wdt, h: hgt }, 150);
+            updObj(o.id, { x, y, w: wdt, h: hgt }, DRAG_THROTTLE);
             markDirty();
             break;
         }
@@ -319,6 +439,10 @@ function onMove(e) {
             if (T.temp) { T.temp.atual = w; markDirty(); }
             break;
         }
+        case 'template': {
+            if (T.temp) { T.temp.atual = snapMedida(w); markDirty(); }
+            break;
+        }
     }
 }
 
@@ -333,20 +457,60 @@ function atualizarMedida(w) {
 }
 
 async function onUp(e) {
+    pointersAtivos.delete(e.pointerId);
+    cancelarLongPress();
+    if (pinch) { if (pointersAtivos.size < 2) pinch = null; return; }
     // Soltar o botão direito durante a medição (vértice) não encerra a régua
     if (ponteiro && ponteiro.tipo === 'measure' && e.button === 2) return;
+    // Soltar o botão direito durante o arrasto (waypoint) não encerra o arrasto
+    if (ponteiro && ponteiro.tipo === 'dragObj' && e.button === 2) return;
     const p = ponteiro; ponteiro = null;
     if (T.tool === 'move') cv.style.cursor = 'grab';
     if (!p) return;
 
-    if (p.tipo === 'pan' && p.botao === 2 && !p.moveu && p.alvoCtx && T.mode === 'secret') {
-        // clique direito sem arrastar = menu de contexto
-        abrirMenuContexto(p.alvoCtx, e.clientX, e.clientY);
+    if (p.tipo === 'pan' && p.botao === 2 && !p.moveu && p.alvoCtx) {
+        abrirCtxOuRadial(p.alvoCtx, e.clientX, e.clientY);
         return;
     }
     if (p.tipo === 'dragObj') {
         const o = T.objects.get(p.id);
-        if (o) { delete o.__dragging; updObj(o.id, o.pontos ? { pontos: o.pontos } : { x: o.x, y: o.y }); }
+        if (o) {
+            delete o.__dragging;
+            const trail = p.trail ? [...p.trail, { x: o.x, y: o.y }] : null;
+
+            // F4.6: Movement Lock — colisão com paredes/portas fechadas/janelas
+            const lockAtivo = T.canvas?.bloquearMovimento && !T.isMaster;
+            if (o.tipo === 'token' && lockAtivo && p.moveu) {
+                const segs = paredesDeMovimento(o.elev || 0);
+                const hit = trajetoColide(trail || [{ x: p.x0, y: p.y0 }, { x: o.x, y: o.y }], segs);
+                if (hit) {
+                    o.x = p.x0; o.y = p.y0;
+                    delete o.__fogPos;
+                    updObj(o.id, { x: p.x0, y: p.y0, movendo: false });
+                    toast('🧱 Movimento bloqueado por parede/porta fechada', 'warning');
+                    if (T.temp?.tipo === 'medida') { T.temp = null; limparReguaCompartilhada(); }
+                    markDirty();
+                    return;
+                }
+            }
+
+            delete o.__fogPos; // F2.3: agora o fog recalcula na posição final
+            const patchFinal = o.pontos ? { pontos: o.pontos } : (o.tipo === 'token' ? { x: o.x, y: o.y, movendo: false } : { x: o.x, y: o.y });
+            updObj(o.id, patchFinal);
+
+            // F7.3: registra o movimento no undo (mestre)
+            if (p.moveu) {
+                registrarOp(p.pontos0
+                    ? { tipo: 'patch', id: o.id, antes: { pontos: p.pontos0 }, depois: { pontos: o.pontos } }
+                    : { tipo: 'patch', id: o.id, antes: { x: p.x0, y: p.y0 }, depois: { x: o.x, y: o.y } });
+            }
+
+            // F5.4: loot solto sobre um token = entrega
+            if (o.tipo === 'loot' && p.moveu) {
+                const alvo = tokenSobPonto({ x: o.x, y: o.y }, o.id);
+                if (alvo && window.tbEntregarLoot) window.tbEntregarLoot(o.id, alvo);
+            }
+        }
         if (T.temp?.tipo === 'medida') { T.temp = null; limparReguaCompartilhada(); markDirty(); }
         return;
     }
@@ -378,6 +542,33 @@ async function onUp(e) {
         markDirty();
         return;
     }
+    if (p.tipo === 'template' && T.temp) {
+        const t = T.temp; T.temp = null;
+        const origem = t.pontos[0], destino = t.atual || origem;
+        markDirty();
+        if (Math.hypot(destino.x - origem.x, destino.y - origem.y) > 6 || tplCfg.forma === 'circulo') {
+            await confirmarTemplate(origem, destino);
+        }
+        return;
+    }
+}
+
+function tokenSobPonto(w, ignorarId) {
+    for (const o of T.objects.values()) {
+        if (o.tipo !== 'token' || o.id === ignorarId || !objVisivel(o)) continue;
+        if (Math.hypot(w.x - o.x, w.y - o.y) <= ((o.tamanhoCelulas || 1) * gridSize()) / 2 + 6) return o;
+    }
+    return null;
+}
+
+function abrirCtxOuRadial(o, x, y) {
+    // Tokens abrem o menu radial (F5.5); demais objetos o menu clássico
+    if (o.tipo === 'token' && (T.mode === 'secret' || (o.vinculo?.tipo === 'npc' && can('abrirNpc')))) {
+        abrirMenuRadial(o, x, y);
+        return;
+    }
+    if (T.mode !== 'secret') return;
+    abrirMenuContexto(o, x, y);
 }
 
 function onWheel(e) {
@@ -395,6 +586,14 @@ function onWheel(e) {
 
 function onDblClick(e) {
     const w = evWorld(e);
+    // F2.5: Alt + duplo-clique = ping (Shift junto: mestre força a câmera)
+    if (e.altKey) { enviarPing(w, e.shiftKey && T.isMaster); return; }
+    // Terreno: duplo-clique fecha o polígono
+    if (T.tool === 'terreno' && T.temp?.tipo === 'terreno') {
+        const pts = T.temp.pontos; T.temp = null; markDirty();
+        confirmarTerreno(pts);
+        return;
+    }
     const o = pickObject(w);
     if (!o) return;
     if (o.tipo === 'texto' && podeEditarObj(o)) { abrirModalTexto(null, o); return; }
@@ -409,12 +608,41 @@ function onDblClick(e) {
 function onKey(e) {
     if (e.target.matches('input,textarea,select')) return;
     if (e.key === 'Escape') { T.temp = null; T.selection = null; abrirPropriedades(null); limparReguaCompartilhada(); markDirty(); return; }
+    if (e.key === 'Enter' && T.tool === 'terreno' && T.temp?.tipo === 'terreno') {
+        const pts = T.temp.pontos; T.temp = null; markDirty();
+        confirmarTerreno(pts);
+        return;
+    }
     if (e.key === 'Delete' || e.key === 'Backspace') {
         if (T.selection) { const o = T.objects.get(T.selection); if (o && podeEditarObj(o)) delObj(T.selection); }
         return;
     }
+    if (e.key === '?' && e.shiftKey) { abrirAjudaAtalhos(); return; }
+    // F7.4: setas movem o token selecionado 1 célula
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+        const o = T.selection && T.objects.get(T.selection);
+        if (o && o.tipo === 'token' && podeMoverObj(o)) {
+            e.preventDefault();
+            const gs = gridSize();
+            const dx = e.key === 'ArrowLeft' ? -gs : e.key === 'ArrowRight' ? gs : 0;
+            const dy = e.key === 'ArrowUp' ? -gs : e.key === 'ArrowDown' ? gs : 0;
+            const destino = snapToken({ x: o.x + dx, y: o.y + dy });
+            if (T.canvas?.bloquearMovimento && !T.isMaster) {
+                const hit = trajetoColide([{ x: o.x, y: o.y }, destino], paredesDeMovimento(o.elev || 0));
+                if (hit) { toast('🧱 Movimento bloqueado', 'warning'); return; }
+            }
+            const antes = { x: o.x, y: o.y };
+            o.x = destino.x; o.y = destino.y;
+            updObj(o.id, { x: o.x, y: o.y, movendo: false });
+            registrarOp({ tipo: 'patch', id: o.id, antes, depois: { x: o.x, y: o.y } });
+            markDirty();
+        }
+        return;
+    }
     if (e.ctrlKey || e.metaKey) {
         const k = e.key.toLowerCase();
+        if (k === 'z' && !e.shiftKey) { e.preventDefault(); desfazer(); return; }
+        if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); refazer(); return; }
         if (k === 's') { e.preventDefault(); setTool('select'); }
         if (k === 'f') { e.preventDefault(); setTool('draw'); T.drawShape = 'livre'; }
         if (k === 'd') { e.preventDefault(); setTool('draw'); T.drawShape = 'ret'; }
@@ -423,6 +651,21 @@ function onKey(e) {
         document.querySelectorAll('[data-shape]').forEach(x => x.classList.toggle('active', x.dataset.shape === T.drawShape));
         return;
     }
+}
+
+function abrirAjudaAtalhos() {
+    abrirModal('⌨️ Atalhos do Tabuleiro', `
+        <div class="tb-list" style="font-size:.85rem;line-height:1.9">
+            <div><b>Ctrl+S</b> Selecionar · <b>Ctrl+F</b> Caneta · <b>Ctrl+D</b> Retângulo · <b>Ctrl+G</b> Texto · <b>Ctrl+M</b> Régua</div>
+            <div><b>Ctrl+Z / Ctrl+Y</b> Desfazer / Refazer (mestre)</div>
+            <div><b>Setas</b> Movem o token selecionado 1 célula</div>
+            <div><b>Alt + duplo-clique</b> Ping no mapa · <b>+Shift</b> (mestre) puxa a câmera de todos</div>
+            <div><b>Botão direito (arrastando token)</b> Adiciona waypoint ao trajeto</div>
+            <div><b>Botão direito (régua)</b> Adiciona vértice · <b>Botão direito (parado)</b> Menu de contexto</div>
+            <div><b>Duplo-clique / Enter</b> Fecha o polígono de terreno · <b>Esc</b> Cancela</div>
+            <div><b>Delete</b> Exclui a seleção · <b>Shift+?</b> Esta ajuda</div>
+            <div><b>Toque:</b> pinça = zoom · segurar = menu de contexto</div>
+        </div>`);
 }
 
 function clampCamera() {
@@ -489,34 +732,59 @@ function abrirModalTexto(w, objExistente) {
     };
 }
 
-// ===== ALFINETES =====
+// ===== ALFINETES AVANÇADOS (F6.1) =====
 async function criarAlfinete(w) {
     const id = await addObj({ tipo: 'alfinete', layerId: T.mode === 'secret' ? T.activeLayerId : 'tokens', x: w.x, y: w.y, cor: '#ef4444', titulo: '', descricao: '' });
     T.selection = id;
-    abrirModal('📌 Novo Alfinete', `
+    window.tbEditarAlfinete(id);
+}
+
+window.tbEditarAlfinete = function(id) {
+    const o = T.objects.get(id); if (!o) return;
+    const npcs = T.npcs || [];
+    abrirModal('📌 Alfinete', `
         <div class="tb-form-grid tb-form-grid-1">
-            <label>Título<input type="text" id="pin_t" placeholder="Ex: Entrada da caverna"></label>
-            <label>Descrição<textarea id="pin_d" rows="3" placeholder="Anotações..."></textarea></label>
-            <label>Cor<input type="color" id="pin_c" value="#ef4444"></label>
+            <label>Título<input type="text" id="pin_t" value="${esc(o.titulo || '')}" placeholder="Ex: Entrada da caverna"></label>
+            <label>Descrição<textarea id="pin_d" rows="3" placeholder="Anotações...">${esc(o.descricao || '')}</textarea></label>
+        </div>
+        <div class="tb-form-grid">
+            <label>Cor<input type="color" id="pin_c" value="${o.cor || '#ef4444'}"></label>
+            <label>Imagem<input type="file" id="pin_img" accept="image/*"></label>
+            ${T.mode === 'secret' ? `<label>Vincular NPC<select id="pin_npc"><option value="">— nenhum —</option>${npcs.map(n => `<option value="${n.id}" ${o.refTipo==='npc'&&o.refId===n.id?'selected':''}>${esc(n.nome)}</option>`).join('')}</select></label>` : ''}
         </div>
         <div class="tb-modal-actions"><button class="tb-btn tb-btn-success" id="pin_ok">✅ Salvar</button></div>
     `);
-    document.getElementById('pin_ok').onclick = () => {
-        updObj(id, { titulo: document.getElementById('pin_t').value, descricao: document.getElementById('pin_d').value, cor: document.getElementById('pin_c').value });
+    document.getElementById('pin_ok').onclick = async () => {
+        const patch = {
+            titulo: document.getElementById('pin_t').value,
+            descricao: document.getElementById('pin_d').value,
+            cor: document.getElementById('pin_c').value,
+        };
+        const sel = document.getElementById('pin_npc');
+        if (sel) { patch.refTipo = sel.value ? 'npc' : null; patch.refId = sel.value || null; }
+        const file = document.getElementById('pin_img').files[0];
+        if (file) {
+            try { patch.imagem = await uploadArquivo(file); } catch (e) { toast('❌ Falha no upload da imagem', 'danger'); }
+        }
+        updObj(id, patch);
         fecharModal();
     };
-}
+};
 
 function mostrarPopupAlfinete(o) {
-    if (!o.titulo && !o.descricao) return;
+    if (!o.titulo && !o.descricao && !o.imagem && !o.refId) return;
     const el = document.getElementById('tbPinPopup');
     const s = worldToScreen({ x: o.x, y: o.y });
     el.style.left = (s.x + 14) + 'px';
     el.style.top = (s.y - 10) + 'px';
-    el.innerHTML = `<b>📌 ${esc(o.titulo || 'Alfinete')}</b>${o.descricao ? `<div>${esc(o.descricao)}</div>` : ''}`;
+    el.innerHTML = `
+        ${o.imagem ? `<img src="${esc(o.imagem)}" style="width:100%;max-height:130px;object-fit:cover;border-radius:6px;margin-bottom:6px">` : ''}
+        <b>📌 ${esc(o.titulo || 'Alfinete')}</b>
+        ${o.descricao ? `<div>${esc(o.descricao)}</div>` : ''}
+        ${o.refTipo === 'npc' && o.refId ? `<button class="tb-btn" style="margin-top:6px;font-size:.72rem" onclick="window.tbAbrirNpcModal&&window.tbAbrirNpcModal('${o.refId}')">👹 Abrir NPC</button>` : ''}`;
     el.classList.add('open');
     clearTimeout(el._t);
-    el._t = setTimeout(() => el.classList.remove('open'), 4000);
+    el._t = setTimeout(() => el.classList.remove('open'), 5000);
 }
 
 // ===== MENU DE CONTEXTO =====
@@ -526,7 +794,12 @@ function abrirMenuContexto(o, x, y) {
     const itens = [];
     itens.push({ t: (o.visivelPublico !== false ? '🚫 Ocultar do público' : '👁️ Exibir ao público'), fn: () => updObj(o.id, { visivelPublico: !(o.visivelPublico !== false) }) });
     if (o.tipo === 'porta') itens.push({ t: o.aberta ? '🚪 Fechar porta' : '🚪 Abrir porta', fn: () => updObj(o.id, { aberta: !o.aberta }) });
-    if (o.tipo === 'token' && o.vinculo?.tipo === 'npc') itens.push({ t: '👹 Abrir ficha do NPC', fn: () => window.tbAbrirNpcModal && window.tbAbrirNpcModal(o.vinculo.id) });
+    if (o.tipo === 'alfinete') itens.push({ t: '📝 Editar alfinete', fn: () => window.tbEditarAlfinete(o.id) });
+    if (o.tipo === 'relogio') {
+        itens.push({ t: '➖ Voltar fatia', fn: () => updObj(o.id, { cheias: Math.max(0, (o.cheias || 0) - 1) }) });
+        itens.push({ t: '🔄 Zerar relógio', fn: () => updObj(o.id, { cheias: 0 }) });
+    }
+    if (o.tipo === 'template') itens.push({ t: '🎯 Limpar alvos', fn: () => updObj(o.id, { alvos: [] }) });
     itens.push({ t: '⬆️ Trazer para frente', fn: () => updObj(o.id, { z: maxZ() + 1 }) });
     itens.push({ t: '⚙️ Propriedades', fn: () => { T.selection = o.id; abrirPropriedades(o.id); markDirty(); } });
     itens.push({ t: '🗑️ Excluir', fn: () => delObj(o.id), danger: true });

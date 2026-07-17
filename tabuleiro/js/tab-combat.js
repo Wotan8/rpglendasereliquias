@@ -103,9 +103,14 @@ window.tbCombTurno = async function(dir) {
     const c = T.combate || {}; const n = (c.participantes || []).length || 1;
     let turno = (c.turnoAtual || 0) + dir;
     let rodada = c.rodada || 1;
+    const rodadaAntes = rodada;
     if (turno >= n) { turno = 0; rodada++; }
     if (turno < 0) { turno = n - 1; rodada = Math.max(1, rodada - 1); }
     await salvar(c.participantes || [], { turnoAtual: turno, rodada });
+    // F4.3: expira templates com duração ao virar a rodada
+    if (rodada > rodadaAntes) {
+        try { const m = await import('./tab-templates.js'); m.expirarTemplates(rodada); } catch (e) {}
+    }
 };
 
 window.tbCombVisibilidade = async function() {
