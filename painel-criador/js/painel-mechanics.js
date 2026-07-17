@@ -146,15 +146,25 @@ function esc(text) {
 /**
  * Gera optgroup com opções de "Limite: <titulo>" para cada módulo de classe.
  * Percorre window._classesCache ou window._systemData.classes.
+ * Suporta tanto IDs de referência (novo) quanto objetos inline (legado).
  */
 function _getModuleLimitOptions() {
     const classes = window._classesCache || (window._systemData?.classes) || [];
+    const classModulesCache = window._classModulesCache || [];
     const options = [];
     for (const cls of classes) {
         if (cls.publicado === false) continue;
         if (!cls.modulosDaClasse || !Array.isArray(cls.modulosDaClasse)) continue;
-        for (const mod of cls.modulosDaClasse) {
-            const titulo = mod.titulo || mod.id || '';
+        for (const entry of cls.modulosDaClasse) {
+            let titulo = '';
+            if (typeof entry === 'string') {
+                // Novo formato: ID referenciando classModules collection
+                const mod = classModulesCache.find(m => m.id === entry);
+                titulo = mod ? (mod.titulo || mod.id) : entry;
+            } else if (typeof entry === 'object' && entry !== null) {
+                // Formato legado: objeto inline
+                titulo = entry.titulo || entry.id || '';
+            }
             if (!titulo) continue;
             options.push({ value: `Limite: ${titulo}`, label: `📦 Limite: ${titulo} (${cls.nome})` });
         }

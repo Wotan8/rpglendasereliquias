@@ -88,6 +88,7 @@ window._systemData = {
     auras: [],
     itemRules: [],
     runicElements: [],
+    classModules: [],
     loaded: false,
     error: null
 };
@@ -107,7 +108,7 @@ window._classModules = {};
  */
 async function loadSystemData(db, collectionFn, getDocsFn) {
     const collections = ['races', 'classes', 'tribes', 'peculiarities', 'mechanics',
-        'skills', 'conditions', 'equipment', 'maneuvers', 'spells', 'derivedValues', 'vitalStats', 'auras', 'itemRules', 'bodyParts', 'runicElements'];
+        'skills', 'conditions', 'equipment', 'maneuvers', 'spells', 'derivedValues', 'vitalStats', 'auras', 'itemRules', 'bodyParts', 'runicElements', 'classModules'];
 
     try {
         await Promise.all(collections.map(async (col) => {
@@ -435,17 +436,33 @@ function _buildPartsFromMechanic(mech) {
 
 /**
  * Constrói window._classModules a partir do campo modulosDaClasse de cada classe no Firebase.
+ * Suporta tanto o formato legado (objetos inline) quanto o novo formato (IDs referenciando classModules).
  * Cada módulo é normalizado com: id, tipo, titulo, icone, custoExpPorItem, custoExpLabel, mecanicaLimiteId, schema
  */
 function buildClassModulesFromFirebase() {
     window._classModules = {};
     let totalModules = 0;
+    const classModulesCollection = window._systemData.classModules || [];
 
     for (const cls of window._systemData.classes) {
         if (cls.publicado === false) continue;
         if (!cls.modulosDaClasse || !Array.isArray(cls.modulosDaClasse) || cls.modulosDaClasse.length === 0) continue;
 
-        window._classModules[cls.nome] = cls.modulosDaClasse.map(mod => {
+        window._classModules[cls.nome] = cls.modulosDaClasse.map(entry => {
+            let mod;
+            if (typeof entry === 'string') {
+                // Novo formato: ID referenciando classModules collection
+                mod = classModulesCollection.find(m => m.id === entry);
+                if (!mod) {
+                    console.warn(`⚠️ Módulo de classe não encontrado: ${entry} (classe: ${cls.nome})`);
+                    return null;
+                }
+            } else if (typeof entry === 'object' && entry !== null) {
+                // Formato legado: objeto inline
+                mod = entry;
+            } else {
+                return null;
+            }
             totalModules++;
             return {
                 // Preserva campos extras (parâmetros de Runomancia, etc.)
@@ -465,7 +482,7 @@ function buildClassModulesFromFirebase() {
                 itensPredefinidos: Array.isArray(mod.itensPredefinidos) ? mod.itensPredefinidos : [],
                 schema: Array.isArray(mod.schema) ? mod.schema : []
             };
-        });
+        }).filter(Boolean); // Remover nulls (módulos não encontrados)
     }
 
     console.log(`✅ Módulos de classe carregados: ${totalModules} módulo(s)`);

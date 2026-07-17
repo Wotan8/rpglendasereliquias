@@ -41,7 +41,14 @@
 
     function _runoModuleConfig(classe) {
         const cls = _classDoc(classe);
-        const mods = Array.isArray(cls?.modulosDaClasse) ? cls.modulosDaClasse : [];
+        const rawMods = Array.isArray(cls?.modulosDaClasse) ? cls.modulosDaClasse : [];
+        const classModulesCol = window._systemData?.classModules || [];
+        // Resolver referências: strings -> objetos
+        const mods = rawMods.map(entry => {
+            if (typeof entry === 'string') return classModulesCol.find(m => m.id === entry) || null;
+            if (typeof entry === 'object' && entry !== null) return entry;
+            return null;
+        }).filter(Boolean);
         return mods.find(m => m.tipo === 'runomancia') || null;
     }
 

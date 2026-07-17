@@ -55,6 +55,7 @@ let bodyPartsCache = [];
 let aurasCache = [];
 let maneuversCache = [];
 let equipmentCache = [];
+let classModulesCache = [];
 
 // ====================================================================
 // MODULE DEFINITIONS — each module defines its fields and Firestore path
@@ -110,7 +111,7 @@ const MODULE_DEFS = {
             { key: 'kitsIniciais', label: '🎒 Kits Iniciais', type: 'class_kits_editor' },
             { key: 'testesDeClasse', label: '🎯 Testes de Classe (Rolagens)', type: 'class_tests_editor' },
             { key: 'usaRunomancia', label: 'ᛟ Usa Runomancia? (ON/OFF)', type: 'boolean' },
-            { key: 'modulosDaClasse', label: '📦 Módulos da Classe', type: 'class_modules_editor' },
+            { key: 'modulosDaClasse', label: '📦 Módulos da Classe', type: 'class_module_linker' },
             { key: 'imagemUrl', label: 'URL da Imagem', type: 'text', placeholder: 'https://...' },
         ]
     },
@@ -419,6 +420,13 @@ const MODULE_DEFS = {
             { key: 'podeFixar', label: 'Pode Fixar?', type: 'boolean' },
         ]
     },
+    classModules: {
+        name: 'Módulo de Classe', namePlural: 'Módulos de Classe', icon: '📦',
+        collection: 'system/data/classModules',
+        fields: [
+            { key: '_moduleData', label: '', type: 'class_module_standalone_editor' }
+        ]
+    },
     runicElements: RUNIC_MODULE_DEF
 };
 
@@ -723,9 +731,14 @@ async function loadModule(moduleName) {
 
     // Module-specific caches
     if (moduleName === 'races' || moduleName === 'classes' || moduleName === 'tribes') await refreshPeculiaritiesCache();
-    if (moduleName === 'classes') {
+    if (moduleName === 'classes' || moduleName === 'classModules') {
         await refreshManeuversCache();
         await refreshEquipmentCache();
+    }
+    if (moduleName === 'classes' || moduleName === 'classModules') {
+        await refreshClassModulesCache();
+        // Migração automática: módulos inline -> coleção centralizada
+        await _migrateInlineModulesToCollection();
     }
     if (moduleName === 'peculiarities') await refreshAurasCache();
 
@@ -852,6 +865,16 @@ async function refreshClassesCache() {
     } catch (e) { console.error('Erro cache classes:', e); }
 }
 
+async function refreshClassModulesCache() {
+    try {
+        const snap = await getDocs(collection(db, 'system/data/classModules'));
+        classModulesCache = [];
+        snap.forEach(d => classModulesCache.push({ id: d.id, ...d.data() }));
+        classModulesCache.sort((a, b) => (a.titulo || '').localeCompare(b.titulo || ''));
+        window._classModulesCache = classModulesCache;
+    } catch (e) { console.error('Erro cache classModules:', e); }
+}
+
 async function refreshBodyPartsCache() {
     try {
         const snap = await getDocs(collection(db, 'system/data/bodyParts'));
@@ -961,6 +984,15 @@ function _buildCardMetaChips(item) {
             if (item.podeVestir) add('🧥 Veste');
             if (item.podeFixar) add('📌 Fixa');
             break;
+        case 'classModules': {
+            const TIPO_CM = { lista: '📋 Lista', grimorio: '📖 Grimório', runomancia: 'ᛟ Runomancia' };
+            add(TIPO_CM[item.tipo] || '', 'chip-accent');
+            if (Array.isArray(item.schema) && item.schema.length) add(`📋 ${item.schema.length} campos`);
+            if (Array.isArray(item.itensPredefinidos) && item.itensPredefinidos.length) add(`🗂️ ${item.itensPredefinidos.length} pré-def`);
+            if (item.custoExpPorItem) add(`⭐ ${item.custoExpPorItem} EXP/item`);
+            if (item.limiteFixo != null) add(`🎯 Limite: ${item.limiteFixo}`);
+            break;
+        }
         case 'lore':
             add(item.categoria ? `🗂️ ${escapeHtml(item.categoria)}` : '', 'chip-accent');
             if (Array.isArray(item.referencias) && item.referencias.length) add(`🔗 ${item.referencias.length} refs`);
@@ -1773,7 +1805,7 @@ window.closeForm = function () {
 function buildField(field, value, existingData) {
     const wrap = document.createElement('div');
     wrap.className = 'form-group' + (
-        ['textarea', 'array', 'json', 'tags', 'mechanic_selector', 'aura_graus_editor', 'class_tests_editor', 'class_modules_editor', 'body_parts_editor', 'class_kits_editor'].includes(field.type) ? ' full-width' : ''
+        ['textarea', 'array', 'json', 'tags', 'mechanic_selector', 'aura_graus_editor', 'class_tests_editor', 'class_modules_editor', 'class_module_standalone_editor', 'class_module_linker', 'body_parts_editor', 'class_kits_editor'].includes(field.type) ? ' full-width' : ''
     );
     if (field.showWhen) {
         wrap.dataset.showWhenField = field.showWhen.field;
@@ -1856,9 +1888,52 @@ function buildField(field, value, existingData) {
         return wrap;
     }
 
-    // === CLASS MODULES EDITOR ===
+    // === CLASS MODULES EDITOR (inline, legado — mantido para retro-compat) ===
     if (field.type === 'class_modules_editor') {
         wrap.innerHTML = _buildClassModulesEditorHTML(field.key, field.label, Array.isArray(value) ? value : []);
+        return wrap;
+    }
+
+    // === CLASS MODULE STANDALONE EDITOR (centralizado, nova aba) ===
+    if (field.type === 'class_module_standalone_editor') {
+        const moduleData = (typeof value === 'object' && value) ? value : (existingData || {});
+        wrap.innerHTML = _buildClassModuleEditorRow(0, moduleData);
+        // Remove header com botão de remover (não faz sentido no standalone)
+        const header = wrap.querySelector('.array-item-header');
+        if (header) header.style.display = 'none';
+        return wrap;
+    }
+
+    // === CLASS MODULE LINKER (vinculação nas classes) ===
+    if (field.type === 'class_module_linker') {
+        const ids = Array.isArray(value) ? value : [];
+        // Resolver IDs para nomes — suporta formato legado (objetos) e novo (strings)
+        const chipsHtml = ids.map(entry => {
+            if (typeof entry === 'object' && entry !== null) {
+                // Formato legado: objeto inline, mostrar como chip não-removível
+                const titulo = entry.titulo || entry.id || 'Módulo';
+                const icone = entry.icone || '📦';
+                return `<span class="mech-tag cm-linker-chip" data-id="_legacy_${escapeHtml(entry.id || '')}" style="opacity:0.7;cursor:default" title="Módulo inline (legado) — migre para o repositório central">${icone} ${escapeHtml(titulo)} <small style='color:#f59e0b'>(legado)</small></span>`;
+            }
+            const mod = classModulesCache.find(m => m.id === entry);
+            const titulo = mod ? mod.titulo : `⚠️ ${entry}`;
+            const icone = mod ? (mod.icone || '📦') : '📦';
+            return `<span class="mech-tag cm-linker-chip" data-id="${escapeHtml(entry)}" onclick="event.stopPropagation(); window._openClassModuleFromLinker('${escapeHtml(entry)}')" style="cursor:pointer" title="Clique para editar">${icone} ${escapeHtml(titulo)} <button type="button" onclick="event.stopPropagation(); this.parentElement.remove(); window._syncClassModuleLinkerHidden()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:.8rem;padding:0 2px">✕</button></span>`;
+        }).join('');
+        const selectOptions = classModulesCache
+            .filter(m => m.publicado !== false)
+            .map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml((m.icone || '📦') + ' ' + (m.titulo || m.id))}</option>`).join('');
+        wrap.innerHTML = `
+            <label>${escapeHtml(field.label)}</label>
+            <div class="aura-grau-mechs cm-linker-area" data-field-key="${field.key}">
+                <div class="mech-tags-container cm-linker-chips">${chipsHtml}</div>
+                <select class="aura-mech-select" onchange="window._addClassModuleLink(this)">
+                    <option value="">+ Vincular Módulo...</option>
+                    ${selectOptions}
+                </select>
+            </div>
+            <input type="hidden" id="field_${field.key}" value="${escapeHtml(JSON.stringify(ids.filter(e => typeof e === 'string')))}">
+        `;
         return wrap;
     }
 
@@ -3416,146 +3491,359 @@ window.addSchemaField = function (moduleIdx, btnEl) {
     container.appendChild(temp.firstElementChild);
 };
 
+/**
+ * Coleta dados de um ÚNICO item .class-module-editor-item do DOM.
+ * Reutilizado tanto pelo editor inline (classes) quanto pelo standalone (aba classModules).
+ */
+function _collectSingleModuleData(item) {
+    const id = (item.querySelector('[data-cm-key="id"]')?.value || '').trim();
+    const titulo = (item.querySelector('[data-cm-key="titulo"]')?.value || '').trim();
+    if (!id && !titulo) return null; // skip empty
+
+    // Mecânicas de limite (chips)
+    const limiteMecanicaIds = [];
+    item.querySelectorAll('.cm-limite-tags .mech-tag').forEach(tag => {
+        if (tag.dataset.id) limiteMecanicaIds.push(tag.dataset.id);
+    });
+    const limiteFixoRaw = item.querySelector('[data-cm-key="limiteFixo"]')?.value ?? '';
+    const limiteFixo = limiteFixoRaw !== '' ? Math.max(0, parseInt(limiteFixoRaw, 10) || 0) : null;
+
+    const cadastrarBloqueio = item.querySelector('[data-cm-key="cadastrarBloqueio"]')?.checked || false;
+    const bloqueioMecanicaIds = [];
+    if (cadastrarBloqueio) {
+        item.querySelectorAll('.cm-bloqueio-tags .mech-tag').forEach(tag => {
+            if (tag.dataset.id) bloqueioMecanicaIds.push(tag.dataset.id);
+        });
+    }
+
+    const mod = {
+        id: id || ('mod_' + titulo.toLowerCase().replace(/[^a-z0-9]/g, '_')),
+        tipo: item.querySelector('[data-cm-key="tipo"]')?.value || 'lista',
+        titulo: titulo,
+        icone: (item.querySelector('[data-cm-key="icone"]')?.value || '').trim() || '📦',
+        custoExpPorItem: parseInt(item.querySelector('[data-cm-key="custoExpPorItem"]')?.value || '0', 10) || 0,
+        custoExpLabel: (item.querySelector('[data-cm-key="custoExpLabel"]')?.value || '').trim(),
+        cadastrarBloqueio: cadastrarBloqueio,
+        bloqueioMecanicaIds: bloqueioMecanicaIds,
+        limiteFixo: limiteFixo,
+        limiteMecanicaIds: limiteMecanicaIds,
+        // Compatibilidade legada: primeira mecânica vinculada
+        mecanicaLimiteId: limiteMecanicaIds[0] || null,
+        custoEquipamentos: _collectEquipCostArea(item.querySelector('.cm-custo-eq-modulo')),
+        permitirCriacaoJogador: item.querySelector('[data-cm-key="permitirCriacaoJogador"]')?.checked !== false,
+        custoEdicaoAtivo: item.querySelector('[data-cm-key="custoEdicaoAtivo"]')?.checked || false,
+        custoEdicaoMecanicaIds: Array.from(item.querySelectorAll('[data-cm-key="custoEdicaoMecanicaIds"] .mech-tag')).map(t => t.dataset.id).filter(Boolean),
+        custoEdicaoMecanicaId: null, // Legado compatível, não salva mais string única
+        custoRemocaoAtivo: item.querySelector('[data-cm-key="custoRemocaoAtivo"]')?.checked || false,
+        custoRemocaoMecanicaIds: Array.from(item.querySelectorAll('[data-cm-key="custoRemocaoMecanicaIds"] .mech-tag')).map(t => t.dataset.id).filter(Boolean),
+        custoRemocaoMecanicaId: null,
+        custoCriacaoMecanicaIds: Array.from(item.querySelectorAll('[data-cm-key="custoCriacaoMecanicaIds"] .mech-tag')).map(t => t.dataset.id).filter(Boolean),
+        custoCriacaoMecanicaId: null,
+        schema: [],
+        itensPredefinidos: []
+    };
+
+    // Parâmetros do módulo Runomancia (Lista de Estudo)
+    if (mod.tipo === 'runomancia') {
+        const g = k => item.querySelector(`[data-cm-key="${k}"]`)?.value ?? '';
+        mod.runoSlotsBase = parseInt(g('runoSlotsBase'), 10) || 0;
+        mod.runoSlotsDotKey = (g('runoSlotsDotKey') || '').trim();
+        mod.runoSlotsPorNivel = parseFloat(g('runoSlotsPorNivel')) || 0;
+        mod.runoDescontoDotKey = (g('runoDescontoDotKey') || '').trim();
+        mod.runoDescontoPorNivel = parseFloat(g('runoDescontoPorNivel')) || 0;
+        mod.runoCustoExpMult = parseFloat(g('runoCustoExpMult')) || 1;
+    }
+
+    // Collect schema fields
+    const schemaContainer = item.querySelector('.schema-fields-container');
+    if (schemaContainer) {
+        schemaContainer.querySelectorAll('.schema-field-row').forEach(row => {
+            const key = (row.querySelector('[data-sf-key="key"]')?.value || '').trim();
+            const tipo = row.querySelector('[data-sf-key="tipo"]')?.value || 'text';
+            if (!key && tipo !== 'separador') return;
+            const sf = {
+                key: key || ('sep_' + Math.random().toString(36).substr(2, 5)),
+                label: (row.querySelector('[data-sf-key="label"]')?.value || '').trim(),
+                tipo: tipo,
+                largura: row.querySelector('[data-sf-key="largura"]')?.value || '',
+                placeholder: (row.querySelector('[data-sf-key="placeholder"]')?.value || '').trim()
+            };
+            if (row.querySelector('[data-sf-key="somenteLeitura"]')?.checked) sf.somenteLeitura = true;
+            if (row.querySelector('[data-sf-key="ocultarSeVazio"]')?.checked) sf.ocultarSeVazio = true;
+            const opcoesRaw = (row.querySelector('[data-sf-key="opcoes"]')?.value || '').trim();
+            if (opcoesRaw && sf.tipo === 'select') {
+                sf.opcoes = opcoesRaw.split(',').map(o => o.trim()).filter(Boolean);
+            }
+            if (opcoesRaw && sf.tipo === 'dado') {
+                sf.formula = opcoesRaw;
+            }
+            if (sf.tipo === 'botao') {
+                const mecanicaIds = [];
+                row.querySelectorAll('.sf-botao-tags .mech-tag').forEach(tag => {
+                    if (tag.dataset.id) mecanicaIds.push(tag.dataset.id);
+                });
+                sf.mecanicaIds = mecanicaIds;
+            }
+            if (sf.tipo === 'valor_derivado') {
+                const dvTag = row.querySelector('.sf-dv-tag .mech-tag');
+                sf.derivedValueId = dvTag?.dataset.id || '';
+            }
+            mod.schema.push(sf);
+        });
+    }
+
+    // Collect itens pré-cadastrados
+    item.querySelectorAll('.cm-predef-items .cm-predef-item').forEach(pd => {
+        const nome = (pd.querySelector('[data-pd-key="nome"]')?.value || '').trim();
+        if (!nome) return;
+        const existingId = pd.dataset.predefId;
+        const pdId = existingId && existingId !== 'undefined' && existingId !== ''
+            ? existingId
+            : 'pdi_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        const custoExpRaw = pd.querySelector('[data-pd-key="custoExpProprio"]')?.value ?? '';
+        const usarCustoEq = pd.querySelector('[data-pd-key="usarCustoEqProprio"]')?.checked === true;
+        const valores = {};
+        pd.querySelectorAll('.cm-pv-grid [data-pv-key]').forEach(el => {
+            valores[el.dataset.pvKey] = el.type === 'checkbox' ? el.checked : el.value;
+        });
+        // Coletar steps pré-cadastrados
+        pd.querySelectorAll('.cm-pv-grid [data-pv-steps-key]').forEach(stepsWrap => {
+            const stepsKey = stepsWrap.dataset.pvStepsKey;
+            const stepsArr = [];
+            stepsWrap.querySelectorAll('.cm-pv-step').forEach(stepEl => {
+                stepsArr.push({
+                    name: stepEl.querySelector('[data-pv-step-name]')?.value || '',
+                    desc: stepEl.querySelector('[data-pv-step-desc]')?.value || ''
+                });
+            });
+            valores[stepsKey] = stepsArr;
+        });
+        mod.itensPredefinidos.push({
+            id: pdId,
+            nome,
+            descricao: (pd.querySelector('[data-pd-key="descricao"]')?.value || '').trim(),
+            custoExpProprio: custoExpRaw !== '' ? Math.max(0, parseInt(custoExpRaw, 10) || 0) : null,
+            custoEquipamentos: usarCustoEq ? _collectEquipCostArea(pd.querySelector('.cm-custo-eq-predef')) : null,
+            valores
+        });
+    });
+
+    return mod;
+}
+
 function _collectClassModulesData(fieldKey) {
     const container = document.getElementById(`classModulesItems_${fieldKey}`);
     if (!container) return [];
     const modules = [];
     container.querySelectorAll('.class-module-editor-item').forEach(item => {
-        const id = (item.querySelector('[data-cm-key="id"]')?.value || '').trim();
-        const titulo = (item.querySelector('[data-cm-key="titulo"]')?.value || '').trim();
-        if (!id && !titulo) return; // skip empty
-
-        // Mecânicas de limite (chips)
-        const limiteMecanicaIds = [];
-        item.querySelectorAll('.cm-limite-tags .mech-tag').forEach(tag => {
-            if (tag.dataset.id) limiteMecanicaIds.push(tag.dataset.id);
-        });
-        const limiteFixoRaw = item.querySelector('[data-cm-key="limiteFixo"]')?.value ?? '';
-        const limiteFixo = limiteFixoRaw !== '' ? Math.max(0, parseInt(limiteFixoRaw, 10) || 0) : null;
-
-        const cadastrarBloqueio = item.querySelector('[data-cm-key="cadastrarBloqueio"]')?.checked || false;
-        const bloqueioMecanicaIds = [];
-        if (cadastrarBloqueio) {
-            item.querySelectorAll('.cm-bloqueio-tags .mech-tag').forEach(tag => {
-                if (tag.dataset.id) bloqueioMecanicaIds.push(tag.dataset.id);
-            });
-        }
-
-        const mod = {
-            id: id || ('mod_' + titulo.toLowerCase().replace(/[^a-z0-9]/g, '_')),
-            tipo: item.querySelector('[data-cm-key="tipo"]')?.value || 'lista',
-            titulo: titulo,
-            icone: (item.querySelector('[data-cm-key="icone"]')?.value || '').trim() || '📦',
-            custoExpPorItem: parseInt(item.querySelector('[data-cm-key="custoExpPorItem"]')?.value || '0', 10) || 0,
-            custoExpLabel: (item.querySelector('[data-cm-key="custoExpLabel"]')?.value || '').trim(),
-            cadastrarBloqueio: cadastrarBloqueio,
-            bloqueioMecanicaIds: bloqueioMecanicaIds,
-            limiteFixo: limiteFixo,
-            limiteMecanicaIds: limiteMecanicaIds,
-            // Compatibilidade legada: primeira mecânica vinculada
-            mecanicaLimiteId: limiteMecanicaIds[0] || null,
-            custoEquipamentos: _collectEquipCostArea(item.querySelector('.cm-custo-eq-modulo')),
-            permitirCriacaoJogador: item.querySelector('[data-cm-key="permitirCriacaoJogador"]')?.checked !== false,
-            custoEdicaoAtivo: item.querySelector('[data-cm-key="custoEdicaoAtivo"]')?.checked || false,
-            custoEdicaoMecanicaIds: Array.from(item.querySelectorAll('[data-cm-key="custoEdicaoMecanicaIds"] .mech-tag')).map(t => t.dataset.id).filter(Boolean),
-            custoEdicaoMecanicaId: null, // Legado compatível, não salva mais string única
-            custoRemocaoAtivo: item.querySelector('[data-cm-key="custoRemocaoAtivo"]')?.checked || false,
-            custoRemocaoMecanicaIds: Array.from(item.querySelectorAll('[data-cm-key="custoRemocaoMecanicaIds"] .mech-tag')).map(t => t.dataset.id).filter(Boolean),
-            custoRemocaoMecanicaId: null,
-            custoCriacaoMecanicaIds: Array.from(item.querySelectorAll('[data-cm-key="custoCriacaoMecanicaIds"] .mech-tag')).map(t => t.dataset.id).filter(Boolean),
-            custoCriacaoMecanicaId: null,
-            schema: [],
-            itensPredefinidos: []
-        };
-
-        // Parâmetros do módulo Runomancia (Lista de Estudo)
-        if (mod.tipo === 'runomancia') {
-            const g = k => item.querySelector(`[data-cm-key="${k}"]`)?.value ?? '';
-            mod.runoSlotsBase = parseInt(g('runoSlotsBase'), 10) || 0;
-            mod.runoSlotsDotKey = (g('runoSlotsDotKey') || '').trim();
-            mod.runoSlotsPorNivel = parseFloat(g('runoSlotsPorNivel')) || 0;
-            mod.runoDescontoDotKey = (g('runoDescontoDotKey') || '').trim();
-            mod.runoDescontoPorNivel = parseFloat(g('runoDescontoPorNivel')) || 0;
-            mod.runoCustoExpMult = parseFloat(g('runoCustoExpMult')) || 1;
-        }
-
-        // Collect schema fields
-        const schemaContainer = item.querySelector('.schema-fields-container');
-        if (schemaContainer) {
-            schemaContainer.querySelectorAll('.schema-field-row').forEach(row => {
-                const key = (row.querySelector('[data-sf-key="key"]')?.value || '').trim();
-                const tipo = row.querySelector('[data-sf-key="tipo"]')?.value || 'text';
-                if (!key && tipo !== 'separador') return;
-                const sf = {
-                    key: key || ('sep_' + Math.random().toString(36).substr(2, 5)),
-                    label: (row.querySelector('[data-sf-key="label"]')?.value || '').trim(),
-                    tipo: tipo,
-                    largura: row.querySelector('[data-sf-key="largura"]')?.value || '',
-                    placeholder: (row.querySelector('[data-sf-key="placeholder"]')?.value || '').trim()
-                };
-                if (row.querySelector('[data-sf-key="somenteLeitura"]')?.checked) sf.somenteLeitura = true;
-                if (row.querySelector('[data-sf-key="ocultarSeVazio"]')?.checked) sf.ocultarSeVazio = true;
-                const opcoesRaw = (row.querySelector('[data-sf-key="opcoes"]')?.value || '').trim();
-                if (opcoesRaw && sf.tipo === 'select') {
-                    sf.opcoes = opcoesRaw.split(',').map(o => o.trim()).filter(Boolean);
-                }
-                if (opcoesRaw && sf.tipo === 'dado') {
-                    sf.formula = opcoesRaw;
-                }
-                if (sf.tipo === 'botao') {
-                    const mecanicaIds = [];
-                    row.querySelectorAll('.sf-botao-tags .mech-tag').forEach(tag => {
-                        if (tag.dataset.id) mecanicaIds.push(tag.dataset.id);
-                    });
-                    sf.mecanicaIds = mecanicaIds;
-                }
-                if (sf.tipo === 'valor_derivado') {
-                    const dvTag = row.querySelector('.sf-dv-tag .mech-tag');
-                    sf.derivedValueId = dvTag?.dataset.id || '';
-                }
-                mod.schema.push(sf);
-            });
-        }
-
-        // Collect itens pré-cadastrados
-        item.querySelectorAll('.cm-predef-items .cm-predef-item').forEach(pd => {
-            const nome = (pd.querySelector('[data-pd-key="nome"]')?.value || '').trim();
-            if (!nome) return;
-            const existingId = pd.dataset.predefId;
-            const pdId = existingId && existingId !== 'undefined' && existingId !== ''
-                ? existingId
-                : 'pdi_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-            const custoExpRaw = pd.querySelector('[data-pd-key="custoExpProprio"]')?.value ?? '';
-            const usarCustoEq = pd.querySelector('[data-pd-key="usarCustoEqProprio"]')?.checked === true;
-            const valores = {};
-            pd.querySelectorAll('.cm-pv-grid [data-pv-key]').forEach(el => {
-                valores[el.dataset.pvKey] = el.type === 'checkbox' ? el.checked : el.value;
-            });
-            // Coletar steps pré-cadastrados
-            pd.querySelectorAll('.cm-pv-grid [data-pv-steps-key]').forEach(stepsWrap => {
-                const stepsKey = stepsWrap.dataset.pvStepsKey;
-                const stepsArr = [];
-                stepsWrap.querySelectorAll('.cm-pv-step').forEach(stepEl => {
-                    stepsArr.push({
-                        name: stepEl.querySelector('[data-pv-step-name]')?.value || '',
-                        desc: stepEl.querySelector('[data-pv-step-desc]')?.value || ''
-                    });
-                });
-                valores[stepsKey] = stepsArr;
-            });
-            mod.itensPredefinidos.push({
-                id: pdId,
-                nome,
-                descricao: (pd.querySelector('[data-pd-key="descricao"]')?.value || '').trim(),
-                custoExpProprio: custoExpRaw !== '' ? Math.max(0, parseInt(custoExpRaw, 10) || 0) : null,
-                custoEquipamentos: usarCustoEq ? _collectEquipCostArea(pd.querySelector('.cm-custo-eq-predef')) : null,
-                valores
-            });
-        });
-
-        modules.push(mod);
+        const mod = _collectSingleModuleData(item);
+        if (mod) modules.push(mod);
     });
     return modules;
+}
+
+// ===== CLASS MODULE LINKER HELPERS =====
+
+/** Adicionar um módulo ao linker (select -> chip) */
+window._addClassModuleLink = function (select) {
+    const modId = select.value;
+    if (!modId) return;
+    const area = select.closest('.cm-linker-area');
+    const container = area?.querySelector('.cm-linker-chips');
+    if (!container) { select.value = ''; return; }
+    // Evitar duplicatas
+    if (container.querySelector(`[data-id="${modId}"]`)) { select.value = ''; return; }
+    const mod = classModulesCache.find(m => m.id === modId);
+    const titulo = mod ? mod.titulo : modId;
+    const icone = mod ? (mod.icone || '📦') : '📦';
+    const temp = document.createElement('div');
+    temp.innerHTML = `<span class="mech-tag cm-linker-chip" data-id="${escapeHtml(modId)}" onclick="event.stopPropagation(); window._openClassModuleFromLinker('${escapeHtml(modId)}')" style="cursor:pointer" title="Clique para editar">${icone} ${escapeHtml(titulo)} <button type="button" onclick="event.stopPropagation(); this.parentElement.remove(); window._syncClassModuleLinkerHidden()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:.8rem;padding:0 2px">✕</button></span>`;
+    container.appendChild(temp.firstElementChild);
+    select.value = '';
+    window._syncClassModuleLinkerHidden();
+};
+
+/** Sincronizar hidden input com chips atuais */
+window._syncClassModuleLinkerHidden = function () {
+    const container = document.querySelector('.cm-linker-chips');
+    const hidden = document.getElementById('field_modulosDaClasse');
+    if (!container || !hidden) return;
+    const ids = Array.from(container.querySelectorAll('.cm-linker-chip'))
+        .map(chip => chip.dataset.id)
+        .filter(id => id && !id.startsWith('_legacy_'));
+    hidden.value = JSON.stringify(ids);
+};
+
+/** Abrir modal de edição do módulo a partir do chip do linker */
+window._openClassModuleFromLinker = function (moduleId) {
+    // Abrir em sub-modal estilo peculiaridades (push/pop module stack)
+    if (!window._moduleStack) window._moduleStack = [];
+    window._moduleStack.push(currentModule);
+    const prevEditingId = editingItemId;
+    const prevAllItems = allItems;
+    // Salvar referência do modal atual
+    const mainFormModal = document.getElementById('formModal');
+    // Mascarar IDs do form principal
+    mainFormModal.querySelectorAll('[id]').forEach(el => {
+        if (el.id.startsWith('field_') || el.id.startsWith('tags_') || el.id.startsWith('img_preview_') || el.id.startsWith('multisel_') || el.id.startsWith('classModules') || el.id.startsWith('schemaFields') || el.id === 'btnSave' || el.id === 'formTitle' || el.id === 'formFields' || el.id === 'dynamicForm') {
+            if (!el.hasAttribute('data-temp-id-cml')) {
+                el.dataset.tempIdCml = el.id;
+                el.id = 'temp_cml_' + el.id;
+            }
+        }
+    });
+    // Criar overlay do sub-modal
+    const overlay = document.createElement('div');
+    overlay.className = 'modal form-modal active';
+    overlay.id = 'subFormModalClassModule';
+    window.bringModalToTop(overlay);
+    overlay.innerHTML = `
+        <div class="modal-content">
+            <div class="form-header">
+                <h2 id="formTitle">✏️ Editar Módulo de Classe</h2>
+                <button class="btn-close-form" onclick="window._closeClassModuleSubForm()">✕</button>
+            </div>
+            <form id="dynamicForm" onsubmit="window._saveClassModuleSubForm(event)">
+                <div id="formFields" class="form-body"></div>
+                <div class="form-actions">
+                    <div class="form-toggle toggle-publicado-container" style="padding:0">
+                        <label class="toggle-publish"><input type="checkbox" id="field_publicado"><span class="toggle-slider"></span></label>
+                        <span class="toggle-label">Publicado</span>
+                    </div>
+                    <div class="buttons-group" style="display:flex; gap:10px;">
+                        <button type="button" class="btn-modal btn-cancel" onclick="window._closeClassModuleSubForm()">Cancelar</button>
+                        <button type="submit" class="btn-save" id="btnSave">💾 Salvar Módulo</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    // Trocar contexto
+    currentModule = 'classModules';
+    // Carregar dados do módulo
+    const modData = classModulesCache.find(m => m.id === moduleId);
+    editingItemId = moduleId;
+    allItems = classModulesCache;
+    // Preencher form
+    const container = overlay.querySelector('#formFields');
+    const formGrid = document.createElement('div');
+    formGrid.className = 'form-grid';
+    const modDef = MODULE_DEFS.classModules;
+    modDef.fields.forEach(field => {
+        const value = modData ? modData[field.key] : undefined;
+        const el = buildField(field, value, modData);
+        formGrid.appendChild(el);
+    });
+    container.appendChild(formGrid);
+    const pubField = overlay.querySelector('#field_publicado');
+    if (pubField && modData) pubField.checked = !!modData.publicado;
+    overlay.querySelector('#dynamicForm').dataset.module = 'classModules';
+};
+
+/** Salvar módulo editado a partir do sub-modal do linker */
+window._saveClassModuleSubForm = async function (e) {
+    e.preventDefault();
+    const overlay = document.getElementById('subFormModalClassModule');
+    if (!overlay) return;
+    const btn = overlay.querySelector('#btnSave');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
+    const moduleItem = overlay.querySelector('.class-module-editor-item');
+    if (!moduleItem) { window._closeClassModuleSubForm(); return; }
+    const modData = _collectSingleModuleData(moduleItem);
+    if (!modData) { window._closeClassModuleSubForm(); return; }
+    const pubEl = overlay.querySelector('#field_publicado');
+    modData.publicado = pubEl ? pubEl.checked : false;
+    modData.updatedAt = Timestamp.now();
+    try {
+        const docRef = doc(db, 'system/data/classModules', editingItemId);
+        await updateDoc(docRef, modData);
+        showAlert('✅ Módulo atualizado!', 'success');
+        await refreshClassModulesCache();
+        // Atualizar chip no linker
+        document.querySelectorAll(`.cm-linker-chip[data-id="${editingItemId}"]`).forEach(chip => {
+            const icone = modData.icone || '📦';
+            const btnHtml = chip.querySelector('button')?.outerHTML || '';
+            chip.innerHTML = `${icone} ${escapeHtml(modData.titulo)} ${btnHtml}`;
+        });
+    } catch (err) {
+        console.error('Erro ao salvar módulo:', err);
+        showAlert('❌ Erro ao salvar: ' + err.message, 'danger');
+    }
+    window._closeClassModuleSubForm();
+};
+
+/** Fechar sub-modal do módulo de classe */
+window._closeClassModuleSubForm = function () {
+    const overlay = document.getElementById('subFormModalClassModule');
+    if (overlay) overlay.remove();
+    // Restaurar IDs mascarados
+    document.querySelectorAll('[data-temp-id-cml]').forEach(el => {
+        el.id = el.dataset.tempIdCml;
+        delete el.dataset.tempIdCml;
+    });
+    // Restaurar contexto
+    if (window._moduleStack && window._moduleStack.length) {
+        currentModule = window._moduleStack.pop();
+    }
+    editingItemId = null;
+};
+
+// ===== MIGRAÇÃO AUTOMÁTICA: MÓDULOS INLINE -> COLEÇÃO CENTRALIZADA =====
+
+let _migrationDone = false;
+
+/**
+ * Migra módulos inline (objetos em modulosDaClasse das classes) para a coleção
+ * system/data/classModules e converte os arrays para referências por ID.
+ * Executada automaticamente ao carregar a aba classModules ou classes.
+ */
+async function _migrateInlineModulesToCollection() {
+    if (_migrationDone) return;
+    _migrationDone = true;
+    try {
+        const classesSnap = await getDocs(collection(db, 'system/data/classes'));
+        const classes = [];
+        classesSnap.forEach(d => classes.push({ id: d.id, ...d.data() }));
+        let totalMigrated = 0;
+        for (const cls of classes) {
+            if (!Array.isArray(cls.modulosDaClasse) || cls.modulosDaClasse.length === 0) continue;
+            // Verificar se há objetos inline (formato legado)
+            const hasInline = cls.modulosDaClasse.some(m => typeof m === 'object' && m !== null);
+            if (!hasInline) continue;
+            const newIds = [];
+            for (const mod of cls.modulosDaClasse) {
+                if (typeof mod === 'string') {
+                    newIds.push(mod); // Já é referência
+                    continue;
+                }
+                if (typeof mod !== 'object' || mod === null) continue;
+                // Verificar se já existe um módulo com esse ID na coleção
+                const modId = mod.id || ('mod_' + (mod.titulo || '').toLowerCase().replace(/[^a-z0-9]/g, '_'));
+                const existingSnap = await getDoc(doc(db, 'system/data/classModules', modId));
+                if (existingSnap.exists()) {
+                    // Módulo já migrado, apenas referenciar
+                    newIds.push(modId);
+                    continue;
+                }
+                // Criar documento na coleção centralizada
+                const moduleData = { ...mod, id: modId, publicado: true, criadoEm: Timestamp.now(), criadoPor: currentUser?.uid || 'migration', updatedAt: Timestamp.now(), versao: 1 };
+                await setDoc(doc(db, 'system/data/classModules', modId), moduleData);
+                newIds.push(modId);
+                totalMigrated++;
+            }
+            // Atualizar classe com referências
+            await updateDoc(doc(db, 'system/data/classes', cls.id), { modulosDaClasse: newIds, updatedAt: Timestamp.now() });
+        }
+        if (totalMigrated > 0) {
+            showAlert(`✅ Migração concluída: ${totalMigrated} módulo(s) migrado(s) para o repositório central.`, 'success');
+            await refreshClassModulesCache();
+            await refreshClassesCache();
+        }
+    } catch (err) {
+        console.error('Erro na migração de módulos:', err);
+        showAlert('⚠️ Erro na migração automática de módulos: ' + err.message, 'danger');
+    }
 }
 
 // ===== TAGS =====
@@ -3615,6 +3903,19 @@ window.handleFormSubmit = async function (e) {
             data[field.key] = _collectClassTestsData(field.key);
         } else if (field.type === 'class_modules_editor') {
             data[field.key] = _collectClassModulesData(field.key);
+        } else if (field.type === 'class_module_standalone_editor') {
+            // Standalone: coletar dados do único editor row e spread diretamente no data
+            const moduleItem = document.querySelector('#formFields .class-module-editor-item');
+            if (moduleItem) {
+                const modData = _collectSingleModuleData(moduleItem);
+                if (modData) Object.assign(data, modData);
+            }
+        } else if (field.type === 'class_module_linker') {
+            const el = document.getElementById(`field_${field.key}`);
+            if (el) {
+                try { data[field.key] = JSON.parse(el.value || '[]'); }
+                catch { data[field.key] = []; }
+            } else { data[field.key] = []; }
         } else if (field.type === 'class_kits_editor') {
             data[field.key] = _collectClassKitsData(field.key);
         } else if (field.type === 'aura_graus_editor') {
