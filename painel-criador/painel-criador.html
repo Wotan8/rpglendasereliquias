@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Criador — Lendas e Relíquias</title>
     <meta name="description" content="Painel de Criador — Onde o mundo de Vasteluna é forjado.">
-    <link rel="stylesheet" href="css/painel-criador.css?v=4">
+    <link rel="stylesheet" href="css/painel-criador.css?v=6">
     <script type="module" src="/js/global-favicon.js"></script>
     <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,21 +39,21 @@
                 <button class="tab active" data-module="races" onclick="switchModule('races', this)"><span class="emoji">🧬</span><span class="text"> Raças</span></button>
                 <button class="tab" data-module="classes" onclick="switchModule('classes', this)"><span class="emoji">⚔️</span><span class="text"> Classes</span></button>
                 <button class="tab" data-module="tribes" onclick="switchModule('tribes', this)"><span class="emoji">🏕️</span><span class="text"> Tribos</span></button>
-                <button class="tab" data-module="peculiarities" onclick="switchModule('peculiarities', this)"><span class="emoji">✨</span><span class="text"> Peculiaridades</span></button>
-                <button class="tab" data-module="skills" onclick="switchModule('skills', this)"><span class="emoji">📚</span><span class="text"> Perícias</span></button>
-                <button class="tab" data-module="equipment" onclick="switchModule('equipment', this)"><span class="emoji">🗡️</span><span class="text"> Equipamentos</span></button>
-                <button class="tab" data-module="conditions" onclick="switchModule('conditions', this)"><span class="emoji">💀</span><span class="text"> Condições</span></button>
-                <button class="tab" data-module="mechanics" onclick="switchModule('mechanics', this)"><span class="emoji">🔧</span><span class="text"> Mecânicas</span></button>
                 <button class="tab" data-module="derivedValues" onclick="switchModule('derivedValues', this)"><span class="emoji">📊</span><span class="text"> Valores Derivados</span></button>
                 <button class="tab" data-module="classModules" onclick="switchModule('classModules', this)"><span class="emoji">📦</span><span class="text"> Módulos de Classe</span></button>
+                <button class="tab" data-module="peculiarities" onclick="switchModule('peculiarities', this)"><span class="emoji">✨</span><span class="text"> Peculiaridades</span></button>
+                <button class="tab" data-module="skills" onclick="switchModule('skills', this)"><span class="emoji">📚</span><span class="text"> Perícias</span></button>
+                <button class="tab" data-module="mechanics" onclick="switchModule('mechanics', this)"><span class="emoji">🔧</span><span class="text"> Mecânicas</span></button>
+                <button class="tab" data-module="equipment" onclick="switchModule('equipment', this)"><span class="emoji">🗡️</span><span class="text"> Equipamentos</span></button>
+                <button class="tab" data-module="conditions" onclick="switchModule('conditions', this)"><span class="emoji">💀</span><span class="text"> Condições</span></button>
+                <button class="tab" data-module="auras" onclick="switchModule('auras', this)"><span class="emoji">🌟</span><span class="text"> Auras</span></button>
+                <button class="tab" data-module="bodyParts" onclick="switchModule('bodyParts', this)"><span class="emoji">🦴</span><span class="text"> Partes do Corpo</span></button>
+                <button class="tab" data-module="itemRules" onclick="switchModule('itemRules', this)"><span class="emoji">⚙️</span><span class="text"> Regras de Item</span></button>
                 <button class="tab" data-module="vitalStats" onclick="switchModule('vitalStats', this)"><span class="emoji">❤️</span><span class="text"> Status Vitais</span></button>
+                <button class="tab" data-module="lore" onclick="switchModule('lore', this)"><span class="emoji">🌍</span><span class="text"> Lore</span></button>
                 <button class="tab" data-module="maneuvers" onclick="switchModule('maneuvers', this)"><span class="emoji">💥</span><span class="text"> Manobras</span></button>
                 <button class="tab" data-module="spells" onclick="switchModule('spells', this)"><span class="emoji">🔮</span><span class="text"> Magias</span></button>
-                <button class="tab" data-module="auras" onclick="switchModule('auras', this)"><span class="emoji">🌟</span><span class="text"> Auras</span></button>
-                <button class="tab" data-module="itemRules" onclick="switchModule('itemRules', this)"><span class="emoji">⚙️</span><span class="text"> Regras de Item</span></button>
-                <button class="tab" data-module="bodyParts" onclick="switchModule('bodyParts', this)"><span class="emoji">🦴</span><span class="text"> Partes do Corpo</span></button>
                 <button class="tab" data-module="runicElements" onclick="switchModule('runicElements', this)"><span class="emoji">ᛟ</span><span class="text"> Elementos Rúnicos</span></button>
-                <button class="tab" data-module="lore" onclick="switchModule('lore', this)"><span class="emoji">🌍</span><span class="text"> Lore</span></button>
             </div>
         </div>
 
@@ -245,9 +245,9 @@
     </div>
 
     <!-- Firebase Module -->
-    <script type="module" src="js/painel-firebase.js?v=4"></script>
-    <script type="module" src="js/settings-manager.js"></script>
-    <script type="module" src="js/shortcuts-manager.js"></script>
+    <script type="module" src="js/painel-firebase.js?v=6"></script>
+    <script type="module" src="js/settings-manager.js?v=6"></script>
+    <script type="module" src="js/shortcuts-manager.js?v=6"></script>
 
     <script>
         function toggleSidebar() {
