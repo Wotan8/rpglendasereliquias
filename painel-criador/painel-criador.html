@@ -58,13 +58,13 @@
         </div>
 
         <div class="sheet">
-            <!-- Toolbar (Moved into Sheet) -->
+            <!-- Toolbar — ordem padronizada: [🚪 Sair] [🏠 Menu] [contextuais] [spacer] [Nome] -->
             <div class="toolbar" style="display:none">
-                <span class="hint-toolbar" style="margin-right: auto;">Lendas e Relíquias — Painel de Criador</span>
+                <button class="btn-logout" onclick="logout()" title="Sair da conta">🚪 Sair</button>
+                <button onclick="goToMenu()" title="Menu principal">🏠 Menu</button>
+                <button id="btnSettings" onclick="openSettingsModal()" title="Configurações">⚙️</button>
+                <span class="hint-toolbar" style="margin-left: auto;">Lendas e Relíquias — Painel de Criador</span>
                 <span id="userDisplayName" class="user-display" title=""></span>
-                <button onclick="goToMenu()">← Menu</button>
-                <button id="btnSettings" onclick="openSettingsModal()">⚙️</button>
-                <button class="btn-logout" onclick="logout()">🚪</button>
             </div>
 
             <!-- Header -->

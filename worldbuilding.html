@@ -199,22 +199,29 @@
             overflow: hidden;
         }
 
+        /* Cabeçalho superior padronizado — UMA linha:
+           [🚪 Sair] [🏠 Menu] [contextuais] [título/spacer] [Nome] */
         .content-header {
-            padding: 20px 30px;
+            padding: 14px 20px;
             background: rgba(31, 38, 48, 0.6);
             border-bottom: 2px solid var(--border);
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
+            gap: 12px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            white-space: nowrap;
         }
+        .content-header > * { flex: 0 0 auto; }
+        .content-header .content-title { flex: 1 1 auto; min-width: 60px; }
 
         .header-actions {
             display: flex;
             align-items: center;
             gap: 10px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
         }
 
         .btn-mestre {
@@ -4528,6 +4535,47 @@
             background: var(--primary);
             color: white;
         }
+
+        /* =========================================================
+           📱 MOBILE — libera a rolagem vertical do documento.
+           Remove as restrições de altura/overflow do layout desktop
+           (sidebar 100vh + main-content overflow:hidden) que travavam
+           o scroll da página em telas pequenas.
+           ========================================================= */
+        @media (max-width: 860px) {
+            html, body {
+                height: auto;
+                min-height: 100%;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                min-width: 0;
+                height: auto;
+                max-height: none;
+                overflow-y: visible;
+                border-right: none;
+                border-bottom: 2px solid var(--border);
+            }
+
+            .main-content {
+                overflow: visible;
+                height: auto;
+                min-height: 0;
+            }
+
+            .content-body {
+                overflow-y: visible;
+                height: auto;
+                padding: 16px;
+            }
+        }
     </style>
 <script type="module" src="/js/global-favicon.js"></script>
     <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
@@ -4608,15 +4656,13 @@
 
     <main class="main-content">
         <div class="content-header">
+            <button class="btn-logout" onclick="logout()" title="Sair da conta">🚪 SAIR</button>
+            <button class="btn-mestre" onclick="window.location.href='painel-mestre/painel-mestre.html'"
+                title="Menu — Painel do Mestre">🏠</button>
+            <button class="btn-viewmap" onclick="window.location.href='viewmap.html'"
+                title="Navegador de Mapa">🌍</button>
             <h1 class="content-title" id="contentTitle">Dashboard</h1>
-            <div class="header-actions">
-                <button class="btn-mestre" onclick="window.location.href='painel-mestre/painel-mestre.html'"
-                    title="Painel do Mestre">🎭</button>
-                <button class="btn-viewmap" onclick="window.location.href='viewmap.html'"
-                    title="Navegador de Mapa">🌍</button>
-                <span class="user-display-name" id="userDisplayName" title=""></span>
-                <button class="btn-logout" onclick="logout()">🚪 SAIR</button>
-            </div>
+            <span class="user-display-name" id="userDisplayName" title=""></span>
         </div>
         <div class="content-body" id="contentBody"></div>
     </main>

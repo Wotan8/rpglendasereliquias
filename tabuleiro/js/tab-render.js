@@ -740,17 +740,41 @@ function drawJanela(o) {
 }
 
 function drawSelecao() {
+    syncLockBtn();
     if (!T.selection) return;
     const o = T.objects.get(T.selection); if (!o) return;
     const b = bboxOf(o);
-    ctx.strokeStyle = '#8b5cf6'; ctx.lineWidth = 2/T.cam.z; ctx.setLineDash([6/T.cam.z, 4/T.cam.z]);
+    const bloqueado = !!o.bloqueado;
+    ctx.strokeStyle = bloqueado ? '#f59e0b' : '#8b5cf6';
+    ctx.lineWidth = 2/T.cam.z; ctx.setLineDash([6/T.cam.z, 4/T.cam.z]);
     ctx.strokeRect(b.x, b.y, b.w, b.h); ctx.setLineDash([]);
+    if (bloqueado) {
+        // 🔒 sem alças de redimensionamento; cadeado no canto superior esquerdo
+        ctx.font = `${16/T.cam.z}px sans-serif`;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+        ctx.fillText('🔒', b.x, b.y - 4/T.cam.z);
+        return;
+    }
     if (['imagem','mostrar'].includes(o.tipo)) {
         for (const h of handlesOf(b)) {
             ctx.fillStyle = '#8b5cf6';
             ctx.fillRect(h.x - 6/T.cam.z, h.y - 6/T.cam.z, 12/T.cam.z, 12/T.cam.z);
         }
     }
+}
+
+/** 🔒 F8: posiciona o botão HTML de desbloqueio sobre o objeto bloqueado selecionado (só Mestre). */
+function syncLockBtn() {
+    const el = document.getElementById('tbLockBtn');
+    if (!el) return;
+    const o = T.selection && T.objects.get(T.selection);
+    if (!o || !o.bloqueado || !T.isMaster) { el.classList.remove('open'); return; }
+    const b = bboxOf(o);
+    const s = worldToScreen({ x: b.x + b.w / 2, y: b.y });
+    el.style.left = Math.max(24, Math.min(window.innerWidth - 24, s.x)) + 'px';
+    el.style.top = Math.max(24, Math.min(window.innerHeight - 24, s.y - 18)) + 'px';
+    el.dataset.id = o.id;
+    el.classList.add('open');
 }
 export function handlesOf(b) {
     return [

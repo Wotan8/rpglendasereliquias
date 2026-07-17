@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="app-canvas">
 
 <head>
     <meta charset="UTF-8">
@@ -128,15 +128,24 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 0 30px;
+            gap: 12px;
+            padding: 0 20px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            white-space: nowrap;
         }
+
+        .header > * { flex: 0 0 auto; }
 
         .header-left {
             display: flex;
             align-items: center;
             gap: 15px;
+            flex: 1 1 auto !important;
+            min-width: 40px;
         }
 
         .logo {
@@ -151,7 +160,9 @@
 
         .header-actions {
             display: flex;
+            align-items: center;
             gap: 12px;
+            flex-wrap: nowrap;
         }
 
         .header-btn {
@@ -790,7 +801,7 @@
     <link rel="stylesheet" href="shared/lendas-reliquias.css">
 </head>
 
-<body>
+<body class="app-canvas">
     <!-- Loading Screen -->
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-spinner"></div>
@@ -798,7 +809,11 @@
     </div>
 
     <div class="app-container">
+        <!-- Cabeçalho padronizado — UMA linha: [🚪 Sair] [🏠 Menu] [contextuais] [Nome] -->
         <div class="header">
+            <button class="btn-logout" onclick="logout()" title="Sair da conta">🚪 SAIR</button>
+            <button class="btn-back" onclick="window.location.href='painel-mestre/painel-mestre.html'"
+                title="Menu — Painel do Mestre">🏠</button>
             <div class="header-left">
                 <div class="logo">🗺️</div>
                 <h1>Lendas Hexmap</h1>
@@ -812,13 +827,8 @@
                 </button>
                 <button class="header-btn" onclick="saveProject()" id="saveBtn">💾 Salvar</button>
                 <button class="header-btn" onclick="showLoadModal()">📂 Carregar</button>
-
-                <!-- User Info integrado no header -->
                 <div class="header-user-info" id="headerUserInfo">
-                    <button class="btn-back" onclick="window.location.href='painel-mestre/painel-mestre.html'"
-                        title="Voltar ao Painel">🏠</button>
                     <span class="user-email" id="userDisplayName" style="cursor: default;" title="">Carregando...</span>
-                    <button class="btn-logout" onclick="logout()">🚪 SAIR</button>
                 </div>
             </div>
         </div>

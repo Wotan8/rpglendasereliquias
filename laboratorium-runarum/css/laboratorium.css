@@ -55,14 +55,24 @@ body {
     padding: 12px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
 }
 .lab-topo {
-    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    /* Cabeçalho padronizado: UMA linha; excedente rola horizontalmente */
+    display: flex; align-items: center; gap: 14px; flex-wrap: nowrap;
+    overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; white-space: nowrap;
     padding: 10px 14px; background: var(--bancada);
     border: 1px solid var(--borda); border-radius: var(--radius);
     box-shadow: 0 8px 30px rgba(0, 0, 0, .25);
 }
+.lab-topo > * { flex: 0 0 auto; }
+.lab-sair {
+    background: rgba(201, 79, 92, .18); border: 1px solid rgba(201, 79, 92, .5);
+    color: var(--ink); border-radius: 8px; padding: 6px 10px; cursor: pointer;
+    font-size: 1rem; line-height: 1; transition: background .15s;
+}
+.lab-sair:hover { background: rgba(201, 79, 92, .32); }
 .lab-topo h1 {
     margin: 0; font-family: var(--font); font-weight: 900; font-size: 1.2rem;
     letter-spacing: -.2px; color: var(--ink);
+    flex: 1 1 auto; min-width: 0;
 }
 .lab-topo h1 .runa { color: var(--lume); }
 .lab-voltar,
@@ -164,7 +174,8 @@ body {
         radial-gradient(circle at 1px 1px, rgba(139, 147, 167, .13) 1px, transparent 0) 0 0 / 26px 26px,
         linear-gradient(180deg, #0e1018, #10131e);
     border: 1px solid var(--borda); border-radius: var(--radius);
-    touch-action: none;
+    /* 📱 rolagem vertical da página liberada; o bloqueio de gesto fica só nos nós (.lab-node) */
+    touch-action: pan-y;
 }
 .lab-links { position: absolute; top: 0; left: 0; pointer-events: none; }
 .lab-links .lab-link { pointer-events: stroke; }
@@ -175,7 +186,7 @@ body {
 .lab-canvas-dica { color: var(--muted); font-size: .68rem; line-height: 1.6; }
 
 /* --- Nós --- */
-.lab-node { position: absolute; cursor: grab; user-select: none; z-index: 2; }
+.lab-node { position: absolute; cursor: grab; user-select: none; z-index: 2; touch-action: none; }
 .lab-node--drag { cursor: grabbing; z-index: 5; }
 .lab-node-img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; filter: drop-shadow(0 0 8px rgba(212, 175, 55,.25)); }
 .lab-node-box {

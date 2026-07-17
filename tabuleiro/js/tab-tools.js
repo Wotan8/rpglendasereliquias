@@ -118,6 +118,8 @@ function deslocDoToken(o) {
 }
 
 function podeMoverObj(o) {
+    // 🔒 Objeto bloqueado: ninguém move — nem o Mestre (desbloqueie antes)
+    if (o.bloqueado) return false;
     if (T.isMaster) return true;
     if (o.tipo === 'token' && tokenDoUsuario(o)) return can('moverToken');
     if (o.tipo === 'loot') return can('moverToken');
@@ -125,6 +127,8 @@ function podeMoverObj(o) {
     return false;
 }
 function podeEditarObj(o) {
+    // 🔒 Objeto bloqueado: edição/redimensionamento desabilitados para todos
+    if (o.bloqueado) return false;
     if (T.isMaster) return true;
     return o.criadoPor === T.user?.uid;
 }
@@ -234,7 +238,7 @@ function onDown(e) {
             const o = pickObject(w);
             if (o) {
                 // Relógio: clique do mestre = avançar fatia (F6.2)
-                if (o.tipo === 'relogio' && T.isMaster && T.mode === 'secret' && !e.shiftKey) {
+                if (o.tipo === 'relogio' && T.isMaster && T.mode === 'secret' && !e.shiftKey && !o.bloqueado) {
                     const cheias = Math.min((o.cheias || 0) + 1, o.fatias || 6);
                     updObj(o.id, { cheias });
                     T.selection = o.id; markDirty();
@@ -664,6 +668,7 @@ function abrirAjudaAtalhos() {
             <div><b>Botão direito (régua)</b> Adiciona vértice · <b>Botão direito (parado)</b> Menu de contexto</div>
             <div><b>Duplo-clique / Enter</b> Fecha o polígono de terreno · <b>Esc</b> Cancela</div>
             <div><b>Delete</b> Exclui a seleção · <b>Shift+?</b> Esta ajuda</div>
+            <div><b>🔒 Bloqueio:</b> menu de contexto/propriedades bloqueiam o objeto; clique no objeto bloqueado e use o botão 🔒 (Mestre) para desbloquear</div>
             <div><b>Toque:</b> pinça = zoom · segurar = menu de contexto</div>
         </div>`);
 }
@@ -789,10 +794,20 @@ function mostrarPopupAlfinete(o) {
 
 // ===== MENU DE CONTEXTO =====
 function abrirMenuContexto(o, x, y) {
-    if (o.tipo === 'mostrar' && window.tbMenuMostrar) { window.tbMenuMostrar(o.id, x, y); return; }
     const menu = document.getElementById('tbCtxMenu');
     const itens = [];
+    // 🔒 Objeto bloqueado: única ação disponível é o desbloqueio (apenas Mestre)
+    if (o.bloqueado) {
+        if (T.isMaster) itens.push({ t: '🔒 Desbloquear objeto', fn: () => window.tbDesbloquearObj(o.id) });
+        if (!itens.length) return;
+        renderMenuContexto(menu, itens, x, y);
+        return;
+    }
+    if (o.tipo === 'mostrar' && window.tbMenuMostrar) { window.tbMenuMostrar(o.id, x, y); return; }
     itens.push({ t: (o.visivelPublico !== false ? '🚫 Ocultar do público' : '👁️ Exibir ao público'), fn: () => updObj(o.id, { visivelPublico: !(o.visivelPublico !== false) }) });
+    if (T.isMaster && ['imagem', 'token', 'mostrar'].includes(o.tipo)) {
+        itens.push({ t: '🔒 Bloquear objeto', fn: () => window.tbBloquearObj(o.id) });
+    }
     if (o.tipo === 'porta') itens.push({ t: o.aberta ? '🚪 Fechar porta' : '🚪 Abrir porta', fn: () => updObj(o.id, { aberta: !o.aberta }) });
     if (o.tipo === 'alfinete') itens.push({ t: '📝 Editar alfinete', fn: () => window.tbEditarAlfinete(o.id) });
     if (o.tipo === 'relogio') {
@@ -803,6 +818,9 @@ function abrirMenuContexto(o, x, y) {
     itens.push({ t: '⬆️ Trazer para frente', fn: () => updObj(o.id, { z: maxZ() + 1 }) });
     itens.push({ t: '⚙️ Propriedades', fn: () => { T.selection = o.id; abrirPropriedades(o.id); markDirty(); } });
     itens.push({ t: '🗑️ Excluir', fn: () => delObj(o.id), danger: true });
+    renderMenuContexto(menu, itens, x, y);
+}
+function renderMenuContexto(menu, itens, x, y) {
     menu.innerHTML = itens.map((it, i) => `<div class="tb-ctx-item ${it.danger?'tb-danger':''}" data-i="${i}">${it.t}</div>`).join('');
     menu.querySelectorAll('.tb-ctx-item').forEach(el => el.onclick = () => { itens[+el.dataset.i].fn(); menu.classList.remove('open'); });
     menu.style.left = Math.min(x, window.innerWidth - 240) + 'px';

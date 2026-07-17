@@ -5,7 +5,7 @@
 // e salva o Grimório de volta em char/{id}.runomancia.
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, updateDoc, setDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
@@ -145,3 +145,10 @@ onAuthStateChanged(auth, async (user) => {
         setMsg('❌ Erro ao carregar o Laboratorium.<br><small>Verifique a conexão e recarregue.</small>');
     }
 });
+
+
+// ===== 🚪 Sair (cabeçalho padronizado) =====
+window.labLogout = async function () {
+    try { await signOut(auth); } catch (e) { console.warn('logout', e); }
+    window.location.href = '../index.html';
+};

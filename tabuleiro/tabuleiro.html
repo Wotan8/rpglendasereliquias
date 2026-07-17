@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="app-canvas">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="../shared/tokens.css">
     <link rel="stylesheet" href="../shared/lendas-reliquias.css">
 </head>
-<body>
+<body class="app-canvas">
     <canvas id="tbCanvas"></canvas>
 
     <!-- Loading -->
@@ -152,6 +152,9 @@
     <!-- Menu de contexto / popup / toasts -->
     <div class="tb-ctx" id="tbCtxMenu"></div>
     <div id="tbPinPopup"></div>
+    <!-- 🔒 F8: botão de desbloqueio de objeto bloqueado (renderizado apenas para o Mestre) -->
+    <button id="tbLockBtn" title="Desbloquear objeto (Mestre)"
+        onclick="if(this.dataset.id&&window.tbDesbloquearObj)tbDesbloquearObj(this.dataset.id)">🔒</button>
     <div id="tbToasts"></div>
     <div id="tbCoords"></div>
 

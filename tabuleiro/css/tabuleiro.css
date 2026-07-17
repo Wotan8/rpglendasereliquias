@@ -233,6 +233,20 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 #tbPinPopup b { color: var(--lr-gold-2); }
 #tbPinPopup div { margin-top: 5px; color: var(--tb-muted); white-space: pre-wrap; }
 
+/* ===== 🔒 Botão de desbloqueio de objeto (F8 — só Mestre) ===== */
+#tbLockBtn {
+    position: fixed; z-index: 92; display: none;
+    transform: translate(-50%, -100%);
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--tb-panel); border: 2px solid #f59e0b; color: #f59e0b;
+    font-size: 18px; line-height: 1; cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0,0,0,.55);
+    transition: background .15s, transform .1s;
+}
+#tbLockBtn.open { display: block; }
+#tbLockBtn:hover { background: rgba(245, 158, 11, .18); }
+#tbLockBtn:active { transform: translate(-50%, -100%) scale(.92); }
+
 /* ===== Toasts ===== */
 #tbToasts { position: fixed; top: 58px; left: 50%; transform: translateX(-50%); z-index: 150; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
 .tb-toast {

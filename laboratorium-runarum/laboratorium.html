@@ -24,8 +24,10 @@
 
     <!-- APP -->
     <div id="labWrap" class="lab-wrap" style="display:none">
+        <!-- Cabeçalho padronizado — UMA linha: [🚪 Sair] [Menu/Voltar] [contextuais] [🌙 Tema] [Nome] -->
         <header class="lab-topo">
-            <button class="lab-voltar" onclick="history.length > 1 ? history.back() : location.href='../menu/menu.html'" title="Voltar à ficha">←</button>
+            <button class="lab-sair" onclick="labLogout()" title="Sair da conta">🚪</button>
+            <button class="lab-voltar" onclick="history.length > 1 ? history.back() : location.href='../menu/menu.html'" title="Voltar à ficha / menu">←</button>
             <h1><span class="runa">ᛟ</span> Laboratorium Runarum</h1>
             <button id="btnThemeToggle" class="theme-toggle" onclick="toggleTheme()" title="Alternar tema claro/escuro">🌙</button>
             <div id="labCharInfo" class="lab-char"></div>

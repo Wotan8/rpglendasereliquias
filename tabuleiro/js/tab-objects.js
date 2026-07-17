@@ -345,6 +345,16 @@ export function abrirPropriedades(id, soAtualizar) {
     const o = T.objects.get(id); if (!o) { p.classList.remove('open'); return; }
     if (T.mode !== 'secret') { p.classList.remove('open'); return; }
     p.classList.add('open');
+    // 🔒 F8: objeto bloqueado — sem campos de edição; só o Mestre vê o botão de desbloqueio
+    if (o.bloqueado) {
+        document.getElementById('tbPropsBody').innerHTML = `
+            <div class="tb-props-title">🔒 ${iconeTipo(o.tipo)} ${esc(o.nome || o.titulo || o.tipo)}</div>
+            <div class="tb-muted" style="font-size:.78rem;line-height:1.6;margin:6px 0 10px">
+                Este objeto está <b>bloqueado</b>: arrastar, redimensionar e editar estão desativados para todos, inclusive o Mestre.
+            </div>
+            ${T.isMaster ? `<button class="tb-btn tb-btn-small" style="width:100%" onclick="tbDesbloquearObj('${id}')">🔒 Desbloquear objeto</button>` : ''}`;
+        return;
+    }
     const camadas = (T.canvas?.camadas || []);
     const b = bboxOf(o);
     let extra = '';
@@ -427,6 +437,7 @@ export function abrirPropriedades(id, soAtualizar) {
             <button class="tb-btn tb-btn-small" onclick="tbZOrdem('${id}',1)">⬆️ Frente</button>
             <button class="tb-btn tb-btn-small" onclick="tbZOrdem('${id}',-1)">⬇️ Trás</button>
             <button class="tb-btn tb-btn-small" onclick="tbDuplicar('${id}')">📄 Duplicar</button>
+            ${T.isMaster ? `<button class="tb-btn tb-btn-small" title="Protege contra movimentações acidentais" onclick="tbBloquearObj('${id}')">🔒 Bloquear</button>` : ''}
             <button class="tb-btn tb-btn-small tb-btn-danger" onclick="tbExcluirObj('${id}')">🗑️ Excluir</button>
         </div>`;
 }
@@ -451,6 +462,26 @@ window.tbDuplicar = async (id) => {
     await addObj({ ...cp, x: (cp.x||0) + 40, y: (cp.y||0) + 40, pontos: cp.pontos ? cp.pontos.map(p => ({ x: p.x + 40, y: p.y + 40 })) : undefined, z: maxZ() + 1 });
 };
 window.tbExcluirObj = (id) => { delObj(id); };
+
+// ===== 🔒 BLOQUEIO DE OBJETOS (F8) =====
+// Bloqueado: arrastar, redimensionar e editar ficam desativados para TODOS (inclusive o Mestre).
+// Somente o Mestre pode bloquear/desbloquear, por ação explícita.
+window.tbBloquearObj = (id) => {
+    if (!T.isMaster) { toast('⚠️ Apenas o Mestre pode bloquear objetos', 'warning'); return; }
+    const o = T.objects.get(id); if (!o) return;
+    updObj(id, { bloqueado: true });
+    abrirPropriedades(id, true);
+    markDirty();
+    toast('🔒 Objeto bloqueado — protegido contra movimentações');
+};
+window.tbDesbloquearObj = (id) => {
+    if (!T.isMaster) { toast('⚠️ Apenas o Mestre pode desbloquear objetos', 'warning'); return; }
+    const o = T.objects.get(id); if (!o) return;
+    updObj(id, { bloqueado: false });
+    abrirPropriedades(id, true);
+    markDirty();
+    toast('🔓 Objeto desbloqueado — manipulação reabilitada');
+};
 
 // ===== LIMPAR DESENHOS E TEXTO =====
 window.tbLimparDesenhos = async function() {

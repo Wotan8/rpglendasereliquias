@@ -136,7 +136,10 @@ export function abrirMenuRadial(o, sx, sy) {
     if (o.vinculo?.tipo === 'npc' && (secreto || can('abrirNpc'))) {
         acoes.push({ ic: '📋', tip: 'Abrir ficha do NPC', fn: () => window.tbAbrirNpcModal?.(o.vinculo.id, !secreto) });
     }
-    if (secreto) {
+    // 🔒 Token bloqueado: nenhuma ação de manipulação; Mestre vê apenas o desbloqueio
+    if (o.bloqueado) {
+        if (secreto) acoes.push({ ic: '🔒', tip: 'Desbloquear objeto', fn: () => window.tbDesbloquearObj?.(o.id) });
+    } else if (secreto) {
         acoes.push({ ic: '🎲', tip: 'Rolar iniciativa (d20)', fn: () => rolarIniciativa(o) });
         acoes.push({ ic: o.visao?.ativa ? '👁️' : '🙈', tip: 'Alternar visão', fn: () => updObj(o.id, { visao: { ...(o.visao||{}), ativa: !o.visao?.ativa } }) });
         acoes.push({ ic: o.luz?.ativa ? '🔦' : '💡', tip: 'Alternar luz', fn: () => updObj(o.id, { luz: { ...(o.luz||{ alcance: 3 }), ativa: !o.luz?.ativa } }) });

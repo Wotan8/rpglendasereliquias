@@ -30,9 +30,11 @@
         <div class="loading-text">⚔️ Carregando personagens...</div>
     </div>
 
-    <!-- Toolbar -->
+    <!-- Toolbar — ordem padronizada: [🚪 Sair] [🏠 Menu] [contextuais] [spacer] [🌙 Tema] [Nome] -->
     <div class="toolbar" style="display:none">
-        <button id="btnThemeToggle" onclick="toggleTheme()">🌙</button>
+        <button onclick="logout()" title="Sair da conta"
+            style="background:var(--lr-blood-2);color:var(--lr-divine);border:none;font-weight:700">🚪 Sair</button>
+        <button onclick="window.location.href='menu.html'" title="Menu principal">🏠 Menu</button>
         <button id="btnPainelMestre"
             style="display:none;background:rgba(212, 175, 55,.2);border-color:rgba(212, 175, 55,.5);color:var(--lr-gold)"
             onclick="window.location.href='../painel-mestre/painel-mestre.html'">👑 Painel de Mestre</button>
@@ -41,13 +43,10 @@
             onclick="window.location.href='../painel-criador/painel-criador.html'">🔧 Painel Criador</button>
         <div class="spacer"></div>
         <span class="hint-toolbar">Menu</span>
-        <div style="display:flex;align-items:center;gap:8px;margin-left:12px">
-            <span id="userDisplayName"
-                style="color:var(--lr-text-2);font-size:.8rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
-                title=""></span>
-            <button onclick="logout()"
-                style="background:var(--lr-blood-2);color:var(--lr-divine);border:none;padding:4px 10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:.75rem">🚪</button>
-        </div>
+        <button id="btnThemeToggle" onclick="toggleTheme()" title="Alternar tema">🌙</button>
+        <span id="userDisplayName"
+            style="color:var(--lr-text-2);font-size:.8rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+            title=""></span>
     </div>
 
     <!-- Main Content -->

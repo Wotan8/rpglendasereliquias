@@ -358,9 +358,38 @@ dialog {
 
 img, svg, video, canvas { max-width: 100%; }
 
+/* =====================================================================
+   11.1 CABEÇALHO SUPERIOR PADRONIZADO (uma linha em todas as resoluções)
+   Ordem fixa dos elementos em todas as páginas:
+   [🚪 Sair] [Menu] [ações contextuais…] [spacer] [🖨️ Impressão] [🌙 Tema] [Nome da conta]
+   ===================================================================== */
+.toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;          /* estritamente UMA linha */
+    overflow-x: auto;           /* excedente rola horizontalmente */
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    white-space: nowrap;
+    gap: 8px;
+}
+.toolbar > * { flex: 0 0 auto; }
+.toolbar .spacer { flex: 1 1 auto; min-width: 8px; }
+
 @media (max-width: 768px) {
     /* Nunca permitir rolagem horizontal da página inteira */
     html, body { overflow-x: hidden; }
+
+    /* 📱 Rolagem VERTICAL sempre liberada nas páginas de conteúdo.
+       Apps de canvas em tela cheia (ex.: Tabuleiro) usam body.app-canvas
+       para manter o comportamento fixo de viewport. */
+    html:not(.app-canvas), body:not(.app-canvas) {
+        overflow-y: auto;
+        height: auto;
+        min-height: 100%;
+        -webkit-overflow-scrolling: touch;
+    }
 
     /* Barras/toolbars compactas no celular */
     .toolbar { padding-top: 6px; padding-bottom: 6px; }
