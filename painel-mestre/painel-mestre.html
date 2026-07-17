@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0b0c10">
+    <meta name="theme-color" content="#0E1117">
     <title>Lendas e Relíquias — Painel do Mestre</title>
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/layout.css">
@@ -17,6 +17,12 @@
     <link rel="stylesheet" href="../ficha-v1.7_1/css/inventory.css">
     <link rel="stylesheet" href="../ficha-v1.7_1/css/equip-modal.css">
 <script type="module" src="/js/global-favicon.js"></script>
+    <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../shared/tokens.css">
+    <link rel="stylesheet" href="../shared/lendas-reliquias.css">
 </head>
 <body>
     <!-- LOADING -->
@@ -419,7 +425,7 @@
                     <div id="inner-tab-repertorio" style="display: none;">
                         <!-- Sistema de Repertório -->
                         <div id="repertorioSection" style="display: none; margin-bottom: 25px;">
-                            <div style="background: rgba(30, 27, 75, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 20px;">
+                            <div style="background: rgba(31, 38, 48, 0.6); border: 2px solid var(--border); border-radius: 15px; padding: 20px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                                     <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary);">🎒 Repertório do Jogador</div>
                                     <button class="btn btn-success" onclick="openAddItemRepertorioModal()" style="padding: 8px 20px; font-size: 0.9rem;">
@@ -427,7 +433,7 @@
                                     </button>
                                 </div>
                                 <div id="repertorioList">
-                                    <div style="text-align: center; padding: 40px; color: #64748b;">
+                                    <div style="text-align: center; padding: 40px; color: var(--lr-text-2);">
                                         O repertório está vazio
                                     </div>
                                 </div>

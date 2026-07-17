@@ -13,15 +13,15 @@
         }
 
         :root {
-            --primary: #8b5cf6;
-            --secondary: #ec4899;
-            --dark: #1e1b4b;
-            --darker: #0f172a;
-            --light: #f8fafc;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --border: #334155;
+            --primary: var(--lr-abyssal);
+            --secondary: var(--lr-abyssal-2);
+            --dark: var(--lr-surface);
+            --darker: var(--lr-bg-0);
+            --light: var(--lr-divine);
+            --success: var(--lr-nature);
+            --danger: var(--lr-blood-2);
+            --warning: var(--lr-gold);
+            --border: var(--lr-surface-2);
         }
 
         body {
@@ -49,7 +49,7 @@
         .loading-spinner {
             width: 60px;
             height: 60px;
-            border: 4px solid rgba(139, 92, 246, 0.2);
+            border: 4px solid rgba(91, 63, 184, 0.2);
             border-top: 4px solid var(--primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -76,7 +76,7 @@
         .sidebar {
             width: 280px;
             min-width: 280px;
-            background: rgba(15, 23, 42, 0.95);
+            background: rgba(14, 17, 23, 0.95);
             border-right: 2px solid var(--border);
             height: 100vh;
             overflow-y: auto;
@@ -105,7 +105,7 @@
         .search-input {
             width: 100%;
             padding: 10px 15px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 2px solid var(--border);
             border-radius: 8px;
             color: var(--light);
@@ -133,12 +133,12 @@
         }
 
         .nav-category:hover {
-            background: rgba(139, 92, 246, 0.1);
+            background: rgba(91, 63, 184, 0.1);
             border-left-color: var(--primary);
         }
 
         .nav-category.active {
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             border-left-color: var(--primary);
         }
 
@@ -160,7 +160,7 @@
         .btn-new-entry {
             margin: 15px;
             padding: 12px;
-            background: linear-gradient(135deg, var(--success), #059669);
+            background: linear-gradient(135deg, var(--success), var(--lr-nature));
             border: none;
             border-radius: 10px;
             color: white;
@@ -171,7 +171,7 @@
 
         .btn-new-entry:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 4px 12px rgba(63, 174, 106, 0.4);
         }
 
         .btn-back {
@@ -201,7 +201,7 @@
 
         .content-header {
             padding: 20px 30px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border-bottom: 2px solid var(--border);
             display: flex;
             justify-content: space-between;
@@ -218,7 +218,7 @@
         }
 
         .btn-mestre {
-            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            background: linear-gradient(135deg, var(--lr-abyssal), #6366f1);
             color: white;
             border: none;
             padding: 8px 14px;
@@ -234,7 +234,7 @@
 
         .btn-mestre:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+            box-shadow: 0 4px 12px rgba(91, 63, 184, 0.4);
         }
 
         .btn-viewmap {
@@ -258,7 +258,7 @@
         }
 
         .btn-logout {
-            background: linear-gradient(135deg, var(--danger), #dc2626);
+            background: linear-gradient(135deg, var(--danger), var(--lr-blood-2));
             color: white;
             border: none;
             padding: 8px 16px;
@@ -271,11 +271,11 @@
 
         .btn-logout:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            box-shadow: 0 4px 12px rgba(201, 79, 92, 0.4);
         }
 
         .user-display-name {
-            color: #94a3b8;
+            color: var(--lr-text-2);
             font-size: 0.9rem;
             font-weight: 600;
             cursor: default;
@@ -305,7 +305,7 @@
         }
 
         .stat-card {
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 2px solid var(--border);
             border-radius: 16px;
             padding: 20px;
@@ -330,7 +330,7 @@
         }
 
         .stat-label {
-            color: #94a3b8;
+            color: var(--lr-text-2);
             font-size: 0.9rem;
         }
 
@@ -359,7 +359,7 @@
         }
 
         .entry-card {
-            background: rgba(30, 27, 75, 0.8);
+            background: rgba(31, 38, 48, 0.8);
             border: 2px solid var(--border);
             border-radius: 16px;
             padding: 20px;
@@ -370,7 +370,7 @@
         .entry-card:hover {
             border-color: var(--primary);
             transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.2);
+            box-shadow: 0 10px 30px rgba(91, 63, 184, 0.2);
         }
 
         .entry-image {
@@ -398,7 +398,7 @@
         }
 
         .entry-desc {
-            color: #94a3b8;
+            color: var(--lr-text-2);
             font-size: 0.85rem;
             line-height: 1.5;
             display: -webkit-box;
@@ -422,7 +422,7 @@
             align-items: center;
             gap: 10px;
             padding: 10px 12px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 8px;
             transition: all 0.2s;
@@ -441,7 +441,7 @@
         .linked-entity-title {
             flex: 1;
             padding: 6px 10px;
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(14, 17, 23, 0.8);
             border: 1px solid var(--border);
             border-radius: 6px;
             color: var(--light);
@@ -454,7 +454,7 @@
         }
 
         .linked-entity-remove {
-            background: rgba(239, 68, 68, 0.2);
+            background: rgba(201, 79, 92, 0.2);
             border: none;
             color: var(--danger);
             width: 28px;
@@ -497,7 +497,7 @@
 
         .entity-type-badge {
             padding: 2px 8px;
-            background: rgba(139, 92, 246, 0.3);
+            background: rgba(91, 63, 184, 0.3);
             border-radius: 4px;
             font-size: 0.7rem;
             font-weight: 600;
@@ -525,7 +525,7 @@
         .no-entries {
             text-align: center;
             padding: 60px 20px;
-            color: #64748b;
+            color: var(--lr-text-2);
         }
 
         .no-entries-icon {
@@ -544,7 +544,7 @@
 
         .filter-select {
             padding: 10px 15px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 2px solid var(--border);
             border-radius: 8px;
             color: var(--light);
@@ -574,7 +574,7 @@
 
         .filter-input {
             padding: 10px 15px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 2px solid var(--border);
             border-radius: 8px;
             color: var(--light);
@@ -590,7 +590,7 @@
         }
 
         .filter-input::placeholder {
-            color: #64748b;
+            color: var(--lr-text-2);
         }
 
         /* Quick Filters */
@@ -602,10 +602,10 @@
 
         .quick-filter-btn {
             padding: 8px 14px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 20px;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             cursor: pointer;
             font-size: 0.8rem;
             font-weight: 500;
@@ -616,7 +616,7 @@
         }
 
         .quick-filter-btn:hover {
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             border-color: var(--primary);
             color: var(--light);
         }
@@ -640,9 +640,9 @@
 
         .active-filters-summary {
             font-size: 0.8rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             padding: 8px 12px;
-            background: rgba(139, 92, 246, 0.1);
+            background: rgba(91, 63, 184, 0.1);
             border-radius: 6px;
             display: flex;
             align-items: center;
@@ -651,7 +651,7 @@
 
         .clear-filters-btn {
             padding: 4px 10px;
-            background: rgba(239, 68, 68, 0.2);
+            background: rgba(201, 79, 92, 0.2);
             border: none;
             border-radius: 4px;
             color: var(--danger);
@@ -671,7 +671,7 @@
             align-items: center;
             gap: 8px;
             padding: 12px 16px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 10px;
             margin-bottom: 20px;
@@ -688,24 +688,24 @@
         }
 
         .breadcrumb-item:hover {
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
         }
 
         .breadcrumb-item.current {
             color: var(--light);
             cursor: default;
             font-weight: 700;
-            background: rgba(139, 92, 246, 0.3);
+            background: rgba(91, 63, 184, 0.3);
         }
 
         .breadcrumb-separator {
-            color: #64748b;
+            color: var(--lr-text-2);
             font-size: 0.9rem;
         }
 
         /* Geographic Hierarchy - Tree View */
         .geography-tree-container {
-            background: rgba(30, 27, 75, 0.4);
+            background: rgba(31, 38, 48, 0.4);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 15px;
@@ -721,7 +721,7 @@
 
         .tree-controls button {
             padding: 8px 16px;
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             border: 1px solid var(--primary);
             border-radius: 6px;
             color: var(--primary);
@@ -760,12 +760,12 @@
             cursor: pointer;
             border-radius: 8px;
             transition: all 0.2s;
-            background: rgba(30, 27, 75, 0.4);
+            background: rgba(31, 38, 48, 0.4);
             margin-bottom: 4px;
         }
 
         .tree-node-header:hover {
-            background: rgba(139, 92, 246, 0.15);
+            background: rgba(91, 63, 184, 0.15);
             border-color: var(--primary);
         }
 
@@ -773,7 +773,7 @@
             width: 24px;
             height: 24px;
             border: none;
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             border-radius: 4px;
             color: var(--primary);
             cursor: pointer;
@@ -800,7 +800,7 @@
 
         .tree-node-type {
             font-size: 0.75rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             padding: 2px 8px;
             background: rgba(100, 116, 139, 0.2);
             border-radius: 4px;
@@ -808,14 +808,14 @@
 
         .tree-children-count {
             font-size: 0.75rem;
-            color: #64748b;
+            color: var(--lr-text-2);
             display: flex;
             gap: 8px;
         }
 
         .tree-node-edit {
             padding: 4px 8px;
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             border: none;
             border-radius: 4px;
             cursor: pointer;
@@ -835,7 +835,7 @@
         .view-toggle {
             display: flex;
             gap: 5px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border-radius: 8px;
             padding: 4px;
             margin-bottom: 20px;
@@ -847,7 +847,7 @@
             background: transparent;
             border: none;
             border-radius: 6px;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             cursor: pointer;
             font-weight: 600;
             transition: all 0.2s;
@@ -859,7 +859,7 @@
         }
 
         .view-btn:hover:not(.active) {
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             color: var(--light);
         }
 
@@ -884,7 +884,7 @@
             align-items: center;
             gap: 10px;
             padding: 10px 12px;
-            background: rgba(139, 92, 246, 0.1);
+            background: rgba(91, 63, 184, 0.1);
             border: 1px solid var(--primary);
             border-radius: 8px;
             margin-top: 8px;
@@ -898,7 +898,7 @@
 
         .parent-selector-clear {
             padding: 4px 8px;
-            background: rgba(239, 68, 68, 0.2);
+            background: rgba(201, 79, 92, 0.2);
             border: none;
             border-radius: 4px;
             color: var(--danger);
@@ -916,7 +916,7 @@
             display: flex;
             gap: 10px;
             font-size: 0.75rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             margin-top: 8px;
             flex-wrap: wrap;
         }
@@ -932,7 +932,7 @@
 
         /* Referenced By Section (Bidirectional References) */
         .referenced-by-section {
-            background: rgba(139, 92, 246, 0.08);
+            background: rgba(91, 63, 184, 0.08);
             border: 1px dashed var(--primary);
             border-radius: 10px;
             padding: 15px;
@@ -976,7 +976,7 @@
             align-items: center;
             gap: 8px;
             padding: 8px 12px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 8px;
             cursor: pointer;
@@ -985,7 +985,7 @@
         }
 
         .ref-item:hover {
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             border-color: var(--primary);
         }
 
@@ -1000,12 +1000,12 @@
 
         .ref-item-context {
             font-size: 0.75rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             font-style: italic;
         }
 
         .ref-empty {
-            color: #64748b;
+            color: var(--lr-text-2);
             font-size: 0.85rem;
             font-style: italic;
         }
@@ -1021,7 +1021,7 @@
             width: 320px;
             max-width: 90vw;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6),
-                0 0 20px rgba(139, 92, 246, 0.2);
+                0 0 20px rgba(91, 63, 184, 0.2);
             animation: hoverCardIn 0.2s ease-out;
             pointer-events: none;
         }
@@ -1068,7 +1068,7 @@
 
         .hover-preview-desc {
             font-size: 0.85rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             line-height: 1.5;
             max-height: 60px;
             overflow: hidden;
@@ -1079,7 +1079,7 @@
             gap: 10px;
             margin-top: 10px;
             font-size: 0.75rem;
-            color: #64748b;
+            color: var(--lr-text-2);
         }
 
         .hover-preview-tags {
@@ -1109,7 +1109,7 @@
             text-align: center;
             margin-bottom: 30px;
             padding: 20px;
-            background: linear-gradient(135deg, rgba(30, 27, 75, 0.8), rgba(15, 23, 42, 0.9));
+            background: linear-gradient(135deg, rgba(31, 38, 48, 0.8), rgba(14, 17, 23, 0.9));
             border-radius: 15px;
             border: 1px solid var(--border);
         }
@@ -1123,7 +1123,7 @@
         }
 
         .submundo-motto {
-            color: #94a3b8;
+            color: var(--lr-text-2);
             font-style: italic;
             margin-top: 8px;
         }
@@ -1135,16 +1135,16 @@
             margin-bottom: 25px;
             flex-wrap: wrap;
             padding: 10px;
-            background: rgba(15, 23, 42, 0.5);
+            background: rgba(14, 17, 23, 0.5);
             border-radius: 12px;
         }
 
         .submundo-tab {
             padding: 10px 18px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 8px;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             cursor: pointer;
             font-weight: 600;
             transition: all 0.2s;
@@ -1154,7 +1154,7 @@
         }
 
         .submundo-tab:hover {
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             border-color: var(--primary);
             color: var(--light);
         }
@@ -1174,7 +1174,7 @@
         }
 
         .submundo-stat-card {
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 20px;
@@ -1202,7 +1202,7 @@
 
         .stat-label {
             font-size: 0.85rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
         }
 
         /* As Três Leis */
@@ -1214,7 +1214,7 @@
         }
 
         .lei-card {
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(14, 17, 23, 0.8);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 20px;
@@ -1229,7 +1229,7 @@
         }
 
         .lei-texto {
-            color: #94a3b8;
+            color: var(--lr-text-2);
             font-style: italic;
             display: block;
             margin-bottom: 10px;
@@ -1248,7 +1248,7 @@
         }
 
         .feira-card {
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 12px;
             overflow: hidden;
@@ -1259,7 +1259,7 @@
         .feira-card:hover {
             transform: translateY(-5px);
             border-color: var(--primary);
-            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.2);
+            box-shadow: 0 10px 30px rgba(91, 63, 184, 0.2);
         }
 
         .feira-image {
@@ -1291,7 +1291,7 @@
             background: rgba(100, 116, 139, 0.3);
             border-radius: 15px;
             font-size: 0.75rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
         }
 
         .feira-nome {
@@ -1303,7 +1303,7 @@
 
         .feira-info {
             font-size: 0.85rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             margin-bottom: 5px;
         }
 
@@ -1316,14 +1316,14 @@
 
         .especialidade-badge {
             padding: 4px 8px;
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             border-radius: 8px;
             font-size: 0.8rem;
         }
 
         /* Tabela de Preços */
         .precos-container {
-            background: rgba(15, 23, 42, 0.5);
+            background: rgba(14, 17, 23, 0.5);
             border-radius: 15px;
             padding: 20px;
         }
@@ -1337,10 +1337,10 @@
 
         .preco-tab {
             padding: 8px 15px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 8px;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             cursor: pointer;
             font-size: 0.85rem;
             transition: all 0.2s;
@@ -1366,13 +1366,13 @@
         }
 
         .precos-table th {
-            background: rgba(139, 92, 246, 0.1);
+            background: rgba(91, 63, 184, 0.1);
             color: var(--primary);
             font-weight: 600;
         }
 
         .precos-table tr:hover {
-            background: rgba(139, 92, 246, 0.05);
+            background: rgba(91, 63, 184, 0.05);
         }
 
         .precos-categoria {
@@ -1391,7 +1391,7 @@
         }
 
         .simbolo-card {
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 15px;
@@ -1414,7 +1414,7 @@
 
         .simbolo-significado {
             font-size: 0.8rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
         }
 
         /* Contatos */
@@ -1425,7 +1425,7 @@
         }
 
         .contato-card {
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 15px;
@@ -1449,13 +1449,13 @@
             border-radius: 15px;
             font-size: 0.75rem;
             font-weight: 600;
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             color: var(--primary);
         }
 
         .contato-nivel {
             font-size: 0.8rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
         }
 
         .contato-nome {
@@ -1466,7 +1466,7 @@
 
         .contato-sombra {
             font-size: 0.85rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             font-style: italic;
         }
 
@@ -1484,12 +1484,12 @@
         }
 
         .marca-quebrado {
-            background: #DC2626;
+            background: var(--lr-blood-2);
             color: white;
         }
 
         .marca-sempalavra {
-            background: #F59E0B;
+            background: var(--lr-gold);
             color: black;
         }
 
@@ -1500,7 +1500,7 @@
 
         /* Submundo Filters */
         .submundo-filters {
-            background: rgba(15, 23, 42, 0.4);
+            background: rgba(14, 17, 23, 0.4);
             padding: 15px;
             border-radius: 12px;
             border: 1px solid var(--border);
@@ -1518,13 +1518,13 @@
 
         .submundo-filter-label {
             font-size: 0.75rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             font-weight: 600;
             margin-left: 5px;
         }
 
         .submundo-filter-select {
-            background: rgba(30, 27, 75, 0.8);
+            background: rgba(31, 38, 48, 0.8);
             border: 1px solid var(--border);
             border-radius: 8px;
             padding: 8px 12px;
@@ -1538,7 +1538,7 @@
         .submundo-filter-select:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+            box-shadow: 0 0 0 2px rgba(91, 63, 184, 0.2);
         }
 
         /* Reputação */
@@ -1549,7 +1549,7 @@
         }
 
         .reputacao-card {
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 20px;
@@ -1599,7 +1599,7 @@
 
         .specialty-chip {
             padding: 6px 12px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 20px;
             cursor: pointer;
@@ -1625,7 +1625,7 @@
         .escala-option {
             flex: 1;
             padding: 15px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 2px solid var(--border);
             border-radius: 10px;
             text-align: center;
@@ -1639,7 +1639,7 @@
 
         .escala-option.selected {
             border-color: var(--primary);
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
         }
 
         .escala-option .escala-label {
@@ -1649,7 +1649,7 @@
 
         .escala-option .escala-desc {
             font-size: 0.75rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             margin-top: 5px;
         }
 
@@ -1665,14 +1665,14 @@
             align-items: center;
             gap: 5px;
             padding: 5px 10px;
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             border-radius: 8px;
             font-size: 0.85rem;
         }
 
         .mercador-badge .remove-btn {
             cursor: pointer;
-            color: #ef4444;
+            color: var(--lr-blood-2);
         }
 
         /* Rumor System Styles */
@@ -1701,23 +1701,23 @@
         }
 
         .status-naodescoberto {
-            background: #475569;
-            color: #f8fafc;
+            background: var(--lr-border);
+            color: var(--lr-divine);
         }
 
         .status-ouvido {
-            background: #f59e0b;
-            color: #fff;
+            background: var(--lr-gold);
+            color: var(--lr-divine);
         }
 
         .status-investigado {
-            background: #3b82f6;
-            color: #fff;
+            background: var(--lr-arcane);
+            color: var(--lr-divine);
         }
 
         .status-resolvido {
-            background: #10b981;
-            color: #fff;
+            background: var(--lr-nature);
+            color: var(--lr-divine);
         }
 
         .rumor-source-link {
@@ -1730,7 +1730,7 @@
         }
 
         .rumor-truth-box {
-            background: rgba(15, 23, 42, 0.6);
+            background: rgba(14, 17, 23, 0.6);
             border: 1px dashed var(--primary);
             padding: 10px;
             border-radius: 8px;
@@ -1795,7 +1795,7 @@
 
         .timeline-event-card {
             width: 42%;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 18px;
@@ -1808,7 +1808,7 @@
         .timeline-event-card:hover {
             transform: translateY(-5px) scale(1.02);
             border-color: var(--primary);
-            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.2);
+            box-shadow: 0 10px 30px rgba(91, 63, 184, 0.2);
         }
 
         .timeline-event-card::before {
@@ -1855,19 +1855,19 @@
         .event-importance-grande {
             width: 46% !important;
             border: 1px solid var(--secondary);
-            background: rgba(30, 27, 75, 0.8);
+            background: rgba(31, 38, 48, 0.8);
         }
 
         .event-importance-epica {
             width: 50% !important;
-            border: 2px solid #fbbf24;
+            border: 2px solid var(--lr-gold-2);
             /* Dourado */
-            box-shadow: 0 0 20px rgba(251, 191, 36, 0.2);
-            background: linear-gradient(135deg, rgba(30, 27, 75, 0.9), rgba(67, 20, 7, 0.4));
+            box-shadow: 0 0 20px rgba(229, 197, 88, 0.2);
+            background: linear-gradient(135deg, rgba(31, 38, 48, 0.9), rgba(67, 20, 7, 0.4));
         }
 
         .event-importance-epica .event-title {
-            color: #fbbf24;
+            color: var(--lr-gold-2);
             font-size: 1.4rem;
         }
 
@@ -1884,7 +1884,7 @@
 
         .event-type-badge {
             padding: 2px 8px;
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             border-radius: 4px;
             color: var(--primary);
             font-size: 0.75rem;
@@ -1908,7 +1908,7 @@
 
         .event-desc {
             font-size: 0.9rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             line-height: 1.5;
             display: -webkit-box;
             -webkit-line-clamp: 3;
@@ -1928,10 +1928,10 @@
         .event-tag {
             font-size: 0.7rem;
             padding: 2px 8px;
-            background: rgba(15, 23, 42, 0.6);
+            background: rgba(14, 17, 23, 0.6);
             border: 1px solid rgba(148, 163, 184, 0.2);
             border-radius: 4px;
-            color: #94a3b8;
+            color: var(--lr-text-2);
         }
 
         .event-consequences {
@@ -1940,7 +1940,7 @@
             background: rgba(0, 0, 0, 0.2);
             border-radius: 6px;
             font-size: 0.8rem;
-            color: #fbbf24;
+            color: var(--lr-gold-2);
             display: flex;
             gap: 5px;
         }
@@ -1951,7 +1951,7 @@
             width: 100%;
             margin: 60px 0;
             padding: 15px;
-            background: rgba(239, 68, 68, 0.1);
+            background: rgba(201, 79, 92, 0.1);
             border: 2px dashed var(--danger);
             border-radius: 12px;
             text-align: center;
@@ -1960,7 +1960,7 @@
             z-index: 5;
             text-transform: uppercase;
             letter-spacing: 3px;
-            box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+            box-shadow: 0 0 20px rgba(201, 79, 92, 0.2);
         }
 
         .current-year-marker::after {
@@ -2020,7 +2020,7 @@
         }
 
         .player-summary-card {
-            background: rgba(15, 23, 42, 0.6);
+            background: rgba(14, 17, 23, 0.6);
             border: 1px solid var(--border);
             border-radius: 10px;
             overflow: hidden;
@@ -2028,12 +2028,12 @@
         }
 
         .player-summary-card:hover {
-            border-color: rgba(139, 92, 246, 0.5);
+            border-color: rgba(91, 63, 184, 0.5);
         }
 
         .player-summary-card.expanded {
             border-color: var(--primary);
-            box-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
+            box-shadow: 0 0 15px rgba(91, 63, 184, 0.2);
         }
 
         .player-summary-header {
@@ -2042,12 +2042,12 @@
             justify-content: space-between;
             padding: 12px 15px;
             cursor: pointer;
-            background: rgba(139, 92, 246, 0.1);
+            background: rgba(91, 63, 184, 0.1);
             transition: all 0.3s;
         }
 
         .player-summary-header:hover {
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
         }
 
         .player-summary-info {
@@ -2064,7 +2064,7 @@
 
         .player-summary-player-name {
             font-size: 0.85rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
         }
 
         .player-summary-toggle {
@@ -2075,7 +2075,7 @@
 
         .player-summary-content {
             padding: 15px;
-            background: rgba(15, 23, 42, 0.4);
+            background: rgba(14, 17, 23, 0.4);
             border-top: 1px solid var(--border);
         }
 
@@ -2130,7 +2130,7 @@
         }
 
         .form-section {
-            background: rgba(15, 23, 42, 0.6);
+            background: rgba(14, 17, 23, 0.6);
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 20px;
@@ -2162,14 +2162,14 @@
         .form-label {
             font-weight: 600;
             font-size: 0.9rem;
-            color: #cbd5e1;
+            color: var(--lr-text-2);
         }
 
         .form-input,
         .form-select,
         .form-textarea {
             padding: 12px;
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(14, 17, 23, 0.8);
             border: 2px solid var(--border);
             border-radius: 8px;
             color: var(--light);
@@ -2213,12 +2213,12 @@
         }
 
         .btn-success {
-            background: linear-gradient(135deg, var(--success), #059669);
+            background: linear-gradient(135deg, var(--success), var(--lr-nature));
             color: white;
         }
 
         .btn-danger {
-            background: linear-gradient(135deg, var(--danger), #dc2626);
+            background: linear-gradient(135deg, var(--danger), var(--lr-blood-2));
             color: white;
         }
 
@@ -2301,7 +2301,7 @@
             justify-content: center;
             cursor: pointer;
             font-size: 1.5rem;
-            color: #64748b;
+            color: var(--lr-text-2);
             transition: all 0.3s;
         }
 
@@ -2320,7 +2320,7 @@
 
         .tag {
             padding: 4px 12px;
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             border: 1px solid var(--primary);
             border-radius: 20px;
             font-size: 0.8rem;
@@ -2348,7 +2348,7 @@
             align-items: center;
             gap: 10px;
             padding: 10px;
-            background: rgba(30, 27, 75, 0.4);
+            background: rgba(31, 38, 48, 0.4);
             border-radius: 8px;
             margin-bottom: 8px;
         }
@@ -2367,7 +2367,7 @@
 
         /* Session Logs Styles */
         .campaign-selector-container {
-            background: rgba(30, 27, 75, 0.8);
+            background: rgba(31, 38, 48, 0.8);
             border: 2px solid var(--border);
             border-radius: 12px;
             padding: 20px;
@@ -2391,7 +2391,7 @@
             flex: 1;
             max-width: 400px;
             padding: 12px 16px;
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(14, 17, 23, 0.8);
             border: 2px solid var(--border);
             border-radius: 10px;
             color: var(--light);
@@ -2405,14 +2405,14 @@
         }
 
         .btn-favorite {
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(14, 17, 23, 0.8);
             border: 2px solid var(--border);
             border-radius: 10px;
             padding: 10px 14px;
             font-size: 1.2rem;
             cursor: pointer;
             transition: all 0.3s ease;
-            color: #64748b;
+            color: var(--lr-text-2);
         }
 
         .btn-favorite:hover:not(:disabled) {
@@ -2422,9 +2422,9 @@
         }
 
         .btn-favorite.active {
-            color: #fbbf24;
-            border-color: #fbbf24;
-            background: rgba(251, 191, 36, 0.1);
+            color: var(--lr-gold-2);
+            border-color: var(--lr-gold-2);
+            background: rgba(229, 197, 88, 0.1);
         }
 
         .btn-favorite:disabled {
@@ -2449,7 +2449,7 @@
 
         .campaign-info-label {
             font-size: 0.75rem;
-            color: #64748b;
+            color: var(--lr-text-2);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -2474,7 +2474,7 @@
             align-items: center;
             gap: 10px;
             padding: 10px 12px;
-            background: rgba(15, 23, 42, 0.6);
+            background: rgba(14, 17, 23, 0.6);
             border: 2px solid var(--border);
             border-radius: 10px;
             cursor: pointer;
@@ -2483,12 +2483,12 @@
 
         .character-checkbox-item:hover {
             border-color: var(--primary);
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(14, 17, 23, 0.8);
         }
 
         .character-checkbox-item.selected {
             border-color: var(--success);
-            background: rgba(16, 185, 129, 0.1);
+            background: rgba(63, 174, 106, 0.1);
         }
 
         .character-checkbox-item input[type="checkbox"] {
@@ -2512,7 +2512,7 @@
 
         .character-checkbox-player {
             font-size: 0.75rem;
-            color: #64748b;
+            color: var(--lr-text-2);
         }
 
         /* Player Checkbox Info in Notification Panel */
@@ -2530,7 +2530,7 @@
 
         .player-checkbox-name {
             font-size: 0.7rem;
-            color: #64748b;
+            color: var(--lr-text-2);
         }
 
         .player-checkbox-item {
@@ -2538,7 +2538,7 @@
             align-items: center;
             gap: 10px;
             padding: 8px 12px;
-            background: rgba(15, 23, 42, 0.6);
+            background: rgba(14, 17, 23, 0.6);
             border: 2px solid var(--border);
             border-radius: 8px;
             cursor: pointer;
@@ -2551,7 +2551,7 @@
 
         .player-checkbox-item:has(input:checked) {
             border-color: var(--success);
-            background: rgba(16, 185, 129, 0.1);
+            background: rgba(63, 174, 106, 0.1);
         }
 
         .sessions-list-container {
@@ -2577,7 +2577,7 @@
         .sessions-search-input {
             flex: 1;
             padding: 10px 15px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 2px solid var(--border);
             border-radius: 8px;
             color: var(--light);
@@ -2590,7 +2590,7 @@
         }
 
         .session-card {
-            background: rgba(30, 27, 75, 0.8);
+            background: rgba(31, 38, 48, 0.8);
             border: 2px solid var(--border);
             border-radius: 16px;
             padding: 20px;
@@ -2602,7 +2602,7 @@
         .session-card:hover {
             border-color: var(--primary);
             transform: translateX(5px);
-            box-shadow: 0 5px 20px rgba(139, 92, 246, 0.2);
+            box-shadow: 0 5px 20px rgba(91, 63, 184, 0.2);
         }
 
         .session-card-header {
@@ -2620,7 +2620,7 @@
 
         .session-date {
             font-size: 0.85rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
         }
 
         .session-meta {
@@ -2637,22 +2637,22 @@
         }
 
         .session-badge.duration {
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             color: var(--primary);
         }
 
         .session-badge.players {
-            background: rgba(16, 185, 129, 0.2);
+            background: rgba(63, 174, 106, 0.2);
             color: var(--success);
         }
 
         .session-badge.xp {
-            background: rgba(245, 158, 11, 0.2);
+            background: rgba(212, 175, 55, 0.2);
             color: var(--warning);
         }
 
         .session-summary {
-            color: #cbd5e1;
+            color: var(--lr-text-2);
             font-size: 0.9rem;
             line-height: 1.6;
             display: -webkit-box;
@@ -2674,27 +2674,27 @@
             background: rgba(100, 116, 139, 0.3);
             border-radius: 4px;
             font-size: 0.75rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
         }
 
         .highlight-tag.npc {
-            background: rgba(236, 72, 153, 0.2);
+            background: rgba(138, 111, 224, 0.2);
             color: var(--secondary);
         }
 
         .highlight-tag.location {
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             color: var(--primary);
         }
 
         .highlight-tag.quest {
-            background: rgba(245, 158, 11, 0.2);
+            background: rgba(212, 175, 55, 0.2);
             color: var(--warning);
         }
 
         /* Session Detail Modal Sections */
         .session-detail-section {
-            background: rgba(15, 23, 42, 0.6);
+            background: rgba(14, 17, 23, 0.6);
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 20px;
@@ -2718,7 +2718,7 @@
         }
 
         .detail-item {
-            background: rgba(30, 27, 75, 0.5);
+            background: rgba(31, 38, 48, 0.5);
             padding: 12px;
             border-radius: 8px;
             border: 1px solid var(--border);
@@ -2726,7 +2726,7 @@
 
         .detail-item-label {
             font-size: 0.75rem;
-            color: #64748b;
+            color: var(--lr-text-2);
             margin-bottom: 5px;
         }
 
@@ -2749,13 +2749,13 @@
         }
 
         .player-tag.present {
-            background: rgba(16, 185, 129, 0.2);
+            background: rgba(63, 174, 106, 0.2);
             color: var(--success);
             border: 1px solid var(--success);
         }
 
         .player-tag.absent {
-            background: rgba(239, 68, 68, 0.2);
+            background: rgba(201, 79, 92, 0.2);
             color: var(--danger);
             border: 1px solid var(--danger);
         }
@@ -2765,7 +2765,7 @@
         .combat-card,
         .quest-card,
         .moment-card {
-            background: rgba(30, 27, 75, 0.5);
+            background: rgba(31, 38, 48, 0.5);
             padding: 15px;
             border-radius: 10px;
             border: 1px solid var(--border);
@@ -2807,17 +2807,17 @@
         }
 
         .quest-status.started {
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             color: var(--primary);
         }
 
         .quest-status.in-progress {
-            background: rgba(245, 158, 11, 0.2);
+            background: rgba(212, 175, 55, 0.2);
             color: var(--warning);
         }
 
         .quest-status.completed {
-            background: rgba(16, 185, 129, 0.2);
+            background: rgba(63, 174, 106, 0.2);
             color: var(--success);
         }
 
@@ -2831,17 +2831,17 @@
         }
 
         .moment-type.funny {
-            background: rgba(245, 158, 11, 0.2);
+            background: rgba(212, 175, 55, 0.2);
             color: var(--warning);
         }
 
         .moment-type.epic {
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             color: var(--primary);
         }
 
         .moment-type.dramatic {
-            background: rgba(236, 72, 153, 0.2);
+            background: rgba(138, 111, 224, 0.2);
             color: var(--secondary);
         }
 
@@ -2852,7 +2852,7 @@
         }
 
         .loot-item {
-            background: rgba(30, 27, 75, 0.5);
+            background: rgba(31, 38, 48, 0.5);
             padding: 12px;
             border-radius: 8px;
             border: 1px solid var(--border);
@@ -2872,7 +2872,7 @@
 
         .loot-item-qty {
             font-size: 0.75rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
         }
 
         .next-session-hooks {
@@ -2881,11 +2881,11 @@
 
         .next-session-hooks li {
             padding: 10px 15px;
-            background: rgba(30, 27, 75, 0.5);
+            background: rgba(31, 38, 48, 0.5);
             border-radius: 8px;
             margin-bottom: 8px;
             border-left: 3px solid var(--primary);
-            color: #cbd5e1;
+            color: var(--lr-text-2);
         }
 
         /* Import/Export Buttons */
@@ -2909,13 +2909,13 @@
         }
 
         .btn-import {
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             color: var(--primary);
             border: 1px solid var(--primary);
         }
 
         .btn-export {
-            background: rgba(16, 185, 129, 0.2);
+            background: rgba(63, 174, 106, 0.2);
             color: var(--success);
             border: 1px solid var(--success);
         }
@@ -2933,7 +2933,7 @@
         }
 
         .player-exp-card {
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 2px solid var(--border);
             border-radius: 12px;
             padding: 12px 16px;
@@ -2945,7 +2945,7 @@
 
         .player-exp-card.present {
             border-color: var(--success);
-            background: rgba(16, 185, 129, 0.1);
+            background: rgba(63, 174, 106, 0.1);
         }
 
         .player-exp-card .player-info {
@@ -2963,7 +2963,7 @@
 
         .player-exp-card .player-character {
             font-size: 0.8rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
         }
 
         .player-exp-card .exp-input-group {
@@ -2975,7 +2975,7 @@
         .player-exp-card .exp-input {
             width: 70px;
             padding: 6px 10px;
-            background: rgba(30, 27, 75, 0.8);
+            background: rgba(31, 38, 48, 0.8);
             border: 2px solid var(--border);
             border-radius: 6px;
             color: var(--light);
@@ -3014,7 +3014,7 @@
 
         .search-select-row .btn-add-from-select:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+            box-shadow: 0 4px 12px rgba(91, 63, 184, 0.4);
         }
 
         /* Searchable Autocomplete Dropdown */
@@ -3026,7 +3026,7 @@
         .autocomplete-input {
             width: 100%;
             padding: 10px 14px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 2px solid var(--border);
             border-radius: 8px;
             color: var(--light);
@@ -3037,7 +3037,7 @@
         .autocomplete-input:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+            box-shadow: 0 0 0 3px rgba(91, 63, 184, 0.2);
         }
 
         .autocomplete-dropdown {
@@ -3047,7 +3047,7 @@
             right: 0;
             max-height: 250px;
             overflow-y: auto;
-            background: rgba(30, 27, 75, 0.98);
+            background: rgba(31, 38, 48, 0.98);
             border: 2px solid var(--primary);
             border-radius: 8px;
             z-index: 1000;
@@ -3072,7 +3072,7 @@
 
         .autocomplete-item:hover,
         .autocomplete-item.selected {
-            background: rgba(139, 92, 246, 0.3);
+            background: rgba(91, 63, 184, 0.3);
         }
 
         .autocomplete-item .item-name {
@@ -3082,12 +3082,12 @@
 
         .autocomplete-item .item-type {
             font-size: 0.8rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
         }
 
         .autocomplete-no-results {
             padding: 12px 14px;
-            color: #64748b;
+            color: var(--lr-text-2);
             text-align: center;
             font-style: italic;
         }
@@ -3105,7 +3105,7 @@
             align-items: center;
             gap: 6px;
             padding: 6px 12px;
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             border: 1px solid var(--primary);
             border-radius: 20px;
             color: var(--light);
@@ -3219,7 +3219,7 @@
         .timeline-item {
             position: relative;
             padding: 15px 20px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border-radius: 10px;
             margin-bottom: 15px;
             border: 1px solid var(--border);
@@ -3246,7 +3246,7 @@
 
         .timeline-date {
             font-size: 0.75rem;
-            color: #64748b;
+            color: var(--lr-text-2);
             margin-bottom: 5px;
         }
 
@@ -3257,7 +3257,7 @@
 
         /* Game Time (In-Game Calendar) Styles */
         .game-time-section {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
+            background: linear-gradient(135deg, rgba(91, 63, 184, 0.1), rgba(138, 111, 224, 0.1));
             border: 2px solid var(--primary);
             border-radius: 12px;
             padding: 20px;
@@ -3292,7 +3292,7 @@
             font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: #94a3b8;
+            color: var(--lr-text-2);
         }
 
         .game-time-grid .form-select,
@@ -3304,7 +3304,7 @@
         /* Time Period Selector for Events */
         .time-period-select {
             padding: 6px 10px;
-            background: rgba(139, 92, 246, 0.15);
+            background: rgba(91, 63, 184, 0.15);
             border: 1px solid var(--primary);
             border-radius: 6px;
             color: var(--light);
@@ -3316,7 +3316,7 @@
         .time-period-select:focus {
             outline: none;
             border-color: var(--secondary);
-            box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.2);
+            box-shadow: 0 0 0 2px rgba(138, 111, 224, 0.2);
         }
 
         .time-period-select option {
@@ -3327,7 +3327,7 @@
         /* Custom Time Input */
         .custom-time-input {
             padding: 6px 10px;
-            background: rgba(139, 92, 246, 0.15);
+            background: rgba(91, 63, 184, 0.15);
             border: 1px solid var(--primary);
             border-radius: 6px;
             color: var(--light);
@@ -3342,7 +3342,7 @@
 
         /* In-Game Session Timeline */
         .session-timeline-container {
-            background: rgba(15, 23, 42, 0.6);
+            background: rgba(14, 17, 23, 0.6);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 20px;
@@ -3378,10 +3378,10 @@
             bottom: 0;
             width: 3px;
             background: linear-gradient(180deg,
-                    #fbbf24 0%,
-                    #f59e0b 25%,
-                    #8b5cf6 50%,
-                    #1e1b4b 100%);
+                    var(--lr-gold-2) 0%,
+                    var(--lr-gold) 25%,
+                    var(--lr-abyssal) 50%,
+                    var(--lr-surface) 100%);
             border-radius: 2px;
         }
 
@@ -3405,13 +3405,13 @@
         }
 
         .timeline-period-marker.madrugada {
-            background: linear-gradient(135deg, #1e1b4b, #312e81);
+            background: linear-gradient(135deg, var(--lr-surface), #312e81);
             border: 2px solid #6366f1;
         }
 
         .timeline-period-marker.manha {
-            background: linear-gradient(135deg, #fbbf24, #f59e0b);
-            border: 2px solid #fcd34d;
+            background: linear-gradient(135deg, var(--lr-gold-2), var(--lr-gold));
+            border: 2px solid var(--lr-gold-2);
         }
 
         .timeline-period-marker.tarde {
@@ -3420,13 +3420,13 @@
         }
 
         .timeline-period-marker.noite {
-            background: linear-gradient(135deg, #4c1d95, #6d28d9);
-            border: 2px solid #8b5cf6;
+            background: linear-gradient(135deg, #4c1d95, var(--lr-abyssal));
+            border: 2px solid var(--lr-abyssal);
         }
 
         .timeline-period-marker.sem_periodo {
-            background: linear-gradient(135deg, #374151, #4b5563);
-            border: 2px solid #6b7280;
+            background: linear-gradient(135deg, var(--lr-border), var(--lr-border));
+            border: 2px solid var(--lr-text-2);
         }
 
         .timeline-period-label {
@@ -3434,7 +3434,7 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             margin-bottom: 8px;
             padding-left: 5px;
         }
@@ -3450,7 +3450,7 @@
             align-items: center;
             gap: 8px;
             padding: 8px 12px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border-radius: 8px;
             border-left: 3px solid var(--primary);
             font-size: 0.85rem;
@@ -3489,14 +3489,14 @@
 
         .timeline-empty {
             text-align: center;
-            color: #64748b;
+            color: var(--lr-text-2);
             padding: 20px;
             font-style: italic;
         }
 
         /* Advanced Visual Timeline */
         .visual-timeline-wrapper {
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(14, 17, 23, 0.8);
             border: 2px solid var(--border);
             border-radius: 12px;
             padding: 20px;
@@ -3528,7 +3528,7 @@
         }
 
         .day-nav-btn {
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             border: 1px solid var(--primary);
             color: var(--primary);
             padding: 6px 12px;
@@ -3566,7 +3566,7 @@
             flex: 1;
             text-align: center;
             font-size: 0.65rem;
-            color: #64748b;
+            color: var(--lr-text-2);
             position: relative;
         }
 
@@ -3600,12 +3600,12 @@
         }
 
         .period-bg.madrugada {
-            background: linear-gradient(90deg, #1e1b4b, #312e81);
+            background: linear-gradient(90deg, var(--lr-surface), #312e81);
         }
 
         .period-bg.manha {
-            background: linear-gradient(90deg, #fbbf24, #f59e0b);
-            color: #1e1b4b;
+            background: linear-gradient(90deg, var(--lr-gold-2), var(--lr-gold));
+            color: var(--lr-surface);
         }
 
         .period-bg.tarde {
@@ -3613,14 +3613,14 @@
         }
 
         .period-bg.noite {
-            background: linear-gradient(90deg, #4c1d95, #6d28d9);
+            background: linear-gradient(90deg, #4c1d95, var(--lr-abyssal));
         }
 
         /* Event Tracks */
         .event-tracks {
             min-height: 150px;
             position: relative;
-            background: rgba(30, 27, 75, 0.3);
+            background: rgba(31, 38, 48, 0.3);
             border-radius: 8px;
             padding: 10px 0;
         }
@@ -3664,15 +3664,15 @@
         }
 
         .event-bar.combat {
-            background: linear-gradient(135deg, var(--danger), #dc2626);
+            background: linear-gradient(135deg, var(--danger), var(--lr-blood-2));
         }
 
         .event-bar.quest {
-            background: linear-gradient(135deg, var(--warning), #d97706);
+            background: linear-gradient(135deg, var(--warning), var(--lr-gold));
         }
 
         .event-bar.moment {
-            background: linear-gradient(135deg, #a855f7, #7c3aed);
+            background: linear-gradient(135deg, #a855f7, var(--lr-abyssal));
         }
 
         .event-bar-icon {
@@ -3735,7 +3735,7 @@
 
         .time-editor-label {
             font-size: 0.85rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             margin-bottom: 8px;
             display: block;
         }
@@ -3752,7 +3752,7 @@
 
         .time-input-group label {
             font-size: 0.75rem;
-            color: #64748b;
+            color: var(--lr-text-2);
             display: block;
             margin-bottom: 4px;
         }
@@ -3760,7 +3760,7 @@
         .time-input {
             width: 100%;
             padding: 10px;
-            background: rgba(30, 27, 75, 0.8);
+            background: rgba(31, 38, 48, 0.8);
             border: 2px solid var(--border);
             border-radius: 8px;
             color: var(--light);
@@ -3780,7 +3780,7 @@
 
         .time-preview-bar {
             height: 40px;
-            background: rgba(30, 27, 75, 0.5);
+            background: rgba(31, 38, 48, 0.5);
             border-radius: 8px;
             margin-top: 15px;
             position: relative;
@@ -3802,7 +3802,7 @@
         }
 
         .time-preview-period.manha {
-            background: rgba(251, 191, 36, 0.3);
+            background: rgba(229, 197, 88, 0.3);
         }
 
         .time-preview-period.tarde {
@@ -3810,7 +3810,7 @@
         }
 
         .time-preview-period.noite {
-            background: rgba(139, 92, 246, 0.3);
+            background: rgba(91, 63, 184, 0.3);
         }
 
         .time-preview-selection {
@@ -3846,7 +3846,7 @@
         }
 
         .btn-time-save {
-            background: linear-gradient(135deg, var(--success), #059669);
+            background: linear-gradient(135deg, var(--success), var(--lr-nature));
             color: white;
         }
 
@@ -3866,7 +3866,7 @@
             align-items: center;
             gap: 4px;
             padding: 4px 8px;
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             border: 1px solid var(--primary);
             border-radius: 12px;
             font-size: 0.7rem;
@@ -3876,11 +3876,11 @@
         }
 
         .event-time-badge:hover {
-            background: rgba(139, 92, 246, 0.4);
+            background: rgba(91, 63, 184, 0.4);
         }
 
         .event-time-badge.has-time {
-            background: rgba(16, 185, 129, 0.2);
+            background: rgba(63, 174, 106, 0.2);
             border-color: var(--success);
             color: var(--success);
         }
@@ -3913,7 +3913,7 @@
             align-items: center;
             gap: 10px;
             padding: 8px 12px;
-            background: rgba(139, 92, 246, 0.1);
+            background: rgba(91, 63, 184, 0.1);
             border: 1px solid var(--border);
             border-radius: 8px;
             cursor: pointer;
@@ -3921,7 +3921,7 @@
         }
 
         .event-picker-item:hover {
-            background: rgba(139, 92, 246, 0.3);
+            background: rgba(91, 63, 184, 0.3);
             border-color: var(--primary);
         }
 
@@ -3950,7 +3950,7 @@
         }
 
         .event-bar:hover {
-            box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
+            box-shadow: 0 0 15px rgba(91, 63, 184, 0.5);
             z-index: 10;
         }
 
@@ -4017,10 +4017,10 @@
 
         .wiki-tab {
             padding: 10px 20px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: none;
             border-radius: 8px 8px 0 0;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
@@ -4038,7 +4038,7 @@
         }
 
         .wiki-card {
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 10px;
             padding: 15px;
@@ -4058,7 +4058,7 @@
 
         .wiki-card-count {
             font-size: 0.75rem;
-            color: #64748b;
+            color: var(--lr-text-2);
         }
 
         /* Chronology View - Visual Timeline */
@@ -4070,7 +4070,7 @@
         }
 
         .chronology-visual-day {
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 12px;
             overflow: hidden;
@@ -4085,7 +4085,7 @@
             align-items: center;
             justify-content: space-between;
             padding: 12px 20px;
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(236, 72, 153, 0.15));
+            background: linear-gradient(135deg, rgba(91, 63, 184, 0.3), rgba(138, 111, 224, 0.15));
             border-bottom: 1px solid var(--border);
             cursor: pointer;
             user-select: none;
@@ -4093,7 +4093,7 @@
         }
 
         .chronology-visual-header:hover {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(236, 72, 153, 0.25));
+            background: linear-gradient(135deg, rgba(91, 63, 184, 0.4), rgba(138, 111, 224, 0.25));
         }
 
         .chronology-visual-header .toggle-icon {
@@ -4118,7 +4118,7 @@
 
         .chronology-visual-count {
             font-size: 0.8rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             background: rgba(100, 116, 139, 0.3);
             padding: 4px 12px;
             border-radius: 12px;
@@ -4143,7 +4143,7 @@
             flex: 1;
             text-align: center;
             font-size: 0.65rem;
-            color: #64748b;
+            color: var(--lr-text-2);
             padding: 2px 0;
         }
 
@@ -4165,7 +4165,7 @@
 
         .chronology-visual-timeline .period-bg.madrugada {
             flex: 6;
-            background: linear-gradient(90deg, #1e1b4b, #312e81);
+            background: linear-gradient(90deg, var(--lr-surface), #312e81);
         }
 
         .chronology-visual-timeline .period-bg.manha {
@@ -4180,7 +4180,7 @@
 
         .chronology-visual-timeline .period-bg.noite {
             flex: 6;
-            background: linear-gradient(90deg, #6366f1, #1e1b4b);
+            background: linear-gradient(90deg, #6366f1, var(--lr-surface));
         }
 
         .chronology-visual-timeline .event-tracks {
@@ -4213,7 +4213,7 @@
         }
 
         .chronology-visual-timeline .event-bar:hover {
-            box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
+            box-shadow: 0 0 15px rgba(91, 63, 184, 0.5);
             z-index: 10;
             transform: translateY(-2px);
         }
@@ -4260,7 +4260,7 @@
 
         /* Notification Panel */
         .notification-panel {
-            background: rgba(30, 27, 75, 0.8);
+            background: rgba(31, 38, 48, 0.8);
             border: 2px solid var(--border);
             border-radius: 12px;
             padding: 20px;
@@ -4291,7 +4291,7 @@
             align-items: center;
             gap: 8px;
             padding: 10px;
-            background: rgba(15, 23, 42, 0.6);
+            background: rgba(14, 17, 23, 0.6);
             border-radius: 8px;
             cursor: pointer;
         }
@@ -4303,7 +4303,7 @@
         .empty-state {
             text-align: center;
             padding: 60px 20px;
-            color: #64748b;
+            color: var(--lr-text-2);
         }
 
         .empty-state-icon {
@@ -4320,7 +4320,7 @@
         }
 
         .empty-state-desc {
-            color: #94a3b8;
+            color: var(--lr-text-2);
             margin-bottom: 20px;
         }
 
@@ -4343,7 +4343,7 @@
 
         .btn-add-array-item {
             padding: 8px 16px;
-            background: rgba(139, 92, 246, 0.2);
+            background: rgba(91, 63, 184, 0.2);
             border: 1px solid var(--primary);
             border-radius: 6px;
             color: var(--primary);
@@ -4359,7 +4359,7 @@
 
         .btn-remove-array-item {
             padding: 6px 10px;
-            background: rgba(239, 68, 68, 0.2);
+            background: rgba(201, 79, 92, 0.2);
             border: none;
             border-radius: 6px;
             color: var(--danger);
@@ -4378,13 +4378,13 @@
             justify-content: space-between;
             align-items: center;
             padding: 12px 16px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             cursor: pointer;
             transition: background 0.3s;
         }
 
         .collapsible-header:hover {
-            background: rgba(30, 27, 75, 0.8);
+            background: rgba(31, 38, 48, 0.8);
         }
 
         .collapsible-title {
@@ -4407,7 +4407,7 @@
         .collapsible-content {
             padding: 16px 18px;
             display: none;
-            background: rgba(15, 23, 42, 0.4);
+            background: rgba(14, 17, 23, 0.4);
         }
 
         .collapsible-section.open .collapsible-content {
@@ -4460,7 +4460,7 @@
         .session-modal .array-item-row {
             gap: 8px;
             padding: 8px;
-            background: rgba(30, 27, 75, 0.3);
+            background: rgba(31, 38, 48, 0.3);
             border-radius: 8px;
         }
 
@@ -4508,7 +4508,7 @@
         .view-mode-tabs {
             display: flex;
             gap: 5px;
-            background: rgba(15, 23, 42, 0.6);
+            background: rgba(14, 17, 23, 0.6);
             padding: 5px;
             border-radius: 10px;
         }
@@ -4518,7 +4518,7 @@
             background: transparent;
             border: none;
             border-radius: 8px;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
@@ -4530,6 +4530,12 @@
         }
     </style>
 <script type="module" src="/js/global-favicon.js"></script>
+    <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="shared/tokens.css">
+    <link rel="stylesheet" href="shared/lendas-reliquias.css">
 </head>
 
 <body>
@@ -5386,12 +5392,12 @@
                         <div class="lei-card">
                             <span class="lei-nome">A Paz da Feira</span>
                             <span class="lei-texto">"Nenhuma violência dentro da Feira."</span>
-                            <span class="lei-violacao" style="color: #DC2626;">Violação: Quebrado</span>
+                            <span class="lei-violacao" style="color: var(--lr-blood-2);">Violação: Quebrado</span>
                         </div>
                         <div class="lei-card">
                             <span class="lei-nome">A Palavra Dada</span>
                             <span class="lei-texto">"Todo acordo fechado é sagrado."</span>
-                            <span class="lei-violacao" style="color: #F59E0B;">Violação: Sem Palavra</span>
+                            <span class="lei-violacao" style="color: var(--lr-gold);">Violação: Sem Palavra</span>
                         </div>
                         <div class="lei-card">
                             <span class="lei-nome">O Silêncio</span>
@@ -5453,7 +5459,7 @@
                     ${feira.imagem ? `<img src="${feira.imagem}" class="feira-image" onerror="this.style.display='none'">` : ''}
                     <div class="feira-content">
                         <div class="feira-header">
-                            <span class="feira-escala" style="background: ${escalaColors[feira.escala] || '#6B7280'}">
+                            <span class="feira-escala" style="background: ${escalaColors[feira.escala] || 'var(--lr-text-2)'}">
                                 ${feira.escala || 'média'}
                             </span>
                             <span class="feira-frequencia">${feira.frequencia || 'irregular'}</span>
@@ -5522,7 +5528,7 @@
             return `
                 <div class="precos-container">
                     <h3 style="color: var(--light); margin-bottom: 15px;">💰 Tabela de Preços do Submundo</h3>
-                    <p style="color: #94a3b8; margin-bottom: 20px; font-size: 0.9rem;">
+                    <p style="color: var(--lr-text-2); margin-bottom: 20px; font-size: 0.9rem;">
                         Valores em moedas de prata (₲). Preços variam com disponibilidade, urgência e reputação.
                     </p>
                     ${categorias.map(cat => `
@@ -5576,7 +5582,7 @@
             return `
                 <div style="margin-bottom: 30px;">
                     <h3 style="color: var(--light); margin-bottom: 15px;">📍 Símbolos de Localização</h3>
-                    <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.9rem;">
+                    <p style="color: var(--lr-text-2); margin-bottom: 15px; font-size: 0.9rem;">
                         Marcas discretas deixadas em paredes, postes e portas para comunicação secreta.
                     </p>
                     <div class="simbolos-grid">
@@ -5592,7 +5598,7 @@
                 
                 <div>
                     <h3 style="color: var(--light); margin-bottom: 15px;">📦 Símbolos de Mercadoria</h3>
-                    <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.9rem;">
+                    <p style="color: var(--lr-text-2); margin-bottom: 15px; font-size: 0.9rem;">
                         Indicam o tipo de mercadoria ou serviço disponível em um local.
                     </p>
                     <div class="simbolos-grid">
@@ -5724,7 +5730,7 @@
                         <span class="contato-papel">${papelLabels[submundo.papelSubmundo] || submundo.papelSubmundo}</span>
                         <div style="display: flex; flex-direction: column; align-items: flex-end;">
                             <span class="contato-nivel">Nível ${submundo.nivelAcesso || 0}/5</span>
-                            ${geo ? `<small style="font-size: 0.7rem; color: #64748b;">📍 ${geo.nome}</small>` : ''}
+                            ${geo ? `<small style="font-size: 0.7rem; color: var(--lr-text-2);">📍 ${geo.nome}</small>` : ''}
                         </div>
                     </div>
                     <div class="contato-nome">${npc.nome || 'NPC Desconhecido'}</div>
@@ -5758,13 +5764,13 @@
                                             <div style="display: flex; justify-content: space-between; align-items: center; flex: 1;">
                                                 <div>
                                                     <div style="font-weight: 700; color: var(--light);">${char.nome || char.name}</div>
-                                                    <div style="font-size: 0.85rem; color: #94a3b8;">${char.jogador || 'Jogador'}</div>
+                                                    <div style="font-size: 0.85rem; color: var(--lr-text-2);">${char.jogador || 'Jogador'}</div>
                                                 </div>
-                                                <button class="btn-edit-rep" onclick="openReputacaoModal('${char.id}')" title="Editar Reputação" style="background: rgba(139, 92, 246, 0.2); border: 1px solid var(--primary); color: var(--primary); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">✏️</button>
+                                                <button class="btn-edit-rep" onclick="openReputacaoModal('${char.id}')" title="Editar Reputação" style="background: rgba(91, 63, 184, 0.2); border: 1px solid var(--primary); color: var(--primary); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">✏️</button>
                                             </div>
                                     </div>
                                     <div class="reputacao-nivel">
-                                        <span style="font-size: 0.85rem; color: #94a3b8;">Nível de Acesso:</span>
+                                        <span style="font-size: 0.85rem; color: var(--lr-text-2);">Nível de Acesso:</span>
                                         <div class="nivel-bar">
                                             <div class="nivel-fill" style="width: ${(rep.nivelAcesso / 5) * 100}%"></div>
                                         </div>
@@ -5776,9 +5782,9 @@
                                                 <span class="marca-badge marca-${m.toLowerCase().replace(/ /g, '-')}" style="margin-bottom: 4px;">${m}</span>
                                             `).join('')}
                                         </div>
-                                    ` : '<p style="font-size: 0.85rem; color: #64748b; margin-bottom: 15px;">Sem marcas</p>'}
+                                    ` : '<p style="font-size: 0.85rem; color: var(--lr-text-2); margin-bottom: 15px;">Sem marcas</p>'}
                                     ${rep.notas ? `
-                                        <div class="rep-notes" style="font-size: 0.8rem; color: #94a3b8; padding: 10px; background: rgba(15, 23, 42, 0.4); border-radius: 8px; border-left: 3px solid var(--primary);">
+                                        <div class="rep-notes" style="font-size: 0.8rem; color: var(--lr-text-2); padding: 10px; background: rgba(14, 17, 23, 0.4); border-radius: 8px; border-left: 3px solid var(--primary);">
                                             <strong>Notas:</strong> ${rep.notas}
                                         </div>
                                     ` : ''}
@@ -6038,7 +6044,7 @@
                                style="flex: 1; accent-color: var(--primary);" oninput="this.nextElementSibling.textContent = this.value">
                         <span style="font-size: 1.2rem; font-weight: 700; color: var(--primary); min-width: 20px; text-align: center;">${currentEditingRep.nivelAcesso}</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-top: 5px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--lr-text-2); margin-top: 5px;">
                         <span>0: Cego</span>
                         <span>1: Tocado</span>
                         <span>2: Iniciado</span>
@@ -6051,19 +6057,19 @@
                 <div class="form-group" style="margin-top: 20px;">
                     <label class="form-label">Marcas do Submundo</label>
                     <div class="marcas-checklist" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <label class="checkbox-item" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; background: rgba(15, 23, 42, 0.4); border-radius: 8px;">
+                        <label class="checkbox-item" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; background: rgba(14, 17, 23, 0.4); border-radius: 8px;">
                             <input type="checkbox" name="repMarca" value="Quebrado" ${currentEditingRep.marcas?.includes('Quebrado') ? 'checked' : ''}>
                             <span>💔 Quebrado</span>
                         </label>
-                        <label class="checkbox-item" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; background: rgba(15, 23, 42, 0.4); border-radius: 8px;">
+                        <label class="checkbox-item" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; background: rgba(14, 17, 23, 0.4); border-radius: 8px;">
                             <input type="checkbox" name="repMarca" value="Sem Palavra" ${currentEditingRep.marcas?.includes('Sem Palavra') ? 'checked' : ''}>
                             <span>🤐 Sem Palavra</span>
                         </label>
-                        <label class="checkbox-item" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; background: rgba(15, 23, 42, 0.4); border-radius: 8px;">
+                        <label class="checkbox-item" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; background: rgba(14, 17, 23, 0.4); border-radius: 8px;">
                             <input type="checkbox" name="repMarca" value="Delator" ${currentEditingRep.marcas?.includes('Delator') ? 'checked' : ''}>
                             <span>🐀 Delator</span>
                         </label>
-                        <label class="checkbox-item" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; background: rgba(15, 23, 42, 0.4); border-radius: 8px;">
+                        <label class="checkbox-item" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; background: rgba(14, 17, 23, 0.4); border-radius: 8px;">
                             <input type="checkbox" name="repMarca" value="Sombra de Confiança" ${currentEditingRep.marcas?.includes('Sombra de Confiança') ? 'checked' : ''}>
                             <span>👤 Sombra de Confiança</span>
                         </label>
@@ -6139,7 +6145,7 @@
                     // Don't show the current entry in the breadcrumb, only parents
                     const parentPath = path.split(' › ').slice(0, -1).join(' › ');
                     if (parentPath) {
-                        breadcrumbHtml = `<div class="entry-breadcrumb" style="font-size: 0.7rem; color: #94a3b8; margin-top: 4px;">${parentPath}</div>`;
+                        breadcrumbHtml = `<div class="entry-breadcrumb" style="font-size: 0.7rem; color: var(--lr-text-2); margin-top: 4px;">${parentPath}</div>`;
                     }
                 }
             }
@@ -6320,7 +6326,7 @@
         // Render tree nodes recursively
         function renderGeographyTreeNodes(nodes, level) {
             if (!nodes || nodes.length === 0) {
-                return level === 0 ? '<p style="color: #64748b; padding: 20px;">Nenhuma geografia cadastrada.</p>' : '';
+                return level === 0 ? '<p style="color: var(--lr-text-2); padding: 20px;">Nenhuma geografia cadastrada.</p>' : '';
             }
 
             return nodes.map(node => {
@@ -6588,7 +6594,7 @@
                             <span class="era-toggle-icon">▼</span>
                         </div>
                         <div class="timeline-items">
-                            ${eraEvents.length > 0 ? eraEvents.map(event => renderTimelineEvent(event)).join('') : '<p style="color:#64748b; padding:10px;">Nenhum evento nesta Era.</p>'}
+                            ${eraEvents.length > 0 ? eraEvents.map(event => renderTimelineEvent(event)).join('') : '<p style="color:var(--lr-text-2); padding:10px;">Nenhum evento nesta Era.</p>'}
                         </div>
                     </div>
                 `;
@@ -7106,14 +7112,14 @@
                             <select class="form-select" id="entryFeirasQueFrequenta" multiple style="height: 100px;">
                                 ${feirasOptions || '<option disabled>Nenhuma feira cadastrada</option>'}
                             </select>
-                            <small style="color: #64748b;">Segure Ctrl para selecionar múltiplas</small>
+                            <small style="color: var(--lr-text-2);">Segure Ctrl para selecionar múltiplas</small>
                         </div>
                         <div class="form-group" style="margin-top: 15px;">
                             <label class="form-label">📍 Pontos de Contato</label>
                             <select class="form-select" id="entryPontosDeContato" multiple style="height: 100px;">
                                 ${propertiesOptions || '<option disabled>Nenhuma propriedade cadastrada</option>'}
                             </select>
-                            <small style="color: #64748b;">Locais onde este NPC pode ser encontrado</small>
+                            <small style="color: var(--lr-text-2);">Locais onde este NPC pode ser encontrado</small>
                         </div>
                         <div class="form-group" style="margin-top: 15px;">
                             <label class="form-label">⚠️ Marcas (Violações)</label>
@@ -7121,17 +7127,17 @@
                                 <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
                                     <input type="checkbox" id="marcaQuebrado" ${(entry?.submundo?.marcas || []).includes('Quebrado') ? 'checked' : ''}>
                                     <span class="marca-badge marca-quebrado" style="padding: 4px 8px;">Quebrado</span>
-                                    <small style="color: #64748b;">(violou Paz da Feira)</small>
+                                    <small style="color: var(--lr-text-2);">(violou Paz da Feira)</small>
                                 </label>
                                 <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
                                     <input type="checkbox" id="marcaSemPalavra" ${(entry?.submundo?.marcas || []).includes('SemPalavra') ? 'checked' : ''}>
                                     <span class="marca-badge marca-sempalavra" style="padding: 4px 8px;">Sem Palavra</span>
-                                    <small style="color: #64748b;">(quebrou acordo)</small>
+                                    <small style="color: var(--lr-text-2);">(quebrou acordo)</small>
                                 </label>
                                 <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
                                     <input type="checkbox" id="marcaDelator" ${(entry?.submundo?.marcas || []).includes('Delator') ? 'checked' : ''}>
                                     <span class="marca-badge marca-delator" style="padding: 4px 8px;">Delator</span>
-                                    <small style="color: #64748b;">(revelou segredos)</small>
+                                    <small style="color: var(--lr-text-2);">(revelou segredos)</small>
                                 </label>
                             </div>
                         </div>
@@ -7236,7 +7242,7 @@
                     <input type="text" class="linked-entity-title" value="${npc.title || ''}" placeholder="Título (ex: Ferreiro, Mora aqui...)" onchange="updateLinkedNpcTitle(${idx}, this.value)">
                     <button class="linked-entity-remove" onclick="removeLinkedNpc(${idx})">✕</button>
                 </div>
-            `).join('') : '<p style="color: #64748b; font-size: 0.85rem;">Nenhum NPC vinculado a este local.</p>';
+            `).join('') : '<p style="color: var(--lr-text-2); font-size: 0.85rem;">Nenhum NPC vinculado a este local.</p>';
         }
         window.renderLinkedNpcs = renderLinkedNpcs;
 
@@ -7279,7 +7285,7 @@
                     <input type="text" class="linked-entity-title" value="${tribo.title || ''}" placeholder="Título (ex: Dominante, Aliada...)" onchange="updateLinkedTriboTitle(${idx}, this.value)">
                     <button class="linked-entity-remove" onclick="removeLinkedTribo(${idx})">✕</button>
                 </div>
-            `).join('') : '<p style="color: #64748b; font-size: 0.85rem;">Nenhuma tribo vinculada a este local.</p>';
+            `).join('') : '<p style="color: var(--lr-text-2); font-size: 0.85rem;">Nenhuma tribo vinculada a este local.</p>';
         }
         window.renderLinkedTribos = renderLinkedTribos;
 
@@ -7360,7 +7366,7 @@
                     <input type="text" class="linked-entity-title" value="${cultura.title || ''}" placeholder="Título (ex: Predominante, Herdada...)" onchange="updateLinkedCulturaTitle(${idx}, this.value)">
                     <button class="linked-entity-remove" onclick="removeLinkedCultura(${idx})">✕</button>
                 </div>
-            `).join('') : '<p style="color: #64748b; font-size: 0.85rem;">Nenhuma cultura vinculada a esta tribo.</p>';
+            `).join('') : '<p style="color: var(--lr-text-2); font-size: 0.85rem;">Nenhuma cultura vinculada a esta tribo.</p>';
         }
         window.renderLinkedCulturas = renderLinkedCulturas;
 
@@ -7402,7 +7408,7 @@
                     <input type="text" class="linked-entity-title" value="${npc.title || ''}" placeholder="Título (ex: Proprietário, Empregado, Mora aqui...)" onchange="updateLinkedNpcPropertyTitle(${idx}, this.value)">
                     <button class="linked-entity-remove" onclick="removeLinkedNpcProperty(${idx})">✕</button>
                 </div>
-            `).join('') : '<p style="color: #64748b; font-size: 0.85rem;">Nenhum NPC vinculado a esta propriedade.</p>';
+            `).join('') : '<p style="color: var(--lr-text-2); font-size: 0.85rem;">Nenhum NPC vinculado a esta propriedade.</p>';
         }
         window.renderLinkedNpcsProperty = renderLinkedNpcsProperty;
 
@@ -7445,7 +7451,7 @@
                     <input type="text" class="linked-entity-title" value="${item.title || ''}" placeholder="Título (ex: À venda, No balcão, Escondido...)" onchange="updateLinkedItemTitle(${idx}, this.value)">
                     <button class="linked-entity-remove" onclick="removeLinkedItem(${idx})">✕</button>
                 </div>
-            `).join('') : '<p style="color: #64748b; font-size: 0.85rem;">Nenhum item vinculado a esta propriedade.</p>';
+            `).join('') : '<p style="color: var(--lr-text-2); font-size: 0.85rem;">Nenhum item vinculado a esta propriedade.</p>';
         }
         window.renderLinkedItems = renderLinkedItems;
 
@@ -7487,7 +7493,7 @@
                     <input type="text" class="linked-entity-title" value="${faction.title || ''}" placeholder="Papel (ex: Protagonista, Aliada...)" onchange="updateLinkedFactionHistoryTitle(${idx}, this.value)">
                     <button class="linked-entity-remove" onclick="removeLinkedFactionHistory(${idx})">✕</button>
                 </div>
-            `).join('') : '<p style="color: #64748b; font-size: 0.85rem;">Nenhuma facção vinculada a este evento.</p>';
+            `).join('') : '<p style="color: var(--lr-text-2); font-size: 0.85rem;">Nenhuma facção vinculada a este evento.</p>';
         }
         window.renderLinkedFactionsHistory = renderLinkedFactionsHistory;
 
@@ -8198,7 +8204,7 @@
                                 <div class="wiki-card-name">${name}</div>
                                 <div class="wiki-card-count">Mencionado em ${data.count} sessões</div>
                             </div>
-                        `).join('') || '<p style="color:#64748b;">Nenhum NPC registrado.</p>'}
+                        `).join('') || '<p style="color:var(--lr-text-2);">Nenhum NPC registrado.</p>'}
                     </div>
                     <div class="wiki-grid" id="wikiLocationsGrid" style="display: none;">
                         ${Object.entries(allLocations).map(([name, data]) => `
@@ -8206,7 +8212,7 @@
                                 <div class="wiki-card-name">${name}</div>
                                 <div class="wiki-card-count">Visitado em ${data.count} sessões</div>
                             </div>
-                        `).join('') || '<p style="color:#64748b;">Nenhuma localização registrada.</p>'}
+                        `).join('') || '<p style="color:var(--lr-text-2);">Nenhuma localização registrada.</p>'}
                     </div>
                 </div>
             `;
@@ -8439,7 +8445,7 @@
                 </div>
                 <div class="form-section">
                     <h3 class="form-section-title">👥 Personagens da Campanha</h3>
-                    <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 15px;">Selecione os personagens que participam desta campanha:</p>
+                    <p style="color: var(--lr-text-2); font-size: 0.85rem; margin-bottom: 15px;">Selecione os personagens que participam desta campanha:</p>
                     <div class="character-checkbox-grid" id="characterCheckboxGrid">
                         ${allCharacters.length ? allCharacters.map(char => `
                             <label class="character-checkbox-item ${selectedCharacterIds.includes(char.id) ? 'selected' : ''}">
@@ -8455,7 +8461,7 @@
                                     <span class="character-checkbox-player">👤 ${char.jogador || 'Jogador desconhecido'}</span>
                                 </div>
                             </label>
-                        `).join('') : '<p style="color: #64748b;">Nenhum personagem disponível.</p>'}
+                        `).join('') : '<p style="color: var(--lr-text-2);">Nenhum personagem disponível.</p>'}
                     </div>
                 </div>
                 <div class="form-section">
@@ -8652,7 +8658,7 @@
                         <span class="collapsible-toggle">▼</span>
                     </div>
                     <div class="collapsible-content">
-                        <p style="color:#94a3b8; font-size:0.85rem; margin-bottom:12px;">Marque os jogadores presentes e informe o EXP individual ganho:</p>
+                        <p style="color:var(--lr-text-2); font-size:0.85rem; margin-bottom:12px;">Marque os jogadores presentes e informe o EXP individual ganho:</p>
                         <div class="player-exp-grid">
                             ${campaignPersonagens.length ? campaignPersonagens.map(p => `
                                 <div class="player-exp-card ${isPlayerPresent(p.id) ? 'present' : ''}" data-char-id="${p.id}">
@@ -8673,7 +8679,7 @@
                                         <span class="exp-label">EXP</span>
                                     </div>
                                 </div>
-                            `).join('') : '<p style="color:#64748b;">Nenhum personagem cadastrado na campanha.</p>'}
+                            `).join('') : '<p style="color:var(--lr-text-2);">Nenhum personagem cadastrado na campanha.</p>'}
                         </div>
                     </div>
                 </div>
@@ -8697,7 +8703,7 @@
                                     ↕️ Expandir/Recolher Todos
                                 </button>
                             </div>
-                            <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 12px;">Adicione resumos individuais da perspectiva de cada jogador:</p>
+                            <p style="color: var(--lr-text-2); font-size: 0.85rem; margin-bottom: 12px;">Adicione resumos individuais da perspectiva de cada jogador:</p>
                             <div class="player-summaries-container" id="playerSummariesContainer">
                                 ${campaignPersonagens.map(p => {
                 const existingSummary = session?.playerSummaries?.find(ps => ps.characterId === p.id);
@@ -8968,10 +8974,10 @@
                         <span class="collapsible-toggle">▼</span>
                     </div>
                     <div class="collapsible-content">
-                        <p style="color:#94a3b8; font-size:0.85rem; margin-bottom:12px;">Visualização cronológica dos eventos. Clique em "🕐 Definir" nos eventos acima para configurar horários.</p>
+                        <p style="color:var(--lr-text-2); font-size:0.85rem; margin-bottom:12px;">Visualização cronológica dos eventos. Clique em "🕐 Definir" nos eventos acima para configurar horários.</p>
                         <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
                             <button type="button" class="btn-add-array-item" onclick="renderVisualTimeline()">🔄 Atualizar Timeline</button>
-                            <button type="button" class="btn-add-array-item" onclick="showEventPicker()" style="background: linear-gradient(135deg, #10b981, #059669);">📌 Inserir Evento</button>
+                            <button type="button" class="btn-add-array-item" onclick="showEventPicker()" style="background: linear-gradient(135deg, var(--lr-nature), var(--lr-nature));">📌 Inserir Evento</button>
                         </div>
                         <div id="eventPickerDropdown" class="event-picker-dropdown" style="display: none;">
                             <div class="event-picker-title">📋 Selecione um evento para definir horário:</div>
@@ -9021,7 +9027,7 @@
                             <select class="form-select" id="eventEndDaySelect" onchange="updateTimePreview()">
                                 <!-- Populated dynamically by updateDaySelector() -->
                             </select>
-                            <small style="color: #94a3b8; font-size: 0.75rem; margin-top: 4px; display: block;">Para eventos de um único dia, deixe igual ao dia de início</small>
+                            <small style="color: var(--lr-text-2); font-size: 0.75rem; margin-top: 4px; display: block;">Para eventos de um único dia, deixe igual ao dia de início</small>
                         </div>
                         
                         <div class="time-editor-group">
@@ -9776,7 +9782,7 @@
             });
 
             if (events.length === 0) {
-                list.innerHTML = '<div style="color:#94a3b8; padding:10px;">Todos os eventos já têm horário definido!</div>';
+                list.innerHTML = '<div style="color:var(--lr-text-2); padding:10px;">Todos os eventos já têm horário definido!</div>';
             } else {
                 list.innerHTML = events.map(e => `
                     <div class="event-picker-item" onclick="selectEventFromPicker('${e.container}', ${e.rowIdx})">
@@ -10422,7 +10428,7 @@
                                     <span class="player-checkbox-name">👤 ${p.jogador || 'Jogador'}</span>
                                 </div>
                             </label>
-                        `).join('') || '<p style="color: #64748b; font-size: 0.85rem;">Nenhum personagem na campanha. Edite a campanha para adicionar personagens.</p>'}
+                        `).join('') || '<p style="color: var(--lr-text-2); font-size: 0.85rem;">Nenhum personagem na campanha. Edite a campanha para adicionar personagens.</p>'}
                     </div>
                 </div>
                 <div class="form-group">

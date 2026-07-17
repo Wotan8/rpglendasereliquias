@@ -1,31 +1,31 @@
 :root {
-    --bg: #0b0c10;
-    --bg-gradient: linear-gradient(180deg, #0b0c10, #111827);
-    --paper: #ffffff;
-    --ink: #111827;
-    --muted: #6b7280;
-    --line: #111827;
-    --soft: #e5e7eb;
-    --chip: #f3f4f6;
+    --bg: var(--lr-bg-0);
+    --bg-gradient: linear-gradient(180deg, var(--lr-bg-0), var(--lr-bg-1));
+    --paper: var(--lr-divine);
+    --ink: var(--lr-bg-1);
+    --muted: var(--lr-text-2);
+    --line: var(--lr-bg-1);
+    --soft: var(--lr-text-1);
+    --chip: var(--lr-text-1);
     --radius: 10px;
     --gap: 10px;
     --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif
 }
 
 html.dark {
-    --bg: #0b0c10;
-    --bg-gradient: linear-gradient(180deg, #0b0c10, #111827);
-    --paper: #1a1d2e;
-    --ink: #e5e7eb;
-    --muted: #9ca3af;
-    --line: #374151;
-    --soft: #374151;
-    --chip: #232740
+    --bg: var(--lr-bg-0);
+    --bg-gradient: linear-gradient(180deg, var(--lr-bg-0), var(--lr-bg-1));
+    --paper: var(--lr-surface);
+    --ink: var(--lr-text-1);
+    --muted: var(--lr-text-2);
+    --line: var(--lr-border);
+    --soft: var(--lr-border);
+    --chip: var(--lr-surface)
 }
 
 html.dark body {
     background: var(--bg-gradient);
-    color: #e5e7eb
+    color: var(--lr-text-1)
 }
 
 html.dark .sheet {
@@ -41,52 +41,52 @@ html.dark .tab {
 }
 
 html.dark .tab.active {
-    background: #4f6ef7;
-    color: #fff;
-    border-color: #4f6ef7
+    background: var(--lr-gold);
+    color: var(--lr-divine);
+    border-color: var(--lr-gold)
 }
 
 html.dark .tab:hover {
-    background: #2d3352
+    background: var(--lr-surface-2)
 }
 
 html.dark input,
 html.dark textarea,
 html.dark select {
-    background: #232740 !important;
-    color: #e5e7eb !important;
-    border-color: #374151 !important
+    background: var(--lr-surface) !important;
+    color: var(--lr-text-1) !important;
+    border-color: var(--lr-border) !important
 }
 
 html.dark button,
 html.dark .btn {
-    background: #232740;
-    color: #e5e7eb;
-    border-color: #374151
+    background: var(--lr-surface);
+    color: var(--lr-text-1);
+    border-color: var(--lr-border)
 }
 
 html.dark button:hover {
-    background: #2d3352
+    background: var(--lr-surface-2)
 }
 
 html.dark .dot {
-    background: #232740;
-    border-color: #4b5563
+    background: var(--lr-surface);
+    border-color: var(--lr-border)
 }
 
 html.dark .dot.filled {
-    background: #4f6ef7
+    background: var(--lr-gold)
 }
 
 html.dark .dot.bonus.filled {
-    background: #f59e0b;
-    border-color: #f59e0b;
-    box-shadow: 0 0 4px rgba(245, 158, 11, 0.5)
+    background: var(--lr-gold);
+    border-color: var(--lr-gold);
+    box-shadow: 0 0 4px rgba(212, 175, 55, 0.5)
 }
 
 html.dark .dot.floor.filled {
-    background: #6b7280;
-    border-color: #6b7280;
+    background: var(--lr-text-2);
+    border-color: var(--lr-text-2);
     box-shadow: 0 0 3px rgba(107, 114, 128, 0.4)
 }
 
@@ -128,8 +128,8 @@ html.dark .rm-btn {
 
 html.dark .rm-btn:hover {
     background: #3b1c1c !important;
-    color: #f87171 !important;
-    border-color: #991b1b !important
+    color: var(--lr-blood-3) !important;
+    border-color: var(--lr-blood) !important
 }
 
 html.dark .note-editor {
@@ -168,7 +168,7 @@ body {
     margin: 0;
     font-family: var(--font);
     background: var(--bg-gradient);
-    color: #e5e7eb;
+    color: var(--lr-text-1);
     min-height: 100vh
 }
 
@@ -185,7 +185,7 @@ body {
 .toolbar button {
     border: 1px solid rgba(255, 255, 255, .18);
     background: rgba(255, 255, 255, .06);
-    color: #fff;
+    color: var(--lr-divine);
     font-weight: 600;
     padding: 8px 14px;
     border-radius: 10px;
@@ -233,7 +233,7 @@ body {
 
 .tab {
     border: 2px solid var(--line);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     padding: 10px 16px;
     border-radius: 10px;
@@ -252,7 +252,7 @@ body {
 
 .tab.active {
     background: var(--ink);
-    color: #fff
+    color: var(--lr-divine)
 }
 
 .tab-content {
@@ -327,7 +327,7 @@ body {
     padding: 10px;
     font-size: 14px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -335,7 +335,7 @@ body {
 .field input:focus,
 .field textarea:focus,
 .field select:focus {
-    outline: 3px solid rgba(59, 130, 246, .35);
+    outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px
 }
 
@@ -381,14 +381,14 @@ body {
     padding: 8px 4px;
     font-size: 13px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     text-align: center
 }
 
 .mini-field input:focus {
-    outline: 3px solid rgba(59, 130, 246, .35);
+    outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px
 }
 
@@ -438,13 +438,13 @@ body {
     font-weight: 700;
     text-align: center;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
 
 .vital-inputs input:focus {
-    outline: 3px solid rgba(59, 130, 246, .35);
+    outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px
 }
 
@@ -469,7 +469,7 @@ body {
     border: 2px solid var(--line);
     border-radius: 999px;
     cursor: pointer;
-    background: #fff;
+    background: var(--lr-divine);
     transition: background .12s, transform .1s;
     padding: 0;
     outline: none;
@@ -481,14 +481,14 @@ body {
 }
 
 .dot.bonus.filled {
-    background: #4f6ef7;
-    border-color: #4f6ef7;
-    box-shadow: 0 0 4px rgba(79, 110, 247, 0.4)
+    background: var(--lr-gold);
+    border-color: var(--lr-gold);
+    box-shadow: 0 0 4px rgba(212, 175, 55, 0.4)
 }
 
 .dot.floor.filled {
-    background: #6b7280;
-    border-color: #6b7280;
+    background: var(--lr-text-2);
+    border-color: var(--lr-text-2);
     box-shadow: 0 0 3px rgba(107, 114, 128, 0.35);
     cursor: default
 }
@@ -502,7 +502,7 @@ body {
 }
 
 .dot:focus {
-    outline: 2px solid rgba(59, 130, 246, .35);
+    outline: 2px solid rgba(58, 166, 255, .35);
     outline-offset: 1px
 }
 
@@ -715,13 +715,13 @@ body {
     padding: 8px;
     font-size: 13px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
 
 .test-row input:focus {
-    outline: 3px solid rgba(59, 130, 246, .35);
+    outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px
 }
 
@@ -737,15 +737,15 @@ body {
 }
 
 html.dark .class-test-field {
-    background: #232740 !important;
-    color: #e5e7eb !important;
-    border-color: #374151 !important;
+    background: var(--lr-surface) !important;
+    color: var(--lr-text-1) !important;
+    border-color: var(--lr-border) !important;
 }
 
 html.dark .test-total-field {
-    background: #232740 !important;
-    color: #93c5fd !important;
-    border-color: #4f6ef7 !important;
+    background: var(--lr-surface) !important;
+    color: var(--lr-arcane-2) !important;
+    border-color: var(--lr-gold) !important;
 }
 
 /* EQUIP */
@@ -805,13 +805,13 @@ html.dark .test-total-field {
     padding: 8px 6px;
     font-size: 12px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
 
 .equip-row input:focus {
-    outline: 3px solid rgba(59, 130, 246, .35);
+    outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px
 }
 
@@ -820,7 +820,7 @@ html.dark .test-total-field {
     height: 32px;
     border: 1px solid var(--soft) !important;
     border-radius: 8px !important;
-    background: #fff !important;
+    background: var(--lr-divine) !important;
     color: var(--muted) !important;
     cursor: pointer;
     font-size: 14px;
@@ -833,9 +833,9 @@ html.dark .test-total-field {
 }
 
 .rm-btn:hover {
-    background: #fee2e2 !important;
-    color: #dc2626 !important;
-    border-color: #fca5a5 !important
+    background: var(--lr-blood-soft) !important;
+    color: var(--lr-blood-2) !important;
+    border-color: var(--lr-blood-3) !important
 }
 
 .class-resources {
@@ -870,13 +870,13 @@ html.dark .test-total-field {
     padding: 10px;
     font-size: 13px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
 
 .inv-row input:focus {
-    outline: 3px solid rgba(59, 130, 246, .35);
+    outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px
 }
 
@@ -923,7 +923,7 @@ html.dark .test-total-field {
     min-width: auto !important;
     border: 1px solid var(--soft) !important;
     border-radius: 6px !important;
-    background: #fff !important;
+    background: var(--lr-divine) !important;
     cursor: pointer;
     transition: all .15s
 }
@@ -933,8 +933,8 @@ html.dark .test-total-field {
 }
 
 .note-actions .del-note:hover {
-    background: #fee2e2 !important;
-    color: #dc2626 !important
+    background: var(--lr-blood-soft) !important;
+    color: var(--lr-blood-2) !important
 }
 
 .note-editor-modal {
@@ -988,7 +988,7 @@ html.dark .test-total-field {
 }
 
 .note-editor-header input:focus {
-    outline: 3px solid rgba(59, 130, 246, .35);
+    outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px
 }
 
@@ -1006,7 +1006,7 @@ html.dark .test-total-field {
     font-weight: 700;
     border: 2px solid var(--line);
     border-radius: 8px;
-    background: #fff;
+    background: var(--lr-divine);
     cursor: pointer;
     font-family: var(--font);
     transition: all .15s
@@ -1038,7 +1038,7 @@ html.dark .test-total-field {
 button,
 .btn {
     border: 2px solid var(--line);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     padding: 10px 12px;
     border-radius: 10px;
@@ -1057,7 +1057,7 @@ button:hover {
 
 .add-btn {
     border: 2px dashed var(--soft);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--muted);
     font-weight: 700;
     width: 100%;
@@ -1103,7 +1103,7 @@ button:hover {
     font-weight: 800;
     text-transform: uppercase;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1129,7 +1129,7 @@ button:hover {
     border: 2px solid var(--soft);
     border-radius: 8px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     width: 100%;
@@ -1163,7 +1163,7 @@ button:hover {
     padding: 8px;
     font-size: 13px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     resize: vertical;
@@ -1199,7 +1199,7 @@ button:hover {
     font-weight: 800;
     text-transform: uppercase;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1225,7 +1225,7 @@ button:hover {
     border: 2px solid var(--soft);
     border-radius: 8px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     width: 100%
@@ -1251,7 +1251,7 @@ button:hover {
     font-weight: 700;
     text-align: center;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1282,7 +1282,7 @@ button:hover {
     font-size: 11px;
     font-weight: 700;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1295,7 +1295,7 @@ button:hover {
     font-size: 11px;
     line-height: 1.4;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     resize: vertical;
@@ -1334,7 +1334,7 @@ button:hover {
     font-weight: 800;
     text-transform: uppercase;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1360,7 +1360,7 @@ button:hover {
     border: 2px solid var(--soft);
     border-radius: 8px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     width: 100%;
@@ -1444,7 +1444,7 @@ button:hover {
     font-size: 12px;
     font-weight: 800;
     text-transform: uppercase;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     outline: none
@@ -1458,7 +1458,7 @@ button:hover {
     padding: 6px 4px;
     font-size: 11px;
     font-weight: 700;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     outline: none
@@ -1470,7 +1470,7 @@ button:hover {
     border-radius: 8px;
     padding: 6px 8px;
     font-size: 11px;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     outline: none
@@ -1510,11 +1510,11 @@ button:hover {
 }
 
 .runa-comp-row[data-cat="Captador"] {
-    border-left-color: #3b82f6
+    border-left-color: var(--lr-arcane)
 }
 
 .runa-comp-row[data-cat="Condutor"] {
-    border-left-color: #6b7280
+    border-left-color: var(--lr-text-2)
 }
 
 .runa-comp-row[data-cat="Modulador"] {
@@ -1522,7 +1522,7 @@ button:hover {
 }
 
 .runa-comp-row[data-cat="L\00f3gico"] {
-    border-left-color: #22c55e
+    border-left-color: var(--lr-nature)
 }
 
 .runa-comp-row[data-cat="Armazenador"] {
@@ -1577,7 +1577,7 @@ button:hover {
     padding: 2px 4px;
     font-size: 8px;
     font-weight: 700;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     outline: none;
@@ -1603,7 +1603,7 @@ button:hover {
 
 .runa-comp-row .rc-rm:hover {
     background: var(--soft);
-    color: #dc2626
+    color: var(--lr-blood-2)
 }
 
 .runa-card-footer {
@@ -1617,7 +1617,7 @@ button:hover {
     padding: 6px 8px;
     font-size: 11px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     resize: vertical;
@@ -1680,7 +1680,7 @@ button:hover {
     padding: 6px 4px;
     font-size: 11px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1735,7 +1735,7 @@ button:hover {
     padding: 1px 2px;
     font-size: 7px;
     font-weight: 700;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     outline: none;
@@ -1767,7 +1767,7 @@ button:hover {
 
 .sigilus-item .rm-spec:hover {
     background: var(--soft) !important;
-    color: #dc2626 !important
+    color: var(--lr-blood-2) !important
 }
 
 /* RESPONSIVE */
@@ -1963,7 +1963,7 @@ button:hover {
 }
 
 .pec-compact.negativo {
-    border-left: 3px solid #c0392b;
+    border-left: 3px solid var(--lr-blood-2);
 }
 
 .pec-compact-icon {
@@ -1990,7 +1990,7 @@ button:hover {
 }
 
 .pec-compact-name.has-tooltip:hover {
-    border-bottom-color: #4f6ef7;
+    border-bottom-color: var(--lr-gold);
 }
 
 .pec-compact-badge {
@@ -2030,7 +2030,7 @@ button:hover {
 }
 
 .pec-dots-inline .dot:hover:not([disabled]) {
-    border-color: #4f6ef7;
+    border-color: var(--lr-gold);
 }
 
 .pec-dots-inline .dot[disabled] {
@@ -2057,8 +2057,8 @@ button:hover {
 
 .pec-nivel-info {
     display: inline-block;
-    background: linear-gradient(135deg, #4f6ef7, #7c3aed);
-    color: #fff;
+    background: linear-gradient(135deg, var(--lr-gold), var(--lr-abyssal));
+    color: var(--lr-divine);
     font-size: 10px;
     font-weight: 700;
     padding: 2px 8px;
@@ -2084,7 +2084,7 @@ html.dark .pec-source-header:hover {
 
 html.dark .pec-source-count {
     background: rgba(255,255,255,.06);
-    color: #94a3b8;
+    color: var(--lr-text-2);
 }
 
 html.dark .pec-compact {
@@ -2093,8 +2093,8 @@ html.dark .pec-compact {
 }
 
 html.dark .pec-compact:hover {
-    border-color: #4f6ef7;
-    box-shadow: 0 2px 10px rgba(79,110,247,.12);
+    border-color: var(--lr-gold);
+    box-shadow: 0 2px 10px rgba(212, 175, 55,.12);
 }
 
 html.dark .pec-compact.positivo {
@@ -2102,7 +2102,7 @@ html.dark .pec-compact.positivo {
 }
 
 html.dark .pec-compact.negativo {
-    border-left-color: #e74c3c;
+    border-left-color: var(--lr-blood-2);
 }
 
 html.dark .pec-compact-name {
@@ -2110,13 +2110,13 @@ html.dark .pec-compact-name {
 }
 
 html.dark .pec-compact-badge {
-    background: #4f6ef7;
-    color: #fff;
+    background: var(--lr-gold);
+    color: var(--lr-divine);
 }
 
 html.dark .pec-dots-inline .dot.filled {
-    background: #4f6ef7;
-    border-color: #4f6ef7;
+    background: var(--lr-gold);
+    border-color: var(--lr-gold);
 }
 
 /* ===== DERIVED FIELDS (editable, auto-calculated) ===== */
@@ -2134,9 +2134,9 @@ html.dark .pec-dots-inline .dot.filled {
 }
 
 html.dark .derived-field {
-    background: #1a1d2e !important;
-    border-color: #4f6ef7 !important;
-    color: #93c5fd !important;
+    background: var(--lr-surface) !important;
+    border-color: var(--lr-gold) !important;
+    color: var(--lr-arcane-2) !important;
 }
 
 /* ===== COMBAT GRID ===== */
@@ -2175,14 +2175,14 @@ html.dark .derived-field {
 .teste-card {
     background: var(--chip);
     border: 1px solid var(--soft);
-    border-left: 3px solid #4f6ef7;
+    border-left: 3px solid var(--lr-gold);
     border-radius: 8px;
     padding: 10px 14px;
     transition: box-shadow .15s, transform .1s;
 }
 
 .teste-card:hover {
-    box-shadow: 0 2px 12px rgba(79, 110, 247, .15);
+    box-shadow: 0 2px 12px rgba(212, 175, 55, .15);
     transform: translateY(-1px);
 }
 
@@ -2197,12 +2197,12 @@ html.dark .derived-field {
 
 .teste-formula {
     font-family: 'Courier New', Courier, monospace;
-    color: #4f6ef7;
+    color: var(--lr-gold);
     font-size: 11px;
     font-weight: 700;
     margin-bottom: 6px;
     padding: 4px 8px;
-    background: rgba(79, 110, 247, .08);
+    background: rgba(212, 175, 55, .08);
     border-radius: 4px;
     display: inline-block;
 }
@@ -2216,22 +2216,22 @@ html.dark .derived-field {
 
 /* Dark mode — class tests */
 html.dark .teste-card {
-    background: #232740;
-    border-color: #374151;
-    border-left-color: #4f6ef7;
+    background: var(--lr-surface);
+    border-color: var(--lr-border);
+    border-left-color: var(--lr-gold);
 }
 
 html.dark .teste-nome {
-    color: #e5e7eb;
+    color: var(--lr-text-1);
 }
 
 html.dark .teste-formula {
-    background: rgba(79, 110, 247, .15);
-    color: #93c5fd;
+    background: rgba(212, 175, 55, .15);
+    color: var(--lr-arcane-2);
 }
 
 html.dark .teste-quando {
-    color: #9ca3af;
+    color: var(--lr-text-2);
 }
 
 /* ===== RESPONSIVE — combat grid & tests ===== */
@@ -2277,13 +2277,13 @@ html.dark .teste-quando {
     bottom: 24px;
     left: 50%;
     transform: translateX(-50%) translateY(20px);
-    background: rgba(15, 23, 42, 0.95);
-    color: #94a3b8;
+    background: rgba(14, 17, 23, 0.95);
+    color: var(--lr-text-2);
     padding: 8px 20px;
     border-radius: 10px;
     font-size: 0.85rem;
     font-weight: 600;
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    border: 1px solid rgba(91, 63, 184, 0.3);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     z-index: 99998;
     opacity: 0;
@@ -2298,18 +2298,18 @@ html.dark .teste-quando {
 }
 
 .firebase-save-indicator.saving {
-    color: #fbbf24;
-    border-color: rgba(251, 191, 36, 0.4);
+    color: var(--lr-gold-2);
+    border-color: rgba(229, 197, 88, 0.4);
 }
 
 .firebase-save-indicator.saved {
-    color: #22c55e;
-    border-color: rgba(34, 197, 94, 0.4);
+    color: var(--lr-nature);
+    border-color: rgba(63, 174, 106, 0.4);
 }
 
 .firebase-save-indicator.error {
-    color: #ef4444;
-    border-color: rgba(239, 68, 68, 0.4);
+    color: var(--lr-blood-2);
+    border-color: rgba(201, 79, 92, 0.4);
 }
 
 /* ===== COLOR PICKER POPOVER ===== */
@@ -2360,7 +2360,7 @@ html.dark .teste-quando {
 /* ===== ROW COLORS ===== */
 .bg-red input {
     background: #fef2f2 !important;
-    border-color: #fecaca !important;
+    border-color: var(--lr-blood-soft) !important;
 }
 
 .bg-green input {
@@ -2392,8 +2392,8 @@ html.dark .teste-quando {
 /* Dark mode overrides for colors */
 html.dark .bg-red input {
     background: #450a0a !important;
-    border-color: #7f1d1d !important;
-    color: #fecaca !important;
+    border-color: var(--lr-blood) !important;
+    color: var(--lr-blood-soft) !important;
 }
 
 html.dark .bg-green input {
@@ -2442,8 +2442,8 @@ html.dark .bg-orange input {
 
 .exp-toast {
     pointer-events: all;
-    background: #1e293b;
-    color: #f1f5f9;
+    background: var(--lr-bg-1);
+    color: var(--lr-text-1);
     border-radius: 12px;
     padding: 14px 20px;
     font-family: var(--font);
@@ -2457,7 +2457,7 @@ html.dark .bg-orange input {
     min-width: 300px;
     max-width: 480px;
     animation: expToastIn .3s ease-out;
-    border: 2px solid #334155;
+    border: 2px solid var(--lr-surface-2);
 }
 
 .exp-toast-exit {
@@ -2465,18 +2465,18 @@ html.dark .bg-orange input {
 }
 
 .exp-toast-confirm {
-    border-color: #3b82f6;
-    background: #1e293b;
+    border-color: var(--lr-arcane);
+    background: var(--lr-bg-1);
 }
 
 .exp-toast-error {
-    border-color: #ef4444;
+    border-color: var(--lr-blood-2);
     background: #1c1917;
-    color: #fca5a5;
+    color: var(--lr-blood-3);
 }
 
 .exp-toast-success {
-    border-color: #22c55e;
+    border-color: var(--lr-nature);
     background: #052e16;
     color: #86efac;
 }
@@ -2505,22 +2505,22 @@ html.dark .bg-orange input {
 }
 
 .exp-btn-ok {
-    background: #3b82f6;
-    color: #fff;
+    background: var(--lr-arcane);
+    color: var(--lr-divine);
 }
 
 .exp-btn-ok:hover {
-    background: #2563eb;
+    background: var(--lr-arcane);
 }
 
 .exp-btn-cancel {
-    background: #374151;
-    color: #9ca3af;
+    background: var(--lr-border);
+    color: var(--lr-text-2);
 }
 
 .exp-btn-cancel:hover {
-    background: #4b5563;
-    color: #e5e7eb;
+    background: var(--lr-border);
+    color: var(--lr-text-1);
 }
 
 @keyframes expToastIn {
@@ -2555,16 +2555,16 @@ html.dark .bg-orange input {
 .distribuir-ui {
     margin-top: 10px;
     padding: 10px;
-    border: 2px dashed #f59e0b;
+    border: 2px dashed var(--lr-gold);
     border-radius: 8px;
-    background: rgba(245, 158, 11, 0.05);
+    background: rgba(212, 175, 55, 0.05);
 }
 
 .distribuir-resumo {
     font-size: 12px;
-    color: #059669;
+    color: var(--lr-nature);
     padding: 6px 8px;
-    background: rgba(5, 150, 105, 0.08);
+    background: rgba(63, 174, 106, 0.08);
     border-radius: 6px;
     margin-bottom: 8px;
     line-height: 1.5;
@@ -2573,7 +2573,7 @@ html.dark .bg-orange input {
 .distribuir-titulo {
     font-size: 12px;
     font-weight: 700;
-    color: #92400e;
+    color: var(--lr-bronze);
     margin-bottom: 8px;
     line-height: 1.4;
 }
@@ -2599,14 +2599,14 @@ html.dark .bg-orange input {
 }
 
 .distribuir-select:focus {
-    border-color: #f59e0b;
+    border-color: var(--lr-gold);
 }
 
 .btn-distribuir-confirmar {
     width: 100%;
     padding: 8px 16px;
-    background: #059669;
-    color: #fff;
+    background: var(--lr-nature);
+    color: var(--lr-divine);
     border: none;
     border-radius: 6px;
     font-size: 12px;
@@ -2640,7 +2640,7 @@ html.dark .bg-orange input {
 
 /* Efeito negativo em text */
 .efeito-text.negativo {
-    color: #dc2626;
+    color: var(--lr-blood-2);
 }
 
 /* Condição badge */
@@ -2655,13 +2655,13 @@ html.dark .bg-orange input {
 }
 
 .pec-condicao.sucesso {
-    color: #059669;
-    background: rgba(5, 150, 105, 0.05);
+    color: var(--lr-nature);
+    background: rgba(63, 174, 106, 0.05);
 }
 
 .pec-condicao.falha {
-    color: #dc2626;
-    background: rgba(220, 38, 38, 0.05);
+    color: var(--lr-blood-2);
+    background: rgba(201, 79, 92, 0.05);
 }
 
 /* Capacidades concedidas */
@@ -2687,29 +2687,29 @@ html.dark .bg-orange input {
 
 /* Dark mode overrides */
 html.dark .distribuir-ui {
-    border-color: #b45309;
+    border-color: var(--lr-bronze);
     background: rgba(180, 83, 9, 0.1);
 }
 
 html.dark .distribuir-titulo {
-    color: #fbbf24;
+    color: var(--lr-gold-2);
 }
 
 html.dark .distribuir-resumo {
-    color: #34d399;
+    color: var(--lr-nature);
     background: rgba(52, 211, 153, 0.1);
 }
 
 html.dark .distribuir-select {
     background: var(--chip);
     color: var(--ink);
-    border-color: #374151;
+    border-color: var(--lr-border);
 }
 
 html.dark .btn-redistribuir {
-    background: #1e293b;
-    border-color: #374151;
-    color: #94a3b8;
+    background: var(--lr-bg-1);
+    border-color: var(--lr-border);
+    color: var(--lr-text-2);
 }
 
 html.dark .pec-condicao {
@@ -2717,7 +2717,7 @@ html.dark .pec-condicao {
 }
 
 html.dark .pec-capacidade {
-    color: #818cf8;
+    color: var(--lr-arcane-2);
 }
 
 /* ===== DERIVED VALUES — Dynamic Grid Labels + Tooltip ===== */
@@ -2747,9 +2747,9 @@ html.dark .pec-capacidade {
     z-index: 99999;
     max-width: 320px;
     min-width: 180px;
-    background: #1e293b;
-    color: #e2e8f0;
-    border: 1px solid #334155;
+    background: var(--lr-bg-1);
+    color: var(--lr-text-1);
+    border: 1px solid var(--lr-surface-2);
     border-radius: 10px;
     padding: 12px 14px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
@@ -2762,11 +2762,11 @@ html.dark .pec-capacidade {
 
 .dv-tooltip-desc {
     margin-bottom: 8px;
-    color: #cbd5e1;
+    color: var(--lr-text-2);
 }
 
 .dv-tooltip-mechs {
-    border-top: 1px solid #374151;
+    border-top: 1px solid var(--lr-border);
     padding-top: 8px;
 }
 
@@ -2774,34 +2774,34 @@ html.dark .pec-capacidade {
     font-weight: 700;
     font-size: 11px;
     margin-bottom: 4px;
-    color: #93c5fd;
+    color: var(--lr-arcane-2);
 }
 
 .dv-tooltip-mech-item {
     font-size: 11px;
-    color: #94a3b8;
+    color: var(--lr-text-2);
     padding-left: 4px;
     margin-bottom: 2px;
 }
 
 .dv-tooltip-extras {
     margin-top: 6px;
-    border-top: 1px dashed #475569;
+    border-top: 1px dashed var(--lr-border);
     padding-top: 8px;
 }
 
 .dv-tooltip-extras .dv-tooltip-mechs-title {
-    color: #fbbf24;
+    color: var(--lr-gold-2);
 }
 
 .dv-tooltip-fonte {
-    color: #a78bfa;
+    color: var(--lr-abyssal-2);
     font-weight: 700;
     font-size: 10px;
 }
 
 .dv-tooltip-creation-const {
-    border-top: 1px solid #374151;
+    border-top: 1px solid var(--lr-border);
     padding-top: 6px;
     margin-top: 4px;
     margin-bottom: 4px;
@@ -2830,12 +2830,12 @@ html.dark .pec-capacidade {
     border: 2px solid var(--line);
     border-radius: 10px;
     padding: 8px 4px;
-    background: #fff;
+    background: var(--lr-divine);
 }
 
 html.dark .dv-value-row {
-    background: #232740 !important;
-    border-color: #374151 !important;
+    background: var(--lr-surface) !important;
+    border-color: var(--lr-border) !important;
 }
 
 /* Input inside the wrapper — no border, transparent bg */
@@ -2848,7 +2848,7 @@ html.dark .dv-value-row {
 }
 
 .dv-value-row:focus-within {
-    outline: 3px solid rgba(59, 130, 246, .35);
+    outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px;
 }
 
@@ -2882,13 +2882,13 @@ html.dark .dv-value-row {
     font-weight: 700;
     text-align: center;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
 }
 
 .dv-atual-input:focus {
-    outline: 3px solid rgba(59, 130, 246, .35);
+    outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px;
 }
 
@@ -2906,28 +2906,28 @@ html.dark .dv-value-row {
 
 html.dark .dv-atual-input,
 html.dark .dv-atual-max {
-    background: #232740 !important;
-    color: #e5e7eb !important;
-    border-color: #374151 !important;
+    background: var(--lr-surface) !important;
+    color: var(--lr-text-1) !important;
+    border-color: var(--lr-border) !important;
 }
 
 html.dark .dv-atual-max {
-    color: #9ca3af !important;
+    color: var(--lr-text-2) !important;
 }
 
 /* ===== AURA SYSTEM ===== */
 
 /* Aura-colored dots */
 .dot.aura-filled {
-    background: var(--aura-color, #8b5cf6) !important;
-    border-color: var(--aura-color, #8b5cf6) !important;
-    box-shadow: 0 0 6px color-mix(in srgb, var(--aura-color, #8b5cf6) 50%, transparent);
+    background: var(--aura-color, var(--lr-abyssal)) !important;
+    border-color: var(--aura-color, var(--lr-abyssal)) !important;
+    box-shadow: 0 0 6px color-mix(in srgb, var(--aura-color, var(--lr-abyssal)) 50%, transparent);
 }
 
 html.dark .dot.aura-filled {
-    background: var(--aura-color, #8b5cf6) !important;
-    border-color: var(--aura-color, #8b5cf6) !important;
-    box-shadow: 0 0 8px color-mix(in srgb, var(--aura-color, #8b5cf6) 50%, transparent);
+    background: var(--aura-color, var(--lr-abyssal)) !important;
+    border-color: var(--aura-color, var(--lr-abyssal)) !important;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--aura-color, var(--lr-abyssal)) 50%, transparent);
 }
 
 /* Grade indicator badge */
@@ -2937,7 +2937,7 @@ html.dark .dot.aura-filled {
     border-radius: 10px;
     font-size: 8px;
     font-weight: 800;
-    color: #fff;
+    color: var(--lr-divine);
     text-transform: uppercase;
     letter-spacing: .3px;
     margin-left: 4px;
@@ -2962,11 +2962,11 @@ html.dark .dot.aura-filled {
 }
 
 .aura-card:hover {
-    border-color: #8b5cf6;
+    border-color: var(--lr-abyssal);
 }
 
 .aura-card.aura-mortalidade {
-    border-color: #991b1b;
+    border-color: var(--lr-blood);
     background: linear-gradient(135deg, rgba(153, 27, 27, 0.08), transparent);
 }
 
@@ -3032,7 +3032,7 @@ html.dark .dot.aura-filled {
     border-radius: 12px;
     font-size: 9px;
     font-weight: 800;
-    color: #fff;
+    color: var(--lr-divine);
     text-transform: uppercase;
     letter-spacing: .3px;
     text-shadow: 0 1px 2px rgba(0,0,0,.3);
@@ -3067,9 +3067,9 @@ html.dark .dot.aura-filled {
     border-radius: 6px;
     font-size: 9px;
     font-weight: 700;
-    background: rgba(79, 110, 247, .12);
-    color: #4f6ef7;
-    border: 1px solid rgba(79, 110, 247, .25);
+    background: rgba(212, 175, 55, .12);
+    color: var(--lr-gold);
+    border: 1px solid rgba(212, 175, 55, .25);
 }
 
 .aura-lock-icon {
@@ -3082,31 +3082,31 @@ html.dark .dot.aura-filled {
 
 /* Dark mode aura tab */
 html.dark .aura-card {
-    background: #232740;
-    border-color: #374151;
+    background: var(--lr-surface);
+    border-color: var(--lr-border);
 }
 
 html.dark .aura-card:hover {
-    border-color: #8b5cf6;
+    border-color: var(--lr-abyssal);
 }
 
 html.dark .aura-card.aura-mortalidade {
-    border-color: #7f1d1d;
-    background: linear-gradient(135deg, rgba(127, 29, 29, 0.15), #232740);
+    border-color: var(--lr-blood);
+    background: linear-gradient(135deg, rgba(127, 29, 29, 0.15), var(--lr-surface));
 }
 
 html.dark .aura-grau-display {
-    border-color: #374151;
+    border-color: var(--lr-border);
     background: rgba(255,255,255,.02);
 }
 
 html.dark .aura-grau-display.unlocked {
-    border-color: #4b5563;
+    border-color: var(--lr-border);
 }
 
 html.dark .aura-mech-tag {
-    background: rgba(79, 110, 247, .15);
-    border-color: rgba(79, 110, 247, .3);
+    background: rgba(212, 175, 55, .15);
+    border-color: rgba(212, 175, 55, .3);
 }
 
 /* ===== INFO BUTTON (ℹ️ ao lado dos labels) ===== */
@@ -3136,7 +3136,7 @@ html.dark .aura-mech-tag {
 
 html.dark .select-locked {
     background: #1e2235 !important;
-    border-color: #4b5563 !important;
+    border-color: var(--lr-border) !important;
 }
 
 /* ===== FIELD LOCKED (EXP, Virtude, Vício para jogadores) ===== */
@@ -3149,7 +3149,7 @@ html.dark .select-locked {
 
 html.dark .field-locked {
     background: #1e2235 !important;
-    border-color: #4b5563 !important;
+    border-color: var(--lr-border) !important;
 }
 
 /* ===== DETAIL MODAL ===== */
@@ -3220,9 +3220,9 @@ html.dark .field-locked {
 }
 
 .detail-modal-close:hover {
-    background: #fee2e2 !important;
-    color: #dc2626 !important;
-    border-color: #fca5a5 !important;
+    background: var(--lr-blood-soft) !important;
+    color: var(--lr-blood-2) !important;
+    border-color: var(--lr-blood-3) !important;
     transform: rotate(90deg);
 }
 
@@ -3288,7 +3288,7 @@ html.dark .field-locked {
 
 .detail-level-badge.negativo {
     background: rgba(192, 57, 43, .12);
-    color: #c0392b;
+    color: var(--lr-blood-2);
     border: 1px solid rgba(192, 57, 43, .3);
 }
 
@@ -3353,8 +3353,8 @@ html.dark .field-locked {
     font-style: italic;
     color: var(--muted);
     padding: 12px 16px;
-    border-left: 3px solid #8b5cf6;
-    background: rgba(139, 92, 246, .06);
+    border-left: 3px solid var(--lr-abyssal);
+    background: rgba(91, 63, 184, .06);
     border-radius: 0 8px 8px 0;
     margin: 8px 0;
     line-height: 1.5;
@@ -3412,7 +3412,7 @@ html.dark .field-locked {
 }
 
 .detail-pec-item.negativo {
-    border-left: 3px solid #c0392b;
+    border-left: 3px solid var(--lr-blood-2);
 }
 
 .detail-pec-icon {
@@ -3468,7 +3468,7 @@ html.dark .field-locked {
 }
 
 .detail-progression-table tr.current-level {
-    background: rgba(79, 110, 247, .08);
+    background: rgba(212, 175, 55, .08);
 }
 
 .detail-progression-table tr.current-level td {
@@ -3507,7 +3507,7 @@ html.dark .field-locked {
 }
 
 .detail-mech-bullet {
-    color: #4f6ef7;
+    color: var(--lr-gold);
     font-weight: 800;
     flex-shrink: 0;
 }
@@ -3518,15 +3518,15 @@ html.dark .field-locked {
     align-items: center;
     gap: 10px;
     padding: 10px 14px;
-    background: rgba(139, 92, 246, .08);
-    border: 1px solid rgba(139, 92, 246, .2);
+    background: rgba(91, 63, 184, .08);
+    border: 1px solid rgba(91, 63, 184, .2);
     border-radius: 8px;
 }
 
 .detail-aura-name {
     font-size: 13px;
     font-weight: 800;
-    color: #7c3aed;
+    color: var(--lr-abyssal);
 }
 
 .detail-aura-grade {
@@ -3534,8 +3534,8 @@ html.dark .field-locked {
     font-weight: 700;
     padding: 2px 8px;
     border-radius: 6px;
-    background: rgba(139, 92, 246, .15);
-    color: #7c3aed;
+    background: rgba(91, 63, 184, .15);
+    color: var(--lr-abyssal);
 }
 
 /* --- Empty State --- */
@@ -3559,9 +3559,9 @@ html.dark .detail-modal-close {
 }
 
 html.dark .detail-modal-close:hover {
-    background: rgba(220, 38, 38, .15) !important;
-    color: #f87171 !important;
-    border-color: rgba(220, 38, 38, .3) !important;
+    background: rgba(201, 79, 92, .15) !important;
+    color: var(--lr-blood-3) !important;
+    border-color: rgba(201, 79, 92, .3) !important;
 }
 
 html.dark .detail-img-wrapper {
@@ -3574,8 +3574,8 @@ html.dark .detail-field {
 }
 
 html.dark .detail-quote {
-    background: rgba(139, 92, 246, .08);
-    border-left-color: #8b5cf6;
+    background: rgba(91, 63, 184, .08);
+    border-left-color: var(--lr-abyssal);
 }
 
 html.dark .detail-tag {
@@ -3593,7 +3593,7 @@ html.dark .detail-pec-item.positivo {
 }
 
 html.dark .detail-pec-item.negativo {
-    border-left-color: #e74c3c;
+    border-left-color: var(--lr-blood-2);
 }
 
 html.dark .detail-progression-table {
@@ -3610,7 +3610,7 @@ html.dark .detail-progression-table td {
 }
 
 html.dark .detail-progression-table tr.current-level {
-    background: rgba(79, 110, 247, .12);
+    background: rgba(212, 175, 55, .12);
 }
 
 html.dark .detail-level-badge.positivo {
@@ -3621,22 +3621,22 @@ html.dark .detail-level-badge.positivo {
 
 html.dark .detail-level-badge.negativo {
     background: rgba(231, 76, 60, .15);
-    color: #e74c3c;
+    color: var(--lr-blood-2);
     border-color: rgba(231, 76, 60, .3);
 }
 
 html.dark .detail-aura-info {
-    background: rgba(139, 92, 246, .1);
-    border-color: rgba(139, 92, 246, .25);
+    background: rgba(91, 63, 184, .1);
+    border-color: rgba(91, 63, 184, .25);
 }
 
 html.dark .detail-aura-name {
-    color: #a78bfa;
+    color: var(--lr-abyssal-2);
 }
 
 html.dark .detail-aura-grade {
-    background: rgba(139, 92, 246, .2);
-    color: #a78bfa;
+    background: rgba(91, 63, 184, .2);
+    color: var(--lr-abyssal-2);
 }
 
 /* ===== DETAIL MODAL RESPONSIVE ===== */
@@ -3781,7 +3781,7 @@ html.dark .detail-aura-grade {
         width: 100%;
         flex-wrap: wrap;
         justify-content: flex-end;
-        border-top: 1px solid rgba(139, 92, 246, 0.1);
+        border-top: 1px solid rgba(91, 63, 184, 0.1);
         padding-top: 10px;
         margin-top: 4px;
     }

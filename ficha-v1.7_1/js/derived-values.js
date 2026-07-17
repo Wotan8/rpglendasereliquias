@@ -1,19 +1,19 @@
-/* ===== DERIVED VALUES â€” CÃ¡lculo AutomÃ¡tico de Valores Derivados ===== */
+/* ===== DERIVED VALUES — Cálculo Automático de Valores Derivados ===== */
 
-/* ===== FÃ“RMULAS DE STATUS VITAIS =====
- * Status Vitais (VIT_MAX, ENER_MAX, SAN_MAX) agora sÃ£o gerenciados
- * exclusivamente por mecÃ¢nicas do Painel de Criador (Firebase).
- * As fÃ³rmulas hardcoded foram removidas.
- * O campo base comeÃ§a em 0 e as mecÃ¢nicas vinculadas definem o cÃ¡lculo.
+/* ===== FÓRMULAS DE STATUS VITAIS =====
+ * Status Vitais (VIT_MAX, ENER_MAX, SAN_MAX) agora são gerenciados
+ * exclusivamente por mecânicas do Painel de Criador (Firebase).
+ * As fórmulas hardcoded foram removidas.
+ * O campo base começa em 0 e as mecânicas vinculadas definem o cálculo.
  */
 const DERIVED_FORMULAS = {
-    // Vazio â€” gerenciado por mecÃ¢nicas do Firebase
+    // Vazio — gerenciado por mecânicas do Firebase
 };
 
-/* Mapa: campo de Status Vital â†’ { display, atual }
+/* Mapa: campo de Status Vital → { display, atual }
  * Mapeia as keys (VIT_MAX, ENER_MAX, SAN_MAX) para os IDs
- * dos campos HTML fixos na seÃ§Ã£o Status Vitais.
- * As fÃ³rmulas sÃ£o definidas por mecÃ¢nicas do Firebase.
+ * dos campos HTML fixos na seção Status Vitais.
+ * As fórmulas são definidas por mecânicas do Firebase.
  */
 const DERIVED_FIELDS_MAP = {
     VIT_MAX: { display: 'vit_max_display', atual: 'vit_atual' },
@@ -21,7 +21,7 @@ const DERIVED_FIELDS_MAP = {
     SAN_MAX: { display: 'san_max_display', atual: 'san_atual' },
 };
 
-/* ===== KEYS de derivados que sÃ£o renderizados dinamicamente na grid ===== */
+/* ===== KEYS de derivados que são renderizados dinamicamente na grid ===== */
 let _dynamicDerivedKeys = new Set();
 
 function getEffectiveDotValue(key) {
@@ -33,7 +33,7 @@ function getEffectiveDotValue(key) {
         if ((limit.tipo === 'minimo' || limit.tipo === 'clamp') && limit.min != null) {
             val += limit.min;
         }
-        // Teto: hard cap â€” but if aura extends ceiling, use aura max instead
+        // Teto: hard cap — but if aura extends ceiling, use aura max instead
         if ((limit.tipo === 'maximo' || limit.tipo === 'clamp' || limit.tipo === 'bloqueio') && limit.max != null) {
             const auraMax = typeof getAuraMaxLevel === 'function' ? getAuraMaxLevel(key) : limit.max;
             val = Math.min(val, auraMax);
@@ -69,7 +69,7 @@ function gatherDerivedFields() {
 
 /**
  * Renderiza a grid de Valores Derivados baseada nos dados do Firebase.
- * Filtra por: todoPersonagem=true OU vinculado Ã  raÃ§a/classe selecionada.
+ * Filtra por: todoPersonagem=true OU vinculado à raça/classe selecionada.
  */
 function renderDerivedValuesGrid() {
     const grid = document.getElementById('derivedValuesGrid');
@@ -77,17 +77,17 @@ function renderDerivedValuesGrid() {
 
     const allDVs = window.DERIVED_VALUES || [];
     if (allDVs.length === 0) {
-        // Fallback: se nÃ£o hÃ¡ valores no Firebase, nÃ£o renderizar nada
+        // Fallback: se não há valores no Firebase, não renderizar nada
         grid.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:8px">Nenhum valor derivado cadastrado.</div>';
         _dynamicDerivedKeys = new Set();
         return;
     }
 
-    // Determinar quais DVs sÃ£o aplicÃ¡veis ao personagem
+    // Determinar quais DVs são aplicáveis ao personagem
     const racaNome = document.getElementById('selRaca')?.value || '';
     const classeNome = document.getElementById('selClasse')?.value || '';
 
-    // IDs e valores iniciais de DVs vinculados Ã  raÃ§a selecionada
+    // IDs e valores iniciais de DVs vinculados à raça selecionada
     const raceDVIds = new Set();
     const raceDVInitials = {};  // dvId -> valorInicial
     if (racaNome && window._systemData?.races) {
@@ -104,7 +104,7 @@ function renderDerivedValuesGrid() {
         }
     }
 
-    // IDs de valores derivados vinculados Ã  classe selecionada
+    // IDs de valores derivados vinculados à classe selecionada
     const classDVIds = new Set();
     const classDVInitials = {};  // dvId -> valorInicial
     if (classeNome && window._systemData?.classes) {
@@ -121,7 +121,7 @@ function renderDerivedValuesGrid() {
         }
     }
 
-    // IDs de valores derivados vinculados Ã s peculiaridades ativas
+    // IDs de valores derivados vinculados às peculiaridades ativas
     const pecDVIds = new Set();
     const pecDVInitials = {};
     const processPecDV = (pecList) => {
@@ -161,7 +161,7 @@ function renderDerivedValuesGrid() {
         processPecDV(window.state.peculiaridadesIndividuais);
     }
 
-    // Filtrar: universais OU vinculados Ã  raÃ§a/classe/peculiaridades
+    // Filtrar: universais OU vinculados à raça/classe/peculiaridades
     const applicableDVs = allDVs.filter(dv =>
         dv.todoPersonagem || raceDVIds.has(dv.id) || classDVIds.has(dv.id) || pecDVIds.has(dv.id)
     );
@@ -172,7 +172,7 @@ function renderDerivedValuesGrid() {
     // Ordenar por ordem
     applicableDVs.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
 
-    // Rastrear keys dinÃ¢micos
+    // Rastrear keys dinâmicos
     _dynamicDerivedKeys = new Set(applicableDVs.map(dv => dv.key));
 
     // Renderizar grid
@@ -223,7 +223,7 @@ function renderDerivedValuesGrid() {
         miniField.dataset.dvId = dv.id;
         miniField.dataset.dvKey = dv.key;
 
-        // Label com Ã­cone + nome curto
+        // Label com ícone + nome curto
         const label = document.createElement('label');
         label.className = 'dv-label';
         if (dv.descricao || (dv.mechPreviews && dv.mechPreviews.length)) {
@@ -232,7 +232,7 @@ function renderDerivedValuesGrid() {
         label.textContent = `${dv.icone} ${dv.nome}`;
         label.dataset.dvId = dv.id;
 
-        // Input MÃ¡ximo (calculado)
+        // Input Máximo (calculado)
         const input = document.createElement('input');
         input.type = 'text';
         input.id = `dv_${dv.key}_display`;
@@ -242,7 +242,7 @@ function renderDerivedValuesGrid() {
         if (!dv.campoEditavel) {
             if (window.isCreator) {
                 input.style.border = '2px solid #f59e0b';
-                input.title = 'ðŸ›¡ï¸ Modo Criador: ediÃ§Ã£o livre';
+                input.title = '🛡️ Modo Criador: edição livre';
                 input.addEventListener('input', () => {
                     if (!state.derivedOverrides) state.derivedOverrides = {};
                     state.derivedOverrides[dv.key] = input.value;
@@ -255,12 +255,12 @@ function renderDerivedValuesGrid() {
 
         miniField.appendChild(label);
 
-        // === Campo Atual / MÃ¡x ===
+        // === Campo Atual / Máx ===
         if (dv.campoAtual) {
             const atualRow = document.createElement('div');
             atualRow.className = 'dv-atual-row';
 
-            // Input Atual (editÃ¡vel)
+            // Input Atual (editável)
             const atualInput = document.createElement('input');
             atualInput.type = 'text';
             atualInput.id = `dv_${dv.key}_atual`;
@@ -270,8 +270,8 @@ function renderDerivedValuesGrid() {
             atualInput.value = '0';
             atualInput.addEventListener('input', () => {
                 if (!state.dvAtual) state.dvAtual = {};
-                // Sem clamp automÃ¡tico: o valor digitado pelo jogador Ã© preservado.
-                // MecÃ¢nicas do tipo "limitar" (teto/piso) tratam limites quando necessÃ¡rio.
+                // Sem clamp automático: o valor digitado pelo jogador é preservado.
+                // Mecânicas do tipo "limitar" (teto/piso) tratam limites quando necessário.
                 state.dvAtual[dv.key] = atualInput.value;
                 if (typeof scheduleAutosave === 'function') scheduleAutosave();
             });
@@ -281,7 +281,7 @@ function renderDerivedValuesGrid() {
             sep.className = 'dv-atual-sep';
             sep.textContent = '/';
 
-            // MÃ¡ximo Ã© readOnly no modo Atual/MÃ¡x
+            // Máximo é readOnly no modo Atual/Máx
             input.readOnly = true;
             input.classList.add('dv-atual-max');
 
@@ -358,10 +358,10 @@ function renderDerivedValuesGrid() {
         grid.appendChild(blockContainer);
     });
 
-    // Limpar cache de bÃ´nus para campos "Atual" recriados, forÃ§ando
-    // _applyFieldBonuses() a re-aplicar os bÃ´nus de mecÃ¢nica.
-    // Sem isso, o sistema vÃª que previousBonus === bonus e pula a
-    // atualizaÃ§Ã£o do DOM, deixando o campo em '0'.
+    // Limpar cache de bônus para campos "Atual" recriados, forçando
+    // _applyFieldBonuses() a re-aplicar os bônus de mecânica.
+    // Sem isso, o sistema vê que previousBonus === bonus e pula a
+    // atualização do DOM, deixando o campo em '0'.
     if (state.appliedFieldBonuses || state.fieldBaseValues) {
         for (const dvKey of _dynamicDerivedKeys) {
             const dataKey = `dv_${dvKey}_atual`;
@@ -370,7 +370,7 @@ function renderDerivedValuesGrid() {
         }
     }
 
-    // Restaurar valores de state.dvAtual nos campos "Atual" recÃ©m-criados
+    // Restaurar valores de state.dvAtual nos campos "Atual" recém-criados
     if (state.dvAtual) {
         for (const [dvKey, val] of Object.entries(state.dvAtual)) {
             const atualEl = document.getElementById(`dv_${dvKey}_atual`);
@@ -384,7 +384,7 @@ function renderDerivedValuesGrid() {
     initDerivedTooltips();
 }
 
-/* ===== TOOLTIPS FLUTUANTES (Valores Derivados + Status Vitais + PerÃ­cias) ===== */
+/* ===== TOOLTIPS FLUTUANTES (Valores Derivados + Status Vitais + Perícias) ===== */
 
 let _dvTooltipEl = null;
 
@@ -411,7 +411,7 @@ function initDerivedTooltips() {
 
 /**
  * Inicializa tooltips nos labels de Status Vitais.
- * Chamada apÃ³s VITAL_STATS ser carregado do Firebase.
+ * Chamada após VITAL_STATS ser carregado do Firebase.
  */
 function initVitalStatsTooltips() {
     _ensureTooltipEl();
@@ -425,13 +425,13 @@ function initVitalStatsTooltips() {
         const vs = vitalStats.find(v => v.key === key);
         if (!vs) return;
 
-        // Verificar conteÃºdo direto
+        // Verificar conteúdo direto
         let hasContent = vs.descricao || (vs.mechPreviews && vs.mechPreviews.length);
 
-        // Verificar mecÃ¢nicas externas que afetam este vital stat
+        // Verificar mecânicas externas que afetam este vital stat
         if (!hasContent && typeof getAffectingMechanics === 'function') {
             const linkedIds = vs.mecanicaIds || [];
-            const propNames = [`${vs.nome} MÃ¡xima`, `${vs.nome} MÃ¡ximo`, vs.nome];
+            const propNames = [`${vs.nome} Máxima`, `${vs.nome} Máximo`, vs.nome];
             for (const propName of propNames) {
                 const extras = getAffectingMechanics(propName, { skipLinked: linkedIds });
                 if (extras.length > 0) { hasContent = true; break; }
@@ -451,13 +451,13 @@ function initVitalStatsTooltips() {
 }
 
 /**
- * Inicializa tooltips flutuantes nos nomes das PerÃ­cias.
- * Chamada apÃ³s SKILLS ser carregado do Firebase e renderizado via initSkills().
+ * Inicializa tooltips flutuantes nos nomes das Perícias.
+ * Chamada após SKILLS ser carregado do Firebase e renderizado via initSkills().
  */
 function initSkillTooltips() {
     _ensureTooltipEl();
 
-    // Bind em skills que jÃ¡ tÃªm has-tooltip (via descriÃ§Ã£o)
+    // Bind em skills que já têm has-tooltip (via descrição)
     document.querySelectorAll('.sk-name.has-tooltip').forEach(nameEl => {
         if (nameEl.dataset.tooltipBound) return;
         nameEl.dataset.tooltipBound = '1';
@@ -468,12 +468,12 @@ function initSkillTooltips() {
         nameEl.addEventListener('touchend', hideDvTooltip);
     });
 
-    // Verificar skills SEM has-tooltip mas que sÃ£o afetadas por mecÃ¢nicas externas
+    // Verificar skills SEM has-tooltip mas que são afetadas por mecânicas externas
     if (typeof getAffectingMechanics === 'function') {
         document.querySelectorAll('.sk-name:not(.has-tooltip)').forEach(nameEl => {
             if (nameEl.dataset.tooltipBound) return;
             const skillName = nameEl.textContent.trim();
-            // Verificar se hÃ¡ mecÃ¢nicas afetando esta perÃ­cia
+            // Verificar se há mecânicas afetando esta perícia
             const extras = getAffectingMechanics(skillName, { skipLinked: [] });
             if (extras.length > 0) {
                 nameEl.classList.add('has-tooltip');
@@ -490,32 +490,32 @@ function initSkillTooltips() {
 
 /* ===== HARDCODED ATTRIBUTE DESCRIPTIONS ===== */
 const ATTRIBUTE_DESCRIPTIONS = {
-    INT: 'Representa a sabedoria, memÃ³ria e conhecimento acumulado do personagem. Ã‰ o quanto ele sabe e o quÃ£o esperto ele Ã©.',
-    RAC: 'Velocidade de pensamento, percepÃ§Ã£o e capacidade de reagir mentalmente. Ã‰ a agilidade da mente, o "pensar rÃ¡pido".',
-    PRS: 'ForÃ§a de vontade prolongada, resistÃªncia mental e foco sob pressÃ£o. Ã‰ o que impede o personagem de desistir quando tudo parece perdido.',
-    FOR: 'PotÃªncia muscular, capacidade de carga e poder de dano corpo-a-corpo. Determina o quanto o personagem consegue carregar, empurrar e golpear.',
-    DES: 'Agilidade, coordenaÃ§Ã£o motora e precisÃ£o de movimentos. Governa reflexos, equilÃ­brio e a capacidade de realizar aÃ§Ãµes que exigem fineza fÃ­sica.',
-    VIG: 'ResistÃªncia fÃ­sica, saÃºde e capacidade de suportar dano. Ã‰ o que mantÃ©m o personagem de pÃ© apÃ³s levar uma surra ou correr por horas.',
-    PRE: 'Magnetismo pessoal, capacidade de impressionar e intimidar. Ã‰ aquela forÃ§a invisÃ­vel que faz as pessoas prestarem atenÃ§Ã£o quando o personagem entra numa sala.',
-    MAN: 'Habilidade de influenciar, persuadir e enganar outros. Ã‰ a arte de fazer as pessoas fazerem o que vocÃª quer, muitas vezes sem que percebam.',
-    AUT: 'DomÃ­nio sobre as prÃ³prias emoÃ§Ãµes e calma sob pressÃ£o. Ã‰ o que separa quem age racionalmente de quem Ã© dominado pelo medo ou pela raiva no calor do momento.',
+    INT: 'Representa a sabedoria, memória e conhecimento acumulado do personagem. É o quanto ele sabe e o quão esperto ele é.',
+    RAC: 'Velocidade de pensamento, percepção e capacidade de reagir mentalmente. É a agilidade da mente, o "pensar rápido".',
+    PRS: 'Força de vontade prolongada, resistência mental e foco sob pressão. É o que impede o personagem de desistir quando tudo parece perdido.',
+    FOR: 'Potência muscular, capacidade de carga e poder de dano corpo-a-corpo. Determina o quanto o personagem consegue carregar, empurrar e golpear.',
+    DES: 'Agilidade, coordenação motora e precisão de movimentos. Governa reflexos, equilíbrio e a capacidade de realizar ações que exigem fineza física.',
+    VIG: 'Resistência física, saúde e capacidade de suportar dano. É o que mantém o personagem de pé após levar uma surra ou correr por horas.',
+    PRE: 'Magnetismo pessoal, capacidade de impressionar e intimidar. É aquela força invisível que faz as pessoas prestarem atenção quando o personagem entra numa sala.',
+    MAN: 'Habilidade de influenciar, persuadir e enganar outros. É a arte de fazer as pessoas fazerem o que você quer, muitas vezes sem que percebam.',
+    AUT: 'Domínio sobre as próprias emoções e calma sob pressão. É o que separa quem age racionalmente de quem é dominado pelo medo ou pela raiva no calor do momento.',
 };
 
 const ATTRIBUTE_FULL_NAMES = {
-    INT: 'InteligÃªncia',
-    RAC: 'RaciocÃ­nio',
-    PRS: 'PerseveranÃ§a',
-    FOR: 'ForÃ§a',
+    INT: 'Inteligência',
+    RAC: 'Raciocínio',
+    PRS: 'Perseverança',
+    FOR: 'Força',
     DES: 'Destreza',
     VIG: 'Vigor',
-    PRE: 'PresenÃ§a',
-    MAN: 'ManipulaÃ§Ã£o',
+    PRE: 'Presença',
+    MAN: 'Manipulação',
     AUT: 'Autocontrole',
 };
 
 /**
  * Inicializa tooltips flutuantes nos nomes dos Atributos.
- * Chamada apÃ³s o carregamento dos dados do Firebase.
+ * Chamada após o carregamento dos dados do Firebase.
  */
 function initAttributeTooltips() {
     _ensureTooltipEl();
@@ -550,18 +550,18 @@ function showDvTooltip(e) {
         if (vs.descricao) {
             html += `<div class="dv-tooltip-desc">${_escHtml(vs.descricao)}</div>`;
         }
-        // MecÃ¢nicas vinculadas
+        // Mecânicas vinculadas
         if (vs.mechPreviews && vs.mechPreviews.length) {
             html += '<div class="dv-tooltip-mechs">';
-            html += '<div class="dv-tooltip-mechs-title">âš™ï¸ MecÃ¢nicas Vinculadas:</div>';
+            html += '<div class="dv-tooltip-mechs-title">⚙️ Mecânicas Vinculadas:</div>';
             vs.mechPreviews.forEach(preview => {
-                html += `<div class="dv-tooltip-mech-item">â€¢ ${_escHtml(preview)}</div>`;
+                html += `<div class="dv-tooltip-mech-item">• ${_escHtml(preview)}</div>`;
             });
             html += '</div>';
         }
-        // Buscar TODAS as mecÃ¢nicas que afetam este vital stat
+        // Buscar TODAS as mecânicas que afetam este vital stat
         // Usar variantes de nome para cobrir aliases no TARGET_MAP
-        const propNames = [`${vs.nome} MÃ¡xima`, `${vs.nome} MÃ¡ximo`, vs.nome];
+        const propNames = [`${vs.nome} Máxima`, `${vs.nome} Máximo`, vs.nome];
         const linkedIds = vs.mecanicaIds || [];
         let extras = [];
         for (const propName of propNames) {
@@ -576,7 +576,7 @@ function showDvTooltip(e) {
         }
         if (extras.length > 0) {
             html += '<div class="dv-tooltip-mechs dv-tooltip-extras">';
-            html += '<div class="dv-tooltip-mechs-title">ðŸ”— Outras fontes que afetam:</div>';
+            html += '<div class="dv-tooltip-mechs-title">🔗 Outras fontes que afetam:</div>';
             extras.forEach(item => {
                 html += `<div class="dv-tooltip-mech-item"><span class="dv-tooltip-fonte">${_escHtml(item.fonte)}:</span> ${_escHtml(item.preview)}</div>`;
             });
@@ -591,7 +591,7 @@ function showDvTooltip(e) {
         if (desc) {
             html += `<div class="dv-tooltip-desc">${_escHtml(desc)}</div>`;
         }
-        // Buscar mecÃ¢nicas que afetam este atributo (por abreviaÃ§Ã£o e nome completo)
+        // Buscar mecânicas que afetam este atributo (por abreviação e nome completo)
         if (typeof getAffectingMechanics === 'function') {
             let extras = [];
             const lookups = [attrKey, fullName];
@@ -605,7 +605,7 @@ function showDvTooltip(e) {
             }
             if (extras.length > 0) {
                 html += '<div class="dv-tooltip-mechs">';
-                html += '<div class="dv-tooltip-mechs-title">âš™ï¸ MecÃ¢nicas que afetam:</div>';
+                html += '<div class="dv-tooltip-mechs-title">⚙️ Mecânicas que afetam:</div>';
                 extras.forEach(item => {
                     html += `<div class="dv-tooltip-mech-item"><span class="dv-tooltip-fonte">${_escHtml(item.fonte)}:</span> ${_escHtml(item.preview)}</div>`;
                 });
@@ -614,7 +614,7 @@ function showDvTooltip(e) {
         }
 
     } else if (tooltipType === 'skill') {
-        // === PerÃ­cia ===
+        // === Perícia ===
         const skillName = label.textContent.trim();
         const allSkills = window.SKILLS || {};
         let skill = null;
@@ -626,7 +626,7 @@ function showDvTooltip(e) {
         if (skill.descricao) {
             html += `<div class="dv-tooltip-desc">${_escHtml(skill.descricao)}</div>`;
         }
-        // MecÃ¢nicas vinculadas Ã  perÃ­cia
+        // Mecânicas vinculadas à perícia
         const linkedMechIds = skill.mecanicaIds || [];
         if (linkedMechIds.length > 0) {
             const linkedPreviews = linkedMechIds.map(mid => {
@@ -637,20 +637,20 @@ function showDvTooltip(e) {
             }).filter(Boolean);
             if (linkedPreviews.length > 0) {
                 html += '<div class="dv-tooltip-mechs">';
-                html += '<div class="dv-tooltip-mechs-title">âš™ï¸ MecÃ¢nicas Vinculadas:</div>';
+                html += '<div class="dv-tooltip-mechs-title">⚙️ Mecânicas Vinculadas:</div>';
                 linkedPreviews.forEach(preview => {
-                    html += `<div class="dv-tooltip-mech-item">â€¢ ${_escHtml(preview)}</div>`;
+                    html += `<div class="dv-tooltip-mech-item">• ${_escHtml(preview)}</div>`;
                 });
                 html += '</div>';
             }
         }
-        // Buscar TODAS as mecÃ¢nicas que afetam esta perÃ­cia
+        // Buscar TODAS as mecânicas que afetam esta perícia
         const extras = typeof getAffectingMechanics === 'function'
             ? getAffectingMechanics(skillName, { skipLinked: linkedMechIds })
             : [];
         if (extras.length > 0) {
             html += '<div class="dv-tooltip-mechs dv-tooltip-extras">';
-            html += '<div class="dv-tooltip-mechs-title">ðŸ”— Outras fontes que afetam:</div>';
+            html += '<div class="dv-tooltip-mechs-title">🔗 Outras fontes que afetam:</div>';
             extras.forEach(item => {
                 html += `<div class="dv-tooltip-mech-item"><span class="dv-tooltip-fonte">${_escHtml(item.fonte)}:</span> ${_escHtml(item.preview)}</div>`;
             });
@@ -666,33 +666,33 @@ function showDvTooltip(e) {
         }
 
     } else {
-        // === Valor Derivado (padrÃ£o) ===
+        // === Valor Derivado (padrão) ===
         const dvId = label.dataset.dvId;
         const dv = (window.DERIVED_VALUES || []).find(d => d.id === dvId);
         if (!dv) return;
         if (dv.descricao) {
             html += `<div class="dv-tooltip-desc">${_escHtml(dv.descricao)}</div>`;
         }
-        // Constante de CriaÃ§Ã£o (modificador definido no slider da VÃ©spera da Partida)
+        // Constante de Criação (modificador definido no slider da Véspera da Partida)
         const creationMod = state.derivedModifiers?.[dvId];
         if (creationMod && creationMod !== 0) {
             const sign = creationMod > 0 ? '+' : '';
             const fmtMod = Number.isInteger(creationMod) ? String(creationMod) : creationMod.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-            html += `<div class="dv-tooltip-creation-const">ðŸŽ¯ Constante de CriaÃ§Ã£o: <span class="dv-tooltip-creation-val">${sign}${fmtMod}</span></div>`;
+            html += `<div class="dv-tooltip-creation-const">🎯 Constante de Criação: <span class="dv-tooltip-creation-val">${sign}${fmtMod}</span></div>`;
         }
-        // MecÃ¢nicas vinculadas
+        // Mecânicas vinculadas
         if (dv.mechPreviews && dv.mechPreviews.length) {
             html += '<div class="dv-tooltip-mechs">';
-            html += '<div class="dv-tooltip-mechs-title">âš™ï¸ MecÃ¢nicas Vinculadas:</div>';
+            html += '<div class="dv-tooltip-mechs-title">⚙️ Mecânicas Vinculadas:</div>';
             dv.mechPreviews.forEach(preview => {
-                html += `<div class="dv-tooltip-mech-item">â€¢ ${_escHtml(preview)}</div>`;
+                html += `<div class="dv-tooltip-mech-item">• ${_escHtml(preview)}</div>`;
             });
             html += '</div>';
         }
-        // Buscar TODAS as mecÃ¢nicas que afetam este DV
+        // Buscar TODAS as mecânicas que afetam este DV
         const linkedIds = dv.mecanicaIds || [];
-        // Tentar com nome e variantes (com/sem sufixos MÃ¡xima/MÃ¡ximo)
-        const propNames = [dv.nome, `${dv.nome} (MÃ¡ximo)`, `${dv.nome} MÃ¡xima`, `${dv.nome} MÃ¡ximo`];
+        // Tentar com nome e variantes (com/sem sufixos Máxima/Máximo)
+        const propNames = [dv.nome, `${dv.nome} (Máximo)`, `${dv.nome} Máxima`, `${dv.nome} Máximo`];
         let extras = [];
         for (const propName of propNames) {
             const found = typeof getAffectingMechanics === 'function'
@@ -706,7 +706,7 @@ function showDvTooltip(e) {
         }
         if (extras.length > 0) {
             html += '<div class="dv-tooltip-mechs dv-tooltip-extras">';
-            html += '<div class="dv-tooltip-mechs-title">ðŸ”— Outras fontes que afetam:</div>';
+            html += '<div class="dv-tooltip-mechs-title">🔗 Outras fontes que afetam:</div>';
             extras.forEach(item => {
                 html += `<div class="dv-tooltip-mech-item"><span class="dv-tooltip-fonte">${_escHtml(item.fonte)}:</span> ${_escHtml(item.preview)}</div>`;
             });
@@ -715,8 +715,8 @@ function showDvTooltip(e) {
     }
 
     if (!html) {
-        // Mesmo sem mecÃ¢nicas vinculadas, verificar fontes externas
-        // para habilitar tooltip quando sÃ³ hÃ¡ fontes externas
+        // Mesmo sem mecânicas vinculadas, verificar fontes externas
+        // para habilitar tooltip quando só há fontes externas
         return;
     }
 
@@ -750,52 +750,52 @@ function _escHtml(str) {
     return d.innerHTML;
 }
 
-/* ===== RECALC ALL â€” Status Vitais (mecÃ¢nicas) + DinÃ¢micos (Firebase) ===== */
+/* ===== RECALC ALL — Status Vitais (mecânicas) + Dinâmicos (Firebase) ===== */
 
 function recalcAll() {
-    // Re-avaliar equaÃ§Ãµes de mecÃ¢nicas de valores derivados com valores atuais
-    // Algumas mecÃ¢nicas vinculadas a DVs usam equaÃ§Ãµes com referÃªncias Ã  ficha
-    // (atributos, perÃ­cias) e precisam ser recalculadas a cada chamada de recalcAll
+    // Re-avaliar equações de mecânicas de valores derivados com valores atuais
+    // Algumas mecânicas vinculadas a DVs usam equações com referências à ficha
+    // (atributos, perícias) e precisam ser recalculadas a cada chamada de recalcAll
     if (typeof resolveDerivedValueMechanicsLive === 'function'
         && typeof _getDynamicMechContributions === 'function') {
-        // Subtrair APENAS as contribuiÃ§Ãµes dinÃ¢micas anteriores (equaÃ§Ãµes com ref Ã  ficha),
-        // preservando bÃ´nus de outras fontes (ex: peculiaridades raciais, mecÃ¢nicas fixas)
+        // Subtrair APENAS as contribuições dinâmicas anteriores (equações com ref à ficha),
+        // preservando bônus de outras fontes (ex: peculiaridades raciais, mecânicas fixas)
         const prevContributions = _getDynamicMechContributions();
         const bonuses = state.mechanicBonuses || {};
         for (const [key, contribution] of Object.entries(prevContributions)) {
             if (key.startsWith('SET:') || key.startsWith('BASE_SET:')) {
-                // Para SET, remover a chave inteira (sÃ£o overrides absolutos)
+                // Para SET, remover a chave inteira (são overrides absolutos)
                 delete bonuses[key];
             } else if (key.startsWith('MULT:') || key.startsWith('DIV:') || key.startsWith('BASE_MULT:') || key.startsWith('BASE_DIV:')) {
-                // Para MULT e DIV dinÃ¢micos, desfazer dividindo pela contribuiÃ§Ã£o anterior
+                // Para MULT e DIV dinâmicos, desfazer dividindo pela contribuição anterior
                 if (contribution && contribution !== 0) {
                     bonuses[key] = (bonuses[key] || 1) / contribution;
                 } else {
                     delete bonuses[key];
                 }
             } else {
-                // Para + e -, subtrair a contribuiÃ§Ã£o anterior
+                // Para + e -, subtrair a contribuição anterior
                 bonuses[key] = (bonuses[key] || 0) - contribution;
             }
         }
-        // Re-resolver equaÃ§Ãµes dinÃ¢micas com valores atuais de state.dots
+        // Re-resolver equações dinâmicas com valores atuais de state.dots
         resolveDerivedValueMechanicsLive();
     }
 
     const bonuses = state.mechanicBonuses || {};
     const limits = state.mechanicLimits || {};
 
-    // 1) Calcular Status Vitais (via mecÃ¢nicas do Firebase â€” base 0)
+    // 1) Calcular Status Vitais (via mecânicas do Firebase — base 0)
     for (const [key, mapping] of Object.entries(DERIVED_FIELDS_MAP)) {
-        // Se este key estÃ¡ renderizado na grid dinÃ¢mica, pular
+        // Se este key está renderizado na grid dinâmica, pular
         if (_dynamicDerivedKeys.has(key)) continue;
 
-        let value = 0; // Base 0 â€” mecÃ¢nicas definem o cÃ¡lculo
+        let value = 0; // Base 0 — mecânicas definem o cálculo
         value = _applyMechanicModifiers(key, value, bonuses, limits);
         updateDerivedField(key, value);
     }
 
-    // 2) Calcular valores derivados dinÃ¢micos (Firebase-driven)
+    // 2) Calcular valores derivados dinâmicos (Firebase-driven)
     for (const dvKey of _dynamicDerivedKeys) {
         // Se Criador fez override manual, preservar o valor editado
         const overrideVal = state.derivedOverrides?.[dvKey];
@@ -812,33 +812,33 @@ function recalcAll() {
         let value = 0;
         let initialConstant = 0;
 
-        // Usar valorInicial de raÃ§a/classe como constante (se definido)
+        // Usar valorInicial de raça/classe como constante (se definido)
         const initials = window._dvInitialValues || {};
         const dvDef = (window.DERIVED_VALUES || []).find(d => d.key === dvKey);
         if (dvDef && initials[dvDef.id]) {
             initialConstant = initials[dvDef.id];
         }
 
-        // Aplicar mecÃ¢nicas (bÃ´nus, penalidades, equaÃ§Ãµes, multiplicadores)
+        // Aplicar mecânicas (bônus, penalidades, equações, multiplicadores)
         value = _applyMechanicModifiers(dvKey, value, bonuses, limits);
 
-        // Aplicar constante inicial (RaÃ§a/Classe/Tribo)
+        // Aplicar constante inicial (Raça/Classe/Tribo)
         value += initialConstant;
 
-        // Aplicar modificador constante da VÃ©spera da Partida (Criar Personagem) SEMPRE apÃ³s as mecÃ¢nicas
+        // Aplicar modificador constante da Véspera da Partida (Criar Personagem) SEMPRE após as mecânicas
         if (dvDef && state.derivedModifiers && state.derivedModifiers[dvDef.id]) {
             value += state.derivedModifiers[dvDef.id];
         }
 
-        // Atualizar campo na grid dinÃ¢mica
+        // Atualizar campo na grid dinâmica
         const displayEl = document.getElementById(`dv_${dvKey}_display`);
         if (displayEl) {
             displayEl.value = Number.isInteger(value) ? value : parseFloat(value.toFixed(1));
         }
 
-        // Se DV tem campoAtual, atualizar o atributo max (informativo) â€” sem clampar o valor atual.
-        // O valor digitado pelo jogador Ã© preservado.
-        // MecÃ¢nicas do tipo "limitar" (teto/piso) tratam limites quando necessÃ¡rio.
+        // Se DV tem campoAtual, atualizar o atributo max (informativo) — sem clampar o valor atual.
+        // O valor digitado pelo jogador é preservado.
+        // Mecânicas do tipo "limitar" (teto/piso) tratam limites quando necessário.
         if (dvDef && dvDef.campoAtual) {
             const atualEl = document.getElementById(`dv_${dvKey}_atual`);
             if (atualEl) {
@@ -846,17 +846,17 @@ function recalcAll() {
             }
         }
 
-        // Atualizar tambÃ©m o campo hardcoded, se existir (ex: ENER_MAX)
+        // Atualizar também o campo hardcoded, se existir (ex: ENER_MAX)
         if (DERIVED_FIELDS_MAP[dvKey]) {
             updateDerivedField(dvKey, value);
         }
 
-        // Guardar em state.derived para referÃªncias cruzadas
+        // Guardar em state.derived para referências cruzadas
         if (!state.derived) state.derived = {};
         state.derived[dvKey] = value;
     }
 
-    // 3) Aplicar limites em atributos e perÃ­cias (teto trunca state.dots)
+    // 3) Aplicar limites em atributos e perícias (teto trunca state.dots)
     for (const [field, limit] of Object.entries(limits)) {
         if (field.startsWith('attr_') || field.startsWith('sk_')) {
             if (limit.tipo === 'bloqueio') {
@@ -881,23 +881,23 @@ function recalcAll() {
         }
     }
 
-    // 4) Aplicar bÃ´nus de mecÃ¢nicas em campos DOM (field:xxx, ex: blindagem, tamanho)
+    // 4) Aplicar bônus de mecânicas em campos DOM (field:xxx, ex: blindagem, tamanho)
     _applyFieldBonuses(bonuses);
 
-    // 5) Aplicar bÃ´nus visuais nos dots
+    // 5) Aplicar bônus visuais nos dots
     applyMechanicBonusesToDots();
 
-    // 6) Sincronizar componentes reativos dos mÃ³dulos de classe (VD)
+    // 6) Sincronizar componentes reativos dos módulos de classe (VD)
     if (typeof syncModuleDerivedValuesUI === 'function') syncModuleDerivedValuesUI();
 }
 
 /**
- * Aplica modificadores de mecÃ¢nicas (bÃ´nus, mult, div, set, limites) a um valor derivado.
+ * Aplica modificadores de mecânicas (bônus, mult, div, set, limites) a um valor derivado.
  */
 function _applyMechanicModifiers(key, value, bonuses, limits) {
     const bonusKey = `DERIVED:${key}`;
 
-    // === 1. AVALIAR MECÃ‚NICAS BASE (Vinculadas) ===
+    // === 1. AVALIAR MECÂNICAS BASE (Vinculadas) ===
     const baseSetKey = `BASE_SET:${bonusKey}`;
     if (bonuses[baseSetKey] !== undefined) {
         value = bonuses[baseSetKey];
@@ -916,8 +916,8 @@ function _applyMechanicModifiers(key, value, bonuses, limits) {
         value = Math.floor(value / bonuses[baseDivKey]);
     }
 
-    // === 2. AVALIAR MODIFICADORES GERAIS (Peculiaridades, Itens, CondiÃ§Ãµes) ===
-    // "Definir fixo" (=) â€” overrides the base formula entirely
+    // === 2. AVALIAR MODIFICADORES GERAIS (Peculiaridades, Itens, Condições) ===
+    // "Definir fixo" (=) — overrides the base formula entirely
     const setKey = `SET:${bonusKey}`;
     if (bonuses[setKey] !== undefined) {
         value = bonuses[setKey];
@@ -925,7 +925,7 @@ function _applyMechanicModifiers(key, value, bonuses, limits) {
 
     value += (bonuses[bonusKey] || 0);
 
-    // Multiplicadores de mecÃ¢nicas
+    // Multiplicadores de mecânicas
     const multKey = `MULT:${bonusKey}`;
     if (bonuses[multKey]) {
         value = Math.floor(value * bonuses[multKey]);
@@ -949,7 +949,7 @@ function _applyMechanicModifiers(key, value, bonuses, limits) {
 }
 
 /**
- * Aplica bÃ´nus de mecÃ¢nicas em campos DOM (field:xxx).
+ * Aplica bônus de mecânicas em campos DOM (field:xxx).
  */
 function _applyFieldBonuses(bonuses) {
     if (!state.fieldBaseValues) state.fieldBaseValues = {};
@@ -968,7 +968,7 @@ function _applyFieldBonuses(bonuses) {
         }
     }
 
-    // Resetar campos sem bÃ´nus
+    // Resetar campos sem bônus
     document.querySelectorAll('[data-mechanic-field-bonus]').forEach(el => {
         const dk = el.dataset.key;
         if (!dk || fieldBonuses[dk] !== undefined || fieldSets[dk] !== undefined) return;
@@ -979,7 +979,7 @@ function _applyFieldBonuses(bonuses) {
         delete state.appliedFieldBonuses[dk];
     });
 
-    // Aplicar bÃ´nus atuais
+    // Aplicar bônus atuais
     for (const [dataKey, bonus] of Object.entries(fieldBonuses)) {
         const el = document.querySelector(`[data-key="${dataKey}"]`);
         if (!el) continue;
@@ -1016,7 +1016,7 @@ function _applyFieldBonuses(bonuses) {
 }
 
 /**
- * Aplica visualmente os bÃ´nus de mecÃ¢nicas (sk_* e attr_*) nos dots.
+ * Aplica visualmente os bônus de mecânicas (sk_* e attr_*) nos dots.
  */
 function applyMechanicBonusesToDots() {
     const bonuses = state.mechanicBonuses || {};
@@ -1135,8 +1135,8 @@ function updateDerivedField(key, value) {
         const atualEl = document.querySelector(`[data-key="${mapping.atual}"]`);
         if (atualEl) {
             atualEl.max = value;
-            // Sem clamp automÃ¡tico: o valor digitado pelo jogador Ã© preservado.
-            // MecÃ¢nicas do tipo "limitar" (teto/piso) tratam limites quando necessÃ¡rio.
+            // Sem clamp automático: o valor digitado pelo jogador é preservado.
+            // Mecânicas do tipo "limitar" (teto/piso) tratam limites quando necessário.
         }
     }
 
@@ -1145,26 +1145,26 @@ function updateDerivedField(key, value) {
     state.derived[key] = value;
 }
 
-/* ValidaÃ§Ã£o: ATUAL â€” sem clamp automÃ¡tico.
- * O valor digitado pelo jogador Ã© preservado como estÃ¡.
- * MecÃ¢nicas do tipo "limitar" (teto/piso) tratam limites quando necessÃ¡rio.
+/* Validação: ATUAL — sem clamp automático.
+ * O valor digitado pelo jogador é preservado como está.
+ * Mecânicas do tipo "limitar" (teto/piso) tratam limites quando necessário.
  */
 function validateAtualField(atualKey, maxDisplayId) {
     // No-op: removido clamp hardcoded para permitir que o jogador
     // defina qualquer valor no campo atual.
 }
 
-/* Inicializar listeners e renderizar grid dinÃ¢mica */
+/* Inicializar listeners e renderizar grid dinâmica */
 function initDerivedListeners() {
-    // ValidaÃ§Ã£o de campos ATUAL â‰¤ MAX (Status Vitais â€” mecÃ¢nicas do Firebase)
+    // Validação de campos ATUAL ≤ MAX (Status Vitais — mecânicas do Firebase)
     validateAtualField('vit_atual', 'vit_max_display');
     validateAtualField('ener_atual', 'ener_max_display');
     validateAtualField('san_atual', 'san_max_display');
 
-    // Renderizar grid dinÃ¢mica de valores derivados
+    // Renderizar grid dinâmica de valores derivados
     renderDerivedValuesGrid();
 
-    // Restaurar valores de state.dvAtual (campos "Atual" editÃ¡veis de DVs)
+    // Restaurar valores de state.dvAtual (campos "Atual" editáveis de DVs)
     if (state.dvAtual) {
         for (const [dvKey, val] of Object.entries(state.dvAtual)) {
             const atualEl = document.getElementById(`dv_${dvKey}_atual`);

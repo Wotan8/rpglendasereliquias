@@ -18,14 +18,14 @@
 .loading-spinner {
     width: 48px;
     height: 48px;
-    border: 4px solid rgba(139, 92, 246, 0.2);
+    border: 4px solid rgba(91, 63, 184, 0.2);
     border-top: 4px solid var(--primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
 
 .loading-text {
-    color: #94a3b8;
+    color: var(--lr-text-2);
     font-size: 0.95rem;
     font-weight: 600;
 }
@@ -49,7 +49,7 @@
 .toolbar button {
     border: 1px solid rgba(255, 255, 255, 0.18);
     background: rgba(255, 255, 255, 0.06);
-    color: #fff;
+    color: var(--lr-divine);
     font-weight: 600;
     padding: 8px 14px;
     border-radius: var(--radius);
@@ -140,17 +140,17 @@
 }
 
 .alert-success {
-    background: linear-gradient(135deg, #059669, #10b981);
+    background: linear-gradient(135deg, var(--lr-nature), var(--lr-nature));
     color: white;
 }
 
 .alert-danger {
-    background: linear-gradient(135deg, #dc2626, #ef4444);
+    background: linear-gradient(135deg, var(--lr-blood-2), var(--lr-blood-2));
     color: white;
 }
 
 .alert-warning {
-    background: linear-gradient(135deg, #d97706, #f59e0b);
+    background: linear-gradient(135deg, var(--lr-gold), var(--lr-gold));
     color: white;
 }
 
@@ -215,7 +215,7 @@
 }
 
 html.dark .mechsel-chip {
-    background: #0f1120;
+    background: var(--lr-bg-0);
     border-color: var(--line);
 }
 
@@ -255,12 +255,12 @@ html.dark .mechsel-chip {
 
 .mechsel-chip-remove:hover {
     background: var(--danger);
-    color: #fff;
+    color: var(--lr-divine);
 }
 
 .mechsel-add-btn {
     background: var(--primary);
-    color: #fff;
+    color: var(--lr-divine);
     border: none;
     padding: 6px 14px;
     border-radius: 6px;
@@ -291,7 +291,7 @@ html.dark .mechsel-chip {
 }
 
 html.dark .mechsel-search {
-    background: #0f1120;
+    background: var(--lr-bg-0);
     border-color: var(--line);
 }
 
@@ -308,12 +308,12 @@ html.dark .mechsel-search {
     border-radius: 6px;
     font-size: .78rem;
     font-family: var(--font);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
 }
 
 html.dark .mechsel-search-bar input {
-    background: #151829;
+    background: var(--lr-bg-1);
     border-color: var(--line);
     color: var(--ink);
 }
@@ -325,13 +325,13 @@ html.dark .mechsel-search-bar input {
     font-size: .72rem;
     font-weight: 700;
     font-family: var(--font);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     cursor: pointer;
 }
 
 html.dark .mechsel-search-bar select {
-    background: #151829;
+    background: var(--lr-bg-1);
     border-color: var(--line);
     color: var(--ink);
 }
@@ -354,7 +354,7 @@ html.dark .mechsel-search-bar select {
 }
 
 .mechsel-result:hover {
-    background: rgba(79, 110, 247, .08);
+    background: rgba(212, 175, 55, .08);
 }
 
 .mechsel-result input[type="checkbox"] {
@@ -377,7 +377,7 @@ html.dark .mechsel-search-bar select {
 .mechsel-confirm {
     margin-top: 8px;
     background: var(--success);
-    color: #fff;
+    color: var(--lr-divine);
     border: none;
     padding: 6px 14px;
     border-radius: 6px;
@@ -391,7 +391,7 @@ html.dark .mechsel-search-bar select {
 }
 
 .mechsel-confirm:hover {
-    background: #059669;
+    background: var(--lr-nature);
 }
 
 /* -- Grouped Select styling -- */

@@ -1,31 +1,31 @@
 :root {
-    --bg: #0b0c10;
-    --bg-gradient: linear-gradient(180deg, #0b0c10, #111827);
-    --paper: #ffffff;
-    --ink: #111827;
-    --muted: #6b7280;
-    --line: #111827;
-    --soft: #e5e7eb;
-    --chip: #f3f4f6;
+    --bg: var(--lr-bg-0);
+    --bg-gradient: linear-gradient(180deg, var(--lr-bg-0), var(--lr-bg-1));
+    --paper: var(--lr-divine);
+    --ink: var(--lr-bg-1);
+    --muted: var(--lr-text-2);
+    --line: var(--lr-bg-1);
+    --soft: var(--lr-text-1);
+    --chip: var(--lr-text-1);
     --radius: 10px;
     --gap: 10px;
     --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif
 }
 
 html.dark {
-    --bg: #0b0c10;
-    --bg-gradient: linear-gradient(180deg, #0b0c10, #111827);
-    --paper: #1a1d2e;
-    --ink: #e5e7eb;
-    --muted: #9ca3af;
-    --line: #374151;
-    --soft: #374151;
-    --chip: #232740
+    --bg: var(--lr-bg-0);
+    --bg-gradient: linear-gradient(180deg, var(--lr-bg-0), var(--lr-bg-1));
+    --paper: var(--lr-surface);
+    --ink: var(--lr-text-1);
+    --muted: var(--lr-text-2);
+    --line: var(--lr-border);
+    --soft: var(--lr-border);
+    --chip: var(--lr-surface)
 }
 
 html.dark body {
     background: var(--bg-gradient);
-    color: #e5e7eb
+    color: var(--lr-text-1)
 }
 
 html.dark .sheet {
@@ -41,41 +41,41 @@ html.dark .tab {
 }
 
 html.dark .tab.active {
-    background: #4f6ef7;
-    color: #fff;
-    border-color: #4f6ef7
+    background: var(--lr-gold);
+    color: var(--lr-divine);
+    border-color: var(--lr-gold)
 }
 
 html.dark .tab:hover {
-    background: #2d3352
+    background: var(--lr-surface-2)
 }
 
 html.dark input,
 html.dark textarea,
 html.dark select {
-    background: #232740 !important;
-    color: #e5e7eb !important;
-    border-color: #374151 !important
+    background: var(--lr-surface) !important;
+    color: var(--lr-text-1) !important;
+    border-color: var(--lr-border) !important
 }
 
 html.dark button,
 html.dark .btn {
-    background: #232740;
-    color: #e5e7eb;
-    border-color: #374151
+    background: var(--lr-surface);
+    color: var(--lr-text-1);
+    border-color: var(--lr-border)
 }
 
 html.dark button:hover {
-    background: #2d3352
+    background: var(--lr-surface-2)
 }
 
 html.dark .dot {
-    background: #232740;
-    border-color: #4b5563
+    background: var(--lr-surface);
+    border-color: var(--lr-border)
 }
 
 html.dark .dot.filled {
-    background: #4f6ef7
+    background: var(--lr-gold)
 }
 
 html.dark .attr-item,
@@ -116,8 +116,8 @@ html.dark .rm-btn {
 
 html.dark .rm-btn:hover {
     background: #3b1c1c !important;
-    color: #f87171 !important;
-    border-color: #991b1b !important
+    color: var(--lr-blood-3) !important;
+    border-color: var(--lr-blood) !important
 }
 
 html.dark .note-editor {
@@ -156,7 +156,7 @@ body {
     margin: 0;
     font-family: var(--font);
     background: var(--bg-gradient);
-    color: #e5e7eb;
+    color: var(--lr-text-1);
     min-height: 100vh
 }
 
@@ -173,7 +173,7 @@ body {
 .toolbar button {
     border: 1px solid rgba(255, 255, 255, .18);
     background: rgba(255, 255, 255, .06);
-    color: #fff;
+    color: var(--lr-divine);
     font-weight: 600;
     padding: 8px 14px;
     border-radius: 10px;
@@ -221,7 +221,7 @@ body {
 
 .tab {
     border: 2px solid var(--line);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     padding: 10px 16px;
     border-radius: 10px;
@@ -240,7 +240,7 @@ body {
 
 .tab.active {
     background: var(--ink);
-    color: #fff
+    color: var(--lr-divine)
 }
 
 .tab-content {
@@ -314,7 +314,7 @@ body {
     padding: 10px;
     font-size: 14px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -322,7 +322,7 @@ body {
 .field input:focus,
 .field textarea:focus,
 .field select:focus {
-    outline: 3px solid rgba(59, 130, 246, .35);
+    outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px
 }
 
@@ -368,14 +368,14 @@ body {
     padding: 8px 4px;
     font-size: 13px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     text-align: center
 }
 
 .mini-field input:focus {
-    outline: 3px solid rgba(59, 130, 246, .35);
+    outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px
 }
 
@@ -425,13 +425,13 @@ body {
     font-weight: 700;
     text-align: center;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
 
 .vital-inputs input:focus {
-    outline: 3px solid rgba(59, 130, 246, .35);
+    outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px
 }
 
@@ -456,7 +456,7 @@ body {
     border: 2px solid var(--line);
     border-radius: 999px;
     cursor: pointer;
-    background: #fff;
+    background: var(--lr-divine);
     transition: background .12s, transform .1s;
     padding: 0;
     outline: none;
@@ -472,7 +472,7 @@ body {
 }
 
 .dot:focus {
-    outline: 2px solid rgba(59, 130, 246, .35);
+    outline: 2px solid rgba(58, 166, 255, .35);
     outline-offset: 1px
 }
 
@@ -671,13 +671,13 @@ body {
     padding: 8px;
     font-size: 13px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
 
 .test-row input:focus {
-    outline: 3px solid rgba(59, 130, 246, .35);
+    outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px
 }
 
@@ -693,15 +693,15 @@ body {
 }
 
 html.dark .class-test-field {
-    background: #232740 !important;
-    color: #e5e7eb !important;
-    border-color: #374151 !important;
+    background: var(--lr-surface) !important;
+    color: var(--lr-text-1) !important;
+    border-color: var(--lr-border) !important;
 }
 
 html.dark .test-total-field {
-    background: #232740 !important;
-    color: #93c5fd !important;
-    border-color: #4f6ef7 !important;
+    background: var(--lr-surface) !important;
+    color: var(--lr-arcane-2) !important;
+    border-color: var(--lr-gold) !important;
 }
 
 /* EQUIP */
@@ -761,13 +761,13 @@ html.dark .test-total-field {
     padding: 8px 6px;
     font-size: 12px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
 
 .equip-row input:focus {
-    outline: 3px solid rgba(59, 130, 246, .35);
+    outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px
 }
 
@@ -776,7 +776,7 @@ html.dark .test-total-field {
     height: 32px;
     border: 1px solid var(--soft) !important;
     border-radius: 8px !important;
-    background: #fff !important;
+    background: var(--lr-divine) !important;
     color: var(--muted) !important;
     cursor: pointer;
     font-size: 14px;
@@ -789,9 +789,9 @@ html.dark .test-total-field {
 }
 
 .rm-btn:hover {
-    background: #fee2e2 !important;
-    color: #dc2626 !important;
-    border-color: #fca5a5 !important
+    background: var(--lr-blood-soft) !important;
+    color: var(--lr-blood-2) !important;
+    border-color: var(--lr-blood-3) !important
 }
 
 .class-resources {
@@ -826,13 +826,13 @@ html.dark .test-total-field {
     padding: 10px;
     font-size: 13px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
 
 .inv-row input:focus {
-    outline: 3px solid rgba(59, 130, 246, .35);
+    outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px
 }
 
@@ -884,7 +884,7 @@ html.dark .test-total-field {
     min-width: auto !important;
     border: 1px solid var(--soft) !important;
     border-radius: 6px !important;
-    background: #fff !important;
+    background: var(--lr-divine) !important;
     cursor: pointer;
     transition: all .15s
 }
@@ -894,8 +894,8 @@ html.dark .test-total-field {
 }
 
 .note-actions .del-note:hover {
-    background: #fee2e2 !important;
-    color: #dc2626 !important
+    background: var(--lr-blood-soft) !important;
+    color: var(--lr-blood-2) !important
 }
 
 .note-editor-modal {
@@ -949,7 +949,7 @@ html.dark .test-total-field {
 }
 
 .note-editor-header input:focus {
-    outline: 3px solid rgba(59, 130, 246, .35);
+    outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px
 }
 
@@ -967,7 +967,7 @@ html.dark .test-total-field {
     font-weight: 700;
     border: 2px solid var(--line);
     border-radius: 8px;
-    background: #fff;
+    background: var(--lr-divine);
     cursor: pointer;
     font-family: var(--font);
     transition: all .15s
@@ -999,7 +999,7 @@ html.dark .test-total-field {
 button,
 .btn {
     border: 2px solid var(--line);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     padding: 10px 12px;
     border-radius: 10px;
@@ -1018,7 +1018,7 @@ button:hover {
 
 .add-btn {
     border: 2px dashed var(--soft);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--muted);
     font-weight: 700;
     width: 100%;
@@ -1064,7 +1064,7 @@ button:hover {
     font-weight: 800;
     text-transform: uppercase;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1090,7 +1090,7 @@ button:hover {
     border: 2px solid var(--soft);
     border-radius: 8px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     width: 100%;
@@ -1124,7 +1124,7 @@ button:hover {
     padding: 8px;
     font-size: 13px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     resize: vertical;
@@ -1160,7 +1160,7 @@ button:hover {
     font-weight: 800;
     text-transform: uppercase;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1186,7 +1186,7 @@ button:hover {
     border: 2px solid var(--soft);
     border-radius: 8px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     width: 100%
@@ -1212,7 +1212,7 @@ button:hover {
     font-weight: 700;
     text-align: center;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1243,7 +1243,7 @@ button:hover {
     font-size: 11px;
     font-weight: 700;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1256,7 +1256,7 @@ button:hover {
     font-size: 11px;
     line-height: 1.4;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     resize: vertical;
@@ -1295,7 +1295,7 @@ button:hover {
     font-weight: 800;
     text-transform: uppercase;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1321,7 +1321,7 @@ button:hover {
     border: 2px solid var(--soft);
     border-radius: 8px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     width: 100%;
@@ -1405,7 +1405,7 @@ button:hover {
     font-size: 12px;
     font-weight: 800;
     text-transform: uppercase;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     outline: none
@@ -1419,7 +1419,7 @@ button:hover {
     padding: 6px 4px;
     font-size: 11px;
     font-weight: 700;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     outline: none
@@ -1431,7 +1431,7 @@ button:hover {
     border-radius: 8px;
     padding: 6px 8px;
     font-size: 11px;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     outline: none
@@ -1471,11 +1471,11 @@ button:hover {
 }
 
 .runa-comp-row[data-cat="Captador"] {
-    border-left-color: #3b82f6
+    border-left-color: var(--lr-arcane)
 }
 
 .runa-comp-row[data-cat="Condutor"] {
-    border-left-color: #6b7280
+    border-left-color: var(--lr-text-2)
 }
 
 .runa-comp-row[data-cat="Modulador"] {
@@ -1483,7 +1483,7 @@ button:hover {
 }
 
 .runa-comp-row[data-cat="L\00f3gico"] {
-    border-left-color: #22c55e
+    border-left-color: var(--lr-nature)
 }
 
 .runa-comp-row[data-cat="Armazenador"] {
@@ -1538,7 +1538,7 @@ button:hover {
     padding: 2px 4px;
     font-size: 8px;
     font-weight: 700;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     outline: none;
@@ -1564,7 +1564,7 @@ button:hover {
 
 .runa-comp-row .rc-rm:hover {
     background: var(--soft);
-    color: #dc2626
+    color: var(--lr-blood-2)
 }
 
 .runa-card-footer {
@@ -1578,7 +1578,7 @@ button:hover {
     padding: 6px 8px;
     font-size: 11px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     resize: vertical;
@@ -1641,7 +1641,7 @@ button:hover {
     padding: 6px 4px;
     font-size: 11px;
     outline: none;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1696,7 +1696,7 @@ button:hover {
     padding: 1px 2px;
     font-size: 7px;
     font-weight: 700;
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     font-family: var(--font);
     outline: none;
@@ -1728,7 +1728,7 @@ button:hover {
 
 .sigilus-item .rm-spec:hover {
     background: var(--soft) !important;
-    color: #dc2626 !important
+    color: var(--lr-blood-2) !important
 }
 
 /* RESPONSIVE */
@@ -1788,7 +1788,7 @@ button:hover {
 
     html,
     body {
-        background: #fff !important;
+        background: var(--lr-divine) !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact
     }
@@ -1842,7 +1842,7 @@ button:hover {
 }
 
 .peculiaridade-card.negativo {
-    border-left: 3px solid #c0392b;
+    border-left: 3px solid var(--lr-blood-2);
 }
 
 .peculiaridade-card.positivo {
@@ -1939,7 +1939,7 @@ html.dark .peculiaridade-card {
 }
 
 html.dark .peculiaridade-card.negativo {
-    border-left-color: #e74c3c;
+    border-left-color: var(--lr-blood-2);
 }
 
 html.dark .peculiaridade-card.positivo {
@@ -1951,14 +1951,14 @@ html.dark .pec-nome {
 }
 
 html.dark .pec-nivel-badge {
-    background: #4f6ef7;
-    color: #fff;
+    background: var(--lr-gold);
+    color: var(--lr-divine);
 }
 
 html.dark .pec-efeito {
-    background: var(--bg, #0b0c10);
+    background: var(--bg, var(--lr-bg-0));
     color: var(--ink);
-    border-left-color: #4f6ef7;
+    border-left-color: var(--lr-gold);
 }
 
 /* ===== DERIVED FIELDS (editable, auto-calculated) ===== */
@@ -1976,9 +1976,9 @@ html.dark .pec-efeito {
 }
 
 html.dark .derived-field {
-    background: #1a1d2e !important;
-    border-color: #4f6ef7 !important;
-    color: #93c5fd !important;
+    background: var(--lr-surface) !important;
+    border-color: var(--lr-gold) !important;
+    color: var(--lr-arcane-2) !important;
 }
 
 /* ===== COMBAT GRID ===== */
@@ -2017,14 +2017,14 @@ html.dark .derived-field {
 .teste-card {
     background: var(--chip);
     border: 1px solid var(--soft);
-    border-left: 3px solid #4f6ef7;
+    border-left: 3px solid var(--lr-gold);
     border-radius: 8px;
     padding: 10px 14px;
     transition: box-shadow .15s, transform .1s;
 }
 
 .teste-card:hover {
-    box-shadow: 0 2px 12px rgba(79, 110, 247, .15);
+    box-shadow: 0 2px 12px rgba(212, 175, 55, .15);
     transform: translateY(-1px);
 }
 
@@ -2039,12 +2039,12 @@ html.dark .derived-field {
 
 .teste-formula {
     font-family: 'Courier New', Courier, monospace;
-    color: #4f6ef7;
+    color: var(--lr-gold);
     font-size: 11px;
     font-weight: 700;
     margin-bottom: 6px;
     padding: 4px 8px;
-    background: rgba(79, 110, 247, .08);
+    background: rgba(212, 175, 55, .08);
     border-radius: 4px;
     display: inline-block;
 }
@@ -2058,22 +2058,22 @@ html.dark .derived-field {
 
 /* Dark mode � class tests */
 html.dark .teste-card {
-    background: #232740;
-    border-color: #374151;
-    border-left-color: #4f6ef7;
+    background: var(--lr-surface);
+    border-color: var(--lr-border);
+    border-left-color: var(--lr-gold);
 }
 
 html.dark .teste-nome {
-    color: #e5e7eb;
+    color: var(--lr-text-1);
 }
 
 html.dark .teste-formula {
-    background: rgba(79, 110, 247, .15);
-    color: #93c5fd;
+    background: rgba(212, 175, 55, .15);
+    color: var(--lr-arcane-2);
 }
 
 html.dark .teste-quando {
-    color: #9ca3af;
+    color: var(--lr-text-2);
 }
 
 /* ===== RESPONSIVE � combat grid & tests ===== */
@@ -2119,13 +2119,13 @@ html.dark .teste-quando {
     bottom: 24px;
     left: 50%;
     transform: translateX(-50%) translateY(20px);
-    background: rgba(15, 23, 42, 0.95);
-    color: #94a3b8;
+    background: rgba(14, 17, 23, 0.95);
+    color: var(--lr-text-2);
     padding: 8px 20px;
     border-radius: 10px;
     font-size: 0.85rem;
     font-weight: 600;
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    border: 1px solid rgba(91, 63, 184, 0.3);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     z-index: 99998;
     opacity: 0;
@@ -2140,18 +2140,18 @@ html.dark .teste-quando {
 }
 
 .firebase-save-indicator.saving {
-    color: #fbbf24;
-    border-color: rgba(251, 191, 36, 0.4);
+    color: var(--lr-gold-2);
+    border-color: rgba(229, 197, 88, 0.4);
 }
 
 .firebase-save-indicator.saved {
-    color: #22c55e;
-    border-color: rgba(34, 197, 94, 0.4);
+    color: var(--lr-nature);
+    border-color: rgba(63, 174, 106, 0.4);
 }
 
 .firebase-save-indicator.error {
-    color: #ef4444;
-    border-color: rgba(239, 68, 68, 0.4);
+    color: var(--lr-blood-2);
+    border-color: rgba(201, 79, 92, 0.4);
 }
 
 /* ===== RESPONSIVIDADE PERÍCIAS (MOBILE) ===== */

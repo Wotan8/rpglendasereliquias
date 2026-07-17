@@ -17,15 +17,15 @@
         }
 
         :root {
-            --primary: #8b5cf6;
-            --secondary: #ec4899;
-            --dark: #1e1b4b;
-            --darker: #0f172a;
-            --light: #f8fafc;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --border: #334155;
+            --primary: var(--lr-abyssal);
+            --secondary: var(--lr-abyssal-2);
+            --dark: var(--lr-surface);
+            --darker: var(--lr-bg-0);
+            --light: var(--lr-divine);
+            --success: var(--lr-nature);
+            --danger: var(--lr-blood-2);
+            --warning: var(--lr-gold);
+            --border: var(--lr-surface-2);
             --teal: #14b8a6;
         }
 
@@ -133,7 +133,7 @@
         }
 
         .btn-mestre {
-            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            background: linear-gradient(135deg, var(--lr-abyssal), #6366f1);
             color: white;
             border: none;
             padding: 6px 10px;
@@ -146,7 +146,7 @@
 
         .btn-mestre:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+            box-shadow: 0 4px 12px rgba(91, 63, 184, 0.4);
         }
 
         .btn-worldbuilding {
@@ -167,7 +167,7 @@
         }
 
         .btn-logout {
-            background: linear-gradient(135deg, var(--danger), #dc2626);
+            background: linear-gradient(135deg, var(--danger), var(--lr-blood-2));
             color: white;
             border: none;
             padding: 6px 12px;
@@ -180,7 +180,7 @@
 
         .btn-logout:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            box-shadow: 0 4px 12px rgba(201, 79, 92, 0.4);
         }
 
         .user-display-name {
@@ -227,7 +227,7 @@
         /* Side Panel */
         .side-panel {
             width: 280px;
-            background: rgba(15, 23, 42, 0.95);
+            background: rgba(14, 17, 23, 0.95);
             border-right: 1px solid var(--border);
             overflow-y: auto;
             transition: width 0.3s;
@@ -257,7 +257,7 @@
         .panel-input {
             width: 100%;
             padding: 8px 10px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 6px;
             color: var(--light);
@@ -290,16 +290,16 @@
         }
 
         .panel-btn.secondary {
-            background: linear-gradient(135deg, #64748b, #475569);
+            background: linear-gradient(135deg, var(--lr-text-2), var(--lr-border));
         }
 
         .panel-btn.danger {
-            background: linear-gradient(135deg, var(--danger), #dc2626);
+            background: linear-gradient(135deg, var(--danger), var(--lr-blood-2));
         }
 
         /* Layer List */
         .layer-item {
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 8px;
             padding: 10px;
@@ -338,7 +338,7 @@
         .layer-action-btn {
             background: rgba(255, 255, 255, 0.1);
             border: none;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             width: 24px;
             height: 24px;
             border-radius: 4px;
@@ -378,7 +378,7 @@
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.95);
+            background: rgba(14, 17, 23, 0.95);
             border: 1px solid var(--border);
             border-radius: 10px;
             padding: 8px 12px;
@@ -432,7 +432,7 @@
             position: absolute;
             top: 10px;
             right: 10px;
-            background: rgba(15, 23, 42, 0.9);
+            background: rgba(14, 17, 23, 0.9);
             border: 1px solid var(--border);
             border-radius: 10px;
             padding: 12px;
@@ -448,7 +448,7 @@
         }
 
         .info-label {
-            color: #94a3b8;
+            color: var(--lr-text-2);
         }
 
         .info-value {
@@ -503,7 +503,7 @@
         }
 
         .modal-close {
-            background: rgba(239, 68, 68, 0.2);
+            background: rgba(201, 79, 92, 0.2);
             border: 1px solid var(--danger);
             color: var(--danger);
             width: 32px;
@@ -526,7 +526,7 @@
         .form-label {
             display: block;
             font-size: 0.85rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             font-weight: 600;
             margin-bottom: 5px;
         }
@@ -536,7 +536,7 @@
         .form-textarea {
             width: 100%;
             padding: 10px;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 8px;
             color: var(--light);
@@ -600,7 +600,7 @@
             font-family: 'Cinzel', serif;
             font-weight: 700;
             font-size: 12px;
-            color: #f8fafc;
+            color: var(--lr-divine);
             text-shadow:
                 1px 1px 2px rgba(0, 0, 0, 0.9),
                 -1px -1px 2px rgba(0, 0, 0, 0.9),
@@ -658,19 +658,19 @@
         }
 
         .map-token.cidade {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
+            background: linear-gradient(135deg, var(--lr-gold), var(--lr-gold));
         }
 
         .map-token.vila {
-            background: linear-gradient(135deg, #10b981, #059669);
+            background: linear-gradient(135deg, var(--lr-nature), var(--lr-nature));
         }
 
         .map-token.masmorra {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
+            background: linear-gradient(135deg, var(--lr-blood-2), var(--lr-blood-2));
         }
 
         .map-token.ponto {
-            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            background: linear-gradient(135deg, var(--lr-abyssal), var(--lr-abyssal));
         }
 
         /* Image tokens should always have transparent background */
@@ -696,7 +696,7 @@
 
         .tile-slot {
             aspect-ratio: 1;
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 2px dashed var(--border);
             border-radius: 8px;
             display: flex;
@@ -722,7 +722,7 @@
         }
 
         .tile-placeholder {
-            color: #64748b;
+            color: var(--lr-text-2);
             font-size: 0.75rem;
             text-align: center;
         }
@@ -734,7 +734,7 @@
         }
 
         .map-item {
-            background: rgba(30, 27, 75, 0.6);
+            background: rgba(31, 38, 48, 0.6);
             border: 1px solid var(--border);
             border-radius: 8px;
             padding: 12px;
@@ -758,7 +758,7 @@
 
         .map-item-info {
             font-size: 0.8rem;
-            color: #94a3b8;
+            color: var(--lr-text-2);
         }
 
         /* Template item active state */
@@ -837,7 +837,7 @@
             height: 32px;
             border-radius: 50%;
             border: 2px solid rgba(255, 255, 255, 0.9);
-            background: rgba(15, 23, 42, 0.95);
+            background: rgba(14, 17, 23, 0.95);
             color: white;
             font-size: 14px;
             cursor: pointer;
@@ -858,7 +858,7 @@
         }
 
         .token-hover-btn.map-btn {
-            background: linear-gradient(135deg, var(--warning), #d97706);
+            background: linear-gradient(135deg, var(--warning), var(--lr-gold));
         }
 
         .token-hover-btn.map-btn:disabled {
@@ -883,14 +883,14 @@
             display: none;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+            box-shadow: 0 4px 20px rgba(91, 63, 184, 0.4);
             transition: all 0.3s ease;
             z-index: 100;
         }
 
         .map-nav-back:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 25px rgba(139, 92, 246, 0.5);
+            box-shadow: 0 6px 25px rgba(91, 63, 184, 0.5);
         }
 
         .map-nav-back.visible {
@@ -898,6 +898,9 @@
         }
     </style>
 <script type="module" src="/js/global-favicon.js"></script>
+    <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
+    <link rel="stylesheet" href="shared/tokens.css">
+    <link rel="stylesheet" href="shared/lendas-reliquias.css">
 </head>
 
 <body>
@@ -974,7 +977,7 @@
                 <button class="panel-btn secondary" id="cancelRouteBtn" onclick="cancelDrawRoute()"
                     style="display:none;">❌ Cancelar</button>
                 <div id="routeDrawHelp"
-                    style="display:none; font-size:0.75rem; color:#94a3b8; margin-top:8px; padding:8px; background:rgba(34,211,238,0.1); border-radius:6px; border:1px solid rgba(34,211,238,0.3);">
+                    style="display:none; font-size:0.75rem; color:var(--lr-text-2); margin-top:8px; padding:8px; background:rgba(34,211,238,0.1); border-radius:6px; border:1px solid rgba(34,211,238,0.3);">
                     💡 Clique e arraste no mapa para desenhar uma rota livre. Solte o botão para finalizar.
                 </div>
                 <div id="routesList"></div>
@@ -1026,7 +1029,7 @@
                 <select class="form-select" id="tokenGeographyId" onchange="onTokenGeographyChange()">
                     <option value="">-- Nenhuma (Manual) --</option>
                 </select>
-                <small style="color:#64748b;font-size:0.75rem;">Selecione uma entrada de Geografia ou Propriedade do
+                <small style="color:var(--lr-text-2);font-size:0.75rem;">Selecione uma entrada de Geografia ou Propriedade do
                     Worldbuilding</small>
             </div>
             <div class="form-group">
@@ -1045,12 +1048,12 @@
             <div class="form-group">
                 <label class="form-label">Imagem (URL) - Opcional</label>
                 <input type="text" class="form-input" id="tokenImageUrl" placeholder="https://...">
-                <small style="color:#64748b;font-size:0.75rem;">Deixe vazio para usar o ícone padrão do tipo</small>
+                <small style="color:var(--lr-text-2);font-size:0.75rem;">Deixe vazio para usar o ícone padrão do tipo</small>
             </div>
             <div class="form-group">
                 <label class="form-label">Tamanho (px)</label>
                 <input type="number" class="form-input" id="tokenSize" value="40" min="5" max="200">
-                <small style="color:#64748b;font-size:0.75rem;">Largura/altura do token (relativo ao tile do
+                <small style="color:var(--lr-text-2);font-size:0.75rem;">Largura/altura do token (relativo ao tile do
                     mapa)</small>
             </div>
             <div class="form-group">
@@ -1062,7 +1065,7 @@
                 <select class="form-select" id="tokenLinkedMapId">
                     <option value="">-- Nenhum --</option>
                 </select>
-                <small style="color:#64748b;font-size:0.75rem;">Selecione um mapa para abrir ao clicar neste token (modo
+                <small style="color:var(--lr-text-2);font-size:0.75rem;">Selecione um mapa para abrir ao clicar neste token (modo
                     Mestre)</small>
             </div>
             <div class="btn-row">
@@ -1097,7 +1100,7 @@
             <div class="form-group">
                 <label class="form-label">Imagem (URL) - Opcional</label>
                 <input type="text" class="form-input" id="templateImageUrl" placeholder="https://...">
-                <small style="color:#64748b;font-size:0.75rem;">Deixe vazio para usar o ícone padrão do tipo</small>
+                <small style="color:var(--lr-text-2);font-size:0.75rem;">Deixe vazio para usar o ícone padrão do tipo</small>
             </div>
             <div class="form-group">
                 <label class="form-label">Tamanho Padrão (px)</label>
@@ -1124,7 +1127,7 @@
                 <select class="form-select" id="placeTokenGeographyId" onchange="onPlaceTokenGeographyChange()">
                     <option value="">-- Nenhuma (Manual) --</option>
                 </select>
-                <small style="color:#64748b;font-size:0.75rem;">Selecione uma entrada de Geografia ou Propriedade do
+                <small style="color:var(--lr-text-2);font-size:0.75rem;">Selecione uma entrada de Geografia ou Propriedade do
                     Worldbuilding</small>
             </div>
             <div class="form-group">
@@ -1145,7 +1148,7 @@
                 <select class="form-select" id="placeTokenLinkedMapId">
                     <option value="">-- Nenhum --</option>
                 </select>
-                <small style="color:#64748b;font-size:0.75rem;">Selecione um mapa para abrir ao clicar neste token (modo
+                <small style="color:var(--lr-text-2);font-size:0.75rem;">Selecione um mapa para abrir ao clicar neste token (modo
                     Mestre)</small>
             </div>
             <div class="btn-row">
@@ -2020,8 +2023,8 @@
             if (infoFields.length) {
                 html += `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:15px;">`;
                 infoFields.forEach(f => {
-                    html += `<div style="background:rgba(30,27,75,0.4);padding:10px;border-radius:8px;">
-                        <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:3px;">${f.label}</div>
+                    html += `<div style="background:rgba(31, 38, 48,0.4);padding:10px;border-radius:8px;">
+                        <div style="font-size:0.75rem;color:var(--lr-text-2);margin-bottom:3px;">${f.label}</div>
                         <div style="font-weight:600;">${f.value}</div>
                     </div>`;
                 });
@@ -2058,7 +2061,7 @@
                     <div style="font-weight:700;color:var(--primary);margin-bottom:8px;">👥 NPCs/Criaturas</div>
                     <div style="display:flex;flex-wrap:wrap;gap:8px;">`;
                 geo.linkedNpcs.forEach(npc => {
-                    html += `<span style="background:rgba(139,92,246,0.2);border:1px solid var(--primary);padding:4px 10px;border-radius:20px;font-size:0.85rem;">
+                    html += `<span style="background:rgba(91, 63, 184,0.2);border:1px solid var(--primary);padding:4px 10px;border-radius:20px;font-size:0.85rem;">
                         ${npc.name}${npc.title ? ` - <em>${npc.title}</em>` : ''}
                     </span>`;
                 });
@@ -2071,7 +2074,7 @@
                     <div style="font-weight:700;color:var(--secondary);margin-bottom:8px;">🏕️ Tribos</div>
                     <div style="display:flex;flex-wrap:wrap;gap:8px;">`;
                 geo.linkedTribos.forEach(tribo => {
-                    html += `<span style="background:rgba(236,72,153,0.2);border:1px solid var(--secondary);padding:4px 10px;border-radius:20px;font-size:0.85rem;">
+                    html += `<span style="background:rgba(138, 111, 224,0.2);border:1px solid var(--secondary);padding:4px 10px;border-radius:20px;font-size:0.85rem;">
                         ${tribo.name}${tribo.title ? ` - <em>${tribo.title}</em>` : ''}
                     </span>`;
                 });
@@ -2080,7 +2083,7 @@
 
             // Private notes (only for master)
             if (geo.notas) {
-                html += `<div style="margin-bottom:15px;background:rgba(245,158,11,0.1);border:1px solid var(--warning);border-radius:8px;padding:12px;">
+                html += `<div style="margin-bottom:15px;background:rgba(212, 175, 55,0.1);border:1px solid var(--warning);border-radius:8px;padding:12px;">
                     <div style="font-weight:700;color:var(--warning);margin-bottom:5px;">🔒 Notas Privadas</div>
                     <div style="line-height:1.6;font-style:italic;">${geo.notas.replace(/\n/g, '<br>')}</div>
                 </div>`;
@@ -2108,13 +2111,13 @@
                 <span style="background:linear-gradient(135deg,var(--primary),var(--secondary));padding:4px 12px;border-radius:20px;font-size:0.8rem;font-weight:600;">🏠 ${prop.tipo || 'Propriedade'}</span>`;
             if (prop.estado) {
                 const estadoColors = { 'Conservada': '#10b981', 'Deteriorada': '#f59e0b', 'Abandonada': '#94a3b8', 'Em Ruínas': '#ef4444' };
-                html += `<span style="background:${estadoColors[prop.estado] || '#64748b'};padding:4px 12px;border-radius:20px;font-size:0.8rem;font-weight:600;">${prop.estado}</span>`;
+                html += `<span style="background:${estadoColors[prop.estado] || 'var(--lr-text-2)'};padding:4px 12px;border-radius:20px;font-size:0.8rem;font-weight:600;">${prop.estado}</span>`;
             }
             html += `</div>`;
 
             // Title
             if (prop.titulo && prop.titulo !== prop.nome) {
-                html += `<div style="font-style:italic;color:#94a3b8;margin-bottom:15px;">"${prop.titulo}"</div>`;
+                html += `<div style="font-style:italic;color:var(--lr-text-2);margin-bottom:15px;">"${prop.titulo}"</div>`;
             }
 
             // Description
@@ -2136,8 +2139,8 @@
             if (infoFields.length) {
                 html += `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:15px;">`;
                 infoFields.forEach(f => {
-                    html += `<div style="background:rgba(30,27,75,0.4);padding:10px;border-radius:8px;">
-                        <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:3px;">${f.label}</div>
+                    html += `<div style="background:rgba(31, 38, 48,0.4);padding:10px;border-radius:8px;">
+                        <div style="font-size:0.75rem;color:var(--lr-text-2);margin-bottom:3px;">${f.label}</div>
                         <div style="font-weight:600;">${f.value}</div>
                     </div>`;
                 });
@@ -2154,7 +2157,7 @@
 
             // Secrets
             if (prop.segredos) {
-                html += `<div style="margin-bottom:15px;background:rgba(139,92,246,0.1);border:1px solid var(--primary);border-radius:8px;padding:12px;">
+                html += `<div style="margin-bottom:15px;background:rgba(91, 63, 184,0.1);border:1px solid var(--primary);border-radius:8px;padding:12px;">
                     <div style="font-weight:700;color:var(--primary);margin-bottom:5px;">🔮 Segredos</div>
                     <div style="line-height:1.6;font-style:italic;">${prop.segredos.replace(/\n/g, '<br>')}</div>
                 </div>`;
@@ -2166,7 +2169,7 @@
                     <div style="font-weight:700;color:var(--success);margin-bottom:8px;">👥 NPCs nesta Propriedade</div>
                     <div style="display:flex;flex-wrap:wrap;gap:8px;">`;
                 prop.linkedNpcsProperty.forEach(npc => {
-                    html += `<span style="background:rgba(16,185,129,0.2);border:1px solid var(--success);padding:4px 10px;border-radius:20px;font-size:0.85rem;">
+                    html += `<span style="background:rgba(63, 174, 106,0.2);border:1px solid var(--success);padding:4px 10px;border-radius:20px;font-size:0.85rem;">
                         ${npc.name}${npc.title ? ` - <em>${npc.title}</em>` : ''}
                     </span>`;
                 });
@@ -2181,7 +2184,7 @@
                 prop.linkedItems.forEach(item => {
                     html += `<div style="background:rgba(20,184,166,0.15);border:1px solid var(--teal);padding:8px 12px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
                         <span style="font-weight:600;">${item.name}</span>
-                        ${item.title ? `<span style="color:#94a3b8;font-style:italic;font-size:0.85rem;">${item.title}</span>` : ''}
+                        ${item.title ? `<span style="color:var(--lr-text-2);font-style:italic;font-size:0.85rem;">${item.title}</span>` : ''}
                     </div>`;
                 });
                 html += `</div></div>`;
@@ -2189,7 +2192,7 @@
 
             // Private notes (only for master)
             if (prop.notas) {
-                html += `<div style="margin-bottom:15px;background:rgba(245,158,11,0.1);border:1px solid var(--warning);border-radius:8px;padding:12px;">
+                html += `<div style="margin-bottom:15px;background:rgba(212, 175, 55,0.1);border:1px solid var(--warning);border-radius:8px;padding:12px;">
                     <div style="font-weight:700;color:var(--warning);margin-bottom:5px;">🔒 Notas Privadas</div>
                     <div style="line-height:1.6;font-style:italic;">${prop.notas.replace(/\n/g, '<br>')}</div>
                 </div>`;
@@ -2226,7 +2229,7 @@
                 </div>`;
             }
 
-            html += `<div style="text-align:center;color:#64748b;font-style:italic;margin-top:20px;">Este token não está vinculado a uma entrada de Geografia ou Propriedade do Worldbuilding.</div>`;
+            html += `<div style="text-align:center;color:var(--lr-text-2);font-style:italic;margin-top:20px;">Este token não está vinculado a uma entrada de Geografia ou Propriedade do Worldbuilding.</div>`;
 
             document.getElementById('geoInfoBody').innerHTML = html;
             document.getElementById('geoInfoEditBtn').style.display = 'block';
@@ -2259,7 +2262,7 @@
             if (!mapData.tokenTemplates) mapData.tokenTemplates = [];
 
             if (mapData.tokenTemplates.length === 0) {
-                list.innerHTML = '<div style="color:#64748b;font-size:0.8rem;text-align:center;padding:10px;">Nenhum template criado</div>';
+                list.innerHTML = '<div style="color:var(--lr-text-2);font-size:0.8rem;text-align:center;padding:10px;">Nenhum template criado</div>';
                 return;
             }
 
@@ -2769,12 +2772,12 @@
 
         async function loadMapsList() {
             const list = document.getElementById('mapList');
-            list.innerHTML = '<div style="text-align:center;color:#64748b;padding:20px;">Carregando...</div>';
+            list.innerHTML = '<div style="text-align:center;color:var(--lr-text-2);padding:20px;">Carregando...</div>';
             try {
                 const settingsDoc = await getDoc(doc(db, 'viewmap-settings', 'default'));
                 const favoriteId = settingsDoc.exists() ? settingsDoc.data().favoriteMapId : null;
                 const snapshot = await getDocs(collection(db, 'viewmaps'));
-                if (snapshot.empty) { list.innerHTML = '<div style="text-align:center;color:#64748b;padding:20px;">Nenhum mapa salvo</div>'; return; }
+                if (snapshot.empty) { list.innerHTML = '<div style="text-align:center;color:var(--lr-text-2);padding:20px;">Nenhum mapa salvo</div>'; return; }
                 list.innerHTML = '';
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data(); const isFav = docSnap.id === favoriteId;

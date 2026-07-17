@@ -44,7 +44,7 @@
     align-items: center;
     padding: 18px 20px;
     border-bottom: 2px solid var(--line);
-    background: rgba(139, 92, 246, 0.06);
+    background: rgba(91, 63, 184, 0.06);
 }
 
 .modal-title {
@@ -74,7 +74,7 @@
 .modal-close:hover {
     border-color: var(--danger);
     color: var(--danger);
-    background: rgba(239, 68, 68, 0.1);
+    background: rgba(201, 79, 92, 0.1);
 }
 
 .modal-body {
@@ -102,7 +102,7 @@
     color: var(--primary);
     margin-bottom: 12px;
     padding-bottom: 8px;
-    border-bottom: 2px solid rgba(139, 92, 246, 0.2);
+    border-bottom: 2px solid rgba(91, 63, 184, 0.2);
 }
 
 .form-row {
@@ -134,7 +134,7 @@
     border-radius: 8px;
     font-size: 0.88rem;
     font-family: var(--font);
-    background: rgba(15, 23, 42, 0.8);
+    background: rgba(14, 17, 23, 0.8);
     color: var(--light);
     transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -144,12 +144,12 @@
 .form-textarea:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+    box-shadow: 0 0 0 3px rgba(91, 63, 184, 0.15);
 }
 
 .form-input::placeholder,
 .form-textarea::placeholder {
-    color: #64748b;
+    color: var(--lr-text-2);
 }
 
 .form-textarea {
@@ -189,23 +189,23 @@
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--primary), #7c3aed);
-    color: #fff;
+    background: linear-gradient(135deg, var(--primary), var(--lr-abyssal));
+    color: var(--lr-divine);
 }
 
 .btn-success {
-    background: linear-gradient(135deg, #059669, var(--success));
-    color: #fff;
+    background: linear-gradient(135deg, var(--lr-nature), var(--success));
+    color: var(--lr-divine);
 }
 
 .btn-danger {
-    background: linear-gradient(135deg, #dc2626, var(--danger));
-    color: #fff;
+    background: linear-gradient(135deg, var(--lr-blood-2), var(--danger));
+    color: var(--lr-divine);
 }
 
 .btn-warning {
-    background: linear-gradient(135deg, #d97706, var(--warning));
-    color: #fff;
+    background: linear-gradient(135deg, var(--lr-gold), var(--warning));
+    color: var(--lr-divine);
 }
 
 .btn-secondary {
@@ -231,7 +231,7 @@
 }
 
 .modal-danger .modal-header {
-    background: linear-gradient(135deg, var(--danger), #dc2626);
+    background: linear-gradient(135deg, var(--danger), var(--lr-blood-2));
 }
 
 .modal-danger .modal-title {

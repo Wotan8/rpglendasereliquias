@@ -1,0 +1,382 @@
+/* =====================================================================
+   LENDAS & RELÍQUIAS — CAMADA DE IDENTIDADE VISUAL
+   ---------------------------------------------------------------------
+   "Tecnologia Rúnica Ancestral": pedra escura, ferro forjado, ouro
+   discreto e cristais de Essência. Esta folha estiliza COMPONENTES
+   (cards, botões, inputs, tabelas, abas, modais...), nunca conteúdo.
+   Qualquer módulo novo herda a identidade automaticamente.
+
+   ORDEM DE CARREGAMENTO (obrigatória em toda página):
+     1. CSS local da página
+     2. /shared/tokens.css
+     3. /shared/lendas-reliquias.css  ← este arquivo
+
+   Regras completas: DESIGN-SYSTEM.md na raiz do projeto.
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* =====================================================================
+   1. BASE — a "pedra" sobre a qual tudo é construído
+   ===================================================================== */
+
+body {
+    font-family: var(--lr-font-body);
+    color: var(--lr-text-1);
+    background-color: var(--lr-bg-0);
+    /* Textura de pedra sutil: dois brilhos de Essência quase imperceptíveis */
+    background-image:
+        radial-gradient(1100px 500px at 15% -10%, rgba(91, 63, 184, 0.07), transparent 60%),
+        radial-gradient(900px 420px at 90% 110%, rgba(58, 166, 255, 0.05), transparent 60%),
+        linear-gradient(180deg, var(--lr-bg-0), var(--lr-bg-1));
+    background-attachment: fixed;
+    line-height: var(--lr-lh-body);
+}
+
+/* Títulos: Cinzel — letras lapidadas em pedra */
+h1, h2 {
+    font-family: var(--lr-font-title);
+    font-weight: 600;
+    letter-spacing: var(--lr-track-title);
+    color: var(--lr-divine);
+    line-height: var(--lr-lh-tight);
+}
+
+/* Subtítulos: Cormorant Garamond — caligrafia de estudioso */
+h3, h4 {
+    font-family: var(--lr-font-subtitle);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--lr-text-1);
+    line-height: var(--lr-lh-tight);
+}
+
+h5, h6, legend, summary {
+    font-family: var(--lr-font-body);
+    font-weight: 700;
+    color: var(--lr-text-1);
+}
+
+a {
+    color: var(--lr-arcane);
+    transition: color var(--lr-t-fast) var(--lr-ease);
+}
+a:hover { color: var(--lr-arcane-2); }
+
+::selection {
+    background: rgba(212, 175, 55, 0.30);
+    color: var(--lr-divine);
+}
+
+hr {
+    border: none;
+    border-top: 1px solid var(--lr-border);
+    opacity: 0.8;
+}
+
+/* Foco visível (teclado): anel dourado — a runa "desperta" */
+:focus-visible {
+    outline: 2px solid var(--lr-gold);
+    outline-offset: 2px;
+}
+
+/* =====================================================================
+   2. SCROLLBARS — trilhos de ferro forjado
+   ===================================================================== */
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--lr-border) transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+    background: var(--lr-border);
+    border-radius: var(--lr-radius);
+    border: 2px solid var(--lr-bg-0);
+}
+*::-webkit-scrollbar-thumb:hover { background: #3d4650; }
+
+/* =====================================================================
+   3. BOTÕES — placas de metal com runas gravadas
+   ===================================================================== */
+
+button,
+.btn,
+[class*="btn-"],
+input[type="button"],
+input[type="submit"] {
+    font-family: var(--lr-font-body);
+    border-radius: var(--lr-radius);
+    transition:
+        background-color var(--lr-t-base) var(--lr-ease),
+        border-color     var(--lr-t-base) var(--lr-ease),
+        color            var(--lr-t-base) var(--lr-ease),
+        box-shadow       var(--lr-t-base) var(--lr-ease),
+        transform        var(--lr-t-fast) var(--lr-ease);
+    cursor: pointer;
+}
+
+button:disabled,
+.btn:disabled,
+[class*="btn-"]:disabled {
+    opacity: var(--lr-op-disabled);
+    cursor: not-allowed;
+}
+
+button:active:not(:disabled),
+.btn:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+/* =====================================================================
+   4. CAMPOS DE FORMULÁRIO — cristais de escrita
+   ===================================================================== */
+
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+select,
+textarea) {
+    font-family: var(--lr-font-body);
+    background-color: var(--lr-bg-1);
+    color: var(--lr-text-1);
+    border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    transition:
+        border-color var(--lr-t-base) var(--lr-ease),
+        box-shadow   var(--lr-t-base) var(--lr-ease),
+        background-color var(--lr-t-base) var(--lr-ease);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--lr-gold);
+    box-shadow: var(--lr-glow-gold);
+    background-color: var(--lr-surface);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--lr-text-2);
+    opacity: 0.75;
+}
+
+select option {
+    background: var(--lr-bg-1);
+    color: var(--lr-text-1);
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+    accent-color: var(--lr-gold);
+}
+
+input[type="range"] { accent-color: var(--lr-gold); }
+
+label {
+    color: var(--lr-text-2);
+    font-family: var(--lr-font-body);
+}
+
+/* =====================================================================
+   5. TABELAS — registros gravados em placas
+   ===================================================================== */
+
+table {
+    border-collapse: collapse;
+    color: var(--lr-text-1);
+}
+table th {
+    font-family: var(--lr-font-body);
+    font-weight: 700;
+    font-size: var(--lr-fs-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--lr-text-2);
+    border-bottom: 1px solid var(--lr-border);
+}
+table td { border-bottom: 1px solid var(--lr-border-soft); }
+table tbody tr {
+    transition: background-color var(--lr-t-fast) var(--lr-ease);
+}
+table tbody tr:hover { background-color: rgba(212, 175, 55, 0.05); }
+
+/* =====================================================================
+   6. ABAS (TABS) — atenção especial exigida pelo manual
+      • nunca quebrar o texto em duas linhas
+      • rolagem horizontal suave apenas na barra
+      • altura consistente
+   ===================================================================== */
+
+.tabs,
+.tab-bar,
+[role="tablist"] {
+    display: flex;
+    flex-wrap: nowrap !important;
+    gap: var(--lr-space-2);
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    scroll-behavior: smooth;
+    padding-bottom: 2px;
+}
+.tabs::-webkit-scrollbar,
+.tab-bar::-webkit-scrollbar,
+[role="tablist"]::-webkit-scrollbar { display: none; }
+
+.tabs .tab,
+.tabs .tab-button,
+.tab-bar .tab,
+.tab-button,
+[role="tab"] {
+    flex: 0 0 auto;
+    white-space: nowrap !important;
+    font-family: var(--lr-font-body);
+    font-weight: 600;
+    border-radius: var(--lr-radius);
+    transition:
+        background-color var(--lr-t-base) var(--lr-ease),
+        border-color     var(--lr-t-base) var(--lr-ease),
+        color            var(--lr-t-base) var(--lr-ease);
+}
+
+/* Aba ativa: runa acesa — fio dourado */
+.tab.active,
+.tab-button.active,
+[role="tab"][aria-selected="true"] {
+    color: var(--lr-gold-2);
+    border-color: var(--lr-gold);
+    background: var(--lr-gold-soft);
+    box-shadow: inset 0 -2px 0 var(--lr-gold);
+}
+
+/* =====================================================================
+   7. MODAIS E DIÁLOGOS — câmaras seladas
+   ===================================================================== */
+
+[class*="modal"] { font-family: var(--lr-font-body); }
+
+.detail-modal-content,
+.lab-modal-caixa,
+[class*="modal-content"],
+[class*="modal-caixa"],
+[class*="modal-box"],
+dialog {
+    background: var(--lr-surface);
+    color: var(--lr-text-1);
+    border: 1px solid var(--lr-border);
+    border-top: 2px solid var(--lr-gold);
+    border-radius: var(--lr-radius-lg);
+    box-shadow: var(--lr-shadow-3);
+}
+
+/* =====================================================================
+   8. BADGES, TAGS E CHIPS — selos e insígnias
+   ===================================================================== */
+
+.badge, .tag, .chip,
+[class*="badge"], [class*="-tag"] {
+    font-family: var(--lr-font-body);
+    font-weight: 600;
+    border-radius: var(--lr-radius-sm);
+    letter-spacing: 0.02em;
+}
+
+/* =====================================================================
+   9. TOOLTIPS, TOASTS E ALERTS
+   ===================================================================== */
+
+/* Apenas o CONTÊINER flutuante do tooltip recebe superfície.
+   ⚠️ Nunca usar [class*="tooltip"] aqui: capturaria `.has-tooltip`
+   (gatilhos de texto) e blocos internos `.xx-tooltip-*`. */
+:where(.tooltip, [role="tooltip"], .dv-tooltip) {
+    background: var(--lr-bg-1);
+    color: var(--lr-text-1);
+    border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-sm);
+    box-shadow: var(--lr-shadow-2);
+    font-family: var(--lr-font-body);
+}
+
+/* Gatilhos de tooltip (palavras sublinhadas) e blocos internos de
+   organização: SEMPRE transparentes — sem caixa, sem sombra. */
+:where(.has-tooltip, [class*="has-tooltip"]) {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+[class*="tooltip"] [class*="tooltip"] {
+    background: transparent;
+    box-shadow: none;
+}
+
+[class*="toast"] [class*="toast"] {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+[class*="toast"] {
+    background: var(--lr-surface);
+    color: var(--lr-text-1);
+    border: 1px solid var(--lr-border);
+    border-left: 3px solid var(--lr-gold);
+    border-radius: var(--lr-radius);
+    box-shadow: var(--lr-shadow-3);
+    font-family: var(--lr-font-body);
+}
+
+/* =====================================================================
+   10. LOADING E SKELETON — Essência em fluxo
+   ===================================================================== */
+
+:where([class*="spinner"]) {
+    border-color: var(--lr-border);
+    border-top-color: var(--lr-gold);
+}
+
+[class*="skeleton"] {
+    background: linear-gradient(
+        90deg,
+        var(--lr-surface) 25%,
+        var(--lr-surface-2) 50%,
+        var(--lr-surface) 75%
+    );
+    background-size: 200% 100%;
+    animation: lr-shimmer 1.4s ease infinite;
+    border-radius: var(--lr-radius);
+}
+@keyframes lr-shimmer {
+    from { background-position: 200% 0; }
+    to   { background-position: -200% 0; }
+}
+
+/* =====================================================================
+   11. RESPONSIVIDADE — mesmo poder em qualquer dispositivo
+   ===================================================================== */
+
+img, svg, video, canvas { max-width: 100%; }
+
+@media (max-width: 768px) {
+    /* Nunca permitir rolagem horizontal da página inteira */
+    html, body { overflow-x: hidden; }
+
+    /* Barras/toolbars compactas no celular */
+    .toolbar { padding-top: 6px; padding-bottom: 6px; }
+
+    /* Tabelas largas rolam dentro do próprio contêiner */
+    .table-wrap, .table-container, [class*="table-scroll"] {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Monitores muito largos: manter leitura confortável */
+@media (min-width: 1800px) {
+    .wrap, .container, .sheet, main {
+        max-width: 1560px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+}

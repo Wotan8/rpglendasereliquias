@@ -1,42 +1,42 @@
 /* =============================================
-   PAINEL DE CRIADOR â€” Lendas e RelÃ­quias
+   PAINEL DE CRIADOR — Lendas e Relíquias
    Design System: ficha-v1.7_1 (Dark-first)
    ============================================= */
 
 :root {
-    --bg: #0b0c10;
-    --bg-gradient: linear-gradient(180deg, #0b0c10, #111827);
-    --paper: #ffffff;
-    --ink: #111827;
-    --muted: #6b7280;
-    --line: #111827;
-    --soft: #e5e7eb;
-    --chip: #f3f4f6;
+    --bg: var(--lr-bg-0);
+    --bg-gradient: linear-gradient(180deg, var(--lr-bg-0), var(--lr-bg-1));
+    --paper: var(--lr-divine);
+    --ink: var(--lr-bg-1);
+    --muted: var(--lr-text-2);
+    --line: var(--lr-bg-1);
+    --soft: var(--lr-text-1);
+    --chip: var(--lr-text-1);
     --radius: 10px;
     --gap: 10px;
     --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --primary: #4f6ef7;
-    --danger: #ef4444;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --secondary: #ec4899;
+    --primary: var(--lr-gold);
+    --danger: var(--lr-blood-2);
+    --success: var(--lr-nature);
+    --warning: var(--lr-gold);
+    --secondary: var(--lr-abyssal-2);
 }
 
 /* ===== DARK THEME ===== */
 html.dark {
-    --bg: #0b0c10;
-    --bg-gradient: linear-gradient(180deg, #0b0c10, #111827);
-    --paper: #1a1d2e;
-    --ink: #e5e7eb;
-    --muted: #9ca3af;
-    --line: #374151;
-    --soft: #374151;
-    --chip: #232740;
+    --bg: var(--lr-bg-0);
+    --bg-gradient: linear-gradient(180deg, var(--lr-bg-0), var(--lr-bg-1));
+    --paper: var(--lr-surface);
+    --ink: var(--lr-text-1);
+    --muted: var(--lr-text-2);
+    --line: var(--lr-border);
+    --soft: var(--lr-border);
+    --chip: var(--lr-surface);
 }
 
 html.dark body {
     background: var(--bg-gradient);
-    color: #e5e7eb
+    color: var(--lr-text-1)
 }
 
 html.dark .sheet {
@@ -53,12 +53,12 @@ html.dark .tab {
 
 html.dark .tab.active {
     background: var(--primary);
-    color: #fff;
+    color: var(--lr-divine);
     border-color: var(--primary)
 }
 
 html.dark .tab:hover:not(.active) {
-    background: #2d3352
+    background: var(--lr-surface-2)
 }
 
 html.dark .item-card {
@@ -72,12 +72,12 @@ html.dark .item-card:hover {
 
 html.dark .create-card {
     border-color: var(--line);
-    background: rgba(79, 110, 247, .08)
+    background: rgba(212, 175, 55, .08)
 }
 
 html.dark .create-card:hover {
     border-color: var(--primary);
-    background: rgba(79, 110, 247, .15)
+    background: rgba(212, 175, 55, .15)
 }
 
 html.dark .modal-content {
@@ -107,7 +107,7 @@ html.dark .toolbar button:hover {
 html.dark .form-group input,
 html.dark .form-group textarea,
 html.dark .form-group select {
-    background: #0f1120;
+    background: var(--lr-bg-0);
     border-color: var(--line);
     color: var(--ink)
 }
@@ -116,16 +116,16 @@ html.dark .form-group input:focus,
 html.dark .form-group textarea:focus,
 html.dark .form-group select:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(79, 110, 247, .15)
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, .15)
 }
 
 html.dark .array-item {
-    background: #0f1120;
+    background: var(--lr-bg-0);
     border-color: var(--line)
 }
 
 html.dark .filter-bar input {
-    background: #0f1120;
+    background: var(--lr-bg-0);
     border-color: var(--line);
     color: var(--ink)
 }
@@ -150,7 +150,7 @@ html.dark .toggle-label {
 body {
     font-family: var(--font);
     background: var(--bg-gradient);
-    color: #e5e7eb;
+    color: var(--lr-text-1);
     min-height: 100vh
 }
 
@@ -159,7 +159,7 @@ body {
     position: fixed;
     inset: 0;
     z-index: 99999;
-    background: #0b0c10;
+    background: var(--lr-bg-0);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -170,14 +170,14 @@ body {
 .loading-spinner {
     width: 48px;
     height: 48px;
-    border: 4px solid rgba(79, 110, 247, .2);
+    border: 4px solid rgba(212, 175, 55, .2);
     border-top: 4px solid var(--primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
 
 .loading-text {
-    color: #94a3b8;
+    color: var(--lr-text-2);
     font-size: .95rem;
     font-weight: 600
 }
@@ -233,13 +233,13 @@ body {
 
 .shortcut-btn:hover {
     background: var(--primary);
-    color: #fff;
+    color: var(--lr-divine);
 }
 
 .shortcut-btn.listening {
     background: var(--danger);
     border-color: var(--danger);
-    color: #fff;
+    color: var(--lr-divine);
     animation: pulse 1s infinite;
 }
 
@@ -298,7 +298,7 @@ body {
 
 .btn-logout {
     background: var(--danger);
-    color: #fff;
+    color: var(--lr-divine);
     border: none;
     padding: 6px 12px;
     border-radius: 8px;
@@ -311,7 +311,7 @@ body {
 }
 
 .btn-logout:hover {
-    background: #dc2626;
+    background: var(--lr-blood-2);
     transform: translateY(-1px);
 }
 
@@ -458,7 +458,7 @@ body {
 
 .tab {
     border: 2px solid var(--line);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     padding: 10px 14px;
     border-radius: 10px;
@@ -499,7 +499,7 @@ body {
 
 .tab.active {
     background: var(--ink);
-    color: #fff
+    color: var(--lr-divine)
 }
 
 .tab-content {
@@ -527,7 +527,7 @@ body {
     border-radius: 8px;
     font-size: .85rem;
     font-family: var(--font);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     transition: border-color .15s;
 }
@@ -569,14 +569,14 @@ body {
     cursor: pointer;
     transition: all .2s;
     margin-bottom: 14px;
-    background: rgba(79, 110, 247, .03);
+    background: rgba(212, 175, 55, .03);
 }
 
 .create-card:hover {
     border-color: var(--primary);
-    background: rgba(79, 110, 247, .07);
+    background: rgba(212, 175, 55, .07);
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(79, 110, 247, .12);
+    box-shadow: 0 8px 25px rgba(212, 175, 55, .12);
 }
 
 .create-card .icon {
@@ -692,13 +692,13 @@ body {
 }
 
 .badge-published {
-    background: rgba(16, 185, 129, .12);
+    background: rgba(63, 174, 106, .12);
     color: var(--success);
     border: 1px solid var(--success)
 }
 
 .badge-draft {
-    background: rgba(245, 158, 11, .12);
+    background: rgba(212, 175, 55, .12);
     color: var(--warning);
     border: 1px solid var(--warning)
 }
@@ -723,7 +723,7 @@ body {
 
 .btn-edit:hover {
     background: var(--primary);
-    color: #fff
+    color: var(--lr-divine)
 }
 
 .btn-delete-card {
@@ -733,12 +733,12 @@ body {
 
 .btn-delete-card:hover {
     background: var(--danger);
-    color: #fff
+    color: var(--lr-divine)
 }
 
 .btn-edit[style*="warning"]:hover {
     background: var(--warning);
-    color: #fff !important;
+    color: var(--lr-divine) !important;
 }
 
 /* ===== TOGGLE PUBLISH ===== */
@@ -772,7 +772,7 @@ body {
     width: 16px;
     left: 3px;
     bottom: 3px;
-    background: #fff;
+    background: var(--lr-divine);
     border-radius: 50%;
     transition: .25s;
 }
@@ -862,7 +862,7 @@ body {
 
 .btn-confirm {
     background: var(--danger);
-    color: #fff
+    color: var(--lr-divine)
 }
 
 .btn-modal:hover {
@@ -961,7 +961,7 @@ body {
     border-radius: 8px;
     font-size: .85rem;
     font-family: var(--font);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     transition: border-color .15s, box-shadow .15s;
 }
@@ -971,7 +971,7 @@ body {
 .form-group select:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(79, 110, 247, .1)
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, .1)
 }
 
 .form-group textarea {
@@ -1019,7 +1019,7 @@ body {
 
 .btn-array-add {
     background: var(--primary);
-    color: #fff;
+    color: var(--lr-divine);
     border: none;
     padding: 4px 12px;
     border-radius: 6px;
@@ -1082,7 +1082,7 @@ body {
 
 .btn-array-remove:hover {
     background: var(--danger);
-    color: #fff
+    color: var(--lr-divine)
 }
 
 .array-item .form-group {
@@ -1126,7 +1126,7 @@ body {
 
 .btn-save {
     background: var(--primary);
-    color: #fff;
+    color: var(--lr-divine);
     border: none;
     padding: 10px 24px;
     border-radius: 8px;
@@ -1142,7 +1142,7 @@ body {
 .btn-save:hover {
     background: #3b5ae6;
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(79, 110, 247, .35)
+    box-shadow: 0 6px 18px rgba(212, 175, 55, .35)
 }
 
 .btn-save:disabled {
@@ -1177,13 +1177,13 @@ body {
 }
 
 .alert-success {
-    background: rgba(16, 185, 129, .1);
+    background: rgba(63, 174, 106, .1);
     border: 2px solid var(--success);
     color: var(--success)
 }
 
 .alert-danger {
-    background: rgba(239, 68, 68, .1);
+    background: rgba(201, 79, 92, .1);
     border: 2px solid var(--danger);
     color: var(--danger)
 }
@@ -1246,7 +1246,7 @@ body {
     font-size: .8rem;
     border: 2px solid var(--soft);
     border-radius: 8px;
-    background: #0f1120;
+    background: var(--lr-bg-0);
     color: #a5f3fc;
     resize: vertical;
     tab-size: 2;
@@ -1255,13 +1255,13 @@ body {
 .mechanics-editor textarea:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(79, 110, 247, .15)
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, .15)
 }
 
 .mechanics-preview {
     margin-top: 6px;
     padding: 8px 12px;
-    background: rgba(79, 110, 247, .06);
+    background: rgba(212, 175, 55, .06);
     border: 1px solid var(--primary);
     border-radius: 8px;
     font-size: .78rem;
@@ -1272,7 +1272,7 @@ body {
 .mechanics-preview.error {
     border-color: var(--danger);
     color: var(--danger);
-    background: rgba(239, 68, 68, .06)
+    background: rgba(201, 79, 92, .06)
 }
 
 /* ===== TAGS INPUT ===== */
@@ -1284,13 +1284,13 @@ body {
     border: 2px solid var(--soft);
     border-radius: 8px;
     min-height: 38px;
-    background: #fff;
+    background: var(--lr-divine);
     cursor: text;
     transition: border-color .15s;
 }
 
 html.dark .tags-container {
-    background: #0f1120;
+    background: var(--lr-bg-0);
     border-color: var(--line)
 }
 
@@ -1303,7 +1303,7 @@ html.dark .tags-container {
     align-items: center;
     gap: 4px;
     background: var(--primary);
-    color: #fff;
+    color: var(--lr-divine);
     padding: 2px 8px;
     border-radius: 4px;
     font-size: .72rem;
@@ -1321,7 +1321,7 @@ html.dark .tags-container {
 }
 
 .tags-container .tag button:hover {
-    color: #fff
+    color: var(--lr-divine)
 }
 
 .tags-container input {
@@ -1389,29 +1389,29 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 }
 
 /* =============================================
-   VISUAL MECHANICS EDITOR â€” New Styles
+   VISUAL MECHANICS EDITOR — New Styles
    ============================================= */
 
 /* -- Type Colors -- */
 :root {
-    --type-modificar: #4F6EF7;
-    --type-limitar: #F59E0B;
-    --type-conceder: #10B981;
-    --type-condicional: #EC4899;
-    --type-narrativo: #6B7280;
-    --type-distribuir: #8B5CF6;
+    --type-modificar: var(--lr-gold);
+    --type-limitar: var(--lr-gold);
+    --type-conceder: var(--lr-nature);
+    --type-condicional: var(--lr-abyssal-2);
+    --type-narrativo: var(--lr-text-2);
+    --type-distribuir: var(--lr-abyssal);
     --type-booleano: #14B8A6;
-    --fonte-raca: #10B981;
-    --fonte-classe: #4F6EF7;
-    --fonte-tribo: #F59E0B;
-    --fonte-peculiaridade: #a78bfa;
-    --fonte-item: #8B5CF6;
-    --fonte-condicao: #EF4444;
+    --fonte-raca: var(--lr-nature);
+    --fonte-classe: var(--lr-gold);
+    --fonte-tribo: var(--lr-gold);
+    --fonte-peculiaridade: var(--lr-abyssal-2);
+    --fonte-item: var(--lr-abyssal);
+    --fonte-condicao: var(--lr-blood-2);
     --fonte-booleana: #14B8A6;
-    --fonte-manobra: #EC4899;
+    --fonte-manobra: var(--lr-abyssal-2);
     --fonte-magia: #06B6D4;
     --fonte-individual: #F97316;
-    --fonte-generica: #6B7280;
+    --fonte-generica: var(--lr-text-2);
 }
 
 /* -- Inline Editor Layout -- */
@@ -1509,7 +1509,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 }
 
 html.dark .mech-preview-panel {
-    background: #0f1120;
+    background: var(--lr-bg-0);
     border-color: var(--line);
 }
 
@@ -1532,7 +1532,7 @@ html.dark .mech-preview-panel {
     color: var(--ink);
     line-height: 1.5;
     padding: 12px;
-    background: rgba(79, 110, 247, .06);
+    background: rgba(212, 175, 55, .06);
     border: 1px solid var(--primary);
     border-radius: 8px;
     margin-bottom: 14px;
@@ -1572,7 +1572,7 @@ html.dark .mech-preview-panel {
 }
 
 html.dark .mech-card {
-    background: #151829;
+    background: var(--lr-bg-1);
     border-color: var(--line);
 }
 
@@ -1640,7 +1640,7 @@ html.dark .mech-card {
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: .3px;
-    color: #fff;
+    color: var(--lr-divine);
 }
 
 .badge-fonte {
@@ -1711,14 +1711,14 @@ html.dark .mech-card {
 .tag-filter-chip:hover {
     border-color: var(--primary);
     color: var(--primary);
-    background: rgba(79, 110, 247, .06);
+    background: rgba(212, 175, 55, .06);
 }
 
 .tag-filter-chip.active {
     background: var(--primary);
     border-color: var(--primary);
-    color: #fff;
-    box-shadow: 0 2px 8px rgba(79, 110, 247, .3);
+    color: var(--lr-divine);
+    box-shadow: 0 2px 8px rgba(212, 175, 55, .3);
 }
 
 html.dark .tag-filter-chip {
@@ -1753,7 +1753,7 @@ html.dark .tag-filter-chip:hover {
     font-size: .68rem;
     font-weight: 800;
     background: var(--primary);
-    color: #fff;
+    color: var(--lr-divine);
     padding: 1px 8px;
     border-radius: 12px;
     line-height: 1.5;
@@ -1775,13 +1775,13 @@ html.dark .tag-filter-chip:hover {
     font-size: .78rem;
     font-weight: 700;
     font-family: var(--font);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     cursor: pointer;
 }
 
 html.dark .mech-filters select {
-    background: #0f1120;
+    background: var(--lr-bg-0);
     border-color: var(--line);
     color: var(--ink);
 }
@@ -1823,7 +1823,7 @@ html.dark .mech-filters select {
 }
 
 html.dark .mechsel-chip {
-    background: #0f1120;
+    background: var(--lr-bg-0);
     border-color: var(--line);
 }
 
@@ -1863,12 +1863,12 @@ html.dark .mechsel-chip {
 
 .mechsel-chip-remove:hover {
     background: var(--danger);
-    color: #fff;
+    color: var(--lr-divine);
 }
 
 .mechsel-add-btn {
     background: var(--primary);
-    color: #fff;
+    color: var(--lr-divine);
     border: none;
     padding: 6px 14px;
     border-radius: 6px;
@@ -1899,7 +1899,7 @@ html.dark .mechsel-chip {
 }
 
 html.dark .mechsel-search {
-    background: #0f1120;
+    background: var(--lr-bg-0);
     border-color: var(--line);
 }
 
@@ -1916,12 +1916,12 @@ html.dark .mechsel-search {
     border-radius: 6px;
     font-size: .78rem;
     font-family: var(--font);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
 }
 
 html.dark .mechsel-search-bar input {
-    background: #151829;
+    background: var(--lr-bg-1);
     border-color: var(--line);
     color: var(--ink);
 }
@@ -1933,13 +1933,13 @@ html.dark .mechsel-search-bar input {
     font-size: .72rem;
     font-weight: 700;
     font-family: var(--font);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     cursor: pointer;
 }
 
 html.dark .mechsel-search-bar select {
-    background: #151829;
+    background: var(--lr-bg-1);
     border-color: var(--line);
     color: var(--ink);
 }
@@ -1962,7 +1962,7 @@ html.dark .mechsel-search-bar select {
 }
 
 .mechsel-result:hover {
-    background: rgba(79, 110, 247, .08);
+    background: rgba(212, 175, 55, .08);
 }
 
 .mechsel-result input[type="checkbox"] {
@@ -1985,7 +1985,7 @@ html.dark .mechsel-search-bar select {
 .mechsel-confirm {
     margin-top: 8px;
     background: var(--success);
-    color: #fff;
+    color: var(--lr-divine);
     border: none;
     padding: 6px 14px;
     border-radius: 6px;
@@ -1999,7 +1999,7 @@ html.dark .mechsel-search-bar select {
 }
 
 .mechsel-confirm:hover {
-    background: #059669;
+    background: var(--lr-nature);
 }
 
 /* -- Grouped Select styling -- */
@@ -2045,11 +2045,11 @@ html.dark .mechsel-search-bar select {
     padding: 8px 10px;
     border: 2px solid var(--soft);
     border-radius: 8px;
-    background: #fff;
+    background: var(--lr-divine);
 }
 
 html.dark .multi-select-container {
-    background: #0f1120;
+    background: var(--lr-bg-0);
     border-color: var(--line);
 }
 
@@ -2073,7 +2073,7 @@ html.dark .multi-select-container {
 
 .multi-select-option:hover {
     border-color: var(--primary);
-    background: rgba(79, 110, 247, .06);
+    background: rgba(212, 175, 55, .06);
 }
 
 .multi-select-option input[type="checkbox"] {
@@ -2083,7 +2083,7 @@ html.dark .multi-select-container {
 }
 
 .multi-select-option:has(input:checked) {
-    background: rgba(79, 110, 247, .12);
+    background: rgba(212, 175, 55, .12);
     border-color: var(--primary);
     color: var(--primary) !important;
 }
@@ -2139,7 +2139,7 @@ html.dark .multi-select-container {
 
 .calc-row-remove:hover {
     background: var(--danger);
-    color: #fff;
+    color: var(--lr-divine);
 }
 
 .calc-add-btn {
@@ -2159,7 +2159,7 @@ html.dark .multi-select-container {
 
 .calc-add-btn:hover {
     border-color: var(--primary);
-    background: rgba(79, 110, 247, .06);
+    background: rgba(212, 175, 55, .06);
 }
 
 .calc-limit-valor-area {
@@ -2170,7 +2170,7 @@ html.dark .multi-select-container {
 .eq-builder-section {
     margin-top: 10px;
     padding: 10px 12px;
-    background: rgba(79, 110, 247, .03);
+    background: rgba(212, 175, 55, .03);
     border: 1px dashed var(--soft);
     border-radius: 8px;
 }
@@ -2216,7 +2216,7 @@ html.dark .multi-select-container {
     font-size: .85rem;
     font-weight: 900;
     text-align: center;
-    background: rgba(79, 110, 247, .08);
+    background: rgba(212, 175, 55, .08);
     color: var(--primary);
     cursor: pointer;
     font-family: var(--font);
@@ -2229,7 +2229,7 @@ html.dark .multi-select-container {
     font-size: .72rem;
     font-weight: 700;
     font-family: var(--font);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     cursor: pointer;
 }
@@ -2241,7 +2241,7 @@ html.dark .multi-select-container {
     border-radius: 6px;
     font-size: .78rem;
     font-family: var(--font);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
 }
 
@@ -2275,7 +2275,7 @@ html.dark .multi-select-container {
 
 .eq-term-remove:hover {
     background: var(--danger);
-    color: #fff;
+    color: var(--lr-divine);
 }
 
 .eq-add-term-btn {
@@ -2295,35 +2295,35 @@ html.dark .multi-select-container {
 }
 
 .eq-add-term-btn:hover {
-    background: rgba(79, 110, 247, .08);
+    background: rgba(212, 175, 55, .08);
     border-style: solid;
 }
 
 /* Dark mode overrides */
 html.dark .eq-builder-section {
-    background: rgba(79, 110, 247, .04);
+    background: rgba(212, 175, 55, .04);
     border-color: var(--line);
 }
 
 html.dark .eq-term {
-    background: #151829;
+    background: var(--lr-bg-1);
     border-color: var(--line);
 }
 
 html.dark .eq-term-tipo,
 html.dark .eq-term-fixo-wrap input,
 html.dark .eq-term-ficha-wrap select {
-    background: #0f1120;
+    background: var(--lr-bg-0);
     border-color: var(--line);
     color: var(--ink);
 }
 
 html.dark .eq-term-op {
-    background: rgba(79, 110, 247, .15);
+    background: rgba(212, 175, 55, .15);
 }
 
 html.dark .calc-row {
-    background: #0f1120;
+    background: var(--lr-bg-0);
     border-color: var(--line);
 }
 
@@ -2343,7 +2343,7 @@ html.dark .calc-row:hover {
 }
 
 .aura-grau-item {
-    background: #0f1120;
+    background: var(--lr-bg-0);
     border: 2px solid var(--line);
     border-radius: 10px;
     padding: 14px;
@@ -2368,7 +2368,7 @@ html.dark .calc-row:hover {
     border-radius: 20px;
     font-size: .75rem;
     font-weight: 800;
-    color: #fff;
+    color: var(--lr-divine);
     text-transform: uppercase;
     letter-spacing: .4px;
     text-shadow: 0 1px 3px rgba(0, 0, 0, .4);
@@ -2403,9 +2403,9 @@ html.dark .calc-row:hover {
     border-radius: 6px;
     font-size: .75rem;
     font-weight: 700;
-    background: rgba(79, 110, 247, .15);
+    background: rgba(212, 175, 55, .15);
     color: var(--primary);
-    border: 1px solid rgba(79, 110, 247, .3);
+    border: 1px solid rgba(212, 175, 55, .3);
 }
 
 .mech-tag button {
@@ -2425,7 +2425,7 @@ html.dark .calc-row:hover {
     border-radius: 8px;
     font-size: .82rem;
     font-family: var(--font);
-    background: #0f1120;
+    background: var(--lr-bg-0);
     color: var(--ink);
     cursor: pointer;
     transition: border-color .15s;
@@ -2502,14 +2502,14 @@ html.dark .calc-row:hover {
 }
 
 .ct-mech-modal .mechsel-results .mechsel-result:hover {
-    background: rgba(79, 110, 247, .12);
+    background: rgba(212, 175, 55, .12);
 }
 
 .ct-mech-chip {
     min-height: 32px;
 }
 
-/* ===== EXP CONFIG (mechanic type Modificar â†’ EXP) ===== */
+/* ===== EXP CONFIG (mechanic type Modificar → EXP) ===== */
 .calc-exp-qual-wrap {
     border-left: 3px solid #facc15;
     padding: 6px 0 6px 12px;
@@ -2646,7 +2646,7 @@ html.dark .settings-tab:hover {
 
 .btn-theme-large:hover {
     background: var(--primary);
-    color: #fff;
+    color: var(--lr-divine);
 }
 
 /* Favicons Tab */
@@ -2672,7 +2672,7 @@ html.dark .settings-tab:hover {
     width: 64px;
     height: 64px;
     border-radius: 8px;
-    background: #fff;
+    background: var(--lr-divine);
     border: 1px dashed var(--muted);
     display: flex;
     align-items: center;
@@ -2698,7 +2698,7 @@ html.dark .settings-tab:hover {
 
 .btn-upload {
     background: var(--primary);
-    color: #fff;
+    color: var(--lr-divine);
     border: none;
     padding: 8px 12px;
     border-radius: 6px;
@@ -2831,11 +2831,11 @@ html.dark .settings-tab:hover {
 .bp-slot-input:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(79, 110, 247, 0.2);
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
 }
 
 .bp-linked-remove {
-    background: rgba(239, 68, 68, 0.1);
+    background: rgba(201, 79, 92, 0.1);
     border: 1px solid transparent;
     color: var(--danger);
     border-radius: 8px;
@@ -2853,7 +2853,7 @@ html.dark .settings-tab:hover {
 
 .bp-linked-remove:hover {
     background: var(--danger);
-    color: #fff;
+    color: var(--lr-divine);
     transform: scale(1.05);
 }
 
@@ -2882,7 +2882,7 @@ html.dark .settings-tab:hover {
 }
 
 /* =============================================
-   BOOLEANO EQUATION BUILDER â€” Styles
+   BOOLEANO EQUATION BUILDER — Styles
    ============================================= */
 
 .bool-equation-wrap {
@@ -2897,7 +2897,7 @@ html.dark .bool-output-card { background: rgba(20, 184, 166, 0.08); }
 }
 
 html.dark .bool-equation-wrap {
-    background: #151829;
+    background: var(--lr-bg-1);
 }
 
 .bool-equation-side {
@@ -3023,13 +3023,13 @@ html.dark .bool-output-card {
 
     .shortcut-btn:hover {
         background: var(--primary);
-        color: #fff;
+        color: var(--lr-divine);
     }
 
     .shortcut-btn.listening {
         background: var(--danger);
         border-color: var(--danger);
-        color: #fff;
+        color: var(--lr-divine);
         animation: pulse 1s infinite;
     }
 
@@ -3082,7 +3082,7 @@ html.dark .bool-output-card {
 
 .btn-clear-search:hover {
     color: var(--danger);
-    background: rgba(239, 68, 68, .08);
+    background: rgba(201, 79, 92, .08);
 }
 
 /* ----- Select de ordenação ----- */
@@ -3093,7 +3093,7 @@ html.dark .bool-output-card {
     font-size: .8rem;
     font-weight: 700;
     font-family: var(--font);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     cursor: pointer;
     transition: border-color .15s;
@@ -3105,8 +3105,8 @@ html.dark .bool-output-card {
 }
 
 html.dark .filter-select {
-    background: #0f1120;
-    color: #e5e7eb;
+    background: var(--lr-bg-0);
+    color: var(--lr-text-1);
     border-color: #2a2d40;
 }
 
@@ -3118,7 +3118,7 @@ html.dark .filter-select {
     white-space: nowrap;
     padding: 4px 10px;
     border-radius: 20px;
-    background: rgba(79, 110, 247, .08);
+    background: rgba(212, 175, 55, .08);
 }
 
 /* ----- Meta-chips dos cards ----- */
@@ -3145,29 +3145,29 @@ html.dark .filter-select {
 }
 
 .meta-chip.chip-accent {
-    background: rgba(79, 110, 247, .1);
+    background: rgba(212, 175, 55, .1);
     color: var(--primary);
-    border-color: rgba(79, 110, 247, .3);
+    border-color: rgba(212, 175, 55, .3);
 }
 
 .meta-chip.chip-gold {
-    background: rgba(245, 158, 11, .1);
-    color: #d97706;
-    border-color: rgba(245, 158, 11, .35);
+    background: rgba(212, 175, 55, .1);
+    color: var(--lr-gold);
+    border-color: rgba(212, 175, 55, .35);
 }
 
 html.dark .meta-chip.chip-gold {
-    color: #fbbf24;
+    color: var(--lr-gold-2);
 }
 
 .meta-chip.chip-tag {
-    background: rgba(139, 92, 246, .1);
-    color: #8b5cf6;
-    border-color: rgba(139, 92, 246, .3);
+    background: rgba(91, 63, 184, .1);
+    color: var(--lr-abyssal);
+    border-color: rgba(91, 63, 184, .3);
 }
 
 html.dark .meta-chip.chip-tag {
-    color: #a78bfa;
+    color: var(--lr-abyssal-2);
 }
 
 /* ----- Ícone no nome do card ----- */
@@ -3199,7 +3199,7 @@ html.dark .meta-chip.chip-tag {
     padding: 8px 16px;
     border: 2px solid var(--primary);
     border-radius: 8px;
-    background: rgba(79, 110, 247, .06);
+    background: rgba(212, 175, 55, .06);
     color: var(--primary);
     font-weight: 800;
     font-size: .78rem;
@@ -3210,12 +3210,12 @@ html.dark .meta-chip.chip-tag {
 
 .btn-clear-filters:hover {
     background: var(--primary);
-    color: #fff;
+    color: var(--lr-divine);
 }
 
 /* ===== CLASS MODULES EDITOR — visual profissional ===== */
 .class-module-editor-item {
-    border: 1px solid rgba(139, 92, 246, .25);
+    border: 1px solid rgba(91, 63, 184, .25);
     border-radius: 10px;
     overflow: hidden;
 }
@@ -3225,13 +3225,13 @@ html.dark .meta-chip.chip-tag {
     padding: 10px 12px;
     border: 1px solid rgba(148, 163, 184, .12);
     border-radius: 8px;
-    background: rgba(15, 23, 42, .25);
+    background: rgba(14, 17, 23, .25);
 }
 
 .cm-section-title {
     font-weight: 700;
     font-size: .78rem;
-    color: #a78bfa;
+    color: var(--lr-abyssal-2);
     letter-spacing: .02em;
     margin-bottom: 8px;
     text-transform: uppercase;
@@ -3249,7 +3249,7 @@ html.dark .meta-chip.chip-tag {
 
 .cm-hint {
     font-size: .65rem;
-    color: var(--muted, #94a3b8);
+    color: var(--muted, var(--lr-text-2));
     margin-top: 4px;
     line-height: 1.4;
 }
@@ -3266,19 +3266,19 @@ html.dark .meta-chip.chip-tag {
 .cm-toggle-row input[type="checkbox"] {
     width: 16px;
     height: 16px;
-    accent-color: #8b5cf6;
+    accent-color: var(--lr-abyssal);
 }
 
 .cm-mini-title {
     font-size: .68rem;
     font-weight: 700;
-    color: var(--muted, #94a3b8);
+    color: var(--muted, var(--lr-text-2));
 }
 
 .cm-chip-remove {
     background: none;
     border: none;
-    color: #ef4444;
+    color: var(--lr-blood-2);
     cursor: pointer;
     font-size: .8rem;
     padding: 2px 6px;
@@ -3286,7 +3286,7 @@ html.dark .meta-chip.chip-tag {
     transition: background .15s;
 }
 
-.cm-chip-remove:hover { background: rgba(239, 68, 68, .15); }
+.cm-chip-remove:hover { background: rgba(201, 79, 92, .15); }
 
 /* Custo de Equipamento — chips expandidos */
 .cm-equip-cost-row {
@@ -3296,15 +3296,15 @@ html.dark .meta-chip.chip-tag {
     flex-wrap: wrap;
     padding: 6px 8px;
     margin-bottom: 6px;
-    border: 1px solid rgba(139, 92, 246, .25);
+    border: 1px solid rgba(91, 63, 184, .25);
     border-radius: 8px;
-    background: rgba(139, 92, 246, .06);
+    background: rgba(91, 63, 184, .06);
 }
 
 .cm-equip-cost-name {
     font-size: .75rem;
     font-weight: 700;
-    color: var(--text, #e2e8f0);
+    color: var(--text, var(--lr-text-1));
     flex: 1 1 140px;
     align-self: center;
 }
@@ -3315,7 +3315,7 @@ html.dark .meta-chip.chip-tag {
     gap: 2px;
     font-size: .6rem;
     font-weight: 600;
-    color: var(--muted, #94a3b8);
+    color: var(--muted, var(--lr-text-2));
     text-transform: uppercase;
 }
 
@@ -3357,7 +3357,7 @@ html.dark .meta-chip.chip-tag {
 .schema-field-botao-mechs {
     margin-top: 5px;
     padding: 5px 6px;
-    border: 1px dashed rgba(139, 92, 246, .3);
+    border: 1px dashed rgba(91, 63, 184, .3);
     border-radius: 6px;
 }
 
@@ -3401,7 +3401,7 @@ html.dark .meta-chip.chip-tag {
     font-size: .6rem;
     font-weight: 600;
     text-transform: uppercase;
-    color: var(--muted, #94a3b8);
+    color: var(--muted, var(--lr-text-2));
     margin-bottom: 2px;
 }
 

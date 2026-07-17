@@ -13,7 +13,23 @@ Sistema online de fichas digitais para o RPG **Lendas e Relíquias**
 
 </div>
 
+
 ---
+
+## 🜲 Identidade Visual / Design System
+
+Toda a interface segue a identidade **"Tecnologia Rúnica Ancestral"** documentada em
+[`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md) — **leitura obrigatória antes de qualquer alteração de UI**
+(vale para devs humanos e IAs de desenvolvimento).
+
+Em resumo:
+- **Tokens globais** em [`/shared/tokens.css`](shared/tokens.css) (cores, tipografia, espaçamentos, raios, sombras, transições, z-index) — nenhum componente usa valores fixos;
+- **Camada de identidade** em [`/shared/lendas-reliquias.css`](shared/lendas-reliquias.css), que estiliza componentes (botões, inputs, tabelas, abas, modais…) de forma global e data-driven;
+- Ordem de carregamento em toda página: `CSS local → tokens.css → lendas-reliquias.css`;
+- Fontes: **Cinzel** (títulos), **Cormorant Garamond** (subtítulos), **Inter** (texto e UI);
+- Paleta oficial: pedra escura `#0E1117`, superfícies de ferro `#1F2630`, ouro discreto `#D4AF37`, azul arcano `#3AA6FF`, roxo abissal `#5B3FB8`, verde natureza `#3FAE6A`, vermelho sangue `#8B1E2D`.
+
+Novos módulos herdam a identidade automaticamente ao usar os componentes e tokens existentes.
 
 ## 📖 Sobre o Projeto
 

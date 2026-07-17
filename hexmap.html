@@ -77,13 +77,13 @@
         }
 
         .user-email {
-            color: #cbd5e1;
+            color: var(--lr-text-2);
             font-size: 0.85rem;
             font-weight: 600;
         }
 
         .btn-logout {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
+            background: linear-gradient(135deg, var(--lr-blood-2), var(--lr-blood-2));
             color: white;
             border: none;
             padding: 8px 16px;
@@ -96,7 +96,7 @@
 
         .btn-logout:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            box-shadow: 0 4px 12px rgba(201, 79, 92, 0.4);
         }
 
         .btn-back {
@@ -725,9 +725,9 @@
         }
 
         .btn-delete-map {
-            background: rgba(239, 68, 68, 0.2);
-            border: 2px solid #ef4444;
-            color: #ef4444;
+            background: rgba(201, 79, 92, 0.2);
+            border: 2px solid var(--lr-blood-2);
+            color: var(--lr-blood-2);
             padding: 6px 12px;
             border-radius: 6px;
             cursor: pointer;
@@ -737,7 +737,7 @@
         }
 
         .btn-delete-map:hover {
-            background: #ef4444;
+            background: var(--lr-blood-2);
             color: white;
         }
 
@@ -767,21 +767,27 @@
         }
 
         .alert-success {
-            background: #10b981;
+            background: var(--lr-nature);
             color: white;
         }
 
         .alert-danger {
-            background: #ef4444;
+            background: var(--lr-blood-2);
             color: white;
         }
 
         .alert-warning {
-            background: #f59e0b;
+            background: var(--lr-gold);
             color: white;
         }
     </style>
 <script type="module" src="/js/global-favicon.js"></script>
+    <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="shared/tokens.css">
+    <link rel="stylesheet" href="shared/lendas-reliquias.css">
 </head>
 
 <body>
@@ -1372,7 +1378,7 @@
                 mapListEl.innerHTML = html;
             } catch (error) {
                 console.error('Erro ao carregar lista:', error);
-                document.getElementById('mapList').innerHTML = '<p style="color: #ef4444; text-align: center; padding: 40px;">Erro ao carregar mapas.</p>';
+                document.getElementById('mapList').innerHTML = '<p style="color: var(--lr-blood-2); text-align: center; padding: 40px;">Erro ao carregar mapas.</p>';
             }
         };
 

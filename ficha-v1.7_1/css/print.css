@@ -21,7 +21,7 @@
 }
 
 #printModal {
-    background: var(--paper, #fff);
+    background: var(--paper, var(--lr-divine));
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -68,13 +68,13 @@
 }
 
 .btn-cancel {
-    background: #e5e7eb;
-    color: #374151;
+    background: var(--lr-text-1);
+    color: var(--lr-border);
 }
 
 .btn-print {
-    background: #4f6ef7;
-    color: #fff;
+    background: var(--lr-gold);
+    color: var(--lr-divine);
 }
 
 /* --- PRINT MEDIA QUERY --- */

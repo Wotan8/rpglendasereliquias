@@ -3,39 +3,39 @@
    ============================================= */
 
 :root {
-    --bg: #0b0c10;
-    --bg-gradient: linear-gradient(180deg, #0b0c10, #111827);
-    --paper: #ffffff;
-    --ink: #111827;
-    --muted: #6b7280;
-    --line: #111827;
-    --soft: #e5e7eb;
-    --chip: #f3f4f6;
+    --bg: var(--lr-bg-0);
+    --bg-gradient: linear-gradient(180deg, var(--lr-bg-0), var(--lr-bg-1));
+    --paper: var(--lr-divine);
+    --ink: var(--lr-bg-1);
+    --muted: var(--lr-text-2);
+    --line: var(--lr-bg-1);
+    --soft: var(--lr-text-1);
+    --chip: var(--lr-text-1);
     --radius: 10px;
     --gap: 10px;
     --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --primary: #4f6ef7;
-    --danger: #ef4444;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --secondary: #ec4899;
+    --primary: var(--lr-gold);
+    --danger: var(--lr-blood-2);
+    --success: var(--lr-nature);
+    --warning: var(--lr-gold);
+    --secondary: var(--lr-abyssal-2);
 }
 
 /* ===== DARK THEME ===== */
 html.dark {
-    --bg: #0b0c10;
-    --bg-gradient: linear-gradient(180deg, #0b0c10, #111827);
-    --paper: #1a1d2e;
-    --ink: #e5e7eb;
-    --muted: #9ca3af;
-    --line: #374151;
-    --soft: #374151;
-    --chip: #232740;
+    --bg: var(--lr-bg-0);
+    --bg-gradient: linear-gradient(180deg, var(--lr-bg-0), var(--lr-bg-1));
+    --paper: var(--lr-surface);
+    --ink: var(--lr-text-1);
+    --muted: var(--lr-text-2);
+    --line: var(--lr-border);
+    --soft: var(--lr-border);
+    --chip: var(--lr-surface);
 }
 
 html.dark body {
     background: var(--bg-gradient);
-    color: #e5e7eb
+    color: var(--lr-text-1)
 }
 
 html.dark .sheet {
@@ -52,12 +52,12 @@ html.dark .tab {
 
 html.dark .tab.active {
     background: var(--primary);
-    color: #fff;
+    color: var(--lr-divine);
     border-color: var(--primary)
 }
 
 html.dark .tab:hover {
-    background: #2d3352
+    background: var(--lr-surface-2)
 }
 
 html.dark .character-card {
@@ -70,28 +70,28 @@ html.dark .character-card:hover {
 }
 
 html.dark .info-item {
-    background: #1a1d2e;
+    background: var(--lr-surface);
     border-color: var(--line)
 }
 
 html.dark .create-card {
     border-color: var(--line);
-    background: rgba(16, 185, 129, .06)
+    background: rgba(63, 174, 106, .06)
 }
 
 html.dark .create-card:hover {
     border-color: var(--success);
-    background: rgba(16, 185, 129, .14)
+    background: rgba(63, 174, 106, .14)
 }
 
 html.dark .create-card-blank {
-    background: rgba(79, 110, 247, .08);
+    background: rgba(212, 175, 55, .08);
     border-color: var(--line)
 }
 
 html.dark .create-card-blank:hover {
     border-color: var(--primary);
-    background: rgba(79, 110, 247, .15)
+    background: rgba(212, 175, 55, .15)
 }
 
 html.dark .inventory-item {
@@ -104,12 +104,12 @@ html.dark .inventory-item:hover {
 }
 
 html.dark .inventory-item-footer {
-    background: #1a1d2e;
+    background: var(--lr-surface);
     border-color: var(--line)
 }
 
 html.dark .inventory-header {
-    background: rgba(79, 110, 247, .1);
+    background: rgba(212, 175, 55, .1);
     border-color: var(--primary)
 }
 
@@ -120,7 +120,7 @@ html.dark .notification-item {
 
 html.dark .notification-item.new {
     border-color: var(--primary);
-    background: rgba(79, 110, 247, .12)
+    background: rgba(212, 175, 55, .12)
 }
 
 html.dark .modal-content {
@@ -148,7 +148,7 @@ html.dark .pagination-btn:hover:not(:disabled) {
 html.dark .pagination-btn.active {
     background: var(--primary);
     border-color: var(--primary);
-    color: #fff
+    color: var(--lr-divine)
 }
 
 html.dark .toolbar button {
@@ -172,7 +172,7 @@ html.dark .toolbar button:hover {
 body {
     font-family: var(--font);
     background: var(--bg-gradient);
-    color: #e5e7eb;
+    color: var(--lr-text-1);
     min-height: 100vh;
 }
 
@@ -181,7 +181,7 @@ body {
     position: fixed;
     inset: 0;
     z-index: 99999;
-    background: #0b0c10;
+    background: var(--lr-bg-0);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -192,14 +192,14 @@ body {
 .loading-spinner {
     width: 48px;
     height: 48px;
-    border: 4px solid rgba(79, 110, 247, .2);
+    border: 4px solid rgba(212, 175, 55, .2);
     border-top: 4px solid var(--primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
 
 .loading-text {
-    color: #94a3b8;
+    color: var(--lr-text-2);
     font-size: .95rem;
     font-weight: 600;
 }
@@ -228,7 +228,7 @@ body {
 .toolbar button {
     border: 1px solid rgba(255, 255, 255, .18);
     background: rgba(255, 255, 255, .06);
-    color: #fff;
+    color: var(--lr-divine);
     font-weight: 600;
     padding: 8px 14px;
     border-radius: 10px;
@@ -278,7 +278,7 @@ body {
 
 .tab {
     border: 2px solid var(--line);
-    background: #fff;
+    background: var(--lr-divine);
     color: var(--ink);
     padding: 10px 16px;
     border-radius: 10px;
@@ -298,7 +298,7 @@ body {
 
 .tab.active {
     background: var(--ink);
-    color: #fff
+    color: var(--lr-divine)
 }
 
 .tab-content {
@@ -315,7 +315,7 @@ body {
     top: -6px;
     right: -6px;
     background: var(--danger);
-    color: #fff;
+    color: var(--lr-divine);
     font-size: 9px;
     font-weight: 800;
     padding: 2px 5px;
@@ -358,7 +358,7 @@ body {
     text-align: center;
     cursor: pointer;
     transition: all .2s;
-    background: rgba(16, 185, 129, .03);
+    background: rgba(63, 174, 106, .03);
 }
 
 .create-card-main {
@@ -377,7 +377,7 @@ body {
     justify-content: center;
     gap: 4px;
     border-color: var(--line);
-    background: rgba(79, 110, 247, .04);
+    background: rgba(212, 175, 55, .04);
 }
 
 .create-card-blank .icon {
@@ -393,16 +393,16 @@ body {
 
 .create-card-blank:hover {
     border-color: var(--primary);
-    background: rgba(79, 110, 247, .1);
+    background: rgba(212, 175, 55, .1);
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(79, 110, 247, .15);
+    box-shadow: 0 8px 25px rgba(212, 175, 55, .15);
 }
 
 .create-card:hover {
     border-color: var(--success);
-    background: rgba(16, 185, 129, .07);
+    background: rgba(63, 174, 106, .07);
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(16, 185, 129, .12);
+    box-shadow: 0 8px 25px rgba(63, 174, 106, .12);
 }
 
 .create-card .icon {
@@ -507,7 +507,7 @@ body {
 
 .btn-delete:hover {
     background: var(--danger);
-    color: #fff;
+    color: var(--lr-divine);
     transform: scale(1.05);
 }
 
@@ -557,7 +557,7 @@ body {
     width: 100%;
     padding: 10px;
     background: var(--primary);
-    color: #fff;
+    color: var(--lr-divine);
     border: none;
     border-radius: 8px;
     font-weight: 800;
@@ -572,7 +572,7 @@ body {
 .btn-play:hover {
     background: #3b5ae6;
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(79, 110, 247, .35);
+    box-shadow: 0 6px 18px rgba(212, 175, 55, .35);
 }
 
 .character-footer {
@@ -617,7 +617,7 @@ body {
     padding: 1.2rem;
     margin-bottom: 14px;
     text-align: center;
-    background: rgba(79, 110, 247, .04);
+    background: rgba(212, 175, 55, .04);
 }
 
 .total-apoios {
@@ -660,7 +660,7 @@ body {
 
 .inventory-item:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(79, 110, 247, .12);
+    box-shadow: 0 8px 20px rgba(212, 175, 55, .12);
     border-color: var(--primary);
 }
 
@@ -681,7 +681,7 @@ body {
 
 .inventory-item-quantity {
     background: var(--primary);
-    color: #fff;
+    color: var(--lr-divine);
     padding: 2px 10px;
     border-radius: 20px;
     font-weight: 700;
@@ -741,8 +741,8 @@ body {
 
 .notification-item.new {
     border-color: var(--primary);
-    background: rgba(79, 110, 247, .06);
-    box-shadow: 0 0 12px rgba(79, 110, 247, .1);
+    background: rgba(212, 175, 55, .06);
+    box-shadow: 0 0 12px rgba(212, 175, 55, .1);
 }
 
 .notification-item:hover {
@@ -792,15 +792,15 @@ body {
 }
 
 .notification-icon.inventory {
-    color: #d97706;
+    color: var(--lr-gold);
     font-size: 1.5rem;
     text-shadow: 0 0 8px rgba(217, 119, 6, .4)
 }
 
 .notification-icon.exp {
-    color: #fbbf24;
+    color: var(--lr-gold-2);
     font-size: 1.5rem;
-    text-shadow: 0 0 8px rgba(251, 191, 36, .4)
+    text-shadow: 0 0 8px rgba(229, 197, 88, .4)
 }
 
 .notification-delete {
@@ -817,29 +817,29 @@ body {
 
 .notification-delete:hover {
     background: var(--danger);
-    color: #fff
+    color: var(--lr-divine)
 }
 
 .notification-item.importante {
     border-color: var(--warning);
-    background: rgba(245, 158, 11, .06);
+    background: rgba(212, 175, 55, .06);
 }
 
 .notification-item.urgente {
     border-color: var(--danger);
-    background: rgba(239, 68, 68, .06);
+    background: rgba(201, 79, 92, .06);
     animation: pulse-urgent 1.5s ease infinite;
 }
 
 .notification-item.inventory {
-    border-color: #d97706;
+    border-color: var(--lr-gold);
     background: rgba(217, 119, 6, .06);
     animation: pulse-inv 2s ease infinite;
 }
 
 .notification-item.exp {
-    border-color: #fbbf24;
-    background: rgba(251, 191, 36, .06);
+    border-color: var(--lr-gold-2);
+    background: rgba(229, 197, 88, .06);
     animation: pulse-inv 2s ease infinite;
 }
 
@@ -847,11 +847,11 @@ body {
 
     0%,
     100% {
-        box-shadow: 0 0 10px rgba(239, 68, 68, .1)
+        box-shadow: 0 0 10px rgba(201, 79, 92, .1)
     }
 
     50% {
-        box-shadow: 0 0 20px rgba(239, 68, 68, .25)
+        box-shadow: 0 0 20px rgba(201, 79, 92, .25)
     }
 }
 
@@ -898,7 +898,7 @@ body {
 .pagination-btn.active {
     background: var(--primary);
     border-color: var(--primary);
-    color: #fff;
+    color: var(--lr-divine);
 }
 
 .pagination-btn:disabled {
@@ -980,7 +980,7 @@ body {
 
 .btn-confirm {
     background: var(--danger);
-    color: #fff;
+    color: var(--lr-divine);
 }
 
 .btn-modal:hover {
@@ -999,13 +999,13 @@ body {
 }
 
 .alert-success {
-    background: rgba(16, 185, 129, .1);
+    background: rgba(63, 174, 106, .1);
     border: 2px solid var(--success);
     color: var(--success)
 }
 
 .alert-danger {
-    background: rgba(239, 68, 68, .1);
+    background: rgba(201, 79, 92, .1);
     border: 2px solid var(--danger);
     color: var(--danger)
 }
@@ -1091,7 +1091,7 @@ body {
 .modal-close-btn:hover {
     background: var(--danger);
     border-color: var(--danger);
-    color: #fff;
+    color: var(--lr-divine);
 }
 
 .modal-body-create {
@@ -1122,18 +1122,18 @@ body {
 .mesa-option:hover:not(.disabled) {
     border-color: var(--primary);
     transform: translateX(4px);
-    box-shadow: 0 4px 16px rgba(79, 110, 247, .12);
+    box-shadow: 0 4px 16px rgba(212, 175, 55, .12);
 }
 
 .mesa-option.avulso {
     border-color: var(--success);
-    background: rgba(16, 185, 129, .05);
+    background: rgba(63, 174, 106, .05);
 }
 
 .mesa-option.avulso:hover {
-    background: rgba(16, 185, 129, .12);
+    background: rgba(63, 174, 106, .12);
     border-color: var(--success);
-    box-shadow: 0 4px 16px rgba(16, 185, 129, .15);
+    box-shadow: 0 4px 16px rgba(63, 174, 106, .15);
 }
 
 .mesa-option.disabled {
@@ -1251,7 +1251,7 @@ body {
     border-radius: 999px;
     cursor: pointer;
     user-select: none;
-    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #1e1b4b 100%);
+    background: linear-gradient(135deg, var(--lr-surface) 0%, #312e81 55%, var(--lr-surface) 100%);
     border: 1px solid rgba(129, 140, 248, 0.55);
     box-shadow:
         inset 0 1px 0 rgba(199, 210, 254, 0.25),
@@ -1290,7 +1290,7 @@ body {
     line-height: 1;
     text-transform: uppercase;
     letter-spacing: 0.8px;
-    color: #a5b4fc;
+    color: var(--lr-arcane-2);
     padding-left: 7px;
     border-left: 1px solid rgba(165, 180, 252, 0.35);
 }
@@ -1349,7 +1349,7 @@ html:not(.dark) .loja-card {
 
 .loja-card:hover {
     transform: translateY(-3px);
-    border-color: var(--accent-glow, rgba(79, 110, 247, 0.35));
+    border-color: var(--accent-glow, rgba(212, 175, 55, 0.35));
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
 }
 
@@ -1357,7 +1357,7 @@ html:not(.dark) .loja-card {
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
-    background: radial-gradient(circle at 50% 30%, rgba(79, 110, 247, 0.16), rgba(0, 0, 0, 0.45));
+    background: radial-gradient(circle at 50% 30%, rgba(212, 175, 55, 0.16), rgba(0, 0, 0, 0.45));
     overflow: hidden;
 }
 
@@ -1439,7 +1439,7 @@ html:not(.dark) .loja-card {
 }
 
 .loja-tag {
-    color: #fff;
+    color: var(--lr-divine);
     padding: 4px 8px;
     border-radius: 6px;
     font-size: .72rem;
@@ -1465,7 +1465,7 @@ html:not(.dark) .loja-card {
     border-radius: 10px;
     border: none;
     cursor: pointer;
-    color: #fff;
+    color: var(--lr-divine);
     font-weight: 800;
     font-size: .95rem;
     font-family: inherit;
@@ -1481,8 +1481,8 @@ html:not(.dark) .loja-card {
 .loja-btn:hover { filter: brightness(1.12); }
 .loja-btn:active { transform: scale(.98); }
 
-.loja-btn-frag { background: linear-gradient(135deg, #6366f1, #4f6ef7); }
-.loja-btn-real { background: linear-gradient(135deg, #10b981, #059669); }
+.loja-btn-frag { background: linear-gradient(135deg, #6366f1, var(--lr-gold)); }
+.loja-btn-real { background: linear-gradient(135deg, var(--lr-nature), var(--lr-nature)); }
 
 .loja-card-secure {
     font-size: .7rem;
@@ -1492,13 +1492,13 @@ html:not(.dark) .loja-card {
 
 /* Alertas complementares usados pela Loja */
 .alert-warning {
-    background: rgba(245, 158, 11, 0.15);
-    border: 1px solid #f59e0b;
-    color: #f59e0b;
+    background: rgba(212, 175, 55, 0.15);
+    border: 1px solid var(--lr-gold);
+    color: var(--lr-gold);
 }
 
 .alert-info {
-    background: rgba(79, 110, 247, 0.15);
+    background: rgba(212, 175, 55, 0.15);
     border: 1px solid var(--primary);
     color: var(--primary);
 }

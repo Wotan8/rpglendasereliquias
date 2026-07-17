@@ -11,7 +11,7 @@
 
 /* ===== NPC CARD ===== */
 .npc-card {
-    background: rgba(15, 23, 42, 0.6);
+    background: rgba(14, 17, 23, 0.6);
     border: 2px solid var(--border);
     border-radius: 12px;
     padding: 18px;
@@ -20,7 +20,7 @@
 }
 
 .npc-card:hover {
-    border-color: rgba(139, 92, 246, 0.4);
+    border-color: rgba(91, 63, 184, 0.4);
     transform: translateY(-2px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
@@ -62,7 +62,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.3px;
-    background: rgba(139, 92, 246, 0.2);
+    background: rgba(91, 63, 184, 0.2);
     color: var(--primary);
     margin-top: 4px;
 }
@@ -73,7 +73,7 @@
     border-radius: 10px;
     overflow: hidden;
     margin-bottom: 12px;
-    background: rgba(15, 23, 42, 0.8);
+    background: rgba(14, 17, 23, 0.8);
 }
 
 .npc-card-image {
@@ -112,7 +112,7 @@
 
 .npc-frases-label {
     font-size: 0.82rem;
-    color: #94a3b8;
+    color: var(--lr-text-2);
     font-style: italic;
 }
 
@@ -124,7 +124,7 @@
 }
 
 .npc-tag {
-    background: rgba(139, 92, 246, 0.15);
+    background: rgba(91, 63, 184, 0.15);
     color: var(--primary);
     padding: 3px 10px;
     border-radius: 12px;
@@ -179,7 +179,7 @@
     border-radius: 8px;
     font-size: 0.88rem;
     font-family: var(--font);
-    background: rgba(15, 23, 42, 0.8);
+    background: rgba(14, 17, 23, 0.8);
     color: var(--light);
     transition: border-color 0.15s;
 }
@@ -205,7 +205,7 @@
     font-size: 1rem;
     font-weight: 800;
     font-family: var(--font);
-    background: rgba(15, 23, 42, 0.8);
+    background: rgba(14, 17, 23, 0.8);
     color: var(--primary);
 }
 
@@ -226,7 +226,7 @@
 
 /* ===== ADVANCED FILTERS ===== */
 .npc-advanced-panel {
-    background: rgba(15, 23, 42, 0.4);
+    background: rgba(14, 17, 23, 0.4);
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 14px;
@@ -264,12 +264,12 @@
     background: var(--danger); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 12px; font-weight: bold;
 }
 .filter-chip {
-    display: inline-flex; align-items: center; gap: 6px; background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.4); color: #fff; font-size: 0.8rem; padding: 4px 10px; border-radius: 16px;
+    display: inline-flex; align-items: center; gap: 6px; background: rgba(91, 63, 184, 0.2); border: 1px solid rgba(91, 63, 184, 0.4); color: var(--lr-divine); font-size: 0.8rem; padding: 4px 10px; border-radius: 16px;
 }
 .filter-chip-close {
     cursor: pointer; color: var(--muted); transition: color 0.2s;
 }
-.filter-chip-close:hover { color: #fff; }
+.filter-chip-close:hover { color: var(--lr-divine); }
 
 /* ============================================================
    FICHA DE NPC v2 — modo Rápido/Mecânico, campos híbridos,
@@ -288,7 +288,7 @@
     padding: 8px 14px; font-weight: 800; font-size: .85rem; cursor: pointer;
     transition: all .15s ease;
 }
-.npcv2-mode-btn.active { background: var(--primary); color: #fff; }
+.npcv2-mode-btn.active { background: var(--primary); color: var(--lr-divine); }
 
 .npcv2-sections {
     display: flex; gap: 6px; flex-wrap: wrap;
@@ -328,7 +328,7 @@
     background: transparent; border: none; color: var(--muted);
     cursor: pointer; font-size: .9rem; padding: 2px 6px; border-radius: 6px;
 }
-.npcv2-pec-del:hover { color: #ef4444; background: rgba(239, 68, 68, .12); }
+.npcv2-pec-del:hover { color: var(--lr-blood-2); background: rgba(201, 79, 92, .12); }
 .npcv2-pec-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .npcv2-pec-add .form-input, .npcv2-pec-add .form-select { flex: 1; min-width: 160px; }
 
@@ -340,7 +340,7 @@
 .npcv2-attr-cell { text-align: center; }
 .npcv2-attr-label { font-size: .72rem; font-weight: 800; color: var(--muted); margin-bottom: 4px; }
 .npcv2-attr-input { text-align: center; font-weight: 800; color: var(--primary); }
-.npcv2-attr-eff { font-size: .72rem; color: var(--success, #22c55e); min-height: 16px; margin-top: 2px; }
+.npcv2-attr-eff { font-size: .72rem; color: var(--success, var(--lr-nature)); min-height: 16px; margin-top: 2px; }
 
 /* Valores derivados */
 .npcv2-dv-grid {
@@ -349,14 +349,14 @@
 .npcv2-dv-cell {
     border: 1px solid var(--line); border-radius: 10px; padding: 8px;
 }
-.npcv2-dv-cell.locked { border-color: var(--warning, #f59e0b); }
+.npcv2-dv-cell.locked { border-color: var(--warning, var(--lr-gold)); }
 .npcv2-dv-label {
     font-size: .72rem; font-weight: 800; color: var(--muted); margin-bottom: 4px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help;
 }
 .npcv2-dv-value { display: flex; align-items: center; gap: 4px; }
 .npcv2-dv-input { text-align: center; font-weight: 800; }
-.npcv2-dv-cell.locked .npcv2-dv-input { color: var(--warning, #f59e0b); }
+.npcv2-dv-cell.locked .npcv2-dv-input { color: var(--warning, var(--lr-gold)); }
 .npcv2-dv-reset {
     background: transparent; border: 1px solid var(--line); border-radius: 6px;
     color: var(--muted); cursor: pointer; padding: 4px 6px; font-size: .8rem;
@@ -378,7 +378,7 @@
     font-size: .82rem; padding: 6px 10px; border-left: 3px solid var(--primary);
     background: var(--primary-glow); border-radius: 0 8px 8px 0; margin-bottom: 6px;
 }
-.npcv2-avisos { font-size: .78rem; color: var(--warning, #f59e0b); margin-top: 10px; }
+.npcv2-avisos { font-size: .78rem; color: var(--warning, var(--lr-gold)); margin-top: 10px; }
 
 /* Vínculos */
 .npcv2-vinc-list { display: flex; flex-direction: column; gap: 4px; }
