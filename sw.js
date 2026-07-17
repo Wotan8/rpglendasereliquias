@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v13';
+const VERSION = 'v14';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -132,6 +132,15 @@ const PRECACHE_URLS = [
   '/painel-mestre/js/state.js',
   '/painel-mestre/js/ui-utils.js',
   '/painel-mestre/painel-mestre.html',
+  '/tabuleiro/tabuleiro.html',
+  '/tabuleiro/css/tabuleiro.css',
+  '/tabuleiro/js/tab-state.js',
+  '/tabuleiro/js/tab-main.js',
+  '/tabuleiro/js/tab-render.js',
+  '/tabuleiro/js/tab-tools.js',
+  '/tabuleiro/js/tab-objects.js',
+  '/tabuleiro/js/tab-combat.js',
+  '/tabuleiro/js/tab-mostrar.js',
   '/shared/theme.js',
   '/shared/tokens.css',
   '/viewmap.html',

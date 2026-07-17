@@ -81,7 +81,9 @@ export function getImg(url) {
     let e = T.imgCache.get(url);
     if (e) return e.ok ? e.img : null;
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // Nota: sem crossOrigin — o Firebase Storage não envia cabeçalhos CORS e o
+    // service worker cacheia respostas opacas; requisições no-cors (padrão de <img>)
+    // funcionam normalmente para desenhar no canvas.
     e = { img, ok: false };
     img.onload = () => { e.ok = true; markDirty(); };
     img.onerror = () => { e.ok = false; };

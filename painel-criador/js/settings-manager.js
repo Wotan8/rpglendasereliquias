@@ -17,13 +17,15 @@ const storage = getStorage(app);
 
 const faviconsConfig = [
     { id: 'pwa-icon', name: 'Ícone do App (PWA - 512x512)' },
+    { id: 'app-windows', name: 'Ícone do App (Windows)' },
     { id: 'index', name: 'Login (index.html)' },
     { id: 'menu', name: 'Menu Principal' },
     { id: 'criar-personagem', name: 'Criar Personagem' },
     { id: 'ficha', name: 'Ficha do Personagem' },
     { id: 'painel-mestre', name: 'Painel do Mestre' },
     { id: 'painel-criador', name: 'Painel de Criador' },
-    { id: 'mapa', name: 'Mapa (World/Hex)' }
+    { id: 'mapa', name: 'Mapa (World/Hex)' },
+    { id: 'tabuleiro', name: 'Favicon do Tabuleiro' }
 ];
 
 function initSettingsManager() {
@@ -203,12 +205,31 @@ async function loadFavicons() {
                 if (file) {
                     if (file.size > 2 * 1024 * 1024) {
                         alert("A imagem não pode ter mais de 2MB.");
+                        input.value = "";
                         return;
                     }
-                    selectedFile = file;
-                    preview.src = URL.createObjectURL(file);
-                    preview.style.display = 'block';
-                    saveBtn.disabled = false;
+
+                    const tempUrl = URL.createObjectURL(file);
+                    const img = new Image();
+                    img.onload = () => {
+                        if (fav.id === 'app-windows' || fav.id === 'pwa-icon') {
+                            if (img.width !== img.height) {
+                                alert("O Ícone do App deve ser uma imagem quadrada (ex: 256x256, 512x512).");
+                                input.value = "";
+                                return;
+                            }
+                        }
+                        
+                        selectedFile = file;
+                        preview.src = tempUrl;
+                        preview.style.display = 'block';
+                        saveBtn.disabled = false;
+                    };
+                    img.onerror = () => {
+                        alert("Arquivo de imagem inválido.");
+                        input.value = "";
+                    };
+                    img.src = tempUrl;
                 }
             });
 
