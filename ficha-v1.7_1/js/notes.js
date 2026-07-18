@@ -268,13 +268,13 @@ window.openShareModal = async function(noteId) {
             return;
         }
         
-        const { getFirestore, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const { getFirestore, collection, getDocs, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
         const db = getFirestore();
-        const snap = await getDocs(collection(db, 'char'));
+        const snap = await getDocs(query(collection(db, 'char'), where('mesaId', '==', state.mesaId)));
         const chars = [];
         snap.forEach(doc => {
             const data = doc.data();
-            if (data.mesaId === state.mesaId && doc.id !== window.currentCharacterId) {
+            if (doc.id !== window.currentCharacterId) {
                 chars.push({ id: doc.id, nome: (data.fields && data.fields.nome) || 'Sem Nome' });
             }
         });

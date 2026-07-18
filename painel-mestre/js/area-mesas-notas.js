@@ -22,8 +22,8 @@ async function loadMesaNotas() {
     try {
         let chars = S.mesaCharacters || [];
         if (!chars.length) {
-            const snap = await getDocs(collection(db, 'char'));
-            snap.forEach(d => { const data = d.data(); if (data.mesaId === S.currentMesaId) chars.push({ id: d.id, ...data }); });
+            const snap = await getDocs(query(collection(db, 'char'), where('mesaId', '==', S.currentMesaId)));
+            snap.forEach(d => { chars.push({ id: d.id, ...d.data() }); });
         }
         if (!chars.length) { el.innerHTML = '<div style="text-align:center;padding:50px;color:var(--muted)">Nenhum personagem nesta mesa</div>'; return; }
         

@@ -936,7 +936,10 @@ async function loadVinculosUI() {
     try {
         let chars = S.allCharacters && S.allCharacters.length ? S.allCharacters : null;
         if (!chars) {
-            const snap = await getDocs(collection(db, 'char'));
+            const q = S.currentMesaId 
+                ? query(collection(db, 'char'), where('mesaId', '==', S.currentMesaId)) 
+                : query(collection(db, 'char'), where('ownerUid', '==', S.currentUser?.uid || ''));
+            const snap = await getDocs(q);
             chars = []; snap.forEach(d => { const raw = d.data(); const f = raw.fields || {}; chars.push({ id: d.id, nome: f.nome || raw.nome || 'Sem nome', jogador: raw.ownerEmail || f.jogador || '', mesaId: raw.mesaId || f.mesaId || '' }); });
         }
         window._npcVincChars = chars;

@@ -1536,10 +1536,10 @@ window.openTransferModal = async function(itemId) {
             });
 
             // Get all characters in same mesa
-            const charSnaps = await getDocs(collection(db, 'char'));
+            const charSnaps = await getDocs(query(collection(db, 'char'), where('mesaId', '==', mesaId)));
             charSnaps.forEach(d => {
                 const data = d.data();
-                if (data.mesaId === mesaId && d.id !== charId) {
+                if (d.id !== charId) {
                     const f = data.fields || {};
                     targets.push({
                         id: d.id,
@@ -1550,8 +1550,8 @@ window.openTransferModal = async function(itemId) {
                 }
             });
         } else {
-            // Character is avulso — show all avulso characters
-            const charSnaps = await getDocs(collection(db, 'char'));
+            // Character is avulso — show all avulso characters of the SAME OWNER
+            const charSnaps = await getDocs(query(collection(db, 'char'), where('ownerUid', '==', window.currentUser?.uid || '')));
             charSnaps.forEach(d => {
                 const data = d.data();
                 if (!data.mesaId && d.id !== charId) {
@@ -1573,11 +1573,8 @@ window.openTransferModal = async function(itemId) {
             // IDs de personagens permitidos: o próprio + (se em mesa) os da mesa
             const allowedCharIds = new Set([charId]);
             if (mesaId) {
-                const charSnaps2 = await getDocs(collection(db, 'char'));
-                charSnaps2.forEach(d => {
-                    const data = d.data();
-                    if (data.mesaId === mesaId) allowedCharIds.add(d.id);
-                });
+                const charSnaps2 = await getDocs(query(collection(db, 'char'), where('mesaId', '==', mesaId)));
+                charSnaps2.forEach(d => allowedCharIds.add(d.id));
             }
             const npcSnaps = await getDocs(collection(db, 'npcs'));
             npcSnaps.forEach(d => {

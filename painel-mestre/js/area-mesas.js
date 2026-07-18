@@ -168,14 +168,12 @@ async function loadMesaPlayers() {
         if (!linked.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Nenhum jogador encontrado</div>'; return; }
 
         // Count characters per player in this mesa
-        const charSnap = await getDocs(collection(db, 'char'));
+        const charSnap = await getDocs(query(collection(db, 'char'), where('mesaId', '==', S.currentMesaId)));
         const charCountMap = {};
         charSnap.forEach(d => {
             const data = d.data();
-            if (data.mesaId === S.currentMesaId) {
-                const owner = data.ownerUid || '';
-                charCountMap[owner] = (charCountMap[owner] || 0) + 1;
-            }
+            const owner = data.ownerUid || '';
+            charCountMap[owner] = (charCountMap[owner] || 0) + 1;
         });
 
         const limites = S.currentMesaData.limitePersonagens || {};
@@ -260,13 +258,10 @@ window.unlinkPlayer = async function(uid) {
 async function loadMesaCharacters() {
     if (!S.currentMesaId) return;
     try {
-        const snap = await getDocs(collection(db, 'char'));
+        const snap = await getDocs(query(collection(db, 'char'), where('mesaId', '==', S.currentMesaId)));
         const chars = [];
         snap.forEach(d => {
-            const data = d.data();
-            if (data.mesaId === S.currentMesaId) {
-                chars.push({ id: d.id, ...data });
-            }
+            chars.push({ id: d.id, ...d.data() });
         });
         S.setMesaCharacters(chars);
         displayMesaCharacters();

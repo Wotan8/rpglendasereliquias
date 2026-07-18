@@ -12,7 +12,10 @@ export async function populateCharacterSelect() {
     const chars = S.allCharacters.length ? S.allCharacters : [];
     if (!chars.length) {
         try {
-            const snap = await getDocs(collection(db, 'char'));
+            const q = S.currentMesaId 
+                ? query(collection(db, 'char'), where('mesaId', '==', S.currentMesaId)) 
+                : query(collection(db, 'char'), where('ownerUid', '==', S.currentUser?.uid || ''));
+            const snap = await getDocs(q);
             snap.forEach(d => {
                 const raw = d.data();
                 const f = raw.fields || {};

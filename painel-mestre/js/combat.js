@@ -42,9 +42,9 @@ window._loadCombatFromMesa = async function() {
 window.addCharacterToCombat = async function() {
     try {
         if (!S.currentMesaId) { showAlert('⚠️ Nenhuma mesa aberta', 'warning'); return; }
-        const snap = await getDocs(collection(db, 'char'));
+        const snap = await getDocs(query(collection(db, 'char'), where('mesaId', '==', S.currentMesaId)));
         const chars = [];
-        snap.forEach(d => { const data = d.data(); if (data.mesaId === S.currentMesaId) chars.push({ id: d.id, ...data }); });
+        snap.forEach(d => { chars.push({ id: d.id, ...d.data() }); });
         if (!chars.length) { showAlert('❌ Nenhum personagem nesta mesa', 'danger'); return; }
         const opts = chars.map(c => { const f = c.fields || {}; const nome = f.nome || c.nome || 'Sem nome'; const jogador = c.ownerEmail || c.jogador || '-'; return `<option value="${c.id}" data-name="${nome.toLowerCase()}">${nome} (${jogador})</option>`; }).join('');
         const m = document.createElement('div'); m.className = 'modal active';

@@ -4817,7 +4817,7 @@
 
             // Load characters for campaign player selection
             try {
-                const charactersSnapshot = await getDocs(collection(db, 'char'));
+                const charactersSnapshot = await getDocs(query(collection(db, 'char'), where('ownerUid', '==', window.currentUser?.uid || '')));
                 allCharacters = charactersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 console.log(`Loaded ${allCharacters.length} characters for campaigns`);
             } catch (e) { console.log('Error loading characters:', e); allCharacters = []; }

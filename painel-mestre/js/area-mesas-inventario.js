@@ -95,13 +95,11 @@ async function loadPersonagensInventario() {
 async function _fetchMesaCharacters() {
     const chars = S.mesaCharacters || [];
     if (!chars.length) {
-        const snap = await getDocs(collection(db, 'char'));
+        const snap = await getDocs(query(collection(db, 'char'), where('mesaId', '==', S.currentMesaId)));
         snap.forEach(d => {
             const raw = d.data();
             const f = raw.fields || {};
-            if (raw.mesaId === S.currentMesaId || (S.currentMesaData?.jogadores||[]).includes(raw.ownerUid)) {
-                chars.push({ id: d.id, nome: f.nome || raw.nome || '', ownerUid: raw.ownerUid || '', ownerEmail: raw.ownerEmail || '', ...raw });
-            }
+            chars.push({ id: d.id, nome: f.nome || raw.nome || '', ownerUid: raw.ownerUid || '', ownerEmail: raw.ownerEmail || '', ...raw });
         });
         S.setMesaCharacters(chars);
     }
@@ -665,7 +663,7 @@ window._openMestreTransferModal = async function(itemId, mesaId) {
 
     try {
         const [snap, npcSnap] = await Promise.all([
-            getDocs(collection(db, 'char')),
+            getDocs(query(collection(db, 'char'), where('mesaId', '==', mesaId))),
             getDocs(collection(db, 'npcs'))
         ]);
         const allChars = [];

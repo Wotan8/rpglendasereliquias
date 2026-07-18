@@ -645,7 +645,7 @@ window.openNpcTransferModal = async function(itemId) {
     try {
         const [npcSnap, charSnap] = await Promise.all([
             getDocs(collection(db, 'npcs')),
-            getDocs(collection(db, 'char'))
+            getDocs(S.currentMesaId ? query(collection(db, 'char'), where('mesaId', '==', S.currentMesaId)) : query(collection(db, 'char'), where('ownerUid', '==', S.currentUser?.uid || '')))
         ]);
         const npcs = []; npcSnap.forEach(d => { const data = d.data(); npcs.push({ id: d.id, nome: data.nome || 'Sem nome', papel: data.papel || '', tipo: data.tipo || 'npc', mesaId: data.mesaId || null, vinculos: data.vinculos || [] }); });
         const chars = []; charSnap.forEach(d => { const data = d.data(); const f = data.fields || {}; chars.push({ id: d.id, nome: f.nome || data.nome || 'Sem nome', ownerUid: data.ownerUid || '', ownerEmail: data.ownerEmail || data.userEmail || '', mesaId: data.mesaId || null }); });
