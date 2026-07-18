@@ -219,9 +219,8 @@ exports.comprarComFragmentos = onCall(
       });
 
       const apoios = data.apoios || [];
-      const logNome = item.nome + (metasNamesStr ? ` [Metas: ${metasNamesStr}]` : "");
       apoios.push({
-        nome: logNome,
+        nome: item.nome,
         tipo: "Loja (Frag$)",
         montante: quantidade,
         meta: metas.join(","),
@@ -547,9 +546,8 @@ exports.pagbankWebhook = onRequest(
         });
 
         const apoios = data.apoios || [];
-        const logNome = item.nome + (metasNamesStr ? ` [Metas: ${metasNamesStr}]` : "");
         apoios.push({
-          nome: logNome,
+          nome: item.nome,
           tipo: "Loja (PagBank)",
           montante: quantidade,
           meta: (pending.selectedMetas || []).join(","),

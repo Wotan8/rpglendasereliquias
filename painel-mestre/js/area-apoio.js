@@ -136,6 +136,32 @@ function renderLogsCompra(logs) {
     }).join('');
 }
 
+function getMetaName(metaVal) {
+    if (!metaVal) return '-';
+    const ids = metaVal.split(',');
+    const nomes = ids.map(id => {
+        const idTrimmed = id.trim();
+        const m = dynamicMetas.find(x => x.id === idTrimmed || x.slug === idTrimmed || x.nome === idTrimmed);
+        return m ? m.nome : idTrimmed;
+    });
+    return nomes.join(', ');
+}
+
+function getMetaOptionsHtml(selectedMetaId) {
+    let html = '<option value="">Nenhuma</option>';
+    const isLegacy = selectedMetaId === 'Classe' || selectedMetaId === 'Raça' || selectedMetaId === 'Lore';
+    if (isLegacy) {
+        html += `<option value="Classe" ${selectedMetaId === 'Classe' ? 'selected' : ''}>Classe (Legado)</option>`;
+        html += `<option value="Raça" ${selectedMetaId === 'Raça' ? 'selected' : ''}>Raça (Legado)</option>`;
+        html += `<option value="Lore" ${selectedMetaId === 'Lore' ? 'selected' : ''}>Lore (Legado)</option>`;
+    }
+    dynamicMetas.forEach(m => {
+        const selected = (m.id === selectedMetaId || m.slug === selectedMetaId || m.nome === selectedMetaId) ? 'selected' : '';
+        html += `<option value="${m.id}" ${selected}>${escapeHtml(m.nome)}</option>`;
+    });
+    return html;
+}
+
 function renderApoios(apoios) {
     const el = document.getElementById('apoiosList'); if (!el) return;
     if (!apoios.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Nenhum apoio</div>'; return; }
@@ -148,7 +174,7 @@ function renderApoios(apoios) {
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;font-size:.85rem">
                 <div><span style="color:var(--muted)">Tipo:</span> ${escapeHtml(a.tipo||'-')}</div>
                 <div><span style="color:var(--muted)">Valor:</span> ${a.valor||'-'}</div>
-                <div><span style="color:var(--muted)">Meta:</span> ${escapeHtml(a.meta||'-')}</div>
+                <div><span style="color:var(--muted)">Meta:</span> ${escapeHtml(getMetaName(a.meta))}</div>
                 <div><span style="color:var(--muted)">Data:</span> ${a.dataInicio||'-'}</div>
                 <div><span style="color:var(--muted)">Recebido:</span> ${a.recebido?'✅':'❌'}</div>
             </div>
@@ -174,7 +200,7 @@ window.openAddApoioModal = function() {
             <div class="form-group"><label class="form-label">Montante</label><input type="number" class="form-input" id="apoio_montante" value="1" min="1"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div class="form-group"><label class="form-label">Meta</label><select class="form-select" id="apoio_meta"><option value="">Nenhuma</option><option value="Classe">Classe</option><option value="Raça">Raça</option><option value="Lore">Lore</option></select></div>
+            <div class="form-group"><label class="form-label">Meta</label><select class="form-select" id="apoio_meta">${getMetaOptionsHtml('')}</select></div>
             <div class="form-group"><label class="form-label">Valor</label><input type="text" class="form-input" id="apoio_valor"></div>
         </div>
         <div class="form-group"><label class="form-label">Data Início</label><input type="date" class="form-input" id="apoio_data"></div>
@@ -206,7 +232,7 @@ window.editApoio = function(i) {
             <div class="form-group"><label class="form-label">Montante</label><input type="number" class="form-input" id="ea_montante" value="${a.montante||1}" min="1"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div class="form-group"><label class="form-label">Meta</label><select class="form-select" id="ea_meta"><option value="">Nenhuma</option><option value="Classe" ${a.meta==='Classe'?'selected':''}>Classe</option><option value="Raça" ${a.meta==='Raça'?'selected':''}>Raça</option><option value="Lore" ${a.meta==='Lore'?'selected':''}>Lore</option></select></div>
+            <div class="form-group"><label class="form-label">Meta</label><select class="form-select" id="ea_meta">${getMetaOptionsHtml(a.meta)}</select></div>
             <div class="form-group"><label class="form-label">Valor</label><input type="text" class="form-input" id="ea_valor" value="${escapeHtml(a.valor||'')}"></div>
         </div>
         <div class="form-group"><label class="form-label">Data</label><input type="date" class="form-input" id="ea_data" value="${a.dataInicio||''}"></div>
@@ -230,7 +256,6 @@ window.deleteApoio = async function(i) {
 // ===== METAS DINÂMICAS =====
 async function carregarSistemaMetas() {
     try {
-        await calcularLegadoTotais();
         const snap = await getDocs(collection(db, 'metas'));
         dynamicMetas = [];
         snap.forEach(doc => {
@@ -240,6 +265,7 @@ async function carregarSistemaMetas() {
         // Ordenar as metas alfabeticamente
         dynamicMetas.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
         
+        await calcularLegadoTotais();
         renderMetasUI();
     } catch (error) {
         console.error('❌ Erro ao carregar metas:', error);
@@ -256,7 +282,13 @@ async function calcularLegadoTotais() {
             const apoios = d.data().apoios || [];
             apoios.forEach(a => {
                 const montante = parseInt(a.montante) || 1;
-                const metaLegado = (a.meta || '').toLowerCase().trim();
+                const metaRaw = (a.meta || '').trim();
+                let metaLegado = metaRaw.toLowerCase();
+                
+                const metaDoc = dynamicMetas.find(m => m.id === metaRaw);
+                if (metaDoc && metaDoc.slug) {
+                    metaLegado = metaDoc.slug.toLowerCase().trim();
+                }
                 
                 // Mapeia os slugs legados para manter o tracking
                 let slug = metaLegado;
