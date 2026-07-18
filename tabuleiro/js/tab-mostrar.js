@@ -119,6 +119,12 @@ function menuMostrar(objId, x, y) {
     let extras = '';
     if (o.refTipo === 'npc') extras = check('exRaca', 'Raça') + check('exPapel', 'Papel') + check('exTags', 'Tags');
     else extras = check('exTipo', 'Tipo') + check('exPeso', 'Peso') + check('exDesc', 'Descrição curta');
+    let fichaVisItem = '';
+    if (o.refTipo === 'npc' && T.isMaster) {
+        const npcRef = T.npcs.find(x => x.id === o.refId);
+        const fichaPub = npcRef?.visibilidade === 'publico';
+        fichaVisItem = `<div class="tb-ctx-item" data-acao="vis-ficha">${fichaPub ? '🕵️ Tornar ficha Secreta (visão do Mestre)' : '📢 Tornar ficha Pública (Modo Rápido)'}</div>`;
+    }
     menu.innerHTML = `
         <div class="tb-ctx-title">🎁 Exibição ao público</div>
         <label class="tb-ctx-check"><input type="checkbox" data-k="__visivel" ${o.visivelPublico !== false ? 'checked' : ''}> <b>Exibir ao público</b></label>
@@ -126,6 +132,7 @@ function menuMostrar(objId, x, y) {
         ${check('mostrarNome', 'Nome abaixo da imagem')}
         ${extras}
         <div class="tb-ctx-item" data-acao="abrir">${o.refTipo === 'npc' ? '👹 Abrir ficha do NPC' : '🎒 Adicionar ao inventário...'}</div>
+        ${fichaVisItem}
         ${o.refTipo !== 'npc' ? '<div class="tb-ctx-item" data-acao="loot">📦 Transformar em loot no mapa</div>' : ''}
         <div class="tb-ctx-item tb-danger" data-acao="del">🗑️ Remover do canva</div>`;
     menu.style.left = Math.min(x, window.innerWidth - 260) + 'px';
@@ -140,6 +147,8 @@ function menuMostrar(objId, x, y) {
         await aplicarOpcoes(objId, novo);
     });
     menu.querySelector('[data-acao="abrir"]').onclick = () => { menu.classList.remove('open'); clickMostrar(objId); };
+    const visFichaBtn = menu.querySelector('[data-acao="vis-ficha"]');
+    if (visFichaBtn) visFichaBtn.onclick = () => { menu.classList.remove('open'); window.tbAlternarFichaNpc(o.refId); };
     const lootBtn = menu.querySelector('[data-acao="loot"]');
     if (lootBtn) lootBtn.onclick = async () => {
         menu.classList.remove('open');
@@ -193,52 +202,125 @@ async function clickMostrar(objId) {
     abrirEntregaItem(o);
 }
 
-// ===== FICHA RÁPIDA DE NPC =====
+// =====================================================================
+// FICHA DE NPC NO TABULEIRO — Renderização condicional por visibilidade
+// - NPC "Secreto"  → instancia o MESMO componente da Ficha de NPC do
+//   Painel do Mestre (painel-mestre/js/area-npcs.js), carregado sob demanda.
+// - NPC "Público"  → instancia o componente da Ficha de NPC usado na
+//   Ficha de Personagem (Aliados), restrito à view de Modo Rápido.
+// =====================================================================
+
+function _tbInjectCss(href, id) {
+    if (document.getElementById(id)) return;
+    const link = document.createElement('link');
+    link.id = id; link.rel = 'stylesheet'; link.href = href;
+    document.head.appendChild(link);
+}
+
+function _tbInjectScript(src, id) {
+    return new Promise((resolve, reject) => {
+        if (document.getElementById(id)) { resolve(); return; }
+        const s = document.createElement('script');
+        s.id = id; s.src = src;
+        s.onload = resolve; s.onerror = reject;
+        document.body.appendChild(s);
+    });
+}
+
+/* DOM do modal do Painel do Mestre (mesmo markup de painel-mestre.html) */
+function _tbEnsureNpcModalDom() {
+    if (document.getElementById('npcModal')) return;
+    const div = document.createElement('div');
+    div.innerHTML = `<div id="npcModal" class="modal"><div class="modal-content" style="max-width:900px"><div class="modal-header"><span class="modal-title" id="npcModalTitle">Novo NPC</span><button class="modal-close" onclick="closeNpcModal()">✕</button></div><div class="modal-body" id="npcModalBody"></div></div></div>`;
+    document.body.appendChild(div.firstElementChild);
+}
+
+/* DOM do modal de Aliado (mesmo markup de ficha-v1.7_1.html) */
+function _tbEnsureAliadoModalDom() {
+    if (document.getElementById('aliadoNpcModal')) return;
+    const div = document.createElement('div');
+    div.innerHTML = `<div class="detail-modal hidden" id="aliadoNpcModal">
+        <div class="detail-modal-content" style="max-width: 700px;">
+            <button class="detail-modal-close" onclick="closeAliadoModal()">✕</button>
+            <div class="detail-modal-body" id="aliadoNpcModalBody" style="padding: 20px;"></div>
+        </div>
+    </div>`;
+    document.body.appendChild(div.firstElementChild);
+}
+
+/* Ficha completa do Mestre (componente do Painel do Mestre) */
+async function abrirFichaMestreNpc(npc) {
+    try {
+        _tbInjectCss('../painel-mestre/css/modais.css', 'tbCssPmModais');
+        _tbInjectCss('../painel-mestre/css/area-npcs.css', 'tbCssPmAreaNpcs');
+        _tbEnsureNpcModalDom();
+
+        const [S] = await Promise.all([
+            import('../../painel-mestre/js/state.js'),
+            import('../../painel-mestre/js/area-npcs.js')
+        ]);
+
+        // Garante o NPC atual no estado compartilhado usado pelo componente
+        const existentes = Array.isArray(S.allNpcs) ? S.allNpcs.filter(x => x.id !== npc.id) : [];
+        S.setAllNpcs([...existentes, npc]);
+        if (!S.currentUser && T.user) S.setCurrentUser({ email: T.user.email || T.user.uid || 'tabuleiro' });
+
+        await window.openNpcModal(npc.id);
+    } catch (e) {
+        console.error('❌ Erro ao abrir a Ficha de NPC (Painel do Mestre):', e);
+        toast('❌ Erro ao abrir a ficha do Mestre', 'danger');
+    }
+}
+
+/* Ficha de Aliado (componente da Ficha de Personagem), forçando Modo Rápido */
+async function abrirFichaAliadoNpc(npc, opts = {}) {
+    try {
+        _tbInjectCss('css/tab-npc-sheet.css', 'tbCssNpcSheet');
+        _tbEnsureAliadoModalDom();
+        window.db = window.db || db;
+
+        // Inventário do aliado (script clássico, opcional)
+        try { await _tbInjectScript('../ficha-v1.7_1/js/aliado-inventario.js?v=6', 'tbScriptAliadoInv'); }
+        catch (e) { console.warn('⚠️ aliado-inventario indisponível no tabuleiro:', e); }
+
+        if (!window.openAliadoModal) {
+            await import('../../ficha-v1.7_1/js/aliados.js?v=7');
+        }
+        await window.openAliadoModal(npc.id, { readonly: !!opts.readonly, forceRapido: true });
+    } catch (e) {
+        console.error('❌ Erro ao abrir a Ficha de NPC (Aliado):', e);
+        toast('❌ Erro ao abrir a ficha do NPC', 'danger');
+    }
+}
+
 async function abrirNpcModal(npcId, somenteLeitura) {
     let n = T.npcs.find(x => x.id === npcId);
     try { const s = await getDoc(doc(db, 'npcs', npcId)); if (s.exists()) n = { id: s.id, ...s.data() }; } catch (e) {}
     if (!n) { toast('❌ NPC não encontrado', 'danger'); return; }
-    const ro = somenteLeitura ? 'readonly disabled' : '';
-    const vd = n.valoresDer || {};
-    const personalidade = (n.rolePlay?.personalidade || []).join('\n');
-    abrirModal(`👹 ${esc(n.nome || 'NPC')}`, `
-        <div style="display:flex;gap:14px;flex-wrap:wrap">
-            ${n.imagem ? `<img src="${esc(n.imagem)}" style="width:130px;height:130px;object-fit:cover;border-radius:10px">` : ''}
-            <div class="tb-form-grid" style="flex:1;min-width:260px">
-                <label>Nome<input type="text" id="np_nome" value="${esc(n.nome||'')}" ${ro}></label>
-                <label>Raça<input type="text" id="np_raca" value="${esc(n.raca||'')}" ${ro}></label>
-                <label>Papel<input type="text" id="np_papel" value="${esc(n.papel||'')}" ${ro}></label>
-                <label>Tags<input type="text" id="np_tags" value="${esc(n.tags||'')}" ${ro}></label>
-            </div>
-        </div>
-        <div class="tb-form-grid" style="margin-top:10px">
-            <label>❤️ VIT<input type="number" id="np_vit" value="${vd.VIT ?? 10}" ${ro}></label>
-            <label>🔥 ENER<input type="number" id="np_ener" value="${vd.ENER ?? 5}" ${ro}></label>
-            <label>🧠 SAN<input type="number" id="np_san" value="${vd.SAN ?? 100}" ${ro}></label>
-        </div>
-        <div class="tb-form-grid tb-form-grid-1" style="margin-top:10px">
-            <label>Personalidade<textarea id="np_pers" rows="3" ${ro}>${esc(personalidade)}</textarea></label>
-            <label>🎭 Trejeitos<textarea id="np_trej" rows="2" ${ro}>${esc(n.rolePlay?.trejeitos||'')}</textarea></label>
-        </div>
-        <div class="tb-modal-actions">
-            ${!somenteLeitura ? `<button class="tb-btn tb-btn-success" onclick="tbSalvarNpc('${npcId}')">💾 Salvar</button>` : ''}
-            ${T.isMaster ? `<a class="tb-btn" style="text-decoration:none" href="../painel-mestre/painel-mestre.html" target="_blank" title="Ficha completa no Painel do Mestre">📋 Painel do Mestre</a>` : ''}
-        </div>`, true);
+
+    const vis = n.visibilidade === 'publico' ? 'publico' : 'secreto';
+    const mestreView = !somenteLeitura && T.isMaster;
+
+    if (mestreView && vis === 'secreto') {
+        // NPC Secreto → visão gerencial completa (Painel do Mestre)
+        await abrirFichaMestreNpc(n);
+        return;
+    }
+
+    // NPC Público (ou visão de jogador) → componente de Aliados em Modo Rápido
+    const readonly = !!somenteLeitura || !T.isMaster;
+    await abrirFichaAliadoNpc(n, { readonly });
 }
-window.tbSalvarNpc = async function(npcId) {
+window.tbAlternarFichaNpc = async function(npcId) {
     try {
-        const v = id => document.getElementById(id);
-        const n = T.npcs.find(x => x.id === npcId) || {};
-        await updateDoc(doc(db, 'npcs', npcId), {
-            nome: v('np_nome').value, raca: v('np_raca').value, papel: v('np_papel').value, tags: v('np_tags').value,
-            valoresDer: { ...(n.valoresDer || {}), VIT: parseInt(v('np_vit').value)||0, ENER: parseInt(v('np_ener').value)||0, SAN: parseInt(v('np_san').value)||0 },
-            rolePlay: { ...(n.rolePlay || {}), personalidade: v('np_pers').value.split('\n').filter(x=>x.trim()), trejeitos: v('np_trej').value },
-        });
-        // Atualiza cache local
+        const n = T.npcs.find(x => x.id === npcId);
+        const atual = n?.visibilidade === 'publico' ? 'publico' : 'secreto';
+        const novo = atual === 'publico' ? 'secreto' : 'publico';
+        await updateDoc(doc(db, 'npcs', npcId), { visibilidade: novo });
         const i = T.npcs.findIndex(x => x.id === npcId);
-        if (i >= 0) T.npcs[i] = { ...T.npcs[i], nome: v('np_nome').value, raca: v('np_raca').value, papel: v('np_papel').value, tags: v('np_tags').value };
-        fecharModal(); toast('✅ NPC salvo'); markDirty();
-    } catch (e) { console.error(e); toast('❌ Erro ao salvar NPC', 'danger'); }
+        if (i >= 0) T.npcs[i] = { ...T.npcs[i], visibilidade: novo };
+        toast(novo === 'publico' ? '📢 Ficha do NPC agora é Pública (Modo Rápido)' : '🕵️ Ficha do NPC agora é Secreta (visão do Mestre)');
+    } catch (e) { console.error(e); toast('❌ Erro ao alterar visibilidade da ficha', 'danger'); }
 };
 
 // ===== ENTREGAR ITEM AO INVENTÁRIO =====

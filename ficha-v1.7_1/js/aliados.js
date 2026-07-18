@@ -2,6 +2,7 @@ import { collection, getDocs, doc, updateDoc } from 'https://www.gstatic.com/fir
 
 let _aliadosLoaded = false;
 let currentAliadoNpc = null;
+let currentAliadoOpts = {};
 
 // Escutar clique na aba
 document.addEventListener('DOMContentLoaded', () => {
@@ -96,10 +97,12 @@ function renderAliados(aliados) {
     }).join('');
 }
 
-window.openAliadoModal = async function(npcId) {
+window.openAliadoModal = async function(npcId, opts) {
     const modal = document.getElementById('aliadoNpcModal');
     const body = document.getElementById('aliadoNpcModalBody');
     if (!modal || !body) return;
+
+    currentAliadoOpts = opts || {};
 
     body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">⏳ Carregando dados do aliado...</div>';
     modal.classList.remove('hidden');
@@ -118,11 +121,26 @@ window.openAliadoModal = async function(npcId) {
 
         body.innerHTML = buildAliadoForm();
         fillAliadoForm(currentAliadoNpc);
+        await renderAliadoClassModules(currentAliadoNpc);
+        if (currentAliadoOpts.readonly) _applyAliadoReadonly(body);
     } catch (e) {
         console.error(e);
         body.innerHTML = '<div style="color:var(--danger);padding:20px;text-align:center;">❌ Erro ao carregar dados do aliado.</div>';
     }
 };
+
+/* Modo somente leitura (usado pelo Tabuleiro para NPCs Públicos abertos por jogadores):
+   restringe a exibição à view de Modo Rápido, sem edição/salvamento. */
+function _applyAliadoReadonly(body) {
+    body.querySelectorAll('input, textarea, select').forEach(el => {
+        el.disabled = true;
+        el.readOnly = true;
+    });
+    body.querySelectorAll('button').forEach(btn => {
+        const oc = btn.getAttribute('onclick') || '';
+        if (!oc.includes('aliadoSwitchSection')) btn.style.display = 'none';
+    });
+}
 
 window.closeAliadoModal = function() {
     const modal = document.getElementById('aliadoNpcModal');
@@ -147,7 +165,12 @@ window.aliadoSwitchSection = function(secId) {
 
     // Carrega o inventário do aliado sob demanda
     if (secId === 'inventario' && currentAliadoNpc && window.renderAliadoInventario) {
-        window.renderAliadoInventario(currentAliadoNpc);
+        const p = window.renderAliadoInventario(currentAliadoNpc);
+        if (currentAliadoOpts.readonly) {
+            const body = document.getElementById('aliadoNpcModalBody');
+            const reapply = () => body && _applyAliadoReadonly(body);
+            (p && typeof p.then === 'function') ? p.then(reapply).catch(() => {}) : setTimeout(reapply, 400);
+        }
     }
 };
 
@@ -271,6 +294,13 @@ function buildAliadoForm() {
             <div class="section-title">🎯 Perícias Estruturadas</div>
             <div id="al_structured_skills_grid"></div>
         </div>
+
+        <div class="section" id="al_class_modules_section">
+            <div class="section-title">🧩 Módulos de Classe</div>
+            <div id="al_class_modules">
+                <div style="color:var(--muted);font-size:.85rem;">Carregando módulos...</div>
+            </div>
+        </div>
     </div>
 
     <!-- ============ SEÇÃO: INVENTÁRIO ============ -->
@@ -346,6 +376,161 @@ function buildAliadoForm() {
     </div>
     `;
 }
+
+/* =====================================================================
+   MÓDULOS DE CLASSE — Ficha do Aliado
+   Renderiza os módulos vinculados ao NPC (npc.modulosClasse), permitindo
+   editar os itens. A vinculação/desvinculação de módulos e a herança pela
+   classe são gerenciadas pelo Mestre na Ficha de NPC (Painel do Mestre).
+===================================================================== */
+function _alNormalizeModDef(mod) {
+    if (!mod || typeof mod !== 'object') return null;
+    return {
+        ...mod,
+        id: mod.id || ('mod_' + String(mod.titulo || '').toLowerCase().replace(/[^a-z0-9]/g, '_')),
+        titulo: mod.titulo || 'Módulo',
+        icone: mod.icone || '📦',
+        schema: Array.isArray(mod.schema) ? mod.schema : [],
+        itensPredefinidos: Array.isArray(mod.itensPredefinidos) ? mod.itensPredefinidos : [],
+        permitirCriacaoJogador: mod.permitirCriacaoJogador !== false
+    };
+}
+
+async function _alEnsureClassModuleDefs() {
+    if (!window._systemData) window._systemData = {};
+    if (Array.isArray(window._systemData.classModules) && window._systemData.classModules.length) {
+        return window._systemData.classModules;
+    }
+    // Fallback (ex.: Tabuleiro, onde o system-data-loader da ficha não roda)
+    try {
+        const snap = await getDocs(collection(window.db, 'system/data/classModules'));
+        const arr = [];
+        snap.forEach(d => {
+            const data = d.data();
+            if (data.publicado !== false) arr.push({ id: d.id, ...data });
+        });
+        window._systemData.classModules = arr;
+        return arr;
+    } catch (e) {
+        console.warn('⚠️ [Aliados] Não foi possível carregar classModules:', e);
+        return [];
+    }
+}
+
+function _alResolveModDef(vinc, defs) {
+    if (!vinc) return null;
+    if (vinc.refId) {
+        const hit = defs.find(m => m.id === vinc.refId);
+        if (hit) return _alNormalizeModDef(hit);
+    }
+    return vinc.snapshot ? _alNormalizeModDef(vinc.snapshot) : null;
+}
+
+function _alModFieldHtml(mi, ii, field, item) {
+    const key = field.key;
+    const label = escapeHtml(field.label || key || '');
+    const set = (prop, expr) => `alSetModField(${mi},${ii},'${prop}',${expr})`;
+    if (field.tipo === 'separador') {
+        return `<div style="grid-column:1/-1;font-weight:700;font-size:.75rem;color:var(--muted);text-transform:uppercase;border-bottom:1px dashed var(--line);padding-bottom:2px;margin-top:4px;">${label}</div>`;
+    }
+    if (field.tipo === 'botao') return '';
+    const val = item[key];
+    let input = '';
+    if (field.tipo === 'textarea') {
+        input = `<textarea rows="2" oninput="${set(key, 'this.value')}">${escapeHtml(String(val ?? ''))}</textarea>`;
+    } else if (field.tipo === 'select') {
+        const opts = (field.opcoes || []).map(o => `<option value="${escapeHtml(o)}" ${val === o ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
+        input = `<select onchange="${set(key, 'this.value')}"><option value="">— Selecionar —</option>${opts}</select>`;
+    } else if (field.tipo === 'checkbox') {
+        return `<div class="field" style="flex-direction:row;align-items:center;gap:8px;">
+            <input type="checkbox" style="width:auto;" ${val === true || val === 'true' ? 'checked' : ''} onchange="${set(key, 'this.checked')}">
+            <label style="margin:0;">${label}</label>
+        </div>`;
+    } else if (field.tipo === 'number' || field.tipo === 'contador' || field.tipo === 'avaliacao') {
+        input = `<input type="number" value="${escapeHtml(String(val ?? ''))}" oninput="${set(key, "this.value===''?'':parseFloat(this.value)||0")}">`;
+    } else if (field.tipo === 'progress') {
+        input = `<div style="display:flex;gap:6px;align-items:center;">
+            <input type="text" style="text-align:center;" placeholder="0" value="${escapeHtml(String(item[key + '_atual'] ?? ''))}" oninput="${set(key + '_atual', 'this.value')}">
+            <span style="color:var(--muted);">/</span>
+            <input type="text" style="text-align:center;" placeholder="0" value="${escapeHtml(String(item[key + '_total'] ?? ''))}" oninput="${set(key + '_total', 'this.value')}">
+        </div>`;
+    } else if (field.tipo === 'data') {
+        input = `<input type="date" value="${escapeHtml(String(val ?? ''))}" oninput="${set(key, 'this.value')}">`;
+    } else {
+        input = `<input type="text" value="${escapeHtml(String(val ?? ''))}" placeholder="${escapeHtml(field.placeholder || '')}" oninput="${set(key, 'this.value')}">`;
+    }
+    return `<div class="field"><label>${label}</label>${input}</div>`;
+}
+
+async function renderAliadoClassModules(npc) {
+    const wrap = document.getElementById('al_class_modules');
+    if (!wrap) return;
+
+    const vincs = Array.isArray(npc.modulosClasse) ? npc.modulosClasse : [];
+    if (!vincs.length) {
+        wrap.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Nenhum Módulo de Classe vinculado a este aliado. O Mestre pode vincular módulos na Ficha de NPC do Painel do Mestre.</div>';
+        return;
+    }
+
+    const defs = (await _alEnsureClassModuleDefs()).map(_alNormalizeModDef).filter(Boolean);
+
+    wrap.innerHTML = vincs.map((vinc, mi) => {
+        const def = _alResolveModDef(vinc, defs);
+        if (!def) return `<div style="color:var(--muted);font-size:.8rem;margin-bottom:8px;">⚠️ Módulo não encontrado no registro.</div>`;
+        const itens = (vinc.itens || []).map((item, ii) => `
+            <div style="border:1px solid var(--line);border-radius:8px;margin-bottom:8px;overflow:hidden;">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 10px;font-size:.8rem;font-weight:600;border-bottom:1px solid var(--line);background:rgba(139,92,246,.06);">
+                    <span>${escapeHtml(item._predefNome || `${def.titulo} #${ii + 1}`)}</span>
+                    <button type="button" class="al-mod-btn" style="background:none;border:none;color:#ef4444;cursor:pointer;" onclick="alRemoveModItem(${mi},${ii})" title="Remover item">✕</button>
+                </div>
+                <div class="row" style="grid-template-columns:repeat(auto-fill,minmax(170px,1fr));padding:8px 10px;">
+                    ${def.schema.map(f => _alModFieldHtml(mi, ii, f, item)).join('')}
+                </div>
+            </div>`).join('');
+        const addBtn = def.permitirCriacaoJogador
+            ? `<button type="button" class="btn al-mod-btn" style="font-size:.78rem;padding:4px 10px;" onclick="alAddModItem(${mi})">➕ Novo item</button>`
+            : '';
+        return `<div style="border:1px solid var(--line);border-radius:10px;margin-bottom:12px;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;font-weight:700;background:rgba(139,92,246,.08);border-bottom:1px solid var(--line);">
+                <span>${def.icone} ${escapeHtml(def.titulo)}</span>
+            </div>
+            <div style="padding:8px;">
+                ${itens || '<div style="color:var(--muted);font-size:.8rem;padding:2px;">Nenhum item.</div>'}
+                ${addBtn}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+window.alSetModField = function(mi, ii, key, val) {
+    const item = currentAliadoNpc?.modulosClasse?.[mi]?.itens?.[ii];
+    if (item) item[key] = val;
+};
+
+window.alAddModItem = async function(mi) {
+    const vinc = currentAliadoNpc?.modulosClasse?.[mi]; if (!vinc) return;
+    const defs = (await _alEnsureClassModuleDefs()).map(_alNormalizeModDef).filter(Boolean);
+    const def = _alResolveModDef(vinc, defs); if (!def) return;
+    const item = {};
+    def.schema.forEach(f => {
+        if (f.tipo === 'progress') { item[f.key + '_atual'] = ''; item[f.key + '_total'] = ''; }
+        else if (f.tipo === 'steps' || f.tipo === 'tags') item[f.key] = [];
+        else if (f.tipo === 'checkbox') item[f.key] = false;
+        else if (f.tipo === 'avaliacao' || f.tipo === 'contador') item[f.key] = 0;
+        else if (f.tipo === 'botao' || f.tipo === 'separador') { /* sem valor */ }
+        else item[f.key] = '';
+    });
+    vinc.itens = vinc.itens || [];
+    vinc.itens.push(item);
+    await renderAliadoClassModules(currentAliadoNpc);
+    if (currentAliadoOpts.readonly) _applyAliadoReadonly(document.getElementById('aliadoNpcModalBody'));
+};
+
+window.alRemoveModItem = async function(mi, ii) {
+    const vinc = currentAliadoNpc?.modulosClasse?.[mi]; if (!vinc) return;
+    vinc.itens.splice(ii, 1);
+    await renderAliadoClassModules(currentAliadoNpc);
+};
 
 // Resolve a chave do registro (Painel de Criador) correspondente a uma sigla
 // legada (VIT/ENER/SAN), para ler/gravar overrides e valores atuais no mesmo
@@ -549,6 +734,11 @@ window.saveAliadoNpc = async function() {
         updateData['loot.luns'] = document.getElementById('al_luns').value.trim();
         updateData['loot.pistas'] = document.getElementById('al_pistas').value.trim();
         updateData['loot.complicacoes'] = document.getElementById('al_complicacoes').value.trim();
+
+        // 🧩 Módulos de Classe (itens editados na ficha do aliado)
+        if (Array.isArray(currentAliadoNpc.modulosClasse)) {
+            updateData.modulosClasse = JSON.parse(JSON.stringify(currentAliadoNpc.modulosClasse));
+        }
 
         const npcRef = doc(window.db, 'npcs', currentAliadoNpc.id);
         await updateDoc(npcRef, updateData);

@@ -7,7 +7,7 @@ import { db, collection, getDocs } from './firebase-config.js';
 
 const COLLECTIONS = [
     'races', 'classes', 'tribes', 'peculiarities',
-    'mechanics', 'derivedValues', 'vitalStats', 'skills'
+    'mechanics', 'derivedValues', 'vitalStats', 'skills', 'classModules'
 ];
 
 let _loading = null;
@@ -69,9 +69,11 @@ export async function ensureNpcSystemData() {
                     icone: vs.icone || '❤️',
                     mecanicaIds: vs.mecanicaIds || []
                 })),
+            classModules: (sd.classModules || []).map(normalizeClassModule).filter(Boolean),
         };
 
         sys.racesById = byId(sys.races);
+        sys.classModulesById = byId(sys.classModules);
         sys.classesById = byId(sys.classes);
         sys.tribesById = byId(sys.tribes);
         sys.pecsById = byId(sys.peculiarities);
@@ -92,6 +94,50 @@ export async function ensureNpcSystemData() {
 
     try { return await _loading; }
     finally { _loading = null; }
+}
+
+/**
+ * Normaliza a definição de um Módulo de Classe (registro OU objeto inline
+ * legado do campo modulosDaClasse) para o formato usado pela Ficha de NPC.
+ */
+export function normalizeClassModule(mod) {
+    if (!mod || typeof mod !== 'object') return null;
+    return {
+        ...mod,
+        id: mod.id || ('mod_' + String(mod.titulo || '').toLowerCase().replace(/[^a-z0-9]/g, '_')),
+        tipo: mod.tipo || 'lista',
+        titulo: mod.titulo || 'Módulo',
+        icone: mod.icone || '📦',
+        schema: Array.isArray(mod.schema) ? mod.schema : [],
+        itensPredefinidos: Array.isArray(mod.itensPredefinidos) ? mod.itensPredefinidos : [],
+        permitirCriacaoJogador: mod.permitirCriacaoJogador !== false
+    };
+}
+
+/**
+ * Módulos de Classe atrelados a uma classe do registro.
+ * Suporta o formato novo (IDs referenciando a coleção classModules)
+ * e o formato legado (objetos inline em modulosDaClasse).
+ * Retorna definições normalizadas.
+ */
+export function modulosDaClasseNpc(classeRefId, sys) {
+    const cls = classeRefId ? sys.classesById[classeRefId] : null;
+    if (!cls || !Array.isArray(cls.modulosDaClasse)) return [];
+    return cls.modulosDaClasse.map(entry => {
+        if (typeof entry === 'string') return sys.classModulesById[entry] || null;
+        if (entry && typeof entry === 'object') return normalizeClassModule(entry);
+        return null;
+    }).filter(Boolean);
+}
+
+/**
+ * Resolve o vínculo de módulo salvo no NPC ({refId, snapshot}) para a
+ * definição atual do registro (preferida) ou o snapshot salvo.
+ */
+export function resolveNpcClassModule(vinc, sys) {
+    if (!vinc) return null;
+    if (vinc.refId && sys.classModulesById[vinc.refId]) return sys.classModulesById[vinc.refId];
+    return vinc.snapshot ? normalizeClassModule(vinc.snapshot) : null;
 }
 
 /**

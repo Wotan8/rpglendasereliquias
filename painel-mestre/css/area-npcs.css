@@ -388,3 +388,49 @@
 }
 .npcv2-vinc-rel { max-width: 200px; font-size: .8rem; padding: 4px 8px; }
 .npcv2-funcoes { margin-top: 4px; }
+
+/* ===== VD vinculado — botão de desvincular ===== */
+.npcv2-dv-cell { position: relative; }
+.npcv2-dv-unlink {
+    position: absolute; top: 4px; right: 4px;
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: .75rem; line-height: 1;
+    padding: 2px 5px; border-radius: 4px;
+}
+.npcv2-dv-unlink:hover { color: var(--lr-blood-2, #ef4444); background: rgba(201, 79, 92, .12); }
+
+/* ===== Módulos de Classe (Ficha de NPC) ===== */
+.npcv2-mod-box {
+    border: 1px solid var(--line); border-radius: 10px;
+    background: rgba(139, 92, 246, .04); margin-bottom: 10px; overflow: hidden;
+}
+.npcv2-mod-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; font-weight: 700; font-size: .9rem;
+    background: rgba(139, 92, 246, .08); border-bottom: 1px solid var(--line);
+}
+.npcv2-mod-head .npcv2-pec-fonte { margin-left: 8px; }
+.npcv2-mod-items { padding: 8px; }
+.npcv2-mod-item {
+    border: 1px solid var(--line); border-radius: 8px;
+    margin-bottom: 8px; overflow: hidden; background: rgba(15, 23, 42, .25);
+}
+.npcv2-mod-item-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 10px; font-size: .8rem; font-weight: 600;
+    background: rgba(51, 65, 85, .25); border-bottom: 1px solid var(--line);
+}
+.npcv2-mod-fields {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px; padding: 8px 10px;
+}
+.npcv2-mod-field label.form-label { font-size: .72rem; margin-bottom: 2px; }
+.npcv2-mod-sep {
+    grid-column: 1 / -1; font-weight: 700; font-size: .78rem;
+    color: var(--muted); text-transform: uppercase; letter-spacing: .04em;
+    border-bottom: 1px dashed var(--line); padding-bottom: 2px; margin-top: 4px;
+}
+.npcv2-mod-actions {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 0 8px 8px 8px;
+}

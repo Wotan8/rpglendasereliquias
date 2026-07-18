@@ -1,0 +1,155 @@
+/* =====================================================================
+   TABULEIRO — Ficha de NPC "Pública" (componente de Aliados da Ficha de
+   Personagem, exibido em Modo Rápido dentro do tabuleiro).
+   Réplica escopada (#aliadoNpcModal) dos estilos de styles_v2.css da
+   ficha, usando os tokens compartilhados (shared/tokens.css) já
+   carregados pelo tabuleiro — evita importar o CSS global da ficha,
+   que estiliza body/html e conflitaria com o tabuleiro.
+===================================================================== */
+
+#aliadoNpcModal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    font-family: var(--font, ui-sans-serif, system-ui, sans-serif);
+}
+
+#aliadoNpcModal.hidden { display: none; }
+
+#aliadoNpcModal .detail-modal-content {
+    background: var(--lr-surface, #1c1826);
+    color: var(--lr-text-1, #e2e8f0);
+    border: 1px solid var(--lr-border, rgba(148, 163, 184, .2));
+    border-radius: 16px;
+    width: 92%;
+    max-width: 700px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .5);
+    position: relative;
+    overflow: hidden;
+}
+
+#aliadoNpcModal .detail-modal-body {
+    overflow-y: auto;
+    flex: 1;
+}
+
+#aliadoNpcModal .detail-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--lr-border, rgba(148, 163, 184, .3));
+    background: var(--lr-surface, #1c1826);
+    color: var(--muted, #94a3b8);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#aliadoNpcModal .detail-modal-close:hover { color: var(--lr-text-1, #fff); border-color: var(--lr-gold, #c9a227); }
+
+/* Abas */
+#aliadoNpcModal .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+#aliadoNpcModal .tab {
+    background: transparent;
+    border: 1px solid var(--lr-border, rgba(148, 163, 184, .25));
+    border-radius: 8px;
+    color: var(--muted, #94a3b8);
+    padding: 6px 14px;
+    font-size: .85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+#aliadoNpcModal .tab.active {
+    color: var(--lr-text-1, #fff);
+    border-color: var(--lr-gold, #c9a227);
+    background: rgba(201, 162, 39, .12);
+}
+#aliadoNpcModal .tab-content { display: none; }
+#aliadoNpcModal .tab-content.active { display: block; }
+
+/* Seções e campos */
+#aliadoNpcModal .section {
+    border: 1px solid var(--lr-border-soft, rgba(148, 163, 184, .12));
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+    background: rgba(15, 23, 42, .25);
+}
+#aliadoNpcModal .section-title {
+    font-weight: 800;
+    font-size: .9rem;
+    margin-bottom: 10px;
+    color: var(--lr-gold, #c9a227);
+}
+#aliadoNpcModal .row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+#aliadoNpcModal .field { display: flex; flex-direction: column; }
+#aliadoNpcModal .field label {
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--muted, #94a3b8);
+    margin-bottom: 3px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+#aliadoNpcModal input[type="text"],
+#aliadoNpcModal input[type="number"],
+#aliadoNpcModal input[type="url"],
+#aliadoNpcModal input[type="date"],
+#aliadoNpcModal textarea,
+#aliadoNpcModal select {
+    background: rgba(15, 23, 42, .5);
+    border: 1px solid var(--lr-border, rgba(148, 163, 184, .25));
+    border-radius: 8px;
+    color: var(--lr-text-1, #e2e8f0);
+    padding: 7px 10px;
+    font-size: .85rem;
+    font-family: inherit;
+    width: 100%;
+    box-sizing: border-box;
+}
+#aliadoNpcModal input:focus,
+#aliadoNpcModal textarea:focus,
+#aliadoNpcModal select:focus {
+    outline: none;
+    border-color: var(--lr-gold, #c9a227);
+}
+#aliadoNpcModal input:disabled,
+#aliadoNpcModal textarea:disabled,
+#aliadoNpcModal select:disabled {
+    opacity: .65;
+    cursor: not-allowed;
+}
+
+#aliadoNpcModal .btn,
+#aliadoNpcModal button.btn {
+    background: rgba(51, 65, 85, .5);
+    border: 1px solid var(--lr-border, rgba(148, 163, 184, .3));
+    border-radius: 8px;
+    color: var(--lr-text-1, #e2e8f0);
+    padding: 6px 14px;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+#aliadoNpcModal .btn:hover { border-color: var(--lr-gold, #c9a227); }
+
+#aliadoNpcModal h3 { color: var(--lr-text-1, #e2e8f0); }

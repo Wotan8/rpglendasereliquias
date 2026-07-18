@@ -3,7 +3,7 @@ import { db, collection, getDocs, setDoc, deleteDoc, doc, addDoc } from './fireb
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
-import { ensureNpcSystemData, pecsDaOrigem } from './npc-system-data.js?v=1.3';
+import { ensureNpcSystemData, pecsDaOrigem, modulosDaClasseNpc, resolveNpcClassModule } from './npc-system-data.js?v=1.4';
 import { calcularNpc, ATTR_SIGLAS } from './npc-calc-engine.js?v=1.3';
 import './npc-inventario.js?v=1.0'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
 
@@ -18,7 +18,7 @@ async function loadAllNpcs() {
             const data = d.data();
             npcs.push({ id: d.id, ...data });
         });
-        S.setAllNpcs(npcs); window.restoreNpcFiltersState ? window.restoreNpcFiltersState() : window.filterNpcs();
+        S.setAllNpcs(npcs); window.restoreNpcFiltersState ? window.restoreNpcFiltersState() : (window.filterNpcs && window.filterNpcs());
     } catch (e) { console.error(e); showAlert('❌ Erro NPCs', 'danger'); }
 }
 window.loadAllNpcs = loadAllNpcs;
@@ -373,6 +373,30 @@ function normalizeNpc(raw, sys) {
     if (!Array.isArray(n.vinculos)) {
         n.vinculos = n.mesaId ? [{ tipo: 'mesa', id: n.mesaId }] : [];
     }
+
+    // Visibilidade da ficha no Tabuleiro (Secreto = componente do Painel do
+    // Mestre; Público = componente de Aliados em Modo Rápido)
+    n.visibilidade = n.visibilidade === 'publico' ? 'publico' : 'secreto';
+
+    // Módulos de Classe vinculados ao NPC
+    n.modulosClasse = (Array.isArray(n.modulosClasse) ? n.modulosClasse : []).map(m => ({
+        refId: m.refId || null,
+        snapshot: m.snapshot || null,
+        fonte: m.fonte === 'classe' ? 'classe' : 'manual',
+        itens: Array.isArray(m.itens) ? m.itens : []
+    })).filter(m => m.refId || m.snapshot);
+
+    // Valores Derivados vinculados — a ficha não lista mais TODOS os VDs do
+    // sistema: apenas os vinculados. Estado inicial (criação ou migração de
+    // fichas antigas): VDs com "Todo personagem tem este valor?" = true, mais
+    // quaisquer VDs que já possuam override/atual salvos (migração segura).
+    if (!Array.isArray(n.valoresDer.vinculados)) {
+        const dvKeys = new Set(sys.derivedValues.map(d => d.key));
+        const keys = new Set(sys.derivedValues.filter(d => d.todoPersonagem).map(d => d.key));
+        Object.keys(n.valoresDer.overrides || {}).forEach(k => { if (dvKeys.has(k)) keys.add(k); });
+        Object.keys(n.valoresDer.atual || {}).forEach(k => { if (dvKeys.has(k)) keys.add(k); });
+        n.valoresDer.vinculados = [...keys];
+    }
     return n;
 }
 
@@ -460,6 +484,13 @@ function buildNpcForm() {
             <div class="form-group"><label class="form-label">Tamanho</label><input type="text" class="form-input" id="npcTamanho"></div>
             <div class="form-group"><label class="form-label">🏷️ Tags (separadas por vírgula)</label><input type="text" class="form-input" id="npcTags" placeholder="tag1, tag2"></div>
         </div>
+        <div class="form-group">
+            <label class="form-label">👁️ Visibilidade da ficha no Tabuleiro</label>
+            <select class="form-select" id="npcVisibilidade" onchange="F_set('visibilidade', this.value)">
+                <option value="secreto">🕵️ Secreto — abre a ficha completa do Painel do Mestre</option>
+                <option value="publico">📢 Público — abre a ficha de Aliado (Modo Rápido)</option>
+            </select>
+        </div>
         <div class="form-group npcv2-funcoes npcv2-only-mecanico"><label class="form-label">Funções</label>
             <label class="npcv2-check"><input type="checkbox" id="npcFuncAliado" onchange="document.getElementById('npcAliadoProprioWrap').style.display = this.checked ? 'block' : 'none'"> 🤝 Aliado (poderá ser vinculado à ficha de personagens)</label>
             <div id="npcAliadoProprioWrap" style="display:none; margin-left: 24px; margin-top: 8px;">
@@ -508,7 +539,23 @@ function buildNpcForm() {
         <div class="npcv2-block-title" style="margin-top:14px">📊 Valores Derivados
             <span class="npcv2-hint npcv2-only-mecanico">calculados pelas mecânicas — clique em um valor para travar um override 🔒</span>
         </div>
+        <div class="npcv2-hint" style="margin-bottom:6px">A ficha lista apenas os VDs vinculados a este NPC (VDs marcados como "Todo personagem tem este valor?" entram automaticamente). Use ✕ para desvincular.</div>
         <div class="npcv2-dv-grid" id="npcDvGrid"></div>
+        <div class="npcv2-pec-add npcv2-only-mecanico" style="margin-top:8px;display:flex;gap:10px">
+            <select class="form-select" id="npcDvPicker" style="flex:1"></select>
+            <button class="btn btn-secondary btn-small" onclick="addNpcDv()">➕ Vincular VD</button>
+        </div>
+
+        <div id="npcClassModulesWrap" class="npcv2-only-mecanico" style="margin-top:14px">
+            <div class="npcv2-block-title">🧩 Módulos de Classe
+                <span class="npcv2-hint">herdados da classe selecionada ou vinculados manualmente</span>
+            </div>
+            <div id="npcClassModulesList"></div>
+            <div class="npcv2-pec-add" style="margin-top:8px;display:flex;gap:10px">
+                <select class="form-select" id="npcModPicker" style="flex:1"></select>
+                <button class="btn btn-secondary btn-small" onclick="addNpcClassModule()">➕ Vincular módulo</button>
+            </div>
+        </div>
 
         <div class="npcv2-block-title" style="margin-top:14px">➕ Valores extras <span class="npcv2-hint">informações fora dos registros</span></div>
         <div id="npcExtrasList"></div>
@@ -651,6 +698,7 @@ window.onHybCustomInput = function(campo, valor) {
         const prev = ref.refId;
         ref.refId = null;
         syncInheritedPecs(campo, prev, null);
+        if (campo === 'classe') syncClassModules(prev, null);
         renderPecs();
         recalcStats();
     }
@@ -673,6 +721,7 @@ window.onHybSelChange = function(campo) {
         custom.value = '';
     }
     if (campo !== 'porte') syncInheritedPecs(campo, prevRefId, ref.refId);
+    if (campo === 'classe') syncClassModules(prevRefId, ref.refId);
     renderPecs();
     recalcStats();
 };
@@ -771,6 +820,197 @@ window.addPecCustom = function() {
     renderPecs(); recalcStats();
 };
 
+/* ===== MÓDULOS DE CLASSE (Ficha de NPC) =====
+   Vínculos armazenados em npc.modulosClasse:
+   [{ refId, snapshot, fonte: 'classe'|'manual', itens: [{...valores do schema}] }]
+   - fonte 'classe': populado automaticamente ao selecionar uma classe do registro
+   - fonte 'manual': vinculado pelo Mestre via picker */
+
+function _npcModDef(vinc) {
+    return resolveNpcClassModule(vinc, F.sys);
+}
+
+function _npcModItemVazio(def) {
+    const item = {};
+    (def.schema || []).forEach(f => {
+        if (f.tipo === 'progress') { item[f.key + '_atual'] = ''; item[f.key + '_total'] = ''; }
+        else if (f.tipo === 'steps' || f.tipo === 'tags') item[f.key] = [];
+        else if (f.tipo === 'checkbox') item[f.key] = false;
+        else if (f.tipo === 'avaliacao' || f.tipo === 'contador') item[f.key] = 0;
+        else if (f.tipo === 'botao' || f.tipo === 'separador') { /* sem valor */ }
+        else item[f.key] = '';
+    });
+    return item;
+}
+
+function _npcModFieldHtml(mi, ii, field, item) {
+    const key = field.key;
+    const label = escapeHtml(field.label || key || '');
+    const set = (prop, expr) => `setNpcModItemField(${mi},${ii},'${prop}',${expr})`;
+    if (field.tipo === 'separador') {
+        return `<div class="npcv2-mod-sep">${label}</div>`;
+    }
+    if (field.tipo === 'botao') return '';
+    let input = '';
+    const val = item[key];
+    if (field.tipo === 'textarea') {
+        input = `<textarea class="form-textarea" rows="2" placeholder="${escapeHtml(field.placeholder || '')}" oninput="${set(key, 'this.value')}">${escapeHtml(String(val ?? ''))}</textarea>`;
+    } else if (field.tipo === 'select') {
+        const opts = (field.opcoes || []).map(o => `<option value="${escapeHtml(o)}" ${val === o ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
+        input = `<select class="form-select" onchange="${set(key, 'this.value')}"><option value="">— Selecionar —</option>${opts}</select>`;
+    } else if (field.tipo === 'checkbox') {
+        input = `<label class="npcv2-check"><input type="checkbox" ${val === true || val === 'true' ? 'checked' : ''} onchange="${set(key, 'this.checked')}"> ${label}</label>`;
+        return `<div class="npcv2-mod-field">${input}</div>`;
+    } else if (field.tipo === 'number' || field.tipo === 'contador' || field.tipo === 'avaliacao') {
+        input = `<input type="number" class="form-input" value="${escapeHtml(String(val ?? ''))}" placeholder="${escapeHtml(field.placeholder || '')}" oninput="${set(key, "this.value===''?'':parseFloat(this.value)||0")}">`;
+    } else if (field.tipo === 'progress') {
+        input = `<div style="display:flex;gap:6px;align-items:center">
+            <input type="text" class="form-input" style="text-align:center" placeholder="0" value="${escapeHtml(String(item[key + '_atual'] ?? ''))}" oninput="${set(key + '_atual', 'this.value')}">
+            <span style="color:var(--muted)">/</span>
+            <input type="text" class="form-input" style="text-align:center" placeholder="0" value="${escapeHtml(String(item[key + '_total'] ?? ''))}" oninput="${set(key + '_total', 'this.value')}">
+        </div>`;
+    } else if (field.tipo === 'data') {
+        input = `<input type="date" class="form-input" value="${escapeHtml(String(val ?? ''))}" oninput="${set(key, 'this.value')}">`;
+    } else {
+        // text e demais tipos → texto livre
+        input = `<input type="text" class="form-input" value="${escapeHtml(String(val ?? ''))}" placeholder="${escapeHtml(field.placeholder || '')}" oninput="${set(key, 'this.value')}">`;
+    }
+    return `<div class="npcv2-mod-field"><label class="form-label">${label}</label>${input}</div>`;
+}
+
+function renderNpcClassModules() {
+    const list = document.getElementById('npcClassModulesList'); if (!list) return;
+    const mods = F.npc.modulosClasse || [];
+    if (!mods.length) {
+        list.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:6px 0">Nenhum módulo vinculado. Selecione uma classe do registro (os módulos dela entram automaticamente) ou vincule manualmente abaixo.</div>';
+    } else {
+        list.innerHTML = mods.map((vinc, mi) => {
+            const def = _npcModDef(vinc);
+            if (!def) {
+                return `<div class="npcv2-mod-box"><div class="npcv2-mod-head">
+                    <span>⚠️ Módulo não encontrado no registro</span>
+                    <button class="npcv2-pec-del" onclick="removeNpcClassModule(${mi})" title="Desvincular">✕</button>
+                </div></div>`;
+            }
+            const fonte = vinc.fonte === 'classe' ? '<span class="npcv2-pec-fonte">classe</span>' : '<span class="npcv2-pec-fonte">manual</span>';
+            const itens = (vinc.itens || []).map((item, ii) => `
+                <div class="npcv2-mod-item">
+                    <div class="npcv2-mod-item-head">
+                        <span>${escapeHtml(item._predefNome || `${def.titulo} #${ii + 1}`)}</span>
+                        <button class="npcv2-pec-del" onclick="removeNpcModuleItem(${mi},${ii})" title="Remover item">✕</button>
+                    </div>
+                    <div class="npcv2-mod-fields">
+                        ${(def.schema || []).map(f => _npcModFieldHtml(mi, ii, f, item)).join('')}
+                    </div>
+                </div>`).join('');
+            const predefs = def.itensPredefinidos || [];
+            const predefSel = predefs.length ? `
+                <select class="form-select btn-small" id="npcModPredef_${mi}" style="max-width:220px">
+                    ${predefs.map((p, pi) => `<option value="${pi}">${escapeHtml(p.nome || 'Item')}</option>`).join('')}
+                </select>
+                <button class="btn btn-secondary btn-small" onclick="addNpcModuleItem(${mi}, parseInt(document.getElementById('npcModPredef_${mi}').value))">➕ Pré-cadastrado</button>` : '';
+            return `<div class="npcv2-mod-box">
+                <div class="npcv2-mod-head">
+                    <span>${def.icone || '📦'} ${escapeHtml(def.titulo)} ${fonte}</span>
+                    <button class="npcv2-pec-del" onclick="removeNpcClassModule(${mi})" title="Desvincular módulo">✕</button>
+                </div>
+                <div class="npcv2-mod-items">${itens || '<div style="color:var(--muted);font-size:.8rem;padding:4px 2px">Nenhum item.</div>'}</div>
+                <div class="npcv2-mod-actions">
+                    <button class="btn btn-secondary btn-small" onclick="addNpcModuleItem(${mi})">➕ Novo item</button>
+                    ${predefSel}
+                </div>
+            </div>`;
+        }).join('');
+    }
+    renderNpcModPicker();
+}
+window.renderNpcClassModules = renderNpcClassModules;
+
+function renderNpcModPicker() {
+    const sel = document.getElementById('npcModPicker'); if (!sel) return;
+    const usados = new Set((F.npc.modulosClasse || []).map(v => v.refId || (v.snapshot && v.snapshot.id)).filter(Boolean));
+    const disponiveis = (F.sys.classModules || [])
+        .filter(m => !usados.has(m.id))
+        .slice().sort((a, b) => (a.titulo || '').localeCompare(b.titulo || ''));
+    sel.innerHTML = disponiveis.length
+        ? disponiveis.map(m => `<option value="${m.id}">${m.icone || '📦'} ${escapeHtml(m.titulo)}</option>`).join('')
+        : '<option value="">Nenhum módulo disponível no registro</option>';
+}
+
+window.addNpcClassModule = function() {
+    const id = document.getElementById('npcModPicker')?.value;
+    if (!id || !F.sys.classModulesById[id]) return;
+    F.npc.modulosClasse = F.npc.modulosClasse || [];
+    if (F.npc.modulosClasse.some(v => v.refId === id)) return;
+    F.npc.modulosClasse.push({ refId: id, snapshot: null, fonte: 'manual', itens: [] });
+    renderNpcClassModules();
+};
+
+window.removeNpcClassModule = function(mi) {
+    const vinc = F.npc.modulosClasse?.[mi]; if (!vinc) return;
+    if ((vinc.itens || []).length && !confirm('Este módulo possui itens preenchidos. Desvincular mesmo assim?')) return;
+    F.npc.modulosClasse.splice(mi, 1);
+    renderNpcClassModules();
+};
+
+window.addNpcModuleItem = function(mi, predefIdx) {
+    const vinc = F.npc.modulosClasse?.[mi]; if (!vinc) return;
+    const def = _npcModDef(vinc); if (!def) return;
+    const item = _npcModItemVazio(def);
+    if (predefIdx !== undefined && predefIdx !== null && !isNaN(predefIdx)) {
+        const predef = (def.itensPredefinidos || [])[predefIdx];
+        if (predef) {
+            item._predefId = predef.id || '';
+            item._predefNome = predef.nome || '';
+            if (predef.valores && typeof predef.valores === 'object') {
+                Object.keys(predef.valores).forEach(k => { item[k] = predef.valores[k]; });
+            }
+        }
+    }
+    vinc.itens = vinc.itens || [];
+    vinc.itens.push(item);
+    renderNpcClassModules();
+};
+
+window.removeNpcModuleItem = function(mi, ii) {
+    const vinc = F.npc.modulosClasse?.[mi]; if (!vinc) return;
+    vinc.itens.splice(ii, 1);
+    renderNpcClassModules();
+};
+
+window.setNpcModItemField = function(mi, ii, key, val) {
+    const item = F.npc.modulosClasse?.[mi]?.itens?.[ii]; if (!item) return;
+    item[key] = val;
+};
+
+/* Escuta de estado: ao trocar a Classe do NPC, popula automaticamente a lista
+   de módulos com os Módulos de Classe atrelados à classe selecionada.
+   - Módulos herdados (fonte 'classe') SEM itens são removidos junto com a classe antiga.
+   - Módulos herdados COM itens preenchidos são preservados como 'manual'. */
+function syncClassModules(prevRefId, newRefId) {
+    if (prevRefId === newRefId) return;
+    F.npc.modulosClasse = (F.npc.modulosClasse || []).filter(v => {
+        if (v.fonte !== 'classe') return true;
+        if ((v.itens || []).length) { v.fonte = 'manual'; return true; }
+        return false;
+    });
+    if (newRefId) {
+        const mods = modulosDaClasseNpc(newRefId, F.sys);
+        const usados = new Set(F.npc.modulosClasse.map(v => v.refId || (v.snapshot && v.snapshot.id)).filter(Boolean));
+        for (const def of mods) {
+            if (usados.has(def.id)) continue;
+            const noRegistro = !!F.sys.classModulesById[def.id];
+            F.npc.modulosClasse.push({
+                refId: noRegistro ? def.id : null,
+                snapshot: noRegistro ? null : def, // módulo inline legado: guarda snapshot
+                fonte: 'classe',
+                itens: []
+            });
+        }
+    }
+    renderNpcClassModules();
+}
+
 /* ===== RECÁLCULO E RENDER DE STATS ===== */
 window.recalcStats = function() {
     if (!F.npc || !F.sys) return;
@@ -803,9 +1043,11 @@ function renderDvGrid() {
     const rapido = F.npc.modoFicha === 'rapido';
     const allDvs = Object.values(F.calc.derived);
     const vitals = allDvs.filter(dv => dv.isVital);
-    const dvs = allDvs.filter(dv => !dv.isVital);
+    // 📊 VDs: apenas os vinculados ao NPC (não lista mais todos os VDs do sistema)
+    const vinc = F.npc.valoresDer.vinculados || [];
+    const dvs = allDvs.filter(dv => !dv.isVital && vinc.includes(dv.key));
 
-    const renderFn = (list, container, emptyMsg) => {
+    const renderFn = (list, container, emptyMsg, removable) => {
         if (!list.length) { container.innerHTML = `<div style="color:var(--muted);font-size:.85rem">${emptyMsg}</div>`; return; }
         container.innerHTML = list.map(dv => {
             const locked = dv.override !== null;
@@ -818,7 +1060,11 @@ function renderDvGrid() {
                      value="${F.npc.valoresDer.atual?.[dv.key] ?? ''}"
                      oninput="F.npc.valoresDer.atual['${dv.key}']=this.value===''?null:parseFloat(this.value)">`
                 : '';
+            const removeBtn = removable
+                ? `<button class="npcv2-dv-unlink" title="Desvincular este Valor Derivado do NPC" onclick="removeNpcDv('${dv.key}')">✕</button>`
+                : '';
             return `<div class="npcv2-dv-cell ${locked ? 'locked' : ''}" data-dvkey="${dv.key}">
+                ${removeBtn}
                 <div class="npcv2-dv-label" 
                      data-tt-title="${escapeHtml(dv.nome)}" 
                      data-tt-desc="${escapeHtml(desc)}" 
@@ -840,11 +1086,38 @@ function renderDvGrid() {
         }).join('');
     };
 
-    renderFn(vitals, vGrid, 'Nenhum status vital cadastrado no Painel de Criador.');
-    renderFn(dvs, dGrid, 'Nenhum valor derivado cadastrado no Painel de Criador.');
+    renderFn(vitals, vGrid, 'Nenhum status vital cadastrado no Painel de Criador.', false);
+    renderFn(dvs, dGrid, 'Nenhum Valor Derivado vinculado a este NPC. Use "➕ Vincular VD" abaixo.', true);
 
+    renderDvPicker();
     renderExtras();
 }
+
+/* ===== VINCULAÇÃO DE VALORES DERIVADOS ===== */
+function renderDvPicker() {
+    const sel = document.getElementById('npcDvPicker'); if (!sel) return;
+    const vinc = new Set(F.npc.valoresDer.vinculados || []);
+    const disponiveis = (F.sys.derivedValues || []).filter(dv => !vinc.has(dv.key));
+    sel.innerHTML = disponiveis.length
+        ? disponiveis.map(dv => `<option value="${dv.key}">${escapeHtml(dv.nome)}${dv.todoPersonagem ? ' ⭐' : ''}</option>`).join('')
+        : '<option value="">Todos os VDs do sistema já estão vinculados</option>';
+}
+
+window.addNpcDv = function() {
+    const key = document.getElementById('npcDvPicker')?.value;
+    if (!key) return;
+    F.npc.valoresDer.vinculados = F.npc.valoresDer.vinculados || [];
+    if (!F.npc.valoresDer.vinculados.includes(key)) F.npc.valoresDer.vinculados.push(key);
+    recalcStats();
+};
+
+window.removeNpcDv = function(key) {
+    const vd = F.npc.valoresDer;
+    vd.vinculados = (vd.vinculados || []).filter(k => k !== key);
+    delete vd.overrides[key];
+    if (vd.atual) delete vd.atual[key];
+    recalcStats();
+};
 
 window.startDvOverride = function(key, input) {
     // Primeiro clique em um valor automático (modo mecânico) trava o override
@@ -1099,8 +1372,10 @@ function fillNpcForm(n) {
     if (n.imagem?.startsWith('http')) { const p = document.getElementById('npcImgPreview'); const img = document.getElementById('npcImgTag'); if (p && img) { img.src = n.imagem; p.style.display = 'block'; img.onerror = () => { p.style.display = 'none'; }; } }
 
     setNpcModo(n.modoFicha || 'rapido');
+    set('npcVisibilidade', n.visibilidade || 'secreto');
     renderPecs();
     renderPecPicker();
+    renderNpcClassModules();
     renderSkillPickers();
     renderStructuredSkills();
 }
@@ -1290,12 +1565,14 @@ function collectNpcData() {
         tamanho: g('npcTamanho'), tags: g('npcTags'),
         funcao,
         aliadoProprio: document.getElementById('npcAliadoProprio')?.checked || false,
+        visibilidade: g('npcVisibilidade') || n.visibilidade || 'secreto',
 
         // v2: referências híbridas + espelho legado em string
         racaRef: n.racaRef, classeRef: n.classeRef, triboRef: n.triboRef,
         raca: racaNome, classe: classeNome, tribo: triboNome,
 
         peculiaridades: n.peculiaridades,
+        modulosClasse: n.modulosClasse || [],
         periciasEstruturadas: n.periciasEstruturadas,
         partesDoCorpo: Array.isArray(n.partesDoCorpo) ? n.partesDoCorpo : [],
         atributos: { ...Object.fromEntries(ATTR_SIGLAS.map(a => [a, parseInt(n.atributos?.[a]) || 0])) },
@@ -1303,6 +1580,7 @@ function collectNpcData() {
             overrides: n.valoresDer.overrides || {},
             atual: n.valoresDer.atual || {},
             extras: n.valoresDer.extras || [],
+            vinculados: n.valoresDer.vinculados || [],
             ...legacyDv
         },
         ai: gi('npcNivel') || n.ai || 0, // AI legado ≈ nível
