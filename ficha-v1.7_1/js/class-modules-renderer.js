@@ -928,7 +928,13 @@ function _cmValidarECobrar(mod, predef) {
         }
     }
 
-    const criacaoIds = _cmGetCostMechanics(mod, 'custoCriacao');
+    let criacaoIds = [];
+    if (predef && Array.isArray(predef.custoCriacaoMecanicaIds)) {
+        criacaoIds = predef.custoCriacaoMecanicaIds.slice();
+    } else {
+        criacaoIds = _cmGetCostMechanics(mod, 'custoCriacao');
+    }
+    
     let mechCheck = { ok: true, label: 'Sem custo', costs: [] };
     if (criacaoIds.length > 0) {
         mechCheck = _cmCheckMechanicsCosts(criacaoIds);
@@ -1247,7 +1253,7 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
             return;
         }
 
-        if (field.tipo !== 'botao') {
+        if (field.tipo !== 'botao' && field.tipo !== 'select_botao') {
             const label = document.createElement('label');
             label.textContent = field.label || field.key;
             fieldWrap.appendChild(label);
@@ -1539,6 +1545,33 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
             btn.textContent = field.label || field.key || 'Ativar';
             btn.title = field.placeholder || 'Aplica as mecânicas vinculadas';
             btn.addEventListener('click', () => _cmAplicarMecanicasBotao(field, btn));
+            wrap.appendChild(btn);
+            fieldWrap.appendChild(wrap);
+        } else if (field.tipo === 'select_botao') {
+            const wrap = document.createElement('div');
+            wrap.className = 'cm-action-wrap';
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'cm-action-btn no-print';
+            btn.textContent = field.label || field.key || 'Ativar';
+            btn.title = field.placeholder || 'Aplica a mecânica vinculada a este botão';
+            btn.addEventListener('click', () => {
+                const mechId = data[field.key];
+                if (!mechId) {
+                    if (typeof showUpgradeBlocked === 'function') {
+                        showUpgradeBlocked('Nenhuma mecânica configurada para este botão.');
+                    } else if (typeof alert === 'function') {
+                        alert('Nenhuma mecânica configurada para este botão.');
+                    }
+                    return;
+                }
+                const pseudoField = {
+                    key: field.key,
+                    label: field.label,
+                    mecanicaIds: [mechId]
+                };
+                _cmAplicarMecanicasBotao(pseudoField, btn);
+            });
             wrap.appendChild(btn);
             fieldWrap.appendChild(wrap);
         } else if (field.tipo === 'select_vd') {

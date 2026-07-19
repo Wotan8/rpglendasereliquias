@@ -2701,6 +2701,7 @@ const CM_SCHEMA_TIPOS = [
     { v: 'imagem', label: '🖼️ Imagem (URL)' },
     { v: 'dado', label: '🎲 Dado (rolagem)' },
     { v: 'botao', label: '🔘 Botão (mecânicas)' },
+    { v: 'select_botao', label: '🔘 Select Botão' },
     { v: 'separador', label: '➖ Separador de seção' },
     { v: 'valor_derivado', label: '📊 Valor Derivado' },
     { v: 'select_vd', label: '📊 Select VD (Valor Derivado)' }
@@ -3262,6 +3263,11 @@ function _buildPredefValoresGrid(schema, valores) {
         if (f.tipo === 'checkbox') {
             return `<div class="cm-pv-field"><label>${lbl}</label><input type="checkbox" data-pv-key="${escapeHtml(f.key)}" ${valores[f.key] ? 'checked' : ''}></div>`;
         }
+        if (f.tipo === 'select_botao') {
+            const mechOpts = (typeof mechanicsCache !== 'undefined' ? mechanicsCache : []).map(m =>
+                `<option value="${escapeHtml(m.id)}" ${valores[f.key] === m.id ? 'selected' : ''}>${escapeHtml(m.nome)}</option>`).join('');
+            return `<div class="cm-pv-field full"><label>${lbl} (Selecione a mecânica do botão)</label><select data-pv-key="${escapeHtml(f.key)}"><option value="">— Nenhuma mecânica vinculada —</option>${mechOpts}</select></div>`;
+        }
         if (f.tipo === 'progress') {
             return `<div class="cm-pv-field"><label>${lbl} (atual/total)</label>
                 <div style="display:flex;gap:4px;align-items:center">
@@ -3340,6 +3346,20 @@ function _buildPredefItemRow(moduleIdx, itemIdx, data, schema) {
             <div class="cm-predef-custo-eq" style="display:${usaCustoEq ? '' : 'none'}">
                 ${_buildEquipCostArea(usaCustoEq ? data.custoEquipamentos : [], 'cm-custo-eq-predef')}
             </div>
+            <label class="cm-toggle-row">
+                <input type="checkbox" data-pd-key="usarMecanicaPropria" ${Array.isArray(data.custoCriacaoMecanicaIds) ? 'checked' : ''} onchange="cmPredefToggleMecanica(this)">
+                <span>⚙️ Definir Mecânica de Custo própria (substitui a do módulo)</span>
+            </label>
+            <div class="cm-predef-mecanica" style="display:${Array.isArray(data.custoCriacaoMecanicaIds) ? '' : 'none'}">
+                <label style="font-size: 0.75rem; margin-top: 5px; display: block;">Mecânica de Custo (Aplicada ao adicionar/criar item)</label>
+                <div class="aura-grau-mechs cm-predef-custo-criacao-mechs" data-pd-key="custoCriacaoMecanicaIds">
+                    <div class="mech-tags-container cm-predef-custo-criacao-tags">${(Array.isArray(data.custoCriacaoMecanicaIds) ? data.custoCriacaoMecanicaIds : []).map(id => _cmMechChip(id)).join('')}</div>
+                    <select class="aura-mech-select" onchange="cmAddModuleMech(this, '.cm-predef-custo-criacao-tags')">
+                        <option value="">+ Vincular Mecânica...</option>
+                        ${_cmMechSelectOptions()}
+                    </select>
+                </div>
+            </div>
             <div class="cm-predef-valores">
                 <div class="cm-section-title-row">
                     <span class="cm-mini-title">🧬 Valores dos Campos (pré-preenchidos na ficha)</span>
@@ -3376,6 +3396,11 @@ window.removePredefItem = function (btn) {
 
 window.cmPredefToggleCustoEq = function (checkbox) {
     const area = checkbox.closest('.cm-predef-item')?.querySelector('.cm-predef-custo-eq');
+    if (area) area.style.display = checkbox.checked ? '' : 'none';
+};
+
+window.cmPredefToggleMecanica = function (checkbox) {
+    const area = checkbox.closest('.cm-predef-item')?.querySelector('.cm-predef-mecanica');
     if (area) area.style.display = checkbox.checked ? '' : 'none';
 };
 
@@ -3602,6 +3627,7 @@ function _collectSingleModuleData(item) {
             : 'pdi_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
         const custoExpRaw = pd.querySelector('[data-pd-key="custoExpProprio"]')?.value ?? '';
         const usarCustoEq = pd.querySelector('[data-pd-key="usarCustoEqProprio"]')?.checked === true;
+        const usarMecanica = pd.querySelector('[data-pd-key="usarMecanicaPropria"]')?.checked === true;
         const valores = {};
         pd.querySelectorAll('.cm-pv-grid [data-pv-key]').forEach(el => {
             valores[el.dataset.pvKey] = el.type === 'checkbox' ? el.checked : el.value;
@@ -3624,6 +3650,7 @@ function _collectSingleModuleData(item) {
             descricao: (pd.querySelector('[data-pd-key="descricao"]')?.value || '').trim(),
             custoExpProprio: custoExpRaw !== '' ? Math.max(0, parseInt(custoExpRaw, 10) || 0) : null,
             custoEquipamentos: usarCustoEq ? _collectEquipCostArea(pd.querySelector('.cm-custo-eq-predef')) : null,
+            custoCriacaoMecanicaIds: usarMecanica ? Array.from(pd.querySelectorAll('.cm-predef-custo-criacao-mechs .mech-tag')).map(t => t.dataset.id).filter(Boolean) : null,
             valores
         });
     });
