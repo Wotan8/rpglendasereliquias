@@ -1,5 +1,5 @@
 // ÁREA NPCs — Full CRUD, Export/Import, Modal Form
-import { db, collection, getDocs, setDoc, deleteDoc, doc, addDoc } from './firebase-config.js';
+import { db, collection, getDocs, setDoc, deleteDoc, doc, addDoc, onSnapshot } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
@@ -8,6 +8,7 @@ import { calcularNpc, ATTR_SIGLAS } from './npc-calc-engine.js?v=1.3';
 import './npc-inventario.js?v=1.0'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
 
 let currentEditingNpc = null;
+let _npcModalUnsubscribe = null;
 export async function onTabActivated() { await loadAllNpcs(); }
 
 async function loadAllNpcs() {
@@ -370,6 +371,16 @@ function normalizeNpc(raw, sys) {
         n.valoresDer = { overrides: vd.overrides || {}, atual: vd.atual || {}, extras: vd.extras || [] };
     }
 
+    // Espelhar chaves legacy (VIT/ENER/SAN) → chaves do sistema no atual.
+    // O combate escreve apenas chaves legacy; o formulário lê chaves do sistema.
+    // Este espelho garante que ao abrir a ficha, os valores do combate apareçam.
+    for (const legacy of ['VIT', 'ENER', 'SAN']) {
+        const key = findDvKeyLike(legacy, sys);
+        if (key && key !== legacy && n.valoresDer.atual[legacy] !== undefined && n.valoresDer.atual[legacy] !== null) {
+            n.valoresDer.atual[key] = n.valoresDer.atual[legacy];
+        }
+    }
+
     if (!Array.isArray(n.vinculos)) {
         n.vinculos = n.mesaId ? [{ tipo: 'mesa', id: n.mesaId }] : [];
     }
@@ -435,6 +446,45 @@ window.openNpcModal = async function(npcId = null) {
     fillNpcForm(F.npc);
     recalcStats();
     npcSwitchSection('identidade');
+
+    if (_npcModalUnsubscribe) {
+        _npcModalUnsubscribe();
+        _npcModalUnsubscribe = null;
+    }
+    if (npcId) {
+        _npcModalUnsubscribe = onSnapshot(doc(db, 'npcs', npcId), (snap) => {
+            if (!snap.exists()) return;
+            const data = snap.data();
+            
+            // Verifica mudanças apenas de fora (ex: vindas do painel de combate)
+            const vd = data.valoresDer || {};
+            const atual = vd.atual || {};
+            let mudou = false;
+            
+            const legacyKeys = ['VIT', 'ENER', 'SAN'];
+            legacyKeys.forEach(leg => {
+                if (atual[leg] !== undefined) {
+                    if (F.npc.valoresDer.atual?.[leg] !== atual[leg]) {
+                        if (!F.npc.valoresDer.atual) F.npc.valoresDer.atual = {};
+                        F.npc.valoresDer.atual[leg] = atual[leg];
+                        mudou = true;
+                    }
+                    const dk = findDvKeyLike(leg, F.sys);
+                    if (dk && F.npc.valoresDer.atual?.[dk] !== atual[leg]) {
+                        if (!F.npc.valoresDer.atual) F.npc.valoresDer.atual = {};
+                        F.npc.valoresDer.atual[dk] = atual[leg];
+                        mudou = true;
+                    }
+                }
+            });
+            
+            if (mudou) {
+                // Ao invés de re-renderizar todo o grid, podemos apenas atualizar os inputs atuais,
+                // mas `renderDvGrid` é mais seguro e redesenha o grid corretamente se algo mais mudou.
+                renderDvGrid();
+            }
+        });
+    }
 };
 window.openNpcEditModal = window.openNpcModal;
 
@@ -1114,8 +1164,8 @@ window.addNpcDv = function() {
 window.removeNpcDv = function(key) {
     const vd = F.npc.valoresDer;
     vd.vinculados = (vd.vinculados || []).filter(k => k !== key);
-    delete vd.overrides[key];
-    if (vd.atual) delete vd.atual[key];
+    vd.overrides[key] = null;
+    if (vd.atual) vd.atual[key] = null;
     recalcStats();
 };
 
@@ -1131,7 +1181,7 @@ window.startDvOverride = function(key, input) {
 };
 
 window.setDvOverride = function(key, val) {
-    if (val === '') delete F.npc.valoresDer.overrides[key];
+    if (val === '') F.npc.valoresDer.overrides[key] = null;
     else F.npc.valoresDer.overrides[key] = parseFloat(val) || 0;
     // Não re-renderiza a grid inteira durante a digitação; só marca lock
     const cell = document.querySelector(`.npcv2-dv-cell[data-dvkey="${key}"]`);
@@ -1139,7 +1189,7 @@ window.setDvOverride = function(key, val) {
 };
 
 window.clearDvOverride = function(key) {
-    delete F.npc.valoresDer.overrides[key];
+    F.npc.valoresDer.overrides[key] = null;
     recalcStats();
 };
 
@@ -1544,9 +1594,13 @@ function collectNpcData() {
     // Espelho legado de valores derivados (VIT/ENER/SAN/... = valor final)
     const calc = calcularNpc(n, F.sys);
     const legacyDv = {};
+    const atualEspelho = { ...(n.valoresDer.atual || {}) };
     for (const legacy of ['VIT', 'ENER', 'SAN', 'PERC', 'INI', 'REA', 'BLD']) {
         const key = findDvKeyLike(legacy, F.sys);
-        if (key && calc.derived[key]) legacyDv[legacy] = calc.derived[key].final;
+        if (key && calc.derived[key]) {
+            legacyDv[legacy] = calc.derived[key].final;
+            if (atualEspelho[key] !== undefined) atualEspelho[legacy] = atualEspelho[key];
+        }
     }
     const desloc = (n.valoresDer.extras || []).find(x => F.sys.norm(x.nome).startsWith('desloc'));
     if (desloc) legacyDv.DESLOCAMENTO = String(desloc.valor ?? '');
@@ -1578,7 +1632,7 @@ function collectNpcData() {
         atributos: { ...Object.fromEntries(ATTR_SIGLAS.map(a => [a, parseInt(n.atributos?.[a]) || 0])) },
         valoresDer: {
             overrides: n.valoresDer.overrides || {},
-            atual: n.valoresDer.atual || {},
+            atual: atualEspelho,
             extras: n.valoresDer.extras || [],
             vinculados: n.valoresDer.vinculados || [],
             ...legacyDv
@@ -1624,13 +1678,50 @@ window.saveNpc = async function() {
                 } catch (e) { /* segue sem partes; mestre pode aplicar depois */ }
             }
         }
-        if (currentEditingNpc) { await setDoc(doc(db, 'npcs', currentEditingNpc.id), data, { merge: true }); await addLog(S.currentUser?.email, 'Editou NPC', data.nome, 'npcs'); showAlert('✅ NPC atualizado!', 'success'); }
-        else { await setDoc(doc(collection(db, 'npcs')), data); await addLog(S.currentUser?.email, 'Criou NPC', data.nome, 'npcs'); showAlert('✅ NPC criado!', 'success'); }
+        if (currentEditingNpc) { 
+            await setDoc(doc(db, 'npcs', currentEditingNpc.id), data, { merge: true }); 
+            await addLog(S.currentUser?.email, 'Editou NPC', data.nome, 'npcs'); 
+            
+            // Sincroniza alterações de MAX HP/SAN/ENER com o Combat Tracker caso o NPC esteja lá
+            if (window.S && S.combatParticipants && window.persistCombat) {
+                let updatedComb = false;
+                S.combatParticipants.forEach(p => {
+                    if (p.npcId === currentEditingNpc.id) {
+                        const vd = data.valoresDer || {};
+                        if (vd.VIT !== undefined) { p.hpMax = vd.VIT; p.hpCurrent = Math.min(p.hpCurrent, vd.VIT); }
+                        if (vd.ENER !== undefined) { p.enerMax = vd.ENER; p.enerCurrent = Math.min(p.enerCurrent, vd.ENER); }
+                        if (vd.SAN !== undefined) { p.sanMax = vd.SAN; p.sanCurrent = Math.min(p.sanCurrent, vd.SAN); }
+                        
+                        // Atualiza também os vitais ATUAIS se foram modificados explicitamente na ficha
+                        if (vd.atual?.VIT !== undefined) p.hpCurrent = Math.min(vd.atual.VIT, p.hpMax);
+                        if (vd.atual?.ENER !== undefined) p.enerCurrent = Math.min(vd.atual.ENER, p.enerMax);
+                        if (vd.atual?.SAN !== undefined) p.sanCurrent = Math.min(vd.atual.SAN, p.sanMax);
+                        
+                        updatedComb = true;
+                    }
+                });
+                if (updatedComb) {
+                    S.setCombatParticipants([...S.combatParticipants]);
+                    if (window.renderCombatList) window.renderCombatList();
+                    persistCombat();
+                }
+            }
+            showAlert('✅ NPC atualizado!', 'success'); 
+        } else { 
+            await setDoc(doc(collection(db, 'npcs')), data); 
+            await addLog(S.currentUser?.email, 'Criou NPC', data.nome, 'npcs'); 
+            showAlert('✅ NPC criado!', 'success'); 
+        }
         closeNpcModal(); await loadAllNpcs(); if (window._loadMesaNpcs) await window._loadMesaNpcs();
     } catch (e) { console.error(e); showAlert('❌ Erro ao salvar', 'danger'); }
 };
 
-window.closeNpcModal = function() { document.getElementById('npcModal')?.classList.remove('active'); currentEditingNpc = null; F.npc = null; };
+window.closeNpcModal = function() { 
+    document.getElementById('npcModal')?.classList.remove('active'); 
+    currentEditingNpc = null; 
+    F.npc = null; 
+    if (_npcModalUnsubscribe) { _npcModalUnsubscribe(); _npcModalUnsubscribe = null; }
+};
 
 window.deleteCurrentNpc = async function() {
     if (!currentEditingNpc || !confirm(`Deletar "${currentEditingNpc.nome}"?`)) return;

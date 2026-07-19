@@ -1,7 +1,7 @@
 // =============================================
 // COMBAT SYSTEM — Full migration from mestre.html
 // =============================================
-import { db, collection, getDocs, getDoc, setDoc, doc, onSnapshot, query, where } from './firebase-config.js';
+import { db, collection, getDocs, getDoc, setDoc, updateDoc, doc, onSnapshot, query, where, deleteField } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 
@@ -30,7 +30,10 @@ window._loadCombatFromMesa = async function() {
         if (snap.exists()) {
             const parts = snap.data().participantes || [];
             S.setCombatParticipants(parts);
-            parts.forEach(p => { if (p.characterId) setupCombatListener(p.characterId, p.id); });
+            parts.forEach(p => {
+                if (p.characterId) setupCombatListener(p.characterId, p.id);
+                if (p.npcId) setupCombatNpcListener(p.npcId, p.id);
+            });
         } else {
             S.setCombatParticipants([]);
         }
@@ -72,10 +75,13 @@ window.confirmAddChar = function() {
     const nome = f.nome || c.nome || 'Sem nome';
     const raca = f.raca || c.raca || '-';
     const classe = f.classe || c.classe || '-';
-    const vitMax = (d.vig || c.vig || 1) + (d.tamanho || c.tamanho || 5);
-    const enerMax = (d.prs || c.prs || 1) + (d.aut || c.aut || 1);
+    // Status Vitais: lê valores pré-calculados do documento (a ficha salva hpMax/enerMax/sanMax
+    // via mecânicas do Firebase). Fallback legado para fichas ainda não recalculadas.
+    const vitMax = c.hpMax || ((d.vig || c.vig || 1) + (d.tamanho || c.tamanho || 5));
+    const enerMax = c.enerMax || ((d.prs || c.prs || 1) + (d.aut || c.aut || 1));
+    const sanMax = c.sanMax || 100;
     const pid = 'char-' + Date.now();
-    S.combatParticipants.push({ id: pid, characterId: id, name: nome, type: 'Jogador', initiative: init, details: `${raca} - ${classe}`, hpCurrent: c.hpCurrent !== undefined ? c.hpCurrent : vitMax, hpMax: vitMax, enerCurrent: c.enerCurrent !== undefined ? c.enerCurrent : enerMax, enerMax: enerMax, sanCurrent: c.sanCurrent !== undefined ? c.sanCurrent : 80, sanMax: 100 });
+    S.combatParticipants.push({ id: pid, characterId: id, name: nome, type: 'Jogador', initiative: init, details: `${raca} - ${classe}`, hpCurrent: c.hpCurrent !== undefined ? c.hpCurrent : vitMax, hpMax: vitMax, enerCurrent: c.enerCurrent !== undefined ? c.enerCurrent : enerMax, enerMax: enerMax, sanCurrent: c.sanCurrent !== undefined ? c.sanCurrent : sanMax, sanMax: sanMax });
     setupCombatListener(id, pid);
     renderCombatList(); document.querySelector('.modal.active')?.remove();
     showAlert('✅ Jogador adicionado!', 'success');
@@ -86,14 +92,41 @@ function setupCombatListener(charId, pid) {
         if (!snap.exists()) return;
         const d = snap.data(), f = d.fields || {}, dt = d.dots || {};
         const p = S.combatParticipants.find(x => x.id === pid); if (!p) return;
-        const vm = (dt.vig || d.vig || 1) + (dt.tamanho || d.tamanho || 5);
-        const em = (dt.prs || d.prs || 1) + (dt.aut || d.aut || 1);
+        // Status Vitais: lê valores pré-calculados do documento (mecânicas do Firebase).
+        // Fallback legado para fichas que ainda não possuem hpMax/enerMax/sanMax salvos.
+        const vm = d.hpMax || ((dt.vig || d.vig || 1) + (dt.tamanho || d.tamanho || 5));
+        const em = d.enerMax || ((dt.prs || d.prs || 1) + (dt.aut || d.aut || 1));
+        const sm = d.sanMax || 100;
         p.hpCurrent = d.hpCurrent !== undefined ? d.hpCurrent : vm; p.hpMax = vm;
         p.enerCurrent = d.enerCurrent !== undefined ? d.enerCurrent : em; p.enerMax = em;
-        p.sanCurrent = d.sanCurrent !== undefined ? d.sanCurrent : 80; p.name = f.nome || d.nome || p.name;
+        p.sanCurrent = d.sanCurrent !== undefined ? d.sanCurrent : sm; p.sanMax = sm;
+        p.name = f.nome || d.nome || p.name;
         updateParticipantStats(pid);
         persistCombat();
     }); combatListeners[pid] = unsub;
+}
+
+function setupCombatNpcListener(npcId, pid) {
+    const unsub = onSnapshot(doc(db, 'npcs', npcId), snap => {
+        if (!snap.exists()) return;
+        const n = snap.data();
+        const p = S.combatParticipants.find(x => x.id === pid); if (!p) return;
+        
+        const vd = n.valoresDer || {};
+        const atual = vd.atual || {};
+        const vitMax = vd.VIT || p.hpMax;
+        const enerMax = vd.ENER || p.enerMax;
+        const sanMax = vd.SAN || p.sanMax;
+        
+        p.hpCurrent = (atual.VIT !== undefined && atual.VIT !== null) ? Math.min(atual.VIT, vitMax) : vitMax; p.hpMax = vitMax;
+        p.enerCurrent = (atual.ENER !== undefined && atual.ENER !== null) ? Math.min(atual.ENER, enerMax) : enerMax; p.enerMax = enerMax;
+        p.sanCurrent = (atual.SAN !== undefined && atual.SAN !== null) ? Math.min(atual.SAN, sanMax) : sanMax; p.sanMax = sanMax;
+        p.name = n.nome || p.name;
+        
+        updateParticipantStats(pid);
+        persistCombat();
+    });
+    combatListeners[pid] = unsub;
 }
 
 function updateParticipantStats(pid) {
@@ -127,8 +160,26 @@ window.confirmAddNpc = function() {
     const id = document.getElementById('selNpc').value;
     const init = parseInt(document.getElementById('npcInit').value) || 0;
     const n = window._tempNpcs.find(x => x.id === id); if (!n) return;
-    const vit = n.valoresDer?.VIT || 10, ener = n.valoresDer?.ENER || 5, san = n.valoresDer?.SAN || 100;
-    S.combatParticipants.push({ id: 'npc-' + Date.now(), npcId: id, name: n.nome, type: n.tipo === 'criatura' ? 'Criatura' : 'NPC', initiative: init, details: `${n.raca||'N/A'} | ${n.papel||'-'}`, hpCurrent: vit, hpMax: vit, enerCurrent: ener, enerMax: ener, sanCurrent: san, sanMax: san, isNpc: true });
+    
+    const vd = n.valoresDer || {};
+    const atual = vd.atual || {};
+    
+    const vitMax = vd.VIT || 10;
+    const enerMax = vd.ENER || 5;
+    const sanMax = vd.SAN || 100;
+    
+    const vitCur = (atual.VIT !== undefined && atual.VIT !== null) ? Math.min(atual.VIT, vitMax) : vitMax;
+    const enerCur = (atual.ENER !== undefined && atual.ENER !== null) ? Math.min(atual.ENER, enerMax) : enerMax;
+    const sanCur = (atual.SAN !== undefined && atual.SAN !== null) ? Math.min(atual.SAN, sanMax) : sanMax;
+
+    const pid = 'npc-' + Date.now();
+    S.combatParticipants.push({ 
+        id: pid, npcId: id, name: n.nome, type: n.tipo === 'criatura' ? 'Criatura' : 'NPC', 
+        initiative: init, details: `${n.raca||'N/A'} | ${n.papel||'-'}`, 
+        hpCurrent: vitCur, hpMax: vitMax, enerCurrent: enerCur, enerMax: enerMax, sanCurrent: sanCur, sanMax: sanMax, 
+        isNpc: true 
+    });
+    setupCombatNpcListener(id, pid);
     renderCombatList(); document.querySelector('.modal.active')?.remove();
     showAlert('✅ NPC adicionado!', 'success');
 };
@@ -159,6 +210,51 @@ window.adjustCombatStat = function(pid, stat, amt, ev) {
     else if (stat === 'san') p.sanCurrent = Math.max(0, Math.min(p.sanCurrent + amt, p.sanMax));
     updateParticipantStats(pid);
     persistCombat();
+
+    // ===== Sincronização bidirecional: Combat → Ficha/NPC =====
+    const curMap = { vit: 'hpCurrent', ener: 'enerCurrent', san: 'sanCurrent' };
+    const atualMap = { vit: 'vit_atual', ener: 'ener_atual', san: 'san_atual' };
+    const siglaMap = { vit: 'VIT', ener: 'ENER', san: 'SAN' };
+    const novoVal = stat === 'vit' ? p.hpCurrent : stat === 'ener' ? p.enerCurrent : p.sanCurrent;
+
+    // Personagem de jogador → atualizar doc char
+    if (p.characterId) {
+        updateDoc(doc(db, 'char', p.characterId), {
+            [curMap[stat]]: novoVal,
+            [`derivedValues.${atualMap[stat]}`]: String(novoVal)
+        }).catch(e => console.warn('sync char stat', e));
+    }
+
+    // NPC → atualizar doc npcs (legacy + system key)
+    if (p.npcId) {
+        (async () => {
+            try {
+                const npcSnap = await getDoc(doc(db, 'npcs', p.npcId));
+                if (!npcSnap.exists()) return;
+                const npcData = npcSnap.data();
+                const atualObj = npcData.valoresDer?.atual || {};
+                const legacyKey = siglaMap[stat]; // VIT, ENER ou SAN
+                const patch = { [`valoresDer.atual.${legacyKey}`]: novoVal };
+                // Também atualizar chaves do sistema que existam no atual
+                // (chaves que NÃO são legacy e cujo valor antigo coincidia com o legacy)
+                const LEGACY_KEYS = new Set(['VIT','ENER','SAN','PERC','INI','REA','BLD']);
+                for (const [k, v] of Object.entries(atualObj)) {
+                    if (LEGACY_KEYS.has(k)) continue;
+                    // Se o valor dessa chave do sistema é igual ao antigo valor legacy,
+                    // ou se ela corresponde à sigla (prefixo normalizado)
+                    const nomeNorm = k.toLowerCase().replace(/[^a-z]/g, '');
+                    const sigNorm = legacyKey.toLowerCase();
+                    if (nomeNorm.startsWith(sigNorm) || nomeNorm.startsWith(sigNorm === 'vit' ? 'vitalidade' : sigNorm === 'ener' ? 'energia' : 'sanidade')) {
+                        patch[`valoresDer.atual.${k}`] = novoVal;
+                    } else if (v === atualObj[legacyKey]) {
+                        // Fallback: se o valor é idêntico ao legacy antigo, é provável espelho
+                        patch[`valoresDer.atual.${k}`] = novoVal;
+                    }
+                }
+                await updateDoc(doc(db, 'npcs', p.npcId), patch);
+            } catch (e) { console.warn('sync npc stat', e); }
+        })();
+    }
 };
 
 window.updateInitiative = function(pid, v) { const p = S.combatParticipants.find(x => x.id === pid); if (p) p.initiative = parseInt(v)||0; persistCombat(); };

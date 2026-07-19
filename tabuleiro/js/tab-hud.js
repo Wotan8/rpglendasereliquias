@@ -21,12 +21,15 @@ export function initHud() {
         const u = onSnapshot(doc(db, 'char', c.id), snap => {
             if (!snap.exists()) return;
             const d = snap.data(), dt = d.dots || {};
-            const hpMax = (dt.vig || d.vig || 1) + (dt.tamanho || d.tamanho || 5);
-            const enerMax = (dt.prs || d.prs || 1) + (dt.aut || d.aut || 1);
+            // Status Vitais: lê valores pré-calculados do documento (mecânicas do Firebase).
+            // Fallback legado para fichas que ainda não possuem hpMax/enerMax/sanMax salvos.
+            const hpMax = d.hpMax || ((dt.vig || d.vig || 1) + (dt.tamanho || d.tamanho || 5));
+            const enerMax = d.enerMax || ((dt.prs || d.prs || 1) + (dt.aut || d.aut || 1));
+            const sanMax = d.sanMax || 100;
             VITAIS.set(c.id, {
                 hp: d.hpCurrent !== undefined ? d.hpCurrent : hpMax, hpMax,
                 ener: d.enerCurrent !== undefined ? d.enerCurrent : enerMax, enerMax,
-                san: d.sanCurrent !== undefined ? d.sanCurrent : 80, sanMax: 100,
+                san: d.sanCurrent !== undefined ? d.sanCurrent : sanMax, sanMax,
                 conds: (d.conditions || []).map(x => ({ icone: x.icone || '💀', nome: x.nome || '' })),
             });
             markDirty();
@@ -47,7 +50,25 @@ export function vitaisDoToken(o) {
         return { ...v, conds };
     }
     const p = participanteDoToken(o);
-    if (!p) return null;
+    if (!p) {
+        if (o.vinculo?.tipo === 'npc') {
+            const n = T.npcs.find(x => x.id === o.vinculo.id);
+            if (n) {
+                const vd = n.valoresDer || {};
+                const atual = vd.atual || {};
+                const hpMax = vd.VIT || 10;
+                const enerMax = vd.ENER || 5;
+                const sanMax = vd.SAN || 100;
+                return {
+                    hp: (atual.VIT !== undefined && atual.VIT !== null) ? Math.min(atual.VIT, hpMax) : hpMax, hpMax,
+                    ener: (atual.ENER !== undefined && atual.ENER !== null) ? Math.min(atual.ENER, enerMax) : enerMax, enerMax,
+                    san: (atual.SAN !== undefined && atual.SAN !== null) ? Math.min(atual.SAN, sanMax) : sanMax, sanMax,
+                    conds: []
+                };
+            }
+        }
+        return null;
+    }
     return {
         hp: p.hpCurrent ?? 0, hpMax: p.hpMax ?? 0,
         ener: p.enerCurrent ?? 0, enerMax: p.enerMax ?? 0,
@@ -181,12 +202,19 @@ export function abrirMenuRadial(o, sx, sy) {
 export function fecharMenuRadial() { document.getElementById('tbRadial')?.remove(); }
 
 async function adicionarCondicao(o) {
-    const nome = prompt('Condição (ex: Envenenado, Caído):');
-    if (!nome) return;
-    const parts = (T.combate?.participantes || []).map(p => ({ ...p }));
-    let p = participanteDoToken(o) && parts.find(x => x.id === participanteDoToken(o).id);
+    const p = participanteDoToken(o);
     if (!p) { toast('⚠️ Token sem participante no combate — role a iniciativa primeiro', 'warning'); return; }
-    p.condicoes = [...(p.condicoes || []), nome.trim()];
-    try { await setDoc(refCombate(), { participantes: parts, atualizadoEm: Date.now() }, { merge: true }); }
-    catch (e) { toast('❌ Erro', 'danger'); }
+    // Delega ao picker de condições do módulo de combate (tab-combat.js)
+    if (window.tbCombCondAdd) {
+        window.tbCombCondAdd(p.id);
+    } else {
+        // Fallback caso o módulo de combate não esteja carregado
+        const nome = prompt('Condição (ex: Envenenado, Caído):');
+        if (!nome) return;
+        const parts = (T.combate?.participantes || []).map(pp => ({ ...pp }));
+        const pp = parts.find(x => x.id === p.id); if (!pp) return;
+        pp.condicoes = [...(pp.condicoes || []), nome.trim()];
+        try { await setDoc(refCombate(), { participantes: parts, atualizadoEm: Date.now() }, { merge: true }); }
+        catch (e) { toast('❌ Erro', 'danger'); }
+    }
 }

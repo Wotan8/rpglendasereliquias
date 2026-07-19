@@ -79,7 +79,7 @@ export function initAuth(onReady) {
 
 // ===== NAVIGATION =====
 window.goToMenu = () => { window.location.href = '../menu/menu.html'; };
-window.goToWorldbuilding = () => { window.location.href = '../worldbuilding.html'; };
+window.goToWorldbuilding = () => { window.location.href = '../worldbuilding/worldbuilding.html'; };
 window.goToHexmap = () => { window.location.href = '../hexmap.html'; };
 window.goToViewmap = () => { window.location.href = '../viewmap.html'; };
 

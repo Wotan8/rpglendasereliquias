@@ -4,7 +4,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getStorage, ref, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
@@ -104,6 +104,45 @@ function showSaveIndicator(text, type) {
     ind._timer = setTimeout(() => ind.classList.remove('show'), 2500);
 }
 
+// ===== REAL-TIME LISTENER (STATUS VITAIS) =====
+let _charSnapshotUnsubscribe = null;
+function setupRealtimeListeners(charId) {
+    if (_charSnapshotUnsubscribe) _charSnapshotUnsubscribe();
+    
+    const docRef = doc(db, 'char', charId);
+    _charSnapshotUnsubscribe = onSnapshot(docRef, (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        
+        // Se a mudança for local (feita por nós mesmos), o Firestore avisa em metadata.
+        // Mas a forma mais segura é checar e atualizar apenas se diferir do DOM para não apagar o que o usuário digita.
+        
+        const vitAtual = data.derivedValues?.vit_atual ?? data.hpCurrent;
+        const enerAtual = data.derivedValues?.ener_atual ?? data.enerCurrent;
+        const sanAtual = data.derivedValues?.san_atual ?? data.sanCurrent;
+        
+        const updateField = (key, newValue) => {
+            if (newValue === undefined || newValue === null) return;
+            const el = document.querySelector(`[data-key="${key}"]`);
+            if (el && document.activeElement !== el && el.value !== String(newValue)) {
+                el.value = String(newValue);
+                if (typeof window.scheduleAutosave === 'function') {
+                    // Impede de fazer saveToFirebase() imediato, só atualiza state
+                    if (typeof state !== 'undefined' && state.dvAtual) {
+                         state.dvAtual[key] = newValue;
+                    }
+                }
+            }
+        };
+
+        updateField('vit_atual', vitAtual);
+        updateField('ener_atual', enerAtual);
+        updateField('san_atual', sanAtual);
+    }, (error) => {
+        console.warn('⚠️ Erro no onSnapshot da ficha:', error);
+    });
+}
+
 // ===== CARREGAR DO FIRESTORE =====
 async function loadFromFirebase(charId) {
     try {
@@ -126,6 +165,10 @@ async function loadFromFirebase(charId) {
             if (window.initMesaTab && data.mesaId) {
                 window.initMesaTab(data.mesaId);
             }
+            
+            // Ativar sincronização em tempo real (para Combate)
+            setupRealtimeListeners(charId);
+
             // 📜 CharLogger: registrar snapshot inicial (após a UI assentar)
             if (window.CharLogger) {
                 setTimeout(() => window.CharLogger.primeFromGather(), 700);

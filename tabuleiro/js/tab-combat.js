@@ -5,6 +5,7 @@
 import { db, doc, setDoc, updateDoc, getDoc } from '../../painel-mestre/js/firebase-config.js';
 import { T, esc, toast } from './tab-state.js';
 import { refCombate, refEstado } from './tab-main.js';
+import { VITAIS } from './tab-hud.js';
 
 let janelaAberta = false;
 
@@ -78,10 +79,35 @@ function render() {
                 ${podeCtrl ? `<button class="tb-cstat-btn" onclick="tbCombStat('${p.id}','${label}',1)">+</button>` : ''}
             </div>`;
         };
+        let hpC = p.hpCurrent ?? 0, hpM = p.hpMax ?? 0;
+        let enerC = p.enerCurrent ?? 0, enerM = p.enerMax ?? 0;
+        let sanC = p.sanCurrent ?? 0, sanM = p.sanMax ?? 0;
+
+        if (p.characterId) {
+            const v = VITAIS.get(p.characterId);
+            if (v) {
+                hpC = v.hp; hpM = v.hpMax;
+                enerC = v.ener; enerM = v.enerMax;
+                sanC = v.san; sanM = v.sanMax;
+            }
+        } else if (p.npcId) {
+            const n = T.npcs.find(x => x.id === p.npcId);
+            if (n) {
+                const vd = n.valoresDer || {};
+                const atual = vd.atual || {};
+                hpM = vd.VIT || hpM;
+                enerM = vd.ENER || enerM;
+                sanM = vd.SAN || sanM;
+                hpC = (atual.VIT !== undefined && atual.VIT !== null) ? Math.min(atual.VIT, hpM) : hpM;
+                enerC = (atual.ENER !== undefined && atual.ENER !== null) ? Math.min(atual.ENER, enerM) : enerM;
+                sanC = (atual.SAN !== undefined && atual.SAN !== null) ? Math.min(atual.SAN, sanM) : sanM;
+            }
+        }
+
         const stats = secreto ? `
-            ${barra('VIT', p.hpCurrent ?? 0, p.hpMax ?? 0, 'linear-gradient(90deg,#10b981,#34d399)')}
-            ${barra('ENER', p.enerCurrent ?? 0, p.enerMax ?? 0, 'linear-gradient(90deg,#f59e0b,#fbbf24)')}
-            ${barra('SAN', p.sanCurrent ?? 0, p.sanMax ?? 0, 'linear-gradient(90deg,#6366f1,#8b5cf6)')}` : '';
+            ${barra('VIT', hpC, hpM, 'linear-gradient(90deg,#10b981,#34d399)')}
+            ${barra('ENER', enerC, enerM, 'linear-gradient(90deg,#f59e0b,#fbbf24)')}
+            ${barra('SAN', sanC, sanM, 'linear-gradient(90deg,#6366f1,#8b5cf6)')}` : '';
         const conds = (p.condicoes || []).map((cd, ci) =>
             `<span class="tb-cond">${esc(cd)}${secreto ? ` <b onclick="tbCombCondRm('${p.id}',${ci})">✕</b>` : ''}</span>`).join('');
         const abrirNpc = secreto && p.npcId ? `onclick="tbAbrirNpcModal('${p.npcId}')" style="cursor:pointer" title="Abrir ficha do NPC"` : '';
@@ -124,31 +150,260 @@ window.tbCombStat = async function(pid, stat, amt) {
     const p = parts.find(x => x.id === pid); if (!p) return;
     const map = { VIT: ['hpCurrent', 'hpMax'], ENER: ['enerCurrent', 'enerMax'], SAN: ['sanCurrent', 'sanMax'] };
     const [cur, max] = map[stat];
-    p[cur] = Math.max(0, Math.min((p[cur] ?? 0) + amt, p[max] ?? 999));
+
+    // Ler valores corretos da Ficha (VITAIS) se possível, ignorando cache do combate
+    let curVal = p[cur] ?? 0;
+    let maxVal = p[max] ?? 999;
+    if (p.characterId) {
+        const v = VITAIS.get(p.characterId);
+        if (v) {
+            const vmap = { VIT: ['hp','hpMax'], ENER: ['ener','enerMax'], SAN: ['san','sanMax'] };
+            curVal = v[vmap[stat][0]];
+            maxVal = v[vmap[stat][1]];
+        }
+    } else if (p.npcId) {
+        const n = T.npcs.find(x => x.id === p.npcId);
+        if (n) {
+            const vd = n.valoresDer || {};
+            const atual = vd.atual || {};
+            maxVal = vd[stat] || maxVal;
+            if (atual[stat] !== undefined && atual[stat] !== null) {
+                curVal = Math.min(atual[stat], maxVal);
+            } else {
+                curVal = maxVal;
+            }
+        }
+    }
+
+    const novoVal = Math.max(0, Math.min(curVal + amt, maxVal));
+    p[cur] = novoVal;
     await salvar(parts);
-    // Se for personagem de jogador, reflete na ficha (char doc)
+
+    // ===== Sincronização bidirecional: Combat → Ficha =====
+    const atualMap = { VIT: 'vit_atual', ENER: 'ener_atual', SAN: 'san_atual' };
+    const curMap = { VIT: 'hpCurrent', ENER: 'enerCurrent', SAN: 'sanCurrent' };
+
+    // Personagem de jogador → atualizar doc char
     if (p.characterId) {
         try {
-            const campo = { VIT: 'hpCurrent', ENER: 'enerCurrent', SAN: 'sanCurrent' }[stat];
-            await updateDoc(doc(db, 'char', p.characterId), { [campo]: p[cur] });
-        } catch (e) { console.warn('sync char', e); }
+            await updateDoc(doc(db, 'char', p.characterId), {
+                [curMap[stat]]: novoVal,
+                [`derivedValues.${atualMap[stat]}`]: String(novoVal)
+            });
+        } catch (e) { console.warn('sync char stat', e); }
+    }
+
+    // NPC → atualizar doc npcs (legacy + system key)
+    if (p.npcId) {
+        try {
+            const npcSnap = await getDoc(doc(db, 'npcs', p.npcId));
+            if (npcSnap.exists()) {
+                const npcData = npcSnap.data();
+                const atualObj = npcData.valoresDer?.atual || {};
+                const patch = { [`valoresDer.atual.${stat}`]: p[cur] };
+                // Também atualizar chaves do sistema que existam no atual
+                const LEGACY_KEYS = new Set(['VIT','ENER','SAN','PERC','INI','REA','BLD']);
+                for (const [k, v] of Object.entries(atualObj)) {
+                    if (LEGACY_KEYS.has(k)) continue;
+                    const nomeNorm = k.toLowerCase().replace(/[^a-z]/g, '');
+                    const sigNorm = stat.toLowerCase();
+                    if (nomeNorm.startsWith(sigNorm) || nomeNorm.startsWith(sigNorm === 'vit' ? 'vitalidade' : sigNorm === 'ener' ? 'energia' : 'sanidade')) {
+                        patch[`valoresDer.atual.${k}`] = p[cur];
+                    } else if (v === atualObj[stat]) {
+                        patch[`valoresDer.atual.${k}`] = p[cur];
+                    }
+                }
+                await updateDoc(doc(db, 'npcs', p.npcId), patch);
+            }
+        } catch (e) { console.warn('sync npc stat', e); }
     }
 };
 
+// ===== Cache de condições do sistema =====
+let _systemConditions = null;
+
+async function carregarCondicoesSistema() {
+    if (_systemConditions) return _systemConditions;
+    try {
+        const { getDocs: gd, collection: col } = await import('../../painel-mestre/js/firebase-config.js');
+        const snap = await gd(col(db, 'system/data/conditions'));
+        _systemConditions = [];
+        snap.forEach(d => {
+            const data = d.data();
+            if (data.publicado !== false) _systemConditions.push({ id: d.id, ...data });
+        });
+        _systemConditions.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+    } catch (e) {
+        console.warn('⚠️ Não foi possível carregar condições do sistema:', e);
+        _systemConditions = [];
+    }
+    return _systemConditions;
+}
+
+function fecharCondPicker() {
+    document.getElementById('tbCondPickerOverlay')?.remove();
+}
+
 window.tbCombCondAdd = async function(pid) {
-    const cond = prompt('Condição (ex: Envenenado, Caído, Atordoado):');
-    if (!cond) return;
+    const conditions = await carregarCondicoesSistema();
+    const overlay = document.createElement('div');
+    overlay.id = 'tbCondPickerOverlay';
+    overlay.className = 'tb-cond-picker-overlay';
+
+    const itensHtml = conditions.map((c, i) =>
+        `<div class="tb-cond-picker-item" data-idx="${i}">
+            <span class="tb-cpi-icon">${esc(c.icone || '💀')}</span>
+            <span class="tb-cpi-nome">${esc(c.nome || 'Sem nome')}</span>
+            ${c.duracao ? `<span class="tb-cpi-sub">⏱️ ${esc(c.duracao)}</span>` : ''}
+        </div>`
+    ).join('');
+
+    overlay.innerHTML = `<div class="tb-cond-picker">
+        <div class="tb-cond-picker-head">
+            <span>☠️ Aplicar Condição</span>
+            <button class="tb-mini-btn" onclick="document.getElementById('tbCondPickerOverlay')?.remove()">✕</button>
+        </div>
+        <input type="text" class="tb-cond-picker-search" id="tbCondSearch" placeholder="🔍 Buscar condição..." autocomplete="off">
+        <div class="tb-cond-picker-list" id="tbCondList">
+            ${itensHtml || '<div class="tb-muted" style="text-align:center;padding:16px">Nenhuma condição cadastrada no sistema</div>'}
+        </div>
+        <div class="tb-cond-picker-custom">
+            <div class="tb-section-title">✏️ Condição Personalizada</div>
+            <input type="text" id="tbCondCustomNome" placeholder="Nome da condição (ex: Atordoado)">
+            <button class="tb-btn tb-btn-success tb-btn-small" id="tbCondCustomBtn">➕ Criar e Aplicar</button>
+        </div>
+    </div>`;
+
+    document.body.appendChild(overlay);
+
+    // Busca
+    const searchEl = document.getElementById('tbCondSearch');
+    searchEl.focus();
+    searchEl.oninput = () => {
+        const q = searchEl.value.toLowerCase().trim();
+        document.querySelectorAll('#tbCondList .tb-cond-picker-item').forEach(el => {
+            const nome = el.querySelector('.tb-cpi-nome')?.textContent?.toLowerCase() || '';
+            el.style.display = (!q || nome.includes(q)) ? '' : 'none';
+        });
+    };
+
+    // Clique em condição do sistema
+    document.querySelectorAll('#tbCondList .tb-cond-picker-item').forEach(el => {
+        el.onclick = async () => {
+            const idx = parseInt(el.dataset.idx);
+            const c = conditions[idx];
+            if (!c) return;
+            await aplicarCondicaoCombate(pid, c.nome, c);
+            fecharCondPicker();
+        };
+    });
+
+    // Condição personalizada
+    document.getElementById('tbCondCustomBtn').onclick = async () => {
+        const nome = document.getElementById('tbCondCustomNome')?.value?.trim();
+        if (!nome) { toast('⚠️ Insira o nome da condição', 'warning'); return; }
+        await aplicarCondicaoCombate(pid, nome, null);
+        fecharCondPicker();
+    };
+
+    // Fechar ao clicar fora
+    overlay.addEventListener('click', e => { if (e.target === overlay) fecharCondPicker(); });
+};
+
+/**
+ * Aplica uma condição ao participante do combate e sincroniza com a ficha.
+ * @param {string} pid - ID do participante no combate
+ * @param {string} nome - Nome da condição
+ * @param {object|null} tpl - Template da condição do sistema (ou null para personalizada)
+ */
+async function aplicarCondicaoCombate(pid, nome, tpl) {
     const parts = (T.combate?.participantes || []).map(p => ({ ...p }));
     const p = parts.find(x => x.id === pid); if (!p) return;
-    p.condicoes = [...(p.condicoes || []), cond.trim()];
+    p.condicoes = [...(p.condicoes || []), nome.trim()];
     await salvar(parts);
-};
+    toast(`☠️ Condição "${esc(nome)}" aplicada`);
+
+    // Sincronizar com a ficha do personagem (char doc)
+    if (p.characterId) {
+        try {
+            const charSnap = await getDoc(doc(db, 'char', p.characterId));
+            if (charSnap.exists()) {
+                const charData = charSnap.data();
+                const conditions = charData.conditions || [];
+                conditions.push({
+                    nome: nome.trim(),
+                    icone: tpl?.icone || '☠️',
+                    descricao: tpl?.descricao || '',
+                    tempoAtual: '',
+                    tempoRestante: tpl?.duracao || '',
+                    modeloId: tpl?.id || null,
+                    efeitoMecanicaIds: tpl?.efeitoMecanicaIds || []
+                });
+                await updateDoc(doc(db, 'char', p.characterId), { conditions });
+            }
+        } catch (e) { console.warn('sync condition to char', e); }
+    }
+
+    // Sincronizar com a ficha do NPC (npcs doc)
+    if (p.npcId) {
+        try {
+            const npcSnap = await getDoc(doc(db, 'npcs', p.npcId));
+            if (npcSnap.exists()) {
+                const npcData = npcSnap.data();
+                const conditions = npcData.conditions || [];
+                conditions.push({
+                    nome: nome.trim(),
+                    icone: tpl?.icone || '☠️',
+                    descricao: tpl?.descricao || '',
+                    tempoAtual: '',
+                    tempoRestante: tpl?.duracao || '',
+                    modeloId: tpl?.id || null,
+                    efeitoMecanicaIds: tpl?.efeitoMecanicaIds || []
+                });
+                await updateDoc(doc(db, 'npcs', p.npcId), { conditions });
+            }
+        } catch (e) { console.warn('sync condition to npc', e); }
+    }
+}
 
 window.tbCombCondRm = async function(pid, i) {
     const parts = (T.combate?.participantes || []).map(p => ({ ...p }));
     const p = parts.find(x => x.id === pid); if (!p) return;
+    const removida = (p.condicoes || [])[i];
     p.condicoes = (p.condicoes || []).filter((_, ci) => ci !== i);
     await salvar(parts);
+
+    // Sincronizar remoção na ficha do personagem
+    if (p.characterId && removida) {
+        try {
+            const charSnap = await getDoc(doc(db, 'char', p.characterId));
+            if (charSnap.exists()) {
+                const charData = charSnap.data();
+                let conditions = charData.conditions || [];
+                const idx = conditions.findIndex(c => c.nome === removida);
+                if (idx >= 0) {
+                    conditions.splice(idx, 1);
+                    await updateDoc(doc(db, 'char', p.characterId), { conditions });
+                }
+            }
+        } catch (e) { console.warn('sync condition removal to char', e); }
+    }
+
+    // Sincronizar remoção na ficha do NPC
+    if (p.npcId && removida) {
+        try {
+            const npcSnap = await getDoc(doc(db, 'npcs', p.npcId));
+            if (npcSnap.exists()) {
+                const npcData = npcSnap.data();
+                let conditions = npcData.conditions || [];
+                const idx = conditions.findIndex(c => c.nome === removida);
+                if (idx >= 0) {
+                    conditions.splice(idx, 1);
+                    await updateDoc(doc(db, 'npcs', p.npcId), { conditions });
+                }
+            }
+        } catch (e) { console.warn('sync condition removal to npc', e); }
+    }
 };
 
 window.tbCombRemover = async function(pid) {

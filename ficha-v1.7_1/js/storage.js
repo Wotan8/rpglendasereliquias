@@ -68,6 +68,42 @@ function gatherData() {
         san_atual: (document.querySelector('[data-key="san_atual"]') || {}).value || '',
         blindagem: (document.querySelector('[data-key="blindagem"]') || {}).value || '',
     };
+
+    // ===== Espelhar Status Vitais como campos de topo =====
+    // Permite que módulos externos (Combate, Tabuleiro HUD) leiam os
+    // valores máximos e atuais sem replicar o motor de mecânicas.
+    const _derived = (typeof state !== 'undefined' && state.derived) || {};
+    const _vitalStats = window.VITAL_STATS || [];
+    const _findVitalMax = (sigla) => {
+        // 1) Busca pela chaveInterna exata (ex: VIT_MAX)
+        const vs = _vitalStats.find(v => v.key === sigla + '_MAX');
+        if (vs) return _derived[vs.key] ?? null;
+        // 2) Busca por key parcial em state.derived
+        for (const k of Object.keys(_derived)) {
+            if (k.startsWith(sigla) && k.endsWith('_MAX')) return _derived[k];
+        }
+        // 3) Busca via DERIVED_FIELDS_MAP (display DOM fallback)
+        const mapEntry = { VIT: 'vit_max_display', ENER: 'ener_max_display', SAN: 'san_max_display' }[sigla];
+        if (mapEntry) {
+            const el = document.getElementById(mapEntry);
+            if (el && el.value !== '' && el.value !== '0') return parseFloat(el.value) || null;
+        }
+        return null;
+    };
+    const _parseAtual = (v) => { const n = parseFloat(v); return isNaN(n) ? null : n; };
+
+    const hpMax = _findVitalMax('VIT');
+    const enerMax = _findVitalMax('ENER');
+    const sanMax = _findVitalMax('SAN');
+    if (hpMax !== null) d.hpMax = hpMax;
+    if (enerMax !== null) d.enerMax = enerMax;
+    if (sanMax !== null) d.sanMax = sanMax;
+    const hpCur = _parseAtual(d.derivedValues.vit_atual);
+    const enerCur = _parseAtual(d.derivedValues.ener_atual);
+    const sanCur = _parseAtual(d.derivedValues.san_atual);
+    if (hpCur !== null) d.hpCurrent = hpCur;
+    if (enerCur !== null) d.enerCurrent = enerCur;
+    if (sanCur !== null) d.sanCurrent = sanCur;
     // Gather class module data
     d.classModuleData = typeof gatherClassModuleData === 'function'
         ? gatherClassModuleData()

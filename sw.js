@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v16';
+const VERSION = 'v26';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -151,7 +151,7 @@ const PRECACHE_URLS = [
   '/shared/theme.js',
   '/shared/tokens.css',
   '/viewmap.html',
-  '/worldbuilding.html',
+  '/worldbuilding/worldbuilding.html',
   'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js',
   'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js',
   'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js',

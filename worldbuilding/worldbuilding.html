@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lendas e Relíquias - Worldbuilding</title>
+
+    <!-- vis-network (grafos de conexão) -->
+    <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+
+    <script type="module" src="/js/global-favicon.js"></script>
+
+    <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+
+    <!-- 1. CSS local da página  2. Ferramentas novas  3. Tokens  4. Identidade -->
+    <link rel="stylesheet" href="css/worldbuilding.css">
+    <link rel="stylesheet" href="css/wb-ferramentas.css">
+    <link rel="stylesheet" href="../shared/tokens.css">
+    <link rel="stylesheet" href="../shared/lendas-reliquias.css">
+</head>
+
+<body>
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">🌐 Carregando Worldbuilding...</div>
+    </div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <span style="font-size: 1.5rem;">🌐</span>
+            <span class="sidebar-title">Worldbuilding</span>
+        </div>
+        <div class="sidebar-search">
+            <input type="text" class="search-input" id="globalSearch" placeholder="🔍 Buscar em tudo...">
+        </div>
+        <nav class="sidebar-nav" id="sidebarNav">
+            <div class="nav-category" data-category="session-logs">
+                <span class="nav-icon">📋</span>
+                <span class="nav-label">Logs de Sessão</span>
+            </div>
+            <div class="nav-category active" data-category="dashboard">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Dashboard</span>
+            </div>
+            <div class="nav-category" data-category="geography">
+                <span class="nav-icon">📍</span>
+                <span class="nav-label">Geografia</span>
+            </div>
+            <div class="nav-category" data-category="properties">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">Propriedades</span>
+            </div>
+            <div class="nav-category" data-category="npcs">
+                <span class="nav-icon">👥</span>
+                <span class="nav-label">NPCs</span>
+            </div>
+            <div class="nav-category" data-category="factions">
+                <span class="nav-icon">⚔️</span>
+                <span class="nav-label">Tribos</span>
+            </div>
+            <div class="nav-category" data-category="history">
+                <span class="nav-icon">📜</span>
+                <span class="nav-label">História</span>
+            </div>
+            <div class="nav-category" data-category="cultures">
+                <span class="nav-icon">🎭</span>
+                <span class="nav-label">Culturas</span>
+            </div>
+            <div class="nav-category" data-category="magic">
+                <span class="nav-icon">✨</span>
+                <span class="nav-label">Magia/Tecnologia</span>
+            </div>
+            <div class="nav-category" data-category="religion">
+                <span class="nav-icon">🏛️</span>
+                <span class="nav-label">Religião</span>
+            </div>
+            <div class="nav-category" data-category="rumors">
+                <span class="nav-icon">💬</span>
+                <span class="nav-label">Rumores/Ganchos</span>
+            </div>
+            <div class="nav-divider"></div>
+            <div class="nav-category" data-category="submundo">
+                <span class="nav-icon">🌙</span>
+                <span class="nav-label">Submundo</span>
+            </div>
+        </nav>
+        <button class="btn-new-entry" id="btnNewEntry">➕ Nova Entrada</button>
+    </div>
+
+    <main class="main-content">
+        <div class="content-header">
+            <button class="btn-logout" onclick="logout()" title="Sair da conta">🚪 SAIR</button>
+            <button class="btn-mestre" onclick="window.location.href='../painel-mestre/painel-mestre.html'"
+                title="Menu — Painel do Mestre">🏠</button>
+            <button class="btn-viewmap" onclick="window.location.href='../viewmap.html'"
+                title="Navegador de Mapa">🌍</button>
+            <h1 class="content-title" id="contentTitle">Dashboard</h1>
+            <span class="user-display-name" id="userDisplayName" title=""></span>
+        </div>
+        <div class="content-body" id="contentBody"></div>
+    </main>
+
+    <!-- Entry Modal -->
+    <div class="modal" id="entryModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="entryModalTitle">Nova Entrada</h2>
+                <button class="modal-close" onclick="closeEntryModal()">✕</button>
+            </div>
+            <div class="modal-body" id="entryModalBody"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEntryModal()">Cancelar</button>
+                <button class="btn btn-danger" id="btnDeleteEntry" style="display:none;"
+                    onclick="deleteCurrentEntry()">🗑️ Excluir</button>
+                <button class="btn btn-success" onclick="saveEntry()">💾 Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Núcleo legado (Dashboard, Geografia, NPCs, Tribos, História…) -->
+    <script type="module" src="js/wb-core.js"></script>
+    <!-- Ferramentas novas (Linha do Tempo, Grafos, Editor, Mural) -->
+    <script type="module" src="js/wb-main.js"></script>
+</body>
+
+</html>

@@ -94,9 +94,19 @@ async function carregarChars() {
     });
 }
 async function carregarNpcs() {
-    const snap = await getDocs(collection(db, 'npcs'));
-    T.npcs = [];
-    snap.forEach(d => { const n = d.data(); if (n.mesaId === T.mesaId) T.npcs.push({ id: d.id, ...n }); });
+    return new Promise((resolve) => {
+        let first = true;
+        onSnapshot(collection(db, 'npcs'), snap => {
+            T.npcs = [];
+            snap.forEach(d => { const n = d.data(); if (n.mesaId === T.mesaId) T.npcs.push({ id: d.id, ...n }); });
+            if (first) { first = false; resolve(); }
+            else {
+                if (window._renderCombate) window._renderCombate();
+                // trigger HUD update for tokens
+                import('./tab-state.js').then(m => m.markDirty());
+            }
+        });
+    });
 }
 async function carregarUsers() {
     T.usersMap = {};

@@ -320,6 +320,18 @@ service cloud.firestore {
       allow create, update, delete: if isMaster();
     }
 
+    // Arestas dos Grafos de Conexão (genealogia + teia de facções)
+    match /worldbuilding-relations/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    // Textos do Escritório do Cronista (contos e descrições)
+    match /worldbuilding-articles/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
     // ========== ADICIONADO: Coleções de Session Logs ==========
     match /campaigns/{docId} {
       allow read: if isSignedIn();

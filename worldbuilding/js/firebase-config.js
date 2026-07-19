@@ -1,6 +1,7 @@
 // =============================================
-// PAINEL DO MESTRE — Firebase Config + Exports
+// WORLDBUILDING — Firebase Config + Exports
 // Lendas e Relíquias
+// (mesmo padrão de painel-mestre/js/firebase-config.js)
 // =============================================
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -8,10 +9,9 @@ import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/fi
 import {
     getFirestore, collection, query, where, orderBy, limit,
     onSnapshot, doc, getDoc, getDocs, setDoc, deleteDoc,
-    addDoc, updateDoc, runTransaction
-, writeBatch, deleteField } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    addDoc, updateDoc, runTransaction, writeBatch
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 // ===== CONFIG =====
 const firebaseConfig = {
@@ -25,9 +25,8 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+
 // 💾 PERSISTÊNCIA OFFLINE (Firebase v10+): cache local em IndexedDB.
-// Leituras funcionam offline e escritas ficam na fila e sincronizam
-// automaticamente quando a conexão voltar. Multi-tab habilitado.
 let db;
 try {
     db = initializeFirestore(app, {
@@ -38,14 +37,11 @@ try {
     console.warn('💾 Firestore: cache offline indisponível, usando memória.', e);
     db = getFirestore(app);
 }
-const storage = getStorage(app);
 
-// ===== RE-EXPORT =====
 export {
-    app, auth, db, storage,
+    app, auth, db,
     onAuthStateChanged, signOut,
-    collection, query, where, orderBy, limit,
-    onSnapshot, doc, getDoc, getDocs, setDoc,
-    deleteDoc, addDoc, updateDoc, runTransaction, writeBatch, deleteField,
-    ref, uploadBytes, getDownloadURL
+    collection, query, where, orderBy, limit, onSnapshot,
+    doc, getDoc, getDocs, setDoc, deleteDoc, addDoc, updateDoc,
+    runTransaction, writeBatch
 };

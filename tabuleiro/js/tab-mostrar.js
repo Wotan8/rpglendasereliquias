@@ -299,15 +299,16 @@ async function abrirNpcModal(npcId, somenteLeitura) {
     if (!n) { toast('❌ NPC não encontrado', 'danger'); return; }
 
     const vis = n.visibilidade === 'publico' ? 'publico' : 'secreto';
-    const mestreView = !somenteLeitura && T.isMaster;
+    const mestreView = !somenteLeitura && T.isMaster && T.mode === 'secret';
 
     if (mestreView && vis === 'secreto') {
-        // NPC Secreto → visão gerencial completa (Painel do Mestre)
+        // NPC Secreto + Mestre em modo secreto → visão gerencial completa (Painel do Mestre)
         await abrirFichaMestreNpc(n);
         return;
     }
 
-    // NPC Público (ou visão de jogador) → componente de Aliados em Modo Rápido
+    // Qualquer outro caso (modo público, jogador, ou NPC público visto pelo mestre)
+    // → componente de Aliados em Modo Rápido (leitura ou edição limitada)
     const readonly = !!somenteLeitura || !T.isMaster;
     await abrirFichaAliadoNpc(n, { readonly });
 }

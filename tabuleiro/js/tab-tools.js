@@ -603,7 +603,8 @@ function onDblClick(e) {
     if (o.tipo === 'texto' && podeEditarObj(o)) { abrirModalTexto(null, o); return; }
     if (o.tipo === 'porta' && T.mode === 'secret') { updObj(o.id, { aberta: !o.aberta }); return; }
     if (o.tipo === 'token' && o.vinculo?.tipo === 'npc' && (T.mode === 'secret' || can('abrirNpc'))) {
-        window.tbAbrirNpcModal && window.tbAbrirNpcModal(o.vinculo.id);
+        const somenteLeitura = T.mode !== 'secret' || !T.isMaster;
+        window.tbAbrirNpcModal && window.tbAbrirNpcModal(o.vinculo.id, somenteLeitura);
         return;
     }
     if (o.tipo === 'mostrar') { window.tbClickMostrar && window.tbClickMostrar(o.id); }
