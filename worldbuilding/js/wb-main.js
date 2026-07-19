@@ -11,11 +11,13 @@
    Nenhuma linha do núcleo é reescrita — só estendida.
    ═══════════════════════════════════════════════════════════ */
 
+import { Eco }        from './wb-ecosystem.js';
 import { Calendario } from './wb-calendario.js';
 import { Timeline }   from './wb-timeline.js';
 import { Grafos }     from './wb-grafos.js';
 import { Editor }     from './wb-editor.js';
 import { Mural }      from './wb-mural.js';
+import { Busca }      from './wb-busca.js';
 
 const TOOLS = [
     { tool: 'timeline', icon: '📜', label: 'Linha do Tempo', render: () => Timeline.render() },
@@ -77,8 +79,32 @@ async function activate(tool) {
 
 /* Espera o núcleo carregar os dados reais antes de habilitar as ferramentas. */
 document.addEventListener('wb:data-ready', async () => {
+    await Eco.load();            // raças, classes, tribos mecânicas, personagens e linhagens
     await Calendario.load();     // regras do calendário (usadas por timeline)
     injectModal();
     injectNav();
+    injectSearchButton();
+    Busca.init();                // atalho Ctrl/Cmd-K
     console.log('⚒️ Ferramentas do Cronista prontas.');
 }, { once: true });
+
+/* Botão de busca global no topo da sidebar. */
+function injectSearchButton() {
+    const nav = document.getElementById('sidebarNav');
+    if (!nav || document.getElementById('wbBuscaBtn')) return;
+    const btn = document.createElement('button');
+    btn.id = 'wbBuscaBtn';
+    btn.className = 'wbt-search-btn';
+    btn.innerHTML = `<span>🔍 Buscar no mundo</span><kbd>Ctrl K</kbd>`;
+    btn.onclick = () => Busca.open();
+    nav.insertBefore(btn, nav.firstChild);
+}
+
+/* Busca global pediu para abrir uma linhagem específica. */
+document.addEventListener('wb:goto-lineage', async (e) => {
+    const grafosTool = TOOLS.find(t => t.tool === 'grafos');
+    if (grafosTool) {
+        await activate(grafosTool);
+        Grafos.openLineageById?.(e.detail);
+    }
+});

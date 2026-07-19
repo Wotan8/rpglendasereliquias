@@ -326,6 +326,12 @@ service cloud.firestore {
       allow create, update, delete: if isMaster();
     }
 
+    // Linhagens familiares (⚜️ Casas / Clãs) — NOVA
+    match /worldbuilding-lineages/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
     // Textos do Escritório do Cronista (contos e descrições)
     match /worldbuilding-articles/{docId} {
       allow read: if isSignedIn();

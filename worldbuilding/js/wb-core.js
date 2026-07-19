@@ -46,7 +46,7 @@ import {
             geography: { collection: 'worldbuilding-geography', icon: '📍', title: 'Geografia', types: ['Continente', 'Região', 'Cidade', 'Vila', 'Ponto de Interesse'] },
             properties: { collection: 'worldbuilding-properties', icon: '🏠', title: 'Propriedades', types: ['Castelo', 'Taverna', 'Choupana', 'Loja', 'Templo', 'Fortaleza', 'Mansão', 'Fazenda', 'Outro'] },
             npcs: { collection: 'npcs', icon: '👥', title: 'NPCs', types: ['NPC', 'Criatura'] },
-            factions: { collection: 'worldbuilding-factions', icon: '⚔️', title: 'Tribos', types: ['Tribo', 'Facção', 'Organização'] },
+            factions: { collection: 'worldbuilding-factions', icon: '⚔️', title: 'Tribos & Civilizações', types: ['Tribo', 'Civilização', 'Clã', 'Organização'] },
             history: { collection: 'worldbuilding-history', icon: '📜', title: 'História', types: ['Era', 'Evento', 'Período', 'Guerra', 'Fundação', 'Catástrofe', 'Descoberta', 'Político', 'Desastre Natural', 'Tratado'] },
             cultures: { collection: 'worldbuilding-cultures', icon: '🎭', title: 'Culturas', types: ['Cultura', 'Sociedade', 'Tradição'] },
             magic: { collection: 'worldbuilding-magic', icon: '✨', title: 'Magia/Tecnologia', types: ['Escola de Magia', 'Tecnologia', 'Artefato'] },
@@ -105,12 +105,8 @@ import {
                 console.log(`Loaded ${allCampaigns.length} campaigns`);
             } catch (e) { console.log('Error loading campaigns:', e); allCampaigns = []; }
 
-            // Load session logs
-            try {
-                const sessionsSnapshot = await getDocs(collection(db, 'session-logs'));
-                allSessions = sessionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log(`Loaded ${allSessions.length} session logs`);
-            } catch (e) { console.log('Error loading sessions:', e); allSessions = []; }
+            // Session Logs REMOVIDOS do Worldbuilding — agora vivem no Painel do Mestre.
+            allSessions = [];
 
             // Load characters for campaign player selection
             try {
@@ -433,7 +429,7 @@ import {
             if (refs.factions?.length) {
                 html += `
                     <div class="ref-category">
-                        <span class="ref-category-title">⚔️ Tribos/Facções</span>
+                        <span class="ref-category-title">⚔️ Tribos &amp; Civilizações</span>
                         <div class="ref-items-grid">
                             ${refs.factions.map(f => `
                                 <div class="ref-item" data-hover-preview="factions:${f.id}" onclick="openEntry('factions', '${f.id}')">
@@ -2249,11 +2245,11 @@ import {
 
                 factionsSections = `
                 <div class="form-section">
-                    <h3 class="form-section-title">⚔️ Facções/Tribos Envolvidas</h3>
+                    <h3 class="form-section-title">⚔️ Tribos &amp; Civilizações Envolvidas</h3>
                     <div class="linked-entities-list" id="linkedFactionsHistoryList"></div>
                     <div class="add-linked-entity">
                         <select class="form-select" id="selectFactionToLinkHistory">
-                            <option value="">Selecionar Tribo/Facção...</option>
+                            <option value="">Selecionar Tribo/Civilização...</option>
                             ${availableFactions.map(f => `<option value="${f.id}" data-name="${f.nome}">${f.nome}</option>`).join('')}
                         </select>
                         <button type="button" onclick="addLinkedFactionHistory()">+ Adicionar</button>
@@ -2832,7 +2828,7 @@ import {
             if (!container) return;
             container.innerHTML = linkedFactionsHistory.length ? linkedFactionsHistory.map((faction, idx) => `
                 <div class="linked-entity-item">
-                    <span class="entity-type-badge">Facção</span>
+                    <span class="entity-type-badge">Tribo</span>
                     <span class="linked-entity-name">${faction.name}</span>
                     <input type="text" class="linked-entity-title" value="${faction.title || ''}" placeholder="Papel (ex: Protagonista, Aliada...)" onchange="updateLinkedFactionHistoryTitle(${idx}, this.value)">
                     <button class="linked-entity-remove" onclick="removeLinkedFactionHistory(${idx})">✕</button>

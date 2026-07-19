@@ -167,6 +167,8 @@ export const Editor = (() => {
                     <button class="wbt-chip" data-rt="factions">⚔️ Tribos</button>
                     <button class="wbt-chip" data-rt="geography">📍 Locais</button>
                     <button class="wbt-chip" data-rt="history">📜 História</button>
+                    <button class="wbt-chip" data-rt="races">🧬 Raças</button>
+                    <button class="wbt-chip" data-rt="classes">⚔️ Classes</button>
                 </div>
                 <div id="refsList" class="wbt-refs__list"></div>
             </aside>
