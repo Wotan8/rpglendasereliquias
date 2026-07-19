@@ -29,8 +29,19 @@ body {
         radial-gradient(1100px 500px at 15% -10%, rgba(91, 63, 184, 0.07), transparent 60%),
         radial-gradient(900px 420px at 90% 110%, rgba(58, 166, 255, 0.05), transparent 60%),
         linear-gradient(180deg, var(--lr-bg-0), var(--lr-bg-1));
-    background-attachment: fixed;
+    /* ⚠️ background-attachment: fixed é QUEBRADO no iOS Safari e muitos
+       WebViews mobile — congela completamente o scroll da página.
+       Usamos 'scroll' por padrão e só ativamos 'fixed' em mouses finos
+       (desktops/laptops) que não sofrem do bug. */
+    background-attachment: scroll;
     line-height: var(--lr-lh-body);
+}
+
+/* Desktop com mouse: ativar fundo fixo (efeito parallax sutil) */
+@media (pointer: fine) {
+    body {
+        background-attachment: fixed;
+    }
 }
 
 /* Títulos: Cinzel — letras lapidadas em pedra */
@@ -383,12 +394,22 @@ img, svg, video, canvas { max-width: 100%; }
 
     /* 📱 Rolagem VERTICAL sempre liberada nas páginas de conteúdo.
        Apps de canvas em tela cheia (ex.: Tabuleiro) usam body.app-canvas
-       para manter o comportamento fixo de viewport. */
+       para manter o comportamento fixo de viewport.
+
+       ⚠️ !important é NECESSÁRIO: muitos CSS locais de página definem
+       overflow:hidden ou height:100vh no body/html que impedem o scroll
+       no mobile. Esta camada global DEVE vencer essas regras. */
     html:not(.app-canvas), body:not(.app-canvas) {
-        overflow-y: auto;
-        height: auto;
-        min-height: 100%;
+        overflow-y: auto !important;
+        height: auto !important;
+        min-height: 100% !important;
         -webkit-overflow-scrolling: touch;
+    }
+
+    /* Garantir que body com display:flex (login, worldbuilding) não trave
+       o scroll quando o conteúdo excede a viewport */
+    body:not(.app-canvas) {
+        min-height: 100vh;
     }
 
     /* Barras/toolbars compactas no celular */

@@ -7,7 +7,7 @@
     "start_url": "/",
     "scope": "/",
     "display": "standalone",
-    "display_override": ["tabbed", "window-controls-overlay", "fullscreen", "standalone", "minimal-ui"],
+    "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
     "background_color": "#0f172a",
     "theme_color": "#8b5cf6",
     "icons": [
