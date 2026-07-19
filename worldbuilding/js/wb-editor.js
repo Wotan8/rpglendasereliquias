@@ -1,29 +1,285 @@
 /* ═══════════════════════════════════════════════════════════
    wb-editor.js — Escritório do Cronista
    ─────────────────────────────────────
-   • Rich text (contenteditable) + toolbar
-   • Split-screen: painel de consulta com as fichas REAIS
-     (NPCs, Tribos, Locais, História) do ecossistema
-   • @Mentions: "@" sugere qualquer entidade real; ao escolher,
-     insere link que abre a ficha
-   • Modo Foco
-   • Textos salvos em worldbuilding-articles/{id}
+   Área do ESCRITOR. Duas telas:
+
+   • 📚 BIBLIOTECA — estantes com LIVROS (cada um com seus
+     capítulos/contos) + uma prateleira de TEXTOS AVULSOS.
+     Mostra status público/privado, nº de capítulos e palavras.
+
+   • ✒️ ESCRITA — editor rich-text com:
+       – título, sinopse, livro/ordem, público, status;
+       – painel de consulta com as fichas REAIS do ecossistema;
+       – @menções que linkam NPCs, Tribos, Locais, eventos…;
+       – autosave + modo foco.
+
+   Coleções:
+     worldbuilding-books      → livros (agrupam capítulos)
+     worldbuilding-articles   → capítulos/contos/textos
    ═══════════════════════════════════════════════════════════ */
 
 import { db, collection, getDocs, doc, setDoc, deleteDoc } from './firebase-config.js';
 import { WB, esc, uid, ToolModal, setTitle, contentBody, searchables, KIND } from './wb-utils.js';
 
 export const Editor = (() => {
-    let artigos = [], atual = null, mentionRange = null, mentionIdx = 0, saveTimer = null, refType = 'all';
-
-    async function loadArtigos() {
-        try {
-            const snap = await getDocs(collection(db, 'worldbuilding-articles'));
-            artigos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        } catch { artigos = []; }
-    }
+    let books = [], artigos = [], atual = null;
+    let mentionRange = null, mentionIdx = 0, saveTimer = null, refType = 'all';
+    let view = 'library';   // 'library' | 'editor'
 
     const $ = (s) => document.querySelector(s);
+    const now = () => Date.now();
+    const wordCount = (html) => {
+        const txt = (html || '').replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/g, ' ');
+        const m = txt.trim().match(/\S+/g);
+        return m ? m.length : 0;
+    };
+    const fmtDate = (ts) => ts ? new Date(ts).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+
+    async function loadAll() {
+        try {
+            const [bSnap, aSnap] = await Promise.all([
+                getDocs(collection(db, 'worldbuilding-books')),
+                getDocs(collection(db, 'worldbuilding-articles')),
+            ]);
+            books = bSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            artigos = aSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        } catch (e) { console.warn('[editor] load', e); books = books || []; artigos = artigos || []; }
+    }
+
+    /* Capítulos de um livro, na ordem definida. */
+    const chaptersOf = (bookId) =>
+        artigos.filter(a => a.bookId === bookId)
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.createdAt ?? 0) - (b.createdAt ?? 0));
+    const loose = () => artigos.filter(a => !a.bookId)
+        .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+
+    const pubBadge = (isPub) => isPub
+        ? '<span class="wb-badge wb-badge--pub">🌐 Público</span>'
+        : '<span class="wb-badge wb-badge--priv">🔒 Privado</span>';
+    const statusBadge = (st) => {
+        const map = { rascunho: ['✏️ Rascunho', 'draft'], revisao: ['🔍 Em revisão', 'rev'], publicado: ['✅ Publicado', 'done'] };
+        const [label, cls] = map[st] || map.rascunho;
+        return `<span class="wb-badge wb-badge--${cls}">${label}</span>`;
+    };
+
+    /* ══════════════ BIBLIOTECA ══════════════ */
+    function renderLibrary() {
+        view = 'library';
+        setTitle('📚 Escritório do Cronista');
+        document.body.classList.remove('wbt-focus');
+
+        const totalPalavras = artigos.reduce((s, a) => s + wordCount(a.contentHTML), 0);
+        const bookCards = books
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+            .map(bookCard).join('');
+        const looseCards = loose().map(a => articleRow(a)).join('');
+
+        contentBody().innerHTML = `
+        <div class="wb-library">
+            <div class="wb-lib-toolbar">
+                <div class="wb-lib-stats">
+                    <span><b>${books.length}</b> livros</span>
+                    <span><b>${artigos.length}</b> textos</span>
+                    <span><b>${totalPalavras.toLocaleString('pt-BR')}</b> palavras</span>
+                </div>
+                <span style="flex:1"></span>
+                <button class="btn btn-secondary btn-sm" id="newLoose">📄 Novo texto avulso</button>
+                <button class="btn btn-success btn-sm" id="newBook">📗 Novo livro</button>
+            </div>
+
+            <h3 class="wb-lib-section">📚 Livros</h3>
+            <div class="wb-shelf">
+                ${bookCards || '<p class="wbt-muted">Nenhum livro ainda. Crie um livro para agrupar capítulos e contos.</p>'}
+            </div>
+
+            <h3 class="wb-lib-section">📄 Textos avulsos</h3>
+            <div class="wb-loose-list">
+                ${looseCards || '<p class="wbt-muted">Nenhum texto avulso. Bons textos avulsos podem virar capítulos depois.</p>'}
+            </div>
+        </div>`;
+
+        bindLibrary();
+    }
+
+    function bookCard(b) {
+        const caps = chaptersOf(b.id);
+        const palavras = caps.reduce((s, a) => s + wordCount(a.contentHTML), 0);
+        const capsHtml = caps.length
+            ? caps.map((a, i) => articleRow(a, i + 1)).join('')
+            : '<p class="wbt-muted" style="margin:.4rem .2rem">Sem capítulos ainda.</p>';
+        return `
+        <div class="wb-book" data-book="${b.id}">
+            <div class="wb-book__head">
+                <div class="wb-book__cover" style="${b.cover ? `background-image:url('${esc(b.cover)}')` : ''}">${b.cover ? '' : '📖'}</div>
+                <div class="wb-book__meta">
+                    <div class="wb-book__title">${esc(b.title || 'Livro sem título')}</div>
+                    <div class="wb-book__badges">${pubBadge(b.public)} <span class="wb-badge wb-badge--soft">${caps.length} cap.</span> <span class="wb-badge wb-badge--soft">${palavras.toLocaleString('pt-BR')} palavras</span></div>
+                    ${b.description ? `<p class="wb-book__desc">${esc(b.description)}</p>` : ''}
+                </div>
+                <div class="wb-book__actions">
+                    <button class="btn btn-secondary btn-sm" data-editbook="${b.id}" title="Editar livro">⚙️</button>
+                    <button class="btn btn-secondary btn-sm" data-addchap="${b.id}" title="Novo capítulo">＋ cap.</button>
+                </div>
+            </div>
+            <div class="wb-book__chapters">${capsHtml}</div>
+        </div>`;
+    }
+
+    function articleRow(a, num) {
+        const palavras = wordCount(a.contentHTML);
+        return `
+        <div class="wb-chapter" data-openart="${a.id}">
+            <span class="wb-chapter__num">${num ? num : '—'}</span>
+            <div class="wb-chapter__body">
+                <div class="wb-chapter__title">${esc(a.title || 'Sem título')}</div>
+                ${a.synopsis ? `<div class="wb-chapter__syn">${esc(a.synopsis)}</div>` : ''}
+                <div class="wb-chapter__meta">${statusBadge(a.status)} ${pubBadge(a.public)} <span class="wbt-muted">${palavras} palavras · ${fmtDate(a.updatedAt)}</span></div>
+            </div>
+            <button class="btn btn-secondary btn-sm" data-delart="${a.id}" title="Excluir">🗑️</button>
+        </div>`;
+    }
+
+    function bindLibrary() {
+        $('#newBook').onclick = () => openBookModal(null);
+        $('#newLoose').onclick = () => openArticle(null, null);
+        contentBody().querySelectorAll('[data-editbook]').forEach(b =>
+            b.onclick = (e) => { e.stopPropagation(); openBookModal(books.find(x => x.id === b.dataset.editbook)); });
+        contentBody().querySelectorAll('[data-addchap]').forEach(b =>
+            b.onclick = (e) => { e.stopPropagation(); openArticle(null, b.dataset.addchap); });
+        contentBody().querySelectorAll('[data-openart]').forEach(el =>
+            el.onclick = (e) => { if (e.target.closest('[data-delart]')) return; openArticle(artigos.find(x => x.id === el.dataset.openart), null); });
+        contentBody().querySelectorAll('[data-delart]').forEach(b =>
+            b.onclick = async (e) => {
+                e.stopPropagation();
+                if (!confirm('Excluir este texto? Esta ação não pode ser desfeita.')) return;
+                await deleteDoc(doc(db, 'worldbuilding-articles', b.dataset.delart));
+                artigos = artigos.filter(x => x.id !== b.dataset.delart);
+                renderLibrary();
+            });
+    }
+
+    /* ══════════════ LIVRO (modal) ══════════════ */
+    function openBookModal(book = null) {
+        const b = book || { id: uid('book'), title: '', description: '', cover: '', public: false, order: books.length };
+        ToolModal.open(`
+            <h2>${book ? '⚙️ Editar livro' : '📗 Novo livro'}</h2>
+            <div class="wbt-form">
+                <label>Título do livro <input id="bkTitle" class="form-input" value="${esc(b.title)}" placeholder="Ex: Crônicas de Eldoria — Vol. I"></label>
+                <label>Sinopse / descrição <textarea id="bkDesc" class="form-textarea" placeholder="Do que trata este livro?">${esc(b.description || '')}</textarea></label>
+                <label>Capa (URL de imagem) <input id="bkCover" class="form-input" value="${esc(b.cover || '')}" placeholder="https://…"></label>
+                <label class="wbt-check"><input type="checkbox" id="bkPublic" ${b.public ? 'checked' : ''}> 🌐 Livro público (visível para jogadores)</label>
+                <div class="wbt-actions">
+                    ${book ? '<button class="btn btn-danger" id="bkDel">🗑️ Excluir livro</button>' : ''}
+                    <button class="btn btn-success" id="bkSave">💾 Salvar livro</button>
+                </div>
+            </div>`);
+        $('#bkSave').onclick = async () => {
+            b.title = $('#bkTitle').value.trim() || 'Livro sem título';
+            b.description = $('#bkDesc').value.trim();
+            b.cover = $('#bkCover').value.trim();
+            b.public = $('#bkPublic').checked;
+            b.updatedAt = now();
+            b.updatedBy = WB().user?.email || '';
+            if (!b.createdAt) b.createdAt = now();
+            const { id, ...data } = b;
+            await setDoc(doc(db, 'worldbuilding-books', id), data);
+            if (!books.find(x => x.id === b.id)) books.push(b);
+            else books = books.map(x => x.id === b.id ? b : x);
+            ToolModal.close(); renderLibrary();
+        };
+        const del = $('#bkDel');
+        if (del) del.onclick = async () => {
+            const caps = chaptersOf(b.id);
+            if (!confirm(`Excluir o livro "${b.title}"?${caps.length ? `\nOs ${caps.length} capítulos NÃO serão apagados — voltarão para "Textos avulsos".` : ''}`)) return;
+            // Desvincula capítulos (viram avulsos) antes de excluir o livro.
+            for (const a of caps) {
+                a.bookId = null;
+                const { id, ...data } = a;
+                await setDoc(doc(db, 'worldbuilding-articles', id), data, { merge: true });
+            }
+            await deleteDoc(doc(db, 'worldbuilding-books', b.id));
+            books = books.filter(x => x.id !== b.id);
+            ToolModal.close(); renderLibrary();
+        };
+    }
+
+    /* ══════════════ EDITOR (escrita) ══════════════ */
+    function bookOptions(sel) {
+        return `<option value="">— texto avulso —</option>` +
+            books.map(b => `<option value="${b.id}" ${b.id === sel ? 'selected' : ''}>📗 ${esc(b.title || 'Sem título')}</option>`).join('');
+    }
+
+    function openArticle(article, bookId) {
+        atual = article || {
+            id: uid('art'), title: '', synopsis: '', contentHTML: '',
+            bookId: bookId || null, order: bookId ? chaptersOf(bookId).length : 0,
+            public: false, status: 'rascunho', mentions: [], createdAt: now(),
+        };
+        renderEditor();
+    }
+
+    function renderEditor() {
+        view = 'editor';
+        const a = atual;
+        setTitle('✒️ Escritório do Cronista');
+        contentBody().innerHTML = `
+        <div class="wbt-editor-layout" id="editorLayout">
+            <div class="wbt-editor-main" id="editorMain">
+                <div class="wbt-toolbar wbt-etoolbar">
+                    <button class="btn btn-secondary btn-sm" id="backLib">← Biblioteca</button>
+                    <span style="flex:1"></span>
+                    <button class="btn btn-secondary btn-sm" data-cmd="bold" title="Negrito"><b>N</b></button>
+                    <button class="btn btn-secondary btn-sm" data-cmd="italic" title="Itálico"><i>I</i></button>
+                    <button class="btn btn-secondary btn-sm" data-cmd="formatBlock:h2" title="Título">T</button>
+                    <button class="btn btn-secondary btn-sm" data-cmd="formatBlock:blockquote" title="Citação">❝</button>
+                    <button class="btn btn-secondary btn-sm" data-cmd="insertUnorderedList" title="Lista">•—</button>
+                    <span style="flex:1"></span>
+                    <button class="btn btn-secondary btn-sm" id="toggleRefs" title="Painel de consulta">Consulta ⇄</button>
+                    <button class="btn btn-secondary btn-sm" id="focusMode" title="Modo foco">Foco ⛶</button>
+                    <button class="btn btn-success btn-sm" id="saveArticle">💾 Salvar</button>
+                </div>
+
+                <input id="articleTitle" class="wbt-article-title" placeholder="Título do conto, capítulo ou cena…" value="${esc(a.title || '')}">
+                <input id="articleSyn" class="wb-article-syn" placeholder="Sinopse curta (opcional)…" value="${esc(a.synopsis || '')}">
+
+                <div class="wb-editor-props">
+                    <label>📗 Livro
+                        <select id="artBook" class="form-select">${bookOptions(a.bookId)}</select>
+                    </label>
+                    <label>🔢 Ordem
+                        <input id="artOrder" type="number" class="form-input" value="${a.order ?? 0}" min="0" style="width:80px">
+                    </label>
+                    <label>📊 Status
+                        <select id="artStatus" class="form-select">
+                            <option value="rascunho" ${a.status === 'rascunho' ? 'selected' : ''}>✏️ Rascunho</option>
+                            <option value="revisao" ${a.status === 'revisao' ? 'selected' : ''}>🔍 Em revisão</option>
+                            <option value="publicado" ${a.status === 'publicado' ? 'selected' : ''}>✅ Publicado</option>
+                        </select>
+                    </label>
+                    <label class="wbt-check"><input type="checkbox" id="artPublic" ${a.public ? 'checked' : ''}> 🌐 Público</label>
+                </div>
+
+                <div id="richEditor" class="wbt-rich" contenteditable="true"
+                     data-placeholder="Escreva aqui. Digite @ para vincular NPCs, Tribos, Locais ou eventos…">${a.contentHTML || ''}</div>
+                <p class="wbt-muted" id="editorStatus"></p>
+                <div id="mentionBox" class="wbt-mentionbox" hidden></div>
+            </div>
+            <aside class="wbt-refs" id="refsPanel">
+                <input id="refsSearch" class="form-input" placeholder="Buscar no ecossistema…">
+                <div class="wbt-chips" id="refsTabs">
+                    <button class="wbt-chip is-active" data-rt="all">Tudo</button>
+                    <button class="wbt-chip" data-rt="npcs">👥 NPCs</button>
+                    <button class="wbt-chip" data-rt="factions">⚔️ Tribos</button>
+                    <button class="wbt-chip" data-rt="geography">📍 Locais</button>
+                    <button class="wbt-chip" data-rt="history">📜 História</button>
+                    <button class="wbt-chip" data-rt="races">🧬 Raças</button>
+                    <button class="wbt-chip" data-rt="classes">⚔️ Classes</button>
+                </div>
+                <div id="refsList" class="wbt-refs__list"></div>
+            </aside>
+        </div>`;
+        renderRefs(); bindEditor();
+    }
 
     /* ── Painel de consulta lateral ─────────────────────── */
     function renderRefs() {
@@ -53,7 +309,6 @@ export const Editor = (() => {
         mentionRange.setEnd(node, sel.anchorOffset);
         show(m[1].trim().toLowerCase());
     }
-
     function show(query) {
         const box = $('#mentionBox');
         const items = searchables().filter(x => !query || x.nome.toLowerCase().includes(query)).slice(0, 8);
@@ -70,7 +325,6 @@ export const Editor = (() => {
         box.style.top = `${rect.bottom - host.top + 6}px`;
     }
     function hide() { const b = $('#mentionBox'); if (b) b.hidden = true; mentionRange = null; }
-
     function insert(id, cat) {
         const item = searchables().find(x => x.id === id && x.cat === cat);
         if (!item || !mentionRange) return;
@@ -84,7 +338,6 @@ export const Editor = (() => {
         sel.removeAllRanges(); sel.addRange(r);
         hide(); autosaveHint();
     }
-
     function keyNav(e) {
         const box = $('#mentionBox'); if (box.hidden) return;
         const btns = [...box.querySelectorAll('button')];
@@ -98,95 +351,48 @@ export const Editor = (() => {
         } else if (e.key === 'Escape') hide();
     }
 
-    /* ── Artigos ────────────────────────────────────────── */
-    function artigoOptions() {
-        return `<option value="">— textos salvos —</option>` +
-            artigos.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
-                .map(a => `<option value="${a.id}" ${a.id === atual?.id ? 'selected' : ''}>${esc(a.title || 'Sem título')}</option>`).join('');
-    }
-    function load(a) {
-        atual = a;
-        $('#articleTitle').value = a?.title || '';
-        $('#richEditor').innerHTML = a?.contentHTML || '';
-        $('#editorStatus').textContent = a ? 'Texto carregado.' : '';
-        $('#articleSelect').innerHTML = artigoOptions();
-    }
+    /* ── Salvar ─────────────────────────────────────────── */
     async function save() {
         const ed = $('#richEditor');
         const mentions = [...ed.querySelectorAll('a.wbt-mention')].map(a => ({ id: a.dataset.entity, cat: a.dataset.cat }));
-        const a = atual || { id: uid('art') };
+        const a = atual;
         a.title = $('#articleTitle').value.trim() || 'Sem título';
+        a.synopsis = $('#articleSyn').value.trim();
         a.contentHTML = ed.innerHTML;
+        a.bookId = $('#artBook').value || null;
+        a.order = parseInt($('#artOrder').value || '0') || 0;
+        a.status = $('#artStatus').value || 'rascunho';
+        a.public = $('#artPublic').checked;
         a.mentions = mentions;
-        a.updatedAt = Date.now();
+        a.words = wordCount(a.contentHTML);
+        a.updatedAt = now();
         a.updatedBy = WB().user?.email || '';
+        if (!a.createdAt) a.createdAt = now();
         const { id, ...data } = a;
         await setDoc(doc(db, 'worldbuilding-articles', id), data);
-        atual = a;
         if (!artigos.find(x => x.id === a.id)) artigos.push(a);
+        else artigos = artigos.map(x => x.id === a.id ? a : x);
         $('#editorStatus').textContent = `✓ Salvo às ${new Date().toLocaleTimeString('pt-BR')}`;
-        $('#articleSelect').innerHTML = artigoOptions();
     }
     function autosaveHint() {
         clearTimeout(saveTimer);
-        $('#editorStatus').textContent = 'Alterações não salvas…';
-        saveTimer = setTimeout(() => { if (atual) save(); }, 4000);
+        const st = $('#editorStatus'); if (st) st.textContent = 'Alterações não salvas…';
+        saveTimer = setTimeout(() => { if (view === 'editor') save(); }, 4000);
     }
 
-    /* ── Render ─────────────────────────────────────────── */
-    function render() {
-        setTitle('✒️ Escritório do Cronista');
-        contentBody().innerHTML = `
-        <div class="wbt-editor-layout" id="editorLayout">
-            <div class="wbt-editor-main" id="editorMain">
-                <div class="wbt-toolbar wbt-etoolbar">
-                    <select id="articleSelect" class="form-select">${artigoOptions()}</select>
-                    <button class="btn btn-secondary btn-sm" id="newArticle">+ Novo</button>
-                    <span style="flex:1"></span>
-                    <button class="btn btn-secondary btn-sm" data-cmd="bold" title="Negrito"><b>N</b></button>
-                    <button class="btn btn-secondary btn-sm" data-cmd="italic" title="Itálico"><i>I</i></button>
-                    <button class="btn btn-secondary btn-sm" data-cmd="formatBlock:h2" title="Título">T</button>
-                    <button class="btn btn-secondary btn-sm" data-cmd="formatBlock:blockquote" title="Citação">❝</button>
-                    <button class="btn btn-secondary btn-sm" data-cmd="insertUnorderedList" title="Lista">•—</button>
-                    <span style="flex:1"></span>
-                    <button class="btn btn-secondary btn-sm" id="toggleRefs" title="Painel de consulta">Consulta ⇄</button>
-                    <button class="btn btn-secondary btn-sm" id="focusMode" title="Modo foco">Foco ⛶</button>
-                    <button class="btn btn-success btn-sm" id="saveArticle">💾 Salvar</button>
-                </div>
-                <input id="articleTitle" class="wbt-article-title" placeholder="Título do conto ou cena…">
-                <div id="richEditor" class="wbt-rich" contenteditable="true"
-                     data-placeholder="Escreva aqui. Digite @ para vincular NPCs, Tribos, Locais ou eventos…"></div>
-                <p class="wbt-muted" id="editorStatus"></p>
-                <div id="mentionBox" class="wbt-mentionbox" hidden></div>
-            </div>
-            <aside class="wbt-refs" id="refsPanel">
-                <input id="refsSearch" class="form-input" placeholder="Buscar no ecossistema…">
-                <div class="wbt-chips" id="refsTabs">
-                    <button class="wbt-chip is-active" data-rt="all">Tudo</button>
-                    <button class="wbt-chip" data-rt="npcs">👥 NPCs</button>
-                    <button class="wbt-chip" data-rt="factions">⚔️ Tribos</button>
-                    <button class="wbt-chip" data-rt="geography">📍 Locais</button>
-                    <button class="wbt-chip" data-rt="history">📜 História</button>
-                    <button class="wbt-chip" data-rt="races">🧬 Raças</button>
-                    <button class="wbt-chip" data-rt="classes">⚔️ Classes</button>
-                </div>
-                <div id="refsList" class="wbt-refs__list"></div>
-            </aside>
-        </div>`;
-        renderRefs(); bind();
-    }
-
-    function bind() {
+    function bindEditor() {
+        $('#backLib').onclick = async () => { clearTimeout(saveTimer); await save(); renderLibrary(); };
         document.querySelectorAll('[data-cmd]').forEach(b => b.onclick = () => {
             const [cmd, arg] = b.dataset.cmd.split(':');
             $('#richEditor').focus(); document.execCommand(cmd, false, arg || null); autosaveHint();
         });
         $('#saveArticle').onclick = save;
-        $('#newArticle').onclick = () => load(null);
-        $('#articleSelect').onchange = (e) => { const a = artigos.find(x => x.id === e.target.value); if (a) load(a); };
         $('#toggleRefs').onclick = () => $('#editorLayout').classList.toggle('refs-closed');
         $('#focusMode').onclick = () => document.body.classList.toggle('wbt-focus');
         $('#refsSearch').oninput = renderRefs;
+        ['articleTitle', 'articleSyn', 'artBook', 'artOrder', 'artStatus', 'artPublic'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.addEventListener('change', autosaveHint);
+        });
         $('#refsTabs').onclick = (e) => {
             const b = e.target.closest('[data-rt]'); if (!b) return;
             refType = b.dataset.rt;
@@ -198,7 +404,6 @@ export const Editor = (() => {
             if (e.detail === 2) ToolModal.openEntry(c.dataset.refcat, c.dataset.ref);
             else c.classList.toggle('is-open');
         };
-
         const ed = $('#richEditor');
         ed.addEventListener('keyup', (e) => { if (!['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].includes(e.key)) detect(); });
         ed.addEventListener('keydown', keyNav);
@@ -217,6 +422,6 @@ export const Editor = (() => {
     }
 
     return {
-        async render() { await loadArtigos(); render(); },
+        async render() { await loadAll(); renderLibrary(); },
     };
 })();

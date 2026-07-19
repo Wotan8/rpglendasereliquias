@@ -110,12 +110,14 @@ onAuthStateChanged(auth, async (user) => {
 
                 const btnMestre = document.getElementById('btnPainelMestre');
                 const btnCriador = document.getElementById('btnPainelCriador');
+                const btnWorldbuilding = document.getElementById('btnWorldbuilding');
 
                 if (role === 'mestre') {
                     if (btnMestre) btnMestre.style.display = '';
                 } else if (role === 'criador') {
                     if (btnMestre) btnMestre.style.display = '';
                     if (btnCriador) btnCriador.style.display = '';
+                    if (btnWorldbuilding) btnWorldbuilding.style.display = '';
                 }
             }
         } catch (e) { /* ignore */ }

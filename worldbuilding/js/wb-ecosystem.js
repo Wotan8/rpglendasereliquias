@@ -44,10 +44,28 @@ export const Eco = (() => {
         cache.races = races;
         cache.classes = classes;
         cache.tribesMech = tribes;
-        cache.chars = chars;
+        // Personagens de jogador guardam os dados dentro de `fields` (nome, raça,
+        // classe…) e a imagem em `charImg`. Normalizamos aqui, uma única vez,
+        // para que TODOS os consumidores (grafos, editor, busca, linhagens)
+        // enxerguem `nome`, `raca`, `classe`, `nivel` e `imagem` no topo.
+        cache.chars = chars.map(normalizeChar);
         cache.lineages = lineages;
         cache.loaded = true;
         return cache;
+    }
+
+    /* Achata os campos do personagem de jogador para o topo do objeto. */
+    function normalizeChar(c) {
+        const f = c.fields || {};
+        return {
+            ...c,
+            nome: f.nome || c.nome || c.nomePersonagem || '',
+            raca: f.raca || c.raca || '',
+            classe: f.classe || c.classe || '',
+            tribo: f.tribo || c.tribo || '',
+            nivel: f.nivel || c.nivel || '',
+            imagem: c.charImg || c.imagem || c.imagemUrl || f.imagem || '',
+        };
     }
 
     async function reloadLineages() {
@@ -80,6 +98,7 @@ export const Eco = (() => {
         get classes() { return cache.classes; },
         get tribesMech() { return cache.tribesMech; },
         get chars() { return cache.chars; },
+        normalizeChar,
         get lineages() { return cache.lineages; },
         mechanicsFor, charsOf, byName,
     };

@@ -109,7 +109,42 @@ export const Grafos = (() => {
 
     function buildGenealogy() {
         const nodes = personagens().map(personNode);
+        const nodeIds = new Set(nodes.map(n => n.id));
         const edges = edgesFrom(relations.filter(r => r.graph === 'genealogy'), TIPOS_REL.genealogy);
+        // Sobrepõe os vínculos de LINHAGEM: para cada linhagem, liga seus membros
+        // com uma linha na COR DA FAMÍLIA, exibindo o nome da Casa e o rótulo.
+        for (const lin of (lineages || [])) {
+            const cor = lin.cor || '#D4AF37';
+            const rels = relations.filter(r =>
+                r.graph === 'lineage' && r.lineageId === lin.id &&
+                nodeIds.has(r.from) && nodeIds.has(r.to));
+            if (rels.length) {
+                // Há papéis definidos (Pai de, Herdeiro de…): use-os como rótulo.
+                for (const r of rels) {
+                    const papel = TIPOS_REL.lineage[r.kind]?.label || r.kind;
+                    edges.push({
+                        id: `linfam:${r.id}`, from: r.from, to: r.to,
+                        label: `⚜️ ${lin.nome} · ${r.label || papel}`,
+                        color: { color: cor, highlight: '#E9E2D2' },
+                        font: { color: cor, size: 11, strokeWidth: 4, strokeColor: '#0E1117', face: 'Cinzel' },
+                        dashes: false, width: 2.5, arrows: r.directed ? 'to' : '',
+                        smooth: { type: 'curvedCW', roundness: 0.18 },
+                    });
+                }
+            } else {
+                // Sem papéis: encadeia os membros para deixar a Casa visível.
+                const membros = (lin.members || []).filter(m => nodeIds.has(m.ref));
+                for (let i = 0; i < membros.length - 1; i++) {
+                    edges.push({
+                        id: `linchain:${lin.id}:${i}`, from: membros[i].ref, to: membros[i + 1].ref,
+                        label: `⚜️ ${lin.nome}`,
+                        color: { color: cor, highlight: '#E9E2D2' },
+                        font: { color: cor, size: 10, strokeWidth: 4, strokeColor: '#0E1117', face: 'Cinzel' },
+                        dashes: [5, 4], width: 1.6,
+                    });
+                }
+            }
+        }
         return { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
     }
 
@@ -159,15 +194,28 @@ export const Grafos = (() => {
                 const [fonte, id] = String(nid).split(':');
                 if (fonte === 'npcs') ToolModal.openEntry('npcs', id);
                 else openCharCard(id);
-            } else if (p.edges.length) openRelation(p.edges[0]);
+            } else if (p.edges.length) {
+                const eid = String(p.edges[0]);
+                if (eid.startsWith('linfam:')) return openRelation(eid.slice('linfam:'.length));
+                if (eid.startsWith('linchain:')) {
+                    const linId = eid.slice('linchain:'.length).split(':')[0];
+                    return openLineageEditor(lineages.find(l => l.id === linId) || null);
+                }
+                openRelation(eid);
+            }
         });
         legend();
     }
 
     function legend() {
-        document.getElementById('grafoLegend').innerHTML =
-            Object.values(TIPOS_REL[modo]).map(k =>
-                `<span><i class="wbt-legdot" style="background:${k.cor};${k.dashes ? 'opacity:.6' : ''}"></i>${k.label}</span>`).join('');
+        let html = Object.values(TIPOS_REL[modo]).map(k =>
+            `<span><i class="wbt-legdot" style="background:${k.cor};${k.dashes ? 'opacity:.6' : ''}"></i>${k.label}</span>`).join('');
+        // Na visão geral, mostra também as cores das linhagens presentes.
+        if (modo === 'genealogy' && (lineages || []).length) {
+            html += (lineages || []).map(l =>
+                `<span><i class="wbt-legdot" style="background:${l.cor || '#D4AF37'}"></i>⚜️ ${esc(l.nome)}</span>`).join('');
+        }
+        document.getElementById('grafoLegend').innerHTML = html;
     }
 
     /* Ficha rápida de personagem de jogador (coleção char). */
@@ -262,6 +310,18 @@ export const Grafos = (() => {
     }
 
     /* ══════════════ LINHAGENS ══════════════ */
+    /* Opções do seletor de membros, já filtradas por um termo de busca. */
+    function memberOptions(pool, query = '') {
+        const q = query.trim().toLowerCase();
+        const list = q
+            ? pool.filter(p => (p.nome || '').toLowerCase().includes(q)
+                || (p.descricao || '').toLowerCase().includes(q))
+            : pool;
+        if (!list.length) return `<option value="" disabled>Nenhum resultado para “${esc(query)}”</option>`;
+        return list.map(p =>
+            `<option value="${nodeRef(p)}">${p.ehJogador ? '🎭' : '👥'} ${esc(p.nome || 'Sem nome')}${p.descricao ? ` — ${esc(p.descricao)}` : ''}</option>`).join('');
+    }
+
     function openLineageEditor(lin = null) {
         const l = lin || { id: uid('lin'), nome: '', descricao: '', cor: '#D4AF37', brasao: '', members: [] };
         const todos = personagens();
@@ -284,9 +344,10 @@ export const Grafos = (() => {
                 <h3 class="wbt-subhead">Membros (${(l.members || []).length})</h3>
                 <div id="linMembers" class="wbt-member-list">${renderMembers(l)}</div>
                 <label>Adicionar membro
-                    <select id="linAdd" class="form-select">
+                    <input id="linAddSearch" class="form-input" type="search" placeholder="🔍 Buscar NPC ou personagem…" autocomplete="off" style="margin-bottom:.4rem">
+                    <select id="linAdd" class="form-select" size="1">
                         <option value="">— escolher NPC ou personagem —</option>
-                        ${todos.map(p => `<option value="${nodeRef(p)}">${p.ehJogador ? '🎭' : '👥'} ${esc(p.nome)}</option>`).join('')}
+                        ${memberOptions(todos, '')}
                     </select></label>
                 <p class="wbt-muted">💡 Clique em 📅 num membro para definir nascimento/morte no calendário do mundo — isso alimenta a Linha do Tempo geracional.</p>
                 <div class="wbt-actions">
@@ -324,7 +385,20 @@ export const Grafos = (() => {
             document.getElementById('linBrasaoPreview').innerHTML = brasao ? `<img src="${esc(brasao)}" alt="brasão">` : '<span class="wbt-muted">sem brasão</span>';
         };
 
-        document.getElementById('linAdd').onchange = (e) => {
+        // Busca dentro do seletor de membros: reconstrói as opções ao digitar.
+        const addSel = document.getElementById('linAdd');
+        const addSearch = document.getElementById('linAddSearch');
+        if (addSearch) {
+            addSearch.oninput = () => {
+                const q = addSearch.value;
+                addSel.innerHTML = `<option value="">— escolher NPC ou personagem —</option>${memberOptions(todos, q)}`;
+                // Abre a lista automaticamente quando há um termo (melhor no desktop).
+                if (q) { addSel.size = Math.min(8, addSel.options.length); }
+                else { addSel.size = 1; }
+            };
+            addSearch.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); addSel.focus(); } };
+        }
+        addSel.onchange = (e) => {
             const ref = e.target.value; if (!ref) return;
             if (!members.find(m => m.ref === ref)) {
                 const p = findPersona(ref);
@@ -332,6 +406,9 @@ export const Grafos = (() => {
                 redraw();
             }
             e.target.value = '';
+            e.target.size = 1;
+            if (addSearch) addSearch.value = '';
+            addSel.innerHTML = `<option value="">— escolher NPC ou personagem —</option>${memberOptions(todos, '')}`;
         };
         document.getElementById('linSave').onclick = async () => {
             l.nome = document.getElementById('linNome').value.trim() || 'Linhagem sem nome';

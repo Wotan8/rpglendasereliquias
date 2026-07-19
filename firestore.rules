@@ -338,6 +338,11 @@ service cloud.firestore {
       allow create, update, delete: if isMaster();
     }
 
+    match /worldbuilding-books/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
     // ========== ADICIONADO: Coleções de Session Logs ==========
     match /campaigns/{docId} {
       allow read: if isSignedIn();

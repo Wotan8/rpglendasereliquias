@@ -22,6 +22,7 @@ import {
         let linkedItems = []; // For Properties - Items with titles (location/sale status)
         let allItems = []; // All available loose items from Firebase
         let linkedFactionsHistory = []; // For History - Factions involved
+        let criadorTribes = []; // Tribos cadastradas no Painel do Criador (system/data/tribes)
 
         // Session Logs variables
         let allCampaigns = [];
@@ -54,9 +55,43 @@ import {
             rumors: { collection: 'worldbuilding-rumors', icon: '💬', title: 'Rumores', types: ['Rumor', 'Gancho', 'Informação', 'Lenda'] }
         };
 
+        async function checkRole() {
+            let userDoc = null;
+            let q = query(collection(db, 'users'), where('uid', '==', currentUser.uid));
+            let snap = await getDocs(q);
+            if (!snap.empty) userDoc = snap.docs[0];
+            
+            if (!userDoc) {
+                q = query(collection(db, 'users'), where('email', '==', currentUser.email));
+                snap = await getDocs(q);
+                if (!snap.empty) userDoc = snap.docs[0];
+            }
+            
+            if (!userDoc) {
+                try {
+                    const docRef = doc(db, 'users', currentUser.uid);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) userDoc = docSnap;
+                } catch (e) { /* ignore */ }
+            }
+
+            if (userDoc) {
+                const data = userDoc.data();
+                if (data.role === 'criador') {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
+                const isCriador = await checkRole();
+                if (!isCriador) {
+                    window.location.href = '../menu/menu.html';
+                    return;
+                }
                 const displayNameEl = document.getElementById('userDisplayName');
                 displayNameEl.textContent = user.displayName || user.email;
                 displayNameEl.title = user.email;
@@ -82,6 +117,44 @@ import {
             }
         };
 
+        // Funde Tribos do WB (worldbuilding-factions) com as do Painel do Criador
+        // (system/data/tribes). Casamento por NOME (case-insensitive). Campos
+        // compartilhados (descrição, imagem) preferem o Criador.
+        function mergeFactionsWithCriador(wbFactions, criador) {
+            const norm = (s) => (s || '').trim().toLowerCase();
+            const usados = new Set();
+            const merged = (wbFactions || []).map(f => {
+                const t = (f.criadorTriboId && (criador || []).find(c => c.id === f.criadorTriboId))
+                    || (criador || []).find(c => norm(c.nome) === norm(f.nome));
+                if (!t) return f;
+                usados.add(t.id);
+                return {
+                    ...f,
+                    _criador: t,
+                    _criadorId: t.id,
+                    // Criador é a fonte preferida para os campos de mesmo nome:
+                    descricao: t.descricao || f.descricao || '',
+                    imagem: t.imagemUrl || f.imagem || '',
+                    tipo: f.tipo || 'Tribo',
+                };
+            });
+            // Tribos que existem SÓ no Criador entram na lista:
+            for (const t of (criador || [])) {
+                if (usados.has(t.id)) continue;
+                merged.push({
+                    id: t.id,
+                    nome: t.nome || 'Sem nome',
+                    tipo: 'Tribo',
+                    descricao: t.descricao || '',
+                    imagem: t.imagemUrl || '',
+                    _criador: t,
+                    _criadorId: t.id,
+                    _criadorOnly: true,
+                });
+            }
+            return merged;
+        }
+
         async function loadAllData() {
             for (const [key, config] of Object.entries(categoryConfig)) {
                 try {
@@ -89,6 +162,16 @@ import {
                     allData[key] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 } catch (e) { console.log(`Error loading ${key}:`, e); allData[key] = []; }
             }
+
+            // ── Tribos do Painel do Criador (mesma entidade das Tribos & Civilizações).
+            // Carrega system/data/tribes e funde na lista de factions: os campos de
+            // mesmo nome (descrição, imagem) passam a vir do Criador (fonte preferida)
+            // e as tribos que só existem no Criador também aparecem aqui.
+            try {
+                const tribesSnap = await getDocs(collection(db, 'system/data/tribes'));
+                criadorTribes = tribesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            } catch (e) { console.log('Error loading criador tribes:', e); criadorTribes = []; }
+            allData.factions = mergeFactionsWithCriador(allData.factions || [], criadorTribes);
             // Load items for property linking (only loose items - not assigned to characters)
             try {
                 const itemsSnapshot = await getDocs(collection(db, 'items'));
@@ -603,35 +686,75 @@ import {
         // Dashboard
         function renderDashboard() {
             const body = document.getElementById('contentBody');
+
+            const allEntries = Object.entries(allData)
+                .flatMap(([cat, entries]) => (entries || []).map(e => ({ ...e, category: cat })));
+            const total = allEntries.length;
+
             const stats = Object.entries(categoryConfig).map(([key, config]) => `
-                <div class="stat-card" onclick="navigateToCategory('${key}')">
+                <div class="stat-card" onclick="navigateToCategory('${key}')" title="Abrir ${config.title}">
                     <div class="stat-icon">${config.icon}</div>
                     <div class="stat-value">${allData[key]?.length || 0}</div>
                     <div class="stat-label">${config.title}</div>
                 </div>
             `).join('');
 
-            const recentEntries = Object.entries(allData)
-                .flatMap(([cat, entries]) => entries.map(e => ({ ...e, category: cat })))
+            // Saúde do mundo: o que ainda falta preencher.
+            const semImagem = allEntries.filter(e => e.category !== 'rumors' && !e.imagem).length;
+            const semDescricao = allEntries.filter(e => !e.descricao || e.descricao.length < 50).length;
+            const rumoresAbertos = (allData.rumors || []).filter(r => r.status === 'ouvido' || r.status === 'investigado');
+            const criadorCount = (criadorTribes || []).length;
+
+            const recentEntries = allEntries
+                .filter(e => e.lastUpdate)
                 .sort((a, b) => new Date(b.lastUpdate || 0) - new Date(a.lastUpdate || 0))
-                .slice(0, 6);
+                .slice(0, 8);
+
+            const atalho = (icon, label, onclick) =>
+                `<button class="wb-quickaction" onclick="${onclick}"><span>${icon}</span>${label}</button>`;
 
             body.innerHTML = `
+                <div class="wb-dash-hero">
+                    <div>
+                        <div class="wb-dash-hero__total">${total}</div>
+                        <div class="wb-dash-hero__label">entradas no seu mundo${criadorCount ? ` · ${criadorCount} tribos do Criador` : ''}</div>
+                    </div>
+                    <div class="wb-quickactions">
+                        ${atalho('➕', 'Nova entrada', "document.getElementById('btnNewEntry').click()")}
+                        ${atalho('🕸️', 'Grafos', "document.querySelector('[data-tool=\\'grafos\\']')?.click()")}
+                        ${atalho('✒️', 'Escritório', "document.querySelector('[data-tool=\\'editor\\']')?.click()")}
+                        ${atalho('📜', 'Linha do Tempo', "document.querySelector('[data-tool=\\'timeline\\']')?.click()")}
+                    </div>
+                </div>
+
                 <div class="dashboard-grid">${stats}</div>
-                ${(allData.rumors || []).filter(r => r.status === 'ouvido').length > 0 ? `
+
+                <div class="wb-dash-health">
+                    <div class="wb-health-card ${semImagem ? 'is-warn' : 'is-ok'}" onclick="navigateToCategory('geography')">
+                        <div class="wb-health-card__v">${semImagem}</div>
+                        <div class="wb-health-card__l">🖼️ sem imagem</div>
+                    </div>
+                    <div class="wb-health-card ${semDescricao ? 'is-warn' : 'is-ok'}" onclick="navigateToCategory('geography')">
+                        <div class="wb-health-card__v">${semDescricao}</div>
+                        <div class="wb-health-card__l">📝 descrição curta</div>
+                    </div>
+                    <div class="wb-health-card ${rumoresAbertos.length ? 'is-info' : 'is-ok'}" onclick="navigateToCategory('rumors')">
+                        <div class="wb-health-card__v">${rumoresAbertos.length}</div>
+                        <div class="wb-health-card__l">💬 rumores ativos</div>
+                    </div>
+                </div>
+
+                ${rumoresAbertos.length > 0 ? `
                     <div class="entries-section">
-                        <div class="section-header">
-                            <h2 class="section-title">💬 Rumores em Aberto</h2>
-                        </div>
+                        <div class="section-header"><h2 class="section-title">💬 Rumores em Aberto</h2></div>
                         <div class="entries-grid">
-                            ${allData.rumors.filter(r => r.status === 'ouvido').slice(0, 3).map(r => renderEntryCard(r, 'rumors')).join('')}
+                            ${rumoresAbertos.slice(0, 3).map(r => renderEntryCard(r, 'rumors')).join('')}
                         </div>
                     </div>
                 ` : ''}
+
                 <div class="entries-section">
-                    <div class="section-header">
-                        <h2 class="section-title">📝 Entradas Recentes</h2>
-                    </div>
+                    <div class="section-header"><h2 class="section-title">🕒 Editados recentemente</h2></div>
                     <div class="entries-grid" id="recentEntries">
                         ${recentEntries.length ? recentEntries.map(e => renderEntryCard(e, e.category)).join('') :
                     '<div class="no-entries"><div class="no-entries-icon">📝</div><p>Nenhuma entrada ainda. Clique em "Nova Entrada" para começar!</p></div>'}
@@ -2045,6 +2168,126 @@ import {
         // Modal & CRUD
         document.getElementById('btnNewEntry').addEventListener('click', () => openEntryModal());
 
+        // Ficha completa da Tribo tal como cadastrada no Painel do Criador.
+        // Mostrada apenas para leitura (a edição mecânica/cultural vive no Criador).
+        function renderCriadorTriboSection(entry) {
+            const t = entry?._criador;
+            const esc = (s) => (s == null ? '' : String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])));
+            const linkBtn = `<button type="button" class="btn btn-secondary" style="margin-top:10px" onclick="window.open('../painel-criador/painel-criador.html#tribes${t?.id ? '/' + t.id : ''}', '_blank')">🛠️ ${t ? 'Editar no Painel do Criador' : 'Cadastrar no Painel do Criador'}</button>`;
+            if (!t) {
+                return `
+                <div class="form-section">
+                    <h3 class="form-section-title">⚙️ Dados do Painel do Criador</h3>
+                    <p style="color: var(--lr-text-2); font-size: 0.9rem;">Esta tribo ainda não tem ficha no Painel do Criador. Lá você cadastra cultura, governo, economia, estrutura militar, unidades, peculiaridades e mais — e esses dados aparecem aqui automaticamente.</p>
+                    ${linkBtn}
+                </div>`;
+            }
+            const linha = (label, val) => val ? `<div class="form-group" style="grid-column:1/-1"><label class="form-label">${label}</label><div class="wb-readonly-field">${esc(val)}</div></div>` : '';
+            const pericias = Array.isArray(t.pericias) && t.pericias.length
+                ? `<div class="form-group" style="grid-column:1/-1"><label class="form-label">🎯 Perícias Tribais</label><div class="wb-readonly-field">${t.pericias.map(p => `• ${esc(p.nome)}${p.nivel ? ` (nível ${esc(p.nivel)})` : ''}${p.opcao ? ` — ${esc(p.opcao)}` : ''}`).join('<br>')}</div></div>`
+                : '';
+            const unidades = Array.isArray(t.unidadesMilitares) && t.unidadesMilitares.length
+                ? `<div class="form-group" style="grid-column:1/-1"><label class="form-label">⚔️ Unidades Militares</label><div class="wb-readonly-field">${t.unidadesMilitares.map(u => `<b>${esc(u.nome)}</b>${u.funcao ? ` (${esc(u.funcao)})` : ''}${u.descricao ? `<br>${esc(u.descricao)}` : ''}`).join('<br><br>')}</div></div>`
+                : '';
+            return `
+            <div class="form-section">
+                <h3 class="form-section-title">⚙️ Ficha do Painel do Criador <span style="font-size:0.75rem;opacity:0.7;font-weight:400">(mesma tribo — somente leitura)</span></h3>
+                <div class="form-grid">
+                    ${linha('📜 Lema / Citação', t.lema)}
+                    ${linha('🎭 Cultura e Costumes', t.cultura)}
+                    ${linha('🏛️ Governo', t.governo)}
+                    ${linha('💰 Economia', t.economia)}
+                    ${linha('🛡️ Estrutura Militar', t.militar)}
+                    ${pericias}
+                    ${unidades}
+                </div>
+                ${linkBtn}
+            </div>`;
+        }
+
+        // Ficha completa do NPC — os mesmos dados do Painel do Mestre > NPCs
+        // (é a mesma coleção `npcs`). Exibida para leitura; a edição mecânica
+        // completa (atributos, valores derivados, peculiaridades…) vive lá.
+        function renderNpcFichaSection(entry) {
+            const NPC_ATTRS = ['INT', 'RAC', 'PRS', 'FOR', 'DES', 'VIG', 'PRE', 'MAN', 'AUT'];
+            const esc = (s) => (s == null ? '' : String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])));
+            const abrir = `<button type="button" class="btn btn-secondary" style="margin-top:10px" onclick="window.open('../painel-mestre/painel-mestre.html#npcs${entry?.id ? '/' + entry.id : ''}', '_blank')">🛠️ ${entry?.id ? 'Abrir ficha completa no Painel do Mestre' : 'Criar ficha no Painel do Mestre'}</button>`;
+            if (!entry) {
+                return `
+                <div class="form-section">
+                    <h3 class="form-section-title">📋 Ficha completa do NPC</h3>
+                    <p style="color: var(--lr-text-2); font-size: 0.9rem;">Salve o NPC e reabra para ver a ficha completa (atributos, valores derivados, roleplay, ataques…), ou crie a ficha detalhada no Painel do Mestre.</p>
+                    ${abrir}
+                </div>`;
+            }
+            const rp = entry.rolePlay || {};
+            const personalidade = Array.isArray(rp.personalidade) ? rp.personalidade.filter(Boolean).join(' · ') : (rp.personalidade || '');
+            const rel = rp.relacoes || {};
+            const loot = entry.loot || {};
+            const cri = entry.criatura || null;
+
+            const chip = (label, val) => val ? `<span class="wb-chip"><b>${label}:</b> ${esc(val)}</span>` : '';
+            const bloco = (label, val) => val ? `<div class="form-group" style="grid-column:1/-1"><label class="form-label">${label}</label><div class="wb-readonly-field">${esc(val)}</div></div>` : '';
+
+            const attrs = entry.atributos || {};
+            const temAttrs = NPC_ATTRS.some(a => attrs[a]);
+            const attrsHtml = temAttrs ? `
+                <div class="form-group" style="grid-column:1/-1">
+                    <label class="form-label">🎲 Atributos</label>
+                    <div class="wb-attr-grid">
+                        ${NPC_ATTRS.map(a => `<div class="wb-attr"><span class="wb-attr__k">${a}</span><span class="wb-attr__v">${esc(attrs[a] ?? 0)}</span></div>`).join('')}
+                    </div>
+                </div>` : '';
+
+            const vd = entry.valoresDer || {};
+            const vitais = vd.atual && typeof vd.atual === 'object'
+                ? Object.entries(vd.atual).filter(([, v]) => v !== '' && v != null) : [];
+            const extras = Array.isArray(vd.extras) ? vd.extras.filter(x => x && (x.nome || x.valor)) : [];
+            const vdHtml = (vitais.length || extras.length) ? `
+                <div class="form-group" style="grid-column:1/-1">
+                    <label class="form-label">❤️ Valores Derivados</label>
+                    <div class="wb-chips-row">
+                        ${vitais.map(([k, v]) => `<span class="wb-chip"><b>${esc(k)}:</b> ${esc(v)}</span>`).join('')}
+                        ${extras.map(x => `<span class="wb-chip"><b>${esc(x.nome)}:</b> ${esc(x.valor)}</span>`).join('')}
+                    </div>
+                </div>` : '';
+
+            const criHtml = cri ? `
+                <div class="form-group" style="grid-column:1/-1">
+                    <label class="form-label">🐾 Criatura</label>
+                    <div class="wb-chips-row">
+                        ${chip('Habitat', cri.habitat)}${chip('Comportamento', cri.comportamento)}${chip('Dieta', cri.dieta)}${chip('Nível de Ameaça', cri.nivelAmeaca)}
+                    </div>
+                </div>` : '';
+
+            return `
+            <div class="form-section">
+                <h3 class="form-section-title">📋 Ficha completa do NPC <span style="font-size:0.75rem;opacity:0.7;font-weight:400">(Painel do Mestre — somente leitura)</span></h3>
+                <div class="form-grid">
+                    <div class="form-group" style="grid-column:1/-1">
+                        <div class="wb-chips-row">
+                            ${chip('Nível', entry.nivel)}${chip('Porte', entry.porte)}${chip('Papel', entry.papel)}${chip('Local', entry.local)}${chip('Tamanho', entry.tamanho)}
+                            ${chip('Raça', entry.raca)}${chip('Classe', entry.classe)}${chip('Tribo', entry.tribo)}
+                        </div>
+                    </div>
+                    ${attrsHtml}
+                    ${vdHtml}
+                    ${bloco('⚔️ Ataques', entry.ataques)}
+                    ${bloco('📚 Perícias', entry.skills)}
+                    ${bloco('🎭 Personalidade', personalidade)}
+                    ${bloco('Trejeitos', rp.trejeitos)}
+                    ${bloco('Motivação', rp.motivacao)}
+                    ${bloco('Segredos', rp.segredos)}
+                    ${(rel.aliado || rel.rival || rel.devedor) ? `<div class="form-group" style="grid-column:1/-1"><label class="form-label">🤝 Relações</label><div class="wb-chips-row">${chip('Aliado', rel.aliado)}${chip('Rival', rel.rival)}${chip('Devedor', rel.devedor)}</div></div>` : ''}
+                    ${bloco('💬 Frases', rp.frases)}
+                    ${bloco('📖 História', rp.historia)}
+                    ${(loot.itens || loot.luns || loot.pistas || loot.complicacoes) ? `<div class="form-group" style="grid-column:1/-1"><label class="form-label">💰 Espólio</label><div class="wb-chips-row">${chip('Itens', loot.itens)}${chip('Luns', loot.luns)}${chip('Pistas', loot.pistas)}${chip('Complicações', loot.complicacoes)}</div></div>` : ''}
+                    ${criHtml}
+                </div>
+                ${abrir}
+            </div>`;
+        }
+
         function openEntryModal(entry = null) {
             currentEditingEntry = entry;
             const modal = document.getElementById('entryModal');
@@ -2055,8 +2298,14 @@ import {
             const cat = currentCategory === 'dashboard' ? 'geography' : currentCategory;
             const config = categoryConfig[cat];
 
+            // Tribo cuja fonte de verdade é o Painel do Criador: descrição e imagem
+            // são exibidas a partir de lá (somente leitura aqui).
+            const criadorLocked = cat === 'factions' && !!entry?._criador;
+
             title.textContent = entry ? `Editar ${config.title}` : `Nova Entrada - ${config.title}`;
             deleteBtn.style.display = entry ? 'block' : 'none';
+            // Não há o que excluir no WB para tribos que só existem no Criador.
+            if (cat === 'factions' && entry?._criadorOnly) deleteBtn.style.display = 'none';
 
             // Initialize linked entities from entry
             linkedNpcs = entry?.linkedNpcs || [];
@@ -2191,6 +2440,7 @@ import {
                         <button type="button" onclick="addLinkedCultura()">+ Adicionar</button>
                     </div>
                 </div>
+                ${renderCriadorTriboSection(entry)}
                 `;
             } else if (cat === 'history') {
                 const eras = (allData.history || []).filter(h => h.tipo === 'Era').sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
@@ -2483,6 +2733,7 @@ import {
                         </div>
                     </div>
                 </div>
+                ${renderNpcFichaSection(entry)}
                 `;
             }
 
@@ -2494,28 +2745,29 @@ import {
                             <label class="form-label">Nome *</label>
                             <input type="text" class="form-input" id="entryNome" value="${entry?.nome || entry?.titulo || ''}" required>
                         </div>
+                        ${cat === 'factions' ? '' : `
                         <div class="form-group">
                             <label class="form-label">Tipo</label>
                             <select class="form-select" id="entryTipo" ${cat === 'geography' ? 'onchange="onGeographyTypeChange()"' : ''}>
                                 ${config.types.map(t => `<option value="${t}" ${(entry?.tipo || '') === t ? 'selected' : ''}>${t}</option>`).join('')}
                             </select>
-                        </div>
+                        </div>`}
                     </div>
                 </div>
                 <div class="form-section">
-                    <h3 class="form-section-title">🖼️ Imagem</h3>
+                    <h3 class="form-section-title">🖼️ Imagem${criadorLocked ? ' <span style="font-size:0.72rem;opacity:0.7;font-weight:400">(do Painel do Criador)</span>' : ''}</h3>
                     <div class="form-group">
                         <label class="form-label">URL da Imagem</label>
-                        <input type="url" class="form-input" id="entryImagem" value="${entry?.imagem || ''}" placeholder="https://..." oninput="updateImagePreview()">
+                        <input type="url" class="form-input" id="entryImagem" value="${entry?.imagem || ''}" placeholder="https://..." oninput="updateImagePreview()" ${criadorLocked ? 'readonly title="Editável no Painel do Criador"' : ''}>
                         <div class="image-preview-container">
                             <img src="${entry?.imagem || ''}" class="image-preview ${entry?.imagem ? 'visible' : ''}" id="imagePreview" onerror="this.classList.remove('visible')" onload="this.classList.add('visible')">
                         </div>
                     </div>
                 </div>
                 <div class="form-section">
-                    <h3 class="form-section-title">📝 Descrição</h3>
+                    <h3 class="form-section-title">📝 Descrição${criadorLocked ? ' <span style="font-size:0.72rem;opacity:0.7;font-weight:400">(do Painel do Criador)</span>' : ''}</h3>
                     <div class="form-group">
-                        <textarea class="form-textarea" id="entryDescricao" rows="6" placeholder="Descreva esta entrada...">${entry?.descricao || entry?.historia || ''}</textarea>
+                        <textarea class="form-textarea" id="entryDescricao" rows="6" placeholder="Descreva esta entrada..." ${criadorLocked ? 'readonly title="Editável no Painel do Criador"' : ''}>${entry?.descricao || entry?.historia || ''}</textarea>
                     </div>
                 </div>
                 ${extraFields ? `<div class="form-section"><h3 class="form-section-title">🔧 Campos Específicos</h3><div class="form-grid">${extraFields}</div></div>` : ''}
@@ -2911,7 +3163,7 @@ import {
 
             const data = {
                 nome,
-                tipo: document.getElementById('entryTipo').value,
+                tipo: document.getElementById('entryTipo')?.value || currentEditingEntry?.tipo || (cat === 'factions' ? 'Tribo' : ''),
                 imagem: document.getElementById('entryImagem').value.trim(),
                 descricao: document.getElementById('entryDescricao').value.trim(),
                 tags: document.getElementById('entryTags').value.trim(),
@@ -2954,6 +3206,8 @@ import {
                 data.inimigos = document.getElementById('entryInimigos')?.value?.trim() || '';
                 // Save linked Cultures
                 data.linkedCulturas = linkedCulturas;
+                // Mantém o vínculo com a tribo do Painel do Criador (mesma entidade).
+                if (currentEditingEntry?._criadorId) data.criadorTriboId = currentEditingEntry._criadorId;
             } else if (cat === 'history') {
                 data.era = document.getElementById('historyEra')?.value || '';
                 data.importancia = document.getElementById('historyImportancia')?.value || 'moderada';

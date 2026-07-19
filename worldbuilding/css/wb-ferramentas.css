@@ -226,3 +226,167 @@ body.wbt-focus .wbt-etoolbar { justify-content: flex-end; }
 .wbt-search-btn { display: flex; align-items: center; justify-content: space-between; gap: .5rem; width: calc(100% - 1.6rem); margin: .8rem; padding: .55rem .8rem; background: var(--lr-bg-1); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); color: var(--lr-text-2); cursor: pointer; font-size: var(--lr-fs-sm); transition: border-color var(--lr-t-base); }
 .wbt-search-btn:hover { border-color: var(--lr-gold); color: var(--lr-text-1); }
 .wbt-search-btn kbd { font-size: 10px; background: var(--lr-surface); border: 1px solid var(--lr-border); border-radius: 4px; padding: 1px 5px; color: var(--lr-text-2); }
+
+/* ═══════════════════════════════════════════════════════════
+   Correções & melhorias do Worldbuilding
+   (menu recolhível, dashboard, fichas read-only)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Botão de recolher o menu lateral ─────────────────────── */
+.wb-sidebar-toggle {
+    margin-left: auto;
+    background: rgba(0, 0, 0, .25);
+    border: 1px solid rgba(255, 255, 255, .18);
+    color: #fff;
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: .9rem;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .2s, transform .2s;
+    flex: 0 0 auto;
+}
+.wb-sidebar-toggle:hover { background: rgba(0, 0, 0, .45); transform: scale(1.06); }
+
+/* Estado recolhido: sidebar estreita, só emojis visíveis */
+body.wb-sidebar-collapsed .sidebar { width: 68px; min-width: 68px; }
+body.wb-sidebar-collapsed .sidebar-title,
+body.wb-sidebar-collapsed .nav-label,
+body.wb-sidebar-collapsed .wbt-nav-header,
+body.wb-sidebar-collapsed .btn-new-entry span,
+body.wb-sidebar-collapsed .sidebar-search { display: none; }
+body.wb-sidebar-collapsed .sidebar-header { padding: 16px 0; justify-content: center; gap: 0; }
+body.wb-sidebar-collapsed .wb-sidebar-toggle { margin: 0; }
+body.wb-sidebar-collapsed .nav-category { justify-content: center; padding: 12px 0; gap: 0; }
+body.wb-sidebar-collapsed .nav-icon { font-size: 1.35rem; }
+body.wb-sidebar-collapsed .btn-new-entry {
+    margin: 12px 10px; padding: 12px 0; font-size: 1.2rem; text-align: center;
+}
+/* Tooltip no hover quando recolhido */
+body.wb-sidebar-collapsed .nav-category { position: relative; }
+body.wb-sidebar-collapsed .nav-category:hover::after {
+    content: attr(data-tip);
+    position: absolute; left: 74px; top: 50%; transform: translateY(-50%);
+    background: var(--lr-surface, #1b2029); color: var(--lr-text-1, #e9e2d2);
+    padding: 5px 10px; border-radius: 6px; white-space: nowrap;
+    font-size: .8rem; font-weight: 600; z-index: 50;
+    border: 1px solid var(--lr-border, #333); box-shadow: 0 6px 18px rgba(0,0,0,.4);
+    pointer-events: none;
+}
+
+/* ── Dashboard ─────────────────────────────────────────────── */
+.wb-dash-hero {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap;
+    background: linear-gradient(135deg, rgba(91,63,184,.18), rgba(0,0,0,.15));
+    border: 1px solid var(--lr-border, #333);
+    border-radius: 14px; padding: 18px 22px; margin-bottom: 18px;
+}
+.wb-dash-hero__total { font-size: 2.4rem; font-weight: 800; line-height: 1; color: var(--lr-gold, #D4AF37); }
+.wb-dash-hero__label { color: var(--lr-text-2, #a99f8c); font-size: .9rem; margin-top: 4px; }
+.wb-quickactions { display: flex; gap: 8px; flex-wrap: wrap; }
+.wb-quickaction {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--lr-bg-1, #1f2630); color: var(--lr-text-1, #e9e2d2);
+    border: 1px solid var(--lr-border, #333); border-radius: 10px;
+    padding: 9px 14px; font-weight: 600; font-size: .85rem; cursor: pointer;
+    transition: border-color .2s, transform .2s;
+}
+.wb-quickaction:hover { border-color: var(--lr-gold, #D4AF37); transform: translateY(-2px); }
+.wb-dash-health { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 4px 0 22px; }
+.wb-health-card {
+    border: 1px solid var(--lr-border, #333); border-radius: 12px;
+    padding: 14px 16px; cursor: pointer; background: var(--lr-bg-1, #1f2630);
+    transition: transform .2s, border-color .2s;
+}
+.wb-health-card:hover { transform: translateY(-2px); }
+.wb-health-card__v { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+.wb-health-card__l { font-size: .82rem; color: var(--lr-text-2, #a99f8c); margin-top: 4px; }
+.wb-health-card.is-warn { border-color: rgba(212,175,55,.5); }
+.wb-health-card.is-warn .wb-health-card__v { color: var(--lr-gold, #D4AF37); }
+.wb-health-card.is-info { border-color: rgba(58,166,255,.5); }
+.wb-health-card.is-info .wb-health-card__v { color: #3AA6FF; }
+.wb-health-card.is-ok .wb-health-card__v { color: var(--lr-nature, #3FAE6A); }
+
+/* ── Campos read-only das fichas (NPC / Tribo do Criador) ──── */
+.wb-readonly-field {
+    background: rgba(0,0,0,.18); border: 1px solid var(--lr-border, #333);
+    border-radius: 8px; padding: 9px 12px; color: var(--lr-text-1, #e9e2d2);
+    font-size: .9rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+}
+.wb-chips-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.wb-chip {
+    background: rgba(0,0,0,.18); border: 1px solid var(--lr-border, #333);
+    border-radius: 999px; padding: 5px 11px; font-size: .82rem; color: var(--lr-text-1, #e9e2d2);
+}
+.wb-chip b { color: var(--lr-gold, #D4AF37); font-weight: 700; }
+.wb-attr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 8px; }
+.wb-attr {
+    display: flex; flex-direction: column; align-items: center;
+    background: rgba(0,0,0,.18); border: 1px solid var(--lr-border, #333);
+    border-radius: 8px; padding: 8px 4px;
+}
+.wb-attr__k { font-size: .68rem; color: var(--lr-text-2, #a99f8c); font-weight: 700; letter-spacing: .04em; }
+.wb-attr__v { font-size: 1.15rem; font-weight: 800; color: var(--lr-text-1, #e9e2d2); }
+
+/* ═══════════════════════════════════════════════════════════
+   Escritório do Cronista — Biblioteca (livros e capítulos)
+   ═══════════════════════════════════════════════════════════ */
+.wb-library { max-width: 1000px; margin: 0 auto; }
+.wb-lib-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.wb-lib-stats { display: flex; gap: 16px; color: var(--lr-text-2, #a99f8c); font-size: .85rem; }
+.wb-lib-stats b { color: var(--lr-gold, #D4AF37); }
+.wb-lib-section { margin: 20px 0 10px; font-family: 'Cinzel', serif; color: var(--lr-text-1, #e9e2d2); font-size: 1.05rem; border-bottom: 1px solid var(--lr-border, #333); padding-bottom: 6px; }
+.wb-shelf { display: grid; gap: 14px; }
+
+.wb-book { border: 1px solid var(--lr-border, #333); border-radius: 14px; background: var(--lr-bg-1, #1f2630); overflow: hidden; }
+.wb-book__head { display: flex; gap: 14px; padding: 14px; align-items: flex-start; }
+.wb-book__cover {
+    width: 60px; height: 82px; flex: 0 0 auto; border-radius: 8px;
+    background: linear-gradient(135deg, #3a2f5e, #1b1530); background-size: cover; background-position: center;
+    display: flex; align-items: center; justify-content: center; font-size: 1.8rem;
+    border: 1px solid rgba(255,255,255,.1);
+}
+.wb-book__meta { flex: 1; min-width: 0; }
+.wb-book__title { font-family: 'Cinzel', serif; font-size: 1.15rem; font-weight: 700; color: var(--lr-text-1, #e9e2d2); }
+.wb-book__badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.wb-book__desc { color: var(--lr-text-2, #a99f8c); font-size: .85rem; margin: 4px 0 0; line-height: 1.4; }
+.wb-book__actions { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
+.wb-book__chapters { border-top: 1px solid var(--lr-border, #333); background: rgba(0,0,0,.15); }
+
+.wb-loose-list { display: grid; gap: 8px; }
+.wb-chapter {
+    display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer;
+    transition: background .15s; border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.wb-loose-list .wb-chapter { border: 1px solid var(--lr-border, #333); border-radius: 10px; background: var(--lr-bg-1, #1f2630); }
+.wb-chapter:hover { background: rgba(212,175,55,.08); }
+.wb-chapter__num {
+    width: 26px; height: 26px; flex: 0 0 auto; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(212,175,55,.15); color: var(--lr-gold, #D4AF37); font-weight: 700; font-size: .8rem;
+}
+.wb-chapter__body { flex: 1; min-width: 0; }
+.wb-chapter__title { font-weight: 600; color: var(--lr-text-1, #e9e2d2); }
+.wb-chapter__syn { color: var(--lr-text-2, #a99f8c); font-size: .82rem; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-chapter__meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 5px; font-size: .75rem; }
+
+.wb-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; font-size: .72rem; font-weight: 600; border: 1px solid transparent; }
+.wb-badge--pub { background: rgba(58,166,255,.14); color: #7cc4ff; border-color: rgba(58,166,255,.35); }
+.wb-badge--priv { background: rgba(255,255,255,.06); color: var(--lr-text-2, #a99f8c); border-color: var(--lr-border, #333); }
+.wb-badge--soft { background: rgba(255,255,255,.05); color: var(--lr-text-2, #a99f8c); }
+.wb-badge--draft { background: rgba(160,160,160,.14); color: #c9c9c9; }
+.wb-badge--rev { background: rgba(212,175,55,.16); color: var(--lr-gold, #D4AF37); }
+.wb-badge--done { background: rgba(63,174,106,.16); color: #6fd79b; }
+
+/* Campos extras do editor de escrita */
+.wb-article-syn {
+    width: 100%; background: transparent; border: none; border-bottom: 1px dashed var(--lr-border, #333);
+    color: var(--lr-text-2, #a99f8c); font-size: .95rem; font-style: italic; padding: 6px 2px; margin-bottom: 10px;
+}
+.wb-article-syn:focus { outline: none; border-bottom-color: var(--lr-gold, #D4AF37); }
+.wb-editor-props { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 12px; padding: 10px 12px; background: rgba(0,0,0,.15); border: 1px solid var(--lr-border, #333); border-radius: 10px; }
+.wb-editor-props label { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: var(--lr-text-2, #a99f8c); }
+.wb-editor-props select, .wb-editor-props input[type=number] { margin-left: 4px; }
+.wb-editor-props .wbt-check { gap: 6px; }
