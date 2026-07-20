@@ -3291,6 +3291,22 @@ html.dark .meta-chip.chip-tag {
 
 .cm-chip-remove:hover { background: rgba(201, 79, 92, .15); }
 
+.btn-array-move {
+    background: none;
+    border: none;
+    color: var(--lr-text-2);
+    cursor: pointer;
+    font-size: .8rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background .15s, color .15s;
+}
+
+.btn-array-move:hover { 
+    background: rgba(255, 255, 255, .1); 
+    color: var(--lr-text);
+}
+
 /* Custo de Equipamento — chips expandidos */
 .cm-equip-cost-row {
     display: flex;

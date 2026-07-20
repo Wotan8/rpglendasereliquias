@@ -3359,6 +3359,8 @@ function _buildSchemaFieldRow(moduleIdx, fieldIdx, data) {
     return `
         <div class="schema-field-row" data-field-index="${fieldIdx}">
             <div class="schema-field-main">
+                <button type="button" class="btn-array-move" onclick="cmMoveSchemaFieldUp(this)" title="Mover para cima" style="padding: 2px 5px; font-size: 0.7rem;">↑</button>
+                <button type="button" class="btn-array-move" onclick="cmMoveSchemaFieldDown(this)" title="Mover para baixo" style="padding: 2px 5px; font-size: 0.7rem;">↓</button>
                 <input type="text" data-sf-key="key" value="${escapeHtml(data.key || '')}" placeholder="key" style="width:80px">
                 <input type="text" data-sf-key="label" value="${escapeHtml(data.label || '')}" placeholder="label" style="width:100px">
                 <select data-sf-key="tipo" style="width:130px" onchange="cmSchemaTipoChange(this)">${tipoOpts}</select>
@@ -4600,5 +4602,19 @@ window.runicImportSeed = async function () {
         showAlert('❌ Falha na importação: ' + e.message, 'error');
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = '📥 Importar Compêndio (64 elementos)'; }
+    }
+};
+
+window.cmMoveSchemaFieldUp = function(btn) {
+    const row = btn.closest('.schema-field-row');
+    if (row && row.previousElementSibling) {
+        row.parentNode.insertBefore(row, row.previousElementSibling);
+    }
+};
+
+window.cmMoveSchemaFieldDown = function(btn) {
+    const row = btn.closest('.schema-field-row');
+    if (row && row.nextElementSibling) {
+        row.parentNode.insertBefore(row.nextElementSibling, row);
     }
 };
