@@ -232,22 +232,56 @@ body.wbt-focus .wbt-etoolbar { justify-content: flex-end; }
    (menu recolhível, dashboard, fichas read-only)
    ═══════════════════════════════════════════════════════════ */
 
-/* ── Botão de recolher o menu lateral ─────────────────────── */
-.wb-sidebar-toggle {
-    margin-left: auto;
-    background: rgba(0, 0, 0, .25);
-    border: 1px solid rgba(255, 255, 255, .18);
-    color: #fff;
-    width: 30px; height: 30px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: .9rem;
-    line-height: 1;
+/* ── Botão de recolher o menu lateral (flutuante, SEMPRE visível) ── */
+.wb-nav-toggle {
+    position: fixed;
+    top: 10px; left: 10px;
+    z-index: 1300;
+    width: 40px; height: 40px;
     display: flex; align-items: center; justify-content: center;
-    transition: background .2s, transform .2s;
-    flex: 0 0 auto;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, .22);
+    background: rgba(20, 20, 32, .85);
+    color: #fff;
+    font-size: 1.15rem; font-weight: 700; line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .45);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    transition: background .2s, transform .12s;
 }
-.wb-sidebar-toggle:hover { background: rgba(0, 0, 0, .45); transform: scale(1.06); }
+.wb-nav-toggle:hover { background: rgba(42, 42, 66, .95); transform: scale(1.06); }
+.wb-nav-toggle:active { transform: scale(.92); }
+
+/* Fundo escuro do drawer — só ganha vida no celular, no estado 'full' */
+.wb-nav-backdrop {
+    position: fixed; inset: 0;
+    z-index: 1150;
+    background: rgba(0, 0, 0, .55);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s ease;
+}
+
+/* O botão substitui o 🌐 nos modos compactos → esconde o globo do header p/ não sobrepor */
+body.wb-sidebar-collapsed .sidebar-header > span:first-child,
+body.wb-sidebar-hidden .sidebar-header > span:first-child { visibility: hidden; }
+
+/* Abre espaço p/ o botão flutuante no header da sidebar (modo full desktop) */
+.sidebar-header { padding-left: 58px; }
+
+/* ── Estado OCULTO (hidden): sidebar recolhida a zero, conteúdo ocupa tudo ── */
+body.wb-sidebar-hidden .sidebar {
+    width: 0; min-width: 0;
+    padding: 0; margin: 0;
+    border: none;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+/* No desktop oculto, reserva espaço p/ o botão não cobrir o "SAIR" */
+body.wb-sidebar-hidden .content-header { padding-left: 58px; }
 
 /* Estado recolhido: sidebar estreita, só emojis visíveis */
 body.wb-sidebar-collapsed .sidebar { width: 68px; min-width: 68px; }
@@ -257,7 +291,6 @@ body.wb-sidebar-collapsed .wbt-nav-header,
 body.wb-sidebar-collapsed .btn-new-entry span,
 body.wb-sidebar-collapsed .sidebar-search { display: none; }
 body.wb-sidebar-collapsed .sidebar-header { padding: 16px 0; justify-content: center; gap: 0; }
-body.wb-sidebar-collapsed .wb-sidebar-toggle { margin: 0; }
 body.wb-sidebar-collapsed .nav-category { justify-content: center; padding: 12px 0; gap: 0; }
 body.wb-sidebar-collapsed .nav-icon { font-size: 1.35rem; }
 body.wb-sidebar-collapsed .btn-new-entry {
@@ -390,3 +423,116 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
 .wb-editor-props label { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: var(--lr-text-2, #a99f8c); }
 .wb-editor-props select, .wb-editor-props input[type=number] { margin-left: 4px; }
 .wb-editor-props .wbt-check { gap: 6px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   📱 MOBILE (≤860px) — sidebar vira "drawer", botões menores e layout
+   repensado para desenvolver o worldbuilding pelo celular de forma prática.
+   Este bloco vem por último → prevalece sobre o @media do worldbuilding.css.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 860px) {
+
+    /* ── Sidebar como painel deslizante fixo (não empurra mais o conteúdo p/ baixo) ── */
+    body .sidebar {
+        position: fixed;
+        top: 0; left: 0;
+        height: 100vh; height: 100dvh;
+        width: min(82vw, 300px); min-width: 0;
+        max-height: none;
+        z-index: 1200;
+        overflow-y: auto;
+        border-right: 1px solid var(--border);
+        border-bottom: none;
+        box-shadow: 6px 0 26px rgba(0, 0, 0, .55);
+        transform: translateX(0);
+        transition: transform .25s ease, width .2s ease;
+    }
+
+    /* FULL = drawer aberto sobre o conteúdo, com fundo escuro clicável */
+    body:not(.wb-sidebar-collapsed):not(.wb-sidebar-hidden) .wb-nav-backdrop {
+        opacity: 1; pointer-events: auto;
+    }
+
+    /* ICONS = trilho fino ancorado à esquerda; conteúdo desloca ao lado */
+    body.wb-sidebar-collapsed .sidebar {
+        width: 56px; min-width: 56px;
+        transform: translateX(0);
+        box-shadow: 2px 0 12px rgba(0, 0, 0, .4);
+    }
+    body.wb-sidebar-collapsed .main-content { margin-left: 56px; }
+
+    /* HIDDEN = drawer sai da tela; conteúdo ocupa 100% */
+    body.wb-sidebar-hidden .sidebar {
+        width: min(82vw, 300px); min-width: 0;
+        transform: translateX(-100%);
+        opacity: 1; padding: 0; border: none;
+    }
+    body.wb-sidebar-hidden .main-content { margin-left: 0; }
+
+    /* Botão flutuante um pouco maior p/ o dedo; conteúdo reserva espaço p/ ele */
+    .wb-nav-toggle { top: 8px; left: 8px; width: 42px; height: 42px; }
+    .content-header { padding-left: 60px; }
+
+    /* ── Botões laterais menores (pedido) ── */
+    .sidebar-header { padding: 14px 14px 14px 58px; }
+    .sidebar-title { font-size: 1.15rem; }
+    .sidebar-search { padding: 10px 12px; }
+    .nav-category { padding: 10px 16px; gap: 10px; }
+    .nav-icon { font-size: 1.1rem; }
+    .nav-label { font-size: .92rem; }
+    .nav-divider { margin: 6px 14px; }
+    .btn-new-entry { margin: 12px; padding: 12px; }
+
+    /* Trilho de ícones: centraliza e amplia o emoji, some com o resto */
+    body.wb-sidebar-collapsed .nav-category { padding: 11px 0; }
+    body.wb-sidebar-collapsed .nav-icon { font-size: 1.3rem; }
+    body.wb-sidebar-collapsed .sidebar-header { padding: 14px 0; }
+    /* tooltip do trilho aponta a partir do trilho de 56px */
+    body.wb-sidebar-collapsed .nav-category:hover::after { left: 62px; }
+
+    /* ── Header do conteúdo: compacto, rolável, sem quebrar ── */
+    .content-header { padding-top: 10px; padding-right: 12px; padding-bottom: 10px; gap: 8px; }
+    .content-title { font-size: 1.25rem; }
+    .btn-logout { padding: 7px 12px; font-size: .78rem; }
+    .btn-mestre, .btn-viewmap { padding: 7px 11px; font-size: .9rem; }
+    .user-display-name { font-size: .8rem; }
+    .content-body { padding: 14px; }
+
+    /* ── Dashboard e grids: uma coluna confortável ── */
+    .dashboard-grid { grid-template-columns: 1fr; gap: 14px; }
+    .wb-dash-hero { padding: 14px 16px; }
+    .wb-dash-hero__total { font-size: 2rem; }
+    .wb-quickactions { width: 100%; }
+    .wb-quickaction { flex: 1 1 auto; justify-content: center; }
+    .wb-dash-health { grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    /* ── Modais em tela cheia: escrever/editar lore fica muito mais prático ── */
+    .modal { padding: 0; align-items: stretch; justify-content: stretch; }
+    .modal-content,
+    .modal-content.session-modal {
+        max-width: 100%; width: 100%;
+        max-height: 100vh; max-height: 100dvh; height: 100%;
+        border-radius: 0; border-width: 0 0 0 0;
+    }
+    .modal-header { padding: 14px 16px; }
+    .modal-title { font-size: 1.15rem; }
+    .modal-body { padding: 16px; }
+    .form-grid { grid-template-columns: 1fr; gap: 12px; }
+    .modal-footer {
+        position: sticky; bottom: 0;
+        padding: 12px 16px;
+        gap: 10px; flex-wrap: wrap;
+        background: linear-gradient(135deg, var(--darker), var(--dark));
+    }
+    .modal-footer .btn { flex: 1 1 auto; min-width: 120px; }
+
+    /* Ferramentas do Cronista: editor/grafos numa coluna e cabíveis */
+    .wbt-editor-layout { grid-template-columns: 1fr; }
+    .wbt-graph { height: 58vh; }
+    .wbt-lane, .wbt-life { grid-template-columns: 120px 1fr; }
+}
+
+/* Telas bem estreitas (≤430px): saúde do mundo também em coluna única */
+@media (max-width: 430px) {
+    .wb-dash-health { grid-template-columns: 1fr; }
+    .content-title { font-size: 1.1rem; }
+}

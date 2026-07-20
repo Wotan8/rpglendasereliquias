@@ -104,34 +104,97 @@ function wireGlobalSearch() {
     input.addEventListener('click', open);
 }
 
-/* Botão para recolher o menu lateral (mostra só os emojis quando recolhido). */
+/* Botão para recolher o menu lateral — 3 estados em vai-e-volta:
+   full (ícones + nomes) ⇄ icons (só emojis) ⇄ hidden (menu oculto).
+   O botão fica SEMPRE visível (flutuante, fixo), para reabrir mesmo oculto.
+   No celular a sidebar vira um "drawer": em 'full' sobrepõe o conteúdo com
+   fundo escuro; em 'icons' vira um trilho fino à esquerda; em 'hidden' some. */
 function injectSidebarToggle() {
-    const header = document.querySelector('.sidebar .sidebar-header');
-    if (!header || document.getElementById('wbSidebarToggle')) return;
-    const btn = document.createElement('button');
-    btn.id = 'wbSidebarToggle';
-    btn.className = 'wb-sidebar-toggle';
-    btn.title = 'Recolher / expandir menu';
-    btn.setAttribute('aria-label', 'Recolher menu lateral');
-    btn.textContent = '⏴';
-    const KEY = 'wb-sidebar-collapsed';
-    const apply = (collapsed) => {
-        document.body.classList.toggle('wb-sidebar-collapsed', collapsed);
-        btn.textContent = collapsed ? '⏵' : '⏴';
-        const nova = document.getElementById('btnNewEntry');
-        if (nova) { nova.textContent = collapsed ? '➕' : '➕ Nova Entrada'; nova.title = 'Nova Entrada'; }
-        try { localStorage.setItem(KEY, collapsed ? '1' : '0'); } catch { }
+    if (document.getElementById('wbNavToggle')) return;
+
+    const KEY = 'wb-nav-state';
+    const STATES = ['full', 'icons', 'hidden'];
+    const GLYPH = { full: '«', icons: '‹', hidden: '☰' };
+    const TIPS = {
+        full: 'Recolher para só ícones',
+        icons: 'Ocultar o menu',
+        hidden: 'Mostrar o menu',
     };
-    btn.onclick = () => apply(!document.body.classList.contains('wb-sidebar-collapsed'));
-    header.appendChild(btn);
-    // Tooltips (visíveis só no modo recolhido) a partir do rótulo de cada aba.
+    const isMobile = () => window.matchMedia('(max-width: 860px)').matches;
+
+    // Botão flutuante, sempre visível (fora da sidebar, para sobreviver ao 'hidden').
+    const btn = document.createElement('button');
+    btn.id = 'wbNavToggle';
+    btn.className = 'wb-nav-toggle';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Alternar menu lateral');
+    document.body.appendChild(btn);
+
+    // Fundo escuro do drawer (só aparece no celular, em 'full').
+    let backdrop = document.getElementById('wbNavBackdrop');
+    if (!backdrop) {
+        backdrop = document.createElement('div');
+        backdrop.id = 'wbNavBackdrop';
+        backdrop.className = 'wb-nav-backdrop';
+        document.body.appendChild(backdrop);
+    }
+
+    let current = 'full';
+    let dir = 1; // sentido do vai-e-volta no vetor STATES
+    const idx = () => STATES.indexOf(current);
+
+    function apply(state) {
+        current = STATES.includes(state) ? state : 'full';
+        document.body.classList.toggle('wb-sidebar-collapsed', current === 'icons');
+        document.body.classList.toggle('wb-sidebar-hidden', current === 'hidden');
+        btn.textContent = GLYPH[current];
+        btn.title = TIPS[current];
+        btn.dataset.state = current;
+        const nova = document.getElementById('btnNewEntry');
+        if (nova) {
+            nova.textContent = current === 'full' ? '➕ Nova Entrada' : '➕';
+            nova.title = 'Nova Entrada';
+        }
+        try { localStorage.setItem(KEY, current); } catch { }
+    }
+
+    // Clique: caminha no vetor [full, icons, hidden] em vai-e-volta (ping-pong).
+    btn.onclick = () => {
+        let i = idx();
+        if (i <= 0) dir = 1;
+        else if (i >= STATES.length - 1) dir = -1;
+        apply(STATES[i + dir]);
+    };
+
+    // Toca no fundo escuro → oculta o menu (fecha o drawer).
+    backdrop.onclick = () => { dir = -1; apply('hidden'); };
+
+    // Rótulos → tooltip (aparecem no modo só-ícones) e acessibilidade.
     document.querySelectorAll('.sidebar-nav .nav-category').forEach(el => {
         const label = el.querySelector('.nav-label')?.textContent?.trim();
         if (label && !el.dataset.tip) el.dataset.tip = label;
     });
-    let saved = '0';
-    try { saved = localStorage.getItem(KEY) || '0'; } catch { }
-    apply(saved === '1');
+
+    // No celular, ao escolher uma aba com o drawer aberto, recolhe para ícones
+    // (libera a tela para o conteúdo sem perder a navegação rápida).
+    document.getElementById('sidebarNav')?.addEventListener('click', (e) => {
+        if (!e.target.closest('.nav-category')) return;
+        if (isMobile() && current === 'full') { dir = 1; apply('icons'); }
+    }, true);
+    document.getElementById('btnNewEntry')?.addEventListener('click', () => {
+        if (isMobile() && current === 'full') { dir = 1; apply('icons'); }
+    }, true);
+
+    // Estado inicial: preferência salva; senão, no celular começa em 'icons'
+    // (trilho compacto, conteúdo em primeiro plano) e no desktop em 'full'.
+    let saved = '';
+    try { saved = localStorage.getItem(KEY) || ''; } catch { }
+    if (!saved) {
+        try { if (localStorage.getItem('wb-sidebar-collapsed') === '1') saved = 'icons'; } catch { }
+    }
+    if (!STATES.includes(saved)) saved = isMobile() ? 'icons' : 'full';
+    dir = saved === 'hidden' ? -1 : 1;
+    apply(saved);
 }
 
 /* Busca global pediu para abrir uma linhagem específica. */
