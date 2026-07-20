@@ -25,7 +25,9 @@ const faviconsConfig = [
     { id: 'painel-mestre', name: 'Painel do Mestre' },
     { id: 'painel-criador', name: 'Painel de Criador' },
     { id: 'mapa', name: 'Mapa (World/Hex)' },
-    { id: 'tabuleiro', name: 'Favicon do Tabuleiro' }
+    { id: 'tabuleiro', name: 'Favicon do Tabuleiro' },
+    { id: 'worldbuilding', name: 'Construção de Mundo' },
+    { id: 'laboratorium', name: 'Laboratório de Runas' }
 ];
 
 function initSettingsManager() {
