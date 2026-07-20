@@ -430,6 +430,75 @@ const MODULE_DEFS = {
     runicElements: RUNIC_MODULE_DEF
 };
 
+// =====================================================================
+// FILTROS DINÂMICOS POR MÓDULO (data-driven)
+// Cada aba pode declarar filtros baseados nos campos importantes daquele
+// cadastro, tornando a busca mais precisa. Tipos:
+//   'auto'    → gera um dropdown com os valores distintos existentes nos
+//               registros (ex.: "Nome do Bloco" em Valores Derivados).
+//   'static'  → reaproveita as opções fixas definidas no campo (MODULE_DEFS).
+//   'boolean' → filtro de 3 estados (Todos / Sim / Não).
+// =====================================================================
+const MODULE_FILTERS = {
+    races: [
+        { key: 'habitat', label: 'Habitat', icon: '🌍', type: 'auto' },
+        { key: 'tendencia', label: 'Tendência', icon: '☯️', type: 'auto' },
+    ],
+    classes: [
+        { key: 'arquetipo', label: 'Arquétipo', icon: '🎭', type: 'auto' },
+        { key: 'usaRunomancia', label: 'Runomancia', icon: 'ᛟ', type: 'boolean' },
+    ],
+    peculiarities: [
+        { key: 'fonte', label: 'Fonte', icon: '📌', type: 'static' },
+        { key: 'quandoSeAplica', label: 'Aplicação', icon: '⏱️', type: 'static' },
+        { key: 'concedeAura', label: 'Concede Aura', icon: '🌟', type: 'boolean' },
+    ],
+    skills: [
+        { key: 'todoPersonagem', label: 'Universal', icon: '👥', type: 'boolean' },
+    ],
+    derivedValues: [
+        { key: 'blocoNome', label: 'Bloco', icon: '🧱', type: 'auto' },
+        { key: 'todoPersonagem', label: 'Universal', icon: '👥', type: 'boolean' },
+        { key: 'characterCreationRule', label: 'Regra de Criação', icon: '🎯', type: 'boolean' },
+    ],
+    equipment: [
+        { key: 'tipo', label: 'Tipo', icon: '📦', type: 'static' },
+        { key: 'categoriaArma', label: 'Cat. Arma', icon: '⚔️', type: 'static' },
+        { key: 'ehContainer', label: 'Container', icon: '🎒', type: 'boolean' },
+    ],
+    conditions: [
+        { key: 'removivel', label: 'Removível', icon: '♻️', type: 'boolean' },
+    ],
+    auras: [
+        { key: 'tipo', label: 'Tipo', icon: '🌟', type: 'static' },
+    ],
+    bodyParts: [
+        { key: 'ehPadrao', label: 'Padrão', icon: '⭐', type: 'boolean' },
+    ],
+    itemRules: [
+        { key: 'ativo', label: 'Ativa', icon: '⚙️', type: 'boolean' },
+    ],
+    vitalStats: [
+        { key: 'chaveInterna', label: 'Campo', icon: '❤️', type: 'static' },
+    ],
+    lore: [
+        { key: 'categoria', label: 'Categoria', icon: '📂', type: 'static' },
+    ],
+    maneuvers: [
+        { key: 'classe', label: 'Classe', icon: '⚔️', type: 'auto' },
+    ],
+    spells: [
+        { key: 'escola', label: 'Escola', icon: '🔮', type: 'static' },
+        { key: 'nivel', label: 'Nível', icon: '🔢', type: 'auto' },
+        { key: 'classeRequerida', label: 'Classe', icon: '⚔️', type: 'auto' },
+    ],
+    runicElements: [
+        { key: 'tipoElemento', label: 'Família', icon: 'ᛟ', type: 'static' },
+        { key: 'categoria', label: 'Categoria', icon: '🔧', type: 'static' },
+        { key: 'complexidade', label: 'Complexidade', icon: '📈', type: 'static' },
+    ],
+};
+
 // ===== THEME =====
 function initTheme() {
     const saved = localStorage.getItem('painel-theme');
@@ -604,6 +673,10 @@ window.switchModule = function (moduleName, btnEl) {
     if (oldSkillFilters) oldSkillFilters.remove();
     if (moduleName === 'skills') renderSkillsExtraFilters();
 
+    // Remove filtros dinâmicos do módulo anterior (serão remontados em loadModule)
+    const oldModuleFilters = document.getElementById('moduleFiltersExtra');
+    if (oldModuleFilters) oldModuleFilters.remove();
+
 
 
     // Remove/add tag filter for modules that have tags
@@ -662,6 +735,98 @@ function renderSkillsExtraFilters() {
         </label>`;
     filterBar.after(div);
 }
+
+// =====================================================================
+// FILTROS DINÂMICOS POR MÓDULO — renderização e estado
+// =====================================================================
+// Guarda as seleções por módulo para que a escolha do Criador seja
+// preservada ao recarregar a aba (ex.: após salvar um registro).
+const moduleFilterState = {};
+function _getModuleFilterState() {
+    return moduleFilterState[currentModule] || (moduleFilterState[currentModule] = {});
+}
+
+// Retorna a lista de filtros do módulo atual que estão realmente ativos.
+function _getActiveModuleFilters() {
+    const defs = MODULE_FILTERS[currentModule] || [];
+    const active = [];
+    defs.forEach(f => {
+        const el = document.getElementById('modFilter_' + f.key);
+        const val = el ? el.value : '';
+        if (val === '') return;
+        active.push({ key: f.key, type: f.type, value: val });
+    });
+    return active;
+}
+
+// Monta os dropdowns de filtro específicos do módulo atual.
+function renderModuleFilters() {
+    const old = document.getElementById('moduleFiltersExtra');
+    if (old) old.remove();
+
+    const defs = MODULE_FILTERS[currentModule];
+    if (!defs || !defs.length) return;
+
+    const modDef = MODULE_DEFS[currentModule] || {};
+    const saved = _getModuleFilterState();
+
+    const selects = defs.map(f => {
+        let optionsHtml = `<option value="">${f.icon || '📌'} ${escapeHtml(f.label)}: Todos</option>`;
+
+        if (f.type === 'boolean') {
+            optionsHtml += `<option value="1">✅ ${escapeHtml(f.label)}: Sim</option>`;
+            optionsHtml += `<option value="0">⬜ ${escapeHtml(f.label)}: Não</option>`;
+        } else if (f.type === 'static') {
+            const fieldDef = (modDef.fields || []).find(fl => fl.key === f.key);
+            const opts = f.options || (fieldDef && fieldDef.options) || [];
+            optionsHtml += opts.map(o => `<option value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`).join('');
+        } else { // 'auto' — valores distintos existentes nos registros carregados
+            const seen = new Map(); // normalizado -> valor original (para exibir)
+            allItems.forEach(it => {
+                const raw = it[f.key];
+                if (raw === undefined || raw === null || raw === '') return;
+                const norm = _norm(raw);
+                if (!seen.has(norm)) seen.set(norm, String(raw));
+            });
+            let values = [...seen.values()];
+            const allNumeric = values.length > 0 && values.every(v => v.trim() !== '' && !isNaN(Number(v)));
+            values.sort(allNumeric
+                ? (a, b) => Number(a) - Number(b)
+                : (a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+            optionsHtml += values.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+        }
+
+        return `<select id="modFilter_${escapeHtml(f.key)}" class="filter-select" onchange="onModuleFilterChange(this)" title="Filtrar por ${escapeHtml(f.label)}">${optionsHtml}</select>`;
+    });
+
+    const div = document.createElement('div');
+    div.className = 'mech-filters';
+    div.id = 'moduleFiltersExtra';
+    div.innerHTML = selects.join('');
+
+    // Insere logo após os filtros específicos existentes (ou a barra de filtros)
+    const anchor = document.getElementById('skillsFiltersExtra')
+        || document.getElementById('mechFiltersExtra')
+        || document.getElementById('filterBar');
+    if (anchor) anchor.after(div);
+
+    // Restaura seleções anteriores (descarta as que não existem mais)
+    defs.forEach(f => {
+        if (saved[f.key] == null) return;
+        const el = document.getElementById('modFilter_' + f.key);
+        if (!el) return;
+        el.value = saved[f.key];
+        if (el.value !== String(saved[f.key])) delete saved[f.key]; // opção sumiu
+    });
+}
+
+window.onModuleFilterChange = function (sel) {
+    const key = sel.id.replace('modFilter_', '');
+    const state = _getModuleFilterState();
+    if (sel.value === '') delete state[key];
+    else state[key] = sel.value;
+    renderItems();
+};
 
 
 
@@ -763,6 +928,9 @@ async function loadModule(moduleName) {
 
         // Render tag filter chips (preserve existing selections)
         renderTagFilter();
+
+        // Filtros dinâmicos específicos do módulo (ex.: Bloco em Valores Derivados)
+        renderModuleFilters();
 
         renderItems();
     } catch (error) {
@@ -1068,6 +1236,7 @@ function _hasActiveFilters() {
     if (document.getElementById('mechFilterTipo')?.value) return true;
     if (document.getElementById('skillFilterCategoria')?.value) return true;
     if (getSelectedTags().size > 0) return true;
+    if (_getActiveModuleFilters().length > 0) return true;
     return false;
 }
 
@@ -1084,6 +1253,12 @@ window.clearAllFilters = function () {
     if (cat) cat.value = '';
     getSelectedTags().clear();
     document.querySelectorAll('#tagFilterArea .tag-filter-chip.active').forEach(b => b.classList.remove('active'));
+    // Limpar filtros dinâmicos do módulo atual
+    (MODULE_FILTERS[currentModule] || []).forEach(f => {
+        const el = document.getElementById('modFilter_' + f.key);
+        if (el) el.value = '';
+    });
+    delete moduleFilterState[currentModule];
     renderItems();
 };
 
@@ -1111,6 +1286,7 @@ function renderItems() {
     const emptyState = document.getElementById('emptyState');
     const searchVal = _norm(document.getElementById('searchInput')?.value || '').trim();
     const onlyPublished = document.getElementById('filterPublished')?.checked || false;
+    const activeModFilters = _getActiveModuleFilters();
 
     _updateClearSearchBtn();
 
@@ -1144,6 +1320,16 @@ function renderItems() {
         if (selTags.size > 0) {
             const itemTags = Array.isArray(item.tags) ? item.tags : [];
             if (!itemTags.some(t => selTags.has(t))) return false;
+        }
+
+        // Filtros dinâmicos por módulo (data-driven)
+        for (const mf of activeModFilters) {
+            if (mf.type === 'boolean') {
+                const want = mf.value === '1';
+                if (Boolean(item[mf.key]) !== want) return false;
+            } else {
+                if (_norm(item[mf.key]) !== _norm(mf.value)) return false;
+            }
         }
         return true;
     });
