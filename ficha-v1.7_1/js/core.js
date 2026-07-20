@@ -301,6 +301,27 @@ function renderBlock(id, skills, pfx) {
 
 
 
+/**
+ * Resolve as chaves de atributo limitador (ex.: ['attr_for']) de uma perícia
+ * a partir do seu nome, lendo `atributoBase` da definição no Firebase.
+ * Usado para registrar o limitador de perícias exclusivas de classe (sk_classe_*),
+ * que não passam por buildSkillsFromFirebase() com o mesmo prefixo.
+ */
+function getSkillLimiterAttrsByName(name) {
+    const ATTR_KEY_MAP = {
+        'FOR': 'attr_for', 'DES': 'attr_des', 'VIG': 'attr_vig',
+        'INT': 'attr_int', 'RAC': 'attr_rac', 'PRS': 'attr_prs',
+        'PRE': 'attr_pre', 'MAN': 'attr_man', 'AUT': 'attr_aut'
+    };
+    const skill = (window._systemData?.skills || []).find(s => s.nome === name);
+    if (!skill) return [];
+    const raw = skill.atributoBase;
+    const attrs = Array.isArray(raw)
+        ? raw
+        : (typeof raw === 'string' && raw ? raw.split('/') : []);
+    return attrs.map(a => ATTR_KEY_MAP[String(a).trim().toUpperCase()]).filter(Boolean);
+}
+
 function onClassChange() {
     const cl = document.getElementById('selClasse').value;
     const g = document.getElementById('skillsExclusivo');
@@ -311,6 +332,21 @@ function onClassChange() {
     if (cl && CLASS_SKILLS[cl]) {
         CLASS_SKILLS[cl].forEach(sk => {
             const key = 'sk_classe_' + sk.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+            // ⚠️ CORREÇÃO: registrar o "atributo limitador" desta perícia exclusiva
+            // de classe. As perícias de classe são injetadas com a chave `sk_classe_*`,
+            // que NÃO era indexada em window.SKILL_LIMITERS (só as `sk_exclusivo_*` eram).
+            // Sem isso, getSkillLimiterLevel() retornava Infinity e o teto pelo atributo
+            // nunca era aplicado. Resolvemos o atributoBase da perícia pelo nome.
+            const attrKeys = getSkillLimiterAttrsByName(sk);
+            if (window.SKILL_LIMITERS) {
+                if (attrKeys.length) {
+                    window.SKILL_LIMITERS[key] = { keys: attrKeys, mode: attrKeys.length > 1 ? 'min' : undefined };
+                } else {
+                    delete window.SKILL_LIMITERS[key];
+                }
+            }
+
             const row = document.createElement('div'); row.className = 'sk-row'; row.dataset.classSkill = '1';
             const lbl = document.createElement('div'); lbl.className = 'sk-label';
             
@@ -324,8 +360,12 @@ function onClassChange() {
                     break;
                 }
             }
-            
-            lbl.innerHTML = `<div class="sk-name${hasDesc ? ' has-tooltip' : ''}">${sk}</div><div class="sk-attr">Classe</div>`;
+
+            // Mostra o(s) atributo(s) limitador(es) na coluna, em vez de apenas "Classe"
+            const attrLabel = attrKeys.length
+                ? attrKeys.map(k => k.replace('attr_', '').toUpperCase()).join('/')
+                : 'Classe';
+            lbl.innerHTML = `<div class="sk-name${hasDesc ? ' has-tooltip' : ''}">${sk}</div><div class="sk-attr">${attrLabel}</div>`;
             row.appendChild(lbl); row.appendChild(createDotsHTML(key)); g.appendChild(row);
         });
         

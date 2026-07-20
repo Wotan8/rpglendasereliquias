@@ -126,18 +126,90 @@
     // =====================================================================
     // RENDERIZAÇÃO PRINCIPAL — chamada por onClassChange()
     // =====================================================================
-    window.renderRunomanciaModule = function (classeNome) {
-        const sec = document.getElementById('runimagoSection');
-        if (!sec) return;
-        // Remove instância anterior
-        sec.querySelectorAll('.runo-mod, .runo-lab-btn').forEach(e => e.remove());
+    /**
+     * Garante que exista um container para o módulo de Runomancia.
+     * O HTML antigo tinha <div id="runimagoSection"> dentro da aba Combate, mas
+     * ele foi removido numa refatoração — por isso o botão "Laboratorium Runarum"
+     * (e todo o módulo) deixou de aparecer. Agora criamos dinamicamente uma aba
+     * "ᛟ Runomancia" logo APÓS a aba "Notas" (mesmo padrão de mesa-tab.js),
+     * contendo a Lista de Estudo e o botão do Laboratorium.
+     */
+    function _ensureRunoTab() {
+        // Já existe (de HTML legado ou criada antes)?
+        let sec = document.getElementById('runimagoSection');
+        if (sec) return sec;
 
+        const tabBar = document.getElementById('tabBar');
+        const sheet = document.querySelector('.sheet');
+        if (!tabBar || !sheet) return null;
+
+        const notasBtn = tabBar.querySelector('[data-tab="tabNotas"]');
+        const notasContent = document.getElementById('tabNotas');
+
+        // 1) Botão da aba — inserido logo após "Notas"
+        let tabBtn = document.getElementById('tabRunomanciaBtn');
+        if (!tabBtn) {
+            tabBtn = document.createElement('button');
+            tabBtn.className = 'tab';
+            tabBtn.id = 'tabRunomanciaBtn';
+            tabBtn.dataset.tab = 'tabRunomancia';
+            tabBtn.textContent = 'ᛟ Runomancia';
+            if (notasBtn) notasBtn.after(tabBtn); else tabBar.appendChild(tabBtn);
+            // initTabs() já rodou; adicionamos o handler manualmente
+            tabBtn.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                tabBtn.classList.add('active');
+                document.getElementById('tabRunomancia')?.classList.add('active');
+            });
+        }
+
+        // 2) Conteúdo da aba — inserido logo após o conteúdo de "Notas"
+        let content = document.getElementById('tabRunomancia');
+        if (!content) {
+            content = document.createElement('div');
+            content.className = 'tab-content';
+            content.id = 'tabRunomancia';
+            content.innerHTML =
+                '<div class="section" id="runimagoSection">' +
+                '<div class="section-title">ᛟ Runomancia</div>' +
+                '<div id="runimagoContent"></div>' +
+                '</div>';
+            if (notasContent) notasContent.after(content); else sheet.appendChild(content);
+        }
+        return document.getElementById('runimagoSection');
+    }
+
+    window.renderRunomanciaModule = function (classeNome) {
         const cls = _classDoc(classeNome);
         const usa = !!cls?.usaRunomancia;
+
+        // Classe SEM runomancia: esconde a aba (se existir) e limpa o módulo.
         if (!usa) {
-            // Não força esconder: legado do Runimago (core.js) ainda controla display
+            const tabBtn = document.getElementById('tabRunomanciaBtn');
+            const content = document.getElementById('tabRunomancia');
+            if (tabBtn) tabBtn.style.display = 'none';
+            if (content) {
+                content.querySelectorAll('.runo-mod, .runo-lab-btn').forEach(e => e.remove());
+                // Se a aba de runomancia estava ativa, volta para Principal
+                if (content.classList.contains('active')) {
+                    document.querySelectorAll('.tab, .tab-content').forEach(t => t.classList.remove('active'));
+                    document.querySelector('[data-tab="tabPrincipal"]')?.classList.add('active');
+                    document.getElementById('tabPrincipal')?.classList.add('active');
+                }
+            }
             return;
         }
+
+        const sec = _ensureRunoTab();
+        if (!sec) return;
+
+        // Classe COM runomancia: garante a aba visível
+        const tabBtn = document.getElementById('tabRunomanciaBtn');
+        if (tabBtn) tabBtn.style.display = '';
+
+        // Remove instância anterior
+        sec.querySelectorAll('.runo-mod, .runo-lab-btn').forEach(e => e.remove());
         sec.style.display = '';
 
         // Classe genérica com Runomancia (≠ Runimago legado): limpa conteúdo
@@ -163,7 +235,7 @@
         mod.appendChild(_buildBody(cfg));
         sec.appendChild(mod);
 
-        // Botão Laboratorium Runarum — final da aba Combate
+        // Botão Laboratorium Runarum — ao final da aba "ᛟ Runomancia" (logo após "Notas")
         const btn = document.createElement('button');
         btn.className = 'runo-lab-btn no-print';
         btn.innerHTML = 'ᛟ&nbsp; Laboratorium Runarum';

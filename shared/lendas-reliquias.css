@@ -37,10 +37,22 @@ body {
     line-height: var(--lr-lh-body);
 }
 
-/* Desktop com mouse: ativar fundo fixo (efeito parallax sutil) */
-@media (pointer: fine) {
+/* Desktop com mouse REAL: ativar fundo fixo (efeito parallax sutil).
+   ⚠️ Exigimos hover:hover E pointer:fine juntos. Só `pointer: fine` não
+   basta: muitos tablets, aparelhos 2-em-1, WebViews e navegadores in-app
+   reportam pointer:fine mesmo sendo touch — e aí o `fixed` voltava a
+   congelar a rolagem no celular. `hover: hover` distingue mouse de dedo. */
+@media (hover: hover) and (pointer: fine) {
     body {
         background-attachment: fixed;
+    }
+}
+
+/* Rede de segurança: em QUALQUER aparelho de toque, nunca usar `fixed`
+   (evita o congelamento de scroll do iOS/WebView de forma definitiva). */
+@media (hover: none), (pointer: coarse) {
+    body {
+        background-attachment: scroll !important;
     }
 }
 
@@ -390,7 +402,7 @@ img, svg, video, canvas { max-width: 100%; }
 
 @media (max-width: 768px) {
     /* Nunca permitir rolagem horizontal da página inteira */
-    html, body { overflow-x: hidden; }
+    html, body { overflow-x: clip; }
 
     /* 📱 Rolagem VERTICAL sempre liberada nas páginas de conteúdo.
        Apps de canvas em tela cheia (ex.: Tabuleiro) usam body.app-canvas
@@ -400,10 +412,9 @@ img, svg, video, canvas { max-width: 100%; }
        overflow:hidden ou height:100vh no body/html que impedem o scroll
        no mobile. Esta camada global DEVE vencer essas regras. */
     html:not(.app-canvas), body:not(.app-canvas) {
-        overflow-y: auto !important;
+        overflow-y: visible !important;
         height: auto !important;
         min-height: 100% !important;
-        -webkit-overflow-scrolling: touch;
     }
 
     /* Garantir que body com display:flex (login, worldbuilding) não trave
@@ -419,6 +430,20 @@ img, svg, video, canvas { max-width: 100%; }
     .table-wrap, .table-container, [class*="table-scroll"] {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Mesma liberação de rolagem para aparelhos de TOQUE maiores que 768px
+   (tablets em paisagem, dobráveis etc.), que não são cobertos pela
+   media query de largura acima mas também precisam rolar com o dedo. */
+@media (hover: none) and (pointer: coarse) {
+    html:not(.app-canvas), body:not(.app-canvas) {
+        overflow-y: visible !important;
+        height: auto !important;
+        min-height: 100% !important;
+    }
+    body:not(.app-canvas) {
+        min-height: 100vh;
     }
 }
 
