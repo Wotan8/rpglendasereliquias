@@ -2258,6 +2258,31 @@ html.dark .multi-select-container {
     max-width: 140px;
 }
 
+.eq-term-sort-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.eq-term-sort-wrap input {
+    width: 48px;
+    text-align: center;
+    padding: 3px 6px;
+    border: 1px solid var(--soft);
+    border-radius: 6px;
+    font-size: .78rem;
+    font-family: var(--font);
+    background: var(--lr-divine);
+    color: var(--ink);
+}
+
+.eq-term-sort-sep {
+    font-size: .8rem;
+    line-height: 1;
+    opacity: .8;
+    user-select: none;
+}
+
 .eq-term-remove {
     background: transparent;
     border: 1px solid var(--danger);
@@ -2315,7 +2340,8 @@ html.dark .eq-term {
 
 html.dark .eq-term-tipo,
 html.dark .eq-term-fixo-wrap input,
-html.dark .eq-term-ficha-wrap select {
+html.dark .eq-term-ficha-wrap select,
+html.dark .eq-term-sort-wrap input {
     background: var(--lr-bg-0);
     border-color: var(--line);
     color: var(--ink);

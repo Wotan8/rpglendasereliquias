@@ -202,6 +202,7 @@ function _formatEquation(equacao) {
         const fnName = equacao[1].op === 'min' ? 'menor' : 'maior';
         const parts = equacao.map(t => {
             if (t.tipo === 'ficha') return `[${t.ref || '?'}]`;
+            if (t.tipo === 'sort') return `🎲${t.min ?? '?'}~${t.max ?? '?'}`;
             return (t.valor ?? '?');
         });
         return `${fnName}(${parts.join(', ')})`;
@@ -211,6 +212,7 @@ function _formatEquation(equacao) {
         const t = equacao[i];
         if (i > 0 && t.op) str += ` ${t.op} `;
         if (t.tipo === 'ficha') str += `[${t.ref || '?'}]`;
+        else if (t.tipo === 'sort') str += `🎲${t.min ?? '?'}~${t.max ?? '?'}`;
         else str += (t.valor ?? '?');
     }
     return equacao.length > 1 ? `(${str})` : str;
@@ -519,20 +521,29 @@ function _renderEquationTerm(term, calcIndex, termIndex) {
             </optgroup>
         </select>` : '';
 
+    const isFicha = t.tipo === 'ficha';
+    const isSort = t.tipo === 'sort';
+    const isFixo = !isFicha && !isSort;
     return `
     <div class="eq-term" data-term-index="${termIndex}">
         ${opHtml}
         <select class="eq-term-tipo" onchange="window._mechTermTipoChange(${calcIndex}, ${termIndex}); window._mechUpdatePreview()">
-            <option value="fixo" ${t.tipo !== 'ficha' ? 'selected' : ''}>🔢 Fixo</option>
-            <option value="ficha" ${t.tipo === 'ficha' ? 'selected' : ''}>📋 Ficha</option>
+            <option value="fixo" ${isFixo ? 'selected' : ''}>🔢 Fixo</option>
+            <option value="ficha" ${isFicha ? 'selected' : ''}>📋 Ficha</option>
+            <option value="sort" ${isSort ? 'selected' : ''}>🎲 Sort</option>
         </select>
-        <div class="eq-term-fixo-wrap" style="display:${t.tipo !== 'ficha' ? '' : 'none'}">
+        <div class="eq-term-fixo-wrap" style="display:${isFixo ? '' : 'none'}">
             <input type="text" class="eq-term-valor" value="${esc(String(t.valor ?? ''))}" placeholder="Valor" oninput="window._mechUpdatePreview()">
         </div>
-        <div class="eq-term-ficha-wrap" style="display:${t.tipo === 'ficha' ? '' : 'none'}">
+        <div class="eq-term-ficha-wrap" style="display:${isFicha ? '' : 'none'}">
             <select class="eq-term-ref" onchange="window._mechUpdatePreview()">
                 <option value="">— Ref —</option>${getValueSourceHTML()}
             </select>
+        </div>
+        <div class="eq-term-sort-wrap" style="display:${isSort ? '' : 'none'}">
+            <input type="text" class="eq-term-sort-min" value="${esc(String(t.min ?? ''))}" placeholder="mín" title="Valor mínimo" oninput="window._mechUpdatePreview()">
+            <span class="eq-term-sort-sep" title="Sorteia um valor entre mínimo e máximo">🎲</span>
+            <input type="text" class="eq-term-sort-max" value="${esc(String(t.max ?? ''))}" placeholder="máx" title="Valor máximo" oninput="window._mechUpdatePreview()">
         </div>
         ${termIndex > 0 ? `<button type="button" class="eq-term-remove" onclick="window._mechRemoveTerm(${calcIndex}, ${termIndex})" title="Remover termo">✕</button>` : ''}
     </div>`;
@@ -934,20 +945,29 @@ function _renderBoolEquationTerm(term, side, termIndex) {
             </optgroup>
         </select>` : '';
 
+    const isFicha = t.tipo === 'ficha';
+    const isSort = t.tipo === 'sort';
+    const isFixo = !isFicha && !isSort;
     return `
     <div class="eq-term" data-term-index="${termIndex}">
         ${opHtml}
         <select class="eq-term-tipo" onchange="window._mechBoolTermTipoChange('${side}', ${termIndex}); window._mechUpdatePreview()">
-            <option value="fixo" ${t.tipo !== 'ficha' ? 'selected' : ''}>🔢 Fixo</option>
-            <option value="ficha" ${t.tipo === 'ficha' ? 'selected' : ''}>📋 Ficha</option>
+            <option value="fixo" ${isFixo ? 'selected' : ''}>🔢 Fixo</option>
+            <option value="ficha" ${isFicha ? 'selected' : ''}>📋 Ficha</option>
+            <option value="sort" ${isSort ? 'selected' : ''}>🎲 Sort</option>
         </select>
-        <div class="eq-term-fixo-wrap" style="display:${t.tipo !== 'ficha' ? '' : 'none'}">
+        <div class="eq-term-fixo-wrap" style="display:${isFixo ? '' : 'none'}">
             <input type="text" class="eq-term-valor" value="${esc(String(t.valor ?? ''))}" placeholder="Valor" oninput="window._mechUpdatePreview()">
         </div>
-        <div class="eq-term-ficha-wrap" style="display:${t.tipo === 'ficha' ? '' : 'none'}">
+        <div class="eq-term-ficha-wrap" style="display:${isFicha ? '' : 'none'}">
             <select class="eq-term-ref" onchange="window._mechUpdatePreview()">
                 <option value="">— Ref —</option>${getValueSourceHTML()}
             </select>
+        </div>
+        <div class="eq-term-sort-wrap" style="display:${isSort ? '' : 'none'}">
+            <input type="text" class="eq-term-sort-min" value="${esc(String(t.min ?? ''))}" placeholder="mín" title="Valor mínimo" oninput="window._mechUpdatePreview()">
+            <span class="eq-term-sort-sep" title="Sorteia um valor entre mínimo e máximo">🎲</span>
+            <input type="text" class="eq-term-sort-max" value="${esc(String(t.max ?? ''))}" placeholder="máx" title="Valor máximo" oninput="window._mechUpdatePreview()">
         </div>
         ${termIndex > 0 ? `<button type="button" class="eq-term-remove" onclick="window._mechBoolRemoveTerm('${side}', ${termIndex})" title="Remover termo">✕</button>` : ''}
     </div>`;
@@ -1569,8 +1589,10 @@ window._mechTermTipoChange = function (calcIndex, termIndex) {
     const tipo = term.querySelector('.eq-term-tipo')?.value || 'fixo';
     const fixoWrap = term.querySelector('.eq-term-fixo-wrap');
     const fichaWrap = term.querySelector('.eq-term-ficha-wrap');
+    const sortWrap = term.querySelector('.eq-term-sort-wrap');
     if (fixoWrap) fixoWrap.style.display = tipo === 'fixo' ? '' : 'none';
     if (fichaWrap) fichaWrap.style.display = tipo === 'ficha' ? '' : 'none';
+    if (sortWrap) sortWrap.style.display = tipo === 'sort' ? '' : 'none';
     // Refresh progression columns when term type changes
     window._mechRefreshProgressao();
 };
@@ -1636,8 +1658,10 @@ window._mechBoolTermTipoChange = function (side, termIndex) {
     const tipo = term.querySelector('.eq-term-tipo')?.value || 'fixo';
     const fixoWrap = term.querySelector('.eq-term-fixo-wrap');
     const fichaWrap = term.querySelector('.eq-term-ficha-wrap');
+    const sortWrap = term.querySelector('.eq-term-sort-wrap');
     if (fixoWrap) fixoWrap.style.display = tipo === 'fixo' ? '' : 'none';
     if (fichaWrap) fichaWrap.style.display = tipo === 'ficha' ? '' : 'none';
+    if (sortWrap) sortWrap.style.display = tipo === 'sort' ? '' : 'none';
 };
 
 window._mechBoolAddTerm = function (side) {
@@ -1688,6 +1712,11 @@ function _collectEquacaoFromContainer(container) {
         if (i > 0) entry.op = term.querySelector('.eq-term-op')?.value || '+';
         if (tipo === 'ficha') {
             entry.ref = term.querySelector('.eq-term-ref')?.value || '';
+        } else if (tipo === 'sort') {
+            const rawMin = term.querySelector('.eq-term-sort-min')?.value?.trim() ?? '';
+            const rawMax = term.querySelector('.eq-term-sort-max')?.value?.trim() ?? '';
+            entry.min = isNaN(Number(rawMin)) || rawMin === '' ? rawMin : Number(rawMin);
+            entry.max = isNaN(Number(rawMax)) || rawMax === '' ? rawMax : Number(rawMax);
         } else {
             const rawVal = term.querySelector('.eq-term-valor')?.value?.trim() ?? '';
             entry.valor = isNaN(Number(rawVal)) || rawVal === '' ? rawVal : Number(rawVal);

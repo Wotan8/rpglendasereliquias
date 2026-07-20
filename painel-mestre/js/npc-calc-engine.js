@@ -73,7 +73,21 @@ function resolveEquation(equacao, ctx) {
 function resolveTerm(term, ctx) {
     if (!term) return 0;
     if (term.tipo === 'ficha') return resolveRef(term.ref, ctx);
+    if (term.tipo === 'sort') return rollSortTerm(term);
     return parseFloat(term.valor) || 0;
+}
+
+/* Sorteia um valor inteiro entre min e max (inclusive) para termos do tipo 'sort'. */
+function rollSortTerm(term) {
+    let lo = parseFloat(term.min);
+    let hi = parseFloat(term.max);
+    if (isNaN(lo) && isNaN(hi)) return 0;
+    if (isNaN(lo)) lo = hi;
+    if (isNaN(hi)) hi = lo;
+    lo = Math.round(lo);
+    hi = Math.round(hi);
+    if (lo > hi) { const tmp = lo; lo = hi; hi = tmp; }
+    return Math.floor(Math.random() * (hi - lo + 1)) + lo;
 }
 
 /**
@@ -130,7 +144,7 @@ function configNoNivel(mech, nivel) {
                 if (!Array.isArray(calc.equacao)) continue;
                 let fixoIdx = 0;
                 for (const term of calc.equacao) {
-                    if (term.tipo !== 'ficha') {
+                    if (term.tipo !== 'ficha' && term.tipo !== 'sort') {
                         const ov = prog.termos[String(fixoIdx)];
                         if (ov !== undefined && ov !== '') term.valor = ov;
                         fixoIdx++;

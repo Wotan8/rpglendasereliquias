@@ -411,7 +411,23 @@ function _resolveTermValue(term) {
     if (term.tipo === 'ficha') {
         return _resolveSheetRef(term.ref, 1);
     }
+    if (term.tipo === 'sort') {
+        return _rollSortTerm(term);
+    }
     return parseFloat(term.valor) || 0;
+}
+
+/* Sorteia um valor inteiro entre min e max (inclusive) para termos do tipo 'sort'. */
+function _rollSortTerm(term) {
+    let lo = parseFloat(term.min);
+    let hi = parseFloat(term.max);
+    if (isNaN(lo) && isNaN(hi)) return 0;
+    if (isNaN(lo)) lo = hi;
+    if (isNaN(hi)) hi = lo;
+    lo = Math.round(lo);
+    hi = Math.round(hi);
+    if (lo > hi) { const tmp = lo; lo = hi; hi = tmp; }
+    return Math.floor(Math.random() * (hi - lo + 1)) + lo;
 }
 
 function _resolveSheetRef(ref, mult) {
@@ -974,7 +990,7 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
                         if (Array.isArray(calc.equacao)) {
                             let fixoIdx = 0;
                             for (const term of calc.equacao) {
-                                if (term.tipo !== 'ficha') {
+                                if (term.tipo !== 'ficha' && term.tipo !== 'sort') {
                                     const overrideVal = prog.termos[String(fixoIdx)];
                                     if (overrideVal !== undefined && overrideVal !== '') {
                                         term.valor = overrideVal;
@@ -1226,6 +1242,7 @@ function _formatEquationPreview(equacao) {
         const fnName = equacao[1].op === 'min' ? 'menor' : 'maior';
         const parts = equacao.map(t => {
             if (t.tipo === 'ficha') return `[${t.ref || '?'}]`;
+            if (t.tipo === 'sort') return `🎲${t.min ?? '?'}~${t.max ?? '?'}`;
             return (t.valor ?? '?');
         });
         return `${fnName}(${parts.join(', ')})`;
@@ -1235,6 +1252,7 @@ function _formatEquationPreview(equacao) {
         const t = equacao[i];
         if (i > 0 && t.op) str += ` ${t.op} `;
         if (t.tipo === 'ficha') str += `[${t.ref || '?'}]`;
+        else if (t.tipo === 'sort') str += `🎲${t.min ?? '?'}~${t.max ?? '?'}`;
         else str += (t.valor ?? '?');
     }
     return equacao.length > 1 ? `(${str})` : str;
@@ -1722,7 +1740,7 @@ function getAffectingMechanics(propertyName, opts) {
                                 if (Array.isArray(calc.equacao)) {
                                     let fixoIdx = 0;
                                     for (const term of calc.equacao) {
-                                        if (term.tipo !== 'ficha') {
+                                        if (term.tipo !== 'ficha' && term.tipo !== 'sort') {
                                             const ov = prog.termos[String(fixoIdx)];
                                             if (ov !== undefined && ov !== '') term.valor = ov;
                                             fixoIdx++;

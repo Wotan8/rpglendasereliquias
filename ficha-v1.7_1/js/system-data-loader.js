@@ -395,6 +395,7 @@ function _formatEquationForFormula(equacao) {
         const t = equacao[i];
         if (i > 0 && t.op) str += ` ${t.op} `;
         if (t.tipo === 'ficha') str += `[${t.ref || '?'}]`;
+        else if (t.tipo === 'sort') str += `🎲${t.min ?? '?'}~${t.max ?? '?'}`;
         else str += (t.valor ?? '?');
     }
     return str;
