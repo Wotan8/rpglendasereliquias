@@ -853,6 +853,17 @@ function _cmAbrirSelecaoPredef(mod, predefs, podeCriar) {
             ? pd.custoExpProprio : (mod.custoExpPorItem || 0);
         const reqs = Array.isArray(pd.custoEquipamentos) ? pd.custoEquipamentos : (mod.custoEquipamentos || []);
         const custos = _cmFormatarCustos(custoExp, reqs);
+        
+        const criacaoIds = Array.isArray(pd.custoCriacaoMecanicaIds) ? pd.custoCriacaoMecanicaIds : _cmGetCostMechanics(mod, 'custoCriacao');
+        if (criacaoIds.length > 0) {
+            criacaoIds.forEach(id => {
+                const m = (window._systemData?.mechanics || []).find(x => x.id === id);
+                if (m && m.tipo === 'booleano') {
+                    const check = _cmCheckMechanicCost(id);
+                    custos.push(check.label);
+                }
+            });
+        }
 
         const opt = document.createElement('button');
         opt.type = 'button';
@@ -1041,22 +1052,31 @@ function _doAddModuleItem(mod, predef) {
 function _cmAplicarMecanicasBotao(field, btnEl) {
     const ids = Array.isArray(field.mecanicaIds) ? field.mecanicaIds : [];
     if (ids.length === 0) {
-        _cmToastBotao(btnEl, '⚠️ Nenhuma mecânica vinculada');
+        _cmToastBotao(btnEl, '🚫 Nenhuma mecânica vinculada');
         return;
     }
+    
+    for (const id of ids) {
+        const check = _cmCheckMechanicCost(id);
+        if (!check.ok) {
+            _cmToastBotao(btnEl, `❌ ${check.label}`);
+            return;
+        }
+    }
+
     const mechs = window._systemData?.mechanics || [];
     const nomes = [];
     ids.forEach(id => {
         const m = mechs.find(x => x.id === id);
         if (m && typeof applyMechanicToSheet === 'function') {
-            applyMechanicToSheet(m, null);
+            applyMechanicToSheet(m, null, true);
             nomes.push(m.nome);
         }
     });
     if (typeof recalcAll === 'function') recalcAll();
     if (typeof scheduleAutosave === 'function') scheduleAutosave();
-    _cmToastBotao(btnEl, nomes.length ? `⚡ Aplicado: ${nomes.join(', ')}` : '⚠️ Mecânica(s) não encontrada(s)');
-    console.log(`🔘 Botão de módulo aplicou mecânicas: ${nomes.join(', ')}`);
+    _cmToastBotao(btnEl, nomes.length ? `✅ Aplicado: ${nomes.join(', ')}` : '🚫 Mecânica(s) não encontrada(s)');
+    console.log(`⚡ Botão de módulo aplicou mecânicas: ${nomes.join(', ')}`);
 }
 
 function _cmToastBotao(btnEl, msg) {
@@ -1556,7 +1576,17 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
             btn.textContent = field.label || field.key || 'Ativar';
             btn.title = field.placeholder || 'Aplica a mecânica vinculada a este botão';
             btn.addEventListener('click', () => {
-                const mechId = data[field.key];
+                let mechId = data[field.key];
+                
+                if (!mechId && data._predefId && mod && mod.itensPredefinidos) {
+                    const pd = mod.itensPredefinidos.find(p => p.id === data._predefId);
+                    if (pd && pd.valores && pd.valores[field.key]) {
+                        mechId = pd.valores[field.key];
+                        data[field.key] = mechId;
+                        if (typeof _saveModuleData === 'function') _saveModuleData(mod.id);
+                    }
+                }
+
                 if (!mechId) {
                     if (typeof showUpgradeBlocked === 'function') {
                         showUpgradeBlocked('Nenhuma mecânica configurada para este botão.');
@@ -1747,6 +1777,39 @@ function _cmCheckMechanicCost(mechId) {
     if (!mechId) return { ok: true, label: 'Sem custo' };
     const mech = (window._systemData?.mechanics || []).find(m => m.id === mechId);
     if (!mech) return { ok: true, label: 'Mecânica não encontrada' };
+    
+    if (mech.tipo === 'booleano') {
+        const config = mech.config || {};
+        try {
+            const valA = typeof resolveEquation === 'function' ? resolveEquation(config.equacaoA || []) : 0;
+            const valB = typeof resolveEquation === 'function' ? resolveEquation(config.equacaoB || []) : 0;
+            const op = config.operadorComparacao || '>=';
+            let r = false;
+            if (op === '==') r = valA === valB;
+            else if (op === '!=') r = valA !== valB;
+            else if (op === '>') r = valA > valB;
+            else if (op === '>=') r = valA >= valB;
+            else if (op === '<') r = valA < valB;
+            else r = valA <= valB;
+            
+            const formatEq = (eq) => {
+                if (!Array.isArray(eq)) return String(eq);
+                return eq.map((e, idx) => {
+                    const txt = e.tipo === 'ficha' ? `[${e.ref}]` : String(e.valor || 0);
+                    const op = idx > 0 ? (e.op ? ` ${e.op} ` : ' + ') : '';
+                    return op + txt;
+                }).join('');
+            };
+            
+            const eqAStr = formatEq(config.equacaoA);
+            const eqBStr = formatEq(config.equacaoB);
+            const labelStr = `${eqAStr} ${op} ${eqBStr} ? ${r ? '✅' : '❌ ' + (config.valorFalso || 'Requisito não atendido')}`;
+            
+            return { ok: r, label: labelStr };
+        } catch (e) {
+            return { ok: false, label: 'Erro ao avaliar requisito' };
+        }
+    }
     
     let isSubtracao = false;
     let requiredVal = 0;

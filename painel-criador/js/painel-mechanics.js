@@ -229,14 +229,12 @@ export function generatePreviewText(data) {
         // Support new multi-calc format
         if (Array.isArray(config.calculos) && config.calculos.length > 0) {
             text = config.calculos.map(c => {
-                // EXP: use standard equation format, target shows qualExp label
                 if (c.alvo === 'EXP') {
                     const op = c.operacao || '+';
                     const val = _formatCalcValue(c);
                     const qualLabels = { exp_total: 'EXP Total', exp_restante: 'EXP Restante', ambos: 'EXP Total + Restante' };
                     const qualLabel = qualLabels[c.qualExp] || 'EXP';
-                    // quandoAplica is at top-level data, not in calc
-                    const quandoLabels = { na_criacao: 'Na Criação', por_sessao: 'Por Sessão', por_descanso_longo: 'Por Descanso Longo', por_descanso_curto: 'Por Descanso Curto', por_arco: 'Por Arco', por_masmorra: 'Por Masmorra', ao_ativar: 'Ao Ativar', ao_desativar: 'Ao Desativar', condicional: 'Condicional', permanente: 'Permanente', por_uso_recurso: 'Por Uso de Recurso', por_morte: 'Por Morte/Ressurreição' };
+                    const quandoLabels = { na_criacao: 'Na Criação', por_sessao: 'Por Sessão', por_descanso_longo: 'Por Descanso Longo', por_descanso_curto: 'Por Descanso Curto', por_arco: 'Por Arco', por_masmorra: 'Por Masmorra', ao_ativar: 'Ao Ativar', ao_desativar: 'Ao Desativar', condicional: 'Condicional', permanente: 'Permanente', instantanea: 'Instantânea', por_uso_recurso: 'Por Uso de Recurso', por_morte: 'Por Morte/Ressurreição' };
                     const quandoLabel = quandoLabels[data.quandoAplica] || '';
                     const triggerSuffix = quandoLabel ? ` — ${quandoLabel}` : '';
                     return `${op}${val} em ${qualLabel}${triggerSuffix}`;
@@ -1306,6 +1304,7 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, 
                         <div class="form-group"><label>Duração</label>
                             <select id="mech_duracao" onchange="window._mechDuracaoChange(); window._mechUpdatePreview()">
                                 <option value="permanente" ${(data.duracao || 'permanente') === 'permanente' ? 'selected' : ''}>Permanente</option>
+                                <option value="instantanea" ${data.duracao === 'instantanea' ? 'selected' : ''}>Instantânea</option>
                                 <option value="cena" ${data.duracao === 'cena' ? 'selected' : ''}>1 Cena</option>
                                 <option value="turno" ${data.duracao === 'turno' ? 'selected' : ''}>X Turnos</option>
                                 <option value="ate_remover" ${data.duracao === 'ate_remover' ? 'selected' : ''}>Até ser removido</option>
