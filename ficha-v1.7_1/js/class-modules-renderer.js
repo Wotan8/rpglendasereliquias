@@ -210,6 +210,10 @@
             min-height: 1em;
         }
         .cm-btn-toast.show { opacity: 1; }
+        .cm-btn-toast .cm-toast-line { line-height: 1.4; text-align: left; }
+        .cm-btn-toast .cm-toast-head { font-weight: 800; color: #a78bfa; }
+        .cm-btn-toast .cm-toast-ok { color: #34d399; }
+        .cm-btn-toast .cm-toast-fail { color: #f87171; }
         /* Modal de itens pré-cadastrados */
         .cm-predef-overlay {
             position: fixed; inset: 0; z-index: 9999;
@@ -1152,17 +1156,60 @@ function _cmAplicarMecanicasBotao(field, btnEl) {
 
     const mechs = window._systemData?.mechanics || [];
     const nomes = [];
-    ids.forEach(id => {
-        const m = mechs.find(x => x.id === id);
-        if (m && typeof applyMechanicToSheet === 'function') {
-            applyMechanicToSheet(m, null, true);
-            nomes.push(m.nome);
-        }
-    });
+    const canCollect = typeof meBeginMessageCollection === 'function' && typeof meEndMessageCollection === 'function';
+    let msgs = [];
+    if (canCollect) meBeginMessageCollection();
+    try {
+        ids.forEach(id => {
+            const m = mechs.find(x => x.id === id);
+            if (m && typeof applyMechanicToSheet === 'function') {
+                applyMechanicToSheet(m, null, true);
+                nomes.push(m.nome);
+            }
+        });
+    } finally {
+        if (canCollect) msgs = meEndMessageCollection();
+    }
     if (typeof recalcAll === 'function') recalcAll();
     if (typeof scheduleAutosave === 'function') scheduleAutosave();
-    _cmToastBotao(btnEl, nomes.length ? `✅ Aplicado: ${nomes.join(', ')}` : '🚫 Mecânica(s) não encontrada(s)');
+    const header = nomes.length ? `✅ Aplicado: ${nomes.join(', ')}` : '🚫 Mecânica(s) não encontrada(s)';
+    if (msgs.length > 0) {
+        _cmToastBotaoCadeia(btnEl, header, msgs);
+    } else {
+        _cmToastBotao(btnEl, header);
+    }
     console.log(`⚡ Botão de módulo aplicou mecânicas: ${nomes.join(', ')}`);
+}
+
+/** Toast empilhado: cabeçalho + mensagem de cada mecânica da cadeia, na ordem
+ *  de acionamento. Mensagens de mecânicas encadeadas aparecem abaixo (e
+ *  levemente indentadas) da mecânica que as acionou. */
+function _cmToastBotaoCadeia(btnEl, header, msgs) {
+    if (!btnEl) return;
+    let toast = btnEl.parentElement?.querySelector('.cm-btn-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.className = 'cm-btn-toast';
+        btnEl.parentElement?.appendChild(toast);
+    }
+    toast.textContent = '';
+    const head = document.createElement('div');
+    head.className = 'cm-toast-line cm-toast-head';
+    head.textContent = header;
+    toast.appendChild(head);
+    msgs.forEach(m => {
+        const line = document.createElement('div');
+        line.className = 'cm-toast-line ' + (m.ok ? 'cm-toast-ok' : 'cm-toast-fail');
+        line.style.paddingLeft = `${Math.min(m.depth || 0, 6) * 12}px`;
+        const prefixo = m.nome ? `${m.nome} — ` : '';
+        line.textContent = `${m.ok ? '✅' : '❌'} ${prefixo}${m.texto}`;
+        toast.appendChild(line);
+    });
+    toast.classList.add('show');
+    clearTimeout(toast._timer);
+    // Mais mensagens = mais tempo de leitura
+    const dur = Math.min(3200 + msgs.length * 1800, 12000);
+    toast._timer = setTimeout(() => toast.classList.remove('show'), dur);
 }
 
 function _cmToastBotao(btnEl, msg) {

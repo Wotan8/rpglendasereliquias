@@ -508,21 +508,55 @@ function _meCompare(valor, comp, a, b) {
     return false;
 }
 
+/* ===== COLETOR DE MENSAGENS DE MECÂNICAS (cadeias acionadas por botão) =====
+ * Enquanto a coleta estiver ativa, cada mecânica avaliada registra sua mensagem:
+ * booleano → "Valor se Verdadeiro" / "Valor se Falso";
+ * condicional encadeado → mensagem da faixa (condição) que casou;
+ * modificar (one-off) → resumo do que foi aplicado na ficha.
+ * As mensagens são registradas na ordem de acionamento, com 'depth' indicando
+ * o nível na cadeia (mensagens encadeadas aparecem abaixo da mecânica que as acionou). */
+let _meMsgCollector = null;
+let _meMsgDepth = 0;
+
+function meBeginMessageCollection() {
+    _meMsgCollector = [];
+    _meMsgDepth = 0;
+}
+function meEndMessageCollection() {
+    const msgs = _meMsgCollector || [];
+    _meMsgCollector = null;
+    _meMsgDepth = 0;
+    return msgs;
+}
+function _mePushMsg(mech, texto, ok = true) {
+    if (!_meMsgCollector) return;
+    const t = String(texto ?? '').trim();
+    if (!t) return;
+    _meMsgCollector.push({ nome: mech?.nome || '', texto: t, ok: ok !== false, depth: _meMsgDepth });
+}
+window.meBeginMessageCollection = meBeginMessageCollection;
+window.meEndMessageCollection = meEndMessageCollection;
+
 /* ===== ACIONAR MECÂNICAS VINCULADAS (booleano / condicional_encadeado) =====
- * Aplica as mecânicas vinculadas ao resultado, com guarda contra ciclos. */
+ * Aplica as mecânicas vinculadas ao resultado, com guarda contra ciclos.
+ * IMPORTANTE: isOneOff é propagado para a cadeia — assim, mecânicas "modificar"
+ * encadeadas que afetam valores ATUAIS (Sanidade Atual, Energia Atual...) são
+ * aplicadas quando a cadeia parte de um botão de módulo. */
 const _meTriggerStack = new Set();
 
-function _meTriggerMechanics(ids, sourceMech, parentPec) {
+function _meTriggerMechanics(ids, sourceMech, parentPec, isOneOff = false) {
     if (!Array.isArray(ids) || ids.length === 0 || !sourceMech) return;
     if (_meTriggerStack.has(sourceMech.id)) return;
     _meTriggerStack.add(sourceMech.id);
+    _meMsgDepth++;
     try {
         for (const id of ids) {
             if (!id || id === sourceMech.id || _meTriggerStack.has(id)) continue;
             const target = window._systemData?.mechanics?.find(m => m.id === id);
-            if (target) applyMechanicToSheet(target, parentPec);
+            if (target) applyMechanicToSheet(target, parentPec, isOneOff);
         }
     } finally {
+        _meMsgDepth--;
         _meTriggerStack.delete(sourceMech.id);
     }
 }
@@ -655,6 +689,14 @@ function _resolveSheetRef(ref, mult) {
     if (ref === 'Nível') {
         const nivel = parseInt(document.querySelector('[data-key="nivel"]')?.value) || 1;
         return nivel * mult;
+    }
+
+    // Check status vitais (Atual) — lê o input da ficha (ex: [Sanidade Atual])
+    if (attrKey && attrKey.startsWith('ATUAL:')) {
+        const atualKey = attrKey.replace('ATUAL:', '');
+        const atualEl = document.querySelector(`[data-key="${atualKey}"]`);
+        const atualVal = parseFloat(String(atualEl?.value ?? '0').replace(',', '.')) || 0;
+        return atualVal * mult;
     }
 
     // Check DV (Atual) — reads editable Atual field from state.dvAtual
@@ -1208,6 +1250,8 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
         const calculos = Array.isArray(config.calculos) ? config.calculos
             : [{ alvo: config.alvo, operacao: config.operacao, valor: config.valor, valorTipo: 'fixo' }];
 
+        const _msgDescs = []; // resumo do que foi aplicado (coletor de mensagens)
+
         for (const calc of calculos) {
             // === EXP MODIFIER: special handling ===
             if (calc.alvo === 'EXP') {
@@ -1227,6 +1271,8 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
 
                 const val = resolveCalcValue(calc);
                 const op = calc.operacao;
+
+                if (_meMsgCollector) _msgDescs.push(`${op === '=' ? '= ' : (op || '+')}${val} em ${alvo}`);
 
                 if (field.startsWith('ATUAL:')) {
                     if (isOneOff) {
@@ -1260,6 +1306,9 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
                 }
             }
         }
+
+        // Resumo do que foi aplicado (exibido na cadeia de mensagens do botão)
+        if (_msgDescs.length) _mePushMsg(mech, _msgDescs.join('; '));
     }
 
     // === TIPO: LIMITAR ===
@@ -1391,9 +1440,12 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
         state.booleanResults[mech.id] = { valorSaida, resultadoBooleano, valA, valB, op, modo: config.modoVerificacao || 'numerico' };
         console.log(`🔀 Booleano "${mech.nome}": ${valA} ${op} ${valB} → ${resultadoBooleano} (saída: ${valorSaida})`);
 
+        // Registrar a mensagem do resultado (texto bruto de Verdadeiro/Falso)
+        _mePushMsg(mech, resultadoBooleano ? (config.valorVerdadeiro ?? '') : (config.valorFalso ?? ''), resultadoBooleano);
+
         // Acionar mecânicas vinculadas ao resultado (✅ Verdadeiro / ❌ Falso)
         const trigIds = resultadoBooleano ? config.efeitoTrueIds : config.efeitoFalseIds;
-        _meTriggerMechanics(trigIds, mech, parentPec);
+        _meTriggerMechanics(trigIds, mech, parentPec, isOneOff);
     }
 
     // === TIPO: CONDICIONAL ENCADEADO ===
@@ -1403,11 +1455,14 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
         state.chainedResults[mech.id] = resultado;
         console.log(`🔗 Cond. Encadeada "${mech.nome}": valor ${resultado.valorEquacao} → "${resultado.valorSaida}" (condição #${resultado.condicaoIndex >= 0 ? resultado.condicaoIndex + 1 : 'padrão'})`);
 
+        // Registrar a mensagem da faixa (condição) que casou — ou o valor padrão
+        _mePushMsg(mech, resultado.valorSaida, resultado.condicaoIndex >= 0);
+
         // Acionar mecânicas vinculadas à condição que casou
         if (resultado.condicaoIndex >= 0) {
             const condicoes = Array.isArray(config.condicoes) ? config.condicoes : [];
             const cond = condicoes[resultado.condicaoIndex];
-            if (cond) _meTriggerMechanics(cond.efeitoMecanicaIds, mech, parentPec);
+            if (cond) _meTriggerMechanics(cond.efeitoMecanicaIds, mech, parentPec, isOneOff);
         }
     }
 
@@ -1422,7 +1477,7 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
                 const boolMech = window._systemData?.mechanics?.find(m => m.id === boolId);
                 if (boolMech && boolMech.tipo === 'booleano') {
                     // Executar a mecânica booleana para atualizar state.booleanResults
-                    applyMechanicToSheet(boolMech, parentPec);
+                    applyMechanicToSheet(boolMech, parentPec, isOneOff);
                     
                     if (!state.booleanResults || !state.booleanResults[boolId] || !state.booleanResults[boolId].resultadoBooleano) {
                         allTrue = false;
@@ -1438,13 +1493,17 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
             for (const targetId of targetIds) {
                 const targetMech = window._systemData?.mechanics?.find(m => m.id === targetId);
                 if (targetMech) {
-                    applyMechanicToSheet(targetMech, parentPec);
+                    applyMechanicToSheet(targetMech, parentPec, isOneOff);
                 }
             }
         }
     }
 
-    // Narrativo: apenas informativo (exibido no card)
+    // Narrativo: apenas informativo (exibido no card) — mas, quando acionado
+    // numa cadeia com coleta ativa, sua mensagem também é exibida ao jogador.
+    if (tipo === 'narrativo') {
+        _mePushMsg(mech, config.textoEfeito || mech.previewTexto || mech.descricao || '');
+    }
 }
 /* ===== FORMAT EQUATION PREVIEW ===== */
 function _formatEquationPreview(equacao) {

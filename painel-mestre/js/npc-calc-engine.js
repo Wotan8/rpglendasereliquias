@@ -300,6 +300,64 @@ function resolveBooleano(config, ctx) {
     return { valA, valB, op, resultado, valorSaida };
 }
 
+/* ===== Expansão recursiva de mecânicas encadeadas =====
+ * Avalia as mecânicas vinculadas a um resultado (✅/❌ de um booleano ou a
+ * faixa que casou de um condicional encadeado) usando o contexto do NPC e
+ * devolve uma linha de texto por mecânica, com a mensagem de cada uma.
+ * Booleanos e encadeados aninhados são resolvidos recursivamente; 'visited'
+ * evita ciclos e 'depth' limita/indenta a profundidade da cadeia. */
+function _expandTriggered(trigIds, sys, ctx, depth, visited) {
+    const linhas = [];
+    if (!Array.isArray(trigIds) || trigIds.length === 0 || depth > 8) return linhas;
+    const indent = '\u00A0\u00A0'.repeat(Math.max(depth - 1, 0)) + '↳ ';
+
+    for (const id of trigIds) {
+        if (!id || visited.has(id)) continue;
+        visited.add(id);
+        const mech = sys.mechsById?.[id];
+        if (!mech) { linhas.push(`${indent}⚠️ Mecânica "${id}" não encontrada no registro.`); continue; }
+        const config = mech.config || {};
+        const nome = mech.nome || 'Mecânica';
+        try {
+            if (mech.tipo === 'booleano') {
+                const res = resolveBooleano(config, ctx);
+                const msg = String(res.valorSaida ?? '').trim();
+                linhas.push(`${indent}🔀 ${nome}: ${res.resultado ? '✅' : '❌'}${msg ? ` "${msg}"` : ''}`);
+                const nested = res.resultado ? (config.efeitoTrueIds || []) : (config.efeitoFalseIds || []);
+                linhas.push(..._expandTriggered(nested, sys, ctx, depth + 1, visited));
+            } else if (mech.tipo === 'condicional_encadeado') {
+                const res = resolveChainedConditional(config, ctx);
+                const msg = String(res.valorSaida ?? '').trim();
+                linhas.push(`${indent}🔗 ${nome}: "${msg}"`);
+                if (res.condicaoIndex >= 0) {
+                    const cond = (Array.isArray(config.condicoes) ? config.condicoes : [])[res.condicaoIndex];
+                    linhas.push(..._expandTriggered(cond?.efeitoMecanicaIds, sys, ctx, depth + 1, visited));
+                }
+            } else if (mech.tipo === 'modificar') {
+                const calculos = Array.isArray(config.calculos) && config.calculos.length
+                    ? config.calculos
+                    : [{ alvo: config.alvo, operacao: config.operacao, valor: config.valor, valorTipo: config.valorTipo || 'fixo', valorRef: config.valorRef, valorMultiplicador: config.valorMultiplicador, equacao: config.equacao }];
+                const partes = [];
+                for (const calc of calculos) {
+                    if (!calc || calc.alvo === 'EXP') continue;
+                    const alvos = Array.isArray(calc.alvo) ? calc.alvo : [calc.alvo];
+                    const val = fmt(resolveCalcValue(calc, ctx));
+                    for (const alvo of alvos) {
+                        if (alvo) partes.push(`${calc.operacao === '=' ? '= ' : (calc.operacao || '+')}${val} em ${alvo}`);
+                    }
+                }
+                linhas.push(`${indent}⚙️ ${nome}: ${partes.join('; ') || '(sem cálculos)'} — aplicar manualmente na ficha do NPC`);
+            } else {
+                const texto = mech.previewTexto || config.textoEfeito || mech.descricao || '';
+                linhas.push(`${indent}📋 ${nome}${texto ? `: ${texto}` : ''}`);
+            }
+        } catch (e) {
+            linhas.push(`${indent}⚠️ Erro ao avaliar mecânica encadeada "${nome}".`);
+        }
+    }
+    return linhas;
+}
+
 /* ===== Coleta de mecânicas das peculiaridades do NPC ===== */
 
 /**
@@ -379,14 +437,14 @@ function gatherOperations(npc, sys, targetMap, avisos) {
             // Condicional Encadeado permanente e sem condição → avaliado
             // automaticamente com os valores finais do NPC (após as demais mecânicas)
             if (mech.tipo === 'condicional_encadeado' && !isConditional && isPermanent) {
-                encadeadas.push({ config, fonte: fonteLabel, icone: pec.icone || '🔗', nome: mech.nome || '' });
+                encadeadas.push({ config, fonte: fonteLabel, icone: pec.icone || '🔗', nome: mech.nome || '', id: mechId });
                 continue;
             }
 
             // Booleano permanente e sem condição → avaliado automaticamente
             // com os valores finais do NPC (após as demais mecânicas)
             if (mech.tipo === 'booleano' && !isConditional && isPermanent) {
-                booleanas.push({ config, fonte: fonteLabel, icone: pec.icone || '🔀', nome: mech.nome || '' });
+                booleanas.push({ config, fonte: fonteLabel, icone: pec.icone || '🔀', nome: mech.nome || '', id: mechId });
                 continue;
             }
 
@@ -585,8 +643,6 @@ export function calcularNpc(npc, sys, opts = {}) {
     }
 
     // --- 3) Booleanas e Condicionais Encadeadas: avaliadas com os valores FINAIS do NPC ---
-    const _mechNome = id => sys.mechsById?.[id]?.nome || id;
-
     for (const b of (booleanas || [])) {
         try {
             const res = resolveBooleano(b.config, ctx);
@@ -599,12 +655,14 @@ export function calcularNpc(npc, sys, opts = {}) {
                 const opLabel = { '==': '==', '!=': '!=', '>': '>', '>=': '≥', '<': '<', '<=': '≤' }[res.op] || res.op;
                 texto = `🔀 ${nomePrefix}${fmt(res.valA)} ${opLabel} ${fmt(res.valB)} → ${res.resultado ? '✅' : '❌'} "${res.valorSaida}"`;
             }
-            // Mecânicas acionadas pelo resultado (o mestre aplica manualmente)
-            const trigIds = res.resultado ? (b.config?.efeitoTrueIds || []) : (b.config?.efeitoFalseIds || []);
-            if (Array.isArray(trigIds) && trigIds.length > 0) {
-                texto += ` → Aciona: ${trigIds.map(_mechNome).join(', ')}`;
-            }
             infos.push({ fonte: b.fonte, texto, icone: b.icone || '🔀' });
+
+            // Mecânicas acionadas pelo resultado: cadeia resolvida recursivamente,
+            // cada mecânica em sua própria linha, abaixo da que a acionou
+            const trigIds = res.resultado ? (b.config?.efeitoTrueIds || []) : (b.config?.efeitoFalseIds || []);
+            for (const linha of _expandTriggered(trigIds, sys, ctx, 1, new Set(b.id ? [b.id] : []))) {
+                infos.push({ fonte: b.fonte, texto: linha, icone: '\u00A0' });
+            }
         } catch (e) {
             avisos.add(`Erro ao avaliar mecânica booleana "${b.nome || '?'}" (${b.fonte}).`);
         }
@@ -622,15 +680,16 @@ export function calcularNpc(npc, sys, opts = {}) {
             } else {
                 texto = `🔗 ${nomePrefix}${fmt(res.valorEquacao)} → "${res.valorSaida}"`;
             }
-            // Mecânicas acionadas pela condição que casou (o mestre aplica manualmente)
+            infos.push({ fonte: enc.fonte, texto, icone: enc.icone || '🔗' });
+
+            // Mecânicas acionadas pela faixa que casou: cadeia resolvida
+            // recursivamente, cada mecânica em sua própria linha, abaixo
             if (res.condicaoIndex >= 0) {
                 const cond = (Array.isArray(enc.config?.condicoes) ? enc.config.condicoes : [])[res.condicaoIndex];
-                const trigIds = cond?.efeitoMecanicaIds;
-                if (Array.isArray(trigIds) && trigIds.length > 0) {
-                    texto += ` → Aciona: ${trigIds.map(_mechNome).join(', ')}`;
+                for (const linha of _expandTriggered(cond?.efeitoMecanicaIds, sys, ctx, 1, new Set(enc.id ? [enc.id] : []))) {
+                    infos.push({ fonte: enc.fonte, texto: linha, icone: '\u00A0' });
                 }
             }
-            infos.push({ fonte: enc.fonte, texto, icone: enc.icone || '🔗' });
         } catch (e) {
             avisos.add(`Erro ao avaliar condicional encadeada "${enc.nome || '?'}" (${enc.fonte}).`);
         }
