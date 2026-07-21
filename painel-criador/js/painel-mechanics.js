@@ -1,4 +1,5 @@
 // =============================================
+console.log("🧩 painel-mechanics v2.1 — múltiplos booleanos ATIVOS");
 // VISUAL MECHANICS EDITOR — Lendas e Relíquias
 // Handles: inline form, preview, mechanic cards,
 //          MechanicSelector component
@@ -336,23 +337,29 @@ export function generatePreviewText(data) {
     } else if (tipo === 'booleano') {
         const vTrue = config.valorVerdadeiro ?? '?';
         const vFalse = config.valorFalso ?? '?';
-        if (config.modoVerificacao === 'equipamento') {
-            const reqs = Array.isArray(config.equipReqs) ? config.equipReqs : [];
-            const qtdStr = (Array.isArray(config.equacaoQtdMin) && config.equacaoQtdMin.length > 0)
-                ? _formatEquation(config.equacaoQtdMin) : '1';
-            const reqParts = reqs.map(r => {
-                const formas = _mechReqFormas(r);
-                const formasLbl = formas.length ? ` (${formas.map(f => _MECH_FORMA_LABELS[f]).join(' ou ')})` : '';
-                return `${_mechReqLabel(r)}${formasLbl}`;
-            });
-            text = `🎒 Equipado: ${reqParts.join(' E ') || '?'} — cada um ×≥ ${qtdStr} ? ✅${vTrue} : ❌${vFalse}`;
-        } else {
-            const sideA = _formatEquation(config.equacaoA || []);
-            const opLabel = { '==': '==', '!=': '!=', '>': '>', '>=': '≥', '<': '<', '<=': '≤' };
-            const op = opLabel[config.operadorComparacao] || config.operadorComparacao || '?';
-            const sideB = _formatEquation(config.equacaoB || []);
-            text = `${sideA} ${op} ${sideB} ? ✅${vTrue} : ❌${vFalse}`;
-        }
+        const verifsPrev = (Array.isArray(config.verificacoes) && config.verificacoes.length > 0)
+            ? config.verificacoes : [config];
+        const joinLbl = config.operadorLogico === 'ou' ? ' OU ' : ' E ';
+        const opLabel = { '==': '==', '!=': '!=', '>': '>', '>=': '≥', '<': '<', '<=': '≤' };
+        const parts = verifsPrev.map(v => {
+            if (v?.modoVerificacao === 'equipamento') {
+                const reqs = Array.isArray(v.equipReqs) ? v.equipReqs : [];
+                const qtdStr = (Array.isArray(v.equacaoQtdMin) && v.equacaoQtdMin.length > 0)
+                    ? _formatEquation(v.equacaoQtdMin) : '1';
+                const reqParts = reqs.map(r => {
+                    const formas = _mechReqFormas(r);
+                    const formasLbl = formas.length ? ` (${formas.map(f => _MECH_FORMA_LABELS[f]).join(' ou ')})` : '';
+                    return `${_mechReqLabel(r)}${formasLbl}`;
+                });
+                return `🎒 Equipado: ${reqParts.join(' E ') || '?'} — cada um ×≥ ${qtdStr}`;
+            }
+            const sideA = _formatEquation(v?.equacaoA || []);
+            const op = opLabel[v?.operadorComparacao] || v?.operadorComparacao || '?';
+            const sideB = _formatEquation(v?.equacaoB || []);
+            return `${sideA} ${op} ${sideB}`;
+        });
+        const condStr = parts.length > 1 ? parts.map(p => `(${p})`).join(joinLbl) : parts[0];
+        text = `${condStr} ? ✅${vTrue} : ❌${vFalse}`;
         const trigParts = [];
         const cacheT = window._mechCache || [];
         const nameOf = id => (cacheT.find(x => x.id === id)?.nome || '?');
@@ -1158,80 +1165,127 @@ window._mechEquipReqRemove = function (btn) {
     window._mechUpdatePreview();
 };
 
+/** Normaliza a config do booleano para uma lista de verificações.
+ *  Formato novo: config.verificacoes = [{ modoVerificacao, equacaoA, operadorComparacao,
+ *  equacaoB, equipReqs, equacaoQtdMin }, ...] combinadas por config.operadorLogico ('e'|'ou').
+ *  Formato legado (uma verificação nos campos de topo) é convertido automaticamente. */
+function _boolVerifsFromConfig(config) {
+    if (Array.isArray(config?.verificacoes) && config.verificacoes.length > 0) {
+        return config.verificacoes.map(v => ({ ...(v || {}) }));
+    }
+    return [{
+        modoVerificacao: config?.modoVerificacao === 'equipamento' ? 'equipamento' : 'numerico',
+        equacaoA: config?.equacaoA || [{ tipo: 'fixo', valor: '' }],
+        operadorComparacao: config?.operadorComparacao || '>=',
+        equacaoB: config?.equacaoB || [{ tipo: 'fixo', valor: '' }],
+        equipReqs: Array.isArray(config?.equipReqs) ? config.equipReqs : [],
+        equacaoQtdMin: (Array.isArray(config?.equacaoQtdMin) && config.equacaoQtdMin.length > 0)
+            ? config.equacaoQtdMin : [{ tipo: 'fixo', valor: '1' }]
+    }];
+}
+
+/** Renderiza um bloco de verificação booleana (#i). Os containers de equação usam
+ *  sufixo por índice ('A_0', 'B_0', 'Q_0'...) — compatível com os handlers
+ *  _mechBoolAddTerm / _mechBoolRemoveTerm / _mechBoolTermTipoChange existentes. */
+function _renderBoolVerifBlock(v, i, total) {
+    const modo = v?.modoVerificacao === 'equipamento' ? 'equipamento' : 'numerico';
+    const equacaoA = (Array.isArray(v?.equacaoA) && v.equacaoA.length) ? v.equacaoA : [{ tipo: 'fixo', valor: '' }];
+    const equacaoB = (Array.isArray(v?.equacaoB) && v.equacaoB.length) ? v.equacaoB : [{ tipo: 'fixo', valor: '' }];
+    const equipReqs = Array.isArray(v?.equipReqs) ? v.equipReqs : [];
+    const equacaoQtdMin = (Array.isArray(v?.equacaoQtdMin) && v.equacaoQtdMin.length) ? v.equacaoQtdMin : [{ tipo: 'fixo', valor: '1' }];
+    const operador = v?.operadorComparacao || '>=';
+
+    const termsA = equacaoA.map((t, ti) => _renderBoolEquationTerm(t, `A_${i}`, ti)).join('');
+    const termsB = equacaoB.map((t, ti) => _renderBoolEquationTerm(t, `B_${i}`, ti)).join('');
+    const termsQ = equacaoQtdMin.map((t, ti) => _renderBoolEquationTerm(t, `Q_${i}`, ti)).join('');
+    const reqRows = equipReqs.map((r, ri) => _renderMechEquipReqRow(r, ri, false)).join('');
+
+    return `
+    <div class="bool-verif-block" data-verif-index="${i}" style="border:1px solid rgba(148,163,184,.2);border-radius:10px;padding:10px;margin-bottom:10px;background:rgba(15,23,42,.35)">
+        <div class="bool-verif-head" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <span class="bool-verif-title" style="font-weight:800;font-size:.8rem;color:#f59e0b">🔀 Booleano #${i + 1}</span>
+            ${total > 1 ? `<button type="button" class="eq-term-remove" onclick="window._mechBoolRemoveVerif(${i})" title="Remover este booleano">✕</button>` : ''}
+        </div>
+
+        <div class="form-group full-width">
+            <label>Tipo de Lógica</label>
+            <select id="mech_config_modoVerificacao_${i}" class="bool-verif-modo" onchange="window._mechBoolModoChange(${i})">
+                <option value="numerico" ${modo === 'numerico' ? 'selected' : ''}>🧮 Lógica Numérica (equação comparativa)</option>
+                <option value="equipamento" ${modo === 'equipamento' ? 'selected' : ''}>🎒 Verificação de Equipamento (inventário do personagem)</option>
+            </select>
+        </div>
+
+        <div id="mech_bool_numerico_wrap_${i}" style="display:${modo === 'numerico' ? '' : 'none'}">
+        <div class="bool-equation-wrap">
+            <div class="bool-equation-side">
+                <div class="bool-equation-side-label">Lado Esquerdo (A)</div>
+                <div class="eq-terms-container" id="boolEquacaoA_${i}">
+                    ${termsA}
+                </div>
+                <button type="button" class="eq-add-term-btn" onclick="window._mechBoolAddTerm('A_${i}')">➕ Adicionar Termo</button>
+            </div>
+
+            <div class="bool-comparator-row">
+                <div class="bool-vs-label">COMPARAR COM</div>
+                <select class="bool-comparator bool-verif-operador" id="mech_config_operadorComparacao_${i}" onchange="window._mechUpdatePreview()">
+                    <option value="==" ${operador === '==' ? 'selected' : ''}>== Igual</option>
+                    <option value="!=" ${operador === '!=' ? 'selected' : ''}>!= Diferente</option>
+                    <option value=">" ${operador === '>' ? 'selected' : ''}>> Maior que</option>
+                    <option value=">=" ${operador === '>=' ? 'selected' : ''}>≥ Maior ou igual</option>
+                    <option value="<" ${operador === '<' ? 'selected' : ''}>< Menor que</option>
+                    <option value="<=" ${operador === '<=' ? 'selected' : ''}>≤ Menor ou igual</option>
+                </select>
+            </div>
+
+            <div class="bool-equation-side">
+                <div class="bool-equation-side-label">Lado Direito (B)</div>
+                <div class="eq-terms-container" id="boolEquacaoB_${i}">
+                    ${termsB}
+                </div>
+                <button type="button" class="eq-add-term-btn" onclick="window._mechBoolAddTerm('B_${i}')">➕ Adicionar Termo</button>
+            </div>
+        </div>
+        </div>
+
+        <div id="mech_bool_equip_wrap_${i}" style="display:${modo === 'equipamento' ? '' : 'none'}">
+            <div class="bool-equation-side">
+                <div class="bool-equation-side-label">🎒 Equipamentos verificados no inventário</div>
+                <div class="mech-equipreqs" id="mech_bool_equipReqs_${i}">${reqRows}</div>
+                ${_renderMechEquipReqSelect(`mech_bool_equipReqs_${i}`)}
+                <div class="cm-hint">Retorna <b>Verdadeiro</b> se <b>todos</b> os vínculos tiverem itens equipados nas formas marcadas (nenhuma marcada = qualquer forma equipada) em quantidade ≥ à Equação de Valor abaixo.</div>
+            </div>
+            <div class="bool-equation-side" style="margin-top:8px">
+                <div class="bool-equation-side-label">🧮 Equação de Valor — Qtd mín. exigida de cada vínculo (vazio = 1)</div>
+                <div class="eq-terms-container" id="boolEquacaoQ_${i}">
+                    ${termsQ}
+                </div>
+                <button type="button" class="eq-add-term-btn" onclick="window._mechBoolAddTerm('Q_${i}')">➕ Adicionar Termo</button>
+            </div>
+        </div>
+    </div>`;
+}
+
 function renderConfigBooleano(config) {
-    const modo = config?.modoVerificacao === 'equipamento' ? 'equipamento' : 'numerico';
-    const equacaoA = config?.equacaoA || [{ tipo: 'fixo', valor: '' }];
-    const equacaoB = config?.equacaoB || [{ tipo: 'fixo', valor: '' }];
-    const operador = config?.operadorComparacao || '>=';
+    const verifs = _boolVerifsFromConfig(config);
+    const operadorLogico = config?.operadorLogico === 'ou' ? 'ou' : 'e';
     const valTrue = config?.valorVerdadeiro ?? '';
     const valFalse = config?.valorFalso ?? '';
-    const equipReqs = Array.isArray(config?.equipReqs) ? config.equipReqs : [];
-    const equacaoQtdMin = (Array.isArray(config?.equacaoQtdMin) && config.equacaoQtdMin.length > 0)
-        ? config.equacaoQtdMin : [{ tipo: 'fixo', valor: '1' }];
     const efeitoTrueIds = Array.isArray(config?.efeitoTrueIds) ? config.efeitoTrueIds : [];
     const efeitoFalseIds = Array.isArray(config?.efeitoFalseIds) ? config.efeitoFalseIds : [];
     const cache = window._mechCache || [];
 
-    const termsA = equacaoA.map((t, i) => _renderBoolEquationTerm(t, 'A', i)).join('');
-    const termsB = equacaoB.map((t, i) => _renderBoolEquationTerm(t, 'B', i)).join('');
-    const termsQ = equacaoQtdMin.map((t, i) => _renderBoolEquationTerm(t, 'Q', i)).join('');
-    const reqRows = equipReqs.map((r, i) => _renderMechEquipReqRow(r, i, false)).join('');
+    const blocks = verifs.map((v, i) => _renderBoolVerifBlock(v, i, verifs.length)).join('');
 
     return `
-    <div class="form-group full-width">
-        <label>Tipo de Lógica</label>
-        <select id="mech_config_modoVerificacao" onchange="window._mechBoolModoChange()">
-            <option value="numerico" ${modo === 'numerico' ? 'selected' : ''}>🧮 Lógica Numérica (equação comparativa)</option>
-            <option value="equipamento" ${modo === 'equipamento' ? 'selected' : ''}>🎒 Verificação de Equipamento (inventário do personagem)</option>
+    <div id="mech_bool_verif_list">${blocks}</div>
+    <button type="button" class="calc-add-btn" onclick="window._mechBoolAddVerif()">➕ Adicionar Booleano</button>
+
+    <div class="form-group full-width" id="mech_bool_logico_wrap" style="display:${verifs.length > 1 ? '' : 'none'};margin-top:8px">
+        <label>Combinação dos Booleanos</label>
+        <select id="mech_config_operadorLogico" onchange="window._mechUpdatePreview()">
+            <option value="e" ${operadorLogico === 'e' ? 'selected' : ''}>E — ✅ Verdadeiro somente se TODAS as verificações forem verdadeiras</option>
+            <option value="ou" ${operadorLogico === 'ou' ? 'selected' : ''}>OU — ✅ Verdadeiro se QUALQUER verificação for verdadeira</option>
         </select>
-    </div>
-
-    <div id="mech_bool_numerico_wrap" style="display:${modo === 'numerico' ? '' : 'none'}">
-    <div class="bool-equation-wrap">
-        <div class="bool-equation-side">
-            <div class="bool-equation-side-label">Lado Esquerdo (A)</div>
-            <div class="eq-terms-container" id="boolEquacaoA">
-                ${termsA}
-            </div>
-            <button type="button" class="eq-add-term-btn" onclick="window._mechBoolAddTerm('A')">➕ Adicionar Termo</button>
-        </div>
-
-        <div class="bool-comparator-row">
-            <div class="bool-vs-label">COMPARAR COM</div>
-            <select class="bool-comparator" id="mech_config_operadorComparacao" onchange="window._mechUpdatePreview()">
-                <option value="==" ${operador === '==' ? 'selected' : ''}>== Igual</option>
-                <option value="!=" ${operador === '!=' ? 'selected' : ''}>!= Diferente</option>
-                <option value=">" ${operador === '>' ? 'selected' : ''}>> Maior que</option>
-                <option value=">=" ${operador === '>=' ? 'selected' : ''}>≥ Maior ou igual</option>
-                <option value="<" ${operador === '<' ? 'selected' : ''}>< Menor que</option>
-                <option value="<=" ${operador === '<=' ? 'selected' : ''}>≤ Menor ou igual</option>
-            </select>
-        </div>
-
-        <div class="bool-equation-side">
-            <div class="bool-equation-side-label">Lado Direito (B)</div>
-            <div class="eq-terms-container" id="boolEquacaoB">
-                ${termsB}
-            </div>
-            <button type="button" class="eq-add-term-btn" onclick="window._mechBoolAddTerm('B')">➕ Adicionar Termo</button>
-        </div>
-    </div>
-    </div>
-
-    <div id="mech_bool_equip_wrap" style="display:${modo === 'equipamento' ? '' : 'none'}">
-        <div class="bool-equation-side">
-            <div class="bool-equation-side-label">🎒 Equipamentos verificados no inventário</div>
-            <div class="mech-equipreqs" id="mech_bool_equipReqs">${reqRows}</div>
-            ${_renderMechEquipReqSelect('mech_bool_equipReqs')}
-            <div class="cm-hint">Retorna <b>Verdadeiro</b> se <b>todos</b> os vínculos tiverem itens equipados nas formas marcadas (nenhuma marcada = qualquer forma equipada) em quantidade ≥ à Equação de Valor abaixo.</div>
-        </div>
-        <div class="bool-equation-side" style="margin-top:8px">
-            <div class="bool-equation-side-label">🧮 Equação de Valor — Qtd mín. exigida de cada vínculo (vazio = 1)</div>
-            <div class="eq-terms-container" id="boolEquacaoQ">
-                ${termsQ}
-            </div>
-            <button type="button" class="eq-add-term-btn" onclick="window._mechBoolAddTerm('Q')">➕ Adicionar Termo</button>
-        </div>
     </div>
 
     <div class="bool-output-section">
@@ -1253,10 +1307,68 @@ function renderConfigBooleano(config) {
     </div>`;
 }
 
-window._mechBoolModoChange = function () {
-    const modo = document.getElementById('mech_config_modoVerificacao')?.value || 'numerico';
-    const numWrap = document.getElementById('mech_bool_numerico_wrap');
-    const eqWrap = document.getElementById('mech_bool_equip_wrap');
+/** Coleta todas as verificações booleanas do editor (uma por bloco). */
+function _collectBoolVerificacoes() {
+    const list = document.getElementById('mech_bool_verif_list');
+    if (!list) return [];
+    return Array.from(list.querySelectorAll('.bool-verif-block')).map(block => {
+        const i = block.dataset.verifIndex;
+        const modoVerificacao = block.querySelector('.bool-verif-modo')?.value === 'equipamento' ? 'equipamento' : 'numerico';
+        const contA = document.getElementById(`boolEquacaoA_${i}`);
+        const contB = document.getElementById(`boolEquacaoB_${i}`);
+        const contQ = document.getElementById(`boolEquacaoQ_${i}`);
+        return {
+            modoVerificacao,
+            equacaoA: contA ? _collectEquacaoFromContainer(contA) : [{ tipo: 'fixo', valor: '' }],
+            operadorComparacao: block.querySelector('.bool-verif-operador')?.value || '>=',
+            equacaoB: contB ? _collectEquacaoFromContainer(contB) : [{ tipo: 'fixo', valor: '' }],
+            equipReqs: _collectMechEquipReqs(`mech_bool_equipReqs_${i}`),
+            equacaoQtdMin: contQ ? _collectEquacaoFromContainer(contQ) : []
+        };
+    });
+}
+
+/** Re-renderiza a lista de verificações (após adicionar/remover), preservando os valores. */
+function _rerenderBoolVerifs(verifs) {
+    const list = document.getElementById('mech_bool_verif_list');
+    if (!list) return;
+    list.innerHTML = verifs.map((v, i) => _renderBoolVerifBlock(v, i, verifs.length)).join('');
+    // Restaurar refs 'ficha' das equações após o re-render
+    verifs.forEach((v, i) => {
+        const ca = document.getElementById(`boolEquacaoA_${i}`); if (ca) _restoreEquacaoRefs(ca, v.equacaoA || []);
+        const cb = document.getElementById(`boolEquacaoB_${i}`); if (cb) _restoreEquacaoRefs(cb, v.equacaoB || []);
+        const cq = document.getElementById(`boolEquacaoQ_${i}`); if (cq) _restoreEquacaoRefs(cq, v.equacaoQtdMin || []);
+    });
+    const logicoWrap = document.getElementById('mech_bool_logico_wrap');
+    if (logicoWrap) logicoWrap.style.display = verifs.length > 1 ? '' : 'none';
+    window._mechUpdatePreview();
+}
+
+window._mechBoolAddVerif = function () {
+    const verifs = _collectBoolVerificacoes();
+    verifs.push({
+        modoVerificacao: 'numerico',
+        equacaoA: [{ tipo: 'fixo', valor: '' }],
+        operadorComparacao: '>=',
+        equacaoB: [{ tipo: 'fixo', valor: '' }],
+        equipReqs: [],
+        equacaoQtdMin: [{ tipo: 'fixo', valor: '1' }]
+    });
+    _rerenderBoolVerifs(verifs);
+};
+
+window._mechBoolRemoveVerif = function (i) {
+    const verifs = _collectBoolVerificacoes();
+    if (verifs.length <= 1) return;
+    verifs.splice(i, 1);
+    _rerenderBoolVerifs(verifs);
+};
+
+window._mechBoolModoChange = function (i) {
+    i = i ?? 0;
+    const modo = document.getElementById(`mech_config_modoVerificacao_${i}`)?.value || 'numerico';
+    const numWrap = document.getElementById(`mech_bool_numerico_wrap_${i}`);
+    const eqWrap = document.getElementById(`mech_bool_equip_wrap_${i}`);
     if (numWrap) numWrap.style.display = modo === 'numerico' ? '' : 'none';
     if (eqWrap) eqWrap.style.display = modo === 'equipamento' ? '' : 'none';
     window._mechUpdatePreview();
@@ -1938,17 +2050,15 @@ window._mechTipoChange = function () {
         }, 0);
     }
 
-    // Restore booleano equation ficha refs after DOM is ready
+    // Restore booleano equation ficha refs after DOM is ready (todas as verificações)
     if (tipo === 'booleano') {
         setTimeout(() => {
-            ['A', 'B'].forEach(side => {
-                const container = document.getElementById('boolEquacao' + side);
-                if (!container) return;
-                const equacao = side === 'A' ? (config?.equacaoA || []) : (config?.equacaoB || []);
-                _restoreEquacaoRefs(container, equacao);
+            const verifs = _boolVerifsFromConfig(config);
+            verifs.forEach((v, i) => {
+                const ca = document.getElementById('boolEquacaoA_' + i); if (ca) _restoreEquacaoRefs(ca, v.equacaoA || []);
+                const cb = document.getElementById('boolEquacaoB_' + i); if (cb) _restoreEquacaoRefs(cb, v.equacaoB || []);
+                const cq = document.getElementById('boolEquacaoQ_' + i); if (cq) _restoreEquacaoRefs(cq, v.equacaoQtdMin || []);
             });
-            const containerQ = document.getElementById('boolEquacaoQ');
-            if (containerQ) _restoreEquacaoRefs(containerQ, config?.equacaoQtdMin || []);
         }, 0);
     }
 
@@ -2567,19 +2677,25 @@ function collectMechFormData() {
             poolPersonalizado
         };
     } else if (tipo === 'booleano') {
-        const containerA = document.getElementById('boolEquacaoA');
-        const containerB = document.getElementById('boolEquacaoB');
-        const containerQ = document.getElementById('boolEquacaoQ');
         const rawTrue = document.getElementById('mech_config_valorVerdadeiro')?.value?.trim() ?? '';
         const rawFalse = document.getElementById('mech_config_valorFalso')?.value?.trim() ?? '';
-        const modoVerificacao = document.getElementById('mech_config_modoVerificacao')?.value === 'equipamento' ? 'equipamento' : 'numerico';
+        const verificacoes = _collectBoolVerificacoes();
+        const v0 = verificacoes[0] || {
+            modoVerificacao: 'numerico',
+            equacaoA: [{ tipo: 'fixo', valor: '' }], operadorComparacao: '>=',
+            equacaoB: [{ tipo: 'fixo', valor: '' }], equipReqs: [], equacaoQtdMin: []
+        };
         data.config = {
-            modoVerificacao,
-            equacaoA: containerA ? _collectEquacaoFromContainer(containerA) : [{ tipo: 'fixo', valor: '' }],
-            operadorComparacao: document.getElementById('mech_config_operadorComparacao')?.value || '>=',
-            equacaoB: containerB ? _collectEquacaoFromContainer(containerB) : [{ tipo: 'fixo', valor: '' }],
-            equipReqs: _collectMechEquipReqs('mech_bool_equipReqs'),
-            equacaoQtdMin: containerQ ? _collectEquacaoFromContainer(containerQ) : [],
+            verificacoes,
+            operadorLogico: document.getElementById('mech_config_operadorLogico')?.value === 'ou' ? 'ou' : 'e',
+            // Espelho da verificação #1 nos campos legados (compatibilidade com
+            // leitores antigos: simulador de criação, dados já publicados etc.)
+            modoVerificacao: v0.modoVerificacao,
+            equacaoA: v0.equacaoA,
+            operadorComparacao: v0.operadorComparacao,
+            equacaoB: v0.equacaoB,
+            equipReqs: v0.equipReqs,
+            equacaoQtdMin: v0.equacaoQtdMin,
             valorVerdadeiro: isNaN(Number(rawTrue)) || rawTrue === '' ? rawTrue : Number(rawTrue),
             valorFalso: isNaN(Number(rawFalse)) || rawFalse === '' ? rawFalse : Number(rawFalse),
             efeitoTrueIds: JSON.parse(document.getElementById('mech_config_efeitoTrueIds')?.value || '[]'),

@@ -269,26 +269,27 @@ function resolveChainedConditional(config, ctx) {
     return { valorEquacao, valorSaida, condicaoIndex };
 }
 
-/* ===== Resolução de Booleano (equação comparativa OU verificação de equipamento) com contexto de NPC ===== */
-function resolveBooleano(config, ctx) {
-    if (config?.modoVerificacao === 'equipamento') {
-        const reqs = Array.isArray(config?.equipReqs) ? config.equipReqs : [];
-        const eqQ = Array.isArray(config?.equacaoQtdMin) ? config.equacaoQtdMin : [];
+/* ===== Resolução de Booleano (equação comparativa OU verificação de equipamento) com contexto de NPC =====
+ * Suporta múltiplas verificações (config.verificacoes, combinadas por
+ * config.operadorLogico 'e'|'ou'). Config legada (campos no topo) = 1 verificação. */
+function _npcEvalBoolVerif(v, ctx) {
+    v = v || {};
+    if (v.modoVerificacao === 'equipamento') {
+        const reqs = Array.isArray(v.equipReqs) ? v.equipReqs : [];
+        const eqQ = Array.isArray(v.equacaoQtdMin) ? v.equacaoQtdMin : [];
         const qtdMin = eqQ.length > 0 ? resolveEquation(eqQ, ctx) : 1;
         const counts = reqs.map(r => _npcCountReq(r, ctx));
         const resultado = reqs.length > 0 && counts.every(c => c >= qtdMin);
-        const valorSaida = resultado ? (config?.valorVerdadeiro ?? '') : (config?.valorFalso ?? '');
         return {
             valA: counts.length ? Math.min(...counts) : 0,
-            valB: qtdMin, op: '>=', resultado, valorSaida,
+            valB: qtdMin, op: '>=', resultado,
             modo: 'equipamento', counts, qtdMin,
             reqNomes: reqs.map(r => _npcReqNome(r, ctx))
         };
     }
-
-    const valA = resolveEquation(Array.isArray(config?.equacaoA) ? config.equacaoA : [], ctx);
-    const valB = resolveEquation(Array.isArray(config?.equacaoB) ? config.equacaoB : [], ctx);
-    const op = config?.operadorComparacao || '>=';
+    const valA = resolveEquation(Array.isArray(v.equacaoA) ? v.equacaoA : [], ctx);
+    const valB = resolveEquation(Array.isArray(v.equacaoB) ? v.equacaoB : [], ctx);
+    const op = v.operadorComparacao || '>=';
     let resultado = false;
     if (op === '==') resultado = valA === valB;
     else if (op === '!=') resultado = valA !== valB;
@@ -296,8 +297,20 @@ function resolveBooleano(config, ctx) {
     else if (op === '>=') resultado = valA >= valB;
     else if (op === '<') resultado = valA < valB;
     else if (op === '<=') resultado = valA <= valB;
+    return { valA, valB, op, resultado, modo: 'numerico' };
+}
+
+function resolveBooleano(config, ctx) {
+    const verifs = (Array.isArray(config?.verificacoes) && config.verificacoes.length > 0)
+        ? config.verificacoes : [config || {}];
+    const operadorLogico = config?.operadorLogico === 'ou' ? 'ou' : 'e';
+    const resultados = verifs.map(v => _npcEvalBoolVerif(v, ctx));
+    const resultado = operadorLogico === 'ou'
+        ? resultados.some(r => r.resultado)
+        : resultados.every(r => r.resultado);
     const valorSaida = resultado ? (config?.valorVerdadeiro ?? '') : (config?.valorFalso ?? '');
-    return { valA, valB, op, resultado, valorSaida };
+    const first = resultados[0] || { valA: 0, valB: 0, op: '>=', modo: 'numerico' };
+    return { ...first, resultado, valorSaida, resultados, operadorLogico, multi: resultados.length > 1 };
 }
 
 /* ===== Expansão recursiva de mecânicas encadeadas =====
@@ -647,13 +660,21 @@ export function calcularNpc(npc, sys, opts = {}) {
         try {
             const res = resolveBooleano(b.config, ctx);
             const nomePrefix = b.nome ? `${b.nome}: ` : '';
+            const opLabels = { '==': '==', '!=': '!=', '>': '>', '>=': '≥', '<': '<', '<=': '≤' };
+            const _verifTxt = (r) => {
+                if (r.modo === 'equipamento') {
+                    const detalhe = (r.reqNomes || []).map((n, i) => `${n}=${fmt(r.counts?.[i] ?? 0)}`).join(', ');
+                    return `🎒 [${detalhe || 'sem vínculos'}] ≥ ${fmt(r.qtdMin)} cada → ${r.resultado ? '✅' : '❌'}`;
+                }
+                return `${fmt(r.valA)} ${opLabels[r.op] || r.op} ${fmt(r.valB)} → ${r.resultado ? '✅' : '❌'}`;
+            };
             let texto;
-            if (res.modo === 'equipamento') {
-                const detalhe = (res.reqNomes || []).map((n, i) => `${n}=${fmt(res.counts?.[i] ?? 0)}`).join(', ');
-                texto = `🔀 ${nomePrefix}🎒 [${detalhe || 'sem vínculos'}] ≥ ${fmt(res.qtdMin)} cada → ${res.resultado ? '✅' : '❌'} "${res.valorSaida}"`;
+            if (res.multi) {
+                const joinLbl = res.operadorLogico === 'ou' ? ' OU ' : ' E ';
+                const partes = res.resultados.map(r => `(${_verifTxt(r)})`);
+                texto = `🔀 ${nomePrefix}${partes.join(joinLbl)} → ${res.resultado ? '✅' : '❌'} "${res.valorSaida}"`;
             } else {
-                const opLabel = { '==': '==', '!=': '!=', '>': '>', '>=': '≥', '<': '<', '<=': '≤' }[res.op] || res.op;
-                texto = `🔀 ${nomePrefix}${fmt(res.valA)} ${opLabel} ${fmt(res.valB)} → ${res.resultado ? '✅' : '❌'} "${res.valorSaida}"`;
+                texto = `🔀 ${nomePrefix}${_verifTxt(res)} "${res.valorSaida}"`;
             }
             infos.push({ fonte: b.fonte, texto, icone: b.icone || '🔀' });
 

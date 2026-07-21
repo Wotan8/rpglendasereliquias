@@ -4,7 +4,7 @@ import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { ensureNpcSystemData, pecsDaOrigem, modulosDaClasseNpc, resolveNpcClassModule } from './npc-system-data.js?v=1.4';
-import { calcularNpc, ATTR_SIGLAS } from './npc-calc-engine.js?v=1.4';
+import { calcularNpc, ATTR_SIGLAS } from './npc-calc-engine.js?v=1.5';
 import './npc-inventario.js?v=1.0'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
 
 let currentEditingNpc = null;

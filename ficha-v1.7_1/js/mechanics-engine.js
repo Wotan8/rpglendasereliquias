@@ -1,3 +1,4 @@
+console.log("🧩 mechanics-engine v2.1 — cadeias + multi-booleano ATIVOS");
 /* ===== MECHANICS ENGINE — Interpreta mecânicas do Firebase ===== */
 
 /**
@@ -559,6 +560,36 @@ function _meTriggerMechanics(ids, sourceMech, parentPec, isOneOff = false) {
         _meMsgDepth--;
         _meTriggerStack.delete(sourceMech.id);
     }
+}
+
+/** Avalia UMA verificação booleana (numérica ou de equipamento) e devolve
+ *  { resultado, valA, valB, op, modo, counts? }. */
+function _meEvalBoolVerif(v, mech) {
+    v = v || {};
+    if (v.modoVerificacao === 'equipamento') {
+        // Verificação de Equipamento: todos os vínculos precisam ter
+        // itens equipados nas formas exigidas em quantidade ≥ Equação de Valor
+        const reqs = Array.isArray(v.equipReqs) ? v.equipReqs : [];
+        const eqQ = Array.isArray(v.equacaoQtdMin) ? v.equacaoQtdMin : [];
+        const qtdMin = eqQ.length > 0 ? resolveEquation(eqQ) : 1;
+        const counts = reqs.map(r => _meCountEquipReq(r));
+        const resultado = reqs.length > 0 && counts.every(c => c >= qtdMin);
+        console.log(`🎒 Booleano (equipamento) "${mech?.nome || '?'}": [${reqs.map((r, i) => `${_meReqNome(r)}=${counts[i]}`).join(', ')}] ≥ ${qtdMin} cada → ${resultado}`);
+        return { resultado, valA: counts.length ? Math.min(...counts) : 0, valB: qtdMin, op: '>=', modo: 'equipamento', counts };
+    }
+    const eqA = Array.isArray(v.equacaoA) ? v.equacaoA : [];
+    const eqB = Array.isArray(v.equacaoB) ? v.equacaoB : [];
+    const valA = resolveEquation(eqA);
+    const valB = resolveEquation(eqB);
+    const op = v.operadorComparacao || '>=';
+    let resultado = false;
+    if (op === '==') resultado = valA === valB;
+    else if (op === '!=') resultado = valA !== valB;
+    else if (op === '>') resultado = valA > valB;
+    else if (op === '>=') resultado = valA >= valB;
+    else if (op === '<') resultado = valA < valB;
+    else if (op === '<=') resultado = valA <= valB;
+    return { resultado, valA, valB, op, modo: 'numerico' };
 }
 
 /* ===== RESOLVER CONDICIONAL ENCADEADO =====
@@ -1403,42 +1434,27 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
 
     // === TIPO: BOOLEANO ===
     if (tipo === 'booleano') {
-        let resultadoBooleano = false;
-        let valA, valB, op;
+        // Suporta múltiplas verificações (config.verificacoes, combinadas por
+        // config.operadorLogico 'e'|'ou'). Config legada (campos no topo) = 1 verificação.
+        const verifs = (Array.isArray(config.verificacoes) && config.verificacoes.length > 0)
+            ? config.verificacoes : [config];
+        const operadorLogico = config.operadorLogico === 'ou' ? 'ou' : 'e';
 
-        if (config.modoVerificacao === 'equipamento') {
-            // Verificação de Equipamento: todos os vínculos precisam ter
-            // itens equipados nas formas exigidas em quantidade ≥ Equação de Valor
-            const reqs = Array.isArray(config.equipReqs) ? config.equipReqs : [];
-            const eqQ = Array.isArray(config.equacaoQtdMin) ? config.equacaoQtdMin : [];
-            const qtdMin = eqQ.length > 0 ? resolveEquation(eqQ) : 1;
-            const counts = reqs.map(r => _meCountEquipReq(r));
-            resultadoBooleano = reqs.length > 0 && counts.every(c => c >= qtdMin);
-            valA = counts.length ? Math.min(...counts) : 0;
-            valB = qtdMin;
-            op = '>=';
-            console.log(`🎒 Booleano (equipamento) "${mech.nome}": [${reqs.map((r, i) => `${_meReqNome(r)}=${counts[i]}`).join(', ')}] ≥ ${qtdMin} cada → ${resultadoBooleano}`);
-        } else {
-            const eqA = Array.isArray(config.equacaoA) ? config.equacaoA : [];
-            const eqB = Array.isArray(config.equacaoB) ? config.equacaoB : [];
-            valA = resolveEquation(eqA);
-            valB = resolveEquation(eqB);
-            op = config.operadorComparacao || '>=';
-            if (op === '==') resultadoBooleano = valA === valB;
-            else if (op === '!=') resultadoBooleano = valA !== valB;
-            else if (op === '>') resultadoBooleano = valA > valB;
-            else if (op === '>=') resultadoBooleano = valA >= valB;
-            else if (op === '<') resultadoBooleano = valA < valB;
-            else if (op === '<=') resultadoBooleano = valA <= valB;
-        }
+        const resultados = verifs.map(v => _meEvalBoolVerif(v, mech));
+        const resultadoBooleano = operadorLogico === 'ou'
+            ? resultados.some(r => r.resultado)
+            : resultados.every(r => r.resultado);
+
+        const first = resultados[0] || { valA: 0, valB: 0, op: '>=', modo: 'numerico' };
+        const valA = first.valA, valB = first.valB, op = first.op;
 
         const valorSaida = resultadoBooleano
             ? (parseFloat(config.valorVerdadeiro) || config.valorVerdadeiro || 0)
             : (parseFloat(config.valorFalso) || config.valorFalso || 0);
 
         if (!state.booleanResults) state.booleanResults = {};
-        state.booleanResults[mech.id] = { valorSaida, resultadoBooleano, valA, valB, op, modo: config.modoVerificacao || 'numerico' };
-        console.log(`🔀 Booleano "${mech.nome}": ${valA} ${op} ${valB} → ${resultadoBooleano} (saída: ${valorSaida})`);
+        state.booleanResults[mech.id] = { valorSaida, resultadoBooleano, valA, valB, op, modo: first.modo, resultados, operadorLogico };
+        console.log(`🔀 Booleano "${mech.nome}": [${resultados.map(r => r.resultado ? '✅' : '❌').join(operadorLogico === 'ou' ? ' OU ' : ' E ')}] → ${resultadoBooleano} (saída: ${valorSaida})`);
 
         // Registrar a mensagem do resultado (texto bruto de Verdadeiro/Falso)
         _mePushMsg(mech, resultadoBooleano ? (config.valorVerdadeiro ?? '') : (config.valorFalso ?? ''), resultadoBooleano);
