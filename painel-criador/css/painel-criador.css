@@ -3447,6 +3447,111 @@ html.dark .meta-chip.chip-tag {
 
 .cm-mini-label input[type="number"] { width: 64px; }
 
+/* Formas de equipar exigidas (Efeitos Ativos / Segurando / Fixado) */
+.cm-equip-cost-formas {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1 1 100%;
+}
+
+.cm-equip-cost-formas.cm-formas-disabled { opacity: .4; }
+
+.cm-forma-checks {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.cm-forma-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: .7rem;
+    color: var(--text, var(--lr-text-1));
+    cursor: pointer;
+    user-select: none;
+}
+
+.cm-forma-check input { accent-color: var(--lr-accent, #5b3fb8); }
+
+/* Verificação de Equipamento em Mecânicas (booleano / condicional encadeado) */
+.mech-eqreq-index {
+    font-size: .7rem;
+    font-weight: 800;
+    color: var(--lr-accent, #8b5cf6);
+    background: rgba(139, 92, 246, .12);
+    border-radius: 6px;
+    padding: 2px 7px;
+    align-self: center;
+}
+
+.enc-cond-item { margin-bottom: 10px; }
+
+.enc-cond-mechs {
+    margin: 4px 0 0 18px;
+    padding-left: 8px;
+    border-left: 2px solid rgba(139, 92, 246, .25);
+}
+
+.enc-eqcond-block {
+    border: 1px solid rgba(139, 92, 246, .25);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    background: rgba(139, 92, 246, .05);
+}
+
+.enc-eqcond-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.enc-eqcond-title {
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--text, var(--lr-text-1));
+}
+
+.enc-eqcond-title small {
+    font-weight: 500;
+    color: var(--muted, var(--lr-text-2));
+}
+
+.enc-eqcheck-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 5px;
+}
+
+.enc-eqcheck-row select,
+.enc-eqcheck-row input { font-size: .74rem; padding: 3px 6px; }
+
+.enc-eqcheck-row .enc-eqcheck-valorA,
+.enc-eqcheck-row .enc-eqcheck-valorB { width: 70px; }
+
+.enc-eqcheck-sep {
+    font-size: .72rem;
+    color: var(--muted, var(--lr-text-2));
+}
+
+.enc-eqcond-result-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0 4px;
+}
+
+.enc-eqcond-result-row input {
+    flex: 1;
+    font-size: .78rem;
+    padding: 4px 8px;
+}
+
 /* Schema field rows */
 .schema-field-row {
     border: 1px solid rgba(148, 163, 184, .1);

@@ -126,10 +126,129 @@ function resolveCalcValue(calc, ctx) {
     return resolveRef(calc.valorRef, ctx) * (calc.valorMultiplicador || 1);
 }
 
+/* ===== Verificação de Equipamento (booleano / condicional_encadeado) =====
+ * Conta itens do inventário do NPC (ctx.inventoryItems) que casam com um
+ * requisito (equipamento específico, tag ou tipo) equipados nas formas
+ * exigidas (efeitos ativos / segurando / fixado — nenhuma = qualquer forma). */
+
+function _npcReqTarget(req) {
+    req = req || {};
+    if (req.targetTipo === 'tag' || (req.tag && !req.equipamentoId)) return { kind: 'tag', value: req.tag || '' };
+    if (req.targetTipo === 'tipo' || (req.tipoEquipamento && !req.equipamentoId)) return { kind: 'tipo', value: req.tipoEquipamento || '' };
+    return { kind: 'equipamento', value: req.equipamentoId || req.id || '' };
+}
+
+function _npcReqFormas(req) {
+    req = req || {};
+    if (Array.isArray(req.formasEquip)) return req.formasEquip.filter(f => ['efeitos', 'segurando', 'fixado'].includes(f));
+    return req.exigeEfeitosOn === true ? ['efeitos'] : [];
+}
+
+function _npcReqNome(req, ctx) {
+    const t = _npcReqTarget(req);
+    if (t.kind === 'tag') return `Tag "${t.value}"`;
+    if (t.kind === 'tipo') return `Tipo ${t.value}`;
+    const tpl = (ctx.equipCatalog || []).find(x => x.id === t.value);
+    return tpl?.nome || t.value;
+}
+
+function _npcItemFormas(item) {
+    const formas = [];
+    if (!item.equipado || item.parentItemId || item.estadoEquip === 'armazenado') return formas;
+    if (item.estadoEquip === 'fixado') { formas.push('fixado'); return formas; }
+    if (item.estadoEquip === 'segurar') { formas.push('segurando'); return formas; }
+    let efeitosOn = true;
+    if (item.formaEquipar) {
+        const equipToStateMap = { 'segurar': 'segurar', 'empunhar': 'empunhado', 'vestir': 'vestido', 'fixar': 'fixado' };
+        if (item.estadoEquip !== equipToStateMap[item.formaEquipar]) efeitosOn = false;
+    }
+    if (efeitosOn) formas.push('efeitos');
+    return formas;
+}
+
+/** Soma a quantidade dos itens do NPC que casam com o requisito, equipados nas formas exigidas. */
+function _npcCountReq(req, ctx) {
+    const items = Array.isArray(ctx?.inventoryItems) ? ctx.inventoryItems : [];
+    const catalog = Array.isArray(ctx?.equipCatalog) ? ctx.equipCatalog : [];
+    const target = _npcReqTarget(req);
+    const formas = _npcReqFormas(req);
+
+    let matched;
+    if (target.kind === 'tag') {
+        const tag = target.value;
+        matched = items.filter(i => {
+            if (Array.isArray(i.tags) && i.tags.includes(tag)) return true;
+            const tpl = i.modeloId ? catalog.find(t => t.id === i.modeloId) : catalog.find(t => t.nome === i.nome);
+            return !!(tpl && Array.isArray(tpl.tags) && tpl.tags.includes(tag));
+        });
+    } else if (target.kind === 'tipo') {
+        const tipo = target.value;
+        matched = items.filter(i => {
+            if (i.tipo) return i.tipo === tipo;
+            const tpl = i.modeloId ? catalog.find(t => t.id === i.modeloId) : catalog.find(t => t.nome === i.nome);
+            return !!(tpl && tpl.tipo === tipo);
+        });
+    } else {
+        const eqId = target.value;
+        const tpl = catalog.find(t => t.id === eqId);
+        matched = items.filter(i => i.modeloId === eqId || (tpl && i.nome === tpl.nome));
+    }
+
+    return matched
+        .filter(i => {
+            if (!i.equipado || i.parentItemId || i.estadoEquip === 'armazenado') return false;
+            if (formas.length === 0) return true;
+            const atuais = _npcItemFormas(i);
+            return formas.some(f => atuais.includes(f));
+        })
+        .reduce((s, i) => s + (parseInt(i.quantidade, 10) || 1), 0);
+}
+
+function _npcCompare(valor, comp, a, b) {
+    comp = comp || '>=';
+    if (comp === 'entre') {
+        if (isNaN(a) || isNaN(b)) return false;
+        const lo = Math.min(a, b), hi = Math.max(a, b);
+        return valor >= lo && valor <= hi;
+    }
+    if (isNaN(a)) return false;
+    if (comp === '<') return valor < a;
+    if (comp === '<=') return valor <= a;
+    if (comp === '==') return valor === a;
+    if (comp === '!=') return valor !== a;
+    if (comp === '>=') return valor >= a;
+    if (comp === '>') return valor > a;
+    return false;
+}
+
 /* ===== Resolução de Condicional Encadeado (tabela de resolução) =====
- * Avalia a equação de valor com o contexto do NPC e percorre as
- * condições em ordem — a primeira que casar define o resultado. */
+ * Modo numérico: avalia a equação de valor com o contexto do NPC e percorre as
+ * condições em ordem — a primeira que casar define o resultado.
+ * Modo equipamento: conta os itens do inventário do NPC por vínculo e avalia
+ * as verificações de cada condição (individuais e/ou Σ total somado). */
 function resolveChainedConditional(config, ctx) {
+    if (config?.modoVerificacao === 'equipamento') {
+        const reqs = Array.isArray(config?.equipReqs) ? config.equipReqs : [];
+        const counts = reqs.map(r => _npcCountReq(r, ctx));
+        const total = counts.reduce((s, c) => s + c, 0);
+        const condicoes = Array.isArray(config?.condicoes) ? config.condicoes : [];
+
+        let valorSaida = config?.valorPadrao ?? '';
+        let condicaoIndex = -1;
+        for (let i = 0; i < condicoes.length; i++) {
+            const c = condicoes[i] || {};
+            const vers = Array.isArray(c.verificacoes) ? c.verificacoes : [];
+            if (vers.length === 0) continue;
+            let ok = true;
+            for (const v of vers) {
+                const val = v.alvo === 'total' ? total : (counts[parseInt(v.alvo, 10) || 0] ?? 0);
+                if (!_npcCompare(val, v.comparacao || '>=', parseFloat(v.valorA), parseFloat(v.valorB))) { ok = false; break; }
+            }
+            if (ok) { valorSaida = c.resultado ?? ''; condicaoIndex = i; break; }
+        }
+        return { valorEquacao: total, valorSaida, condicaoIndex, counts, modo: 'equipamento' };
+    }
+
     const eq = Array.isArray(config?.equacaoValor) ? config.equacaoValor : [];
     const valorEquacao = resolveEquation(eq, ctx);
     const condicoes = Array.isArray(config?.condicoes) ? config.condicoes : [];
@@ -139,23 +258,7 @@ function resolveChainedConditional(config, ctx) {
 
     for (let i = 0; i < condicoes.length; i++) {
         const c = condicoes[i] || {};
-        const comp = c.comparacao || '<';
-        const a = parseFloat(c.valorA);
-        const b = parseFloat(c.valorB);
-        let ok = false;
-        if (comp === 'entre') {
-            if (!isNaN(a) && !isNaN(b)) {
-                const lo = Math.min(a, b), hi = Math.max(a, b);
-                ok = valorEquacao >= lo && valorEquacao <= hi;
-            }
-        } else if (!isNaN(a)) {
-            if (comp === '<') ok = valorEquacao < a;
-            else if (comp === '<=') ok = valorEquacao <= a;
-            else if (comp === '==') ok = valorEquacao === a;
-            else if (comp === '!=') ok = valorEquacao !== a;
-            else if (comp === '>=') ok = valorEquacao >= a;
-            else if (comp === '>') ok = valorEquacao > a;
-        }
+        const ok = _npcCompare(valorEquacao, c.comparacao || '<', parseFloat(c.valorA), parseFloat(c.valorB));
         if (ok) {
             valorSaida = c.resultado ?? '';
             condicaoIndex = i;
@@ -166,8 +269,23 @@ function resolveChainedConditional(config, ctx) {
     return { valorEquacao, valorSaida, condicaoIndex };
 }
 
-/* ===== Resolução de Booleano (equação comparativa) com contexto de NPC ===== */
+/* ===== Resolução de Booleano (equação comparativa OU verificação de equipamento) com contexto de NPC ===== */
 function resolveBooleano(config, ctx) {
+    if (config?.modoVerificacao === 'equipamento') {
+        const reqs = Array.isArray(config?.equipReqs) ? config.equipReqs : [];
+        const eqQ = Array.isArray(config?.equacaoQtdMin) ? config.equacaoQtdMin : [];
+        const qtdMin = eqQ.length > 0 ? resolveEquation(eqQ, ctx) : 1;
+        const counts = reqs.map(r => _npcCountReq(r, ctx));
+        const resultado = reqs.length > 0 && counts.every(c => c >= qtdMin);
+        const valorSaida = resultado ? (config?.valorVerdadeiro ?? '') : (config?.valorFalso ?? '');
+        return {
+            valA: counts.length ? Math.min(...counts) : 0,
+            valB: qtdMin, op: '>=', resultado, valorSaida,
+            modo: 'equipamento', counts, qtdMin,
+            reqNomes: reqs.map(r => _npcReqNome(r, ctx))
+        };
+    }
+
     const valA = resolveEquation(Array.isArray(config?.equacaoA) ? config.equacaoA : [], ctx);
     const valB = resolveEquation(Array.isArray(config?.equacaoB) ? config.equacaoB : [], ctx);
     const op = config?.operadorComparacao || '>=';
@@ -385,7 +503,7 @@ function fmt(v) { return Number.isInteger(v) ? v : parseFloat(Number(v).toFixed(
  *   avisos:  string[]
  * }}
  */
-export function calcularNpc(npc, sys) {
+export function calcularNpc(npc, sys, opts = {}) {
     const avisos = new Set();
     const targetMap = buildTargetMap(sys);
     const nivel = parseInt(npc.nivel) || 1;
@@ -393,7 +511,12 @@ export function calcularNpc(npc, sys) {
     const { ops, limites, infos, encadeadas, booleanas } = gatherOperations(npc, sys, targetMap, avisos);
 
     // --- Contexto compartilhado pelas equações ---
-    const ctx = { nivel, targetMap, attrsFinais: {}, derivedFinais: {}, skillLevels: {}, avisos };
+    const ctx = {
+        nivel, targetMap, attrsFinais: {}, derivedFinais: {}, skillLevels: {}, avisos,
+        // Inventário do NPC (para mecânicas com Verificação de Equipamento)
+        inventoryItems: Array.isArray(opts.items) ? opts.items : [],
+        equipCatalog: Array.isArray(sys.equipment) ? sys.equipment : []
+    };
     
     // Alimenta o contexto com os níveis das perícias estruturadas do NPC
     if (Array.isArray(npc.periciasEstruturadas)) {
@@ -462,16 +585,26 @@ export function calcularNpc(npc, sys) {
     }
 
     // --- 3) Booleanas e Condicionais Encadeadas: avaliadas com os valores FINAIS do NPC ---
+    const _mechNome = id => sys.mechsById?.[id]?.nome || id;
+
     for (const b of (booleanas || [])) {
         try {
             const res = resolveBooleano(b.config, ctx);
-            const opLabel = { '==': '==', '!=': '!=', '>': '>', '>=': '≥', '<': '<', '<=': '≤' }[res.op] || res.op;
             const nomePrefix = b.nome ? `${b.nome}: ` : '';
-            infos.push({
-                fonte: b.fonte,
-                texto: `🔀 ${nomePrefix}${fmt(res.valA)} ${opLabel} ${fmt(res.valB)} → ${res.resultado ? '✅' : '❌'} "${res.valorSaida}"`,
-                icone: b.icone || '🔀'
-            });
+            let texto;
+            if (res.modo === 'equipamento') {
+                const detalhe = (res.reqNomes || []).map((n, i) => `${n}=${fmt(res.counts?.[i] ?? 0)}`).join(', ');
+                texto = `🔀 ${nomePrefix}🎒 [${detalhe || 'sem vínculos'}] ≥ ${fmt(res.qtdMin)} cada → ${res.resultado ? '✅' : '❌'} "${res.valorSaida}"`;
+            } else {
+                const opLabel = { '==': '==', '!=': '!=', '>': '>', '>=': '≥', '<': '<', '<=': '≤' }[res.op] || res.op;
+                texto = `🔀 ${nomePrefix}${fmt(res.valA)} ${opLabel} ${fmt(res.valB)} → ${res.resultado ? '✅' : '❌'} "${res.valorSaida}"`;
+            }
+            // Mecânicas acionadas pelo resultado (o mestre aplica manualmente)
+            const trigIds = res.resultado ? (b.config?.efeitoTrueIds || []) : (b.config?.efeitoFalseIds || []);
+            if (Array.isArray(trigIds) && trigIds.length > 0) {
+                texto += ` → Aciona: ${trigIds.map(_mechNome).join(', ')}`;
+            }
+            infos.push({ fonte: b.fonte, texto, icone: b.icone || '🔀' });
         } catch (e) {
             avisos.add(`Erro ao avaliar mecânica booleana "${b.nome || '?'}" (${b.fonte}).`);
         }
@@ -481,11 +614,23 @@ export function calcularNpc(npc, sys) {
         try {
             const res = resolveChainedConditional(enc.config, ctx);
             const nomePrefix = enc.nome ? `${enc.nome}: ` : '';
-            infos.push({
-                fonte: enc.fonte,
-                texto: `🔗 ${nomePrefix}${fmt(res.valorEquacao)} → "${res.valorSaida}"`,
-                icone: enc.icone || '🔗'
-            });
+            let texto;
+            if (res.modo === 'equipamento') {
+                const reqs = Array.isArray(enc.config?.equipReqs) ? enc.config.equipReqs : [];
+                const detalhe = reqs.map((r, i) => `${_npcReqNome(r, ctx)}=${fmt(res.counts?.[i] ?? 0)}`).join(', ');
+                texto = `🔗 ${nomePrefix}🎒 [${detalhe || 'sem vínculos'}] (Σ ${fmt(res.valorEquacao)}) → "${res.valorSaida}"`;
+            } else {
+                texto = `🔗 ${nomePrefix}${fmt(res.valorEquacao)} → "${res.valorSaida}"`;
+            }
+            // Mecânicas acionadas pela condição que casou (o mestre aplica manualmente)
+            if (res.condicaoIndex >= 0) {
+                const cond = (Array.isArray(enc.config?.condicoes) ? enc.config.condicoes : [])[res.condicaoIndex];
+                const trigIds = cond?.efeitoMecanicaIds;
+                if (Array.isArray(trigIds) && trigIds.length > 0) {
+                    texto += ` → Aciona: ${trigIds.map(_mechNome).join(', ')}`;
+                }
+            }
+            infos.push({ fonte: enc.fonte, texto, icone: enc.icone || '🔗' });
         } catch (e) {
             avisos.add(`Erro ao avaliar condicional encadeada "${enc.nome || '?'}" (${enc.fonte}).`);
         }

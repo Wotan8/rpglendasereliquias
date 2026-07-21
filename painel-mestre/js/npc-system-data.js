@@ -7,7 +7,8 @@ import { db, collection, getDocs } from './firebase-config.js';
 
 const COLLECTIONS = [
     'races', 'classes', 'tribes', 'peculiarities',
-    'mechanics', 'derivedValues', 'vitalStats', 'skills', 'classModules'
+    'mechanics', 'derivedValues', 'vitalStats', 'skills', 'classModules',
+    'equipment'
 ];
 
 let _loading = null;
@@ -70,6 +71,7 @@ export async function ensureNpcSystemData() {
                     mecanicaIds: vs.mecanicaIds || []
                 })),
             classModules: (sd.classModules || []).map(normalizeClassModule).filter(Boolean),
+            equipment: sd.equipment || [],
         };
 
         sys.racesById = byId(sys.races);

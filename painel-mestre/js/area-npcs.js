@@ -1061,10 +1061,16 @@ function syncClassModules(prevRefId, newRefId) {
     renderNpcClassModules();
 }
 
+/* Itens do inventário do NPC (para mecânicas com Verificação de Equipamento) */
+function _npcCalcOpts(npcId) {
+    const NI = window._npcInv;
+    return { items: (NI && npcId && NI.loadedFor === npcId) ? NI.items : [] };
+}
+
 /* ===== RECÁLCULO E RENDER DE STATS ===== */
 window.recalcStats = function() {
     if (!F.npc || !F.sys) return;
-    F.calc = calcularNpc(F.npc, F.sys);
+    F.calc = calcularNpc(F.npc, F.sys, _npcCalcOpts(F.npc.id));
     renderAttrEffects();
     renderDvGrid();
     renderInfos();
@@ -1592,7 +1598,7 @@ function collectNpcData() {
     const triboNome = hybNome(n.triboRef, F.sys.tribesById);
 
     // Espelho legado de valores derivados (VIT/ENER/SAN/... = valor final)
-    const calc = calcularNpc(n, F.sys);
+    const calc = calcularNpc(n, F.sys, _npcCalcOpts(n.id || F.npc?.id));
     const legacyDv = {};
     const atualEspelho = { ...(n.valoresDer.atual || {}) };
     for (const legacy of ['VIT', 'ENER', 'SAN', 'PERC', 'INI', 'REA', 'BLD']) {
@@ -1656,7 +1662,7 @@ window.saveNpc = async function() {
     try {
         if (!currentEditingNpc) {
             // ✅ Garantia: ao CRIAR um NPC, os Status Vitais ATUAIS nascem iguais ao MÁXIMO
-            const calcNovo = calcularNpc(F.npc, F.sys);
+            const calcNovo = calcularNpc(F.npc, F.sys, _npcCalcOpts(F.npc?.id));
             data.valoresDer.atual = data.valoresDer.atual || {};
             for (const dv of Object.values(calcNovo.derived)) {
                 if (dv.isVital && (data.valoresDer.atual[dv.key] === undefined || data.valoresDer.atual[dv.key] === null || data.valoresDer.atual[dv.key] === '')) {

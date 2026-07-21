@@ -229,6 +229,7 @@ const MODULE_DEFS = {
                     { value: 'Relíquia', label: '✨ Relíquia' }
                 ]
             },
+            { key: 'tags', label: '🏷️ Tags', type: 'tags', placeholder: 'Digite e Enter para adicionar (Ex: metálico, mágico, leve)' },
             { key: 'equipavelEm', label: 'Equipável em', type: 'body_parts_selector' },
             {
                 key: 'formaEquipar', label: 'Forma de equipar', type: 'select', options: [
@@ -831,7 +832,7 @@ window.onModuleFilterChange = function (sel) {
 
 
 // Modules that support tag filtering
-const TAG_MODULES = ['peculiarities', 'mechanics'];
+const TAG_MODULES = ['peculiarities', 'mechanics', 'equipment'];
 const selectedTagsMap = {};  // per-module tag selections
 function getSelectedTags() { return selectedTagsMap[currentModule] || (selectedTagsMap[currentModule] = new Set()); }
 
@@ -2935,10 +2936,6 @@ function _cmMechSelectOptions() {
         .map(m => `<option value="${m.id}">${escapeHtml(m.nome)}</option>`).join('');
 }
 
-function _cmEquipSelectOptions() {
-    return (typeof equipmentCache !== 'undefined' ? equipmentCache : [])
-        .map(e => `<option value="${e.id}">${escapeHtml(e.nome)}</option>`).join('');
-}
 
 function _cmEquipName(eqId) {
     const e = (typeof equipmentCache !== 'undefined' ? equipmentCache : []).find(x => x.id === eqId);
@@ -2966,62 +2963,149 @@ function _cmDVSelectOptions() {
         .map(d => `<option value="${d.id}">${escapeHtml((d.icone || '📊') + ' ' + (d.nome || d.id))}</option>`).join('');
 }
 
+/** Lista de tipos de equipamento (espelha o campo "tipo" da entidade Equipamento). */
+function _cmEquipTipos() {
+    const f = MODULE_DEFS?.equipment?.fields?.find(x => x.key === 'tipo');
+    if (f && Array.isArray(f.options)) return f.options.map(o => ({ value: o.value, label: o.label }));
+    return ['Arma', 'Vestimenta', 'Acessório', 'Projétil', 'Container', 'Objeto', 'Consumível', 'Relíquia']
+        .map(t => ({ value: t, label: t }));
+}
+
+/** Todas as tags existentes no catálogo de equipamentos. */
+function _cmEquipAllTags() {
+    const set = new Set();
+    (typeof equipmentCache !== 'undefined' ? equipmentCache : []).forEach(e => {
+        if (Array.isArray(e.tags)) e.tags.forEach(t => { if (t) set.add(String(t)); });
+    });
+    return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+/** Normaliza o alvo de um requisito de equipamento (compatível com formato legado). */
+function _cmReqTarget(req) {
+    req = req || {};
+    if (req.targetTipo === 'tag' || (req.tag && !req.equipamentoId)) return { kind: 'tag', value: req.tag || '' };
+    if (req.targetTipo === 'tipo' || (req.tipoEquipamento && !req.equipamentoId)) return { kind: 'tipo', value: req.tipoEquipamento || '' };
+    return { kind: 'equipamento', value: req.equipamentoId || req.id || '' };
+}
+
+/** Rótulo de exibição do alvo de um requisito. */
+function _cmReqTargetLabel(req) {
+    const t = _cmReqTarget(req);
+    if (t.kind === 'tag') return `🏷️ Tag: ${escapeHtml(t.value)}`;
+    if (t.kind === 'tipo') {
+        const opt = _cmEquipTipos().find(o => o.value === t.value);
+        return `${escapeHtml(opt ? opt.label : t.value)} <small style="opacity:.7">(tipo)</small>`;
+    }
+    return `🎒 ${escapeHtml(_cmEquipName(t.value))}`;
+}
+
+/** Normaliza as formas de equipar exigidas (compat: exigeEfeitosOn legado → ['efeitos']). */
+function _cmReqFormas(req) {
+    req = req || {};
+    if (Array.isArray(req.formasEquip)) return req.formasEquip.filter(f => ['efeitos', 'segurando', 'fixado'].includes(f));
+    return req.exigeEfeitosOn === true ? ['efeitos'] : [];
+}
+
 /**
  * Linha de custo de equipamento — chip expandido com configurações:
- * consumir (sim/não), quantidade mínima, exigência de "Efeitos ON".
- * req = { equipamentoId, quantidade, consumir, exigeEfeitosOn }
+ * alvo (equipamento específico, tag ou tipo), consumir (sim/não),
+ * quantidade mínima e formas de equipar exigidas
+ * (Efeitos Ativos / Segurando / Fixado — nenhuma marcada = qualquer forma equipada).
+ * req = { targetTipo, equipamentoId|tag|tipoEquipamento, quantidade, consumir, formasEquip, exigeEfeitosOn(legado) }
  */
 function _buildEquipCostRow(req) {
     req = req || {};
-    const eqId = req.equipamentoId || req.id || '';
+    const target = _cmReqTarget(req);
     const consumir = req.consumir === true;
-    const efeitosOn = req.exigeEfeitosOn === true;
+    const formas = _cmReqFormas(req);
+    const formaChk = (key, icon, label) => `
+        <label class="cm-forma-check">
+            <input type="checkbox" data-ce-forma="${key}" ${formas.includes(key) ? 'checked' : ''} ${consumir ? 'disabled' : ''}>
+            <span>${icon} ${label}</span>
+        </label>`;
     return `
-        <div class="cm-equip-cost-row" data-eq-id="${escapeHtml(eqId)}">
-            <span class="cm-equip-cost-name">🎒 ${escapeHtml(_cmEquipName(eqId))}</span>
+        <div class="cm-equip-cost-row" data-target-tipo="${target.kind}" data-eq-id="${target.kind === 'equipamento' ? escapeHtml(target.value) : ''}" data-eq-tag="${target.kind === 'tag' ? escapeHtml(target.value) : ''}" data-eq-tipo="${target.kind === 'tipo' ? escapeHtml(target.value) : ''}">
+            <span class="cm-equip-cost-name">${_cmReqTargetLabel(req)}</span>
             <label class="cm-mini-label">Qtd mín.
                 <input type="number" min="1" data-ce-key="quantidade" value="${Math.max(1, parseInt(req.quantidade, 10) || 1)}">
             </label>
             <label class="cm-mini-label">Modo
-                <select data-ce-key="consumir" onchange="this.closest('.cm-equip-cost-row').querySelector('[data-ce-key=efeitosOn]').disabled = this.value === 'consumir'">
+                <select data-ce-key="consumir" onchange="cmEquipCostModoChanged(this)">
                     <option value="equipado" ${!consumir ? 'selected' : ''}>Precisa estar equipado</option>
                     <option value="consumir" ${consumir ? 'selected' : ''}>Será consumido</option>
                 </select>
             </label>
-            <label class="cm-mini-label">Forma de equipar
-                <select data-ce-key="efeitosOn" ${consumir ? 'disabled' : ''}>
-                    <option value="qualquer" ${!efeitosOn ? 'selected' : ''}>Qualquer forma equipada</option>
-                    <option value="on" ${efeitosOn ? 'selected' : ''}>Efeitos = ON</option>
-                </select>
-            </label>
+            <div class="cm-equip-cost-formas ${consumir ? 'cm-formas-disabled' : ''}">
+                <span class="cm-mini-label">Precisa estar (nenhum = qualquer forma):</span>
+                <div class="cm-forma-checks">
+                    ${formaChk('efeitos', '⚡', 'Efeitos Ativos')}
+                    ${formaChk('segurando', '🖐️', 'Segurando')}
+                    ${formaChk('fixado', '📌', 'Fixado')}
+                </div>
+            </div>
             <button type="button" class="cm-chip-remove" onclick="this.closest('.cm-equip-cost-row').remove()">✕</button>
         </div>
     `;
 }
 
+window.cmEquipCostModoChanged = function (select) {
+    const row = select.closest('.cm-equip-cost-row');
+    const consumir = select.value === 'consumir';
+    row.querySelectorAll('[data-ce-forma]').forEach(c => { c.disabled = consumir; });
+    row.querySelector('.cm-equip-cost-formas')?.classList.toggle('cm-formas-disabled', consumir);
+};
+
 function _buildEquipCostArea(reqs, cssClass) {
     reqs = Array.isArray(reqs) ? reqs : [];
     const rows = reqs.map(r => _buildEquipCostRow(r)).join('');
+    const tagOpts = _cmEquipAllTags().map(t => `<option value="tag::${escapeHtml(t)}">🏷️ ${escapeHtml(t)}</option>`).join('');
+    const tipoOpts = _cmEquipTipos().map(o => `<option value="tipo::${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`).join('');
     return `
         <div class="cm-equip-cost-area ${cssClass || ''}">
             <div class="cm-equip-cost-list">${rows}</div>
             <select class="aura-mech-select" onchange="cmAddEquipCost(this)">
-                <option value="">+ Vincular Equipamento (custo)...</option>
-                ${_cmEquipSelectOptions()}
+                <option value="">+ Vincular Equipamento, Tag ou Tipo (custo)...</option>
+                <optgroup label="🗡️ Equipamentos específicos">
+                    ${(typeof equipmentCache !== 'undefined' ? equipmentCache : [])
+                        .map(e => `<option value="eq::${escapeHtml(e.id)}">${escapeHtml(e.nome)}</option>`).join('')}
+                </optgroup>
+                ${tagOpts ? `<optgroup label="🏷️ Por Tag (qualquer equipamento com a tag)">${tagOpts}</optgroup>` : ''}
+                <optgroup label="📦 Por Tipo (qualquer equipamento do tipo)">${tipoOpts}</optgroup>
             </select>
         </div>
     `;
 }
 
 window.cmAddEquipCost = function (select) {
-    const eqId = select.value;
-    if (!eqId) return;
+    const raw = select.value;
+    if (!raw) return;
     const area = select.closest('.cm-equip-cost-area');
     const list = area?.querySelector('.cm-equip-cost-list');
     if (!list) { select.value = ''; return; }
-    if (list.querySelector(`.cm-equip-cost-row[data-eq-id="${eqId}"]`)) { select.value = ''; return; }
+
+    let req, dupKind, dupValue;
+    if (raw.startsWith('tag::')) {
+        const tag = raw.slice(5);
+        req = { targetTipo: 'tag', tag, quantidade: 1, consumir: false, formasEquip: [] };
+        dupKind = 'tag'; dupValue = tag;
+    } else if (raw.startsWith('tipo::')) {
+        const tipo = raw.slice(6);
+        req = { targetTipo: 'tipo', tipoEquipamento: tipo, quantidade: 1, consumir: false, formasEquip: [] };
+        dupKind = 'tipo'; dupValue = tipo;
+    } else {
+        const eqId = raw.startsWith('eq::') ? raw.slice(4) : raw;
+        req = { targetTipo: 'equipamento', equipamentoId: eqId, quantidade: 1, consumir: false, formasEquip: [] };
+        dupKind = 'equipamento'; dupValue = eqId;
+    }
+    const isDup = [...list.querySelectorAll('.cm-equip-cost-row')].some(r => {
+        if ((r.dataset.targetTipo || 'equipamento') !== dupKind) return false;
+        const v = dupKind === 'tag' ? r.dataset.eqTag : (dupKind === 'tipo' ? r.dataset.eqTipo : r.dataset.eqId);
+        return v === dupValue;
+    });
+    if (isDup) { select.value = ''; return; }
+
     const temp = document.createElement('div');
-    temp.innerHTML = _buildEquipCostRow({ equipamentoId: eqId, quantidade: 1, consumir: false, exigeEfeitosOn: false });
+    temp.innerHTML = _buildEquipCostRow(req);
     list.appendChild(temp.firstElementChild);
     select.value = '';
 };
@@ -3030,14 +3114,29 @@ function _collectEquipCostArea(areaEl) {
     if (!areaEl) return [];
     const reqs = [];
     areaEl.querySelectorAll('.cm-equip-cost-row').forEach(row => {
-        const eqId = row.dataset.eqId;
-        if (!eqId) return;
-        reqs.push({
-            equipamentoId: eqId,
+        const targetTipo = row.dataset.targetTipo || 'equipamento';
+        const consumir = row.querySelector('[data-ce-key="consumir"]')?.value === 'consumir';
+        const formasEquip = consumir ? [] : [...row.querySelectorAll('[data-ce-forma]')]
+            .filter(c => c.checked).map(c => c.dataset.ceForma);
+        const req = {
+            targetTipo,
             quantidade: Math.max(1, parseInt(row.querySelector('[data-ce-key="quantidade"]')?.value, 10) || 1),
-            consumir: row.querySelector('[data-ce-key="consumir"]')?.value === 'consumir',
-            exigeEfeitosOn: row.querySelector('[data-ce-key="efeitosOn"]')?.value === 'on'
-        });
+            consumir,
+            formasEquip,
+            // Compat com fichas antigas: exigeEfeitosOn = exige exclusivamente "Efeitos Ativos"
+            exigeEfeitosOn: formasEquip.length === 1 && formasEquip[0] === 'efeitos'
+        };
+        if (targetTipo === 'tag') {
+            if (!row.dataset.eqTag) return;
+            req.tag = row.dataset.eqTag;
+        } else if (targetTipo === 'tipo') {
+            if (!row.dataset.eqTipo) return;
+            req.tipoEquipamento = row.dataset.eqTipo;
+        } else {
+            if (!row.dataset.eqId) return;
+            req.equipamentoId = row.dataset.eqId;
+        }
+        reqs.push(req);
     });
     return reqs;
 }
@@ -3168,7 +3267,7 @@ function _buildClassModuleEditorRow(idx, data) {
                     <div class="form-group full-width">
                         <label>🎒 Custo de Equipamento</label>
                         ${_buildEquipCostArea(data.custoEquipamentos, 'cm-custo-eq-modulo')}
-                        <div class="cm-hint">O jogador só poderá adicionar um novo item se possuir <b>todos</b> os equipamentos configurados. "Será consumido" remove do inventário; "Precisa estar equipado" apenas exige o item vestido/empunhado (com ou sem Efeitos = ON).</div>
+                        <div class="cm-hint">O jogador só poderá adicionar um novo item se cumprir <b>todos</b> os requisitos configurados. O requisito pode ser um <b>equipamento específico</b>, qualquer equipamento com uma <b>🏷️ Tag</b> ou de um <b>📦 Tipo</b>. "Será consumido" remove do inventário; "Precisa estar equipado" exige o item equipado — marque <b>⚡ Efeitos Ativos</b>, <b>🖐️ Segurando</b> e/ou <b>📌 Fixado</b> para exigir formas específicas (nenhum marcado = qualquer forma equipada vale).</div>
                     </div>
                     <div class="form-group full-width" style="margin-top: 10px;">
                         <label>Mecânica de Custo (Aplicada ao adicionar/criar item)</label>

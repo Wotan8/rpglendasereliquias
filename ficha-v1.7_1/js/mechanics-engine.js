@@ -407,11 +407,135 @@ function resolveEquation(equacao) {
     return isNaN(result) ? 0 : result;
 }
 
+/* ===== VERIFICAÇÃO DE EQUIPAMENTO (mecânicas booleano / condicional_encadeado) =====
+ * Conta itens do inventário do personagem que casam com um requisito
+ * (equipamento específico, tag ou tipo) equipados nas formas exigidas
+ * (efeitos ativos / segurando / fixado — nenhuma = qualquer forma equipada). */
+
+function _meReqTarget(req) {
+    req = req || {};
+    if (req.targetTipo === 'tag' || (req.tag && !req.equipamentoId)) return { kind: 'tag', value: req.tag || '' };
+    if (req.targetTipo === 'tipo' || (req.tipoEquipamento && !req.equipamentoId)) return { kind: 'tipo', value: req.tipoEquipamento || '' };
+    return { kind: 'equipamento', value: req.equipamentoId || req.id || '' };
+}
+
+function _meReqFormas(req) {
+    req = req || {};
+    if (Array.isArray(req.formasEquip)) return req.formasEquip.filter(f => ['efeitos', 'segurando', 'fixado'].includes(f));
+    return req.exigeEfeitosOn === true ? ['efeitos'] : [];
+}
+
+function _meReqNome(req) {
+    const t = _meReqTarget(req);
+    if (t.kind === 'tag') return `Tag "${t.value}"`;
+    if (t.kind === 'tipo') return `Tipo ${t.value}`;
+    const catalog = window._inventoryState?.catalog || [];
+    const tpl = catalog.find(x => x.id === t.value);
+    return tpl?.nome || t.value;
+}
+
+/** Categorias de forma que o item equipado satisfaz: 'efeitos', 'segurando' e/ou 'fixado'. */
+function _meItemFormasAtuais(item) {
+    const formas = [];
+    if (!item.equipado || item.parentItemId || item.estadoEquip === 'armazenado') return formas;
+    if (item.estadoEquip === 'fixado') { formas.push('fixado'); return formas; }
+    if (item.estadoEquip === 'segurar') { formas.push('segurando'); return formas; }
+    // Mesma regra de applyEquippedItemsMechanics: efeitos ativos apenas se o
+    // estado corresponder à forma de equipar prevista do item (empunhado/vestido).
+    let efeitosOn = true;
+    if (item.formaEquipar) {
+        const equipToStateMap = { 'segurar': 'segurar', 'empunhar': 'empunhado', 'vestir': 'vestido', 'fixar': 'fixado' };
+        if (item.estadoEquip !== equipToStateMap[item.formaEquipar]) efeitosOn = false;
+    }
+    if (efeitosOn) formas.push('efeitos');
+    return formas;
+}
+
+function _meItemEquipValido(item, formasExigidas) {
+    if (!item.equipado || item.parentItemId || item.estadoEquip === 'armazenado') return false;
+    if (!formasExigidas || formasExigidas.length === 0) return true;
+    const atuais = _meItemFormasAtuais(item);
+    return formasExigidas.some(f => atuais.includes(f));
+}
+
+function _meMatchItemsByReq(req) {
+    const target = _meReqTarget(req);
+    const items = window._inventoryState?.items || [];
+    const catalog = window._inventoryState?.catalog || [];
+    if (target.kind === 'tag') {
+        const tag = target.value;
+        return items.filter(i => {
+            if (Array.isArray(i.tags) && i.tags.includes(tag)) return true;
+            const tpl = i.modeloId ? catalog.find(t => t.id === i.modeloId) : catalog.find(t => t.nome === i.nome);
+            return !!(tpl && Array.isArray(tpl.tags) && tpl.tags.includes(tag));
+        });
+    }
+    if (target.kind === 'tipo') {
+        const tipo = target.value;
+        return items.filter(i => {
+            if (i.tipo) return i.tipo === tipo;
+            const tpl = i.modeloId ? catalog.find(t => t.id === i.modeloId) : catalog.find(t => t.nome === i.nome);
+            return !!(tpl && tpl.tipo === tipo);
+        });
+    }
+    const eqId = target.value;
+    const tpl = catalog.find(t => t.id === eqId);
+    return items.filter(i => i.modeloId === eqId || (tpl && i.nome === tpl.nome));
+}
+
+/** Soma a quantidade dos itens que casam com o requisito, equipados nas formas exigidas. */
+function _meCountEquipReq(req) {
+    const formas = _meReqFormas(req);
+    return _meMatchItemsByReq(req)
+        .filter(i => _meItemEquipValido(i, formas))
+        .reduce((s, i) => s + (parseInt(i.quantidade, 10) || 1), 0);
+}
+
+function _meCompare(valor, comp, a, b) {
+    comp = comp || '>=';
+    if (comp === 'entre') {
+        if (isNaN(a) || isNaN(b)) return false;
+        const lo = Math.min(a, b), hi = Math.max(a, b);
+        return valor >= lo && valor <= hi;
+    }
+    if (isNaN(a)) return false;
+    if (comp === '<') return valor < a;
+    if (comp === '<=') return valor <= a;
+    if (comp === '==') return valor === a;
+    if (comp === '!=') return valor !== a;
+    if (comp === '>=') return valor >= a;
+    if (comp === '>') return valor > a;
+    return false;
+}
+
+/* ===== ACIONAR MECÂNICAS VINCULADAS (booleano / condicional_encadeado) =====
+ * Aplica as mecânicas vinculadas ao resultado, com guarda contra ciclos. */
+const _meTriggerStack = new Set();
+
+function _meTriggerMechanics(ids, sourceMech, parentPec) {
+    if (!Array.isArray(ids) || ids.length === 0 || !sourceMech) return;
+    if (_meTriggerStack.has(sourceMech.id)) return;
+    _meTriggerStack.add(sourceMech.id);
+    try {
+        for (const id of ids) {
+            if (!id || id === sourceMech.id || _meTriggerStack.has(id)) continue;
+            const target = window._systemData?.mechanics?.find(m => m.id === id);
+            if (target) applyMechanicToSheet(target, parentPec);
+        }
+    } finally {
+        _meTriggerStack.delete(sourceMech.id);
+    }
+}
+
 /* ===== RESOLVER CONDICIONAL ENCADEADO =====
- * Avalia a equação de valor e percorre a tabela de resolução (condicoes) em ordem.
+ * Modo numérico: avalia a equação de valor e percorre a tabela de resolução (condicoes) em ordem.
+ * Modo equipamento: conta os itens de cada vínculo no inventário e avalia as
+ * verificações de cada condição (individuais por vínculo e/ou Σ total).
  * A primeira condição que casar define o resultado (valorSaida).
  * Se nenhuma casar, usa config.valorPadrao. */
 function resolveChainedConditional(config) {
+    if (config?.modoVerificacao === 'equipamento') return _resolveChainedEquip(config);
+
     const eq = Array.isArray(config?.equacaoValor) ? config.equacaoValor : [];
     const valorEquacao = resolveEquation(eq);
     const condicoes = Array.isArray(config?.condicoes) ? config.condicoes : [];
@@ -421,23 +545,7 @@ function resolveChainedConditional(config) {
 
     for (let i = 0; i < condicoes.length; i++) {
         const c = condicoes[i] || {};
-        const comp = c.comparacao || '<';
-        const a = parseFloat(c.valorA);
-        const b = parseFloat(c.valorB);
-        let ok = false;
-        if (comp === 'entre') {
-            if (!isNaN(a) && !isNaN(b)) {
-                const lo = Math.min(a, b), hi = Math.max(a, b);
-                ok = valorEquacao >= lo && valorEquacao <= hi;
-            }
-        } else if (!isNaN(a)) {
-            if (comp === '<') ok = valorEquacao < a;
-            else if (comp === '<=') ok = valorEquacao <= a;
-            else if (comp === '==') ok = valorEquacao === a;
-            else if (comp === '!=') ok = valorEquacao !== a;
-            else if (comp === '>=') ok = valorEquacao >= a;
-            else if (comp === '>') ok = valorEquacao > a;
-        }
+        const ok = _meCompare(valorEquacao, c.comparacao || '<', parseFloat(c.valorA), parseFloat(c.valorB));
         if (ok) {
             valorSaida = c.resultado ?? '';
             condicaoIndex = i;
@@ -446,6 +554,34 @@ function resolveChainedConditional(config) {
     }
 
     return { valorEquacao, valorSaida, condicaoIndex };
+}
+
+function _resolveChainedEquip(config) {
+    const reqs = Array.isArray(config?.equipReqs) ? config.equipReqs : [];
+    const counts = reqs.map(r => _meCountEquipReq(r));
+    const total = counts.reduce((s, c) => s + c, 0);
+    const condicoes = Array.isArray(config?.condicoes) ? config.condicoes : [];
+
+    let valorSaida = config?.valorPadrao ?? '';
+    let condicaoIndex = -1;
+
+    for (let i = 0; i < condicoes.length; i++) {
+        const c = condicoes[i] || {};
+        const vers = Array.isArray(c.verificacoes) ? c.verificacoes : [];
+        if (vers.length === 0) continue;
+        let ok = true;
+        for (const v of vers) {
+            const val = v.alvo === 'total' ? total : (counts[parseInt(v.alvo, 10) || 0] ?? 0);
+            if (!_meCompare(val, v.comparacao || '>=', parseFloat(v.valorA), parseFloat(v.valorB))) { ok = false; break; }
+        }
+        if (ok) {
+            valorSaida = c.resultado ?? '';
+            condicaoIndex = i;
+            break;
+        }
+    }
+
+    return { valorEquacao: total, valorSaida, condicaoIndex, counts };
 }
 
 function _resolveTermValue(term) {
@@ -1218,26 +1354,46 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
 
     // === TIPO: BOOLEANO ===
     if (tipo === 'booleano') {
-        const eqA = Array.isArray(config.equacaoA) ? config.equacaoA : [];
-        const eqB = Array.isArray(config.equacaoB) ? config.equacaoB : [];
-        const valA = resolveEquation(eqA);
-        const valB = resolveEquation(eqB);
-        const op = config.operadorComparacao || '>=';
         let resultadoBooleano = false;
-        if (op === '==') resultadoBooleano = valA === valB;
-        else if (op === '!=') resultadoBooleano = valA !== valB;
-        else if (op === '>') resultadoBooleano = valA > valB;
-        else if (op === '>=') resultadoBooleano = valA >= valB;
-        else if (op === '<') resultadoBooleano = valA < valB;
-        else if (op === '<=') resultadoBooleano = valA <= valB;
+        let valA, valB, op;
+
+        if (config.modoVerificacao === 'equipamento') {
+            // Verificação de Equipamento: todos os vínculos precisam ter
+            // itens equipados nas formas exigidas em quantidade ≥ Equação de Valor
+            const reqs = Array.isArray(config.equipReqs) ? config.equipReqs : [];
+            const eqQ = Array.isArray(config.equacaoQtdMin) ? config.equacaoQtdMin : [];
+            const qtdMin = eqQ.length > 0 ? resolveEquation(eqQ) : 1;
+            const counts = reqs.map(r => _meCountEquipReq(r));
+            resultadoBooleano = reqs.length > 0 && counts.every(c => c >= qtdMin);
+            valA = counts.length ? Math.min(...counts) : 0;
+            valB = qtdMin;
+            op = '>=';
+            console.log(`🎒 Booleano (equipamento) "${mech.nome}": [${reqs.map((r, i) => `${_meReqNome(r)}=${counts[i]}`).join(', ')}] ≥ ${qtdMin} cada → ${resultadoBooleano}`);
+        } else {
+            const eqA = Array.isArray(config.equacaoA) ? config.equacaoA : [];
+            const eqB = Array.isArray(config.equacaoB) ? config.equacaoB : [];
+            valA = resolveEquation(eqA);
+            valB = resolveEquation(eqB);
+            op = config.operadorComparacao || '>=';
+            if (op === '==') resultadoBooleano = valA === valB;
+            else if (op === '!=') resultadoBooleano = valA !== valB;
+            else if (op === '>') resultadoBooleano = valA > valB;
+            else if (op === '>=') resultadoBooleano = valA >= valB;
+            else if (op === '<') resultadoBooleano = valA < valB;
+            else if (op === '<=') resultadoBooleano = valA <= valB;
+        }
 
         const valorSaida = resultadoBooleano
             ? (parseFloat(config.valorVerdadeiro) || config.valorVerdadeiro || 0)
             : (parseFloat(config.valorFalso) || config.valorFalso || 0);
 
         if (!state.booleanResults) state.booleanResults = {};
-        state.booleanResults[mech.id] = { valorSaida, resultadoBooleano, valA, valB, op };
+        state.booleanResults[mech.id] = { valorSaida, resultadoBooleano, valA, valB, op, modo: config.modoVerificacao || 'numerico' };
         console.log(`🔀 Booleano "${mech.nome}": ${valA} ${op} ${valB} → ${resultadoBooleano} (saída: ${valorSaida})`);
+
+        // Acionar mecânicas vinculadas ao resultado (✅ Verdadeiro / ❌ Falso)
+        const trigIds = resultadoBooleano ? config.efeitoTrueIds : config.efeitoFalseIds;
+        _meTriggerMechanics(trigIds, mech, parentPec);
     }
 
     // === TIPO: CONDICIONAL ENCADEADO ===
@@ -1246,6 +1402,13 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
         if (!state.chainedResults) state.chainedResults = {};
         state.chainedResults[mech.id] = resultado;
         console.log(`🔗 Cond. Encadeada "${mech.nome}": valor ${resultado.valorEquacao} → "${resultado.valorSaida}" (condição #${resultado.condicaoIndex >= 0 ? resultado.condicaoIndex + 1 : 'padrão'})`);
+
+        // Acionar mecânicas vinculadas à condição que casou
+        if (resultado.condicaoIndex >= 0) {
+            const condicoes = Array.isArray(config.condicoes) ? config.condicoes : [];
+            const cond = condicoes[resultado.condicaoIndex];
+            if (cond) _meTriggerMechanics(cond.efeitoMecanicaIds, mech, parentPec);
+        }
     }
 
     // === TIPO: CONDICIONAL ===

@@ -210,6 +210,8 @@ export async function loadNpcInventory() {
         const items = []; snap.forEach(d => items.push({ id: d.id, ...d.data() }));
         NI.items = items; NI.loadedFor = npcId;
         renderNpcInventoryList();
+        // Reavaliar mecânicas com Verificação de Equipamento (booleano / cond. encadeada)
+        if (typeof window.recalcStats === 'function') window.recalcStats();
     } catch (e) {
         console.error(e);
         listEl.innerHTML = '<div style="color:var(--danger)">❌ Erro ao carregar itens do NPC.</div>';

@@ -695,17 +695,66 @@ function _updateModuleSlots(mod) {
 
 /* ===== CUSTOS DE EQUIPAMENTO ===== */
 
-/** Verifica se um item está equipado de forma válida para custo (Efeitos ON ou qualquer forma). */
-function _cmItemEquipadoValido(item, exigeEfeitosOn) {
-    if (!item.equipado || item.parentItemId) return false;
-    if (!exigeEfeitosOn) return true; // Qualquer forma equipada serve
-    // Réplica da regra de applyEquippedItemsMechanics: estados sem efeito não contam
-    if (item.estadoEquip === 'fixado' || item.estadoEquip === 'armazenado' || item.estadoEquip === 'segurar') return false;
+/** Normaliza o alvo de um requisito de equipamento (equipamento específico, tag ou tipo). */
+function _cmReqTarget(req) {
+    req = req || {};
+    if (req.targetTipo === 'tag' || (req.tag && !req.equipamentoId)) return { kind: 'tag', value: req.tag || '' };
+    if (req.targetTipo === 'tipo' || (req.tipoEquipamento && !req.equipamentoId)) return { kind: 'tipo', value: req.tipoEquipamento || '' };
+    return { kind: 'equipamento', value: req.equipamentoId || req.id || '' };
+}
+
+/** Nome de exibição do alvo de um requisito. */
+function _cmReqNome(req) {
+    const t = _cmReqTarget(req);
+    if (t.kind === 'tag') return `equipamento com tag "${t.value}"`;
+    if (t.kind === 'tipo') return `equipamento do tipo ${t.value}`;
+    const catalog = window._inventoryState?.catalog || [];
+    const tpl = catalog.find(x => x.id === t.value);
+    return tpl?.nome || t.value;
+}
+
+/** Normaliza as formas de equipar exigidas (compat: exigeEfeitosOn legado → ['efeitos']). */
+function _cmReqFormas(req) {
+    req = req || {};
+    if (Array.isArray(req.formasEquip)) return req.formasEquip.filter(f => ['efeitos', 'segurando', 'fixado'].includes(f));
+    return req.exigeEfeitosOn === true ? ['efeitos'] : [];
+}
+
+const _CM_FORMA_LABELS = { efeitos: '⚡ Efeitos Ativos', segurando: '🖐️ Segurando', fixado: '📌 Fixado' };
+
+/** Rótulo legível das formas exigidas (ex: "Efeitos Ativos ou Fixado"). */
+function _cmFormasLabel(formas) {
+    if (!formas || formas.length === 0) return '';
+    return formas.map(f => _CM_FORMA_LABELS[f] || f).join(' ou ');
+}
+
+/** Retorna as categorias de forma que o item equipado satisfaz: 'efeitos', 'segurando' e/ou 'fixado'. */
+function _cmItemFormasAtuais(item) {
+    const formas = [];
+    if (!item.equipado || item.parentItemId || item.estadoEquip === 'armazenado') return formas;
+    if (item.estadoEquip === 'fixado') { formas.push('fixado'); return formas; }
+    if (item.estadoEquip === 'segurar') { formas.push('segurando'); return formas; }
+    // Réplica da regra de applyEquippedItemsMechanics: efeitos ativos apenas se o estado
+    // corresponder à forma de equipar prevista do item (empunhado/vestido).
+    let efeitosOn = true;
     if (item.formaEquipar) {
         const equipToStateMap = { 'segurar': 'segurar', 'empunhar': 'empunhado', 'vestir': 'vestido', 'fixar': 'fixado' };
-        if (item.estadoEquip !== equipToStateMap[item.formaEquipar]) return false;
+        if (item.estadoEquip !== equipToStateMap[item.formaEquipar]) efeitosOn = false;
     }
-    return true;
+    if (efeitosOn) formas.push('efeitos');
+    return formas;
+}
+
+/**
+ * Verifica se um item está equipado de forma válida para o requisito.
+ * Se o requisito não exige nenhuma forma específica, qualquer forma equipada serve.
+ */
+function _cmItemEquipadoValido(item, req) {
+    if (!item.equipado || item.parentItemId || item.estadoEquip === 'armazenado') return false;
+    const exigidas = _cmReqFormas(req);
+    if (exigidas.length === 0) return true; // Qualquer forma equipada serve
+    const atuais = _cmItemFormasAtuais(item);
+    return exigidas.some(f => atuais.includes(f));
 }
 
 /** Localiza itens do personagem que correspondem a um equipamento do catálogo. */
@@ -716,6 +765,32 @@ function _cmMatchInventoryItems(eqId) {
     return items.filter(i => i.modeloId === eqId || (tpl && i.nome === tpl.nome));
 }
 
+/** Localiza itens do personagem que correspondem a um requisito (equipamento, tag ou tipo). */
+function _cmMatchInventoryItemsByReq(req) {
+    const target = _cmReqTarget(req);
+    if (target.kind === 'equipamento') return _cmMatchInventoryItems(target.value);
+
+    const items = window._inventoryState?.items || [];
+    const catalog = window._inventoryState?.catalog || [];
+
+    if (target.kind === 'tag') {
+        const tag = target.value;
+        return items.filter(i => {
+            if (Array.isArray(i.tags) && i.tags.includes(tag)) return true;
+            const tpl = i.modeloId ? catalog.find(t => t.id === i.modeloId) : catalog.find(t => t.nome === i.nome);
+            return !!(tpl && Array.isArray(tpl.tags) && tpl.tags.includes(tag));
+        });
+    }
+
+    // target.kind === 'tipo'
+    const tipo = target.value;
+    return items.filter(i => {
+        if (i.tipo) return i.tipo === tipo;
+        const tpl = i.modeloId ? catalog.find(t => t.id === i.modeloId) : catalog.find(t => t.nome === i.nome);
+        return !!(tpl && tpl.tipo === tipo);
+    });
+}
+
 /**
  * Valida os custos de equipamento de um módulo/item pré-cadastrado.
  * @returns {{ok: boolean, faltas: string[], consumos: Array}}
@@ -723,28 +798,27 @@ function _cmMatchInventoryItems(eqId) {
 function _cmValidarCustosEquipamento(reqs) {
     const faltas = [];
     const consumos = [];
-    const catalog = window._inventoryState?.catalog || [];
 
     for (const req of (reqs || [])) {
-        const eqId = req.equipamentoId || req.id;
-        if (!eqId) continue;
+        const target = _cmReqTarget(req);
+        if (!target.value) continue;
         const qtdMin = Math.max(1, parseInt(req.quantidade, 10) || 1);
-        const tpl = catalog.find(t => t.id === eqId);
-        const nome = tpl?.nome || eqId;
-        const matches = _cmMatchInventoryItems(eqId);
+        const nome = _cmReqNome(req);
+        const matches = _cmMatchInventoryItemsByReq(req);
 
         if (req.consumir) {
             const disponivel = matches.reduce((s, i) => s + (parseInt(i.quantidade, 10) || 1), 0);
             if (disponivel < qtdMin) {
                 faltas.push(`🎒 ${nome} ×${qtdMin} (possui ${disponivel}) — seria consumido`);
             } else {
-                consumos.push({ eqId, nome, qtd: qtdMin });
+                consumos.push({ req, eqId: target.kind === 'equipamento' ? target.value : null, nome, qtd: qtdMin });
             }
         } else {
-            const validos = matches.filter(i => _cmItemEquipadoValido(i, req.exigeEfeitosOn === true));
+            const validos = matches.filter(i => _cmItemEquipadoValido(i, req));
             const total = validos.reduce((s, i) => s + (parseInt(i.quantidade, 10) || 1), 0);
             if (total < qtdMin) {
-                faltas.push(`🎒 ${nome} ×${qtdMin} equipado${req.exigeEfeitosOn ? ' (Efeitos = ON)' : ''}`);
+                const formasLbl = _cmFormasLabel(_cmReqFormas(req));
+                faltas.push(`🎒 ${nome} ×${qtdMin} equipado${formasLbl ? ` (${formasLbl})` : ''}`);
             }
         }
     }
@@ -758,7 +832,7 @@ async function _cmConsumirEquipamentos(consumos) {
     for (const c of consumos) {
         let restante = c.qtd;
         // Itens soltos primeiro, depois equipados
-        const matches = _cmMatchInventoryItems(c.eqId)
+        const matches = (c.req ? _cmMatchInventoryItemsByReq(c.req) : _cmMatchInventoryItems(c.eqId))
             .sort((a, b) => (a.equipado === b.equipado) ? 0 : (a.equipado ? 1 : -1));
         for (const item of matches) {
             if (restante <= 0) break;
@@ -789,14 +863,17 @@ async function _cmConsumirEquipamentos(consumos) {
 function _cmFormatarCustos(custoExp, reqs) {
     const partes = [];
     if (custoExp > 0) partes.push(`💠 ${custoExp} EXP`);
-    const catalog = window._inventoryState?.catalog || [];
     (reqs || []).forEach(req => {
-        const eqId = req.equipamentoId || req.id;
-        const tpl = catalog.find(t => t.id === eqId);
-        const nome = tpl?.nome || eqId;
+        const target = _cmReqTarget(req);
+        if (!target.value) return;
+        const nome = _cmReqNome(req);
         const qtd = Math.max(1, parseInt(req.quantidade, 10) || 1);
-        if (req.consumir) partes.push(`🔥 Consome ${nome}${qtd > 1 ? ` ×${qtd}` : ''}`);
-        else partes.push(`🎒 Requer ${nome}${qtd > 1 ? ` ×${qtd}` : ''} equipado${req.exigeEfeitosOn ? ' (Efeitos ON)' : ''}`);
+        if (req.consumir) {
+            partes.push(`🔥 Consome ${nome}${qtd > 1 ? ` ×${qtd}` : ''}`);
+        } else {
+            const formasLbl = _cmFormasLabel(_cmReqFormas(req));
+            partes.push(`🎒 Requer ${nome}${qtd > 1 ? ` ×${qtd}` : ''} equipado${formasLbl ? ` (${formasLbl})` : ''}`);
+        }
     });
     return partes;
 }
