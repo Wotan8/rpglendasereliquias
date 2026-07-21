@@ -268,6 +268,7 @@ function clearMechanicBonuses() {
     state.capacidades = [];
     state.mecanicasPendentes = [];
     state.booleanResults = {};
+    state.chainedResults = {};
     _derivedValueMechanicsRaw = [];
     _dynamicMechContributions = {};
     state._invPressureContrib = 0;
@@ -404,6 +405,47 @@ function resolveEquation(equacao) {
         else if (op === 'max') result = Math.max(result, val);
     }
     return isNaN(result) ? 0 : result;
+}
+
+/* ===== RESOLVER CONDICIONAL ENCADEADO =====
+ * Avalia a equação de valor e percorre a tabela de resolução (condicoes) em ordem.
+ * A primeira condição que casar define o resultado (valorSaida).
+ * Se nenhuma casar, usa config.valorPadrao. */
+function resolveChainedConditional(config) {
+    const eq = Array.isArray(config?.equacaoValor) ? config.equacaoValor : [];
+    const valorEquacao = resolveEquation(eq);
+    const condicoes = Array.isArray(config?.condicoes) ? config.condicoes : [];
+
+    let valorSaida = config?.valorPadrao ?? '';
+    let condicaoIndex = -1;
+
+    for (let i = 0; i < condicoes.length; i++) {
+        const c = condicoes[i] || {};
+        const comp = c.comparacao || '<';
+        const a = parseFloat(c.valorA);
+        const b = parseFloat(c.valorB);
+        let ok = false;
+        if (comp === 'entre') {
+            if (!isNaN(a) && !isNaN(b)) {
+                const lo = Math.min(a, b), hi = Math.max(a, b);
+                ok = valorEquacao >= lo && valorEquacao <= hi;
+            }
+        } else if (!isNaN(a)) {
+            if (comp === '<') ok = valorEquacao < a;
+            else if (comp === '<=') ok = valorEquacao <= a;
+            else if (comp === '==') ok = valorEquacao === a;
+            else if (comp === '!=') ok = valorEquacao !== a;
+            else if (comp === '>=') ok = valorEquacao >= a;
+            else if (comp === '>') ok = valorEquacao > a;
+        }
+        if (ok) {
+            valorSaida = c.resultado ?? '';
+            condicaoIndex = i;
+            break;
+        }
+    }
+
+    return { valorEquacao, valorSaida, condicaoIndex };
 }
 
 function _resolveTermValue(term) {
@@ -1196,6 +1238,14 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
         if (!state.booleanResults) state.booleanResults = {};
         state.booleanResults[mech.id] = { valorSaida, resultadoBooleano, valA, valB, op };
         console.log(`🔀 Booleano "${mech.nome}": ${valA} ${op} ${valB} → ${resultadoBooleano} (saída: ${valorSaida})`);
+    }
+
+    // === TIPO: CONDICIONAL ENCADEADO ===
+    if (tipo === 'condicional_encadeado') {
+        const resultado = resolveChainedConditional(config);
+        if (!state.chainedResults) state.chainedResults = {};
+        state.chainedResults[mech.id] = resultado;
+        console.log(`🔗 Cond. Encadeada "${mech.nome}": valor ${resultado.valorEquacao} → "${resultado.valorSaida}" (condição #${resultado.condicaoIndex >= 0 ? resultado.condicaoIndex + 1 : 'padrão'})`);
     }
 
     // === TIPO: CONDICIONAL ===

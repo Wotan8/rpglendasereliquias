@@ -128,8 +128,8 @@ function getMechanicTargetsHTML() {
 }
 
 export const FONTE_LABELS = { raca: '🧬 Raça', classe: '⚔️ Classe', tribo: '🏕️ Tribo', peculiaridade: '✨ Pecul.', item: '🗡️ Item', condicao: '💀 Condição', booleana: '🔀 Booleana', manobra: '💥 Manobra', magia: '🔮 Magia', individual: '👤 Individual', generica: '⚙️ Genérica' };
-export const TIPO_ICONS = { modificar: '➕', limitar: '🔒', conceder: '🎁', condicional: '⚡', narrativo: '📝', distribuir: '🎲', booleano: '🔀' };
-export const TIPO_LABELS = { modificar: 'Modificar', limitar: 'Limitar', conceder: 'Conceder', condicional: 'Condicional', narrativo: 'Narrativo', distribuir: 'Distribuir', booleano: 'Booleano' };
+export const TIPO_ICONS = { modificar: '➕', limitar: '🔒', conceder: '🎁', condicional: '⚡', narrativo: '📝', distribuir: '🎲', booleano: '🔀', condicional_encadeado: '🔗' };
+export const TIPO_LABELS = { modificar: 'Modificar', limitar: 'Limitar', conceder: 'Conceder', condicional: 'Condicional', narrativo: 'Narrativo', distribuir: 'Distribuir', booleano: 'Booleano', condicional_encadeado: 'Cond. Encadeada' };
 
 function esc(text) {
     if (text === null || text === undefined) return '';
@@ -341,6 +341,17 @@ export function generatePreviewText(data) {
         const vTrue = config.valorVerdadeiro ?? '?';
         const vFalse = config.valorFalso ?? '?';
         text = `${sideA} ${op} ${sideB} ? ✅${vTrue} : ❌${vFalse}`;
+    } else if (tipo === 'condicional_encadeado') {
+        const eqStr = _formatEquation(config.equacaoValor || []);
+        const condicoes = Array.isArray(config.condicoes) ? config.condicoes : [];
+        const compLabel = { '<': 'Menor que', '<=': 'Menor ou igual a', '==': 'Igual a', '!=': 'Diferente de', '>=': 'Maior ou igual a', '>': 'Maior que', 'entre': 'Entre' };
+        const condParts = condicoes.map(c => {
+            const comp = c.comparacao || '<';
+            if (comp === 'entre') return `${compLabel[comp]} ${c.valorA ?? '?'} e ${c.valorB ?? '?'} = "${c.resultado ?? '?'}"`;
+            return `${compLabel[comp] || comp} ${c.valorA ?? '?'} = "${c.resultado ?? '?'}"`;
+        });
+        const padrao = (config.valorPadrao !== undefined && config.valorPadrao !== null && config.valorPadrao !== '') ? ` | Padrão: "${config.valorPadrao}"` : '';
+        text = `🔗 ${eqStr} → ${condParts.join(' | ') || 'sem condições'}${padrao}`;
     }
     return text + evo + cond + dur || 'Efeito não definido';
 }
@@ -1026,6 +1037,69 @@ function renderConfigBooleano(config) {
     </div>`;
 }
 
+// ===== RENDER A CHAINED CONDITION ROW (tipo condicional_encadeado) =====
+function _renderEncCondRow(cond, index) {
+    const c = cond || { comparacao: '<', valorA: '', valorB: '', resultado: '' };
+    const comp = c.comparacao || '<';
+    const isEntre = comp === 'entre';
+    return `
+    <div class="enc-cond-row" data-cond-index="${index}">
+        <span class="enc-cond-label">Se</span>
+        <select class="enc-cond-comp" onchange="window._mechEncCompChange(${index}); window._mechUpdatePreview()">
+            <option value="<" ${comp === '<' ? 'selected' : ''}>Menor que</option>
+            <option value="<=" ${comp === '<=' ? 'selected' : ''}>Menor ou igual a</option>
+            <option value="==" ${comp === '==' ? 'selected' : ''}>Igual a</option>
+            <option value="!=" ${comp === '!=' ? 'selected' : ''}>Diferente de</option>
+            <option value=">=" ${comp === '>=' ? 'selected' : ''}>Maior ou igual a</option>
+            <option value=">" ${comp === '>' ? 'selected' : ''}>Maior que</option>
+            <option value="entre" ${isEntre ? 'selected' : ''}>Entre (inclusivo)</option>
+        </select>
+        <input type="text" class="enc-cond-valorA" value="${esc(String(c.valorA ?? ''))}" placeholder="Valor" oninput="window._mechUpdatePreview()">
+        <span class="enc-cond-e-sep" style="display:${isEntre ? '' : 'none'}">e</span>
+        <input type="text" class="enc-cond-valorB" value="${esc(String(c.valorB ?? ''))}" placeholder="Valor" style="display:${isEntre ? '' : 'none'}" oninput="window._mechUpdatePreview()">
+        <span class="enc-cond-label">=</span>
+        <input type="text" class="enc-cond-resultado" value="${esc(String(c.resultado ?? ''))}" placeholder='Ex: "Fraco" ou 2' oninput="window._mechUpdatePreview()">
+        <button type="button" class="eq-term-remove" onclick="window._mechEncRemoveCond(${index})" title="Remover condição">✕</button>
+    </div>`;
+}
+
+function renderConfigCondEncadeado(config) {
+    const equacaoValor = config?.equacaoValor || [{ tipo: 'ficha', ref: '' }];
+    const condicoes = (Array.isArray(config?.condicoes) && config.condicoes.length > 0)
+        ? config.condicoes
+        : [{ comparacao: '<', valorA: '', valorB: '', resultado: '' }];
+    const valorPadrao = config?.valorPadrao ?? '';
+
+    const termsV = equacaoValor.map((t, i) => _renderBoolEquationTerm(t, 'V', i)).join('');
+    const condsHtml = condicoes.map((c, i) => _renderEncCondRow(c, i)).join('');
+
+    return `
+    <div class="bool-equation-wrap enc-wrap">
+        <div class="bool-equation-side">
+            <div class="bool-equation-side-label">🧮 Equação de Valor</div>
+            <div class="eq-terms-container" id="boolEquacaoV">
+                ${termsV}
+            </div>
+            <button type="button" class="eq-add-term-btn" onclick="window._mechBoolAddTerm('V')">➕ Adicionar Termo</button>
+        </div>
+
+        <div class="bool-equation-side">
+            <div class="bool-equation-side-label">🔗 Condicionais (avaliadas em ordem — a primeira que casar define o resultado)</div>
+            <div class="enc-cond-list" id="encCondList">
+                ${condsHtml}
+            </div>
+            <button type="button" class="eq-add-term-btn" onclick="window._mechEncAddCond()">➕ Adicionar Condição</button>
+        </div>
+
+        <div class="bool-output-section" style="margin-top:0">
+            <div class="bool-output-card">
+                <label>🛟 Resultado Padrão (se nenhuma condição casar)</label>
+                <input type="text" id="mech_config_valorPadrao" value="${esc(String(valorPadrao))}" placeholder="Ex: Indefinido" oninput="window._mechUpdatePreview()">
+            </div>
+        </div>
+    </div>`;
+}
+
 // ===== PROGRESSION / LEVEL TABLE =====
 
 // Returns indices and labels of fixo terms across all calc rows for progression columns
@@ -1312,6 +1386,7 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, 
                         <option value="narrativo" ${tipo === 'narrativo' ? 'selected' : ''}>📝 Narrativo (efeito descritivo)</option>
                         <option value="distribuir" ${tipo === 'distribuir' ? 'selected' : ''}>🎲 Distribuir (distribui pontos entre múltiplos alvos)</option>
                         <option value="booleano" ${tipo === 'booleano' ? 'selected' : ''}>🔀 Booleano (equação comparativa)</option>
+                        <option value="condicional_encadeado" ${tipo === 'condicional_encadeado' ? 'selected' : ''}>🔗 Condicional (condições encadeadas)</option>
                     </select>
                 </div>
                 <div class="mech-config-area" id="mechConfigArea"></div>
@@ -1480,6 +1555,7 @@ window._mechTipoChange = function () {
     else if (tipo === 'narrativo') area.innerHTML = renderConfigNarrativo(config);
     else if (tipo === 'distribuir') area.innerHTML = renderConfigDistribuir(config);
     else if (tipo === 'booleano') area.innerHTML = renderConfigBooleano(config);
+    else if (tipo === 'condicional_encadeado') area.innerHTML = renderConfigCondEncadeado(config);
 
     // Set alvo values and ficha refs in calc rows after DOM is ready
     if (tipo === 'modificar' || tipo === 'limitar') {
@@ -1543,6 +1619,14 @@ window._mechTipoChange = function () {
                 const equacao = side === 'A' ? (config?.equacaoA || []) : (config?.equacaoB || []);
                 _restoreEquacaoRefs(container, equacao);
             });
+        }, 0);
+    }
+
+    // Restore condicional_encadeado equation ficha refs after DOM is ready
+    if (tipo === 'condicional_encadeado') {
+        setTimeout(() => {
+            const container = document.getElementById('boolEquacaoV');
+            if (container) _restoreEquacaoRefs(container, config?.equacaoValor || []);
         }, 0);
     }
 
@@ -1684,6 +1768,56 @@ window._mechBoolRemoveTerm = function (side, termIndex) {
     container.innerHTML = currentEquacao.map((t, ti) => _renderBoolEquationTerm(t, side, ti)).join('');
     // Restore ficha ref values after re-render
     _restoreEquacaoRefs(container, currentEquacao);
+    window._mechUpdatePreview();
+};
+
+// ===== CHAINED CONDITION HANDLERS (tipo condicional_encadeado) =====
+function _collectEncCondFromList() {
+    const list = document.getElementById('encCondList');
+    if (!list) return [];
+    return Array.from(list.querySelectorAll('.enc-cond-row')).map(row => {
+        const comparacao = row.querySelector('.enc-cond-comp')?.value || '<';
+        const rawA = row.querySelector('.enc-cond-valorA')?.value?.trim() ?? '';
+        const rawB = row.querySelector('.enc-cond-valorB')?.value?.trim() ?? '';
+        const rawR = row.querySelector('.enc-cond-resultado')?.value?.trim() ?? '';
+        return {
+            comparacao,
+            valorA: isNaN(Number(rawA)) || rawA === '' ? rawA : Number(rawA),
+            valorB: comparacao === 'entre' ? (isNaN(Number(rawB)) || rawB === '' ? rawB : Number(rawB)) : '',
+            resultado: isNaN(Number(rawR)) || rawR === '' ? rawR : Number(rawR)
+        };
+    });
+}
+
+window._mechEncCompChange = function (index) {
+    const list = document.getElementById('encCondList');
+    if (!list) return;
+    const row = list.querySelectorAll('.enc-cond-row')[index];
+    if (!row) return;
+    const isEntre = (row.querySelector('.enc-cond-comp')?.value || '<') === 'entre';
+    const sep = row.querySelector('.enc-cond-e-sep');
+    const valB = row.querySelector('.enc-cond-valorB');
+    if (sep) sep.style.display = isEntre ? '' : 'none';
+    if (valB) valB.style.display = isEntre ? '' : 'none';
+};
+
+window._mechEncAddCond = function () {
+    const list = document.getElementById('encCondList');
+    if (!list) return;
+    const index = list.querySelectorAll('.enc-cond-row').length;
+    list.insertAdjacentHTML('beforeend', _renderEncCondRow({ comparacao: '<', valorA: '', valorB: '', resultado: '' }, index));
+    window._mechUpdatePreview();
+};
+
+window._mechEncRemoveCond = function (index) {
+    const list = document.getElementById('encCondList');
+    if (!list) return;
+    const rows = list.querySelectorAll('.enc-cond-row');
+    if (rows.length <= 1) return;
+    if (rows[index]) rows[index].remove();
+    // Re-render to fix onclick indices
+    const current = _collectEncCondFromList();
+    list.innerHTML = current.map((c, i) => _renderEncCondRow(c, i)).join('');
     window._mechUpdatePreview();
 };
 
@@ -2008,6 +2142,14 @@ function collectMechFormData() {
             equacaoB: containerB ? _collectEquacaoFromContainer(containerB) : [{ tipo: 'fixo', valor: '' }],
             valorVerdadeiro: isNaN(Number(rawTrue)) || rawTrue === '' ? rawTrue : Number(rawTrue),
             valorFalso: isNaN(Number(rawFalse)) || rawFalse === '' ? rawFalse : Number(rawFalse)
+        };
+    } else if (tipo === 'condicional_encadeado') {
+        const containerV = document.getElementById('boolEquacaoV');
+        const rawPadrao = document.getElementById('mech_config_valorPadrao')?.value?.trim() ?? '';
+        data.config = {
+            equacaoValor: containerV ? _collectEquacaoFromContainer(containerV) : [{ tipo: 'fixo', valor: '' }],
+            condicoes: _collectEncCondFromList(),
+            valorPadrao: isNaN(Number(rawPadrao)) || rawPadrao === '' ? rawPadrao : Number(rawPadrao)
         };
     }
 

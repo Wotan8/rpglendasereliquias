@@ -98,3 +98,19 @@ Mecânicas de comparação lógica. O próprio sistema as utiliza nos bastidores
 
 **Retorno Personalizado (Opcional):**
 - Você pode definir o "Valor Verdadeiro" ou "Valor Falso". Em integrações avançadas de sistema, o painel pode extrair esse retorno numérico para ativar bônus com base no resultado da Booleana.
+
+---
+
+## 8. 🔗 Condicional Encadeado
+Uma evolução da mecânica Booleana, operando como uma lista de condições avaliadas em ordem (estilo *if/else if* ou "graus de sucesso"). Muito útil para rolagens que possuem diferentes efeitos baseados no total atingido (Ex: se rolar < 10 é Falha, se 10 a 15 é Parcial, se > 15 é Crítico).
+
+**🧮 Equação de Valor:**
+- A base da avaliação. Você monta uma Equação de Valor (idêntica à das mecânicas Modificar/Booleana) que servirá como o valor de entrada para ser comparado em todas as etapas abaixo. Ex: Uma rolagem `1d20 + [FOR]`.
+
+**🔗 Condicionais (Avaliadas em ordem):**
+- Você adiciona múltiplas condições (linhas). O sistema lerá de cima para baixo e a **primeira** condição que for satisfeita definirá o resultado final da mecânica.
+- **Comparação:** Opções como Menor (`<`), Maior (`>`), Igual (`==`), Diferente (`!=`), e até **Entre** (que compara se o valor está dentro de uma faixa entre X e Y).
+- **Resultado:** O valor (numérico ou textual) que a mecânica retornará caso essa linha seja satisfeita. Ex: "Fraco", "Forte", ou `2`.
+
+**🛟 Resultado Padrão:**
+- Se o valor calculado não casar com nenhuma das condições cadastradas acima, a mecânica retornará o que estiver definido neste campo. (Ex: "Indefinido" ou `0`).

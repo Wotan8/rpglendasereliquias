@@ -1404,6 +1404,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     --type-narrativo: var(--lr-text-2);
     --type-distribuir: var(--lr-abyssal);
     --type-booleano: #14B8A6;
+    --type-condicional_encadeado: #A855F7;
     --fonte-raca: var(--lr-nature);
     --fonte-classe: var(--lr-gold);
     --fonte-tribo: var(--lr-gold);
@@ -1610,6 +1611,10 @@ html.dark .mech-card {
 
 .mech-card[data-type="booleano"] {
     border-left-color: var(--type-booleano);
+}
+
+.mech-card[data-type="condicional_encadeado"] {
+    border-left-color: var(--type-condicional_encadeado);
 }
 
 .mech-card-header {
@@ -2999,6 +3004,76 @@ html.dark .bool-equation-wrap {
 
 html.dark .bool-output-card {
     background: rgba(20, 184, 166, 0.08);
+}
+
+/* =============================================
+   CONDICIONAL ENCADEADO — Styles
+   ============================================= */
+
+.enc-wrap {
+    border-color: var(--type-condicional_encadeado);
+}
+
+.enc-wrap .bool-equation-side-label {
+    color: var(--type-condicional_encadeado);
+}
+
+.enc-cond-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.enc-cond-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 8px;
+    border: 1px solid var(--soft);
+    border-left: 3px solid var(--type-condicional_encadeado);
+    border-radius: 8px;
+    background: var(--chip);
+}
+
+html.dark .enc-cond-row {
+    background: rgba(168, 85, 247, 0.06);
+}
+
+.enc-cond-label {
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: var(--type-condicional_encadeado);
+}
+
+.enc-cond-row select.enc-cond-comp {
+    width: auto;
+    min-width: 140px;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+}
+
+.enc-cond-row input.enc-cond-valorA,
+.enc-cond-row input.enc-cond-valorB {
+    width: 70px;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+.enc-cond-row input.enc-cond-resultado {
+    flex: 1;
+    min-width: 120px;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.enc-cond-e-sep {
+    font-size: 0.75rem;
+    font-weight: 900;
+    color: var(--muted);
 }
 
 /* ===== SHORTCUTS ===== */

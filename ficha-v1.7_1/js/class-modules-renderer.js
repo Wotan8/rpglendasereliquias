@@ -661,6 +661,15 @@ function _resolveModuleMechanicValue(mechId) {
         } catch (e) { return null; }
     }
 
+    if (mech.tipo === 'condicional_encadeado') {
+        try {
+            if (typeof resolveChainedConditional !== 'function') return null;
+            const res = resolveChainedConditional(config);
+            const n = parseFloat(res.valorSaida);
+            return isNaN(n) ? 0 : n;
+        } catch (e) { return null; }
+    }
+
     const calculos = Array.isArray(config.calculos) ? config.calculos : null;
     if (calculos && calculos.length && typeof resolveCalcValue === 'function') {
         let total = 0;
@@ -1808,6 +1817,17 @@ function _cmCheckMechanicCost(mechId) {
             return { ok: r, label: labelStr };
         } catch (e) {
             return { ok: false, label: 'Erro ao avaliar requisito' };
+        }
+    }
+    
+    if (mech.tipo === 'condicional_encadeado') {
+        const config = mech.config || {};
+        try {
+            if (typeof resolveChainedConditional !== 'function') return { ok: true, label: 'Sem custo' };
+            const res = resolveChainedConditional(config);
+            return { ok: true, label: `🔗 ${res.valorEquacao} → "${res.valorSaida}"` };
+        } catch (e) {
+            return { ok: false, label: 'Erro ao avaliar condicional' };
         }
     }
     

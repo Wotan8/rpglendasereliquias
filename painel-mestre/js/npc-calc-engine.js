@@ -1,7 +1,8 @@
 // =============================================
 // NPC CALC ENGINE — Motor de cálculo PURO para a Ficha de NPC v2.
 // Interpreta o mesmo formato de mecânicas do Painel de Criador
-// (tipos: modificar, limitar, narrativo, conceder, condicional),
+// (tipos: modificar, limitar, narrativo, conceder, condicional,
+//  condicional_encadeado),
 // mas sem depender do DOM nem do `state` global da ficha v1.7.
 //
 // Entrada:  npcData (schema v2) + sys (de ensureNpcSystemData)
@@ -125,6 +126,62 @@ function resolveCalcValue(calc, ctx) {
     return resolveRef(calc.valorRef, ctx) * (calc.valorMultiplicador || 1);
 }
 
+/* ===== Resolução de Condicional Encadeado (tabela de resolução) =====
+ * Avalia a equação de valor com o contexto do NPC e percorre as
+ * condições em ordem — a primeira que casar define o resultado. */
+function resolveChainedConditional(config, ctx) {
+    const eq = Array.isArray(config?.equacaoValor) ? config.equacaoValor : [];
+    const valorEquacao = resolveEquation(eq, ctx);
+    const condicoes = Array.isArray(config?.condicoes) ? config.condicoes : [];
+
+    let valorSaida = config?.valorPadrao ?? '';
+    let condicaoIndex = -1;
+
+    for (let i = 0; i < condicoes.length; i++) {
+        const c = condicoes[i] || {};
+        const comp = c.comparacao || '<';
+        const a = parseFloat(c.valorA);
+        const b = parseFloat(c.valorB);
+        let ok = false;
+        if (comp === 'entre') {
+            if (!isNaN(a) && !isNaN(b)) {
+                const lo = Math.min(a, b), hi = Math.max(a, b);
+                ok = valorEquacao >= lo && valorEquacao <= hi;
+            }
+        } else if (!isNaN(a)) {
+            if (comp === '<') ok = valorEquacao < a;
+            else if (comp === '<=') ok = valorEquacao <= a;
+            else if (comp === '==') ok = valorEquacao === a;
+            else if (comp === '!=') ok = valorEquacao !== a;
+            else if (comp === '>=') ok = valorEquacao >= a;
+            else if (comp === '>') ok = valorEquacao > a;
+        }
+        if (ok) {
+            valorSaida = c.resultado ?? '';
+            condicaoIndex = i;
+            break;
+        }
+    }
+
+    return { valorEquacao, valorSaida, condicaoIndex };
+}
+
+/* ===== Resolução de Booleano (equação comparativa) com contexto de NPC ===== */
+function resolveBooleano(config, ctx) {
+    const valA = resolveEquation(Array.isArray(config?.equacaoA) ? config.equacaoA : [], ctx);
+    const valB = resolveEquation(Array.isArray(config?.equacaoB) ? config.equacaoB : [], ctx);
+    const op = config?.operadorComparacao || '>=';
+    let resultado = false;
+    if (op === '==') resultado = valA === valB;
+    else if (op === '!=') resultado = valA !== valB;
+    else if (op === '>') resultado = valA > valB;
+    else if (op === '>=') resultado = valA >= valB;
+    else if (op === '<') resultado = valA < valB;
+    else if (op === '<=') resultado = valA <= valB;
+    const valorSaida = resultado ? (config?.valorVerdadeiro ?? '') : (config?.valorFalso ?? '');
+    return { valA, valB, op, resultado, valorSaida };
+}
+
 /* ===== Coleta de mecânicas das peculiaridades do NPC ===== */
 
 /**
@@ -172,6 +229,8 @@ function gatherOperations(npc, sys, targetMap, avisos) {
     const ops = [];      // { target, op, valor|calc, fonte }
     const limites = [];  // { target, tipoLimite, calc, calcMin, fonte }
     const infos = [];    // { fonte, texto, icone }
+    const encadeadas = []; // { config, fonte, icone, nome } — avaliadas após os valores finais
+    const booleanas = [];  // { config, fonte, icone, nome } — avaliadas após os valores finais
 
     for (const pecRef of (npc.peculiaridades || [])) {
         // Peculiaridade personalizada: apenas informativa
@@ -199,8 +258,34 @@ function gatherOperations(npc, sys, targetMap, avisos) {
             const isPermanent = !mech.duracao || mech.duracao === 'permanente';
             const config = configNoNivel(mech, nivel);
 
+            // Condicional Encadeado permanente e sem condição → avaliado
+            // automaticamente com os valores finais do NPC (após as demais mecânicas)
+            if (mech.tipo === 'condicional_encadeado' && !isConditional && isPermanent) {
+                encadeadas.push({ config, fonte: fonteLabel, icone: pec.icone || '🔗', nome: mech.nome || '' });
+                continue;
+            }
+
+            // Booleano permanente e sem condição → avaliado automaticamente
+            // com os valores finais do NPC (após as demais mecânicas)
+            if (mech.tipo === 'booleano' && !isConditional && isPermanent) {
+                booleanas.push({ config, fonte: fonteLabel, icone: pec.icone || '🔀', nome: mech.nome || '' });
+                continue;
+            }
+
+            // Distribuir: exige escolha de alvos (regra de criação de PJ)
+            // → vira informação para o mestre aplicar manualmente
+            if (mech.tipo === 'distribuir' && !isConditional && isPermanent) {
+                const pool = config.pool === 'Personalizado' && Array.isArray(config.poolPersonalizado) && config.poolPersonalizado.length
+                    ? config.poolPersonalizado.join(', ') : (config.pool || '?');
+                const texto = mech.previewTexto
+                    || `Distribuir: ${config.operacao || '+'}${config.valorPorAlvo ?? '?'} em ${config.quantidadeAlvos ?? '?'} alvos de [${pool}]`;
+                infos.push({ fonte: fonteLabel, texto: `🎲 ${texto} — aplicar manualmente na ficha do NPC`, icone: pec.icone || '🎲' });
+                continue;
+            }
+
             // Efeitos não-automáticos viram informação para o mestre
             if (mech.tipo === 'narrativo' || mech.tipo === 'conceder' || mech.tipo === 'condicional'
+                || mech.tipo === 'condicional_encadeado'
                 || isConditional || !isPermanent) {
                 let texto = mech.previewTexto || config.textoEfeito || mech.descricao || mech.nome || '';
                 if (mech.evoluivel && mech.progressao?.[String(nivel)]) {
@@ -244,7 +329,7 @@ function gatherOperations(npc, sys, targetMap, avisos) {
             }
         }
     }
-    return { ops, limites, infos };
+    return { ops, limites, infos, encadeadas, booleanas };
 }
 
 /* ===== Aplicação de operações sobre um valor ===== */
@@ -305,7 +390,7 @@ export function calcularNpc(npc, sys) {
     const targetMap = buildTargetMap(sys);
     const nivel = parseInt(npc.nivel) || 1;
 
-    const { ops, limites, infos } = gatherOperations(npc, sys, targetMap, avisos);
+    const { ops, limites, infos, encadeadas, booleanas } = gatherOperations(npc, sys, targetMap, avisos);
 
     // --- Contexto compartilhado pelas equações ---
     const ctx = { nivel, targetMap, attrsFinais: {}, derivedFinais: {}, skillLevels: {}, avisos };
@@ -373,6 +458,36 @@ export function calcularNpc(npc, sys) {
                 final: fmt(final), fontes: pass === 1 ? fontes : []
             };
             ctx.derivedFinais[def.key] = final;
+        }
+    }
+
+    // --- 3) Booleanas e Condicionais Encadeadas: avaliadas com os valores FINAIS do NPC ---
+    for (const b of (booleanas || [])) {
+        try {
+            const res = resolveBooleano(b.config, ctx);
+            const opLabel = { '==': '==', '!=': '!=', '>': '>', '>=': '≥', '<': '<', '<=': '≤' }[res.op] || res.op;
+            const nomePrefix = b.nome ? `${b.nome}: ` : '';
+            infos.push({
+                fonte: b.fonte,
+                texto: `🔀 ${nomePrefix}${fmt(res.valA)} ${opLabel} ${fmt(res.valB)} → ${res.resultado ? '✅' : '❌'} "${res.valorSaida}"`,
+                icone: b.icone || '🔀'
+            });
+        } catch (e) {
+            avisos.add(`Erro ao avaliar mecânica booleana "${b.nome || '?'}" (${b.fonte}).`);
+        }
+    }
+
+    for (const enc of (encadeadas || [])) {
+        try {
+            const res = resolveChainedConditional(enc.config, ctx);
+            const nomePrefix = enc.nome ? `${enc.nome}: ` : '';
+            infos.push({
+                fonte: enc.fonte,
+                texto: `🔗 ${nomePrefix}${fmt(res.valorEquacao)} → "${res.valorSaida}"`,
+                icone: enc.icone || '🔗'
+            });
+        } catch (e) {
+            avisos.add(`Erro ao avaliar condicional encadeada "${enc.nome || '?'}" (${enc.fonte}).`);
         }
     }
 
