@@ -1,5 +1,5 @@
 // ÁREA NPCs — Full CRUD, Export/Import, Modal Form
-import { db, collection, getDocs, setDoc, deleteDoc, doc, addDoc, onSnapshot } from './firebase-config.js';
+import { db, collection, getDocs, setDoc, deleteDoc, doc, addDoc, onSnapshot, query, where } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
@@ -497,7 +497,7 @@ function buildNpcForm() {
             <button type="button" id="modoMecanicoBtn" class="npcv2-mode-btn" onclick="setNpcModo('mecanico')">⚙️ Mecânico</button>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-secondary btn-small" onclick="exportNpcFromForm()">📤 Exportar</button>
+            <button class="btn btn-secondary btn-small npcv2-only-mecanico" onclick="exportNpcFromForm()">📤 Exportar</button>
             <button class="btn btn-danger btn-small" onclick="deleteCurrentNpc()">🗑️ Excluir</button>
             <button class="btn btn-success btn-small" onclick="saveNpc()">💾 Salvar</button>
         </div>
@@ -1746,15 +1746,163 @@ window.duplicateSelectedNpcs = async function() {
 };
 
 window.exportSelectedNpcs = async function() {
-    const cbs = document.querySelectorAll('.npc-checkbox:checked'); if (!cbs.length) { showAlert('⚠️ Selecione NPCs', 'warning'); return; }
-    const data = Array.from(cbs).map(cb => { const n = S.allNpcs.find(x=>x.id===cb.dataset.npcId); return n ? {...n, exportDate: new Date().toISOString(), exportedBy: S.currentUser?.email} : null; }).filter(Boolean);
-    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const cbs = document.querySelectorAll('.npc-checkbox:checked');
+    
+    // Nenhum NPC selecionado → baixar JSON modelo com instruções
+    if (!cbs.length) {
+        const template = _buildNpcTemplate();
+        const blob = new Blob([JSON.stringify(template, null, 2)], {type:'application/json'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `modelo_npc_${Date.now()}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        showAlert('📄 Modelo de NPC exportado! Preencha e use "📥 Importar" para criar NPCs.', 'success');
+        return;
+    }
+
+    const rawData = Array.from(cbs).map(cb => { const n = S.allNpcs.find(x=>x.id===cb.dataset.npcId); return n ? {...n, exportDate: new Date().toISOString(), exportedBy: S.currentUser?.email} : null; }).filter(Boolean);
+    
+    for (const n of rawData) {
+        let inventoryItems = [];
+        try {
+            const snap = await getDocs(query(collection(db, 'items'), where('characterId', '==', n.id)));
+            snap.forEach(d => inventoryItems.push({ id: d.id, ...d.data() }));
+        } catch(e) { console.error('Erro ao exportar itens', e); }
+        n.inventoryItems = inventoryItems;
+    }
+
+    const blob = new Blob([JSON.stringify(rawData, null, 2)], {type:'application/json'});
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `npcs_${Date.now()}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    showAlert(`✅ ${data.length} exportado(s)`, 'success');
+    showAlert(`✅ ${rawData.length} exportado(s)`, 'success');
 };
 
-window.exportNpcFromForm = function() {
+function _buildNpcTemplate() {
+    return [
+        {
+            "_instrucoes": [
+                "=== MODELO DE NPC — Lendas & Relíquias ===",
+                "Este é um modelo para criar NPCs via importação JSON.",
+                "Campos que começam com '_' (como este) são IGNORADOS na importação.",
+                "Duplique este objeto dentro do array para criar múltiplos NPCs.",
+                "",
+                "CAMPO 'modoFicha':",
+                "  'mecanico' → usa referências dos registros (racaRef.refId, peculiaridades com refId, etc.)",
+                "  'rapido'   → usa texto livre (raca, classe, tribo como strings simples)",
+                "",
+                "CAMPO 'tipo': 'npc' ou 'criatura'",
+                "  Se 'criatura', preencha o objeto 'criatura' com habitat, comportamento, dieta, nivelAmeaca.",
+                "",
+                "REFERÊNCIAS HÍBRIDAS (racaRef, classeRef, triboRef):",
+                "  Para usar um registro existente: { 'refId': 'ID_DO_REGISTRO', 'custom': '' }",
+                "  Para texto livre:               { 'refId': null, 'custom': 'Nome personalizado' }",
+                "  Sempre preencha também os espelhos legados: raca, classe, tribo (strings com o nome).",
+                "",
+                "PECULIARIDADES:",
+                "  Do registro: { 'refId': 'ID_DA_PECULIARIDADE', 'nivel': 1, 'fonte': 'raca'|'classe'|'tribo'|null }",
+                "  Personalizada: { 'refId': null, 'nomeCustom': 'Nome', 'efeitoManual': 'Efeito', 'nivel': 1 }",
+                "",
+                "PERÍCIAS ESTRUTURADAS:",
+                "  { 'refId': 'ID_DA_PERICIA', 'nivel': 2 }",
+                "",
+                "VALORES DERIVADOS:",
+                "  'vinculados' → array de keys dos VDs que o NPC possui (ex: ['VIT_MAX','ENER_MAX'])",
+                "  'overrides'  → { 'KEY': valor } para travar manualmente",
+                "  'atual'      → { 'KEY': valor } para valor atual durante o jogo",
+                "  'extras'     → [{ 'nome': 'Deslocamento', 'valor': '9m' }]",
+                "",
+                "MÓDULOS DE CLASSE:",
+                "  { 'refId': 'ID_DO_MODULO', 'snapshot': null, 'fonte': 'classe'|'manual', 'itens': [] }",
+                "",
+                "PARTES DO CORPO:",
+                "  Copie do registro de bodyParts: { 'id': 'bp_xxx', 'nome': 'Mão', 'icone': '✋', 'slots': 2, ... }",
+                "",
+                "ITENS DE INVENTÁRIO (inventoryItems):",
+                "  Array de objetos com: nome, tipo, peso, tamanho, quantidade, equipado, etc.",
+                "  Tipos: 'Arma','Vestimenta','Acessório','Projétil','Container','Objeto','Consumível','Relíquia'",
+                "",
+                "Use o botão '📦 Ex.Especial' para exportar todos os registros de uma biblioteca",
+                "(raças, classes, peculiaridades, etc.) com IDs reais do seu sistema.",
+                "Alimente esse JSON a uma IA para que ela gere NPCs com referências corretas."
+            ],
+            "schemaVersion": 2,
+            "modoFicha": "mecanico",
+            "nome": "Nome do NPC",
+            "tipo": "npc",
+            "imagem": "",
+            "nivel": 1,
+            "porte": "Médio",
+            "papel": "",
+            "local": "",
+            "tamanho": "",
+            "tags": "",
+            "funcao": [],
+            "aliadoProprio": false,
+            "visibilidade": "secreto",
+
+            "racaRef": { "refId": null, "custom": "" },
+            "classeRef": { "refId": null, "custom": "" },
+            "triboRef": { "refId": null, "custom": "" },
+            "raca": "",
+            "classe": "",
+            "tribo": "",
+
+            "atributos": {
+                "INT": 0, "RAC": 0, "PRS": 0,
+                "FOR": 0, "DES": 0, "VIG": 0,
+                "PRE": 0, "MAN": 0, "AUT": 0
+            },
+
+            "peculiaridades": [],
+            "periciasEstruturadas": [],
+            "modulosClasse": [],
+            "partesDoCorpo": [],
+
+            "valoresDer": {
+                "overrides": {},
+                "atual": {},
+                "extras": [],
+                "vinculados": []
+            },
+
+            "ataques": "",
+            "skills": "",
+
+            "rolePlay": {
+                "personalidade": ["", "", ""],
+                "trejeitos": "",
+                "motivacao": "",
+                "segredos": "",
+                "relacoes": { "aliado": "", "rival": "", "devedor": "" },
+                "frases": "",
+                "historia": ""
+            },
+
+            "loot": {
+                "itens": "",
+                "luns": "",
+                "pistas": "",
+                "complicacoes": ""
+            },
+
+            "criatura": null,
+
+            "inventoryItems": [],
+
+            "vinculos": [],
+            "mesaId": ""
+        }
+    ];
+}
+
+window.exportNpcFromForm = async function() {
     const data = collectNpcData(); data.exportDate = new Date().toISOString(); data.exportedBy = S.currentUser?.email;
+    const currentId = currentEditingNpc?.id;
+    let inventoryItems = [];
+    if (currentId) {
+        try {
+            const snap = await getDocs(query(collection(db, 'items'), where('characterId', '==', currentId)));
+            snap.forEach(d => inventoryItems.push({ id: d.id, ...d.data() }));
+        } catch(e) { console.error('Erro ao exportar itens', e); }
+    }
+    data.inventoryItems = inventoryItems;
+    
     const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `npc_${(data.nome||'sem_nome').replace(/\s+/g,'_')}_${Date.now()}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
     showAlert('✅ Exportado!', 'success');
@@ -1766,12 +1914,447 @@ window.bulkImportNpcs = function() {
         fi.addEventListener('change', async e => { const files = Array.from(e.target.files); if (!files.length) return; if (!confirm(`Importar ${files.length} arquivo(s)?`)) { fi.value=''; return; }
             let cr=0,up=0,er=0;
             for (const f of files) { try { const list = JSON.parse(await f.text()); const arr = Array.isArray(list)?list:[list];
-                for (const d of arr) { try { delete d.id; delete d.firestoreId; delete d.exportDate; delete d.exportedBy; d.lastUpdate = new Date().toISOString(); d.lastUpdateBy = S.currentUser?.email;
+                for (const d of arr) { try { 
+                    const inventoryItems = d.inventoryItems;
+                    // Limpa campos de instrução/meta (chaves com _ no início) e campos internos
+                    Object.keys(d).forEach(k => { if (k.startsWith('_')) delete d[k]; });
+                    delete d.id; delete d.firestoreId; delete d.exportDate; delete d.exportedBy; delete d.inventoryItems;
+                    d.lastUpdate = new Date().toISOString(); d.lastUpdateBy = S.currentUser?.email;
+                    if (!d.nome || !d.nome.trim()) { er++; continue; } // pula NPCs sem nome
                     const ex = S.allNpcs.find(n=>n.nome&&d.nome&&n.nome.toLowerCase().trim()===d.nome.toLowerCase().trim());
-                    if (ex) { await setDoc(doc(db,'npcs',ex.id), d, {merge:true}); up++; } else { await addDoc(collection(db,'npcs'), d); cr++; }
+                    let finalId = null;
+                    if (ex) { await setDoc(doc(db,'npcs',ex.id), d, {merge:true}); up++; finalId = ex.id; } 
+                    else { const docRef = await addDoc(collection(db,'npcs'), d); cr++; finalId = docRef.id; }
+                    
+                    if (finalId && Array.isArray(inventoryItems) && inventoryItems.length > 0) {
+                        const oldItemsSnap = await getDocs(query(collection(db, 'items'), where('characterId', '==', finalId)));
+                        for (const oi of oldItemsSnap.docs) { await deleteDoc(oi.ref); }
+                        
+                        let idMap = {};
+                        inventoryItems.forEach(item => { idMap[item.id] = 'item-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6); });
+                        for (const item of inventoryItems) {
+                            const newId = idMap[item.id];
+                            if (!newId) continue;
+                            item.characterId = finalId;
+                            if (item.parentItemId && idMap[item.parentItemId]) item.parentItemId = idMap[item.parentItemId];
+                            delete item.id;
+                            await setDoc(doc(db, 'items', newId), item);
+                        }
+                    }
                 } catch(ie) { er++; } }
             } catch(fe) { er++; } }
             await loadAllNpcs(); showAlert(`✅ ${cr} criado(s), ${up} atualizado(s), ${er} erro(s)`, cr+up>0?'success':'danger'); fi.value='';
         });
     } fi.click();
 };
+
+// =====================================================================
+// ===== EXPORTAÇÃO ESPECIAL — Registros do Sistema para IAs =====
+// Exporta TODOS os registros de uma biblioteca (raças, classes, etc.)
+// em formato JSON, acompanhado de instruções claras sobre como
+// referenciar esses registros ao gerar o JSON de um NPC para importação.
+// =====================================================================
+
+const SPECIAL_EXPORT_OPTIONS = [
+    { value: 'races',          label: '🧬 Raças',             collection: 'system/data/races' },
+    { value: 'classes',        label: '⚔️ Classes',           collection: 'system/data/classes' },
+    { value: 'tribes',         label: '🏕️ Tribos',            collection: 'system/data/tribes' },
+    { value: 'derivedValues',  label: '📊 Valores Derivados', collection: 'system/data/derivedValues' },
+    { value: 'vitalStats',     label: '❤️ Status Vitais',     collection: 'system/data/vitalStats' },
+    { value: 'peculiarities',  label: '✨ Peculiaridades',    collection: 'system/data/peculiarities' },
+    { value: 'skills',         label: '📚 Perícias',          collection: 'system/data/skills' },
+    { value: 'equipment',      label: '🗡️ Equipamentos',     collection: 'system/data/equipment' },
+    { value: 'conditions',     label: '💀 Condições',         collection: 'system/data/conditions' },
+    { value: 'auras',          label: '🌟 Auras',             collection: 'system/data/auras' },
+    { value: 'bodyParts',      label: '🦴 Partes do Corpo',   collection: 'system/data/bodyParts' },
+];
+
+window.openSpecialExportModal = function() {
+    document.getElementById('specialExportModal')?.remove();
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.id = 'specialExportModal';
+    modal.innerHTML = `<div class="modal-content" style="max-width:550px">
+        <div class="modal-header">
+            <span class="modal-title">📦 Exportação Especial — Registros do Sistema</span>
+            <button class="modal-close" onclick="this.closest('.modal').remove()">✕</button>
+        </div>
+        <div class="modal-body">
+            <p style="color:var(--muted);font-size:.88rem;margin-bottom:14px">
+                Selecione a biblioteca do sistema que deseja exportar. O JSON gerado incluirá <strong>todos os registros cadastrados</strong> e um bloco de <strong>instruções para IA</strong> explicando como usar esses registros ao gerar fichas de NPC para importação.
+            </p>
+            <div class="form-group">
+                <label class="form-label">Biblioteca</label>
+                <select class="form-select" id="specialExportSelect" size="11" style="height:auto">
+                    ${SPECIAL_EXPORT_OPTIONS.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+                </select>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+                <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancelar</button>
+                <button class="btn btn-success" onclick="executeSpecialExport()">📦 Exportar</button>
+            </div>
+        </div>
+    </div>`;
+    document.body.appendChild(modal);
+};
+
+window.executeSpecialExport = async function() {
+    const sel = document.getElementById('specialExportSelect');
+    const chosen = sel?.value;
+    if (!chosen) { showAlert('⚠️ Selecione uma biblioteca', 'warning'); return; }
+
+    const opt = SPECIAL_EXPORT_OPTIONS.find(o => o.value === chosen);
+    if (!opt) return;
+
+    showAlert('⏳ Carregando registros...', 'info');
+
+    try {
+        const snap = await getDocs(collection(db, opt.collection));
+        const registros = [];
+        snap.forEach(d => {
+            const data = d.data();
+            if (data.publicado !== false) registros.push({ id: d.id, ...data });
+        });
+
+        const instructions = buildSpecialExportInstructions(chosen, registros);
+
+        const output = {
+            _meta: {
+                tipo: 'exportacao_especial_registro',
+                biblioteca: opt.label,
+                codigoInterno: chosen,
+                totalRegistros: registros.length,
+                exportadoEm: new Date().toISOString(),
+                exportadoPor: S.currentUser?.email || 'mestre'
+            },
+            _instrucoes_para_ia: instructions,
+            registros
+        };
+
+        const blob = new Blob([JSON.stringify(output, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `registro_${chosen}_${Date.now()}.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+
+        showAlert(`✅ ${registros.length} registro(s) de "${opt.label}" exportados!`, 'success');
+        document.getElementById('specialExportModal')?.remove();
+    } catch (e) {
+        console.error(e);
+        showAlert('❌ Erro ao carregar registros: ' + e.message, 'danger');
+    }
+};
+
+function buildSpecialExportInstructions(tipo, registros) {
+    const npcSchemaBase = `
+SCHEMA DO NPC PARA IMPORTAÇÃO (schemaVersion: 2):
+O JSON de cada NPC deve ser um objeto (ou um array de objetos) com os seguintes campos:
+{
+  "schemaVersion": 2,
+  "modoFicha": "mecanico",           // "mecanico" usa referências dos registros | "rapido" usa texto livre
+  "nome": "Nome do NPC",             // OBRIGATÓRIO
+  "tipo": "npc",                     // "npc" ou "criatura"
+  "imagem": "",                      // URL da imagem (opcional)
+  "nivel": 1,                        // nível numérico do NPC
+  "porte": "Médio",                  // "Minúsculo","Pequeno","Médio","Grande","Enorme","Colossal"
+  "papel": "",                       // papel narrativo: Ferreiro, Guarda, etc.
+  "local": "",                       // localização no mundo
+  "tamanho": "",                     // tamanho descritivo (texto livre)
+  "tags": "",                        // tags separadas por vírgula
+
+  // ===== REFERÊNCIAS HÍBRIDAS (modo mecânico) =====
+  // Use o campo "refId" com o ID do registro. Se a raça/classe/tribo não existir
+  // no registro, use "custom" com o nome em texto livre.
+  "racaRef":   { "refId": "ID_DA_RACA_DO_REGISTRO", "custom": "" },
+  "classeRef": { "refId": "ID_DA_CLASSE_DO_REGISTRO", "custom": "" },
+  "triboRef":  { "refId": "ID_DA_TRIBO_DO_REGISTRO", "custom": "" },
+
+  // Espelhos legados (texto) — o sistema os preenche automaticamente,
+  // mas inclua-os para compatibilidade:
+  "raca": "Nome da Raça",
+  "classe": "Nome da Classe",
+  "tribo": "Nome da Tribo",
+
+  // ===== ATRIBUTOS =====
+  // 9 atributos base do sistema, valores numéricos inteiros
+  "atributos": {
+    "INT": 0, "RAC": 0, "PRS": 0,
+    "FOR": 0, "DES": 0, "VIG": 0,
+    "PRE": 0, "MAN": 0, "AUT": 0
+  },
+
+  // ===== PECULIARIDADES =====
+  // Array de objetos. Para vincular do registro use "refId" com o ID.
+  // Para peculiaridades personalizadas, use "nomeCustom" e "efeitoManual".
+  // "fonte" indica a origem: "raca", "classe", "tribo" ou null (manual).
+  "peculiaridades": [
+    { "refId": "ID_DA_PECULIARIDADE", "nivel": 1, "fonte": "raca" },
+    { "refId": null, "nomeCustom": "Personalizada", "efeitoManual": "Efeito livre", "nivel": 1 }
+  ],
+
+  // ===== PERÍCIAS ESTRUTURADAS =====
+  // Array de objetos com "refId" (ID da perícia do registro) e "nivel" numérico.
+  "periciasEstruturadas": [
+    { "refId": "ID_DA_PERICIA", "nivel": 2 }
+  ],
+
+  // ===== VALORES DERIVADOS =====
+  "valoresDer": {
+    "overrides": {},              // { "KEY_DO_VD": valorNumerico } para travar manualmente
+    "atual": {},                  // valores atuais (VIT atual, ENER atual, etc.)
+    "extras": [],                 // [{ "nome": "Deslocamento", "valor": "9m" }]
+    "vinculados": []              // array de keys dos VDs vinculados a este NPC
+  },
+
+  // ===== MÓDULOS DE CLASSE =====
+  // Módulos vinculados — use "refId" com o ID do módulo do registro.
+  "modulosClasse": [
+    {
+      "refId": "ID_DO_MODULO",
+      "snapshot": null,
+      "fonte": "classe",           // "classe" = herança automática | "manual" = vinculado pelo mestre
+      "itens": []                  // array de objetos com campos conforme o schema do módulo
+    }
+  ],
+
+  // ===== PARTES DO CORPO =====
+  // Defina a anatomia do NPC. Use IDs do registro de bodyParts ou custom.
+  "partesDoCorpo": [
+    { "id": "ID_DA_PARTE", "nome": "Mão", "icone": "✋", "slots": 2,
+      "podeSegurar": true, "podeEmpunhar": true, "podeVestir": false, "podeFixar": false }
+  ],
+
+  // ===== COMBATE =====
+  "ataques": "",                  // texto livre de ataques e danos
+  "skills": "",                   // texto livre de perícias (legado)
+
+  // ===== ROLE PLAY =====
+  "rolePlay": {
+    "personalidade": ["traço 1", "traço 2", "traço 3"],
+    "trejeitos": "",
+    "motivacao": "",
+    "segredos": "",
+    "relacoes": { "aliado": "", "rival": "", "devedor": "" },
+    "frases": "",
+    "historia": ""
+  },
+
+  // ===== LOOT =====
+  "loot": {
+    "itens": "",                  // texto livre
+    "luns": "",                   // quantidade de moedas
+    "pistas": "",
+    "complicacoes": ""
+  },
+
+  // ===== CRIATURA (só se tipo === "criatura") =====
+  "criatura": {
+    "habitat": "",
+    "comportamento": "",
+    "dieta": "",
+    "nivelAmeaca": ""             // "inofensivo","baixo","medio","alto","letal"
+  },
+
+  // ===== ITENS DE INVENTÁRIO (opcional — importados junto com o NPC) =====
+  // Array de objetos representando itens da mochila/equipamento do NPC.
+  "inventoryItems": [
+    {
+      "nome": "Espada Longa",
+      "tipo": "Arma",              // "Arma","Vestimenta","Acessório","Projétil","Container","Objeto","Consumível","Relíquia"
+      "categoriaArma": "uma_mao",  // só se tipo=Arma: "uma_mao","duas_maos","versatil","escudo","distancia"
+      "peso": 1.5,
+      "tamanho": 1,
+      "quantidade": 1,
+      "descricao": "",
+      "imagem": "",
+      "equipavelEm": ["ID_PARTE_DO_CORPO"],
+      "formaEquipar": "empunhar",  // "segurar","empunhar","vestir","fixar" ou null
+      "equipado": false,
+      "slotAnatomico": null,
+      "estadoEquip": null,
+      "parentItemId": null,        // se dentro de container, ID do container
+      "ehContainer": false,
+      "pesoMaximoContainer": null,
+      "multiplicadorPressao": null,
+      "mecanicaIdsProprias": []
+    }
+  ],
+
+  "visibilidade": "secreto",      // "secreto" ou "publico"
+  "vinculos": [],                  // vínculos com mesas e personagens
+  "mesaId": ""                     // ID da mesa (legado)
+}`;
+
+    const specific = {
+        races: `
+COMO USAR ESTES REGISTROS DE RAÇAS:
+- Cada registro tem um "id" (ex: "abc123"). Use este ID no campo "racaRef.refId" do NPC.
+- As peculiaridades raciais estão em "peculiaridadeIds" — ao criar o NPC, adicione cada uma ao array "peculiaridades" com { "refId": "<ID>", "nivel": 1, "fonte": "raca" }.
+- O campo "partesDoCorpo" da raça define a anatomia padrão — copie-o para o campo "partesDoCorpo" do NPC se quiser manter a anatomia racial.
+- Use o campo "nome" da raça no campo "raca" (string) do NPC para compatibilidade legada.
+
+EXEMPLO:
+Se a raça "Humano" tem id "raca_humano" e peculiaridades ["pec_001", "pec_002"], o NPC ficaria:
+  "racaRef": { "refId": "raca_humano", "custom": "" },
+  "raca": "Humano",
+  "peculiaridades": [
+    { "refId": "pec_001", "nivel": 1, "fonte": "raca" },
+    { "refId": "pec_002", "nivel": 1, "fonte": "raca" }
+  ]`,
+
+        classes: `
+COMO USAR ESTES REGISTROS DE CLASSES:
+- Use o "id" da classe no campo "classeRef.refId" do NPC.
+- Peculiaridades de classe estão em "bonusIniciais" — adicione ao array "peculiaridades" com fonte "classe".
+- Perícias de classe estão em "pericClasse" — adicione ao array "periciasEstruturadas" com { "refId": "<ID>", "nivel": 0 }.
+- Módulos de classe estão em "modulosDaClasse" (array de IDs) — adicione ao array "modulosClasse" com { "refId": "<ID>", "snapshot": null, "fonte": "classe", "itens": [] }.
+- Use "nome" da classe no campo "classe" (string) do NPC.
+
+EXEMPLO:
+Se a classe "Guerreiro" tem id "cls_guerreiro", bonusIniciais ["pec_x"] e modulosDaClasse ["mod_y"]:
+  "classeRef": { "refId": "cls_guerreiro", "custom": "" },
+  "classe": "Guerreiro",
+  "peculiaridades": [{ "refId": "pec_x", "nivel": 1, "fonte": "classe" }],
+  "modulosClasse": [{ "refId": "mod_y", "snapshot": null, "fonte": "classe", "itens": [] }]`,
+
+        tribes: `
+COMO USAR ESTES REGISTROS DE TRIBOS:
+- Use o "id" da tribo no campo "triboRef.refId" do NPC.
+- Peculiaridades tribais estão em "peculiaridadeIds" — adicione ao array "peculiaridades" com fonte "tribo".
+- Use "nome" da tribo no campo "tribo" (string) do NPC.
+
+EXEMPLO:
+Se a tribo "Comuno" tem id "trb_comuno" e peculiaridades ["pec_a"]:
+  "triboRef": { "refId": "trb_comuno", "custom": "" },
+  "tribo": "Comuno",
+  "peculiaridades": [{ "refId": "pec_a", "nivel": 1, "fonte": "tribo" }]`,
+
+        derivedValues: `
+COMO USAR ESTES REGISTROS DE VALORES DERIVADOS:
+- Cada registro tem um "key" — use este key para referenciá-lo no NPC.
+- Adicione as keys dos VDs que o NPC possui em "valoresDer.vinculados": ["key1", "key2"].
+- Para travar um valor manualmente, defina em "valoresDer.overrides": { "key1": 10 }.
+- Se o registro tem "campoAtual": true, pode definir o atual em "valoresDer.atual": { "key1": 8 }.
+- VDs com "todoPersonagem": true são vinculados automaticamente ao abrir a ficha.
+
+EXEMPLO:
+  "valoresDer": {
+    "overrides": {},
+    "atual": { "VIT_MAX": 20 },
+    "extras": [],
+    "vinculados": ["VIT_MAX", "ENER_MAX", "SAN_MAX", "PERC", "INI"]
+  }`,
+
+        vitalStats: `
+COMO USAR ESTES REGISTROS DE STATUS VITAIS:
+- Status vitais (VIT, ENER, SAN) são calculados automaticamente pelas mecânicas vinculadas.
+- Cada registro tem um "key" — use-o em "valoresDer.vinculados" e "valoresDer.atual".
+- Para sobrescrever manualmente, adicione em "valoresDer.overrides": { "VIT_MAX": 25 }.
+- O campo "atual" armazena o valor corrente durante o jogo: "valoresDer.atual": { "VIT_MAX": 18 }.
+- O sistema também espelha esses valores nas chaves legadas VIT, ENER, SAN automaticamente.`,
+
+        peculiarities: `
+COMO USAR ESTES REGISTROS DE PECULIARIDADES:
+- Cada registro tem um "id" — use no campo "refId" dentro do array "peculiaridades" do NPC.
+- O campo "fonte" indica de onde a peculiaridade vem: "raca", "classe", "tribo", ou null para manual.
+- O campo "nivel" é numérico (padrão 1). Peculiaridades com mecânicas evoluíveis podem ter nível maior.
+- Para peculiaridades personalizadas (sem registro): { "refId": null, "nomeCustom": "Nome", "efeitoManual": "Texto", "nivel": 1 }.
+
+EXEMPLO:
+  "peculiaridades": [
+    { "refId": "pec_001", "nivel": 1, "fonte": "raca" },
+    { "refId": "pec_002", "nivel": 3, "fonte": "classe" },
+    { "refId": null, "nomeCustom": "Visão Noturna", "efeitoManual": "+2 em percepção no escuro", "nivel": 1 }
+  ]`,
+
+        skills: `
+COMO USAR ESTES REGISTROS DE PERÍCIAS:
+- Cada registro tem um "id" — use no campo "refId" dentro do array "periciasEstruturadas" do NPC.
+- O campo "nivel" é numérico (0 a 10), indica o grau de proficiência naquela perícia.
+- Perícias com "todoPersonagem": true entram por padrão ao ativar "Tem todas as Perícias Padrões?".
+- O campo "categoria" indica o tipo: "fisico", "mental", "social", "combate", "exclusivo".
+
+EXEMPLO:
+  "periciasEstruturadas": [
+    { "refId": "skill_furtividade", "nivel": 3 },
+    { "refId": "skill_diplomacia", "nivel": 2 },
+    { "refId": "skill_arco", "nivel": 4 }
+  ]`,
+
+        equipment: `
+COMO USAR ESTES REGISTROS DE EQUIPAMENTOS:
+- Equipamentos do registro servem como TEMPLATE. Para dar um item ao NPC, crie uma entrada
+  no array "inventoryItems" copiando os dados do template (nome, tipo, peso, etc.).
+- Campos relevantes do template: nome, tipo, categoriaArma, peso, tamanho, equipavelEm (array de IDs
+  de bodyParts), formaEquipar, ehContainer, pesoMaximoContainer, multiplicadorPressao, mecanicaIds.
+- No inventoryItems do NPC, adicione campos extras: equipado (bool), slotAnatomico (string/null),
+  estadoEquip ("empunhado"/"segurar"/"vestido"/"fixado"/null), quantidade, characterId (deixe vazio).
+
+EXEMPLO:
+  "inventoryItems": [
+    {
+      "nome": "Espada Longa",
+      "tipo": "Arma",
+      "categoriaArma": "uma_mao",
+      "peso": 1.5,
+      "tamanho": 1,
+      "quantidade": 1,
+      "descricao": "Uma espada de aço comum.",
+      "equipavelEm": ["ID_da_mao"],
+      "formaEquipar": "empunhar",
+      "equipado": false,
+      "slotAnatomico": null,
+      "estadoEquip": null,
+      "parentItemId": null,
+      "ehContainer": false,
+      "mecanicaIdsProprias": []
+    }
+  ]`,
+
+        conditions: `
+COMO USAR ESTES REGISTROS DE CONDIÇÕES:
+- Condições são aplicadas a personagens/NPCs durante o jogo (atordoado, cego, etc.).
+- Elas NÃO são campos diretos do JSON de NPC — são gerenciadas pelo sistema de combate/mesa.
+- Use os IDs e nomes destes registros para referência nas descrições, mecânicas ou loot dos NPCs.
+- Cada condição tem: nome, descricao, duracao, removivel, icone, e efeitoMecanicaIds.`,
+
+        auras: `
+COMO USAR ESTES REGISTROS DE AURAS:
+- Auras são concedidas por peculiaridades (campo "concedeAura" + "auraVinculadaId" da peculiaridade).
+- Elas NÃO são campos diretos do JSON de NPC — são resolvidas automaticamente pelas peculiaridades.
+- Se uma peculiaridade do NPC concede uma aura, basta vincular a peculiaridade correta.
+- Cada aura tem: nome, tipo ("propriedade"/"mortalidade"), propriedadeTipo, propriedadeVinculada, graus.`,
+
+        bodyParts: `
+COMO USAR ESTES REGISTROS DE PARTES DO CORPO:
+- Cada registro tem um "id" — use no array "partesDoCorpo" do NPC.
+- Copie os campos relevantes: id, nome, icone, slots, podeSegurar, podeEmpunhar, podeVestir, podeFixar.
+- Partes com "ehPadrao": true compõem a anatomia humanoide padrão.
+- Para criaturas, monte anatomias customizadas adicionando partes não-padrão (Cauda, Asa, etc.).
+
+EXEMPLO:
+  "partesDoCorpo": [
+    { "id": "bp_cabeca", "nome": "Cabeça", "icone": "🗣️", "slots": 1, "podeSegurar": false, "podeEmpunhar": false, "podeVestir": true, "podeFixar": true },
+    { "id": "bp_mao", "nome": "Mão", "icone": "✋", "slots": 2, "podeSegurar": true, "podeEmpunhar": true, "podeVestir": false, "podeFixar": false }
+  ]`
+    };
+
+    return `
+=== INSTRUÇÕES PARA GERAÇÃO DE NPCs VIA IA ===
+
+Este arquivo contém todos os registros da biblioteca "${tipo}" do sistema Lendas & Relíquias.
+Use os IDs dos registros abaixo para gerar fichas de NPC em formato JSON que possam ser
+importadas diretamente no Painel do Mestre (botão "📥 Importar" na aba NPCs).
+
+O JSON de importação aceita um único NPC (objeto) ou múltiplos NPCs (array de objetos).
+
+${npcSchemaBase}
+
+${specific[tipo] || 'Use os IDs dos registros listados em "registros" para referenciar nas fichas de NPC.'}
+
+=== REGISTROS DISPONÍVEIS ===
+Total: ${registros.length} registro(s) do tipo "${tipo}".
+Todos os registros estão listados no campo "registros" deste JSON.
+Use o campo "id" de cada registro para fazer referências nos NPCs.
+`;
+}
