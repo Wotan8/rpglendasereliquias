@@ -562,10 +562,42 @@ function _meTriggerMechanics(ids, sourceMech, parentPec, isOneOff = false) {
     }
 }
 
-/** Avalia UMA verificação booleana (numérica ou de equipamento) e devolve
+/* ===== VERIFICAÇÃO DE CLASSE (booleano / condicional_encadeado) ===== */
+
+/** Lista as classes atuais do personagem (nomes). Hoje a ficha usa uma classe
+ *  (#selClasse), mas o helper devolve uma lista para suportar múltiplas. */
+function _meGetCharacterClasses() {
+    const out = [];
+    const sel = document.getElementById('selClasse')?.value;
+    if (sel) out.push(sel);
+    return out;
+}
+
+function _meNormClasse(s) {
+    return String(s || '').trim().toLowerCase();
+}
+
+/** true se o personagem possuir TODAS as classes exigidas (lista de nomes). */
+function _meHasAllClasses(classesReq) {
+    const reqs = (Array.isArray(classesReq) ? classesReq : []).filter(Boolean);
+    if (reqs.length === 0) return false;
+    const have = _meGetCharacterClasses().map(_meNormClasse);
+    return reqs.every(c => have.includes(_meNormClasse(c)));
+}
+
+/** Avalia UMA verificação booleana (numérica, de equipamento ou de classe) e devolve
  *  { resultado, valA, valB, op, modo, counts? }. */
 function _meEvalBoolVerif(v, mech) {
     v = v || {};
+    if (v.modoVerificacao === 'classe') {
+        // Verificação de Classe: lado esquerdo = classes do personagem (automático);
+        // lado direito = classes exigidas. Verdadeiro se o personagem tiver TODAS.
+        const reqs = (Array.isArray(v.classesReq) ? v.classesReq : []).filter(Boolean);
+        const charClasses = _meGetCharacterClasses();
+        const resultado = _meHasAllClasses(reqs);
+        console.log(`⚔️ Booleano (classe) "${mech?.nome || '?'}": personagem [${charClasses.join(', ') || '—'}] precisa de [${reqs.join(', ') || '—'}] → ${resultado}`);
+        return { resultado, valA: charClasses.length, valB: reqs.length, op: '>=', modo: 'classe', charClasses, classesReq: reqs };
+    }
     if (v.modoVerificacao === 'equipamento') {
         // Verificação de Equipamento: todos os vínculos precisam ter
         // itens equipados nas formas exigidas em quantidade ≥ Equação de Valor
@@ -600,6 +632,7 @@ function _meEvalBoolVerif(v, mech) {
  * Se nenhuma casar, usa config.valorPadrao. */
 function resolveChainedConditional(config) {
     if (config?.modoVerificacao === 'equipamento') return _resolveChainedEquip(config);
+    if (config?.modoVerificacao === 'classe') return _resolveChainedClasse(config);
 
     const eq = Array.isArray(config?.equacaoValor) ? config.equacaoValor : [];
     const valorEquacao = resolveEquation(eq);
@@ -647,6 +680,31 @@ function _resolveChainedEquip(config) {
     }
 
     return { valorEquacao: total, valorSaida, condicaoIndex, counts };
+}
+
+/** Modo classe: cada condição exige uma ou mais classes (classesReq).
+ *  A primeira condição cujas classes estejam TODAS entre as do personagem
+ *  define o resultado (mensagem) e aciona as mecânicas vinculadas;
+ *  se nenhuma casar, usa config.valorPadrao. */
+function _resolveChainedClasse(config) {
+    const charClasses = _meGetCharacterClasses();
+    const condicoes = Array.isArray(config?.condicoes) ? config.condicoes : [];
+
+    let valorSaida = config?.valorPadrao ?? '';
+    let condicaoIndex = -1;
+
+    for (let i = 0; i < condicoes.length; i++) {
+        const c = condicoes[i] || {};
+        const reqs = (Array.isArray(c.classesReq) ? c.classesReq : []).filter(Boolean);
+        if (reqs.length === 0) continue;
+        if (_meHasAllClasses(reqs)) {
+            valorSaida = c.resultado ?? '';
+            condicaoIndex = i;
+            break;
+        }
+    }
+
+    return { valorEquacao: charClasses.length, valorSaida, condicaoIndex, charClasses, modo: 'classe' };
 }
 
 function _resolveTermValue(term) {

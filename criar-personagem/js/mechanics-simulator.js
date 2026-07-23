@@ -217,19 +217,26 @@ export function simulateDerivedValues() {
                     for (const boolId of config.condicaoMecanicaIds) {
                         const boolMech = window._systemData?.mechanics?.find(m => m.id === boolId);
                         if (boolMech && boolMech.tipo === 'booleano') {
-                            const eqA = Array.isArray(boolMech.config.equacaoA) ? boolMech.config.equacaoA : [];
-                            const eqB = Array.isArray(boolMech.config.equacaoB) ? boolMech.config.equacaoB : [];
-                            const valA = resolveEquation(eqA);
-                            const valB = resolveEquation(eqB);
-                            const op = boolMech.config.operadorComparacao || '>=';
                             let res = false;
-                            if (op === '==') res = valA === valB;
-                            else if (op === '!=') res = valA !== valB;
-                            else if (op === '>') res = valA > valB;
-                            else if (op === '>=') res = valA >= valB;
-                            else if (op === '<') res = valA < valB;
-                            else if (op === '<=') res = valA <= valB;
-                            
+                            if (boolMech.config.modoVerificacao === 'classe') {
+                                // Verificação de Classe: verdadeiro se o personagem tiver TODAS as classes exigidas
+                                const reqs = (Array.isArray(boolMech.config.classesReq) ? boolMech.config.classesReq : []).filter(Boolean);
+                                const have = state.classeSelecionada ? [String(state.classeSelecionada).trim().toLowerCase()] : [];
+                                res = reqs.length > 0 && reqs.every(c => have.includes(String(c).trim().toLowerCase()));
+                            } else {
+                                const eqA = Array.isArray(boolMech.config.equacaoA) ? boolMech.config.equacaoA : [];
+                                const eqB = Array.isArray(boolMech.config.equacaoB) ? boolMech.config.equacaoB : [];
+                                const valA = resolveEquation(eqA);
+                                const valB = resolveEquation(eqB);
+                                const op = boolMech.config.operadorComparacao || '>=';
+                                if (op === '==') res = valA === valB;
+                                else if (op === '!=') res = valA !== valB;
+                                else if (op === '>') res = valA > valB;
+                                else if (op === '>=') res = valA >= valB;
+                                else if (op === '<') res = valA < valB;
+                                else if (op === '<=') res = valA <= valB;
+                            }
+
                             if (!res) allTrue = false;
                         } else {
                             allTrue = false;

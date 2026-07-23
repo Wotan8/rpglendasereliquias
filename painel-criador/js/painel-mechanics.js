@@ -353,6 +353,10 @@ export function generatePreviewText(data) {
                 });
                 return `🎒 Equipado: ${reqParts.join(' E ') || '?'} — cada um ×≥ ${qtdStr}`;
             }
+            if (v?.modoVerificacao === 'classe') {
+                const cls = (Array.isArray(v.classesReq) ? v.classesReq : []).filter(Boolean);
+                return `⚔️ Personagem tem as classes: ${cls.join(' E ') || '?'}`;
+            }
             const sideA = _formatEquation(v?.equacaoA || []);
             const op = opLabel[v?.operadorComparacao] || v?.operadorComparacao || '?';
             const sideB = _formatEquation(v?.equacaoB || []);
@@ -386,6 +390,12 @@ export function generatePreviewText(data) {
                     return `${alvoLbl} ${compLabel[v.comparacao] || v.comparacao || '?'} ${v.valorA ?? '?'}`;
                 });
                 return `Se ${vParts.join(' E ') || '?'} = "${c.resultado ?? '?'}"${mechSuffix(c)}`;
+            });
+        } else if (config.modoVerificacao === 'classe') {
+            eqStr = `⚔️ [Classes do personagem]`;
+            condParts = condicoes.map(c => {
+                const cls = (Array.isArray(c.classesReq) ? c.classesReq : []).filter(Boolean);
+                return `Se tiver [${cls.join(' E ') || '?'}] = "${c.resultado ?? '?'}"${mechSuffix(c)}`;
             });
         } else {
             eqStr = _formatEquation(config.equacaoValor || []);
@@ -1165,6 +1175,38 @@ window._mechEquipReqRemove = function (btn) {
     window._mechUpdatePreview();
 };
 
+// ===== VERIFICAÇÃO DE CLASSE (compartilhado: booleano + condicional_encadeado) =====
+
+/** Lista os nomes de todas as classes cadastradas no registro. */
+function _mechAllClasses() {
+    const classes = window._classesCache || (window._systemData?.classes) || [];
+    return classes
+        .filter(c => c && c.nome)
+        .map(c => c.nome)
+        .sort((a, b) => a.localeCompare(b));
+}
+
+/** Checkbox list de classes (lado direito da Verificação de Classe).
+ *  Preserva classes salvas que não existem mais no registro. */
+function _renderMechClasseChecks(containerId, selected) {
+    const sel = (Array.isArray(selected) ? selected : []).filter(Boolean);
+    const all = _mechAllClasses();
+    const extras = sel.filter(n => !all.includes(n));
+    const items = [...all, ...extras].map(nome => `
+        <label class="cm-forma-check mech-classe-check">
+            <input type="checkbox" value="${esc(nome)}" ${sel.includes(nome) ? 'checked' : ''} onchange="window._mechUpdatePreview()">
+            <span>⚔️ ${esc(nome)}${extras.includes(nome) ? ' <small>(fora do registro)</small>' : ''}</span>
+        </label>`).join('');
+    return `<div class="cm-forma-checks mech-classe-checks" id="${containerId}" style="flex-wrap:wrap;gap:6px">${items || '<span class="cm-hint">Nenhuma classe cadastrada no registro.</span>'}</div>`;
+}
+
+/** Coleta os nomes de classes marcados em um container de checkboxes. */
+function _collectMechClasseReqs(containerId) {
+    const cont = document.getElementById(containerId);
+    if (!cont) return [];
+    return [...cont.querySelectorAll('input[type="checkbox"]:checked')].map(c => c.value);
+}
+
 /** Normaliza a config do booleano para uma lista de verificações.
  *  Formato novo: config.verificacoes = [{ modoVerificacao, equacaoA, operadorComparacao,
  *  equacaoB, equipReqs, equacaoQtdMin }, ...] combinadas por config.operadorLogico ('e'|'ou').
@@ -1174,13 +1216,14 @@ function _boolVerifsFromConfig(config) {
         return config.verificacoes.map(v => ({ ...(v || {}) }));
     }
     return [{
-        modoVerificacao: config?.modoVerificacao === 'equipamento' ? 'equipamento' : 'numerico',
+        modoVerificacao: ['equipamento', 'classe'].includes(config?.modoVerificacao) ? config.modoVerificacao : 'numerico',
         equacaoA: config?.equacaoA || [{ tipo: 'fixo', valor: '' }],
         operadorComparacao: config?.operadorComparacao || '>=',
         equacaoB: config?.equacaoB || [{ tipo: 'fixo', valor: '' }],
         equipReqs: Array.isArray(config?.equipReqs) ? config.equipReqs : [],
         equacaoQtdMin: (Array.isArray(config?.equacaoQtdMin) && config.equacaoQtdMin.length > 0)
-            ? config.equacaoQtdMin : [{ tipo: 'fixo', valor: '1' }]
+            ? config.equacaoQtdMin : [{ tipo: 'fixo', valor: '1' }],
+        classesReq: Array.isArray(config?.classesReq) ? config.classesReq : []
     }];
 }
 
@@ -1188,7 +1231,8 @@ function _boolVerifsFromConfig(config) {
  *  sufixo por índice ('A_0', 'B_0', 'Q_0'...) — compatível com os handlers
  *  _mechBoolAddTerm / _mechBoolRemoveTerm / _mechBoolTermTipoChange existentes. */
 function _renderBoolVerifBlock(v, i, total) {
-    const modo = v?.modoVerificacao === 'equipamento' ? 'equipamento' : 'numerico';
+    const modo = ['equipamento', 'classe'].includes(v?.modoVerificacao) ? v.modoVerificacao : 'numerico';
+    const classesReq = Array.isArray(v?.classesReq) ? v.classesReq : [];
     const equacaoA = (Array.isArray(v?.equacaoA) && v.equacaoA.length) ? v.equacaoA : [{ tipo: 'fixo', valor: '' }];
     const equacaoB = (Array.isArray(v?.equacaoB) && v.equacaoB.length) ? v.equacaoB : [{ tipo: 'fixo', valor: '' }];
     const equipReqs = Array.isArray(v?.equipReqs) ? v.equipReqs : [];
@@ -1212,6 +1256,7 @@ function _renderBoolVerifBlock(v, i, total) {
             <select id="mech_config_modoVerificacao_${i}" class="bool-verif-modo" onchange="window._mechBoolModoChange(${i})">
                 <option value="numerico" ${modo === 'numerico' ? 'selected' : ''}>🧮 Lógica Numérica (equação comparativa)</option>
                 <option value="equipamento" ${modo === 'equipamento' ? 'selected' : ''}>🎒 Verificação de Equipamento (inventário do personagem)</option>
+                <option value="classe" ${modo === 'classe' ? 'selected' : ''}>⚔️ Verificação de Classe (classes do personagem)</option>
             </select>
         </div>
 
@@ -1260,6 +1305,23 @@ function _renderBoolVerifBlock(v, i, total) {
                     ${termsQ}
                 </div>
                 <button type="button" class="eq-add-term-btn" onclick="window._mechBoolAddTerm('Q_${i}')">➕ Adicionar Termo</button>
+            </div>
+        </div>
+
+        <div id="mech_bool_classe_wrap_${i}" style="display:${modo === 'classe' ? '' : 'none'}">
+            <div class="bool-equation-wrap">
+                <div class="bool-equation-side">
+                    <div class="bool-equation-side-label">Lado Esquerdo (A) — Classes do personagem</div>
+                    <div class="cm-hint">Preenchido <b>automaticamente</b> na ficha com as classes do personagem.</div>
+                </div>
+                <div class="bool-comparator-row">
+                    <div class="bool-vs-label">POSSUI TODAS</div>
+                </div>
+                <div class="bool-equation-side">
+                    <div class="bool-equation-side-label">Lado Direito (B) — Classes exigidas</div>
+                    ${_renderMechClasseChecks(`mech_bool_classeReqs_${i}`, classesReq)}
+                    <div class="cm-hint">Retorna <b>✅ Verdadeiro</b> se o personagem tiver <b>todas</b> as classes selecionadas; se faltar alguma delas, retorna <b>❌ Falso</b>.</div>
+                </div>
             </div>
         </div>
     </div>`;
@@ -1313,7 +1375,8 @@ function _collectBoolVerificacoes() {
     if (!list) return [];
     return Array.from(list.querySelectorAll('.bool-verif-block')).map(block => {
         const i = block.dataset.verifIndex;
-        const modoVerificacao = block.querySelector('.bool-verif-modo')?.value === 'equipamento' ? 'equipamento' : 'numerico';
+        const modoRaw = block.querySelector('.bool-verif-modo')?.value;
+        const modoVerificacao = ['equipamento', 'classe'].includes(modoRaw) ? modoRaw : 'numerico';
         const contA = document.getElementById(`boolEquacaoA_${i}`);
         const contB = document.getElementById(`boolEquacaoB_${i}`);
         const contQ = document.getElementById(`boolEquacaoQ_${i}`);
@@ -1323,7 +1386,8 @@ function _collectBoolVerificacoes() {
             operadorComparacao: block.querySelector('.bool-verif-operador')?.value || '>=',
             equacaoB: contB ? _collectEquacaoFromContainer(contB) : [{ tipo: 'fixo', valor: '' }],
             equipReqs: _collectMechEquipReqs(`mech_bool_equipReqs_${i}`),
-            equacaoQtdMin: contQ ? _collectEquacaoFromContainer(contQ) : []
+            equacaoQtdMin: contQ ? _collectEquacaoFromContainer(contQ) : [],
+            classesReq: _collectMechClasseReqs(`mech_bool_classeReqs_${i}`)
         };
     });
 }
@@ -1352,7 +1416,8 @@ window._mechBoolAddVerif = function () {
         operadorComparacao: '>=',
         equacaoB: [{ tipo: 'fixo', valor: '' }],
         equipReqs: [],
-        equacaoQtdMin: [{ tipo: 'fixo', valor: '1' }]
+        equacaoQtdMin: [{ tipo: 'fixo', valor: '1' }],
+        classesReq: []
     });
     _rerenderBoolVerifs(verifs);
 };
@@ -1369,8 +1434,10 @@ window._mechBoolModoChange = function (i) {
     const modo = document.getElementById(`mech_config_modoVerificacao_${i}`)?.value || 'numerico';
     const numWrap = document.getElementById(`mech_bool_numerico_wrap_${i}`);
     const eqWrap = document.getElementById(`mech_bool_equip_wrap_${i}`);
+    const clWrap = document.getElementById(`mech_bool_classe_wrap_${i}`);
     if (numWrap) numWrap.style.display = modo === 'numerico' ? '' : 'none';
     if (eqWrap) eqWrap.style.display = modo === 'equipamento' ? '' : 'none';
+    if (clWrap) clWrap.style.display = modo === 'classe' ? '' : 'none';
     window._mechUpdatePreview();
 };
 
@@ -1465,8 +1532,33 @@ function _renderEncEqCondBlock(cond, index, reqs) {
     </div>`;
 }
 
+// ===== CLASS MODE — condição por classes do personagem (condicional_encadeado) =====
+function _renderEncClasseCondBlock(cond, index) {
+    const c = cond || {};
+    const classesReq = Array.isArray(c.classesReq) ? c.classesReq : [];
+    const mechIds = Array.isArray(c.efeitoMecanicaIds) ? c.efeitoMecanicaIds : [];
+    return `
+    <div class="enc-clcond-block enc-eqcond-block" data-cond-index="${index}">
+        <div class="enc-eqcond-head">
+            <span class="enc-eqcond-title">⚔️ Condição #${index + 1} <small>(o personagem precisa ter TODAS as classes marcadas)</small></span>
+            <button type="button" class="eq-term-remove" onclick="window._mechEncClRemoveCond(${index})" title="Remover condição">✕</button>
+        </div>
+        <div class="enc-clcond-classes" style="margin-bottom:6px">
+            <span class="enc-cond-label">Se o personagem tiver a(s) classe(s):</span>
+            ${_renderMechClasseChecks(`enc_clcond_classes_${index}`, classesReq)}
+        </div>
+        <div class="enc-eqcond-result-row">
+            <span class="enc-cond-label">→ Mensagem/Resultado:</span>
+            <input type="text" class="enc-clcond-resultado" value="${esc(String(c.resultado ?? ''))}" placeholder='Ex: "Bônus de Guerreiro ativado" ou 2' oninput="window._mechUpdatePreview()">
+        </div>
+        <div class="enc-cond-mechs">
+            ${buildInlineMechSelector(`enc_clcond_mech_${index}`, '⚙️ Acionar Mecânicas ao cumprir esta condição (opcional)', mechIds, window._mechCache || [], true)}
+        </div>
+    </div>`;
+}
+
 function renderConfigCondEncadeado(config) {
-    const modo = config?.modoVerificacao === 'equipamento' ? 'equipamento' : 'numerico';
+    const modo = ['equipamento', 'classe'].includes(config?.modoVerificacao) ? config.modoVerificacao : 'numerico';
     const equacaoValor = config?.equacaoValor || [{ tipo: 'ficha', ref: '' }];
     const condicoes = (Array.isArray(config?.condicoes) && config.condicoes.length > 0)
         ? config.condicoes
@@ -1477,6 +1569,7 @@ function renderConfigCondEncadeado(config) {
     const termsV = equacaoValor.map((t, i) => _renderBoolEquationTerm(t, 'V', i)).join('');
     const condsHtml = condicoes.map((c, i) => _renderEncCondRow(c, i)).join('');
     const eqCondsHtml = condicoes.map((c, i) => _renderEncEqCondBlock(c, i, equipReqs)).join('');
+    const clCondsHtml = condicoes.map((c, i) => _renderEncClasseCondBlock(c, i)).join('');
     const reqRows = equipReqs.map((r, i) => _renderMechEquipReqRow(r, i, true)).join('');
 
     return `
@@ -1485,6 +1578,7 @@ function renderConfigCondEncadeado(config) {
         <select id="mech_config_modoVerificacaoEnc" onchange="window._mechEncModoChange()">
             <option value="numerico" ${modo === 'numerico' ? 'selected' : ''}>🧮 Lógica Numérica (equação de valor)</option>
             <option value="equipamento" ${modo === 'equipamento' ? 'selected' : ''}>🎒 Verificação de Equipamento (inventário do personagem)</option>
+            <option value="classe" ${modo === 'classe' ? 'selected' : ''}>⚔️ Verificação de Classe (classes do personagem)</option>
         </select>
     </div>
     <div class="bool-equation-wrap enc-wrap">
@@ -1522,6 +1616,20 @@ function renderConfigCondEncadeado(config) {
         </div>
         </div>
 
+        <div id="mech_enc_classe_wrap" style="display:${modo === 'classe' ? '' : 'none'}">
+        <div class="bool-equation-side">
+            <div class="bool-equation-side-label">⚔️ Classes verificadas</div>
+            <div class="cm-hint">O lado esquerdo é preenchido <b>automaticamente</b> com as classes do personagem. Cada condição abaixo marca <b>uma ou mais classes</b>: se o personagem tiver todas as classes marcadas, a condição casa, exibe a mensagem e aciona as mecânicas vinculadas; se não, a próxima condição é verificada — até o Resultado Padrão.</div>
+        </div>
+        <div class="bool-equation-side">
+            <div class="bool-equation-side-label">🔗 Condicionais (avaliadas em ordem — a primeira que casar define o resultado)</div>
+            <div class="enc-cond-list" id="encClasseCondList">
+                ${clCondsHtml}
+            </div>
+            <button type="button" class="eq-add-term-btn" onclick="window._mechEncClAddCond()">➕ Adicionar Condição</button>
+        </div>
+        </div>
+
         <div class="bool-output-section" style="margin-top:0">
             <div class="bool-output-card">
                 <label>🛟 Resultado Padrão (se nenhuma condição casar)</label>
@@ -1535,8 +1643,10 @@ window._mechEncModoChange = function () {
     const modo = document.getElementById('mech_config_modoVerificacaoEnc')?.value || 'numerico';
     const numWrap = document.getElementById('mech_enc_numerico_wrap');
     const eqWrap = document.getElementById('mech_enc_equip_wrap');
+    const clWrap = document.getElementById('mech_enc_classe_wrap');
     if (numWrap) numWrap.style.display = modo === 'numerico' ? '' : 'none';
     if (eqWrap) eqWrap.style.display = modo === 'equipamento' ? '' : 'none';
+    if (clWrap) clWrap.style.display = modo === 'classe' ? '' : 'none';
     window._mechUpdatePreview();
 };
 
@@ -2366,6 +2476,49 @@ window._mechEncEqRemoveCond = function (index) {
     window._mechUpdatePreview();
 };
 
+// ===== CLASS-MODE CONDITION HANDLERS (tipo condicional_encadeado) =====
+function _collectEncClasseCondFromList() {
+    const list = document.getElementById('encClasseCondList');
+    if (!list) return [];
+    return Array.from(list.querySelectorAll('.enc-clcond-block')).map(block => {
+        const classesReq = [...block.querySelectorAll('.mech-classe-checks input[type="checkbox"]:checked')].map(c => c.value);
+        const rawR = block.querySelector('.enc-clcond-resultado')?.value?.trim() ?? '';
+        let efeitoMecanicaIds = [];
+        try {
+            const hidden = block.querySelector('.enc-cond-mechs input[type="hidden"]');
+            if (hidden) efeitoMecanicaIds = JSON.parse(hidden.value || '[]');
+        } catch (e) { efeitoMecanicaIds = []; }
+        return {
+            classesReq,
+            resultado: isNaN(Number(rawR)) || rawR === '' ? rawR : Number(rawR),
+            efeitoMecanicaIds
+        };
+    });
+}
+
+function _mechEncClRerenderConds(conds) {
+    const list = document.getElementById('encClasseCondList');
+    if (!list) return;
+    const safe = (Array.isArray(conds) && conds.length > 0)
+        ? conds : [{ classesReq: [], resultado: '', efeitoMecanicaIds: [] }];
+    list.innerHTML = safe.map((c, i) => _renderEncClasseCondBlock(c, i)).join('');
+}
+
+window._mechEncClAddCond = function () {
+    const conds = _collectEncClasseCondFromList();
+    conds.push({ classesReq: [], resultado: '', efeitoMecanicaIds: [] });
+    _mechEncClRerenderConds(conds);
+    window._mechUpdatePreview();
+};
+
+window._mechEncClRemoveCond = function (index) {
+    const conds = _collectEncClasseCondFromList();
+    if (conds.length <= 1) return;
+    conds.splice(index, 1);
+    _mechEncClRerenderConds(conds);
+    window._mechUpdatePreview();
+};
+
 // ===== CONDIÇÃO MECÂNICA TOGGLE HANDLER =====
 window._mechCondicaoMecanicaToggle = function () {
     const checked = document.getElementById('mech_condicaoMecanica')?.checked || false;
@@ -2683,7 +2836,7 @@ function collectMechFormData() {
         const v0 = verificacoes[0] || {
             modoVerificacao: 'numerico',
             equacaoA: [{ tipo: 'fixo', valor: '' }], operadorComparacao: '>=',
-            equacaoB: [{ tipo: 'fixo', valor: '' }], equipReqs: [], equacaoQtdMin: []
+            equacaoB: [{ tipo: 'fixo', valor: '' }], equipReqs: [], equacaoQtdMin: [], classesReq: []
         };
         data.config = {
             verificacoes,
@@ -2696,6 +2849,7 @@ function collectMechFormData() {
             equacaoB: v0.equacaoB,
             equipReqs: v0.equipReqs,
             equacaoQtdMin: v0.equacaoQtdMin,
+            classesReq: Array.isArray(v0.classesReq) ? v0.classesReq : [],
             valorVerdadeiro: isNaN(Number(rawTrue)) || rawTrue === '' ? rawTrue : Number(rawTrue),
             valorFalso: isNaN(Number(rawFalse)) || rawFalse === '' ? rawFalse : Number(rawFalse),
             efeitoTrueIds: JSON.parse(document.getElementById('mech_config_efeitoTrueIds')?.value || '[]'),
@@ -2704,12 +2858,15 @@ function collectMechFormData() {
     } else if (tipo === 'condicional_encadeado') {
         const containerV = document.getElementById('boolEquacaoV');
         const rawPadrao = document.getElementById('mech_config_valorPadrao')?.value?.trim() ?? '';
-        const modoVerificacao = document.getElementById('mech_config_modoVerificacaoEnc')?.value === 'equipamento' ? 'equipamento' : 'numerico';
+        const modoRawEnc = document.getElementById('mech_config_modoVerificacaoEnc')?.value;
+        const modoVerificacao = ['equipamento', 'classe'].includes(modoRawEnc) ? modoRawEnc : 'numerico';
         data.config = {
             modoVerificacao,
             equacaoValor: containerV ? _collectEquacaoFromContainer(containerV) : [{ tipo: 'fixo', valor: '' }],
             equipReqs: _collectMechEquipReqs('mech_enc_equipReqs'),
-            condicoes: modoVerificacao === 'equipamento' ? _collectEncEquipCondFromList() : _collectEncCondFromList(),
+            condicoes: modoVerificacao === 'equipamento' ? _collectEncEquipCondFromList()
+                : modoVerificacao === 'classe' ? _collectEncClasseCondFromList()
+                : _collectEncCondFromList(),
             valorPadrao: isNaN(Number(rawPadrao)) || rawPadrao === '' ? rawPadrao : Number(rawPadrao)
         };
     }

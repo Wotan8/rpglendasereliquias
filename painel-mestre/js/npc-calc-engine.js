@@ -204,6 +204,33 @@ function _npcCountReq(req, ctx) {
         .reduce((s, i) => s + (parseInt(i.quantidade, 10) || 1), 0);
 }
 
+/* ===== Verificação de Classe (booleano / condicional_encadeado) ===== */
+
+/** Lista as classes do NPC (nomes), resolvendo o campo híbrido classeRef
+ *  (registro OU personalizado) com fallback no campo legado npc.classe. */
+function _npcClasses(npc, sys) {
+    const out = [];
+    const ref = npc?.classeRef;
+    if (ref && typeof ref === 'object') {
+        if (ref.refId && sys?.classesById?.[ref.refId]?.nome) out.push(sys.classesById[ref.refId].nome);
+        else if (ref.custom) out.push(String(ref.custom));
+    }
+    if (out.length === 0 && npc?.classe) out.push(String(npc.classe));
+    return out;
+}
+
+function _npcNormClasse(s) {
+    return String(s || '').trim().toLowerCase();
+}
+
+/** true se o NPC (ctx.classes) possuir TODAS as classes exigidas. */
+function _npcHasAllClasses(classesReq, ctx) {
+    const reqs = (Array.isArray(classesReq) ? classesReq : []).filter(Boolean);
+    if (reqs.length === 0) return false;
+    const have = (Array.isArray(ctx?.classes) ? ctx.classes : []).map(_npcNormClasse);
+    return reqs.every(c => have.includes(_npcNormClasse(c)));
+}
+
 function _npcCompare(valor, comp, a, b) {
     comp = comp || '>=';
     if (comp === 'entre') {
@@ -249,6 +276,19 @@ function resolveChainedConditional(config, ctx) {
         return { valorEquacao: total, valorSaida, condicaoIndex, counts, modo: 'equipamento' };
     }
 
+    if (config?.modoVerificacao === 'classe') {
+        const condicoes = Array.isArray(config?.condicoes) ? config.condicoes : [];
+        let valorSaida = config?.valorPadrao ?? '';
+        let condicaoIndex = -1;
+        for (let i = 0; i < condicoes.length; i++) {
+            const c = condicoes[i] || {};
+            const reqs = (Array.isArray(c.classesReq) ? c.classesReq : []).filter(Boolean);
+            if (reqs.length === 0) continue;
+            if (_npcHasAllClasses(reqs, ctx)) { valorSaida = c.resultado ?? ''; condicaoIndex = i; break; }
+        }
+        return { valorEquacao: (ctx?.classes || []).length, valorSaida, condicaoIndex, modo: 'classe' };
+    }
+
     const eq = Array.isArray(config?.equacaoValor) ? config.equacaoValor : [];
     const valorEquacao = resolveEquation(eq, ctx);
     const condicoes = Array.isArray(config?.condicoes) ? config.condicoes : [];
@@ -274,6 +314,15 @@ function resolveChainedConditional(config, ctx) {
  * config.operadorLogico 'e'|'ou'). Config legada (campos no topo) = 1 verificação. */
 function _npcEvalBoolVerif(v, ctx) {
     v = v || {};
+    if (v.modoVerificacao === 'classe') {
+        const reqs = (Array.isArray(v.classesReq) ? v.classesReq : []).filter(Boolean);
+        const charClasses = Array.isArray(ctx?.classes) ? ctx.classes : [];
+        const resultado = _npcHasAllClasses(reqs, ctx);
+        return {
+            valA: charClasses.length, valB: reqs.length, op: '>=', resultado,
+            modo: 'classe', charClasses, classesReq: reqs
+        };
+    }
     if (v.modoVerificacao === 'equipamento') {
         const reqs = Array.isArray(v.equipReqs) ? v.equipReqs : [];
         const eqQ = Array.isArray(v.equacaoQtdMin) ? v.equacaoQtdMin : [];
@@ -586,7 +635,9 @@ export function calcularNpc(npc, sys, opts = {}) {
         nivel, targetMap, attrsFinais: {}, derivedFinais: {}, skillLevels: {}, avisos,
         // Inventário do NPC (para mecânicas com Verificação de Equipamento)
         inventoryItems: Array.isArray(opts.items) ? opts.items : [],
-        equipCatalog: Array.isArray(sys.equipment) ? sys.equipment : []
+        equipCatalog: Array.isArray(sys.equipment) ? sys.equipment : [],
+        // Classes do NPC (para mecânicas com Verificação de Classe)
+        classes: _npcClasses(npc, sys)
     };
     
     // Alimenta o contexto com os níveis das perícias estruturadas do NPC
@@ -666,6 +717,11 @@ export function calcularNpc(npc, sys, opts = {}) {
                     const detalhe = (r.reqNomes || []).map((n, i) => `${n}=${fmt(r.counts?.[i] ?? 0)}`).join(', ');
                     return `🎒 [${detalhe || 'sem vínculos'}] ≥ ${fmt(r.qtdMin)} cada → ${r.resultado ? '✅' : '❌'}`;
                 }
+                if (r.modo === 'classe') {
+                    const tem = (r.charClasses || []).join(', ') || 'sem classe';
+                    const precisa = (r.classesReq || []).join(' E ') || '?';
+                    return `⚔️ [${tem}] precisa de [${precisa}] → ${r.resultado ? '✅' : '❌'}`;
+                }
                 return `${fmt(r.valA)} ${opLabels[r.op] || r.op} ${fmt(r.valB)} → ${r.resultado ? '✅' : '❌'}`;
             };
             let texto;
@@ -698,6 +754,9 @@ export function calcularNpc(npc, sys, opts = {}) {
                 const reqs = Array.isArray(enc.config?.equipReqs) ? enc.config.equipReqs : [];
                 const detalhe = reqs.map((r, i) => `${_npcReqNome(r, ctx)}=${fmt(res.counts?.[i] ?? 0)}`).join(', ');
                 texto = `🔗 ${nomePrefix}🎒 [${detalhe || 'sem vínculos'}] (Σ ${fmt(res.valorEquacao)}) → "${res.valorSaida}"`;
+            } else if (res.modo === 'classe') {
+                const tem = (ctx.classes || []).join(', ') || 'sem classe';
+                texto = `🔗 ${nomePrefix}⚔️ [${tem}] → "${res.valorSaida}"`;
             } else {
                 texto = `🔗 ${nomePrefix}${fmt(res.valorEquacao)} → "${res.valorSaida}"`;
             }

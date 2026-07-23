@@ -99,6 +99,11 @@ Mecânicas de comparação lógica. O próprio sistema as utiliza nos bastidores
 **Retorno Personalizado (Opcional):**
 - Você pode definir o "Valor Verdadeiro" ou "Valor Falso". Em integrações avançadas de sistema, o painel pode extrair esse retorno numérico para ativar bônus com base no resultado da Booleana.
 
+**⚔️ Tipo de Lógica: Verificação de Classe:**
+- Além da Lógica Numérica e da Verificação de Equipamento, o Booleano aceita a **Verificação de Classe**.
+- O lado esquerdo (A) é preenchido **automaticamente** com as classes do personagem na ficha; no lado direito (B) você seleciona uma ou mais classes do registro.
+- Retorna **✅ Verdadeiro** se o personagem tiver **todas** as classes selecionadas; se faltar alguma delas, retorna **❌ Falso**.
+
 ---
 
 ## 8. 🔗 Condicional Encadeado
@@ -114,3 +119,8 @@ Uma evolução da mecânica Booleana, operando como uma lista de condições ava
 
 **🛟 Resultado Padrão:**
 - Se o valor calculado não casar com nenhuma das condições cadastradas acima, a mecânica retornará o que estiver definido neste campo. (Ex: "Indefinido" ou `0`).
+
+**⚔️ Tipo de Lógica: Verificação de Classe:**
+- No Tipo de Lógica, além da Lógica Numérica e da Verificação de Equipamento, há a **Verificação de Classe**.
+- O lado esquerdo é preenchido **automaticamente** com as classes do personagem. Em cada condição ("Se") você marca **uma ou mais classes**.
+- As condições são avaliadas em ordem: a primeira cujas classes estiverem **todas** entre as do personagem casa — exibindo a **Mensagem/Resultado** definida e acionando as **Mecânicas vinculadas** daquela condição. Se nenhuma casar, vale o **Resultado Padrão**.
