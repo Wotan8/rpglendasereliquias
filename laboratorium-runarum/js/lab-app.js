@@ -13,7 +13,7 @@
     const $ = s => document.querySelector(s);
     const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
     const norm = s => RuneEngine.norm(s);
-    const learned = () => (window.LabFB?.runomancia?.aprendidos) || {};
+    const learned = () => (window.LabFB?.niveisEfetivos?.()) || (window.LabFB?.runomancia?.aprendidos) || {};
 
     const CAT_ORDEM = ['captador', 'condutor', 'modulador', 'logico', 'armazenador', 'emissor', 'exaustor'];
     const CAT_LABEL = {

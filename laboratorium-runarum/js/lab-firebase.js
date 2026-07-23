@@ -76,7 +76,21 @@ const LabFB = {
     charData: null,
     ctx: null,           // atributos/perícias extraídos
     elementsById: {},    // catálogo dinâmico
-    runomancia: { estudos: [], aprendidos: {}, grimorio: [] },
+    runomancia: { estudos: [], aprendidos: {}, grimorio: [], concedidos: {} },
+
+    /**
+     * ᛟ Mapa de níveis EFETIVOS de domínio: estudado (aprendidos) somado ao
+     * concedido por mecânicas (concedidos). É o que o motor de runas deve usar
+     * para validar se o personagem domina cada elemento do circuito.
+     */
+    niveisEfetivos() {
+        const r = this.runomancia || {};
+        const out = { ...(r.aprendidos || {}) };
+        for (const [id, lv] of Object.entries(r.concedidos || {})) {
+            out[id] = Number(out[id] || 0) + Number(lv || 0);
+        }
+        return out;
+    },
 
     async saveRunomancia() {
         if (!this.charId) return false;
@@ -129,6 +143,10 @@ onAuthStateChanged(auth, async (user) => {
                     estudos: Array.isArray(r.estudos) ? r.estudos : [],
                     aprendidos: r.aprendidos || {},
                     grimorio: Array.isArray(r.grimorio) ? r.grimorio : [],
+                    // ᛟ Níveis concedidos por mecânicas (pool rúnico da mecânica
+                    // "Distribuir"). Mantidos SEPARADOS de `aprendidos` para que o
+                    // save do Grimório nunca os transforme em nível estudado.
+                    concedidos: r.concedidos || {},
                 };
             }
         }

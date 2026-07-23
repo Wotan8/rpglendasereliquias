@@ -216,9 +216,193 @@ function populateTargetMapFromClassModules() {
  * Pool map: mapeia nomes de pool (usados em mecânicas distribuir) para listas de alvos válidos.
  * Usa o array SKILLS (data.js) como fonte canônica de nomes para evitar aliases/duplicatas.
  */
+/* =====================================================================
+   ᛟ ELEMENTOS RÚNICOS COMO ALVOS DE DISTRIBUIÇÃO
+   ---------------------------------------------------------------------
+   O Painel do Criador grava alvos rúnicos como "Elemento Rúnico: <nome>".
+   Aqui eles NÃO entram em state.mechanicBonuses (não são atributo nem
+   perícia): eles concedem NÍVEIS DE DOMÍNIO, guardados em
+   state.runomancia.concedidos = { [elementId]: nivel }.
+
+   Esse mapa é RECONSTRUÍDO do zero a cada recálculo (clearMechanicBonuses),
+   então aplicar a mesma mecânica várias vezes nunca duplica níveis.
+   O nível efetivo do personagem = aprendidos (estudado) + concedidos.
+   ===================================================================== */
+const RUNIC_TARGET_PREFIX = 'Elemento Rúnico: ';
+
+function _runicAll() {
+    return (window._systemData?.runicElements || []).filter(e => e && e.nome);
+}
+
+function isRunicTarget(nome) {
+    return typeof nome === 'string' && nome.startsWith(RUNIC_TARGET_PREFIX);
+}
+
+/** Resolve "Elemento Rúnico: Fogo" → doc do elemento (por nome, latim ou id). */
+function runicElementFromTarget(nome) {
+    if (!isRunicTarget(nome)) return null;
+    const bruto = nome.slice(RUNIC_TARGET_PREFIX.length).trim();
+    const alvo = bruto.toLowerCase();
+    const all = _runicAll();
+
+    const porNome = all.filter(e => String(e.nome || '').trim().toLowerCase() === alvo);
+    if (porNome.length > 1) {
+        console.warn(
+            `ᛟ Há ${porNome.length} Elementos Rúnicos cadastrados com o nome "${bruto}" ` +
+            `(ids: ${porNome.map(e => e.id).join(', ')}). O alvo é resolvido por nome, ` +
+            `então o nível pode ser lido do documento errado. Remova a duplicata no ` +
+            `Painel do Criador → ᛟ Elementos Rúnicos.`
+        );
+    }
+    return porNome[0]
+        || all.find(e => String(e.nomeLatim || '').trim().toLowerCase() === alvo)
+        || all.find(e => String(e.id || '') === bruto)
+        || null;
+}
+
+/** Nível máximo de um elemento (padrão do Compêndio: Sigilus 3, demais 5). */
+function runicMaxNivel(el) {
+    const n = Number(el?.maxNivel);
+    if (Number.isFinite(n) && n > 0) return n;
+    return String(el?.tipoElemento || '').toLowerCase() === 'sigilus' ? 3 : 5;
+}
+
+function _runoStateSafe() {
+    // NÃO usar `window.state` aqui: `state` é um binding léxico global
+    // (let, em app.js) e não é propriedade de window. Escrever
+    // `window.state = {}` criaria um objeto decoy paralelo ao estado real.
+    if (typeof state === 'undefined') return { estudos: [], aprendidos: {}, grimorio: [], concedidos: {}, concedidosDetalhe: [] };
+    if (!state.runomancia) state.runomancia = { estudos: [], aprendidos: {}, grimorio: [] };
+    if (!state.runomancia.aprendidos) state.runomancia.aprendidos = {};
+    if (!state.runomancia.concedidos) state.runomancia.concedidos = {};
+    if (!Array.isArray(state.runomancia.concedidosDetalhe)) state.runomancia.concedidosDetalhe = [];
+    return state.runomancia;
+}
+
+/** Zera as concessões rúnicas vindas de mecânicas (chamado a cada recálculo). */
+function clearRunicGrants() {
+    const runo = _runoStateSafe();
+    runo.concedidos = {};
+    runo.concedidosDetalhe = [];
+}
+
+/**
+ * Aplica (idempotentemente) um alvo rúnico escolhido numa distribuição.
+ * Respeita o Nível Máximo do elemento, considerando o que já foi estudado.
+ */
+function applyRunicGrant(alvoNome, valor, operacao, mech, parentPec) {
+    const el = runicElementFromTarget(alvoNome);
+    if (!el) { console.warn(`ᛟ Elemento Rúnico não encontrado: ${alvoNome}`); return false; }
+
+    const runo = _runoStateSafe();
+    const base = Number(runo.aprendidos[el.id] || 0);
+    const atualConcedido = Number(runo.concedidos[el.id] || 0);
+    const v = Number(valor) || 0;
+    const max = runicMaxNivel(el);
+
+    let novo;
+    if (operacao === '=') novo = Math.max(0, v - base);
+    else if (operacao === '-') novo = atualConcedido - v;
+    else novo = atualConcedido + v;
+
+    // Teto: base + concedido nunca ultrapassa o Nível Máximo do elemento
+    novo = Math.max(0, Math.min(novo, Math.max(0, max - base)));
+
+    runo.concedidos[el.id] = novo;
+    runo.concedidosDetalhe.push({
+        elementId: el.id,
+        nome: el.nome,
+        valor: v,
+        operacao: operacao || '+',
+        mechId: mech?.id || '',
+        fonte: parentPec?.nome || mech?.nome || ''
+    });
+    return true;
+}
+
+/** Nível concedido por mecânicas (sem contar o estudo). */
+function runicNivelConcedido(elementId) {
+    if (typeof state === 'undefined') return 0;
+    return Number(state?.runomancia?.concedidos?.[elementId] || 0);
+}
+
+/** Nível efetivo = estudado + concedido por mecânicas. */
+function runicNivelEfetivo(elementId) {
+    if (typeof state === 'undefined') return 0;
+    const runo = state?.runomancia || {};
+    return Number(runo.aprendidos?.[elementId] || 0) + runicNivelConcedido(elementId);
+}
+
+window.isRunicTarget = isRunicTarget;
+window.runicElementFromTarget = runicElementFromTarget;
+window.runicMaxNivel = runicMaxNivel;
+window.runicNivelConcedido = runicNivelConcedido;
+window.runicNivelEfetivo = runicNivelEfetivo;
+window.RUNIC_TARGET_PREFIX = RUNIC_TARGET_PREFIX;
+
+/**
+ * Normaliza um nome de pool para comparação: minúsculas, sem acentos e sem
+ * diferença entre NFC/NFD. O texto do pool viaja Painel → Firestore → ficha e
+ * pode ser editado à mão, então nunca comparamos a string crua.
+ */
+function _normPool(s) {
+    return String(s || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+}
+
+/**
+ * Monta a lista de alvos de um pool rúnico ("Elementos Rúnicos: ...").
+ * Retorna nomes já prefixados, prontos para o TARGET/alvo da distribuição.
+ */
+function getRunicPool(poolName) {
+    const p = _normPool(poolName);
+    let list = _runicAll();
+
+    const fam = p.includes('artus') ? 'artus'
+        : p.includes('aspectus') ? 'aspectus'
+            : p.includes('sigilus') ? 'sigilus' : '';
+    if (fam) list = list.filter(e => _normPool(e.tipoElemento) === fam);
+
+    const CATS = ['captador', 'condutor', 'modulador', 'logico', 'armazenador', 'emissor', 'exaustor'];
+    for (const cat of CATS) {
+        if (p.includes(cat)) { list = list.filter(e => _normPool(e.categoria) === cat); break; }
+    }
+
+    const COMPLEX = ['iniciante', 'intermediario', 'avancado', 'mestre'];
+    if (p.includes('complexidade')) {
+        for (const cx of COMPLEX) {
+            if (p.includes(cx)) { list = list.filter(e => _normPool(e.complexidade) === cx); break; }
+        }
+    }
+
+    return list
+        .sort((a, b) => (a.ordem ?? 999) - (b.ordem ?? 999) || (a.nome || '').localeCompare(b.nome || ''))
+        .map(e => RUNIC_TARGET_PREFIX + e.nome);
+}
+
+/** Detecta se um nome de pool se refere a Elementos Rúnicos. */
+function isRunicPool(poolName) {
+    const p = _normPool(poolName);
+    return p.includes('elemento') && p.includes('runic');
+}
+
 function getDistribuirPool(poolName) {
     if (!poolName) return [];
     const p = poolName.toLowerCase();
+
+    // ᛟ Pools de Elementos Rúnicos (Runomancia)
+    if (isRunicPool(poolName)) {
+        const lista = getRunicPool(poolName);
+        if (!lista.length) {
+            console.warn(`ᛟ Pool rúnico "${poolName}" não retornou elementos. ` +
+                `Elementos carregados: ${_runicAll().length}. ` +
+                `Verifique se system/data/runicElements foi carregado em window._systemData.`);
+        }
+        return lista;
+    }
 
     // Helper: extrai nomes canônicos de uma ou mais categorias do SKILLS
     const fromSkills = (...categories) => {
@@ -273,6 +457,8 @@ function clearMechanicBonuses() {
     _derivedValueMechanicsRaw = [];
     _dynamicMechContributions = {};
     state._invPressureContrib = 0;
+    // ᛟ Concessões de níveis rúnicos são reconstruídas a cada recálculo
+    clearRunicGrants();
 }
 
 /* ===== CONCEDER EQUIPAMENTO (cria Itens Soltos no inventário) ===== */
@@ -912,6 +1098,11 @@ function applyAllRaceMechanics(racaNome) {
 
     // Render auras tab if available
     if (typeof renderAurasTab === 'function') renderAurasTab();
+
+    // ᛟ Atualiza a aba Runomancia para refletir níveis concedidos por mecânicas
+    if (typeof window.runoRefreshFromMechanics === 'function') window.runoRefreshFromMechanics();
+    // ᛟ E os rótulos "Nv X/Y" dos selects de distribuição já renderizados
+    if (typeof refreshRunicDistribuirLabels === 'function') refreshRunicDistribuirLabels();
 }
 
 /**
@@ -1468,6 +1659,11 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
         // Restaurar bônus de alvos já escolhidos (parcial ou completo)
         if (dados?.alvosEscolhidos) {
             for (const alvo of dados.alvosEscolhidos) {
+                // ᛟ Elemento Rúnico → concede nível de domínio (aba Runomancia)
+                if (isRunicTarget(alvo.nome)) {
+                    applyRunicGrant(alvo.nome, alvo.valor, config.operacao, mech, parentPec);
+                    continue;
+                }
                 const field = TARGET_MAP[alvo.nome];
                 if (field) {
                     const v = Number(alvo.valor) || 0;
@@ -1762,6 +1958,39 @@ function _resolveDistribuirConfig(mech, parentPec) {
 }
 
 /**
+ * (Re)escreve o rótulo de uma <option> rúnica com o nível ATUAL do personagem.
+ * Idempotente: pode ser chamada quantas vezes quiser sobre a mesma option.
+ */
+function _setRunicOptionLabel(opt) {
+    const id = opt.dataset.runicId;
+    if (!id) return;
+    const el = (window._systemData?.runicElements || []).find(e => e.id === id);
+    const nome = opt.dataset.runicNome || el?.nome || id;
+    const max = runicMaxNivel(el);
+    const atual = runicNivelEfetivo(id);
+    const valor = Number(opt.dataset.runicValor) || 0;
+    const op = opt.dataset.runicOp || '+';
+
+    const noTeto = op !== '=' && (atual + valor) > max;
+    opt.textContent = `ᛟ ${nome} — Nv ${atual}/${max}${noTeto ? ' (nível máximo)' : ''}`;
+    // Não mexer em options desabilitadas pela restrição "alvos diferentes":
+    // essas carregam data-lockedDiff e têm prioridade.
+    if (opt.dataset.lockedDiff === '1') return;
+    opt.disabled = noTeto;
+}
+
+/**
+ * Atualiza os rótulos de TODAS as options rúnicas presentes na página.
+ * Chamada ao fim de cada recálculo de mecânicas e ao focar um select, para que
+ * o nível exibido nunca fique defasado em relação a state.runomancia.
+ */
+function refreshRunicDistribuirLabels(root) {
+    const scope = root || document;
+    scope.querySelectorAll('.distribuir-select option[data-runic-id]').forEach(_setRunicOptionLabel);
+}
+window.refreshRunicDistribuirLabels = refreshRunicDistribuirLabels;
+
+/**
  * Renderiza a UI de distribuição.
  * Se já houver alvos confirmados parcialmente, mostra-os travados e oferece os slots restantes.
  * Se todos os slots estiverem preenchidos, mostra apenas o resumo.
@@ -1789,7 +2018,10 @@ function renderDistribuirUI(container, mech, parentPec) {
     if (jaEscolhidos.length > 0) {
         const resumo = document.createElement('div');
         resumo.className = 'distribuir-resumo';
-        const linhas = jaEscolhidos.map(a => `${a.nome} (+${a.valor})`).join(', ');
+        const linhas = jaEscolhidos.map(a => {
+            const nome = isRunicTarget(a.nome) ? 'ᛟ ' + a.nome.slice(RUNIC_TARGET_PREFIX.length) : a.nome;
+            return `${nome} (+${a.valor})`;
+        }).join(', ');
         resumo.innerHTML = `<strong>✅ Distribuído:</strong> ${linhas}`;
         wrapper.appendChild(resumo);
     }
@@ -1803,8 +2035,12 @@ function renderDistribuirUI(container, mech, parentPec) {
     // --- Título ---
     const titulo = document.createElement('div');
     titulo.className = 'distribuir-titulo';
+    const poolEhRunico = pool.length > 0 && pool.every(n => isRunicTarget(n));
+    const substantivo = poolEhRunico
+        ? (restricao === 'diferentes' ? 'Elementos Rúnicos diferentes' : 'Elementos Rúnicos')
+        : (restricao === 'diferentes' ? 'alvos diferentes' : 'alvos');
     titulo.innerHTML = `⚠️ <strong>DISTRIBUIÇÃO PENDENTE</strong><br>
-        Escolha até ${remaining} ${restricao === 'diferentes' ? 'perícias diferentes' : 'alvos'} para receber +${valorPorAlvo} (${jaEscolhidos.length}/${totalQty} distribuído${jaEscolhidos.length !== 1 ? 's' : ''}):`;
+        Escolha até ${remaining} ${substantivo} para receber +${valorPorAlvo} ${poolEhRunico ? 'nível de domínio' : ''} (${jaEscolhidos.length}/${totalQty} distribuído${jaEscolhidos.length !== 1 ? 's' : ''}):`;
     wrapper.appendChild(titulo);
 
     // --- Selects apenas para os slots restantes ---
@@ -1823,12 +2059,35 @@ function renderDistribuirUI(container, mech, parentPec) {
             const opt = document.createElement('option');
             opt.value = alvoName;
             opt.textContent = alvoName;
+
+            // ᛟ Elemento Rúnico: mostra nível atual/máximo e trava os já no teto
+            if (isRunicTarget(alvoName)) {
+                const el = runicElementFromTarget(alvoName);
+                if (!el) {
+                    // Elemento removido do cadastro — não oferecer
+                    return;
+                }
+                // O nível é recalculado depois por refreshRunicDistribuirLabels():
+                // no boot a ficha pode renderizar a distribuição ANTES de
+                // state.runomancia ser carregado, e o rótulo ficaria congelado.
+                opt.dataset.runicId = el.id;
+                opt.dataset.runicNome = el.nome;
+                opt.dataset.runicValor = String(Number(valorPorAlvo) || 0);
+                opt.dataset.runicOp = config.operacao || '+';
+                _setRunicOptionLabel(opt);
+            }
+
             // Desabilitar nomes que já foram confirmados anteriormente
             if (restricao === 'diferentes' && nomesJaEscolhidos.includes(alvoName)) {
                 opt.disabled = true;
+                opt.dataset.lockedDiff = '1';
             }
             sel.appendChild(opt);
         });
+
+        // Rótulos rúnicos são recalculados ao abrir o select: garante o nível
+        // correto mesmo que a ficha ainda estivesse carregando na renderização.
+        sel.addEventListener('focus', () => refreshRunicDistribuirLabels(wrapper));
 
         sel.addEventListener('change', () => {
             if (restricao === 'diferentes') {
@@ -1859,7 +2118,14 @@ function updateDistribuirOptions(wrapper, pool, nomesJaEscolhidos) {
         const currentVal = sel.value;
         sel.querySelectorAll('option').forEach(opt => {
             if (!opt.value) return; // skip placeholder
-            opt.disabled = allUsed.includes(opt.value) && opt.value !== currentVal;
+            const usadoPorOutro = allUsed.includes(opt.value) && opt.value !== currentVal;
+            // ᛟ Um elemento no Nível Máximo continua travado mesmo que ninguém
+            // o tenha escolhido — senão esta função o reabilitaria.
+            const noTeto = opt.dataset.runicId
+                ? String(opt.textContent).includes('(nível máximo)')
+                : false;
+            opt.disabled = usadoPorOutro || noTeto;
+            opt.dataset.lockedDiff = usadoPorOutro ? '1' : '';
         });
     });
 }
@@ -1898,7 +2164,14 @@ function confirmarDistribuicao(mech, wrapper, parentPec) {
     };
 
     // Aplicar bônus dos NOVOS alvos apenas
+    let tocouRunomancia = false;
     for (const alvo of novosAlvos) {
+        // ᛟ Elemento Rúnico → nível de domínio, não bônus numérico
+        if (isRunicTarget(alvo.nome)) {
+            applyRunicGrant(alvo.nome, alvo.valor, config.operacao, mech, parentPec);
+            tocouRunomancia = true;
+            continue;
+        }
         const field = TARGET_MAP[alvo.nome];
         if (field) {
             const v = Number(alvo.valor) || 0;

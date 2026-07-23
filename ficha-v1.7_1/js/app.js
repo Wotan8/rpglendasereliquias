@@ -9,6 +9,14 @@ let state = {
     mecanicasPendentes: [], capacidades: [], auras: {}, classModuleData: {},
     expApplied: {}, expSessionTriggers: [], conditions: [], partesDoCorpo: []
 };
+
+/* `let` no topo de um script clássico NÃO cria propriedade em window, então
+   `window.state` seria undefined. Vários módulos usam `window.state` com
+   optional chaining e falhariam em silêncio (lendo 0/undefined) — ou pior,
+   criariam um `window.state = {}` decoy paralelo ao estado real.
+   Este alias aponta os dois nomes para o MESMO objeto. Seguro porque `state`
+   nunca é reatribuído por inteiro, apenas mutado. */
+window.state = state;
 let editingNoteId = null, testCount = 3;
 
 /* Contadores de recursos de classe */

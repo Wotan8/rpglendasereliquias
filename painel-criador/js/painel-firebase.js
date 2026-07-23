@@ -890,6 +890,8 @@ async function loadModule(moduleName) {
         refreshVitalStatsCache(),
         refreshBodyPartsCache(),
         refreshClassesCache(),
+        // ᛟ Elementos Rúnicos: usados como alvos no pool da mecânica "Distribuir"
+        refreshRunicElementsCache(),
         // Equipamentos agora são usados pelo editor de Módulos da Classe (custos)
         // e pelo editor de Mecânicas (Conceder Equipamento) em qualquer aba
         refreshEquipmentCache()
@@ -1042,6 +1044,18 @@ async function refreshClassModulesCache() {
         classModulesCache.sort((a, b) => (a.titulo || '').localeCompare(b.titulo || ''));
         window._classModulesCache = classModulesCache;
     } catch (e) { console.error('Erro cache classModules:', e); }
+}
+
+// ᛟ Elementos Rúnicos — consumidos pelo editor de Mecânicas
+// (pool de alvos da mecânica "Distribuir").
+async function refreshRunicElementsCache() {
+    try {
+        const snap = await getDocs(collection(db, 'system/data/runicElements'));
+        const list = [];
+        snap.forEach(d => list.push({ ...d.data(), id: d.id }));
+        list.sort((a, b) => (a.ordem ?? 999) - (b.ordem ?? 999) || (a.nome || '').localeCompare(b.nome || ''));
+        window._runicElementsCache = list;
+    } catch (e) { console.error('Erro cache runicElements:', e); }
 }
 
 async function refreshBodyPartsCache() {

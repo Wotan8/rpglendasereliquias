@@ -78,11 +78,31 @@ Mecânicas textuais livres.
 Mecânica poderosa para criação de fichas e progressão de níveis, permitindo que o jogador divida um pacote de pontos.
 
 **Configurações:**
-- **Pool de Alvos:** Onde os pontos podem ser colocados. Pode ser genérico ("Perícias Sociais") ou "Personalizado" (onde você seleciona manualmente a dedo quais atributos/perícias são candidatos).
+- **Pool de Alvos:** Onde os pontos podem ser colocados. Pode ser genérico ("Perícias Sociais"), **rúnico** (ver abaixo) ou "Personalizado" (onde você seleciona manualmente a dedo quais atributos/perícias/elementos são candidatos).
 - **Quantos alvos diferentes?** Ex: "Escolha 3 perícias".
 - **Valor por alvo:** Ex: "+2".
 - **Operação:** O que acontece na perícia escolhida (Somar, Subtrair, Definir).
 - **Restrição:** Define se o jogador deve obrigatoriamente escolher alvos *diferentes*, ou se é *livre* e ele pode empilhar o bônus diversas vezes no mesmo alvo (caso o sistema permita).
+
+### ᛟ Pools de Elementos Rúnicos
+
+O pool de alvos aceita os **Elementos Rúnicos cadastrados** na aba *ᛟ Elementos Rúnicos* do Painel do Criador. Isso permite regras como *"O Adepto inicia dominando 2 Elementos Rúnicos à sua escolha"* sem escrever código.
+
+**Pools prontos disponíveis:**
+- `Elementos Rúnicos (qualquer)` — todos os elementos cadastrados.
+- `Elementos Rúnicos: Artus` / `Aspectus` / `Sigilus` — filtra por família.
+- `Elementos Rúnicos: Sigilus <Categoria>` — Captador, Condutor, Modulador, Lógico, Armazenador, Emissor, Exaustor.
+- `Elementos Rúnicos: Complexidade <Nível>` — Iniciante, Intermediário, Avançado, Mestre.
+
+**Pool Personalizado:** os Elementos Rúnicos também aparecem na lista de caixas de seleção (destacados com borda roxa), misturados aos atributos e perícias. Há um campo de busca e botões para marcar/desmarcar todos os rúnicos de uma vez — útil porque o Compêndio traz 64 elementos.
+
+**Como a ficha interpreta:**
+- Um alvo rúnico é gravado como `Elemento Rúnico: <nome>` e **não** vira bônus numérico de atributo/perícia. Ele concede **níveis de domínio**, que aparecem na aba **ᛟ Runomancia** da ficha.
+- O nível efetivo do personagem em um elemento é `estudado + concedido`. O nível concedido aparece marcado com **⚙️+N** no chip do elemento, com a fonte indicada na legenda.
+- Níveis concedidos **não consomem EXP nem slots da Lista de Estudo**, e são recalculados do zero a cada recálculo da ficha — trocar de classe ou remover a peculiaridade remove o nível automaticamente, sem resíduo.
+- O **Nível Máximo** cadastrado em cada elemento é respeitado (padrão do Compêndio: 3 para Sigilus, 5 para Artus/Aspectus). Elementos que já estão no teto aparecem desabilitados na hora de escolher.
+- O estudo normal continua funcionando por cima: se a mecânica concedeu Nv1, o próximo estudo mira o Nv2 e cobra o EXP do Nv2.
+- O **Laboratorium Runarum** valida os circuitos usando o nível efetivo, então elementos concedidos já contam para montar runas.
 
 ---
 

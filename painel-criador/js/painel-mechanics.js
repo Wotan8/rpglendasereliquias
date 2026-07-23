@@ -8,6 +8,61 @@ console.log("🧩 painel-mechanics v2.1 — múltiplos booleanos ATIVOS");
 // --- Shared state (set by painel-firebase.js) ---
 // window._mechState = { db, collection, getDocs, addDoc, updateDoc, doc, Timestamp, currentUser, ... }
 
+// =====================================================================
+// ᛟ ELEMENTOS RÚNICOS COMO ALVOS (usado no Pool da mecânica "Distribuir")
+// ---------------------------------------------------------------------
+// Os elementos vêm de system/data/runicElements (window._runicElementsCache,
+// populado por refreshRunicElementsCache() em painel-firebase.js).
+// O valor gravado no alvo usa o prefixo abaixo para que a ficha consiga
+// distinguir um Elemento Rúnico de uma perícia/atributo.
+// =====================================================================
+export const RUNIC_TARGET_PREFIX = 'Elemento Rúnico: ';
+
+const RUNIC_FAMILY_LABELS = { artus: 'Artus (a Ação)', aspectus: 'Aspectus (a Essência)', sigilus: 'Sigilus (as Engrenagens)' };
+const RUNIC_FAMILY_ICON = { artus: '⚙️', aspectus: '✨', sigilus: 'ᛟ' };
+const RUNIC_CAT_LABELS = { captador: 'Captador', condutor: 'Condutor', modulador: 'Modulador', logico: 'Lógico', armazenador: 'Armazenador', emissor: 'Emissor', exaustor: 'Exaustor' };
+
+function _runicCache() {
+    return (window._runicElementsCache || []).filter(e => e && e.nome);
+}
+
+/** Rótulo do grupo (família / categoria) de um elemento rúnico. */
+function _runicGroupLabel(el) {
+    const fam = String(el.tipoElemento || '').toLowerCase();
+    if (fam === 'sigilus') return `ᛟ Sigilus — ${RUNIC_CAT_LABELS[el.categoria] || 'Outros'}`;
+    return `${RUNIC_FAMILY_ICON[fam] || 'ᛟ'} ${RUNIC_FAMILY_LABELS[fam] || 'Elementos Rúnicos'}`;
+}
+
+/**
+ * <optgroup>s com TODOS os Elementos Rúnicos cadastrados, agrupados por
+ * família (Artus / Aspectus) e por categoria (dentro de Sigilus).
+ */
+function getRunicTargetsHTML() {
+    const cache = _runicCache();
+    if (!cache.length) return '';
+
+    const groups = {};
+    for (const el of cache) {
+        const label = _runicGroupLabel(el);
+        (groups[label] = groups[label] || []).push(el);
+    }
+
+    let html = '';
+    for (const label of Object.keys(groups).sort((a, b) => a.localeCompare(b))) {
+        const list = groups[label].sort(
+            (a, b) => (a.ordem ?? 999) - (b.ordem ?? 999) || (a.nome || '').localeCompare(b.nome || '')
+        );
+        html += `\n<optgroup label="${esc(label)}">`;
+        for (const el of list) {
+            const icon = RUNIC_FAMILY_ICON[String(el.tipoElemento || '').toLowerCase()] || 'ᛟ';
+            const latim = el.nomeLatim ? ` (${el.nomeLatim})` : '';
+            html += `\n<option value="${esc(RUNIC_TARGET_PREFIX + el.nome)}">${icon} ${esc(el.nome)}${esc(latim)}</option>`;
+        }
+        html += `\n</optgroup>`;
+    }
+    return html;
+}
+
 function getMechanicTargetsHTML() {
     let html = `
 <optgroup label="Atributos">
@@ -331,9 +386,17 @@ export function generatePreviewText(data) {
         const val = config.valorPorAlvo || '?';
         const op = config.operacao || '+';
         const rest = config.restricao === 'diferentes' ? ' (diferentes)' : '';
-        const poolLabel = pool === 'Personalizado' && Array.isArray(config.poolPersonalizado) && config.poolPersonalizado.length
-            ? `Personalizado: ${config.poolPersonalizado.join(', ')}` : pool;
+        let poolLabel = pool;
+        if (pool === 'Personalizado' && Array.isArray(config.poolPersonalizado) && config.poolPersonalizado.length) {
+            const lista = config.poolPersonalizado.map(v => v.replace(RUNIC_TARGET_PREFIX, 'ᛟ '));
+            poolLabel = lista.length > 8
+                ? `Personalizado: ${lista.slice(0, 8).join(', ')} … (+${lista.length - 8})`
+                : `Personalizado: ${lista.join(', ')}`;
+        }
+        const rune = String(pool).startsWith('Elementos Rúnicos')
+            || (Array.isArray(config.poolPersonalizado) && config.poolPersonalizado.some(v => String(v).startsWith(RUNIC_TARGET_PREFIX)));
         text = `Distribuir: ${op}${val} em ${qty} alvos${rest} de [${poolLabel}]`;
+        if (rune) text += `\nᛟ Alvos rúnicos concedem níveis de domínio na aba Runomancia da ficha.`;
     } else if (tipo === 'booleano') {
         const vTrue = config.valorVerdadeiro ?? '?';
         const vFalse = config.valorFalso ?? '?';
@@ -941,15 +1004,36 @@ function renderConfigDistribuir(config) {
     const restVal = config?.restricao || 'diferentes';
     const poolCustom = Array.isArray(config?.poolPersonalizado) ? config.poolPersonalizado : [];
 
-    // Build checkboxes from getMechanicTargetsHTML() by extracting option values
+    // Build checkboxes from getMechanicTargetsHTML() + getRunicTargetsHTML()
+    // (ᛟ Elementos Rúnicos entram no mesmo pool personalizado dos demais alvos)
     const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = `<select>${getMechanicTargetsHTML()}</select>`;
+    tempDiv.innerHTML = `<select>${getMechanicTargetsHTML()}${getRunicTargetsHTML()}</select>`;
     const allOptions = Array.from(tempDiv.querySelectorAll('option'));
-    const checkboxesHtml = allOptions.map(opt => {
-        const v = opt.value;
-        const checked = poolCustom.includes(v) ? 'checked' : '';
-        return `<label class="mechsel-result" style="padding:4px 6px"><input type="checkbox" value="${esc(v)}" ${checked} onchange="window._mechUpdatePreview()"><span class="mechsel-result-name">${esc(opt.textContent)}</span></label>`;
-    }).join('');
+
+    const knownValues = new Set(allOptions.map(o => o.value));
+    // Alvos salvos que não existem mais no cadastro (ou cache ainda não carregado)
+    // continuam visíveis e marcados — assim nunca são perdidos silenciosamente.
+    const orphans = poolCustom.filter(v => !knownValues.has(v));
+
+    const buildCb = (value, label, grupo, isOrphan) => {
+        const checked = poolCustom.includes(value) ? 'checked' : '';
+        const runic = value.startsWith(RUNIC_TARGET_PREFIX);
+        const style = runic
+            ? 'padding:4px 6px;border:1px solid rgba(139,92,246,.35);border-radius:6px'
+            : 'padding:4px 6px';
+        return `<label class="mechsel-result mech-pool-opt" data-search="${esc((label + ' ' + grupo).toLowerCase())}" title="${esc(grupo)}" style="${style}">
+            <input type="checkbox" value="${esc(value)}" ${checked} onchange="window._mechUpdatePreview()" data-runic="${runic ? '1' : '0'}">
+            <span class="mechsel-result-name">${esc(label)}${isOrphan ? ' <em>(não cadastrado)</em>' : ''}</span></label>`;
+    };
+
+    const checkboxesHtml =
+        orphans.map(v => buildCb(v, v, 'órfão', true)).join('') +
+        allOptions.map(opt => {
+            const grupo = opt.parentElement?.label || '';
+            return buildCb(opt.value, opt.textContent, grupo, false);
+        }).join('');
+
+    const runicCount = _runicCache().length;
 
     return `
     <div class="form-grid">
@@ -964,8 +1048,27 @@ function renderConfigDistribuir(config) {
                 <option value="Atributos Mentais" ${poolVal === 'Atributos Mentais' ? 'selected' : ''}>Atributos Mentais</option>
                 <option value="Atributos Físicos" ${poolVal === 'Atributos Físicos' ? 'selected' : ''}>Atributos Físicos</option>
                 <option value="Atributos Sociais" ${poolVal === 'Atributos Sociais' ? 'selected' : ''}>Atributos Sociais</option>
+                <optgroup label="ᛟ Elementos Rúnicos (Runomancia)">
+                    <option value="Elementos Rúnicos (qualquer)" ${poolVal === 'Elementos Rúnicos (qualquer)' ? 'selected' : ''}>ᛟ Elementos Rúnicos (qualquer)</option>
+                    <option value="Elementos Rúnicos: Artus" ${poolVal === 'Elementos Rúnicos: Artus' ? 'selected' : ''}>⚙️ Elementos Rúnicos — Artus</option>
+                    <option value="Elementos Rúnicos: Aspectus" ${poolVal === 'Elementos Rúnicos: Aspectus' ? 'selected' : ''}>✨ Elementos Rúnicos — Aspectus</option>
+                    <option value="Elementos Rúnicos: Sigilus" ${poolVal === 'Elementos Rúnicos: Sigilus' ? 'selected' : ''}>ᛟ Elementos Rúnicos — Sigilus</option>
+                    ${Object.entries(RUNIC_CAT_LABELS).map(([k, lbl]) => {
+        const v = `Elementos Rúnicos: Sigilus ${lbl}`;
+        return `<option value="${esc(v)}" ${poolVal === v ? 'selected' : ''}>ᛟ Sigilus — ${esc(lbl)}</option>`;
+    }).join('')}
+                    ${['iniciante', 'intermediario', 'avancado', 'mestre'].map(c => {
+        const lbl = c === 'intermediario' ? 'Intermediário' : c === 'avancado' ? 'Avançado' : c.charAt(0).toUpperCase() + c.slice(1);
+        const v = `Elementos Rúnicos: Complexidade ${lbl}`;
+        return `<option value="${esc(v)}" ${poolVal === v ? 'selected' : ''}>ᛟ Sigilus — Complexidade ${esc(lbl)}</option>`;
+    }).join('')}
+                </optgroup>
                 <option value="Personalizado" ${poolVal === 'Personalizado' ? 'selected' : ''}>Personalizado</option>
             </select>
+            <div style="font-size:.62rem;color:var(--muted);margin-top:4px">
+                ᛟ Pools rúnicos concedem <b>níveis de domínio</b> do elemento na ficha (aba Runomancia), respeitando o Nível Máximo de cada elemento.
+                ${runicCount ? `${runicCount} elemento(s) cadastrado(s).` : '⚠️ Nenhum Elemento Rúnico cadastrado ainda (aba ᛟ Elementos Rúnicos).'}
+            </div>
         </div>
         <div class="form-group"><label>Quantos alvos diferentes? <span class="required">*</span></label>
             <input type="number" id="mech_config_quantidadeAlvos" value="${esc(String(qtyVal))}" placeholder="Ex: 4" min="1" oninput="window._mechUpdatePreview()">
@@ -988,9 +1091,17 @@ function renderConfigDistribuir(config) {
         </div>
         <div class="form-group full-width" id="mech_config_poolCustomWrap" style="display:${poolVal === 'Personalizado' ? '' : 'none'}">
             <label>Pool Personalizado — Selecione os alvos permitidos</label>
-            <div id="mech_config_poolPersonalizado" style="max-height:200px;overflow-y:auto;border:2px solid var(--soft);border-radius:8px;padding:8px;display:flex;flex-wrap:wrap;gap:2px">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
+                <input type="text" id="mech_config_poolFiltro" placeholder="🔎 Filtrar alvos (ex: fogo, perícia, sigilus…)"
+                    oninput="window._mechPoolFiltrar(this.value)" style="flex:1;min-width:180px;font-size:.75rem">
+                <button type="button" class="btn-sm" onclick="window._mechPoolMarcar('runic', true)" title="Marca todos os Elementos Rúnicos visíveis no filtro">ᛟ Marcar rúnicos</button>
+                <button type="button" class="btn-sm" onclick="window._mechPoolMarcar('runic', false)">ᛟ Desmarcar rúnicos</button>
+                <button type="button" class="btn-sm" onclick="window._mechPoolMarcar('all', false)">✕ Limpar tudo</button>
+            </div>
+            <div id="mech_config_poolPersonalizado" style="max-height:220px;overflow-y:auto;border:2px solid var(--soft);border-radius:8px;padding:8px;display:flex;flex-wrap:wrap;gap:2px">
                 ${checkboxesHtml}
             </div>
+            <div id="mech_config_poolResumo" style="font-size:.62rem;color:var(--muted);margin-top:4px"></div>
         </div>
     </div>`;
 }
@@ -1795,6 +1906,47 @@ window._mechPoolChange = function () {
     const pool = document.getElementById('mech_config_pool')?.value || '';
     const wrap = document.getElementById('mech_config_poolCustomWrap');
     if (wrap) wrap.style.display = pool === 'Personalizado' ? '' : 'none';
+    window._mechPoolResumo();
+};
+
+/** Filtra visualmente as opções do Pool Personalizado (não altera seleção). */
+window._mechPoolFiltrar = function (termo) {
+    const box = document.getElementById('mech_config_poolPersonalizado');
+    if (!box) return;
+    const q = String(termo || '').trim().toLowerCase();
+    box.querySelectorAll('.mech-pool-opt').forEach(lab => {
+        const hay = lab.dataset.search || lab.textContent.toLowerCase();
+        lab.style.display = (!q || hay.includes(q)) ? '' : 'none';
+    });
+};
+
+/**
+ * Marca/desmarca em lote as opções VISÍVEIS do Pool Personalizado.
+ * escopo: 'runic' (só Elementos Rúnicos) | 'all' (tudo).
+ */
+window._mechPoolMarcar = function (escopo, valor) {
+    const box = document.getElementById('mech_config_poolPersonalizado');
+    if (!box) return;
+    box.querySelectorAll('.mech-pool-opt').forEach(lab => {
+        if (lab.style.display === 'none') return;
+        const cb = lab.querySelector('input[type="checkbox"]');
+        if (!cb) return;
+        if (escopo === 'runic' && cb.dataset.runic !== '1') return;
+        cb.checked = !!valor;
+    });
+    window._mechUpdatePreview();
+};
+
+/** Mostra o total de alvos marcados (e quantos são rúnicos). */
+window._mechPoolResumo = function () {
+    const box = document.getElementById('mech_config_poolPersonalizado');
+    const out = document.getElementById('mech_config_poolResumo');
+    if (!box || !out) return;
+    const marcados = Array.from(box.querySelectorAll('input[type="checkbox"]:checked'));
+    const runicos = marcados.filter(cb => cb.dataset.runic === '1').length;
+    out.textContent = marcados.length
+        ? `✅ ${marcados.length} alvo(s) no pool${runicos ? ` — ${runicos} Elemento(s) Rúnico(s)` : ''}.`
+        : '⚠️ Nenhum alvo selecionado — o pool ficará vazio na ficha.';
 };
 
 // ===== EXP SUBFORM HANDLERS =====
@@ -2697,6 +2849,9 @@ window._mechUpdatePreview = function () {
             <span>👤 <strong>Escopo:</strong> ${esc2}</span>
             ${formData.condicaoAplicacao ? `<span>📎 <strong>Condição:</strong> ${esc(formData.condicaoAplicacao)}</span>` : ''}`;
     }
+
+    // Resumo do Pool Personalizado (Distribuir)
+    if (typeof window._mechPoolResumo === 'function') window._mechPoolResumo();
 };
 
 window._mechTagKey = function (e) {

@@ -18,8 +18,22 @@
         state.runomancia.estudos = state.runomancia.estudos || [];
         state.runomancia.aprendidos = state.runomancia.aprendidos || {};
         state.runomancia.grimorio = state.runomancia.grimorio || [];
+        // ᛟ Níveis concedidos por mecânicas (ex.: Distribuir com pool rúnico).
+        // Reconstruído a cada recálculo pelo mechanics-engine — aqui é só leitura.
+        state.runomancia.concedidos = state.runomancia.concedidos || {};
         return state.runomancia;
     }
+
+    // Nível vindo do estudo (gasto de EXP + sessões)
+    function _nivelEstudado(elId) { return Number(_runoState().aprendidos[elId] || 0); }
+    // Nível vindo de mecânicas (classe, raça, peculiaridade…)
+    function _nivelConcedido(elId) { return Number(_runoState().concedidos[elId] || 0); }
+    // Nível efetivo do personagem no elemento
+    function _nivelEfetivo(elId) { return _nivelEstudado(elId) + _nivelConcedido(elId); }
+
+    window.runoNivelEstudado = _nivelEstudado;
+    window.runoNivelConcedido = _nivelConcedido;
+    window.runoNivelEfetivo = _nivelEfetivo;
 
     window.gatherRunomanciaData = function () { return _runoState(); };
     window.applyRunomanciaData = function (d) {
@@ -104,6 +118,7 @@
         .runo-learned{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
         .runo-chip{font-size:.72rem;border:1px solid rgba(148,163,184,.2);border-radius:999px;padding:3px 10px;cursor:pointer;background:rgba(15,23,42,.5);color:var(--text,#e2e8f0)}
         .runo-chip b{color:#a78bfa}
+        .runo-chip .runo-conc{font-style:normal;font-size:.66rem;color:#fbbf24;margin-left:4px}
         .runo-chip:hover{border-color:#a78bfa}
         .runo-add-select{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
         .runo-add-select select{flex:1;min-width:180px;background:rgba(15,23,42,.6);border:1px solid rgba(148,163,184,.15);color:var(--text,#e2e8f0);border-radius:6px;padding:5px 8px;font-size:.78rem}
@@ -320,7 +335,7 @@
             const add = document.createElement('div');
             add.className = 'runo-add-select no-print';
             const opts = els.map(el => {
-                const atual = runo.aprendidos[el.id] || 0;
+                const atual = _nivelEfetivo(el.id);
                 const max = el.maxNivel || (el.tipoElemento === 'sigilus' ? 3 : 5);
                 if (atual >= max) return '';
                 const emEstudo = runo.estudos.some(e => e.elementId === el.id);
@@ -338,7 +353,7 @@
                 const id = add.querySelector('#runoAddSelect').value;
                 if (!id) return;
                 const el = _elById(id);
-                const alvo = (runo.aprendidos[id] || 0) + 1;
+                const alvo = _nivelEfetivo(id) + 1;
                 runo.estudos.push({ elementId: id, nivelAlvo: alvo, sessoesFeitas: 0 });
                 _refresh(cfg); _save();
             };
@@ -357,21 +372,40 @@
         body.appendChild(t2);
         const learned = document.createElement('div');
         learned.className = 'runo-learned';
-        const chips = Object.entries(runo.aprendidos).filter(([, lv]) => lv > 0);
-        if (!chips.length) {
+        // União de estudados + concedidos por mecânicas
+        const ids = [...new Set([
+            ...Object.keys(runo.aprendidos || {}),
+            ...Object.keys(runo.concedidos || {})
+        ])].filter(id => _nivelEfetivo(id) > 0);
+
+        if (!ids.length) {
             learned.innerHTML = '<span style="font-size:.74rem;color:var(--muted)">Nenhum ainda — todo Runomago começa do traço zero.</span>';
         } else {
-            chips.forEach(([id, lv]) => {
+            ids.forEach(id => {
                 const el = _elById(id);
                 if (!el) return;
+                const lv = _nivelEfetivo(id);
+                const conc = _nivelConcedido(id);
+                const est = _nivelEstudado(id);
                 const c = document.createElement('span');
                 c.className = 'runo-chip';
-                c.innerHTML = `${TIPO_ICON[el.tipoElemento] || 'ᛟ'} ${el.nome} <b>Nv${lv}</b>`;
+                c.innerHTML = `${TIPO_ICON[el.tipoElemento] || 'ᛟ'} ${el.nome} <b>Nv${lv}</b>` +
+                    (conc > 0 ? ` <em class="runo-conc" title="${est} de estudo + ${conc} concedido(s) por mecânica">⚙️+${conc}</em>` : '');
                 c.onclick = () => window.runoOpenElementModal(id, lv);
                 learned.appendChild(c);
             });
         }
         body.appendChild(learned);
+
+        // Legenda das concessões (de onde vieram os níveis automáticos)
+        const detalhe = Array.isArray(runo.concedidosDetalhe) ? runo.concedidosDetalhe : [];
+        if (detalhe.length) {
+            const fontes = [...new Set(detalhe.map(d => d.fonte).filter(Boolean))];
+            const leg = document.createElement('div');
+            leg.style.cssText = 'font-size:.68rem;color:#c4b5fd;margin-top:6px';
+            leg.innerHTML = `⚙️ Níveis concedidos automaticamente por: ${fontes.join(', ') || 'mecânicas'} — não consomem EXP nem slots de estudo.`;
+            body.appendChild(leg);
+        }
     }
 
     function _concluirEstudo(idx, cfg) {
@@ -387,7 +421,9 @@
         }
         if (!confirm(`Concluir o estudo de ${el.nome} Nv${es.nivelAlvo}?\nCusto: ${exp} EXP.`)) return;
         if (typeof spendExp === 'function') spendExp(exp);
-        runo.aprendidos[es.elementId] = es.nivelAlvo;
+        // Incrementa o nível ESTUDADO em 1. O nível efetivo (estudado +
+        // concedido por mecânicas) sobe junto, sem sobrescrever concessões.
+        runo.aprendidos[es.elementId] = _nivelEstudado(es.elementId) + 1;
         runo.estudos.splice(idx, 1);
         _refresh(cfg); _save();
     }
@@ -400,6 +436,23 @@
     }
     function _save() { if (typeof scheduleAutosave === 'function') scheduleAutosave(); }
 
+    /**
+     * Re-renderiza o módulo após um recálculo de mecânicas, para refletir
+     * níveis rúnicos concedidos (state.runomancia.concedidos).
+     * Seguro para chamar sempre: não faz nada se a aba não estiver montada.
+     */
+    window.runoRefreshFromMechanics = function () {
+        const body = document.getElementById('runoModBody');
+        if (!body) return;
+        const classe = document.getElementById('selClasse')?.value || '';
+        const cfg = _runoModuleConfig(classe) || {
+            titulo: 'Lista de Estudo', icone: 'ᛟ',
+            runoSlotsBase: 2, runoSlotsPorNivel: 1, runoSlotsDotKey: '',
+            runoDescontoDotKey: '', runoDescontoPorNivel: 0, runoCustoExpMult: 1
+        };
+        _refresh(cfg);
+    };
+
     // =====================================================================
     // MODAL DE DETALHES DO ELEMENTO
     // =====================================================================
@@ -410,7 +463,9 @@
         const cfg = _runoModuleConfig(classe) || {};
         const desconto = _desconto(cfg);
         const runo = _runoState();
-        const atual = runo.aprendidos[el.id] || 0;
+        const atual = _nivelEfetivo(el.id);
+        const concedido = _nivelConcedido(el.id);
+        const estudado = _nivelEstudado(el.id);
         const grupo = el.tipoElemento === 'sigilus'
             ? `Sigilus · ${CAT_LABEL[el.categoria] || ''} · ${el.complexidade || ''}`
             : TIPO_LABEL[el.tipoElemento];
@@ -438,7 +493,7 @@
             ${el.limites ? `<div style="font-size:.74rem;margin-top:4px"><b style="color:#fca5a5">Limites:</b> ${el.limites}</div>` : ''}
             <table><thead><tr><th>Nível</th><th>Custo (CT)</th><th>EXP</th><th>Tempo de Estudo</th><th>Propriedades</th></tr></thead>
             <tbody>${rows || '<tr><td colspan="5">Sem níveis cadastrados.</td></tr>'}</tbody></table>
-            <div style="font-size:.68rem;color:#94a3b8">Nível dominado pelo personagem: <b style="color:#a78bfa">${atual || 'nenhum'}</b>.
+            <div style="font-size:.68rem;color:#94a3b8">Nível dominado pelo personagem: <b style="color:#a78bfa">${atual || 'nenhum'}</b>${concedido > 0 ? ` <span style="color:#fbbf24">(${estudado} estudado + ${concedido} concedido por mecânica)</span>` : ''}.
                 Custos e tempos vêm do cadastro no Painel do Criador; descontos aplicados pela configuração do módulo (Parte XI).</div>
             <div style="text-align:right;margin-top:10px"><button class="runo-btn" onclick="this.closest('.runo-modal-bk').remove()">Fechar</button></div>
         </div>`;
@@ -462,8 +517,9 @@
             ${Object.entries(groups).map(([g, list]) => `
                 <div style="font-size:.72rem;color:#c4b5fd;font-weight:700;margin:10px 0 4px;text-transform:uppercase">${g}</div>
                 <div class="runo-learned">${list.map(el => {
-            const lv = runo.aprendidos[el.id] || 0;
-            return `<span class="runo-chip" onclick="runoOpenElementModal('${el.id}')">${el.nome}${lv ? ` <b>Nv${lv}</b>` : ''}</span>`;
+            const lv = _nivelEfetivo(el.id);
+            const conc = _nivelConcedido(el.id);
+            return `<span class="runo-chip" onclick="runoOpenElementModal('${el.id}')">${el.nome}${lv ? ` <b>Nv${lv}</b>` : ''}${conc ? ` <em class="runo-conc">⚙️+${conc}</em>` : ''}</span>`;
         }).join('')}</div>`).join('')}
             <div style="text-align:right;margin-top:10px"><button class="runo-btn" onclick="this.closest('.runo-modal-bk').remove()">Fechar</button></div>
         </div>`;

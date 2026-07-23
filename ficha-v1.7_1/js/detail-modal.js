@@ -422,14 +422,21 @@ function buildPeculiarityDetailHTML(pecKey, sourceKey) {
     if (pec.mecanicas) {
         for (const mech of pec.mecanicas) {
             if (mech.tipo !== 'distribuir') continue;
-            const distKey = `dist_${mech.id}`;
-            const saved = state.distribuirAlvos?.[distKey];
+            // Fonte canônica: state.mecanicasAplicadas (mechanics-engine).
+            // state.distribuirAlvos é formato legado (array de strings).
+            const aplicada = state.mecanicasAplicadas?.[mech.id]?.alvosEscolhidos;
+            const legado = state.distribuirAlvos?.[`dist_${mech.id}`];
+            const saved = (Array.isArray(aplicada) && aplicada.length)
+                ? aplicada.map(a => `${a.nome}${a.valor != null ? ` (+${a.valor})` : ''}`)
+                : legado;
             if (saved && saved.length > 0) {
                 html += `<div class="detail-section">
                     <div class="detail-section-title">🎯 Distribuição</div>
                     <div class="detail-tag-list">`;
                 for (const alvo of saved) {
-                    html += `<span class="detail-tag">${_escDetail(alvo)}</span>`;
+                    // ᛟ Elementos Rúnicos: encurta o prefixo para caber na pill
+                    const label = String(alvo).replace('Elemento Rúnico: ', 'ᛟ ');
+                    html += `<span class="detail-tag">${_escDetail(label)}</span>`;
                 }
                 html += '</div></div>';
             }
