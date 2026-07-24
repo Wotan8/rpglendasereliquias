@@ -166,22 +166,9 @@ function getGroupRemainingPoints(grupoNome) {
     else if (grupoNome === wizardState.grupoFraco) totalPool = regras.fraco;
     else totalPool = regras.intermediario;
 
-    const attrs = ATRIBUTOS[grupoNome];
-    let spent = 0;
-    for (const attr of attrs) {
-        const val = wizardState.atributos[attr.key] || 0;
-        // Quinta bolinha custa 2
-        if (val >= 4) spent += (val - 1) + 1; // 1+1+1+2 = 5 for level 4
-        else spent += val;
-    }
-    // Recalculate properly: each level costs 1 except 4th which costs 2
-    spent = 0;
-    for (const attr of attrs) {
-        const val = wizardState.atributos[attr.key] || 0;
-        for (let i = 1; i <= val; i++) {
-            spent += (i + regras.base_inicial >= 5) ? regras.custo_quinta_bolinha : 1;
-        }
-    }
+    // Custo por atributo (5ª bolinha custa 2) centralizado em calcAttrCost
+    const spent = ATRIBUTOS[grupoNome]
+        .reduce((sum, attr) => sum + calcAttrCost(wizardState.atributos[attr.key] || 0), 0);
     return totalPool - spent;
 }
 

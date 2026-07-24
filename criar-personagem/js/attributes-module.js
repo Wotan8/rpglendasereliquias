@@ -1,6 +1,7 @@
 /* ===== PHASE 3 — O Corpo e a Mente (Atributos) ===== */
 
 function initPhase3(container) {
+    clampAttributesToCreationLimits(); // fonte pode ter mudado o teto desde a última visita
     let html = createNarratorBox(NARRADOR_TEXTOS.corpo);
 
     // Step 1: Select primary group
@@ -181,6 +182,32 @@ function clickAttrDot(attrKey, dotLevel, grupo) {
     updateAllAttrCounters();
     ExpTracker.updateDisplay();
     saveWizardToStorage();
+}
+
+// Re-valida os atributos já distribuídos contra o teto dinâmico atual.
+// Chamado ao renderizar os atributos e no finale, para que trocar/desmarcar
+// uma fonte (raça/classe/tribo/peculiaridade) que elevava o teto puxe de volta
+// qualquer valor agora ilegal para o máximo permitido.
+function clampAttributesToCreationLimits() {
+    const base = REGRAS_CRIACAO.atributos.base_inicial;
+    const defaultMaxDots = REGRAS_CRIACAO.atributos.limite_max_por_atributo + base;
+    let changed = false;
+    for (const grupo of GRUPOS_ATRIBUTOS) {
+        for (const attr of ATRIBUTOS[grupo]) {
+            const val = wizardState.atributos[attr.key] || 0;
+            if (val === 0) continue;
+            const maxDots = window.getDynamicCreationLimit
+                ? window.getDynamicCreationLimit(attr.id, defaultMaxDots, wizardState)
+                : defaultMaxDots;
+            const maxLevel = maxDots - base;
+            if (val > maxLevel) {
+                wizardState.atributos[attr.key] = maxLevel;
+                changed = true;
+            }
+        }
+    }
+    if (changed) saveWizardToStorage();
+    return changed;
 }
 
 function calcAttrCost(level) {

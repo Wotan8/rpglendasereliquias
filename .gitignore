@@ -67,4 +67,8 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
-hosting..cache 
+hosting..cache
+
+# graphify generated knowledge graph
+graphify-out/
+ficha-v1.7_1/test.js

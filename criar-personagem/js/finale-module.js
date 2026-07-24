@@ -1,6 +1,7 @@
 /* ===== PHASE 8 — A Véspera da Partida ===== */
 
 function initPhase8(container) {
+        if (typeof clampAttributesToCreationLimits === 'function') clampAttributesToCreationLimits(); // impede salvar atributo acima do teto se a fonte foi removida
         let html = createNarratorBox(NARRADOR_TEXTOS.vespera);
 
     // Ajustes Finos (Valores Derivados)
