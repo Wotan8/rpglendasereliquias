@@ -48,6 +48,15 @@
         $('#labBtnLimpar').addEventListener('click', () => { if (confirm('Limpar a mesa de montagem?')) { currentRuna = null; $('#labRunaNome').value = ''; LabCanvas.clear(); } });
         $('#labBtnSalvar').addEventListener('click', salvarRuna);
         $('#labBtnPdf')?.addEventListener('click', exportarMesa);   // ausente se o HTML não foi atualizado
+
+        // Ctrl+P / menu do PWA também produzem a folha, não a tela do app.
+        window.LabExport?.registrarProvedor(() => ({
+            nome: ($('#labRunaNome').value || '').trim() || 'Runa sem nome',
+            state: LabCanvas.getState(),
+            audit: window._lastAudit,
+            elementsById,
+            ctx: window.LabFB.ctx,
+        }));
         $('#labSearch').addEventListener('input', renderPalette);
     };
 

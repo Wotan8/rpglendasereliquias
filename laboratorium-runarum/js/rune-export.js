@@ -42,6 +42,100 @@ const LabExport = (() => {
     const G = () => window.LabCanvas.getGeometry();
 
     // ==================================================================
+    // 0. CSS DE IMPRESSÃO — injetado inline, de propósito
+    // ------------------------------------------------------------------
+    // Este bloco JÁ morou em lab-print.css. O problema: se aquele arquivo
+    // não chegasse ao cliente (cache antigo do Service Worker, 404, deploy
+    // parcial), o resultado não era "folha sem estilo" — era o APP INTEIRO
+    // indo para a impressora, porque as regras que escondem a aplicação
+    // simplesmente não existiam. Injetar junto com a folha elimina a
+    // possibilidade de a marcação existir sem o seu CSS.
+    // ==================================================================
+    const PRINT_CSS = `
+@media print {
+  body.lab-printing > *:not(#labPrintSheet) { display: none !important; }
+  body.lab-printing {
+    background: #fff !important; margin: 0 !important; padding: 0 !important;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  body.lab-printing #labPrintSheet {
+    display: block !important; position: static !important; width: 100% !important;
+    color: #16181f; background: #fff;
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    font-size: 9.4pt; line-height: 1.5;
+  }
+  .lab-pr-topo { display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 14px; border-bottom: 2px solid #b8912a; padding-bottom: 7px; margin-bottom: 12px; }
+  .lab-pr-topo h1 { margin: 0; font-size: 17pt; line-height: 1.2;
+    font-family: Cinzel, Georgia, serif; color: #0f1117; }
+  .lab-pr-topo h1 .runa { color: #8a6d16; margin-right: 4px; }
+  .lab-pr-sub { margin-top: 3px; font-size: 8.6pt; color: #444a58; }
+  .lab-pr-selo { text-align: right; font-size: 8pt; color: #6b7180; white-space: nowrap;
+    font-family: Cinzel, Georgia, serif; }
+  .lab-pr-simtag { margin-top: 5px; display: inline-block; padding: 2px 8px;
+    border: 1.5px solid #8a6fe0; border-radius: 4px; color: #5b43a8;
+    font-weight: 800; letter-spacing: .12em; font-size: 7.5pt; }
+  .lab-pr-fig { margin: 0 0 12px; text-align: center; break-inside: avoid; }
+  .lab-pr-fig svg { width: 100%; height: auto; max-height: 190mm;
+    border: 1px solid #c9c2ad; border-radius: 6px; }
+  .lab-pr-fig figcaption { margin-top: 5px; font-size: 7.6pt; color: #6b7180; font-style: italic; }
+  #labPrintSheet.paisagem .lab-pr-fig svg { max-height: 120mm; }
+  .lab-pr-fig + .lab-pr-audit { break-before: page; }
+  .lab-pr-audit h2 { margin: 0 0 9px; font-size: 12.5pt; font-family: Cinzel, Georgia, serif;
+    color: #0f1117; border-bottom: 1px solid #d8d2c0; padding-bottom: 4px; }
+  .lab-pr-audit h2 small { font-weight: 400; font-size: 8.4pt; color: #6b7180; }
+  .lab-pr-audit h3 { margin: 13px 0 5px; font-size: 10pt; font-family: Cinzel, Georgia, serif;
+    color: #2a2d36; break-after: avoid; }
+  .lab-pr-destaque { display: flex; align-items: center; gap: 14px; margin-bottom: 10px;
+    break-inside: avoid; }
+  .lab-pr-ct { display: flex; align-items: baseline; gap: 6px; border: 1.5px solid #b8912a;
+    border-radius: 7px; padding: 5px 12px; background: #fdf8e8; }
+  .lab-pr-ct span { font-size: 8pt; letter-spacing: .1em; color: #8a6d16; font-weight: 700; }
+  .lab-pr-ct b { font-size: 17pt; line-height: 1; color: #0f1117; }
+  .lab-pr-ct small { font-size: 7.4pt; color: #6b7180; }
+  .lab-pr-nat { font-size: 11pt; font-weight: 700; font-family: Cinzel, Georgia, serif; }
+  .lab-pr-tab, .lab-pr-comp { width: 100%; border-collapse: collapse; }
+  .lab-pr-tab th, .lab-pr-tab td, .lab-pr-comp th, .lab-pr-comp td {
+    border-bottom: 1px solid #e2ddcd; padding: 4px 7px; text-align: left;
+    vertical-align: top; break-inside: avoid; }
+  .lab-pr-tab th { width: 44%; font-weight: 600; color: #3a3f4c; }
+  .lab-pr-tab small, .lab-pr-comp small { color: #6b7180; font-size: 8pt; }
+  .lab-pr-comp thead th { background: #f3efe2; font-size: 8.2pt; text-transform: uppercase;
+    letter-spacing: .05em; color: #5b6070; }
+  .lab-pr-comp .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .lab-pr-comp tfoot td { font-weight: 800; background: #fdf8e8; border-top: 1.5px solid #b8912a; }
+  .lab-pr-comp tfoot td:last-child { text-align: right; }
+  .lab-pr-lista { margin: 4px 0 0; padding-left: 17px; }
+  .lab-pr-lista li { margin-bottom: 3px; break-inside: avoid; }
+  .lab-pr-nota { margin: 3px 0 5px; font-size: 8.6pt; color: #444a58; }
+  .lab-pr-issues { display: flex; flex-direction: column; gap: 4px; }
+  .lab-pr-issue { border: 1px solid; border-left-width: 3px; border-radius: 4px;
+    padding: 4px 7px; font-size: 8.6pt; break-inside: avoid; }
+  .lab-pr-issue.erro  { border-color: #c94f5c; background: #fdf2f3; }
+  .lab-pr-issue.aviso { border-color: #b8912a; background: #fdf8e8; }
+  .lab-pr-issue.info  { border-color: #b9bfcc; background: #f6f7f9; color: #444a58; }
+  .lab-pr-issue.ok    { border-color: #3fae6a; background: #f1faf4; }
+  .lab-pr-rodape { margin-top: 14px; padding-top: 5px; border-top: 1px solid #d8d2c0;
+    font-size: 7.4pt; color: #8b8f9c; text-align: center; font-family: Cinzel, Georgia, serif; }
+}`;
+
+    /**
+     * Injeta o CSS de impressão + a orientação.
+     * `size` sem nome de papel (só portrait/landscape) de propósito: o
+     * Android reportou "Letter" e forçar "A4" faria o navegador reescalar
+     * a folha contra o papel real da impressora.
+     */
+    function injetarCss(paisagem) {
+        let st = document.getElementById('labPrintStyle');
+        if (!st) {
+            st = document.createElement('style');
+            st.id = 'labPrintStyle';
+            document.head.appendChild(st);
+        }
+        st.textContent = `@page { size: ${paisagem ? 'landscape' : 'portrait'}; margin: 12mm; }` + PRINT_CSS;
+    }
+
+    // ==================================================================
     // 1. BOUNDING BOX — a garantia de "não corta nada"
     // ==================================================================
     function bbox(state, elementsById, simSet) {
@@ -448,7 +542,9 @@ const LabExport = (() => {
         }
     }
 
-    async function gerar(p, opts) {
+    /** Monta a folha e ativa o modo de impressão. Síncrono de propósito:
+     *  precisa rodar inteiro dentro de um handler de 'beforeprint'. */
+    function montarFolha(p, opts) {
         const a = p.audit;
         const simSet = new Set((a?.naoAprendidos || []).map(n => n.nodeId));
         const nome = (p.nome || '').trim() || 'Runa sem nome';
@@ -456,7 +552,7 @@ const LabExport = (() => {
         let figura = '', paisagem = false;
         if (opts.comFig) {
             const { svg, bb } = buildSvg(p.state, p.elementsById, simSet, opts.claro ? 'claro' : 'escuro');
-            // Circuito largo em A4 retrato encolhe até ficar ilegível:
+            // Circuito largo em retrato encolhe até ficar ilegível:
             // gira a folha inteira em vez de espremer a figura.
             paisagem = (bb.w / bb.h) > 1.35;
             figura = `<figure class="lab-pr-fig">${svg}
@@ -473,47 +569,71 @@ const LabExport = (() => {
             (opts.comAud && a ? auditHtml(a, p.ctx || {}) : '') +
             `<footer class="lab-pr-rodape">Gerado pelo Laboratorium Runarum · Lendas &amp; Relíquias</footer>`;
         sheet.setAttribute('aria-hidden', 'false');
+        sheet.style.removeProperty('display');   // o inline display:none do HTML sai daqui
 
-        // @page não aceita seletor de classe — a orientação vai por <style> injetado.
-        let ps = document.getElementById('labPageStyle');
-        if (!ps) {
-            ps = document.createElement('style');
-            ps.id = 'labPageStyle';
-            document.head.appendChild(ps);
-        }
-        ps.textContent = `@page { size: A4 ${paisagem ? 'landscape' : 'portrait'}; margin: 12mm; }`;
+        injetarCss(paisagem);
+        document.body.classList.add('lab-printing');
+        return { sheet, nome };
+    }
+
+    async function gerar(p, opts) {
+        const { sheet, nome } = montarFolha(p, opts);
 
         await aguardarImagens(sheet);
 
         // O navegador usa document.title como nome sugerido do PDF.
-        const tituloOriginal = document.title;
-        const hoje = new Date().toISOString().slice(0, 10);
-        document.title = `runa-${slug(nome)}-${hoje}`;
+        tituloOriginal = document.title;
+        document.title = `runa-${slug(nome)}-${new Date().toISOString().slice(0, 10)}`;
 
-        document.body.classList.add('lab-printing');
-
-        const depois = () => {
-            document.title = tituloOriginal;
-            limpar();
-            window.removeEventListener('afterprint', depois);
-        };
-        window.addEventListener('afterprint', depois);
+        window.addEventListener('afterprint', limpar);
 
         // Um frame para o layout de impressão assentar antes do diálogo.
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
         window.print();
 
         // Safari/iOS nem sempre disparam afterprint.
-        setTimeout(() => { if (document.body.classList.contains('lab-printing')) depois(); }, 60000);
+        setTimeout(() => { if (document.body.classList.contains('lab-printing')) limpar(); }, 60000);
     }
+
+    let tituloOriginal = null;
 
     function limpar() {
+        window.removeEventListener('afterprint', limpar);
         document.body.classList.remove('lab-printing');
+        if (tituloOriginal !== null) { document.title = tituloOriginal; tituloOriginal = null; }
         const sheet = document.getElementById('labPrintSheet');
-        if (sheet) { sheet.innerHTML = ''; sheet.setAttribute('aria-hidden', 'true'); }
+        if (sheet) {
+            sheet.innerHTML = '';
+            sheet.setAttribute('aria-hidden', 'true');
+            sheet.style.display = 'none';
+        }
     }
 
-    return { open, buildSvg, bbox };
+    // ==================================================================
+    // 6. IMPRESSÃO NATIVA DO NAVEGADOR (Ctrl+P / menu do PWA)
+    // ------------------------------------------------------------------
+    // Sem isto, quem manda imprimir pelo menu do navegador leva a
+    // aplicação inteira para o papel — barra lateral, abas, botões.
+    // Monta a folha padrão na hora, de forma síncrona.
+    // ==================================================================
+    let provedor = null;
+    function registrarProvedor(fn) { provedor = fn; }
+
+    if (typeof window !== 'undefined') {
+        window.addEventListener('beforeprint', () => {
+            if (document.body.classList.contains('lab-printing')) return;  // já é a nossa folha
+            if (!provedor) return;
+            let p;
+            try { p = provedor(); } catch (e) { return; }
+            if (!p?.state?.nodes?.length) return;   // mesa vazia: deixa a página como está
+            try {
+                montarFolha(p, { comFig: true, comAud: true, claro: false });
+                window.addEventListener('afterprint', limpar);
+            } catch (e) { console.error('❌ Folha automática:', e); limpar(); }
+        });
+    }
+
+    return { open, registrarProvedor, buildSvg, bbox };
 })();
 
 if (typeof window !== 'undefined') window.LabExport = LabExport;
