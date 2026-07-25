@@ -62,11 +62,11 @@ const LabExport = (() => {
     display: block !important; position: static !important; width: 100% !important;
     color: #16181f; background: #fff;
     font-family: Inter, system-ui, -apple-system, sans-serif;
-    font-size: 9.4pt; line-height: 1.5;
+    font-size: 9pt; line-height: 1.38;
   }
   .lab-pr-topo { display: flex; justify-content: space-between; align-items: flex-start;
-    gap: 14px; border-bottom: 2px solid #b8912a; padding-bottom: 7px; margin-bottom: 12px; }
-  .lab-pr-topo h1 { margin: 0; font-size: 17pt; line-height: 1.2;
+    gap: 14px; border-bottom: 2px solid #b8912a; padding-bottom: 5px; margin-bottom: 9px; }
+  .lab-pr-topo h1 { margin: 0; font-size: 15pt; line-height: 1.2;
     font-family: Cinzel, Georgia, serif; color: #0f1117; }
   .lab-pr-topo h1 .runa { color: #8a6d16; margin-right: 4px; }
   .lab-pr-sub { margin-top: 3px; font-size: 8.6pt; color: #444a58; }
@@ -75,18 +75,21 @@ const LabExport = (() => {
   .lab-pr-simtag { margin-top: 5px; display: inline-block; padding: 2px 8px;
     border: 1.5px solid #8a6fe0; border-radius: 4px; color: #5b43a8;
     font-weight: 800; letter-spacing: .12em; font-size: 7.5pt; }
-  .lab-pr-fig { margin: 0 0 12px; text-align: center; break-inside: avoid; }
-  .lab-pr-fig svg { width: 100%; height: auto; max-height: 190mm;
+  .lab-pr-fig { margin: 0 0 9px; text-align: center; break-inside: avoid; }
+  /* A largura vem inline, calculada da proporção real do circuito: sem isso
+     um circuito de um nó só era esticado para a largura inteira da página. */
+  .lab-pr-fig svg { max-width: 100%; height: auto;
     border: 1px solid #c9c2ad; border-radius: 6px; }
   .lab-pr-fig figcaption { margin-top: 5px; font-size: 7.6pt; color: #6b7180; font-style: italic; }
-  #labPrintSheet.paisagem .lab-pr-fig svg { max-height: 120mm; }
-  .lab-pr-fig + .lab-pr-audit { break-before: page; }
-  .lab-pr-audit h2 { margin: 0 0 9px; font-size: 12.5pt; font-family: Cinzel, Georgia, serif;
+  /* Só a figura em página própria força a quebra; no modo compacto a
+     auditoria flui logo abaixo e o conjunto cabe em uma folha. */
+  #labPrintSheet.fig-propria .lab-pr-fig + .lab-pr-audit { break-before: page; }
+  .lab-pr-audit h2 { margin: 0 0 6px; font-size: 12.5pt; font-family: Cinzel, Georgia, serif;
     color: #0f1117; border-bottom: 1px solid #d8d2c0; padding-bottom: 4px; }
   .lab-pr-audit h2 small { font-weight: 400; font-size: 8.4pt; color: #6b7180; }
-  .lab-pr-audit h3 { margin: 13px 0 5px; font-size: 10pt; font-family: Cinzel, Georgia, serif;
+  .lab-pr-audit h3 { margin: 9px 0 4px; font-size: 10pt; font-family: Cinzel, Georgia, serif;
     color: #2a2d36; break-after: avoid; }
-  .lab-pr-destaque { display: flex; align-items: center; gap: 14px; margin-bottom: 10px;
+  .lab-pr-destaque { display: flex; align-items: center; gap: 14px; margin-bottom: 7px;
     break-inside: avoid; }
   .lab-pr-ct { display: flex; align-items: baseline; gap: 6px; border: 1.5px solid #b8912a;
     border-radius: 7px; padding: 5px 12px; background: #fdf8e8; }
@@ -96,7 +99,7 @@ const LabExport = (() => {
   .lab-pr-nat { font-size: 11pt; font-weight: 700; font-family: Cinzel, Georgia, serif; }
   .lab-pr-tab, .lab-pr-comp { width: 100%; border-collapse: collapse; }
   .lab-pr-tab th, .lab-pr-tab td, .lab-pr-comp th, .lab-pr-comp td {
-    border-bottom: 1px solid #e2ddcd; padding: 4px 7px; text-align: left;
+    border-bottom: 1px solid #e2ddcd; padding: 2.5px 6px; text-align: left;
     vertical-align: top; break-inside: avoid; }
   .lab-pr-tab th { width: 44%; font-weight: 600; color: #3a3f4c; }
   .lab-pr-tab small, .lab-pr-comp small { color: #6b7180; font-size: 8pt; }
@@ -110,12 +113,12 @@ const LabExport = (() => {
   .lab-pr-nota { margin: 3px 0 5px; font-size: 8.6pt; color: #444a58; }
   .lab-pr-issues { display: flex; flex-direction: column; gap: 4px; }
   .lab-pr-issue { border: 1px solid; border-left-width: 3px; border-radius: 4px;
-    padding: 4px 7px; font-size: 8.6pt; break-inside: avoid; }
+    padding: 3px 6px; font-size: 8.4pt; break-inside: avoid; }
   .lab-pr-issue.erro  { border-color: #c94f5c; background: #fdf2f3; }
   .lab-pr-issue.aviso { border-color: #b8912a; background: #fdf8e8; }
   .lab-pr-issue.info  { border-color: #b9bfcc; background: #f6f7f9; color: #444a58; }
   .lab-pr-issue.ok    { border-color: #3fae6a; background: #f1faf4; }
-  .lab-pr-rodape { margin-top: 14px; padding-top: 5px; border-top: 1px solid #d8d2c0;
+  .lab-pr-rodape { margin-top: 10px; padding-top: 4px; border-top: 1px solid #d8d2c0;
     font-size: 7.4pt; color: #8b8f9c; text-align: center; font-family: Cinzel, Georgia, serif; }
 }`;
 
@@ -470,6 +473,7 @@ const LabExport = (() => {
                 <label class="lab-pr-opt"><input type="checkbox" id="labPrOptFig" checked> Imagem da runa</label>
                 <label class="lab-pr-opt"><input type="checkbox" id="labPrOptAud" checked> Auditoria do Projeto</label>
                 <label class="lab-pr-opt"><input type="checkbox" id="labPrOptClaro"> Fundo claro na figura <small>(economiza tinta)</small></label>
+                <label class="lab-pr-opt"><input type="checkbox" id="labPrOptPagina"> Figura em página própria <small>(maior, gera 2 páginas)</small></label>
                 <p class="lab-pr-dica">No diálogo do navegador, escolha <b>“Salvar como PDF”</b> em Destino
                    para baixar o arquivo — ou envie direto para a impressora.</p>
                 <div class="lab-pr-acoes">
@@ -521,6 +525,7 @@ const LabExport = (() => {
         const comFig = document.getElementById('labPrOptFig').checked;
         const comAud = document.getElementById('labPrOptAud').checked;
         const claro = document.getElementById('labPrOptClaro').checked;
+        const figPropria = document.getElementById('labPrOptPagina').checked;
         if (!comFig && !comAud) {
             window.labToast?.('⚠️ Selecione ao menos uma seção.');
             return;
@@ -532,7 +537,7 @@ const LabExport = (() => {
         window.labToast?.('📄 Montando a folha…');
 
         try {
-            await gerar(p, { comFig, comAud, claro });
+            await gerar(p, { comFig, comAud, claro, figPropria });
         } catch (e) {
             console.error('❌ Falha ao gerar a folha:', e);
             window.labToast?.('❌ Não foi possível gerar a folha — veja o console.');
@@ -549,20 +554,37 @@ const LabExport = (() => {
         const simSet = new Set((a?.naoAprendidos || []).map(n => n.nodeId));
         const nome = (p.nome || '').trim() || 'Runa sem nome';
 
+        // Figura grande = página própria, ou quando ela é o único conteúdo.
+        const figGrande = !!opts.figPropria || !opts.comAud;
+        const figPropria = !!opts.figPropria && opts.comAud;
+
         let figura = '', paisagem = false;
         if (opts.comFig) {
             const { svg, bb } = buildSvg(p.state, p.elementsById, simSet, opts.claro ? 'claro' : 'escuro');
-            // Circuito largo em retrato encolhe até ficar ilegível:
-            // gira a folha inteira em vez de espremer a figura.
-            paisagem = (bb.w / bb.h) > 1.35;
-            figura = `<figure class="lab-pr-fig">${svg}
+            const prop = bb.w / bb.h;
+
+            // Só vira a folha quando a figura tem a página inteira: no modo
+            // compacto o limite de largura já resolve circuitos largos.
+            paisagem = figGrande && prop > 1.35;
+
+            // Altura disponível (mm) → largura pela proporção real. Assim um
+            // circuito pequeno sai pequeno em vez de esticado, e um grande
+            // ocupa o que precisa sem estourar a folha.
+            const alturaMax = figGrande ? (paisagem ? 120 : 185) : 66;
+            const larguraMax = paisagem ? 245 : 178;
+            const larguraMm = Math.min(larguraMax, Math.round(alturaMax * prop));
+
+            figura = `<figure class="lab-pr-fig">${svg.replace('<svg ',
+                `<svg style="width:${larguraMm}mm" `)}
                 <figcaption>Circuito completo — ${p.state.nodes.length} elemento(s),
                 ${p.state.links.length} ligação(ões). Enquadramento automático: nada foi cortado.</figcaption>
             </figure>`;
         }
 
         const sheet = document.getElementById('labPrintSheet');
-        sheet.className = 'lab-print-sheet' + (paisagem ? ' paisagem' : '');
+        sheet.className = 'lab-print-sheet'
+            + (paisagem ? ' paisagem' : '')
+            + (figPropria ? ' fig-propria' : '');
         sheet.innerHTML =
             cabecalho(nome, p.ctx, simSet.size > 0) +
             figura +
