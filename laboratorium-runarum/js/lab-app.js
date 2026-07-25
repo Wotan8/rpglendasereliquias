@@ -47,6 +47,7 @@
 
         $('#labBtnLimpar').addEventListener('click', () => { if (confirm('Limpar a mesa de montagem?')) { currentRuna = null; $('#labRunaNome').value = ''; LabCanvas.clear(); } });
         $('#labBtnSalvar').addEventListener('click', salvarRuna);
+        $('#labBtnPdf')?.addEventListener('click', exportarMesa);   // ausente se o HTML não foi atualizado
         $('#labSearch').addEventListener('input', renderPalette);
     };
 
@@ -133,6 +134,16 @@
                 : a.naoAprendidos.length
                     ? 'Elementos em simulação (não dominados): ' + a.naoAprendidos.map(n => `${n.nome} Nv${n.nivel}`).join(', ')
                     : 'Monte um circuito primeiro';
+        // 📄 Exportar: diferente do Salvar, funciona TAMBÉM em simulação —
+        // só exige que haja algo na mesa.
+        const btnPdf = $('#labBtnPdf');
+        if (btnPdf) {
+            btnPdf.disabled = !cState.nodes.length;
+            btnPdf.title = cState.nodes.length
+                ? 'Imprimir / salvar em PDF a runa + a Auditoria do Projeto'
+                : 'Monte um circuito primeiro';
+        }
+
         $('#labSimAviso').style.display = a.naoAprendidos.length ? '' : 'none';
         $('#labSimAviso').innerHTML = a.naoAprendidos.length
             ? `🔮 Simulação: <b>${a.naoAprendidos.map(n => `${esc(n.nome)} Nv${n.nivel}`).join(' · ')}</b> ainda não dominado(s) — estude-os na Lista de Estudo da ficha para poder gravar.` : '';
@@ -170,6 +181,62 @@
         if (ok) { currentRuna = runa.id; renderGrimorio(); }
     }
 
+    // ================= EXPORTAR (impressão / PDF) =================
+    /**
+     * O Service Worker revalida cada recurso por conta própria: se a VERSION
+     * do sw.js não for incrementada, um cliente pode ficar com o HTML antigo
+     * (sem o <script> de rune-export.js) e o lab-app.js novo. Falha explicada
+     * é melhor que ReferenceError.
+     */
+    function exportDisponivel() {
+        if (window.LabExport) return true;
+        toast('⚠️ Módulo de exportação não carregado — recarregue a página (Ctrl+F5).');
+        return false;
+    }
+
+    /** Roda a auditoria completa sobre um estado de canvas qualquer. */
+    function auditarEstado(state) {
+        return RuneEngine.audit({
+            nodes: state?.nodes || [], links: state?.links || [], elementsById,
+            char: { ...window.LabFB.ctx, aprendidos: learned() },
+            tabelas: window.RUNO_TABELAS,
+        });
+    }
+
+    /** Mesa de montagem → folha. Usa a auditoria que já está na tela. */
+    function exportarMesa() {
+        if (!exportDisponivel()) return;
+        const state = LabCanvas.getState();
+        if (!state.nodes.length) { toast('⚠️ Não há nada na mesa para exportar.'); return; }
+        LabExport.open({
+            nome: ($('#labRunaNome').value || '').trim() || 'Runa sem nome',
+            state,
+            audit: window._lastAudit || auditarEstado(state),
+            elementsById,
+            ctx: window.LabFB.ctx,
+        });
+    }
+
+    /**
+     * Runa do Grimório → folha. A auditoria é RECALCULADA a partir de
+     * r.canvas: o registro salvo guarda só o resumo (ct/alvo/composicao),
+     * sem issues nem confluências.
+     */
+    function exportarRuna(r) {
+        if (!exportDisponivel()) return;
+        if (!r?.canvas?.nodes?.length) {
+            toast('⚠️ Esta runa foi salva sem o desenho do circuito.');
+            return;
+        }
+        LabExport.open({
+            nome: r.nome,
+            state: r.canvas,
+            audit: auditarEstado(r.canvas),
+            elementsById,
+            ctx: window.LabFB.ctx,
+        });
+    }
+
     function renderGrimorio() {
         const g = window.LabFB.runomancia.grimorio || [];
         $('#labGrimorio').innerHTML = !g.length
@@ -184,6 +251,7 @@
                 <div class="lab-grim-comp">${(r.composicao || []).map(c => `<span class="lab-chip">${esc(c.nome)} Nv${c.nivel} <small>${c.custo}</small></span>`).join('')}</div>
                 <div class="lab-grim-acoes">
                     <button data-acao="abrir">🛠️ Abrir na mesa</button>
+                    <button data-acao="pdf" title="Imprimir / salvar em PDF">📄</button>
                     <button data-acao="excluir" class="perigo">🗑️</button>
                 </div>
             </div>`).join('');
@@ -199,6 +267,8 @@
                     $('#labRunaNome').value = r.nome;
                     LabCanvas.loadState(r.canvas);
                     switchTab('montagem');
+                } else if (b.dataset.acao === 'pdf') {
+                    exportarRuna(r);
                 } else if (b.dataset.acao === 'excluir') {
                     if (!confirm(`Apagar "${r.nome}" do Grimório?`)) return;
                     window.LabFB.runomancia.grimorio = window.LabFB.runomancia.grimorio.filter(x => x.id !== id);
@@ -262,4 +332,5 @@
         setTimeout(() => t.classList.add('show'), 20);
         setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 400); }, 2800);
     }
+    window.labToast = toast;   // usado por rune-export.js
 })();

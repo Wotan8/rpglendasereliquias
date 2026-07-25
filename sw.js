@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v35';
+const VERSION = 'v36';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -79,12 +79,14 @@ const PRECACHE_URLS = [
   '/hexmap.js',
   '/index.html',
   '/js/global-favicon.js',
+  '/laboratorium-runarum/css/lab-print.css',
   '/laboratorium-runarum/css/laboratorium.css',
   '/laboratorium-runarum/js/canvas.js',
   '/laboratorium-runarum/js/compendium-data.js',
   '/laboratorium-runarum/js/lab-app.js',
   '/laboratorium-runarum/js/lab-firebase.js',
   '/laboratorium-runarum/js/rune-engine.js',
+  '/laboratorium-runarum/js/rune-export.js',
   '/laboratorium-runarum/laboratorium.html',
   '/menu/css/menu.css',
   '/menu/js/menu-firebase.js',
@@ -148,6 +150,7 @@ const PRECACHE_URLS = [
   '/tabuleiro/js/tab-clima.js',
   '/tabuleiro/js/tab-cena.js',
   '/tabuleiro/js/tab-undo.js',
+  '/shared/lendas-reliquias.css',
   '/shared/theme.js',
   '/shared/tokens.css',
   '/viewmap.html',
