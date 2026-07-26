@@ -1,0 +1,84 @@
+/* =====================================================================
+   ᛟ LAB PRINT — Folha Técnica da Runa (impressão / salvar como PDF)
+   ---------------------------------------------------------------------
+   Duas partes:
+   1) Tela  — o modal de opções (#labPrintOverlay). A folha em si fica
+              oculta; ela só existe para a mídia de impressão.
+   2) Print — esconde a aplicação inteira e imprime somente a folha.
+   ===================================================================== */
+
+/* ================= 1. MODAL (tela) ================= */
+#labPrintOverlay {
+    position: fixed; inset: 0; z-index: 10000;
+    background: rgba(0, 0, 0, .55); backdrop-filter: blur(2px);
+    display: none; align-items: center; justify-content: center; padding: 16px;
+}
+
+#labPrintModal {
+    background: var(--pedra, #151827); color: var(--ink, #e8eaf2);
+    border: 1px solid var(--borda, #2a2f45); border-radius: var(--radius, 12px);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .5);
+    width: 380px; max-width: 100%; padding: 18px;
+    display: flex; flex-direction: column; gap: 10px;
+    font-family: var(--font, Inter, system-ui, sans-serif);
+}
+
+#labPrintModal h2 {
+    margin: 0 0 4px; font-size: 1.05rem; text-align: center;
+    color: var(--lume, #d4af37); font-family: var(--font-titulo, Cinzel, serif);
+}
+
+.lab-pr-opt {
+    display: flex; align-items: center; gap: 9px;
+    font-size: .82rem; cursor: pointer; padding: 7px 9px;
+    border: 1px solid var(--borda, #2a2f45); border-radius: 8px;
+    background: var(--canvas-chip, #10131e);
+}
+.lab-pr-opt:hover { border-color: var(--lume, #d4af37); }
+.lab-pr-opt input { accent-color: var(--lume, #d4af37); width: 16px; height: 16px; }
+.lab-pr-opt small { color: var(--muted, #8b93a7); }
+
+#labPrintModal .lab-pr-dica {
+    margin: 2px 0 0; font-size: .72rem; line-height: 1.5;
+    color: var(--muted, #8b93a7);
+}
+
+.lab-pr-acoes { display: flex; gap: 8px; margin-top: 6px; }
+.lab-pr-acoes button {
+    flex: 1; padding: 9px 12px; min-height: 40px; border-radius: 8px;
+    cursor: pointer; font-weight: 700; font-family: inherit; font-size: .84rem;
+}
+.lab-pr-acoes .cancelar {
+    background: var(--canvas-chip, #10131e); color: var(--muted, #8b93a7);
+    border: 1px solid var(--borda, #2a2f45);
+}
+.lab-pr-acoes .cancelar:hover { color: var(--ink, #e8eaf2); }
+.lab-pr-acoes .confirmar {
+    background: var(--primary, var(--lume, #d4af37)); color: var(--lr-divine, #12141c);
+    border: 1px solid var(--primary, var(--lume, #d4af37));
+}
+.lab-pr-acoes .confirmar:hover:not(:disabled) { filter: brightness(1.08); }
+.lab-pr-acoes .confirmar:disabled { opacity: .6; cursor: progress; }
+
+/* Botão 📄 PDF na barra da mesa — secundário, para não competir
+   visualmente com o dourado do "Gravar no Grimório". */
+.lab-canvas-barra button#labBtnPdf {
+    background: var(--pedra, #151827); border-color: var(--borda, #2a2f45);
+    color: var(--ink, #e8eaf2);
+}
+.lab-canvas-barra button#labBtnPdf:hover:not(:disabled) {
+    border-color: var(--lume, #d4af37); color: var(--lume, #d4af37); filter: none;
+}
+
+/* A folha nunca aparece na tela — só na mídia de impressão. */
+.lab-print-sheet { display: none; }
+
+/* ================= 2. FOLHA (impressão) =================
+   As regras de @media print NÃO moram mais aqui: foram para a constante
+   PRINT_CSS em js/rune-export.js, injetada inline junto com a folha.
+
+   Motivo: se este arquivo não chegasse ao cliente (cache antigo do
+   Service Worker, deploy parcial), o navegador imprimia a APLICAÇÃO
+   INTEIRA — as regras que a escondem estavam justamente aqui. Marcação
+   e CSS agora nascem juntos e não podem se separar.
+   ========================================================= */

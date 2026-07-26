@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#0E1117">
     <title>ᛟ Laboratorium Runarum — Lendas & Relíquias</title>
     <link rel="stylesheet" href="css/laboratorium.css">
+    <link rel="stylesheet" href="css/lab-print.css">
     <link rel="stylesheet" href="../shared/tokens.css">
     <script src="../shared/theme.js"></script>
     <script type="module" src="/js/global-favicon.js"></script>
@@ -55,6 +56,7 @@
                 <div class="lab-canvas-barra">
                     <input id="labRunaNome" type="text" placeholder="Nome da runa (ex.: Lanterna Perene)">
                     <button id="labBtnSalvar" disabled>📖 Gravar no Grimório</button>
+                    <button id="labBtnPdf" disabled title="Monte um circuito primeiro">📄 PDF</button>
                     <button id="labBtnLimpar" class="perigo">🧹</button>
                 </div>
                 <div id="labSimAviso" class="lab-sim-aviso" style="display:none"></div>
@@ -92,10 +94,15 @@
         </div>
     </div>
 
+    <!-- FOLHA TÉCNICA (impressão / PDF) — precisa ser filha direta do <body>:
+         o @media print esconde os irmãos e deixa só ela. -->
+    <div id="labPrintSheet" class="lab-print-sheet" style="display:none" aria-hidden="true"></div>
+
     <!-- Scripts (ordem importa) -->
     <script src="js/compendium-data.js"></script>
     <script src="js/rune-engine.js"></script>
     <script src="js/canvas.js"></script>
+    <script src="js/rune-export.js"></script>
     <script src="js/lab-app.js"></script>
     <script type="module" src="js/lab-firebase.js"></script>
 </body>

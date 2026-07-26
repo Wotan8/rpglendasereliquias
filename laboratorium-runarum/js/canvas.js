@@ -493,12 +493,19 @@ const LabCanvas = (() => {
         }
     }
 
+    // Geometria das ligações isolada: a mesa e a exportação (rune-export.js)
+    // desenham a MESMA curva. Se mudar aqui, muda nos dois.
+    const linkPath = (a, b) => {
+        const dx = Math.max(24, Math.abs(b.x - a.x) / 2);
+        return `M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`;
+    };
+    const linkColor = (sinal, preview) => preview ? '#22c55e' : (sinal ? '#a78bfa' : '#f59e0b');
+
     function mkLine(a, b, preview, sinal) {
         const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const dx = Math.max(24, Math.abs(b.x - a.x) / 2);
-        p.setAttribute('d', `M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`);
+        p.setAttribute('d', linkPath(a, b));
         p.setAttribute('fill', 'none');
-        p.setAttribute('stroke', preview ? '#22c55e' : (sinal ? '#a78bfa' : '#f59e0b'));
+        p.setAttribute('stroke', linkColor(sinal, preview));
         p.setAttribute('stroke-width', preview ? 2 : 3);
         if (preview || sinal) p.setAttribute('stroke-dasharray', preview ? '4 4' : '6 5');
         p.style.cursor = 'pointer';
@@ -525,7 +532,21 @@ const LabCanvas = (() => {
         return m[RuneEngine.norm(nome)] || nome || '#94a3b8';
     }
 
-    return { init, addNode, removeNode, clear, getState, loadState, setLearned, NODE_W, NODE_H };
+    /**
+     * ᛟ Geometria compartilhada — usada por rune-export.js para redesenhar
+     * o circuito em SVG a partir do modelo. É de propósito uma referência
+     * às MESMAS funções da mesa: evita que a folha impressa passe a mentir
+     * silenciosamente no dia em que o encaixe ou os pontos mudarem aqui.
+     */
+    function getGeometry() {
+        return {
+            NODE_W, NODE_H, CP_CORES, CP_FALLBACK,
+            pointsOf, ptPos, cssColor, linkPath,
+            linkColor: sinal => linkColor(sinal, false),
+        };
+    }
+
+    return { init, addNode, removeNode, clear, getState, loadState, setLearned, getGeometry, NODE_W, NODE_H };
 })();
 
 if (typeof window !== 'undefined') window.LabCanvas = LabCanvas;
