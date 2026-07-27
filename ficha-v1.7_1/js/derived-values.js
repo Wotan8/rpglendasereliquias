@@ -232,6 +232,17 @@ function renderDerivedValuesGrid() {
         label.textContent = `${dv.icone} ${dv.nome}`;
         label.dataset.dvId = dv.id;
 
+        // DV escopado por item: o número aqui é a BASE do personagem; o total
+        // com cada item equipado sai na aba Combate → Ataques e Efeitos Ativos.
+        if (dv.escopoItem) {
+            miniField.classList.add('dv-escopo-item');
+            const tag = document.createElement('span');
+            tag.className = 'dv-escopo-tag';
+            tag.textContent = '🎒 base';
+            tag.title = 'Valor base do personagem. O total com cada item equipado aparece na aba Combate → Ataques e Efeitos Ativos.';
+            label.appendChild(tag);
+        }
+
         // Input Máximo (calculado)
         const input = document.createElement('input');
         input.type = 'text';
@@ -897,6 +908,10 @@ function recalcAll() {
 
     // 6) Sincronizar componentes reativos dos módulos de classe (VD)
     if (typeof syncModuleDerivedValuesUI === 'function') syncModuleDerivedValuesUI();
+
+    // 7) Tabela "Ataques e Efeitos Ativos" — depende de state.derived já calculado
+    //    acima. Só lê e escreve no DOM; não recalcula nada (evita laço infinito).
+    if (typeof renderActiveEffects === 'function') renderActiveEffects();
 }
 
 /**

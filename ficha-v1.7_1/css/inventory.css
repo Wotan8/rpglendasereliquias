@@ -1208,3 +1208,111 @@
     .cond-card-time { flex-wrap: wrap; }
 }
 
+
+/* ===== ATAQUES E EFEITOS ATIVOS (aba Combate) ===== */
+/* Rola na horizontal: o número de colunas cresce com os Valores Derivados
+   marcados com Escopo por Item, e a página nunca deve rolar lateralmente. */
+.atk-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.atk-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+    min-width: 320px;
+}
+.atk-table th {
+    text-align: center;
+    padding: 6px 10px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted, var(--lr-text-2));
+    border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+    white-space: nowrap;
+}
+.atk-table th.atk-col-item,
+.atk-table td.atk-col-item {
+    text-align: left;
+    min-width: 150px;
+}
+.atk-table tbody tr {
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.atk-table tbody tr:hover {
+    background: rgba(99, 102, 241, 0.08);
+}
+.atk-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.06));
+    text-align: center;
+    white-space: nowrap;
+}
+.atk-item-name {
+    display: block;
+    font-weight: 600;
+}
+.atk-item-state {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--muted, var(--lr-text-2));
+}
+.atk-dano {
+    font-weight: 700;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    color: #f59e0b;
+}
+.atk-val strong { font-size: 1rem; }
+.atk-delta {
+    margin-left: 4px;
+    font-size: 0.7rem;
+    color: #10b981;
+    font-weight: 700;
+}
+
+/* Breakdown no modal de detalhe do item */
+.inv-detail-escopo {
+    margin: 12px 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(99, 102, 241, 0.07);
+    border: 1px solid rgba(99, 102, 241, 0.22);
+}
+.inv-escopo-inativo { opacity: 0.55; }
+.inv-escopo-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 0.84rem;
+    flex-wrap: wrap;
+}
+.inv-escopo-nome { font-weight: 600; }
+.inv-escopo-calc {
+    color: var(--muted, var(--lr-text-2));
+    font-size: 0.78rem;
+}
+.inv-escopo-total {
+    margin-left: auto;
+    font-weight: 700;
+}
+.inv-escopo-dano {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    color: #f59e0b;
+}
+
+/* Marcador "base" nos Valores Derivados escopados por item */
+.dv-escopo-tag {
+    margin-left: 5px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    background: rgba(99, 102, 241, 0.16);
+    color: var(--lr-arcane-2, #818cf8);
+    white-space: nowrap;
+    cursor: help;
+}

@@ -434,3 +434,57 @@
     display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
     padding: 0 8px 8px 8px;
 }
+
+/* ===== ATAQUES E EFEITOS ATIVOS (totais por item equipado) ===== */
+/* Rola na horizontal: o número de colunas cresce com os Valores Derivados
+   marcados com Escopo por Item no Painel do Criador. */
+#npcAtaquesWrap .atk-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+#npcAtaquesWrap .atk-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    min-width: 320px;
+}
+#npcAtaquesWrap .atk-table th {
+    text-align: center;
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted, #94a3b8);
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+    white-space: nowrap;
+}
+#npcAtaquesWrap .atk-table th.atk-col-item,
+#npcAtaquesWrap .atk-table td.atk-col-item {
+    text-align: left;
+    min-width: 150px;
+}
+#npcAtaquesWrap .atk-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+    text-align: center;
+    white-space: nowrap;
+}
+#npcAtaquesWrap .atk-item-name { display: block; font-weight: 600; }
+#npcAtaquesWrap .atk-item-state {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--muted, #94a3b8);
+}
+#npcAtaquesWrap .atk-dano {
+    font-weight: 700;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    color: #f59e0b;
+}
+#npcAtaquesWrap .atk-val strong { font-size: 1rem; }
+#npcAtaquesWrap .atk-delta {
+    margin-left: 4px;
+    font-size: 0.7rem;
+    color: #10b981;
+    font-weight: 700;
+}

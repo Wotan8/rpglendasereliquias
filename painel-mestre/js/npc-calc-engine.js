@@ -166,42 +166,76 @@ function _npcItemFormas(item) {
     return formas;
 }
 
-/** Soma a quantidade dos itens do NPC que casam com o requisito, equipados nas formas exigidas. */
-function _npcCountReq(req, ctx) {
+/** Itens do NPC que casam com o alvo do requisito (sem filtrar por forma de equipar). */
+function _npcMatchItems(req, ctx) {
     const items = Array.isArray(ctx?.inventoryItems) ? ctx.inventoryItems : [];
     const catalog = Array.isArray(ctx?.equipCatalog) ? ctx.equipCatalog : [];
     const target = _npcReqTarget(req);
-    const formas = _npcReqFormas(req);
 
-    let matched;
     if (target.kind === 'tag') {
         const tag = target.value;
-        matched = items.filter(i => {
+        return items.filter(i => {
             if (Array.isArray(i.tags) && i.tags.includes(tag)) return true;
             const tpl = i.modeloId ? catalog.find(t => t.id === i.modeloId) : catalog.find(t => t.nome === i.nome);
             return !!(tpl && Array.isArray(tpl.tags) && tpl.tags.includes(tag));
         });
-    } else if (target.kind === 'tipo') {
+    }
+    if (target.kind === 'tipo') {
         const tipo = target.value;
-        matched = items.filter(i => {
+        return items.filter(i => {
             if (i.tipo) return i.tipo === tipo;
             const tpl = i.modeloId ? catalog.find(t => t.id === i.modeloId) : catalog.find(t => t.nome === i.nome);
             return !!(tpl && tpl.tipo === tipo);
         });
-    } else {
-        const eqId = target.value;
-        const tpl = catalog.find(t => t.id === eqId);
-        matched = items.filter(i => i.modeloId === eqId || (tpl && i.nome === tpl.nome));
     }
+    const eqId = target.value;
+    const tpl = catalog.find(t => t.id === eqId);
+    return items.filter(i => i.modeloId === eqId || (tpl && i.nome === tpl.nome));
+}
 
-    return matched
-        .filter(i => {
-            if (!i.equipado || i.parentItemId || i.estadoEquip === 'armazenado') return false;
-            if (formas.length === 0) return true;
-            const atuais = _npcItemFormas(i);
-            return formas.some(f => atuais.includes(f));
-        })
+/** Item equipado numa das formas exigidas (lista vazia = qualquer forma equipada). */
+function _npcItemEquipValido(item, formas) {
+    if (!item.equipado || item.parentItemId || item.estadoEquip === 'armazenado') return false;
+    if (!formas || formas.length === 0) return true;
+    const atuais = _npcItemFormas(item);
+    return formas.some(f => atuais.includes(f));
+}
+
+/** Soma a quantidade dos itens do NPC que casam com o requisito, equipados nas formas exigidas. */
+function _npcCountReq(req, ctx) {
+    const formas = _npcReqFormas(req);
+    return _npcMatchItems(req, ctx)
+        .filter(i => _npcItemEquipValido(i, formas))
         .reduce((s, i) => s + (parseInt(i.quantidade, 10) || 1), 0);
+}
+
+/** Itens com Efeitos Ativos — os que aplicam as próprias mecânicas. */
+function _npcItensComEfeitos(ctx) {
+    const items = Array.isArray(ctx?.inventoryItems) ? ctx.inventoryItems : [];
+    return items.filter(i => _npcItemFormas(i).includes('efeitos'));
+}
+
+/**
+ * Itens afetados por uma mecânica `escopoAplicacao: 'itens'`.
+ * Filtro vazio = todos os itens com Efeitos Ativos.
+ */
+function _npcItensDoFiltro(filtro, ctx) {
+    const reqs = Array.isArray(filtro)
+        ? filtro.filter(r => r && (r.equipamentoId || r.tag || r.tipoEquipamento || r.targetTipo))
+        : [];
+    if (reqs.length === 0) return _npcItensComEfeitos(ctx);
+
+    const vistos = new Set();
+    const out = [];
+    for (const req of reqs) {
+        const formas = _npcReqFormas(req);
+        for (const it of _npcMatchItems(req, ctx)) {
+            if (vistos.has(it.id) || !_npcItemEquipValido(it, formas.length ? formas : ['efeitos'])) continue;
+            vistos.add(it.id);
+            out.push(it);
+        }
+    }
+    return out;
 }
 
 /* ===== Verificação de Classe (booleano / condicional_encadeado) ===== */
@@ -570,6 +604,117 @@ function gatherOperations(npc, sys, targetMap, avisos) {
     return { ops, limites, infos, encadeadas, booleanas };
 }
 
+/* ===== Operações vindas dos ITENS EQUIPADOS =====
+ * Até aqui o motor de NPC só percorria npc.peculiaridades: as mecânicas dos
+ * itens equipados (do modelo do catálogo, da instância, e os Valores Derivados
+ * Vinculados) nunca eram aplicadas — uma espada "+2 de Acerto" não fazia nada
+ * num NPC. Esta função corrige isso.
+ *
+ * Devolve as ops separadas: as de alvo global vão para o bag do NPC; as de
+ * alvo marcado com `escopoItem` ficam presas ao item que as concedeu, para que
+ * duas armas equipadas não somem no mesmo número.
+ *
+ * ponytail: espelha _meItensDoFiltro/_meBonusBag da ficha (mechanics-engine.js).
+ * Os dois motores já são reimplementações paralelos por design — unificá-los é
+ * reescrita, não feature. Se divergirem, o teste a acrescentar é aqui.
+ */
+function gatherItemOperations(sys, targetMap, ctx, avisos) {
+    const globais = [];
+    const porItem = {};   // { itemId: [ops] }
+    const dvEscopo = {};  // { 'DV:key': 'coluna'|'dano' }
+    for (const dv of (sys.derivedValues || [])) {
+        if (dv.escopoItem) dvEscopo['DV:' + dv.key] = dv.escopoItem;
+    }
+
+    const pushOp = (itemId, op) => {
+        if (itemId && dvEscopo[op.target]) {
+            (porItem[itemId] = porItem[itemId] || []).push(op);
+        } else {
+            globais.push(op);
+        }
+    };
+
+    /** Converte uma mecânica 'modificar' em ops, atribuídas ao item informado. */
+    const opsDaMecanica = (mech, itemId, fonteLabel) => {
+        if (!mech || mech.tipo !== 'modificar') return;
+        const isConditional = mech.condicaoAplicacao && String(mech.condicaoAplicacao).trim() !== '';
+        const isPermanent = !mech.duracao || mech.duracao === 'permanente';
+        if (isConditional || !isPermanent) return;
+
+        const config = mech.config || {};
+        const calculos = Array.isArray(config.calculos) && config.calculos.length
+            ? config.calculos
+            : [{ alvo: config.alvo, operacao: config.operacao, valor: config.valor, valorTipo: config.valorTipo || 'fixo', valorRef: config.valorRef, valorMultiplicador: config.valorMultiplicador, equacao: config.equacao }];
+
+        for (const calc of calculos) {
+            if (calc.alvo === 'EXP') continue;
+            for (const alvo of (Array.isArray(calc.alvo) ? calc.alvo : [calc.alvo])) {
+                if (!alvo) continue;
+                const target = targetMap[alvo];
+                if (!target) {
+                    avisos.add(`Item "${fonteLabel}": alvo "${alvo}" não existe na ficha de NPC — aplicar manualmente.`);
+                    continue;
+                }
+                pushOp(itemId, { target, op: calc.operacao || '+', calc, fonte: fonteLabel });
+            }
+        }
+    };
+
+    // 1) Mecânicas dos próprios itens equipados com Efeitos Ativos
+    for (const item of _npcItensComEfeitos(ctx)) {
+        const tpl = item.modeloId ? (ctx.equipCatalog || []).find(t => t.id === item.modeloId) : null;
+        const label = item.nome || tpl?.nome || 'Item';
+
+        for (const mechId of (tpl?.mecanicaIds || [])) opsDaMecanica(sys.mechsById[mechId], item.id, label);
+        for (const mechId of (item.mecanicaIdsProprias || [])) opsDaMecanica(sys.mechsById[mechId], item.id, label);
+
+        // Valores Derivados Vinculados (modificador fixo): instância vence modelo
+        const dvList = item.valoresDerivadosVinculados || tpl?.valoresDerivadosVinculados || [];
+        for (const dvObj of dvList) {
+            const dvId = dvObj.id || dvObj;
+            const mod = Number(dvObj.modificador) || 0;
+            if (!mod) continue;
+            const dvDef = (sys.derivedValues || []).find(d => d.id === dvId);
+            if (!dvDef) continue;
+            pushOp(item.id, {
+                target: 'DV:' + dvDef.key, op: '+',
+                calc: { valorTipo: 'fixo', valor: mod }, fonte: label
+            });
+        }
+    }
+
+    // 2) Mecânicas de peculiaridade marcadas como "aplica nos itens equipados"
+    //    (ex: "todo item com tag Adaga recebe +1 de Dano")
+    for (const pecRef of (npcPecRefs(ctx) || [])) {
+        const pec = sys.pecsById[pecRef.refId];
+        if (!pec) continue;
+        for (const mechId of (pec.mecanicaIds || [])) {
+            const mech = sys.mechsById[mechId];
+            if (!mech || mech.escopoAplicacao !== 'itens') continue;
+            for (const it of _npcItensDoFiltro(mech.itemFiltro, ctx)) {
+                opsDaMecanica(mech, it.id, `${pec.nome} → ${it.nome || 'item'}`);
+            }
+        }
+    }
+
+    return { globais, porItem, dvEscopo };
+}
+
+/** Referências de peculiaridade do NPC guardadas no contexto. */
+function npcPecRefs(ctx) {
+    return (ctx && ctx.pecRefs) ? ctx.pecRefs.filter(p => p && p.refId) : [];
+}
+
+/** Fórmula de dano do item: instância vence o modelo do catálogo. */
+function _npcFormulaDano(item, catalog) {
+    if (item?.formulaDano) return String(item.formulaDano).trim();
+    if (item?.modeloId) {
+        const tpl = (catalog || []).find(t => t.id === item.modeloId);
+        if (tpl?.formulaDano) return String(tpl.formulaDano).trim();
+    }
+    return '';
+}
+
 /* ===== Aplicação de operações sobre um valor ===== */
 
 function applyOpsToValue(target, baseValue, ops, limites, ctx, fontes) {
@@ -619,6 +764,7 @@ function fmt(v) { return Number.isInteger(v) ? v : parseFloat(Number(v).toFixed(
  * @returns {{
  *   attrs:   { [SIGLA]: { base, bonus, final, fontes[] } },
  *   derived: { [key]: { key, nome, icone, isVital, auto, override, final, fontes[] } },
+ *   porItem: [{ itemId, nome, tipo, estadoEquip, dano, colunas[] }],
  *   infos:   [{ fonte, texto, icone }],
  *   avisos:  string[]
  * }}
@@ -637,8 +783,13 @@ export function calcularNpc(npc, sys, opts = {}) {
         inventoryItems: Array.isArray(opts.items) ? opts.items : [],
         equipCatalog: Array.isArray(sys.equipment) ? sys.equipment : [],
         // Classes do NPC (para mecânicas com Verificação de Classe)
-        classes: _npcClasses(npc, sys)
+        classes: _npcClasses(npc, sys),
+        // Peculiaridades do NPC (para mecânicas com escopoAplicacao: 'itens')
+        pecRefs: Array.isArray(npc.peculiaridades) ? npc.peculiaridades : []
     };
+
+    // Operações vindas dos itens equipados (globais + presas a cada item)
+    const itemOps = gatherItemOperations(sys, targetMap, ctx, avisos);
     
     // Alimenta o contexto com os níveis das perícias estruturadas do NPC
     if (Array.isArray(npc.periciasEstruturadas)) {
@@ -685,7 +836,7 @@ export function calcularNpc(npc, sys, opts = {}) {
             }
         }
     }
-    const allOps = [...intrinsecas, ...ops];
+    const allOps = [...intrinsecas, ...ops, ...itemOps.globais];
 
     // Duas passadas para estabilizar referências cruzadas entre derivados
     const derived = {};
@@ -703,6 +854,58 @@ export function calcularNpc(npc, sys, opts = {}) {
                 final: fmt(final), fontes: pass === 1 ? fontes : []
             };
             ctx.derivedFinais[def.key] = final;
+        }
+    }
+
+    // --- 2b) Totais por item equipado (Valores Derivados com Escopo por Item) ---
+    // Base = valor final global do DV (já com raça/classe/peculiaridade dentro);
+    // em cima disso aplicamos APENAS as ops presas àquele item.
+    const porItem = [];
+    for (const item of _npcItensComEfeitos(ctx)) {
+        const minhasOps = itemOps.porItem[item.id] || [];
+        const colunas = [];
+        let somaDano = 0;
+        let temBonusDano = false;
+
+        for (const def of dvDefs) {
+            const escopo = itemOps.dvEscopo['DV:' + def.key];
+            if (!escopo) continue;
+
+            const base = Number(derived[def.key]?.final) || 0;
+            const total = fmt(applyOpsToValue('DV:' + def.key, base, minhasOps, [], ctx, []));
+            const bonus = fmt(total - base);
+
+            if (escopo === 'dano') {
+                somaDano += total;
+                if (bonus !== 0) temBonusDano = true;
+                continue;
+            }
+            colunas.push({
+                key: def.key, nome: def.nome, icone: def.icone || '📊',
+                prefixo: def.prefixo || '', sufixo: def.sufixo || '',
+                base: fmt(base), bonus, total
+            });
+        }
+
+        // SEM fórmula não há dano: um escudo não causa dano só porque o NPC tem
+        // bônus global de dano. O bônus só significa algo grudado num dado.
+        const formula = _npcFormulaDano(item, ctx.equipCatalog);
+        const somaFmt = fmt(somaDano);
+        let dano = '';
+        if (formula) dano = somaFmt !== 0 ? `${formula}${somaFmt > 0 ? '+' : ''}${somaFmt}` : formula;
+
+        if (!formula && temBonusDano) {
+            avisos.add(`"${item.nome || item.id}" concede bônus de Dano mas não tem Fórmula de Dano — o bônus não aparece. Preencha a Fórmula de Dano do equipamento.`);
+        }
+
+        if (formula || colunas.some(c => c.bonus !== 0)) {
+            porItem.push({
+                itemId: item.id,
+                nome: item.nome || 'Item',
+                tipo: item.tipo || 'Objeto',
+                estadoEquip: item.estadoEquip || null,
+                dano, colunas
+            });
         }
     }
 
@@ -775,7 +978,7 @@ export function calcularNpc(npc, sys, opts = {}) {
         }
     }
 
-    return { attrs, derived, infos, avisos: [...avisos] };
+    return { attrs, derived, porItem, infos, avisos: [...avisos] };
 }
 
 export { ATTR_SIGLAS };

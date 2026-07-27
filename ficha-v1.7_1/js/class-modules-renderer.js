@@ -732,21 +732,10 @@ function _cmFormasLabel(formas) {
     return formas.map(f => _CM_FORMA_LABELS[f] || f).join(' ou ');
 }
 
-/** Retorna as categorias de forma que o item equipado satisfaz: 'efeitos', 'segurando' e/ou 'fixado'. */
+/** Retorna as categorias de forma que o item equipado satisfaz: 'efeitos', 'segurando' e/ou 'fixado'.
+ *  Regra canônica em inventory.js (itemFormasAtuais) — aqui só delega. */
 function _cmItemFormasAtuais(item) {
-    const formas = [];
-    if (!item.equipado || item.parentItemId || item.estadoEquip === 'armazenado') return formas;
-    if (item.estadoEquip === 'fixado') { formas.push('fixado'); return formas; }
-    if (item.estadoEquip === 'segurar') { formas.push('segurando'); return formas; }
-    // Réplica da regra de applyEquippedItemsMechanics: efeitos ativos apenas se o estado
-    // corresponder à forma de equipar prevista do item (empunhado/vestido).
-    let efeitosOn = true;
-    if (item.formaEquipar) {
-        const equipToStateMap = { 'segurar': 'segurar', 'empunhar': 'empunhado', 'vestir': 'vestido', 'fixar': 'fixado' };
-        if (item.estadoEquip !== equipToStateMap[item.formaEquipar]) efeitosOn = false;
-    }
-    if (efeitosOn) formas.push('efeitos');
-    return formas;
+    return typeof itemFormasAtuais === 'function' ? itemFormasAtuais(item) : [];
 }
 
 /**

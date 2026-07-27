@@ -56,9 +56,14 @@ export async function ensureNpcSystemData() {
                     key: dv.key || dv.id,
                     nome: dv.nome,
                     descricao: dv.descricao,
+                    icone: dv.icone || '📊',
+                    prefixo: dv.prefixo || '',
+                    sufixo: dv.sufixo || '',
                     mecanicaIds: dv.mecanicaIds || [],
                     campoAtual: dv.campoAtual || false,
-                    todoPersonagem: dv.todoPersonagem || false
+                    todoPersonagem: dv.todoPersonagem || false,
+                    // '' = global | 'coluna' = por item | 'dano' = concatena no dano
+                    escopoItem: dv.escopoItem || ''
                 })),
             vitalStats: (sd.vitalStats || [])
                 .slice().sort((a, b) => (a.ordem || 99) - (b.ordem || 99))

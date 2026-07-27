@@ -224,49 +224,58 @@ function _updatePressureDisplay(totalPressure) {
     }
 }
 
+// ===== EFEITOS ATIVOS — regra canônica =====
+/**
+ * Categorias de forma que um item equipado satisfaz: 'efeitos', 'segurando' e/ou 'fixado'.
+ * Fonte única da verdade — mechanics-engine.js e class-modules-renderer.js delegam aqui.
+ *
+ * "Efeitos ativos" exige que o estado atual do item corresponda à Forma de Equipar
+ * prevista para ele (uma espada guardada na cintura não dá bônus de acerto).
+ * Itens legados sem `formaEquipar` continuam valendo como efeitos ativos.
+ */
+function itemFormasAtuais(item) {
+    const formas = [];
+    if (!item || !item.equipado || item.parentItemId || item.estadoEquip === 'armazenado') return formas;
+    if (item.estadoEquip === 'fixado') { formas.push('fixado'); return formas; }
+    if (item.estadoEquip === 'segurar') { formas.push('segurando'); return formas; }
+
+    let efeitosOn = true;
+    if (item.formaEquipar) {
+        const equipToStateMap = { 'segurar': 'segurar', 'empunhar': 'empunhado', 'vestir': 'vestido', 'fixar': 'fixado' };
+        if (item.estadoEquip !== equipToStateMap[item.formaEquipar]) efeitosOn = false;
+    }
+    if (efeitosOn) formas.push('efeitos');
+    return formas;
+}
+
+/**
+ * Item está com Efeitos Ativos E num slot anatômico compatível com sua restrição
+ * `equipavelEm`. É o predicado que decide se as mecânicas do item valem.
+ */
+function itemTemEfeitosAtivos(item) {
+    if (!itemFormasAtuais(item).includes('efeitos')) return false;
+
+    const equipavelEm = Array.isArray(item.equipavelEm)
+        ? item.equipavelEm
+        : (item.equipavelEm ? [item.equipavelEm] : []);
+    if (equipavelEm.length === 0) return true;
+
+    const slotDef = _getCharacterBodySlots()[item.slotAnatomico];
+    return !slotDef || equipavelEm.includes(slotDef.partId);
+}
+
 // ===== APPLY EQUIPPED ITEM MECHANICS =====
 /**
  * Aplica mecânicas dos itens equipados ao personagem.
  * Chamada em applyAllRaceMechanics() após outras mecânicas.
+ *
+ * Cada item é aplicado com o escopo ligado (_meSetItemScope): alvos que sejam
+ * Valores Derivados marcados com `escopoItem` caem em state.itemBonuses[item.id]
+ * em vez do bag global — é o que permite duas armas terem Acerto próprio.
  */
 function applyEquippedItemsMechanics() {
     const items = window._inventoryState.items;
-    
-    // Apenas aplica mecânicas se o estado do equipamento permitir (empunhado ou vestido).
-    // Itens antigos (legado) sem estado definido mas equipados=true continuam aplicando mecânicas (tratados como vestido por padrão).
-    const equipped = items.filter(i => {
-        if (!i.equipado || i.parentItemId) return false;
-        if (i.estadoEquip === 'fixado' || i.estadoEquip === 'armazenado' || i.estadoEquip === 'segurar') return false;
-        
-        // NOVO: Apenas aplica mecânicas se o item estiver no estado exato definido na sua "Forma de equipar"
-        // (Retrocompatibilidade: se i.formaEquipar não estiver definido, permite empunhado/vestido)
-        if (i.formaEquipar && i.estadoEquip !== i.formaEquipar) {
-            // Conversão de estado legado para comparativo: 'empunhado' form 'empunhar' etc.
-            // i.formaEquipar usa os valores do select form (segurar, empunhar, vestir, fixar)
-            // mas i.estadoEquip no select de equipar usa os values de _updateFormaEquiparOptions.
-            // Oh, wait, in _updateFormaEquiparOptions we used 'empunhar', 'vestir' as values!
-            // Wait, in my _updateFormaEquiparOptions replacement:
-            // `<option value="empunhar" ...>`
-            // But in _getAvailableStates I pushed 'empunhado', 'vestido', 'fixado'.
-            // I should make sure I match them correctly.
-            // formaEquipar === 'empunhar' -> estadoEquip === 'empunhado'
-            const equipToStateMap = {
-                'segurar': 'segurar',
-                'empunhar': 'empunhado',
-                'vestir': 'vestido',
-                'fixar': 'fixado'
-            };
-            if (i.estadoEquip !== equipToStateMap[i.formaEquipar]) return false;
-        }
-        
-        // NOVO: Se está restrito a partes específicas (equipavelEm), verifica se o slot atual é de uma dessas partes
-        const equipavelEm = Array.isArray(i.equipavelEm) ? i.equipavelEm : (i.equipavelEm ? [i.equipavelEm] : []);
-        const bodySlots = _getCharacterBodySlots();
-        const slotDef = bodySlots[i.slotAnatomico];
-        if (equipavelEm.length > 0 && slotDef && !equipavelEm.includes(slotDef.partId)) return false;
-
-        return true;
-    });
+    const equipped = items.filter(itemTemEfeitosAtivos);
 
     const mechanicsById = {};
     if (window._systemData?.mechanics) {
@@ -277,50 +286,65 @@ function applyEquippedItemsMechanics() {
 
     // 1) Mecânicas de itens equipados (modelo + próprias)
     for (const item of equipped) {
-        // 1a) Mecânicas herdadas do modelo (catálogo)
-        if (item.modeloId) {
-            const template = window._inventoryState.catalog.find(t => t.id === item.modeloId);
-            if (template?.mecanicaIds) {
-                for (const mechId of template.mecanicaIds) {
+        // Liga o escopo: tudo aplicado daqui até o reset pertence a este item
+        if (typeof window._meSetItemScope === 'function') window._meSetItemScope(item.id);
+        try {
+            // 1a) Mecânicas herdadas do modelo (catálogo)
+            if (item.modeloId) {
+                const template = window._inventoryState.catalog.find(t => t.id === item.modeloId);
+                if (template?.mecanicaIds) {
+                    for (const mechId of template.mecanicaIds) {
+                        const mech = mechanicsById[mechId];
+                        if (mech) applyMechanicToSheet(mech, null);
+                    }
+                }
+            }
+
+            // 1b) Mecânicas próprias da instância
+            if (item.mecanicaIdsProprias) {
+                for (const mechId of item.mecanicaIdsProprias) {
                     const mech = mechanicsById[mechId];
                     if (mech) applyMechanicToSheet(mech, null);
                 }
             }
-        }
 
-        // 1b) Mecânicas próprias da instância
-        if (item.mecanicaIdsProprias) {
-            for (const mechId of item.mecanicaIdsProprias) {
-                const mech = mechanicsById[mechId];
-                if (mech) applyMechanicToSheet(mech, null);
-            }
-        }
-
-        // 1c) Valores Derivados Vinculados
-        let dvList = item.valoresDerivadosVinculados || [];
-        if (item.modeloId) {
-            const template = window._inventoryState.catalog.find(t => t.id === item.modeloId);
-            if (template && template.valoresDerivadosVinculados) {
-                if (!item.valoresDerivadosVinculados) {
-                    dvList = template.valoresDerivadosVinculados;
-                }
-            }
-        }
-        
-        if (dvList && dvList.length > 0 && window.DERIVED_VALUES) {
-            for (const dvObj of dvList) {
-                const dvId = dvObj.id || dvObj;
-                const dvMod = dvObj.modificador || 0;
-                
-                if (dvMod != 0) {
-                    const dvDef = window.DERIVED_VALUES.find(d => d.id === dvId);
-                    if (dvDef) {
-                        const targetKey = `DERIVED:${dvDef.key}`;
-                        if (!window.state.mechanicBonuses) window.state.mechanicBonuses = {};
-                        window.state.mechanicBonuses[targetKey] = (window.state.mechanicBonuses[targetKey] || 0) + Number(dvMod);
+            // 1c) Valores Derivados Vinculados
+            let dvList = item.valoresDerivadosVinculados || [];
+            if (item.modeloId) {
+                const template = window._inventoryState.catalog.find(t => t.id === item.modeloId);
+                if (template && template.valoresDerivadosVinculados) {
+                    if (!item.valoresDerivadosVinculados) {
+                        dvList = template.valoresDerivadosVinculados;
                     }
                 }
             }
+
+            if (dvList && dvList.length > 0 && window.DERIVED_VALUES) {
+                for (const dvObj of dvList) {
+                    const dvId = dvObj.id || dvObj;
+                    const dvMod = dvObj.modificador || 0;
+
+                    if (dvMod != 0) {
+                        const dvDef = window.DERIVED_VALUES.find(d => d.id === dvId);
+                        if (dvDef) {
+                            const targetKey = `DERIVED:${dvDef.key}`;
+                            // DV escopado → bag do item; DV global → bag do personagem
+                            let bag;
+                            if (dvDef.escopoItem) {
+                                if (!window.state.itemBonuses) window.state.itemBonuses = {};
+                                if (!window.state.itemBonuses[item.id]) window.state.itemBonuses[item.id] = {};
+                                bag = window.state.itemBonuses[item.id];
+                            } else {
+                                if (!window.state.mechanicBonuses) window.state.mechanicBonuses = {};
+                                bag = window.state.mechanicBonuses;
+                            }
+                            bag[targetKey] = (bag[targetKey] || 0) + Number(dvMod);
+                        }
+                    }
+                }
+            }
+        } finally {
+            if (typeof window._meSetItemScope === 'function') window._meSetItemScope(null);
         }
     }
 
@@ -358,6 +382,79 @@ function applyEquippedItemsMechanics() {
         }
     }
 }
+
+// ===== RENDER: ABA COMBATE — ATAQUES E EFEITOS ATIVOS =====
+/**
+ * Tabela com uma linha por item que está com Efeitos Ativos e contribui com
+ * algo próprio: fórmula de dano, bônus de dano, ou delta em algum Valor
+ * Derivado marcado com Escopo por Item.
+ *
+ * Chamada no fim de recalcAll() — precisa de state.derived já atualizado.
+ * NUNCA deve chamar recalcAll de volta (laço infinito).
+ */
+function renderActiveEffects() {
+    const section = document.getElementById('activeEffectsSection');
+    const table = document.getElementById('activeEffectsTable');
+    if (!section || !table) return;
+
+    if (typeof computeItemScopedTotals !== 'function') { section.style.display = 'none'; return; }
+
+    const ctx = {
+        derivedValues: window.DERIVED_VALUES || [],
+        derived: (window.state && window.state.derived) || {},
+        itemBonuses: (window.state && window.state.itemBonuses) || {},
+        catalog: window._inventoryState.catalog || [],
+    };
+
+    const linhas = [];
+    for (const item of window._inventoryState.items.filter(itemTemEfeitosAtivos)) {
+        const r = computeItemScopedTotals(item, ctx);
+        if (r.temAlgo) linhas.push({ item, ...r });
+    }
+
+    if (linhas.length === 0) { section.style.display = 'none'; return; }
+
+    // Colunas exibidas: só as que algum item realmente usa (evita tabela larga
+    // com colunas vazias quando há muitos Valores Derivados escopados).
+    const colDefs = [];
+    for (const l of linhas) {
+        for (const c of l.colunas) {
+            if (c.bonus === 0 && c.total === 0) continue;
+            if (!colDefs.some(x => x.key === c.key)) colDefs.push({ key: c.key, nome: c.nome, icone: c.icone });
+        }
+    }
+    const temDano = linhas.some(l => l.dano);
+
+    let html = '<thead><tr><th class="atk-col-item">Item</th>';
+    if (temDano) html += '<th>💥 Dano</th>';
+    for (const c of colDefs) html += `<th title="${_escHtml(c.nome)}">${c.icone} ${_escHtml(c.nome)}</th>`;
+    html += '</tr></thead><tbody>';
+
+    for (const l of linhas) {
+        const estado = EQUIP_STATES[l.item.estadoEquip];
+        html += `<tr onclick="openItemDetail('${l.item.id}')">
+            <td class="atk-col-item">
+                <span class="atk-item-name">${_getTipoEmoji(l.item.tipo)} ${_escHtml(l.item.nome || 'Sem nome')}</span>
+                ${estado ? `<small class="atk-item-state">${estado.icon} ${estado.label}</small>` : ''}
+            </td>`;
+        if (temDano) html += `<td class="atk-dano">${l.dano ? _escHtml(l.dano) : '—'}</td>`;
+        for (const cd of colDefs) {
+            const c = l.colunas.find(x => x.key === cd.key);
+            if (!c) { html += '<td class="atk-val">—</td>'; continue; }
+            const title = `Base ${c.base} ${c.bonus >= 0 ? '+' : '−'} ${Math.abs(c.bonus)} (item) = ${c.total}`;
+            html += `<td class="atk-val" title="${_escHtml(title)}">
+                ${_escHtml(c.prefixo)}<strong>${c.total}</strong>${_escHtml(c.sufixo)}
+                ${c.bonus !== 0 ? `<small class="atk-delta">${c.bonus > 0 ? '+' : ''}${c.bonus}</small>` : ''}
+            </td>`;
+        }
+        html += '</tr>';
+    }
+    html += '</tbody>';
+
+    table.innerHTML = html;
+    section.style.display = '';
+}
+window.renderActiveEffects = renderActiveEffects;
 
 // ===== RENDER: ABA COMBATE — EQUIPAMENTOS =====
 function renderEquippedItems() {
@@ -1332,6 +1429,32 @@ window.openItemDetail = function(itemId) {
     const img = item.imagem || item.imagemUrl;
     const mechPreview = _getMechPreview(item);
 
+    // Totais escopados: base do personagem + o que ESTE item acrescenta
+    let escopoHtml = '';
+    if (typeof computeItemScopedTotals === 'function') {
+        const r = computeItemScopedTotals(item, {
+            derivedValues: window.DERIVED_VALUES || [],
+            derived: (window.state && window.state.derived) || {},
+            itemBonuses: (window.state && window.state.itemBonuses) || {},
+            catalog: window._inventoryState.catalog || [],
+        });
+        const ativo = itemTemEfeitosAtivos(item);
+        const linhas = r.colunas.filter(c => c.bonus !== 0 || c.total !== 0).map(c =>
+            `<div class="inv-escopo-row">
+                <span class="inv-escopo-nome">${c.icone} ${_escHtml(c.nome)}</span>
+                <span class="inv-escopo-calc">base ${c.base} ${c.bonus >= 0 ? '+' : '−'} ${Math.abs(c.bonus)} <em>(item)</em></span>
+                <span class="inv-escopo-total">= ${_escHtml(c.prefixo)}${c.total}${_escHtml(c.sufixo)}</span>
+            </div>`).join('');
+
+        if (r.dano || linhas) {
+            escopoHtml = `<div class="inv-detail-escopo${ativo ? '' : ' inv-escopo-inativo'}">
+                <span class="inv-detail-label">⚔️ Com este item${ativo ? '' : ' <em>(efeitos inativos — equipe na forma prevista)</em>'}</span>
+                ${r.dano ? `<div class="inv-escopo-row"><span class="inv-escopo-nome">💥 Dano</span><span class="inv-escopo-total inv-escopo-dano">${_escHtml(r.dano)}</span></div>` : ''}
+                ${linhas}
+            </div>`;
+        }
+    }
+
     const modal = document.createElement('div');
     modal.className = 'inv-modal';
     modal.id = 'invDetailModal';
@@ -1359,6 +1482,7 @@ window.openItemDetail = function(itemId) {
                 ${item.ehContainer ? `<div class="inv-detail-field"><span class="inv-detail-label">Multiplicador</span><span>×${item.multiplicadorPressao || 1}</span></div>` : ''}
             </div>
             ${item.descricao ? `<div class="inv-detail-desc">${_escHtml(item.descricao)}</div>` : ''}
+            ${escopoHtml}
             ${mechPreview ? `<div class="inv-detail-mechs"><span class="inv-detail-label">Efeitos</span>${mechPreview}</div>` : ''}
         </div>
         <div class="inv-modal-footer">
@@ -1891,6 +2015,10 @@ window.openItemFormModal = function(title, item, containerId) {
                     </div>
                 </div>
                 <div class="inv-form-group inv-form-wide">
+                    <label class="inv-form-label">💥 Fórmula de Dano</label>
+                    <input type="text" id="invFormFormulaDano" class="inv-form-input" value="${_escHtml(item?.formulaDano || '')}" placeholder="Ex: 1d10 — bônus numéricos vêm dos Valores Derivados">
+                </div>
+                <div class="inv-form-group inv-form-wide">
                     <label class="inv-form-label">Descrição</label>
                     <textarea id="invFormDesc" class="inv-form-textarea" rows="3" placeholder="Descrição do item">${_escHtml(item?.descricao || '')}</textarea>
                 </div>
@@ -1948,6 +2076,8 @@ window.fillFromCatalog = function(templateId) {
     document.getElementById('invFormTamanho').value = tpl.tamanho || 1;
     document.getElementById('invFormDesc').value = tpl.descricao || '';
     document.getElementById('invFormImagem').value = tpl.imagemUrl || '';
+    const fdEl = document.getElementById('invFormFormulaDano');
+    if (fdEl) fdEl.value = tpl.formulaDano || '';
     document.getElementById('invFormModeloId').value = tpl.id;
     document.getElementById('invFormQuantidade').value = 1;
 
@@ -2070,6 +2200,7 @@ window.saveInventoryItemForm = async function() {
             // Containers e Armas NÃO podem ser "stacados" — quantidade sempre 1
             quantidade: (isContainer || tipo === 'Arma') ? 1 : Math.max(1, parseInt(document.getElementById('invFormQuantidade')?.value) || 1),
             descricao: document.getElementById('invFormDesc')?.value?.trim() || '',
+            formulaDano: document.getElementById('invFormFormulaDano')?.value?.trim() || '',
             imagem: document.getElementById('invFormImagem')?.value?.trim() || '',
             modeloId: document.getElementById('invFormModeloId')?.value || null,
             equipavelEm: equipavelEm.length > 0 ? equipavelEm : null,

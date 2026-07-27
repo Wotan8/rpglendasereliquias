@@ -96,11 +96,15 @@ const TARGET_MAP = {
     "Contra-Ataq.": "sk_combate_contra_ataque",
     "Ambidestria": "sk_combate_ambidestria",
 
-    // === PROPRIEDADES DE COMBATE (informativos) ===
-    "Alvo de Ataque": "INFO:alvo_ataque",
-    "Alvo de Defesa": "INFO:alvo_defesa",
-    "Dano": "INFO:dano",
-    "Dano Crítico": "INFO:dano_critico",
+    // === PROPRIEDADES DE COMBATE ===
+    // "Alvo de Ataque", "Alvo de Defesa", "Dano" e "Dano Crítico" eram alvos
+    // "INFO:" — gravavam em state.mechanicBonuses e ninguém lia: a mecânica
+    // salvava e não acontecia nada. Foram removidos para que o alvo apareça
+    // como aviso no console em vez de falhar em silêncio.
+    // Migração: cadastre um Valor Derivado com esse nome no Painel do Criador
+    // (ex: "Acerto", "Bônus de Dano") — populateTargetMapFromDerivedValues()
+    // registra o nome automaticamente e a mecânica volta a funcionar, agora
+    // com Escopo por Item se você quiser um valor por arma equipada.
     "Ações por turno": "INFO:acoes_turno",
 
     // === EXPERIÊNCIA ===
@@ -146,6 +150,19 @@ function populateTargetMapFromSkills() {
 function populateTargetMapFromDerivedValues() {
     if (!window.DERIVED_VALUES) return;
     for (const dv of window.DERIVED_VALUES) {
+        // Guarda de colisão: perícias/atributos são registrados ANTES dos DVs
+        // (firebase.js chama populateTargetMapFromSkills primeiro). Um DV com o
+        // mesmo nome de uma perícia sobrescreve o alvo dela e quebra, em silêncio,
+        // toda mecânica que mirava a perícia. Renomeie o DV (ex: "Teste de Esquiva").
+        const anterior = TARGET_MAP[dv.nome];
+        if (anterior && !anterior.startsWith('DERIVED:')) {
+            console.warn(
+                `⚠️ Colisão de alvo: o Valor Derivado "${dv.nome}" sobrescreve "${anterior}" ` +
+                `(perícia/atributo de mesmo nome) no TARGET_MAP. Mecânicas que miravam ` +
+                `"${dv.nome}" passarão a afetar o Valor Derivado. Renomeie um dos dois ` +
+                `no Painel do Criador — ex: "Teste de ${dv.nome}".`
+            );
+        }
         // Registrar/sobrescrever por nome legível → DERIVED:KEY
         // SEMPRE sobrescreve para garantir que o key dinâmico (Firebase)
         // coincida com o key usado em recalcAll/_applyMechanicModifiers
@@ -449,6 +466,11 @@ let _dynamicMechContributions = {};
 /* ===== LIMPAR BÔNUS DE MECÂNICAS ===== */
 function clearMechanicBonuses() {
     state.mechanicBonuses = {};
+    // Bônus escopados a um item equipado: { [itemId]: { 'DERIVED:KEY': valor } }.
+    // Reconstruído do zero a cada recálculo — sem isso os bônus de item
+    // acumulariam a cada chamada de applyAllRaceMechanics.
+    state.itemBonuses = {};
+    _meItemScope = null;
     state.mechanicLimits = {};
     state.capacidades = [];
     state.mecanicasPendentes = [];
@@ -528,6 +550,7 @@ function _concederEquipamentosDeMecanica(mech, config, parentPec) {
                     quantidade: (isArma || isContainer) ? 1 : qtd,
                     descricao: tpl?.descricao || '',
                     imagem: tpl?.imagem || '',
+                    formulaDano: tpl?.formulaDano || '',
                     modeloId: tpl?.id || null,
                     equipavelEm: tpl?.equipavelEm || null,
                     formaEquipar: tpl?.formaEquipar || null,
@@ -621,21 +644,10 @@ function _meReqNome(req) {
     return tpl?.nome || t.value;
 }
 
-/** Categorias de forma que o item equipado satisfaz: 'efeitos', 'segurando' e/ou 'fixado'. */
+/** Categorias de forma que o item equipado satisfaz: 'efeitos', 'segurando' e/ou 'fixado'.
+ *  Regra canônica em inventory.js (itemFormasAtuais) — aqui só delega. */
 function _meItemFormasAtuais(item) {
-    const formas = [];
-    if (!item.equipado || item.parentItemId || item.estadoEquip === 'armazenado') return formas;
-    if (item.estadoEquip === 'fixado') { formas.push('fixado'); return formas; }
-    if (item.estadoEquip === 'segurar') { formas.push('segurando'); return formas; }
-    // Mesma regra de applyEquippedItemsMechanics: efeitos ativos apenas se o
-    // estado corresponder à forma de equipar prevista do item (empunhado/vestido).
-    let efeitosOn = true;
-    if (item.formaEquipar) {
-        const equipToStateMap = { 'segurar': 'segurar', 'empunhar': 'empunhado', 'vestir': 'vestido', 'fixar': 'fixado' };
-        if (item.estadoEquip !== equipToStateMap[item.formaEquipar]) efeitosOn = false;
-    }
-    if (efeitosOn) formas.push('efeitos');
-    return formas;
+    return typeof itemFormasAtuais === 'function' ? itemFormasAtuais(item) : [];
 }
 
 function _meItemEquipValido(item, formasExigidas) {
@@ -677,6 +689,68 @@ function _meCountEquipReq(req) {
         .filter(i => _meItemEquipValido(i, formas))
         .reduce((s, i) => s + (parseInt(i.quantidade, 10) || 1), 0);
 }
+
+/* ===== ESCOPO POR ITEM =====
+ * Valores Derivados marcados com `escopoItem` no Painel do Criador não somam
+ * num único número do personagem: cada item equipado carrega o seu próprio
+ * delta. Assim duas armas equipadas deixam de somar no mesmo "Acerto".
+ *
+ * O total exibido por item = base global (state.derived[key], que já reúne
+ * raça/classe/peculiaridade/condição) + delta daquele item.
+ */
+let _meItemScope = null;   // id do item cujos bônus estão sendo aplicados
+
+/** Liga/desliga o escopo de item. `null` volta a escrever no bag global. */
+function _meSetItemScope(itemId) { _meItemScope = itemId || null; }
+
+/** true se o alvo é um DV marcado como calculado por item ('coluna' ou 'dano'). */
+function _meIsItemScopedTarget(rawField) {
+    if (typeof rawField !== 'string' || !rawField.startsWith('DERIVED:')) return false;
+    const key = rawField.slice('DERIVED:'.length);
+    const dv = (window.DERIVED_VALUES || []).find(d => d.key === key);
+    return !!(dv && dv.escopoItem);
+}
+
+/** Bag de destino de um bônus: o do item em escopo, ou o global do personagem. */
+function _meBonusBag(rawField) {
+    if (_meItemScope && _meIsItemScopedTarget(rawField)) {
+        if (!state.itemBonuses) state.itemBonuses = {};
+        if (!state.itemBonuses[_meItemScope]) state.itemBonuses[_meItemScope] = {};
+        return state.itemBonuses[_meItemScope];
+    }
+    return state.mechanicBonuses;
+}
+
+/**
+ * Itens equipados que casam com o filtro de uma mecânica `escopoAplicacao: 'itens'`.
+ * Filtro vazio = todos os itens com Efeitos Ativos. Reusa a mesma estrutura
+ * `equipReqs` (equipamento específico / tag / tipo) das verificações de equipamento.
+ */
+function _meItensDoFiltro(filtro) {
+    const items = window._inventoryState?.items || [];
+    const reqs = Array.isArray(filtro)
+        ? filtro.filter(r => r && (r.equipamentoId || r.tag || r.tipoEquipamento || r.targetTipo))
+        : [];
+
+    if (reqs.length === 0) return items.filter(i => _meItemEquipValido(i, ['efeitos']));
+
+    const vistos = new Set();
+    const out = [];
+    for (const req of reqs) {
+        const formas = _meReqFormas(req);
+        for (const it of _meMatchItemsByReq(req)) {
+            if (vistos.has(it.id)) continue;
+            if (!_meItemEquipValido(it, formas.length ? formas : ['efeitos'])) continue;
+            vistos.add(it.id);
+            out.push(it);
+        }
+    }
+    return out;
+}
+
+window._meSetItemScope = _meSetItemScope;
+window._meIsItemScopedTarget = _meIsItemScopedTarget;
+window._meItensDoFiltro = _meItensDoFiltro;
 
 function _meCompare(valor, comp, a, b) {
     comp = comp || '>=';
@@ -1519,6 +1593,25 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
         }
     }
 
+    // === ESCOPO DE APLICAÇÃO: mecânica que afeta ITENS EQUIPADOS ===
+    // Ex: "todo item com tag Adaga recebe +1 de Dano". Reaplica a si mesma uma
+    // vez por item que casa com o filtro, com o escopo ligado — os alvos
+    // marcados como `escopoItem` caem no bag daquele item.
+    // Este é o único ponto por onde TODA mecânica ativa passa, venha ela de
+    // peculiaridade, raça, tribo, condição ou do próprio item.
+    if (mech.escopoAplicacao === 'itens' && !_meItemScope) {
+        for (const it of _meItensDoFiltro(mech.itemFiltro)) {
+            const anterior = _meItemScope;
+            _meItemScope = it.id;
+            try {
+                applyMechanicToSheet({ ...mech, escopoAplicacao: 'personagem' }, parentPec, isOneOff);
+            } finally {
+                _meItemScope = anterior;
+            }
+        }
+        return;
+    }
+
     // Verificar condições
     const isConditional = mech.condicaoAplicacao && mech.condicaoAplicacao.trim() !== '';
     const isPermanent = !mech.duracao || mech.duracao === 'permanente';
@@ -1569,20 +1662,23 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
                     continue;
                 }
 
-                if (op === '+') state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) + val;
-                else if (op === '-') state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) - val;
+                // Alvo escopado a um item em escopo → bag daquele item; senão, global.
+                const bag = _meBonusBag(rawField);
+
+                if (op === '+') bag[field] = (bag[field] || 0) + val;
+                else if (op === '-') bag[field] = (bag[field] || 0) - val;
                 else if (op === '×' || op === '*') {
                     const multKey = (mech._isBaseCalc ? 'BASE_MULT:' : 'MULT:') + rawField;
-                    state.mechanicBonuses[multKey] = (state.mechanicBonuses[multKey] || 1) * val;
+                    bag[multKey] = (bag[multKey] || 1) * val;
                 }
                 else if (op === '=') {
                     // "Definir fixo": overrides the base formula entirely
                     const setKey = (mech._isBaseCalc ? 'BASE_SET:' : 'SET:') + rawField;
-                    state.mechanicBonuses[setKey] = val;
+                    bag[setKey] = val;
                 }
                 else if (op === '÷' || op === '/') {
                     const divKey = (mech._isBaseCalc ? 'BASE_DIV:' : 'DIV:') + rawField;
-                    state.mechanicBonuses[divKey] = (state.mechanicBonuses[divKey] || 1) * val;
+                    bag[divKey] = (bag[divKey] || 1) * val;
                 }
             }
         }

@@ -918,6 +918,8 @@ function buildDerivedValuesFromFirebase() {
             mechPreviews: mechPreviews,
             campoAtual: dv.campoAtual === true,
             campoEditavel: dv.campoEditavel === true,
+            // '' = global (padrão) | 'coluna' = por item | 'dano' = por item, concatena no dano
+            escopoItem: dv.escopoItem || '',
             blocoId: dv.blocoId || '',
             blocoNome: dv.blocoNome || '',
             blocoOrdem: dv.blocoOrdem,

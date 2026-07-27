@@ -3,7 +3,7 @@
 // Lendas e Relíquias (ficha-v1.7_1 style)
 // =============================================
 
-import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildManeuverSelectorHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=4';
+import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildManeuverSelectorHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=5';
 import { RUNIC_MODULE_DEF, buildRunicField, collectRunicField, importRunicSeed } from './painel-runic.js?v=1';
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -258,6 +258,7 @@ const MODULE_DEFS = {
             { key: 'multiplicadorPressao', label: 'Multiplicador de Pressão (conteúdo)', type: 'number', placeholder: '1', showWhenBoolean: 'ehContainer' },
             { key: 'pesoMaximoContainer', label: 'Peso Máximo Suportado (Container)', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
             { key: 'capacidadeContainer', label: 'Capacidade do Container (slots antigos)', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
+            { key: 'formulaDano', label: '💥 Fórmula de Dano', type: 'text', placeholder: 'Ex: 1d10, 2d6 — bônus numéricos vêm dos Valores Derivados' },
             { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: 'item' },
             { key: 'valoresDerivadosVinculados', label: 'Valores Derivados Vinculados', type: 'mechanic_selector', selectorTarget: 'equipmentDerivedValues' },
         ]
@@ -295,6 +296,13 @@ const MODULE_DEFS = {
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true, placeholder: 'Descreva o que este valor representa e como é calculado' },
             { key: 'todoPersonagem', label: 'Todo personagem tem este valor?', type: 'boolean' },
             { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: '' },
+            {
+                key: 'escopoItem', label: '🎒 Escopo por Item Equipado', type: 'select', options: [
+                    { value: '', label: '— Global (padrão): um único valor para o personagem' },
+                    { value: 'coluna', label: '📊 Por item: coluna própria em Ataques e Efeitos Ativos' },
+                    { value: 'dano', label: '💥 Por item: concatena na Fórmula de Dano (ex: 1d10+5)' }
+                ]
+            },
             { key: 'campoAtual', label: 'Tem campo "Atual" (editável)?', type: 'boolean' },
             { key: 'campoEditavel', label: 'Campo editável pelo jogador?', type: 'boolean' },
             { key: 'characterCreationRule', label: 'Regra de Criação de Personagem', type: 'boolean' },
@@ -1674,7 +1682,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                 
                 const wrap = document.getElementById(parentFieldPeculiaridade.id + '_wrap');
                 if (wrap) {
-                    import('./painel-mechanics.js?v=4').then(m => {
+                    import('./painel-mechanics.js?v=5').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
                         
@@ -1702,7 +1710,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                 const wrap = document.getElementById(legacyField.id + '_wrap');
                 if (wrap) {
                     const currentIds = JSON.parse(legacyField.value || '[]');
-                    import('./painel-mechanics.js?v=4').then(m => {
+                    import('./painel-mechanics.js?v=5').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
                         
@@ -1890,7 +1898,7 @@ window.saveSubFormValorDerivado = async function (e, vid, parentFieldKey) {
                 
                 const wrap = document.getElementById(parentFieldValorDerivado.id + '_wrap');
                 if (wrap) {
-                    import('./painel-mechanics.js?v=4').then(m => {
+                    import('./painel-mechanics.js?v=5').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Valores Derivados';
                         

@@ -3,8 +3,8 @@ import { db, collection, getDocs, setDoc, deleteDoc, doc, addDoc, onSnapshot, qu
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
-import { ensureNpcSystemData, pecsDaOrigem, modulosDaClasseNpc, resolveNpcClassModule } from './npc-system-data.js?v=1.4';
-import { calcularNpc, ATTR_SIGLAS } from './npc-calc-engine.js?v=1.5';
+import { ensureNpcSystemData, pecsDaOrigem, modulosDaClasseNpc, resolveNpcClassModule } from './npc-system-data.js?v=1.5';
+import { calcularNpc, ATTR_SIGLAS } from './npc-calc-engine.js?v=1.6';
 import './npc-inventario.js?v=1.0'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
 
 let currentEditingNpc = null;
@@ -596,6 +596,13 @@ function buildNpcForm() {
             <button class="btn btn-secondary btn-small" onclick="addNpcDv()">➕ Vincular VD</button>
         </div>
 
+        <div id="npcAtaquesWrap" class="npcv2-only-mecanico" style="margin-top:14px;display:none">
+            <div class="npcv2-block-title">⚔️ Ataques e Efeitos Ativos
+                <span class="npcv2-hint">totais por item equipado (base do NPC + o que o item acrescenta)</span>
+            </div>
+            <div class="atk-table-wrap"><table class="atk-table" id="npcAtaquesTable"></table></div>
+        </div>
+
         <div id="npcClassModulesWrap" class="npcv2-only-mecanico" style="margin-top:14px">
             <div class="npcv2-block-title">🧩 Módulos de Classe
                 <span class="npcv2-hint">herdados da classe selecionada ou vinculados manualmente</span>
@@ -1073,8 +1080,58 @@ window.recalcStats = function() {
     F.calc = calcularNpc(F.npc, F.sys, _npcCalcOpts(F.npc.id));
     renderAttrEffects();
     renderDvGrid();
+    renderNpcAtaques();
     renderInfos();
 };
+
+/* ===== ATAQUES E EFEITOS ATIVOS =====
+ * Uma linha por item equipado com Efeitos Ativos que contribua com algo próprio.
+ * Os totais vêm de calc.porItem (npc-calc-engine): base do NPC + delta do item. */
+function renderNpcAtaques() {
+    const wrap = document.getElementById('npcAtaquesWrap');
+    const table = document.getElementById('npcAtaquesTable');
+    if (!wrap || !table) return;
+
+    const linhas = F.calc?.porItem || [];
+    if (!linhas.length) { wrap.style.display = 'none'; return; }
+
+    // Só as colunas que algum item realmente usa
+    const colDefs = [];
+    for (const l of linhas) {
+        for (const c of l.colunas) {
+            if (c.bonus === 0 && c.total === 0) continue;
+            if (!colDefs.some(x => x.key === c.key)) colDefs.push({ key: c.key, nome: c.nome, icone: c.icone });
+        }
+    }
+    const temDano = linhas.some(l => l.dano);
+
+    let html = '<thead><tr><th class="atk-col-item">Item</th>';
+    if (temDano) html += '<th>💥 Dano</th>';
+    for (const c of colDefs) html += `<th>${c.icone} ${escapeHtml(c.nome)}</th>`;
+    html += '</tr></thead><tbody>';
+
+    for (const l of linhas) {
+        html += `<tr><td class="atk-col-item">
+            <span class="atk-item-name">${escapeHtml(l.nome)}</span>
+            ${l.estadoEquip ? `<small class="atk-item-state">${escapeHtml(l.estadoEquip)}</small>` : ''}
+        </td>`;
+        if (temDano) html += `<td class="atk-dano">${l.dano ? escapeHtml(l.dano) : '—'}</td>`;
+        for (const cd of colDefs) {
+            const c = l.colunas.find(x => x.key === cd.key);
+            if (!c) { html += '<td class="atk-val">—</td>'; continue; }
+            const tip = `Base ${c.base} ${c.bonus >= 0 ? '+' : '−'} ${Math.abs(c.bonus)} (item) = ${c.total}`;
+            html += `<td class="atk-val" title="${escapeHtml(tip)}">
+                ${escapeHtml(c.prefixo)}<strong>${c.total}</strong>${escapeHtml(c.sufixo)}
+                ${c.bonus !== 0 ? `<small class="atk-delta">${c.bonus > 0 ? '+' : ''}${c.bonus}</small>` : ''}
+            </td>`;
+        }
+        html += '</tr>';
+    }
+    html += '</tbody>';
+
+    table.innerHTML = html;
+    wrap.style.display = '';
+}
 
 function renderAttrEffects() {
     let anyBonus = false;

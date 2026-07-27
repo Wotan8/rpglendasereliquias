@@ -153,11 +153,11 @@ function getMechanicTargetsHTML() {
         }
     }
 
+    // "Propriedades de Combate" (Alvo de Ataque/Defesa, Dano, Dano Crítico) foi
+    // removido: eram alvos informativos que a ficha nunca lia — a mecânica salvava
+    // e não fazia nada. Cadastre-os como Valores Derivados (com Escopo por Item,
+    // se quiser um valor por arma equipada) e eles aparecem no grupo acima.
     html += `
-<optgroup label="Propriedades de Combate">
-<option value="Alvo de Ataque">Alvo de Ataque</option><option value="Alvo de Defesa">Alvo de Defesa</option>
-<option value="Dano">Dano</option><option value="Dano Crítico">Dano Crítico</option>
-</optgroup>
 <optgroup label="Propriedades de Item">
 <option value="Item: Peso/Pressão">⚖️ Peso / Pressão do Item</option>
 <option value="Item: Tamanho">📐 Tamanho do Item</option>
@@ -2095,6 +2095,27 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, 
             </div>
 
             <div class="mech-form-section">
+                <div class="mech-section-label">🎯 Onde se Aplica</div>
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label>Escopo de Aplicação</label>
+                        <select id="mech_escopoAplicacao" onchange="window._mechEscopoAplicacaoChange()">
+                            <option value="personagem" ${(data.escopoAplicacao || 'personagem') === 'personagem' ? 'selected' : ''}>👤 No personagem (padrão)</option>
+                            <option value="itens" ${data.escopoAplicacao === 'itens' ? 'selected' : ''}>🎒 Nos itens equipados (por item)</option>
+                        </select>
+                        <div class="cm-hint">Só faz diferença em alvos que sejam Valores Derivados marcados com <b>Escopo por Item Equipado</b>. Ex.: "todo item com tag Adaga recebe +1 de Dano". Para efeitos globais <i>destravados</i> por ter um item equipado, use uma mecânica <b>Booleana</b> com Verificação de Equipamento.</div>
+                    </div>
+                    <div class="form-group full-width" id="mech_itemFiltroWrap" style="display:${data.escopoAplicacao === 'itens' ? '' : 'none'}">
+                        <label>Filtrar itens afetados <small style="color:var(--muted)">(vazio = todos os itens com Efeitos Ativos)</small></label>
+                        <div class="mech-equipreqs" id="mech_itemFiltro">
+                            ${(Array.isArray(data.itemFiltro) ? data.itemFiltro : []).map((r, i) => _renderMechEquipReqRow(r, i, false)).join('')}
+                        </div>
+                        ${_renderMechEquipReqSelect('mech_itemFiltro')}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mech-form-section">
                 <div class="mech-section-label">🕐 Quando se Aplica</div>
                 <div class="form-grid">
                     <div id="mech_duracao_standard_wrap">
@@ -2750,6 +2771,12 @@ window._mechLimitChange = function () {
     if (minW) minW.style.display = ['minimo', 'clamp'].includes(tl) ? '' : 'none';
 };
 
+window._mechEscopoAplicacaoChange = function () {
+    const wrap = document.getElementById('mech_itemFiltroWrap');
+    if (wrap) wrap.style.display = document.getElementById('mech_escopoAplicacao')?.value === 'itens' ? '' : 'none';
+    window._mechUpdatePreview();
+};
+
 window._mechDuracaoChange = function () {
     const d = document.getElementById('mech_duracao')?.value || '';
     const tw = document.getElementById('mech_turnosWrap');
@@ -2880,6 +2907,10 @@ function collectMechFormData() {
         duracaoTurnos: Number(document.getElementById('mech_duracaoTurnos')?.value) || null,
         duracaoEspecial: document.getElementById('mech_duracaoEspecial')?.value || '',
         escopo: document.getElementById('mech_escopo')?.value || 'proprio',
+        // 'personagem' (padrão) | 'itens' — ver _meItensDoFiltro no mechanics-engine
+        escopoAplicacao: document.getElementById('mech_escopoAplicacao')?.value || 'personagem',
+        itemFiltro: document.getElementById('mech_escopoAplicacao')?.value === 'itens'
+            ? _collectMechEquipReqs('mech_itemFiltro') : [],
         condicaoAplicacao: document.getElementById('mech_condicaoAplicacao')?.value || '',
         empilhamento: document.getElementById('mech_empilhamento')?.value || 'soma',
         config: {}
