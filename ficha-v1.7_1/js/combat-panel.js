@@ -34,7 +34,11 @@
      * Lemos dela em vez de repetir o filtro.
      */
 
-    /** Status Vitais + Valores Derivados com campo Atual/Máx. */
+    const _dvByKey = (key) => (window.DERIVED_VALUES || []).find(d => d.key === key);
+
+    /** Status Vitais + Valores Derivados marcados como "Status de Combate"
+     *  no Painel do Criador (statusCombate). VD com campo Atual/Máx vira card
+     *  com barra e −/+; sem campo Atual, vira card só de leitura. */
     function collectVitals() {
         const list = [];
         const map = typeof DERIVED_FIELDS_MAP !== 'undefined' ? DERIVED_FIELDS_MAP : {};
@@ -48,19 +52,21 @@
             list.push({
                 id: vs.key, nome: vs.nome, icone: vs.icone,
                 cor: VITAL_COLORS[vs.key] || 'var(--lr-gold)',
-                curSel, maxSel, sufixo: '',
+                curSel, maxSel, prefixo: '', sufixo: '',
             });
         }
 
         document.querySelectorAll('#derivedValuesGrid .mini-field[data-dv-key]').forEach(mf => {
             const key = mf.dataset.dvKey;
-            if (!document.getElementById(`dv_${key}_atual`)) return;  // só os com Atual/Máx
-            const dv = (window.DERIVED_VALUES || []).find(d => d.key === key);
+            const dv = _dvByKey(key);
+            if (!dv || !dv.statusCombate) return;
+            const temAtual = !!document.getElementById(`dv_${key}_atual`);
             list.push({
-                id: 'DV_' + key, nome: dv?.nome || key, icone: dv?.icone || '📊',
+                id: 'DV_' + key, nome: dv.nome, icone: dv.icone || '📊',
                 cor: 'var(--lr-gold)',
-                curSel: `#dv_${key}_atual`, maxSel: `#dv_${key}_display`,
-                sufixo: dv?.sufixo || '',
+                curSel: temAtual ? `#dv_${key}_atual` : null,
+                maxSel: `#dv_${key}_display`,
+                prefixo: dv.prefixo || '', sufixo: dv.sufixo || '',
             });
         });
 
@@ -74,10 +80,8 @@
             const nome = bc.querySelector('.attr-block-title')?.textContent?.trim() || 'Geral';
             const dvs = [];
             bc.querySelectorAll('.mini-field[data-dv-key]').forEach(mf => {
-                const key = mf.dataset.dvKey;
-                if (document.getElementById(`dv_${key}_atual`)) return;  // já está no HUD
-                const dv = (window.DERIVED_VALUES || []).find(d => d.key === key);
-                if (dv) dvs.push(dv);
+                const dv = _dvByKey(mf.dataset.dvKey);
+                if (dv && !dv.statusCombate) dvs.push(dv);   // o resto já está no HUD
             });
             if (dvs.length) blocks.push({ nome, dvs });
         });
@@ -87,13 +91,24 @@
     /* ===== RENDER ===== */
 
     function vitalCardHTML(v) {
-        return `<div class="cbt-vital" style="--cbt-c:${v.cor}"
-                     data-cur-sel="${_esc(v.curSel)}" data-max-sel="${_esc(v.maxSel)}">
-            <div class="cbt-vital-top">
+        const cabecalho = `<div class="cbt-vital-top">
                 <span class="cbt-ic">${_esc(v.icone)}</span>
                 <span class="cbt-nm" title="${_esc(v.nome)}">${_esc(v.nome)}</span>
-                <span class="cbt-pct">—</span>
-            </div>
+                ${v.curSel ? '<span class="cbt-pct">—</span>' : ''}
+            </div>`;
+
+        // VD sem campo Atual: só leitura, sem barra nem botões.
+        if (!v.curSel) {
+            return `<div class="cbt-vital is-static" style="--cbt-c:${v.cor}"
+                         data-max-sel="${_esc(v.maxSel)}" data-pre="${_esc(v.prefixo)}" data-suf="${_esc(v.sufixo)}">
+                ${cabecalho}
+                <div class="cbt-vital-ctl"><span class="cbt-static-val">—</span></div>
+            </div>`;
+        }
+
+        return `<div class="cbt-vital" style="--cbt-c:${v.cor}"
+                     data-cur-sel="${_esc(v.curSel)}" data-max-sel="${_esc(v.maxSel)}">
+            ${cabecalho}
             <div class="cbt-vital-ctl">
                 <button type="button" class="cbt-step no-print" data-delta="-1" title="Reduzir (usa o passo Δ)">−</button>
                 <input type="text" class="cbt-cur" inputmode="numeric" placeholder="0" aria-label="${_esc(v.nome)} atual">
@@ -103,6 +118,26 @@
             </div>
             <div class="cbt-bar"><i></i></div>
         </div>`;
+    }
+
+    /** Condições ativas em miniatura, no rodapé do bloco de Status de Combate. */
+    function renderCombatConditionTags() {
+        const el = document.getElementById('cbtCondTags');
+        if (!el) return;
+        const conds = (window.state && window.state.conditions) || [];
+        if (!conds.length) { el.innerHTML = ''; el.hidden = true; return; }
+
+        el.innerHTML = conds.map((c, i) => {
+            const tempo = String(c.tempoRestante || '').trim();
+            const titulo = c.descricao || c.nome || '';
+            return `<button type="button" class="cbt-cond-tag" data-cond-idx="${i}"
+                        title="${_esc(titulo)}${tempo ? ' — restam ' + _esc(tempo) : ''}">
+                <span class="cbt-cond-ic">${_esc(c.icone || '💀')}</span>
+                <span class="cbt-cond-nm">${_esc(c.nome || 'Sem nome')}</span>
+                ${tempo ? `<b class="cbt-cond-t">⏱️ ${_esc(tempo)}</b>` : ''}
+            </button>`;
+        }).join('');
+        el.hidden = false;
     }
 
     function blockHTML(b, open) {
@@ -143,6 +178,7 @@
             bindChipTooltips();
         }
 
+        renderCombatConditionTags();
         syncCombatPanel();
     }
 
@@ -150,9 +186,18 @@
 
     function syncCombatPanel() {
         document.querySelectorAll('#combatVitalsGrid .cbt-vital').forEach(card => {
-            const cur = document.querySelector(card.dataset.curSel);
             const max = document.querySelector(card.dataset.maxSel);
-            if (!cur || !max) return;
+            if (!max) return;
+
+            // Card só de leitura (VD sem campo Atual)
+            if (card.classList.contains('is-static')) {
+                card.querySelector('.cbt-static-val').textContent =
+                    `${card.dataset.pre || ''}${_fmt(max.value)}${card.dataset.suf || ''}`;
+                return;
+            }
+
+            const cur = document.querySelector(card.dataset.curSel);
+            if (!cur) return;
 
             const input = card.querySelector('.cbt-cur');
             if (document.activeElement !== input) input.value = cur.value;
@@ -221,6 +266,15 @@
             syncCombatPanel();
         });
 
+        // Miniatura de condição abre o bloco completo e rola até ele.
+        document.getElementById('cbtCondTags')?.addEventListener('click', e => {
+            if (!e.target.closest('.cbt-cond-tag')) return;
+            const sec = document.getElementById('conditionsSection');
+            if (!sec) return;
+            sec.classList.remove('cbt-collapsed');
+            sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+
         // Edição feita na aba Principal reflete no HUD.
         document.addEventListener('input', e => {
             const t = e.target;
@@ -255,6 +309,8 @@
             });
             // Equipamentos ocupa muita altura: começa fechado no celular.
             if (sec.id === 'equipSection' && window.innerWidth < 600) sec.classList.add('cbt-collapsed');
+            // Condições nascem fechadas: o resumo delas já está no topo, em miniatura.
+            if (sec.id === 'conditionsSection') sec.classList.add('cbt-collapsed');
         });
     }
 
@@ -317,6 +373,7 @@
     window.renderCombatPanel = renderCombatPanel;
     window.syncCombatPanel = syncCombatPanel;
     window.setCombatInitiative = setCombatInitiative;
+    window.renderCombatConditionTags = renderCombatConditionTags;
     window.watchCombatInitiative = watchCombatInitiative;
 
     document.addEventListener('DOMContentLoaded', initEvents);

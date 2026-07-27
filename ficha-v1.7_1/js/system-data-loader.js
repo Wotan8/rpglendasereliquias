@@ -918,6 +918,8 @@ function buildDerivedValuesFromFirebase() {
             mechPreviews: mechPreviews,
             campoAtual: dv.campoAtual === true,
             campoEditavel: dv.campoEditavel === true,
+            // Fixa este VD no topo da aba Combate da ficha (Painel do Criador)
+            statusCombate: dv.statusCombate === true,
             // '' = global (padrão) | 'coluna' = por item | 'dano' = por item, concatena no dano
             escopoItem: dv.escopoItem || '',
             blocoId: dv.blocoId || '',

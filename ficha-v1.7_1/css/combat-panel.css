@@ -215,6 +215,65 @@
 
 .cbt-sfx { font-size: 9px; font-weight: 700; color: var(--muted); flex-shrink: 0; }
 
+/* VD marcado como Status de Combate mas sem campo Atual: só leitura */
+.cbt-vital.is-static .cbt-vital-ctl { justify-content: center; padding: 2px 0; }
+
+.cbt-static-val {
+    font-size: 17px;
+    font-weight: 900;
+    color: var(--ink);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ===== CONDIÇÕES EM MINIATURA ===== */
+.cbt-cond-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--line);
+}
+
+.cbt-cond-tags[hidden] { display: none; }
+
+.cbt-cond-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    border: 2px solid var(--lr-blood-2);
+    border-radius: 999px;
+    background: var(--lr-blood-soft);
+    padding: 2px 8px 2px 6px;
+    font-family: var(--font);
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--ink);
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.cbt-cond-tag:hover { border-color: var(--lr-blood-3); }
+
+.cbt-cond-ic { font-size: 11px; flex-shrink: 0; }
+
+.cbt-cond-nm {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cbt-cond-t {
+    font-weight: 900;
+    color: var(--lr-blood-3);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 .cbt-bar {
     height: 5px;
     border-radius: 3px;
@@ -348,6 +407,8 @@
     #combatHudSection > .section-title { margin-bottom: 6px; }
     #cbtStep { height: 26px; }
     .cbt-combat-strip { margin-bottom: 6px; padding: 3px 6px; gap: 6px; }
+    .cbt-cond-tags { margin-top: 6px; padding-top: 6px; gap: 3px; }
+    .cbt-static-val { font-size: 15px; }
     .cbt-vitals { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 5px; }
     .cbt-vital { padding: 3px 5px; gap: 2px; }
     .cbt-vital-top { gap: 3px; }

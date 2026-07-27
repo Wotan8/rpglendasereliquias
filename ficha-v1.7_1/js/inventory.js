@@ -2544,6 +2544,9 @@ function renderConditions() {
 
     const conditions = state.conditions || [];
 
+    // Miniaturas no topo da aba Combate acompanham a lista completa
+    if (typeof renderCombatConditionTags === 'function') renderCombatConditionTags();
+
     if (conditions.length === 0) {
         container.innerHTML = `<div class="cond-empty">
             <span class="cond-empty-icon">💀</span>
@@ -2610,6 +2613,7 @@ function renderConditions() {
 window.updateConditionTime = function(idx, field, value) {
     if (idx >= 0 && idx < state.conditions.length) {
         state.conditions[idx][field] = value;
+        if (typeof renderCombatConditionTags === 'function') renderCombatConditionTags();
         scheduleAutosave();
     }
 };

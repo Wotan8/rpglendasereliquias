@@ -306,6 +306,7 @@ const MODULE_DEFS = {
             },
             { key: 'campoAtual', label: 'Tem campo "Atual" (editável)?', type: 'boolean' },
             { key: 'campoEditavel', label: 'Campo editável pelo jogador?', type: 'boolean' },
+            { key: 'statusCombate', label: '⚔️ Status de Combate? (fixa no topo da aba Combate da ficha)', type: 'boolean' },
             { key: 'characterCreationRule', label: 'Regra de Criação de Personagem', type: 'boolean' },
             { key: 'characterCreationMin', label: 'Valor Mínimo', type: 'number', showWhenBoolean: 'characterCreationRule' },
             { key: 'characterCreationMax', label: 'Valor Máximo', type: 'number', showWhenBoolean: 'characterCreationRule' },
@@ -1141,6 +1142,7 @@ function _buildCardMetaChips(item) {
             if (item.ordem != null) add(`#${escapeHtml(item.ordem)}`);
             if (item.todoPersonagem) add('👥 Todos', 'chip-gold');
             if (item.campoAtual) add('✏️ Atual');
+            if (item.statusCombate) add('⚔️ Combate', 'chip-gold');
             if (mechCount) add(`🔧 ${mechCount}`);
             break;
         case 'vitalStats':

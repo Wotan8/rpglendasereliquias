@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="css/styles_v2.css?v=7">
     <link rel="stylesheet" href="css/inventory.css?v=7">
     <link rel="stylesheet" href="css/equip-modal.css?v=7">
-    <link rel="stylesheet" href="css/combat-panel.css?v=1">
+    <link rel="stylesheet" href="css/combat-panel.css?v=2">
     <link rel="stylesheet" href="../shared/tokens.css?v=7">
     <link rel="stylesheet" href="css/print.css?v=7">
 <script type="module" src="/js/global-favicon.js"></script>
@@ -260,7 +260,7 @@
             <div class="tab-content" id="tabCombate">
                 <!-- HUD: espelha os campos canônicos da aba Principal (combat-panel.js) -->
                 <div class="section" id="combatHudSection">
-                    <div class="section-title">❤️ Status Vitais
+                    <div class="section-title">⚔️ Status de Combate
                         <span class="cbt-tools no-print">
                             <label class="cbt-step-lbl" title="Quantidade aplicada pelos botões − e +">Δ
                                 <input type="number" id="cbtStep" value="1" min="1" inputmode="numeric">
@@ -275,6 +275,8 @@
                         <span class="cbt-init-pos" id="cbtInitPos"></span>
                     </div>
                     <div class="cbt-vitals" id="combatVitalsGrid"></div>
+                    <!-- Condições ativas em miniatura (bloco completo mais abaixo) -->
+                    <div class="cbt-cond-tags" id="cbtCondTags" hidden></div>
                 </div>
                 <div class="section" id="combatValuesSection">
                     <div class="section-title">📊 Valores Rápidos</div>
@@ -286,7 +288,7 @@
                         <table class="atk-table" id="activeEffectsTable"></table>
                     </div>
                 </div>
-                <div class="section">
+                <div class="section" id="conditionsSection">
                     <div class="section-title">🧪 Condições e Estados</div>
                     <div id="conditionsContainer" class="cond-cards-grid"></div>
                     <button class="add-btn no-print" onclick="addCondition()" style="margin-top:8px">+ Adicionar Condição</button>
@@ -425,7 +427,7 @@
 
     <!-- Scripts externos -->
     <script src="js/data.js"></script>
-    <script src="js/system-data-loader.js?v=2"></script>
+    <script src="js/system-data-loader.js?v=3"></script>
     <script src="js/mechanics-engine.js?v=22"></script>
     <script src="js/race-peculiarities.js"></script>
     <script src="js/detail-modal.js"></script>
@@ -439,8 +441,8 @@
     <script src="js/class-modules-renderer.js?v=22"></script>
     <script src="js/runomancia-module.js"></script>
     <script src="js/item-scope-calc.js?v=1"></script>
-    <script src="js/inventory.js?v=8"></script>
-    <script src="js/combat-panel.js?v=1"></script>
+    <script src="js/inventory.js?v=9"></script>
+    <script src="js/combat-panel.js?v=2"></script>
     <script src="js/notes.js"></script>
     <script src="js/aura.js"></script>
     <script src="js/storage.js"></script>
