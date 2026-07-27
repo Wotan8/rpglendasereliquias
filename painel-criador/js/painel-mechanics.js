@@ -63,7 +63,7 @@ function getRunicTargetsHTML() {
     return html;
 }
 
-function getMechanicTargetsHTML() {
+export function getMechanicTargetsHTML() {
     let html = `
 <optgroup label="Atributos">
 <option value="INT">INT</option><option value="RAC">RAC</option><option value="PRS">PRS</option>

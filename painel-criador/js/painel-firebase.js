@@ -3,7 +3,7 @@
 // Lendas e Relíquias (ficha-v1.7_1 style)
 // =============================================
 
-import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildManeuverSelectorHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=5';
+import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=6';
 import { RUNIC_MODULE_DEF, buildRunicField, collectRunicField, importRunicSeed } from './painel-runic.js?v=1';
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -56,6 +56,10 @@ let aurasCache = [];
 let maneuversCache = [];
 let equipmentCache = [];
 let classModulesCache = [];
+// 📚 Livros e capítulos escritos no Worldbuilding (Escritório do Cronista).
+// Só a aba Conhecimento usa — carregado sob demanda.
+let wbBooksCache = [];
+let wbChaptersCache = [];
 
 // ====================================================================
 // MODULE DEFINITIONS — each module defines its fields and Firestore path
@@ -388,21 +392,24 @@ const MODULE_DEFS = {
             { key: 'graus', label: 'Graus da Aura', type: 'aura_graus_editor' },
         ]
     },
-    lore: {
-        name: 'Entrada de Lore', namePlural: 'Lore & Mundo', icon: '🌍',
-        collection: 'system/data/lore',
+    // 📚 CONHECIMENTO — trava de leitura dos capítulos escritos no Worldbuilding.
+    // Um registro por capítulo: sem registro, o capítulo só aparece na ficha se
+    // estiver marcado como Público no Escritório do Cronista. Com registro, a
+    // liberação passa a depender dos requisitos abaixo.
+    knowledge: {
+        name: 'Regra de Conhecimento', namePlural: 'Conhecimento', icon: '📚',
+        collection: 'system/data/knowledge',
         fields: [
-            { key: 'titulo', label: 'Título', type: 'text', required: true, placeholder: 'Ex: A Grande Calamidade' },
+            { key: 'capituloId', label: '📖 Capítulo (Worldbuilding)', type: 'wb_chapter_selector', required: true },
+            { key: 'titulo', label: 'Título de exibição (preenchido pelo capítulo)', type: 'text', placeholder: 'Preenchido automaticamente' },
             {
-                key: 'categoria', label: 'Categoria', type: 'select', required: true, options: [
-                    { value: 'historia', label: 'História' }, { value: 'geografia', label: 'Geografia' },
-                    { value: 'religiao', label: 'Religião' }, { value: 'organizacao', label: 'Organização' },
-                    { value: 'npc', label: 'NPC' }, { value: 'evento', label: 'Evento' }
+                key: 'modo', label: 'Como liberar', type: 'select', options: [
+                    { value: 'todos', label: '🔗 Exige TODOS os requisitos' },
+                    { value: 'qualquer', label: '🔀 Basta UM dos requisitos' }
                 ]
             },
-            { key: 'conteudo', label: 'Conteúdo', type: 'textarea', required: true, placeholder: 'Texto completo da entrada' },
-            { key: 'imagemUrl', label: 'URL da Imagem', type: 'text', placeholder: 'https://...' },
-            { key: 'referencias', label: 'Referências (IDs)', type: 'tags', placeholder: 'IDs de lore relacionados' },
+            { key: 'requisitos', label: '🔐 Requisitos de Desbloqueio', type: 'knowledge_reqs_editor' },
+            { key: 'dica', label: '💡 Dica exibida enquanto bloqueado', type: 'text', placeholder: 'Ex: Dizem que só quem treinou na Torre entende estas linhas.' },
         ]
     },
     itemRules: {
@@ -492,8 +499,8 @@ const MODULE_FILTERS = {
     vitalStats: [
         { key: 'chaveInterna', label: 'Campo', icon: '❤️', type: 'static' },
     ],
-    lore: [
-        { key: 'categoria', label: 'Categoria', icon: '📂', type: 'static' },
+    knowledge: [
+        { key: 'modo', label: 'Liberação', icon: '🔐', type: 'static' },
     ],
     maneuvers: [
         { key: 'classe', label: 'Classe', icon: '⚔️', type: 'auto' },
@@ -919,6 +926,7 @@ async function loadModule(moduleName) {
         await _migrateInlineModulesToCollection();
     }
     if (moduleName === 'peculiarities') await refreshAurasCache();
+    if (moduleName === 'knowledge') await refreshWorldbuildingCache();
 
     const grid = document.getElementById('itemsGrid');
     const emptyState = document.getElementById('emptyState');
@@ -1068,6 +1076,22 @@ async function refreshRunicElementsCache() {
     } catch (e) { console.error('Erro cache runicElements:', e); }
 }
 
+// 📚 Livros + capítulos do Escritório do Cronista (coleções raiz, fora de system/data).
+async function refreshWorldbuildingCache() {
+    try {
+        const [bSnap, aSnap] = await Promise.all([
+            getDocs(collection(db, 'worldbuilding-books')),
+            getDocs(collection(db, 'worldbuilding-articles')),
+        ]);
+        wbBooksCache = [];
+        bSnap.forEach(d => wbBooksCache.push({ ...d.data(), id: d.id }));
+        wbBooksCache.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.title || '').localeCompare(b.title || ''));
+        wbChaptersCache = [];
+        aSnap.forEach(d => wbChaptersCache.push({ ...d.data(), id: d.id }));
+        wbChaptersCache.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    } catch (e) { console.error('Erro cache worldbuilding:', e); }
+}
+
 async function refreshBodyPartsCache() {
     try {
         const snap = await getDocs(collection(db, 'system/data/bodyParts'));
@@ -1187,10 +1211,13 @@ function _buildCardMetaChips(item) {
             if (item.limiteFixo != null) add(`🎯 Limite: ${item.limiteFixo}`);
             break;
         }
-        case 'lore':
-            add(item.categoria ? `🗂️ ${escapeHtml(item.categoria)}` : '', 'chip-accent');
-            if (Array.isArray(item.referencias) && item.referencias.length) add(`🔗 ${item.referencias.length} refs`);
+        case 'knowledge': {
+            const reqs = Array.isArray(item.requisitos) ? item.requisitos : [];
+            add(item.modo === 'qualquer' ? '🔀 Basta um' : '🔗 Todos', 'chip-accent');
+            add(reqs.length ? `🔐 ${reqs.length} requisito${reqs.length > 1 ? 's' : ''}` : '🔓 Sem requisito — liberado');
+            if (item.dica) add('💡 Com dica', 'chip-tag');
             break;
+        }
         case 'runicElements': {
             const fam = { artus: 'ᛞ Artus', aspectus: 'ᛟ Aspectus', sigilus: 'ᛝ Sigilus' };
             add(fam[item.tipoElemento] || '', 'chip-accent');
@@ -2017,7 +2044,7 @@ window.closeForm = function () {
 function buildField(field, value, existingData) {
     const wrap = document.createElement('div');
     wrap.className = 'form-group' + (
-        ['textarea', 'array', 'json', 'tags', 'mechanic_selector', 'aura_graus_editor', 'class_tests_editor', 'class_modules_editor', 'class_module_standalone_editor', 'class_module_linker', 'body_parts_editor', 'class_kits_editor'].includes(field.type) ? ' full-width' : ''
+        ['textarea', 'array', 'json', 'tags', 'mechanic_selector', 'aura_graus_editor', 'class_tests_editor', 'class_modules_editor', 'class_module_standalone_editor', 'class_module_linker', 'body_parts_editor', 'class_kits_editor', 'wb_chapter_selector', 'knowledge_reqs_editor'].includes(field.type) ? ' full-width' : ''
     );
     if (field.showWhen) {
         wrap.dataset.showWhenField = field.showWhen.field;
@@ -2152,6 +2179,19 @@ function buildField(field, value, existingData) {
     // === CLASS KITS EDITOR ===
     if (field.type === 'class_kits_editor') {
         wrap.innerHTML = _buildClassKitsEditorHTML(field.key, field.label, Array.isArray(value) ? value : []);
+        return wrap;
+    }
+
+    // === 📖 SELETOR DE CAPÍTULO DO WORLDBUILDING ===
+    if (field.type === 'wb_chapter_selector') {
+        wrap.innerHTML = _buildWbChapterSelectorHTML(field.key, field.label, value, field.required);
+        return wrap;
+    }
+
+    // === 🔐 REQUISITOS DE CONHECIMENTO ===
+    if (field.type === 'knowledge_reqs_editor') {
+        wrap.innerHTML = _buildKnowledgeReqsEditorHTML(field.key, field.label, Array.isArray(value) ? value : []);
+        setTimeout(() => _knApplySelValues(document.getElementById(`knReqItems_${field.key}`)), 0);
         return wrap;
     }
 
@@ -2865,6 +2905,170 @@ window.addClassKitEquip = function(select) {
     container.appendChild(tag);
     select.value = '';
 };
+
+// =====================================================================
+// 📚 CONHECIMENTO — seletor de capítulo + editor de requisitos
+// ---------------------------------------------------------------------
+// O requisito de "ficha" (Atributo / Perícia / Valor Derivado / Status
+// Vital / EXP) reaproveita EXATAMENTE o mesmo dropdown de alvos das
+// Mecânicas — e a ficha resolve o valor com o mesmo _resolveSheetRef().
+// Um alvo só precisa existir lá para funcionar aqui.
+// =====================================================================
+function _buildWbChapterSelectorHTML(fieldKey, label, value, required) {
+    const byBook = {};
+    wbChaptersCache.forEach(c => { (byBook[c.bookId] = byBook[c.bookId] || []).push(c); });
+
+    let opts = '<option value="">— escolha o capítulo —</option>';
+    wbBooksCache.forEach(b => {
+        const caps = byBook[b.id] || [];
+        if (!caps.length) return;
+        opts += `<optgroup label="📗 ${escapeHtml(b.title || 'Livro sem título')}">`;
+        caps.forEach((c, i) => {
+            const titulo = `${b.title || 'Livro'} — ${i + 1}. ${c.title || 'Sem título'}`;
+            opts += `<option value="${escapeHtml(c.id)}" data-titulo="${escapeHtml(titulo)}" ${value === c.id ? 'selected' : ''}>${i + 1}. ${escapeHtml(c.title || 'Sem título')}</option>`;
+        });
+        opts += '</optgroup>';
+    });
+
+    const vazio = wbBooksCache.length === 0
+        ? `<div class="cm-hint">⚠️ Nenhum livro encontrado no Worldbuilding. Crie livros e capítulos no <b>Escritório do Cronista</b> primeiro.</div>` : '';
+
+    return `
+        <label>${escapeHtml(label)} ${required ? '<span class="required">*</span>' : ''}</label>
+        <select id="field_${fieldKey}" onchange="window._knSyncChapterTitle(this)">${opts}</select>
+        ${vazio}
+        <div class="cm-hint">Capítulos sem regra aqui seguem a marcação 🌐 Público do próprio capítulo.</div>
+    `;
+}
+
+window._knSyncChapterTitle = function (sel) {
+    const tituloEl = document.getElementById('field_titulo');
+    const opt = sel.selectedOptions[0];
+    if (tituloEl && opt) tituloEl.value = opt.dataset.titulo || '';
+};
+
+const KN_REQ_OPS = ['>=', '>', '==', '!=', '<=', '<'];
+
+function _buildKnowledgeReqsEditorHTML(fieldKey, label, reqs) {
+    return `
+        <div class="class-kits-editor" id="knReqs_${fieldKey}" data-field-key="${fieldKey}">
+            <div class="array-editor-header">
+                <label>${escapeHtml(label)}</label>
+                <button type="button" class="btn-array-add" onclick="window.addKnowledgeReq('${fieldKey}')">➕ Adicionar Requisito</button>
+            </div>
+            <div class="class-kits-items" id="knReqItems_${fieldKey}">${reqs.map((r, i) => _buildKnowledgeReqRow(i, r)).join('')}</div>
+            <div class="cm-hint">Sem nenhum requisito, o capítulo fica liberado para todos os jogadores.</div>
+        </div>
+    `;
+}
+
+function _buildKnowledgeReqRow(idx, r) {
+    r = r || {};
+    const tipo = r.tipo || 'ficha';
+    const opOpts = KN_REQ_OPS.map(o => `<option value="${o}" ${r.op === o ? 'selected' : ''}>${o}</option>`).join('');
+    const mechOpts = '<option value="">— escolha a mecânica —</option>' + mechanicsCache
+        .filter(m => m.tipo === 'booleano')
+        .map(m => `<option value="${escapeHtml(m.id)}" ${r.mecanicaId === m.id ? 'selected' : ''}>🔀 ${escapeHtml(m.nome || m.id)}</option>`).join('');
+    const eqOpts = '<option value="">— escolha o equipamento —</option>' + equipmentCache
+        .map(e => `<option value="${escapeHtml(e.id)}" ${r.equipamentoId === e.id ? 'selected' : ''}>${escapeHtml(e.nome || e.id)}</option>`).join('');
+
+    const show = (t) => tipo === t ? '' : 'style="display:none"';
+
+    return `
+        <div class="array-item kn-req-item" data-index="${idx}">
+            <div class="array-item-header">
+                <span class="array-item-number">#${idx + 1}</span>
+                <button type="button" class="btn-array-remove" onclick="window.removeKnowledgeReq(this)">✕</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Tipo de requisito</label>
+                    <select data-kn-key="tipo" onchange="window._knToggleReqTipo(this)">
+                        <option value="ficha" ${tipo === 'ficha' ? 'selected' : ''}>📊 Valor da Ficha (Atributo / Perícia / VD)</option>
+                        <option value="mecanica" ${tipo === 'mecanica' ? 'selected' : ''}>🔀 Mecânica Booleana</option>
+                        <option value="equipamento" ${tipo === 'equipamento' ? 'selected' : ''}>🗡️ Equipamento Equipado</option>
+                    </select>
+                </div>
+                <div class="form-group kn-req-ficha" ${show('ficha')}>
+                    <label>Alvo na ficha</label>
+                    <select data-kn-key="ref" data-sel-value="${escapeHtml(r.ref || '')}">${getMechanicTargetsHTML()}</select>
+                </div>
+                <div class="form-group kn-req-ficha" ${show('ficha')}>
+                    <label>Comparação</label>
+                    <div style="display:flex;gap:6px">
+                        <select data-kn-key="op" style="width:90px">${opOpts}</select>
+                        <input type="number" data-kn-key="valor" value="${escapeHtml(r.valor ?? '')}" placeholder="0">
+                    </div>
+                </div>
+                <div class="form-group full-width kn-req-mecanica" ${show('mecanica')}>
+                    <label>Mecânica Booleana (precisa dar verdadeiro)</label>
+                    <select data-kn-key="mecanicaId">${mechOpts}</select>
+                </div>
+                <div class="form-group full-width kn-req-equipamento" ${show('equipamento')}>
+                    <label>Equipamento que precisa estar equipado (mochila não conta)</label>
+                    <select data-kn-key="equipamentoId">${eqOpts}</select>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/** Aplica o valor salvo nos selects montados por HTML puro (getMechanicTargetsHTML não marca `selected`). */
+function _knApplySelValues(root) {
+    if (!root) return;
+    root.querySelectorAll('select[data-sel-value]').forEach(sel => { sel.value = sel.dataset.selValue || ''; });
+}
+
+window._knToggleReqTipo = function (sel) {
+    const row = sel.closest('.kn-req-item');
+    if (!row) return;
+    ['ficha', 'mecanica', 'equipamento'].forEach(t => {
+        row.querySelectorAll(`.kn-req-${t}`).forEach(el => { el.style.display = sel.value === t ? '' : 'none'; });
+    });
+};
+
+window.addKnowledgeReq = function (fieldKey) {
+    const container = document.getElementById(`knReqItems_${fieldKey}`);
+    if (!container) return;
+    const temp = document.createElement('div');
+    temp.innerHTML = _buildKnowledgeReqRow(container.children.length, {});
+    const row = temp.firstElementChild;
+    container.appendChild(row);
+    _knApplySelValues(row);
+};
+
+window.removeKnowledgeReq = function (btn) {
+    const item = btn.closest('.kn-req-item');
+    if (!item) return;
+    const container = item.parentElement;
+    item.remove();
+    container?.querySelectorAll('.kn-req-item').forEach((el, i) => {
+        el.dataset.index = i;
+        const num = el.querySelector('.array-item-number');
+        if (num) num.textContent = `#${i + 1}`;
+    });
+};
+
+function _collectKnowledgeReqs(fieldKey) {
+    const container = document.getElementById(`knReqItems_${fieldKey}`);
+    if (!container) return [];
+    const out = [];
+    container.querySelectorAll('.kn-req-item').forEach(item => {
+        const val = (k) => item.querySelector(`[data-kn-key="${k}"]`)?.value || '';
+        const tipo = val('tipo') || 'ficha';
+        if (tipo === 'mecanica') {
+            const mecanicaId = val('mecanicaId');
+            if (mecanicaId) out.push({ tipo, mecanicaId });
+        } else if (tipo === 'equipamento') {
+            const equipamentoId = val('equipamentoId');
+            if (equipamentoId) out.push({ tipo, equipamentoId });
+        } else {
+            const ref = val('ref');
+            if (ref) out.push({ tipo: 'ficha', ref, op: val('op') || '>=', valor: Number(val('valor')) || 0 });
+        }
+    });
+    return out;
+}
 
 function _collectClassKitsData(fieldKey) {
     const container = document.getElementById(`classKitsItems_${fieldKey}`);
@@ -4261,6 +4465,11 @@ window.handleFormSubmit = async function (e) {
             } else { data[field.key] = []; }
         } else if (field.type === 'class_kits_editor') {
             data[field.key] = _collectClassKitsData(field.key);
+        } else if (field.type === 'knowledge_reqs_editor') {
+            data[field.key] = _collectKnowledgeReqs(field.key);
+        } else if (field.type === 'wb_chapter_selector') {
+            const el = document.getElementById(`field_${field.key}`);
+            data[field.key] = el ? el.value : '';
         } else if (field.type === 'aura_graus_editor') {
             data[field.key] = collectAuraGrausData(field.key);
         } else if (field.type === 'aura_property_selector' || field.type === 'aura_selector') {

@@ -1,0 +1,217 @@
+/* =============================================
+   📚 ABA CONHECIMENTO — biblioteca do personagem
+   Tokens do Design System (ver DESIGN-SYSTEM.md).
+   ============================================= */
+
+.cnh-resumo {
+    font-family: var(--lr-font-title);
+    font-size: var(--lr-fs-sm);
+    letter-spacing: var(--lr-track-title);
+    color: var(--lr-gold-2);
+    background: var(--lr-gold-soft);
+    border: 1px solid var(--lr-gold);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    margin-bottom: 12px;
+}
+
+.cnh-livro {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--lr-surface);
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+
+.cnh-livro-head {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    background: var(--lr-surface-2);
+    border-bottom: 1px solid var(--line);
+}
+
+.cnh-capa {
+    width: 56px;
+    height: 78px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    border: 1px solid var(--lr-bronze);
+    background: var(--lr-bg-1) center/cover no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.cnh-livro-titulo {
+    font-family: var(--lr-font-title);
+    font-size: var(--lr-fs-md);
+    letter-spacing: var(--lr-track-title);
+    color: var(--lr-gold-2);
+}
+
+.cnh-livro-desc {
+    font-family: var(--lr-font-subtitle);
+    font-size: var(--lr-fs-sm);
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.cnh-progresso {
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-arcane-2);
+    margin-top: 6px;
+}
+
+.cnh-capitulos {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cnh-cap {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--lr-border-soft);
+    background: var(--lr-bg-1);
+}
+
+.cnh-cap--aberto {
+    cursor: pointer;
+    border-left: 3px solid var(--lr-nature);
+}
+
+.cnh-cap--aberto:hover {
+    background: var(--lr-surface-2);
+}
+
+.cnh-cap--travado {
+    border-left: 3px solid var(--lr-blood-2);
+    opacity: .92;
+}
+
+.cnh-cap-num {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--lr-bg-0);
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-size: var(--lr-fs-xs);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cnh-cap-titulo {
+    font-weight: 600;
+    font-size: var(--lr-fs-sm);
+    color: var(--lr-text-1);
+}
+
+.cnh-cap-syn {
+    font-family: var(--lr-font-subtitle);
+    font-size: var(--lr-fs-xs);
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.cnh-selo {
+    flex-shrink: 0;
+    font-size: var(--lr-fs-xs);
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.cnh-selo--ok {
+    background: var(--lr-nature-soft);
+    color: var(--lr-nature);
+    border: 1px solid var(--lr-nature);
+}
+
+.cnh-selo--lock {
+    background: var(--lr-blood-soft);
+    color: var(--lr-blood-3);
+    border: 1px solid var(--lr-blood-2);
+}
+
+.cnh-req-titulo {
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-blood-3);
+    margin-top: 6px;
+    font-weight: 600;
+}
+
+.cnh-reqs {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cnh-reqs li {
+    font-size: var(--lr-fs-xs);
+    color: var(--muted);
+}
+
+.cnh-req--ok {
+    color: var(--lr-nature) !important;
+}
+
+.cnh-req-atual {
+    color: var(--lr-text-2);
+    opacity: .8;
+}
+
+/* ── Leitura (dentro do #detailModal) ───────────────── */
+.cnh-leitura {
+    padding: 4px;
+}
+
+.cnh-leitura-livro {
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-bronze);
+    letter-spacing: var(--lr-track-title);
+}
+
+.cnh-leitura-titulo {
+    font-family: var(--lr-font-title);
+    font-size: var(--lr-fs-lg);
+    color: var(--lr-gold-2);
+    margin: 4px 0 8px;
+}
+
+.cnh-leitura-syn {
+    font-family: var(--lr-font-subtitle);
+    font-style: italic;
+    color: var(--muted);
+    margin-bottom: 12px;
+}
+
+.cnh-leitura-corpo {
+    font-family: var(--lr-font-subtitle);
+    font-size: var(--lr-fs-md);
+    line-height: var(--lr-lh-body);
+    color: var(--lr-text-1);
+}
+
+.cnh-leitura-corpo blockquote {
+    border-left: 3px solid var(--lr-bronze);
+    margin: 10px 0;
+    padding-left: 12px;
+    color: var(--muted);
+}
+
+.cnh-leitura-corpo .wbt-mention {
+    color: var(--lr-arcane-2);
+    text-decoration: underline dotted;
+}

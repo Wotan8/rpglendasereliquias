@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v52';
+const VERSION = 'v55';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -43,6 +43,7 @@ const PRECACHE_URLS = [
   '/criar-personagem/js/tribe-module.js',
   '/criar-personagem/js/wizard-engine.js',
   '/ficha-v1.7_1/css/combat-panel.css',
+  '/ficha-v1.7_1/css/conhecimento.css',
   '/ficha-v1.7_1/css/equip-modal.css',
   '/ficha-v1.7_1/css/inventory.css',
   '/ficha-v1.7_1/css/print.css',
@@ -59,6 +60,8 @@ const PRECACHE_URLS = [
   '/ficha-v1.7_1/js/class-tests-data.js',
   '/ficha-v1.7_1/js/class-tests.js',
   '/ficha-v1.7_1/js/combat-panel.js',
+  '/ficha-v1.7_1/js/conhecimento-calc.js',
+  '/ficha-v1.7_1/js/conhecimento.js',
   '/ficha-v1.7_1/js/core.js',
   '/ficha-v1.7_1/js/data.js',
   '/ficha-v1.7_1/js/derived-values.js',
@@ -153,6 +156,7 @@ const PRECACHE_URLS = [
   '/tabuleiro/js/tab-cena.js',
   '/tabuleiro/js/tab-undo.js',
   '/tabuleiro/js/tab-musica.js',
+  '/tabuleiro/js/tab-musica-calc.js',
   '/shared/lendas-reliquias.css',
   '/shared/theme.js',
   '/shared/tokens.css',

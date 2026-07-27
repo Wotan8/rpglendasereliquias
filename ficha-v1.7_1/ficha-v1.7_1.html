@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="css/inventory.css?v=7">
     <link rel="stylesheet" href="css/equip-modal.css?v=7">
     <link rel="stylesheet" href="css/combat-panel.css?v=3">
+    <link rel="stylesheet" href="css/conhecimento.css?v=1">
     <link rel="stylesheet" href="../shared/tokens.css?v=7">
     <link rel="stylesheet" href="css/print.css?v=7">
 <script type="module" src="/js/global-favicon.js"></script>
@@ -75,6 +76,7 @@
                 <button class="tab" data-tab="tabPeculiaridades">Peculiaridades</button>
                 <button class="tab" data-tab="tabAura">Aura</button>
                 <button class="tab" data-tab="tabAliados">Aliados</button>
+                <button class="tab" data-tab="tabConhecimento">Conhecimento</button>
                 <button class="tab" data-tab="tabNotas">Notas</button>
             </div>
 
@@ -368,6 +370,17 @@
                 </div>
             </div>
 
+            <!-- ======== CONHECIMENTO ======== -->
+            <div class="tab-content" id="tabConhecimento">
+                <div class="section">
+                    <div class="section-title">📚 Biblioteca — o que você já pode ler</div>
+                    <div id="conhecimentoContainer">
+                        <p style="font-size:12px;color:var(--muted);text-align:center;padding:20px 0;">Abra esta aba
+                            para carregar a biblioteca.</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- ======== NOTAS ======== -->
             <div class="tab-content" id="tabNotas">
                 <div class="section">
@@ -451,6 +464,7 @@
     <script src="js/char-logger.js?v=7"></script>
     <script src="js/aliado-inventario.js?v=7"></script>
     <script type="module" src="js/aliados.js?v=7"></script>
+    <script type="module" src="js/conhecimento.js?v=1"></script>
     <script type="module" src="js/firebase.js"></script>
 </body>
 
