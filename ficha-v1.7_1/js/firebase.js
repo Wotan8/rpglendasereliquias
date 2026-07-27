@@ -140,6 +140,10 @@ function setupRealtimeListeners(charId) {
         updateField('vit_atual', vitAtual);
         updateField('ener_atual', enerAtual);
         updateField('san_atual', sanAtual);
+
+        // updateField escreve direto no input, sem disparar 'input' — o HUD da
+        // aba Combate espelha esses campos e precisa ser avisado na mão.
+        if (typeof window.syncCombatPanel === 'function') window.syncCombatPanel();
     }, (error) => {
         console.warn('⚠️ Erro no onSnapshot da ficha:', error);
     });

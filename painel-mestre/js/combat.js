@@ -257,6 +257,22 @@ window.adjustCombatStat = function(pid, stat, amt, ev) {
     }
 };
 
+/**
+ * Restaura VIT/ENER/SAN de um participante ao máximo.
+ * Exclusivo do Mestre — a ficha do jogador não tem esse atalho.
+ * Delega em adjustCombatStat para reusar toda a sincronização
+ * (doc char / doc npcs) que ela já faz.
+ */
+window.restoreCombatStats = function(pid, ev) {
+    if (ev) ev.stopPropagation();
+    const p = S.combatParticipants.find(x => x.id === pid); if (!p) return;
+    if (!confirm(`Restaurar ❤️ VIT, 🔥 ENER e 🧠 SAN de "${p.name}" ao máximo?`)) return;
+    window.adjustCombatStat(pid, 'vit', (p.hpMax || 0) - (p.hpCurrent || 0));
+    window.adjustCombatStat(pid, 'ener', (p.enerMax || 0) - (p.enerCurrent || 0));
+    window.adjustCombatStat(pid, 'san', (p.sanMax || 0) - (p.sanCurrent || 0));
+    showAlert(`✅ Status de ${p.name} restaurados`, 'success');
+};
+
 window.updateInitiative = function(pid, v) { const p = S.combatParticipants.find(x => x.id === pid); if (p) p.initiative = parseInt(v)||0; persistCombat(); };
 window.updateCustomAbilities = function(pid, v) { const p = S.combatParticipants.find(x => x.id === pid); if (p) p.combatAbilities = v; persistCombat(); };
 
@@ -300,6 +316,7 @@ export function renderCombatList() {
         const click = isNpc ? `onclick="openCombatNpcModal('${p.id}')" style="cursor:pointer"` : '';
         const cls = isCustom ? 'combat-participant-custom' : isNpc ? 'combat-participant-npc' : '';
         const npcHint = isNpc ? '<span style="font-size:.7rem;color:#94a3b8;margin-left:5px">📋 detalhes</span>' : '';
-        return `<div class="combat-participant ${cls}" ${click}><div class="combat-initiative"><div class="combat-initiative-value">${p.initiative}</div><div class="combat-initiative-label">Iniciativa</div></div><div style="flex:1"><div class="combat-name">${escapeHtml(p.name)}${npcHint}</div><span class="combat-type">${p.type}</span><div class="combat-details">${escapeHtml(p.details||'')}</div>${stats}${abil}</div><div class="combat-actions" onclick="event.stopPropagation()"><input type="number" class="combat-initiative-input" value="${p.initiative}" onchange="updateInitiative('${p.id}',this.value)"><button class="btn btn-danger btn-small" onclick="removeFromCombat('${p.id}')">🗑️</button></div></div>`;
+        const btnRestore = hasStats ? `<button class="btn btn-secondary btn-small" onclick="restoreCombatStats('${p.id}',event)" title="Restaurar VIT/ENER/SAN ao máximo">🛌</button>` : '';
+        return `<div class="combat-participant ${cls}" ${click}><div class="combat-initiative"><div class="combat-initiative-value">${p.initiative}</div><div class="combat-initiative-label">Iniciativa</div></div><div style="flex:1"><div class="combat-name">${escapeHtml(p.name)}${npcHint}</div><span class="combat-type">${p.type}</span><div class="combat-details">${escapeHtml(p.details||'')}</div>${stats}${abil}</div><div class="combat-actions" onclick="event.stopPropagation()"><input type="number" class="combat-initiative-input" value="${p.initiative}" onchange="updateInitiative('${p.id}',this.value)">${btnRestore}<button class="btn btn-danger btn-small" onclick="removeFromCombat('${p.id}')">🗑️</button></div></div>`;
     }).join('');
 }
