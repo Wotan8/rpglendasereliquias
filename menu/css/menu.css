@@ -1505,3 +1505,303 @@ html:not(.dark) .loja-card {
     border: 1px solid var(--primary);
     color: var(--primary);
 }
+
+/* =============================================
+   ABA METAS (jogador)
+   Objetivo visual: o número que falta é o herói do card; as etapas contam a
+   história do que já foi conquistado; os itens da Loja fecham o caminho.
+   ============================================= */
+
+.metas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 14px;
+}
+
+.meta-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012));
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+html:not(.dark) .meta-card {
+    background: var(--paper);
+    border: 1px solid var(--soft);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    /* body herda `--lr-text-1` (claro) em vez de `--ink`, então no tema claro o
+       texto herdado sairia branco no branco. Fixa a cor certa no card. */
+    color: var(--ink);
+}
+
+.meta-card:hover {
+    border-color: var(--accent-glow, rgba(212, 175, 55, 0.35));
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+.meta-card.is-complete {
+    border-color: var(--lr-nature, #10b981);
+}
+
+.meta-card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.meta-card-titulo {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1.25;
+    margin: 0;
+}
+
+.meta-card-etapas {
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--muted);
+    white-space: nowrap;
+    letter-spacing: .3px;
+}
+
+.meta-card-desc {
+    font-size: .87rem;
+    line-height: 1.55;
+    opacity: .85;
+    margin: 0;
+}
+
+/* --- Chamada: o que falta agora --- */
+.meta-callout {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--lr-gold-soft, rgba(212, 175, 55, 0.14));
+    border: 1px solid rgba(212, 175, 55, 0.30);
+}
+
+.meta-callout-num {
+    font-size: 2rem;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--lr-gold);
+    font-variant-numeric: tabular-nums;
+}
+
+.meta-callout-txt {
+    font-size: .82rem;
+    line-height: 1.4;
+    opacity: .9;
+}
+
+.meta-callout-alvo {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.meta-callout-ok {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: var(--lr-nature, #10b981);
+    font-weight: 700;
+    font-size: .88rem;
+    display: block;
+    text-align: center;
+}
+
+.meta-callout-neutro {
+    background: rgba(127, 127, 127, 0.10);
+    border-color: rgba(127, 127, 127, 0.20);
+    color: var(--muted);
+    font-size: .82rem;
+    display: block;
+    text-align: center;
+}
+
+/* --- Lista de etapas --- */
+.meta-etapas {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.meta-etapa {
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    opacity: .5;
+}
+
+.meta-etapa.is-done,
+.meta-etapa.is-current {
+    opacity: 1;
+}
+
+.meta-etapa-check {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: .7rem;
+    font-weight: 800;
+    border: 1px solid rgba(127, 127, 127, 0.35);
+    color: var(--muted);
+}
+
+.meta-etapa.is-done .meta-etapa-check {
+    background: var(--lr-nature, #10b981);
+    border-color: var(--lr-nature, #10b981);
+    color: #fff;
+}
+
+.meta-etapa.is-current .meta-etapa-check {
+    border-color: var(--lr-gold);
+    color: var(--lr-gold);
+}
+
+.meta-etapa-desc {
+    font-size: .84rem;
+    line-height: 1.35;
+    margin-bottom: 5px;
+}
+
+.meta-etapa-bar {
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(127, 127, 127, 0.20);
+    overflow: hidden;
+}
+
+.meta-etapa-bar > div {
+    height: 100%;
+    background: var(--lr-gold);
+    transition: width .4s ease;
+}
+
+.meta-etapa.is-done .meta-etapa-bar > div {
+    background: var(--lr-nature, #10b981);
+}
+
+.meta-etapa-num {
+    font-size: .74rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* --- Rodapé com os números --- */
+.meta-card-foot {
+    display: flex;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(127, 127, 127, 0.18);
+}
+
+.meta-stat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.meta-stat-num {
+    font-size: 1.25rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.meta-stat.is-mine .meta-stat-num {
+    color: var(--lr-gold);
+}
+
+.meta-stat-lbl {
+    font-size: .68rem;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--muted);
+    font-weight: 700;
+}
+
+/* --- Itens da Loja que empurram a meta --- */
+.meta-itens {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(127, 127, 127, 0.18);
+}
+
+.meta-itens-titulo {
+    font-size: .68rem;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--muted);
+    font-weight: 800;
+    margin-bottom: 2px;
+}
+
+.meta-item-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(127, 127, 127, 0.22);
+    background: rgba(127, 127, 127, 0.08);
+    color: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color .15s ease, background .15s ease;
+}
+
+.meta-item-chip:hover {
+    border-color: var(--lr-gold);
+    background: var(--lr-gold-soft, rgba(212, 175, 55, 0.14));
+}
+
+.meta-item-nome {
+    font-size: .84rem;
+    font-weight: 600;
+}
+
+.meta-item-preco {
+    font-size: .76rem;
+    font-weight: 800;
+    color: var(--lr-gold);
+    white-space: nowrap;
+}
+
+.meta-itens-mais {
+    font-size: .72rem;
+    color: var(--muted);
+    text-align: center;
+}
+
+/* Destaque temporário ao chegar da aba Metas */
+.loja-card-destaque {
+    border-color: var(--lr-gold) !important;
+    box-shadow: 0 0 0 3px var(--lr-gold-soft, rgba(212, 175, 55, 0.25)) !important;
+}
+
+@media (max-width: 640px) {
+    .metas-grid {
+        grid-template-columns: 1fr;
+    }
+}

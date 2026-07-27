@@ -19,7 +19,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
-import { somarApoiosDoJogador } from '../../shared/apoios-calc.js';
+import { somarApoiosDoJogador, somarMetaTotais, progressoDasEtapas, proximaEtapa, valorApoio, parseMetaIds, resolveMetaId } from '../../shared/apoios-calc.js';
 
 // ===== CONFIG =====
 const firebaseConfig = {
@@ -642,6 +642,164 @@ window.goToNotificationPage = function (page) {
     }
 };
 
+// =============================================
+// METAS (JOGADOR)
+// Objetivo da aba: mostrar o que falta para o próximo desbloqueio e o caminho
+// direto para o item da Loja que empurra aquela meta.
+// =============================================
+
+let metasCarregadas = false;
+
+async function loadMetasJogador() {
+    const grid = document.getElementById('metasGrid');
+    const vazio = document.getElementById('emptyMetas');
+    const loading = document.getElementById('metasLoading');
+    if (!grid) return;
+
+    // Recarrega a cada abertura: o total é coletivo e muda com a compra dos outros.
+    loading.style.display = metasCarregadas ? 'none' : 'block';
+    vazio.style.display = 'none';
+
+    try {
+        // metasData e lojaItensData já vêm de loadLojaItens() no login
+        if (!metasData.length) await loadLojaItens();
+
+        // ponytail: soma no cliente varrendo a coleção `users`. Serve para uma mesa
+        // de dezenas de jogadores; virando centenas, trocar por um contador agregado
+        // mantido por Cloud Function (FieldValue.increment em metas_totais/global).
+        const snapUsers = await getDocs(collection(db, 'users'));
+        const users = snapUsers.docs.map(d => ({ id: d.id, ...d.data() }));
+        const totais = somarMetaTotais(users, metasData);
+
+        // Contribuição pessoal — sai da mesma leitura, sem custo extra
+        const meuDoc = users.find(u => u.uid === currentUser.uid || u.email === currentUser.email);
+        const meusTotais = somarMetaTotais(meuDoc ? [meuDoc] : [], metasData);
+
+        loading.style.display = 'none';
+
+        if (!metasData.length) {
+            grid.innerHTML = '';
+            vazio.style.display = 'block';
+            return;
+        }
+
+        const ordenadas = [...metasData].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        grid.innerHTML = ordenadas.map(meta => renderMetaCard(meta, totais[meta.id] || 0, meusTotais[meta.id] || 0)).join('');
+        metasCarregadas = true;
+
+    } catch (e) {
+        console.error('Erro ao carregar metas:', e);
+        loading.style.display = 'none';
+        showAlert('❌ Erro ao carregar as metas.', 'danger');
+    }
+}
+window.loadMetasJogador = loadMetasJogador;
+
+// Itens da Loja que empurram esta meta — o gancho de conversão da aba
+function itensQueApoiam(metaId) {
+    return lojaItensData.filter(item => {
+        const vinculadas = item.metasVinculadas || [];
+        // modoSelecaoMeta = o jogador escolhe a meta no checkout, entre as vinculadas
+        return vinculadas.includes(metaId);
+    });
+}
+
+function renderMetaCard(meta, total, meuTotal) {
+    const etapas = progressoDasEtapas(total, meta.etapas || []);
+    const proxima = proximaEtapa(etapas);
+    const concluidas = etapas.filter(e => e.concluida).length;
+    const tudoConcluido = etapas.length > 0 && !proxima;
+
+    // Faixa de destaque: o que falta agora
+    let chamada;
+    if (!etapas.length) {
+        chamada = `<div class="meta-callout meta-callout-neutro">Meta sem etapas definidas — acompanhe o total acumulado.</div>`;
+    } else if (tudoConcluido) {
+        chamada = `<div class="meta-callout meta-callout-ok">🏆 Todas as etapas foram desbloqueadas. Obrigado!</div>`;
+    } else {
+        chamada = `
+            <div class="meta-callout">
+                <div class="meta-callout-num">${proxima.faltam}</div>
+                <div class="meta-callout-txt">
+                    <strong>${proxima.faltam === 1 ? 'apoio restante' : 'apoios restantes'}</strong>
+                    para desbloquear<br>
+                    <span class="meta-callout-alvo">${escapeHtml(proxima.descricao || `Etapa ${proxima.indice + 1}`)}</span>
+                </div>
+            </div>`;
+    }
+
+    const etapasHtml = etapas.map(e => `
+        <li class="meta-etapa ${e.concluida ? 'is-done' : (e.progresso > 0 ? 'is-current' : '')}">
+            <span class="meta-etapa-check">${e.concluida ? '✓' : e.indice + 1}</span>
+            <div class="meta-etapa-body">
+                <div class="meta-etapa-desc">${escapeHtml(e.descricao || `Etapa ${e.indice + 1}`)}</div>
+                <div class="meta-etapa-bar"><div style="width:${e.pct}%"></div></div>
+            </div>
+            <span class="meta-etapa-num">${e.progresso}/${e.necessarios}</span>
+        </li>`).join('');
+
+    const itens = itensQueApoiam(meta.id);
+    const itensHtml = itens.length ? `
+        <div class="meta-itens">
+            <div class="meta-itens-titulo">Itens que empurram esta meta</div>
+            ${itens.slice(0, 4).map(item => {
+                const centavos = getItemValorCentavos(item);
+                const precos = [
+                    item.valorFrag > 0 ? `${item.valorFrag} Frag$` : null,
+                    centavos > 0 ? `R$ ${(centavos / 100).toFixed(2).replace('.', ',')}` : null
+                ].filter(Boolean).join(' · ');
+                return `
+                    <button class="meta-item-chip" onclick="irParaItemDaLoja('${item.id}')" title="Ver na Loja">
+                        <span class="meta-item-nome">${escapeHtml(item.nome)}</span>
+                        <span class="meta-item-preco">${precos || 'Ver na Loja'}</span>
+                    </button>`;
+            }).join('')}
+            ${itens.length > 4 ? `<div class="meta-itens-mais">+${itens.length - 4} outro(s) na Loja</div>` : ''}
+        </div>` : '';
+
+    return `
+        <article class="meta-card ${tudoConcluido ? 'is-complete' : ''}">
+            <header class="meta-card-head">
+                <h2 class="meta-card-titulo">${escapeHtml(meta.nome || 'Meta')}</h2>
+                <span class="meta-card-etapas">${concluidas}/${etapas.length || 0} etapas</span>
+            </header>
+
+            ${meta.descricao ? `<p class="meta-card-desc">${escapeHtmlWithBreaks(meta.descricao)}</p>` : ''}
+
+            ${chamada}
+
+            ${etapas.length ? `<ul class="meta-etapas">${etapasHtml}</ul>` : ''}
+
+            <footer class="meta-card-foot">
+                <div class="meta-stat">
+                    <span class="meta-stat-num">${total}</span>
+                    <span class="meta-stat-lbl">apoios da mesa</span>
+                </div>
+                <div class="meta-stat ${meuTotal > 0 ? 'is-mine' : ''}">
+                    <span class="meta-stat-num">${meuTotal}</span>
+                    <span class="meta-stat-lbl">${meuTotal === 1 ? 'seu apoio' : 'seus apoios'}</span>
+                </div>
+            </footer>
+
+            ${itensHtml}
+        </article>`;
+}
+
+// Leva o jogador da meta direto ao item na Loja
+window.irParaItemDaLoja = function (itemId) {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelector('.tab[onclick*="loja"]')?.classList.add('active');
+    document.getElementById('tab-loja').classList.add('active');
+
+    const card = document.querySelector(`[data-loja-item="${itemId}"]`);
+    if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.classList.add('loja-card-destaque');
+        setTimeout(() => card.classList.remove('loja-card-destaque'), 2200);
+    }
+};
+
 // ===== TABS =====
 window.switchTab = function (tabName) {
     document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
@@ -652,6 +810,9 @@ window.switchTab = function (tabName) {
 
     if (tabName === 'notificacoes') {
         markNotificationsAsRead();
+    }
+    if (tabName === 'metas') {
+        loadMetasJogador();
     }
 };
 
@@ -833,7 +994,7 @@ function renderLojaItens() {
             : `<div class="loja-card-media loja-media-fallback"></div>`;
 
         html += `
-            <div class="loja-card">
+            <div class="loja-card" data-loja-item="${escapeHtml(item.id)}">
                 ${imgHtml}
                 <div class="loja-card-body">
                     <div class="loja-card-title">${escapeHtml(item.nome)}</div>

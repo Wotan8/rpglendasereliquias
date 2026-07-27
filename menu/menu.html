@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0E1117">
     <title>Menu</title>
-    <link rel="stylesheet" href="css/menu.css?v=6">
+    <link rel="stylesheet" href="css/menu.css?v=7">
     <link rel="stylesheet" href="../shared/tokens.css">
     <script src="../shared/theme.js"></script>
     <!-- reCAPTCHA v3 (invisível) — protege a criação de checkout PagBank contra bots/abuso.
@@ -69,6 +69,7 @@
                 <button class="tab active" onclick="switchTab('personagens')">👥 Personagens</button>
                 <button class="tab" onclick="switchTab('inventario')">🎒 Repertório</button>
                 <button class="tab" onclick="switchTab('loja')">🛒 Loja</button>
+                <button class="tab" onclick="switchTab('metas')">🎯 Metas</button>
                 <button class="tab" onclick="switchTab('notificacoes')" style="position:relative">
                     🔔 Notificações
                     <span class="badge" id="notificationBadge" style="display:none">0</span>
@@ -158,6 +159,29 @@
                 </div>
             </div>
 
+            <!-- ======== ABA METAS ======== -->
+            <div class="tab-content" id="tab-metas">
+                <div class="menu-header" style="margin-bottom:10px">
+                    <h1 style="font-size:1.2rem">🎯 Metas da Campanha</h1>
+                </div>
+                <p class="notifications-info" style="margin-bottom:20px;">Cada item adquirido na Loja vira um apoio e
+                    empurra as metas abaixo. Elas são coletivas: o esforço de toda a mesa soma no mesmo lugar, e o que
+                    for desbloqueado vale para todos.</p>
+
+                <div id="metasLoading" class="empty-state" style="display:none">
+                    <div class="icon">⏳</div>
+                    <div class="text">Somando os apoios da mesa...</div>
+                </div>
+
+                <div class="metas-grid" id="metasGrid"></div>
+
+                <div class="empty-state" id="emptyMetas" style="display:none">
+                    <div class="icon">🎯</div>
+                    <div class="text">Nenhuma meta ativa</div>
+                    <div class="hint">O mestre ainda não publicou metas para a campanha.</div>
+                </div>
+            </div>
+
             <!-- ======== ABA NOTIFICAÇÕES ======== -->
             <div class="tab-content" id="tab-notificacoes">
                 <div class="menu-header" style="margin-bottom:10px">
@@ -226,7 +250,7 @@
     </div>
 
     <!-- Firebase Module -->
-    <script type="module" src="js/menu-firebase.js?v=6"></script>
+    <script type="module" src="js/menu-firebase.js?v=7"></script>
 
 </body>
 

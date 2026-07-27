@@ -4,7 +4,7 @@ import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { notifyUsers } from './notify.js';
-import { parseMetaIds, resolveMetaId as resolveMetaIdPuro, somarMetaTotais, chaveApoio, valorApoio } from '../../shared/apoios-calc.js';
+import { parseMetaIds, resolveMetaId as resolveMetaIdPuro, somarMetaTotais, chaveApoio, valorApoio, progressoDasEtapas } from '../../shared/apoios-calc.js';
 
 let dynamicMetas = [];
 let metaTotais = {};   // { [metaId]: somaDosMontantes }
@@ -410,44 +410,23 @@ function renderMetasUI() {
     let html = '';
     
     dynamicMetas.forEach(meta => {
-        // Cálculo de progresso
+        // Cálculo de progresso — mesma função usada na aba Metas do jogador
         const totalApoios = metaTotais[meta.id] || 0;
-
-        let saldo = totalApoios;
-        let etapasHtml = '';
-        
         const etapas = meta.etapas || [];
-        
-        etapas.forEach((etapa, idx) => {
-            const necessarios = parseInt(etapa.necessarios) || 1;
-            let progressoEtapa = 0;
-            let concluida = false;
-            
-            if (saldo >= necessarios) {
-                concluida = true;
-                progressoEtapa = necessarios;
-                saldo -= necessarios;
-            } else {
-                progressoEtapa = saldo;
-                saldo = 0;
-            }
-            
-            const pct = Math.min(100, Math.round((progressoEtapa / necessarios) * 100));
-            const barColor = concluida ? '#22c55e' : (progressoEtapa > 0 ? '#eab308' : 'rgba(255,255,255,0.1)');
-            
-            etapasHtml += `
+        const etapasHtml = progressoDasEtapas(totalApoios, etapas).map(e => {
+            const barColor = e.concluida ? '#22c55e' : (e.progresso > 0 ? '#eab308' : 'rgba(255,255,255,0.1)');
+            return `
                 <div style="margin-bottom:8px;font-size:0.85rem;">
                     <div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--light);">
-                        <span><strong style="color:${concluida ? '#22c55e' : 'inherit'}">Etapa ${idx + 1}</strong>: ${escapeHtml(etapa.descricao || '...')}</span>
-                        <span style="color:var(--muted)">${progressoEtapa} / ${necessarios}</span>
+                        <span><strong style="color:${e.concluida ? '#22c55e' : 'inherit'}">Etapa ${e.indice + 1}</strong>: ${escapeHtml(e.descricao || '...')}</span>
+                        <span style="color:var(--muted)">${e.progresso} / ${e.necessarios}</span>
                     </div>
                     <div style="background:rgba(0,0,0,0.3);height:6px;border-radius:3px;overflow:hidden;border:1px solid rgba(255,255,255,0.05)">
-                        <div style="width:${pct}%;height:100%;background:${barColor};transition:width 0.3s"></div>
+                        <div style="width:${e.pct}%;height:100%;background:${barColor};transition:width 0.3s"></div>
                     </div>
-                </div>
-            `;
-        });
-        
+                </div>`;
+        }).join('');
+
         html += `
             <div style="background:rgba(15,23,42,0.6);border:2px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
@@ -461,6 +440,8 @@ function renderMetasUI() {
                     </div>
                 </div>
                 
+                ${meta.descricao ? `<div style="font-size:0.85rem;color:var(--light);opacity:.85;margin-bottom:12px;white-space:pre-wrap;line-height:1.5">${escapeHtml(meta.descricao)}</div>` : '<div style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;font-style:italic">Sem descrição — os jogadores veem esta meta sem explicação.</div>'}
+
                 <div style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;background:rgba(0,0,0,0.2);padding:8px;border-radius:6px;">
                     Total de Apoios Históricos: <strong style="color:var(--light)">${totalApoios}</strong>
                 </div>
@@ -488,7 +469,8 @@ window.openMetaModal = function(metaId = null) {
             document.getElementById('meta_id').value = meta.id;
             document.getElementById('meta_nome').value = meta.nome || '';
             document.getElementById('meta_slug').value = meta.slug || '';
-            
+            document.getElementById('meta_descricao').value = meta.descricao || '';
+
             if (meta.etapas && meta.etapas.length > 0) {
                 meta.etapas.forEach(etapa => window.addMetaEtapa(etapa.necessarios, etapa.descricao));
             } else {
@@ -500,6 +482,7 @@ window.openMetaModal = function(metaId = null) {
         document.getElementById('meta_id').value = '';
         document.getElementById('meta_nome').value = '';
         document.getElementById('meta_slug').value = '';
+        document.getElementById('meta_descricao').value = '';
         window.addMetaEtapa();
     }
     
@@ -553,6 +536,8 @@ window.saveMeta = async function() {
     const metaData = {
         nome,
         slug,
+        // Exibida para os jogadores na aba Metas do Menu
+        descricao: document.getElementById('meta_descricao').value.trim(),
         etapas,
         updatedAt: new Date().toISOString()
     };

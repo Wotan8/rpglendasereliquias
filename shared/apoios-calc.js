@@ -71,6 +71,36 @@ export function somarApoiosDoJogador(apoios = []) {
     return apoios.reduce((s, a) => s + valorApoio(a), 0);
 }
 
+/**
+ * Distribui o total acumulado entre as etapas, em cascata: a etapa 1 consome os
+ * primeiros N apoios, o que sobra escorre para a etapa 2, e assim por diante.
+ * Usado pelo painel do mestre E pela aba de Metas do jogador — a conta precisa
+ * bater nos dois, senão o jogador vê um progresso e o mestre outro.
+ * @returns {Array<{indice, necessarios, descricao, progresso, faltam, concluida, pct}>}
+ */
+export function progressoDasEtapas(total = 0, etapas = []) {
+    let saldo = Math.max(0, total);
+    return etapas.map((etapa, i) => {
+        const necessarios = parseInt(etapa.necessarios) || 1;
+        const progresso = Math.min(saldo, necessarios);
+        saldo = Math.max(0, saldo - necessarios);
+        return {
+            indice: i,
+            necessarios,
+            descricao: etapa.descricao || '',
+            progresso,
+            faltam: Math.max(0, necessarios - progresso),
+            concluida: progresso >= necessarios,
+            pct: Math.min(100, Math.round((progresso / necessarios) * 100))
+        };
+    });
+}
+
+/** A primeira etapa ainda não concluída — o "próximo desbloqueio". null se tudo concluído. */
+export function proximaEtapa(etapasComProgresso = []) {
+    return etapasComProgresso.find(e => !e.concluida) || null;
+}
+
 /** Identidade de um apoio pelo conteúdo — usada para reencontrá-lo no array do servidor. */
 export function chaveApoio(a) {
     return JSON.stringify([

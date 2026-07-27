@@ -1,6 +1,6 @@
 // Rodar: node shared/apoios-calc.test.mjs
 import assert from 'node:assert/strict';
-import { valorApoio, parseMetaIds, resolveMetaId, somarMetaTotais, somarApoiosDoJogador, chaveApoio } from './apoios-calc.js';
+import { valorApoio, parseMetaIds, resolveMetaId, somarMetaTotais, somarApoiosDoJogador, chaveApoio, progressoDasEtapas, proximaEtapa } from './apoios-calc.js';
 
 // --- valorApoio: regra de mesa da roleta ---
 assert.equal(valorApoio({ montante: 5 }), 5);
@@ -72,5 +72,42 @@ assert.equal(chaveApoio(a), chaveApoio({ ...a }), 'cópia idêntica tem a mesma 
 assert.notEqual(chaveApoio(a), chaveApoio({ ...a, montante: 3 }));
 assert.notEqual(chaveApoio(a), chaveApoio({ ...a, recebido: false }));
 assert.equal(chaveApoio({ nome: 'A' }), chaveApoio({ nome: 'A', montante: 1, recebido: false }), 'defaults equivalem');
+
+// --- progressoDasEtapas: cascata (o que sobra escorre para a etapa seguinte) ---
+const etapas = [
+    { necessarios: 10, descricao: 'Primeira' },
+    { necessarios: 20, descricao: 'Segunda' },
+    { necessarios: 30, descricao: 'Terceira' },
+];
+
+const p0 = progressoDasEtapas(0, etapas);
+assert.deepEqual(p0.map(e => e.progresso), [0, 0, 0]);
+assert.deepEqual(p0.map(e => e.concluida), [false, false, false]);
+assert.equal(p0[0].faltam, 10);
+assert.equal(proximaEtapa(p0).indice, 0, 'nada feito: proxima e a primeira');
+
+// 25 apoios: fecha a etapa 1 (10) e leva 15 para a etapa 2 (de 20)
+const p25 = progressoDasEtapas(25, etapas);
+assert.deepEqual(p25.map(e => e.progresso), [10, 15, 0]);
+assert.deepEqual(p25.map(e => e.concluida), [true, false, false]);
+assert.equal(p25[1].faltam, 5, 'faltam 5 para a segunda etapa');
+assert.equal(p25[1].pct, 75);
+assert.equal(proximaEtapa(p25).descricao, 'Segunda');
+
+// Exatamente no limite de uma etapa: ela conta como concluida
+const p30 = progressoDasEtapas(30, etapas);
+assert.equal(p30[1].concluida, true, '10+20 = segunda etapa fechada');
+assert.equal(proximaEtapa(p30).indice, 2);
+
+// Excedente alem da ultima etapa nao quebra nem vaza
+const pTudo = progressoDasEtapas(999, etapas);
+assert.deepEqual(pTudo.map(e => e.progresso), [10, 20, 30]);
+assert.equal(proximaEtapa(pTudo), null, 'tudo concluido: nao ha proxima');
+
+// Bordas
+assert.deepEqual(progressoDasEtapas(50, []), [], 'sem etapas, sem progresso');
+assert.equal(progressoDasEtapas(-5, etapas)[0].progresso, 0, 'total negativo nao vira credito');
+assert.equal(progressoDasEtapas(5, [{ descricao: 'sem necessarios' }])[0].necessarios, 1, 'necessarios ausente = 1');
+assert.equal(proximaEtapa([]), null);
 
 console.log('✅ apoios-calc: todos os casos passaram');
