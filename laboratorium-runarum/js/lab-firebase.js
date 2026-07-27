@@ -94,6 +94,24 @@ const LabFB = {
         return out;
     },
 
+    /**
+     * ᛟ Compêndio da Runomancia — lido do Worldbuilding (livro "Compêndio de
+     * Runomancia"), não mais hardcoded. Retorna os artigos ordenados
+     * [{title, contentHTML}]. O RUNO_COMPENDIO em compendium-data.js vira
+     * apenas fallback quando a leitura falha/está vazia.
+     */
+    async loadCompendio() {
+        const bsnap = await getDocs(collection(db, 'worldbuilding-books'));
+        let bookId = null;
+        bsnap.forEach(d => { if ((d.data().title || '') === 'Compêndio de Runomancia') bookId = d.id; });
+        if (!bookId) return [];
+        const asnap = await getDocs(collection(db, 'worldbuilding-articles'));
+        const arts = [];
+        asnap.forEach(d => { const a = d.data(); if (a.bookId === bookId) arts.push(a); });
+        arts.sort((x, y) => (Number(x.order) || 0) - (Number(y.order) || 0));
+        return arts.map(a => ({ title: a.title || '', contentHTML: a.contentHTML || '' }));
+    },
+
     async saveRunomancia() {
         if (!this.charId) return false;
         try {

@@ -289,10 +289,21 @@
     }
 
     // ================= COMPÊNDIO =================
-    function renderCompendio() {
-        $('#labCompendio').innerHTML = (window.RUNO_COMPENDIO || []).map(s => `
-            <details class="lab-comp-sec"><summary>${s.icone} ${esc(s.titulo)}</summary>
-            <div class="lab-comp-body">${s.html}</div></details>`).join('');
+    async function renderCompendio() {
+        const host = $('#labCompendio');
+        let secs = [];
+        try {
+            secs = await window.LabFB.loadCompendio();
+        } catch (e) {
+            console.warn('Compêndio: falha ao ler do Worldbuilding, usando fallback local.', e);
+        }
+        // Fallback: RUNO_COMPENDIO hardcoded (compendium-data.js)
+        if (!secs || !secs.length) {
+            secs = (window.RUNO_COMPENDIO || []).map(s => ({ title: `${s.icone} ${s.titulo}`, contentHTML: s.html }));
+        }
+        host.innerHTML = secs.map(s => `
+            <details class="lab-comp-sec"><summary>${esc(s.title)}</summary>
+            <div class="lab-comp-body texto-mundo">${s.contentHTML}</div></details>`).join('');
     }
 
     // ================= MODAL DE ELEMENTO =================
