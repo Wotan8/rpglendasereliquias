@@ -297,10 +297,11 @@ const MODULE_DEFS = {
             { key: 'todoPersonagem', label: 'Todo personagem tem este valor?', type: 'boolean' },
             { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: '' },
             {
-                key: 'escopoItem', label: '🎒 Escopo por Item Equipado', type: 'select', options: [
-                    { value: '', label: '— Global (padrão): um único valor para o personagem' },
-                    { value: 'coluna', label: '📊 Por item: coluna própria em Ataques e Efeitos Ativos' },
-                    { value: 'dano', label: '💥 Por item: concatena na Fórmula de Dano (ex: 1d10+5)' }
+                // O renderer de 'select' já injeta um <option value=""> — deixar o
+                // vazio fora daqui evita opção duplicada. Vazio = global (padrão).
+                key: 'escopoItem', label: '🎒 Escopo por Item Equipado (vazio = global, um valor só para o personagem)', type: 'select', options: [
+                    { value: 'coluna', label: '📊 Por item equipado: coluna própria em "Ataques e Efeitos Ativos"' },
+                    { value: 'dano', label: '💥 Por item equipado: soma na Fórmula de Dano (ex: 1d10 → 1d10+5)' }
                 ]
             },
             { key: 'campoAtual', label: 'Tem campo "Atual" (editável)?', type: 'boolean' },
