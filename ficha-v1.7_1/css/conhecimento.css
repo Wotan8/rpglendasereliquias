@@ -197,21 +197,9 @@
     margin-bottom: 12px;
 }
 
-.cnh-leitura-corpo {
-    font-family: var(--lr-font-subtitle);
+/* O corpo do capítulo é desenhado por shared/texto-mundo.css — a mesma
+   folha do Escritório do Cronista. Aqui só o tamanho de leitura na ficha.
+   Classe dupla porque texto-mundo.css carrega depois desta folha. */
+.texto-mundo.cnh-leitura-corpo {
     font-size: var(--lr-fs-md);
-    line-height: var(--lr-lh-body);
-    color: var(--lr-text-1);
-}
-
-.cnh-leitura-corpo blockquote {
-    border-left: 3px solid var(--lr-bronze);
-    margin: 10px 0;
-    padding-left: 12px;
-    color: var(--muted);
-}
-
-.cnh-leitura-corpo .wbt-mention {
-    color: var(--lr-arcane-2);
-    text-decoration: underline dotted;
 }

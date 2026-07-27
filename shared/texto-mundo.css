@@ -1,0 +1,237 @@
+/* =====================================================================
+   TEXTO DO MUNDO — a folha ÚNICA que desenha o que o escritor diagramou
+   ---------------------------------------------------------------------
+   Todo HTML escrito no Escritório do Cronista (worldbuilding-articles)
+   é renderizado dentro de um container com a classe `.texto-mundo`.
+   Enquanto cada tela tinha o seu próprio CSS, o mesmo capítulo aparecia
+   diferente no Worldbuilding, na ficha e no Laboratorium — este arquivo
+   existe para que a diagramação do autor seja a MESMA em qualquer lugar.
+
+   Quem usa:
+     • worldbuilding  → #richEditor (edição) e a leitura
+     • ficha-v1.7_1   → aba Conhecimento (modal de leitura)
+     • laboratorium   → Compêndio de Runomancia
+
+   Regra de ouro: o editor só grava CLASSES `tm-*` (nunca layout inline),
+   e é aqui que elas ganham aparência. Mexeu aqui, mudou em todo lugar.
+   ===================================================================== */
+
+.texto-mundo {
+    font-family: var(--lr-font-subtitle);
+    font-size: var(--lr-fs-lg);
+    line-height: var(--lr-lh-body);
+    color: var(--lr-text-1);
+    overflow-wrap: break-word;
+}
+
+/* ── Blocos ──────────────────────────────────────────────── */
+.texto-mundo p { margin: 0 0 .9em; }
+.texto-mundo > *:last-child { margin-bottom: 0; }
+
+.texto-mundo h1,
+.texto-mundo h2,
+.texto-mundo h3,
+.texto-mundo h4 {
+    font-family: var(--lr-font-title);
+    letter-spacing: var(--lr-track-title);
+    line-height: var(--lr-lh-tight);
+    color: var(--lr-gold);
+    margin: 1.4em 0 .5em;
+}
+
+.texto-mundo h1 { font-size: 1.7em; color: var(--lr-gold-2); }
+.texto-mundo h2 { font-size: 1.35em; }
+.texto-mundo h3 { font-size: 1.12em; color: var(--lr-gold-2); }
+.texto-mundo h4 { font-size: 1em; color: var(--lr-bronze); text-transform: uppercase; }
+
+.texto-mundo blockquote {
+    border-left: 3px solid var(--lr-bronze);
+    margin: 1.2em 0;
+    padding: .3em 1.1em;
+    color: var(--lr-text-2);
+    font-style: italic;
+}
+
+.texto-mundo ul,
+.texto-mundo ol { margin: 0 0 .9em; padding-left: 1.6em; }
+.texto-mundo li { margin-bottom: .25em; }
+
+.texto-mundo hr {
+    border: none;
+    height: 1px;
+    margin: 1.8em auto;
+    width: 60%;
+    background: linear-gradient(90deg, transparent, var(--lr-bronze), transparent);
+}
+
+.texto-mundo pre {
+    background: var(--lr-bg-1);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius-sm);
+    padding: .8em 1em;
+    overflow-x: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: .85em;
+}
+
+.texto-mundo a { color: var(--lr-arcane); text-decoration: underline; }
+.texto-mundo a:hover { color: var(--lr-arcane-2); }
+
+/* Menção a uma entidade do ecossistema (@NPC, @Local…) */
+.texto-mundo .wbt-mention {
+    color: var(--lr-arcane);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--lr-arcane);
+    cursor: pointer;
+    font-family: var(--lr-font-body);
+    font-size: .95em;
+    padding: 0 .1em;
+}
+.texto-mundo .wbt-mention:hover { background: var(--lr-arcane-soft); }
+
+/* ── Marcadores de trecho ────────────────────────────────── */
+.texto-mundo mark,
+.texto-mundo .tm-marca {
+    background: var(--lr-gold-soft);
+    color: inherit;
+    padding: 0 .15em;
+    border-radius: 2px;
+}
+
+/* Capitular — primeira letra grande, para abrir um capítulo */
+.texto-mundo .tm-capitular::first-letter {
+    float: left;
+    font-family: var(--lr-font-title);
+    font-size: 3.2em;
+    line-height: .82;
+    padding: .05em .12em 0 0;
+    color: var(--lr-gold);
+}
+
+/* Alinhamento sai como `style="text-align:…"` inline (execCommand) — é
+   portátil por si só e não precisa de classe. */
+
+/* ── Imagens ─────────────────────────────────────────────── */
+.texto-mundo img,
+.texto-mundo .tm-img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: var(--lr-radius-sm);
+}
+
+/* Tamanhos — sempre relativos, para não estourar em tela pequena */
+.texto-mundo .tm-img--p { width: 30%; }
+.texto-mundo .tm-img--m { width: 55%; }
+.texto-mundo .tm-img--g { width: 80%; }
+.texto-mundo .tm-img--full { width: 100%; }
+
+/* Figura = imagem + legenda opcional */
+.texto-mundo .tm-fig {
+    margin: 1.4em 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .4em;
+}
+
+.texto-mundo .tm-fig figcaption {
+    font-family: var(--lr-font-body);
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2);
+    text-align: center;
+    font-style: italic;
+}
+.texto-mundo .tm-fig figcaption:empty::before {
+    content: 'Legenda (opcional)…';
+    opacity: .55;
+}
+
+/* Posição da figura no texto */
+.texto-mundo .tm-fig--esq  { align-items: flex-start; }
+.texto-mundo .tm-fig--esq figcaption { text-align: left; }
+.texto-mundo .tm-fig--dir  { align-items: flex-end; }
+.texto-mundo .tm-fig--dir figcaption { text-align: right; }
+
+/* Flutuar — o texto contorna a imagem (diagramação de livro) */
+.texto-mundo .tm-fig--flut-esq {
+    float: left;
+    width: 42%;
+    margin: .4em 1.4em .8em 0;
+}
+.texto-mundo .tm-fig--flut-dir {
+    float: right;
+    width: 42%;
+    margin: .4em 0 .8em 1.4em;
+}
+.texto-mundo .tm-fig--flut-esq img,
+.texto-mundo .tm-fig--flut-dir img { width: 100%; }
+
+/* Limpa o float para o próximo bloco não subir junto */
+.texto-mundo .tm-limpa { clear: both; }
+.texto-mundo::after { content: ''; display: block; clear: both; }
+
+/* ── Tabelas ─────────────────────────────────────────────── */
+.texto-mundo table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.2em 0;
+    font-family: var(--lr-font-body);
+    font-size: .8em;
+}
+
+.texto-mundo th,
+.texto-mundo td {
+    border: var(--lr-border-w) solid var(--lr-border);
+    padding: .45em .6em;
+    text-align: left;
+    vertical-align: top;
+}
+
+.texto-mundo th {
+    background: var(--lr-bg-1);
+    color: var(--lr-gold-2);
+    font-family: var(--lr-font-title);
+    font-weight: 600;
+    letter-spacing: var(--lr-track-title);
+}
+
+.texto-mundo caption {
+    caption-side: bottom;
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2);
+    font-style: italic;
+    padding-top: .4em;
+}
+
+/* Tabela larga rola sozinha em vez de estourar a página. */
+.texto-mundo .tm-tabela-rola { overflow-x: auto; margin: 1.2em 0; }
+.texto-mundo .tm-tabela-rola table { margin: 0; }
+
+/* ── Colunas (diagramação de duas colunas) ───────────────── */
+.texto-mundo .tm-colunas {
+    column-count: 2;
+    column-gap: 2.2em;
+    column-rule: 1px solid var(--lr-border);
+}
+
+/* ── Telas estreitas: nada de float nem coluna dupla ─────── */
+@media (max-width: 640px) {
+    .texto-mundo .tm-fig--flut-esq,
+    .texto-mundo .tm-fig--flut-dir {
+        float: none;
+        width: 100%;
+        margin: 1.2em 0;
+    }
+    .texto-mundo .tm-img--p,
+    .texto-mundo .tm-img--m,
+    .texto-mundo .tm-img--g { width: 100%; }
+    .texto-mundo .tm-colunas { column-count: 1; }
+}
+
+/* ── Impressão ───────────────────────────────────────────── */
+@media print {
+    .texto-mundo { color: #000; }
+    .texto-mundo h1, .texto-mundo h2, .texto-mundo h3 { color: #000; }
+    .texto-mundo .tm-fig { break-inside: avoid; }
+}

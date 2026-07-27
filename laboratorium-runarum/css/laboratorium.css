@@ -291,7 +291,12 @@ body {
 }
 .lab-comp-sec summary::-webkit-details-marker { display: none; }
 .lab-comp-sec[open] summary { border-bottom: 1px solid var(--borda); }
-.lab-comp-body { padding: 12px 16px; font-size: .82rem; line-height: 1.65; }
+/* Tipografia do corpo vem de shared/texto-mundo.css (mesma folha do
+   Escritório do Cronista). O seletor duplo repete o tamanho de leitura
+   daqui porque aquela folha carrega depois desta — e mantém o compêndio
+   correto mesmo se o container ainda não tiver a classe. */
+.lab-comp-body { padding: 12px 16px; }
+.lab-comp-body, .lab-comp-body.texto-mundo { font-size: .82rem; line-height: 1.65; }
 .lab-comp-body h4 { color: var(--ink); font-family: var(--font); font-weight: 800; margin: 14px 0 6px; }
 .lab-comp-body table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: .76rem; }
 .lab-comp-body th, .lab-comp-body td { border: 1px solid var(--borda); padding: 5px 7px; text-align: left; vertical-align: top; }

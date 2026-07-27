@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Check — Texto do Mundo</title>
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="shared/tokens.css">
+    <link rel="stylesheet" href="shared/texto-mundo.css">
+    <style>
+        body { background: var(--lr-bg-0); color: var(--lr-text-1); font-family: var(--lr-font-body); margin: 0; padding: 24px; }
+        .col { max-width: 70ch; margin: 0 auto 32px; }
+        h1 { font-family: var(--lr-font-title); color: var(--lr-gold); }
+        #res { white-space: pre-wrap; font-family: monospace; font-size: 12px; background: var(--lr-bg-1); border: 1px solid var(--lr-border); padding: 12px; border-radius: 6px; }
+        .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight: 700; }
+        .moldura { border: 1px dashed var(--lr-border); padding: 16px; border-radius: 6px; }
+    </style>
+</head>
+
+<body>
+    <div class="col">
+        <h1>Faxina (limparHTML)</h1>
+        <div id="res">rodando…</div>
+    </div>
+
+    <div class="col">
+        <h1>Amostra diagramada</h1>
+        <div class="moldura texto-mundo" id="amostra"></div>
+    </div>
+
+    <script type="module">
+        // Cache-buster: esta página é um check, precisa sempre do arquivo atual.
+        const { limparHTML } = await import(`./worldbuilding/js/wb-rich-sanitize.js?t=${Date.now()}`);
+
+        const casos = [
+            ['mantém parágrafo e ênfase', '<p>Um <strong>herói</strong> e um <em>vilão</em>.</p>', h => h.includes('<strong>') && h.includes('<em>')],
+            ['mata script', '<p>oi</p><script>alert(1)<\/script>', h => !h.includes('script') && h.includes('oi')],
+            ['mata onerror', '<img src="x.png" onerror="alert(1)">', h => !h.includes('onerror') && h.includes('x.png')],
+            ['mata javascript: no href', '<a href="javascript:alert(1)">clique</a>', h => !h.includes('javascript') && h.includes('clique')],
+            ['desembrulha <font>, preserva o texto', '<p><font color="red" face="Calibri">Vasteluna</font></p>', h => !h.includes('<font') && h.includes('Vasteluna')],
+            ['tabela sobrevive inteira', '<table><thead><tr><th>Manobra</th></tr></thead><tbody><tr><td colspan="2">Corte</td></tr></tbody></table>', h => h.includes('<table>') && h.includes('<th>') && h.includes('colspan="2"') && h.includes('Corte')],
+            ['figura com classes tm-* sobrevive', '<figure class="tm-fig tm-fig--flut-dir"><img src="/a.png" class="tm-img tm-img--m"><figcaption>Mapa</figcaption></figure>', h => h.includes('tm-fig--flut-dir') && h.includes('tm-img--m') && h.includes('Mapa')],
+            ['classe do Word cai, tm-* fica', '<p class="MsoNormal tm-capitular">Era uma vez</p>', h => !h.includes('MsoNormal') && h.includes('tm-capitular')],
+            ['cor e alinhamento do autor ficam', '<p style="color: #D4AF37; text-align: center; font-family: Calibri">Oráculo</p>', h => h.includes('color') && h.includes('text-align') && !h.includes('Calibri')],
+            ['menção @entidade intacta', '<a class="wbt-mention" data-entity="npc1" data-cat="npcs" contenteditable="false">Kael</a>', h => h.includes('wbt-mention') && h.includes('npc1') && h.includes('Kael')],
+            ['lista sobrevive', '<ul><li>um</li><li>dois</li></ul>', h => h.includes('<li>um</li>')],
+            ['vazio não explode', '', h => h === ''],
+        ];
+
+        let falhas = 0;
+        const linhas = casos.map(([nome, entrada, ok]) => {
+            let saida = '', bom = false;
+            try { saida = limparHTML(entrada); bom = ok(saida); }
+            catch (e) { saida = 'ERRO: ' + e.message; }
+            if (!bom) falhas++;
+            return `<span class="${bom ? 'ok' : 'fail'}">${bom ? '✅' : '❌'} ${nome}</span>\n     → ${saida.replace(/</g, '&lt;')}`;
+        });
+        document.getElementById('res').innerHTML =
+            `<b class="${falhas ? 'fail' : 'ok'}">${falhas ? falhas + ' FALHA(S)' : 'TODOS OS ' + casos.length + ' CASOS PASSARAM'}</b>\n\n` + linhas.join('\n\n');
+
+        document.getElementById('amostra').innerHTML = `
+            <h1>O Cerco de Eldoria</h1>
+            <p class="tm-capitular">Naquela manhã a névoa não subiu. Os sinos da torre bateram três vezes e ninguém
+            em Eldoria precisou perguntar o motivo — todos já sabiam o que vinha pela estrada do norte.</p>
+            <figure class="tm-fig tm-fig--flut-dir"><img src="data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200"><rect width="300" height="200" fill="#5B3FB8"/><text x="150" y="105" font-size="20" fill="#F6F7FB" text-anchor="middle">mapa</text></svg>')}" class="tm-img tm-img--m"><figcaption>A muralha leste, antes da queda</figcaption></figure>
+            <p>O conselho se reuniu ao amanhecer. <strong>Sete casas</strong>, <em>quatro juramentos</em> e uma
+            <span style="color:#D4AF37">promessa antiga</span> que ninguém tinha coragem de nomear em voz alta.
+            O texto contorna a imagem à direita, exatamente como o autor diagramou.</p>
+            <blockquote>“Muralha nenhuma segura quem já entrou.”</blockquote>
+            <h2>As casas do conselho</h2>
+            <table><thead><tr><th>Casa</th><th>Juramento</th></tr></thead>
+            <tbody><tr><td>Valdren</td><td>Aço</td></tr><tr><td>Ilmarë</td><td>Névoa</td></tr></tbody>
+            <caption>Registro do escriba, ano 412</caption></table>
+            <h3>Depois do cerco</h3>
+            <ul><li>A torre caiu</li><li>Os sinos, não</li></ul>
+            <hr>
+            <p style="text-align:center">— fim do capítulo —</p>`;
+    </script>
+</body>
+
+</html>

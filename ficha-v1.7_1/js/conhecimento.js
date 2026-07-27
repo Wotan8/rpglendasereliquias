@@ -179,7 +179,7 @@ window.lerCapitulo = function (capId) {
             ${livro ? `<div class="cnh-leitura-livro">📗 ${_esc(livro.title || '')}</div>` : ''}
             <h2 class="cnh-leitura-titulo">${_esc(cap.title || 'Sem título')}</h2>
             ${cap.synopsis ? `<p class="cnh-leitura-syn">${_esc(cap.synopsis)}</p>` : ''}
-            <div class="cnh-leitura-corpo">${cap.contentHTML || '<p><em>Capítulo ainda sem conteúdo.</em></p>'}</div>
+            <div class="cnh-leitura-corpo texto-mundo">${cap.contentHTML || '<p><em>Capítulo ainda sem conteúdo.</em></p>'}</div>
         </div>`;
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';

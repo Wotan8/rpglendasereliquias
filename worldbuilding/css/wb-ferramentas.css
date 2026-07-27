@@ -105,12 +105,36 @@
 .wbt-editor-main { position: relative; min-width: 0; }
 .wbt-etoolbar { margin-bottom: .6rem; }
 .wbt-article-title { width: 100%; background: none; border: none; border-bottom: var(--lr-border-w) solid var(--lr-border); color: var(--lr-text-1); font-family: var(--lr-font-title); font-size: var(--lr-fs-xl); padding: .4rem 0; margin-bottom: .8rem; }
-.wbt-rich { min-height: 55vh; background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius); padding: 1.4rem clamp(1rem, 4vw, 2.2rem); font-family: var(--lr-font-subtitle); font-size: var(--lr-fs-lg); line-height: var(--lr-lh-body); max-width: 72ch; color: var(--lr-text-1); }
+/* Só a "moldura" do editor. A tipografia do texto (títulos, citação,
+   imagens, colunas…) vem de shared/texto-mundo.css — a MESMA folha que a
+   ficha e o Laboratorium usam, para o autor ver o que o jogador verá. */
+.wbt-rich { min-height: 55vh; background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius); padding: 1.4rem clamp(1rem, 4vw, 2.2rem); max-width: 72ch; }
 .wbt-rich:empty::before { content: attr(data-placeholder); color: var(--lr-text-2); font-style: italic; }
-.wbt-rich h2 { font-family: var(--lr-font-title); font-size: 1.3rem; color: var(--lr-gold); }
-.wbt-rich blockquote { border-left: 3px solid var(--lr-bronze); margin: 1em 0; padding: .2em 1em; color: var(--lr-text-2); font-style: italic; }
 .wbt-mention { color: var(--lr-arcane); text-decoration: none; border-bottom: 1px dotted var(--lr-arcane); cursor: pointer; font-family: var(--lr-font-body); font-size: .95em; padding: 0 .1em; }
 .wbt-mention:hover { background: var(--lr-arcane-soft); }
+
+/* ── Barra de diagramação (wb-rich.js) ─────────────────── */
+.wb-richbar { flex-wrap: wrap; gap: .25rem; align-items: center; margin-bottom: .7rem; padding: .4rem; background: var(--lr-bg-1); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); }
+.wb-richbar .btn { min-width: 2rem; padding: .3rem .45rem; }
+.wb-rich-sep { width: 1px; align-self: stretch; background: var(--lr-border); margin: 0 .25rem; }
+.wb-rich-sel { background: var(--lr-surface); color: var(--lr-text-1); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); padding: .3rem .4rem; font-size: var(--lr-fs-xs); font-family: var(--lr-font-body); }
+.wb-rich-cor { display: inline-flex; align-items: center; gap: .2rem; background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); padding: .15rem .3rem; cursor: pointer; font-size: var(--lr-fs-sm); }
+.wb-rich-cor input { width: 22px; height: 22px; border: none; background: none; padding: 0; cursor: pointer; }
+
+/* ── Barra flutuante da imagem ─────────────────────────── */
+.wb-imgbar { position: absolute; z-index: var(--lr-z-dropdown); display: flex; gap: .5rem; align-items: center; background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-gold); border-radius: var(--lr-radius-sm); box-shadow: var(--lr-shadow-2); padding: .3rem .45rem; }
+.wb-imgbar[hidden] { display: none; }
+.wb-imgbar__grupo { display: flex; gap: .15rem; align-items: center; }
+.wb-imgbar__grupo + .wb-imgbar__grupo { border-left: 1px solid var(--lr-border); padding-left: .5rem; }
+.wb-imgbar__grupo > span { font-size: var(--lr-fs-xs); color: var(--lr-text-2); margin-right: .2rem; }
+.wb-imgbar button { background: var(--lr-bg-1); color: var(--lr-text-1); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); padding: .2rem .45rem; font-size: var(--lr-fs-xs); cursor: pointer; }
+.wb-imgbar button:hover { border-color: var(--lr-gold); }
+.wb-imgbar button.is-on { background: var(--lr-gold); color: var(--lr-bg-0); border-color: var(--lr-gold); }
+.wb-imgbar button.is-danger:hover { border-color: var(--lr-blood-2); color: var(--lr-blood-3); }
+
+/* Enquanto edita, a figura mostra que é clicável. */
+.wbt-rich .tm-fig { outline: 1px dashed transparent; outline-offset: 3px; cursor: pointer; }
+.wbt-rich .tm-fig:hover { outline-color: var(--lr-bronze); }
 
 .wbt-mentionbox { position: absolute; z-index: var(--lr-z-dropdown); min-width: 240px; max-height: 260px; overflow-y: auto; background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-gold); border-radius: var(--lr-radius-sm); box-shadow: 0 8px 28px rgba(0,0,0,.45); }
 .wbt-mentionbox button { display: flex; gap: .5rem; align-items: center; width: 100%; background: none; border: none; color: var(--lr-text-1); padding: .5rem .7rem; text-align: left; font-family: var(--lr-font-body); font-size: var(--lr-fs-sm); cursor: pointer; }

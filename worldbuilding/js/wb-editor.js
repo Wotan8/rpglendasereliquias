@@ -20,9 +20,11 @@
 
 import { db, collection, getDocs, doc, setDoc, deleteDoc } from './firebase-config.js';
 import { WB, esc, uid, ToolModal, setTitle, contentBody, searchables, KIND } from './wb-utils.js';
+import { TOOLBAR_HTML, bindRich } from './wb-rich.js';
 
 export const Editor = (() => {
     let books = [], artigos = [], atual = null;
+    let rich = null;   // mesa de diagramação (wb-rich.js) do editor aberto
     let mentionRange = null, mentionIdx = 0, saveTimer = null, refType = 'all';
     let view = 'library';   // 'library' | 'editor'
 
@@ -228,16 +230,11 @@ export const Editor = (() => {
                 <div class="wbt-toolbar wbt-etoolbar">
                     <button class="btn btn-secondary btn-sm" id="backLib">← Biblioteca</button>
                     <span style="flex:1"></span>
-                    <button class="btn btn-secondary btn-sm" data-cmd="bold" title="Negrito"><b>N</b></button>
-                    <button class="btn btn-secondary btn-sm" data-cmd="italic" title="Itálico"><i>I</i></button>
-                    <button class="btn btn-secondary btn-sm" data-cmd="formatBlock:h2" title="Título">T</button>
-                    <button class="btn btn-secondary btn-sm" data-cmd="formatBlock:blockquote" title="Citação">❝</button>
-                    <button class="btn btn-secondary btn-sm" data-cmd="insertUnorderedList" title="Lista">•—</button>
-                    <span style="flex:1"></span>
                     <button class="btn btn-secondary btn-sm" id="toggleRefs" title="Painel de consulta">Consulta ⇄</button>
                     <button class="btn btn-secondary btn-sm" id="focusMode" title="Modo foco">Foco ⛶</button>
                     <button class="btn btn-success btn-sm" id="saveArticle">💾 Salvar</button>
                 </div>
+                <div class="wbt-toolbar wb-richbar" id="richToolbar">${TOOLBAR_HTML}</div>
 
                 <input id="articleTitle" class="wbt-article-title" placeholder="Título do conto, capítulo ou cena…" value="${esc(a.title || '')}">
                 <input id="articleSyn" class="wb-article-syn" placeholder="Sinopse curta (opcional)…" value="${esc(a.synopsis || '')}">
@@ -259,7 +256,7 @@ export const Editor = (() => {
                     <label class="wbt-check"><input type="checkbox" id="artPublic" ${a.public ? 'checked' : ''}> 🌐 Público</label>
                 </div>
 
-                <div id="richEditor" class="wbt-rich" contenteditable="true"
+                <div id="richEditor" class="wbt-rich texto-mundo" contenteditable="true"
                      data-placeholder="Escreva aqui. Digite @ para vincular NPCs, Tribos, Locais ou eventos…">${a.contentHTML || ''}</div>
                 <p class="wbt-muted" id="editorStatus"></p>
                 <div id="mentionBox" class="wbt-mentionbox" hidden></div>
@@ -358,7 +355,9 @@ export const Editor = (() => {
         const a = atual;
         a.title = $('#articleTitle').value.trim() || 'Sem título';
         a.synopsis = $('#articleSyn').value.trim();
-        a.contentHTML = ed.innerHTML;
+        // Grava já higienizado: é este HTML que a ficha do jogador e o
+        // Laboratorium vão renderizar, então a faxina vale na gravação.
+        a.contentHTML = rich ? rich.limpar() : ed.innerHTML;
         a.bookId = $('#artBook').value || null;
         a.order = parseInt($('#artOrder').value || '0') || 0;
         a.status = $('#artStatus').value || 'rascunho';
@@ -382,10 +381,7 @@ export const Editor = (() => {
 
     function bindEditor() {
         $('#backLib').onclick = async () => { clearTimeout(saveTimer); await save(); renderLibrary(); };
-        document.querySelectorAll('[data-cmd]').forEach(b => b.onclick = () => {
-            const [cmd, arg] = b.dataset.cmd.split(':');
-            $('#richEditor').focus(); document.execCommand(cmd, false, arg || null); autosaveHint();
-        });
+        rich = bindRich($('#richEditor'), $('#richToolbar'), autosaveHint);
         $('#saveArticle').onclick = save;
         $('#toggleRefs').onclick = () => $('#editorLayout').classList.toggle('refs-closed');
         $('#focusMode').onclick = () => document.body.classList.toggle('wbt-focus');

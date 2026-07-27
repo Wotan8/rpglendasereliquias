@@ -12,6 +12,7 @@ import {
     addDoc, updateDoc, runTransaction, writeBatch
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 // ===== CONFIG =====
 const firebaseConfig = {
@@ -38,10 +39,13 @@ try {
     db = getFirestore(app);
 }
 
+const storage = getStorage(app);
+
 export {
-    app, auth, db,
+    app, auth, db, storage,
     onAuthStateChanged, signOut,
     collection, query, where, orderBy, limit, onSnapshot,
     doc, getDoc, getDocs, setDoc, deleteDoc, addDoc, updateDoc,
-    runTransaction, writeBatch
+    runTransaction, writeBatch,
+    ref, uploadBytes, getDownloadURL
 };
