@@ -5,6 +5,7 @@ import { db, collection, getDocs, getDoc, doc, addDoc, updateDoc, deleteDoc, que
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
+import { notifyUsers } from './notify.js';
 
 // Register global loader
 window._loadSessionLogs = loadSessionLogs;
@@ -151,13 +152,12 @@ window.saveSessionLog = async function() {
                     // Notify owner
                     if (p.ownerUid) {
                         try {
-                            const uRef = doc(db, 'users', p.ownerUid);
-                            const uSnap = await getDoc(uRef);
-                            if (uSnap.exists()) {
-                                const notifs = uSnap.data().notifications || [];
-                                notifs.push({ message: `Sessão #${logData.sessionNumber}: ${isAdd?'Ganhou':'Perdeu'} ${p.expAmount} EXP em ${p.characterName}!`, highlight: 'importante', from: 'Mestre', date: new Date().toISOString(), read: false });
-                                await updateDoc(uRef, { notifications: notifs });
-                            }
+                            await notifyUsers([p.ownerUid], {
+                                type: 'exp_received',
+                                highlight: 'importante',
+                                message: `Sessão #${logData.sessionNumber}: ${isAdd?'Ganhou':'Perdeu'} ${p.expAmount} EXP em ${p.characterName}!`,
+                                data: { direction: isAdd ? 'up' : 'down', amount: p.expAmount, characterName: p.characterName }
+                            });
                         } catch (ne) { /* ignore */ }
                     }
                 }

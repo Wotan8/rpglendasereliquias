@@ -7,6 +7,11 @@ import { initAuth } from './auth.js';
 import { showAlert, switchTab } from './ui-utils.js';
 import { addLog } from './logs.js';
 
+// Cache-busting dos imports dinâmicos. Antes era Date.now(), que gerava uma URL
+// nova a cada troca de aba e anulava o cache HTTP e o service worker.
+// Subir junto com o VERSION do sw.js quando os módulos mudarem.
+const V = '?v=v48';
+
 // ===== AREA MODULES (lazy-loaded on tab switch) =====
 let mesasModule = null;
 let npcsModule = null;
@@ -35,12 +40,12 @@ document.addEventListener('keydown', (e) => {
 // ===== MESA SUB-MODULE LOADER =====
 async function ensureMesaSubModules() {
     try {
-        if (!mesaSessoesLoaded) { await import('./area-mesas-sessoes.js?v=' + Date.now()); mesaSessoesLoaded = true; }
-        if (!mesaConfigLoaded) { await import('./area-mesas-config.js?v=' + Date.now()); mesaConfigLoaded = true; }
-        if (!mesaNpcsLoaded) { await import('./area-mesas-npcs.js?v=' + Date.now()); mesaNpcsLoaded = true; }
-        if (!mesaInventarioLoaded) { await import('./area-mesas-inventario.js?v=' + Date.now()); mesaInventarioLoaded = true; }
-        if (!mesaNotasLoaded) { await import('./area-mesas-notas.js?v=' + Date.now()); mesaNotasLoaded = true; }
-        if (!mesaLogsLoaded) { await import('./area-mesas-logs.js?v=' + Date.now()); mesaLogsLoaded = true; }
+        if (!mesaSessoesLoaded) { await import('./area-mesas-sessoes.js' + V); mesaSessoesLoaded = true; }
+        if (!mesaConfigLoaded) { await import('./area-mesas-config.js' + V); mesaConfigLoaded = true; }
+        if (!mesaNpcsLoaded) { await import('./area-mesas-npcs.js' + V); mesaNpcsLoaded = true; }
+        if (!mesaInventarioLoaded) { await import('./area-mesas-inventario.js' + V); mesaInventarioLoaded = true; }
+        if (!mesaNotasLoaded) { await import('./area-mesas-notas.js' + V); mesaNotasLoaded = true; }
+        if (!mesaLogsLoaded) { await import('./area-mesas-logs.js' + V); mesaLogsLoaded = true; }
     } catch (error) {
         console.error('❌ Erro ao carregar sub-módulos de mesa:', error);
     }
@@ -62,7 +67,7 @@ window.switchTab = async function (tabName) {
         switch (tabName) {
             case 'mesas':
                 if (!mesasModule) {
-                    mesasModule = await import('./area-mesas.js?v=' + Date.now());
+                    mesasModule = await import('./area-mesas.js' + V);
                     // Also load sub-modules for mesa content
                     await ensureMesaSubModules();
                 }
@@ -71,28 +76,28 @@ window.switchTab = async function (tabName) {
 
             case 'npcs':
                 if (!npcsModule) {
-                    npcsModule = await import('./area-npcs.js?v=' + Date.now());
+                    npcsModule = await import('./area-npcs.js' + V);
                 }
                 if (npcsModule.onTabActivated) npcsModule.onTabActivated();
                 break;
 
             case 'economica':
                 if (!economicaModule) {
-                    economicaModule = await import('./area-economica.js?v=' + Date.now());
+                    economicaModule = await import('./area-economica.js' + V);
                 }
                 if (economicaModule.onTabActivated) economicaModule.onTabActivated();
                 break;
 
             case 'apoio':
                 if (!apoioModule) {
-                    apoioModule = await import('./area-apoio.js?v=' + Date.now() + '_3');
+                    apoioModule = await import('./area-apoio.js' + V);
                 }
                 if (apoioModule.onTabActivated) apoioModule.onTabActivated();
                 break;
 
             case 'historico':
                 if (!historicoModule) {
-                    historicoModule = await import('./area-historico.js?v=' + Date.now());
+                    historicoModule = await import('./area-historico.js' + V);
                 }
                 if (historicoModule.onTabActivated) historicoModule.onTabActivated();
                 break;

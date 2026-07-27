@@ -3,15 +3,30 @@ import { db, collection, getDocs, getDoc, setDoc, doc, updateDoc, addDoc, delete
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
+import { notifyUsers } from './notify.js';
+import { parseMetaIds, resolveMetaId as resolveMetaIdPuro, somarMetaTotais, chaveApoio, valorApoio } from '../../shared/apoios-calc.js';
 
 let dynamicMetas = [];
-let legacyTotais = {};
+let metaTotais = {};   // { [metaId]: somaDosMontantes }
+let usersCache = null; // coleção 'users' lida UMA vez por abertura da aba
 
-export async function onTabActivated() { 
+// Antes a aba varria a coleção `users` inteira duas vezes (uma para o <select>,
+// outra para somar as metas) — fichas, inventários e notificações completos.
+async function loadUsers(force = false) {
+    if (!usersCache || force) {
+        const snap = await getDocs(collection(db, 'users'));
+        usersCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+    return usersCache;
+}
+
+export async function onTabActivated() {
     await checkCriadorRole();
-    await loadApoioUsers(); 
-    await carregarSistemaMetas(); 
-    await carregarSistemaLoja(); 
+    await loadUsers(true);
+    await loadApoioUsers();
+    await carregarSistemaMetas();
+    await carregarSistemaLoja();
+    await carregarListaProducao();
 }
 
 async function checkCriadorRole() {
@@ -31,10 +46,9 @@ async function checkCriadorRole() {
 // ===== USERS =====
 async function loadApoioUsers() {
     try {
-        const snap = await getDocs(collection(db, 'users'));
         const sel = document.getElementById('apoioUserSelect'); if (!sel) return;
         sel.innerHTML = '<option value="">Selecione um jogador...</option>';
-        const users = []; snap.forEach(d => users.push({ id: d.id, ...d.data() }));
+        const users = [...await loadUsers()];
         users.sort((a, b) => (a.displayName||a.email||'').localeCompare(b.displayName||b.email||''));
         users.forEach(u => { const o = document.createElement('option'); o.value = u.id; o.textContent = `${u.displayName||'Sem Nome'} (${u.email||u.id})`; sel.appendChild(o); });
         S.setNotificationUsersCache(users);
@@ -98,13 +112,15 @@ window.loadUserApoios = async function() {
         const apoios = d.data().apoios || [];
         const logsCompra = d.data().logsCompra || [];
         
-        S.setTodosApoiosCarregados(apoios); 
-        
-        // Render apoios
+        S.setTodosApoiosCarregados(apoios);
+
+        // Render apoios — filtros zerados a cada troca de jogador, senão um filtro
+        // deixado ativo no jogador anterior faria a lista parecer vazia.
         if (apoios.length === 0) {
+            popularFiltroTipo();
             el.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Este jogador ainda não possui apoios</div>';
         } else {
-            renderApoios(apoios);
+            window.limparFiltrosApoios();
         }
 
         // Render logsCompra
@@ -123,11 +139,16 @@ function renderLogsCompra(logs) {
     
     el.innerHTML = logs.map(l => {
         const dateStr = l.data ? new Date(l.data).toLocaleString('pt-BR') : '-';
+        // Compra em dinheiro grava `valorPago` em CENTAVOS com moeda "BRL"
+        // (era exibido cru: R$ 15,00 aparecia como "1500 BRL").
+        const valorStr = l.moeda === 'BRL'
+            ? `R$ ${((Number(l.valorPago) || 0) / 100).toFixed(2).replace('.', ',')}`
+            : `${l.valorPago} ${escapeHtml(l.moeda || '')}`;
         return `
         <div style="background:rgba(15,23,42,.6);border:2px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                 <div style="font-weight:800;color:var(--light)">${escapeHtml(l.nome || 'Item Desconhecido')}</div>
-                <div style="color:var(--primary);font-weight:800;background:rgba(99,102,241,0.2);padding:4px 8px;border-radius:6px;">${l.valorPago} ${l.moeda}</div>
+                <div style="color:var(--primary);font-weight:800;background:rgba(99,102,241,0.2);padding:4px 8px;border-radius:6px;">${valorStr}</div>
             </div>
             <div style="font-size:.85rem;color:var(--muted);">
                 Data: ${dateStr}
@@ -136,39 +157,51 @@ function renderLogsCompra(logs) {
     }).join('');
 }
 
+const resolveMetaId = (ref) => resolveMetaIdPuro(ref, dynamicMetas);
+
 function getMetaName(metaVal) {
-    if (!metaVal) return '-';
-    const ids = metaVal.split(',');
-    const nomes = ids.map(id => {
-        const idTrimmed = id.trim();
-        const m = dynamicMetas.find(x => x.id === idTrimmed || x.slug === idTrimmed || x.nome === idTrimmed);
-        return m ? m.nome : idTrimmed;
-    });
-    return nomes.join(', ');
+    const ids = parseMetaIds(metaVal);
+    if (!ids.length) return '-';
+    return ids.map(ref => {
+        const m = dynamicMetas.find(x => x.id === resolveMetaId(ref));
+        return m ? m.nome : ref;
+    }).join(', ');
 }
 
-function getMetaOptionsHtml(selectedMetaId) {
-    let html = '<option value="">Nenhuma</option>';
-    const isLegacy = selectedMetaId === 'Classe' || selectedMetaId === 'Raça' || selectedMetaId === 'Lore';
-    if (isLegacy) {
-        html += `<option value="Classe" ${selectedMetaId === 'Classe' ? 'selected' : ''}>Classe (Legado)</option>`;
-        html += `<option value="Raça" ${selectedMetaId === 'Raça' ? 'selected' : ''}>Raça (Legado)</option>`;
-        html += `<option value="Lore" ${selectedMetaId === 'Lore' ? 'selected' : ''}>Lore (Legado)</option>`;
-    }
+// Multi-seleção: um apoio de compra pode estar atrelado a várias metas.
+// O <select> simples de antes só conseguia guardar uma e apagava as demais ao salvar.
+function getMetaOptionsHtml(selectedMetaVal) {
+    const selecionados = parseMetaIds(selectedMetaVal).map(resolveMetaId);
+    const conhecidos = new Set(dynamicMetas.map(m => m.id));
+    let html = '';
     dynamicMetas.forEach(m => {
-        const selected = (m.id === selectedMetaId || m.slug === selectedMetaId || m.nome === selectedMetaId) ? 'selected' : '';
-        html += `<option value="${m.id}" ${selected}>${escapeHtml(m.nome)}</option>`;
+        html += `<option value="${escapeHtml(m.id)}" ${selecionados.includes(m.id) ? 'selected' : ''}>${escapeHtml(m.nome)}</option>`;
+    });
+    // Valor gravado que não corresponde a nenhuma meta atual: mantém como opção
+    // marcada para que salvar não apague o vínculo histórico.
+    selecionados.filter(id => !conhecidos.has(id)).forEach(id => {
+        html += `<option value="${escapeHtml(id)}" selected>${escapeHtml(id)} (legado)</option>`;
     });
     return html;
+}
+
+function lerMetasSelecionadas(selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return '';
+    return Array.from(sel.selectedOptions).map(o => o.value).filter(Boolean).join(',');
 }
 
 function renderApoios(apoios) {
     const el = document.getElementById('apoiosList'); if (!el) return;
     if (!apoios.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Nenhum apoio</div>'; return; }
-    el.innerHTML = apoios.map((a, i) => `
+    // O índice do onclick TEM que ser o da lista completa: quando há filtro ativo,
+    // a posição na lista renderizada aponta para outro apoio (editava/apagava o errado).
+    el.innerHTML = apoios.map((a) => {
+        const i = S.todosApoiosCarregados.indexOf(a);
+        return `
         <div style="background:rgba(15,23,42,.6);border:2px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                <div style="font-weight:800;color:var(--light)">${escapeHtml(a.nome||'Sem nome')} <span style="background:rgba(139,92,246,.2);color:var(--primary);padding:2px 8px;border-radius:8px;font-size:.78rem">x${a.montante||1}</span></div>
+                <div style="font-weight:800;color:var(--light)">${escapeHtml(a.nome||'Sem nome')} <span style="background:rgba(139,92,246,.2);color:var(--primary);padding:2px 8px;border-radius:8px;font-size:.78rem">x${a.montante||1}</span>${valorApoio(a) !== (parseInt(a.montante)||1) ? `<span title="Roleta múltipla de 3 conta 1 a cada 3" style="background:rgba(234,179,8,.15);color:#eab308;padding:2px 8px;border-radius:8px;font-size:.72rem;margin-left:4px">conta ${valorApoio(a)}</span>` : ''}</div>
                 <div style="display:flex;gap:6px"><button class="btn btn-primary btn-small" onclick="editApoio(${i})">✏️</button><button class="btn btn-danger btn-small" onclick="deleteApoio(${i})">🗑️</button></div>
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;font-size:.85rem">
@@ -178,18 +211,41 @@ function renderApoios(apoios) {
                 <div><span style="color:var(--muted)">Data:</span> ${a.dataInicio||'-'}</div>
                 <div><span style="color:var(--muted)">Recebido:</span> ${a.recebido?'✅':'❌'}</div>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
+}
+
+// Preenche o filtro de tipo com os tipos que realmente existem nos apoios do jogador
+// (o <select> do HTML só tinha "Todos" e nunca era populado).
+function popularFiltroTipo() {
+    const sel = document.getElementById('filtroTipo'); if (!sel) return;
+    const atual = sel.value;
+    const tipos = [...new Set(S.todosApoiosCarregados.map(a => (a.tipo || '').trim()).filter(Boolean))].sort();
+    sel.innerHTML = '<option value="todos">Todos</option>' +
+        tipos.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+    if (tipos.includes(atual)) sel.value = atual;
 }
 
 window.aplicarFiltrosApoios = function() {
     const st = document.getElementById('filtroStatus')?.value||'todos', tp = document.getElementById('filtroTipo')?.value||'todos';
+    const de = document.getElementById('filtroDataInicio')?.value || '';
+    const ate = document.getElementById('filtroDataFim')?.value || '';
     let f = [...S.todosApoiosCarregados];
     if (st === 'recebidos') f = f.filter(a => a.recebido);
     if (st === 'nao-recebidos') f = f.filter(a => !a.recebido);
     if (tp !== 'todos') f = f.filter(a => a.tipo === tp);
+    // Datas ficam em ISO (YYYY-MM-DD), então comparação de string já ordena certo.
+    // Apoio sem data fica de fora quando há filtro de período.
+    if (de) f = f.filter(a => (a.dataInicio || '') >= de);
+    if (ate) f = f.filter(a => (a.dataInicio || '') && (a.dataInicio || '') <= ate);
     renderApoios(f);
 };
-window.limparFiltrosApoios = function() { ['filtroStatus','filtroTipo','filtroDataInicio','filtroDataFim'].forEach(id => { const el = document.getElementById(id); if (el) el.value = el.options?el.options[0].value:''; }); renderApoios(S.todosApoiosCarregados); };
+window.limparFiltrosApoios = function() {
+    popularFiltroTipo();
+    ['filtroStatus','filtroTipo'].forEach(id => { const el = document.getElementById(id); if (el && el.options.length) el.value = el.options[0].value; });
+    ['filtroDataInicio','filtroDataFim'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    renderApoios(S.todosApoiosCarregados);
+};
 
 window.openAddApoioModal = function() {
     const m = document.createElement('div'); m.className = 'modal active'; m.id = 'addApoioModal';
@@ -200,7 +256,7 @@ window.openAddApoioModal = function() {
             <div class="form-group"><label class="form-label">Montante</label><input type="number" class="form-input" id="apoio_montante" value="1" min="1"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div class="form-group"><label class="form-label">Meta</label><select class="form-select" id="apoio_meta">${getMetaOptionsHtml('')}</select></div>
+            <div class="form-group"><label class="form-label">Metas <span style="color:var(--muted);font-weight:400">(Ctrl+clique p/ várias)</span></label><select class="form-select" id="apoio_meta" multiple size="4">${getMetaOptionsHtml('')}</select></div>
             <div class="form-group"><label class="form-label">Valor</label><input type="text" class="form-input" id="apoio_valor"></div>
         </div>
         <div class="form-group"><label class="form-label">Data Início</label><input type="date" class="form-input" id="apoio_data"></div>
@@ -210,16 +266,40 @@ window.openAddApoioModal = function() {
     document.body.appendChild(m);
 };
 
+/**
+ * Grava apoios DENTRO de uma transação: relê o array atual e aplica a mutação em cima
+ * dele. Antes o painel reenviava o array inteiro carregado na abertura da aba — se uma
+ * compra caísse pela Cloud Function nesse intervalo, ela era sobrescrita e sumia
+ * (junto com o Frag$ já debitado).
+ * @param {(apoios: Array) => void} mutate - altera o array no lugar; pode lançar para abortar
+ */
+async function mutateApoios(uid, mutate) {
+    const ref = doc(db, 'users', uid);
+    await runTransaction(db, async (tx) => {
+        const snap = await tx.get(ref);
+        if (!snap.exists()) throw new Error('Usuário não encontrado');
+        const apoios = snap.data().apoios || [];
+        mutate(apoios);
+        tx.update(ref, { apoios });
+    });
+    // Ressincroniza com o que ficou de fato no servidor
+    usersCache = null; // os totais das metas precisam reler
+    const fresh = await getDoc(ref);
+    S.setTodosApoiosCarregados(fresh.data()?.apoios || []);
+    popularFiltroTipo();
+    window.aplicarFiltrosApoios();
+}
+
 window.saveNewApoio = async function() {
     const nome = document.getElementById('apoio_nome')?.value?.trim(); if (!nome) { showAlert('⚠️ Nome obrigatório', 'warning'); return; }
     if (!S.currentSelectedUserId) { showAlert('⚠️ Selecione um jogador', 'warning'); return; }
-    const apoio = { nome, tipo: document.getElementById('apoio_tipo')?.value?.trim()||'', montante: parseInt(document.getElementById('apoio_montante')?.value)||1, meta: document.getElementById('apoio_meta')?.value||'', valor: document.getElementById('apoio_valor')?.value?.trim()||'', dataInicio: document.getElementById('apoio_data')?.value||'', recebido: document.getElementById('apoio_recebido')?.checked||false };
+    const apoio = { nome, tipo: document.getElementById('apoio_tipo')?.value?.trim()||'', montante: parseInt(document.getElementById('apoio_montante')?.value)||1, meta: lerMetasSelecionadas('apoio_meta'), valor: document.getElementById('apoio_valor')?.value?.trim()||'', dataInicio: document.getElementById('apoio_data')?.value||'', recebido: document.getElementById('apoio_recebido')?.checked||false };
     try {
-        S.todosApoiosCarregados.push(apoio);
-        await updateDoc(doc(db, 'users', S.currentSelectedUserId), { apoios: S.todosApoiosCarregados });
+        await mutateApoios(S.currentSelectedUserId, apoios => { apoios.push(apoio); });
         await addLog(S.currentUser?.email, `Adicionou apoio "${nome}"`, '', 'apoios');
-        showAlert('✅ Apoio adicionado!', 'success'); document.getElementById('addApoioModal')?.remove(); renderApoios(S.todosApoiosCarregados);
-    } catch (e) { showAlert('❌ Erro', 'danger'); }
+        showAlert('✅ Apoio adicionado!', 'success'); document.getElementById('addApoioModal')?.remove();
+        await carregarSistemaMetas();
+    } catch (e) { console.error(e); showAlert('❌ Erro ao salvar apoio: ' + e.message, 'danger'); }
 };
 
 window.editApoio = function(i) {
@@ -232,7 +312,7 @@ window.editApoio = function(i) {
             <div class="form-group"><label class="form-label">Montante</label><input type="number" class="form-input" id="ea_montante" value="${a.montante||1}" min="1"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div class="form-group"><label class="form-label">Meta</label><select class="form-select" id="ea_meta">${getMetaOptionsHtml(a.meta)}</select></div>
+            <div class="form-group"><label class="form-label">Metas <span style="color:var(--muted);font-weight:400">(Ctrl+clique p/ várias)</span></label><select class="form-select" id="ea_meta" multiple size="4">${getMetaOptionsHtml(a.meta)}</select></div>
             <div class="form-group"><label class="form-label">Valor</label><input type="text" class="form-input" id="ea_valor" value="${escapeHtml(a.valor||'')}"></div>
         </div>
         <div class="form-group"><label class="form-label">Data</label><input type="date" class="form-input" id="ea_data" value="${a.dataInicio||''}"></div>
@@ -244,13 +324,42 @@ window.editApoio = function(i) {
 
 window.saveEditApoio = async function(i) {
     if (!S.currentSelectedUserId) return;
-    S.todosApoiosCarregados[i] = { nome: document.getElementById('ea_nome')?.value?.trim()||'', tipo: document.getElementById('ea_tipo')?.value?.trim()||'', montante: parseInt(document.getElementById('ea_montante')?.value)||1, meta: document.getElementById('ea_meta')?.value||'', valor: document.getElementById('ea_valor')?.value?.trim()||'', dataInicio: document.getElementById('ea_data')?.value||'', recebido: document.getElementById('ea_recebido')?.checked||false };
-    try { await updateDoc(doc(db, 'users', S.currentSelectedUserId), { apoios: S.todosApoiosCarregados }); showAlert('✅ Apoio atualizado!', 'success'); document.getElementById('editApoioModal')?.remove(); renderApoios(S.todosApoiosCarregados); } catch (e) { showAlert('❌ Erro', 'danger'); }
+    const original = S.todosApoiosCarregados[i];
+    if (!original) { showAlert('⚠️ Apoio não encontrado, recarregue a lista', 'warning'); return; }
+    const chaveOriginal = chaveApoio(original);
+    const novo = { nome: document.getElementById('ea_nome')?.value?.trim()||'', tipo: document.getElementById('ea_tipo')?.value?.trim()||'', montante: parseInt(document.getElementById('ea_montante')?.value)||1, meta: lerMetasSelecionadas('ea_meta'), valor: document.getElementById('ea_valor')?.value?.trim()||'', dataInicio: document.getElementById('ea_data')?.value||'', recebido: document.getElementById('ea_recebido')?.checked||false };
+    try {
+        await mutateApoios(S.currentSelectedUserId, apoios => {
+            // Localiza pelo conteúdo, não pela posição: o array no servidor pode ter
+            // crescido (compra do jogador) desde que a tela carregou.
+            const idx = apoios.findIndex(a => chaveApoio(a) === chaveOriginal);
+            if (idx === -1) throw new Error('Este apoio mudou no servidor. Recarregue a lista e tente de novo.');
+            // Merge, não substituição: qualquer campo extra gravado por outra parte
+            // do sistema (itemId, compraId...) sobrevive à edição no painel.
+            apoios[idx] = { ...apoios[idx], ...novo };
+        });
+        await addLog(S.currentUser?.email, `Editou apoio "${novo.nome}"`, '', 'apoios');
+        showAlert('✅ Apoio atualizado!', 'success'); document.getElementById('editApoioModal')?.remove();
+        await carregarSistemaMetas();
+    } catch (e) { console.error(e); showAlert('❌ ' + e.message, 'danger'); }
 };
 
 window.deleteApoio = async function(i) {
-    if (!S.currentSelectedUserId || !confirm('Excluir este apoio?')) return;
-    try { S.todosApoiosCarregados.splice(i, 1); await updateDoc(doc(db, 'users', S.currentSelectedUserId), { apoios: S.todosApoiosCarregados }); showAlert('✅ Removido', 'success'); renderApoios(S.todosApoiosCarregados); } catch (e) { showAlert('❌ Erro', 'danger'); }
+    if (!S.currentSelectedUserId) return;
+    const original = S.todosApoiosCarregados[i];
+    if (!original) { showAlert('⚠️ Apoio não encontrado, recarregue a lista', 'warning'); return; }
+    if (!confirm(`Excluir o apoio "${original.nome || 'sem nome'}" (x${original.montante || 1})?`)) return;
+    const chaveOriginal = chaveApoio(original);
+    try {
+        await mutateApoios(S.currentSelectedUserId, apoios => {
+            const idx = apoios.findIndex(a => chaveApoio(a) === chaveOriginal);
+            if (idx === -1) throw new Error('Este apoio mudou no servidor. Recarregue a lista e tente de novo.');
+            apoios.splice(idx, 1);
+        });
+        await addLog(S.currentUser?.email, `Removeu apoio "${original.nome || 'sem nome'}"`, '', 'apoios');
+        showAlert('✅ Removido', 'success');
+        await carregarSistemaMetas();
+    } catch (e) { console.error(e); showAlert('❌ ' + e.message, 'danger'); }
 };
 
 // ===== METAS DINÂMICAS =====
@@ -265,7 +374,7 @@ async function carregarSistemaMetas() {
         // Ordenar as metas alfabeticamente
         dynamicMetas.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
         
-        await calcularLegadoTotais();
+        await calcularMetaTotais();
         renderMetasUI();
     } catch (error) {
         console.error('❌ Erro ao carregar metas:', error);
@@ -274,34 +383,18 @@ async function carregarSistemaMetas() {
 }
 window.carregarSistemaMetas = carregarSistemaMetas;
 
-async function calcularLegadoTotais() {
-    legacyTotais = {};
+// Soma os apoios por META (lógica em shared/apoios-calc.js). Duas correções:
+//  1) `meta` pode conter VÁRIOS ids ("id1,id2") — compras com mais de uma meta
+//     caíam numa chave inexistente e não contavam em lugar nenhum;
+//  2) a chave agora é o ID do documento, não o slug — meta sem slug ficava
+//     eternamente em 0 e renomear o slug zerava o histórico.
+// Nada é gravado aqui: é só leitura/soma.
+async function calcularMetaTotais() {
+    metaTotais = {};
     try {
-        const snap = await getDocs(collection(db, 'users'));
-        snap.forEach(d => {
-            const apoios = d.data().apoios || [];
-            apoios.forEach(a => {
-                const montante = parseInt(a.montante) || 1;
-                const metaRaw = (a.meta || '').trim();
-                let metaLegado = metaRaw.toLowerCase();
-                
-                const metaDoc = dynamicMetas.find(m => m.id === metaRaw);
-                if (metaDoc && metaDoc.slug) {
-                    metaLegado = metaDoc.slug.toLowerCase().trim();
-                }
-                
-                // Mapeia os slugs legados para manter o tracking
-                let slug = metaLegado;
-                if (metaLegado === 'raça') slug = 'raca';
-                
-                if (slug) {
-                    if (!legacyTotais[slug]) legacyTotais[slug] = 0;
-                    legacyTotais[slug] += montante;
-                }
-            });
-        });
+        metaTotais = somarMetaTotais(await loadUsers(), dynamicMetas);
     } catch (error) {
-        console.error('❌ Erro ao calcular legado:', error);
+        console.error('❌ Erro ao calcular totais das metas:', error);
     }
 }
 
@@ -318,9 +411,8 @@ function renderMetasUI() {
     
     dynamicMetas.forEach(meta => {
         // Cálculo de progresso
-        const slugStr = (meta.slug || '').toLowerCase().trim();
-        const totalApoios = legacyTotais[slugStr] || 0;
-        
+        const totalApoios = metaTotais[meta.id] || 0;
+
         let saldo = totalApoios;
         let etapasHtml = '';
         
@@ -468,13 +560,15 @@ window.saveMeta = async function() {
     try {
         if (id) {
             await updateDoc(doc(db, 'metas', id), metaData);
+            await addLog(S.currentUser?.email, `Editou a meta "${nome}"`, '', 'apoios');
             showAlert('✅ Meta atualizada!', 'success');
         } else {
             metaData.createdAt = new Date().toISOString();
             await addDoc(collection(db, 'metas'), metaData);
+            await addLog(S.currentUser?.email, `Criou a meta "${nome}"`, '', 'apoios');
             showAlert('✅ Meta criada!', 'success');
         }
-        
+
         window.closeMetaModal();
         await carregarSistemaMetas();
     } catch (error) {
@@ -484,10 +578,14 @@ window.saveMeta = async function() {
 };
 
 window.deleteMeta = async function(id) {
-    if (!confirm('Tem certeza que deseja excluir esta meta? Todas as configurações de etapas serão perdidas!')) return;
-    
+    const meta = dynamicMetas.find(m => m.id === id);
+    const total = metaTotais[id] || 0;
+    // Os apoios continuam no banco apontando para esta meta — só o alvo some.
+    if (!confirm(`Excluir a meta "${meta?.nome || id}"?\n\nAs etapas serão perdidas. Os ${total} apoio(s) já atrelados a ela NÃO são apagados, mas deixam de aparecer em qualquer progresso.`)) return;
+
     try {
         await deleteDoc(doc(db, 'metas', id));
+        await addLog(S.currentUser?.email, `Excluiu a meta "${meta?.nome || id}"`, '', 'apoios');
         showAlert('✅ Meta excluída!', 'success');
         await carregarSistemaMetas();
     } catch (error) {
@@ -501,7 +599,7 @@ window.openSendNotificationModal = function() {
     const modal = document.getElementById('sendNotificationModal'); if (!modal) return;
     modal.classList.add('active');
     const list = document.getElementById('playerCheckboxList');
-    if (list) list.innerHTML = S.notificationUsersCache.map(u => `<label style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;cursor:pointer;border:1px solid var(--border)"><input type="checkbox" class="notification-player-cb" value="${u.id}" style="width:16px;height:16px"><span style="font-size:.88rem;color:var(--light)">${escapeHtml(u.nome||u.email||u.id)}</span></label>`).join('');
+    if (list) list.innerHTML = S.notificationUsersCache.map(u => `<label style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;cursor:pointer;border:1px solid var(--border)"><input type="checkbox" class="notification-player-cb" value="${u.id}" style="width:16px;height:16px"><span style="font-size:.88rem;color:var(--light)">${escapeHtml(u.displayName||u.nome||u.email||u.id)}</span></label>`).join('');
 };
 window.closeSendNotificationModal = function() { document.getElementById('sendNotificationModal')?.classList.remove('active'); };
 window.toggleAllPlayersSelection = function() { const all = document.getElementById('selectAllPlayers')?.checked; document.querySelectorAll('.notification-player-cb').forEach(cb => { cb.checked = all; }); };
@@ -513,7 +611,7 @@ window.sendMasterNotification = async function() {
     const sel = Array.from(document.querySelectorAll('.notification-player-cb:checked')).map(c => c.value);
     if (!sel.length) { showAlert('⚠️ Selecione destinatários', 'warning'); return; }
     try {
-        for (const uid of sel) { const r = doc(db, 'users', uid); const d = await getDoc(r); if (!d.exists()) continue; const n = d.data().notifications||[]; n.push({ message: msg, highlight: hl, from: S.currentUser?.email||'Mestre', date: new Date().toISOString(), read: false }); await updateDoc(r, { notifications: n }); }
+        await notifyUsers(sel, { type: 'master_message', message: msg, highlight: hl });
         showAlert(`✅ Enviada a ${sel.length} jogador(es)`, 'success');
         await addLog(S.currentUser?.email, `Notificação: "${msg.substring(0,40)}..."`, `${sel.length} jogador(es)`, 'notifications');
         window.closeSendNotificationModal(); document.getElementById('notificationMessage').value = '';
@@ -543,7 +641,8 @@ function renderProd() {
 window.adicionarItemProducao = async function() { S.listaProducao.push({ nome: 'Novo Item', progresso: '' }); await salvarProd(); renderProd(); };
 window.remProd = async function(i) { if (confirm('Remover?')) { S.listaProducao.splice(i, 1); await salvarProd(); renderProd(); } };
 window.editProd = async function(i, f) { const v = prompt(`Editar ${f}:`, S.listaProducao[i][f]||''); if (v !== null) { S.listaProducao[i][f] = v; await salvarProd(); renderProd(); } };
-setTimeout(carregarListaProducao, 500);
+// Carregado em onTabActivated — antes rodava num setTimeout no import do módulo,
+// correndo com o auth e engolindo o erro de permissão num console.warn.
 
 // ============= REPERTÓRIO =============
 
@@ -753,48 +852,21 @@ window.saveItemRepertorio = async function () {
 
         // 📬 Enviar notificação ao jogador
         try {
-            const notificationUserDoc = await getDoc(doc(db, 'users', S.currentSelectedUserId));
-            if (notificationUserDoc.exists()) {
-                const notifUserData = notificationUserDoc.data();
-                let notifications = notifUserData.notifications || [];
+            let message = quantidade > 1
+                ? `🎒 Você recebeu ${quantidade}x "${nome}" no seu Repertório do Jogador!`
+                : `🎒 Você recebeu "${nome}" no seu Repertório do Jogador!`;
+            if (novoItem.formaRecebimento) message += ` (${novoItem.formaRecebimento})`;
 
-                // Criar mensagem da notificação
-                let message = quantidade > 1
-                    ? `🎒 Você recebeu ${quantidade}x "${nome}" no seu Repertório do Jogador!`
-                    : `🎒 Você recebeu "${nome}" no seu Repertório do Jogador!`;
-
-                if (novoItem.formaRecebimento) {
-                    message += ` (${novoItem.formaRecebimento})`;
+            await notifyUsers([S.currentSelectedUserId], {
+                type: 'inventory_item_received',
+                message,
+                data: {
+                    itemName: nome,
+                    quantity: quantidade,
+                    description: novoItem.descricao || '',
+                    formaRecebimento: novoItem.formaRecebimento || ''
                 }
-
-                // Criar objeto de notificação
-                const notification = {
-                    id: `repertoire_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    type: 'repertoire_item_received',
-                    message: message,
-                    date: new Date().toISOString(), // Keeping format consistent with area-apoio
-                    read: false,
-                    data: {
-                        itemName: nome,
-                        quantity: quantidade,
-                        description: novoItem.descricao || '',
-                        formaRecebimento: novoItem.formaRecebimento || '',
-                        highlight: 'normal',
-                        sentBy: S.currentUser?.email || 'Mestre'
-                    }
-                };
-
-                // Adicionar nova notificação no início
-                notifications.unshift(notification);
-
-                // Limitar a 100 notificações
-                if (notifications.length > 100) {
-                    notifications = notifications.slice(0, 100);
-                }
-
-                await updateDoc(doc(db, 'users', S.currentSelectedUserId), { notifications: notifications });
-                console.log(`📬 Notificação de item enviada para o jogador: ${message}`);
-            }
+            });
         } catch (notifError) {
             console.error('❌ Erro ao enviar notificação (não afeta o salvamento):', notifError);
         }
@@ -830,34 +902,15 @@ window.updateQuantidadeRepertorio = async function (userId, itemIndex, novaQuant
             // 📬 Enviar notificação se a quantidade aumentou
             if (diferenca > 0) {
                 try {
-                    let notifications = userData.notifications || [];
-
                     const message = diferenca > 1
                         ? `🎒 Foram adicionados +${diferenca} "${item.nome}" ao seu Repertório do Jogador!`
                         : `🎒 Foi adicionado +1 "${item.nome}" ao seu Repertório do Jogador!`;
 
-                    const notification = {
-                        id: `repertoire_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                        type: 'repertoire_item_received',
-                        message: message,
-                        date: new Date().toISOString(),
-                        read: false,
-                        data: {
-                            itemName: item.nome,
-                            quantityAdded: diferenca,
-                            newTotal: quantidadeNova,
-                            highlight: 'normal',
-                            sentBy: S.currentUser?.email || 'Mestre'
-                        }
-                    };
-
-                    notifications.unshift(notification);
-                    if (notifications.length > 100) {
-                        notifications = notifications.slice(0, 100);
-                    }
-
-                    await updateDoc(doc(db, 'users', userId), { notifications: notifications });
-                    console.log(`📬 Notificação de quantidade enviada: ${message}`);
+                    await notifyUsers([userId], {
+                        type: 'inventory_item_received',
+                        message,
+                        data: { itemName: item.nome, quantityAdded: diferenca, newTotal: quantidadeNova }
+                    });
                 } catch (notifError) {
                     console.error('❌ Erro ao enviar notificação:', notifError);
                 }
@@ -923,7 +976,8 @@ window.addLojaItemPersonagemRow = function(itemId = '', qtd = 1) {
     if (!selectedId) {
         if (!select.value) return;
         selectedId = select.value;
-        selectedName = select.options[select.selectedIndex].text;
+        // .text devolve o texto já decodificado — precisa reescapar antes de ir pra innerHTML
+        selectedName = escapeHtml(select.options[select.selectedIndex].text);
     } else {
         const item = cachedEquipamentos.find(i => i.id === selectedId);
         selectedName = item ? escapeHtml(item.nome) : 'Item Desconhecido';
@@ -1156,7 +1210,7 @@ window.openLojaModal = async function(itemId = null) {
             }
 
             document.getElementById('loja_modo_meta_selecao').checked = item.modoSelecaoMeta !== false;
-            document.getElementById('loja_meta_selecionaveis').value = item.quantidadeMetasSelecionaveis || '1';
+            document.getElementById('loja_meta_selecionaveis').value = item.quantidadeMetasSelecionaveis || item.qtdSelecaoMeta || '1';
 
             // Check metas vinculadas
             if (item.metasVinculadas && Array.isArray(item.metasVinculadas)) {
@@ -1207,7 +1261,9 @@ window.saveLojaItem = async function() {
             valorRs: parseFloat(document.getElementById('loja_valor_rs').value) || 0,
             // Formato canônico para o pagamento via PagBank: centavos como inteiro (R$ 15,00 → 1500)
             valorReal: Math.round((parseFloat(document.getElementById('loja_valor_rs').value) || 0) * 100),
-            valorFrag: parseFloat(document.getElementById('loja_valor_frag').value) || 0,
+            // Inteiro obrigatório: a Cloud Function rejeita valorFrag fracionário
+            // com "este item não está à venda por Frag$".
+            valorFrag: Math.round(parseFloat(document.getElementById('loja_valor_frag').value) || 0),
             
             isExp: document.getElementById('loja_is_exp').checked,
             isRoleta: document.getElementById('loja_is_roleta').checked,
@@ -1247,7 +1303,11 @@ window.saveLojaItem = async function() {
             });
         }
         if (data.modoSelecaoMeta) {
-            data.quantidadeMetasSelecionaveis = parseFloat(document.getElementById('loja_meta_selecionaveis').value) || 1;
+            const qtd = Math.max(1, Math.round(parseFloat(document.getElementById('loja_meta_selecionaveis').value) || 1));
+            // Os dois nomes são gravados: a Cloud Function de compra com Frag$ lê
+            // `qtdSelecaoMeta`, o resto do sistema lê `quantidadeMetasSelecionaveis`.
+            data.quantidadeMetasSelecionaveis = qtd;
+            data.qtdSelecaoMeta = qtd;
         }
 
         const cbs = document.querySelectorAll('.loja-meta-cb');
@@ -1359,22 +1419,14 @@ window.updatePlayerFrag = async function(action) {
             });
         });
         
-        // Push notification
-        const notification = {
-            id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2,9),
+        await notifyUsers([S.currentSelectedUserId], {
             type: 'master_message',
-            message: action === 'add' ? `💎 Você recebeu ${amount} Fragmentos da administração!` : `💎 Foram removidos ${amount} Fragmentos da sua conta.`,
-            timestamp: Date.now(),
-            isNew: true,
-            data: { highlight: 'importante' }
-        };
-        
-        const userDoc = await getDoc(userRef);
-        let notifs = userDoc.data().notifications || [];
-        notifs.unshift(notification);
-        if (notifs.length > 100) notifs = notifs.slice(0, 100);
-        await updateDoc(userRef, { notifications: notifs });
-        
+            highlight: 'importante',
+            message: action === 'add'
+                ? `💎 Você recebeu ${amount} Fragmentos da administração!`
+                : `💎 Foram removidos ${amount} Fragmentos da sua conta.`
+        });
+
         document.getElementById('fragCurrentBalance').textContent = newBalance;
         document.getElementById('fragAmount').value = '';
         showAlert('✅ Saldo atualizado e jogador notificado!', 'success');

@@ -152,7 +152,7 @@ exports.comprarComFragmentos = onCall(
     // Validação de metas (mesma regra que existia no frontend, agora inviolável)
     let metas = [];
     if (item.modoSelecaoMeta) {
-      const limit = item.qtdSelecaoMeta || 1;
+      const limit = item.qtdSelecaoMeta || item.quantidadeMetasSelecionaveis || 1;
       const allowed = item.metasVinculadas || [];
       metas = Array.isArray(selectedMetas) ? selectedMetas : [];
       if (metas.length > limit) {

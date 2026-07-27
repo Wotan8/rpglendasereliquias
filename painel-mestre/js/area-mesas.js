@@ -5,6 +5,7 @@ import { db, collection, getDocs, getDoc, setDoc, deleteDoc, doc, addDoc, update
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
+import { notifyUsers } from './notify.js';
 import { renderCombatList } from './combat.js';
 
 export async function onTabActivated() { await loadMesas(); }
@@ -508,13 +509,12 @@ window.applyExpBulk = async function(isAdd) {
         // Send notification to player
         if (c.ownerUid) {
             try {
-                const userRef = doc(db, 'users', c.ownerUid);
-                const userDoc = await getDoc(userRef);
-                if (userDoc.exists()) {
-                    const notifs = userDoc.data().notifications || [];
-                    notifs.push({ message: `${isAdd?'Ganhou':'Perdeu'} ${v} EXP em ${nome}!`, highlight: 'importante', from: S.currentUser?.email||'Mestre', date: new Date().toISOString(), read: false });
-                    await updateDoc(userRef, { notifications: notifs });
-                }
+                await notifyUsers([c.ownerUid], {
+                    type: 'exp_received',
+                    highlight: 'importante',
+                    message: `${isAdd?'Ganhou':'Perdeu'} ${v} EXP em ${nome}!`,
+                    data: { direction: isAdd ? 'up' : 'down', amount: v, characterName: nome }
+                });
             } catch (ne) { console.warn('Notif error:', ne); }
         }
         count++;
@@ -558,12 +558,7 @@ window.sendMesaNotification = async function() {
     const sel = Array.from(document.querySelectorAll('.mn-cb:checked')).map(c => c.value);
     if (!sel.length) { showAlert('⚠️ Selecione destinatários', 'warning'); return; }
     try {
-        for (const uid of sel) {
-            const r = doc(db, 'users', uid); const d = await getDoc(r); if (!d.exists()) continue;
-            const n = d.data().notifications || [];
-            n.push({ message: msg, highlight: hl, from: S.currentUser?.email||'Mestre', date: new Date().toISOString(), read: false });
-            await updateDoc(r, { notifications: n });
-        }
+        await notifyUsers(sel, { type: 'master_message', message: msg, highlight: hl });
         showAlert(`✅ Enviada a ${sel.length} jogador(es)`, 'success');
         document.getElementById('mesaNotifModal')?.remove();
     } catch (e) { showAlert('❌ Erro', 'danger'); }

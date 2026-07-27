@@ -19,6 +19,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
+import { somarApoiosDoJogador } from '../../shared/apoios-calc.js';
 
 // ===== CONFIG =====
 const firebaseConfig = {
@@ -423,19 +424,8 @@ async function loadInventory() {
             }
         });
 
-        // Calcular Total de Apoios
-        let totalApoios = 0;
-        apoios.forEach(apoio => {
-            const montante = apoio.montante || 0;
-            const tipo = (apoio.tipo || '').toLowerCase();
-            if (tipo === 'roleta') {
-                totalApoios += (montante % 3 === 0) ? montante / 3 : montante;
-            } else {
-                totalApoios += montante;
-            }
-        });
-
-        document.getElementById('totalApoios').textContent = totalApoios;
+        // Contagem vem de shared/apoios-calc.js — a MESMA usada no painel do mestre
+        document.getElementById('totalApoios').textContent = somarApoiosDoJogador(apoios);
 
         // Renderizar Inventário
         const grid = document.getElementById('inventoryGrid');
@@ -489,6 +479,23 @@ async function loadInventory() {
 }
 
 // ===== NOTIFICAÇÕES =====
+
+// Notificações antigas do painel vieram com {date, read, highlight} na raiz e sem `id`.
+// Aqui elas são convertidas para o formato canônico {id, type, timestamp, isNew, data.highlight}.
+// É ADITIVO: nenhum campo é removido, nada é perdido — só passa a ser legível.
+function normalizeNotification(n, i) {
+    if (n && n.id && n.timestamp != null && n.isNew != null) return n;
+    const ts = n.timestamp ?? (n.date ? Date.parse(n.date) : NaN);
+    return {
+        ...n,
+        id: n.id || `legacy_${Number.isFinite(ts) ? ts : 0}_${i}`,
+        type: n.type || 'master_message',
+        timestamp: Number.isFinite(ts) ? ts : Date.now(),
+        isNew: n.isNew ?? (n.read === false),
+        data: { ...(n.data || {}), highlight: n.data?.highlight || n.highlight || 'normal' }
+    };
+}
+
 async function loadNotifications() {
     try {
         const userDoc = await findUserDoc();
@@ -497,8 +504,15 @@ async function loadNotifications() {
             if (!userDocRef) {
                 userDocRef = doc(db, 'users', userDoc.id);
             }
-            const userData = userDoc.data();
-            userNotifications = userData.notifications || [];
+            const raw = userDoc.data().notifications || [];
+            const normalizadas = raw.map(normalizeNotification);
+            const precisouMigrar = normalizadas.some((n, i) => n !== raw[i]);
+
+            // Ordem de exibição vem do timestamp, não da posição no array —
+            // por isso o painel pode acrescentar com arrayUnion (no fim) sem corrida.
+            userNotifications = normalizadas.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+            if (precisouMigrar) await saveNotifications();
         }
 
         updateNotificationBadge();
@@ -566,7 +580,7 @@ function renderNotifications() {
     container.innerHTML = pageNotifications.map(notification => {
         let icon = '📬', iconClass = 'master', highlightClass = '';
 
-        if (notification.type === 'inventory_item_received') {
+        if (notification.type === 'inventory_item_received' || notification.type === 'repertoire_item_received') {
             icon = '🎒'; iconClass = 'inventory'; highlightClass = 'inventory';
         } else if (notification.type === 'exp_received') {
             icon = '⭐'; iconClass = 'exp'; highlightClass = 'exp';
@@ -750,12 +764,14 @@ let currentCheckoutItem = null;
 
 async function loadLojaItens() {
     try {
-        // Load active items from loja_itens
-        const qItems = query(collection(db, 'loja_itens'), where('isVendaAtiva', '==', true));
-        const snapItems = await getDocs(qItems);
+        // Itens à venda. O filtro é feito aqui, e não com where('isVendaAtiva','==',true),
+        // porque itens criados antes desse campo existir não têm a propriedade e sumiriam
+        // da loja — painel e Cloud Functions tratam ausente como ATIVO.
+        const snapItems = await getDocs(collection(db, 'loja_itens'));
         lojaItensData = [];
         snapItems.forEach(docSnap => {
-            lojaItensData.push({ id: docSnap.id, ...docSnap.data() });
+            const data = docSnap.data();
+            if (data.isVendaAtiva !== false) lojaItensData.push({ id: docSnap.id, ...data });
         });
 
         // Load metas for checkout options

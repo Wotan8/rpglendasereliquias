@@ -111,19 +111,10 @@ export function setAvulsosDisplayOrder(order) { avulsosDisplayOrder = order; }
 export let personagensDisplayOrder = [];
 export function setPersonagensDisplayOrder(order) { personagensDisplayOrder = order; }
 
-// ===== METAS STATE =====
-export let metasData = {
-    classe: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50],
-    raca: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50],
-    lore: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
-};
-export function setMetasData(data) { metasData = data; }
-
-export let totaisApoios = { classe: 0, raca: 0, lore: 0 };
-export function setTotaisApoios(totais) { totaisApoios = totais; }
-
-export let desbloquearMetas = {};
-export function setDesbloquearMetas(metas) { desbloquearMetas = metas; }
+// ===== METAS =====
+// As metas são dinâmicas (coleção 'metas') e vivem em area-apoio.js.
+// O estado legado daqui (metasData/totaisApoios/desbloquearMetas, com as etapas
+// fixas de classe/raca/lore) não tinha mais nenhum leitor — removido.
 
 // ===== LISTA DE PRODUÇÃO =====
 export let listaProducao = [];

@@ -9,7 +9,7 @@ import {
     getFirestore, collection, query, where, orderBy, limit,
     onSnapshot, doc, getDoc, getDocs, setDoc, deleteDoc,
     addDoc, updateDoc, runTransaction
-, writeBatch, deleteField } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+, writeBatch, deleteField, arrayUnion } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
@@ -46,6 +46,6 @@ export {
     onAuthStateChanged, signOut,
     collection, query, where, orderBy, limit,
     onSnapshot, doc, getDoc, getDocs, setDoc,
-    deleteDoc, addDoc, updateDoc, runTransaction, writeBatch, deleteField,
+    deleteDoc, addDoc, updateDoc, runTransaction, writeBatch, deleteField, arrayUnion,
     ref, uploadBytes, getDownloadURL
 };
