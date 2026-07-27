@@ -18,6 +18,16 @@ export function podeRegistrar() {
 }
 
 /**
+ * Zera o histórico ao trocar de canvas. Sem isso as pilhas guardavam operações de
+ * outro tabuleiro: o Ctrl+Z as descartava com um aviso e a ação sumia da pilha,
+ * fazendo o próximo Ctrl+Z pular ações.
+ */
+export function limparHistorico() {
+    undoStack.length = 0;
+    redoStack.length = 0;
+}
+
+/**
  * Registra uma operação reversível.
  * op: { tipo:'add'|'del'|'patch', id, dados?, antes?, depois? }
  */

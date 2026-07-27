@@ -55,6 +55,7 @@
         <button class="tb-tool" id="toolTerreno" data-tool="terreno" data-tip="Terreno difícil — clique nos vértices, duplo-clique fecha">⛰️</button>
         <div class="tb-sep"></div>
         <button class="tb-tool" id="btnUploadImg" onclick="tbUploadImagem()" data-tip="Adicionar imagem / mapa">🖼️</button>
+        <button class="tb-tool" id="btnLocal" onclick="tbAbrirLocal()" data-tip="Adicionar Local do Worldbuilding (mapa pronto com paredes e luzes)">📍</button>
         <button class="tb-tool" id="btnToken" onclick="tbAbrirToken()" data-tip="Novo token (personagem, NPC ou custom)">🎭</button>
         <div class="tb-sep"></div>
         <button class="tb-tool" onclick="tbCentralizar()" data-tip="Centralizar no conteúdo">🎯</button>
@@ -110,7 +111,7 @@
             <button data-luz="porta">🚪 Inserir Porta</button>
             <button data-luz="janela">🪟 Inserir Janela</button>
         </div>
-        <div class="tb-muted" style="font-size:.7rem;max-width:200px">Desenhe (🖌️) na camada <b>💡 Luz</b> para criar paredes que bloqueiam a visão. Duplo clique na porta abre/fecha. 🪟 Janelas: luz passa, movimento não.</div>
+        <div class="tb-muted" style="font-size:.7rem;max-width:200px">Desenhe (🖌️) na camada <b>💡 Luz</b> para criar paredes que bloqueiam a visão <b>e o movimento dos jogadores</b>. Duplo clique: 🚪 abre/fecha, 🪟 abre/fecha, 💡 acende/apaga. Janela fechada: luz passa, movimento não.</div>
     </div>
     <div class="tb-subbar" id="tbTemplateBar" style="top:305px">
         <div class="tb-section-title" style="margin:0">🎯 Templates de Área</div>

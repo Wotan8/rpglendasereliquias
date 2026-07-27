@@ -6,7 +6,7 @@ import {
     collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc,
     onSnapshot, query, where, writeBatch
 } from '../../painel-mestre/js/firebase-config.js';
-import { T, CAMADAS_PADRAO, PERMISSOES_LISTA, esc, uid, toast, markDirty, camadasVisiveis } from './tab-state.js';
+import { T, CAMADAS_PADRAO, PERMISSOES_LISTA, esc, uid, toast, markDirty, camadasVisiveis, optsUnidade } from './tab-state.js';
 import { notifyObjectChange, notifyCanvasConfigChange } from './tab-perf.js';
 import { startRenderLoop, centerCamera } from './tab-render.js';
 import { initTools } from './tab-tools.js';
@@ -17,7 +17,10 @@ import { initPresenca } from './tab-presenca.js';
 import { initHud } from './tab-hud.js';
 import { initCena, transicaoDeCena } from './tab-cena.js';
 import { initTemplates } from './tab-templates.js';
+import { initMusica } from './tab-musica.js';
+import './tab-local.js';   // 📍 Locais do Worldbuilding (registra window.tbAbrirLocal)
 import { carregarExploracao } from './tab-fog.js';
+import { limparHistorico } from './tab-undo.js';
 import { posDisplay, screenToWorld } from './tab-render.js';
 
 // ===== Refs Firestore =====
@@ -31,6 +34,7 @@ export const refReguas = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'reg
 export const refPresenca = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'presenca');
 export const refPings = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'pings');
 export const refLegenda = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'legenda');
+export const refMusica = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'musica');
 
 // ===== BOOT =====
 window.addEventListener('DOMContentLoaded', () => {
@@ -69,6 +73,7 @@ window.addEventListener('DOMContentLoaded', () => {
             initHud();
             initCena();
             initTemplates();
+            initMusica();
             startRenderLoop();
             document.getElementById('tbLoading').style.display = 'none';
         } catch (e) {
@@ -97,11 +102,17 @@ async function carregarNpcs() {
     return new Promise((resolve) => {
         let first = true;
         onSnapshot(collection(db, 'npcs'), snap => {
-            T.npcs = [];
-            snap.forEach(d => { const n = d.data(); if (n.mesaId === T.mesaId) T.npcs.push({ id: d.id, ...n }); });
+            T.npcs = []; T.npcsTodos = [];
+            snap.forEach(d => {
+                const n = { id: d.id, ...d.data() };
+                T.npcsTodos.push(n);
+                if (n.mesaId === T.mesaId) T.npcs.push(n);
+            });
+            T.npcsTodos.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
             if (first) { first = false; resolve(); }
             else {
                 if (window._renderCombate) window._renderCombate();
+                if (window._renderVincNpcs) window._renderVincNpcs();
                 // trigger HUD update for tokens
                 import('./tab-state.js').then(m => m.markDirty());
             }
@@ -179,6 +190,7 @@ export async function trocarCanvas(id, escreverEstado) {
     T.objects = new Map();
     T.anims = new Map();
     notifyCanvasConfigChange();
+    limparHistorico();   // undo/redo é por canvas
     T.selection = null;
     abrirPropriedades(null);
 
@@ -235,6 +247,7 @@ export async function criarCanvas(nome, ativar) {
         nome: nome || 'Novo Tabuleiro',
         createdAt: Date.now(),
         grid: { size: 70, show: true, snap: true },
+        bloquearMovimento: true,
         escala: { valorPorCelula: 1.5, unidade: 'm' },
         luzDinamica: { ativa: false, modo: 'noite', fogSecretOpacity: 0.6 },
         camadas: CAMADAS_PADRAO,
@@ -279,6 +292,7 @@ export function aplicarModoUI() {
     show('toolPin', secret || T.perms.alfinete);
     show('toolLight', secret);
     show('btnUploadImg', secret || T.perms.addImagem);
+    show('btnLocal', secret);
     show('btnToken', secret);
     show('btnMostrar', secret);
     show('btnCamadas', secret);
@@ -393,9 +407,7 @@ window.tbAbrirConfig = function() {
         <div class="tb-form-grid">
             <label>Tamanho da célula (px)<input type="number" id="cfg_grid" value="${g.size||70}" min="20" max="300"></label>
             <label>Valor por célula<input type="number" id="cfg_vpc" value="${e.valorPorCelula||1.5}" step="0.1" min="0.01"></label>
-            <label>Unidade<select id="cfg_un">
-                ${['m','cm','ft'].map(u=>`<option value="${u}" ${e.unidade===u?'selected':''}>${u}</option>`).join('')}
-            </select></label>
+            <label>Unidade<select id="cfg_un">${optsUnidade(e.unidade)}</select></label>
             <label class="tb-check"><input type="checkbox" id="cfg_show" ${g.show!==false?'checked':''}> Mostrar grid</label>
             <label class="tb-check"><input type="checkbox" id="cfg_snap" ${g.snap!==false?'checked':''}> Encaixar tokens no grid</label>
             <label>Tipo de grid<select id="cfg_gtipo">
@@ -413,7 +425,7 @@ window.tbAbrirConfig = function() {
         <hr class="tb-hr">
         <div class="tb-section-title">🚶 Movimento & Andares</div>
         <div class="tb-form-grid">
-            <label class="tb-check"><input type="checkbox" id="cfg_lock" ${c.bloquearMovimento?'checked':''}> 🧱 Bloquear movimento através de paredes (jogadores)</label>
+            <label class="tb-check"><input type="checkbox" id="cfg_lock" ${c.bloquearMovimento!==false?'checked':''}> 🧱 Bloquear movimento através de paredes (jogadores)</label>
             <label>Altura de cada andar (elevação)<input type="number" id="cfg_andar" value="${c.andarAltura||5}" min="1" step="0.5"></label>
         </div>
         <hr class="tb-hr">

@@ -5,7 +5,7 @@
 import { db, collection, doc, getDoc, getDocs, addDoc, updateDoc } from '../../painel-mestre/js/firebase-config.js';
 import { T, esc, toast, markDirty } from './tab-state.js';
 import { abrirModal, fecharModal } from './tab-main.js';
-import { addObj, updObj, delObj } from './tab-objects.js';
+import { addObj, updObj, delObj, vincularNpcNaMesa } from './tab-objects.js';
 import { screenToWorld } from './tab-render.js';
 
 let equipCatalogo = null;
@@ -46,7 +46,10 @@ async function abrirMostrar() {
                 <button class="tb-tab" data-aba="equip" onclick="tbMostrarAba('equip',this)">⚔️ Equipamentos (${equips.length})</button>
                 <button class="tb-tab" data-aba="caixa" onclick="tbMostrarAba('caixa',this)">📦 Caixa do Mestre (${caixa.length})</button>
             </div>
-            <input type="text" class="tb-input" id="ms_busca" placeholder="🔍 Buscar..." oninput="tbMostrarFiltra()" style="margin:10px 0">
+            <div style="display:flex;gap:8px;align-items:center;margin:10px 0">
+                <input type="text" class="tb-input" id="ms_busca" placeholder="🔍 Buscar..." oninput="tbMostrarFiltra()">
+                <button class="tb-btn tb-btn-small" style="white-space:nowrap" onclick="tbVincularNpcs()" title="Vincular ou desvincular NPCs desta mesa">🔗 Vincular NPCs</button>
+            </div>
             <div id="ms_lista" class="tb-mostrar-grid"></div>`;
         document.querySelector('#tbModal .tb-modal-body').innerHTML = abas;
         window._msAba = 'npcs';
@@ -91,6 +94,52 @@ function card({ img, nome, sub, onclick }) {
         <div class="tb-muted" style="font-size:.72rem">${esc(sub)}</div>
     </div>`;
 }
+
+// ===== VINCULAR NPCs À MESA =====
+window.tbVincularNpcs = function() {
+    if (T.mode !== 'secret') return;
+    abrirModal('🔗 NPCs da mesa', `
+        <input type="text" class="tb-input" id="vn_busca" placeholder="🔍 Buscar por nome ou papel..." oninput="_renderVincNpcs()">
+        <div class="tb-muted" style="font-size:.76rem;margin:8px 0">Só NPCs vinculados aparecem no criador de token, no rastreador de combate e na aba 🎁 Mostrar.</div>
+        <div class="tb-list" id="vn_lista" style="max-height:46vh;overflow-y:auto"></div>
+    `, true);
+    window._renderVincNpcs();
+};
+
+window._renderVincNpcs = function() {
+    const el = document.getElementById('vn_lista');
+    if (!el) return;   // modal fechado — o snapshot chama isto de qualquer jeito
+    const busca = (document.getElementById('vn_busca')?.value || '').trim().toLowerCase();
+    const lista = T.npcsTodos.filter(n =>
+        !busca || (n.nome || '').toLowerCase().includes(busca) || (n.papel || '').toLowerCase().includes(busca));
+    // os da mesa primeiro
+    lista.sort((a, b) => (b.mesaId === T.mesaId) - (a.mesaId === T.mesaId));
+    el.innerHTML = lista.map(n => {
+        const aqui = n.mesaId === T.mesaId;
+        const outra = !aqui && !!n.mesaId;
+        return `<div class="tb-list-row ${aqui ? 'sel' : ''}">
+            ${n.imagem ? `<img src="${esc(n.imagem)}" style="width:30px;height:30px;object-fit:cover;border-radius:6px;flex:none">` : '<span style="width:30px;text-align:center;flex:none">👤</span>'}
+            <div style="flex:1;min-width:0">
+                <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(n.nome || 'Sem nome')} ${n.tipo === 'criatura' ? '🐉' : ''}</div>
+                <div class="tb-muted" style="font-size:.7rem">${esc(n.papel || (n.tipo === 'criatura' ? 'Criatura' : 'NPC'))}${outra ? ' · ⚠️ vinculado a outra mesa' : ''}</div>
+            </div>
+            <button class="tb-btn tb-btn-small ${aqui ? 'tb-btn-danger' : 'tb-btn-success'}" onclick="tbToggleVincNpc('${n.id}',${!aqui})">
+                ${aqui ? '✕ Desvincular' : outra ? '🔗 Trazer' : '🔗 Vincular'}
+            </button>
+        </div>`;
+    }).join('') || '<div class="tb-muted" style="text-align:center;padding:20px">Nenhum NPC encontrado</div>';
+};
+
+window.tbToggleVincNpc = async function(npcId, vincular) {
+    const n = T.npcsTodos.find(x => x.id === npcId);
+    if (vincular && n?.mesaId && n.mesaId !== T.mesaId &&
+        !confirm(`“${n.nome || 'NPC'}” está vinculado a outra mesa. Trazer para esta?`)) return;
+    try {
+        await vincularNpcNaMesa(npcId, vincular);
+        toast(vincular ? `🔗 ${n?.nome || 'NPC'} vinculado` : `✕ ${n?.nome || 'NPC'} desvinculado`);
+        window._renderVincNpcs();
+    } catch (e) { console.error(e); toast('❌ Erro ao salvar o vínculo', 'danger'); }
+};
 
 window.tbColocarMostrar = async function(refTipo, refId) {
     let nome = '', url = '';

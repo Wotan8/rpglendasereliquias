@@ -12,6 +12,7 @@ export const T = {
     mesa: null,              // doc da mesa
     chars: [],               // personagens da mesa
     npcs: [],                // npcs da mesa
+    npcsTodos: [],           // catálogo completo (o snapshot já traz tudo — filtrar é de graça)
     usersMap: {},            // uid -> {email, nome}
 
     // Canvas (cenas)
@@ -81,7 +82,12 @@ export const PERMISSOES_LISTA = [
     { key: 'medir',        label: 'Usar a régua' },
     { key: 'alfinete',     label: 'Colocar alfinetes' },
     { key: 'abrirNpc',     label: 'Abrir ficha de NPCs exibidos' },
+    { key: 'interagirCenario', label: 'Interagir com o cenário (portas, janelas, luzes)' },
 ];
+
+/** Objetos da camada de luz que o jogador pode ver e acionar com `interagirCenario`.
+ *  Os riscos (paredes) continuam invisíveis — senão o mapa entrega a própria planta. */
+export const CENARIO_INTERATIVO = new Set(['porta', 'janela', 'luz']);
 
 // ===== Utils =====
 export function esc(t) {
@@ -105,6 +111,19 @@ export function markDirty() { T.dirty = true; }
 export function gridSize() { return T.canvas?.grid?.size || 70; }
 export function escalaCanvas() { return T.canvas?.escala || { valorPorCelula: 1.5, unidade: 'm' }; }
 
+/** Unidades de medida disponíveis (o `id` é o que fica salvo — não renomear os antigos). */
+export const UNIDADES = [
+    { id: 'm',      nome: 'm — metros' },
+    { id: 'cm',     nome: 'cm — centímetros' },
+    { id: 'km',     nome: 'km — quilômetros' },
+    { id: 'ft',     nome: 'ft — pés' },
+    { id: 'mi',     nome: 'mi — milhas' },
+    { id: 'passos', nome: 'passos' },
+];
+export function optsUnidade(sel) {
+    return UNIDADES.map(u => `<option value="${u.id}" ${sel === u.id ? 'selected' : ''}>${u.nome}</option>`).join('');
+}
+
 /** Converte distância em pixels de mundo para unidades, considerando um mapa sob o ponto (se houver). */
 export function pxParaUnidades(distPx, worldPt) {
     let vpc = escalaCanvas().valorPorCelula, un = escalaCanvas().unidade;
@@ -119,9 +138,42 @@ export function pxParaUnidades(distPx, worldPt) {
     return { valor: (distPx / gridSize()) * vpc, unidade: un, celulas: distPx / gridSize() };
 }
 
-export function unidadesParaPx(valor, unidadeIgnorada) {
-    const e = escalaCanvas();
-    return (valor / (e.valorPorCelula || 1)) * gridSize();
+/**
+ * Unidades → pixels de mundo. Se `pt` for informado, usa a escala do mapa sob o ponto
+ * (mesma regra da régua) — sem isso "9 m de visão" não batia com "9 m" medidos.
+ */
+export function unidadesParaPx(valor, pt) {
+    return (valor / (upcEm(pt) || 1)) * gridSize();
+}
+
+// Escala de MAPA: `larguraReal` ⇄ largura em px ------------------------------
+// Invariante: um mapa com `larguraReal` ocupa exatamente (larguraReal / valorPorCelula)
+// células do grid. Mexer num lado move o outro — senão a régua e o grid medem coisas
+// diferentes e o campo "Largura real p/ régua" vira decoração.
+export function pxDeLarguraReal(larguraReal) {
+    return (larguraReal / (escalaCanvas().valorPorCelula || 1)) * gridSize();
+}
+export function larguraRealDePx(w) {
+    return Math.round(((w / gridSize()) * (escalaCanvas().valorPorCelula || 1)) * 100) / 100;
+}
+/** Depois de redimensionar a imagem na mão: patch que reencaixa `larguraReal` (ou {} se nada muda). */
+export function sincLarguraReal(o) {
+    if (!o || o.tipo !== 'imagem' || !(o.larguraReal > 0) || !(o.w > 0)) return {};
+    const larguraReal = larguraRealDePx(o.w);
+    if (larguraReal === o.larguraReal) return {};
+    o.larguraReal = larguraReal;
+    return { larguraReal };
+}
+
+/**
+ * Nova lista `vinculos` do NPC ao entrar/sair de uma mesa.
+ * Troca só o vínculo de mesa e preserva os outros tipos — o editor de NPCs salva
+ * essa lista de volta, então perder um item aqui apaga o vínculo lá.
+ */
+export function vinculosComMesa(vinculos, mesaId, vincular) {
+    const out = (Array.isArray(vinculos) ? vinculos : []).filter(v => v && v.tipo !== 'mesa');
+    if (vincular) out.push({ tipo: 'mesa', id: mesaId });
+    return out;
 }
 
 export function mapaSobPonto(pt) {
@@ -179,7 +231,12 @@ export function can(perm) {
 export function camadasVisiveis() {
     const cs = (T.canvas?.camadas || []).slice().sort((a, b) => (a.ordem||0) - (b.ordem||0));
     if (T.mode === 'secret') return cs;
-    return cs.filter(c => c.tipo !== 'dm' && c.tipo !== 'luz' && c.visivelPublico !== false);
+    return cs.filter(c => {
+        if (c.tipo === 'dm') return false;
+        // a camada de luz entra só para o cenário interativo (filtro fino em objVisivel)
+        if (c.tipo === 'luz') return can('interagirCenario');
+        return c.visivelPublico !== false;
+    });
 }
 
 export function getCamada(id) { return (T.canvas?.camadas || []).find(c => c.id === id); }
@@ -189,7 +246,8 @@ export function objVisivel(o) {
     const cam = getCamada(o.layerId);
     if (!cam) return T.mode === 'secret';
     if (T.mode === 'secret') return true;
-    if (cam.tipo === 'dm' || cam.tipo === 'luz') return false;
+    if (cam.tipo === 'dm') return false;
+    if (cam.tipo === 'luz') return CENARIO_INTERATIVO.has(o.tipo) && can('interagirCenario');
     if (cam.visivelPublico === false) return false;
     if (o.visivelPublico === false) return false;
     return true;

@@ -312,10 +312,72 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 .tb-zoombar button { width: 36px; height: 36px; border-radius: 9px; background: var(--tb-panel); border: 1px solid var(--tb-border); color: var(--tb-light); font-size: 1rem; cursor: pointer; }
 .tb-zoombar button:hover { border-color: var(--tb-primary); }
 
+/* ===== Player de música (modo secreto) ===== */
+.tb-form-grid .tb-form-full { grid-column: 1 / -1; }
+
+.tb-musica {
+    position: fixed; bottom: 60px; left: 14px; z-index: 44; width: 232px;
+    background: var(--tb-panel); border: 1px solid var(--tb-border); border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.45); overflow: hidden;
+}
+.tb-musica.recolhida { width: auto; background: none; border: none; box-shadow: none; }
+.tb-musica.oculta { display: none; }
+.tb-musica-jogador { width: 180px; }
+.tb-mus-pe { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-top: 1px solid var(--tb-border); }
+.tb-musica-jogador .tb-mus-pe { border-top: none; }
+.tb-mus-icvol { font-size: .85rem; }
+.tb-mus-sync { font-size: .64rem; font-weight: 800; color: var(--lr-nature); white-space: nowrap; }
+.tb-mus-destravar {
+    display: block; width: 100%; border: none; border-top: 1px solid var(--tb-border); cursor: pointer;
+    background: var(--lr-gold-2, #d4af37); color: #1a1206; font-size: .72rem; font-weight: 800; padding: 6px 8px;
+}
+.tb-mus-pill {
+    width: 36px; height: 36px; border-radius: 9px; background: var(--tb-panel);
+    border: 1px solid var(--tb-border); color: var(--tb-light); font-size: 1rem; cursor: pointer; position: relative;
+}
+.tb-mus-pill:hover { border-color: var(--tb-primary); }
+.tb-mus-pill.on { border-color: var(--lr-nature); }
+.tb-mus-badge {
+    position: absolute; top: -5px; right: -5px; background: var(--lr-nature); color: #04121c;
+    font-size: .6rem; font-weight: 900; border-radius: 8px; padding: 0 4px;
+}
+.tb-mus-head {
+    display: flex; align-items: center; gap: 3px; padding: 5px 7px;
+    border-bottom: 1px solid var(--tb-border); background: var(--tb-panel2); font-size: .8rem;
+}
+.tb-mus-sel {
+    flex: 1; min-width: 0; background: var(--tb-bg); border: 1px solid var(--tb-border);
+    color: var(--tb-light); border-radius: 6px; padding: 3px 5px; font-size: .74rem; font-family: inherit;
+}
+.tb-mus-lista { max-height: 172px; overflow-y: auto; padding: 4px; }
+.tb-mus-vazio { color: var(--tb-muted); font-size: .72rem; padding: 8px 6px; text-align: center; }
+.tb-mus-row {
+    display: flex; align-items: center; gap: 5px; padding: 3px 4px; border-radius: 7px;
+    border: 1px solid transparent;
+}
+.tb-mus-row:hover { background: var(--tb-panel2); }
+.tb-mus-row.on { border-color: var(--lr-nature); background: rgba(52,211,153,.09); }
+.tb-mus-play {
+    width: 24px; height: 24px; flex: none; border-radius: 6px; cursor: pointer;
+    background: var(--tb-bg); border: 1px solid var(--tb-border); color: var(--tb-light); font-size: .7rem;
+}
+.tb-mus-row.on .tb-mus-play { border-color: var(--lr-nature); animation: tbMusPulso 1.8s ease-in-out infinite; }
+@keyframes tbMusPulso { 50% { box-shadow: 0 0 0 3px rgba(52,211,153,.18); } }
+.tb-mus-nome {
+    flex: 1; min-width: 0; font-size: .74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tb-mus-loop { color: var(--tb-muted); font-size: .68rem; }
+.tb-mus-vol { width: 56px; flex: none; accent-color: var(--tb-primary); }
+.tb-mus-plrow { display: flex; align-items: flex-end; gap: 6px; }
+.tb-mus-plrow label { display: flex; flex-direction: column; gap: 4px; font-size: .76rem; color: var(--tb-muted); font-weight: 700; }
+.tb-mus-edit { gap: 6px; }
+.tb-mus-edit .tb-input { padding: 5px 8px; font-size: .78rem; }
+
 @media (max-width: 720px) {
     #tbMesaNome { display: none; }
     .tb-side-panel { width: 230px; }
     .tb-window { width: 94vw; right: 3vw; }
+    .tb-musica { width: 190px; }
 }
 
 

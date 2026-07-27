@@ -188,6 +188,10 @@ function draw() {
     const abaixo = camadas.filter(c => c.tipo !== 'mapa' && (c.abaixoDaLuz !== false || c.tipo === 'tokens' || c.tipo === 'dm'));
     const acima = camadas.filter(c => c.tipo !== 'mapa' && !abaixo.includes(c) && c.tipo !== 'luz');
     for (const cam of abaixo) drawCamada(cam, viewRect);
+    // Público: o cenário interativo (porta/janela/luz) vai ANTES do fog — o jogador
+    // só enxerga a porta que está no campo de visão dele. (No secreto, depois.)
+    const camLuz = camadas.find(c => c.tipo === 'luz');
+    if (camLuz && T.mode !== 'secret') drawCamada(camLuz, viewRect);
     ctx.restore();
 
     drawFog();
@@ -195,10 +199,7 @@ function draw() {
     ctx.save();
     aplicarCamera(ctx, T.cam);
     for (const cam of acima) drawCamada(cam, viewRect);
-    if (T.mode === 'secret') {
-        const luz = camadas.find(c => c.tipo === 'luz');
-        if (luz) drawCamada(luz, viewRect);
-    }
+    if (camLuz && T.mode === 'secret') drawCamada(camLuz, viewRect);
     drawTelhados();
     drawSelecao();
     drawTemp();
@@ -350,7 +351,7 @@ function drawObjeto(o, cam) {
         case 'desenho': drawDesenho(o, cam); break;
         case 'medida': drawLinhaMedida(o.pontos || [], o.cor || '#22d3ee', o.label); break;
         case 'alfinete': drawAlfinete(o); break;
-        case 'luz': if (secreto) drawLuzPonto(o); break;
+        case 'luz': drawLuzPonto(o); break;   // no público só chega aqui com `interagirCenario`
         case 'porta': drawPorta(o); break;
         case 'janela': drawJanela(o); break;
         case 'template': drawTemplate(o); break;
@@ -466,7 +467,7 @@ function drawToken(o) {
 
     // Indicador de visão (secreto)
     if (T.mode === 'secret' && o.visao?.ativa) {
-        ctx.beginPath(); ctx.arc(pos.x, pos.y, unidadesParaPx(o.visao.alcance || 6), 0, Math.PI*2);
+        ctx.beginPath(); ctx.arc(pos.x, pos.y, unidadesParaPx(o.visao.alcance || 6, pos), 0, Math.PI*2);
         ctx.strokeStyle = 'rgba(250,204,21,.22)'; ctx.setLineDash([6,6]); ctx.lineWidth = 1.5/T.cam.z; ctx.stroke(); ctx.setLineDash([]);
     }
     ctx.restore();
@@ -713,11 +714,12 @@ function drawAlfinete(o) {
 }
 
 function drawLuzPonto(o) {
-    const r = unidadesParaPx(o.alcance || 6);
+    const r = unidadesParaPx(o.alcance || 6, o);
     ctx.beginPath(); ctx.arc(o.x, o.y, r, 0, Math.PI*2);
-    ctx.strokeStyle = hexA(o.cor || '#fde047', 0.3); ctx.setLineDash([8,8]); ctx.lineWidth = 1.5/T.cam.z; ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = hexA(o.cor || '#fde047', o.apagada ? 0.1 : 0.3); ctx.setLineDash([8,8]); ctx.lineWidth = 1.5/T.cam.z; ctx.stroke(); ctx.setLineDash([]);
     ctx.font = `${22/T.cam.z}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(o.animacao && o.animacao !== 'nenhuma' ? '🔥' : '💡', o.x, o.y); ctx.textAlign='left';
+    ctx.globalAlpha *= o.apagada ? 0.45 : 1;
+    ctx.fillText(o.apagada ? '🕯️' : (o.animacao && o.animacao !== 'nenhuma' ? '🔥' : '💡'), o.x, o.y); ctx.textAlign='left';
     if ((o.elev || 0) !== 0) { ctx.font = `${hud(11)}px Arial`; ctx.fillStyle = '#fdba74'; ctx.fillText(`▲${o.elev}`, o.x + hud(14), o.y - hud(14)); }
 }
 
@@ -733,10 +735,12 @@ function drawPorta(o) {
 }
 function drawJanela(o) {
     const p = o.pontos || []; if (p.length < 2) return;
-    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = Math.max(3, 4/T.cam.z);
-    ctx.setLineDash([4, 6]);
+    ctx.strokeStyle = o.aberta ? '#22c55e' : '#38bdf8'; ctx.lineWidth = Math.max(3, 4/T.cam.z);
+    ctx.setLineDash(o.aberta ? [10, 12] : [4, 6]);
     ctx.beginPath(); ctx.moveTo(p[0].x, p[0].y); ctx.lineTo(p[1].x, p[1].y); ctx.stroke();
     ctx.setLineDash([]);
+    ctx.font = `${14/T.cam.z}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🪟', (p[0].x+p[1].x)/2, (p[0].y+p[1].y)/2); ctx.textAlign='left';
 }
 
 function drawSelecao() {
@@ -1066,7 +1070,7 @@ function coletarFontesDeVisao(escopo) {
         }
         const p = posConfirmada(o);
         fontes.push({
-            x: p.x, y: p.y, r: unidadesParaPx(o.visao.alcance || 6),
+            x: p.x, y: p.y, r: unidadesParaPx(o.visao.alcance || 6, p),
             ang: o.visao.angulo, dir: o.rot || 0,
             sensor: o.visao.tipo || 'padrao', elev: o.elev || 0,
         });
@@ -1078,14 +1082,15 @@ function coletarFontesDeLuz() {
     const fontes = [];
     for (const o of T.objects.values()) {
         if (o.tipo === 'luz') {
+            if (o.apagada) continue;
             const ok = T.mode === 'public' ? (o.visivelPublico !== false) : true;
-            if (ok) fontes.push({ x: o.x, y: o.y, r: unidadesParaPx(o.alcance || 6), cor: o.cor, animacao: o.animacao, intensidadeAnim: o.intensidadeAnim, elev: o.elev || 0 });
+            if (ok) fontes.push({ x: o.x, y: o.y, r: unidadesParaPx(o.alcance || 6, o), cor: o.cor, animacao: o.animacao, intensidadeAnim: o.intensidadeAnim, elev: o.elev || 0 });
         }
         if (o.tipo === 'token' && o.luz?.ativa) {
             if (T.mode === 'public' && !objVisivel(o)) continue;
             const p = posConfirmada(o);
             fontes.push({
-                x: p.x, y: p.y, r: unidadesParaPx(o.luz.alcance || 3),
+                x: p.x, y: p.y, r: unidadesParaPx(o.luz.alcance || 3, p),
                 ang: o.luz.angulo && o.luz.angulo < 360 ? o.luz.angulo : undefined,
                 dir: o.rot || 0,
                 cor: o.luz.cor, animacao: o.luz.animacao, intensidadeAnim: o.luz.intensidadeAnim,
@@ -1226,7 +1231,7 @@ function hexA(hex, a) {
     return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
 }
 
-/** Paredes que bloqueiam MOVIMENTO (inclui janelas; portas abertas passam). F4.6 */
+/** Paredes que bloqueiam MOVIMENTO (janelas e portas fechadas; abertas passam). F4.6 */
 export function paredesDeMovimento(elevToken) {
     const alturaAndar = T.canvas?.andarAltura || 5;
     const segs = [];
@@ -1235,7 +1240,7 @@ export function paredesDeMovimento(elevToken) {
         const elev = o.elev || 0;
         if (!mesmaFaixaElev(elev, elevToken || 0, alturaAndar)) continue;
         if (o.tipo === 'porta') { if (!o.aberta && o.pontos?.length >= 2) segs.push({ a: o.pontos[0], b: o.pontos[1] }); continue; }
-        if (o.tipo === 'janela') { if (o.pontos?.length >= 2) segs.push({ a: o.pontos[0], b: o.pontos[1] }); continue; }
+        if (o.tipo === 'janela') { if (!o.aberta && o.pontos?.length >= 2) segs.push({ a: o.pontos[0], b: o.pontos[1] }); continue; }
         if (o.tipo === 'desenho') {
             const pts = o.pontos || [];
             if (o.forma === 'ret' && pts.length >= 2) {

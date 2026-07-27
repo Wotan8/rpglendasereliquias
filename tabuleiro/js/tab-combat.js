@@ -46,13 +46,14 @@ function render() {
     if (!body || !janelaAberta) return;
     const c = T.combate;
     const parts = (c?.participantes || []).slice().sort((a, b) => (b.initiative||0) - (a.initiative||0));
-    const turno = c?.turnoAtual || 0;
     const secreto = T.mode === 'secret';
 
     if (!parts.length) {
         body.innerHTML = '<div class="tb-muted" style="padding:16px;text-align:center">Nenhum participante.<br>Adicione pelo Painel do Mestre › Mesas › ⚔️ Combate.</div>';
         return;
     }
+    // normaliza: remover participantes deixava turnoAtual fora da lista ("Turno 5/3")
+    const turno = ((c?.turnoAtual || 0) % parts.length + parts.length) % parts.length;
 
     let topo = '';
     if (secreto) {
@@ -60,7 +61,7 @@ function render() {
             <button class="tb-btn tb-btn-small" onclick="tbCombTurno(-1)">⏮️</button>
             <span class="tb-combat-round">Turno ${turno + 1}/${parts.length}${c?.rodada ? ' · Rodada ' + c.rodada : ''}</span>
             <button class="tb-btn tb-btn-small" onclick="tbCombTurno(1)">⏭️</button>
-            <button class="tb-btn tb-btn-small" title="${c?.visivelPublicoCombate === false ? 'Exibir ao público' : 'Ocultar do público'}" onclick="tbCombVisibilidade()">${T.estado?.combateVisivelPublico ? '👁️' : '🚫'} público</button>
+            <button class="tb-btn tb-btn-small" title="${T.estado?.combateVisivelPublico ? 'Ocultar do público' : 'Exibir ao público'}" onclick="tbCombVisibilidade()">${T.estado?.combateVisivelPublico ? '👁️' : '🚫'} público</button>
         </div>`;
     } else {
         topo = `<div class="tb-combat-controls"><span class="tb-combat-round">Ordem dos turnos${c?.rodada ? ' · Rodada ' + c.rodada : ''}</span></div>`;

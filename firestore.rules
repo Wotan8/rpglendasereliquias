@@ -399,12 +399,12 @@ service cloud.firestore {
         }
       }
 
-      // Metadados ao vivo: estado/combate/réguas/presença/pings/legenda
+      // Metadados ao vivo: estado/combate/réguas/presença/pings/legenda/musica
       match /tabuleiro-meta/{docId} {
         allow read: if isSignedIn();
-        // legenda (teleprompter) e estado (canvas ativo) são só do mestre
+        // legenda (teleprompter), estado (canvas ativo) e musica (playlists) são só do mestre
         allow write: if isMaster() ||
-          (ehJogadorDaMesa() && docId != 'legenda' && docId != 'estado');
+          (ehJogadorDaMesa() && docId != 'legenda' && docId != 'estado' && docId != 'musica');
       }
 
       // Demais subcoleções futuras da mesa

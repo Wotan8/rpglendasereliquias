@@ -33,7 +33,15 @@ export function carregarExploracao() {
     const trocouCanvas = EXP.carregadaDe !== T.canvasId;
     EXP.carregadaDe = T.canvasId;
     if (!e || !e.dados) {
-        if (trocouCanvas) { EXP.x0 = 0; EXP.y0 = 0; EXP.cols = 0; EXP.rows = 0; EXP.bits = null; EXP.sujo = false; }
+        // Doc sem exploração = ninguém explorou nada. Limpar também aqui é o que faz o
+        // "Resetar exploração" do mestre chegar nos outros clientes — antes cada um
+        // guardava a própria grade e o primeiro a explorar de novo regravava tudo.
+        // `sujo` protege quem ainda tem células novas esperando o debounce do save.
+        if (trocouCanvas || !EXP.sujo) {
+            clearTimeout(saveTimer);
+            EXP.x0 = 0; EXP.y0 = 0; EXP.cols = 0; EXP.rows = 0; EXP.bits = null; EXP.sujo = false;
+            markDirty();
+        }
         return;
     }
     try {

@@ -2,7 +2,7 @@
 // TABULEIRO — Objetos (CRUD), Uploads, Tokens, Camadas, Propriedades
 // =============================================
 import { db, storage, ref, uploadBytes, getDownloadURL, setDoc, updateDoc, deleteDoc, doc, writeBatch } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, uid, toast, markDirty, gridSize, getCamada, escalaCanvas } from './tab-state.js';
+import { T, esc, uid, toast, markDirty, gridSize, getCamada, escalaCanvas, optsUnidade, pxDeLarguraReal, larguraRealDePx, vinculosComMesa } from './tab-state.js';
 import { refObjeto, refObjetos, refCanvas, abrirModal, fecharModal } from './tab-main.js';
 import { notifyObjectChange } from './tab-perf.js';
 import { bboxOf, centerCamera, screenToWorld } from './tab-render.js';
@@ -119,7 +119,7 @@ function abrirModalNovaImagem(url) {
             <label>É um mapa? Largura real (para a régua) — deixe 0 se não for mapa
                 <input type="number" id="ni_larguraReal" value="0" min="0" step="0.5">
             </label>
-            <label>Unidade<select id="ni_un">${['m','cm','ft'].map(u=>`<option ${escalaCanvas().unidade===u?'selected':''}>${u}</option>`).join('')}</select></label>
+            <label>Unidade<select id="ni_un">${optsUnidade(escalaCanvas().unidade)}</select></label>
             ${window._tbGradeDetectada ? `<label class="tb-check"><input type="checkbox" id="ni_useGrade" checked> 🧮 Detectamos grade de ~${window._tbGradeDetectada.cell}px — dimensionar para casar com o grid</label>` : ''}
             ${T.mode === 'secret' ? `<label class="tb-check"><input type="checkbox" id="ni_telhado"> 🏠 É um telhado (fica acima dos tokens e some quando alguém entra)</label>` : ''}
         </div>
@@ -141,8 +141,7 @@ window.tbConfirmarImagem = async function(url) {
     }
     if (larguraReal > 0) {
         // dimensiona para que a escala do grid bata: larguraReal unidades => (larguraReal/vpc)*gridSize px
-        const e = escalaCanvas();
-        w = (larguraReal / (e.valorPorCelula || 1)) * gridSize();
+        w = pxDeLarguraReal(larguraReal);
         h = w * (dim.h / dim.w);
     }
     const telhado = document.getElementById('ni_telhado')?.checked || false;
@@ -151,17 +150,45 @@ window.tbConfirmarImagem = async function(url) {
     fecharModal(); toast('✅ Imagem adicionada');
 };
 
+// ===== VÍNCULO DE NPC COM A MESA =====
+// `vinculos` é a lista canônica do editor de NPCs; `mesaId` é o espelho legado que
+// o Tabuleiro e a área de Mesas leem. Os dois têm que andar juntos: escrever só
+// `mesaId` deixa `vinculos` desatualizado e o editor desfaz o vínculo no próximo save.
+export async function vincularNpcNaMesa(npcId, vincular) {
+    const n = T.npcsTodos.find(x => x.id === npcId);
+    const vinculos = vinculosComMesa(n?.vinculos, T.mesaId, vincular);
+    await updateDoc(doc(db, 'npcs', npcId), { mesaId: vincular ? T.mesaId : '', vinculos });
+    if (n) { n.mesaId = vincular ? T.mesaId : ''; n.vinculos = vinculos; }   // eco local até o snapshot
+}
+
 // ===== TOKENS =====
+/** Opções de NPC do criador de token: os da mesa primeiro, o resto abaixo. */
+window.tbTokenFiltraNpcs = function() {
+    const busca = (document.getElementById('tk_busca')?.value || '').trim().toLowerCase();
+    const sel = document.getElementById('tk_vinculo'); if (!sel) return;
+    const escolhido = sel.value;
+    const bate = n => !busca || (n.nome || '').toLowerCase().includes(busca) || (n.papel || '').toLowerCase().includes(busca);
+    const opt = n => `<option value="npc:${n.id}">${esc(n.nome || 'NPC')}${n.tipo === 'criatura' ? ' 🐉' : ''}${n.papel ? ' · ' + esc(n.papel) : ''}</option>`;
+    const daMesa = T.npcs.filter(bate);
+    const fora = T.npcsTodos.filter(n => n.mesaId !== T.mesaId).filter(bate);
+    const chars = T.chars.filter(c => !busca || (c.nome || '').toLowerCase().includes(busca))
+        .map(c => `<option value="char:${c.id}">${esc(c.nome)}</option>`).join('');
+    sel.innerHTML =
+        `<optgroup label="Personagens da mesa">${chars || '<option disabled>— nenhum —</option>'}</optgroup>` +
+        `<optgroup label="NPCs da mesa (${daMesa.length})">${daMesa.map(opt).join('') || '<option disabled>— nenhum —</option>'}</optgroup>` +
+        `<optgroup label="Outros NPCs (${fora.length}) — serão vinculados à mesa">${fora.map(opt).join('') || '<option disabled>— nenhum —</option>'}</optgroup>` +
+        `<option value="custom">✨ Custom (sem vínculo)</option>`;
+    if ([...sel.options].some(o => o.value === escolhido)) sel.value = escolhido;
+    window.tbTokenVinculoChange();
+};
+
 window.tbAbrirToken = function() {
-    const chars = T.chars.map(c => `<option value="char:${c.id}">${esc(c.nome)}</option>`).join('');
-    const npcs = T.npcs.map(n => `<option value="npc:${n.id}">${esc(n.nome || 'NPC')}</option>`).join('');
     abrirModal('🎭 Novo Token', `
+        <div class="tb-form-grid tb-form-grid-1">
+            <label>🔍 Buscar personagem ou NPC<input type="text" id="tk_busca" placeholder="Nome ou papel — busca em todos os NPCs, não só os da mesa" oninput="tbTokenFiltraNpcs()"></label>
+        </div>
         <div class="tb-form-grid">
-            <label>Vincular a<select id="tk_vinculo" onchange="tbTokenVinculoChange()">
-                <optgroup label="Personagens da mesa">${chars || '<option disabled>— nenhum —</option>'}</optgroup>
-                <optgroup label="NPCs da mesa">${npcs || '<option disabled>— nenhum —</option>'}</optgroup>
-                <option value="custom">✨ Custom (sem vínculo)</option>
-            </select></label>
+            <label>Vincular a<select id="tk_vinculo" size="6" style="height:150px" onchange="tbTokenVinculoChange()"></select></label>
             <label id="tk_nomeWrap" style="display:none">Nome<input type="text" id="tk_nome" placeholder="Nome do token"></label>
             <label>Camada<select id="tk_layer">
                 <option value="tokens" selected>🎭 Tokens</option>
@@ -183,17 +210,29 @@ window.tbAbrirToken = function() {
         </div>
         <div class="tb-modal-actions"><button class="tb-btn tb-btn-success" onclick="tbCriarToken()">✅ Criar Token</button></div>
     `);
-    window.tbTokenVinculoChange();
+    window.tbTokenFiltraNpcs();
 };
 window.tbTokenVinculoChange = function() {
     const v = document.getElementById('tk_vinculo')?.value || '';
-    document.getElementById('tk_nomeWrap').style.display = v === 'custom' ? '' : 'none';
+    const wrap = document.getElementById('tk_nomeWrap');
+    if (wrap) wrap.style.display = v === 'custom' ? '' : 'none';
 };
 window.tbCriarToken = async function() {
     const v = document.getElementById('tk_vinculo').value;
     let vinculo = { tipo: 'custom', id: null }, nome = document.getElementById('tk_nome').value.trim() || 'Token', url = '';
     if (v.startsWith('char:')) { const c = T.chars.find(x => x.id === v.slice(5)); vinculo = { tipo: 'char', id: c.id }; nome = c.nome; url = c.charImg || ''; }
-    else if (v.startsWith('npc:')) { const n = T.npcs.find(x => x.id === v.slice(4)); vinculo = { tipo: 'npc', id: n.id }; nome = n.nome || 'NPC'; url = n.imagem || ''; }
+    else if (v.startsWith('npc:')) {
+        const n = T.npcsTodos.find(x => x.id === v.slice(4));
+        if (!n) { toast('⚠️ NPC não encontrado', 'warning'); return; }
+        vinculo = { tipo: 'npc', id: n.id }; nome = n.nome || 'NPC'; url = n.imagem || '';
+        // NPC de fora da mesa: vincula junto, senão o token fica sem vitais nem ficha
+        if (n.mesaId !== T.mesaId) {
+            const outra = !!n.mesaId;
+            if (outra && !confirm(`“${n.nome || 'NPC'}” está vinculado a outra mesa. Trazer para esta?`)) return;
+            try { await vincularNpcNaMesa(n.id, true); toast(`🔗 ${n.nome || 'NPC'} vinculado a esta mesa`); }
+            catch (e) { console.error(e); toast('❌ Não consegui vincular o NPC à mesa', 'danger'); return; }
+        }
+    }
     const finish = async (finalUrl) => {
         const centro = screenToWorld({ x: window.innerWidth/2, y: window.innerHeight/2 });
         const gs = gridSize();
@@ -362,7 +401,8 @@ export function abrirPropriedades(id, soAtualizar) {
         <label>Largura (px)<input type="number" id="pr_w" value="${Math.round(o.w||0)}" onchange="tbProp('${id}','w',parseFloat(this.value)||10,true)"></label>
         <label>Altura (px)<input type="number" id="pr_h" value="${Math.round(o.h||0)}" onchange="tbProp('${id}','h',parseFloat(this.value)||10)"></label>
         <label>Largura real p/ régua (0 = não é mapa)<input type="number" id="pr_lr" value="${o.larguraReal||0}" step="0.5" onchange="tbProp('${id}','larguraReal',parseFloat(this.value)||0)"></label>
-        <label>Unidade<select onchange="tbProp('${id}','unidade',this.value)">${['m','cm','ft'].map(u=>`<option ${o.unidade===u?'selected':''}>${u}</option>`).join('')}</select></label>
+        <label>Unidade<select onchange="tbProp('${id}','unidade',this.value)">${optsUnidade(o.unidade)}</select></label>
+        ${o.larguraReal > 0 ? `<label class="tb-muted tb-form-full" style="font-size:.72rem;font-weight:600">📏 ${(o.w / gridSize()).toFixed(1)} células · 1 célula = ${escalaCanvas().valorPorCelula || 1} ${esc(o.unidade || escalaCanvas().unidade)} — mudar a largura real redimensiona o mapa; redimensionar o mapa recalcula a largura real.</label>` : ''}
         <label class="tb-check"><input type="checkbox" ${o.telhado?'checked':''} onchange="tbProp('${id}','telhado',this.checked)"> 🏠 Telhado (acima dos tokens; some quando alguém entra)</label>`;
     if (o.tipo === 'token') extra = `
         <label>Nome<input type="text" value="${esc(o.nome||'')}" onchange="tbProp('${id}','nome',this.value)"></label>
@@ -396,6 +436,7 @@ export function abrirPropriedades(id, soAtualizar) {
         <label>Cor<input type="color" value="${o.cor||'#ef4444'}" onchange="tbProp('${id}','cor',this.value)"></label>
         <button class="tb-btn tb-btn-small" onclick="tbEditarAlfinete('${id}')">📝 Editar completo (imagem/vínculo)</button>`;
     if (o.tipo === 'luz') extra = `
+        <label class="tb-check"><input type="checkbox" ${!o.apagada?'checked':''} onchange="tbProp('${id}','apagada',!this.checked)"> 💡 Acesa</label>
         <label>Alcance (${escalaCanvas().unidade})<input type="number" step="0.5" value="${o.alcance||6}" onchange="tbProp('${id}','alcance',parseFloat(this.value)||1)"></label>
         <label>Cor<input type="color" value="${o.cor||'#ffdd99'}" onchange="tbProp('${id}','cor',this.value)"></label>
         <label>Animação<select onchange="tbProp('${id}','animacao',this.value)">${[['nenhuma','Nenhuma'],['tocha','🔥 Tocha'],['pulso','💗 Pulso'],['estrobo','⚡ Estroboscópica']].map(x=>`<option value="${x[0]}" ${((o.animacao)||'nenhuma')===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
@@ -405,7 +446,8 @@ export function abrirPropriedades(id, soAtualizar) {
         <label class="tb-check"><input type="checkbox" ${o.aberta?'checked':''} onchange="tbProp('${id}','aberta',this.checked)"> Porta aberta (não bloqueia luz nem movimento)</label>
         <label>Elevação<input type="number" step="0.5" value="${o.elev||0}" onchange="tbProp('${id}','elev',parseFloat(this.value)||0)"></label>`;
     if (o.tipo === 'janela') extra = `
-        <label class="tb-muted" style="font-size:.72rem">🪟 Janela: deixa a luz passar, mas bloqueia o movimento.</label>
+        <label class="tb-check"><input type="checkbox" ${o.aberta?'checked':''} onchange="tbProp('${id}','aberta',this.checked)"> 🪟 Janela aberta (deixa passar o movimento)</label>
+        <label class="tb-muted" style="font-size:.72rem">🪟 Fechada: a luz passa, o movimento não.</label>
         <label>Elevação<input type="number" step="0.5" value="${o.elev||0}" onchange="tbProp('${id}','elev',parseFloat(this.value)||0)"></label>`;
     if (o.tipo === 'desenho') extra = `
         <label>Cor<input type="color" value="${o.cor||'#3b82f6'}" onchange="tbProp('${id}','cor',this.value)"></label>
@@ -447,7 +489,18 @@ window.tbProp = function(id, campo, valor, manterProporcao) {
     const patch = { [campo]: valor };
     const o = T.objects.get(id);
     if (manterProporcao && campo === 'w' && o?.propW) patch.h = valor * (o.propH / o.propW);
+    // 🖼️ Mapa: largura real e largura em px são dois lados da mesma escala — mexer em um move o outro.
+    if (o?.tipo === 'imagem') {
+        if (campo === 'larguraReal' && valor > 0) {
+            const prop = (o.propW && o.propH) ? (o.propH / o.propW) : (o.w > 0 ? (o.h || o.w) / o.w : 1);
+            patch.w = pxDeLarguraReal(valor);
+            patch.h = patch.w * prop;
+        } else if (campo === 'w' && o.larguraReal > 0) {
+            patch.larguraReal = larguraRealDePx(valor);
+        }
+    }
     updObj(id, patch);
+    if (o?.tipo === 'imagem' && (patch.w !== undefined || patch.larguraReal !== undefined)) abrirPropriedades(id, true);
     if (campo === 'layerId' || campo === 'visivelPublico') markDirty();
 };
 window.tbPropDeep = function(id, grupo, campo, valor) {
@@ -458,8 +511,10 @@ window.tbPropDeep = function(id, grupo, campo, valor) {
 window.tbZOrdem = (id, dir) => updObj(id, { z: dir > 0 ? maxZ() + 1 : minZ() - 1 });
 window.tbDuplicar = async (id) => {
     const o = T.objects.get(id); if (!o) return;
-    const { id: _, ...cp } = o;
-    await addObj({ ...cp, x: (cp.x||0) + 40, y: (cp.y||0) + 40, pontos: cp.pontos ? cp.pontos.map(p => ({ x: p.x + 40, y: p.y + 40 })) : undefined, z: maxZ() + 1 });
+    // `undefined` é recusado pelo Firestore — só mande `pontos` quando existir; e nunca copie flags locais.
+    const { id: _, __dragging, __fogPos, ...cp } = o;
+    if (cp.pontos) cp.pontos = cp.pontos.map(p => ({ x: p.x + 40, y: p.y + 40 }));
+    await addObj({ ...cp, x: (cp.x||0) + 40, y: (cp.y||0) + 40, z: maxZ() + 1 });
 };
 window.tbExcluirObj = (id) => { delObj(id); };
 

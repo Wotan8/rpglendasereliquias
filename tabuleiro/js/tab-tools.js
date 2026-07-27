@@ -5,13 +5,14 @@
 // Cursores/Pings, Menu radial, Undo/Redo, Atalhos e toque.
 // =============================================
 import { setDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, markDirty, gridSize, can, camadasVisiveis, objVisivel, tokenDoUsuario, pxParaUnidades, fmtDist, getCamada, cfgGrid, upcEm, unidadeEm } from './tab-state.js';
+import { T, esc, toast, markDirty, gridSize, can, camadasVisiveis, objVisivel, tokenDoUsuario, pxParaUnidades, fmtDist, getCamada, cfgGrid, upcEm, unidadeEm, sincLarguraReal, CENARIO_INTERATIVO } from './tab-state.js';
 import { refReguas, abrirModal, fecharModal } from './tab-main.js';
 import { screenToWorld, worldToScreen, bboxOf, handlesOf, centerCamera, paredesDeMovimento, getImg } from './tab-render.js';
 import { addObj, updObj, delObj, maxZ, abrirPropriedades, uploadArquivo } from './tab-objects.js';
 import { snapPonto, medirTrajeto, trajetoColide } from './tab-grid.js';
 import { publicarCursor, enviarPing } from './tab-presenca.js';
 import { abrirMenuRadial } from './tab-hud.js';
+import { pontoVisivelAgora } from './tab-fog.js';
 import { confirmarTemplate, confirmarTerreno, terrenosDoCanvas, tplCfg } from './tab-templates.js';
 import { desfazer, refazer, registrarOp } from './tab-undo.js';
 
@@ -126,6 +127,29 @@ function podeMoverObj(o) {
     if (o.criadoPor === T.user?.uid) return true;
     return false;
 }
+/**
+ * Pode acionar porta/janela/luz? Mestre sempre; jogador precisa da permissão
+ * `interagirCenario` E de enxergar o objeto — senão dava para abrir às cegas
+ * uma porta escondida no fog e mapear o cenário por tentativa.
+ */
+function podeAcionarCenario(o) {
+    if (!CENARIO_INTERATIVO.has(o.tipo) || !can('interagirCenario')) return false;
+    if (T.mode === 'secret') return true;
+    if (!T.canvas?.luzDinamica?.ativa) return true;
+    const p = o.pontos?.length >= 2
+        ? { x: (o.pontos[0].x + o.pontos[1].x) / 2, y: (o.pontos[0].y + o.pontos[1].y) / 2 }
+        : { x: o.x, y: o.y };
+    return !!pontoVisivelAgora(p);
+}
+
+/** Abre/fecha porta e janela, acende/apaga luz. Um write, todo mundo vê. */
+function acionarCenario(o) {
+    if (o.tipo === 'luz') { updObj(o.id, { apagada: !o.apagada }); toast(o.apagada ? '💡 Luz acesa' : '🕯️ Luz apagada'); return; }
+    updObj(o.id, { aberta: !o.aberta });
+    const nome = o.tipo === 'porta' ? '🚪 Porta' : '🪟 Janela';
+    toast(`${nome} ${o.aberta ? 'fechada' : 'aberta'}`);
+}
+
 function podeEditarObj(o) {
     // 🔒 Objeto bloqueado: edição/redimensionamento desabilitados para todos
     if (o.bloqueado) return false;
@@ -317,12 +341,25 @@ function onDown(e) {
     }
 }
 
+/** Paredes valem para este arrasto? (jogador movendo token, com o bloqueio ligado) */
+function segsDoArrasto(o) {
+    if (o.tipo !== 'token' || !bloqueioAtivo()) return null;
+    return paredesDeMovimento(o.elev || 0);   // uma vez por arrasto: paredes não mudam no meio
+}
+/** Bloqueio de movimento por paredes. Ligado por padrão — desligar é escolha do mestre. */
+function bloqueioAtivo() {
+    return T.canvas?.bloquearMovimento !== false && !T.isMaster;
+}
+
 function iniciarDragObj(o, w) {
     ponteiro = {
         tipo: 'dragObj', id: o.id, w0: w, x0: o.x, y0: o.y,
         pontos0: o.pontos ? o.pontos.map(p => ({ ...p })) : null,
         moveu: false, ultimoWrite: 0,
         trail: o.tipo === 'token' ? [{ x: o.x, y: o.y }] : null, // waypoints
+        // F4.6: a parede segura o token DURANTE o arrasto — nada de atravessar e voltar no fim
+        segs: segsDoArrasto(o),
+        ultimoValido: { x: o.x, y: o.y },
     };
     const lo = T.objects.get(o.id);
     if (lo) {
@@ -385,6 +422,17 @@ function onMove(e) {
             } else {
                 let nx = ponteiro.x0 + dx, ny = ponteiro.y0 + dy;
                 if (o.tipo === 'token') { const s = snapToken({ x: nx, y: ny }); nx = s.x; ny = s.y; }
+                if (ponteiro.segs) {
+                    // parede segura aqui: o token para nela e continua deslizando pelos lados
+                    const v = ponteiro.ultimoValido;
+                    if (nx !== v.x || ny !== v.y) {
+                        if (trajetoColide([v, { x: nx, y: ny }], ponteiro.segs)) {
+                            nx = v.x; ny = v.y;
+                            if (!ponteiro.avisou) { ponteiro.avisou = true; toast('🧱 Parede no caminho', 'warning'); }
+                        } else ponteiro.ultimoValido = { x: nx, y: ny };
+                    }
+                }
+                if (nx === o.x && ny === o.y) break;
                 o.x = nx; o.y = ny;
                 // F2.2/F2.3: deltas com flag `movendo` (clientes remotos seguram o fog)
                 updObj(o.id, o.tipo === 'token' ? { x: nx, y: ny, movendo: true } : { x: nx, y: ny }, DRAG_THROTTLE);
@@ -482,11 +530,10 @@ async function onUp(e) {
             delete o.__dragging;
             const trail = p.trail ? [...p.trail, { x: o.x, y: o.y }] : null;
 
-            // F4.6: Movement Lock — colisão com paredes/portas fechadas/janelas
-            const lockAtivo = T.canvas?.bloquearMovimento && !T.isMaster;
-            if (o.tipo === 'token' && lockAtivo && p.moveu) {
-                const segs = paredesDeMovimento(o.elev || 0);
-                const hit = trajetoColide(trail || [{ x: p.x0, y: p.y0 }, { x: o.x, y: o.y }], segs);
+            // F4.6: rede de segurança — o clamp do onMove já segura, mas waypoints
+            // (botão direito) e escritas remotas podem ter escapado.
+            if (o.tipo === 'token' && p.segs && p.moveu) {
+                const hit = trajetoColide(trail || [{ x: p.x0, y: p.y0 }, { x: o.x, y: o.y }], p.segs);
                 if (hit) {
                     o.x = p.x0; o.y = p.y0;
                     delete o.__fogPos;
@@ -516,6 +563,19 @@ async function onUp(e) {
             }
         }
         if (T.temp?.tipo === 'medida') { T.temp = null; limparReguaCompartilhada(); markDirty(); }
+        return;
+    }
+    if (p.tipo === 'resize') {
+        const o = T.objects.get(p.id);
+        if (o) {
+            // write final (o throttle do arrasto pode ter ficado para trás) + reencaixe da escala do mapa
+            updObj(o.id, { x: o.x, y: o.y, w: o.w, h: o.h, ...sincLarguraReal(o) });
+            registrarOp({ tipo: 'patch', id: o.id,
+                antes: { x: p.b0.x, y: p.b0.y, w: p.b0.w, h: p.b0.h },
+                depois: { x: o.x, y: o.y, w: o.w, h: o.h } });
+            abrirPropriedades(o.id, true);
+        }
+        markDirty();
         return;
     }
     if (p.tipo === 'draw' && T.temp) {
@@ -571,7 +631,9 @@ function abrirCtxOuRadial(o, x, y) {
         abrirMenuRadial(o, x, y);
         return;
     }
-    if (T.mode !== 'secret') return;
+    // No público o menu só existe para o cenário interativo (é o caminho do toque,
+    // que não tem duplo-clique).
+    if (T.mode !== 'secret' && !podeAcionarCenario(o)) return;
     abrirMenuContexto(o, x, y);
 }
 
@@ -601,7 +663,8 @@ function onDblClick(e) {
     const o = pickObject(w);
     if (!o) return;
     if (o.tipo === 'texto' && podeEditarObj(o)) { abrirModalTexto(null, o); return; }
-    if (o.tipo === 'porta' && T.mode === 'secret') { updObj(o.id, { aberta: !o.aberta }); return; }
+    // Cenário interativo: mestre sempre; jogador com a permissão `interagirCenario`
+    if (podeAcionarCenario(o)) { acionarCenario(o); return; }
     if (o.tipo === 'token' && o.vinculo?.tipo === 'npc' && (T.mode === 'secret' || can('abrirNpc'))) {
         const somenteLeitura = T.mode !== 'secret' || !T.isMaster;
         window.tbAbrirNpcModal && window.tbAbrirNpcModal(o.vinculo.id, somenteLeitura);
@@ -632,7 +695,7 @@ function onKey(e) {
             const dx = e.key === 'ArrowLeft' ? -gs : e.key === 'ArrowRight' ? gs : 0;
             const dy = e.key === 'ArrowUp' ? -gs : e.key === 'ArrowDown' ? gs : 0;
             const destino = snapToken({ x: o.x + dx, y: o.y + dy });
-            if (T.canvas?.bloquearMovimento && !T.isMaster) {
+            if (bloqueioAtivo()) {
                 const hit = trajetoColide([{ x: o.x, y: o.y }, destino], paredesDeMovimento(o.elev || 0));
                 if (hit) { toast('🧱 Movimento bloqueado', 'warning'); return; }
             }
@@ -668,6 +731,7 @@ function abrirAjudaAtalhos() {
             <div><b>Botão direito (arrastando token)</b> Adiciona waypoint ao trajeto</div>
             <div><b>Botão direito (régua)</b> Adiciona vértice · <b>Botão direito (parado)</b> Menu de contexto</div>
             <div><b>Duplo-clique / Enter</b> Fecha o polígono de terreno · <b>Esc</b> Cancela</div>
+            <div><b>Duplo-clique</b> em 🚪 porta / 🪟 janela abre e fecha · em 💡 luz acende e apaga (jogadores precisam da permissão “Interagir com o cenário”)</div>
             <div><b>Delete</b> Exclui a seleção · <b>Shift+?</b> Esta ajuda</div>
             <div><b>🔒 Bloqueio:</b> menu de contexto/propriedades bloqueiam o objeto; clique no objeto bloqueado e use o botão 🔒 (Mestre) para desbloquear</div>
             <div><b>Toque:</b> pinça = zoom · segurar = menu de contexto</div>
@@ -805,11 +869,22 @@ function abrirMenuContexto(o, x, y) {
         return;
     }
     if (o.tipo === 'mostrar' && window.tbMenuMostrar) { window.tbMenuMostrar(o.id, x, y); return; }
+    // Jogador: só os acionamentos do cenário, nada de ocultar/excluir/z-ordem
+    if (T.mode !== 'secret') {
+        if (!podeAcionarCenario(o)) return;
+        const rotulo = o.tipo === 'luz' ? (o.apagada ? '💡 Acender' : '🕯️ Apagar')
+            : o.aberta ? (o.tipo === 'porta' ? '🚪 Fechar porta' : '🪟 Fechar janela')
+            : (o.tipo === 'porta' ? '🚪 Abrir porta' : '🪟 Abrir janela');
+        renderMenuContexto(menu, [{ t: rotulo, fn: () => acionarCenario(o) }], x, y);
+        return;
+    }
     itens.push({ t: (o.visivelPublico !== false ? '🚫 Ocultar do público' : '👁️ Exibir ao público'), fn: () => updObj(o.id, { visivelPublico: !(o.visivelPublico !== false) }) });
     if (T.isMaster && ['imagem', 'token', 'mostrar'].includes(o.tipo)) {
         itens.push({ t: '🔒 Bloquear objeto', fn: () => window.tbBloquearObj(o.id) });
     }
     if (o.tipo === 'porta') itens.push({ t: o.aberta ? '🚪 Fechar porta' : '🚪 Abrir porta', fn: () => updObj(o.id, { aberta: !o.aberta }) });
+    if (o.tipo === 'janela') itens.push({ t: o.aberta ? '🪟 Fechar janela' : '🪟 Abrir janela (deixa passar)', fn: () => updObj(o.id, { aberta: !o.aberta }) });
+    if (o.tipo === 'luz') itens.push({ t: o.apagada ? '💡 Acender' : '🕯️ Apagar', fn: () => updObj(o.id, { apagada: !o.apagada }) });
     if (o.tipo === 'alfinete') itens.push({ t: '📝 Editar alfinete', fn: () => window.tbEditarAlfinete(o.id) });
     if (o.tipo === 'relogio') {
         itens.push({ t: '➖ Voltar fatia', fn: () => updObj(o.id, { cheias: Math.max(0, (o.cheias || 0) - 1) }) });
