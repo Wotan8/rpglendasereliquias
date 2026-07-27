@@ -61,7 +61,6 @@
             <div class="section-title">⚔️ Status de Combate
                 <span class="cbt-tools">
                     <label class="cbt-step-lbl">Δ <input type="number" id="cbtStep" value="1" min="1"></label>
-                    <button type="button" id="cbtRestore">🛌 Máx</button>
                 </span>
             </div>
             <div class="cbt-combat-strip" id="cbtInitStrip" hidden>
@@ -208,12 +207,10 @@
             canon('ener_atual').dispatchEvent(new Event('input', { bubbles: true }));
             eq('editar na Principal espelha no HUD', cards[2].querySelector('.cbt-cur').value, '4');
 
-            // Restaurar tudo ao máximo
-            document.getElementById('cbtRestore').click();
-            eq('restaura Vitalidade', canon('vit_atual').value, '20');
-            eq('restaura Sanidade', canon('san_atual').value, '10');
-            eq('restaura DV Fôlego', q('#dv_FOLEGO_atual').value, '5');
-            eq('não mexe em VD fora do HUD', q('#dv_CARGA_atual').value, '12');
+            // Não existe atalho para encher os status de volta: só o Mestre
+            // (ou o jogador digitando) muda isso.
+            eq('sem botão de restaurar ao máximo', document.getElementById('cbtRestore'), null);
+            eq('VD fora do HUD segue intocado', q('#dv_CARGA_atual').value, '12');
 
             // Sanfona das seções (não afeta o HUD)
             const equip = document.getElementById('equipSection');

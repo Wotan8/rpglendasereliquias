@@ -48,20 +48,6 @@
 #cbtStep::-webkit-outer-spin-button,
 #cbtStep::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
-#cbtRestore {
-    border: 2px solid var(--soft);
-    background: transparent;
-    color: var(--muted);
-    border-radius: 8px;
-    padding: 4px 8px;
-    font-size: 10px;
-    font-weight: 800;
-    cursor: pointer;
-    font-family: var(--font);
-}
-
-#cbtRestore:hover { border-color: var(--lr-nature); color: var(--lr-nature); }
-
 /* Faixa de combate — só aparece quando o Mestre põe o personagem na lista */
 .cbt-combat-strip {
     display: flex;

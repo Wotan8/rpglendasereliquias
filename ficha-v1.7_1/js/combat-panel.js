@@ -257,15 +257,6 @@
             syncCombatPanel();
         });
 
-        document.getElementById('cbtRestore')?.addEventListener('click', () => {
-            document.querySelectorAll('#combatVitalsGrid .cbt-vital').forEach(card => {
-                const cur = document.querySelector(card.dataset.curSel);
-                const max = document.querySelector(card.dataset.maxSel);
-                if (cur && max) writeCanonical(cur, _fmt(max.value));
-            });
-            syncCombatPanel();
-        });
-
         // Miniatura de condição abre o bloco completo e rola até ele.
         document.getElementById('cbtCondTags')?.addEventListener('click', e => {
             if (!e.target.closest('.cbt-cond-tag')) return;
