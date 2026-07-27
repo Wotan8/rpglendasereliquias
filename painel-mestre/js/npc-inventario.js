@@ -378,6 +378,10 @@ window.openNpcItemForm = function(editItemId) {
                     </div>
                 </div>
                 <div class="inv-form-group inv-form-wide">
+                    <label class="inv-form-label">💥 Fórmula de Dano</label>
+                    <input type="text" id="nif_formulaDano" class="inv-form-input" value="${escapeHtml(item?.formulaDano || '')}" placeholder="Ex: 1d10 — só o dado; bônus numéricos vêm dos Valores Derivados">
+                </div>
+                <div class="inv-form-group inv-form-wide">
                     <label class="inv-form-label">Descrição</label>
                     <textarea id="nif_desc" class="inv-form-textarea" rows="3">${escapeHtml(item?.descricao || '')}</textarea>
                 </div>
@@ -446,6 +450,7 @@ window.saveNpcItemForm = async function() {
         tamanho: parseInt(document.getElementById('nif_tamanho')?.value) || 1,
         quantidade: (isContainer || tipo === 'Arma') ? 1 : Math.max(1, parseInt(document.getElementById('nif_quantidade')?.value) || 1),
         descricao: document.getElementById('nif_desc')?.value?.trim() || '',
+        formulaDano: document.getElementById('nif_formulaDano')?.value?.trim() || '',
         imagem: document.getElementById('nif_imagem')?.value?.trim() || '',
         equipavelEm: equipavelEm.length ? equipavelEm : null,
         formaEquipar: document.getElementById('nif_formaEquipar')?.value || null,

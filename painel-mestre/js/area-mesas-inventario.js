@@ -448,6 +448,10 @@ window._openMestreItemFormModal = async function(mesaId, editItemId, targetCharI
                     </div>
                 </div>
                 <div class="inv-form-group inv-form-wide">
+                    <label class="inv-form-label">💥 Fórmula de Dano</label>
+                    <input type="text" id="invFormFormulaDano" class="inv-form-input" value="${escapeHtml(item?.formulaDano || '')}" placeholder="Ex: 1d10 — só o dado; bônus numéricos vêm dos Valores Derivados">
+                </div>
+                <div class="inv-form-group inv-form-wide">
                     <label class="inv-form-label">Descrição</label>
                     <textarea id="invFormDesc" class="inv-form-textarea" rows="3" placeholder="Descrição do item">${escapeHtml(item?.descricao || '')}</textarea>
                 </div>
@@ -525,6 +529,7 @@ window._saveMestreItem = async function() {
         tamanho: parseInt(document.getElementById('invFormTamanho')?.value) || 1,
         quantidade: (isContainer || tipo === 'Arma') ? 1 : Math.max(1, parseInt(document.getElementById('invFormQuantidade')?.value) || 1),
         descricao: document.getElementById('invFormDesc')?.value?.trim() || '',
+        formulaDano: document.getElementById('invFormFormulaDano')?.value?.trim() || '',
         imagem: document.getElementById('invFormImagem')?.value?.trim() || '',
         mecanicaIdsProprias: mecanicaIds,
         characterId: targetCharId,
