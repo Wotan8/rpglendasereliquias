@@ -346,7 +346,7 @@ const LabExport = (() => {
             plena: '⟐ Runa Plena', auxiliar: 'Runa Auxiliar',
             incompleta: '⚠️ Núcleo incompleto', vazia: 'Mesa vazia',
         }[a.natureza] || '—';
-        const g = a.gravacao, arm = a.armazenamento, m = a.mentalizacao;
+        const g = a.gravacao, arm = a.armazenamento;
 
         const tabela = [
             linha('🎯 Alvo — Teste de Construção (§6.2)',
@@ -367,19 +367,12 @@ const LabExport = (() => {
             linha('♨️ Exaustão', a.exaustao.presente
                 ? `<b>${a.exaustao.capacidade} Ess</b>`
                 : '<b>— ausente</b> <small>(todo excedente vira Sobrecarga, §2.9)</small>'),
-            linha('🧠 Mentalização (§8.4)', m.componentes
-                // A classe/tempo vêm de RUNO_TABELAS.complexidadeRuna; se a faixa
-                // não resolver, não deixa separador solto na folha.
-                ? [`<b>${esc(m.classe || '—')}</b>`, esc(m.tempo || ''),
-                m.minPericia ? `perícia ${m.minPericia}+` : ''].filter(Boolean).join(' · ') +
-                (m.energiaPura ? `<br><small>Energia Pura: ${m.energiaPura} En + esforço dos componentes</small>` : '')
-                : '—'),
         ].join('');
 
         // Uma linha por elemento — "Nome NvX … N Ess". A contagem sobe para o
         // título (era a linha "Componentes") e o total já está no quadro do CT.
         const comp = a.breakdown.length ? `
-            <h3>▼ Σ Composição <small>(${m.componentes || a.breakdown.length} elementos)</small></h3>
+            <h3>▼ Σ Composição <small>(${a.breakdown.length} elementos)</small></h3>
             <table class="lab-pr-comp">
                 <tbody>${a.breakdown.map(b => `<tr>
                     <td>${esc(b.nome)} Nv${b.nivel}${b.elo ? ' <small>(½ do par — Elo)</small>' : ''}</td>
@@ -429,7 +422,7 @@ const LabExport = (() => {
     function cabecalho(nome, ctx, sim) {
         const data = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
         const attrs = ctx && ctx.nome
-            ? `INT ${ctx.int} · RAC ${ctx.rac} · Runomancia ${ctx.runomancia} · Gravação ${ctx.gravacao} · Mentalização ${ctx.mentalizacao}`
+            ? `INT ${ctx.int} · RAC ${ctx.rac} · Runomancia ${ctx.runomancia} · Gravação ${ctx.gravacao}`
             : 'Simulação livre — sem ficha vinculada';
         return `
             <header class="lab-pr-topo">

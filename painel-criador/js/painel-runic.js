@@ -416,7 +416,7 @@ export function buildSeedDocs() {
             _seedId: 'artus_' + nome.toLowerCase(),
             nome, nomeLatim: '', tipoElemento: 'artus', categoria: '', complexidade: '',
             maxNivel: 5, descricao: 'O verbo da runa. ' + desc,
-            limites: 'Nv4 permite Mentalização Pura em combate deste Artus (§8.7). Nv5 reduz tempo de criação.',
+            limites: 'Nv5 reduz tempo de criação.',
             posicaoRegra: 'Núcleo — após o Aspectus', flags: ['artus', 'nucleo'],
             niveis: NUCLEO_CUSTOS.map((c, n) => ({ nivel: n + 1, custoEss: c, custoExp: c, sessoesEstudo: ARTUS_SESS[n], capacidade: null, taxa: null, propriedades: '' })),
             pontosConexao: CP.passagem, imagemUrl: '', ordem: 100 + i, publicado: true, cor: ''

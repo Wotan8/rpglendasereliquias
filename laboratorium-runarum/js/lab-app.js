@@ -29,7 +29,7 @@
         const ctx = window.LabFB.ctx;
         $('#labCharInfo').innerHTML = ctx.nome
             ? `<b>${esc(ctx.nome)}</b> · ${esc(ctx.classe || '')}<br>
-               <small>INT ${ctx.int} · RAC ${ctx.rac} · Runomancia ${ctx.runomancia} · Gravação ${ctx.gravacao} · Mentalização ${ctx.mentalizacao}</small>`
+               <small>INT ${ctx.int} · RAC ${ctx.rac} · Runomancia ${ctx.runomancia} · Gravação ${ctx.gravacao}</small>`
             : `<b>Simulação livre</b><br><small>Abra pela ficha para usar seus atributos e salvar no Grimório.</small>`;
 
         if (!Object.keys(elementsById).length) {
@@ -125,7 +125,6 @@
                 <tr><td>💰 Material</td><td>${a.ct ? `<b>≈ ${g.material} L$</b>${g.multMaterial > 1 ? ` <small>(×${g.multMaterial} por elemento ${g.multMaterial === 3 ? 'Mestre' : 'Avançado'})</small>` : ''}` : '—'}</td></tr>
                 <tr><td>🔋 Armazenamento</td><td>${a.armazenamento.capacidade} Ess ${a.ct ? (a.armazenamento.suficiente ? '✅' : a.armazenamento.regimeContinuoOk ? '♻️ contínuo' : '⚠️ &lt; CT') : ''}</td></tr>
                 <tr><td>♨️ Exaustão</td><td>${a.exaustao.presente ? a.exaustao.capacidade + ' Ess' : '— ausente'}</td></tr>
-                <tr><td>🧠 Mentalização (§8.4)</td><td>${a.mentalizacao.componentes ? `${a.mentalizacao.classe} · ${a.mentalizacao.tempo}${a.mentalizacao.minPericia ? ` · perícia ${a.mentalizacao.minPericia}+` : ''}${a.mentalizacao.energiaPura ? ` · Pura: ${a.mentalizacao.energiaPura} En + esforço` : ''}` : '—'}</td></tr>
             </table>
             ${a.breakdown.length ? `<details class="lab-aud-det"><summary>Σ Composição (${a.breakdown.length} elementos)</summary>
                 ${a.breakdown.map(b => `<div class="lab-aud-row"><span>${esc(b.nome)} Nv${b.nivel}${b.elo ? ' <small>(½ do par)</small>' : ''}</span><b>${b.custo} Ess</b></div>`).join('')}

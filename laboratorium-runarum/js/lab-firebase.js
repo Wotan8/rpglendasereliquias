@@ -39,7 +39,10 @@ const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u030
 const squash = k => norm(k).replace(/[^a-z0-9]/g, '');
 
 function extractCharContext(data) {
-    const dots = data?.dots || {};
+    // effectiveDots já vem com bônus/pisos/tetos de mecânicas aplicados pela ficha;
+    // dots é só o que foi comprado com pontos. Fichas salvas antes deste campo
+    // existir caem no comportamento antigo até o próximo autosave.
+    const dots = { ...(data?.dots || {}), ...(data?.effectiveDots || {}) };
     const findDot = (frag) => {
         let best = 0;
         Object.keys(dots).forEach(k => {
@@ -55,7 +58,6 @@ function extractCharContext(data) {
         int: intV, rac: racV,
         runomancia: findDot('runomancia'),
         gravacao: findDot('grava'),              // Gravação Rúnica ("ç/ã" viram '_')
-        mentalizacao: findDot('mentaliza'),
         erudicao: findDot('erudi'),
         diagnostico: findDot('diagn'),
         eficiencia: findDot('efici'),
@@ -152,7 +154,7 @@ onAuthStateChanged(auth, async (user) => {
         }
         if (!LabFB.ctx) {
             // Sem ficha vinculada: modo simulação livre
-            LabFB.ctx = { nome: '', classe: '', baseAttr: 0, int: 0, rac: 0, runomancia: 0, gravacao: 0, mentalizacao: 0, erudicao: 0, diagnostico: 0, eficiencia: 0, vig: 0, prs: 0 };
+            LabFB.ctx = { nome: '', classe: '', baseAttr: 0, int: 0, rac: 0, runomancia: 0, gravacao: 0, erudicao: 0, diagnostico: 0, eficiencia: 0, vig: 0, prs: 0 };
         }
 
         loading.style.display = 'none';

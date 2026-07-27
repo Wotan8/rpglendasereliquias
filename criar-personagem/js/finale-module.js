@@ -740,64 +740,10 @@ async function createCharacter() {
         charData.charImg = ws.imagemPersonagem;
     }
 
-    // === Inicializar Status Vitais ===
-    // Calcula o valor máximo baseado nos atributos finais e atribui ao valor atual.
-    if (window.VITAL_STATS) {
-        const hardcodedVitalsMap = {
-            'VIT_MAX': 'vit_atual',
-            'ENER_MAX': 'ener_atual',
-            'SAN_MAX': 'san_atual'
-        };
-        charData.dvAtual = charData.dvAtual || {};
-
-        window.VITAL_STATS.forEach(vs => {
-            let maxVal = 0;
-            // 1. Calcular usando as mecânicas vinculadas ao status vital
-            if (vs.mecanicaIds && vs.mecanicaIds.length > 0 && window._systemData && window._systemData.mechanics) {
-                vs.mecanicaIds.forEach(mId => {
-                    const mech = window._systemData.mechanics.find(m => m.id === mId);
-                    if (mech && mech.tipo === 'modificar' && mech.config) {
-                        let calcStr = String(mech.config.calculo || mech.config.valorFixo || '0');
-                        // Substitui atributos (ex: FOR -> dots.attr_for)
-                        calcStr = calcStr.replace(/\b(FOR|DES|VIG|INT|RAC|PRS|PRE|MAN|AUT)\b/g, match => {
-                            const attrKey = 'attr_' + match.toLowerCase();
-                            return (charData.dots[attrKey] || 0);
-                        });
-                        try {
-                            const result = new Function('"use strict"; return (' + calcStr + ')')();
-                            if (mech.config.operacao === '+') maxVal += result;
-                            else if (mech.config.operacao === '=') maxVal = result;
-                            else if (mech.config.operacao === '*') maxVal *= result;
-                        } catch (e) {
-                            console.error(`Erro ao calcular mecânica para ${vs.key}:`, e);
-                        }
-                    }
-                });
-            } 
-            // 2. Fallback para string de fórmula antiga, se existir
-            else if (vs.formula) {
-                let calcStr = String(vs.formula);
-                calcStr = calcStr.replace(/\b(FOR|DES|VIG|INT|RAC|PRS|PRE|MAN|AUT)\b/g, match => {
-                    const attrKey = 'attr_' + match.toLowerCase();
-                    return (charData.dots[attrKey] || 0);
-                });
-                try {
-                    maxVal = new Function('"use strict"; return (' + calcStr + ')')();
-                } catch (e) {
-                    console.error(`Erro ao calcular fórmula para ${vs.key}:`, e);
-                }
-            }
-
-            maxVal = Math.floor(maxVal);
-
-            // 3. Atribui o valor máximo à respectiva variável atual (fields ou dvAtual)
-            if (hardcodedVitalsMap[vs.key]) {
-                charData.fields[hardcodedVitalsMap[vs.key]] = maxVal;
-            } else {
-                charData.dvAtual[vs.key] = maxVal;
-            }
-        });
-    }
+    // === Status Vitais ===
+    // Não gravamos vit_atual/san_atual/ener_atual aqui: o máximo só é calculável
+    // pelo motor de mecânicas completo da ficha. A ficha preenche Atual = Máximo
+    // no primeiro carregamento (campo vazio ⇒ personagem nasce com 100%).
 
     // Show saving indicator
     showWizardToast('💾 Salvando personagem...', 'info');

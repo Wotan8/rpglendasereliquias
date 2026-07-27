@@ -77,7 +77,7 @@ function initPhase3(container) {
             html += `
                 <div class="attr-dist-row" title="${escHtml(attr.tooltip)}">
                     <span class="attr-dist-name">${attr.id}</span>
-                    <span style="font-size:.75rem;color:var(--muted);flex:1;">${escHtml(attr.nome)}</span>
+                    <span style="font-size:.75rem;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(attr.nome)}</span>
                     <div class="attr-dist-dots dots5">
             `;
             for (let d = 1; d <= 5; d++) {

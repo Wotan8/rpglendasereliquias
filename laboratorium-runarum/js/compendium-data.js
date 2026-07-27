@@ -54,12 +54,6 @@ const RUNO_TABELAS = {
         { nv: 4, intensidade: 'Poderosa', duracao: 'Até 1 cena', ex: 'Incêndio, furacão localizado' },
         { nv: 5, intensidade: 'Absoluta', duracao: 'Permanente', ex: 'Fusão, tormenta, colapso' },
     ],
-    complexidadeRuna: [
-        { faixa: [3, 4], nome: 'Simples', mentalizacao: 1, tempo: '1 ação' },
-        { faixa: [5, 7], nome: 'Moderada', mentalizacao: 2, tempo: '2 ações' },
-        { faixa: [8, 12], nome: 'Complexa', mentalizacao: 3, tempo: '1 turno completo' },
-        { faixa: [13, 999], nome: 'Obra-prima', mentalizacao: null, tempo: 'Não pode ser mentalizada' },
-    ],
 };
 
 // ---------- Seções do Compêndio (aba de consulta) ----------
@@ -145,7 +139,7 @@ ${RUNO_TABELAS.sobrecarga.map(r => `<tr><td>${r.max === Infinity ? '26+' : r.min
     },
     {
         id: 'artus', icone: '⚙️', titulo: 'Parte III — Artus, as Cinco Ações', html: `
-<p>Cinco verbos, custo idêntico (5/10/20/40/80 Ess), métricas de escala distintas. Nv4 permite Mentalização Pura em combate; Nv5 é maestria.</p>
+<p>Cinco verbos, custo idêntico (5/10/20/40/80 Ess), métricas de escala distintas. Nv5 é maestria.</p>
 <table><tr><th>Nv</th><th>CRIAR (volume)</th><th>DESTRUIR</th><th>ENTENDER (raio)</th><th>MODIFICAR</th><th>CONTROLAR</th></tr>
 <tr><td>1</td><td>20 cm³ — chama de vela</td><td>10 cm³ — corroer cadeado</td><td>3 m</td><td>5 kg / 10 cm³</td><td>5 m / 10 kg</td></tr>
 <tr><td>2</td><td>1 m³ — barreira pessoal</td><td>0,5 m³ — porta</td><td>10 m</td><td>50 kg / 0,5 m³</td><td>15 m / 100 kg</td></tr>
@@ -241,21 +235,9 @@ ${RUNO_TABELAS.confluencias.map(c => `<tr><td><b>${c.elemento}</b></td><td>${c.a
 <tr><td>Contaminada</td><td>Manchas púrpuras/negras contra o fluxo</td></tr></table>`
     },
     {
-        id: 'mentalizacao', icone: '🧠', titulo: 'Parte VIII — Energia e Mentalização', html: `
+        id: 'energia', icone: '🫀', titulo: 'Parte VIII — Energia', html: `
 <p>⟐ <b>Energia Máxima = (VIG + PRS) × 3</b>. Descanso curto restaura ¼; longo, o total. Energia ≠ Determinação (DET paga Manobras; Energia paga magia que passa pelo corpo).</p>
-<p>⟐ <b>Taxa de Conversão Vital: 1 Energia = 5 Ess</b> — universal (Pulso, Sifão Vital, Mentalização Pura).</p>
-<h4>Custo da Mentalização (§8.4)</h4>
-<table><tr><th>Componente mentalizado</th><th>Esforço (En)</th><th>Requisito</th></tr>
-<tr><td>Emissor/Lógico/Modulador Iniciante</td><td>2</td><td>Mentalização 1</td></tr>
-<tr><td>Emissor/Lógico Intermediário</td><td>4</td><td>Mentalização 2</td></tr>
-<tr><td>Emissor Avançado (Manifestador, Infusor)</td><td>8</td><td>Mentalização 3</td></tr>
-<tr><td>Runa inteira</td><td>Mentalização Pura (§8.7)</td><td>Mentalização 4</td></tr></table>
-<table><tr><th>Complexidade da runa</th><th>Mentalização mín.</th><th>Tempo</th></tr>
-${RUNO_TABELAS.complexidadeRuna.map(r => `<tr><td>${r.nome} (${r.faixa[1] > 100 ? r.faixa[0] + '+' : r.faixa[0] + '–' + r.faixa[1]} componentes)</td><td>${r.mentalizacao ?? '—'}</td><td>${r.tempo}</td></tr>`).join('')}
-</table>
-<p><b>Runas de Reação</b> (Mentalização 3+): até 3 componentes, fora do turno, 2 DET.</p>
-<h4>Mentalização Pura (§8.7)</h4>
-<p>Mentalização 4 (+ Artus Nv4 para combate). Custo: <b>CT ÷ 5 em Energia + esforço dos componentes</b>. Redutor −3; apenas runas Simples. Toda falha atinge o corpo: por 1 = reflui; 2–3 = emissão parcial, 1 dano; 4–5 = curto no corpo, (nível do Aspectus)d6; crítica = Colapso Mental, dano total em 3 m.</p>
+<p>⟐ <b>Taxa de Conversão Vital: 1 Energia = 5 Ess</b> — universal (Pulso, Sifão Vital).</p>
 <h4>Limites do Corpo (§8.6)</h4>
 <ul><li>Energia a 0: colapso</li><li>&gt;50% da Energia máx. em &lt;1 min: teste de VIG ou desmaia</li><li>&lt;25% da Energia: −2 em todos os testes</li></ul>`
     },
@@ -282,20 +264,19 @@ ${RUNO_TABELAS.complexidadeRuna.map(r => `<tr><td>${r.nome} (${r.faixa[1] > 100 
 <h4>Perícias do Runomago (§11.4)</h4>
 <table><tr><th>Perícia</th><th>Função</th><th>Limitada por</th></tr>
 <tr><td>Gravação Rúnica</td><td>Gravar; −tempo; +durabilidade</td><td>Runomancia</td></tr>
-<tr><td>Mentalização</td><td>Completar componentes por concentração</td><td>Runomancia</td></tr>
 <tr><td>Erudição Rúnica</td><td>Slots e descontos; +1 identificar runas</td><td>INT</td></tr>
 <tr><td>Diagnóstico Rúnico</td><td>Analisar/desmontar runas; desarma armadilhas</td><td>menor(Runomancia, Investigação)</td></tr>
 <tr><td>Eficiência Arcana</td><td>+1/nível com Essência limitada</td><td>RAC</td></tr></table>
 <h4>Runas em Combate (§11.5)</h4>
-<ul><li><b>Preparadas:</b> gravadas antes; ação simples; sem DET</li><li><b>Mentalizadas:</b> completadas na hora via runas-base — Energia e ações pela complexidade</li><li><b>De Reação:</b> Mentalização 3+, 2 DET, até 3 componentes</li></ul>
+<ul><li><b>Preparadas:</b> gravadas antes; ação simples; sem DET</li></ul>
 <h4>Manobras do Runimago (§11.6 — custam DET; 1/turno)</h4>
 <table><tr><th>Manobra</th><th>Custo</th><th>Efeito / Requisitos</th></tr>
 <tr><td>Inscrição Veloz</td><td>1</td><td>Grava runa simples (3 comp.) como ação de movimento; ativa até o fim da cena</td></tr>
 <tr><td>Sobrecarga</td><td>2</td><td>+50% potência; teste −4 ou a runa colapsa. Req.: Eficiência Arcana 2</td></tr>
 <tr><td>Desconstrução</td><td>1</td><td>Diagnóstico vs. dificuldade; sucesso desativa. Req.: Diagnóstico 2</td></tr>
 <tr><td>Encadeamento</td><td>2</td><td>Par de Elos Nv1 temporários (5 m, só sinal) até o fim da cena. Req.: Gravação 3</td></tr>
-<tr><td>Improvisação</td><td>3</td><td>Artus/Aspectus sem nível (1×/cena), +2 Redutor. Req.: Mentalização 3</td></tr>
-<tr><td>Escudo Rúnico</td><td>2</td><td>REAÇÃO: barreira que absorve Runomancia×3. Req.: Mentalização 2, Criar 2</td></tr>
+<tr><td>Improvisação</td><td>3</td><td>Artus/Aspectus sem nível (1×/cena), +2 Redutor</td></tr>
+<tr><td>Escudo Rúnico</td><td>2</td><td>REAÇÃO: barreira que absorve Runomancia×3. Req.: Criar 2</td></tr>
 <tr><td>Gatilho Remoto</td><td>1</td><td>Ativa runa preparada a até 30 m</td></tr>
 <tr><td>Análise de Campo</td><td>1</td><td>Detecta runas/magias/Leys em 15 m. Req.: Fluxomancia 5</td></tr>
 <tr><td>Ruína</td><td>3</td><td>Colapsa runa inimiga: (nível)d6 em 3 m. Req.: Diagnóstico 3, Destruir 2</td></tr>

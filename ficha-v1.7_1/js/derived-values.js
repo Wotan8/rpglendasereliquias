@@ -796,7 +796,15 @@ function recalcAll() {
     }
 
     // 2) Calcular valores derivados dinâmicos (Firebase-driven)
-    for (const dvKey of _dynamicDerivedKeys) {
+    // Inclui DVs fora da grid: as mecânicas deles já são aplicadas
+    // (applyDerivedValueMechanics percorre TODOS os DVs), mas sem passar por
+    // aqui o state.derived fica vazio e quem os referencia — chips de módulos
+    // de classe (ex: Manobras do Guerreiro) — exibe "—".
+    const dvKeysToCalc = new Set([
+        ..._dynamicDerivedKeys,
+        ...(window.DERIVED_VALUES || []).map(d => d.key),
+    ]);
+    for (const dvKey of dvKeysToCalc) {
         // Se Criador fez override manual, preservar o valor editado
         const overrideVal = state.derivedOverrides?.[dvKey];
         if (overrideVal !== undefined && overrideVal !== '') {
@@ -1144,6 +1152,30 @@ function updateDerivedField(key, value) {
     if (!state.derived) state.derived = {};
     state.derived[key] = value;
 }
+
+/* Status Vitais: personagem novo nasce com 100%.
+ * Campo "Atual" vazio (o wizard não grava vit/san/ener_atual) recebe o Máximo.
+ * Deve ser chamada UMA vez, no fim do carregamento da ficha — os máximos são
+ * montados em etapas pelas mecânicas, e preencher no meio congelaria um valor
+ * parcial (ex: 1/21).
+ */
+function fillVitalsToMax() {
+    // Garantir máximos finais agora (não depender dos recalcs agendados por timer)
+    if (typeof recalcAll === 'function') recalcAll();
+
+    let filled = false;
+    for (const mapping of Object.values(DERIVED_FIELDS_MAP)) {
+        if (!mapping.atual) continue;
+        const atualEl = document.querySelector(`[data-key="${mapping.atual}"]`);
+        const maxVal = parseFloat(document.getElementById(mapping.display)?.value);
+        if (!atualEl || atualEl.value !== '' || !(maxVal > 0)) continue;
+        atualEl.value = maxVal;
+        filled = true;
+    }
+    if (filled && typeof scheduleAutosave === 'function') scheduleAutosave();
+    return filled;
+}
+window.fillVitalsToMax = fillVitalsToMax;
 
 /* Validação: ATUAL — sem clamp automático.
  * O valor digitado pelo jogador é preservado como está.

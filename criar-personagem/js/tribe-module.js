@@ -17,9 +17,9 @@ function initPhase2(container) {
                 ${tribe.imagemUrl ? `<img class="selection-card-img-full" src="${escHtml(tribe.imagemUrl)}" alt="${escHtml(tribe.nome)}" loading="lazy">` : '<div class="selection-card-img-placeholder">🏕️</div>'}
                 <div class="selection-card-title">${escHtml(tribe.nome)}</div>
                 <div class="selection-card-subtitle">${escHtml(tribe.subtitulo || tribe.lema || '')}</div>
-                <button class="selection-card-info-btn" onclick="openTribeModal('${escHtml(tribe.nome)}', event)">
-                    <span class="info-text">Mais Detalhes Clique Aqui ></span>
+                <button type="button" class="selection-card-info-btn" title="Ver detalhes de ${escHtml(tribe.nome)}" onclick="openTribeModal('${escHtml(tribe.nome)}', event)">
                     <span class="info-icon">ℹ️</span>
+                    <span class="info-text">Ver detalhes</span>
                 </button>
             </div>
         `;

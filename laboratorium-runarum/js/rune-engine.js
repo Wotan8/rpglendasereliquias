@@ -82,7 +82,7 @@ const RuneEngine = (() => {
      * @param {Array}  p.nodes  [{id, elementId, nivel, x, y}]
      * @param {Array}  p.links  [{id, a:{nodeId,pt}, b:{nodeId,pt}}]
      * @param {Object} p.elementsById  catálogo Firestore
-     * @param {Object} p.char   {baseAttr, runomancia, gravacao, mentalizacao, eficiencia, aprendidos:{elId:nv}}
+     * @param {Object} p.char   {baseAttr, runomancia, gravacao, eficiencia, aprendidos:{elId:nv}}
      * @param {Object} p.tabelas  RUNO_TABELAS (confluências, complexidade…)
      */
     function audit({ nodes = [], links = [], elementsById = {}, char = {}, tabelas = {} }) {
@@ -125,7 +125,7 @@ const RuneEngine = (() => {
         const captadores = sigN.filter(n => isCat(n.el, 'captador'));
         const eloNodes = withEl.filter(n => hasFlag(n.el, 'elo'));
         if (withEl.length && !captadores.length && !eloNodes.length) {
-            warn('Sem Captador (nem Elo receptor): a runa depende de inserção manual de Essência ou Mentalização (§2.2).');
+            warn('Sem Captador (nem Elo receptor): a runa depende de inserção manual de Essência (§2.2).');
         }
 
         // ---- Regras de Posição (§6.3) via grafo ----
@@ -260,17 +260,6 @@ const RuneEngine = (() => {
         const multMaterial = comps.includes('mestre') ? 3 : comps.includes('avancado') ? 2 : 1;
         const material = ct * 2 * multMaterial;
 
-        // ---- Mentalização (§8.4) ----
-        const nComp = withEl.length;
-        const cls = (tabelas.complexidadeRuna || []).find(c => nComp >= c.faixa[0] && nComp <= c.faixa[1]) || null;
-        const mentalizacao = {
-            componentes: nComp,
-            classe: cls ? cls.nome : (nComp ? '—' : ''),
-            minPericia: cls ? cls.mentalizacao : null,
-            tempo: cls ? cls.tempo : '',
-            energiaPura: ct > 0 ? Math.ceil(ct / 5) : 0, // + esforço dos componentes; redutor −3
-        };
-
         // ---- Aprendizado: pode salvar? ----
         const aprendidos = char.aprendidos || {};
         const naoAprendidos = withEl
@@ -282,7 +271,6 @@ const RuneEngine = (() => {
             gravacao: { horas, material, multMaterial, fatorTempo },
             armazenamento: { capacidade: capTotal, suficiente: capTotal >= ct, regimeContinuoOk, taxaContinua },
             exaustao: { capacidade: capExaust, presente: exaustores.length > 0 },
-            mentalizacao,
             issues,
             naoAprendidos,
             podeSalvar: withEl.length > 0 && naoAprendidos.length === 0 && natureza !== 'vazia',

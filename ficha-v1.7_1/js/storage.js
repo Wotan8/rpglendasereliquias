@@ -23,6 +23,20 @@ function gatherData() {
         d.fields[el.dataset.key] = el.value || '';
     });
 
+    // Atributos e perícias com bônus, pisos e tetos de mecânicas já aplicados.
+    // state.mechanicBonuses é recalculado a cada carga e nunca foi persistido, então
+    // quem lê a ficha de fora (Laboratorium) enxergava só os pontos comprados e perdia
+    // os níveis concedidos por mecânica. Reusa getEffectiveDotValue para não duplicar regra.
+    d.effectiveDots = {};
+    if (typeof getEffectiveDotValue === 'function') {
+        const keys = new Set([
+            ...Object.keys(state.dots || {}),
+            ...Object.keys(state.mechanicBonuses || {}),
+            ...Object.keys(state.mechanicLimits || {}),
+        ].filter(k => /^(attr_|sk_)/.test(k)));
+        keys.forEach(k => { d.effectiveDots[k] = getEffectiveDotValue(k); });
+    }
+
 
     // Gather customTests (values might have changed)
     // We already have state.customTests, but we should ensure values are up to date from DOM if valid

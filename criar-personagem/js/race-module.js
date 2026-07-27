@@ -19,9 +19,9 @@ function initPhase1(container) {
                 ${race.imagemUrl ? `<img class="selection-card-img-full" src="${escHtml(race.imagemUrl)}" alt="${escHtml(race.nome)}" loading="lazy">` : '<div class="selection-card-img-placeholder">🧬</div>'}
                 <div class="selection-card-title">${escHtml(race.nome)}</div>
                 <div class="selection-card-subtitle">${escHtml(race.subtitulo || '')}</div>
-                <button class="selection-card-info-btn" onclick="openRaceModal('${escHtml(race.nome)}', event)">
-                    <span class="info-text">Mais Detalhes Clique Aqui ></span>
+                <button type="button" class="selection-card-info-btn" title="Ver detalhes de ${escHtml(race.nome)}" onclick="openRaceModal('${escHtml(race.nome)}', event)">
                     <span class="info-icon">ℹ️</span>
+                    <span class="info-text">Ver detalhes</span>
                 </button>
             </div>
         `;
@@ -51,9 +51,9 @@ function initPhase1(container) {
                 <div class="selection-card-title">${escHtml(cls.nome)}</div>
                 <div class="selection-card-subtitle">${escHtml(cls.arquetipo || '')}</div>
                 ${citacao ? `<div class="selection-card-quote">"${escHtml(citacao).substring(0, 60)}${citacao.length > 60 ? '...' : ''}"</div>` : ''}
-                <button class="selection-card-info-btn" onclick="openClassModal('${escHtml(cls.nome)}', event)">
-                    <span class="info-text">Mais Detalhes Clique Aqui ></span>
+                <button type="button" class="selection-card-info-btn" title="Ver detalhes de ${escHtml(cls.nome)}" onclick="openClassModal('${escHtml(cls.nome)}', event)">
                     <span class="info-icon">ℹ️</span>
+                    <span class="info-text">Ver detalhes</span>
                 </button>
             </div>
         `;

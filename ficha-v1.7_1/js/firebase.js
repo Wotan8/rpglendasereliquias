@@ -122,7 +122,9 @@ function setupRealtimeListeners(charId) {
         const sanAtual = data.derivedValues?.san_atual ?? data.sanCurrent;
         
         const updateField = (key, newValue) => {
-            if (newValue === undefined || newValue === null) return;
+            // '' = nunca preenchido no doc; não sobrescrever o que a ficha já calculou
+            // (ex: Atual = Máximo de personagem novo) com vazio.
+            if (newValue === undefined || newValue === null || newValue === '') return;
             const el = document.querySelector(`[data-key="${key}"]`);
             if (el && document.activeElement !== el && el.value !== String(newValue)) {
                 el.value = String(newValue);
@@ -573,6 +575,10 @@ onAuthStateChanged(auth, async (user) => {
         } catch (invErr) {
             console.warn('⚠️ Erro ao carregar inventário:', invErr);
         }
+
+        // === STATUS VITAIS: personagem novo nasce com 100% ===
+        // Aqui os máximos já estão completos (mecânicas + raça/classe + itens).
+        if (typeof window.fillVitalsToMax === 'function') window.fillVitalsToMax();
 
         // Esconder loading, mostrar conteúdo
         if (loadingScreen) loadingScreen.style.display = 'none';
