@@ -167,6 +167,10 @@ async function loadFromFirebase(charId) {
             if (window.initMesaTab && data.mesaId) {
                 window.initMesaTab(data.mesaId);
             }
+            // Iniciativa do combate montado pelo Mestre (aba Combate)
+            if (window.watchCombatInitiative && data.mesaId) {
+                window.watchCombatInitiative(data.mesaId);
+            }
             
             // Ativar sincronização em tempo real (para Combate)
             setupRealtimeListeners(charId);

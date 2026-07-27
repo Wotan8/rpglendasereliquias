@@ -912,6 +912,10 @@ function recalcAll() {
     // 7) Tabela "Ataques e Efeitos Ativos" — depende de state.derived já calculado
     //    acima. Só lê e escreve no DOM; não recalcula nada (evita laço infinito).
     if (typeof renderActiveEffects === 'function') renderActiveEffects();
+
+    // 8) Painel de Combate — espelha Status Vitais e Valores Derivados já
+    //    calculados. Também só lê e escreve no DOM.
+    if (typeof renderCombatPanel === 'function') renderCombatPanel();
 }
 
 /**

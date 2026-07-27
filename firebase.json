@@ -5,7 +5,8 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**",
-      "sistema antigo e lore/**"
+      "sistema antigo e lore/**",
+      "**/__check-*"
     ],
     "rewrites": [
       {

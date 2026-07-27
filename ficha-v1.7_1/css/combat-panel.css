@@ -1,0 +1,364 @@
+/* ===== PAINEL DE COMBATE — HUD vital + valores rápidos ===== */
+
+/* `.sheet` usa overflow:hidden, que impede position:sticky.
+   `clip` recorta igual mas NÃO cria contexto de rolagem. Navegador antigo
+   que não conhece `clip` simplesmente mantém o `hidden` anterior. */
+.sheet { overflow: clip; }
+
+/* ===== HUD (fixo no topo da aba) ===== */
+#combatHudSection {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin: -4px 0 12px;
+    padding: 6px 4px 8px;
+    background: var(--paper);
+    border-bottom: 2px solid var(--line);
+}
+
+.cbt-tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cbt-step-lbl {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 900;
+    color: var(--muted);
+}
+
+#cbtStep {
+    width: 46px;
+    padding: 4px 2px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 800;
+    font-family: var(--font);
+    border: 2px solid var(--soft);
+    border-radius: 8px;
+    background: var(--lr-divine);
+    color: var(--ink);
+    -moz-appearance: textfield;
+}
+
+#cbtStep::-webkit-outer-spin-button,
+#cbtStep::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+#cbtRestore {
+    border: 2px solid var(--soft);
+    background: transparent;
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: var(--font);
+}
+
+#cbtRestore:hover { border-color: var(--lr-nature); color: var(--lr-nature); }
+
+/* Faixa de combate — só aparece quando o Mestre põe o personagem na lista */
+.cbt-combat-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+    padding: 4px 8px;
+    border: 2px solid var(--lr-gold);
+    border-radius: 8px;
+    background: var(--lr-gold-soft);
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    color: var(--ink);
+}
+
+.cbt-combat-strip[hidden] { display: none; }
+
+.cbt-init-tag { color: var(--lr-gold-2); }
+
+.cbt-init-ini { margin-left: auto; }
+
+.cbt-init-ini b {
+    font-size: 15px;
+    color: var(--lr-gold-2);
+    vertical-align: -1px;
+}
+
+.cbt-init-pos { color: var(--muted); font-weight: 700; }
+
+/* É a vez do personagem: verde e pulsando — dá pra ver de longe. */
+.cbt-combat-strip.is-turn {
+    border-color: var(--lr-nature);
+    background: var(--lr-nature-soft);
+    animation: cbt-turn-pulse 1.6s ease-in-out infinite;
+}
+
+.cbt-combat-strip.is-turn .cbt-init-tag { color: var(--lr-nature); }
+
+@keyframes cbt-turn-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(63, 174, 106, 0); }
+    50% { box-shadow: 0 0 0 4px rgba(63, 174, 106, .28); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cbt-combat-strip.is-turn { animation: none; box-shadow: 0 0 0 3px rgba(63, 174, 106, .28); }
+}
+
+.cbt-vitals {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+    gap: 8px;
+}
+
+.cbt-vital {
+    border: 2px solid var(--line);
+    border-left: 4px solid var(--cbt-c);
+    border-radius: 10px;
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    background: var(--chip);
+}
+
+.cbt-vital-top {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+.cbt-ic { font-size: 12px; flex-shrink: 0; }
+
+.cbt-nm {
+    font-size: 9px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cbt-pct {
+    margin-left: auto;
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--muted);
+    flex-shrink: 0;
+}
+
+.cbt-vital-ctl {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+}
+
+.cbt-step {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border: 2px solid var(--soft);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ink);
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+    font-family: var(--font);
+    touch-action: manipulation;
+}
+
+.cbt-step:hover { border-color: var(--cbt-c); color: var(--cbt-c); }
+.cbt-step:active { background: var(--cbt-c); color: var(--lr-divine); }
+
+.cbt-cur {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    border: 2px solid var(--soft);
+    border-radius: 8px;
+    padding: 3px 2px;
+    font-size: 16px;
+    font-weight: 800;
+    text-align: center;
+    outline: none;
+    background: var(--lr-divine);
+    color: var(--ink);
+    font-family: var(--font);
+}
+
+.cbt-cur:focus { outline: 3px solid rgba(58, 166, 255, .35); outline-offset: 1px; }
+
+.cbt-sep { font-weight: 900; color: var(--muted); font-size: 12px; flex-shrink: 0; }
+
+.cbt-max {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--muted);
+    flex-shrink: 0;
+    min-width: 18px;
+    text-align: center;
+}
+
+.cbt-sfx { font-size: 9px; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+
+.cbt-bar {
+    height: 5px;
+    border-radius: 3px;
+    background: var(--line);
+    overflow: hidden;
+}
+
+.cbt-bar > i {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--cbt-c);
+    transition: width .18s var(--lr-ease, ease);
+}
+
+.cbt-vital.is-mid .cbt-bar > i { background: var(--lr-gold); }
+.cbt-vital.is-low .cbt-bar > i { background: var(--lr-blood-2); }
+.cbt-vital.is-low { border-color: var(--lr-blood-2); }
+.cbt-vital.is-low .cbt-pct { color: var(--lr-blood-2); }
+
+/* ===== CHIPS DE VALORES DERIVADOS ===== */
+.cbt-block {
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    overflow: hidden;
+}
+
+.cbt-block > summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 6px 10px;
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    color: var(--ink);
+    background: var(--chip);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cbt-block > summary::-webkit-details-marker { display: none; }
+
+.cbt-block > summary::before {
+    content: '▸';
+    color: var(--muted);
+    font-size: 11px;
+    transition: transform .15s;
+}
+
+.cbt-block[open] > summary::before { transform: rotate(90deg); }
+
+.cbt-block-n {
+    margin-left: auto;
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--muted);
+    background: var(--paper);
+    border-radius: 999px;
+    padding: 1px 6px;
+}
+
+.cbt-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 8px;
+}
+
+.cbt-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 2px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+    padding: 3px 9px 3px 7px;
+    font-family: var(--font);
+    font-size: 11px;
+    color: var(--ink);
+    cursor: help;
+    max-width: 100%;
+}
+
+.cbt-chip:hover { border-color: var(--lr-gold); }
+
+.cbt-chip-ic { font-size: 11px; flex-shrink: 0; }
+
+.cbt-chip-nm {
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cbt-chip-vl {
+    font-weight: 900;
+    font-size: 12px;
+    color: var(--ink);
+    white-space: nowrap;
+}
+
+.cbt-empty {
+    font-size: 11px;
+    color: var(--muted);
+    padding: 8px;
+    text-align: center;
+}
+
+/* ===== SEÇÕES SANFONA ===== */
+.cbt-collapsible { cursor: pointer; }
+
+.cbt-collapsible::after {
+    content: '▾';
+    color: var(--muted);
+    font-size: 12px;
+    margin-left: auto;
+}
+
+.cbt-collapsed > .cbt-collapsible::after { content: '▸'; }
+.cbt-collapsed > *:not(.section-title) { display: none !important; }
+
+/* ===== MOBILE ===== */
+@media (max-width: 600px) {
+    /* Fixo no topo o dia inteiro: cada pixel conta. Barra substitui o %,
+       e o card encolhe pro HUD inteiro caber em ~1/5 da tela. */
+    #combatHudSection { margin: -8px -8px 10px; padding: 5px 8px 7px; border-radius: 0; }
+    #combatHudSection > .section-title { margin-bottom: 6px; }
+    #cbtStep { height: 26px; }
+    .cbt-combat-strip { margin-bottom: 6px; padding: 3px 6px; gap: 6px; }
+    .cbt-vitals { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 5px; }
+    .cbt-vital { padding: 3px 5px; gap: 2px; }
+    .cbt-vital-top { gap: 3px; }
+    .cbt-pct { display: none; }
+    .cbt-cur { font-size: 14px; padding: 1px 2px; }
+    .cbt-step { width: 26px; height: 26px; font-size: 14px; }
+    .cbt-bar { height: 4px; }
+    .cbt-chip { font-size: 10px; }
+}
+
+@media print {
+    #combatHudSection { position: static; border-bottom: 0; }
+    .cbt-collapsed > *:not(.section-title) { display: revert !important; }
+}
