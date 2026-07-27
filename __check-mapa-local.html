@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Check — Mapa Tático do Local</title>
+    <link rel="stylesheet" href="shared/tokens.css">
+    <link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css">
+    <style>
+        body { background: var(--lr-bg-0); color: var(--lr-text-1); font-family: var(--lr-font-body); margin: 0; padding: 24px; }
+        #res { white-space: pre-wrap; font-family: monospace; font-size: 13px; }
+        .ok { color: #3FAE6A; } .fail { color: #C94F5C; font-weight: 700; }
+        .btn { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--lr-border); background: var(--lr-surface); color: var(--lr-text-1); cursor: pointer; }
+        .btn-secondary { } .btn-success { border-color: #3FAE6A; } .btn-sm { font-size: 12px; }
+    </style>
+</head>
+
+<body>
+    <h1>Check — editor de mapa tático</h1>
+    <div id="res">rodando…</div>
+
+    <script type="module">
+        import './worldbuilding/js/wb-mapa-local.js';
+        const casos = [];
+        const t = (nome, fn) => { try { casos.push([nome, !!fn(), '']); } catch (e) { casos.push([nome, false, e.message]); } };
+        const espera = (ms) => new Promise(r => setTimeout(r, ms));
+
+        // Abre com um id falso: o getDoc falha (sem auth), o editor cai no
+        // mapaTatico vazio — exatamente o caminho "Local novo".
+        await window.abrirMapaLocal('geo_fake', 'Local de Teste');
+        await espera(300);
+
+        t('overlay montado', () => document.getElementById('wbMapaLocal'));
+        t('barra de config presente', () => document.getElementById('wbmlLargura') && document.getElementById('wbmlAmbiente') && document.getElementById('wbmlLuzAtiva'));
+        t('5 ferramentas', () => document.querySelectorAll('[data-wbml-tool]').length === 5);
+        t('estado vazio visível', () => !document.getElementById('wbmlVazio').hidden);
+        t('parede começa ativa', () => document.querySelector('[data-wbml-tool="parede"]').classList.contains('is-on'));
+
+        // troca de ferramenta
+        document.querySelector('[data-wbml-tool="luz"]').click();
+        t('troca para luz marca o botão', () => document.querySelector('[data-wbml-tool="luz"]').classList.contains('is-on')
+            && !document.querySelector('[data-wbml-tool="parede"]').classList.contains('is-on'));
+
+        // salvar sem mapa deve avisar, não gravar
+        document.getElementById('wbmlSalvar').click();
+        await espera(100);
+        t('salvar sem mapa avisa', () => document.getElementById('wbmlDica').textContent.includes('⚠️'));
+
+        // ESC fecha
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        t('ESC fecha o editor', () => !document.getElementById('wbMapaLocal'));
+
+        // reabrir funciona (estado não vaza)
+        await window.abrirMapaLocal('geo_fake2', 'Outro Local');
+        await espera(200);
+        t('reabre limpo', () => document.getElementById('wbMapaLocal') && document.querySelector('[data-wbml-tool="parede"]').classList.contains('is-on'));
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+        const falhas = casos.filter(c => !c[1]).length;
+        document.getElementById('res').innerHTML =
+            `<b class="${falhas ? 'fail' : 'ok'}">${falhas ? falhas + ' FALHA(S)' : 'TODOS OS ' + casos.length + ' CASOS PASSARAM'}</b>\n\n` +
+            casos.map(([n, ok, err]) => `<span class="${ok ? 'ok' : 'fail'}">${ok ? '✅' : '❌'} ${n}${err ? ' — ' + err : ''}</span>`).join('\n');
+    </script>
+</body>
+
+</html>

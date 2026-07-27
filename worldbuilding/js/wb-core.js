@@ -2383,6 +2383,21 @@ import {
                 // Prepend parent selector to geography sections
                 geographySections = parentSelectorHtml;
 
+                // 🗺️ Mapa Tático — editor próprio (wb-mapa-local.js). Só para
+                // Locais já salvos: o editor grava direto no doc do Local.
+                const mtStatus = entry?.mapaTatico?.url
+                    ? `<b>✅ Mapa configurado</b> — ${(entry.mapaTatico.objetos || []).length} elemento(s), ${entry.mapaTatico.larguraReal || '?'} ${entry.mapaTatico.unidade || 'm'} de largura`
+                    : 'Nenhum mapa tático ainda.';
+                geographySections += `
+                <div class="form-section">
+                    <h3 class="form-section-title">🗺️ Mapa Tático (Tabuleiro)</h3>
+                    <div class="wbml-secao-status">${mtStatus}</div>
+                    ${entry?.id
+                        ? `<button type="button" class="btn btn-secondary" onclick="abrirMapaLocal('${entry.id}', ${JSON.stringify(entry.nome || '')})">🗺️ Abrir editor de mapa</button>
+                           <p class="wbml-secao-status" style="margin-top:.5rem">Suba o mapa do Local, defina a escala e desenhe paredes, portas, janelas e luzes. No Tabuleiro, o Local entra pronto com um clique.</p>`
+                        : `<p class="wbml-secao-status">💾 Salve o Local primeiro — o editor de mapa grava direto na ficha dele.</p>`}
+                </div>`;
+
                 // NPC/Creature linking section (for all geography types)
                 geographySections += `
                 <div class="form-section">
