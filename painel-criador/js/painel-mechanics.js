@@ -158,9 +158,12 @@ export function getMechanicTargetsHTML() {
     // e não fazia nada. Cadastre-os como Valores Derivados (com Escopo por Item,
     // se quiser um valor por arma equipada) e eles aparecem no grupo acima.
     html += `
-<optgroup label="Propriedades de Item">
+<optgroup label="Propriedades de Item (só com item em escopo)">
 <option value="Item: Peso/Pressão">⚖️ Peso / Pressão do Item</option>
 <option value="Item: Tamanho">📐 Tamanho do Item</option>
+<option value="Item: Preço">💰 Preço do Item (L$)</option>
+<option value="Item: Liga">⚒️ Liga do Item (0–5)</option>
+<option value="Item: Quantidade">🔢 Quantidade do Item</option>
 <option value="Item: Multiplicador de Pressão">📦 Multiplicador de Pressão (conteúdo)</option>
 <option value="Item: Capacidade do Container">🎒 Capacidade do Container (itens)</option>
 <option value="Pressão Total (Equipados)">⚖️ Pressão Total (Itens Equipados)</option>
@@ -604,9 +607,14 @@ function getValueSourceHTML() {
         }
     }
 
-    html += `\n<optgroup label="Propriedades de Item">
+    // "Item: X" só resolve com um item em escopo: mecânica do próprio item, ou
+    // mecânica com Escopo de Aplicação = itens equipados. Fora disso vale 0.
+    html += `\n<optgroup label="Propriedades de Item (só com item em escopo)">
 <option value="Item: Peso/Pressão">⚖️ Peso / Pressão do Item</option>
 <option value="Item: Tamanho">📐 Tamanho do Item</option>
+<option value="Item: Preço">💰 Preço do Item (L$)</option>
+<option value="Item: Liga">⚒️ Liga do Item (0–5)</option>
+<option value="Item: Quantidade">🔢 Quantidade do Item</option>
 <option value="Item: Multiplicador de Pressão">📦 Multiplicador de Pressão (conteúdo)</option>
 <option value="Item: Capacidade do Container">🎒 Capacidade do Container (itens)</option>
 <option value="Pressão Total (Equipados)">⚖️ Pressão Total (Itens Equipados)</option>
@@ -1220,7 +1228,10 @@ function _renderMechEquipReqSelect(containerId) {
         <select class="aura-mech-select" onchange="window._mechEquipReqAdd(this, '${containerId}')">
             <option value="">+ Vincular Equipamento, Tag ou Tipo...</option>
             <optgroup label="🗡️ Equipamentos específicos">${eqOpts}</optgroup>
-            ${tagOpts ? `<optgroup label="🏷️ Por Tag (qualquer equipamento com a tag)">${tagOpts}</optgroup>` : ''}
+            <optgroup label="🏷️ Por Tag (qualquer equipamento com a tag)">
+                ${tagOpts}
+                <option value="tag::__nova__">✏️ Digitar tag...</option>
+            </optgroup>
             <optgroup label="📦 Por Tipo (qualquer equipamento do tipo)">${tipoOpts}</optgroup>
         </select>
     `;
@@ -1252,6 +1263,12 @@ window._mechEquipReqAdd = function (select, containerId) {
     let req, dupKind, dupValue;
     if (raw.startsWith('tag::')) {
         dupKind = 'tag'; dupValue = raw.slice(5);
+        // Tag ainda não usada por nenhum equipamento (ex: cadastrar a regra das
+        // adagas antes de criar as adagas) — digita na hora.
+        if (dupValue === '__nova__') {
+            dupValue = (prompt('Tag do equipamento (escreva igual à do cadastro):') || '').trim();
+            if (!dupValue) { select.value = ''; return; }
+        }
         req = { targetTipo: 'tag', tag: dupValue, formasEquip: [] };
     } else if (raw.startsWith('tipo::')) {
         dupKind = 'tipo'; dupValue = raw.slice(6);

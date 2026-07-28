@@ -711,6 +711,32 @@ function _meIsItemScopedTarget(rawField) {
     return !!(dv && dv.escopoItem);
 }
 
+/* Propriedades do item em escopo — refs "Item: ..." das Equações de Valor.
+ * Só resolvem quando há um item em escopo (mecânica do próprio item ou mecânica
+ * com escopoAplicacao='itens'); fora disso valem 0, como qualquer ref inexistente.
+ * Preço, Liga e Capacidade só existem no catálogo — a instância do inventário não
+ * os copia, então caem no modelo (modeloId). */
+const _ME_ITEM_PROPS = {
+    'Peso/Pressão': it => it.pressaoOverride ?? it.pressaoBase ?? it.peso,
+    'Tamanho': it => it.tamanho,
+    'Multiplicador de Pressão': (it, tpl) => it.multiplicadorPressao ?? tpl?.multiplicadorPressao ?? 1,
+    'Capacidade do Container': (it, tpl) => it.capacidadeContainer ?? tpl?.capacidadeContainer,
+    'Preço': (it, tpl) => it.preco ?? tpl?.preco,
+    'Liga': (it, tpl) => it.liga ?? tpl?.liga,
+    'Quantidade': it => it.quantidade ?? 1
+};
+
+function _meItemProp(prop) {
+    const fn = _ME_ITEM_PROPS[prop];
+    if (!fn || !_meItemScope) return 0;
+    const item = (window._inventoryState?.items || []).find(i => i.id === _meItemScope);
+    if (!item) return 0;
+    const tpl = item.modeloId ? (window._inventoryState?.catalog || []).find(t => t.id === item.modeloId) : null;
+    const bruto = fn(item, tpl);              // Liga vem como string ('0'..'5') do catálogo
+    const num = parseFloat(bruto);
+    return isNaN(num) ? 0 : num;
+}
+
 /** Bag de destino de um bônus: o do item em escopo, ou o global do personagem. */
 function _meBonusBag(rawField) {
     if (_meItemScope && _meIsItemScopedTarget(rawField)) {
@@ -1001,6 +1027,9 @@ function _resolveSheetRef(ref, mult) {
             ? calculateTotalPressure() : 0;
         return pressure * mult;
     }
+
+    // Propriedades do item em escopo (peso, tamanho, preço, liga...)
+    if (ref.startsWith('Item: ')) return _meItemProp(ref.slice(6)) * mult;
 
     // Check attributes (includes mechanic bonuses / highlighted levels)
     const attrKey = TARGET_MAP[ref];
