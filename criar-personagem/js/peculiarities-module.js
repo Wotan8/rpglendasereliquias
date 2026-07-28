@@ -121,6 +121,24 @@ function fmtExpDelta(delta) {
     return `${delta < 0 ? '−' : '+'}${Math.abs(delta)} EXP`;
 }
 
+/* Valor grande do card, para o nível dado. Vazio quando não há EXP em jogo
+   (pec inteiramente grátis), preservando o card limpo. Mesma fonte dos
+   botões e da tabela: os três nunca discordam. */
+function pecCardExpTexto(pec, level) {
+    const delta = pecDeltaAcumulado(pec, level);
+    return delta ? fmtExpDelta(delta) : '';
+}
+
+/* Repinta o valor grande de um card já renderizado. */
+function atualizarPecCardExp(pecId, level) {
+    const pec = window.INDIVIDUAL_PECULIARITIES.find(p => p.id === pecId);
+    if (!pec) return;
+    const texto = pecCardExpTexto(pec, level);
+    document.querySelectorAll(`[data-pec-id="${pecId}"] .pec-list-cost`).forEach(el => {
+        el.textContent = texto;
+    });
+}
+
 /* Botão de nível — usado tanto na montagem do card quanto na inserção
    dinâmica ao selecionar. Um só lugar para os dois não divergirem.
    data-level é a fonte do nível: o rótulo agora tem texto além do número. */
@@ -279,28 +297,17 @@ function getExpInfo(pec) {
 }
 
 function buildPecCard2(pec, selectedClass) {
-    const expInfo = pec._expInfo || getExpInfo(pec);
     const isVantagem = pec.ehVantagem === true;
-
-    // Determine EXP display text
-    let expText = '';
-    let expClass = '';
-    if (expInfo.expAmount > 0) {
-        if (isVantagem) {
-            // Vantagem = custar EXP
-            expText = `-${expInfo.expAmount} EXP`;
-            expClass = 'cost';
-        } else {
-            // Desvantagem = conceder EXP
-            expText = `+${expInfo.expAmount} EXP`;
-            expClass = 'gain';
-        }
-    }
 
     // Multi-level: show current selected level
     const selectedPec = wizardState.peculiaridadesIndividuais.find(p => p.id === pec.id);
     const hasLevels = pec.tipo === 'evolutivo' && pec.nivelMax > 1;
     const currentLevel = selectedPec?.nivel || 1;
+
+    // Valor grande do card: acompanha o nível escolhido. Sem seleção, mostra
+    // o Nv.1 — que é o que o jogador vai pagar se clicar.
+    const expText = pecCardExpTexto(pec, currentLevel);
+    const expClass = isVantagem ? 'cost' : 'gain';
 
     let levelSelectorHtml = '';
     if (hasLevels && selectedPec) {
@@ -331,7 +338,7 @@ function buildPecCard2(pec, selectedClass) {
                     ${apenasCriacaoBadge}
                     ${levelSelectorHtml}
                 </div>
-                ${expText ? `<div class="pec-list-cost ${expClass}" style="color:${isVantagem ? 'var(--success)' : 'var(--danger)'};">${expText}</div>` : ''}
+                <div class="pec-list-cost ${expClass}" style="color:${isVantagem ? 'var(--success)' : 'var(--danger)'};">${escHtml(expText)}</div>
                 <button class="pec-info-btn" style="background:none; border:none; cursor:pointer; font-size:1.2rem; margin-left:8px; padding:4px; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" onclick="togglePecInfo(event, '${pec.id}')" title="Ver detalhes">ℹ️</button>
             </div>
             <div class="pec-details-panel" id="pec-details-${pec.id}" style="display:none; padding:12px; background:var(--bg); border:1px dashed var(--soft); border-radius:8px; font-size:0.85rem; color:var(--text);">
@@ -360,6 +367,8 @@ function togglePeculiarity2(pecId) {
             const selector = card.querySelector('.pec-level-selector');
             if (selector) selector.remove();
         });
+        // Desselecionou: o valor grande volta a anunciar o Nv.1
+        atualizarPecCardExp(pecId, 1);
     } else {
         // === SELECIONAR: aplicar a mecânica ===
 
@@ -456,6 +465,8 @@ function setPecLevel(pecId, level) {
         const btnLevel = parseInt(btn.dataset.level, 10);
         btn.classList.toggle('active', btnLevel <= level);
     });
+
+    atualizarPecCardExp(pecId, level);
     
     // Update details panel dynamically
     const detailsPanel = document.getElementById(`pec-details-${pecId}`);
