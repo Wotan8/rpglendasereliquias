@@ -92,6 +92,86 @@ function initPhase2B(container) {
     }
 }
 
+/* Delta de EXP acumulado ao levar a peculiaridade até `target`.
+   Negativo = o jogador paga; positivo = o jogador recebe.
+
+   Nível 1 vem de mecanicaExpCriacao; níveis 2+ leem pec.niveis[i].custoExp
+   (progressão das mecânicas evoluíveis). Sem niveis, cai no linear antigo.
+
+   FONTE ÚNICA: setPecLevel cobra por aqui e a tabela de níveis exibe por
+   aqui. Se divergirem, a tela mente sobre o preço. */
+function pecDeltaAcumulado(pec, target) {
+    // Nível 0 = não pegou a peculiaridade, não paga nada. Sem isto o degrau
+    // do Nv.1 (total(1) − total(0)) daria zero e a tabela diria "Grátis"
+    // para um nível que cobra.
+    if (!(target >= 1)) return 0;
+    const nv1 = (pec.ehVantagem === true ? -1 : 1) * getExpInfo(pec).expAmount;
+    if (!pec.niveis) return nv1 * target;
+    let d = nv1;
+    for (let i = 2; i <= target; i++) {
+        const nv = pec.niveis[i];
+        if (nv) d += (nv.tipoExp === 'ganho' ? 1 : -1) * (nv.custoExp || 0);
+    }
+    return d;
+}
+
+/** "−9 EXP" / "+4 EXP" / "Grátis" */
+function fmtExpDelta(delta) {
+    if (!delta) return 'Grátis';
+    return `${delta < 0 ? '−' : '+'}${Math.abs(delta)} EXP`;
+}
+
+/* Botão de nível — usado tanto na montagem do card quanto na inserção
+   dinâmica ao selecionar. Um só lugar para os dois não divergirem.
+   data-level é a fonte do nível: o rótulo agora tem texto além do número. */
+function pecLevelBtnHtml(pec, i, active) {
+    const totalNv = fmtExpDelta(pecDeltaAcumulado(pec, i));
+    return `<button class="pec-level-btn pec-level-btn--exp ${active ? 'active' : ''}" data-level="${i}"
+        onclick="setPecLevel('${pec.id}', ${i})" title="Nível ${i} — total ${totalNv}"
+        ><span class="pec-level-num">${i}</span><span class="pec-level-exp">${escHtml(totalNv)}</span></button>`;
+}
+
+/* Tabela de níveis: quanto custa cada degrau e quanto sai no total.
+   O jogador precisa ver o preço do nível 3 antes de clicar no nível 3. */
+function generatePecLevelTable(pec, currentLevel) {
+    if (pec.tipo !== 'evolutivo' || !(pec.nivelMax > 1)) return '';
+
+    let linhas = '';
+    for (let i = 1; i <= pec.nivelMax; i++) {
+        const total = pecDeltaAcumulado(pec, i);
+        const degrau = total - pecDeltaAcumulado(pec, i - 1);
+        const dados = pec.niveis && pec.niveis[i];
+        const efeito = dados && dados.efeitosArray && dados.efeitosArray.length
+            ? dados.efeitosArray.join(' · ')
+            : (pec.descricaoNivel && pec.descricaoNivel[i]) || '—';
+        const atual = i === currentLevel;
+
+        linhas += `<tr class="${atual ? 'atual' : ''}">
+            <td class="pec-nv">${atual ? '▸ ' : ''}Nv.${i}</td>
+            <td class="pec-degrau">${escHtml(fmtExpDelta(degrau))}</td>
+            <td class="pec-total">${escHtml(fmtExpDelta(total))}</td>
+            <td class="pec-efeito">${escHtml(efeito)}</td>
+        </tr>`;
+    }
+
+    return `<div class="pec-tabela-niveis">
+        <div class="pec-tabela-titulo">📊 Custo por nível</div>
+        <div class="pec-tabela-scroll">
+            <table>
+                <thead><tr>
+                    <th>Nível</th><th>Este nível</th><th>Total acumulado</th><th>O que ganha</th>
+                </tr></thead>
+                <tbody>${linhas}</tbody>
+            </table>
+        </div>
+        <div class="pec-tabela-legenda">
+            <b>Total acumulado</b> é o que você paga ou recebe ao escolher aquele nível —
+            já inclui os anteriores, não some com eles.
+            <b>−</b> sai da sua EXP · <b>+</b> entra na sua EXP.
+        </div>
+    </div>`;
+}
+
 function generatePecDetailsHtml(pec, level = 1) {
     let mecsHtml = '';
     if (pec.mecanicas && pec.mecanicas.length > 0) {
@@ -122,6 +202,7 @@ function generatePecDetailsHtml(pec, level = 1) {
         <strong>${escHtml(pec.nome)}</strong><br>
         <div style="margin-top:8px;">${escHtml(desc)}</div>
         ${mecsHtml}
+        ${generatePecLevelTable(pec, level)}
     `;
 }
 
@@ -225,8 +306,7 @@ function buildPecCard2(pec, selectedClass) {
     if (hasLevels && selectedPec) {
         levelSelectorHtml = `<div class="pec-level-selector" onclick="event.stopPropagation()">`;
         for (let i = 1; i <= pec.nivelMax; i++) {
-            const active = currentLevel >= i ? 'active' : '';
-            levelSelectorHtml += `<button class="pec-level-btn ${active}" onclick="setPecLevel('${pec.id}', ${i})" title="Nível ${i}">${i}</button>`;
+            levelSelectorHtml += pecLevelBtnHtml(pec, i, currentLevel >= i);
         }
         levelSelectorHtml += `</div>`;
     }
@@ -324,7 +404,7 @@ function togglePeculiarity2(pecId) {
                 selectorDiv.onclick = (e) => e.stopPropagation();
                 let btns = '';
                 for (let i = 1; i <= pec.nivelMax; i++) {
-                    btns += `<button class="pec-level-btn ${i <= 1 ? 'active' : ''}" onclick="setPecLevel('${pec.id}', ${i})" title="Nível ${i}">${i}</button>`;
+                    btns += pecLevelBtnHtml(pec, i, i <= 1);
                 }
                 selectorDiv.innerHTML = btns;
                 card.appendChild(selectorDiv);
@@ -343,23 +423,10 @@ function setPecLevel(pecId, level) {
     if (!pec) return;
 
     const isVantagem = pec.ehVantagem === true;
-    const expInfo = getExpInfo(pec);
-    const oldLevel = pecState.nivel || 1;
-
-    // Each level costs/grants the same expAmount (multiply by level)
-    const newTotalExp = expInfo.expAmount * level;
-    const oldTotalExp = expInfo.expAmount * oldLevel;
-
-    // Calculate the delta from old level to new level
-    let newDelta = 0;
-    if (isVantagem) {
-        newDelta = -newTotalExp;
-    } else {
-        newDelta = newTotalExp;
-    }
+    const newDelta = pecDeltaAcumulado(pec, level);
 
     // Check if EXP would go below 0
-    if (isVantagem && newTotalExp > 0) {
+    if (newDelta < 0) {
         // Remove current source to check available
         const currentSource = wizardState.expSources['pec_' + pecId];
         const currentDelta = currentSource ? currentSource.amount : 0;
@@ -379,11 +446,14 @@ function setPecLevel(pecId, level) {
             ? `Vantagem: ${pec.nome} Nv.${level}`
             : `Desvantagem: ${pec.nome} Nv.${level}`;
         ExpTracker.addSource('pec_' + pecId, newDelta, label);
+    } else {
+        // Delta zerou (ex.: voltou a um nível grátis) — remove fonte pendurada
+        ExpTracker.removeSource('pec_' + pecId);
     }
 
     // Update level button UI
     document.querySelectorAll(`[data-pec-id="${pecId}"] .pec-level-btn`).forEach(btn => {
-        const btnLevel = parseInt(btn.textContent);
+        const btnLevel = parseInt(btn.dataset.level, 10);
         btn.classList.toggle('active', btnLevel <= level);
     });
     

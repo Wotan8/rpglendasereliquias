@@ -914,6 +914,7 @@ html.dark .memory-box-label { background: var(--paper); }
 /* ===== PEC LEVEL SELECTOR ===== */
 .pec-level-selector {
     display: flex;
+    flex-wrap: wrap; /* botões com preço são largos: quebram em vez de estourar */
     gap: 4px;
     margin-top: 8px;
     padding-top: 8px;
@@ -936,6 +937,101 @@ html.dark .memory-box-label { background: var(--paper); }
 .pec-level-btn:hover {
     border-color: var(--accent);
     color: var(--accent);
+}
+
+/* ===== NÍVEL COM PREÇO À VISTA =====
+   Variante das peculiaridades avulsas: o botão deixa de ser só o número e
+   passa a mostrar o total acumulado, para o jogador não precisar clicar
+   para descobrir quanto custa. As pecs herdadas seguem com o círculo. */
+.pec-level-btn--exp {
+    width: auto;
+    height: auto;
+    min-width: 58px;
+    padding: 4px 8px;
+    border-radius: 10px;
+    flex-direction: column;
+    gap: 1px;
+    line-height: 1.1;
+}
+
+.pec-level-btn--exp .pec-level-num { font-size: .8rem; font-weight: 800; }
+.pec-level-btn--exp .pec-level-exp { font-size: .6rem; font-weight: 700; opacity: .85; white-space: nowrap; }
+
+/* ===== TABELA DE CUSTO POR NÍVEL ===== */
+.pec-tabela-niveis {
+    margin-top: 12px;
+    border-top: 1px solid var(--line);
+    padding-top: 10px;
+}
+
+.pec-tabela-titulo {
+    font-size: .78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--accent);
+    margin-bottom: 6px;
+}
+
+/* Conteúdo largo rola dentro da própria caixa, nunca empurra a página */
+.pec-tabela-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.pec-tabela-niveis table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .78rem;
+    min-width: 380px;
+}
+
+.pec-tabela-niveis th {
+    text-align: left;
+    font-size: .64rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    color: var(--muted);
+    padding: 4px 8px 4px 0;
+    border-bottom: 1px solid var(--soft);
+    white-space: nowrap;
+}
+
+.pec-tabela-niveis td {
+    padding: 6px 8px 6px 0;
+    border-bottom: 1px solid var(--soft);
+    vertical-align: top;
+}
+
+.pec-tabela-niveis tr:last-child td { border-bottom: none; }
+
+.pec-tabela-niveis .pec-nv { font-weight: 800; white-space: nowrap; }
+.pec-tabela-niveis .pec-degrau { color: var(--muted); white-space: nowrap; }
+.pec-tabela-niveis .pec-total { font-weight: 800; color: var(--accent); white-space: nowrap; }
+.pec-tabela-niveis .pec-efeito { color: var(--ink); opacity: .9; min-width: 140px; }
+
+.pec-tabela-niveis tr.atual td {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.pec-tabela-legenda {
+    margin-top: 8px;
+    font-size: .7rem;
+    line-height: 1.45;
+    color: var(--muted);
+}
+
+@media (max-width: 560px) {
+    .pec-level-btn--exp { min-width: 52px; padding: 3px 6px; }
+    .pec-level-btn--exp .pec-level-exp { font-size: .55rem; }
+
+    /* Sem min-width a tabela cabe na tela e dispensa rolagem lateral:
+       o texto do efeito quebra em vez de esticar a linha. */
+    .pec-tabela-niveis table { font-size: .72rem; min-width: 0; }
+    .pec-tabela-niveis th,
+    .pec-tabela-niveis td { padding: 5px 6px 5px 0; }
+    .pec-tabela-niveis .pec-efeito { min-width: 0; word-break: break-word; }
 }
 
 .pec-level-btn.active {
