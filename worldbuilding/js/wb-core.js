@@ -3213,6 +3213,19 @@ import {
                 // Save linked NPCs and Tribos
                 data.linkedNpcs = linkedNpcs;
                 data.linkedTribos = linkedTribos;
+
+                // O vínculo na ficha é a fonte da verdade: NPC desvinculado
+                // aqui também sai do mapa tático, senão o token continuaria
+                // sendo montado no Tabuleiro por um Local que não o conhece.
+                const mt = currentEditingEntry?.mapaTatico;
+                if (mt && Array.isArray(mt.objetos)) {
+                    const vivos = new Set(linkedNpcs.map(n => n.id));
+                    const objetos = mt.objetos.filter(o => o.tipo !== 'npc' || vivos.has(o.npcId));
+                    if (objetos.length !== mt.objetos.length) {
+                        data.mapaTatico = { ...mt, objetos };
+                        showAlert(`🗺️ ${mt.objetos.length - objetos.length} token(s) de NPC removido(s) do mapa tático.`, 'warning');
+                    }
+                }
             } else if (cat === 'factions') {
                 data.lideranca = document.getElementById('entryLideranca')?.value?.trim() || '';
                 data.ideologia = document.getElementById('entryIdeologia')?.value?.trim() || '';

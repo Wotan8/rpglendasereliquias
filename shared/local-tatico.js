@@ -15,9 +15,44 @@
 //       { tipo:'porta',  pontos:[a,b] },
 //       { tipo:'janela', pontos:[a,b] },
 //       { tipo:'luz', x, y, alcance, cor, animacao? },  // alcance em unidades
+//       { tipo:'npc', npcId, nome, url, camada:'tokens'|'dm', x, y },
 //     ],
 //   }
 // =============================================
+
+/**
+ * Pontos de uma parede desenhada por arrasto entre dois cantos.
+ * Retângulo e elipse viram POLILINHA fechada: o raycasting do tabuleiro
+ * só entende segmentos de reta, então a forma é aproximada aqui e o resto
+ * do sistema nem sabe que existiu uma "elipse".
+ * @param forma 'ret' | 'elipse' | qualquer outra (= segmento reto a→b)
+ */
+export function pontosDaForma(forma, a, b, lados = 32) {
+    if (!a || !b) return [];
+    if (forma === 'ret') {
+        return [{ x: a.x, y: a.y }, { x: b.x, y: a.y }, { x: b.x, y: b.y }, { x: a.x, y: b.y }, { x: a.x, y: a.y }];
+    }
+    if (forma === 'elipse') {
+        const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+        const rx = Math.abs(b.x - a.x) / 2, ry = Math.abs(b.y - a.y) / 2;
+        const pts = [];
+        for (let i = 0; i <= lados; i++) {
+            const t = (i / lados) * Math.PI * 2;
+            pts.push({ x: Math.round(cx + rx * Math.cos(t)), y: Math.round(cy + ry * Math.sin(t)) });
+        }
+        return pts;
+    }
+    return [{ x: a.x, y: a.y }, { x: b.x, y: b.y }];
+}
+
+/** Comprimento total de uma polilinha — usado para descartar clique seco. */
+export function comprimentoDaLinha(pts) {
+    let d = 0;
+    for (let i = 1; i < (pts || []).length; i++) {
+        d += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    }
+    return d;
+}
 
 /** O Local tem um mapa tático completo o bastante para ir ao tabuleiro? */
 export function localPronto(mt) {
@@ -34,6 +69,7 @@ export function resumoDoLocal(mt) {
     if (n('porta')) partes.push(`${n('porta')} porta${n('porta') > 1 ? 's' : ''}`);
     if (n('janela')) partes.push(`${n('janela')} janela${n('janela') > 1 ? 's' : ''}`);
     if (n('luz')) partes.push(`${n('luz')} luz${n('luz') > 1 ? 'es' : ''}`);
+    if (n('npc')) partes.push(`${n('npc')} NPC${n('npc') > 1 ? 's' : ''}`);
     partes.push(mt.luzAtiva ? (mt.ambiente === 'dia' ? '☀️ dia' : '🌙 noite') : 'sem luz dinâmica');
     return partes.join(' · ');
 }
@@ -79,6 +115,21 @@ export function objetosDoLocal(mt, destino) {
             };
             if (o.animacao) luz.animacao = o.animacao;
             out.push(luz);
+        } else if (o.tipo === 'npc' && o.npcId && o.x != null && o.y != null) {
+            const p = P(o);
+            const naDM = o.camada === 'dm';
+            out.push({
+                tipo: 'token', layerId: naDM ? 'dm' : 'tokens',
+                x: p.x, y: p.y,
+                nome: o.nome || 'NPC', url: o.url || '',
+                vinculo: { tipo: 'npc', id: o.npcId },
+                tamanhoCelulas: 1, rot: 0, mostrarNome: true,
+                // Token na camada DM nunca vaza para o jogador; na de tokens,
+                // vale a visibilidade normal do canvas.
+                visivelPublico: !naDM,
+                visao: { ativa: false, alcance: 9, angulo: 360, tipo: 'padrao' },
+                luz: { ativa: false, alcance: 3 },
+            });
         }
     }
     return out;

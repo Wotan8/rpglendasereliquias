@@ -32,6 +32,12 @@
             return false;
         };
 
+        // O botão flutuante de menu é criado pelo wb-main.js, que este check
+        // não carrega — recriado aqui só para valer a regra CSS que o esconde.
+        const nav = document.createElement('button');
+        nav.id = 'wbNavToggle'; nav.className = 'wb-nav-toggle'; nav.textContent = '«';
+        document.body.appendChild(nav);
+
         // Regressão: o clique REAL passa pelo atributo onclick gerado pelo
         // wb-core — era aqui que aspas no nome quebravam o handler em silêncio.
         const host = document.createElement('div');
@@ -43,7 +49,8 @@
 
         t('overlay montado', () => document.getElementById('wbMapaLocal'));
         t('barra de config presente', () => document.getElementById('wbmlLargura') && document.getElementById('wbmlAmbiente') && document.getElementById('wbmlLuzAtiva'));
-        t('5 ferramentas', () => document.querySelectorAll('[data-wbml-tool]').length === 5);
+        t('6 ferramentas (parede, porta, janela, luz, npc, apagar)', () =>
+            document.querySelectorAll('[data-wbml-tool]').length === 6);
         t('estado vazio visível', () => !document.getElementById('wbmlVazio').hidden);
         t('parede começa ativa', () => document.querySelector('[data-wbml-tool="parede"]').classList.contains('is-on'));
 
@@ -69,9 +76,41 @@
             return sumiu;
         });
 
+        // O botão flutuante de menu (z-index 1300 > overlay) cobria o título.
+        t('botão de menu do worldbuilding some com o editor aberto', () =>
+            getComputedStyle(document.getElementById('wbNavToggle')).display === 'none');
+
+        // Formas de parede
+        t('4 formas de parede disponíveis', () => document.querySelectorAll('[data-wbml-forma]').length === 4);
+        t('linha começa ativa', () => document.querySelector('[data-wbml-forma="linha"]').classList.contains('is-on'));
+        t('trocar para elipse marca só ela', () => {
+            document.querySelector('[data-wbml-forma="elipse"]').click();
+            return document.querySelector('[data-wbml-forma="elipse"]').classList.contains('is-on')
+                && !document.querySelector('[data-wbml-forma="linha"]').classList.contains('is-on');
+        });
+
+        // Cada ferramenta mostra só os seus controles
+        t('grupo de forma só aparece em Parede', () => {
+            document.querySelector('[data-wbml-tool="parede"]').click();
+            const forma = getComputedStyle(document.getElementById('wbmlGrupoParede')).display !== 'none';
+            const luz = getComputedStyle(document.getElementById('wbmlGrupoLuz')).display === 'none';
+            return forma && luz;
+        });
+        t('grupo de NPC só aparece em NPC', () => {
+            document.querySelector('[data-wbml-tool="npc"]').click();
+            return getComputedStyle(document.getElementById('wbmlGrupoNpc')).display !== 'none'
+                && getComputedStyle(document.getElementById('wbmlGrupoParede')).display === 'none';
+        });
+        t('camadas do NPC: tokens e DM', () => {
+            const opts = [...document.getElementById('wbmlNpcCamada').options].map(o => o.value);
+            return opts.length === 2 && opts.includes('tokens') && opts.includes('dm');
+        });
+
         // ESC fecha (bubbles: como um teclado de verdade)
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
         t('ESC fecha o editor', () => !document.getElementById('wbMapaLocal'));
+        t('botão de menu volta ao fechar', () =>
+            getComputedStyle(document.getElementById('wbNavToggle')).display !== 'none');
 
         const falhas = casos.filter(c => !c[1]).length;
         document.getElementById('res').innerHTML =

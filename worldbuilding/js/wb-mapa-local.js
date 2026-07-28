@@ -15,24 +15,37 @@
    ═══════════════════════════════════════════════════════════ */
 
 import { db, doc, updateDoc, storage, ref, uploadBytes, getDownloadURL } from './firebase-config.js';
-import { localPronto } from '../../shared/local-tatico.js';
+import { localPronto, pontosDaForma, comprimentoDaLinha } from '../../shared/local-tatico.js';
 
 const esc = (s = '') => String(s).replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const FERRAMENTAS = [
-    ['parede', '✏️ Parede', 'Clique para cada vértice; duplo-clique ou Enter encerra. Esc cancela.'],
+    ['parede', '✏️ Parede', 'Escolha a forma ao lado. Linha: um clique por vértice, duplo-clique ou Enter encerra. Esc cancela.'],
     ['porta', '🚪 Porta', 'Dois cliques: início e fim da porta.'],
     ['janela', '🪟 Janela', 'Dois cliques: início e fim da janela.'],
     ['luz', '💡 Luz', 'Um clique posiciona a luz (alcance e cor ao lado).'],
+    ['npc', '🎭 NPC', 'Escolha o NPC e a camada ao lado, depois clique onde ele fica.'],
     ['apagar', '🗑️ Apagar', 'Clique sobre um elemento para removê-lo.'],
+];
+
+/** Formas de parede. Todas terminam como `pontos[]` — o tabuleiro e o
+ *  raycasting não precisam saber qual foi usada. */
+const FORMAS = [
+    ['linha', '📐 Linha', 'clique a clique'],
+    ['livre', '🖌️ Livre', 'arraste como caneta'],
+    ['ret', '⬜ Retângulo', 'arraste de canto a canto'],
+    ['elipse', '⚪ Elipse', 'arraste a área'],
 ];
 
 const E = {                    // estado do editor aberto
     geoId: null, nome: '',
     mt: null,                  // mapaTatico em edição (cópia de trabalho)
     tool: 'parede',
+    forma: 'linha',            // forma da parede (FORMAS)
     atual: null,               // pontos da parede/porta em andamento
+    desenhando: null,          // arrasto em andamento (livre/ret/elipse)
+    npcs: [],                  // NPCs vinculados a este Local
     zoom: 1, panX: 0, panY: 0,
     arrastando: null,
 };
@@ -53,13 +66,28 @@ window.abrirMapaLocal = async function (geoId, nome) {
         url: '', imgW: 0, imgH: 0, larguraReal: 30, unidade: 'm',
         ambiente: 'noite', luzAtiva: true, objetos: [],
     };
-    E.tool = 'parede'; E.atual = null; E.zoom = 1; E.panX = 0; E.panY = 0;
+    // NPCs vinculados na ficha do Local; a imagem vem do catálogo carregado
+    // pelo núcleo (window.WB.data.npcs), então o token já nasce com retrato.
+    const catalogo = window.WB?.data?.npcs || [];
+    E.npcs = (dados?.linkedNpcs || []).map(n => {
+        const full = catalogo.find(x => x.id === n.id);
+        return { id: n.id, nome: n.name || full?.nome || 'NPC', url: full?.imagem || full?.imagemUrl || '' };
+    });
+    // Faxina: NPC que saiu da ficha não pode continuar no mapa (o vínculo é
+    // a fonte da verdade — a mesma regra que o wb-core aplica ao salvar).
+    E.mt.objetos = (E.mt.objetos || []).filter(o => o.tipo !== 'npc' || E.npcs.some(n => n.id === o.npcId));
+
+    E.tool = 'parede'; E.forma = 'linha';
+    E.atual = null; E.desenhando = null;
+    E.zoom = 1; E.panX = 0; E.panY = 0;
     montar();
 };
 
 function fechar() {
     document.getElementById('wbMapaLocal')?.remove();
     document.removeEventListener('keydown', teclas);
+    // Devolve o botão de menu do worldbuilding (escondido enquanto editava)
+    document.body.classList.remove('wbml-aberto');
 }
 
 /* ── Montagem da UI ──────────────────────────────────────── */
@@ -88,13 +116,29 @@ function montar() {
     <div class="wbml-tools">
         ${FERRAMENTAS.map(([id, rotulo, dica]) => `<button data-wbml-tool="${id}" title="${esc(dica)}" class="${id === E.tool ? 'is-on' : ''}">${rotulo}</button>`).join('')}
         <span class="wbml-sep"></span>
-        <label>Alcance da luz <input type="number" id="wbmlAlcance" value="6" min="0.5" step="0.5" style="width:60px"> <span id="wbmlUnLuz">${esc(mt.unidade || 'm')}</span></label>
-        <label>Cor <input type="color" id="wbmlCorLuz" value="#ffdd99"></label>
-        <select id="wbmlAnimLuz">
-            <option value="">Sem animação</option>
-            <option value="tocha">🔥 Tocha</option>
-            <option value="pulso">💗 Pulso</option>
-        </select>
+        <span class="wbml-grupo" id="wbmlGrupoParede">Forma
+            ${FORMAS.map(([id, rotulo, dica]) => `<button data-wbml-forma="${id}" title="${esc(dica)}" class="${id === E.forma ? 'is-on' : ''}">${rotulo}</button>`).join('')}
+        </span>
+        <span class="wbml-grupo" id="wbmlGrupoLuz">
+            <label>Alcance <input type="number" id="wbmlAlcance" value="6" min="0.5" step="0.5" style="width:60px"> <span id="wbmlUnLuz">${esc(mt.unidade || 'm')}</span></label>
+            <label>Cor <input type="color" id="wbmlCorLuz" value="#ffdd99"></label>
+            <select id="wbmlAnimLuz">
+                <option value="">Sem animação</option>
+                <option value="tocha">🔥 Tocha</option>
+                <option value="pulso">💗 Pulso</option>
+            </select>
+        </span>
+        <span class="wbml-grupo" id="wbmlGrupoNpc">
+            <label>NPC <select id="wbmlNpc">
+                ${E.npcs.length
+                    ? E.npcs.map(n => `<option value="${esc(n.id)}">${esc(n.nome)}</option>`).join('')
+                    : '<option value="">— nenhum NPC vinculado a este Local —</option>'}
+            </select></label>
+            <label>Camada <select id="wbmlNpcCamada">
+                <option value="tokens">🎭 Tokens (todos veem)</option>
+                <option value="dm">🕵️ DM (só o mestre)</option>
+            </select></label>
+        </span>
         <span style="flex:1"></span>
         <span class="wbml-dica" id="wbmlDica"></span>
     </div>
@@ -115,15 +159,38 @@ function montar() {
     $('#wbmlUnidade').addEventListener('change', () => { $('#wbmlUnLuz').textContent = $('#wbmlUnidade').value; desenhar(); });
     $('#wbmlLargura').addEventListener('change', desenhar);
     root.querySelectorAll('[data-wbml-tool]').forEach(b => b.onclick = () => {
-        E.tool = b.dataset.wbmlTool; E.atual = null;
+        E.tool = b.dataset.wbmlTool; E.atual = null; E.desenhando = null;
         root.querySelectorAll('[data-wbml-tool]').forEach(x => x.classList.toggle('is-on', x === b));
         dica(FERRAMENTAS.find(f => f[0] === E.tool)?.[2] || '');
+        sincronizarGrupos();
         desenhar();
     });
+    root.querySelectorAll('[data-wbml-forma]').forEach(b => b.onclick = () => {
+        E.forma = b.dataset.wbmlForma; E.atual = null; E.desenhando = null;
+        root.querySelectorAll('[data-wbml-forma]').forEach(x => x.classList.toggle('is-on', x === b));
+        dica(E.forma === 'linha'
+            ? 'Linha: um clique por vértice; duplo-clique ou Enter encerra.'
+            : `${FORMAS.find(f => f[0] === E.forma)?.[1]}: ${FORMAS.find(f => f[0] === E.forma)?.[2]}.`);
+        desenhar();
+    });
+
+    // O botão flutuante de menu do worldbuilding (z-index acima deste
+    // overlay) cobria o título e não tinha função aqui — some enquanto edita.
+    document.body.classList.add('wbml-aberto');
+
     document.addEventListener('keydown', teclas);
     ligarViewport();
+    sincronizarGrupos();
     desenhar();
     dica(FERRAMENTAS[0][2]);
+}
+
+/** Mostra só os controles da ferramenta ativa — a barra estava virando um mural. */
+function sincronizarGrupos() {
+    const mostra = (id, v) => { const el = $(id); if (el) el.style.display = v ? '' : 'none'; };
+    mostra('#wbmlGrupoParede', E.tool === 'parede');
+    mostra('#wbmlGrupoLuz', E.tool === 'luz');
+    mostra('#wbmlGrupoNpc', E.tool === 'npc');
 }
 
 function dica(t) { const el = $('#wbmlDica'); if (el) el.textContent = t; }
@@ -169,6 +236,8 @@ function desenhar() {
     const seg = (pts, cor, dash, extra = '') =>
         linhas.push(`<polyline points="${pts.map(p => `${p.x},${p.y}`).join(' ')}" stroke="${cor}" ${dash ? `stroke-dasharray="${dash}"` : ''} ${extra}/>`);
 
+    const raioNpc = () => Math.max(14, pxPorUnidade() * 0.5);
+
     (mt.objetos || []).forEach((o, i) => {
         if (o.tipo === 'parede') seg(o.pontos, '#ef4444', null, `data-i="${i}"`);
         if (o.tipo === 'porta') seg(o.pontos, '#f59e0b', null, `data-i="${i}" stroke-width="6"`);
@@ -178,14 +247,27 @@ function desenhar() {
             linhas.push(`<circle cx="${o.x}" cy="${o.y}" r="${r}" fill="${o.cor || '#ffdd99'}" fill-opacity=".14" stroke="${o.cor || '#ffdd99'}" stroke-dasharray="6 6" data-i="${i}"/>`);
             linhas.push(`<circle cx="${o.x}" cy="${o.y}" r="9" fill="${o.cor || '#ffdd99'}" data-i="${i}"/>`);
         }
+        if (o.tipo === 'npc') {
+            const r = raioNpc();
+            const cor = o.camada === 'dm' ? '#8A6FE0' : '#3FAE6A';
+            if (o.url) {
+                linhas.push(`<clipPath id="cnpc${i}"><circle cx="${o.x}" cy="${o.y}" r="${r}"/></clipPath>`);
+                linhas.push(`<image href="${esc(o.url)}" x="${o.x - r}" y="${o.y - r}" width="${r * 2}" height="${r * 2}" preserveAspectRatio="xMidYMid slice" clip-path="url(#cnpc${i})" data-i="${i}"/>`);
+            } else {
+                linhas.push(`<circle cx="${o.x}" cy="${o.y}" r="${r}" fill="${cor}" fill-opacity=".35" data-i="${i}"/>`);
+            }
+            linhas.push(`<circle cx="${o.x}" cy="${o.y}" r="${r}" fill="none" stroke="${cor}" stroke-width="3" data-i="${i}"/>`);
+            linhas.push(`<text x="${o.x}" y="${o.y - r - 6}" fill="${cor}" font-size="${r * 0.8}" text-anchor="middle" stroke="none">${esc(o.camada === 'dm' ? '🕵️ ' : '')}${esc(o.nome || 'NPC')}</text>`);
+        }
     });
 
     // traço em andamento
+    const corAtual = E.tool === 'porta' ? '#f59e0b' : E.tool === 'janela' ? '#38bdf8' : '#ef4444';
     if (E.atual?.length) {
-        const cor = E.tool === 'porta' ? '#f59e0b' : E.tool === 'janela' ? '#38bdf8' : '#ef4444';
-        seg(E.atual, cor, '4 4', 'stroke-width="2.5"');
-        E.atual.forEach(p => linhas.push(`<circle cx="${p.x}" cy="${p.y}" r="5" fill="${cor}"/>`));
+        seg(E.atual, corAtual, '4 4', 'stroke-width="2.5"');
+        E.atual.forEach(p => linhas.push(`<circle cx="${p.x}" cy="${p.y}" r="5" fill="${corAtual}"/>`));
     }
+    if (E.desenhando?.length >= 2) seg(E.desenhando, corAtual, '4 4', 'stroke-width="2.5"');
 
     stage.style.width = mt.imgW + 'px';
     stage.style.height = mt.imgH + 'px';
@@ -228,28 +310,64 @@ function ligarViewport() {
             E.arrastando = { x: ev.clientX, y: ev.clientY };
             vp.setPointerCapture(ev.pointerId);
             ev.preventDefault();
+            return;
+        }
+        // Parede em forma de arrasto (livre/retângulo/elipse) começa aqui;
+        // a forma 'linha' continua clique a clique, tratada no 'click'.
+        if (ev.button === 0 && E.mt.url && E.tool === 'parede' && E.forma !== 'linha'
+            && !ev.target.closest('.wbml-vazio')) {
+            E.ancora = pontoDoEvento(ev);      // canto fixo de ret/elipse
+            E.desenhando = [E.ancora];
+            vp.setPointerCapture(ev.pointerId);
+            ev.preventDefault();
         }
     });
     vp.addEventListener('pointermove', (ev) => {
-        if (!E.arrastando) return;
-        E.panX += ev.clientX - E.arrastando.x;
-        E.panY += ev.clientY - E.arrastando.y;
-        E.arrastando = { x: ev.clientX, y: ev.clientY };
-        aplicarTransform();
+        if (E.arrastando) {
+            E.panX += ev.clientX - E.arrastando.x;
+            E.panY += ev.clientY - E.arrastando.y;
+            E.arrastando = { x: ev.clientX, y: ev.clientY };
+            aplicarTransform();
+            return;
+        }
+        if (!E.desenhando) return;
+        const p = pontoDoEvento(ev);
+        if (E.forma === 'livre') {
+            // 1 ponto a cada ~4px: sem isso o arrasto vira milhares de vértices
+            // e o raycasting do tabuleiro engasga.
+            const u = E.desenhando[E.desenhando.length - 1];
+            if (Math.hypot(p.x - u.x, p.y - u.y) >= 4) E.desenhando.push(p);
+        } else {
+            // A âncora é o canto onde o arrasto começou — reler de `desenhando`
+            // não serve, ele é substituído a cada movimento.
+            E.desenhando = pontosDaForma(E.forma, E.ancora, p);
+        }
+        desenhar();
     });
-    vp.addEventListener('pointerup', () => { E.arrastando = null; });
+    vp.addEventListener('pointerup', () => {
+        E.arrastando = null;
+        if (!E.desenhando) return;
+        const pts = E.desenhando;
+        E.desenhando = null; E.ancora = null;
+        // Clique seco (sem arrasto) não vira parede
+        if (pts.length >= 2 && comprimentoDaLinha(pts) > 3) {
+            E.mt.objetos.push({ tipo: 'parede', pontos: pts });
+        }
+        desenhar();
+    });
     vp.addEventListener('contextmenu', (ev) => ev.preventDefault());
 
     vp.addEventListener('click', (ev) => {
         if (!E.mt.url || ev.target.closest('.wbml-vazio')) return;
-        const p = pontoDoEvento(ev);
-        clique(p);
+        if (E.tool === 'parede' && E.forma !== 'linha') return;  // já tratado no arrasto
+        clique(pontoDoEvento(ev));
     });
     vp.addEventListener('dblclick', (ev) => {
         ev.preventDefault();
         encerrarParede();
     });
 }
+
 
 function aplicarTransform() {
     const stage = $('#wbmlStage');
@@ -272,6 +390,16 @@ function clique(p) {
             alcance: parseFloat($('#wbmlAlcance').value) || 6,
             cor: $('#wbmlCorLuz').value,
             ...($('#wbmlAnimLuz').value ? { animacao: $('#wbmlAnimLuz').value } : {}),
+        });
+        desenhar();
+    } else if (E.tool === 'npc') {
+        const id = $('#wbmlNpc').value;
+        if (!id) { dica('⚠️ Vincule um NPC a este Local na ficha (seção “NPCs/Criaturas neste Local”) antes.'); return; }
+        const n = E.npcs.find(x => x.id === id);
+        mt.objetos.push({
+            tipo: 'npc', npcId: id, nome: n?.nome || 'NPC', url: n?.url || '',
+            camada: $('#wbmlNpcCamada').value === 'dm' ? 'dm' : 'tokens',
+            x: p.x, y: p.y,
         });
         desenhar();
     } else if (E.tool === 'apagar') {
@@ -306,9 +434,11 @@ function acharPerto(p) {
         return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
     };
     let melhor = -1, melhorD = tol;
+    const raioNpc = Math.max(14, (E.mt.imgW > 0 ? E.mt.imgW / (E.mt.larguraReal || 30) : 10) * 0.5);
     (E.mt.objetos || []).forEach((o, i) => {
         let d = Infinity;
         if (o.tipo === 'luz') d = Math.hypot(p.x - o.x, p.y - o.y) - 6;
+        else if (o.tipo === 'npc') d = Math.hypot(p.x - o.x, p.y - o.y) - raioNpc;
         else if (Array.isArray(o.pontos)) {
             for (let k = 0; k < o.pontos.length - 1; k++) d = Math.min(d, dSeg(p, o.pontos[k], o.pontos[k + 1]));
         }

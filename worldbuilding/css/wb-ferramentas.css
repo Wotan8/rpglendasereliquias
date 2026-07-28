@@ -573,6 +573,15 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
 .wbml-tools button[data-wbml-tool]:hover { border-color: var(--lr-gold); }
 .wbml-tools button[data-wbml-tool].is-on { background: var(--lr-gold); color: var(--lr-bg-0); border-color: var(--lr-gold); font-weight: 700; }
 .wbml-dica { color: var(--lr-arcane-2); font-size: var(--lr-fs-xs); }
+.wbml-grupo { display: inline-flex; align-items: center; gap: .35rem; font-size: var(--lr-fs-xs); color: var(--lr-text-2); }
+.wbml-grupo button { background: var(--lr-bg-1); color: var(--lr-text-1); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); padding: .25rem .5rem; cursor: pointer; font-size: var(--lr-fs-xs); }
+.wbml-grupo button:hover { border-color: var(--lr-gold); }
+.wbml-grupo button.is-on { background: var(--lr-arcane); color: var(--lr-bg-0); border-color: var(--lr-arcane); font-weight: 700; }
+
+/* O botão flutuante de menu (z-index 1300) passava por cima do editor e
+   cobria o título — e recolher a sidebar não muda nada com o editor aberto. */
+body.wbml-aberto .wb-nav-toggle,
+body.wbml-aberto .wb-nav-backdrop { display: none; }
 .wbml-viewport { position: relative; flex: 1; overflow: hidden; cursor: crosshair; background: repeating-conic-gradient(var(--lr-bg-1) 0% 25%, var(--lr-bg-0) 0% 50%) 0 0 / 28px 28px; }
 .wbml-stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
 .wbml-stage img { display: block; width: 100%; height: 100%; user-select: none; }
