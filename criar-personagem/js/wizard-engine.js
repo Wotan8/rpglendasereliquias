@@ -1,6 +1,10 @@
 /* ===== WIZARD ENGINE — Estado global da criação de personagem ===== */
 
 window.wizardState = {
+    // Marca o layout de fases pós-separação Raças/Classes. Estado salvo sem
+    // esta flag tem índices do wizard antigo e é migrado ao restaurar.
+    wizardFasesV2: true,
+
     // Fase 0
     nomePersonagem: '',
     nivelInicio: null, // { id, nome, exp } — legado, mantido para compat
@@ -188,6 +192,19 @@ function deserializeWizardState(json) {
         const s = JSON.parse(json);
         if (s.fasesCompletas) s.fasesCompletas = new Set(s.fasesCompletas);
         else s.fasesCompletas = new Set();
+
+        // MIGRAÇÃO — separação de Raças/Classes.
+        // faseAtual e fasesCompletas são índices do array FASES_WIZARD, não ids.
+        // A etapa "Classes" entrou no índice 2, então tudo de 2 pra frente
+        // andou uma casa. Sem isto, quem tem criação salva volta uma etapa e
+        // a barra de progresso marca as fases erradas como concluídas.
+        if (!s.wizardFasesV2) {
+            const desloca = i => (typeof i === 'number' && i >= 2 ? i + 1 : i);
+            s.faseAtual = desloca(s.faseAtual);
+            s.fasesCompletas = new Set([...s.fasesCompletas].map(desloca));
+            s.wizardFasesV2 = true;
+        }
+
         Object.assign(wizardState, s);
     } catch (e) {
         console.error('Erro ao restaurar wizard state:', e);
