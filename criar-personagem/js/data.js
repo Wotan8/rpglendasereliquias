@@ -198,11 +198,12 @@ const RELACOES_NPC = [
 /* ===== FASES DO WIZARD ===== */
 const FASES_WIZARD = [
     { id: 0,   key: "convite",        titulo: "O Convite",                icon: "📜", desc: "Nome e nível de início" },
-    { id: 1,   key: "linhagem",       titulo: "A Linhagem",              icon: "🧬", desc: "Raça e Classe" },
-    { id: 2,   key: "origens",        titulo: "As Origens",              icon: "🏕️", desc: "Tribo" },
+    { id: 1,   key: "linhagem",       titulo: "Raças",                   icon: "🧬", desc: "Sua raça" },
+    { id: 1.5, key: "classes",        titulo: "Classes",                 icon: "⚔️", desc: "Sua classe" },
+    { id: 2,   key: "origens",        titulo: "Tribos",                  icon: "🏕️", desc: "Sua tribo" },
     { id: 2.5, key: "peculiaridades", titulo: "Peculiaridades",          icon: "✨", desc: "Peculiaridades Individuais" },
-    { id: 3,   key: "corpo",          titulo: "O Corpo e a Mente",       icon: "💪", desc: "Atributos" },
-    { id: 4,   key: "habilidades",    titulo: "As Habilidades",          icon: "📚", desc: "Perícias" },
+    { id: 3,   key: "corpo",          titulo: "Atributos",               icon: "💪", desc: "Corpo, mente e presença" },
+    { id: 4,   key: "habilidades",    titulo: "Perícias",                icon: "📚", desc: "O que você treinou" },
     { id: 5,   key: "alma",           titulo: "A Alma",                  icon: "💫", desc: "Virtude e Vício" },
     { id: 6,   key: "lacos",          titulo: "Os Laços",                icon: "🤝", desc: "NPCs" },
     { id: 7,   key: "equipamento",    titulo: "O Equipamento",           icon: "⚔️", desc: "Equipamento inicial" },

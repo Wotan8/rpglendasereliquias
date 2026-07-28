@@ -47,7 +47,7 @@ function selectTribe(tribeName) {
 
     updateMiniPreview();
     saveWizardToStorage();
-    forceRerender(3); // Força atualização de Peculiaridades Herdadas
+    forceRerender(getPhaseIndex(2.5)); // Peculiaridades Herdadas
 }
 
 function openTribeModal(tribeName, event) {
@@ -113,6 +113,9 @@ function openTribeModal(tribeName, event) {
         }
         html += `</div></div>`;
     }
+
+    // 📖 Livro vinculado (Worldbuilding) — leitura dos capítulos liberados
+    html += window.lvSecaoHTML ? window.lvSecaoHTML(tribeData) : '';
 
     // Peculiaridades com mecânicas detalhadas
     if (tribeBuilt?.peculiaridades?.length) {

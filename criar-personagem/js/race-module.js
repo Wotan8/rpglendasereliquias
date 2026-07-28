@@ -1,4 +1,4 @@
-/* ===== PHASE 1 — A Linhagem (Raça + Classe) ===== */
+/* ===== PHASE 1 — Raças ===== */
 
 function initPhase1(container) {
     let html = '';
@@ -32,8 +32,14 @@ function initPhase1(container) {
     // Memory for race
     html += createMemoryBox('linhagem_raca', 'O que você viu pela primeira vez quando se olhou no espelho e percebeu que era diferente dos outros? Descreva essa memória. Quando você se olha no espelho, tem algo que te incomoda? Há algo na sua aparência que reflete o caminho que você escolheu?', false);
 
-    // === CLASSE ===
-    html += `<hr style="border:none;border-top:2px solid var(--soft);margin:30px 0;">`;
+    container.innerHTML = html;
+}
+
+/* ===== PHASE 1B — Classes ===== */
+
+function initPhase1B(container) {
+    let html = '';
+
     html += createNarratorBox(NARRADOR_TEXTOS.linhagem_classe);
     html += `<div class="section"><div class="section-title">⚔️ Escolha sua Classe</div>`;
     html += `<div class="selection-grid selection-grid-visual" id="classGrid">`;
@@ -77,7 +83,7 @@ function selectRace(raceName) {
 
     updateMiniPreview();
     saveWizardToStorage();
-    forceRerender(3); // Força atualização de Peculiaridades Herdadas
+    forceRerender(getPhaseIndex(2.5)); // Peculiaridades Herdadas
 }
 
 function openRaceModal(raceName, event) {
@@ -130,12 +136,18 @@ function openRaceModal(raceName, event) {
     // 📖 Livro vinculado (Worldbuilding) — leitura dos capítulos liberados
     html += window.lvSecaoHTML ? window.lvSecaoHTML(raceData) : '';
 
-    // Peculiaridades com mecânicas detalhadas
+    // 🧮 Valores Derivados da Raça — o valor inicial é o traço racial
+    const dvsRaca = resolveDerivedValueEntries(raceData.derivedValueIds);
+    if (dvsRaca.length) {
+        html += `<div class="detail-section"><div class="detail-section-title">🧮 Valores Derivados</div><div class="detail-collapse-list">`;
+        for (const { dv, valorInicial } of dvsRaca) html += renderDerivedValue(dv, valorInicial);
+        html += `</div></div>`;
+    }
+
+    // Peculiaridades Raciais — um bloco retrátil por pec, igual a classes
     if (raceBuilt?.peculiaridades?.length) {
-        html += `<div class="detail-section"><div class="detail-section-title">⚡ Peculiaridades Raciais</div><div class="detail-pec-list">`;
-        for (const pec of raceBuilt.peculiaridades) {
-            html += renderPecWithMechanics(pec);
-        }
+        html += `<div class="detail-section"><div class="detail-section-title">⚡ Peculiaridades Raciais</div><div class="detail-collapse-list">`;
+        for (const pec of raceBuilt.peculiaridades) html += renderPecCollapse(pec);
         html += `</div></div>`;
     }
 
@@ -153,9 +165,9 @@ function selectClass(className) {
 
     updateMiniPreview();
     saveWizardToStorage();
-    forceRerender(3); // Força atualização de Peculiaridades Herdadas
-    forceRerender(5); // Força atualização de Perícias de Classe
-    forceRerender(8); // Força atualização do Equipamento (Kits Iniciais)
+    forceRerender(getPhaseIndex(2.5)); // Peculiaridades Herdadas
+    forceRerender(getPhaseIndex(4));   // Perícias de Classe
+    forceRerender(getPhaseIndex(7));   // Equipamento (Kits Iniciais)
 }
 
 function openClassModal(className, event) {
@@ -259,13 +271,20 @@ function openClassModal(className, event) {
     }
 
     // 🧮 Valores Derivados da Classe
-    const dvsClasse = (cls.derivedValueIds || [])
-        .map(x => (typeof x === 'object' && x !== null) ? x.id : x)
-        .map(id => (window._systemData.derivedValues || []).find(d => d.id === id))
-        .filter(Boolean);
+    // ᛟ Runomancia — a classe usa o subsistema do Laboratorium no lugar de
+    // módulos, então o acesso entra onde os módulos apareceriam.
+    if (cls.usaRunomancia === true) {
+        html += `<div class="detail-section">
+            <div class="detail-section-title">ᛟ Runomancia</div>
+            <a class="btn" href="../laboratorium-runarum/laboratorium.html" target="_blank" rel="noopener"
+               style="margin-top:4px;text-decoration:none">ᛟ&nbsp; Explorar o Laboratorium Runarum</a>
+        </div>`;
+    }
+
+    const dvsClasse = resolveDerivedValueEntries(cls.derivedValueIds);
     if (dvsClasse.length) {
         html += `<div class="detail-section"><div class="detail-section-title">🧮 Valores Derivados</div><div class="detail-collapse-list">`;
-        for (const dv of dvsClasse) html += renderDerivedValue(dv);
+        for (const { dv, valorInicial } of dvsClasse) html += renderDerivedValue(dv, valorInicial);
         html += `</div></div>`;
     }
 
@@ -276,19 +295,7 @@ function openClassModal(className, event) {
     const pecsClasse = window.CLASS_PECULIARITIES[className] || [];
     if (pecsClasse.length) {
         html += `<div class="detail-section"><div class="detail-section-title">⚡ Peculiaridades de Classe</div><div class="detail-collapse-list">`;
-        for (const pec of pecsClasse) {
-            const nNiveis = (pec.tipo === 'evolutivo' && pec.niveis) ? Object.keys(pec.niveis).length : 0;
-            const meta = nNiveis
-                ? `${nNiveis} ${nNiveis === 1 ? 'nível' : 'níveis'}`
-                : (pec.negativo ? 'Desvantagem' : 'Vantagem');
-            html += `<details class="detail-collapse">
-                <summary class="detail-collapse-summary">
-                    <span class="detail-collapse-title">${escHtml(pec.icone || '📋')} ${escHtml(pec.nome)}</span>
-                    <span class="detail-collapse-meta">${escHtml(meta)}</span>
-                </summary>
-                <div class="detail-collapse-body">${renderPecWithMechanics(pec)}</div>
-            </details>`;
-        }
+        for (const pec of pecsClasse) html += renderPecCollapse(pec);
         html += `</div></div>`;
     }
 
@@ -301,21 +308,52 @@ function openClassModal(className, event) {
 /* ===== SHARED: Valor Derivado em bloco retrátil =====
    Não existe campo 'formula' no cadastro — o cálculo mora nas mecânicas
    vinculadas (dv.mecanicaIds), que generatePreviewText() traduz para texto. */
-function renderDerivedValue(dv) {
+/* ===== SHARED: peculiaridade em bloco retrátil (classe, raça, tribo) ===== */
+function renderPecCollapse(pec) {
+    const nNiveis = (pec.tipo === 'evolutivo' && pec.niveis) ? Object.keys(pec.niveis).length : 0;
+    // Só afirmamos "Desvantagem" quando o flag está marcado. Chamar de
+    // "Vantagem" tudo que não está marcado mentiria, porque o cadastro
+    // hoje deixa 'negativo' em false mesmo em traços que são penalidade.
+    const meta = nNiveis
+        ? `${nNiveis} ${nNiveis === 1 ? 'nível' : 'níveis'}`
+        : (pec.negativo ? 'Desvantagem' : '');
+    return `<details class="detail-collapse">
+        <summary class="detail-collapse-summary">
+            <span class="detail-collapse-title">${escHtml(pec.icone || '📋')} ${escHtml(pec.nome)}</span>
+            ${meta ? `<span class="detail-collapse-meta">${escHtml(meta)}</span>` : ''}
+        </summary>
+        <div class="detail-collapse-body">${renderPecWithMechanics(pec)}</div>
+    </details>`;
+}
+
+/* Entradas de derivedValueIds vêm como ID puro (classes) ou como objeto
+   { id, valorInicial } (raças, onde o valor inicial é o traço racial). */
+function resolveDerivedValueEntries(entries) {
+    return (entries || []).map(x => {
+        const obj = (typeof x === 'object' && x !== null);
+        const dv = (window._systemData.derivedValues || []).find(d => d.id === (obj ? x.id : x));
+        return dv ? { dv, valorInicial: obj ? x.valorInicial : undefined } : null;
+    }).filter(Boolean);
+}
+
+function renderDerivedValue(dv, valorInicial) {
     const nome = String(dv.nome || dv.key || dv.id || '').trim();
 
+    // Uma mecânica pode ter várias contas, que generatePreviewText junta com
+    // "; ". Separamos para exibir uma por linha e tirar o sufixo " em <nome>"
+    // de cada uma — o alvo já é o título do bloco, repetir só polui.
     const formulas = (dv.mecanicaIds || [])
         .map(id => (window._systemData.mechanics || []).find(m => m.id === id))
         .filter(Boolean)
-        .map(m => {
-            let txt = m.previewTexto || (typeof generatePreviewText === 'function' ? generatePreviewText(m) : '');
-            txt = String(txt || '').trim();
-            // "+([RAC] + [Perícia: X]) em Cravar Totem" → "([RAC] + [Perícia: X])".
-            // O alvo já é o título do bloco; repetir só polui.
-            const sufixo = ' em ' + nome;
-            if (txt.endsWith(sufixo)) txt = txt.slice(0, -sufixo.length);
-            if (txt.startsWith('+')) txt = txt.slice(1);
-            return txt.trim();
+        .flatMap(m => {
+            const txt = String(m.previewTexto || (typeof generatePreviewText === 'function' ? generatePreviewText(m) : '') || '');
+            return txt.split(';').map(parte => {
+                let p = parte.trim();
+                const sufixo = ' em ' + nome;
+                if (p.endsWith(sufixo)) p = p.slice(0, -sufixo.length);
+                if (p.startsWith('+')) p = p.slice(1);
+                return p.trim();
+            });
         })
         .filter(Boolean);
 
@@ -332,11 +370,20 @@ function renderDerivedValue(dv) {
         </summary>
         <div class="detail-collapse-body">`;
 
+    // Valor inicial: o traço racial em si (Altura do Yotun, Flutuação do Picxi).
+    // Zero costuma significar "só o cálculo vale", então não vira chip.
+    const temInicial = valorInicial !== undefined && valorInicial !== null
+        && valorInicial !== '' && Number(valorInicial) !== 0;
+    if (temInicial) {
+        const mostrado = [dv.prefixo, valorInicial, dv.sufixo].filter(v => v !== '' && v !== undefined && v !== null).join(' ');
+        html += `<div class="cm-item-stats"><div class="cm-stat"><span class="cm-stat-label">Valor inicial</span><span class="cm-stat-valor">${escHtml(mostrado)}</span></div></div>`;
+    }
+
     if (formulas.length) {
         html += `<div class="cm-item-bloco"><span class="cm-stat-label">Fórmula</span>`;
         for (const f of formulas) html += `<span class="cm-formula">${escHtml(f)}</span>`;
         html += `</div>`;
-    } else {
+    } else if (!temInicial) {
         html += `<div class="cm-item-bloco"><span class="cm-stat-label">Fórmula</span><span class="cm-item-texto">Sem cálculo cadastrado.</span></div>`;
     }
 

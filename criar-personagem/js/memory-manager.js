@@ -64,9 +64,9 @@ const MemoryManager = {
         if (Object.keys(memorias).length === 0) return null;
 
         const PHASE_LABELS = {
-            linhagem_raca: '🧬 A Linhagem — Raça',
-            linhagem_classe: '⚔️ A Linhagem — Classe',
-            origens: '🏕️ As Origens',
+            linhagem_raca: '🧬 Raça',
+            linhagem_classe: '⚔️ Classe',
+            origens: '🏕️ Tribo',
             origens_adicional: '🍖 O Sabor de Casa',
             peculiaridades: '✨ Peculiaridades',
             corpo: '💪 Memória dos pontos forte',

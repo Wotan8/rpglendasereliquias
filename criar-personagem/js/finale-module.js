@@ -11,14 +11,35 @@ function initPhase8(container) {
         const classe = window._systemData?.classes?.find(c => c.nome === wizardState.classeSelecionada);
         const tribo = window._systemData?.tribes?.find(t => t.nome === wizardState.triboSelecionada);
 
+        /* Valores Derivados trazidos por PECULIARIDADE (de raça, classe, tribo ou
+           individual): ter a peculiaridade vincula o VD ao personagem, do mesmo jeito
+           que renderDerivedValuesGrid faz na ficha. Sem isto, um VD como Percepção
+           Olfativa — que só existe para quem tem faro — sumia da Véspera da Partida. */
+        const pecDVs = new Map(); // dvId -> entrada com characterCreationMin/Max
+        const coletarDeP = (pecIds) => {
+            (pecIds || []).forEach(entry => {
+                const pecId = typeof entry === 'object' && entry !== null ? entry.id : entry;
+                const pec = (window._systemData?.peculiarities || []).find(p => p.id === pecId);
+                (pec?.derivedValueIds || []).forEach(x => {
+                    const dvId = typeof x === 'object' && x !== null ? x.id : x;
+                    if (!pecDVs.has(dvId)) pecDVs.set(dvId, typeof x === 'object' ? x : {});
+                });
+            });
+        };
+        coletarDeP(raca?.peculiaridadeIds);
+        coletarDeP(classe?.peculiaridadeIds);
+        coletarDeP(classe?.bonusIniciais);
+        coletarDeP(tribo?.peculiaridadeIds);
+        coletarDeP(wizardState.peculiaridadesIndividuais);
+
         const elegiveis = (window.DERIVED_VALUES || []).filter(dv => {
             const checkSource = (source) => {
                 if (!source || !source.derivedValueIds) return false;
                 return source.derivedValueIds.some(x => typeof x === 'object' ? x.id === dv.id : x === dv.id);
             };
-            
-            const isLinked = checkSource(raca) || checkSource(classe) || checkSource(tribo);
-            
+
+            const isLinked = checkSource(raca) || checkSource(classe) || checkSource(tribo) || pecDVs.has(dv.id);
+
             return isLinked || (dv.todoPersonagem && dv.characterCreationRule);
         });
 
@@ -64,26 +85,28 @@ function initPhase8(container) {
                     let linkedMax = null;
                     let hasLink = false;
                     
+                    const aplicarBounds = (match) => {
+                        hasLink = true;
+                        if (typeof match !== 'object' || match === null) return;
+                        if (match.characterCreationMin !== undefined) {
+                            linkedMin = linkedMin === null ? match.characterCreationMin : Math.min(linkedMin, match.characterCreationMin);
+                        }
+                        if (match.characterCreationMax !== undefined) {
+                            linkedMax = linkedMax === null ? match.characterCreationMax : Math.max(linkedMax, match.characterCreationMax);
+                        }
+                    };
                     const checkBounds = (source) => {
                         if (!source || !source.derivedValueIds) return;
                         const match = source.derivedValueIds.find(x => typeof x === 'object' ? x.id === dv.id : x === dv.id);
-                        if (match) {
-                            hasLink = true;
-                            if (typeof match === 'object') {
-                                if (match.characterCreationMin !== undefined) {
-                                    linkedMin = linkedMin === null ? match.characterCreationMin : Math.min(linkedMin, match.characterCreationMin);
-                                }
-                                if (match.characterCreationMax !== undefined) {
-                                    linkedMax = linkedMax === null ? match.characterCreationMax : Math.max(linkedMax, match.characterCreationMax);
-                                }
-                            }
-                        }
+                        if (match) aplicarBounds(match);
                     };
-                    
+
                     checkBounds(raca);
                     checkBounds(classe);
                     checkBounds(tribo);
-                    
+                    // limites da peculiaridade que trouxe o VD (normalmente 0/0 → só leitura)
+                    if (pecDVs.has(dv.id)) aplicarBounds(pecDVs.get(dv.id));
+
                     let minBound, maxBound;
                     if (hasLink) {
                         minBound = linkedMin !== null ? linkedMin : (dv.characterCreationMin !== undefined ? dv.characterCreationMin : -20);
@@ -432,7 +455,7 @@ async function createCharacter() {
             const remaining = getGroupRemainingPoints(grupo);
             if (remaining > 0) {
                 showWizardToast(`Faltam pontos de atributos no grupo ${grupo}. Distribua todos os pontos antes de finalizar.`, 'error');
-                goToPhase(4); // Vai para a fase de Atributos (corpo)
+                goToPhase(getPhaseIndex(3)); // Vai para a fase de Atributos (corpo)
                 return;
             }
         }

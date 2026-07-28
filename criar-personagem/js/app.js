@@ -264,6 +264,7 @@ function renderPhase(index) {
     switch (fase.key) {
         case 'convite':     renderPhase0(container); break;
         case 'linhagem':    renderPhase1(container); break;
+        case 'classes':     renderPhase1B(container); break;
         case 'origens':     renderPhase2(container); break;
         case 'peculiaridades': renderPhase2B(container); break;
         case 'corpo':       renderPhase3(container); break;
@@ -785,6 +786,7 @@ function selectNivel(nivelId) {
 /* ===== PHASE STUBS (will be implemented in modules) ===== */
 
 function renderPhase1(c) { c.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px;">Carregando Fase 1...</p>'; if (typeof initPhase1 === 'function') initPhase1(c); }
+function renderPhase1B(c) { c.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px;">Carregando Classes...</p>'; if (typeof initPhase1B === 'function') initPhase1B(c); }
 function renderPhase2(c) { c.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px;">Carregando Fase 2...</p>'; if (typeof initPhase2 === 'function') initPhase2(c); }
 function renderPhase2B(c) { c.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px;">Carregando Fase 2B...</p>'; if (typeof initPhase2B === 'function') initPhase2B(c); }
 function renderPhase3(c) { c.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px;">Carregando Fase 3...</p>'; if (typeof initPhase3 === 'function') initPhase3(c); }

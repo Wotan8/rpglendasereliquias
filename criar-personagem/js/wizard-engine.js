@@ -98,6 +98,9 @@ function validatePhase(phaseIndex) {
 
         case 'linhagem':
             if (!wizardState.racaSelecionada) return { valid: false, reason: 'Selecione uma raça.' };
+            return { valid: true };
+
+        case 'classes':
             if (!wizardState.classeSelecionada) return { valid: false, reason: 'Selecione uma classe.' };
             return { valid: true };
 
