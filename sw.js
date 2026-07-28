@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v64';
+const VERSION = 'v65';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -202,10 +202,15 @@ self.addEventListener('install', event => {
 
   event.waitUntil(
     caches.open(STATIC_CACHE).then(cache =>
-      // add() individual: um recurso indisponível não aborta a instalação inteira
+      // add() individual: um recurso indisponível não aborta a instalação inteira.
+      // `cache: 'reload'` é ESSENCIAL: sem ele o precache é servido pelo cache
+      // HTTP do navegador (os .js/.css vão com max-age=3600), então uma versão
+      // nova do SW reinstalava com arquivos de até 1h atrás — no celular, que
+      // fica dias sem recarregar, a correção simplesmente não chegava.
       Promise.allSettled(
         PRECACHE_URLS.map(url =>
-          cache.add(url).catch(err => console.warn('[SW] Falha ao pré-cachear:', url, err))
+          cache.add(new Request(url, { cache: 'reload' }))
+            .catch(err => console.warn('[SW] Falha ao pré-cachear:', url, err))
         )
       )
     )

@@ -15,6 +15,7 @@ import { abrirMenuRadial } from './tab-hud.js';
 import { pontoVisivelAgora } from './tab-fog.js';
 import { confirmarTemplate, confirmarTerreno, terrenosDoCanvas, tplCfg } from './tab-templates.js';
 import { desfazer, refazer, registrarOp } from './tab-undo.js';
+import { anguloDoMovimento, temCone } from './tab-girar.js';
 
 let cv;
 let ponteiro = null;    // estado do gesto atual
@@ -417,6 +418,14 @@ function onMove(e) {
             break;
         }
         case 'dragObj': {
+            // Botão direito apertado DURANTE o arrasto: no PC o `pointerdown` do
+            // 2º botão nem sempre chega enquanto o 1º segura a captura, então a
+            // borda de subida é detectada aqui, pelo bitmask de `buttons`.
+            if (ponteiro.trail && e.pointerType === 'mouse') {
+                const direito = (e.buttons & 2) !== 0;
+                if (direito && !ponteiro.direitoAntes && addWaypoint()) toast('📍 Vértice fixado');
+                ponteiro.direitoAntes = direito;
+            }
             const o = T.objects.get(ponteiro.id); if (!o) break;
             const dx = w.x - ponteiro.w0.x, dy = w.y - ponteiro.w0.y;
             if (Math.abs(dx) + Math.abs(dy) > 2) { ponteiro.moveu = true; cancelarLongPress(); }
@@ -437,9 +446,14 @@ function onMove(e) {
                     }
                 }
                 if (nx === o.x && ny === o.y) break;
+                // O token olha para onde anda: sem isto, quem tem visão em cone
+                // atravessa o mapa mirando o mesmo canto o tempo todo.
+                const mira = temCone(o) ? anguloDoMovimento(nx - o.x, ny - o.y) : null;
                 o.x = nx; o.y = ny;
+                const patch = o.tipo === 'token' ? { x: nx, y: ny, movendo: true } : { x: nx, y: ny };
+                if (mira != null && mira !== o.rot) { o.rot = mira; patch.rot = mira; }
                 // F2.2/F2.3: deltas com flag `movendo` (clientes remotos seguram o fog)
-                updObj(o.id, o.tipo === 'token' ? { x: nx, y: ny, movendo: true } : { x: nx, y: ny }, DRAG_THROTTLE);
+                updObj(o.id, patch, DRAG_THROTTLE);
                 // F4.4: preview de custo com waypoints e terreno
                 if (o.tipo === 'token' && T.measureCfg.medirToken) {
                     const pts = [...ponteiro.trail, { x: nx, y: ny }];
@@ -678,7 +692,15 @@ function onDblClick(e) {
 }
 
 function onKey(e) {
-    if (e.target.matches('input,textarea,select')) return;
+    if (e.target.matches?.('input,textarea,select')) return;
+    // Vértice de rota pelo TECLADO. É o caminho confiável no PC: segurar o
+    // botão esquerdo e clicar com o direito depende do navegador entregar o
+    // segundo botão durante a captura, o que nem sempre acontece.
+    if ((e.key === ' ' || e.code === 'Space') && ponteiro?.tipo === 'dragObj' && ponteiro.trail) {
+        e.preventDefault();
+        if (addWaypoint()) toast('📍 Vértice fixado');
+        return;
+    }
     if (e.key === 'Escape') { T.temp = null; T.selection = null; abrirPropriedades(null); limparReguaCompartilhada(); markDirty(); return; }
     if (e.key === 'Enter' && T.tool === 'terreno' && T.temp?.tipo === 'terreno') {
         const pts = T.temp.pontos; T.temp = null; markDirty();

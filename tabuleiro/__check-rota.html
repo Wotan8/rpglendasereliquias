@@ -56,6 +56,12 @@ const up = (x, y, botao, botoes, pid = 1, ptype = 'mouse') => window.dispatchEve
     new PointerEvent('pointerup', { bubbles: true, cancelable: true, clientX: x, clientY: y,
         button: botao, buttons: botoes, pointerId: pid, pointerType: ptype, isPrimary: pid === 1 }));
 
+// Teclado: é assim que o jogador gira de verdade. Dispara no BODY (e sobe
+// até o window): num teclado real o alvo é sempre um elemento, e handlers
+// que leem e.target.matches quebrariam se o alvo fosse o window.
+const tecla = (k, shift) => document.body.dispatchEvent(
+    new KeyboardEvent('keydown', { key: k, shiftKey: !!shift, bubbles: true, cancelable: true }));
+
 let ok = 0, falhou = 0;
 const linhas = [];
 const eq = (nome, obtido, esperado) => {
@@ -130,6 +136,24 @@ eq('A4 soltar o botão direito mantém o arrasto vivo', vertices(), 4);
 up(660, 520, 0, 0);                                   // solta o esquerdo: fim
 eq('A5 soltar o esquerdo encerra e limpa a régua', T.temp, null);
 
+// ===== A') OUTROS CAMINHOS PARA O VÉRTICE (o botão direito falha no PC real) =====
+novoToken(400, 400);
+ev('pointerdown', 400, 400, 0, 1);
+ev('pointermove', 500, 400, -1, 1);
+eq("A7 régua viva antes do vértice", vertices(), 2);
+// ESPAÇO durante o arrasto
+tecla(' ');
+ev('pointermove', 500, 500, -1, 1);
+eq('A8 Espaço fixa vértice durante o arrasto', vertices(), 3);
+// botão direito detectado pelo bitmask de `buttons`, sem pointerdown
+ev('pointermove', 600, 500, -1, 3);
+ev('pointermove', 620, 500, -1, 3);
+eq('A9 botão direito pelo bitmask fixa vértice', vertices(), 4);
+ev('pointermove', 640, 500, -1, 1);   // soltou o direito
+ev('pointermove', 660, 500, -1, 3);   // apertou de novo
+eq('A10 segurar o direito não repete vértice a cada pixel', vertices(), 5);
+up(660, 500, 0, 0);
+
 // ===== B) GIRO: o jogador precisa mirar o cone de visão =====
 const tk2 = novoToken(400, 400);
 T.selection = tk2.id;
@@ -142,11 +166,6 @@ eq('B4 ângulo negativo normaliza para 0–359', T.objects.get('tk1').rot, 270);
 window.tbGirarToken('tk1', 450);
 eq('B5 acima de 360 dá a volta', T.objects.get('tk1').rot, 0);
 
-// Teclado: é assim que o jogador gira de verdade. Dispara no BODY (e sobe
-// até o window): num teclado real o alvo é sempre um elemento, e handlers
-// que leem e.target.matches quebrariam se o alvo fosse o window.
-const tecla = (k, shift) => document.body.dispatchEvent(
-    new KeyboardEvent('keydown', { key: k, shiftKey: !!shift, bubbles: true, cancelable: true }));
 tecla('e');
 eq('B6 tecla E gira 15° no sentido horário', T.objects.get('tk1').rot, 15);
 tecla('q');
@@ -161,7 +180,31 @@ T.selection = null;
 tecla('e');
 eq('B10 sem token selecionado a tecla não faz nada', T.objects.get('tk1').rot, 0);
 
+// ===== B') GIRO AUTOMÁTICO: o token olha para onde anda =====
+const tk3 = novoToken(400, 400);
+tk3.rot = 0;
+ev('pointerdown', 400, 400, 0, 1);
+ev('pointermove', 560, 400, -1, 1);          // arrasta para a DIREITA
+eq('B11 andar para a direita vira o token para 90°', T.objects.get('tk1').rot, 90);
+ev('pointermove', 560, 560, -1, 1);          // agora para BAIXO
+eq('B12 andar para baixo vira para 180°', T.objects.get('tk1').rot, 180);
+ev('pointermove', 400, 560, -1, 1);          // para a ESQUERDA
+eq('B13 andar para a esquerda vira para 270°', T.objects.get('tk1').rot, 270);
+ev('pointermove', 400, 400, -1, 1);          // para CIMA
+eq('B14 andar para cima vira para 0°', T.objects.get('tk1').rot, 0);
+up(400, 400, 0, 0);
+
+// Token de visão 360° não precisa mirar: não deve girar sozinho
+const tk4 = novoToken(400, 400);
+tk4.visao = { ativa: true, alcance: 9, angulo: 360, tipo: 'padrao' };
+tk4.rot = 33;
+ev('pointerdown', 400, 400, 0, 1);
+ev('pointermove', 560, 400, -1, 1);
+eq('B15 visão de 360° não gira sozinha', T.objects.get('tk1').rot, 33);
+up(560, 400, 0, 0);
+
 // ===== C) TOQUE: no celular não há Q/E — os botões são o único caminho =====
+novoToken(400, 400);          // o teste anterior deixou o token com visão 360°
 T.selection = 'tk1';
 desenharUmFrame();   // aba oculta = sem rAF; o frame é pedido na mão
 const bar = document.getElementById('tbGirarBar');
