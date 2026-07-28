@@ -8,7 +8,8 @@
 // Mora fora do tab-tools.js de propósito: registra o próprio listener e
 // não disputa arquivo com as ferramentas de ponteiro.
 // =============================================
-import { T, toast, markDirty, tokenDoUsuario, can } from './tab-state.js';
+import { T, markDirty, tokenDoUsuario, can } from './tab-state.js';
+import { worldToScreen } from './tab-render.js';
 import { updObj } from './tab-objects.js';
 
 const PASSO = 15;        // graus por toque
@@ -40,6 +41,45 @@ export function temCone(o) {
     return !!(o && o.tipo === 'token' && ((o.visao?.ativa && ang(o.visao.angulo)) || (o.luz?.ativa && ang(o.luz.angulo))));
 }
 
+/* ── Botões ↺ ↻ ancorados ao token ────────────────────────
+   No celular não há Q/E: sem estes botões o jogador de tablet
+   simplesmente não consegue mirar o cone. Servem também de dica
+   no desktop, onde a tecla continua valendo. */
+let barra = null, ultimoEstilo = '';
+
+function garantirBarra() {
+    if (barra) return barra;
+    barra = document.createElement('div');
+    barra.id = 'tbGirarBar';
+    barra.hidden = true;
+    barra.innerHTML = `<button data-gira="-1" title="Girar à esquerda (Q)">↺</button>
+                       <button data-gira="1" title="Girar à direita (E)">↻</button>`;
+    // pointerdown, não click: o canvas escuta pointerdown e roubaria o gesto
+    barra.addEventListener('pointerdown', (e) => {
+        const b = e.target.closest('[data-gira]');
+        if (!b) return;
+        e.preventDefault(); e.stopPropagation();
+        const o = T.selection && T.objects.get(T.selection);
+        if (o) girarToken(o.id, Number(b.dataset.gira) * (e.shiftKey ? PASSO_FINO : PASSO));
+    });
+    document.body.appendChild(barra);
+    return barra;
+}
+
+/** Ancora os botões ao token. Recebe centro e raio em coordenadas de MUNDO. */
+export function posicionarBotoesGirar(o, cx, cy, r) {
+    const el = garantirBarra();
+    const p = worldToScreen({ x: cx, y: cy });
+    const raioTela = r * T.cam.z;
+    const estilo = `left:${Math.round(p.x)}px;top:${Math.round(p.y - raioTela - 26)}px`;
+    if (estilo !== ultimoEstilo) { el.style.cssText = estilo; ultimoEstilo = estilo; }
+    el.hidden = false;
+}
+
+export function esconderBotoesGirar() {
+    if (barra && !barra.hidden) barra.hidden = true;
+}
+
 export function initGirar() {
     window.addEventListener('keydown', (e) => {
         if (e.target.matches?.('input,textarea,select')) return;
@@ -48,9 +88,7 @@ export function initGirar() {
         const o = T.selection && T.objects.get(T.selection);
         if (!podeGirar(o)) return;
         e.preventDefault();
-        const passo = e.shiftKey ? PASSO_FINO : PASSO;
-        const rot = girarToken(o.id, k === 'q' ? -passo : passo);
-        if (rot != null) toast(`🧭 ${o.nome || 'Token'} olhando para ${rot}°`);
+        girarToken(o.id, (k === 'q' ? -1 : 1) * (e.shiftKey ? PASSO_FINO : PASSO));
     });
 }
 

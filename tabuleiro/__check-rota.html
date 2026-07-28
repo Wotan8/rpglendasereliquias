@@ -2,6 +2,7 @@
 <html lang="pt-BR"><head><meta charset="utf-8">
 <title>__check — Rota do token e giro da visão</title>
 <link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="css/tabuleiro.css">
 <style>
   html,body{margin:0;height:100%;background:#0b0e14;color:#e6e8ef;font:14px/1.6 Inter,system-ui,sans-serif}
   #tbCanvas{position:fixed;inset:0;width:100vw;height:100vh}
@@ -34,7 +35,7 @@
 <script type="module">
 import { T, CAMADAS_PADRAO } from './js/tab-state.js';
 import { initTools, setTool } from './js/tab-tools.js';
-import { startRenderLoop } from './js/tab-render.js';
+import { startRenderLoop, desenharUmFrame } from './js/tab-render.js';
 import { initGirar } from './js/tab-girar.js';
 
 T.mesaId = 'check'; T.mode = 'secret'; T.isMaster = true; T.user = { uid: 'u' };
@@ -141,8 +142,10 @@ eq('B4 ângulo negativo normaliza para 0–359', T.objects.get('tk1').rot, 270);
 window.tbGirarToken('tk1', 450);
 eq('B5 acima de 360 dá a volta', T.objects.get('tk1').rot, 0);
 
-// Teclado: é assim que o jogador gira de verdade
-const tecla = (k, shift) => window.dispatchEvent(
+// Teclado: é assim que o jogador gira de verdade. Dispara no BODY (e sobe
+// até o window): num teclado real o alvo é sempre um elemento, e handlers
+// que leem e.target.matches quebrariam se o alvo fosse o window.
+const tecla = (k, shift) => document.body.dispatchEvent(
     new KeyboardEvent('keydown', { key: k, shiftKey: !!shift, bubbles: true, cancelable: true }));
 tecla('e');
 eq('B6 tecla E gira 15° no sentido horário', T.objects.get('tk1').rot, 15);
@@ -157,6 +160,43 @@ eq('B9 maiúscula também vale (Shift muda a caixa)', T.objects.get('tk1').rot, 
 T.selection = null;
 tecla('e');
 eq('B10 sem token selecionado a tecla não faz nada', T.objects.get('tk1').rot, 0);
+
+// ===== C) TOQUE: no celular não há Q/E — os botões são o único caminho =====
+T.selection = 'tk1';
+desenharUmFrame();   // aba oculta = sem rAF; o frame é pedido na mão
+const bar = document.getElementById('tbGirarBar');
+eq('C1 barra de girar existe', !!bar, true);
+eq('C2 barra aparece com token de cone selecionado', bar && !bar.hidden, true);
+eq('C2b e aparece de verdade (display não é none)', getComputedStyle(bar).display !== 'none', true);
+eq('C2c botões cabem na tela, não esticam', bar.getBoundingClientRect().width < 140, true);
+eq('C3 tem os dois sentidos', bar ? bar.querySelectorAll('[data-gira]').length : 0, 2);
+
+/** Toque de verdade: pointerdown com pointerType touch. */
+const toque = (el, shift) => el.dispatchEvent(new PointerEvent('pointerdown',
+    { bubbles: true, cancelable: true, pointerType: 'touch', isPrimary: true, pointerId: 7, shiftKey: !!shift }));
+
+const antesTap = T.objects.get('tk1').rot;
+toque(bar.querySelector('[data-gira="1"]'));
+eq('C4 toque no ↻ gira 15°', T.objects.get('tk1').rot, (antesTap + 15) % 360);
+toque(bar.querySelector('[data-gira="-1"]'));
+eq('C5 toque no ↺ volta 15°', T.objects.get('tk1').rot, antesTap);
+toque(bar.querySelector('[data-gira="1"]'), true);
+eq('C6 toque com Shift gira 45°', T.objects.get('tk1').rot, (antesTap + 45) % 360);
+
+// Token SEM cone não mostra a barra (360° não precisa mirar)
+T.objects.get('tk1').visao = { ativa: true, alcance: 9, angulo: 360, tipo: 'padrao' };
+desenharUmFrame();
+eq('C7 visão de 360° não mostra os botões', getComputedStyle(bar).display, 'none');
+
+// Voltando ao cone, a barra reaparece
+T.objects.get('tk1').visao = { ativa: true, alcance: 9, angulo: 220, tipo: 'padrao' };
+desenharUmFrame();
+eq('C8 com cone de novo, a barra volta', bar.hidden, false);
+
+// Deselecionar esconde
+T.selection = null;
+desenharUmFrame();
+eq('C9 sem seleção a barra some', getComputedStyle(bar).display, 'none');
 
 mostrar();
 </script>

@@ -481,3 +481,31 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 }
 .detail-modal:not(#aliadoNpcModal).hidden { display: none; }
 
+
+/* ── Botões de girar o token (tab-girar.js) ──────────────────
+   Ancorados ao token selecionado. Existem principalmente pelo
+   toque: no celular não há Q/E e o cone ficaria travado. */
+#tbGirarBar {
+    position: fixed;
+    z-index: 45;
+    display: flex;
+    gap: 6px;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+}
+#tbGirarBar[hidden] { display: none; }
+#tbGirarBar button {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 1px solid rgba(34, 211, 238, .55);
+    background: rgba(11, 14, 20, .82);
+    color: #22d3ee;
+    font-size: 1.05rem; line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+    touch-action: manipulation;
+    user-select: none;
+}
+#tbGirarBar button:hover { background: rgba(34, 211, 238, .18); }
+#tbGirarBar button:active { transform: scale(.9); }

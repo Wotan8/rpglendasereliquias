@@ -15,7 +15,7 @@ import { desenharExploracao, registrarExploracaoCelulas, tokenVisivelParaMim, ca
 import { cursoresParaDesenhar, pingsParaDesenhar, haPingsAtivos, avancarTweenCamera, cursoresAtivados } from './tab-presenca.js';
 import { vitaisDoToken, barrasVisiveis, tokenAtivoDoCombate } from './tab-hud.js';
 import { desenharClima, climaAtivo, alphaTelhado } from './tab-clima.js';
-import { temCone, podeGirarToken } from './tab-girar.js';
+import { temCone, podeGirarToken, posicionarBotoesGirar, esconderBotoesGirar } from './tab-girar.js';
 
 let cv, ctx, fogCv, fogCtx, maskCv, maskCtx, luzCv, luzCtx;
 let dpr = 1;
@@ -35,6 +35,10 @@ export function startRenderLoop() {
     window.addEventListener('resize', () => { resize(); markDirty(); });
     requestAnimationFrame(loop);
 }
+
+/** Um frame agora, fora do loop. Existe para os checks: com a aba oculta o
+ *  requestAnimationFrame não dispara e o harness ficaria esperando para sempre. */
+export function desenharUmFrame() { draw(); }
 
 function resize() {
     dpr = window.devicePixelRatio || 1;
@@ -749,6 +753,9 @@ function drawJanela(o) {
 
 function drawSelecao() {
     syncLockBtn();
+    // Some por padrão; desenharBussola reexibe no mesmo frame se couber —
+    // assim os early returns abaixo não deixam os botões órfãos na tela.
+    esconderBotoesGirar();
     if (!T.selection) return;
     const o = T.objects.get(T.selection); if (!o) return;
     const b = bboxOf(o);
@@ -773,36 +780,37 @@ function drawSelecao() {
 }
 
 /**
- * Token com visão/luz em CONE: mostra para onde ele olha e ensina a girar.
- * Sem isto o jogador não tem como descobrir que dá para mirar — e um cone
- * de 220° travado em 0° parece um bug de visão.
+ * Token com visão/luz em CONE: um arco fino na borda mostra a amplitude e
+ * para onde ele mira. Discreto de propósito — o token é que importa, não o
+ * indicador; e sem nada o jogador não descobre que dá para girar.
  */
 function desenharBussola(o, b) {
     if (!temCone(o) || !podeGirarToken(o)) return;
     const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
-    const r = Math.max(b.w, b.h) / 2 + hud(10);
-    const a = ((o.rot || 0) - 90) * Math.PI / 180;   // 0° = para cima
+    const r = Math.max(b.w, b.h) / 2 + hud(5);
+    const dir = ((o.rot || 0) - 90) * Math.PI / 180;   // 0° = para cima
+    const ang = (o.visao?.ativa && o.visao.angulo) || o.luz?.angulo || 360;
+    const meia = Math.min(Math.PI, (ang * Math.PI / 180) / 2);
 
     ctx.save();
-    ctx.strokeStyle = '#22d3ee'; ctx.fillStyle = '#22d3ee';
+    ctx.strokeStyle = '#22d3ee';
+    ctx.lineCap = 'round';
+
+    // Arco da amplitude: fininho, só na borda
+    ctx.lineWidth = hud(2.5);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, dir - meia, dir + meia);
+    ctx.stroke();
+
+    // Marca da direção: um risco curto para fora, no centro do cone
     ctx.lineWidth = hud(2);
     ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    ctx.moveTo(cx + Math.cos(dir) * r, cy + Math.sin(dir) * r);
+    ctx.lineTo(cx + Math.cos(dir) * (r + hud(6)), cy + Math.sin(dir) * (r + hud(6)));
     ctx.stroke();
-    // ponta da seta
-    ctx.beginPath();
-    for (const d of [0, 2.5, -2.5]) {
-        const t = a + d;
-        const raio = d === 0 ? r + hud(7) : r - hud(1);
-        ctx.lineTo(cx + Math.cos(t) * raio, cy + Math.sin(t) * raio);
-    }
-    ctx.closePath(); ctx.fill();
-
-    ctx.font = `${hud(11)}px sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillText('Q ↺  E ↻', cx, b.y + b.h + hud(4));
     ctx.restore();
+
+    posicionarBotoesGirar(o, cx, cy, r);
 }
 
 /** 🔒 F8: posiciona o botão HTML de desbloqueio sobre o objeto bloqueado selecionado (só Mestre). */
