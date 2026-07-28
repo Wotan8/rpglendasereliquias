@@ -16,7 +16,7 @@ import { cursoresParaDesenhar, pingsParaDesenhar, haPingsAtivos, avancarTweenCam
 import { vitaisDoToken, barrasVisiveis, tokenAtivoDoCombate } from './tab-hud.js';
 import { desenharClima, climaAtivo, alphaTelhado } from './tab-clima.js';
 
-let cv, ctx, fogCv, fogCtx, maskCv, maskCtx;
+let cv, ctx, fogCv, fogCtx, maskCv, maskCtx, luzCv, luzCtx;
 let dpr = 1;
 let viewRect = null;
 
@@ -27,6 +27,8 @@ export function startRenderLoop() {
     ctx = cv.getContext('2d');
     fogCv = document.createElement('canvas'); fogCtx = fogCv.getContext('2d');
     maskCv = document.createElement('canvas'); maskCtx = maskCv.getContext('2d');
+    // Máscara separada só para a UNIÃO das luzes — ver drawFog()
+    luzCv = document.createElement('canvas'); luzCtx = luzCv.getContext('2d');
     mapCache.cv = document.createElement('canvas'); mapCache.ctx = mapCache.cv.getContext('2d');
     resize();
     window.addEventListener('resize', () => { resize(); markDirty(); });
@@ -39,6 +41,7 @@ function resize() {
     cv.width = r.width * dpr; cv.height = r.height * dpr;
     fogCv.width = cv.width; fogCv.height = cv.height;
     maskCv.width = cv.width; maskCv.height = cv.height;
+    luzCv.width = cv.width; luzCv.height = cv.height;
     mapCache.w = Math.round(cv.width * mapCache.pad);
     mapCache.h = Math.round(cv.height * mapCache.pad);
     mapCache.cv.width = mapCache.w; mapCache.cv.height = mapCache.h;
@@ -942,6 +945,7 @@ function drawFog() {
         const precisam = visao.filter(e => e.precisaLuz);
         const autonomos = visao.filter(e => !e.precisaLuz);
         if (precisam.length) {
+            // union(LoS) na máscara principal
             maskCtx.setTransform(1, 0, 0, 1, 0, 0);
             maskCtx.clearRect(0, 0, maskCv.width, maskCv.height);
             maskCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -949,10 +953,24 @@ function drawFog() {
             maskCtx.globalCompositeOperation = 'source-over';
             maskCtx.fillStyle = '#fff';
             for (const e of precisam) fillPoly(maskCtx, e.poly);
-            // interseção com a área iluminada: union(LoS) ∩ union(luz)
+
+            // union(luz) num canvas SEPARADO. Aplicar 'destination-in' luz a
+            // luz aqui daria LoS ∩ luz1 ∩ luz2 ∩ … — interseção, não união:
+            // com duas luzes que não se tocam o resultado é vazio e o jogador
+            // vê tudo preto por mais luzes que o mestre acenda.
+            luzCtx.setTransform(1, 0, 0, 1, 0, 0);
+            luzCtx.clearRect(0, 0, luzCv.width, luzCv.height);
+            luzCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            aplicarCamera(luzCtx, T.cam);
+            luzCtx.globalCompositeOperation = 'source-over';
+            for (const e of luz) cortarPoly(luzCtx, e.f, e.poly, true);
+
+            // agora sim: union(LoS) ∩ union(luz), numa única operação
+            maskCtx.setTransform(1, 0, 0, 1, 0, 0);
             maskCtx.globalCompositeOperation = 'destination-in';
-            for (const e of luz) cortarPoly(maskCtx, e.f, e.poly, true);
+            maskCtx.drawImage(luzCv, 0, 0);
             maskCtx.globalCompositeOperation = 'source-over';
+
             fogCtx.setTransform(1, 0, 0, 1, 0, 0);
             fogCtx.globalCompositeOperation = 'destination-out';
             fogCtx.drawImage(maskCv, 0, 0);

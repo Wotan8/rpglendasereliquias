@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Check — Fog: união das luzes</title>
+    <style>
+        body { background: #0E1117; color: #F2F2F2; font-family: system-ui, sans-serif; margin: 0; padding: 24px; }
+        h1 { color: #D4AF37; font-size: 1.1rem; }
+        #res { white-space: pre-wrap; font-family: monospace; font-size: 13px; line-height: 1.6; }
+        .ok { color: #3FAE6A; } .fail { color: #C94F5C; font-weight: 700; }
+        canvas { border: 1px solid #30363D; margin: 8px 8px 0 0; image-rendering: pixelated; }
+        .legenda { color: #A8B3C2; font-size: 12px; margin-top: 16px; }
+    </style>
+</head>
+
+<body>
+    <h1>Fog do jogador — duas luzes separadas precisam SOMAR, não se anular</h1>
+    <div id="res">rodando…</div>
+    <div>
+        <canvas id="cvErrado" width="200" height="100"></canvas>
+        <canvas id="cvCerto" width="200" height="100"></canvas>
+    </div>
+    <div class="legenda">
+        Esquerda: <b>destination-in em laço</b> (o bug) — LoS ∩ luz1 ∩ luz2 = vazio, fog inteiro preto.<br>
+        Direita: <b>união num canvas separado</b> (a correção) — LoS ∩ (luz1 ∪ luz2), duas clareiras.<br>
+        O jogador enxerga onde o fog foi recortado (buraco no preto).
+    </div>
+
+    <script type="module">
+        const casos = [];
+        const t = (nome, fn) => { try { casos.push([nome, !!fn(), '']); } catch (e) { casos.push([nome, false, e.message]); } };
+
+        // Cenário: um token vê o mapa inteiro (LoS cobre tudo) e há DUAS luzes
+        // que não se tocam — exatamente a mesa que ficou preta.
+        const LOS = { x: 0, y: 0, w: 200, h: 100 };
+        const LUZES = [{ x: 50, y: 50, r: 25 }, { x: 150, y: 50, r: 25 }];
+
+        const novo = () => {
+            const c = document.createElement('canvas');
+            c.width = 200; c.height = 100;
+            return { cv: c, ctx: c.getContext('2d') };
+        };
+        const circulo = (ctx, l) => { ctx.beginPath(); ctx.arc(l.x, l.y, l.r, 0, Math.PI * 2); ctx.fill(); };
+
+        /** Constrói a máscara do jeito ANTIGO: destination-in luz a luz. */
+        function mascaraAntiga() {
+            const m = novo();
+            m.ctx.fillStyle = '#fff';
+            m.ctx.fillRect(LOS.x, LOS.y, LOS.w, LOS.h);      // union(LoS)
+            m.ctx.globalCompositeOperation = 'destination-in';
+            for (const l of LUZES) circulo(m.ctx, l);          // ⚠️ vira interseção
+            m.ctx.globalCompositeOperation = 'source-over';
+            return m;
+        }
+
+        /** Constrói a máscara do jeito NOVO: união das luzes num canvas à parte. */
+        function mascaraNova() {
+            const m = novo(), luz = novo();
+            m.ctx.fillStyle = '#fff';
+            m.ctx.fillRect(LOS.x, LOS.y, LOS.w, LOS.h);      // union(LoS)
+            luz.ctx.fillStyle = '#fff';
+            for (const l of LUZES) circulo(luz.ctx, l);        // union(luz)
+            m.ctx.globalCompositeOperation = 'destination-in';
+            m.ctx.drawImage(luz.cv, 0, 0);                     // uma única interseção
+            m.ctx.globalCompositeOperation = 'source-over';
+            return m;
+        }
+
+        /** Aplica a máscara no fog preto e devolve o alpha em cada ponto. */
+        function fogCom(mask, destino) {
+            const f = destino ? { cv: destino, ctx: destino.getContext('2d') } : novo();
+            f.ctx.clearRect(0, 0, 200, 100);
+            f.ctx.fillStyle = 'rgba(2,4,10,1)';
+            f.ctx.fillRect(0, 0, 200, 100);
+            f.ctx.globalCompositeOperation = 'destination-out';
+            f.ctx.drawImage(mask.cv, 0, 0);
+            f.ctx.globalCompositeOperation = 'source-over';
+            return (x, y) => f.ctx.getImageData(x, y, 1, 1).data[3];   // alpha do fog
+        }
+
+        const alphaAntigo = fogCom(mascaraAntiga(), document.getElementById('cvErrado'));
+        const alphaNovo = fogCom(mascaraNova(), document.getElementById('cvCerto'));
+
+        // O bug, reproduzido: com duas luzes separadas nada é recortado.
+        t('BUG confirmado: em laço, a luz da esquerda não abre o fog', () => alphaAntigo(50, 50) > 250);
+        t('BUG confirmado: em laço, a luz da direita também não abre', () => alphaAntigo(150, 50) > 250);
+
+        // A correção: cada luz abre a sua clareira.
+        t('luz da esquerda abre o fog', () => alphaNovo(50, 50) < 5);
+        t('luz da direita abre o fog', () => alphaNovo(150, 50) < 5);
+        t('entre as luzes segue escuro', () => alphaNovo(100, 10) > 250);
+        t('fora do alcance segue escuro', () => alphaNovo(5, 95) > 250);
+        t('borda da luz ainda abre', () => alphaNovo(50 + 20, 50) < 5);
+
+        // Uma luz só sempre funcionou — a correção não pode quebrar isso.
+        t('com UMA luz o comportamento continua igual', () => {
+            const guarda = LUZES.splice(1, 1);
+            const um = fogCom(mascaraNova());
+            const antes = fogCom(mascaraAntiga());
+            LUZES.push(guarda[0]);
+            return um(50, 50) < 5 && antes(50, 50) < 5;
+        });
+
+        const falhas = casos.filter(c => !c[1]).length;
+        document.getElementById('res').innerHTML =
+            `<b class="${falhas ? 'fail' : 'ok'}">${falhas ? falhas + ' FALHA(S)' : 'TODOS OS ' + casos.length + ' CASOS PASSARAM'}</b>\n\n` +
+            casos.map(([n, ok, err]) => `<span class="${ok ? 'ok' : 'fail'}">${ok ? '✅' : '❌'} ${n}${err ? ' — ' + err : ''}</span>`).join('\n');
+    </script>
+</body>
+
+</html>
