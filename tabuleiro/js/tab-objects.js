@@ -42,18 +42,24 @@ export function updObj(id, patch, throttleMs = 0) {
     if (o) { Object.assign(o, patch); notifyObjectChange(o); markDirty(); }
     // F2.2: todo write carrega lastWriter (anti-eco do lerp) e timestamp
     const meta = () => ({ atualizadoEm: Date.now(), lastWriter: T.user?.uid || null });
-    const write = async () => {
-        try { await updateDoc(refObjeto(id), { ...patch, ...meta() }); }
+    // Recebe o patch por parâmetro: o disparo atrasado grava o ÚLTIMO
+    // acumulado (th.last), não o que originou o agendamento.
+    const write = async (p) => {
+        try { await updateDoc(refObjeto(id), { ...p, ...meta() }); }
         catch (e) { console.warn('updObj', e); }
     };
-    if (!throttleMs) { write(); return; }
+    if (!throttleMs) { write(patch); return; }
     const th = _throttles.get(id) || { t: 0, timer: null, last: null };
     th.last = patch;
     const agora = Date.now();
-    if (agora - th.t > throttleMs) { th.t = agora; write(); }
+    if (agora - th.t > throttleMs) { th.t = agora; write(patch); }
     else {
         clearTimeout(th.timer);
-        th.timer = setTimeout(() => { th.t = Date.now(); updateDoc(refObjeto(id), { ...th.last, ...meta() }).catch(()=>{}); }, throttleMs);
+        // Antes o refObjeto era chamado aqui, SÍNCRONO e fora de qualquer
+        // try/catch: sem canvas ativo (troca de cena no meio de um arrasto)
+        // virava erro solto no console do jogador. Passando por write(),
+        // a falha vira aviso como em todo o resto.
+        th.timer = setTimeout(() => { th.t = Date.now(); write(th.last); }, throttleMs);
     }
     _throttles.set(id, th);
 }

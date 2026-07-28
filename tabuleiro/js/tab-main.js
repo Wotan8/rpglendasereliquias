@@ -19,6 +19,7 @@ import { initCena, transicaoDeCena } from './tab-cena.js';
 import { initTemplates } from './tab-templates.js';
 import { initMusica } from './tab-musica.js';
 import './tab-local.js';   // 📍 Locais do Worldbuilding (registra window.tbAbrirLocal)
+import { initGirar } from './tab-girar.js';
 import { carregarExploracao } from './tab-fog.js';
 import { limparHistorico } from './tab-undo.js';
 import { posDisplay, screenToWorld } from './tab-render.js';
@@ -66,6 +67,7 @@ window.addEventListener('DOMContentLoaded', () => {
             await iniciarSync();
             montarUI();
             initTools();
+            initGirar();
             initObjects();
             initCombat();
             initMostrar();

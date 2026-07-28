@@ -238,15 +238,19 @@ function onDown(e) {
 
     // Botão do meio ou direito = pan (ou vértice na régua / waypoint no arrasto)
     if (e.button === 2) {
-        if (T.temp?.tipo === 'medida' && T.measureCfg.forma !== 'caneta') {
-            T.temp.pontos.push(snapMedida(w));
-            markDirty();
-            return;
-        }
-        // F4.4: waypoint durante arrasto de token
+        // F4.4: waypoint durante arrasto de token. TEM de vir antes da régua:
+        // arrastando um token, T.temp já é uma 'medida' (a rota do movimento),
+        // então o teste de baixo capturava o clique e empurrava o vértice em
+        // T.temp.pontos — que o onMove reconstrói do trail a cada movimento.
+        // O vértice ia para o lugar errado e sumia no frame seguinte.
         if (ponteiro?.tipo === 'dragObj' && ponteiro.trail) {
             const o = T.objects.get(ponteiro.id);
             if (o) { ponteiro.trail.push({ x: o.x, y: o.y }); markDirty(); }
+            return;
+        }
+        if (T.temp?.tipo === 'medida' && T.measureCfg.forma !== 'caneta') {
+            T.temp.pontos.push(snapMedida(w));
+            markDirty();
             return;
         }
         ponteiro = { tipo: 'pan', scr, cam: { ...T.cam }, botao: 2, moveu: false, alvoCtx: pickObject(w), w0: w };

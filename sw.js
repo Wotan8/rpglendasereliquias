@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v62';
+const VERSION = 'v63';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -158,6 +158,7 @@ const PRECACHE_URLS = [
   '/tabuleiro/js/tab-musica.js',
   '/tabuleiro/js/tab-musica-calc.js',
   '/tabuleiro/js/tab-local.js',
+  '/tabuleiro/js/tab-girar.js',
   '/shared/lendas-reliquias.css',
   '/shared/local-tatico.js',
   '/shared/texto-mundo.css',
