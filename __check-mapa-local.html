@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <title>Check — Mapa Tático do Local</title>
     <link rel="stylesheet" href="shared/tokens.css">
-    <link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css">
+    <link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=2">
     <style>
         body { background: var(--lr-bg-0); color: var(--lr-text-1); font-family: var(--lr-font-body); margin: 0; padding: 24px; }
         #res { white-space: pre-wrap; font-family: monospace; font-size: 13px; }
@@ -58,6 +58,16 @@
         t('salvar sem mapa avisa', () => { document.getElementById('wbmlSalvar').click(); return true; });
         await espera(100);
         t('aviso ⚠️ apareceu', () => document.getElementById('wbmlDica').textContent.includes('⚠️'));
+
+        // Regressão: `display:flex` do CSS vencia o atributo [hidden] e o
+        // overlay "Nenhum mapa ainda" ficava NA FRENTE do mapa enviado.
+        t('overlay some quando hidden (upload feito)', () => {
+            const vazio = document.getElementById('wbmlVazio');
+            vazio.hidden = true;
+            const sumiu = getComputedStyle(vazio).display === 'none';
+            vazio.hidden = false;
+            return sumiu;
+        });
 
         // ESC fecha (bubbles: como um teclado de verdade)
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));

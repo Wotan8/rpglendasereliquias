@@ -578,6 +578,9 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
 .wbml-stage img { display: block; width: 100%; height: 100%; user-select: none; }
 .wbml-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .wbml-vazio { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .8rem; color: var(--lr-text-2); background: rgba(14,17,23,.82); }
+/* `display: flex` acima vence o [hidden] do navegador — sem esta regra o
+   overlay "Nenhum mapa ainda" ficava na frente do mapa recém-enviado. */
+.wbml-vazio[hidden] { display: none; }
 
 /* Seção "Mapa Tático" dentro da ficha do Local */
 .wbml-secao-status { font-size: var(--lr-fs-sm); color: var(--lr-text-2); margin-bottom: .6rem; }
