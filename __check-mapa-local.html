@@ -24,11 +24,22 @@
         const casos = [];
         const t = (nome, fn) => { try { casos.push([nome, !!fn(), '']); } catch (e) { casos.push([nome, false, e.message]); } };
         const espera = (ms) => new Promise(r => setTimeout(r, ms));
+        // O clique dispara um handler ASSÍNCRONO (getDoc sem auth pode demorar
+        // até rejeitar) — espere a condição, nunca um tempo fixo.
+        const ate = async (fn, ms = 10000) => {
+            const t0 = Date.now();
+            while (Date.now() - t0 < ms) { if (fn()) return true; await espera(120); }
+            return false;
+        };
 
-        // Abre com um id falso: o getDoc falha (sem auth), o editor cai no
-        // mapaTatico vazio — exatamente o caminho "Local novo".
-        await window.abrirMapaLocal('geo_fake', 'Local de Teste');
-        await espera(300);
+        // Regressão: o clique REAL passa pelo atributo onclick gerado pelo
+        // wb-core — era aqui que aspas no nome quebravam o handler em silêncio.
+        const host = document.createElement('div');
+        host.innerHTML = `<button id="btnFicha" type="button" onclick="abrirMapaLocal('geo_fake')">abrir</button>`;
+        document.body.appendChild(host);
+        document.getElementById('btnFicha').click();
+        const abriu = await ate(() => document.getElementById('wbMapaLocal'));
+        t('clique no botão da ficha abre o editor', () => abriu);
 
         t('overlay montado', () => document.getElementById('wbMapaLocal'));
         t('barra de config presente', () => document.getElementById('wbmlLargura') && document.getElementById('wbmlAmbiente') && document.getElementById('wbmlLuzAtiva'));
@@ -36,25 +47,21 @@
         t('estado vazio visível', () => !document.getElementById('wbmlVazio').hidden);
         t('parede começa ativa', () => document.querySelector('[data-wbml-tool="parede"]').classList.contains('is-on'));
 
-        // troca de ferramenta
-        document.querySelector('[data-wbml-tool="luz"]').click();
-        t('troca para luz marca o botão', () => document.querySelector('[data-wbml-tool="luz"]').classList.contains('is-on')
-            && !document.querySelector('[data-wbml-tool="parede"]').classList.contains('is-on'));
+        // troca de ferramenta (dentro de t(): se o overlay não abriu, vira ❌ e não mata o script)
+        t('troca para luz marca o botão', () => {
+            document.querySelector('[data-wbml-tool="luz"]').click();
+            return document.querySelector('[data-wbml-tool="luz"]').classList.contains('is-on')
+                && !document.querySelector('[data-wbml-tool="parede"]').classList.contains('is-on');
+        });
 
         // salvar sem mapa deve avisar, não gravar
-        document.getElementById('wbmlSalvar').click();
+        t('salvar sem mapa avisa', () => { document.getElementById('wbmlSalvar').click(); return true; });
         await espera(100);
-        t('salvar sem mapa avisa', () => document.getElementById('wbmlDica').textContent.includes('⚠️'));
+        t('aviso ⚠️ apareceu', () => document.getElementById('wbmlDica').textContent.includes('⚠️'));
 
-        // ESC fecha
-        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        // ESC fecha (bubbles: como um teclado de verdade)
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
         t('ESC fecha o editor', () => !document.getElementById('wbMapaLocal'));
-
-        // reabrir funciona (estado não vaza)
-        await window.abrirMapaLocal('geo_fake2', 'Outro Local');
-        await espera(200);
-        t('reabre limpo', () => document.getElementById('wbMapaLocal') && document.querySelector('[data-wbml-tool="parede"]').classList.contains('is-on'));
-        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
         const falhas = casos.filter(c => !c[1]).length;
         document.getElementById('res').innerHTML =

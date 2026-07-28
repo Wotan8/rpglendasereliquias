@@ -2393,7 +2393,7 @@ import {
                     <h3 class="form-section-title">🗺️ Mapa Tático (Tabuleiro)</h3>
                     <div class="wbml-secao-status">${mtStatus}</div>
                     ${entry?.id
-                        ? `<button type="button" class="btn btn-secondary" onclick="abrirMapaLocal('${entry.id}', ${JSON.stringify(entry.nome || '')})">🗺️ Abrir editor de mapa</button>
+                        ? `<button type="button" class="btn btn-secondary" onclick="abrirMapaLocal('${entry.id}')">🗺️ Abrir editor de mapa</button>
                            <p class="wbml-secao-status" style="margin-top:.5rem">Suba o mapa do Local, defina a escala e desenhe paredes, portas, janelas e luzes. No Tabuleiro, o Local entra pronto com um clique.</p>`
                         : `<p class="wbml-secao-status">💾 Salve o Local primeiro — o editor de mapa grava direto na ficha dele.</p>`}
                 </div>`;
