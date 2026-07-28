@@ -493,6 +493,175 @@ html.dark .memory-box-label { background: var(--paper); }
     gap: 10px;
 }
 
+/* ===== BLOCOS RETRÁTEIS DO MODAL DE DETALHE =====
+   <details> nativo: sem JS, acessível por teclado, fechado por padrão.
+   O summary carrega o sinal comparável (contagem, slots, custo). */
+.detail-collapse-list {
+    display: grid;
+    gap: 8px;
+}
+
+.detail-collapse {
+    border: 1px solid var(--soft);
+    border-radius: 10px;
+    background: var(--paper);
+    overflow: hidden;
+}
+
+.detail-collapse-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+
+.detail-collapse-summary::-webkit-details-marker { display: none; }
+
+.detail-collapse-summary::before {
+    content: '▸';
+    flex: none;
+    color: var(--accent);
+    font-size: .8rem;
+    transition: transform .15s;
+}
+
+.detail-collapse[open] > .detail-collapse-summary::before { transform: rotate(90deg); }
+.detail-collapse-summary:hover { background: var(--chip); }
+
+.detail-collapse-title {
+    font-weight: 800;
+    font-size: .86rem;
+    color: var(--ink);
+}
+
+.detail-collapse-meta {
+    margin-left: auto;
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.detail-collapse-body { padding: 0 12px 12px; }
+.detail-collapse-body .detail-fields-grid { margin-bottom: 0; }
+
+/* Peculiaridade dentro do retrátil: o summary já mostra ícone e nome,
+   então some com o card duplicado e mantém só a borda positivo/negativo. */
+.detail-collapse-body > .detail-pec-item-full {
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-radius: 0;
+    padding: 0 0 0 10px;
+    background: none;
+}
+
+.detail-collapse-body > .detail-pec-item-full .detail-pec-header { display: none; }
+
+/* ===== ITEM PRÉ-CADASTRADO DE MÓDULO — ficha estruturada ===== */
+.cm-item-list {
+    display: grid;
+    gap: 8px;
+}
+
+.cm-item {
+    border: 1px solid var(--soft);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: var(--chip);
+}
+
+.cm-item-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.cm-item-nome {
+    font-weight: 800;
+    font-size: .84rem;
+    color: var(--ink);
+}
+
+.cm-item-exp {
+    margin-left: auto;
+    flex: none;
+    font-size: .68rem;
+    font-weight: 800;
+    color: var(--accent);
+    white-space: nowrap;
+}
+
+.cm-item-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.cm-stat {
+    padding: 5px 8px;
+    border-radius: 6px;
+    background: var(--paper);
+    border: 1px solid var(--soft);
+}
+
+.cm-stat-label {
+    display: block;
+    font-size: .62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--muted);
+    margin-bottom: 1px;
+}
+
+.cm-stat-valor {
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.cm-item-bloco + .cm-item-bloco { margin-top: 6px; }
+
+.cm-item-texto {
+    display: block;
+    font-size: .8rem;
+    line-height: 1.5;
+    color: var(--ink);
+    opacity: .9;
+}
+
+.cm-item-stats:last-child { margin-bottom: 0; }
+
+/* Fórmula de Valor Derivado — monoespaçada, quebra em telas estreitas */
+.cm-formula {
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .76rem;
+    line-height: 1.5;
+    color: var(--accent);
+    word-break: break-word;
+}
+
+.cm-formula + .cm-formula { margin-top: 4px; }
+
+.detail-collapse-empty {
+    padding: 0 12px 12px;
+    font-size: .8rem;
+    font-style: italic;
+    color: var(--muted);
+}
+
+@media (max-width: 560px) {
+    .detail-collapse-summary { flex-wrap: wrap; }
+    .detail-collapse-meta { margin-left: 0; width: 100%; }
+}
+
 .detail-pec-item-full {
     border: 1px solid var(--soft);
     border-radius: 10px;
@@ -536,12 +705,6 @@ html.dark .memory-box-label { background: var(--paper); }
     background: rgba(212, 175, 55,.04);
     border-radius: 6px;
     font-size: .78rem;
-}
-
-.detail-mechanic-name {
-    font-weight: 700;
-    color: var(--accent);
-    white-space: nowrap;
 }
 
 .detail-mechanic-info {

@@ -127,6 +127,9 @@ function openRaceModal(raceName, event) {
         html += `</div></div>`;
     }
 
+    // 📖 Livro vinculado (Worldbuilding) — leitura dos capítulos liberados
+    html += window.lvSecaoHTML ? window.lvSecaoHTML(raceData) : '';
+
     // Peculiaridades com mecânicas detalhadas
     if (raceBuilt?.peculiaridades?.length) {
         html += `<div class="detail-section"><div class="detail-section-title">⚡ Peculiaridades Raciais</div><div class="detail-pec-list">`;
@@ -213,19 +216,78 @@ function openClassModal(className, event) {
             return window._systemData.maneuvers?.find(m => m.id === mId);
         }).filter(Boolean);
         if (maneuverData.length) {
-            html += `<div class="detail-section"><div class="detail-section-title">💥 Manobras / Técnicas</div><div class="detail-tag-list">`;
+            html += `<div class="detail-section"><div class="detail-section-title">💥 Manobras / Técnicas</div><div class="detail-fields-grid">`;
             for (const man of maneuverData) {
-                html += `<span class="detail-tag">${escHtml(man.nome)}</span>`;
+                const rotulo = man.custo ? `${man.nome} · ${man.custo}` : man.nome;
+                html += `<div class="detail-field"><span class="detail-field-label">${escHtml(rotulo)}</span><span class="detail-field-value">${escHtml(man.efeito || '—')}</span></div>`;
             }
             html += `</div></div>`;
         }
     }
 
-    // Peculiaridades de Classe com mecânicas detalhadas
-    if (window.CLASS_PECULIARITIES[className]?.length) {
-        html += `<div class="detail-section"><div class="detail-section-title">⚡ Peculiaridades de Classe</div><div class="detail-pec-list">`;
-        for (const pec of window.CLASS_PECULIARITIES[className]) {
-            html += renderPecWithMechanics(pec);
+    // 📦 Módulos da Classe — o que o jogador vai poder cadastrar na ficha.
+    // Entradas podem ser ID (novo formato) ou objeto inline (legado).
+    const modulos = (cls.modulosDaClasse || []).map(entry =>
+        typeof entry === 'string'
+            ? (window._systemData.classModules || []).find(m => m.id === entry)
+            : entry
+    ).filter(Boolean);
+    if (modulos.length) {
+        html += `<div class="detail-section"><div class="detail-section-title">📦 Módulos da Classe</div><div class="detail-collapse-list">`;
+        for (const mod of modulos) {
+            const itens = Array.isArray(mod.itensPredefinidos) ? mod.itensPredefinidos : [];
+            const meta = [`${itens.length} ${itens.length === 1 ? 'opção' : 'opções'}`];
+            const lim = mod.limiteFixo;
+            if (lim !== null && lim !== undefined && lim !== '') meta.push(`${lim} ${Number(lim) === 1 ? 'slot' : 'slots'}`);
+            if (mod.custoExpLabel) meta.push(mod.custoExpLabel);
+            else if (mod.custoExpPorItem) meta.push(`${mod.custoExpPorItem} EXP/item`);
+            html += `<details class="detail-collapse">
+                <summary class="detail-collapse-summary">
+                    <span class="detail-collapse-title">${escHtml(mod.icone || '📦')} ${escHtml(mod.titulo || mod.id)}</span>
+                    <span class="detail-collapse-meta">${escHtml(meta.join(' · '))}</span>
+                </summary>`;
+            if (itens.length) {
+                html += `<div class="detail-collapse-body"><div class="cm-item-list">`;
+                for (const it of itens) html += renderModuleItem(mod, it);
+                html += `</div></div>`;
+            } else {
+                html += `<div class="detail-collapse-empty">${mod.permitirCriacaoJogador === false ? 'Nenhuma opção cadastrada.' : 'Sem opções pré-cadastradas — o item é criado na ficha.'}</div>`;
+            }
+            html += `</details>`;
+        }
+        html += `</div></div>`;
+    }
+
+    // 🧮 Valores Derivados da Classe
+    const dvsClasse = (cls.derivedValueIds || [])
+        .map(x => (typeof x === 'object' && x !== null) ? x.id : x)
+        .map(id => (window._systemData.derivedValues || []).find(d => d.id === id))
+        .filter(Boolean);
+    if (dvsClasse.length) {
+        html += `<div class="detail-section"><div class="detail-section-title">🧮 Valores Derivados</div><div class="detail-collapse-list">`;
+        for (const dv of dvsClasse) html += renderDerivedValue(dv);
+        html += `</div></div>`;
+    }
+
+    // 📖 Livro vinculado (Worldbuilding) — leitura dos capítulos liberados
+    html += window.lvSecaoHTML ? window.lvSecaoHTML(cls) : '';
+
+    // Peculiaridades de Classe — um bloco retrátil por pec, igual aos módulos
+    const pecsClasse = window.CLASS_PECULIARITIES[className] || [];
+    if (pecsClasse.length) {
+        html += `<div class="detail-section"><div class="detail-section-title">⚡ Peculiaridades de Classe</div><div class="detail-collapse-list">`;
+        for (const pec of pecsClasse) {
+            const nNiveis = (pec.tipo === 'evolutivo' && pec.niveis) ? Object.keys(pec.niveis).length : 0;
+            const meta = nNiveis
+                ? `${nNiveis} ${nNiveis === 1 ? 'nível' : 'níveis'}`
+                : (pec.negativo ? 'Desvantagem' : 'Vantagem');
+            html += `<details class="detail-collapse">
+                <summary class="detail-collapse-summary">
+                    <span class="detail-collapse-title">${escHtml(pec.icone || '📋')} ${escHtml(pec.nome)}</span>
+                    <span class="detail-collapse-meta">${escHtml(meta)}</span>
+                </summary>
+                <div class="detail-collapse-body">${renderPecWithMechanics(pec)}</div>
+            </details>`;
         }
         html += `</div></div>`;
     }
@@ -235,6 +297,111 @@ function openClassModal(className, event) {
 }
 
 /* ===== SHARED: Render a peculiarity with its linked mechanics ===== */
+
+/* ===== SHARED: Valor Derivado em bloco retrátil =====
+   Não existe campo 'formula' no cadastro — o cálculo mora nas mecânicas
+   vinculadas (dv.mecanicaIds), que generatePreviewText() traduz para texto. */
+function renderDerivedValue(dv) {
+    const nome = String(dv.nome || dv.key || dv.id || '').trim();
+
+    const formulas = (dv.mecanicaIds || [])
+        .map(id => (window._systemData.mechanics || []).find(m => m.id === id))
+        .filter(Boolean)
+        .map(m => {
+            let txt = m.previewTexto || (typeof generatePreviewText === 'function' ? generatePreviewText(m) : '');
+            txt = String(txt || '').trim();
+            // "+([RAC] + [Perícia: X]) em Cravar Totem" → "([RAC] + [Perícia: X])".
+            // O alvo já é o título do bloco; repetir só polui.
+            const sufixo = ' em ' + nome;
+            if (txt.endsWith(sufixo)) txt = txt.slice(0, -sufixo.length);
+            if (txt.startsWith('+')) txt = txt.slice(1);
+            return txt.trim();
+        })
+        .filter(Boolean);
+
+    const desc = String(dv.descricao || '').trim();
+    const temDesc = desc && desc !== nome;
+    const unidade = [dv.prefixo, dv.sufixo].filter(Boolean).join(' ').trim();
+
+    const meta = [dv.blocoNome, unidade].filter(Boolean).join(' · ');
+
+    let html = `<details class="detail-collapse">
+        <summary class="detail-collapse-summary">
+            <span class="detail-collapse-title">${escHtml(dv.icone || '🧮')} ${escHtml(nome)}</span>
+            ${meta ? `<span class="detail-collapse-meta">${escHtml(meta)}</span>` : ''}
+        </summary>
+        <div class="detail-collapse-body">`;
+
+    if (formulas.length) {
+        html += `<div class="cm-item-bloco"><span class="cm-stat-label">Fórmula</span>`;
+        for (const f of formulas) html += `<span class="cm-formula">${escHtml(f)}</span>`;
+        html += `</div>`;
+    } else {
+        html += `<div class="cm-item-bloco"><span class="cm-stat-label">Fórmula</span><span class="cm-item-texto">Sem cálculo cadastrado.</span></div>`;
+    }
+
+    if (temDesc) {
+        html += `<div class="cm-item-bloco"><span class="cm-stat-label">Descrição</span><span class="cm-item-texto">${escHtml(desc)}</span></div>`;
+    }
+
+    return html + `</div></details>`;
+}
+
+/* ===== SHARED: item pré-cadastrado de um módulo de classe =====
+   As estatísticas vivem em it.valores, indexadas pelas chaves de mod.schema.
+   Campo curto vira chip; textarea ou texto longo vira bloco. Botões e o
+   campo que repete o nome do item ficam de fora. */
+function renderModuleItem(mod, it) {
+    const valores = it.valores || {};
+    const custoIt = (it.custoExpProprio !== null && it.custoExpProprio !== undefined)
+        ? it.custoExpProprio : mod.custoExpPorItem;
+
+    const chips = [], blocos = [];
+    for (const campo of (mod.schema || [])) {
+        if (campo.tipo === 'botao' || campo.tipo === 'select_botao' || campo.tipo === 'separador') continue;
+        let valor = valores[campo.key];
+
+        if (campo.tipo === 'checkbox') {
+            if (valor === null || valor === undefined) continue;
+            valor = valor ? 'Sim' : 'Não';
+        } else if (campo.tipo === 'tags' || Array.isArray(valor)) {
+            if (!Array.isArray(valor) || !valor.length) continue;
+            valor = valor.join(', ');
+        } else if (campo.tipo === 'select_vd' || campo.tipo === 'valor_derivado') {
+            const dv = (window._systemData.derivedValues || []).find(d => d.id === valor);
+            valor = dv ? (dv.nome || dv.key || '') : '';
+        }
+
+        if (valor === null || valor === undefined || valor === '') continue;
+        valor = String(valor).trim();
+        if (!valor) continue;
+        // Só o campo de texto que repete o título é redundante. Um Valor Derivado
+        // homônimo do ritual segue sendo estatística — é o teste que se rola.
+        if (campo.tipo === 'text' && valor === String(it.nome || '').trim()) continue;
+
+        const rotulo = String(campo.label || campo.key).replace(/\s*:\s*$/, '');
+        (campo.tipo === 'textarea' || valor.length > 60 ? blocos : chips).push({ rotulo, valor });
+    }
+
+    // Módulo sem schema preenchido: cai para a descrição solta.
+    if (!chips.length && !blocos.length && it.descricao) blocos.push({ rotulo: 'Efeito', valor: it.descricao });
+
+    let html = `<div class="cm-item"><div class="cm-item-head"><span class="cm-item-nome">${escHtml(it.nome)}</span>`;
+    if (custoIt) html += `<span class="cm-item-exp">${escHtml(custoIt)} EXP</span>`;
+    html += `</div>`;
+
+    if (chips.length) {
+        html += `<div class="cm-item-stats">`;
+        for (const c of chips) {
+            html += `<div class="cm-stat"><span class="cm-stat-label">${escHtml(c.rotulo)}</span><span class="cm-stat-valor">${escHtml(c.valor)}</span></div>`;
+        }
+        html += `</div>`;
+    }
+    for (const b of blocos) {
+        html += `<div class="cm-item-bloco"><span class="cm-stat-label">${escHtml(b.rotulo)}</span><span class="cm-item-texto">${escHtml(b.valor)}</span></div>`;
+    }
+    return html + `</div>`;
+}
 
 function renderPecWithMechanics(pec) {
     let html = `<div class="detail-pec-item-full ${pec.negativo ? 'negativo' : 'positivo'}">`;
@@ -247,26 +414,18 @@ function renderPecWithMechanics(pec) {
         html += `<div class="detail-pec-desc-full">${escHtml(pec.descricao)}</div>`;
     }
 
-    // Mecânicas vinculadas detalhadas
+    // Mecânicas vinculadas: só o efeito legível, nunca o nome interno da mecânica
     if (pec.mecanicas?.length) {
-        html += `<div class="detail-pec-mechanics">`;
-        for (const mech of pec.mecanicas) {
-            html += `<div class="detail-mechanic-item">`;
-            html += `<span class="detail-mechanic-name">${escHtml(mech.nome || 'Mecânica')}</span>`;
-
-            const parts = [];
-            if (mech.tipo) parts.push(`Tipo: ${escHtml(mech.tipo)}`);
-            if (mech.config?.alvo) parts.push(`Alvo: ${escHtml(mech.config.alvo)}`);
-            if (mech.config?.operacao) parts.push(`Operação: ${escHtml(mech.config.operacao)}`);
-            if (mech.config?.valor != null) parts.push(`Valor: ${mech.config.valor}`);
-            if (mech.config?.textoEfeito) parts.push(escHtml(mech.config.textoEfeito));
-
-            if (parts.length) {
-                html += `<span class="detail-mechanic-info">${parts.join(' · ')}</span>`;
+        const efeitos = pec.mecanicas
+            .map(mech => mech.previewTexto || (typeof generatePreviewText === 'function' ? generatePreviewText(mech) : ''))
+            .filter(txt => txt && txt.trim());
+        if (efeitos.length) {
+            html += `<div class="detail-pec-mechanics">`;
+            for (const txt of efeitos) {
+                html += `<div class="detail-mechanic-item"><span class="detail-mechanic-info">${escHtml(txt)}</span></div>`;
             }
             html += `</div>`;
         }
-        html += `</div>`;
     }
 
     // Níveis evolutivos
