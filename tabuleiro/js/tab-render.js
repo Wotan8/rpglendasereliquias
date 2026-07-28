@@ -866,7 +866,7 @@ function drawPings() {
 function drawFog() {
     const l = T.canvas?.luzDinamica;
     T._luzAnimada = false;
-    if (!l?.ativa) { T.visiveisAgora = null; T._litPolys = null; return; }
+    if (!l?.ativa) { T.visiveisAgora = null; T._litPolys = null; avisoEscuridao(false); return; }
     const dia = l.modo === 'dia';
     const op = T.mode === 'public' ? 1 : (l.fogSecretOpacity ?? 0.6);
     if (op <= 0 && T.mode === 'secret') { T.visiveisAgora = null; return; }
@@ -880,6 +880,7 @@ function drawFog() {
     const escopo = (T.mode === 'secret' || T.isMaster) ? 'mestre' : 'jogador';
     const fontesVisao = coletarFontesDeVisao(escopo);
     const fontesLuz = coletarFontesDeLuz();
+    avisoEscuridao(!dia && fontesLuz.length === 0);
     const alturaAndar = T.canvas?.andarAltura || 5;
 
     const ser = f => `${f.x|0},${f.y|0},${f.r|0},${f.ang||360},${(f.dir||0)|0},${f.sensor||'p'},${faixaDe(f.elev||0, alturaAndar)}`;
@@ -973,6 +974,40 @@ function drawFog() {
     aplicarCamera(ctx, T.cam);
     desenharLuzesColoridasWorld(luz);
     ctx.restore();
+}
+
+/**
+ * Aviso de cegueira (só o mestre vê): luz dinâmica em NOITE sem nenhuma
+ * fonte de luz acesa = jogadores com visão padrão veem o canvas 100% preto.
+ * O estado é legítimo pelas regras (escuro é escuro), mas é indiagnosticável
+ * da cadeira do mestre — a tela DELE mostra o fog translúcido.
+ */
+let _avisoLuzVisivel = false;
+function avisoEscuridao(escuroSemLuz) {
+    if (T.mode !== 'secret') return;
+    const mostrar = !!escuroSemLuz && algumTokenPrecisaDeLuz();
+    if (mostrar === _avisoLuzVisivel) return;
+    _avisoLuzVisivel = mostrar;
+    let el = document.getElementById('tbAvisoLuz');
+    if (!mostrar) { if (el) el.remove(); return; }
+    el = document.createElement('div');
+    el.id = 'tbAvisoLuz';
+    el.style.cssText = 'position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:60;' +
+        'background:rgba(139,30,45,.94);color:#fff;padding:8px 14px;border-radius:8px;font-size:.8rem;' +
+        'cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.4);max-width:min(92vw,560px);text-align:center';
+    el.innerHTML = '🌙 <b>Noite sem nenhuma luz acesa</b> — jogadores com visão padrão estão vendo tudo PRETO. ' +
+        'Acenda uma luz, dê visão noturna ao token ou mude para ☀️ Dia. <u>Abrir configuração</u>';
+    el.onclick = () => { if (typeof window.tbAbrirConfig === 'function') window.tbAbrirConfig(); };
+    document.body.appendChild(el);
+}
+
+function algumTokenPrecisaDeLuz() {
+    for (const o of T.objects.values()) {
+        if (o.tipo !== 'token' || o.vinculo?.tipo !== 'char' || !o.visao?.ativa) continue;
+        const s = o.visao.tipo || 'padrao';
+        if (s === 'padrao' || s === 'verInvisivel') return true;
+    }
+    return false;
 }
 
 function desenharLuzesColoridas(luz) {

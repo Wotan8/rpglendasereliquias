@@ -69,12 +69,16 @@ window.tbAddLocal = async function (geoId) {
             await addObj(p.tipo === 'imagem' ? { ...p, z: ++z } : { ...p, z: ++z });
         }
         // Iluminação ambiente do Local vale para o canvas inteiro
+        const ligouNoite = mt.luzAtiva !== false && mt.ambiente !== 'dia';
         await updateDoc(refCanvas(), {
             'luzDinamica.ativa': mt.luzAtiva !== false,
             'luzDinamica.modo': mt.ambiente === 'dia' ? 'dia' : 'noite',
         });
         centerCamera();
         toast(`📍 ${local.nome} montado — ${payloads.length - 1} elemento(s) de cenário`);
+        // Mudar a luz do canvas em silêncio deixava jogadores no escuro sem
+        // o mestre entender o porquê — agora o efeito colateral é anunciado.
+        if (ligouNoite) toast('🌙 Luz dinâmica ligada em modo NOITE — jogadores só enxergam onde houver luz', 'warning');
     } catch (e) {
         console.error(e);
         toast('❌ Erro ao montar o Local', 'danger');
