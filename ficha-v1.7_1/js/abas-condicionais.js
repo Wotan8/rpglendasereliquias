@@ -48,7 +48,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // ponto. Chamar no DOMContentLoaded caia direto no catch e a aba sumia.
     let tentativas = 0;
     const aguardaDb = setInterval(() => {
-        if (window.db && typeof window.carregarConhecimento === 'function') {
+        // Alem do db: os dados do personagem (raca/classe/tribo) e o catalogo
+        // do sistema. O alcance da biblioteca sai deles — carregar antes daria
+        // lista vazia e esconderia a aba de quem tem livro vinculado.
+        const pronto = window.db
+            && window._dataReady
+            && window._systemData && window._systemData.loaded
+            && typeof window.carregarConhecimento === 'function';
+        if (pronto) {
             clearInterval(aguardaDb);
             Promise.resolve(window.carregarConhecimento())
                 .catch(e => console.warn('[abas] biblioteca nao carregou:', e))

@@ -94,6 +94,43 @@ async function carregarConhecimento() {
     }
 }
 
+
+/**
+ * Livros que o personagem alcanca: os vinculados a raca, classe, tribo ou
+ * peculiaridade dele. Livro publicado no Worldbuilding NAO basta — "public"
+ * so diz que existe para jogadores, nao que este personagem tem acesso.
+ *
+ * Formato salvo pelo Painel do Criador:
+ *   livroVinculado = { bookId, capituloIds: [] }   // vazio = livro inteiro
+ *
+ * Retorna Map bookId -> Set(capituloIds) ou null quando o livro inteiro vale.
+ */
+function _livrosDoPersonagem() {
+    const sd = window._systemData || {};
+    const val = k => (document.querySelector('[data-key="' + k + '"]') || {}).value || '';
+    const acha = (lista, nome) => nome && (lista || []).find(d => d.nome === nome || d.id === nome);
+
+    const fontes = [
+        acha(sd.races, val('raca')),
+        acha(sd.classes, val('classe')),
+        acha(sd.tribes, val('tribo')),
+    ];
+    // Peculiaridades do personagem tambem podem carregar livro.
+    const pecs = (window.state && window.state.peculiarities) || [];
+    for (const p of pecs) fontes.push(acha(sd.peculiarities, p && (p.nome || p.key || p)));
+
+    const mapa = new Map();
+    for (const f of fontes) {
+        const lv = f && f.livroVinculado;
+        if (!lv || !lv.bookId) continue;
+        const caps = Array.isArray(lv.capituloIds) ? lv.capituloIds.filter(Boolean) : [];
+        if (!mapa.has(lv.bookId)) mapa.set(lv.bookId, caps.length ? new Set(caps) : null);
+        else if (mapa.get(lv.bookId) && caps.length) caps.forEach(c => mapa.get(lv.bookId).add(c));
+        else mapa.set(lv.bookId, null);   // outra fonte libera o livro inteiro
+    }
+    return mapa;
+}
+
 function renderConhecimento() {
     const cont = document.getElementById('conhecimentoContainer');
     if (!cont) return;
@@ -101,9 +138,14 @@ function renderConhecimento() {
     let totalLiberados = 0, totalCapitulos = 0;
     const blocos = [];
 
+    const alcance = _livrosDoPersonagem();
+
     for (const livro of _livros) {
-        if (!livro.public) continue;   // livro privado nem existe para o jogador
-        const caps = _capitulos.filter(c => c.bookId === livro.id);
+        if (!livro.public) continue;      // livro privado nem existe para o jogador
+        if (!alcance.has(livro.id)) continue;   // e nao basta existir: tem que estar vinculado
+        const soEsses = alcance.get(livro.id);
+        const caps = _capitulos.filter(c => c.bookId === livro.id
+            && (!soEsses || soEsses.has(c.id)));
         const linhas = [];
         let liberadosNoLivro = 0, visiveisNoLivro = 0;
 
