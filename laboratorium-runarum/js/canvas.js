@@ -50,7 +50,7 @@ const LabCanvas = (() => {
         aprendidos = learnedMap || {};
         onChange = changeCb || (() => { });
         
-        host.innerHTML = '<div class="lab-canvas-inner" style="transform-origin: 0 0; position: relative; width: 100%; height: 100%;"><svg class="lab-links"></svg><div class="lab-hint">Arraste elementos da paleta para cá.<br>Aproxime um ponto <b style="color:#f59e0b">saída</b> de um ponto <b style="color:#38bdf8">entrada</b> para encaixar.</div></div>';
+        host.innerHTML = '<div class="lab-canvas-inner" style="transform-origin: 0 0; position: relative; width: 100%; height: 100%;"><svg class="lab-links"></svg><div class="lab-hint">Arraste elementos da paleta para cá.<br>Aproxime um ponto <b style="color:var(--lr-gold)">saída</b> de um ponto <b style="color:#38bdf8">entrada</b> para encaixar.</div></div>';
         inner = host.querySelector('.lab-canvas-inner');
         svg = inner.querySelector('svg');
         

@@ -360,7 +360,7 @@
             add.querySelector('#runoBrowseBtn').onclick = () => window.runoOpenCatalog();
         } else {
             const full = document.createElement('div');
-            full.style.cssText = 'font-size:.72rem;color:#f59e0b;margin-top:4px';
+            full.style.cssText = 'font-size:.72rem;color:var(--lr-gold);margin-top:4px';
             full.textContent = '⚠️ Lista de Estudo cheia — conclua ou abandone um estudo para liberar um slot.';
             body.appendChild(full);
         }

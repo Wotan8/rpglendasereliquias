@@ -28,8 +28,8 @@
     --lr-text-2:      #55606E;   /* Texto secundário / rótulos         */
     --lr-divine:      #F6F7FB;   /* Branco Divino — texto sobre cor    */
 
-    --lr-gold:        #8A6A18;   /* Dourado — ação primária, foco      */
-    --lr-gold-2:      #6B520F;   /* Dourado escuro (hover / texto)     */
+    --lr-gold:        #6E5413;   /* Dourado — ação primária, foco      */
+    --lr-gold-2:      #57420C;   /* Dourado escuro (hover / texto)     */
     --lr-bronze:      #7A5223;   /* Bronze envelhecido — secundário    */
     --lr-arcane:      #135E9E;   /* Azul Arcano — informação, links    */
     --lr-arcane-2:    #0E4676;   /* Azul Arcano escuro                 */
@@ -83,7 +83,7 @@
     --lr-shadow-1: 0 1px 2px rgba(20, 24, 29, 0.10);
     --lr-shadow-2: 0 4px 12px rgba(20, 24, 29, 0.10);
     --lr-shadow-3: 0 12px 32px rgba(20, 24, 29, 0.14);
-    --lr-glow-gold:   0 0 0 3px rgba(138, 106, 24, 0.25);
+    --lr-glow-gold:   0 0 0 3px rgba(110, 84, 19, 0.28);
     --lr-glow-arcane: 0 0 0 3px rgba(19, 94, 158, 0.25);
 
     /* ---------- 6. ANIMAÇÕES (120–180ms, discretas) ---------------- */

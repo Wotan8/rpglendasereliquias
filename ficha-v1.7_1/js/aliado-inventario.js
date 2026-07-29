@@ -150,7 +150,7 @@
                     ${isEq
                         ? `<button class="inv-btn" title="Desequipar" onclick="AliadoInventario.unequip('${item.id}')">⬇️</button>`
                         : `<button class="inv-btn" title="Equipar" onclick="AliadoInventario.openEquip('${item.id}')">⬆️</button>`}
-                    <button class="inv-btn" style="background:rgba(6,182,212,.12);color:#06b6d4" title="Transferir" onclick="AliadoInventario.openTransfer('${item.id}')">🔄</button>
+                    <button class="inv-btn" style="background:rgba(6,182,212,.12);color:var(--lr-arcane)" title="Transferir" onclick="AliadoInventario.openTransfer('${item.id}')">🔄</button>
                     <button class="inv-btn" style="background:rgba(139,92,246,.12);color:var(--primary,#8b5cf6)" title="Editar" onclick="AliadoInventario.openForm('${item.id}')">✏️</button>
                     <button class="inv-btn inv-btn-delete" title="Excluir" onclick="AliadoInventario.remove('${item.id}')">🗑️</button>
                 </div>
@@ -163,7 +163,7 @@
             <div>${partesHtml}</div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <span class="inv-badge" style="background:rgba(245,158,11,.15);color:#f59e0b;padding:3px 10px;border-radius:8px;font-size:.78rem;font-weight:700">⚖️ Pressão (equipados): ${pressao.toFixed(2)}</span>
+            <span class="inv-badge" style="background:rgba(245,158,11,.15);color:var(--lr-gold);padding:3px 10px;border-radius:8px;font-size:.78rem;font-weight:700">⚖️ Pressão (equipados): ${pressao.toFixed(2)}</span>
             <button class="btn" style="background:var(--success,#10b981);color:#fff;border-color:var(--success,#10b981)" onclick="AliadoInventario.openForm(null)">➕ Criar Item</button>
         </div>
         <div class="inv-section"><div class="inv-section-title">🎒 Equipados <span class="inv-section-count">${equipped.length}</span></div><div class="inv-section-grid">

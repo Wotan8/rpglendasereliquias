@@ -110,19 +110,25 @@ const avisos = [];
 
 // Páginas como o tabuleiro fixam `body { color: ... }` próprio; quem herda
 // nelas herda aquilo, não o texto do tema.
-function corHerdada(css, vars) {
+function doBody(css, prop) {
     for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
         if (!/(^|,)\s*(html\s*,\s*)?body\s*(,|\{|$)/.test(m[1].trim() + '{')) continue;
-        const c = m[2].match(/(?<!-)color\s*:\s*([^;]+)/);
+        const c = m[2].match(prop);
         if (c) return semImportante(c[1]);
     }
-    return vars['--lr-text-1'];
+    return null;
 }
+const corHerdada = (css, vars) => doBody(css, /(?<!-)color\s*:\s*([^;]+)/) || vars['--lr-text-1'];
+// O tabuleiro tem `body { background: var(--tb-bg) }` escuro. Compor translúcido
+// sobre o fundo do tema, e não o da página, o acusava de errado.
+const fundoDaPagina = (css, vars) => doBody(css, /background(?:-color)?\s*:\s*([^;]+)/) || vars['--lr-bg-0'];
 
 export function ilegiveis(css, rel) {
     const achados = [];
     const herdadaClaro = corHerdada(css, CLARO);
     const herdadaEscuro = corHerdada(css, ESCURO);
+    const fundoClaro = resolve(fundoDaPagina(css, CLARO), CLARO) || [255, 255, 255];
+    const fundoEscuro = resolve(fundoDaPagina(css, ESCURO), ESCURO) || [10, 13, 18];
     for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
         const sel = m[1].replace(/\/\*[\s\S]*?\*\//g, '').trim().replace(/\s+/g, ' ');
         if (!sel || sel.startsWith('@') || sel.startsWith('--')) continue;
@@ -159,7 +165,7 @@ export function ilegiveis(css, rel) {
         if (/gradient\(|url\(/.test(vBg)) continue;           // fundo composto — fora do alcance
         let bg = resolve(vBg, vars);
         if (!bg) continue;
-        if (bg.length > 3) bg = sobre(bg, resolve(vars['--lr-bg-0'], vars) || [255, 255, 255]);
+        if (bg.length > 3) bg = sobre(bg, escura ? fundoEscuro : fundoClaro);
 
         const mCor = mCorSo;
         // Sem cor declarada o texto herda o da página — mas metade dessas regras

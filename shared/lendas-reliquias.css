@@ -88,7 +88,7 @@ a:hover { color: var(--lr-arcane-2); }
 
 ::selection {
     background: rgba(212, 175, 55, 0.30);
-    color: var(--lr-divine);
+    color: var(--lr-text-1);
 }
 
 hr {

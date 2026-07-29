@@ -264,7 +264,7 @@
     background: var(--danger); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 12px; font-weight: bold;
 }
 .filter-chip {
-    display: inline-flex; align-items: center; gap: 6px; background: rgba(91, 63, 184, 0.2); border: 1px solid rgba(91, 63, 184, 0.4); color: var(--lr-divine); font-size: 0.8rem; padding: 4px 10px; border-radius: 16px;
+    display: inline-flex; align-items: center; gap: 6px; background: rgba(91, 63, 184, 0.2); border: 1px solid rgba(91, 63, 184, 0.4); color: var(--lr-text-1); font-size: 0.8rem; padding: 4px 10px; border-radius: 16px;
 }
 .filter-chip-close {
     cursor: pointer; color: var(--muted); transition: color 0.2s;
@@ -479,7 +479,7 @@
 #npcAtaquesWrap .atk-dano {
     font-weight: 700;
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
-    color: #f59e0b;
+    color: var(--lr-gold);
 }
 #npcAtaquesWrap .atk-val strong { font-size: 1rem; }
 #npcAtaquesWrap .atk-delta {

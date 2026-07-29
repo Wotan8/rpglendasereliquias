@@ -256,7 +256,7 @@ function renderNpcInventoryList() {
                 ${isEq
                     ? `<button class="inv-btn" title="Desequipar" onclick="window.npcUnequipItem('${item.id}')">⬇️</button>`
                     : `<button class="inv-btn" title="Equipar" onclick="window.openNpcEquipModal('${item.id}')">⬆️</button>`}
-                <button class="inv-btn" style="background:rgba(6,182,212,.12);color:#06b6d4" title="Transferir" onclick="window.openNpcTransferModal('${item.id}')">🔄</button>
+                <button class="inv-btn" style="background:rgba(6,182,212,.12);color:var(--lr-arcane)" title="Transferir" onclick="window.openNpcTransferModal('${item.id}')">🔄</button>
                 <button class="inv-btn" style="background:rgba(139,92,246,.12);color:var(--primary)" title="Editar" onclick="window.openNpcItemForm('${item.id}')">✏️</button>
                 <button class="inv-btn inv-btn-delete" title="Excluir" onclick="window.deleteNpcItem('${item.id}')">🗑️</button>
             </div>
@@ -264,7 +264,7 @@ function renderNpcInventoryList() {
     };
 
     let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span class="inv-badge" style="background:rgba(245,158,11,.15);color:#f59e0b;padding:3px 10px;border-radius:8px;font-size:.78rem;font-weight:700">⚖️ Pressão (equipados): ${pressao.toFixed(2)}</span>
+        <span class="inv-badge" style="background:rgba(245,158,11,.15);color:var(--lr-gold);padding:3px 10px;border-radius:8px;font-size:.78rem;font-weight:700">⚖️ Pressão (equipados): ${pressao.toFixed(2)}</span>
         <button class="btn btn-success btn-small" onclick="window.openNpcItemForm(null)">➕ Criar Item</button>
     </div>`;
 

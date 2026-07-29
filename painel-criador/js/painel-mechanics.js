@@ -1408,7 +1408,7 @@ function _renderBoolVerifBlock(v, i, total) {
     return `
     <div class="bool-verif-block" data-verif-index="${i}" style="border:1px solid rgba(148,163,184,.2);border-radius:10px;padding:10px;margin-bottom:10px;background:rgba(15,23,42,.35)">
         <div class="bool-verif-head" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-            <span class="bool-verif-title" style="font-weight:800;font-size:.8rem;color:#f59e0b">🔀 Booleano #${i + 1}</span>
+            <span class="bool-verif-title" style="font-weight:800;font-size:.8rem;color:var(--lr-gold)">🔀 Booleano #${i + 1}</span>
             ${total > 1 ? `<button type="button" class="eq-term-remove" onclick="window._mechBoolRemoveVerif(${i})" title="Remover este booleano">✕</button>` : ''}
         </div>
 

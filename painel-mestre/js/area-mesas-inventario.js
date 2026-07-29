@@ -78,7 +78,7 @@ async function loadPersonagensInventario() {
             html += `<div style="margin-top: 20px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-left:10px; border-left:4px solid var(--primary);">
                             <h3 style="color:var(--light); margin:0;">Inventário dos Personagens</h3>
-                            <button onclick="_transferAllLooseItems()" style="background:rgba(6,182,212,.15);border:1px solid rgba(6,182,212,.35);color:#06b6d4;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:700;transition:all .2s">Pegar Itens Soltos</button>
+                            <button onclick="_transferAllLooseItems()" style="background:rgba(6,182,212,.15);border:1px solid rgba(6,182,212,.35);color:var(--lr-arcane);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:700;transition:all .2s">Pegar Itens Soltos</button>
                         </div>
                         <div class="accordion-group">`;
             for (const c of chars) {
@@ -116,10 +116,10 @@ function _buildCaixaDoMestreHTML(caixaItems, allItems) {
     const caixaId = _getCaixaMestreId(S.currentMesaId);
     let html = `<div class="sessao-card" style="margin-bottom:14px;border:2px solid rgba(245,158,11,.25)">
         <div class="sessao-card-header" style="background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(245,158,11,.02))">
-            <div class="sessao-titulo" style="color:#f59e0b">📦 Caixa do Mestre</div>
+            <div class="sessao-titulo" style="color:var(--lr-gold)">📦 Caixa do Mestre</div>
             <div style="display:flex;gap:8px;align-items:center">
                 <span class="sessao-data">${caixaItems.length} item(ns)</span>
-                <button onclick="_openMestreItemFormModal('${S.currentMesaId}', null, '${caixaId}')" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);color:#f59e0b;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:700;transition:all .2s">➕ Criar Item</button>
+                <button onclick="_openMestreItemFormModal('${S.currentMesaId}', null, '${caixaId}')" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);color:var(--lr-gold);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:700;transition:all .2s">➕ Criar Item</button>
             </div>
         </div>
         <div style="padding: 10px;">`;
@@ -149,7 +149,7 @@ function _buildCharacterInventoryAccordionHTML(char, charItems, allItems) {
         <div class="accordion-header" style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleAccordion('${bodyId}')">
             <div style="font-weight:bold; color:var(--light);">🎭 ${escapeHtml(nomeReal)}</div>
             <div style="display:flex; gap:12px; align-items:center;">
-                <span style="background:rgba(245,158,11,.15);color:#f59e0b;padding:3px 10px;border-radius:8px;font-size:.78rem;font-weight:700">⚖️ Pressão: ${parseFloat(totalPressure).toFixed(2)}</span>
+                <span style="background:rgba(245,158,11,.15);color:var(--lr-gold);padding:3px 10px;border-radius:8px;font-size:.78rem;font-weight:700">⚖️ Pressão: ${parseFloat(totalPressure).toFixed(2)}</span>
                 <span style="font-size:0.8rem; color:var(--muted);">${charItems.length} itens</span>
                 <span style="color:var(--muted);">▼</span>
             </div>
@@ -185,7 +185,7 @@ function _buildInventoryListHTML(items, allItems, ownerId, isCaixaMestre = false
     html += `<div class="inv-section" style="${!isCaixaMestre ? 'margin-top:16px;' : ''}">
         <div class="inv-section-title" style="display:flex; justify-content:space-between; align-items:center;">
             <div>📋 Itens Soltos <span class="inv-section-count">${loose.length}</span></div>
-            ${!isCaixaMestre ? `<button onclick="event.stopPropagation(); _transferCharacterLooseItems('${ownerId}')" style="background:rgba(6,182,212,.15);border:1px solid rgba(6,182,212,.35);color:#06b6d4;padding:2px 8px;border-radius:6px;cursor:pointer;font-size:.7rem;font-weight:700;transition:all .2s">Pegar Itens Soltos</button>` : ''}
+            ${!isCaixaMestre ? `<button onclick="event.stopPropagation(); _transferCharacterLooseItems('${ownerId}')" style="background:rgba(6,182,212,.15);border:1px solid rgba(6,182,212,.35);color:var(--lr-arcane);padding:2px 8px;border-radius:6px;cursor:pointer;font-size:.7rem;font-weight:700;transition:all .2s">Pegar Itens Soltos</button>` : ''}
         </div>
         <div class="inv-section-grid">`;
     if (loose.length === 0) {
@@ -269,7 +269,7 @@ function _renderInvItemRow(item, isEquipped, contextItems, isInsideContainer=fal
         ${stateBadge}
         <div class="inv-item-actions no-print" onclick="event.stopPropagation()">
             ${containerBtn}
-            <button class="inv-btn" style="background:rgba(6,182,212,.12);color:#06b6d4" onclick="_openMestreTransferModal('${item.id}', '${S.currentMesaId}')" title="Transferir">🔄</button>
+            <button class="inv-btn" style="background:rgba(6,182,212,.12);color:var(--lr-arcane)" onclick="_openMestreTransferModal('${item.id}', '${S.currentMesaId}')" title="Transferir">🔄</button>
             <button class="inv-btn" style="background:rgba(139,92,246,.12);color:var(--primary)" onclick="_openMestreItemFormModal('${S.currentMesaId}', '${item.id}', '${item.characterId}')" title="Editar">✏️</button>
             <button class="inv-btn inv-btn-delete" onclick="_deleteMestreItem('${item.id}')" title="Excluir">🗑️</button>
         </div>
@@ -719,7 +719,7 @@ window._filterMestreTransfer = function() {
     if (data.scope === 'caixa') {
         resultsContainer.innerHTML = `<div style="display:flex;flex-direction:column;gap:4px;padding:14px 16px;background:rgba(15,23,42,.5);border:2px solid rgba(245,158,11,.2);border-radius:10px;cursor:pointer;transition:all .2s"
             onclick="_executeMestreTransfer('${data.itemId}','${_getCaixaMestreId(data.mesaId)}','${S.currentUser?.uid||''}')">
-            <div style="font-weight:700;font-size:.95rem;color:#f59e0b">📦 Caixa do Mestre</div>
+            <div style="font-weight:700;font-size:.95rem;color:var(--lr-gold)">📦 Caixa do Mestre</div>
             <div style="font-size:.78rem;color:var(--muted)">Mesa Atual</div>
         </div>`;
         return;
@@ -746,7 +746,7 @@ window._filterMestreTransfer = function() {
                 onclick="_executeMestreTransfer('${data.itemId}','${n.id}','', true)">
                 <div style="font-weight:700;font-size:.95rem;color:var(--light)">${n.tipo === 'criatura' ? '🐉' : '👤'} ${escapeHtml(n.nome)}</div>
                 ${n.papel ? `<div style="font-size:.78rem;color:var(--muted)">${escapeHtml(n.papel)}</div>` : ''}
-                ${n.mesaId && data.scope === 'npcs_todos' ? `<div style="font-size:.7rem;color:#06b6d4">Mesa ID: ${n.mesaId}</div>` : ''}
+                ${n.mesaId && data.scope === 'npcs_todos' ? `<div style="font-size:.7rem;color:var(--lr-arcane)">Mesa ID: ${n.mesaId}</div>` : ''}
             </div>
         `).join('');
         return;
@@ -777,7 +777,7 @@ window._filterMestreTransfer = function() {
             onclick="_executeMestreTransfer('${data.itemId}','${c.id}','${c.ownerUid || ''}')">
             <div style="font-weight:700;font-size:.95rem;color:var(--light)">🎭 ${escapeHtml(c.nome)}</div>
             ${c.ownerEmail ? `<div style="font-size:.78rem;color:var(--muted)">👤 ${escapeHtml(c.ownerEmail)}</div>` : ''}
-            ${c.mesaId && data.scope === 'todas' ? `<div style="font-size:.7rem;color:#06b6d4">Mesa ID: ${c.mesaId}</div>` : ''}
+            ${c.mesaId && data.scope === 'todas' ? `<div style="font-size:.7rem;color:var(--lr-arcane)">Mesa ID: ${c.mesaId}</div>` : ''}
         </div>
     `).join('');
 };

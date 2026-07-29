@@ -2152,7 +2152,7 @@ function buildField(field, value, existingData) {
                 // Formato legado: objeto inline, mostrar como chip não-removível
                 const titulo = entry.titulo || entry.id || 'Módulo';
                 const icone = entry.icone || '📦';
-                return `<span class="mech-tag cm-linker-chip" data-id="_legacy_${escapeHtml(entry.id || '')}" style="opacity:0.7;cursor:default" title="Módulo inline (legado) — migre para o repositório central">${icone} ${escapeHtml(titulo)} <small style='color:#f59e0b'>(legado)</small></span>`;
+                return `<span class="mech-tag cm-linker-chip" data-id="_legacy_${escapeHtml(entry.id || '')}" style="opacity:0.7;cursor:default" title="Módulo inline (legado) — migre para o repositório central">${icone} ${escapeHtml(titulo)} <small style='color:var(--lr-gold)'>(legado)</small></span>`;
             }
             const mod = classModulesCache.find(m => m.id === entry);
             const titulo = mod ? mod.titulo : `⚠️ ${entry}`;

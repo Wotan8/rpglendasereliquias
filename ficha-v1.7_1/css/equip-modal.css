@@ -29,7 +29,7 @@
 .inv-equip-slot-option.selected, .inv-equip-state-option.selected {
     background: rgba(91, 63, 184, 0.25);
     border-color: var(--lr-abyssal);
-    color: var(--lr-divine);
+    color: var(--lr-text-1);
     box-shadow: 0 0 12px rgba(91, 63, 184, 0.25);
 }
 
