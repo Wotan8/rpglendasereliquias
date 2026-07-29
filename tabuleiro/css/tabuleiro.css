@@ -23,6 +23,17 @@
    fixamos no body, que vence por heranca para tudo que esta dentro. Sem isso,
    quem estivesse no tema claro via acento escuro sobre painel escuro. */
 body {
+    /* Paleta ESCURA COMPLETA. Antes eu fixava so os acentos, e superficie e
+       texto continuavam seguindo o tema: no claro, --lr-surface virava branco
+       e --lr-text-1 virava tinta escura, entao qualquer modal ou painel que
+       usasse esses tokens aparecia branco em cima do tabuleiro preto. */
+    --lr-bg-0:      #0A0D12;
+    --lr-bg-1:      #12161D;
+    --lr-surface:   #1A2029;
+    --lr-border:    #30363D;
+    --lr-border-soft: #262C33;
+    --lr-text-1:    #F2F2F2;
+    --lr-gold:      #D4AF37;
     --lr-surface-2: #262E3A;
     --lr-text-2:    #A8B3C2;
     --lr-gold-2:    #E5C558;
