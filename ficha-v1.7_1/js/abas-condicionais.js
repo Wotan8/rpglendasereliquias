@@ -43,12 +43,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.carregarConhecimento === 'function') {
         Promise.resolve(window.carregarConhecimento()).catch(() => { }).finally(atualizarAbasCondicionais);
     }
-    // Aura e Aliados chegam do Firebase depois do load; reavalia em intervalos
-    // curtos no início e para. ponytail: 5 checagens resolvem sem observar o
-    // DOM; se algum módulo passar a demorar mais, trocar por MutationObserver.
-    let n = 0;
-    const t = setInterval(() => {
-        atualizarAbasCondicionais();
-        if (++n >= 5) clearInterval(t);
-    }, 1200);
+    // Aura e Aliados chegam do Firebase quando chegarem — observar o DOM em
+    // vez de reavaliar por tempo. Com prazo fixo, uma resposta lenta deixava a
+    // aba escondida tendo conteudo, que e o pior erro possivel aqui.
+    const alvos = ['auraMortalidadeContainer', 'aurasPropriedadeContainer',
+        'aliadosGrid', 'conhecimentoContainer', 'auraEmptyHint'];
+    const obs = new MutationObserver(atualizarAbasCondicionais);
+    for (const id of alvos) {
+        const el = document.getElementById(id);
+        if (el) obs.observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+    }
+    atualizarAbasCondicionais();
 });
