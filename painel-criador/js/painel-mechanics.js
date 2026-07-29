@@ -346,7 +346,11 @@ export function generatePreviewText(data) {
             text = `🎒 Concede como Item Solto: ${lista || '?'}`;
         } else if (_MECH_TC_RESTRICAO.includes(config.tipoConcessao)) {
             const alvos = (Array.isArray(config.equipReqs) ? config.equipReqs : []).map(_mechReqLabel).join(', ');
-            const verbo = config.tipoConcessao === 'bloquear_equipar' ? '🚫 Não pode equipar' : '✅ Pode equipar (libera bloqueio)';
+            const verbo = {
+                bloquear_equipar: '🚫 Não pode equipar',
+                bloquear_equipar_efeitos: '⚡ Não pode equipar com efeitos ativos (pode segurar/fixar)',
+                permitir_equipar: '✅ Pode equipar (libera bloqueio)'
+            }[config.tipoConcessao];
             text = `${verbo}: ${alvos || '?'}`;
         } else {
             text = `${label[config.tipoConcessao] || 'Concede'}: ${config.descricaoConcessao || '?'}`;
@@ -853,7 +857,8 @@ function renderConfigConceder(config) {
                 <option value="adicionar_parte_corpo" ${tc === 'adicionar_parte_corpo' ? 'selected' : ''}>Adicionar Parte do Corpo</option>
                 <option value="remover_parte_corpo" ${tc === 'remover_parte_corpo' ? 'selected' : ''}>Remover Parte do Corpo</option>
                 <option value="conceder_equipamento" ${tc === 'conceder_equipamento' ? 'selected' : ''}>🎒 Conceder Equipamento (cria Item Solto)</option>
-                <option value="bloquear_equipar" ${tc === 'bloquear_equipar' ? 'selected' : ''}>🚫 Bloqueia Equipar</option>
+                <option value="bloquear_equipar" ${tc === 'bloquear_equipar' ? 'selected' : ''}>🚫 Bloqueia Equipar (de qualquer forma)</option>
+                <option value="bloquear_equipar_efeitos" ${tc === 'bloquear_equipar_efeitos' ? 'selected' : ''}>⚡ Bloqueia Equipar com Efeito</option>
                 <option value="permitir_equipar" ${tc === 'permitir_equipar' ? 'selected' : ''}>✅ Permite Equipar (libera bloqueio)</option>
             </select>
         </div>
@@ -874,7 +879,7 @@ function renderConfigConceder(config) {
 }
 
 // ===== BLOQUEAR / PERMITIR EQUIPAR =====
-const _MECH_TC_RESTRICAO = ['bloquear_equipar', 'permitir_equipar'];
+const _MECH_TC_RESTRICAO = ['bloquear_equipar', 'bloquear_equipar_efeitos', 'permitir_equipar'];
 
 /** Vínculos (equipamento específico / tag / tipo) que a restrição alcança.
  *  Reusa as mesmas linhas da Verificação de Equipamento, sem as "formas":
@@ -888,9 +893,12 @@ function _renderRestricaoEquipar(config) {
         <div class="mech-equipreqs" id="mech_restricaoEquipReqs">${rows}</div>
         ${_renderMechEquipReqSelect('mech_restricaoEquipReqs')}
         <div class="cm-hint">
-            <b>🚫 Bloqueia:</b> a ficha recusa equipar qualquer item que case com um dos vínculos.<br>
-            <b>✅ Permite:</b> libera o que outra mecânica bloqueou — a liberação sempre vence o bloqueio.<br>
-            Itens que <b>já estavam equipados</b> não são desequipados sozinhos; a regra vale da próxima vez que equipar.
+            <b>🚫 Bloqueia Equipar:</b> a ficha recusa equipar de qualquer forma — nem segurar, nem fixar.<br>
+            <b>⚡ Bloqueia Equipar com Efeito:</b> pode segurar, fixar e guardar em contêiner, mas não
+            nos modos que ativam os efeitos (Empunhado / Vestido). É o caso da armadura que o personagem
+            carrega mas não sabe usar.<br>
+            <b>✅ Permite:</b> libera o que outra mecânica bloqueou — vence os dois tipos de bloqueio.<br>
+            Itens <b>já equipados</b> que a regra alcança saem do corpo no recálculo seguinte, com aviso ao jogador.
         </div>
     </div>`;
 }

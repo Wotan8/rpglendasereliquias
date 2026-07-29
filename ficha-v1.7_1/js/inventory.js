@@ -405,20 +405,31 @@ function _desequipaItensBloqueados() {
 
     const bloqueados = window._inventoryState.items
         .filter(i => i.equipado && !i.parentItemId && i.estadoEquip !== 'armazenado')
-        .map(item => ({ item, bloqueio: window.equipBloqueioDoItem(item) }))
-        .filter(x => x.bloqueio);
+        .map(item => {
+            const total = window.equipBloqueioDoItem(item);
+            if (total) return { item, bloqueio: total, motivo: 'não pode ser equipado' };
+            // Bloqueio só de efeitos: sai do corpo apenas se ESTIVER com efeitos
+            // ativos agora. Segurado ou fixado pode continuar onde está.
+            const efeitos = typeof window.equipBloqueioEfeitosDoItem === 'function'
+                ? window.equipBloqueioEfeitosDoItem(item) : null;
+            if (efeitos && itemTemEfeitosAtivos(item)) {
+                return { item, bloqueio: efeitos, motivo: 'não pode ficar com efeitos ativos' };
+            }
+            return null;
+        })
+        .filter(Boolean);
 
     if (bloqueados.length === 0) return;   // caminho normal: nada a fazer, sem efeito colateral
 
     _desequipandoBloqueados = true;
     (async () => {
         try {
-            for (const { item, bloqueio } of bloqueados) {
-                console.warn(`🚫 Desequipando "${item.nome}" — bloqueado por ${bloqueio.fonte}`);
+            for (const { item, bloqueio, motivo } of bloqueados) {
+                console.warn(`🚫 Desequipando "${item.nome}" — ${motivo} (regra de ${bloqueio.fonte})`);
                 await unequipItem(item.id);
             }
-            const nomes = bloqueados.map(b => `• ${b.item.nome} (${b.bloqueio.fonte})`).join('\n');
-            alert(`🚫 ${bloqueados.length === 1 ? 'Um item foi desequipado' : `${bloqueados.length} itens foram desequipados`} por uma regra que você não cumpre mais:\n\n${nomes}\n\nEles continuam no inventário.`);
+            const nomes = bloqueados.map(b => `• ${b.item.nome} — ${b.motivo} (${b.bloqueio.fonte})`).join('\n');
+            alert(`🚫 ${bloqueados.length === 1 ? 'Um item foi desequipado' : `${bloqueados.length} itens foram desequipados`} por uma regra que você não cumpre:\n\n${nomes}\n\nEles continuam no inventário — os bloqueados só de efeito podem voltar segurados ou fixados.`);
         } finally {
             _desequipandoBloqueados = false;
         }
@@ -996,6 +1007,19 @@ function _getAvailableStates(item, slotKey) {
  * Abre o modal de equipamento — o jogador escolhe slot anatômico e estado.
  */
 /**
+ * Este item ficaria com Efeitos Ativos se fosse equipado neste slot, neste modo?
+ * Usa itemTemEfeitosAtivos — a fonte única da verdade — sobre uma cópia
+ * hipotética do item, para o modal e a confirmação nunca discordarem.
+ */
+function _estadoAtivaEfeitos(item, slotKey, stateKey) {
+    if (!item) return false;
+    return itemTemEfeitosAtivos({
+        ...item, equipado: true, parentItemId: null,
+        estadoEquip: stateKey, slotAnatomico: slotKey
+    });
+}
+
+/**
  * Avisa e devolve true se uma mecânica "Bloqueia Equipar" alcança este item.
  * A regra vem de state.equipRestricoes, montado no recálculo (mechanics-engine).
  */
@@ -1170,6 +1194,13 @@ window.selectEquipSlot = function(slotKey) {
         return;
     }
 
+    // "Bloqueia Equipar com Efeito": o item entra no corpo, mas só nos modos que
+    // não ativam efeitos. Os que ativariam ficam visíveis e não clicáveis, para
+    // o jogador ver que existem e por que estão fora.
+    const itemReal = items.find(i => i.id === st.itemId);
+    const bloqEfeitos = typeof window.equipBloqueioEfeitosDoItem === 'function'
+        ? window.equipBloqueioEfeitosDoItem(itemReal) : null;
+
     statesGrid.innerHTML = availableStates.map(sKey => {
         const s = EQUIP_STATES[sKey];
         const restricoes = Array.isArray(st.itemSlotRestrito) ? st.itemSlotRestrito : (st.itemSlotRestrito ? [st.itemSlotRestrito] : null);
@@ -1177,13 +1208,21 @@ window.selectEquipSlot = function(slotKey) {
         const partId = bodySlots[slotKey] ? bodySlots[slotKey].partId : slotKey;
         const isRestrictedToOtherSlot = restricoes && restricoes.length > 0 && !restricoes.includes(slotKey) && !restricoes.includes(partId);
         const willApplyMechanics = s.appliesMechanics && !isRestrictedToOtherSlot;
+        // O que barra é o predicado real de efeitos ativos, o mesmo que confirmEquip
+        // consulta — assim o modal nunca oferece um modo que a confirmação recusa.
+        const barrado = bloqEfeitos && _estadoAtivaEfeitos(itemReal, slotKey, sKey);
 
-        return `<div class="inv-equip-state-option" data-state="${sKey}" onclick="selectEquipState('${sKey}')">
+        const tag = barrado
+            ? `<span class="inv-equip-nomech-tag">🚫 Bloqueado por ${_escHtml(bloqEfeitos.fonte || 'mecânica')}</span>`
+            : (willApplyMechanics ? '<span class="inv-equip-mech-tag">✨ Efeitos ativos</span>' : '<span class="inv-equip-nomech-tag">🚫 Sem efeitos</span>');
+
+        return `<div class="inv-equip-state-option${barrado ? ' inv-slot-full' : ''}" data-state="${sKey}"
+            ${barrado ? 'title="Uma mecânica impede ativar os efeitos deste item"' : `onclick="selectEquipState('${sKey}')"`}>
             <span class="inv-equip-state-icon">${s.icon}</span>
             <div>
                 <strong>${s.label}</strong>
                 <small>${s.description}</small>
-                ${willApplyMechanics ? '<span class="inv-equip-mech-tag">✨ Efeitos ativos</span>' : '<span class="inv-equip-nomech-tag">🚫 Sem efeitos</span>'}
+                ${tag}
             </div>
         </div>`;
     }).join('');
@@ -1248,6 +1287,14 @@ window.confirmEquip = async function(itemId) {
     // Revalida na confirmação: o modal pode ter ficado aberto enquanto um
     // recálculo mudava as regras (trocou de classe, perdeu a peculiaridade...).
     if (_avisaEquipBloqueado(item)) { closeEquipModal(); return; }
+
+    // "Bloqueia Equipar com Efeito": o modo escolhido não pode ativar efeitos.
+    const bloqEfeitos = typeof window.equipBloqueioEfeitosDoItem === 'function'
+        ? window.equipBloqueioEfeitosDoItem(item) : null;
+    if (bloqEfeitos && _estadoAtivaEfeitos(item, st.selectedSlot, st.selectedState)) {
+        alert(`⚡ "${item.nome || 'Este item'}" não pode ser equipado com os efeitos ativos.\n\nRegra de: ${bloqEfeitos.fonte || 'mecânica'}${bloqEfeitos.descricao ? `\n\n${bloqEfeitos.descricao}` : ''}\n\nVocê ainda pode segurar, fixar ou guardar num contêiner.`);
+        return;
+    }
 
     const slotKey = st.selectedSlot;
     const stateKey = st.selectedState;

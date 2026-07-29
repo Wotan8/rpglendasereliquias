@@ -30,17 +30,21 @@ const flush = () => new Promise(r => setTimeout(r, 0));
  * `reentra` faz o unequipItem stub chamar a função de novo, simulando o
  * recálculo que unequipItem dispara de verdade.
  */
-async function roda(items, bloqueia, { reentra = false } = {}) {
+async function roda(items, bloqueia, { reentra = false, bloqueiaEfeitos = [] } = {}) {
   const chamadas = [];
   const alertas = [];
+  const regra = (lista, fonte) => item => (lista.includes(item.nome) ? { fonte, descricao: '' } : null);
   const sandbox = {
     console: { warn() {}, log() {} },
     alert: msg => alertas.push(msg),
     setTimeout,
+    // Item marcado com _efeitos está com Efeitos Ativos agora.
+    itemTemEfeitosAtivos: item => item._efeitos === true,
     window: {
       _inventoryState: { items },
-      equipBloqueioDoItem: bloqueia
-        ? item => (bloqueia.includes(item.nome) ? { fonte: 'Voto de Paz', descricao: '' } : null)
+      equipBloqueioDoItem: bloqueia ? regra(bloqueia, 'Voto de Paz') : undefined,
+      equipBloqueioEfeitosDoItem: bloqueia
+        ? item => regra(bloqueia, 'Voto de Paz')(item) || regra(bloqueiaEfeitos, 'Sem Treino Marcial')(item)
         : undefined
     },
     async unequipItem(id) {
@@ -92,5 +96,31 @@ assert.deepEqual(r.chamadas, ['i1'], 'a chamada aninhada é cortada pelo flag');
 // --- motor de mecânicas ausente: não quebra ---
 r = await roda([noCorpo], null);
 assert.deepEqual(r.chamadas, [], 'sem equipBloqueioDoItem a função sai quieta');
+
+// ===== BLOQUEIO SÓ DE EFEITOS =====
+const vestida = { id: 'e1', nome: 'Cota de Malha', equipado: true, estadoEquip: 'vestido', _efeitos: true };
+const segurada = { id: 'e2', nome: 'Cota de Malha', equipado: true, estadoEquip: 'segurar', _efeitos: false };
+
+// com efeitos ativos → sai do corpo
+r = await roda([vestida], [], { bloqueiaEfeitos: ['Cota de Malha'] });
+assert.deepEqual(r.chamadas, ['e1'], 'vestida com efeitos ativos deve sair');
+assert.ok(r.alertas[0].includes('não pode ficar com efeitos ativos'), 'o alerta explica que é só o efeito');
+assert.ok(r.alertas[0].includes('Sem Treino Marcial'), 'o alerta nomeia a fonte');
+
+// sem efeitos ativos → fica onde está (é justamente o que a regra permite)
+r = await roda([segurada], [], { bloqueiaEfeitos: ['Cota de Malha'] });
+assert.deepEqual(r.chamadas, [], 'segurada sem efeitos ativos pode continuar equipada');
+assert.deepEqual(r.alertas, []);
+
+// bloqueio total ganha do de efeitos na mensagem
+r = await roda([vestida], ['Cota de Malha'], { bloqueiaEfeitos: ['Cota de Malha'] });
+assert.deepEqual(r.chamadas, ['e1']);
+assert.ok(r.alertas[0].includes('não pode ser equipado'), 'bloqueio total tem precedência no motivo');
+
+// os dois convivem: um item por regra
+r = await roda([noCorpo, vestida], ['Armadura Pesada'], { bloqueiaEfeitos: ['Cota de Malha'] });
+assert.deepEqual(r.chamadas, ['i1', 'e1']);
+assert.ok(r.alertas[0].includes('não pode ser equipado') && r.alertas[0].includes('não pode ficar com efeitos ativos'),
+  'o alerta distingue os dois motivos');
 
 console.log('✅ desequipar automático OK — só o que está no corpo, reentrância cortada, inerte sem bloqueio');

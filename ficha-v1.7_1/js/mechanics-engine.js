@@ -478,7 +478,7 @@ function clearMechanicBonuses() {
     state.chainedResults = {};
     // Restrições de equipar vindas de mecânicas "conceder" (bloquear/permitir_equipar).
     // Reconstruídas a cada recálculo, como qualquer outro efeito de mecânica.
-    state.equipRestricoes = { bloqueios: [], liberacoes: [] };
+    state.equipRestricoes = { bloqueios: [], bloqueiosEfeitos: [], liberacoes: [] };
     _derivedValueMechanicsRaw = [];
     _dynamicMechContributions = {};
     state._invPressureContrib = 0;
@@ -693,10 +693,25 @@ function _meCountEquipReq(req) {
         .reduce((s, i) => s + (parseInt(i.quantidade, 10) || 1), 0);
 }
 
-/* ===== RESTRIÇÃO DE EQUIPAR (mecânicas conceder: bloquear/permitir_equipar) =====
+/* ===== RESTRIÇÃO DE EQUIPAR (mecânicas conceder) =====
+ * Dois bloqueios independentes:
+ *   bloquear_equipar          → não entra no corpo de forma nenhuma;
+ *   bloquear_equipar_efeitos  → entra, mas só em modo sem efeitos (segurar,
+ *                               fixar, guardar). Barra Empunhado/Vestido.
  * As regras são coletadas em state.equipRestricoes durante o recálculo, por
  * applyMechanicToSheet — o único ponto por onde toda mecânica ativa passa.
- * Uma liberação que alcance o mesmo item sempre vence o bloqueio. */
+ * Uma liberação que alcance o item vence os DOIS bloqueios. */
+
+const _ME_TC_EQUIP_BAG = {
+    bloquear_equipar: 'bloqueios',
+    bloquear_equipar_efeitos: 'bloqueiosEfeitos',
+    permitir_equipar: 'liberacoes'
+};
+const _ME_TC_EQUIP_DESC = {
+    bloquear_equipar: 'Não pode equipar certos itens',
+    bloquear_equipar_efeitos: 'Não pode ativar os efeitos de certos itens',
+    permitir_equipar: 'Liberado a equipar certos itens'
+};
 
 /** true se o item casa com algum vínculo (equipamento específico / tag / tipo) da lista. */
 function _meItemCasaReqs(item, reqs) {
@@ -707,23 +722,36 @@ function _meItemCasaReqs(item, reqs) {
     });
 }
 
-/** Motivo pelo qual o item NÃO pode ser equipado, ou null se pode.
- *  Devolve { fonte, descricao } da primeira regra de bloqueio que o alcança. */
-function equipBloqueioDoItem(item) {
+/** Primeira regra de `lista` que alcança o item, respeitando as liberações.
+ *  Devolve { fonte, descricao } ou null. */
+function _meBuscaRestricao(item, lista) {
     if (!item) return null;
     const restr = state?.equipRestricoes;
-    if (!restr || !Array.isArray(restr.bloqueios) || restr.bloqueios.length === 0) return null;
+    const regras = restr?.[lista];
+    if (!Array.isArray(regras) || regras.length === 0) return null;
 
-    const bloqueio = restr.bloqueios.find(b => _meItemCasaReqs(item, b.reqs));
-    if (!bloqueio) return null;
+    const regra = regras.find(r => _meItemCasaReqs(item, r.reqs));
+    if (!regra) return null;
 
     // Liberação vence bloqueio: basta uma regra "permitir_equipar" alcançar o item.
-    const liberado = (restr.liberacoes || []).some(l => _meItemCasaReqs(item, l.reqs));
-    if (liberado) return null;
+    if ((restr.liberacoes || []).some(l => _meItemCasaReqs(item, l.reqs))) return null;
 
-    return { fonte: bloqueio.fonte, descricao: bloqueio.descricao };
+    return { fonte: regra.fonte, descricao: regra.descricao };
+}
+
+/** Motivo pelo qual o item NÃO pode ser equipado de forma nenhuma, ou null. */
+function equipBloqueioDoItem(item) {
+    return _meBuscaRestricao(item, 'bloqueios');
 }
 window.equipBloqueioDoItem = equipBloqueioDoItem;
+
+/** Motivo pelo qual o item não pode ficar com EFEITOS ATIVOS, ou null.
+ *  Um bloqueio total também impede os efeitos — quem não pode equipar de jeito
+ *  nenhum obviamente não ativa efeito. */
+function equipBloqueioEfeitosDoItem(item) {
+    return _meBuscaRestricao(item, 'bloqueiosEfeitos') || equipBloqueioDoItem(item);
+}
+window.equipBloqueioEfeitosDoItem = equipBloqueioEfeitosDoItem;
 
 /* ===== ESCOPO POR ITEM =====
  * Valores Derivados marcados com `escopoItem` no Painel do Criador não somam
@@ -1802,9 +1830,8 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
                 fonte: parentPec?.nome || mech.nome
             });
             _concederEquipamentosDeMecanica(mech, config, parentPec);
-        } else if (config.tipoConcessao === 'bloquear_equipar' || config.tipoConcessao === 'permitir_equipar') {
-            const bag = config.tipoConcessao === 'bloquear_equipar'
-                ? state.equipRestricoes.bloqueios : state.equipRestricoes.liberacoes;
+        } else if (_ME_TC_EQUIP_BAG[config.tipoConcessao]) {
+            const bag = state.equipRestricoes[_ME_TC_EQUIP_BAG[config.tipoConcessao]];
             bag.push({
                 reqs: Array.isArray(config.equipReqs) ? config.equipReqs : [],
                 descricao: config.descricaoConcessao || '',
@@ -1812,8 +1839,7 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
             });
             state.capacidades.push({
                 tipo: config.tipoConcessao,
-                descricao: config.descricaoConcessao
-                    || (config.tipoConcessao === 'bloquear_equipar' ? 'Não pode equipar certos itens' : 'Liberado a equipar certos itens'),
+                descricao: config.descricaoConcessao || _ME_TC_EQUIP_DESC[config.tipoConcessao],
                 fonte: parentPec?.nome || mech.nome
             });
         } else {

@@ -25,7 +25,8 @@ function pega(nome) {
   return src.slice(ini, fim);
 }
 
-const CODIGO = ['_meReqTarget', '_meMatchItemsByReq', '_meItemCasaReqs', 'equipBloqueioDoItem'].map(pega).join('\n');
+const CODIGO = ['_meReqTarget', '_meMatchItemsByReq', '_meItemCasaReqs', '_meBuscaRestricao',
+  'equipBloqueioDoItem', 'equipBloqueioEfeitosDoItem'].map(pega).join('\n');
 
 // Catálogo: a adaga tem a tag no modelo; a espada tem tipo Arma.
 const CATALOGO = [
@@ -43,17 +44,20 @@ const porTag = t => ({ targetTipo: 'tag', tag: t });
 const porTipo = t => ({ targetTipo: 'tipo', tipoEquipamento: t });
 const porItem = id => ({ targetTipo: 'equipamento', equipamentoId: id });
 
-/** Roda equipBloqueioDoItem com as regras dadas. */
-function bloqueio(item, { bloqueios = [], liberacoes = [] } = {}) {
+/** Roda uma das duas consultas de bloqueio com as regras dadas. */
+function consulta(fn, item, { bloqueios = [], bloqueiosEfeitos = [], liberacoes = [] } = {}) {
   const sandbox = {
     window: { _inventoryState: { items: ITENS, catalog: CATALOGO } },
-    state: { equipRestricoes: { bloqueios, liberacoes } },
+    state: { equipRestricoes: { bloqueios, bloqueiosEfeitos, liberacoes } },
     resultado: null
   };
   vm.createContext(sandbox);
-  vm.runInContext(`${CODIGO}\nresultado = equipBloqueioDoItem(${JSON.stringify(item)});`, sandbox);
+  vm.runInContext(`${CODIGO}\nresultado = ${fn}(${JSON.stringify(item)});`, sandbox);
   return sandbox.resultado;
 }
+
+const bloqueio = (item, regras) => consulta('equipBloqueioDoItem', item, regras);
+const bloqueioEfeitos = (item, regras) => consulta('equipBloqueioEfeitosDoItem', item, regras);
 
 const BLOQ_ADAGA = { reqs: [porTag('adaga')], fonte: 'Voto de Paz', descricao: 'Proibido portar lâminas curtas' };
 
@@ -101,4 +105,36 @@ assert.equal(bloqueio(adaga, { bloqueios: [{ reqs: [porTag('')], fonte: 'Tag vaz
 assert.equal(bloqueio(adaga, { bloqueios: [{ reqs: [porItem('')], fonte: 'Id vazio' }] }), null);
 assert.equal(bloqueio(tunica, { bloqueios: [{ fonte: 'Sem reqs' }] }), null);
 
-console.log('✅ bloquear/permitir equipar OK — tag, tipo, item, herança do modelo e liberação vencendo');
+// ===== BLOQUEIO SÓ DE EFEITOS =====
+const EFEITOS_PESADA = { reqs: [porTag('Pesada I')], fonte: 'Sem Treino Marcial', descricao: 'Você não sabe usar' };
+
+// não impede equipar de todo — só os modos com efeito
+assert.equal(bloqueio(espada, { bloqueiosEfeitos: [EFEITOS_PESADA] }), null,
+  'bloqueio de efeitos NÃO pode virar bloqueio total');
+assert.ok(bloqueioEfeitos(espada, { bloqueiosEfeitos: [EFEITOS_PESADA] }), 'mas barra os efeitos');
+assert.equal(bloqueioEfeitos(espada, { bloqueiosEfeitos: [EFEITOS_PESADA] }).fonte, 'Sem Treino Marcial');
+assert.equal(bloqueioEfeitos(adaga, { bloqueiosEfeitos: [EFEITOS_PESADA] }), null, 'adaga não tem a tag');
+
+// bloqueio total implica bloqueio de efeitos (quem não equipa, não ativa)
+assert.ok(bloqueioEfeitos(adaga, { bloqueios: [BLOQ_ADAGA] }),
+  'bloqueio total precisa aparecer também na consulta de efeitos');
+assert.equal(bloqueioEfeitos(adaga, { bloqueios: [BLOQ_ADAGA] }).fonte, 'Voto de Paz');
+
+// os dois bloqueios convivem, cada um no seu alvo
+const regras = { bloqueios: [BLOQ_ADAGA], bloqueiosEfeitos: [EFEITOS_PESADA] };
+assert.ok(bloqueio(adaga, regras), 'adaga: bloqueio total');
+assert.equal(bloqueio(espada, regras), null, 'espada: pode equipar');
+assert.ok(bloqueioEfeitos(espada, regras), 'espada: mas sem efeitos');
+
+// liberação vence os DOIS tipos
+const LIB_PESADA = { reqs: [porTag('Pesada I')], fonte: 'Treinamento Marcial' };
+assert.equal(bloqueioEfeitos(espada, { bloqueiosEfeitos: [EFEITOS_PESADA], liberacoes: [LIB_PESADA] }), null,
+  'permitir_equipar libera o bloqueio de efeitos');
+assert.equal(bloqueioEfeitos(adaga, { bloqueios: [BLOQ_ADAGA], liberacoes: [LIB_ADAGA] }), null,
+  'permitir_equipar libera o bloqueio total na consulta de efeitos');
+
+// sem regra de efeitos, a consulta é inerte
+assert.equal(bloqueioEfeitos(espada, {}), null);
+assert.equal(bloqueioEfeitos(espada, { bloqueiosEfeitos: [{ reqs: [], fonte: 'vazia' }] }), null);
+
+console.log('✅ bloquear/permitir equipar OK — total, só-efeitos, herança do modelo e liberação vencendo os dois');
