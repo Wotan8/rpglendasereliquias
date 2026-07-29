@@ -344,6 +344,10 @@ export function generatePreviewText(data) {
                     return `${eq ? eq.nome : g.id}${(g.quantidade || 1) > 1 ? ` ×${g.quantidade}` : ''}`;
                 }).join(', ');
             text = `🎒 Concede como Item Solto: ${lista || '?'}`;
+        } else if (_MECH_TC_RESTRICAO.includes(config.tipoConcessao)) {
+            const alvos = (Array.isArray(config.equipReqs) ? config.equipReqs : []).map(_mechReqLabel).join(', ');
+            const verbo = config.tipoConcessao === 'bloquear_equipar' ? '🚫 Não pode equipar' : '✅ Pode equipar (libera bloqueio)';
+            text = `${verbo}: ${alvos || '?'}`;
         } else {
             text = `${label[config.tipoConcessao] || 'Concede'}: ${config.descricaoConcessao || '?'}`;
         }
@@ -849,6 +853,8 @@ function renderConfigConceder(config) {
                 <option value="adicionar_parte_corpo" ${tc === 'adicionar_parte_corpo' ? 'selected' : ''}>Adicionar Parte do Corpo</option>
                 <option value="remover_parte_corpo" ${tc === 'remover_parte_corpo' ? 'selected' : ''}>Remover Parte do Corpo</option>
                 <option value="conceder_equipamento" ${tc === 'conceder_equipamento' ? 'selected' : ''}>🎒 Conceder Equipamento (cria Item Solto)</option>
+                <option value="bloquear_equipar" ${tc === 'bloquear_equipar' ? 'selected' : ''}>🚫 Bloqueia Equipar</option>
+                <option value="permitir_equipar" ${tc === 'permitir_equipar' ? 'selected' : ''}>✅ Permite Equipar (libera bloqueio)</option>
             </select>
         </div>
         <div class="form-group"><label>Descrição da concessão <span class="required">*</span></label>
@@ -861,6 +867,31 @@ function renderConfigConceder(config) {
     </div>
     <div id="mech_equipConcessao_container" style="display: ${tc === 'conceder_equipamento' ? 'block' : 'none'}">
         ${_renderEquipamentosConcessao(config)}
+    </div>
+    <div id="mech_equipRestricao_container" style="display: ${_MECH_TC_RESTRICAO.includes(tc) ? 'block' : 'none'}">
+        ${_renderRestricaoEquipar(config)}
+    </div>`;
+}
+
+// ===== BLOQUEAR / PERMITIR EQUIPAR =====
+const _MECH_TC_RESTRICAO = ['bloquear_equipar', 'permitir_equipar'];
+
+/** Vínculos (equipamento específico / tag / tipo) que a restrição alcança.
+ *  Reusa as mesmas linhas da Verificação de Equipamento, sem as "formas":
+ *  a restrição vale para qualquer forma de equipar. */
+function _renderRestricaoEquipar(config) {
+    const reqs = Array.isArray(config?.equipReqs) ? config.equipReqs : [];
+    const rows = reqs.map((r, i) => _renderMechEquipReqRow(r, i, false, true)).join('');
+    return `
+    <div style="margin-top:16px">
+        <label>🎒 Equipamentos alcançados pela regra <span class="required">*</span></label>
+        <div class="mech-equipreqs" id="mech_restricaoEquipReqs">${rows}</div>
+        ${_renderMechEquipReqSelect('mech_restricaoEquipReqs')}
+        <div class="cm-hint">
+            <b>🚫 Bloqueia:</b> a ficha recusa equipar qualquer item que case com um dos vínculos.<br>
+            <b>✅ Permite:</b> libera o que outra mecânica bloqueou — a liberação sempre vence o bloqueio.<br>
+            Itens que <b>já estavam equipados</b> não são desequipados sozinhos; a regra vale da próxima vez que equipar.
+        </div>
     </div>`;
 }
 
@@ -1195,8 +1226,10 @@ function _mechReqFormas(req) {
     return [];
 }
 
-/** Linha de um requisito de equipamento no editor de mecânicas (sem qtd/modo — a Qtd mín. vem da Equação de Valor). */
-function _renderMechEquipReqRow(req, index, showIndex) {
+/** Linha de um requisito de equipamento no editor de mecânicas (sem qtd/modo — a Qtd mín. vem da Equação de Valor).
+ *  `semFormas` esconde os checkboxes de forma: usado por quem só precisa do alvo
+ *  (bloquear/permitir equipar vale para qualquer forma). */
+function _renderMechEquipReqRow(req, index, showIndex, semFormas) {
     const target = _mechReqTarget(req);
     const formas = _mechReqFormas(req);
     const formaChk = (key) => `
@@ -1208,12 +1241,12 @@ function _renderMechEquipReqRow(req, index, showIndex) {
         <div class="cm-equip-cost-row" data-target-tipo="${target.kind}" data-eq-id="${target.kind === 'equipamento' ? esc(target.value) : ''}" data-eq-tag="${target.kind === 'tag' ? esc(target.value) : ''}" data-eq-tipo="${target.kind === 'tipo' ? esc(target.value) : ''}">
             ${showIndex ? `<span class="mech-eqreq-index">#${index + 1}</span>` : ''}
             <span class="cm-equip-cost-name">${esc(_mechReqLabel(req))}</span>
-            <div class="cm-equip-cost-formas">
+            ${semFormas ? '' : `<div class="cm-equip-cost-formas">
                 <span class="cm-mini-label">Precisa estar (nenhum = qualquer forma):</span>
                 <div class="cm-forma-checks">
                     ${formaChk('efeitos')}${formaChk('segurando')}${formaChk('fixado')}
                 </div>
-            </div>
+            </div>`}
             <button type="button" class="cm-chip-remove" onclick="window._mechEquipReqRemove(this)">✕</button>
         </div>
     `;
@@ -1287,7 +1320,7 @@ window._mechEquipReqAdd = function (select, containerId) {
     const showIndex = containerId === 'mech_enc_equipReqs';
     const index = list.querySelectorAll('.cm-equip-cost-row').length;
     const temp = document.createElement('div');
-    temp.innerHTML = _renderMechEquipReqRow(req, index, showIndex);
+    temp.innerHTML = _renderMechEquipReqRow(req, index, showIndex, containerId === 'mech_restricaoEquipReqs');
     list.appendChild(temp.firstElementChild);
     select.value = '';
     if (showIndex) window._mechEncEqSyncAfterReqChange();
@@ -2471,6 +2504,10 @@ window._mechTipoConcessaoChange = function() {
     if (eqContainer) {
         eqContainer.style.display = tc === 'conceder_equipamento' ? 'block' : 'none';
     }
+    const restrContainer = document.getElementById('mech_equipRestricao_container');
+    if (restrContainer) {
+        restrContainer.style.display = _MECH_TC_RESTRICAO.includes(tc) ? 'block' : 'none';
+    }
 };
 
 // ===== BOOLEAN EQUATION HANDLERS =====
@@ -3001,7 +3038,8 @@ function collectMechFormData() {
             tipoConcessao: tc,
             descricaoConcessao: document.getElementById('mech_config_descricaoConcessao')?.value || '',
             ...(partesCorpo !== undefined ? { partesCorpo } : {}),
-            ...(equipamentosConcedidos !== undefined ? { equipamentosConcedidos } : {})
+            ...(equipamentosConcedidos !== undefined ? { equipamentosConcedidos } : {}),
+            ...(_MECH_TC_RESTRICAO.includes(tc) ? { equipReqs: _collectMechEquipReqs('mech_restricaoEquipReqs') } : {})
         };
     } else if (tipo === 'condicional') {
         const condicaoMecanica = document.getElementById('mech_condicaoMecanica')?.checked || false;

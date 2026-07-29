@@ -476,6 +476,9 @@ function clearMechanicBonuses() {
     state.mecanicasPendentes = [];
     state.booleanResults = {};
     state.chainedResults = {};
+    // Restrições de equipar vindas de mecânicas "conceder" (bloquear/permitir_equipar).
+    // Reconstruídas a cada recálculo, como qualquer outro efeito de mecânica.
+    state.equipRestricoes = { bloqueios: [], liberacoes: [] };
     _derivedValueMechanicsRaw = [];
     _dynamicMechContributions = {};
     state._invPressureContrib = 0;
@@ -689,6 +692,38 @@ function _meCountEquipReq(req) {
         .filter(i => _meItemEquipValido(i, formas))
         .reduce((s, i) => s + (parseInt(i.quantidade, 10) || 1), 0);
 }
+
+/* ===== RESTRIÇÃO DE EQUIPAR (mecânicas conceder: bloquear/permitir_equipar) =====
+ * As regras são coletadas em state.equipRestricoes durante o recálculo, por
+ * applyMechanicToSheet — o único ponto por onde toda mecânica ativa passa.
+ * Uma liberação que alcance o mesmo item sempre vence o bloqueio. */
+
+/** true se o item casa com algum vínculo (equipamento específico / tag / tipo) da lista. */
+function _meItemCasaReqs(item, reqs) {
+    return (Array.isArray(reqs) ? reqs : []).some(req => {
+        const alvo = _meReqTarget(req);
+        if (!alvo.value) return false;
+        return _meMatchItemsByReq(req).some(i => i.id === item.id);
+    });
+}
+
+/** Motivo pelo qual o item NÃO pode ser equipado, ou null se pode.
+ *  Devolve { fonte, descricao } da primeira regra de bloqueio que o alcança. */
+function equipBloqueioDoItem(item) {
+    if (!item) return null;
+    const restr = state?.equipRestricoes;
+    if (!restr || !Array.isArray(restr.bloqueios) || restr.bloqueios.length === 0) return null;
+
+    const bloqueio = restr.bloqueios.find(b => _meItemCasaReqs(item, b.reqs));
+    if (!bloqueio) return null;
+
+    // Liberação vence bloqueio: basta uma regra "permitir_equipar" alcançar o item.
+    const liberado = (restr.liberacoes || []).some(l => _meItemCasaReqs(item, l.reqs));
+    if (liberado) return null;
+
+    return { fonte: bloqueio.fonte, descricao: bloqueio.descricao };
+}
+window.equipBloqueioDoItem = equipBloqueioDoItem;
 
 /* ===== ESCOPO POR ITEM =====
  * Valores Derivados marcados com `escopoItem` no Painel do Criador não somam
@@ -1767,6 +1802,20 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
                 fonte: parentPec?.nome || mech.nome
             });
             _concederEquipamentosDeMecanica(mech, config, parentPec);
+        } else if (config.tipoConcessao === 'bloquear_equipar' || config.tipoConcessao === 'permitir_equipar') {
+            const bag = config.tipoConcessao === 'bloquear_equipar'
+                ? state.equipRestricoes.bloqueios : state.equipRestricoes.liberacoes;
+            bag.push({
+                reqs: Array.isArray(config.equipReqs) ? config.equipReqs : [],
+                descricao: config.descricaoConcessao || '',
+                fonte: parentPec?.nome || mech.nome
+            });
+            state.capacidades.push({
+                tipo: config.tipoConcessao,
+                descricao: config.descricaoConcessao
+                    || (config.tipoConcessao === 'bloquear_equipar' ? 'Não pode equipar certos itens' : 'Liberado a equipar certos itens'),
+                fonte: parentPec?.nome || mech.nome
+            });
         } else {
             state.capacidades.push({
                 tipo: config.tipoConcessao,

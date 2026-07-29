@@ -953,9 +953,24 @@ function _getAvailableStates(item, slotKey) {
 /**
  * Abre o modal de equipamento — o jogador escolhe slot anatômico e estado.
  */
+/**
+ * Avisa e devolve true se uma mecânica "Bloqueia Equipar" alcança este item.
+ * A regra vem de state.equipRestricoes, montado no recálculo (mechanics-engine).
+ */
+function _avisaEquipBloqueado(item) {
+    const bloqueio = typeof window.equipBloqueioDoItem === 'function'
+        ? window.equipBloqueioDoItem(item) : null;
+    if (!bloqueio) return false;
+    const motivo = bloqueio.descricao ? `\n\n${bloqueio.descricao}` : '';
+    alert(`🚫 Você não pode equipar "${item.nome || 'este item'}".\n\nRegra de: ${bloqueio.fonte || 'mecânica'}${motivo}`);
+    return true;
+}
+
 window.openEquipModal = function(itemId) {
     const item = window._inventoryState.items.find(i => i.id === itemId);
     if (!item) return;
+
+    if (_avisaEquipBloqueado(item)) return;
 
     // === FALLBACK: Garantir partesDoCorpo carregadas (mesmo padrão de openItemFormModal) ===
     if (!window.state) window.state = {};
@@ -1187,6 +1202,10 @@ window.confirmEquip = async function(itemId) {
         console.warn('⚠️ confirmEquip: item não encontrado no cache', itemId);
         return;
     }
+
+    // Revalida na confirmação: o modal pode ter ficado aberto enquanto um
+    // recálculo mudava as regras (trocou de classe, perdeu a peculiaridade...).
+    if (_avisaEquipBloqueado(item)) { closeEquipModal(); return; }
 
     const slotKey = st.selectedSlot;
     const stateKey = st.selectedState;
