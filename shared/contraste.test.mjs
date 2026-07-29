@@ -118,6 +118,18 @@ function doBody(css, prop) {
     }
     return null;
 }
+// Vars declaradas no body do proprio arquivo vencem o :root por heranca —
+// e como o tabuleiro prende a paleta escura sem depender do tema.
+function varsDoBody(css) {
+    const v = {};
+    for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        // Tirar comentário: o seletor vem colado no bloco /* */ acima dele.
+        const sel = m[1].replace(/\/\*[\s\S]*?\*\//g, '').trim();
+        if (!/^(html\s*,\s*)?body$/.test(sel)) continue;
+        for (const d of m[2].matchAll(/(--[\w-]+)\s*:\s*([^;]+)/g)) v[d[1]] = d[2].trim();
+    }
+    return v;
+}
 const corHerdada = (css, vars) => doBody(css, /(?<!-)color\s*:\s*([^;]+)/) || vars['--lr-text-1'];
 // O tabuleiro tem `body { background: var(--tb-bg) }` escuro. Compor translúcido
 // sobre o fundo do tema, e não o da página, o acusava de errado.
@@ -127,6 +139,9 @@ export function ilegiveis(css, rel) {
     const achados = [];
     const herdadaClaro = corHerdada(css, CLARO);
     const herdadaEscuro = corHerdada(css, ESCURO);
+    const locais = varsDoBody(css);
+    const CLARO_L = { ...CLARO, ...locais };
+    const ESCURO_L = { ...ESCURO, ...locais };
     const fundoClaro = resolve(fundoDaPagina(css, CLARO), CLARO) || [255, 255, 255];
     const fundoEscuro = resolve(fundoDaPagina(css, ESCURO), ESCURO) || [10, 13, 18];
     for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
@@ -134,7 +149,7 @@ export function ilegiveis(css, rel) {
         if (!sel || sel.startsWith('@') || sel.startsWith('--')) continue;
 
         const escura = sel.includes('html.dark');
-        const vars = escura ? ESCURO : CLARO;
+        const vars = escura ? ESCURO_L : CLARO_L;
         const corpo = m[2];
 
         const mCorSo = corpo.match(/(?<!-)color\s*:\s*([^;]+)/);
@@ -147,8 +162,11 @@ export function ilegiveis(css, rel) {
             if (!mCorSo) continue;
             const cor = resolve(semImportante(mCorSo[1]), vars);
             if (!cor || cor.length > 3) continue;
-            const superficies = ['--lr-bg-0', '--lr-bg-1', '--lr-surface']
-                .map(t => resolve(vars[t], vars)).filter(Boolean);
+            // Inclui o fundo da PAGINA: o tabuleiro nunca usa papel, entao
+            // medir --tb-muted contra branco acusava defeito que nao existe.
+            const superficies = [['--lr-bg-0'], ['--lr-bg-1'], ['--lr-surface']]
+                .map(([t]) => resolve(vars[t], vars))
+                .concat([escura ? fundoEscuro : fundoClaro]).filter(Boolean);
             // Limite mais frouxo que o MINIMO de propósito: sem saber a
             // superfície real, só acuso o que some em qualquer uma delas —
             // texto claro em tema claro. Acento de meio-tom sobre chip colorido

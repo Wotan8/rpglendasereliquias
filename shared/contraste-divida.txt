@@ -77,23 +77,7 @@ painel-mestre/js/repertorio.js  linha 143
 painel-mestre/js/repertorio.js  linha 180
 painel-mestre/js/repertorio.js  linha 192
 shared/lendas-reliquias.css  h1, h2
-tabuleiro/css/tabuleiro.css  #tbMesaNome
-tabuleiro/css/tabuleiro.css  #tbPinPopup div
-tabuleiro/css/tabuleiro.css  .modal .modal-body
-tabuleiro/css/tabuleiro.css  .modal .modal-title
-tabuleiro/css/tabuleiro.css  .tb-cond
-tabuleiro/css/tabuleiro.css  .tb-cond-add:hover
-tabuleiro/css/tabuleiro.css  .tb-cond-picker-item .tb-cpi-sub
-tabuleiro/css/tabuleiro.css  .tb-cstat-lb
-tabuleiro/css/tabuleiro.css  .tb-cstat-v
-tabuleiro/css/tabuleiro.css  .tb-form-grid label
-tabuleiro/css/tabuleiro.css  .tb-legenda-texto
 tabuleiro/css/tabuleiro.css  .tb-mode-badge.secret
-tabuleiro/css/tabuleiro.css  .tb-mus-loop
-tabuleiro/css/tabuleiro.css  .tb-mus-plrow label
-tabuleiro/css/tabuleiro.css  .tb-mus-vazio
-tabuleiro/css/tabuleiro.css  .tb-muted
-tabuleiro/css/tabuleiro.css  .tb-subbar label
 viewmap.html  linha 2294
 worldbuilding/css/wb-ferramentas.css  .wb-badge--done
 worldbuilding/css/wb-ferramentas.css  .wb-badge--draft
