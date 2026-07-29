@@ -3628,7 +3628,27 @@ window._dvSelLevelChange = function (fieldId, dvId, prop, newValue) {
 };
 
 // ===== EQUIPMENT DERIVED VALUE SELECTOR (for equipment modifiers) =====
-export function buildEquipmentDerivedValueSelectorHTML(fieldKey, label, currentIds, cache) {
+/**
+ * Status Vitais como opções de seletor: cada vital vira dois alvos, Máxima e Atual.
+ * A distinção importa — Máxima é bônus enquanto equipado, Atual é efeito de uso
+ * único (botão "Usar" na ficha). Ver aplicarStatusVitaisDeItem em inventory.js.
+ */
+export function vitalStatusOptions(vitalStatsCache) {
+    const out = [];
+    for (const v of (vitalStatsCache || []).filter(s => s.publicado !== false)) {
+        const base = String(v.chaveInterna || '').replace(/_MAX$/, '');
+        if (!base) continue;
+        const icon = v.icone || '❤️';
+        out.push({ id: `${base}_MAX`, nome: `${v.nome} Máxima`, icone: icon });
+        out.push({ id: `${base}_ATUAL`, nome: `${v.nome} Atual`, icone: icon });
+    }
+    return out;
+}
+
+export function buildEquipmentDerivedValueSelectorHTML(fieldKey, label, currentIds, cache, noun = 'Valor Derivado') {
+    // O confirm redesenha os chips e precisa do MESMO cache que montou as opções
+    // (VDs ou Status Vitais). Sem isso ele caía sempre no cache de VDs.
+    (window._eqSelCache ||= {})[`field_${fieldKey}`] = { cache, noun };
     const published = cache.filter(d => d.publicado !== false);
     const parsedIds = (currentIds || []).map(item => typeof item === 'object' ? item : { id: item, modificador: 0 });
     const selectedIds = parsedIds.map(p => p.id);
@@ -3650,13 +3670,13 @@ export function buildEquipmentDerivedValueSelectorHTML(fieldKey, label, currentI
     return `
     <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
         <span class="mechsel-label">${esc(label)}</span>
-        <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhum valor derivado vinculado</span>'}</div>
+        <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || `<span style="color:var(--muted);font-size:.75rem">Nenhum ${esc(noun.toLowerCase())} vinculado</span>`}</div>
         <div>
-            <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Valor Derivado</button>
+            <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar ${esc(noun)}</button>
         </div>
         <div class="mechsel-search" id="field_${fieldKey}_search">
             <div class="mechsel-search-bar">
-                <input type="text" placeholder="🔍 Buscar valor derivado..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
+                <input type="text" placeholder="🔍 Buscar ${esc(noun.toLowerCase())}..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
             </div>
             <div class="mechsel-results" id="field_${fieldKey}_results">${opts}</div>
             <button type="button" class="mechsel-confirm" onclick="window._eqDvSelConfirm('field_${fieldKey}')">✔️ Vincular Selecionados</button>
@@ -3688,12 +3708,14 @@ window._eqDvSelConfirm = function (fieldId) {
     hidden.value = JSON.stringify(checked);
     document.getElementById(`${fieldId}_search`).classList.remove('open');
 
-    // Refresh chips
-    const cache = window._derivedValuesCache || [];
+    // Refresh chips — usa o cache que montou ESTE campo (VDs ou Status Vitais)
+    const reg = window._eqSelCache?.[fieldId];
+    const cache = reg?.cache || window._derivedValuesCache || [];
+    const noun = (reg?.noun || 'Valor Derivado').toLowerCase();
     const chipsEl = document.getElementById(`${fieldId}_chips`);
     if (chipsEl) {
         if (!checked.length) {
-            chipsEl.innerHTML = '<span style="color:var(--muted);font-size:.75rem">Nenhum valor derivado vinculado</span>';
+            chipsEl.innerHTML = `<span style="color:var(--muted);font-size:.75rem">Nenhum ${noun} vinculado</span>`;
         } else {
             chipsEl.innerHTML = checked.map(dvObj => {
                 const did = dvObj.id;
@@ -3720,6 +3742,38 @@ window._eqDvSelLevelChange = function (fieldId, did, prop, val) {
         hidden.value = JSON.stringify(data);
     }
 };
+
+/** Condições vinculadas a um item — lista simples de ids, sem modificador. */
+export function buildConditionSelectorHTML(fieldKey, label, currentIds, cache) {
+    const published = (cache || []).filter(c => c.publicado !== false);
+    const ids = currentIds || [];
+
+    const chip = c => `<div class="mechsel-chip" style="border-left-color:var(--danger)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${c.icone || '💀'} ${esc(c.nome)}</div><div class="mechsel-chip-preview">${esc(c.duracao ? 'Duração: ' + c.duracao : '')}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${c.id}')">✕</button></div>`;
+
+    const chips = ids.map(cid => {
+        const c = (cache || []).find(x => x.id === cid);
+        return c ? chip(c) : '';
+    }).join('');
+
+    const opts = published.map(c =>
+        `<label class="mechsel-result"><input type="checkbox" value="${c.id}" ${ids.includes(c.id) ? 'checked' : ''}><span class="mechsel-result-name">${c.icone || '💀'} ${esc(c.nome)}</span><span class="mechsel-result-preview">${esc(c.duracao || '')}</span></label>`).join('');
+
+    return `
+    <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
+        <span class="mechsel-label">${esc(label)}</span>
+        <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhuma condição vinculada</span>'}</div>
+        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Condição</button>
+        <div class="mechsel-search" id="field_${fieldKey}_search">
+            <div class="mechsel-search-bar">
+                <input type="text" placeholder="🔍 Buscar condição..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
+            </div>
+            <div class="mechsel-results" id="field_${fieldKey}_results" onchange="window._mechSelChange('field_${fieldKey}')">
+                ${opts}
+            </div>
+        </div>
+        <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(ids)}'>
+    </div>`;
+}
 
 export function buildManeuverSelectorHTML(fieldKey, label, currentIds, cache) {
     const published = cache.filter(m => m.publicado !== false);

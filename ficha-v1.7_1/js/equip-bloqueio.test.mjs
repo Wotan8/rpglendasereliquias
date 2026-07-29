@@ -25,7 +25,7 @@ function pega(nome) {
   return src.slice(ini, fim);
 }
 
-const CODIGO = ['_meReqTarget', '_meMatchItemsByReq', '_meItemCasaReqs', '_meBuscaRestricao',
+const CODIGO = ['_meSameNome', '_meReqTarget', '_meMatchItemsByReq', '_meItemCasaReqs', '_meBuscaRestricao',
   'equipBloqueioDoItem', 'equipBloqueioEfeitosDoItem'].map(pega).join('\n');
 
 // Catálogo: a adaga tem a tag no modelo; a espada tem tipo Arma.

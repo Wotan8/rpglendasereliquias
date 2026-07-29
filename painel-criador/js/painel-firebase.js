@@ -3,7 +3,7 @@
 // Lendas e Relíquias (ficha-v1.7_1 style)
 // =============================================
 
-import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=9';
+import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=10';
 import { RUNIC_MODULE_DEF, buildRunicField, collectRunicField, importRunicSeed } from './painel-runic.js?v=1';
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -50,6 +50,7 @@ let peculiaritiesCache = [];
 let skillsCache = [];
 let derivedValuesCache = [];
 let vitalStatsCache = [];
+let conditionsCache = [];
 let bodyPartsCache = [];
 
 let aurasCache = [];
@@ -81,6 +82,7 @@ const MODULE_DEFS = {
             { key: 'curiosidades', label: 'Curiosidades', type: 'tags', placeholder: 'Digite e pressione Enter' },
             { key: 'imagemUrl', label: 'URL da Imagem', type: 'text', placeholder: 'https://...' },
             { key: 'ordem', label: 'Ordem no Select', type: 'number', placeholder: '0' },
+            { key: 'livroVinculado', label: '📖 Livro Vinculado (Worldbuilding)', type: 'book_link' },
             { key: 'partesDoCorpo', label: '🦴 Anatomia — Partes do Corpo', type: 'body_parts_editor' },
         ]
     },
@@ -116,6 +118,7 @@ const MODULE_DEFS = {
             { key: 'testesDeClasse', label: '🎯 Testes de Classe (Rolagens)', type: 'class_tests_editor' },
             { key: 'usaRunomancia', label: 'ᛟ Usa Runomancia? (ON/OFF)', type: 'boolean' },
             { key: 'modulosDaClasse', label: '📦 Módulos da Classe', type: 'class_module_linker' },
+            { key: 'livroVinculado', label: '📖 Livro Vinculado (Worldbuilding)', type: 'book_link' },
             { key: 'imagemUrl', label: 'URL da Imagem', type: 'text', placeholder: 'https://...' },
         ]
     },
@@ -135,6 +138,7 @@ const MODULE_DEFS = {
                     { key: 'opcao', label: 'Opção alternativa', type: 'text' }
                 ]
             },
+            { key: 'livroVinculado', label: '📖 Livro Vinculado (Worldbuilding)', type: 'book_link' },
             { key: 'cultura', label: 'Cultura e Costumes', type: 'textarea', required: true },
             { key: 'governo', label: 'Governo', type: 'textarea', required: true },
             { key: 'economia', label: 'Economia', type: 'textarea', required: true },
@@ -252,6 +256,17 @@ const MODULE_DEFS = {
                     { value: 'distancia', label: '🏹 Arma a Distância' }
                 ], showWhen: { field: 'tipo', value: 'Arma' }
             },
+            {
+                key: 'liga', label: '⚒️ Liga (qualidade da peça)', type: 'select', options: [
+                    { value: '0', label: '0 — Sem Liga (improvisado)' },
+                    { value: '1', label: '1 — Liga Bruta (baixa)' },
+                    { value: '2', label: '2 — Liga Justa (comum)' },
+                    { value: '3', label: '3 — Liga Nobre (boa)' },
+                    { value: '4', label: '4 — Liga Pura (alta)' },
+                    { value: '5', label: '5 — Liga Superior' }
+                ]
+            },
+            { key: 'preco', label: '💰 Preço base (L$)', type: 'number', placeholder: 'Ex: 1100' },
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
             { key: 'imagemUrl', label: 'Imagem (URL)', type: 'text', placeholder: 'https://...' },
             { key: 'peso', label: 'Peso', type: 'number', required: true, placeholder: '1' },
@@ -265,6 +280,10 @@ const MODULE_DEFS = {
             { key: 'formulaDano', label: '💥 Fórmula de Dano', type: 'text', placeholder: 'Ex: 1d10, 2d6 — bônus numéricos vêm dos Valores Derivados' },
             { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: 'item' },
             { key: 'valoresDerivadosVinculados', label: 'Valores Derivados Vinculados', type: 'mechanic_selector', selectorTarget: 'equipmentDerivedValues' },
+            // "Máxima" = bônus enquanto equipado. "Atual" = efeito de uso único,
+            // só dispara no botão "Usar" da ficha (item consumível).
+            { key: 'statusVitaisVinculados', label: '❤️ Status Vitais Vinculados (Máxima = ao equipar · Atual = ao usar)', type: 'mechanic_selector', selectorTarget: 'vitalStatus' },
+            { key: 'condicaoIds', label: '💀 Condições Aplicadas ao Usar', type: 'mechanic_selector', selectorTarget: 'conditions' },
         ]
     },
     conditions: {
@@ -482,6 +501,8 @@ const MODULE_FILTERS = {
     equipment: [
         { key: 'tipo', label: 'Tipo', icon: '📦', type: 'static' },
         { key: 'categoriaArma', label: 'Cat. Arma', icon: '⚔️', type: 'static' },
+        { key: 'liga', label: 'Liga', icon: '⚒️', type: 'static' },
+        { key: 'formulaDano', label: 'Dano', icon: '💥', type: 'static' },
         { key: 'ehContainer', label: 'Container', icon: '🎒', type: 'boolean' },
     ],
     conditions: [
@@ -905,6 +926,7 @@ async function loadModule(moduleName) {
         refreshSkillsCache(),
         refreshDerivedValuesCache(),
         refreshVitalStatsCache(),
+        refreshConditionsCache(),
         refreshBodyPartsCache(),
         refreshClassesCache(),
         // ᛟ Elementos Rúnicos: usados como alvos no pool da mecânica "Distribuir"
@@ -926,7 +948,8 @@ async function loadModule(moduleName) {
         await _migrateInlineModulesToCollection();
     }
     if (moduleName === 'peculiarities') await refreshAurasCache();
-    if (moduleName === 'knowledge') await refreshWorldbuildingCache();
+    // Livros: a aba Conhecimento tranca capítulos; raça/classe/tribo vinculam um livro.
+    if (['knowledge', 'races', 'classes', 'tribes'].includes(moduleName)) await refreshWorldbuildingCache();
 
     const grid = document.getElementById('itemsGrid');
     const emptyState = document.getElementById('emptyState');
@@ -999,6 +1022,16 @@ async function refreshDerivedValuesCache() {
         derivedValuesCache.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
         window._derivedValuesCache = derivedValuesCache;
     } catch (e) { console.error('Erro cache derivedValues:', e); }
+}
+
+async function refreshConditionsCache() {
+    try {
+        const snap = await getDocs(collection(db, 'system/data/conditions'));
+        conditionsCache = [];
+        snap.forEach(d => conditionsCache.push({ ...d.data(), id: d.id }));
+        conditionsCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        window._conditionsCache = conditionsCache;
+    } catch (e) { console.error('Erro cache conditions:', e); }
 }
 
 async function refreshVitalStatsCache() {
@@ -1712,7 +1745,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                 
                 const wrap = document.getElementById(parentFieldPeculiaridade.id + '_wrap');
                 if (wrap) {
-                    import('./painel-mechanics.js?v=9').then(m => {
+                    import('./painel-mechanics.js?v=10').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
                         
@@ -1740,7 +1773,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                 const wrap = document.getElementById(legacyField.id + '_wrap');
                 if (wrap) {
                     const currentIds = JSON.parse(legacyField.value || '[]');
-                    import('./painel-mechanics.js?v=9').then(m => {
+                    import('./painel-mechanics.js?v=10').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
                         
@@ -1928,7 +1961,7 @@ window.saveSubFormValorDerivado = async function (e, vid, parentFieldKey) {
                 
                 const wrap = document.getElementById(parentFieldValorDerivado.id + '_wrap');
                 if (wrap) {
-                    import('./painel-mechanics.js?v=9').then(m => {
+                    import('./painel-mechanics.js?v=10').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Valores Derivados';
                         
@@ -2044,7 +2077,7 @@ window.closeForm = function () {
 function buildField(field, value, existingData) {
     const wrap = document.createElement('div');
     wrap.className = 'form-group' + (
-        ['textarea', 'array', 'json', 'tags', 'mechanic_selector', 'aura_graus_editor', 'class_tests_editor', 'class_modules_editor', 'class_module_standalone_editor', 'class_module_linker', 'body_parts_editor', 'class_kits_editor', 'wb_chapter_selector', 'knowledge_reqs_editor'].includes(field.type) ? ' full-width' : ''
+        ['textarea', 'array', 'json', 'tags', 'mechanic_selector', 'aura_graus_editor', 'class_tests_editor', 'class_modules_editor', 'class_module_standalone_editor', 'class_module_linker', 'body_parts_editor', 'class_kits_editor', 'wb_chapter_selector', 'book_link', 'knowledge_reqs_editor'].includes(field.type) ? ' full-width' : ''
     );
     if (field.showWhen) {
         wrap.dataset.showWhenField = field.showWhen.field;
@@ -2077,6 +2110,10 @@ function buildField(field, value, existingData) {
             wrap.innerHTML = buildDerivedValueSelectorHTML(field.key, field.label, ids, derivedValuesCache);
         } else if (field.selectorTarget === 'equipmentDerivedValues') {
             wrap.innerHTML = buildEquipmentDerivedValueSelectorHTML(field.key, field.label, ids, derivedValuesCache);
+        } else if (field.selectorTarget === 'vitalStatus') {
+            wrap.innerHTML = buildEquipmentDerivedValueSelectorHTML(field.key, field.label, ids, vitalStatusOptions(vitalStatsCache), 'Status Vital');
+        } else if (field.selectorTarget === 'conditions') {
+            wrap.innerHTML = buildConditionSelectorHTML(field.key, field.label, ids, conditionsCache);
         } else if (field.selectorTarget === 'maneuvers') {
             wrap.innerHTML = buildManeuverSelectorHTML(field.key, field.label, ids, maneuversCache);
         } else {
@@ -2185,6 +2222,12 @@ function buildField(field, value, existingData) {
     // === 📖 SELETOR DE CAPÍTULO DO WORLDBUILDING ===
     if (field.type === 'wb_chapter_selector') {
         wrap.innerHTML = _buildWbChapterSelectorHTML(field.key, field.label, value, field.required);
+        return wrap;
+    }
+
+    // === 📖 LIVRO VINCULADO (raça / classe / tribo) ===
+    if (field.type === 'book_link') {
+        wrap.innerHTML = _buildBookLinkHTML(field.key, field.label, value);
         return wrap;
     }
 
@@ -2939,6 +2982,50 @@ function _buildWbChapterSelectorHTML(fieldKey, label, value, required) {
         ${vazio}
         <div class="cm-hint">Capítulos sem regra aqui seguem a marcação 🌐 Público do próprio capítulo.</div>
     `;
+}
+
+// ---------------------------------------------------------------------
+// 📖 LIVRO VINCULADO — um livro por raça/classe/tribo + quais capítulos
+// o jogador enxerga. Nenhum capítulo marcado = o livro inteiro.
+// Salvo como { bookId, capituloIds: [] } e lido por shared/livro-vinculado.js.
+// ---------------------------------------------------------------------
+function _buildBookLinkHTML(fieldKey, label, value) {
+    const vinc = (value && typeof value === 'object') ? value : {};
+    const opts = '<option value="">— nenhum livro —</option>' + wbBooksCache
+        .map(b => `<option value="${escapeHtml(b.id)}" ${vinc.bookId === b.id ? 'selected' : ''}>📗 ${escapeHtml(b.title || 'Livro sem título')}</option>`)
+        .join('');
+
+    return `
+        <label>${escapeHtml(label)}</label>
+        <select id="field_${fieldKey}_book" onchange="window._lvOnBookChange('${fieldKey}')">${opts}</select>
+        <div class="multi-select-container" style="max-height:200px;overflow-y:auto;margin-top:8px" id="lvCaps_${fieldKey}">
+            ${_buildBookChaptersHTML(fieldKey, vinc.bookId, Array.isArray(vinc.capituloIds) ? vinc.capituloIds : [])}
+        </div>
+        <div class="cm-hint">Sem nenhum capítulo marcado, o livro inteiro fica visível para o jogador.</div>
+    `;
+}
+
+function _buildBookChaptersHTML(fieldKey, bookId, marcados) {
+    if (!bookId) return '<div class="cm-hint" style="margin:0">Escolha um livro para liberar capítulos.</div>';
+    const caps = wbChaptersCache.filter(c => c.bookId === bookId);
+    if (!caps.length) return '<div class="cm-hint" style="margin:0">⚠️ Este livro ainda não tem capítulos.</div>';
+    return caps.map((c, i) => `
+        <label class="multi-select-option"><input type="checkbox" data-lv-cap="${fieldKey}" value="${escapeHtml(c.id)}"
+            ${marcados.includes(c.id) ? 'checked' : ''}> ${i + 1}. ${escapeHtml(c.title || 'Sem título')}</label>`).join('');
+}
+
+// Trocar de livro zera os capítulos marcados (eram de outro livro).
+window._lvOnBookChange = function (fieldKey) {
+    const box = document.getElementById(`lvCaps_${fieldKey}`);
+    const bookId = document.getElementById(`field_${fieldKey}_book`)?.value || '';
+    if (box) box.innerHTML = _buildBookChaptersHTML(fieldKey, bookId, []);
+};
+
+function _collectBookLink(fieldKey) {
+    const bookId = document.getElementById(`field_${fieldKey}_book`)?.value || '';
+    if (!bookId) return null;
+    const capituloIds = Array.from(document.querySelectorAll(`[data-lv-cap="${fieldKey}"]:checked`)).map(cb => cb.value);
+    return { bookId, capituloIds };
 }
 
 window._knSyncChapterTitle = function (sel) {
@@ -4467,6 +4554,8 @@ window.handleFormSubmit = async function (e) {
             data[field.key] = _collectClassKitsData(field.key);
         } else if (field.type === 'knowledge_reqs_editor') {
             data[field.key] = _collectKnowledgeReqs(field.key);
+        } else if (field.type === 'book_link') {
+            data[field.key] = _collectBookLink(field.key);
         } else if (field.type === 'wb_chapter_selector') {
             const el = document.getElementById(`field_${field.key}`);
             data[field.key] = el ? el.value : '';

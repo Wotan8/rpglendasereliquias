@@ -758,6 +758,11 @@ function _cmMatchInventoryItems(eqId) {
     return items.filter(i => i.modeloId === eqId || (tpl && i.nome === tpl.nome));
 }
 
+// Ver _meSameNome: nome do item na ficha pode ter espaços das pontas.
+function _cmSameNome(a, b) {
+    return (a || '').trim() === (b || '').trim();
+}
+
 /** Localiza itens do personagem que correspondem a um requisito (equipamento, tag ou tipo). */
 function _cmMatchInventoryItemsByReq(req) {
     const target = _cmReqTarget(req);
@@ -770,7 +775,7 @@ function _cmMatchInventoryItemsByReq(req) {
         const tag = target.value;
         return items.filter(i => {
             if (Array.isArray(i.tags) && i.tags.includes(tag)) return true;
-            const tpl = i.modeloId ? catalog.find(t => t.id === i.modeloId) : catalog.find(t => t.nome === i.nome);
+            const tpl = i.modeloId ? catalog.find(t => t.id === i.modeloId) : catalog.find(t => _cmSameNome(t.nome, i.nome));
             return !!(tpl && Array.isArray(tpl.tags) && tpl.tags.includes(tag));
         });
     }
@@ -779,7 +784,7 @@ function _cmMatchInventoryItemsByReq(req) {
     const tipo = target.value;
     return items.filter(i => {
         if (i.tipo) return i.tipo === tipo;
-        const tpl = i.modeloId ? catalog.find(t => t.id === i.modeloId) : catalog.find(t => t.nome === i.nome);
+        const tpl = i.modeloId ? catalog.find(t => t.id === i.modeloId) : catalog.find(t => _cmSameNome(t.nome, i.nome));
         return !!(tpl && tpl.tipo === tipo);
     });
 }

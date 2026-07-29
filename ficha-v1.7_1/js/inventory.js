@@ -273,6 +273,18 @@ function itemTemEfeitosAtivos(item) {
  * Valores Derivados marcados com `escopoItem` caem em state.itemBonuses[item.id]
  * em vez do bag global — é o que permite duas armas terem Acerto próprio.
  */
+/** Campo do item, com fallback pro modelo do catálogo. Instância vence modelo. */
+function _campoDoItem(item, key) {
+    const proprio = item[key];
+    if (Array.isArray(proprio) && proprio.length) return proprio;
+    if (!item.modeloId) return Array.isArray(proprio) ? proprio : [];
+    const tpl = window._inventoryState.catalog.find(t => t.id === item.modeloId);
+    return (tpl && Array.isArray(tpl[key])) ? tpl[key] : [];
+}
+
+const _statusVitaisDoItem = item => _campoDoItem(item, 'statusVitaisVinculados')
+    .map(sv => (typeof sv === 'object' ? sv : { id: sv, modificador: 0 }));
+
 function applyEquippedItemsMechanics() {
     const items = window._inventoryState.items;
     const equipped = items.filter(itemTemEfeitosAtivos);
@@ -342,6 +354,16 @@ function applyEquippedItemsMechanics() {
                         }
                     }
                 }
+            }
+            // 1d) Status Vitais Vinculados — só os "_MAX". Os "_ATUAL" são efeito
+            // de uso único (usarItem), não bônus permanente: somar Vitalidade
+            // Atual aqui reaplicaria a cura a cada recálculo.
+            for (const sv of _statusVitaisDoItem(item)) {
+                const mod = Number(sv.modificador) || 0;
+                if (!mod || !String(sv.id).endsWith('_MAX')) continue;
+                if (!window.state.mechanicBonuses) window.state.mechanicBonuses = {};
+                const k = `DERIVED:${sv.id}`;
+                window.state.mechanicBonuses[k] = (window.state.mechanicBonuses[k] || 0) + mod;
             }
         } finally {
             if (typeof window._meSetItemScope === 'function') window._meSetItemScope(null);
@@ -1440,6 +1462,123 @@ window.toggleEquip = async function(itemId, equip) {
     }
 };
 
+/* ===== USAR ITEM (consumível) ===================================== */
+
+// Mapa vital → ids dos campos da ficha. Espelha DERIVED_FIELDS_MAP em
+// derived-values.js, que é local àquele módulo.
+const VITAL_CAMPOS = {
+    VIT: { atual: 'vit_atual', max: 'vit_max_display', nome: 'Vitalidade' },
+    ENER: { atual: 'ener_atual', max: 'ener_max_display', nome: 'Energia' },
+    SAN: { atual: 'san_atual', max: 'san_max_display', nome: 'Sanidade' },
+};
+
+/** Mecânicas do item (próprias + do modelo), que no uso disparam como one-off. */
+function _mecanicasDoItem(item) {
+    const ids = new Set(_campoDoItem(item, 'mecanicaIdsProprias'));
+    if (item.modeloId) {
+        const tpl = window._inventoryState.catalog.find(t => t.id === item.modeloId);
+        for (const id of (tpl?.mecanicaIds || [])) ids.add(id);
+    }
+    for (const id of (item.mecanicaIds || [])) ids.add(id);
+    return [...ids];
+}
+
+window.podeUsarItem = function(item) {
+    if (!item || item.tipo !== 'Consumível') return false;
+    return _statusVitaisDoItem(item).some(sv => String(sv.id).endsWith('_ATUAL') && Number(sv.modificador))
+        || _campoDoItem(item, 'condicaoIds').length > 0
+        || _mecanicasDoItem(item).length > 0;
+};
+
+/**
+ * Consome 1 unidade: aplica os deltas de status vital "Atual", adiciona as
+ * condições vinculadas e decrementa a quantidade (remove o item ao zerar).
+ */
+window.usarItem = async function(itemId) {
+    const item = window._inventoryState.items.find(i => i.id === itemId);
+    if (!item) return;
+    if (item.tipo !== 'Consumível') {
+        alert('Só itens do tipo Consumível podem ser usados.');
+        return;
+    }
+
+    const efeitos = [];
+
+    // 1) Status vitais "Atual" — clamp em [0, Máximo]
+    for (const sv of _statusVitaisDoItem(item)) {
+        const mod = Number(sv.modificador) || 0;
+        const m = String(sv.id).match(/^(.+)_ATUAL$/);
+        if (!mod || !m) continue;
+        const campos = VITAL_CAMPOS[m[1]];
+        if (!campos) { console.warn(`⚠️ [usarItem] status vital desconhecido: ${sv.id}`); continue; }
+
+        const el = document.getElementById(campos.atual);
+        if (!el) continue;
+        const antes = parseInt(el.value) || 0;
+        const teto = parseInt(document.getElementById(campos.max)?.textContent) || Infinity;
+        const depois = Math.max(0, Math.min(antes + mod, teto));
+        el.value = depois;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        if (depois !== antes) efeitos.push(`${campos.nome} ${antes} → ${depois}`);
+    }
+
+    // 1b) Mecânicas do item, como one-off. É o que faz alvo "ATUAL:" valer:
+    // fora de one-off o motor descarta esses alvos (mechanics-engine.js:1746).
+    if (typeof applyMechanicToSheet === 'function') {
+        const mechs = window._systemData?.mechanics || [];
+        for (const mid of _mecanicasDoItem(item)) {
+            const mech = mechs.find(m => m.id === mid);
+            if (!mech) { console.warn(`⚠️ [usarItem] mecânica ${mid} não encontrada`); continue; }
+            applyMechanicToSheet(mech, null, true);
+            efeitos.push(mech.nome || mid);
+        }
+    }
+
+    // 2) Condições vinculadas — não duplica o que já está ativo
+    for (const condId of _campoDoItem(item, 'condicaoIds')) {
+        const tpl = (window._systemData?.conditions || []).find(c => c.id === condId);
+        if (!tpl) continue;
+        if (!Array.isArray(state.conditions)) state.conditions = [];
+        if (state.conditions.some(c => c.modeloId === tpl.id)) continue;
+        state.conditions.push({
+            nome: tpl.nome || '',
+            descricao: tpl.descricao || '',
+            tempoAtual: '',
+            tempoRestante: tpl.duracao || '',
+            icone: tpl.icone || '💀',
+            modeloId: tpl.id,
+            efeitoMecanicaIds: tpl.efeitoMecanicaIds || []
+        });
+        efeitos.push(`+${tpl.nome}`);
+    }
+
+    // 3) Consome a unidade
+    const qty = Math.max(1, parseInt(item.quantidade) || 1);
+    try {
+        if (qty > 1) {
+            await _firestoreSetDoc('items', itemId, { quantidade: qty - 1, lastModified: new Date().toISOString() });
+            item.quantidade = qty - 1;
+        } else {
+            await _firestoreDeleteDoc('items', itemId);
+            window._inventoryState.items = window._inventoryState.items.filter(i => i.id !== itemId);
+        }
+    } catch (e) {
+        console.error('❌ Erro ao consumir item:', e);
+        return;
+    }
+
+    if (typeof renderConditions === 'function') renderConditions();
+    if (typeof _triggerConditionMechanicsUpdate === 'function') _triggerConditionMechanicsUpdate();
+    renderEquippedItems();
+    renderInventoryTab();
+    recalcInventoryPressure();
+    if (typeof applyAllRaceMechanics === 'function') applyAllRaceMechanics(document.getElementById('selRaca')?.value);
+    if (typeof recalcAll === 'function') recalcAll();
+    if (typeof scheduleAutosave === 'function') scheduleAutosave();
+
+    console.log(`🧪 Usou "${item.nome}": ${efeitos.join(', ') || 'sem efeito'}`);
+};
+
 window.deleteInventoryItem = async function(itemId) {
     const item = window._inventoryState.items.find(i => i.id === itemId);
     if (!item) return;
@@ -1594,6 +1733,7 @@ window.openItemDetail = function(itemId) {
             ${mechPreview ? `<div class="inv-detail-mechs"><span class="inv-detail-label">Efeitos</span>${mechPreview}</div>` : ''}
         </div>
         <div class="inv-modal-footer">
+            ${window.podeUsarItem(item) ? `<button class="inv-btn-action" onclick="usarItem('${item.id}');closeItemDetail()">🧪 Usar</button>` : ''}
             <button class="inv-btn-action" onclick="toggleEquip('${item.id}',${!item.equipado});closeItemDetail()">${item.equipado ? '⬇️ Desequipar' : '⬆️ Equipar'}</button>
             <button class="inv-btn-transfer" onclick="openTransferModal('${item.id}')">🔄 Transferir</button>
             ${qty > 1 && !item.ehContainer && item.tipo !== 'Container' ? `<button class="inv-btn-action" onclick="closeItemDetail();openSplitModal('${item.id}')">➗ Dividir</button>` : ''}

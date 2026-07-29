@@ -660,6 +660,12 @@ function _meItemEquipValido(item, formasExigidas) {
     return formasExigidas.some(f => atuais.includes(f));
 }
 
+// Itens antigos na ficha guardaram o nome com espaços das pontas; o catálogo já
+// foi limpo. Comparar cru desfazia o vínculo item↔modelo em silêncio.
+function _meSameNome(a, b) {
+    return (a || '').trim() === (b || '').trim();
+}
+
 function _meMatchItemsByReq(req) {
     const target = _meReqTarget(req);
     const items = window._inventoryState?.items || [];
@@ -668,7 +674,7 @@ function _meMatchItemsByReq(req) {
         const tag = target.value;
         return items.filter(i => {
             if (Array.isArray(i.tags) && i.tags.includes(tag)) return true;
-            const tpl = i.modeloId ? catalog.find(t => t.id === i.modeloId) : catalog.find(t => t.nome === i.nome);
+            const tpl = i.modeloId ? catalog.find(t => t.id === i.modeloId) : catalog.find(t => _meSameNome(t.nome, i.nome));
             return !!(tpl && Array.isArray(tpl.tags) && tpl.tags.includes(tag));
         });
     }
@@ -676,13 +682,13 @@ function _meMatchItemsByReq(req) {
         const tipo = target.value;
         return items.filter(i => {
             if (i.tipo) return i.tipo === tipo;
-            const tpl = i.modeloId ? catalog.find(t => t.id === i.modeloId) : catalog.find(t => t.nome === i.nome);
+            const tpl = i.modeloId ? catalog.find(t => t.id === i.modeloId) : catalog.find(t => _meSameNome(t.nome, i.nome));
             return !!(tpl && tpl.tipo === tipo);
         });
     }
     const eqId = target.value;
     const tpl = catalog.find(t => t.id === eqId);
-    return items.filter(i => i.modeloId === eqId || (tpl && i.nome === tpl.nome));
+    return items.filter(i => i.modeloId === eqId || (tpl && _meSameNome(i.nome, tpl.nome)));
 }
 
 /** Soma a quantidade dos itens que casam com o requisito, equipados nas formas exigidas. */
