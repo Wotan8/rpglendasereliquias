@@ -1,5 +1,27 @@
+/** Confere se o doc da mesa existe. Erro de rede nao vira "mesa apagada":
+ *  nesse caso assume que existe, senao uma queda de conexao esconderia a aba. */
+async function mesaExiste(mesaId) {
+    try {
+        const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const db = window.db || getFirestore();
+        return (await getDoc(doc(db, 'mesas', mesaId))).exists();
+    } catch (e) {
+        console.warn('[mesa] nao deu para conferir se a mesa existe:', e);
+        return true;
+    }
+}
+
 window.initMesaTab = async function(mesaId) {
     if (!mesaId) return;
+
+    // A mesa ainda existe? Excluir uma mesa apaga so o doc em 'mesas' — o
+    // mesaId fica gravado no personagem. Sem esta checagem a ficha montava a
+    // aba de uma mesa que nao existe mais, listando como "companheiros" outros
+    // personagens igualmente orfaos e oferecendo um Tabuleiro morto.
+    if (!(await mesaExiste(mesaId))) {
+        console.info('[mesa] mesaId', mesaId, 'nao existe mais — aba nao sera criada.');
+        return;
+    }
 
     const tabBar = document.getElementById('tabBar');
     if (!tabBar) return;
