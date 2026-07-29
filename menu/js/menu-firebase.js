@@ -1092,14 +1092,14 @@ function openCheckoutModal(item, mode) {
     const infoDiv = document.getElementById('lojaCheckoutItemInfo');
     infoDiv.innerHTML = `
         <div style="display:flex;gap:12px;align-items:center;">
-            ${item.imagem ? `<img src="${escapeHtml(item.imagem)}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;background:rgba(0,0,0,0.3);" onerror="this.remove();">` : ''}
+            ${item.imagem ? `<img src="${escapeHtml(item.imagem)}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;background:var(--lr-bg-1);" onerror="this.remove();">` : ''}
             <div style="flex:1;">
                 <div style="font-weight:700;color:var(--primary);font-size:1.1rem;margin-bottom:4px;">${escapeHtml(item.nome)}</div>
                 <div style="font-size:0.9rem;color:var(--muted);">Custo: <span id="lojaCheckoutPriceDisplay">${precoLabel}</span></div>
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;">
                 <label for="lojaCheckoutQuantity" style="font-size:0.75rem;color:var(--muted);margin-bottom:2px;font-weight:700;">Quantidade</label>
-                <input type="number" id="lojaCheckoutQuantity" value="1" min="1" max="99" oninput="updateCheckoutTotal()" style="width:60px;text-align:center;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:6px;padding:4px;font-family:var(--font);font-size:0.9rem;font-weight:600;">
+                <input type="number" id="lojaCheckoutQuantity" value="1" min="1" max="99" oninput="updateCheckoutTotal()" style="width:60px;text-align:center;background:var(--lr-bg-1);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:6px;padding:4px;font-family:var(--font);font-size:0.9rem;font-weight:600;">
             </div>
         </div>
         ${isPagBank ? `<div style="font-size:0.8rem;color:var(--muted);margin-top:10px;border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;">🔒 Você será redirecionado ao ambiente <strong>seguro do PagBank</strong> para pagar com PIX, Cartão ou Boleto. O item é entregue automaticamente após a confirmação do pagamento.</div>` : ''}

@@ -122,7 +122,7 @@ function renderInventario() {
                 <button class="btn btn-success btn-small" onclick="addItemToContainerMestre('está com alguém')">➕ Adicionar</button>
             </div>
             <div style="display:grid;gap:10px">
-                ${eqItems.length === 0 ? '<div style="text-align:center;padding:30px;color:var(--muted);background:rgba(15,23,42,.4);border-radius:10px">Nenhum item equipado</div>' :
+                ${eqItems.length === 0 ? '<div style="text-align:center;padding:30px;color:var(--muted);background:var(--lr-bg-1);border-radius:10px">Nenhum item equipado</div>' :
                 eqItems.map(item => renderItemCard(item, eqCont)).join('')}
             </div>
         </div>
@@ -132,7 +132,7 @@ function renderInventario() {
 function renderItemCard(item, eqCont) {
     const isCont = item.tipo === 'Container';
     const isOpen = S.currentOpenPersonagemContainerId === item.id;
-    const img = item.imagem ? `<img src="${item.imagem}" style="width:50px;height:50px;object-fit:contain;border-radius:8px;background:rgba(15,23,42,.8);padding:5px;border:2px solid ${isOpen?'rgba(16,185,129,.6)':'var(--border)'}">` :
+    const img = item.imagem ? `<img src="${item.imagem}" style="width:50px;height:50px;object-fit:contain;border-radius:8px;background:var(--lr-bg-1);padding:5px;border:2px solid ${isOpen?'rgba(16,185,129,.6)':'var(--border)'}">` :
         (isCont ? `<div style="width:50px;height:50px;background:rgba(16,185,129,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;border:2px solid ${isOpen?'rgba(16,185,129,.6)':'rgba(16,185,129,.4)'}">📦</div>` : '');
 
     let badges = '', openBtn = '';
@@ -144,7 +144,7 @@ function renderItemCard(item, eqCont) {
         openBtn = `<button class="btn ${isOpen?'btn-success':'btn-warning'} btn-small" onclick="event.stopPropagation();openPersonagemContainer('${item.id}')">${isOpen?'📂':'📁'}</button>`;
     }
 
-    return `<div onclick="editItemMestre('está com alguém','${item.id}')" style="background:rgba(15,23,42,.6);border:2px solid ${isOpen?'rgba(16,185,129,.6)':'var(--border)'};border-radius:10px;padding:15px;display:flex;align-items:center;gap:15px;cursor:pointer">
+    return `<div onclick="editItemMestre('está com alguém','${item.id}')" style="background:var(--lr-bg-1);border:2px solid ${isOpen?'rgba(16,185,129,.6)':'var(--border)'};border-radius:10px;padding:15px;display:flex;align-items:center;gap:15px;cursor:pointer">
         ${img}
         <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;flex-wrap:wrap"><div style="font-size:1.1rem;font-weight:600;color:var(--light)">${item.equipado?'⚔️ ':''}${escapeHtml(item.nome||item.name||'Sem nome')}</div>${badges}</div>
@@ -172,9 +172,9 @@ function renderPersonagemContainerViewer() {
 
     const itemsHtml = inside.length === 0 ? '<div style="text-align:center;padding:30px;color:var(--muted)"><div style="font-size:2rem;margin-bottom:10px">📭</div>Container vazio</div>' :
         inside.map(i => {
-            const img2 = i.imagem ? `<img src="${i.imagem}" style="width:50px;height:50px;object-fit:contain;border-radius:8px;background:rgba(15,23,42,.8);padding:3px;border:1px solid var(--border)">` :
+            const img2 = i.imagem ? `<img src="${i.imagem}" style="width:50px;height:50px;object-fit:contain;border-radius:8px;background:var(--lr-bg-1);padding:3px;border:1px solid var(--border)">` :
                 `<div style="width:50px;height:50px;background:rgba(16,185,129,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:1px solid rgba(16,185,129,.4)">📄</div>`;
-            return `<div style="background:rgba(15,23,42,.6);border:2px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="editItemMestre('${cid}','${i.id}')">
+            return `<div style="background:var(--lr-bg-1);border:2px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="editItemMestre('${cid}','${i.id}')">
                 ${img2}
                 <div style="flex:1;min-width:0">
                     <div style="font-weight:700;color:var(--light)">${escapeHtml(i.nome||i.name||'Sem nome')} <span style="background:rgba(16,185,129,.2);color:var(--lr-nature);padding:2px 8px;border-radius:6px;font-size:.75rem">${i.tipo||'-'}</span></div>

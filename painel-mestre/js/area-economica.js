@@ -43,7 +43,7 @@ function renderAvulsosItems() {
 
     items.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     list.innerHTML = items.map(item => `
-        <div class="item-draggable" onclick="editAvulsoItem('${item.id}')" style="background:rgba(15,23,42,.6);border:2px solid var(--border);border-radius:12px;padding:18px;display:flex;align-items:center;gap:15px;cursor:pointer;margin-bottom:10px">
+        <div class="item-draggable" onclick="editAvulsoItem('${item.id}')" style="background:var(--lr-bg-1);border:2px solid var(--border);border-radius:12px;padding:18px;display:flex;align-items:center;gap:15px;cursor:pointer;margin-bottom:10px">
             <div style="width:50px;height:50px;background:rgba(245,158,11,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">📦</div>
             <div style="flex:1;min-width:0">
                 <div style="font-weight:700;color:var(--light)">${escapeHtml(item.name || 'Sem nome')} <span style="background:rgba(245,158,11,.2);color:var(--lr-gold);padding:2px 8px;border-radius:6px;font-size:.75rem">${item.tipo || '-'}</span></div>
@@ -94,7 +94,7 @@ window.previewJsonItems = function() {
         S.setParsedJsonItems(items);
         const area = document.getElementById('jsonPreviewArea'); const list = document.getElementById('jsonPreviewList'); const cnt = document.getElementById('jsonPreviewCount');
         if (cnt) cnt.textContent = `${items.length} item(s)`;
-        if (list) list.innerHTML = items.map((i, idx) => `<div style="background:rgba(15,23,42,.6);border:2px solid var(--border);border-radius:10px;padding:12px"><strong>${idx + 1}. ${escapeHtml(i.name)}</strong> <span style="color:var(--muted);font-size:.82rem">${i.tipo}</span></div>`).join('');
+        if (list) list.innerHTML = items.map((i, idx) => `<div style="background:var(--lr-bg-1);border:2px solid var(--border);border-radius:10px;padding:12px"><strong>${idx + 1}. ${escapeHtml(i.name)}</strong> <span style="color:var(--muted);font-size:.82rem">${i.tipo}</span></div>`).join('');
         if (area) area.style.display = 'block';
         showAlert(`✅ ${items.length} item(s) carregado(s)`, 'success');
     } catch (e) { showAlert('❌ JSON inválido: ' + e.message, 'danger'); }

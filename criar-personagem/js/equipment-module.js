@@ -157,7 +157,7 @@ function initPhase7(container) {
                         if (m.tipo === 'modificar') icone = '⚡';
                         if (m.tipo === 'limitar') icone = '🔒';
                         return `
-                        <div style="display: flex; align-items: flex-start; gap: 8px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px;">
+                        <div style="display: flex; align-items: flex-start; gap: 8px; background:var(--lr-bg-1); padding: 8px; border-radius: 6px;">
                             <span style="font-size: 1.1rem; line-height: 1;">${icone}</span>
                             <div>
                                 <strong style="color: var(--light); font-size: 0.85rem;">${escHtml(m.nome)}</strong>
@@ -416,7 +416,7 @@ window.viewImageModal = function(url) {
 
 window.renderEquipmentItemDetails = function(eq) {
     const imgUrl = eq.imagem || eq.imagemUrl || eq.iconeUrl;
-    const imgHtml = imgUrl ? `<img src="${escHtml(imgUrl)}" onclick="window.viewImageModal('${escHtml(imgUrl)}')" title="Clique para ampliar" style="cursor:pointer; width:48px; height:48px; object-fit:contain; border-radius:6px; margin-right:12px; background:rgba(0,0,0,0.3); padding:4px; border:1px solid var(--soft); transition: transform 0.2s, border-color 0.2s;" onmouseover="this.style.transform='scale(1.1)'; this.style.borderColor='var(--accent)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='var(--soft)';" onerror="this.style.display='none'">` : '';
+    const imgHtml = imgUrl ? `<img src="${escHtml(imgUrl)}" onclick="window.viewImageModal('${escHtml(imgUrl)}')" title="Clique para ampliar" style="cursor:pointer; width:48px; height:48px; object-fit:contain; border-radius:6px; margin-right:12px; background:var(--lr-bg-1); padding:4px; border:1px solid var(--soft); transition: transform 0.2s, border-color 0.2s;" onmouseover="this.style.transform='scale(1.1)'; this.style.borderColor='var(--accent)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='var(--soft)';" onerror="this.style.display='none'">` : '';
 
     let html = `<div class="equipment-item-detail" style="border-left: 3px solid var(--accent); padding-left: 12px; margin-bottom: 16px; display: flex; align-items: flex-start;">`;
     
@@ -471,7 +471,7 @@ window.renderEquipmentItemDetails = function(eq) {
                     const color = isNeg ? 'var(--danger)' : 'var(--success)';
                     const icon = isNeg ? '⚠️' : '⚡';
                     
-                    html += `<div class="detail-mechanic-item" style="border-left: 2px solid ${color}; padding-left: 8px; background: rgba(0,0,0,0.1); border-radius: 0 4px 4px 0; padding-top: 4px; padding-bottom: 4px;">`;
+                    html += `<div class="detail-mechanic-item" style="border-left: 2px solid ${color}; padding-left: 8px; background:var(--lr-bg-1); border-radius: 0 4px 4px 0; padding-top: 4px; padding-bottom: 4px;">`;
                     html += `<div style="font-size:.8rem; font-weight:bold; color:var(--text);">${icon} ${escHtml(mech.nome || 'Efeito Especial')}</div>`;
                     
                     const parts = [];

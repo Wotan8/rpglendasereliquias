@@ -531,7 +531,7 @@ function renderRepertorioSelecionado() {
         const encodedKey = escHtml(key).replace(/'/g, "\\'");
 
         html += `
-            <div style="background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:6px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="background:var(--lr-bg-1); border:1px solid var(--border); border-radius:6px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <span style="font-weight:bold; font-size:0.9rem;">${item.quantidadeTotalConsumida}x ${escHtml(item.nome)}</span>
                     ${tagHtml}

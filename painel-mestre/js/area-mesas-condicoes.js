@@ -63,7 +63,7 @@ function _buildCharacterConditionsAccordionHTML(char) {
     const conditions = char.conditions || [];
 
     return `
-    <div class="accordion-item" style="margin-bottom:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:8px;">
+    <div class="accordion-item" style="margin-bottom:8px; background:var(--lr-bg-1); border:1px solid var(--border); border-radius:8px;">
         <div class="accordion-header" style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleConditionsAccordion('${bodyId}')">
             <div style="font-weight:bold; color:var(--light);">🎭 ${escapeHtml(nomeReal)}</div>
             <div style="display:flex; gap:12px; align-items:center;">
@@ -104,7 +104,7 @@ function _buildConditionsListHTML(conditions, charId) {
                 </div>
             </div>
             ${desc ? `<div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 8px;">${escapeHtml(desc)}</div>` : ''}
-            <div style="font-size: 0.8rem; background: rgba(0, 0, 0, 0.2); padding: 4px 8px; border-radius: 4px; display: inline-block;">
+            <div style="font-size: 0.8rem; background:var(--lr-bg-1); padding: 4px 8px; border-radius: 4px; display: inline-block;">
                 ⏱️ Tempo: ${escapeHtml(tAtual)} / ${escapeHtml(tMax)}
             </div>
         </div>`;

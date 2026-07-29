@@ -145,7 +145,7 @@ function _buildCharacterInventoryAccordionHTML(char, charItems, allItems) {
     const totalPressure = equipped.reduce((sum, it) => sum + _calcItemPressure(it, charItems), 0);
 
     return `
-    <div class="accordion-item" style="margin-bottom:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:8px;">
+    <div class="accordion-item" style="margin-bottom:8px; background:var(--lr-bg-1); border:1px solid var(--border); border-radius:8px;">
         <div class="accordion-header" style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleAccordion('${bodyId}')">
             <div style="font-weight:bold; color:var(--light);">🎭 ${escapeHtml(nomeReal)}</div>
             <div style="display:flex; gap:12px; align-items:center;">
@@ -303,14 +303,14 @@ window._openMestreItemInspectionModal = async function(itemId) {
                 <h2 style="margin:0; color:var(--light);">${escapeHtml(item.nome || 'Sem nome')}</h2>
                 <div style="color:var(--muted); font-size:0.9rem; margin-bottom:16px;">${tipoEmoji} ${escapeHtml(item.tipo || '')}</div>
                 
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:left; background:rgba(0,0,0,0.2); padding:12px; border-radius:8px;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:left; background:var(--lr-bg-1); padding:12px; border-radius:8px;">
                     <div><strong>⚖️ Peso:</strong> ${parseFloat(item.peso || 0).toFixed(2)}</div>
                     <div><strong>📏 Tamanho:</strong> ${item.tamanho || 1}</div>
                     <div><strong>× Quantidade:</strong> ${item.quantidade || 1}</div>
                     ${item.categoriaArma ? `<div><strong>⚔️ Categoria:</strong> ${item.categoriaArma}</div>` : ''}
                 </div>
                 
-                ${item.descricao ? `<div style="margin-top:16px; text-align:left; background:rgba(0,0,0,0.2); padding:12px; border-radius:8px; white-space:pre-wrap; color:var(--light); font-size:0.9rem;">${escapeHtml(item.descricao)}</div>` : ''}
+                ${item.descricao ? `<div style="margin-top:16px; text-align:left; background:var(--lr-bg-1); padding:12px; border-radius:8px; white-space:pre-wrap; color:var(--light); font-size:0.9rem;">${escapeHtml(item.descricao)}</div>` : ''}
             </div>
             <div class="inv-modal-footer">
                 <button class="inv-btn-cancel" onclick="this.closest('.inv-modal').remove()">Fechar</button>
@@ -717,7 +717,7 @@ window._filterMestreTransfer = function() {
     const resultsContainer = document.getElementById('mt_results');
     
     if (data.scope === 'caixa') {
-        resultsContainer.innerHTML = `<div style="display:flex;flex-direction:column;gap:4px;padding:14px 16px;background:rgba(15,23,42,.5);border:2px solid rgba(245,158,11,.2);border-radius:10px;cursor:pointer;transition:all .2s"
+        resultsContainer.innerHTML = `<div style="display:flex;flex-direction:column;gap:4px;padding:14px 16px;background:var(--lr-bg-1);border:2px solid rgba(245,158,11,.2);border-radius:10px;cursor:pointer;transition:all .2s"
             onclick="_executeMestreTransfer('${data.itemId}','${_getCaixaMestreId(data.mesaId)}','${S.currentUser?.uid||''}')">
             <div style="font-weight:700;font-size:.95rem;color:var(--lr-gold)">📦 Caixa do Mestre</div>
             <div style="font-size:.78rem;color:var(--muted)">Mesa Atual</div>
@@ -740,7 +740,7 @@ window._filterMestreTransfer = function() {
             return;
         }
         resultsContainer.innerHTML = npcs.slice(0, 100).map(n => `
-            <div style="display:flex;flex-direction:column;gap:4px;padding:14px 16px;background:rgba(15,23,42,.5);border:2px solid rgba(16,185,129,.15);border-radius:10px;cursor:pointer;transition:all .2s"
+            <div style="display:flex;flex-direction:column;gap:4px;padding:14px 16px;background:var(--lr-bg-1);border:2px solid rgba(16,185,129,.15);border-radius:10px;cursor:pointer;transition:all .2s"
                 onmouseenter="this.style.borderColor='#10b981';this.style.background='rgba(16,185,129,.08)'"
                 onmouseleave="this.style.borderColor='rgba(16,185,129,.15)';this.style.background='rgba(15,23,42,.5)'"
                 onclick="_executeMestreTransfer('${data.itemId}','${n.id}','', true)">
@@ -771,7 +771,7 @@ window._filterMestreTransfer = function() {
     }
 
     resultsContainer.innerHTML = filtered.map(c => `
-        <div style="display:flex;flex-direction:column;gap:4px;padding:14px 16px;background:rgba(15,23,42,.5);border:2px solid rgba(139,92,246,.12);border-radius:10px;cursor:pointer;transition:all .2s"
+        <div style="display:flex;flex-direction:column;gap:4px;padding:14px 16px;background:var(--lr-bg-1);border:2px solid rgba(139,92,246,.12);border-radius:10px;cursor:pointer;transition:all .2s"
             onmouseenter="this.style.borderColor='#8b5cf6';this.style.background='rgba(139,92,246,.08)'"
             onmouseleave="this.style.borderColor='rgba(139,92,246,.12)';this.style.background='rgba(15,23,42,.5)'"
             onclick="_executeMestreTransfer('${data.itemId}','${c.id}','${c.ownerUid || ''}')">

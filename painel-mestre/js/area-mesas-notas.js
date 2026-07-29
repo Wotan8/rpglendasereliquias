@@ -62,7 +62,7 @@ async function loadMesaNotas() {
                 : '<div style="color:var(--muted);font-size:.82rem;padding:8px 0;text-align:center">Nenhuma nota ainda.</div>';
             const bodyId = `notas_body_${c.id}`;
             return `
-            <div class="accordion-item" style="margin-bottom:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:8px;">
+            <div class="accordion-item" style="margin-bottom:8px; background:var(--lr-bg-1); border:1px solid var(--border); border-radius:8px;">
                 <div class="accordion-header" style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleNotasAccordion('${bodyId}')">
                     <div style="font-weight:bold; color:var(--light);">🎭 ${escapeHtml(nome)}</div>
                     <div style="font-size:0.8rem; color:var(--muted);">${charNotes.length} nota(s)</div>

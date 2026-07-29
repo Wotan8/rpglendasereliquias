@@ -86,7 +86,7 @@ function _buildImageUpload(field, value) {
         <input type="hidden" id="field_${field.key}" value="${_esc(url)}">
         <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap">
             <div class="runic-img-preview" id="runicImgPrev_${field.key}"
-                 style="width:120px;height:120px;border:1px dashed var(--soft,#334);border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:rgba(15,23,42,.5)">
+                 style="width:120px;height:120px;border:1px dashed var(--soft,#334);border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--lr-bg-1)">
                 ${url ? `<img src="${_esc(url)}" style="width:100%;height:100%;object-fit:contain">` : '<span style="font-size:.65rem;color:var(--muted)">sem imagem</span>'}
             </div>
             <div style="flex:1;min-width:200px">
@@ -146,7 +146,7 @@ function _buildConnPoints(field, value) {
         <div style="display:flex;gap:12px;flex-wrap:wrap">
             <div class="runic-cp-stage" onclick="window.runicCPStageClick(event,'${field.key}')"
                 style="position:relative;width:220px;height:220px;border:1px solid var(--soft,#334);border-radius:12px;
-                       background:rgba(15,23,42,.6) ${imgUrl ? `url('${_esc(imgUrl)}')` : ''};background-size:contain;background-repeat:no-repeat;background-position:center;cursor:crosshair">
+                       background:var(--lr-bg-1) ${imgUrl ? `url('${_esc(imgUrl)}')` : ''};background-size:contain;background-repeat:no-repeat;background-position:center;cursor:crosshair">
             </div>
             <div style="flex:1;min-width:220px">
                 <div style="font-size:.7rem;color:var(--muted);margin-bottom:6px">

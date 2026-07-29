@@ -3603,7 +3603,7 @@ function _buildClassModuleEditorRow(idx, data) {
                 <div class="cm-section-title">⚙️ Custos Condicionais de Ação</div>
                 <div class="form-grid">
                     <!-- Custo de Edição -->
-                    <div class="form-group full-width" style="margin-bottom: 12px; padding: 10px; background: rgba(0,0,0,0.15); border-radius: 6px; border: 1px solid rgba(139,92,246,0.2);">
+                    <div class="form-group full-width" style="margin-bottom: 12px; padding: 10px; background:var(--lr-bg-1); border-radius: 6px; border: 1px solid rgba(139,92,246,0.2);">
                         <label class="switch-label" style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
                             <label class="switch">
                                 <input type="checkbox" data-cm-key="custoEdicaoAtivo" ${data.custoEdicaoAtivo ? 'checked' : ''} onchange="this.closest('.form-group').querySelector('.cm-edicao-mech').style.display = this.checked ? 'block' : 'none'">
@@ -3625,7 +3625,7 @@ function _buildClassModuleEditorRow(idx, data) {
                     </div>
 
                     <!-- Custo de Remoção -->
-                    <div class="form-group full-width" style="padding: 10px; background: rgba(0,0,0,0.15); border-radius: 6px; border: 1px solid rgba(239,68,68,0.2);">
+                    <div class="form-group full-width" style="padding: 10px; background:var(--lr-bg-1); border-radius: 6px; border: 1px solid rgba(239,68,68,0.2);">
                         <label class="switch-label" style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
                             <label class="switch">
                                 <input type="checkbox" data-cm-key="custoRemocaoAtivo" ${data.custoRemocaoAtivo ? 'checked' : ''} onchange="this.closest('.form-group').querySelector('.cm-remocao-mech').style.display = this.checked ? 'block' : 'none'">
@@ -3883,7 +3883,7 @@ function _buildPredefValoresGrid(schema, valores) {
             const steps = Array.isArray(valores[f.key]) ? valores[f.key] : [];
             const stepsHtml = steps.map((s, i) => {
                 const sObj = (typeof s === 'object' && s !== null) ? s : {};
-                return `<div class="cm-pv-step" style="border:1px solid rgba(148,163,184,.1);border-radius:6px;padding:6px 8px;margin-bottom:4px;background:rgba(30,41,59,.25)">
+                return `<div class="cm-pv-step" style="border:1px solid rgba(148,163,184,.1);border-radius:6px;padding:6px 8px;margin-bottom:4px;background:var(--lr-bg-1)">
                     <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
                         <input type="text" data-pv-step-name placeholder="Passo ${i + 1}" value="${escapeHtml(sObj.name || '')}" style="flex:1">
                         <button type="button" class="cm-chip-remove" onclick="cmPredefRemoveStep(this)">✕</button>
@@ -4012,7 +4012,7 @@ window.cmPredefAddStep = function (btn, fieldKey) {
     if (!wrap) return;
     const idx = wrap.querySelectorAll('.cm-pv-step').length;
     const temp = document.createElement('div');
-    temp.innerHTML = `<div class="cm-pv-step" style="border:1px solid rgba(148,163,184,.1);border-radius:6px;padding:6px 8px;margin-bottom:4px;background:rgba(30,41,59,.25)">
+    temp.innerHTML = `<div class="cm-pv-step" style="border:1px solid rgba(148,163,184,.1);border-radius:6px;padding:6px 8px;margin-bottom:4px;background:var(--lr-bg-1)">
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
             <input type="text" data-pv-step-name placeholder="Passo ${idx + 1}" value="" style="flex:1">
             <button type="button" class="cm-chip-remove" onclick="cmPredefRemoveStep(this)">✕</button>

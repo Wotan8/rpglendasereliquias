@@ -698,7 +698,7 @@ window.loadUserRepertorio = async function () {
             }
 
             html += `
-                <div class="repertorio-item-card" style="background: rgba(15, 23, 42, 0.6); border: 2px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 10px;">
+                <div class="repertorio-item-card" style="background:var(--lr-bg-1); border: 2px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 10px;">
                     <div class="repertorio-item-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <div class="repertorio-item-nome" style="font-weight: 800; color: var(--light);">${escapeHtml(item.nome || 'Item sem nome')}</div>
                         <div class="repertorio-item-actions">
@@ -1089,7 +1089,7 @@ function renderLojaUI() {
         if (item.isNarrativo) tagsHtml += `<span style="background:#10b981;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Narrativo</span>`;
         if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span style="background:#8b5cf6;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">🎒 Itens: ${item.personagemItensVinculados.length}</span>`;
         
-        const imgHtml = item.imagem ? `<div style="height:120px;width:100%;background-image:url('${escapeHtml(item.imagem)}');background-size:contain;background-repeat:no-repeat;background-position:center;border-radius:8px;background-color:rgba(0,0,0,0.2);"></div>` : '';
+        const imgHtml = item.imagem ? `<div style="height:120px;width:100%;background-image:url('${escapeHtml(item.imagem)}');background-size:contain;background-repeat:no-repeat;background-position:center;border-radius:8px;background-color:var(--lr-bg-1);"></div>` : '';
 
         const isVendaAtiva = item.isVendaAtiva !== false; // Default true if undefined
         

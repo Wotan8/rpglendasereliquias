@@ -1082,7 +1082,7 @@ function openTerrainEditor() {
 
         const item = document.createElement('div');
         item.style.cssText = `
-            background: rgba(0,0,0,0.3);
+            background:var(--lr-bg-1);
             padding: 15px;
             margin: 10px 0;
             border-radius: 10px;

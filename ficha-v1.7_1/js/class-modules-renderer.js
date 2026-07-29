@@ -48,7 +48,7 @@
             border: 1px solid var(--soft, var(--lr-border-soft));
             border-radius: 8px;
             margin-bottom: 8px;
-            background: rgba(15,23,42,.35);
+            background:var(--lr-bg-1);
             overflow: hidden;
         }
         .class-module-item-header {
@@ -56,7 +56,7 @@
             align-items: center;
             justify-content: space-between;
             padding: 6px 10px;
-            background: rgba(51,65,85,.3);
+            background:var(--lr-bg-1);
             border-bottom: 1px solid var(--soft, rgba(148,163,184,.06));
         }
         .class-module-item-header span {
@@ -135,7 +135,7 @@
             border-radius: 8px;
             border: 1px solid var(--soft, rgba(148,163,184,.15));
             object-fit: contain;
-            background: rgba(15,23,42,.4);
+            background:var(--lr-bg-1);
         }
         /* Avaliação (estrelas) */
         .cm-rating { display: flex; gap: 2px; font-size: 1.1rem; line-height: 1; user-select: none; }
@@ -240,7 +240,7 @@
             text-align: left;
             border: 1px solid var(--soft, rgba(148,163,184,.15));
             border-radius: 10px;
-            background: rgba(30,41,59,.5);
+            background:var(--lr-bg-1);
             padding: 10px 12px;
             cursor: pointer;
             transition: border-color .15s, background .15s;
@@ -322,7 +322,7 @@
             border-radius: 6px;
             padding: 6px 8px;
             margin-bottom: 4px;
-            background: rgba(30,41,59,.3);
+            background:var(--lr-bg-1);
         }
         .class-module-step-header {
             display: flex;

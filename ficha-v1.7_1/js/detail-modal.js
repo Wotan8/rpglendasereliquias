@@ -613,7 +613,7 @@ function buildIdentityDetailHTML() {
         <div class="detail-section">
             <div class="field" style="margin-bottom: 16px;">
                 <label style="display:block; margin-bottom: 4px; color: var(--muted); font-weight: bold;">${nomeLabel}</label>
-                <input type="text" value="${nome}" readonly disabled style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--soft); background: rgba(0,0,0,0.3); color: var(--text); font-family: inherit;">
+                <input type="text" value="${nome}" readonly disabled style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--soft); background:var(--lr-bg-1); color: var(--text); font-family: inherit;">
             </div>
             
             <div class="field" style="margin-bottom: 16px;">

@@ -83,7 +83,7 @@ function _buildCharacterPeculiaridadesAccordionHTML(char) {
     const peculiaridades = char.peculiaridadesIndividuais || [];
 
     return `
-    <div class="accordion-item" style="margin-bottom:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:8px;">
+    <div class="accordion-item" style="margin-bottom:8px; background:var(--lr-bg-1); border:1px solid var(--border); border-radius:8px;">
         <div class="accordion-header" style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="togglePeculiaridadesAccordion('${bodyId}')">
             <div style="font-weight:bold; color:var(--light);">🎭 ${escapeHtml(nomeReal)}</div>
             <div style="display:flex; gap:12px; align-items:center;">
@@ -145,7 +145,7 @@ function _buildPeculiaridadesListHTML(peculiaridades, charId) {
             </div>
             ${desc ? `<div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 8px;">${escapeHtml(desc)}</div>` : ''}
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <div style="font-size: 0.8rem; background: rgba(0, 0, 0, 0.2); padding: 4px 8px; border-radius: 4px; display: inline-block;">
+                <div style="font-size: 0.8rem; background:var(--lr-bg-1); padding: 4px 8px; border-radius: 4px; display: inline-block;">
                     ${escapeHtml(fonteLabel)}
                 </div>
                 <div style="font-size: 0.8rem; background: rgba(139, 92, 246, 0.15); padding: 4px 8px; border-radius: 4px; display: inline-block;">
@@ -286,7 +286,7 @@ function _buildPecPreviewHTML(pecData) {
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
             <span style="font-size:1.3rem;">${escapeHtml(pecData.icone || '✨')}</span>
             <strong style="color:var(--light);">${escapeHtml(pecData.nome || '')}</strong>
-            <span style="font-size:0.75rem;color:var(--muted);background:rgba(0,0,0,0.2);padding:2px 6px;border-radius:4px;">${fonteLabels[pecData.fonte] || pecData.fonte || ''}</span>
+            <span style="font-size:0.75rem;color:var(--muted);background:var(--lr-bg-1);padding:2px 6px;border-radius:4px;">${fonteLabels[pecData.fonte] || pecData.fonte || ''}</span>
         </div>
         ${pecData.descricao ? `<div style="font-size:0.85rem;color:var(--muted);">${escapeHtml(pecData.descricao)}</div>` : ''}
         ${pecData.nivelMax ? `<div style="font-size:0.8rem;color:var(--primary);margin-top:4px;">Nível máximo: ${pecData.nivelMax}</div>` : ''}
