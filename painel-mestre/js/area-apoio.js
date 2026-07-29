@@ -145,7 +145,7 @@ function renderLogsCompra(logs) {
             ? `R$ ${((Number(l.valorPago) || 0) / 100).toFixed(2).replace('.', ',')}`
             : `${l.valorPago} ${escapeHtml(l.moeda || '')}`;
         return `
-        <div style="background:rgba(15,23,42,.6);border:2px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px">
+        <div style="background:var(--lr-bg-1);border:2px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                 <div style="font-weight:800;color:var(--light)">${escapeHtml(l.nome || 'Item Desconhecido')}</div>
                 <div style="color:var(--primary);font-weight:800;background:rgba(99,102,241,0.2);padding:4px 8px;border-radius:6px;">${valorStr}</div>
@@ -199,7 +199,7 @@ function renderApoios(apoios) {
     el.innerHTML = apoios.map((a) => {
         const i = S.todosApoiosCarregados.indexOf(a);
         return `
-        <div style="background:rgba(15,23,42,.6);border:2px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px">
+        <div style="background:var(--lr-bg-1);border:2px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                 <div style="font-weight:800;color:var(--light)">${escapeHtml(a.nome||'Sem nome')} <span style="background:rgba(139,92,246,.2);color:var(--primary);padding:2px 8px;border-radius:8px;font-size:.78rem">x${a.montante||1}</span>${valorApoio(a) !== (parseInt(a.montante)||1) ? `<span title="Roleta múltipla de 3 conta 1 a cada 3" style="background:rgba(234,179,8,.15);color:#eab308;padding:2px 8px;border-radius:8px;font-size:.72rem;margin-left:4px">conta ${valorApoio(a)}</span>` : ''}</div>
                 <div style="display:flex;gap:6px"><button class="btn btn-primary btn-small" onclick="editApoio(${i})">✏️</button><button class="btn btn-danger btn-small" onclick="deleteApoio(${i})">🗑️</button></div>
@@ -421,14 +421,14 @@ function renderMetasUI() {
                         <span><strong style="color:${e.concluida ? '#22c55e' : 'inherit'}">Etapa ${e.indice + 1}</strong>: ${escapeHtml(e.descricao || '...')}</span>
                         <span style="color:var(--muted)">${e.progresso} / ${e.necessarios}</span>
                     </div>
-                    <div style="background:rgba(0,0,0,0.3);height:6px;border-radius:3px;overflow:hidden;border:1px solid rgba(255,255,255,0.05)">
+                    <div style="background:var(--lr-bg-1);height:6px;border-radius:3px;overflow:hidden;border:1px solid rgba(255,255,255,0.05)">
                         <div style="width:${e.pct}%;height:100%;background:${barColor};transition:width 0.3s"></div>
                     </div>
                 </div>`;
         }).join('');
 
         html += `
-            <div style="background:rgba(15,23,42,0.6);border:2px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;">
+            <div style="background:var(--lr-bg-1);border:2px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
                     <div>
                         <div style="font-weight:800;color:var(--primary);font-size:1.1rem">${escapeHtml(meta.nome || 'Sem Nome')}</div>
@@ -442,7 +442,7 @@ function renderMetasUI() {
                 
                 ${meta.descricao ? `<div style="font-size:0.85rem;color:var(--light);opacity:.85;margin-bottom:12px;white-space:pre-wrap;line-height:1.5">${escapeHtml(meta.descricao)}</div>` : '<div style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;font-style:italic">Sem descrição — os jogadores veem esta meta sem explicação.</div>'}
 
-                <div style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;background:rgba(0,0,0,0.2);padding:8px;border-radius:6px;">
+                <div style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;background:var(--lr-bg-1);padding:8px;border-radius:6px;">
                     Total de Apoios Históricos: <strong style="color:var(--light)">${totalApoios}</strong>
                 </div>
                 
@@ -497,7 +497,7 @@ window.closeMetaModal = function() {
 window.addMetaEtapa = function(necessarios = 10, descricao = '') {
     const container = document.getElementById('metaEtapasContainer');
     const div = document.createElement('div');
-    div.style.cssText = "display:flex;gap:8px;align-items:flex-start;background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);margin-bottom:8px;";
+    div.style.cssText = "display:flex;gap:8px;align-items:flex-start;background:var(--lr-bg-1);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);margin-bottom:8px;";
     
     div.innerHTML = `
         <div style="flex:0 0 80px">
@@ -974,7 +974,7 @@ window.addLojaItemPersonagemRow = function(itemId = '', qtd = 1) {
     row.id = rowId;
     row.className = 'loja-item-personagem-row';
     row.dataset.itemId = selectedId;
-    row.style = 'display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.3);padding:6px 10px;border-radius:4px;';
+    row.style = 'display:flex;align-items:center;gap:8px;background:var(--lr-bg-1);padding:6px 10px;border-radius:4px;';
     
     row.innerHTML = `
         <div style="flex:1;font-size:0.85rem;color:var(--light);">${selectedName}</div>
@@ -1096,7 +1096,7 @@ function renderLojaUI() {
         card.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                 <div style="font-weight:700;font-size:1.1rem;color:var(--primary);">${escapeHtml(item.nome)}</div>
-                <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;background:rgba(0,0,0,0.3);padding:4px 8px;border-radius:12px;">
+                <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;background:var(--lr-bg-1);padding:4px 8px;border-radius:12px;">
                     <input type="checkbox" onchange="toggleLojaVendaAtiva('${item.id}', this.checked)" ${isVendaAtiva ? 'checked' : ''} style="width:14px;height:14px;accent-color:var(--primary);"> À Venda
                 </label>
             </div>
