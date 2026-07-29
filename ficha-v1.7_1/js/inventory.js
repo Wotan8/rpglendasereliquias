@@ -381,6 +381,48 @@ function applyEquippedItemsMechanics() {
             }
         }
     }
+
+    // Todas as restrições ja foram coletadas (peculiaridades, itens e regras de
+    // item passaram) — hora de tirar do corpo o que virou proibido.
+    _desequipaItensBloqueados();
+}
+
+/**
+ * Desequipa o que uma mecânica "Bloqueia Equipar" passou a proibir.
+ *
+ * Roda no fim de cada recálculo. O caso real: o personagem já estava de
+ * armadura pesada quando ganhou a peculiaridade que a proíbe — ou chegou da
+ * criação com ela vestida, onde o wizard ainda não checa bloqueio.
+ *
+ * Reentrância: unequipItem() dispara outro recálculo, que cai aqui de novo. O
+ * flag corta a recursão; na passada seguinte os itens já saíram do corpo e não
+ * são mais encontrados, então o processo sempre converge.
+ */
+let _desequipandoBloqueados = false;
+function _desequipaItensBloqueados() {
+    if (_desequipandoBloqueados) return;
+    if (typeof window.equipBloqueioDoItem !== 'function') return;
+
+    const bloqueados = window._inventoryState.items
+        .filter(i => i.equipado && !i.parentItemId && i.estadoEquip !== 'armazenado')
+        .map(item => ({ item, bloqueio: window.equipBloqueioDoItem(item) }))
+        .filter(x => x.bloqueio);
+
+    if (bloqueados.length === 0) return;   // caminho normal: nada a fazer, sem efeito colateral
+
+    _desequipandoBloqueados = true;
+    (async () => {
+        try {
+            for (const { item, bloqueio } of bloqueados) {
+                console.warn(`🚫 Desequipando "${item.nome}" — bloqueado por ${bloqueio.fonte}`);
+                await unequipItem(item.id);
+            }
+            const nomes = bloqueados.map(b => `• ${b.item.nome} (${b.bloqueio.fonte})`).join('\n');
+            alert(`🚫 ${bloqueados.length === 1 ? 'Um item foi desequipado' : `${bloqueados.length} itens foram desequipados`} por uma regra que você não cumpre mais:\n\n${nomes}\n\nEles continuam no inventário.`);
+        } finally {
+            _desequipandoBloqueados = false;
+        }
+    })();
 }
 
 // ===== RENDER: ABA COMBATE — ATAQUES E EFEITOS ATIVOS =====
