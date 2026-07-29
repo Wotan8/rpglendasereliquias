@@ -1,0 +1,226 @@
+# Divida de contraste — regras abaixo de 4.5:1 que ja existiam quando
+# shared/contraste.test.mjs passou a medir translucido composto e style
+# inline em JS. Nao e lista de coisas aceitas: e fila de trabalho.
+#
+# Para queimar: corrija a regra e apague a linha daqui.
+# Regra nova abaixo do minimo quebra o teste mesmo com este arquivo.
+#
+# Padroes dominantes:
+#   rgba(91,63,184,a) / rgba(212,175,55,a)  chip de acento translucido
+#   rgba(14,17,23,a)  / rgba(31,38,48,a)    painel escuro cravado na mao
+#   color: var(--lr-divine)                 branco fixo como texto de corpo
+
+criar-personagem/css/styles.css  .firebase-save-indicator.saving
+criar-personagem/css/styles_wizard.css  .detail-tag
+criar-personagem/css/styles_wizard.css  .mini-preview
+criar-personagem/js/app.js  linha 529
+criar-personagem/js/app.js  linha 631
+criar-personagem/js/equipment-module.js  linha 147
+ficha-v1.7_1/css/equip-modal.css  .inv-equip-slot-cap
+ficha-v1.7_1/css/equip-modal.css  .inv-equip-slot-option, .inv-equip-state-option
+ficha-v1.7_1/css/equip-modal.css  .inv-equip-slot-option.selected, .inv-equip-state-option.selected
+ficha-v1.7_1/css/inventory.css  .atk-dano
+ficha-v1.7_1/css/inventory.css  .atk-delta
+ficha-v1.7_1/css/inventory.css  .cond-card-desc
+ficha-v1.7_1/css/inventory.css  .cond-time-input
+ficha-v1.7_1/css/inventory.css  .inv-badge-pressure
+ficha-v1.7_1/css/inventory.css  .inv-badge-pressure-sm
+ficha-v1.7_1/css/inventory.css  .inv-badge-type
+ficha-v1.7_1/css/inventory.css  .inv-btn-action
+ficha-v1.7_1/css/inventory.css  .inv-btn-add
+ficha-v1.7_1/css/inventory.css  .inv-btn-split
+ficha-v1.7_1/css/inventory.css  .inv-btn-transfer
+ficha-v1.7_1/css/inventory.css  .inv-empty
+ficha-v1.7_1/css/inventory.css  .inv-escopo-dano
+ficha-v1.7_1/css/inventory.css  .inv-form-input, .inv-form-select, .inv-form-textarea
+ficha-v1.7_1/css/inventory.css  .inv-pressure-bar
+ficha-v1.7_1/css/inventory.css  .inv-qty-input
+ficha-v1.7_1/css/inventory.css  .inv-section-count
+ficha-v1.7_1/css/inventory.css  .inv-slot-cap
+ficha-v1.7_1/css/inventory.css  .inv-slot-empty
+ficha-v1.7_1/css/inventory.css  .searchable-select-input
+ficha-v1.7_1/css/inventory.css  .searchable-select-search input
+ficha-v1.7_1/css/styles_v2.css  .aura-grade-indicator
+ficha-v1.7_1/css/styles_v2.css  .aura-grau-badge-display
+ficha-v1.7_1/css/styles_v2.css  .aura-mech-tag
+ficha-v1.7_1/css/styles_v2.css  .detail-level-badge.positivo
+ficha-v1.7_1/css/styles_v2.css  .detail-modal-close:hover
+ficha-v1.7_1/css/styles_v2.css  .dv-tooltip-creation-const
+ficha-v1.7_1/css/styles_v2.css  .dv-tooltip-creation-val
+ficha-v1.7_1/css/styles_v2.css  .note-actions .del-note:hover
+ficha-v1.7_1/css/styles_v2.css  .rm-btn:hover
+ficha-v1.7_1/css/styles_v2.css  .teste-formula
+ficha-v1.7_1/css/styles_v2.css  html.dark .bg-red input
+ficha-v1.7_1/css/styles_v2.css  html.dark .detail-aura-grade
+ficha-v1.7_1/css/styles_v2.css  html.dark .detail-level-badge.negativo
+ficha-v1.7_1/ficha-v1.7_1.html  linha 58
+ficha-v1.7_1/js/aliado-inventario.js  linha 153
+ficha-v1.7_1/js/aliado-inventario.js  linha 154
+ficha-v1.7_1/js/aliado-inventario.js  linha 166
+ficha-v1.7_1/js/aliados.js  linha 263
+ficha-v1.7_1/js/firebase.js  linha 556
+ficha-v1.7_1/js/runomancia-module.js  linha 297
+ficha-v1.7_1/js/runomancia-module.js  linha 317
+ficha-v1.7_1/js/runomancia-module.js  linha 363
+ficha-v1.7_1/js/runomancia-module.js  linha 370
+ficha-v1.7_1/js/runomancia-module.js  linha 405
+ficha-v1.7_1/js/runomancia-module.js  linha 479
+ficha-v1.7_1/js/runomancia-module.js  linha 492
+ficha-v1.7_1/js/runomancia-module.js  linha 493
+ficha-v1.7_1/js/runomancia-module.js  linha 496
+ficha-v1.7_1/js/runomancia-module.js  linha 518
+hexmap.html  linha 1073
+hexmap.html  linha 841
+hexmap.js  linha 1101
+hexmap.js  linha 592
+laboratorium-runarum/js/canvas.js  linha 53
+menu/css/menu.css  .alert-info
+menu/css/menu.css  .alert-warning
+menu/css/menu.css  .frag-amount
+menu/css/menu.css  .loja-btn
+menu/css/menu.css  .loja-tag
+menu/js/menu-firebase.js  linha 1049
+menu/js/menu-firebase.js  linha 1054
+menu/js/menu-firebase.js  linha 1058
+menu/js/menu-firebase.js  linha 1097
+menu/js/menu-firebase.js  linha 1110
+menu/js/menu-firebase.js  linha 1165
+menu/menu.html  linha 39
+painel-criador/css/painel-criador.css  .aura-grau-badge
+painel-criador/css/painel-criador.css  .badge-fonte, .badge-tipo
+painel-criador/css/painel-criador.css  .cm-predef-num
+painel-criador/css/painel-criador.css  .eq-term-op
+painel-criador/css/painel-criador.css  .mech-eqreq-index
+painel-criador/css/painel-criador.css  .mech-tag
+painel-criador/css/painel-criador.css  .meta-chip.chip-accent
+painel-criador/css/painel-criador.css  .meta-chip.chip-gold
+painel-criador/css/painel-criador.css  .multi-select-option:has(input:checked)
+painel-criador/css/painel-criador.css  .tags-container .tag button:hover
+painel-criador/js/painel-firebase.js  linha 2172
+painel-criador/js/painel-firebase.js  linha 3641
+painel-criador/js/painel-mechanics.js  linha 1411
+painel-mestre/css/area-apoio.css  .ally-form-input
+painel-mestre/css/area-mesas.css  .combat-abilities-input
+painel-mestre/css/area-mesas.css  .combat-initiative-input
+painel-mestre/css/area-mesas.css  .combat-type
+painel-mestre/css/area-npcs.css  #npcAtaquesWrap .atk-dano
+painel-mestre/css/area-npcs.css  #npcAtaquesWrap .atk-delta
+painel-mestre/css/area-npcs.css  .filter-chip
+painel-mestre/css/area-npcs.css  .filter-chip-close:hover
+painel-mestre/css/area-npcs.css  .npc-attribute-input
+painel-mestre/css/area-npcs.css  .npc-form-input, .npc-form-textarea, .npc-form-select
+painel-mestre/css/area-npcs.css  .npc-tag
+painel-mestre/css/area-npcs.css  .npc-type-badge
+painel-mestre/css/area-npcs.css  .npcv2-section-btn.active
+painel-mestre/css/layout.css  .toolbar button
+painel-mestre/css/modais.css  .form-input, .form-select, .form-textarea
+painel-mestre/css/modais.css  .modal-danger .modal-title
+painel-mestre/css/tabs.css  .sub-tab-btn.active
+painel-mestre/js/area-apoio.js  linha 1026
+painel-mestre/js/area-apoio.js  linha 1089
+painel-mestre/js/area-apoio.js  linha 1090
+painel-mestre/js/area-apoio.js  linha 1091
+painel-mestre/js/area-apoio.js  linha 1107
+painel-mestre/js/area-apoio.js  linha 152
+painel-mestre/js/area-apoio.js  linha 205
+painel-mestre/js/area-apoio.js  linha 446
+painel-mestre/js/area-economica.js  linha 49
+painel-mestre/js/area-mesas-condicoes.js  linha 102
+painel-mestre/js/area-mesas-inventario.js  linha 119
+painel-mestre/js/area-mesas-inventario.js  linha 122
+painel-mestre/js/area-mesas-inventario.js  linha 152
+painel-mestre/js/area-mesas-inventario.js  linha 188
+painel-mestre/js/area-mesas-inventario.js  linha 272
+painel-mestre/js/area-mesas-inventario.js  linha 273
+painel-mestre/js/area-mesas-inventario.js  linha 722
+painel-mestre/js/area-mesas-inventario.js  linha 749
+painel-mestre/js/area-mesas-inventario.js  linha 780
+painel-mestre/js/area-mesas-inventario.js  linha 81
+painel-mestre/js/area-mesas-peculiaridades.js  linha 142
+painel-mestre/js/area-mesas-peculiaridades.js  linha 289
+painel-mestre/js/area-mesas-sessoes.js  linha 187
+painel-mestre/js/area-mesas-sessoes.js  linha 45
+painel-mestre/js/area-mesas.js  linha 141
+painel-mestre/js/area-mesas.js  linha 142
+painel-mestre/js/combat.js  linha 318
+painel-mestre/js/npc-inventario.js  linha 259
+painel-mestre/js/npc-inventario.js  linha 260
+painel-mestre/js/npc-inventario.js  linha 267
+painel-mestre/js/repertorio.js  linha 125
+painel-mestre/js/repertorio.js  linha 143
+painel-mestre/js/repertorio.js  linha 180
+painel-mestre/js/repertorio.js  linha 192
+shared/lendas-reliquias.css  ::selection
+shared/lendas-reliquias.css  h1, h2
+tabuleiro/css/tabuleiro.css  #tbMesaNome
+tabuleiro/css/tabuleiro.css  #tbPinPopup div
+tabuleiro/css/tabuleiro.css  .modal .modal-body
+tabuleiro/css/tabuleiro.css  .modal .modal-title
+tabuleiro/css/tabuleiro.css  .tb-cond-add:hover
+tabuleiro/css/tabuleiro.css  .tb-cond-picker-item .tb-cpi-sub
+tabuleiro/css/tabuleiro.css  .tb-cstat-lb
+tabuleiro/css/tabuleiro.css  .tb-cstat-v
+tabuleiro/css/tabuleiro.css  .tb-form-grid label
+tabuleiro/css/tabuleiro.css  .tb-legenda-texto
+tabuleiro/css/tabuleiro.css  .tb-mode-badge.public
+tabuleiro/css/tabuleiro.css  .tb-mus-loop
+tabuleiro/css/tabuleiro.css  .tb-mus-plrow label
+tabuleiro/css/tabuleiro.css  .tb-mus-vazio
+tabuleiro/css/tabuleiro.css  .tb-muted
+tabuleiro/css/tabuleiro.css  .tb-subbar label
+tabuleiro/css/tabuleiro.css  .tb-tab.active
+viewmap.html  linha 2294
+worldbuilding/css/wb-ferramentas.css  .wb-badge--done
+worldbuilding/css/wb-ferramentas.css  .wb-badge--draft
+worldbuilding/css/wb-ferramentas.css  .wb-badge--pub
+worldbuilding/css/wb-ferramentas.css  .wb-badge--rev
+worldbuilding/css/wb-ferramentas.css  .wb-chapter__num
+worldbuilding/css/wb-ferramentas.css  .wb-health-card.is-info .wb-health-card__v
+worldbuilding/css/wb-ferramentas.css  .wbml-vazio
+worldbuilding/css/wb-ferramentas.css  .wbt-graph-legend
+worldbuilding/css/worldbuilding.css  .autocomplete-input
+worldbuilding/css/worldbuilding.css  .btn-add-array-item
+worldbuilding/css/worldbuilding.css  .btn-favorite
+worldbuilding/css/worldbuilding.css  .btn-import
+worldbuilding/css/worldbuilding.css  .btn-secondary
+worldbuilding/css/worldbuilding.css  .btn-time-cancel
+worldbuilding/css/worldbuilding.css  .campaign-select
+worldbuilding/css/worldbuilding.css  .chronology-visual-count
+worldbuilding/css/worldbuilding.css  .contato-papel
+worldbuilding/css/worldbuilding.css  .day-nav-btn
+worldbuilding/css/worldbuilding.css  .entity-type-badge
+worldbuilding/css/worldbuilding.css  .event-bar
+worldbuilding/css/worldbuilding.css  .event-consequences
+worldbuilding/css/worldbuilding.css  .event-tag
+worldbuilding/css/worldbuilding.css  .event-time-badge
+worldbuilding/css/worldbuilding.css  .event-type-badge
+worldbuilding/css/worldbuilding.css  .feira-escala
+worldbuilding/css/worldbuilding.css  .feira-frequencia
+worldbuilding/css/worldbuilding.css  .filter-input
+worldbuilding/css/worldbuilding.css  .filter-select
+worldbuilding/css/worldbuilding.css  .form-input, .form-select, .form-textarea
+worldbuilding/css/worldbuilding.css  .highlight-tag
+worldbuilding/css/worldbuilding.css  .highlight-tag.location
+worldbuilding/css/worldbuilding.css  .linked-entity-title
+worldbuilding/css/worldbuilding.css  .modal-close
+worldbuilding/css/worldbuilding.css  .modal-title
+worldbuilding/css/worldbuilding.css  .moment-type.epic
+worldbuilding/css/worldbuilding.css  .next-session-hooks li
+worldbuilding/css/worldbuilding.css  .player-exp-card .exp-input
+worldbuilding/css/worldbuilding.css  .preco-tab
+worldbuilding/css/worldbuilding.css  .precos-table th
+worldbuilding/css/worldbuilding.css  .quest-status.started
+worldbuilding/css/worldbuilding.css  .quick-filter-btn
+worldbuilding/css/worldbuilding.css  .search-input
+worldbuilding/css/worldbuilding.css  .session-badge.duration
+worldbuilding/css/worldbuilding.css  .session-item-tag .remove-tag:hover
+worldbuilding/css/worldbuilding.css  .sessions-search-input
+worldbuilding/css/worldbuilding.css  .submundo-filter-select
+worldbuilding/css/worldbuilding.css  .submundo-tab
+worldbuilding/css/worldbuilding.css  .time-input
+worldbuilding/css/worldbuilding.css  .timeline-event-item
+worldbuilding/css/worldbuilding.css  .tree-controls button
+worldbuilding/css/worldbuilding.css  .tree-expand-btn
+worldbuilding/css/worldbuilding.css  .wiki-tab
+worldbuilding/js/wb-core.js  linha 1232
+worldbuilding/js/wb-core.js  linha 1250

@@ -129,6 +129,19 @@
     --danger:      var(--lr-blood-2);
     --warning:     var(--lr-gold-2);
     --secondary:   var(--lr-arcane);
+
+    /* Nomes que o JS já usa em style inline, sempre na forma
+       `var(--text, #f8fafc)`. Nenhum deles era definido em lugar nenhum, ou
+       seja: renderizavam o fallback escuro cravado e ignoravam o tema — era
+       o que deixava os cards da aba Mesa pretos no tema claro. Definir aqui
+       conserta todos os usos de uma vez, sem caçar style inline em 12 JS. */
+    --text:         var(--lr-text-1);
+    --text-muted:   var(--lr-text-2);
+    --bg-panel:     var(--lr-surface);
+    --bg-card:      var(--lr-surface);
+    --card:         var(--lr-surface);
+    --border:       var(--lr-border);
+    --border-color: var(--lr-border);
 }
 
 /* ---------- TEMA ESCURO — pedra e ferro ------------------------------

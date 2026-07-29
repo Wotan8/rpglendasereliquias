@@ -46,12 +46,14 @@ function paraRgb(v) {
     m = v.match(/^rgba?\(([^)]+)\)$/);
     if (m) {
         const p = m[1].split(/[,/\s]+/).filter(Boolean).map(parseFloat);
-        // Translúcido depende do que está atrás — não dá pra julgar estaticamente.
-        if (p.length > 3 && p[3] < 0.9) return null;
-        return p.slice(0, 3);
+        return p.length > 3 && p[3] < 0.9 ? [...p.slice(0, 3), p[3]] : p.slice(0, 3);
     }
     return null;
 }
+
+// Translúcido: compõe sobre o fundo da página, senão não dá pra medir nada.
+const sobre = (cor, atras) => cor.length < 4 ? cor
+    : cor.slice(0, 3).map((c, i) => Math.round(c * cor[3] + atras[i] * (1 - cor[3])));
 
 const lum = ([r, g, b]) => {
     const f = c => { c /= 255; return c <= .03928 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4); };
@@ -129,14 +131,37 @@ export function ilegiveis(css, rel) {
         const vars = escura ? ESCURO : CLARO;
         const corpo = m[2];
 
+        const mCorSo = corpo.match(/(?<!-)color\s*:\s*([^;]+)/);
         const mBg = corpo.match(/background(?:-color)?\s*:\s*([^;]+)/);
-        if (!mBg) continue;                                   // sem fundo próprio: herda, não dá pra julgar
+
+        // Regra que só pinta o texto: não sei em que superfície ela cai, mas se
+        // for ilegível em TODAS as superfícies do tema, cai mal em qualquer uma.
+        // É o caso de `color: #fff` cravado, que some no tema claro.
+        if (!mBg) {
+            if (!mCorSo) continue;
+            const cor = resolve(semImportante(mCorSo[1]), vars);
+            if (!cor || cor.length > 3) continue;
+            const superficies = ['--lr-bg-0', '--lr-bg-1', '--lr-surface']
+                .map(t => resolve(vars[t], vars)).filter(Boolean);
+            // Limite mais frouxo que o MINIMO de propósito: sem saber a
+            // superfície real, só acuso o que some em qualquer uma delas —
+            // texto claro em tema claro. Acento de meio-tom sobre chip colorido
+            // eu não enxergo daqui, e escurecer no chute pioraria.
+            const melhor = Math.max(...superficies.map(s => contraste(cor, s)));
+            if (melhor < 3 && !PERMITIDAS.has(`${rel} ${sel}`)) {
+                achados.push(`${melhor.toFixed(2)}:1  [${escura ? 'escuro' : 'claro '}]  ${rel}  ${sel}`
+                    + `\n            texto ${semImportante(mCorSo[1])} → rgb(${cor}) ilegível em qualquer superfície do tema`);
+            }
+            continue;
+        }
+
         const vBg = semImportante(mBg[1]);
         if (/gradient\(|url\(/.test(vBg)) continue;           // fundo composto — fora do alcance
-        const bg = resolve(vBg, vars);
-        if (!bg) continue;                                    // translúcido ou cor que não sei ler
+        let bg = resolve(vBg, vars);
+        if (!bg) continue;
+        if (bg.length > 3) bg = sobre(bg, resolve(vars['--lr-bg-0'], vars) || [255, 255, 255]);
 
-        const mCor = corpo.match(/(?<!-)color\s*:\s*([^;]+)/);
+        const mCor = mCorSo;
         // Sem cor declarada o texto herda o da página — mas metade dessas regras
         // são bolinha, barra e thumb de slider, que não têm texto nenhum. Então
         // isso vira aviso, não falha, e só quando o fundo é neutro (cinza/quase
@@ -154,6 +179,32 @@ export function ilegiveis(css, rel) {
         else if (Math.max(...bg) - Math.min(...bg) <= 30) avisos.push(`${rel}  ${sel}  (${c.toFixed(2)}:1, ${escura ? 'escuro' : 'claro'})`);
     }
     return achados;
+}
+
+/* ---------- style inline em JS e HTML ----------
+   Boa parte da interface é montada em innerHTML com style="..." — foi lá que
+   os cards da aba Mesa ficaram pretos no tema claro. Cada style vira uma
+   "regra" com o número da linha no lugar do seletor. */
+function arquivosComInline(dir = RAIZ, saida = []) {
+    for (const nome of readdirSync(dir)) {
+        if (IGNORAR.has(nome) || nome.startsWith('.')) continue;
+        const p = join(dir, nome);
+        if (statSync(p).isDirectory()) arquivosComInline(p, saida);
+        else if (/\.(js|html)$/.test(nome) && !nome.startsWith('__') && !nome.endsWith('.test.mjs')) saida.push(p);
+    }
+    return saida;
+}
+
+function inlineComoCss(texto) {
+    let css = '';
+    // style="..." | style='...' | style.cssText = '...'
+    for (const m of texto.matchAll(/style\s*=\s*(["'`])([^"'`]*?)\1|style\.cssText\s*=\s*(["'`])([^"'`]*?)\3/g)) {
+        const decl = m[2] ?? m[4];
+        if (!decl || !/color|background/.test(decl)) continue;
+        const linha = texto.slice(0, m.index).split('\n').length;
+        css += `linha ${linha} { ${decl} }\n`;
+    }
+    return css;
 }
 
 /* ---------- iscas: o detector precisa continuar detectando ---------- */
@@ -184,14 +235,37 @@ assert.ok(arquivos.length > 10, 'não achou os CSS do repo — caminho errado?')
 const achados = arquivos.flatMap(f =>
     ilegiveis(readFileSync(f, 'utf8'), relative(RAIZ, f).replace(/\\/g, '/')));
 
+const comInline = arquivosComInline();
+achados.push(...comInline.flatMap(f =>
+    ilegiveis(inlineComoCss(readFileSync(f, 'utf8')), relative(RAIZ, f).replace(/\\/g, '/'))));
+
 if (avisos.length && process.env.AVISOS) {
     console.log(`\n${avisos.length} regra(s) só com fundo neutro escuro/claro, sem cor declarada —`
         + ` revisar na mão se contiverem texto:\n` + avisos.join('\n') + '\n');
 }
 
-assert.deepEqual(achados, [],
-    `\n${achados.length} regra(s) abaixo de ${MINIMO}:1 — texto ilegível sobre o próprio fundo:\n\n`
-    + achados.join('\n') + '\n');
+// Dívida conhecida: regras que já estavam abaixo do mínimo quando esta medição
+// passou a enxergá-las (translúcido composto e style inline em JS). Ficam
+// listadas em contraste-divida.txt para o teste seguir servindo de guarda:
+// regra NOVA abaixo do mínimo quebra o build; as antigas são fila de trabalho.
+// Para queimar a dívida: corrija a regra e apague a linha do arquivo.
+const chave = l => l.split('\n')[0].replace(/^[\d.]+:1\s+\[[^\]]+\]\s+/, '').trim();
+const arqDivida = join(RAIZ, 'shared/contraste-divida.txt');
+let divida = new Set();
+try {
+    divida = new Set(readFileSync(arqDivida, 'utf8').split('\n')
+        .map(l => l.trim()).filter(l => l && !l.startsWith('#')));
+} catch { /* sem arquivo: toda regra abaixo do mínimo é falha */ }
 
-console.log(`ok — ${arquivos.length} CSS varridos, 0 regras abaixo de ${MINIMO}:1 nos dois temas`
-    + (avisos.length ? ` (${avisos.length} aviso(s), rode com AVISOS=1 para ver)` : ''));
+const novos = achados.filter(l => !divida.has(chave(l)));
+const restam = achados.length;
+
+assert.deepEqual(novos, [],
+    `\n${novos.length} regra(s) NOVA(S) abaixo de ${MINIMO}:1 — texto ilegível sobre o próprio fundo:\n\n`
+    + novos.join('\n')
+    + `\n\nSe for intencional, acrescente a linha em shared/contraste-divida.txt.\n`);
+
+console.log(`ok — ${arquivos.length} CSS + ${comInline.length} arquivos com style inline varridos, `
+    + `0 regras novas abaixo de ${MINIMO}:1 nos dois temas`
+    + (restam ? `\n     dívida pendente: ${restam} regra(s) em shared/contraste-divida.txt` : '')
+    + (avisos.length ? ` | ${avisos.length} aviso(s), rode com AVISOS=1` : ''));
