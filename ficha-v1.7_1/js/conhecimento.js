@@ -55,6 +55,10 @@ document.addEventListener('systemDataReady', () => { _carregado = false; });
 // Exposta porque abas-condicionais.js precisa saber se existe biblioteca
 // antes do jogador abrir a aba (este arquivo e module, entao nao vaza sozinho).
 window.carregarConhecimento = () => carregarConhecimento();
+// abas-condicionais.js decide pela CONTAGEM, nao pelo DOM: o container so
+// ganha conteudo quando a aba abre, e a aba so abre se ela existir.
+// null = ainda nao deu pra saber, e nesse caso a aba fica visivel.
+window.temConhecimento = () => _carregado ? (window._conhecimentoVisivel > 0) : null;
 async function carregarConhecimento() {
     const cont = document.getElementById('conhecimentoContainer');
     if (!cont) return;
@@ -128,6 +132,10 @@ function renderConhecimento() {
                 <div class="cnh-capitulos">${linhas.join('')}</div>
             </div>`);
     }
+
+    // Sinal para abas-condicionais.js: e o mesmo numero que o jogador ve, ja
+    // filtrado pelos livros que alcancam este personagem — nao o total do mundo.
+    window._conhecimentoVisivel = totalCapitulos;
 
     cont.innerHTML = blocos.length
         ? `<div class="cnh-resumo">📚 ${totalLiberados} de ${totalCapitulos} capítulos ao seu alcance</div>${blocos.join('')}`
