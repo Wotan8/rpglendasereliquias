@@ -315,7 +315,7 @@ export function renderCombatList() {
         if (isCustom) abil = `<div class="combat-abilities-container" onclick="event.stopPropagation()"><label class="combat-abilities-label">⚔️ Habilidades:</label><textarea class="combat-abilities-input" onchange="updateCustomAbilities('${p.id}',this.value)">${p.combatAbilities||''}</textarea></div>`;
         const click = isNpc ? `onclick="openCombatNpcModal('${p.id}')" style="cursor:pointer"` : '';
         const cls = isCustom ? 'combat-participant-custom' : isNpc ? 'combat-participant-npc' : '';
-        const npcHint = isNpc ? '<span style="font-size:.7rem;color:#94a3b8;margin-left:5px">📋 detalhes</span>' : '';
+        const npcHint = isNpc ? '<span style="font-size:.7rem;color:var(--lr-text-2);margin-left:5px">📋 detalhes</span>' : '';
         const btnRestore = hasStats ? `<button class="btn btn-secondary btn-small" onclick="restoreCombatStats('${p.id}',event)" title="Restaurar VIT/ENER/SAN ao máximo">🛌</button>` : '';
         return `<div class="combat-participant ${cls}" ${click}><div class="combat-initiative"><div class="combat-initiative-value">${p.initiative}</div><div class="combat-initiative-label">Iniciativa</div></div><div style="flex:1"><div class="combat-name">${escapeHtml(p.name)}${npcHint}</div><span class="combat-type">${p.type}</span><div class="combat-details">${escapeHtml(p.details||'')}</div>${stats}${abil}</div><div class="combat-actions" onclick="event.stopPropagation()"><input type="number" class="combat-initiative-input" value="${p.initiative}" onchange="updateInitiative('${p.id}',this.value)">${btnRestore}<button class="btn btn-danger btn-small" onclick="removeFromCombat('${p.id}')">🗑️</button></div></div>`;
     }).join('');

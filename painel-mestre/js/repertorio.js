@@ -140,7 +140,7 @@ function renderItemCard(item, eqCont) {
         const linked = S.currentInventarioContainers.find(c => c.id === item.linkedContainerId);
         const cap = linked?.maxCapacity || item.maxCapacity || 10;
         const inside = S.currentInventarioItems.filter(i => i.parentItemId === item.id || (item.linkedContainerId && i.containerId === item.linkedContainerId)).length;
-        badges = `<span style="background:rgba(16,185,129,.2);color:#10b981;padding:3px 8px;border-radius:6px;font-size:.75rem;font-weight:600;margin-left:8px">📦 Cap: ${cap}</span><span style="background:rgba(139,92,246,.2);color:var(--primary);padding:3px 8px;border-radius:6px;font-size:.75rem;font-weight:600;margin-left:5px">${inside} item(s)</span>`;
+        badges = `<span style="background:rgba(16,185,129,.2);color:var(--lr-nature);padding:3px 8px;border-radius:6px;font-size:.75rem;font-weight:600;margin-left:8px">📦 Cap: ${cap}</span><span style="background:rgba(139,92,246,.2);color:var(--primary);padding:3px 8px;border-radius:6px;font-size:.75rem;font-weight:600;margin-left:5px">${inside} item(s)</span>`;
         openBtn = `<button class="btn ${isOpen?'btn-success':'btn-warning'} btn-small" onclick="event.stopPropagation();openPersonagemContainer('${item.id}')">${isOpen?'📂':'📁'}</button>`;
     }
 
@@ -177,7 +177,7 @@ function renderPersonagemContainerViewer() {
             return `<div style="background:rgba(15,23,42,.6);border:2px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="editItemMestre('${cid}','${i.id}')">
                 ${img2}
                 <div style="flex:1;min-width:0">
-                    <div style="font-weight:700;color:var(--light)">${escapeHtml(i.nome||i.name||'Sem nome')} <span style="background:rgba(16,185,129,.2);color:#10b981;padding:2px 8px;border-radius:6px;font-size:.75rem">${i.tipo||'-'}</span></div>
+                    <div style="font-weight:700;color:var(--light)">${escapeHtml(i.nome||i.name||'Sem nome')} <span style="background:rgba(16,185,129,.2);color:var(--lr-nature);padding:2px 8px;border-radius:6px;font-size:.75rem">${i.tipo||'-'}</span></div>
                     <div style="font-size:.82rem;color:var(--muted);margin-top:4px">Peso: ${parseFloat(i.totalWeight||i.peso||0).toFixed(2)} | Tam: ${i.tamanho||0} | Qtd: ${i.quantity||1}</div>
                 </div>
                 <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
@@ -189,7 +189,7 @@ function renderPersonagemContainerViewer() {
 
     return `<div id="personagemContainerViewer" style="background:rgba(16,185,129,.05);border:2px solid rgba(16,185,129,.3);border-radius:15px;padding:20px;margin-top:15px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
-            <div><span style="font-size:1.2rem;font-weight:700;color:#10b981">📂 ${escapeHtml(contItem.name||'Container')}</span></div>
+            <div><span style="font-size:1.2rem;font-weight:700;color:var(--lr-nature)">📂 ${escapeHtml(contItem.name||'Container')}</span></div>
             <button class="btn btn-danger btn-small" onclick="closePersonagemContainerViewer()">✕ Fechar</button>
         </div>
         <div style="display:flex;gap:20px;margin-bottom:15px;font-size:.85rem;color:var(--muted)">

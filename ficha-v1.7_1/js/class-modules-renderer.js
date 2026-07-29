@@ -101,7 +101,7 @@
         /* Separador de seção */
         .cm-separador {
             border-bottom: 1px solid rgba(139,92,246,.35);
-            color: #a78bfa;
+            color: var(--lr-abyssal);
             font-size: .72rem;
             font-weight: 700;
             text-transform: uppercase;
@@ -113,7 +113,7 @@
         .class-module-fields input.cm-checkbox {
             width: 18px;
             height: 18px;
-            accent-color: #8b5cf6;
+            accent-color: var(--lr-abyssal);
             cursor: pointer;
         }
         /* Cor */
@@ -154,7 +154,7 @@
             font-weight: 700;
             cursor: pointer;
         }
-        .cm-counter button:hover { border-color: #8b5cf6; color: #a78bfa; }
+        .cm-counter button:hover { border-color: var(--lr-abyssal); color: var(--lr-abyssal); }
         /* Tags */
         .cm-tags {
             display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
@@ -185,8 +185,8 @@
             border-radius: 6px; background: rgba(51,65,85,.4);
             font-size: .9rem; cursor: pointer; padding: 3px 8px;
         }
-        .cm-dice-btn:hover { border-color: #8b5cf6; }
-        .cm-dice-result { font-size: .75rem; font-weight: 700; color: #a78bfa; }
+        .cm-dice-btn:hover { border-color: var(--lr-abyssal); }
+        .cm-dice-result { font-size: .75rem; font-weight: 700; color: var(--lr-abyssal); }
         /* Botão de ação (mecânicas) */
         .cm-action-wrap { position: relative; display: flex; flex-direction: column; gap: 2px; }
         .cm-action-btn {
@@ -204,14 +204,14 @@
         .cm-action-btn:active { transform: scale(.97); }
         .cm-btn-toast {
             font-size: .68rem;
-            color: #a78bfa;
+            color: var(--lr-abyssal);
             opacity: 0;
             transition: opacity .2s;
             min-height: 1em;
         }
         .cm-btn-toast.show { opacity: 1; }
         .cm-btn-toast .cm-toast-line { line-height: 1.4; text-align: left; }
-        .cm-btn-toast .cm-toast-head { font-weight: 800; color: #a78bfa; }
+        .cm-btn-toast .cm-toast-head { font-weight: 800; color: var(--lr-abyssal); }
         .cm-btn-toast .cm-toast-ok { color: #34d399; }
         .cm-btn-toast .cm-toast-fail { color: #f87171; }
         /* Modal de itens pré-cadastrados */
@@ -245,7 +245,7 @@
             cursor: pointer;
             transition: border-color .15s, background .15s;
         }
-        .cm-predef-option:hover { border-color: #8b5cf6; background: rgba(139,92,246,.1); }
+        .cm-predef-option:hover { border-color: var(--lr-abyssal); background: rgba(139,92,246,.1); }
         .cm-predef-option-nome { font-weight: 700; font-size: .82rem; color: var(--text, #e2e8f0); }
         .cm-predef-option-desc { font-size: .72rem; color: var(--muted, #94a3b8); margin-top: 2px; }
         .cm-predef-option-custos { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
@@ -368,8 +368,8 @@
             margin-top: 4px;
         }
         .class-module-add-btn:hover {
-            border-color: #8b5cf6;
-            color: #a78bfa;
+            border-color: var(--lr-abyssal);
+            color: var(--lr-abyssal);
         }
         .class-module-add-step-btn {
             background: none;
@@ -383,7 +383,7 @@
             transition: color .15s;
         }
         .class-module-add-step-btn:hover {
-            color: #a78bfa;
+            color: var(--lr-abyssal);
         }
         /* Valor Derivado chip */
         .cm-dv-chip {
@@ -397,7 +397,7 @@
         }
         .cm-dv-icon { font-size: 1rem; }
         .cm-dv-name { font-weight: 600; }
-        .cm-dv-value { font-weight: 800; color: #a78bfa; margin-left: 4px; }
+        .cm-dv-value { font-weight: 800; color: var(--lr-abyssal); margin-left: 4px; }
         /* Select VD (dropdown de Valor Derivado) */
         .cm-select-vd-wrap {
             display: flex;
@@ -429,7 +429,7 @@
         .cm-select-vd-preview.visible { display: inline-flex; }
         .cm-select-vd-preview .cm-dv-icon { font-size: .95rem; }
         .cm-select-vd-preview .cm-dv-name { font-weight: 600; font-size: .75rem; }
-        .cm-select-vd-preview .cm-dv-value { font-weight: 800; color: #a78bfa; margin-left: 4px; font-size: .75rem; }
+        .cm-select-vd-preview .cm-dv-value { font-weight: 800; color: var(--lr-abyssal); margin-left: 4px; font-size: .75rem; }
         @media print {
             .class-module-item-header button,
             .class-module-add-btn,

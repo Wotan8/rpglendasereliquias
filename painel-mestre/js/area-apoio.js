@@ -990,6 +990,68 @@ window.addLojaItemPersonagemRow = function(itemId = '', qtd = 1) {
 };
 
 window.carregarSistemaLoja = async function() {
+// ============= COMPRAS EM DINHEIRO (aguardando o mestre) =============
+// O jogador pede na Loja, paga fora do site (dinheiro/PIX/transferência) e o
+// mestre confirma aqui. A entrega roda no servidor — mesma da compra online.
+
+window.carregarComprasDinheiro = async function() {
+    const container = document.getElementById('comprasDinheiroContainer');
+    if (!container) return;
+    try {
+        const snap = await getDocs(query(
+            collection(db, 'compras_pendentes'),
+            where('status', '==', 'AGUARDANDO_CONFIRMACAO_MESTRE')
+        ));
+        const pedidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        pedidos.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0));
+
+        if (pedidos.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:50px;color:var(--muted);">Nenhum pedido aguardando confirmação.</div>';
+            return;
+        }
+
+        const users = await loadUsers();
+        container.innerHTML = pedidos.map(p => {
+            const u = users.find(x => x.id === p.uid || x.uid === p.uid || x.email === p.email);
+            const jogador = u?.displayName || u?.nome || p.email || p.uid;
+            const total = ((p.totalCentavos || p.valorCentavos || 0) / 100).toFixed(2).replace('.', ',');
+            const quando = p.criadoEm?.seconds ? new Date(p.criadoEm.seconds * 1000).toLocaleString('pt-BR') : '';
+            return `
+                <div class="apoio-card" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:10px;">
+                    <div>
+                        <div style="font-weight:700;color:var(--primary);">${escapeHtml(jogador)}</div>
+                        <div style="font-size:.9rem;">${p.quantidade || 1}x ${escapeHtml(p.itemNome || '')}</div>
+                        <div style="font-size:.78rem;color:var(--muted);">${escapeHtml(quando)}</div>
+                    </div>
+                    <div style="font-weight:800;color:var(--lr-nature);font-size:1.1rem;">R$ ${total}</div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-success btn-small" onclick="resolverCompraDinheiro('${p.id}', true)">✅ Recebi — Entregar</button>
+                        <button class="btn btn-secondary btn-small" onclick="resolverCompraDinheiro('${p.id}', false)">❌ Cancelar</button>
+                    </div>
+                </div>`;
+        }).join('');
+    } catch (e) {
+        console.error('❌ Erro ao carregar compras em dinheiro:', e);
+        container.innerHTML = '<div style="text-align:center;padding:50px;color:var(--muted);">Erro ao carregar pedidos.</div>';
+    }
+};
+
+window.resolverCompraDinheiro = async function(compraId, aprovar) {
+    if (!confirm(aprovar
+        ? 'Confirmar que o dinheiro foi recebido e entregar o item agora?'
+        : 'Cancelar este pedido? O jogador será avisado.')) return;
+    try {
+        const fn = httpsCallable(functions, 'confirmarCompraDinheiro');
+        await fn({ compraId, aprovar });
+        showAlert(aprovar ? '✅ Item entregue ao jogador!' : '❌ Pedido cancelado.', aprovar ? 'success' : 'warning');
+        await addLog(S.currentUser?.email, `${aprovar ? 'confirmou' : 'cancelou'} a compra em dinheiro ${compraId}`, '', 'apoios');
+        carregarComprasDinheiro();
+    } catch (e) {
+        console.error('❌ Erro ao resolver compra:', e);
+        showAlert('❌ ' + e.message, 'danger');
+    }
+};
+
     try {
         const snap = await getDocs(collection(db, 'loja_itens'));
         lojaItens = [];
@@ -1041,7 +1103,7 @@ function renderLojaUI() {
             ${imgHtml}
             ${item.descricao ? `<div style="font-size:0.85rem;color:var(--muted);">${escapeHtml(item.descricao)}</div>` : ''}
             <div style="display:flex;gap:10px;font-size:0.9rem;font-weight:600;">
-                ${(item.valorReal > 0 || item.valorRs > 0) ? `<span style="color:#10b981;">R$ ${(item.valorReal > 0 ? (item.valorReal / 100) : Number(item.valorRs)).toFixed(2).replace('.', ',')}</span>` : ''}
+                ${(item.valorReal > 0 || item.valorRs > 0) ? `<span style="color:var(--lr-nature);">R$ ${(item.valorReal > 0 ? (item.valorReal / 100) : Number(item.valorRs)).toFixed(2).replace('.', ',')}</span>` : ''}
                 ${item.valorFrag > 0 ? `<span style="color:#6366f1;">${item.valorFrag} Frag$</span>` : ''}
             </div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;">${tagsHtml}</div>

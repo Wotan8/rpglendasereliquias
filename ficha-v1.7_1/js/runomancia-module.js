@@ -105,21 +105,21 @@
         .runo-mod{border:1px solid rgba(139,92,246,.25);border-radius:12px;background:rgba(30,27,58,.45);margin-top:14px;overflow:hidden}
         .runo-mod-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:linear-gradient(90deg,rgba(139,92,246,.14),transparent);border-bottom:1px solid rgba(139,92,246,.2)}
         .runo-mod-head h4{margin:0;font-size:.9rem;color:var(--text,#e2e8f0)}
-        .runo-slots{font-size:.75rem;color:#c4b5fd;background:rgba(139,92,246,.16);padding:2px 10px;border-radius:999px}
+        .runo-slots{font-size:.75rem;color:var(--lr-abyssal);background:rgba(139,92,246,.16);padding:2px 10px;border-radius:999px}
         .runo-body{padding:10px}
         .runo-study-row{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;border:1px solid rgba(148,163,184,.12);border-radius:8px;padding:6px 10px;margin-bottom:6px;background:rgba(15,23,42,.4);font-size:.8rem}
         .runo-study-row .nm{cursor:pointer;color:var(--text,#e2e8f0);font-weight:600}
-        .runo-study-row .nm:hover{color:#a78bfa}
+        .runo-study-row .nm:hover{color:var(--lr-abyssal)}
         .runo-prog{font-size:.72rem;color:var(--muted,#94a3b8)}
-        .runo-btn{background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.35);color:#c4b5fd;border-radius:6px;padding:3px 9px;font-size:.72rem;cursor:pointer}
+        .runo-btn{background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.35);color:var(--lr-abyssal);border-radius:6px;padding:3px 9px;font-size:.72rem;cursor:pointer}
         .runo-btn:hover{background:rgba(139,92,246,.3)}
         .runo-btn.ok{background:rgba(34,197,94,.14);border-color:rgba(34,197,94,.4);color:#86efac}
         .runo-btn.rm{background:none;border:none;color:#ef4444;font-size:.8rem}
         .runo-learned{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
         .runo-chip{font-size:.72rem;border:1px solid rgba(148,163,184,.2);border-radius:999px;padding:3px 10px;cursor:pointer;background:rgba(15,23,42,.5);color:var(--text,#e2e8f0)}
-        .runo-chip b{color:#a78bfa}
+        .runo-chip b{color:var(--lr-abyssal)}
         .runo-chip .runo-conc{font-style:normal;font-size:.66rem;color:#fbbf24;margin-left:4px}
-        .runo-chip:hover{border-color:#a78bfa}
+        .runo-chip:hover{border-color:var(--lr-abyssal)}
         .runo-add-select{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
         .runo-add-select select{flex:1;min-width:180px;background:rgba(15,23,42,.6);border:1px solid rgba(148,163,184,.15);color:var(--text,#e2e8f0);border-radius:6px;padding:5px 8px;font-size:.78rem}
         .runo-lab-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:12px;padding:14px;border-radius:12px;
@@ -129,10 +129,10 @@
         .runo-modal-bk{position:fixed;inset:0;background:rgba(2,6,23,.75);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px}
         .runo-modal{width:min(560px,96vw);max-height:88vh;overflow:auto;background:#141327;border:1px solid rgba(139,92,246,.4);border-radius:14px;padding:18px;color:#e2e8f0}
         .runo-modal h3{margin:0 0 4px;display:flex;align-items:center;gap:8px}
-        .runo-modal .sub{font-size:.72rem;color:#94a3b8;font-style:italic;margin-bottom:10px}
+        .runo-modal .sub{font-size:.72rem;color:var(--lr-text-2);font-style:italic;margin-bottom:10px}
         .runo-modal table{width:100%;border-collapse:collapse;font-size:.74rem;margin:8px 0}
         .runo-modal th,.runo-modal td{border:1px solid rgba(148,163,184,.15);padding:4px 6px;text-align:left}
-        .runo-modal th{background:rgba(139,92,246,.12);color:#c4b5fd}
+        .runo-modal th{background:rgba(139,92,246,.12);color:var(--lr-abyssal)}
         .runo-modal .img{float:right;width:86px;height:86px;object-fit:contain;margin:0 0 8px 8px;border-radius:8px;background:rgba(15,23,42,.5);border:1px solid rgba(148,163,184,.15)}
         `;
         document.head.appendChild(s);
@@ -294,7 +294,7 @@
 
         // --- Em estudo ---
         const title = document.createElement('div');
-        title.style.cssText = 'font-size:.72rem;color:#94a3b8;margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.04em';
+        title.style.cssText = 'font-size:.72rem;color:var(--lr-text-2);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.04em';
         title.textContent = '📖 Em estudo (1 momento de estudo por sessão — §11.1)';
         body.appendChild(title);
 
@@ -314,7 +314,7 @@
             const row = document.createElement('div');
             row.className = 'runo-study-row';
             row.innerHTML = `
-                <span class="nm" title="Ver detalhes">${TIPO_ICON[el.tipoElemento] || 'ᛟ'} ${el.nome} <small style="color:#94a3b8">Nv${es.nivelAlvo}</small></span>
+                <span class="nm" title="Ver detalhes">${TIPO_ICON[el.tipoElemento] || 'ᛟ'} ${el.nome} <small style="color:var(--lr-text-2)">Nv${es.nivelAlvo}</small></span>
                 <span class="runo-prog">Sessões: ${done}/${need} · EXP: ${exp}</span>
                 <span>
                     <button class="runo-btn" title="Registrar sessão de estudo (roleplay)">+1 sessão</button>
@@ -367,7 +367,7 @@
 
         // --- Aprendidos ---
         const t2 = document.createElement('div');
-        t2.style.cssText = 'font-size:.72rem;color:#94a3b8;margin:12px 0 4px;font-weight:700;text-transform:uppercase;letter-spacing:.04em';
+        t2.style.cssText = 'font-size:.72rem;color:var(--lr-text-2);margin:12px 0 4px;font-weight:700;text-transform:uppercase;letter-spacing:.04em';
         t2.textContent = '✅ Elementos dominados';
         body.appendChild(t2);
         const learned = document.createElement('div');
@@ -402,7 +402,7 @@
         if (detalhe.length) {
             const fontes = [...new Set(detalhe.map(d => d.fonte).filter(Boolean))];
             const leg = document.createElement('div');
-            leg.style.cssText = 'font-size:.68rem;color:#c4b5fd;margin-top:6px';
+            leg.style.cssText = 'font-size:.68rem;color:var(--lr-abyssal);margin-top:6px';
             leg.innerHTML = `⚙️ Níveis concedidos automaticamente por: ${fontes.join(', ') || 'mecânicas'} — não consomem EXP nem slots de estudo.`;
             body.appendChild(leg);
         }
@@ -489,11 +489,11 @@
             <h3>${TIPO_ICON[el.tipoElemento] || 'ᛟ'} ${el.nome}</h3>
             <div class="sub">${el.nomeLatim ? el.nomeLatim + ' · ' : ''}${grupo}${el.cor ? ' · Essência ' + el.cor : ''}</div>
             <div style="font-size:.8rem;line-height:1.5">${el.descricao || ''}</div>
-            ${el.posicaoRegra ? `<div style="font-size:.74rem;margin-top:8px"><b style="color:#c4b5fd">Posição:</b> ${el.posicaoRegra}</div>` : ''}
+            ${el.posicaoRegra ? `<div style="font-size:.74rem;margin-top:8px"><b style="color:var(--lr-abyssal)">Posição:</b> ${el.posicaoRegra}</div>` : ''}
             ${el.limites ? `<div style="font-size:.74rem;margin-top:4px"><b style="color:#fca5a5">Limites:</b> ${el.limites}</div>` : ''}
             <table><thead><tr><th>Nível</th><th>Custo (CT)</th><th>EXP</th><th>Tempo de Estudo</th><th>Propriedades</th></tr></thead>
             <tbody>${rows || '<tr><td colspan="5">Sem níveis cadastrados.</td></tr>'}</tbody></table>
-            <div style="font-size:.68rem;color:#94a3b8">Nível dominado pelo personagem: <b style="color:#a78bfa">${atual || 'nenhum'}</b>${concedido > 0 ? ` <span style="color:#fbbf24">(${estudado} estudado + ${concedido} concedido por mecânica)</span>` : ''}.
+            <div style="font-size:.68rem;color:var(--lr-text-2)">Nível dominado pelo personagem: <b style="color:var(--lr-abyssal)">${atual || 'nenhum'}</b>${concedido > 0 ? ` <span style="color:#fbbf24">(${estudado} estudado + ${concedido} concedido por mecânica)</span>` : ''}.
                 Custos e tempos vêm do cadastro no Painel do Criador; descontos aplicados pela configuração do módulo (Parte XI).</div>
             <div style="text-align:right;margin-top:10px"><button class="runo-btn" onclick="this.closest('.runo-modal-bk').remove()">Fechar</button></div>
         </div>`;
@@ -515,7 +515,7 @@
         bk.innerHTML = `<div class="runo-modal"><h3>ᛟ Catálogo de Elementos Rúnicos</h3>
             <div class="sub">${els.length} elementos cadastrados — clique para ver custos de EXP e tempo de estudo</div>
             ${Object.entries(groups).map(([g, list]) => `
-                <div style="font-size:.72rem;color:#c4b5fd;font-weight:700;margin:10px 0 4px;text-transform:uppercase">${g}</div>
+                <div style="font-size:.72rem;color:var(--lr-abyssal);font-weight:700;margin:10px 0 4px;text-transform:uppercase">${g}</div>
                 <div class="runo-learned">${list.map(el => {
             const lv = _nivelEfetivo(el.id);
             const conc = _nivelConcedido(el.id);

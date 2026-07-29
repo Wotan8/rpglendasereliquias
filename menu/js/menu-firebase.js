@@ -1030,7 +1030,37 @@ function getItemValorCentavos(item) {
     return 0;
 }
 
-let currentCheckoutMode = 'frag'; // 'frag' | 'pagbank'
+let currentCheckoutMode = 'frag'; // 'frag' | 'dinheiro' | 'pagbank'
+
+// Meio de pagamento em dinheiro real da Loja:
+//   'dinheiro' → jogador faz o pedido e o mestre confirma o recebimento no painel
+//   'pagbank'  → checkout online (só volta a valer depois da homologação do PagBank)
+const MODO_PAGAMENTO_REAL = 'dinheiro';
+
+// Dados mostrados no checkout em dinheiro
+const PIX_CHAVE = '62991156283';
+const PIX_TITULAR = 'Igor Estevam Alves de Souza';
+
+function cartaoPixHtml() {
+    return `
+        <div style="margin-top:12px;padding:12px 14px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:10px;">
+            <div style="display:flex;align-items:center;gap:6px;font-weight:700;color:var(--lr-nature);font-size:0.8rem;letter-spacing:.02em;text-transform:uppercase;margin-bottom:8px;">
+                <span>💠</span> Pagamento por PIX
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">
+                <span style="font-size:0.8rem;color:var(--muted);">Chave (telefone)</span>
+                <strong style="font-family:monospace;font-size:0.95rem;color:#fff;letter-spacing:.02em;">${escapeHtml(PIX_CHAVE)}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:4px;">
+                <span style="font-size:0.8rem;color:var(--muted);">Titular</span>
+                <strong style="font-size:0.9rem;color:#fff;">${escapeHtml(PIX_TITULAR)}</strong>
+            </div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-top:10px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;">
+                Também aceito em dinheiro na mesa. Assim que o pagamento for confirmado, o item cai automaticamente no seu Repertório.
+            </div>
+        </div>
+    `;
+}
 
 // ⚠️ Substitua pela sua Site Key do reCAPTCHA v3 (a MESMA usada no menu.html).
 const RECAPTCHA_SITE_KEY = '6Lc3_lUtAAAAAFhlPCUXgJSdL3zLnzFUwx_ZbIzT';
@@ -1055,8 +1085,8 @@ function openCheckoutModal(item, mode) {
 
     const isPagBank = mode === 'pagbank';
     const valorCentavos = getItemValorCentavos(item);
-    const precoLabel = isPagBank
-        ? `<span style="color:#10b981;font-weight:700;">R$ ${(valorCentavos / 100).toFixed(2).replace('.', ',')}</span>`
+    const precoLabel = isReal
+        ? `<span style="color:var(--lr-nature);font-weight:700;">R$ ${(valorCentavos / 100).toFixed(2).replace('.', ',')}</span>`
         : `<span style="color:#6366f1;font-weight:700;">${item.valorFrag} Frag$</span>`;
 
     const infoDiv = document.getElementById('lojaCheckoutItemInfo');
@@ -1123,8 +1153,8 @@ window.updateCheckoutTotal = function () {
 
     const priceDisplay = document.getElementById('lojaCheckoutPriceDisplay');
     if (priceDisplay) {
-        if (isPagBank) {
-            priceDisplay.innerHTML = `<span style="color:#10b981;font-weight:700;">R$ ${(totalCentavos / 100).toFixed(2).replace('.', ',')}</span>`;
+        if (isReal) {
+            priceDisplay.innerHTML = `<span style="color:var(--lr-nature);font-weight:700;">R$ ${(totalCentavos / 100).toFixed(2).replace('.', ',')}</span>`;
         } else {
             priceDisplay.innerHTML = `<span style="color:#6366f1;font-weight:700;">${currentCheckoutItem.valorFrag * qty} Frag$</span>`;
         }

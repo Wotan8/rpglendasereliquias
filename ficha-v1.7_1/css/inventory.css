@@ -1269,7 +1269,7 @@
 .atk-delta {
     margin-left: 4px;
     font-size: 0.7rem;
-    color: #10b981;
+    color: var(--lr-nature);
     font-weight: 700;
 }
 

@@ -553,7 +553,7 @@ onAuthStateChanged(auth, async (user) => {
         } catch (err) {
             console.error('❌ Falha ao carregar dados do sistema:', err);
             if (loadingText) {
-                loadingText.innerHTML = '❌ Erro ao carregar regras do sistema.<br><small style="color:#94a3b8">Verifique sua conexão e recarregue a página.</small>';
+                loadingText.innerHTML = '❌ Erro ao carregar regras do sistema.<br><small style="color:var(--lr-text-2)">Verifique sua conexão e recarregue a página.</small>';
             }
             return; // Não prosseguir sem dados do sistema
         }

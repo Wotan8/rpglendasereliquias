@@ -3658,7 +3658,7 @@ function _buildClassModuleEditorRow(idx, data) {
             </div>
 
             <div class="runo-config full-width" style="display:${data.tipo === 'runomancia' ? '' : 'none'};grid-column:1/-1;border:1px dashed rgba(139,92,246,.4);border-radius:8px;padding:8px;margin:4px 10px">
-                <div style="font-weight:700;font-size:.75rem;color:#a78bfa;margin-bottom:6px">ᛟ Parâmetros da Lista de Estudo (Compêndio, Parte XI)</div>
+                <div style="font-weight:700;font-size:.75rem;color:var(--lr-abyssal);margin-bottom:6px">ᛟ Parâmetros da Lista de Estudo (Compêndio, Parte XI)</div>
                 <div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">
                     <div class="form-group">
                         <label>Slots Base</label>

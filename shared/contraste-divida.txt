@@ -15,7 +15,6 @@ criar-personagem/css/styles.css  .firebase-save-indicator.saving
 criar-personagem/js/app.js  linha 529
 criar-personagem/js/app.js  linha 631
 criar-personagem/js/equipment-module.js  linha 147
-ficha-v1.7_1/css/inventory.css  .atk-delta
 ficha-v1.7_1/css/styles_v2.css  .aura-grade-indicator
 ficha-v1.7_1/css/styles_v2.css  .aura-grau-badge-display
 ficha-v1.7_1/css/styles_v2.css  .detail-level-badge.positivo
@@ -25,16 +24,9 @@ ficha-v1.7_1/css/styles_v2.css  html.dark .bg-red input
 ficha-v1.7_1/css/styles_v2.css  html.dark .detail-aura-grade
 ficha-v1.7_1/css/styles_v2.css  html.dark .detail-level-badge.negativo
 ficha-v1.7_1/js/aliados.js  linha 263
-ficha-v1.7_1/js/firebase.js  linha 556
-ficha-v1.7_1/js/runomancia-module.js  linha 297
-ficha-v1.7_1/js/runomancia-module.js  linha 317
-ficha-v1.7_1/js/runomancia-module.js  linha 370
-ficha-v1.7_1/js/runomancia-module.js  linha 405
 ficha-v1.7_1/js/runomancia-module.js  linha 479
-ficha-v1.7_1/js/runomancia-module.js  linha 492
 ficha-v1.7_1/js/runomancia-module.js  linha 493
 ficha-v1.7_1/js/runomancia-module.js  linha 496
-ficha-v1.7_1/js/runomancia-module.js  linha 518
 hexmap.html  linha 1073
 hexmap.html  linha 841
 hexmap.js  linha 1101
@@ -43,39 +35,28 @@ laboratorium-runarum/js/canvas.js  linha 53
 menu/css/menu.css  .frag-amount
 menu/css/menu.css  .loja-btn
 menu/css/menu.css  .loja-tag
-menu/js/menu-firebase.js  linha 1049
 menu/js/menu-firebase.js  linha 1054
 menu/js/menu-firebase.js  linha 1058
-menu/js/menu-firebase.js  linha 1097
 menu/js/menu-firebase.js  linha 1110
-menu/js/menu-firebase.js  linha 1165
 painel-criador/css/painel-criador.css  .aura-grau-badge
 painel-criador/css/painel-criador.css  .badge-fonte, .badge-tipo
 painel-criador/css/painel-criador.css  .cm-predef-num
 painel-criador/css/painel-criador.css  .mech-eqreq-index
 painel-criador/css/painel-criador.css  .tags-container .tag button:hover
-painel-criador/js/painel-firebase.js  linha 3641
-painel-mestre/css/area-npcs.css  #npcAtaquesWrap .atk-delta
 painel-mestre/css/area-npcs.css  .filter-chip-close:hover
 painel-mestre/css/area-npcs.css  .npcv2-section-btn.active
 painel-mestre/css/layout.css  .toolbar button
 painel-mestre/css/modais.css  .modal-danger .modal-title
-painel-mestre/js/area-apoio.js  linha 1026
 painel-mestre/js/area-apoio.js  linha 1089
 painel-mestre/js/area-apoio.js  linha 1090
 painel-mestre/js/area-apoio.js  linha 1091
-painel-mestre/js/area-apoio.js  linha 1107
 painel-mestre/js/area-apoio.js  linha 205
 painel-mestre/js/area-apoio.js  linha 446
 painel-mestre/js/area-mesas-peculiaridades.js  linha 289
 painel-mestre/js/area-mesas-sessoes.js  linha 187
 painel-mestre/js/area-mesas.js  linha 141
 painel-mestre/js/area-mesas.js  linha 142
-painel-mestre/js/combat.js  linha 318
 painel-mestre/js/repertorio.js  linha 125
-painel-mestre/js/repertorio.js  linha 143
-painel-mestre/js/repertorio.js  linha 180
-painel-mestre/js/repertorio.js  linha 192
 shared/lendas-reliquias.css  h1, h2
 tabuleiro/css/tabuleiro.css  .tb-mode-badge.secret
 viewmap.html  linha 2294
