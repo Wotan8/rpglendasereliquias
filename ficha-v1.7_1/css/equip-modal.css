@@ -11,7 +11,7 @@
     align-items: center;
     gap: 10px;
     padding: 10px 16px;
-    background: rgba(14, 17, 23, 0.6);
+    background: var(--lr-bg-0);
     border: 2px solid rgba(91, 63, 184, 0.2);
     border-radius: 12px;
     color: var(--lr-text-2);
@@ -40,7 +40,7 @@
 }
 
 .inv-equip-slot-option.full:hover {
-    background: rgba(14, 17, 23, 0.6);
+    background: var(--lr-bg-0);
     border-color: rgba(201, 79, 92, 0.2);
 }
 
@@ -55,7 +55,7 @@
 .inv-equip-slot-cap {
     font-size: 0.8rem;
     color: var(--lr-text-2);
-    background: rgba(0,0,0,0.4);
+    background: var(--lr-bg-1);
     padding: 2px 8px;
     border-radius: 12px;
 }

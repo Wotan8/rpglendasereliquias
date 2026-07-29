@@ -23,20 +23,22 @@ window.initMesaTab = async function(mesaId) {
     mesaTabContent.className = 'tab-content';
     mesaTabContent.id = 'tabMesa';
     
-    // Botão "Tabuleiro" na barra de abas (abre o VTT da mesa em modo público)
+    // Atalho do Tabuleiro: fica na toolbar ao lado da impressora, só com o
+    // ícone. Antes era uma aba larga escrita "Tabuleiro" depois de Mesa, que
+    // confundia — abre outra página, não troca de aba.
     if (!document.getElementById('btnTabuleiroFicha')) {
         const btnTab = document.createElement('button');
         btnTab.id = 'btnTabuleiroFicha';
-        btnTab.className = 'tab';
         btnTab.type = 'button';
-        btnTab.textContent = '🗺️ Tabuleiro';
-        btnTab.style.cssText = 'background:linear-gradient(135deg,#7c3aed,#8b5cf6);color:#fff;font-weight:700;';
+        btnTab.textContent = '🗺️';
         btnTab.title = 'Abrir o Tabuleiro (VTT) da sua mesa';
         btnTab.addEventListener('click', (e) => {
             e.preventDefault();
             window.open(`../tabuleiro/tabuleiro.html?mesa=${encodeURIComponent(mesaId)}&mode=public`, '_blank');
         });
-        mesaTabBtn.after(btnTab);
+        const btnImprimir = document.querySelector('.toolbar button[onclick*="openPrintModal"]');
+        if (btnImprimir) btnImprimir.before(btnTab);
+        else mesaTabBtn.after(btnTab);
     }
 
     mesaTabContent.innerHTML = `

@@ -52,6 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // Ficha recarregada (troca de personagem) → os desbloqueios mudam.
 document.addEventListener('systemDataReady', () => { _carregado = false; });
 
+// Exposta porque abas-condicionais.js precisa saber se existe biblioteca
+// antes do jogador abrir a aba (este arquivo e module, entao nao vaza sozinho).
+window.carregarConhecimento = () => carregarConhecimento();
 async function carregarConhecimento() {
     const cont = document.getElementById('conhecimentoContainer');
     if (!cont) return;

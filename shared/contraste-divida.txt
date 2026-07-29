@@ -16,18 +16,7 @@ criar-personagem/css/styles_wizard.css  .mini-preview
 criar-personagem/js/app.js  linha 529
 criar-personagem/js/app.js  linha 631
 criar-personagem/js/equipment-module.js  linha 147
-ficha-v1.7_1/css/equip-modal.css  .inv-equip-slot-cap
-ficha-v1.7_1/css/equip-modal.css  .inv-equip-slot-option, .inv-equip-state-option
 ficha-v1.7_1/css/inventory.css  .atk-delta
-ficha-v1.7_1/css/inventory.css  .cond-card-desc
-ficha-v1.7_1/css/inventory.css  .cond-time-input
-ficha-v1.7_1/css/inventory.css  .inv-empty
-ficha-v1.7_1/css/inventory.css  .inv-form-input, .inv-form-select, .inv-form-textarea
-ficha-v1.7_1/css/inventory.css  .inv-qty-input
-ficha-v1.7_1/css/inventory.css  .inv-slot-cap
-ficha-v1.7_1/css/inventory.css  .inv-slot-empty
-ficha-v1.7_1/css/inventory.css  .searchable-select-input
-ficha-v1.7_1/css/inventory.css  .searchable-select-search input
 ficha-v1.7_1/css/styles_v2.css  .aura-grade-indicator
 ficha-v1.7_1/css/styles_v2.css  .aura-grau-badge-display
 ficha-v1.7_1/css/styles_v2.css  .detail-level-badge.positivo
@@ -36,7 +25,6 @@ ficha-v1.7_1/css/styles_v2.css  .dv-tooltip-creation-val
 ficha-v1.7_1/css/styles_v2.css  html.dark .bg-red input
 ficha-v1.7_1/css/styles_v2.css  html.dark .detail-aura-grade
 ficha-v1.7_1/css/styles_v2.css  html.dark .detail-level-badge.negativo
-ficha-v1.7_1/ficha-v1.7_1.html  linha 58
 ficha-v1.7_1/js/aliados.js  linha 263
 ficha-v1.7_1/js/firebase.js  linha 556
 ficha-v1.7_1/js/runomancia-module.js  linha 297

@@ -9,7 +9,7 @@
 
 /* === SLOT GROUPS — Agrupamentos anatômicos === */
 .inv-slot-group {
-    background: rgba(14, 17, 23, 0.35);
+    background: var(--lr-bg-1);
     border: 1.5px solid var(--line, rgba(91, 63, 184, 0.12));
     border-radius: var(--radius, 10px);
     padding: 10px 12px;
@@ -71,7 +71,7 @@
 
 /* Cada slot anatômico individual */
 .inv-slot-container {
-    background: rgba(14, 17, 23, 0.5);
+    background: var(--lr-bg-0);
     border: 1.5px solid var(--line, rgba(91, 63, 184, 0.08));
     border-radius: 8px;
     padding: 6px 8px;
@@ -109,7 +109,7 @@
     font-size: 0.65rem;
     font-weight: 700;
     color: var(--muted, var(--lr-text-2));
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--lr-bg-1);
     padding: 1px 7px;
     border-radius: 10px;
     flex-shrink: 0;
@@ -131,7 +131,7 @@
     color: var(--muted, var(--lr-text-2));
     font-style: italic;
     padding: 4px 8px;
-    background: rgba(14, 17, 23, 0.25);
+    background: var(--lr-bg-1);
     border-radius: 6px;
     text-align: center;
     opacity: 0.7;
@@ -149,7 +149,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px 14px;
-    background: rgba(14, 17, 23, 0.6);
+    background: var(--lr-bg-0);
     border: 2px solid var(--line, rgba(91, 63, 184, 0.15));
     border-radius: 12px;
     cursor: pointer;
@@ -203,7 +203,7 @@
     height: 48px;
     border-radius: 10px;
     object-fit: contain;
-    background: rgba(14, 17, 23, 0.8);
+    background: var(--lr-bg-0);
     border: 2px solid var(--line, rgba(91, 63, 184, 0.15));
     padding: 4px;
     flex-shrink: 0;
@@ -302,7 +302,7 @@
     gap: 8px;
     padding: 40px 20px;
     color: var(--muted, var(--lr-text-2));
-    background: rgba(14, 17, 23, 0.3);
+    background: var(--lr-bg-1);
     border-radius: 12px;
     text-align: center;
 }
@@ -369,7 +369,7 @@
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
-    background: rgba(14, 17, 23, 0.5);
+    background: var(--lr-bg-0);
     border: 2px solid var(--line, rgba(91, 63, 184, 0.1));
     border-radius: 10px;
     cursor: pointer;
@@ -377,7 +377,7 @@
 }
 .inv-item-row:hover {
     border-color: var(--primary, var(--lr-abyssal));
-    background: rgba(14, 17, 23, 0.7);
+    background: var(--lr-bg-0);
 }
 .inv-item-row.inv-equipped {
     border-color: rgba(63, 174, 106, 0.3);
@@ -389,7 +389,7 @@
     height: 40px;
     border-radius: 8px;
     object-fit: contain;
-    background: rgba(14, 17, 23, 0.8);
+    background: var(--lr-bg-0);
     border: 1px solid var(--line, rgba(91, 63, 184, 0.15));
     padding: 3px;
     flex-shrink: 0;
@@ -522,7 +522,7 @@
     align-items: center;
     gap: 10px;
     padding: 8px 10px;
-    background: rgba(14, 17, 23, 0.4);
+    background: var(--lr-bg-1);
     border: 1px solid var(--line, rgba(91, 63, 184, 0.1));
     border-radius: 8px;
 }
@@ -549,7 +549,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.6);
+    background: var(--lr-bg-0);
     backdrop-filter: blur(4px);
     opacity: 0;
     transition: opacity 0.2s;
@@ -603,7 +603,7 @@
     max-height: 200px;
     object-fit: contain;
     border-radius: 10px;
-    background: rgba(14, 17, 23, 0.8);
+    background: var(--lr-bg-0);
     margin-bottom: 16px;
 }
 .inv-detail-grid {
@@ -617,7 +617,7 @@
     flex-direction: column;
     gap: 2px;
     padding: 8px 10px;
-    background: rgba(14, 17, 23, 0.4);
+    background: var(--lr-bg-1);
     border-radius: 8px;
 }
 .inv-detail-label {
@@ -666,7 +666,7 @@
 .inv-form-select,
 .inv-form-textarea {
     padding: 8px 12px;
-    background: rgba(14, 17, 23, 0.6);
+    background: var(--lr-bg-0);
     border: 2px solid var(--line, rgba(91, 63, 184, 0.15));
     border-radius: 8px;
     color: var(--light, var(--lr-text-1));
@@ -732,7 +732,7 @@
 .inv-qty-input {
     width: 48px;
     padding: 3px 5px;
-    background: rgba(14, 17, 23, 0.7);
+    background: var(--lr-bg-0);
     border: 1.5px solid rgba(99, 102, 241, 0.3);
     border-radius: 6px;
     color: var(--lr-arcane-2);
@@ -856,7 +856,7 @@
     flex-direction: column;
     gap: 4px;
     padding: 14px 16px;
-    background: rgba(14, 17, 23, 0.5);
+    background: var(--lr-bg-0);
     border: 2px solid var(--line, rgba(91, 63, 184, 0.12));
     border-radius: 10px;
     cursor: pointer;
@@ -897,7 +897,7 @@
     flex-direction: column;
     gap: 8px;
     padding: 14px 16px;
-    background: rgba(14, 17, 23, 0.6);
+    background: var(--lr-bg-0);
     border: 2px solid rgba(201, 79, 92, 0.15);
     border-radius: 12px;
     transition: border-color 0.2s, box-shadow 0.2s;
@@ -950,7 +950,7 @@
     line-height: 1.5;
     font-style: italic;
     padding: 6px 10px;
-    background: rgba(14, 17, 23, 0.35);
+    background: var(--lr-bg-1);
     border-radius: 8px;
     border-left: 3px solid rgba(201, 79, 92, 0.2);
 }
@@ -983,7 +983,7 @@
     align-items: center;
     gap: 6px;
     padding: 6px 10px;
-    background: rgba(14, 17, 23, 0.35);
+    background: var(--lr-bg-1);
     border-radius: 8px;
 }
 .cond-card-time-label {
@@ -995,7 +995,7 @@
 .cond-time-input {
     width: 48px;
     padding: 4px 6px;
-    background: rgba(14, 17, 23, 0.7);
+    background: var(--lr-bg-0);
     border: 1.5px solid rgba(201, 79, 92, 0.25);
     border-radius: 6px;
     color: var(--lr-blood-3);
@@ -1044,7 +1044,7 @@
     width: 100%;
     padding: 8px 12px;
     padding-right: 30px;
-    background: rgba(14, 17, 23, 0.6);
+    background: var(--lr-bg-0);
     border: 2px solid var(--line, rgba(91, 63, 184, 0.15));
     border-radius: 8px;
     color: var(--light, var(--lr-text-1));
@@ -1101,7 +1101,7 @@
 .searchable-select-search input {
     width: 100%;
     padding: 6px 10px;
-    background: rgba(14, 17, 23, 0.7);
+    background: var(--lr-bg-0);
     border: 1.5px solid var(--line, rgba(91, 63, 184, 0.2));
     border-radius: 6px;
     color: var(--light, var(--lr-text-1));
