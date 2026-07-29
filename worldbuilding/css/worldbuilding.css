@@ -101,7 +101,7 @@
         .search-input {
             width: 100%;
             padding: 10px 15px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 8px;
             color: var(--light);
@@ -199,7 +199,7 @@
            [🚪 Sair] [🏠 Menu] [contextuais] [título/spacer] [Nome] */
         .content-header {
             padding: 14px 20px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border-bottom: 2px solid var(--border);
             display: flex;
             align-items: center;
@@ -308,7 +308,7 @@
         }
 
         .stat-card {
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 16px;
             padding: 20px;
@@ -362,7 +362,7 @@
         }
 
         .entry-card {
-            background: rgba(31, 38, 48, 0.8);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 16px;
             padding: 20px;
@@ -425,7 +425,7 @@
             align-items: center;
             gap: 10px;
             padding: 10px 12px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 8px;
             transition: all 0.2s;
@@ -444,7 +444,7 @@
         .linked-entity-title {
             flex: 1;
             padding: 6px 10px;
-            background: rgba(14, 17, 23, 0.8);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 6px;
             color: var(--light);
@@ -547,7 +547,7 @@
 
         .filter-select {
             padding: 10px 15px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 8px;
             color: var(--light);
@@ -577,7 +577,7 @@
 
         .filter-input {
             padding: 10px 15px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 8px;
             color: var(--light);
@@ -605,7 +605,7 @@
 
         .quick-filter-btn {
             padding: 8px 14px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 20px;
             color: var(--lr-text-2);
@@ -632,7 +632,7 @@
 
         .filter-count {
             font-size: 0.7rem;
-            background: rgba(0, 0, 0, 0.3);
+            background: var(--lr-bg-1);
             padding: 2px 6px;
             border-radius: 10px;
         }
@@ -674,7 +674,7 @@
             align-items: center;
             gap: 8px;
             padding: 12px 16px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 10px;
             margin-bottom: 20px;
@@ -708,7 +708,7 @@
 
         /* Geographic Hierarchy - Tree View */
         .geography-tree-container {
-            background: rgba(31, 38, 48, 0.4);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 15px;
@@ -763,7 +763,7 @@
             cursor: pointer;
             border-radius: 8px;
             transition: all 0.2s;
-            background: rgba(31, 38, 48, 0.4);
+            background: var(--lr-bg-1);
             margin-bottom: 4px;
         }
 
@@ -838,7 +838,7 @@
         .view-toggle {
             display: flex;
             gap: 5px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border-radius: 8px;
             padding: 4px;
             margin-bottom: 20px;
@@ -979,7 +979,7 @@
             align-items: center;
             gap: 8px;
             padding: 8px 12px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 8px;
             cursor: pointer;
@@ -1138,13 +1138,13 @@
             margin-bottom: 25px;
             flex-wrap: wrap;
             padding: 10px;
-            background: rgba(14, 17, 23, 0.5);
+            background: var(--lr-bg-1);
             border-radius: 12px;
         }
 
         .submundo-tab {
             padding: 10px 18px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 8px;
             color: var(--lr-text-2);
@@ -1177,7 +1177,7 @@
         }
 
         .submundo-stat-card {
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 20px;
@@ -1217,7 +1217,7 @@
         }
 
         .lei-card {
-            background: rgba(14, 17, 23, 0.8);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 20px;
@@ -1251,7 +1251,7 @@
         }
 
         .feira-card {
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 12px;
             overflow: hidden;
@@ -1326,7 +1326,7 @@
 
         /* Tabela de Preços */
         .precos-container {
-            background: rgba(14, 17, 23, 0.5);
+            background: var(--lr-bg-1);
             border-radius: 15px;
             padding: 20px;
         }
@@ -1340,7 +1340,7 @@
 
         .preco-tab {
             padding: 8px 15px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 8px;
             color: var(--lr-text-2);
@@ -1394,7 +1394,7 @@
         }
 
         .simbolo-card {
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 15px;
@@ -1428,7 +1428,7 @@
         }
 
         .contato-card {
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 15px;
@@ -1503,7 +1503,7 @@
 
         /* Submundo Filters */
         .submundo-filters {
-            background: rgba(14, 17, 23, 0.4);
+            background: var(--lr-bg-1);
             padding: 15px;
             border-radius: 12px;
             border: 1px solid var(--border);
@@ -1527,7 +1527,7 @@
         }
 
         .submundo-filter-select {
-            background: rgba(31, 38, 48, 0.8);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 8px;
             padding: 8px 12px;
@@ -1552,7 +1552,7 @@
         }
 
         .reputacao-card {
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 20px;
@@ -1602,7 +1602,7 @@
 
         .specialty-chip {
             padding: 6px 12px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 20px;
             cursor: pointer;
@@ -1628,7 +1628,7 @@
         .escala-option {
             flex: 1;
             padding: 15px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 10px;
             text-align: center;
@@ -1733,7 +1733,7 @@
         }
 
         .rumor-truth-box {
-            background: rgba(14, 17, 23, 0.6);
+            background: var(--lr-bg-1);
             border: 1px dashed var(--primary);
             padding: 10px;
             border-radius: 8px;
@@ -1798,7 +1798,7 @@
 
         .timeline-event-card {
             width: 42%;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 18px;
@@ -1858,7 +1858,7 @@
         .event-importance-grande {
             width: 46% !important;
             border: 1px solid var(--secondary);
-            background: rgba(31, 38, 48, 0.8);
+            background: var(--lr-bg-1);
         }
 
         .event-importance-epica {
@@ -1931,7 +1931,7 @@
         .event-tag {
             font-size: 0.7rem;
             padding: 2px 8px;
-            background: rgba(14, 17, 23, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid rgba(148, 163, 184, 0.2);
             border-radius: 4px;
             color: var(--lr-text-2);
@@ -1940,7 +1940,7 @@
         .event-consequences {
             margin-top: 10px;
             padding: 8px;
-            background: rgba(0, 0, 0, 0.2);
+            background: var(--lr-bg-1);
             border-radius: 6px;
             font-size: 0.8rem;
             color: var(--lr-gold-2);
@@ -2023,7 +2023,7 @@
         }
 
         .player-summary-card {
-            background: rgba(14, 17, 23, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 10px;
             overflow: hidden;
@@ -2078,7 +2078,7 @@
 
         .player-summary-content {
             padding: 15px;
-            background: rgba(14, 17, 23, 0.4);
+            background: var(--lr-bg-1);
             border-top: 1px solid var(--border);
         }
 
@@ -2133,7 +2133,7 @@
         }
 
         .form-section {
-            background: rgba(14, 17, 23, 0.6);
+            background: var(--lr-bg-1);
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 20px;
@@ -2172,7 +2172,7 @@
         .form-select,
         .form-textarea {
             padding: 12px;
-            background: rgba(14, 17, 23, 0.8);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 8px;
             color: var(--light);
@@ -2351,7 +2351,7 @@
             align-items: center;
             gap: 10px;
             padding: 10px;
-            background: rgba(31, 38, 48, 0.4);
+            background: var(--lr-bg-1);
             border-radius: 8px;
             margin-bottom: 8px;
         }
@@ -2370,7 +2370,7 @@
 
         /* Session Logs Styles */
         .campaign-selector-container {
-            background: rgba(31, 38, 48, 0.8);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 12px;
             padding: 20px;
@@ -2394,7 +2394,7 @@
             flex: 1;
             max-width: 400px;
             padding: 12px 16px;
-            background: rgba(14, 17, 23, 0.8);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 10px;
             color: var(--light);
@@ -2408,7 +2408,7 @@
         }
 
         .btn-favorite {
-            background: rgba(14, 17, 23, 0.8);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 10px;
             padding: 10px 14px;
@@ -2477,7 +2477,7 @@
             align-items: center;
             gap: 10px;
             padding: 10px 12px;
-            background: rgba(14, 17, 23, 0.6);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 10px;
             cursor: pointer;
@@ -2486,7 +2486,7 @@
 
         .character-checkbox-item:hover {
             border-color: var(--primary);
-            background: rgba(14, 17, 23, 0.8);
+            background: var(--lr-bg-1);
         }
 
         .character-checkbox-item.selected {
@@ -2541,7 +2541,7 @@
             align-items: center;
             gap: 10px;
             padding: 8px 12px;
-            background: rgba(14, 17, 23, 0.6);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 8px;
             cursor: pointer;
@@ -2580,7 +2580,7 @@
         .sessions-search-input {
             flex: 1;
             padding: 10px 15px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 8px;
             color: var(--light);
@@ -2593,7 +2593,7 @@
         }
 
         .session-card {
-            background: rgba(31, 38, 48, 0.8);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 16px;
             padding: 20px;
@@ -2697,7 +2697,7 @@
 
         /* Session Detail Modal Sections */
         .session-detail-section {
-            background: rgba(14, 17, 23, 0.6);
+            background: var(--lr-bg-1);
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 20px;
@@ -2721,7 +2721,7 @@
         }
 
         .detail-item {
-            background: rgba(31, 38, 48, 0.5);
+            background: var(--lr-bg-1);
             padding: 12px;
             border-radius: 8px;
             border: 1px solid var(--border);
@@ -2768,7 +2768,7 @@
         .combat-card,
         .quest-card,
         .moment-card {
-            background: rgba(31, 38, 48, 0.5);
+            background: var(--lr-bg-1);
             padding: 15px;
             border-radius: 10px;
             border: 1px solid var(--border);
@@ -2855,7 +2855,7 @@
         }
 
         .loot-item {
-            background: rgba(31, 38, 48, 0.5);
+            background: var(--lr-bg-1);
             padding: 12px;
             border-radius: 8px;
             border: 1px solid var(--border);
@@ -2884,7 +2884,7 @@
 
         .next-session-hooks li {
             padding: 10px 15px;
-            background: rgba(31, 38, 48, 0.5);
+            background: var(--lr-bg-1);
             border-radius: 8px;
             margin-bottom: 8px;
             border-left: 3px solid var(--primary);
@@ -2936,7 +2936,7 @@
         }
 
         .player-exp-card {
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 12px;
             padding: 12px 16px;
@@ -2978,7 +2978,7 @@
         .player-exp-card .exp-input {
             width: 70px;
             padding: 6px 10px;
-            background: rgba(31, 38, 48, 0.8);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 6px;
             color: var(--light);
@@ -3029,7 +3029,7 @@
         .autocomplete-input {
             width: 100%;
             padding: 10px 14px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 8px;
             color: var(--light);
@@ -3170,7 +3170,7 @@
             left: 0;
             right: 0;
             padding: 4px 8px;
-            background: rgba(0, 0, 0, 0.7);
+            background: var(--lr-bg-1);
             color: white;
             font-size: 0.7rem;
             text-align: center;
@@ -3222,7 +3222,7 @@
         .timeline-item {
             position: relative;
             padding: 15px 20px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border-radius: 10px;
             margin-bottom: 15px;
             border: 1px solid var(--border);
@@ -3345,7 +3345,7 @@
 
         /* In-Game Session Timeline */
         .session-timeline-container {
-            background: rgba(14, 17, 23, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 20px;
@@ -3453,7 +3453,7 @@
             align-items: center;
             gap: 8px;
             padding: 8px 12px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border-radius: 8px;
             border-left: 3px solid var(--primary);
             font-size: 0.85rem;
@@ -3499,7 +3499,7 @@
 
         /* Advanced Visual Timeline */
         .visual-timeline-wrapper {
-            background: rgba(14, 17, 23, 0.8);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 12px;
             padding: 20px;
@@ -3623,7 +3623,7 @@
         .event-tracks {
             min-height: 150px;
             position: relative;
-            background: rgba(31, 38, 48, 0.3);
+            background: var(--lr-bg-1);
             border-radius: 8px;
             padding: 10px 0;
         }
@@ -3763,7 +3763,7 @@
         .time-input {
             width: 100%;
             padding: 10px;
-            background: rgba(31, 38, 48, 0.8);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 8px;
             color: var(--light);
@@ -3783,7 +3783,7 @@
 
         .time-preview-bar {
             height: 40px;
-            background: rgba(31, 38, 48, 0.5);
+            background: var(--lr-bg-1);
             border-radius: 8px;
             margin-top: 15px;
             position: relative;
@@ -4020,7 +4020,7 @@
 
         .wiki-tab {
             padding: 10px 20px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: none;
             border-radius: 8px 8px 0 0;
             color: var(--lr-text-2);
@@ -4041,7 +4041,7 @@
         }
 
         .wiki-card {
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 10px;
             padding: 15px;
@@ -4073,7 +4073,7 @@
         }
 
         .chronology-visual-day {
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             border: 1px solid var(--border);
             border-radius: 12px;
             overflow: hidden;
@@ -4263,7 +4263,7 @@
 
         /* Notification Panel */
         .notification-panel {
-            background: rgba(31, 38, 48, 0.8);
+            background: var(--lr-bg-1);
             border: 2px solid var(--border);
             border-radius: 12px;
             padding: 20px;
@@ -4294,7 +4294,7 @@
             align-items: center;
             gap: 8px;
             padding: 10px;
-            background: rgba(14, 17, 23, 0.6);
+            background: var(--lr-bg-1);
             border-radius: 8px;
             cursor: pointer;
         }
@@ -4381,13 +4381,13 @@
             justify-content: space-between;
             align-items: center;
             padding: 12px 16px;
-            background: rgba(31, 38, 48, 0.6);
+            background: var(--lr-bg-1);
             cursor: pointer;
             transition: background 0.3s;
         }
 
         .collapsible-header:hover {
-            background: rgba(31, 38, 48, 0.8);
+            background: var(--lr-bg-1);
         }
 
         .collapsible-title {
@@ -4410,7 +4410,7 @@
         .collapsible-content {
             padding: 16px 18px;
             display: none;
-            background: rgba(14, 17, 23, 0.4);
+            background: var(--lr-bg-1);
         }
 
         .collapsible-section.open .collapsible-content {
@@ -4463,7 +4463,7 @@
         .session-modal .array-item-row {
             gap: 8px;
             padding: 8px;
-            background: rgba(31, 38, 48, 0.3);
+            background: var(--lr-bg-1);
             border-radius: 8px;
         }
 
@@ -4511,7 +4511,7 @@
         .view-mode-tabs {
             display: flex;
             gap: 5px;
-            background: rgba(14, 17, 23, 0.6);
+            background: var(--lr-bg-1);
             padding: 5px;
             border-radius: 10px;
         }

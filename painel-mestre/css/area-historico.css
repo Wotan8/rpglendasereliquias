@@ -1,5 +1,5 @@
 /* AREA HISTORICO */
-.log-entry{background:rgba(14, 17, 23,.5);border:2px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;padding:14px;margin-bottom:8px;transition:all .3s}
+.log-entry{background:var(--lr-bg-1);border:2px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;padding:14px;margin-bottom:8px;transition:all .3s}
 .log-entry:hover{border-color:rgba(91, 63, 184,.3)}
 .log-time{font-size:.72rem;color:var(--muted);font-weight:600;margin-bottom:4px}
 .log-user{font-size:.82rem;color:var(--ink);font-weight:700;margin-bottom:4px}
@@ -12,7 +12,7 @@
 @media(max-width:768px){.log-filters{flex-direction:column}}
 
 /* ============ LOG VIEWER (Histórico + Mesa>Logs) ============ */
-.lv-panel{background:rgba(14, 17, 23,.55);border:2px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px}
+.lv-panel{background:var(--lr-bg-1);border:2px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px}
 .lv-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
 .lv-row-secondary{margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)}
 .lv-field{display:flex;flex-direction:column;min-width:130px}

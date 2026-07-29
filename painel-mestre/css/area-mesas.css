@@ -11,7 +11,7 @@
 
 /* ===== MESA CARD ===== */
 .mesa-card {
-    background: rgba(14, 17, 23, 0.6);
+    background: var(--lr-bg-1);
     border: 2px solid var(--border);
     border-radius: 12px;
     padding: 20px;
@@ -74,7 +74,7 @@
 }
 
 .player-card {
-    background: rgba(14, 17, 23, 0.6);
+    background: var(--lr-bg-1);
     border: 2px solid var(--border);
     border-radius: 12px;
     padding: 16px;
@@ -129,7 +129,7 @@
 
 /* ===== STAT BOX ===== */
 .stat-box {
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--lr-bg-1);
     border-radius: 8px;
     padding: 8px;
     text-align: center;
@@ -150,7 +150,7 @@
 
 /* ===== SESSÃO LOG ===== */
 .sessao-card {
-    background: rgba(14, 17, 23, 0.6);
+    background: var(--lr-bg-1);
     border: 2px solid var(--border);
     border-radius: 12px;
     padding: 16px;
@@ -188,7 +188,7 @@
 
 /* ===== COMBAT SYSTEM ===== */
 .combat-participant {
-    background: rgba(14, 17, 23, 0.6);
+    background: var(--lr-bg-1);
     border: 2px solid var(--border);
     border-radius: 12px;
     padding: 18px;
@@ -342,7 +342,7 @@
     padding: 8px;
     border: 2px solid var(--line);
     border-radius: 8px;
-    background: rgba(14, 17, 23, 0.8);
+    background: var(--lr-bg-1);
     color: var(--light);
     font-weight: 700;
     font-size: 0.88rem;
@@ -368,7 +368,7 @@
     padding: 8px;
     border: 2px solid var(--line);
     border-radius: 8px;
-    background: rgba(14, 17, 23, 0.8);
+    background: var(--lr-bg-1);
     color: var(--light);
     font-size: 0.82rem;
     font-family: var(--font);
@@ -390,7 +390,7 @@
     margin-bottom: 10px;
     cursor: pointer;
     transition: all 0.2s;
-    background: rgba(14, 17, 23, 0.3);
+    background: var(--lr-bg-1);
 }
 
 .mesa-note-card:hover {
@@ -456,7 +456,7 @@
     border: 2px solid var(--line);
     border-bottom: none;
     border-radius: 8px 8px 0 0;
-    background: rgba(14, 17, 23, 0.4);
+    background: var(--lr-bg-1);
 }
 
 .mesa-note-editor-toolbar button {

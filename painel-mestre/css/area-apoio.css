@@ -1,31 +1,31 @@
 /* AREA APOIO */
-.apoio-card{background:rgba(14, 17, 23,.6);border:2px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px;transition:all .3s}
+.apoio-card{background:var(--lr-bg-1);border:2px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px;transition:all .3s}
 .apoio-card:hover{border-color:rgba(91, 63, 184,.3)}
 .apoio-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .apoio-nome{font-size:1.1rem;font-weight:800;color:var(--light)}
 .apoio-montante{background:rgba(138, 111, 224,.2);color:var(--secondary);padding:2px 8px;border-radius:6px;font-size:.78rem;font-weight:700;margin-left:8px}
 .apoio-info{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
-.apoio-field{background:rgba(14, 17, 23,.5);padding:10px;border-radius:8px;border:1px solid var(--border)}
+.apoio-field{background:var(--lr-bg-1);padding:10px;border-radius:8px;border:1px solid var(--border)}
 .apoio-field-label{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);margin-bottom:2px}
 .apoio-field-value{font-size:.88rem;font-weight:600;color:var(--light)}
 .apoio-checkbox{display:flex;align-items:center;gap:8px}
 .apoio-filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-end}
 .apoio-filters .form-group{flex:1;min-width:130px;margin-bottom:0}
 /* REPERTORIO (renamed from Inventário do Jogador) */
-.repertorio-card{background:rgba(14, 17, 23,.6);border:2px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px}
+.repertorio-card{background:var(--lr-bg-1);border:2px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px}
 .repertorio-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .repertorio-nome{font-weight:700;color:var(--light);font-size:1rem}
 /* METAS */
-.meta-card{background:rgba(14, 17, 23,.6);border:2px solid var(--border);border-radius:12px;padding:18px;transition:all .3s}
+.meta-card{background:var(--lr-bg-1);border:2px solid var(--border);border-radius:12px;padding:18px;transition:all .3s}
 .meta-card:hover{border-color:rgba(63, 174, 106,.4)}
 .meta-progress{height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;margin-top:8px}
 .meta-progress-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--primary),var(--secondary));transition:width .3s}
 /* STAT BOX */
-.stat-box{background:rgba(14, 17, 23,.5);padding:12px;border-radius:8px;border:1px solid var(--border);text-align:center}
+.stat-box{background:var(--lr-bg-1);padding:12px;border-radius:8px;border:1px solid var(--border);text-align:center}
 .stat-label{font-size:.72rem;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
 .stat-value{font-size:1.2rem;font-weight:900;color:var(--primary)}
 /* ALLY */
-.ally-card{background:rgba(14, 17, 23,.6);border:2px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px}
+.ally-card{background:var(--lr-bg-1);border:2px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px}
 .ally-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .ally-name{font-weight:800;color:var(--light);font-size:1.1rem}
 .ally-details{font-size:.85rem;color:var(--muted);line-height:1.6}
@@ -36,14 +36,14 @@
 .ally-form-row.cols-3{grid-template-columns:repeat(3,1fr)}
 .ally-form-group{margin-bottom:0}
 .ally-form-label{display:block;font-size:.72rem;font-weight:800;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
-.ally-form-input{width:100%;padding:10px;border:2px solid var(--line);border-radius:8px;font-size:.88rem;font-family:var(--font);background:rgba(14, 17, 23,.8);color:var(--light)}
+.ally-form-input{width:100%;padding:10px;border:2px solid var(--line);border-radius:8px;font-size:.88rem;font-family:var(--font);background:var(--lr-bg-1);color:var(--light)}
 .ally-form-input:focus{outline:none;border-color:var(--primary)}
 /* PROPERTY */
-.property-card{background:rgba(14, 17, 23,.5);border:2px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px}
+.property-card{background:var(--lr-bg-1);border:2px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px}
 .property-header{margin-bottom:6px}
 .property-name{font-weight:700;color:var(--light);font-size:.95rem}
 .property-details{font-size:.82rem;color:var(--muted);line-height:1.5}
 /* EXP SECTION */
-.exp-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;padding:14px;background:rgba(14, 17, 23,.5);border:2px solid var(--border);border-radius:12px}
+.exp-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;padding:14px;background:var(--lr-bg-1);border:2px solid var(--border);border-radius:12px}
 .exp-checkbox{width:18px;height:18px;accent-color:var(--primary);cursor:pointer}
 @media(max-width:768px){.ally-form-row.cols-3{grid-template-columns:1fr}.apoio-info{grid-template-columns:1fr 1fr}}

@@ -134,7 +134,7 @@
     border-radius: 8px;
     font-size: 0.88rem;
     font-family: var(--font);
-    background: rgba(14, 17, 23, 0.8);
+    background: var(--lr-bg-1);
     color: var(--light);
     transition: border-color 0.15s, box-shadow 0.15s;
 }

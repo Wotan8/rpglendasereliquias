@@ -1047,7 +1047,7 @@ body {
 }
 
 .array-item {
-    background: rgba(0, 0, 0, .02);
+    background: var(--lr-bg-1);
     border: 1px solid var(--soft);
     border-radius: 8px;
     padding: 10px;
@@ -2625,7 +2625,7 @@ html.dark #mech_duracao_exp_wrap {
 
 .settings-tab:hover {
     color: var(--ink);
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--lr-bg-1);
 }
 
 html.dark .settings-tab:hover {
@@ -3333,7 +3333,7 @@ html.dark .meta-chip.chip-tag {
     padding: 10px 12px;
     border: 1px solid rgba(148, 163, 184, .12);
     border-radius: 8px;
-    background: rgba(14, 17, 23, .25);
+    background: var(--lr-bg-1);
 }
 
 .cm-section-title {

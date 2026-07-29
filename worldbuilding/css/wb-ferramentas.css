@@ -368,20 +368,20 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
 
 /* ── Campos read-only das fichas (NPC / Tribo do Criador) ──── */
 .wb-readonly-field {
-    background: rgba(0,0,0,.18); border: 1px solid var(--lr-border, #333);
+    background: var(--lr-bg-1); border: 1px solid var(--lr-border, #333);
     border-radius: 8px; padding: 9px 12px; color: var(--lr-text-1, #e9e2d2);
     font-size: .9rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
 }
 .wb-chips-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .wb-chip {
-    background: rgba(0,0,0,.18); border: 1px solid var(--lr-border, #333);
+    background: var(--lr-bg-1); border: 1px solid var(--lr-border, #333);
     border-radius: 999px; padding: 5px 11px; font-size: .82rem; color: var(--lr-text-1, #e9e2d2);
 }
 .wb-chip b { color: var(--lr-gold, #D4AF37); font-weight: 700; }
 .wb-attr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 8px; }
 .wb-attr {
     display: flex; flex-direction: column; align-items: center;
-    background: rgba(0,0,0,.18); border: 1px solid var(--lr-border, #333);
+    background: var(--lr-bg-1); border: 1px solid var(--lr-border, #333);
     border-radius: 8px; padding: 8px 4px;
 }
 .wb-attr__k { font-size: .68rem; color: var(--lr-text-2, #a99f8c); font-weight: 700; letter-spacing: .04em; }
@@ -410,7 +410,7 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
 .wb-book__badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
 .wb-book__desc { color: var(--lr-text-2, #a99f8c); font-size: .85rem; margin: 4px 0 0; line-height: 1.4; }
 .wb-book__actions { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
-.wb-book__chapters { border-top: 1px solid var(--lr-border, #333); background: rgba(0,0,0,.15); }
+.wb-book__chapters { border-top: 1px solid var(--lr-border, #333); background: var(--lr-bg-1); }
 
 .wb-loose-list { display: grid; gap: 8px; }
 .wb-chapter {
@@ -443,7 +443,7 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
     color: var(--lr-text-2, #a99f8c); font-size: .95rem; font-style: italic; padding: 6px 2px; margin-bottom: 10px;
 }
 .wb-article-syn:focus { outline: none; border-bottom-color: var(--lr-gold, #D4AF37); }
-.wb-editor-props { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 12px; padding: 10px 12px; background: rgba(0,0,0,.15); border: 1px solid var(--lr-border, #333); border-radius: 10px; }
+.wb-editor-props { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 12px; padding: 10px 12px; background: var(--lr-bg-1); border: 1px solid var(--lr-border, #333); border-radius: 10px; }
 .wb-editor-props label { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: var(--lr-text-2, #a99f8c); }
 .wb-editor-props select, .wb-editor-props input[type=number] { margin-left: 4px; }
 .wb-editor-props .wbt-check { gap: 6px; }
@@ -586,7 +586,7 @@ body.wbml-aberto .wb-nav-backdrop { display: none; }
 .wbml-stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
 .wbml-stage img { display: block; width: 100%; height: 100%; user-select: none; }
 .wbml-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.wbml-vazio { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .8rem; color: var(--lr-text-2); background: rgba(14,17,23,.82); }
+.wbml-vazio { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .8rem; color: var(--lr-text-2); background: var(--lr-bg-1); }
 /* `display: flex` acima vence o [hidden] do navegador — sem esta regra o
    overlay "Nenhum mapa ainda" ficava na frente do mapa recém-enviado. */
 .wbml-vazio[hidden] { display: none; }

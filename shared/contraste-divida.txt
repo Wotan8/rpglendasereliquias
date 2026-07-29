@@ -12,7 +12,6 @@
 
 criar-personagem/css/styles.css  .firebase-save-indicator.saving
 
-criar-personagem/css/styles_wizard.css  .mini-preview
 criar-personagem/js/app.js  linha 529
 criar-personagem/js/app.js  linha 631
 criar-personagem/js/equipment-module.js  linha 147
@@ -56,16 +55,10 @@ painel-criador/css/painel-criador.css  .cm-predef-num
 painel-criador/css/painel-criador.css  .mech-eqreq-index
 painel-criador/css/painel-criador.css  .tags-container .tag button:hover
 painel-criador/js/painel-firebase.js  linha 3641
-painel-mestre/css/area-apoio.css  .ally-form-input
-painel-mestre/css/area-mesas.css  .combat-abilities-input
-painel-mestre/css/area-mesas.css  .combat-initiative-input
 painel-mestre/css/area-npcs.css  #npcAtaquesWrap .atk-delta
 painel-mestre/css/area-npcs.css  .filter-chip-close:hover
-painel-mestre/css/area-npcs.css  .npc-attribute-input
-painel-mestre/css/area-npcs.css  .npc-form-input, .npc-form-textarea, .npc-form-select
 painel-mestre/css/area-npcs.css  .npcv2-section-btn.active
 painel-mestre/css/layout.css  .toolbar button
-painel-mestre/css/modais.css  .form-input, .form-select, .form-textarea
 painel-mestre/css/modais.css  .modal-danger .modal-title
 painel-mestre/js/area-apoio.js  linha 1026
 painel-mestre/js/area-apoio.js  linha 1089
@@ -106,36 +99,17 @@ worldbuilding/css/wb-ferramentas.css  .wb-badge--done
 worldbuilding/css/wb-ferramentas.css  .wb-badge--draft
 worldbuilding/css/wb-ferramentas.css  .wb-badge--pub
 worldbuilding/css/wb-ferramentas.css  .wb-health-card.is-info .wb-health-card__v
-worldbuilding/css/wb-ferramentas.css  .wbml-vazio
 worldbuilding/css/wb-ferramentas.css  .wbt-graph-legend
-worldbuilding/css/worldbuilding.css  .autocomplete-input
-worldbuilding/css/worldbuilding.css  .btn-favorite
 worldbuilding/css/worldbuilding.css  .btn-secondary
 worldbuilding/css/worldbuilding.css  .btn-time-cancel
-worldbuilding/css/worldbuilding.css  .campaign-select
 worldbuilding/css/worldbuilding.css  .chronology-visual-count
 worldbuilding/css/worldbuilding.css  .entity-type-badge
 worldbuilding/css/worldbuilding.css  .event-bar
-worldbuilding/css/worldbuilding.css  .event-tag
 worldbuilding/css/worldbuilding.css  .feira-escala
 worldbuilding/css/worldbuilding.css  .feira-frequencia
-worldbuilding/css/worldbuilding.css  .filter-input
-worldbuilding/css/worldbuilding.css  .filter-select
-worldbuilding/css/worldbuilding.css  .form-input, .form-select, .form-textarea
 worldbuilding/css/worldbuilding.css  .highlight-tag
-worldbuilding/css/worldbuilding.css  .linked-entity-title
 worldbuilding/css/worldbuilding.css  .modal-close
 worldbuilding/css/worldbuilding.css  .modal-title
-worldbuilding/css/worldbuilding.css  .next-session-hooks li
-worldbuilding/css/worldbuilding.css  .player-exp-card .exp-input
-worldbuilding/css/worldbuilding.css  .preco-tab
-worldbuilding/css/worldbuilding.css  .quick-filter-btn
-worldbuilding/css/worldbuilding.css  .search-input
+worldbuilding/css/worldbuilding.css  .session-gallery-item .gallery-label
 worldbuilding/css/worldbuilding.css  .session-item-tag .remove-tag:hover
-worldbuilding/css/worldbuilding.css  .sessions-search-input
-worldbuilding/css/worldbuilding.css  .submundo-filter-select
-worldbuilding/css/worldbuilding.css  .submundo-tab
-worldbuilding/css/worldbuilding.css  .time-input
-worldbuilding/css/worldbuilding.css  .timeline-event-item
-worldbuilding/css/worldbuilding.css  .wiki-tab
 worldbuilding/js/wb-core.js  linha 1250

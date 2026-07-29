@@ -768,7 +768,7 @@ html.dark .memory-box-label { background: var(--paper); }
     display: flex;
     align-items: center;
     gap: 10px;
-    background: rgba(14, 17, 23, .5);
+    background: var(--lr-bg-1);
     border: 1px solid rgba(212, 175, 55,.3);
     border-radius: 12px;
     padding: 6px 12px;
@@ -1239,7 +1239,7 @@ html.dark .memory-box-label { background: var(--paper); }
     align-items: center;
     gap: 12px;
     padding: 8px 16px;
-    background: rgba(14, 17, 23, .8);
+    background: var(--lr-bg-1);
     border-radius: 10px;
     font-size: .8rem;
     color: var(--lr-text-2);

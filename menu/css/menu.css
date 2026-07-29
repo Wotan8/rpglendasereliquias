@@ -522,7 +522,7 @@ body {
 }
 
 .info-item {
-    background: rgba(0, 0, 0, .03);
+    background: var(--lr-bg-1);
     padding: 8px;
     border-radius: 8px;
     border: 1px solid var(--soft);
@@ -552,7 +552,7 @@ body {
     border-radius: 6px;
     font-weight: 900;
     font-size: .75rem;
-    background: rgba(0, 0, 0, .04);
+    background: var(--lr-bg-1);
     border: 2px solid;
 }
 
@@ -700,7 +700,7 @@ body {
 }
 
 .inventory-item-footer {
-    background: rgba(0, 0, 0, .03);
+    background: var(--lr-bg-1);
     padding: 8px;
     border-radius: 6px;
     border: 1px solid var(--soft);
