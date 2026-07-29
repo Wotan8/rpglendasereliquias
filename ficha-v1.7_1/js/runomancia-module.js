@@ -102,7 +102,7 @@
         const s = document.createElement('style');
         s.id = 'runoModuleCSS';
         s.textContent = `
-        .runo-mod{border:1px solid rgba(139,92,246,.25);border-radius:12px;background:rgba(30,27,58,.45);margin-top:14px;overflow:hidden}
+        .runo-mod{border:1px solid rgba(139,92,246,.25);border-radius:12px;background:var(--lr-abyssal-soft);margin-top:14px;overflow:hidden}
         .runo-mod-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:linear-gradient(90deg,rgba(139,92,246,.14),transparent);border-bottom:1px solid rgba(139,92,246,.2)}
         .runo-mod-head h4{margin:0;font-size:.9rem;color:var(--text,#e2e8f0)}
         .runo-slots{font-size:.75rem;color:var(--lr-abyssal);background:rgba(139,92,246,.16);padding:2px 10px;border-radius:999px}
@@ -123,7 +123,7 @@
         .runo-add-select{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
         .runo-add-select select{flex:1;min-width:180px;background:rgba(15,23,42,.6);border:1px solid rgba(148,163,184,.15);color:var(--text,#e2e8f0);border-radius:6px;padding:5px 8px;font-size:.78rem}
         .runo-lab-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:12px;padding:14px;border-radius:12px;
-            border:1px solid rgba(139,92,246,.5);background:linear-gradient(135deg,rgba(76,29,149,.5),rgba(30,27,58,.7));
+            border:1px solid rgba(139,92,246,.5);background:linear-gradient(135deg,var(--lr-abyssal-soft),var(--lr-abyssal-soft));
             color:#e9d5ff;font-weight:800;font-size:1rem;letter-spacing:.06em;cursor:pointer;text-transform:uppercase}
         .runo-lab-btn:hover{box-shadow:0 0 18px rgba(139,92,246,.35)}
         .runo-modal-bk{position:fixed;inset:0;background:rgba(2,6,23,.75);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px}
