@@ -32,7 +32,6 @@ hexmap.html  linha 841
 hexmap.js  linha 1101
 hexmap.js  linha 592
 laboratorium-runarum/js/canvas.js  linha 53
-menu/css/menu.css  .frag-amount
 menu/css/menu.css  .loja-btn
 menu/css/menu.css  .loja-tag
 menu/js/menu-firebase.js  linha 1054
@@ -50,21 +49,15 @@ painel-mestre/js/area-apoio.js  linha 1089
 painel-mestre/js/area-apoio.js  linha 1090
 painel-mestre/js/area-apoio.js  linha 1091
 painel-mestre/js/area-apoio.js  linha 205
-painel-mestre/js/area-apoio.js  linha 446
-painel-mestre/js/area-mesas-peculiaridades.js  linha 289
 painel-mestre/js/area-mesas-sessoes.js  linha 187
 painel-mestre/js/area-mesas.js  linha 141
 painel-mestre/js/area-mesas.js  linha 142
-painel-mestre/js/repertorio.js  linha 125
 tabuleiro/css/tabuleiro.css  .tb-mode-badge.secret
-viewmap.html  linha 2294
 worldbuilding/css/wb-ferramentas.css  .wb-badge--done
 worldbuilding/css/wb-ferramentas.css  .wb-badge--draft
 worldbuilding/css/wb-ferramentas.css  .wb-badge--pub
 worldbuilding/css/wb-ferramentas.css  .wb-health-card.is-info .wb-health-card__v
 worldbuilding/css/wb-ferramentas.css  .wbt-graph-legend
-worldbuilding/css/worldbuilding.css  .btn-secondary
-worldbuilding/css/worldbuilding.css  .btn-time-cancel
 worldbuilding/css/worldbuilding.css  .chronology-visual-count
 worldbuilding/css/worldbuilding.css  .entity-type-badge
 worldbuilding/css/worldbuilding.css  .event-bar
