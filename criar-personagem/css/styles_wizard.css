@@ -822,7 +822,7 @@ html.dark .memory-box-label { background: var(--paper); }
     position: fixed;
     bottom: 0; left: 0; right: 0;
     z-index: 999;
-    background: rgba(14, 17, 23, .95);
+    background: var(--lr-surface);
     backdrop-filter: blur(10px);
     border-top: 1px solid rgba(212, 175, 55,.15);
     /* Área segura de aparelhos com notch/gesto (iPhone, Android) */

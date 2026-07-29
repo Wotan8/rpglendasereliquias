@@ -31,7 +31,7 @@
     transition: all var(--lr-t-base) var(--lr-ease);
 }
 .wbt-chip:hover { border-color: var(--lr-gold); color: var(--lr-text-1); }
-.wbt-chip.is-active { background: var(--lr-gold); border-color: var(--lr-gold); color: #14181d; font-weight: 600; }
+.wbt-chip.is-active { background: var(--lr-gold); border-color: var(--lr-gold); color: var(--lr-bg-0); font-weight: 600; }
 
 .wbt-seg { display: inline-flex; border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius); overflow: hidden; }
 .wbt-seg__btn { background: var(--lr-bg-1); border: none; color: var(--lr-text-2); padding: .5rem 1rem; font-family: var(--lr-font-body); font-size: var(--lr-fs-sm); cursor: pointer; }
@@ -274,7 +274,7 @@ body.wbt-focus .wbt-etoolbar { justify-content: flex-end; }
     backdrop-filter: blur(6px);
     transition: background .2s, transform .12s;
 }
-.wb-nav-toggle:hover { background: rgba(42, 42, 66, .95); transform: scale(1.06); }
+.wb-nav-toggle:hover { background: var(--lr-surface-2); transform: scale(1.06); }
 .wb-nav-toggle:active { transform: scale(.92); }
 
 /* Fundo escuro do drawer — só ganha vida no celular, no estado 'full' */

@@ -296,7 +296,7 @@ body {
 
 .toolbar button:hover {
     background: var(--line);
-    color: var(--paper);
+    color: var(--ink);
 }
 
 .btn-logout {
@@ -1252,7 +1252,7 @@ body {
     border: 2px solid var(--soft);
     border-radius: 8px;
     background: var(--lr-bg-0);
-    color: #a5f3fc;
+    color: var(--lr-arcane-2);
     resize: vertical;
     tab-size: 2;
 }

@@ -2282,7 +2282,7 @@ html.dark .teste-quando {
     bottom: 24px;
     left: 50%;
     transform: translateX(-50%) translateY(20px);
-    background: rgba(14, 17, 23, 0.95);
+    background: var(--lr-surface);
     color: var(--lr-text-2);
     padding: 8px 20px;
     border-radius: 10px;
@@ -2476,7 +2476,7 @@ html.dark .bg-orange input {
 
 .exp-toast-error {
     border-color: var(--lr-blood-2);
-    background: #1c1917;
+    background: var(--lr-surface);
     color: var(--lr-blood-3);
 }
 
@@ -2520,7 +2520,7 @@ html.dark .bg-orange input {
 
 .exp-btn-cancel {
     background: var(--lr-border);
-    color: var(--lr-text-2);
+    color: var(--lr-text-1);
 }
 
 .exp-btn-cancel:hover {

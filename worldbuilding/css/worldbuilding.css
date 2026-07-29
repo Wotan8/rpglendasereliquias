@@ -13,7 +13,7 @@
             --secondary: var(--lr-abyssal-2);
             --dark: var(--lr-surface);
             --darker: var(--lr-bg-0);
-            --light: var(--lr-divine);
+            --light: var(--lr-text-1);
             --success: var(--lr-nature);
             --danger: var(--lr-blood-2);
             --warning: var(--lr-gold);
@@ -72,7 +72,7 @@
         .sidebar {
             width: 280px;
             min-width: 280px;
-            background: rgba(14, 17, 23, 0.95);
+            background: var(--lr-surface);
             border-right: 2px solid var(--border);
             height: 100vh;
             overflow-y: auto;
@@ -1493,7 +1493,7 @@
 
         .marca-sempalavra {
             background: var(--lr-gold);
-            color: black;
+            color: var(--lr-bg-0);
         }
 
         .marca-delator {
@@ -1705,7 +1705,7 @@
 
         .status-naodescoberto {
             background: var(--lr-border);
-            color: var(--lr-divine);
+            color: var(--lr-text-1);
         }
 
         .status-ouvido {
@@ -3050,7 +3050,7 @@
             right: 0;
             max-height: 250px;
             overflow-y: auto;
-            background: rgba(31, 38, 48, 0.98);
+            background: var(--lr-surface);
             border: 2px solid var(--primary);
             border-radius: 8px;
             z-index: 1000;

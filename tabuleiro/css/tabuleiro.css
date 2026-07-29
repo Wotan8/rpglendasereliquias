@@ -6,14 +6,35 @@
     --tb-panel: #12161f;
     --tb-panel2: #1a2030;
     --tb-border: #2a3244;
-    --tb-light: var(--lr-divine);
-    --tb-muted: var(--lr-text-2);
-    --tb-primary: var(--lr-abyssal);
-    --tb-success: var(--lr-nature);
-    --tb-danger: var(--lr-blood-2);
-    --tb-warning: var(--lr-gold);
+    /* O tabuleiro e sempre escuro (e um mapa de batalha, nao segue o tema).
+       Por isso estas cores sao fixas nos valores do tema escuro: puxa-las de
+       var(--lr-*) fazia o texto virar tinta escura sobre os paineis escuros
+       quando o jogador estava no tema claro. */
+    --tb-light: #F6F7FB;
+    --tb-muted: #A8B3C2;
+    --tb-primary: #5B3FB8;
+    --tb-success: #3FAE6A;
+    --tb-danger: #C94F5C;
+    --tb-warning: #D4AF37;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
+/* O tabuleiro nao segue o tema: e um mapa de batalha, sempre escuro. Como
+   tokens.css carrega DEPOIS deste arquivo, nao adianta redeclarar no :root —
+   fixamos no body, que vence por heranca para tudo que esta dentro. Sem isso,
+   quem estivesse no tema claro via acento escuro sobre painel escuro. */
+body {
+    --lr-surface-2: #262E3A;
+    --lr-text-2:    #A8B3C2;
+    --lr-gold-2:    #E5C558;
+    --lr-arcane:    #3AA6FF;
+    --lr-arcane-2:  #7CC0FF;
+    --lr-abyssal:   #5B3FB8;
+    --lr-abyssal-2: #8A6FE0;
+    --lr-nature:    #3FAE6A;
+    --lr-blood-2:   #C94F5C;
+    --lr-blood-3:   #E08A93;
+}
+
 html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: var(--tb-light); font-family: 'Segoe UI', Arial, sans-serif; }
 
 #tbCanvas { position: fixed; inset: 0; width: 100vw; height: 100vh; touch-action: none; }
@@ -40,7 +61,7 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 .tb-mode-badge.public { background: rgba(63, 174, 106,.15); border: 1px solid rgba(63, 174, 106,.45); color: #6ee7b7; }
 #tbMesaNome { font-weight: 800; font-size: .92rem; color: var(--tb-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 26vw; }
 #tbCanvasNome { font-size: .82rem; color: var(--tb-muted); cursor: pointer; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--tb-border); background: var(--tb-panel2); white-space: nowrap; }
-.tb-tag-live { background: var(--lr-nature); color: #04121c; border-radius: 5px; padding: 1px 6px; font-size: .64rem; font-weight: 900; margin-left: 4px; }
+.tb-tag-live { background: var(--tb-success); color: #04121c; border-radius: 5px; padding: 1px 6px; font-size: .64rem; font-weight: 900; margin-left: 4px; }
 .tb-tag-off { background: var(--lr-surface-2); color: var(--lr-text-2); border-radius: 5px; padding: 1px 6px; font-size: .64rem; font-weight: 700; margin-left: 4px; }
 #tbCoords { position: fixed; bottom: 8px; right: 12px; z-index: 40; font-size: .72rem; color: var(--tb-muted); background: rgba(18,22,31,.8); padding: 3px 8px; border-radius: 6px; }
 
@@ -193,7 +214,7 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 .tb-combat-round { font-size: .78rem; font-weight: 800; color: var(--lr-abyssal-2); flex: 1; text-align: center; }
 .tb-combat-p { display: flex; gap: 9px; align-items: flex-start; padding: 9px; border: 1px solid var(--tb-border); border-radius: 10px; margin-bottom: 8px; background: var(--tb-panel2); }
 .tb-combat-p.atual { border-color: var(--tb-warning); box-shadow: 0 0 0 1px var(--tb-warning); background: rgba(212, 175, 55,.08); }
-.tb-combat-init { min-width: 36px; height: 36px; border-radius: 9px; background: var(--tb-bg); display: flex; align-items: center; justify-content: center; font-weight: 900; color: var(--lr-gold-2); }
+.tb-combat-init { min-width: 36px; height: 36px; border-radius: 9px; background: var(--tb-bg); display: flex; align-items: center; justify-content: center; font-weight: 900; color: var(--tb-warning); }
 .tb-combat-nome { font-weight: 800; font-size: .84rem; }
 .tb-combat-tipo { font-size: .64rem; background: var(--tb-bg); border-radius: 5px; padding: 1px 6px; color: var(--tb-muted); margin-left: 4px; }
 .tb-cstat { display: flex; align-items: center; gap: 5px; margin-top: 4px; }
@@ -329,7 +350,7 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 .tb-mus-sync { font-size: .64rem; font-weight: 800; color: var(--lr-nature); white-space: nowrap; }
 .tb-mus-destravar {
     display: block; width: 100%; border: none; border-top: 1px solid var(--tb-border); cursor: pointer;
-    background: var(--lr-gold-2, #d4af37); color: #1a1206; font-size: .72rem; font-weight: 800; padding: 6px 8px;
+    background: var(--tb-warning); color: #1a1206; font-size: .72rem; font-weight: 800; padding: 6px 8px;
 }
 .tb-mus-pill {
     width: 36px; height: 36px; border-radius: 9px; background: var(--tb-panel);
@@ -338,9 +359,17 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 .tb-mus-pill:hover { border-color: var(--tb-primary); }
 .tb-mus-pill.on { border-color: var(--lr-nature); }
 .tb-mus-badge {
-    position: absolute; top: -5px; right: -5px; background: var(--lr-nature); color: #04121c;
+    position: absolute; top: -5px; right: -5px; background: var(--tb-success); color: #04121c;
     font-size: .6rem; font-weight: 900; border-radius: 8px; padding: 0 4px;
 }
+/* Players do YouTube: o embed oficial não pode ficar escondido (termos do YouTube,
+   e iframe oculto não ganha autoplay). Ficam como miniaturas no topo da barra. */
+.tb-mus-yt { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; }
+.tb-mus-yt:empty { display: none; }
+.tb-mus-ytitem { width: 112px; height: 63px; border-radius: 6px; overflow: hidden; background: #000; flex: none; }
+.tb-mus-ytitem iframe { display: block; border: 0; width: 112px; height: 63px; }
+.tb-mus-yticon { color: #ef4444; font-size: .6rem; margin-right: 3px; vertical-align: 1px; }
+
 .tb-mus-head {
     display: flex; align-items: center; gap: 3px; padding: 5px 7px;
     border-bottom: 1px solid var(--tb-border); background: var(--tb-panel2); font-size: .8rem;
