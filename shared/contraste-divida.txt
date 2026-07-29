@@ -45,7 +45,6 @@ painel-criador/css/painel-criador.css  .mech-eqreq-index
 painel-criador/css/painel-criador.css  .tags-container .tag button:hover
 painel-mestre/css/area-npcs.css  .filter-chip-close:hover
 painel-mestre/css/area-npcs.css  .npcv2-section-btn.active
-painel-mestre/css/layout.css  .toolbar button
 painel-mestre/css/modais.css  .modal-danger .modal-title
 painel-mestre/js/area-apoio.js  linha 1089
 painel-mestre/js/area-apoio.js  linha 1090
@@ -57,7 +56,6 @@ painel-mestre/js/area-mesas-sessoes.js  linha 187
 painel-mestre/js/area-mesas.js  linha 141
 painel-mestre/js/area-mesas.js  linha 142
 painel-mestre/js/repertorio.js  linha 125
-shared/lendas-reliquias.css  h1, h2
 tabuleiro/css/tabuleiro.css  .tb-mode-badge.secret
 viewmap.html  linha 2294
 worldbuilding/css/wb-ferramentas.css  .wb-badge--done

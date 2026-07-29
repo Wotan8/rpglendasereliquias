@@ -50,9 +50,9 @@
 }
 
 .toolbar button {
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--lr-divine);
+    border: 1px solid var(--lr-border);
+    background: var(--lr-surface-2);
+    color: var(--ink);
     font-weight: 600;
     padding: 8px 14px;
     border-radius: var(--radius);

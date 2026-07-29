@@ -61,7 +61,9 @@ h1, h2 {
     font-family: var(--lr-font-title);
     font-weight: 600;
     letter-spacing: var(--lr-track-title);
-    color: var(--lr-divine);
+    /* --lr-divine e branco fixo nos dois temas: titulo sumia no papel.
+       --lr-text-1 vira tinta no claro e branco no escuro. */
+    color: var(--lr-text-1);
     line-height: var(--lr-lh-tight);
 }
 
