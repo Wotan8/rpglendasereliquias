@@ -31,6 +31,11 @@ const PERMITIDAS = new Set([
     'menu/css/menu.css html.dark .tab.active',
     'menu/css/menu.css html.dark .pagination-btn.active',
     'painel-criador/css/painel-criador.css html.dark .tab.active',
+    // Branco fixo sobre a pilula de Fragmentos, que e um gradiente roxo igual
+    // nos dois temas. A medicao estatica nao le gradiente, entao mede o texto
+    // contra as superficies da pagina — onde ele de fato nunca cai.
+    'menu/css/menu.css .frag-label',
+    'menu/css/menu.css .frag-amount',
 ]);
 
 /* ---------- cor ---------- */

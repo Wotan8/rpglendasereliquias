@@ -10,7 +10,7 @@
     style.textContent = `
         .class-module-section {
             margin-top: 16px;
-            border: 1px solid var(--soft, rgba(148,163,184,.12));
+            border: 1px solid var(--soft, var(--lr-border-soft));
             border-radius: 10px;
             background: var(--card, rgba(30,41,59,.55));
             overflow: hidden;
@@ -21,7 +21,7 @@
             justify-content: space-between;
             padding: 10px 14px;
             background: rgba(139,92,246,.08);
-            border-bottom: 1px solid var(--soft, rgba(148,163,184,.12));
+            border-bottom: 1px solid var(--soft, var(--lr-border-soft));
         }
         .class-module-header h4 {
             margin: 0;
@@ -45,7 +45,7 @@
             padding: 8px;
         }
         .class-module-item {
-            border: 1px solid var(--soft, rgba(148,163,184,.12));
+            border: 1px solid var(--soft, var(--lr-border-soft));
             border-radius: 8px;
             margin-bottom: 8px;
             background: rgba(15,23,42,.35);
@@ -147,9 +147,9 @@
         .cm-counter input { width: 60px; text-align: center; }
         .cm-counter button {
             width: 26px; height: 26px;
-            border: 1px solid var(--soft, rgba(148,163,184,.2));
+            border: 1px solid var(--soft, var(--lr-border));
             border-radius: 6px;
-            background: rgba(51,65,85,.4);
+            background: var(--lr-bg-1);
             color: var(--text, #e2e8f0);
             font-weight: 700;
             cursor: pointer;
@@ -158,9 +158,9 @@
         /* Tags */
         .cm-tags {
             display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
-            border: 1px solid var(--soft, rgba(148,163,184,.12));
+            border: 1px solid var(--soft, var(--lr-border-soft));
             border-radius: 6px; padding: 4px 6px;
-            background: var(--input-bg, rgba(15,23,42,.6));
+            background: var(--input-bg, var(--lr-bg-1));
         }
         .cm-tag {
             display: inline-flex; align-items: center; gap: 2px;
@@ -181,8 +181,8 @@
         .cm-dice { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
         .cm-dice input { width: 80px; }
         .cm-dice-btn {
-            border: 1px solid var(--soft, rgba(148,163,184,.2));
-            border-radius: 6px; background: rgba(51,65,85,.4);
+            border: 1px solid var(--soft, var(--lr-border));
+            border-radius: 6px; background: var(--lr-bg-1);
             font-size: .9rem; cursor: pointer; padding: 3px 8px;
         }
         .cm-dice-btn:hover { border-color: var(--lr-abyssal); }
@@ -262,7 +262,7 @@
             display: block; width: 100%;
             margin-top: 10px;
             padding: 8px;
-            border: 1px solid var(--soft, rgba(148,163,184,.2));
+            border: 1px solid var(--soft, var(--lr-border));
             border-radius: 8px;
             background: none;
             color: var(--muted, #94a3b8);
@@ -287,8 +287,8 @@
         .class-module-fields textarea,
         .class-module-fields select {
             width: 100%;
-            background: var(--input-bg, rgba(15,23,42,.6));
-            border: 1px solid var(--soft, rgba(148,163,184,.12));
+            background: var(--input-bg, var(--lr-bg-1));
+            border: 1px solid var(--soft, var(--lr-border-soft));
             color: var(--text, #e2e8f0);
             padding: 5px 8px;
             border-radius: 6px;
@@ -344,7 +344,7 @@
         .class-module-step textarea {
             width: 100%;
             min-height: 32px;
-            background: var(--input-bg, rgba(15,23,42,.6));
+            background: var(--input-bg, var(--lr-bg-1));
             border: 1px solid var(--soft, rgba(148,163,184,.08));
             color: var(--text, #e2e8f0);
             padding: 4px 6px;
@@ -373,7 +373,7 @@
         }
         .class-module-add-step-btn {
             background: none;
-            border: 1px dashed var(--soft, rgba(148,163,184,.12));
+            border: 1px dashed var(--soft, var(--lr-border-soft));
             border-radius: 4px;
             color: var(--muted, #94a3b8);
             font-size: .7rem;
@@ -406,8 +406,8 @@
         }
         .cm-select-vd-wrap select {
             width: 100%;
-            background: var(--input-bg, rgba(15,23,42,.6));
-            border: 1px solid var(--soft, rgba(148,163,184,.12));
+            background: var(--input-bg, var(--lr-bg-1));
+            border: 1px solid var(--soft, var(--lr-border-soft));
             color: var(--text, #e2e8f0);
             padding: 5px 8px;
             border-radius: 6px;

@@ -251,7 +251,7 @@ body {
 
 .toolbar .hint-toolbar {
     font-size: 11px;
-    color: rgba(255, 255, 255, .45);
+    color: var(--lr-text-2);
     font-weight: 500
 }
 
@@ -1293,7 +1293,10 @@ body {
     line-height: 1;
     text-transform: uppercase;
     letter-spacing: 0.8px;
-    color: var(--lr-arcane-2);
+    /* A pilula de Fragmentos e um gradiente roxo fixo, igual nos dois temas:
+       o rotulo tem que ser branco fixo. --lr-arcane-2 virava azul escuro no
+       tema claro e o "FRAG$" sumia dentro do roxo. */
+    color: var(--lr-divine);
     padding-left: 7px;
     border-left: 1px solid rgba(165, 180, 252, 0.35);
 }
