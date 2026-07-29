@@ -93,7 +93,42 @@ window.initMesaTab = async function(mesaId) {
 
     // 4. Buscar e renderizar companheiros da mesa
     fetchAndRenderCompanions(mesaId);
+
+    // 5. Acompanhar a mesa em tempo real: se o mestre apagar a mesa ou mexer
+    //    em quem esta nela com a ficha aberta, o jogador ve na hora em vez de
+    //    so no proximo carregamento.
+    observarMesa(mesaId, mesaTabBtn, mesaTabContent);
 };
+
+/** Remove a aba Mesa e o atalho do Tabuleiro (mesa deixou de existir). */
+function desmontarAbaMesa(btn, conteudo) {
+    document.getElementById('btnTabuleiroFicha')?.remove();
+    const eraAtiva = btn.classList.contains('active');
+    btn.remove();
+    conteudo.remove();
+    // Se o jogador estava justamente nela, mandar para Principal em vez de
+    // deixar a ficha sem nenhuma aba marcada.
+    if (eraAtiva) document.querySelector('.tab[data-tab="tabPrincipal"]')?.click();
+}
+
+async function observarMesa(mesaId, btn, conteudo) {
+    try {
+        const { getFirestore, doc, onSnapshot, collection, query, where } =
+            await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const db = window.db || getFirestore();
+
+        onSnapshot(doc(db, 'mesas', mesaId), snap => {
+            if (!snap.exists()) desmontarAbaMesa(btn, conteudo);
+        }, e => console.warn('[mesa] observador da mesa parou:', e));
+
+        // Entrou ou saiu personagem: redesenha a lista.
+        onSnapshot(query(collection(db, 'char'), where('mesaId', '==', mesaId)),
+            () => fetchAndRenderCompanions(mesaId),
+            e => console.warn('[mesa] observador de companheiros parou:', e));
+    } catch (e) {
+        console.warn('[mesa] sem tempo real, fica valendo o que carregou:', e);
+    }
+}
 
 async function fetchAndRenderCompanions(mesaId) {
     // Importa dinamicamente funções do firebase para garantir que estejam disponíveis

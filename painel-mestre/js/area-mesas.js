@@ -140,7 +140,8 @@ window.openDeleteMesaModal = function() {
     const m = document.createElement('div'); m.className = 'modal active';
     m.innerHTML = `<div class="modal-content" style="max-width:500px;border:3px solid var(--danger)"><div class="modal-header" style="background:linear-gradient(135deg,var(--danger),#dc2626)"><span class="modal-title" style="color:#fff">⚠️ Deletar Mesa</span><button class="modal-close" onclick="this.closest('.modal').remove()">✕</button></div><div class="modal-body">
         <div style="color:#f87171;font-weight:700;margin-bottom:14px;text-align:center">Esta ação é IRREVERSÍVEL!</div>
-        <p style="text-align:center;margin-bottom:20px">Mesa: <strong>${escapeHtml(S.currentMesaData?.nome)}</strong></p>
+        <p style="text-align:center;margin-bottom:8px">Mesa: <strong>${escapeHtml(S.currentMesaData?.nome)}</strong></p>
+        <p style="text-align:center;margin-bottom:20px;font-size:.85rem;color:var(--muted)">Os personagens desta mesa nao serao apagados: ficam avulsos.</p>
         <div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancelar</button><button class="btn btn-danger" onclick="confirmDeleteMesa()">🗑️ DELETAR</button></div>
     </div></div>`;
     document.body.appendChild(m);
@@ -149,8 +150,16 @@ window.openDeleteMesaModal = function() {
 window.confirmDeleteMesa = async function() {
     if (!S.currentMesaId) return;
     try {
+        // Soltar os personagens ANTES de apagar a mesa. Se apagarmos primeiro e
+        // algo falhar aqui, sobra personagem apontando para mesa inexistente —
+        // era o que fazia a ficha montar aba de mesa morta com "companheiros"
+        // orfaos. Nesta ordem, o pior caso e personagem ja solto com a mesa
+        // ainda de pe, que o mestre resolve deletando de novo.
+        const chars = await getDocs(query(collection(db, 'char'), where('mesaId', '==', S.currentMesaId)));
+        await Promise.all(chars.docs.map(d => updateDoc(doc(db, 'char', d.id), { mesaId: null })));
+
         await deleteDoc(doc(db, 'mesas', S.currentMesaId));
-        showAlert('✅ Mesa deletada', 'success');
+        showAlert(`✅ Mesa deletada — ${chars.size} personagem(ns) ficaram avulsos`, 'success');
         document.querySelector('.modal.active')?.remove();
         window.closeMesa();
     } catch (e) { showAlert('❌ Erro: ' + e.message, 'danger'); }
