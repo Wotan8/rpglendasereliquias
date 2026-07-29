@@ -236,7 +236,7 @@ body {
 
 .tab {
     border: 2px solid var(--line);
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     padding: 10px 16px;
     border-radius: 10px;
@@ -330,7 +330,9 @@ body {
     padding: 10px;
     font-size: 14px;
     outline: none;
-    background: var(--lr-divine);
+    /* --paper, não --lr-divine: o quase-branco literal deixava o texto
+       (--ink = #F2F2F2, vindo de tokens.css) invisível no tema claro. */
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -384,7 +386,7 @@ body {
     padding: 8px 4px;
     font-size: 13px;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font);
     text-align: center
@@ -441,7 +443,7 @@ body {
     font-weight: 700;
     text-align: center;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -472,7 +474,7 @@ body {
     border: 2px solid var(--line);
     border-radius: 999px;
     cursor: pointer;
-    background: var(--lr-divine);
+    background: var(--paper);
     transition: background .12s, transform .1s;
     padding: 0;
     outline: none;
@@ -718,7 +720,7 @@ body {
     padding: 8px;
     font-size: 13px;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -808,7 +810,7 @@ html.dark .test-total-field {
     padding: 8px 6px;
     font-size: 12px;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -823,7 +825,7 @@ html.dark .test-total-field {
     height: 32px;
     border: 1px solid var(--soft) !important;
     border-radius: 8px !important;
-    background: var(--lr-divine) !important;
+    background: var(--paper) !important;
     color: var(--muted) !important;
     cursor: pointer;
     font-size: 14px;
@@ -873,7 +875,7 @@ html.dark .test-total-field {
     padding: 10px;
     font-size: 13px;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -926,7 +928,7 @@ html.dark .test-total-field {
     min-width: auto !important;
     border: 1px solid var(--soft) !important;
     border-radius: 6px !important;
-    background: var(--lr-divine) !important;
+    background: var(--paper) !important;
     cursor: pointer;
     transition: all .15s
 }
@@ -1009,7 +1011,7 @@ html.dark .test-total-field {
     font-weight: 700;
     border: 2px solid var(--line);
     border-radius: 8px;
-    background: var(--lr-divine);
+    background: var(--paper);
     cursor: pointer;
     font-family: var(--font);
     transition: all .15s
@@ -1041,7 +1043,7 @@ html.dark .test-total-field {
 button,
 .btn {
     border: 2px solid var(--line);
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     padding: 10px 12px;
     border-radius: 10px;
@@ -1060,7 +1062,7 @@ button:hover {
 
 .add-btn {
     border: 2px dashed var(--soft);
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--muted);
     font-weight: 700;
     width: 100%;
@@ -1106,7 +1108,7 @@ button:hover {
     font-weight: 800;
     text-transform: uppercase;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1132,7 +1134,7 @@ button:hover {
     border: 2px solid var(--soft);
     border-radius: 8px;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font);
     width: 100%;
@@ -1166,7 +1168,7 @@ button:hover {
     padding: 8px;
     font-size: 13px;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font);
     resize: vertical;
@@ -1202,7 +1204,7 @@ button:hover {
     font-weight: 800;
     text-transform: uppercase;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1228,7 +1230,7 @@ button:hover {
     border: 2px solid var(--soft);
     border-radius: 8px;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font);
     width: 100%
@@ -1254,7 +1256,7 @@ button:hover {
     font-weight: 700;
     text-align: center;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1285,7 +1287,7 @@ button:hover {
     font-size: 11px;
     font-weight: 700;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1298,7 +1300,7 @@ button:hover {
     font-size: 11px;
     line-height: 1.4;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font);
     resize: vertical;
@@ -1337,7 +1339,7 @@ button:hover {
     font-weight: 800;
     text-transform: uppercase;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1363,7 +1365,7 @@ button:hover {
     border: 2px solid var(--soft);
     border-radius: 8px;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font);
     width: 100%;
@@ -1447,7 +1449,7 @@ button:hover {
     font-size: 12px;
     font-weight: 800;
     text-transform: uppercase;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font);
     outline: none
@@ -1461,7 +1463,7 @@ button:hover {
     padding: 6px 4px;
     font-size: 11px;
     font-weight: 700;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font);
     outline: none
@@ -1473,7 +1475,7 @@ button:hover {
     border-radius: 8px;
     padding: 6px 8px;
     font-size: 11px;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font);
     outline: none
@@ -1580,7 +1582,7 @@ button:hover {
     padding: 2px 4px;
     font-size: 8px;
     font-weight: 700;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font);
     outline: none;
@@ -1620,7 +1622,7 @@ button:hover {
     padding: 6px 8px;
     font-size: 11px;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font);
     resize: vertical;
@@ -1683,7 +1685,7 @@ button:hover {
     padding: 6px 4px;
     font-size: 11px;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font)
 }
@@ -1738,7 +1740,7 @@ button:hover {
     padding: 1px 2px;
     font-size: 7px;
     font-weight: 700;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font);
     outline: none;
@@ -2833,7 +2835,7 @@ html.dark .pec-capacidade {
     border: 2px solid var(--line);
     border-radius: 10px;
     padding: 8px 4px;
-    background: var(--lr-divine);
+    background: var(--paper);
 }
 
 html.dark .dv-value-row {
@@ -2885,7 +2887,7 @@ html.dark .dv-value-row {
     font-weight: 700;
     text-align: center;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font);
 }

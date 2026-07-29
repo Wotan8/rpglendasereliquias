@@ -281,7 +281,7 @@ body {
 
 .tab {
     border: 2px solid var(--line);
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     padding: 10px 16px;
     border-radius: 10px;

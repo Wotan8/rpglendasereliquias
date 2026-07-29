@@ -40,7 +40,7 @@
     font-family: var(--font);
     border: 2px solid var(--soft);
     border-radius: 8px;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     -moz-appearance: textfield;
 }
@@ -181,7 +181,7 @@
     font-weight: 800;
     text-align: center;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font);
 }

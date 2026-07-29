@@ -311,7 +311,7 @@ html.dark .mechsel-search {
     border-radius: 6px;
     font-size: .78rem;
     font-family: var(--font);
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
 }
 
@@ -328,7 +328,7 @@ html.dark .mechsel-search-bar input {
     font-size: .72rem;
     font-weight: 700;
     font-family: var(--font);
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     cursor: pointer;
 }

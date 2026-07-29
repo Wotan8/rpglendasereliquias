@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v73';
+const VERSION = 'v74';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -47,8 +47,6 @@ const PRECACHE_URLS = [
   '/ficha-v1.7_1/css/equip-modal.css',
   '/ficha-v1.7_1/css/inventory.css',
   '/ficha-v1.7_1/css/print.css',
-  '/ficha-v1.7_1/css/styles.css',
-  '/ficha-v1.7_1/css/styles_FIX.css',
   '/ficha-v1.7_1/css/styles_v2.css',
   '/ficha-v1.7_1/ficha-v1.7_1.html',
   '/ficha-v1.7_1/js/aliado-inventario.js',

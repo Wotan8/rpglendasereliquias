@@ -149,7 +149,7 @@ html.dark .sheet {
     padding: 10px;
     font-size: 14px;
     outline: none;
-    background: var(--lr-divine);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font);
     transition: border-color .2s, box-shadow .2s;
@@ -287,7 +287,7 @@ html.dark .btn:hover {
     border: 2px solid var(--line);
     border-radius: 999px;
     cursor: pointer;
-    background: var(--lr-divine);
+    background: var(--paper);
     transition: background .12s, transform .1s, box-shadow .15s;
     padding: 0;
     outline: none;
