@@ -4,7 +4,7 @@
 // Alfinetes avançados, Luz, Templates AoE, Terreno difícil, Pan/Zoom/Pinch,
 // Cursores/Pings, Menu radial, Undo/Redo, Atalhos e toque.
 // =============================================
-import { setDoc } from '../../painel-mestre/js/firebase-config.js';
+import { setDoc, deleteDoc } from '../../painel-mestre/js/firebase-config.js';
 import { T, esc, toast, markDirty, gridSize, can, camadasVisiveis, objVisivel, tokenDoUsuario, pxParaUnidades, fmtDist, fmtViagem, getCamada, cfgGrid, upcEm, unidadeEm, sincLarguraReal, selecionar, CENARIO_INTERATIVO,
          deveAtualizarPasso, DRAG_WRITE_MS, DRAG_PASSO_CELULA } from './tab-state.js';
 import { refReguas, abrirModal, fecharModal } from './tab-main.js';
@@ -1062,7 +1062,9 @@ function clampCamera() {
 // lado, e o rastro remoto ficava picado/incompleto).
 const filaRegua = criarFilaDeEscrita({
     write: (_id, dados) => {
-        setDoc(refReguas(), { [T.user.uid]: dados }, { merge: true }).catch(()=>{});
+        // doc próprio: overwrite (é pequeno); régua encerrada = doc apagado
+        const ref = refReguas(T.user.uid);
+        (dados ? setDoc(ref, dados) : deleteDoc(ref)).catch(() => {});
     },
 });
 function compartilharRegua(pontos, label) {

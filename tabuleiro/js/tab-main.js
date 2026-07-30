@@ -31,7 +31,9 @@ export const refObjetos = (id) => collection(db, 'mesas', T.mesaId, 'tabuleiros'
 export const refObjeto = (objId) => doc(db, 'mesas', T.mesaId, 'tabuleiros', T.canvasId, 'objetos', objId);
 export const refEstado = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'estado');
 export const refCombate = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'combate');
-export const refReguas = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'reguas');
+// Réguas: mesma divisão da presença — um doc por usuário (ver colPresenca).
+export const colReguas = () => collection(db, 'mesas', T.mesaId, 'reguas');
+export const refReguas = (uid) => doc(db, 'mesas', T.mesaId, 'reguas', uid);
 // Presença: um doc POR USUÁRIO. No doc único antigo, N pessoas mexendo o mouse
 // disputavam o mesmo doc (fila de escrita no servidor) e cada movimento reenviava
 // os N cursores para os N clientes. Separado, cada um escreve só no seu e o
@@ -190,9 +192,15 @@ async function iniciarSync() {
     }));
 
     // Réguas compartilhadas — expiração pelo relógio LOCAL de recebimento,
-    // nunca pelo `t` do outro aparelho (ver marcarRecebimentoReguas)
-    T.unsubs.push(onSnapshot(refReguas(), s => {
-        const novas = s.exists() ? s.data() : {};
+    // nunca pelo `t` do outro aparelho (ver marcarRecebimentoReguas).
+    // docChanges reconstrói o mapa uid->régua e a MESMA função testada de TTL
+    // continua decidindo o carimbo de chegada.
+    T.unsubs.push(onSnapshot(colReguas(), s => {
+        const novas = { ...T.reguasRemotas };
+        s.docChanges().forEach(ch => {
+            if (ch.type === 'removed') delete novas[ch.doc.id];
+            else novas[ch.doc.id] = ch.doc.data();
+        });
         T.reguasRecebidas = marcarRecebimentoReguas(T.reguasRemotas, novas, T.reguasRecebidas, Date.now());
         T.reguasRemotas = novas;
         markDirty();

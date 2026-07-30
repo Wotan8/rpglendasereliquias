@@ -393,6 +393,12 @@ service cloud.firestore {
         allow write: if isMaster() || (ehJogadorDaMesa() && request.auth.uid == uid);
       }
 
+      // Réguas compartilhadas: mesma divisão — um doc por usuário
+      match /reguas/{uid} {
+        allow read: if isSignedIn();
+        allow write: if isMaster() || (ehJogadorDaMesa() && request.auth.uid == uid);
+      }
+
       // Metadados ao vivo: estado/combate/réguas/pings/legenda/musica
       match /tabuleiro-meta/{docId} {
         allow read: if isSignedIn();
