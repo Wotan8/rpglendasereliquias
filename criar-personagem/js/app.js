@@ -526,7 +526,7 @@ function renderRepertorioSelecionado() {
         const item = gruposAgrupados[key];
         let tagHtml = '';
         if (item.isExp) tagHtml += `<span style="background:var(--primary);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;">+${item.expAmount * item.quantidadeTotalConsumida} EXP${item.isExpVip ? ' (VIP)' : ''}</span>`;
-        if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagHtml += `<span style="background:#8b5cf6;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;">🎒 Equipamentos: ${item.personagemItensVinculados.length}</span>`;
+        if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagHtml += `<span style="background:var(--lr-abyssal);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-left:8px;">🎒 Equipamentos: ${item.personagemItensVinculados.length}</span>`;
 
         const encodedKey = escHtml(key).replace(/'/g, "\\'");
 
@@ -628,7 +628,7 @@ window.openRepertorioModal = async function() {
             
             let tagsHtml = '';
             if (grupo.isExp) tagsHtml += `<span style="background:var(--primary);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;margin-right:4px;">⭐ +${grupo.expAmount} EXP${grupo.isExpVip ? ' (VIP)' : ''}</span>`;
-            if (grupo.personagemItensVinculados?.length > 0) tagsHtml += `<span style="background:#8b5cf6;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">🎒 Equipamentos Especiais</span>`;
+            if (grupo.personagemItensVinculados?.length > 0) tagsHtml += `<span style="background:var(--lr-abyssal);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">🎒 Equipamentos Especiais</span>`;
 
             window._tempGruposIndices = window._tempGruposIndices || {};
             window._tempGruposDados = window._tempGruposDados || {};

@@ -2398,7 +2398,10 @@ html.dark .teste-quando {
 html.dark .bg-red input {
     background: #450a0a !important;
     border-color: var(--lr-blood) !important;
-    color: var(--lr-blood-soft) !important;
+    /* Era var(--lr-blood-soft) — token de FUNDO translucido (alpha .22) usado
+       como cor de texto. Dava 1.78:1: o valor digitado ficava invisivel. A
+       regra clara nao declara cor nenhuma; aqui a tinta do tema da 14.42:1. */
+    color: var(--lr-text-1) !important;
 }
 
 html.dark .bg-green input {
@@ -2812,12 +2815,16 @@ html.dark .pec-capacidade {
     margin-bottom: 4px;
     font-size: 11px;
     font-weight: 600;
-    color: #5eead4;
+    /* Os dois eram teal cravado (#5eead4 / #2dd4bf), pensados para tooltip
+       escuro. Mas .dv-tooltip usa var(--lr-bg-1), que no tema claro e papel:
+       1.24:1 e 1.56:1. --lr-nature acompanha o tema (5.4:1 no claro). O peso
+       e o tamanho ja separam rotulo de valor, nao precisa de dois tons. */
+    color: var(--lr-nature);
 }
 
 .dv-tooltip-creation-val {
     font-weight: 900;
-    color: #2dd4bf;
+    color: var(--lr-nature);
     font-size: 12px;
 }
 
@@ -3287,7 +3294,9 @@ html.dark .field-locked {
 
 .detail-level-badge.positivo {
     background: rgba(39, 174, 96, .12);
-    color: #27ae60;
+    /* #27ae60 sobre o proprio verde a 12% dava 2.48:1. --lr-nature acompanha
+       o tema e da 5.55:1 no claro. */
+    color: var(--lr-nature);
     border: 1px solid rgba(39, 174, 96, .3);
 }
 

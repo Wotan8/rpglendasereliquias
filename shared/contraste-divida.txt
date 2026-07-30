@@ -10,17 +10,7 @@
 #   rgba(14,17,23,a)  / rgba(31,38,48,a)    painel escuro cravado na mao
 #   color: var(--lr-divine)                 branco fixo como texto de corpo
 
-criar-personagem/css/styles.css  .firebase-save-indicator.saving
-
-criar-personagem/js/app.js  linha 529
-criar-personagem/js/app.js  linha 631
 criar-personagem/js/equipment-module.js  linha 147
-ficha-v1.7_1/css/styles_v2.css  .aura-grade-indicator
-ficha-v1.7_1/css/styles_v2.css  .aura-grau-badge-display
-ficha-v1.7_1/css/styles_v2.css  .detail-level-badge.positivo
-ficha-v1.7_1/css/styles_v2.css  .dv-tooltip-creation-const
-ficha-v1.7_1/css/styles_v2.css  .dv-tooltip-creation-val
-ficha-v1.7_1/css/styles_v2.css  html.dark .bg-red input
 ficha-v1.7_1/css/styles_v2.css  html.dark .detail-aura-grade
 ficha-v1.7_1/css/styles_v2.css  html.dark .detail-level-badge.negativo
 ficha-v1.7_1/js/aliados.js  linha 263
@@ -44,7 +34,6 @@ painel-criador/css/painel-criador.css  .mech-eqreq-index
 painel-criador/css/painel-criador.css  .tags-container .tag button:hover
 painel-mestre/css/area-npcs.css  .filter-chip-close:hover
 painel-mestre/css/area-npcs.css  .npcv2-section-btn.active
-painel-mestre/css/modais.css  .modal-danger .modal-title
 painel-mestre/js/area-apoio.js  linha 1089
 painel-mestre/js/area-apoio.js  linha 1090
 painel-mestre/js/area-apoio.js  linha 1091
@@ -58,14 +47,3 @@ worldbuilding/css/wb-ferramentas.css  .wb-badge--draft
 worldbuilding/css/wb-ferramentas.css  .wb-badge--pub
 worldbuilding/css/wb-ferramentas.css  .wb-health-card.is-info .wb-health-card__v
 worldbuilding/css/wb-ferramentas.css  .wbt-graph-legend
-worldbuilding/css/worldbuilding.css  .chronology-visual-count
-worldbuilding/css/worldbuilding.css  .entity-type-badge
-worldbuilding/css/worldbuilding.css  .event-bar
-worldbuilding/css/worldbuilding.css  .feira-escala
-worldbuilding/css/worldbuilding.css  .feira-frequencia
-worldbuilding/css/worldbuilding.css  .highlight-tag
-worldbuilding/css/worldbuilding.css  .modal-close
-worldbuilding/css/worldbuilding.css  .modal-title
-worldbuilding/css/worldbuilding.css  .session-gallery-item .gallery-label
-worldbuilding/css/worldbuilding.css  .session-item-tag .remove-tag:hover
-worldbuilding/js/wb-core.js  linha 1250

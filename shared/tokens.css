@@ -25,7 +25,10 @@
     --lr-border-soft: #E3DFD3;   /* Bordas internas discretas          */
 
     --lr-text-1:      #14181D;   /* Texto principal — tinta            */
-    --lr-text-2:      #55606E;   /* Texto secundário / rótulos         */
+    /* Escurecido de #55606E: em cima de chip translúcido de slate
+       (rgba(100,116,139,.3), usado em .highlight-tag e afins) o valor antigo
+       dava 4.34:1 — abaixo do mínimo. Agora 5.21:1 lá e 7.43:1 no papel. */
+    --lr-text-2:      #4A5462;   /* Texto secundário / rótulos         */
     --lr-divine:      #F6F7FB;   /* Branco Divino — texto sobre cor    */
 
     --lr-gold:        #6E5413;   /* Dourado — ação primária, foco      */

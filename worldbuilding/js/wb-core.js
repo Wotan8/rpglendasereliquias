@@ -910,11 +910,14 @@ import {
         }
 
         function renderFeiraCard(feira) {
+            // A pilula .feira-escala tem texto branco fixo, entao a cor aqui
+            // precisa ser escura o bastante para o branco ler: o ambar e o
+            // vermelho antigos (#F59E0B, #EF4444) davam 2.15:1 e 3.76:1.
             const escalaColors = {
                 pequena: '#6B7280',
-                media: '#3B82F6',
-                grande: '#F59E0B',
-                excepcional: '#EF4444'
+                media: '#1D4ED8',
+                grande: '#B45309',
+                excepcional: '#B91C1C'
             };
 
             return `
@@ -1247,7 +1250,7 @@ import {
                                         </div>
                                     ` : '<p style="font-size: 0.85rem; color: var(--lr-text-2); margin-bottom: 15px;">Sem marcas</p>'}
                                     ${rep.notas ? `
-                                        <div class="rep-notes" style="font-size: 0.8rem; color: var(--lr-text-2); padding: 10px; background: rgba(14, 17, 23, 0.4); border-radius: 8px; border-left: 3px solid var(--primary);">
+                                        <div class="rep-notes" style="font-size: 0.8rem; color: var(--lr-text-2); padding: 10px; background: var(--lr-surface-2); border-radius: 8px; border-left: 3px solid var(--primary);">
                                             <strong>Notas:</strong> ${rep.notas}
                                         </div>
                                     ` : ''}

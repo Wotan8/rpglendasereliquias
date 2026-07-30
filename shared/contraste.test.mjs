@@ -36,6 +36,26 @@ const PERMITIDAS = new Set([
     // contra as superficies da pagina — onde ele de fato nunca cai.
     'menu/css/menu.css .frag-label',
     'menu/css/menu.css .frag-amount',
+    // Cabecalho de modal pintado com gradiente escuro — o branco em cima dele
+    // e o certo. A medicao nao le gradiente, entao mede o texto contra as
+    // superficies da pagina, onde ele nunca cai.
+    // worldbuilding: .modal-header e linear-gradient(--primary, --secondary);
+    // o .modal-close e um circulo rgba(255,255,255,.2) EM CIMA desse gradiente.
+    'worldbuilding/css/worldbuilding.css .modal-title',
+    'worldbuilding/css/worldbuilding.css .modal-close',
+    // .modal-danger .modal-header e gradiente(--danger, --lr-blood-2).
+    'painel-mestre/css/modais.css .modal-danger .modal-title',
+    // Barra da linha do tempo: todo .event-bar.<tipo> tem fundo gradiente
+    // (npc, location, combat, quest, moment). Branco e o texto correto.
+    'worldbuilding/css/worldbuilding.css .event-bar',
+    // Pilula de escala da feira: o fundo vem inline de escalaColors, em
+    // wb-core.js — cores saturadas escuras, todas >= 4.8:1 com branco.
+    'worldbuilding/css/worldbuilding.css .feira-escala',
+    // Badge de grau de aura: o fundo e `grau.cor`, escolhido pelo criador no
+    // cadastro (aura.js / core.js). Cor arbitraria vinda de dado — branco e o
+    // padrao razoavel, e daqui nao da para saber qual cor vai cair ali.
+    'ficha-v1.7_1/css/styles_v2.css .aura-grade-indicator',
+    'ficha-v1.7_1/css/styles_v2.css .aura-grau-badge-display',
 ]);
 
 /* ---------- cor ---------- */
