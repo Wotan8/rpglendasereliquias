@@ -15,7 +15,12 @@ const refs = {};
 const walk = (node, mecNome) => {
   if (!node || typeof node !== 'object') return;
   if (Array.isArray(node)) return node.forEach(x => walk(x, mecNome));
+  // Duas formas convivem no banco. Varrer só a primeira dava um falso "nenhuma
+  // tag em uso" — as 8 penalidades de armadura usam a segunda.
+  //   1) { kind: 'tag', value: 'X' }
+  //   2) { targetTipo: 'tag', tag: 'X' }   ← config.equipReqs[]
   if (node.kind === 'tag' && node.value) (refs[node.value] ||= new Set()).add(mecNome);
+  if (node.targetTipo === 'tag' && node.tag) (refs[node.tag] ||= new Set()).add(mecNome);
   for (const v of Object.values(node)) walk(v, mecNome);
 };
 snap.docs.forEach(d => walk(d.data(), d.data().nome || d.id));

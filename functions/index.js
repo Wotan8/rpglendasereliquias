@@ -9,6 +9,7 @@ const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { aplicarCompra } = require("./entrega-calc");
 
 initializeApp();
 const db = getFirestore();
@@ -308,79 +309,237 @@ exports.registrarLogFragmentos = onDocumentWritten(
 );
 
 // =============================================
+// COMPRA EM DINHEIRO REAL — validação e registro da intenção
+// Compartilhado pelo checkout do PagBank e pelo pedido em dinheiro:
+// o preço vem SEMPRE do Firestore; o navegador envia só itemId + metas.
+// Devolve { pendingRef, item, valorCentavos, quantidade, metas }.
+// =============================================
+async function registrarCompraPendente(request, status) {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Você precisa estar logado para comprar.");
+  }
+
+  const uid = request.auth.uid;
+  const email = request.auth.token.email || "";
+  const { itemId, selectedMetas, quantidade: reqQuantidade, recaptchaToken } = request.data || {};
+
+  // Verificação anti-bot ANTES de qualquer operação de pagamento
+  await verificarRecaptcha(recaptchaToken, "comprar_loja");
+
+  let quantidade = parseInt(reqQuantidade) || 1;
+  if (quantidade < 1) quantidade = 1;
+  if (quantidade > 99) quantidade = 99;
+
+  if (!itemId || typeof itemId !== "string") {
+    throw new HttpsError("invalid-argument", "itemId é obrigatório.");
+  }
+
+  const itemSnap = await db.collection("loja_itens").doc(itemId).get();
+  if (!itemSnap.exists) {
+    throw new HttpsError("not-found", "Item não encontrado.");
+  }
+  const item = itemSnap.data();
+
+  const valorCentavos = getValorCentavos(item);
+  if (valorCentavos <= 0) {
+    throw new HttpsError("failed-precondition", "Este item não está à venda por dinheiro real.");
+  }
+  // Campo real usado pelo projeto é `isVendaAtiva` (default true quando ausente)
+  if (item.isVendaAtiva === false) {
+    throw new HttpsError("failed-precondition", "Este item não está à venda no momento.");
+  }
+
+  // Mesma validação de metas de comprarComFragmentos
+  let metas = [];
+  if (item.modoSelecaoMeta) {
+    const limit = item.qtdSelecaoMeta || item.quantidadeMetasSelecionaveis || 1;
+    const allowed = item.metasVinculadas || [];
+    metas = Array.isArray(selectedMetas) ? selectedMetas : [];
+    if (metas.length > limit) {
+      throw new HttpsError("invalid-argument", `Você pode escolher no máximo ${limit} meta(s).`);
+    }
+    if (metas.some((m) => typeof m !== "string" || !allowed.includes(m))) {
+      throw new HttpsError("invalid-argument", "Meta inválida selecionada.");
+    }
+  } else {
+    metas = item.metasVinculadas || [];
+  }
+
+  // Registro da intenção de compra (também serve de trilha de auditoria)
+  const pendingRef = db.collection("compras_pendentes").doc();
+  await pendingRef.set({
+    uid,
+    email,
+    itemId,
+    itemNome: item.nome,
+    valorCentavos,
+    quantidade,
+    totalCentavos: valorCentavos * quantidade,
+    selectedMetas: metas,
+    status,
+    criadoEm: FieldValue.serverTimestamp(),
+  });
+
+  return { pendingRef, item, itemId, valorCentavos, quantidade, metas };
+}
+
+// =============================================
+// ENTREGA DOS BENEFÍCIOS DE UMA COMPRA EM DINHEIRO
+// Único caminho de entrega: usado pelo webhook do PagBank e pela
+// confirmação manual do mestre. Idempotente (compra CONCLUIDA nunca
+// é aplicada de novo) e sempre grava log imutável em `real_logs`.
+// `origem` é o rótulo do meio de pagamento ("PagBank" | "Dinheiro").
+// =============================================
+async function entregarCompra(pendingRef, pending, origem, extras = {}) {
+  const itemSnap = await db.collection("loja_itens").doc(pending.itemId).get();
+  const item = itemSnap.exists ? itemSnap.data() : { nome: pending.itemNome, descricao: "" };
+  const metasNamesStr = await getMetasNames(pending.selectedMetas || []);
+  const userRef = await resolveUserRef(pending.uid, pending.email || "");
+
+  await db.runTransaction(async (tx) => {
+    const pSnap = await tx.get(pendingRef);
+    if (pSnap.data().status === "CONCLUIDA") return; // corrida entre notificações
+
+    const uSnap = await tx.get(userRef);
+    if (!uSnap.exists) throw new Error("Usuário não encontrado: " + pending.uid);
+    const data = uSnap.data();
+
+    const { inventario, logsCompra, apoios, notifications, quantidade, totalCentavos } =
+      aplicarCompra(data, item, { ...pending, compraId: pendingRef.id }, origem);
+
+    tx.update(userRef, { inventario, logsCompra, apoios, notifications });
+    tx.update(pendingRef, {
+      status: "CONCLUIDA",
+      concluidaEm: FieldValue.serverTimestamp(),
+      ...(extras.pendingExtra || {}),
+    });
+
+    // Log imutável de transação em dinheiro real (equivalente ao frag_logs)
+    tx.set(db.collection("real_logs").doc(), {
+      uid: pending.uid,
+      jogador: data.displayName || data.email || pending.email || "",
+      itemId: pending.itemId,
+      itemNome: item.nome,
+      valorCentavos: totalCentavos,
+      moeda: "BRL",
+      compraId: pendingRef.id,
+      checkoutId: pending.checkoutId || "",
+      orderId: "",
+      origem: `Compra na Loja (${origem})`,
+      detalhe: `${quantidade}x - ` + (metasNamesStr ? `Metas: ${metasNamesStr}` : ""),
+      criadoEm: FieldValue.serverTimestamp(),
+      ...(extras.logExtra || {}),
+    });
+  });
+}
+
+// Só o mestre (doc em `masters/{uid}`) passa daqui — mesma fonte de verdade das rules
+async function exigirMestre(request) {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Você precisa estar logado.");
+  }
+  const m = await db.collection("masters").doc(request.auth.uid).get();
+  if (!m.exists) {
+    throw new HttpsError("permission-denied", "Apenas o mestre pode confirmar pagamentos.");
+  }
+  return request.auth.token.email || request.auth.uid;
+}
+
+// =============================================
+// COMPRA EM DINHEIRO — PEDIDO DO JOGADOR (callable)
+// Sem gateway: registra o pedido e espera o mestre confirmar que
+// recebeu o dinheiro (na mão, PIX direto, etc.). A entrega acontece
+// só em confirmarCompraDinheiro.
+// =============================================
+exports.solicitarCompraDinheiro = onCall(
+  { secrets: [RECAPTCHA_SECRET], region: "southamerica-east1" },
+  async (request) => {
+    const { pendingRef, item, valorCentavos, quantidade } =
+      await registrarCompraPendente(request, "AGUARDANDO_CONFIRMACAO_MESTRE");
+
+    return {
+      compraId: pendingRef.id,
+      itemNome: item.nome,
+      totalCentavos: valorCentavos * quantidade,
+    };
+  }
+);
+
+// =============================================
+// COMPRA EM DINHEIRO — CONFIRMAÇÃO DO MESTRE (callable)
+// aprovar=true  → entrega os benefícios (mesmo caminho do webhook)
+// aprovar=false → cancela e avisa o jogador
+// =============================================
+exports.confirmarCompraDinheiro = onCall(
+  { region: "southamerica-east1" },
+  async (request) => {
+    const autor = await exigirMestre(request);
+    const { compraId, aprovar } = request.data || {};
+
+    if (!compraId || typeof compraId !== "string") {
+      throw new HttpsError("invalid-argument", "compraId é obrigatório.");
+    }
+
+    const pendingRef = db.collection("compras_pendentes").doc(compraId);
+    const snap = await pendingRef.get();
+    if (!snap.exists) {
+      throw new HttpsError("not-found", "Pedido não encontrado.");
+    }
+    const pending = snap.data();
+
+    if (pending.status === "CONCLUIDA") {
+      throw new HttpsError("failed-precondition", "Este pedido já foi entregue.");
+    }
+    if (pending.status !== "AGUARDANDO_CONFIRMACAO_MESTRE") {
+      throw new HttpsError("failed-precondition", "Este pedido não é de pagamento em dinheiro.");
+    }
+
+    if (aprovar === false) {
+      await pendingRef.update({
+        status: "CANCELADA",
+        canceladaEm: FieldValue.serverTimestamp(),
+        canceladaPor: autor,
+      });
+
+      // Avisa o jogador — sem isso o pedido some sem explicação
+      const userRef = await resolveUserRef(pending.uid, pending.email || "");
+      await db.runTransaction(async (tx) => {
+        const uSnap = await tx.get(userRef);
+        if (!uSnap.exists) return;
+        const notifications = uSnap.data().notifications || [];
+        notifications.unshift({
+          id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
+          type: "master_message",
+          message: `❌ Pedido cancelado: ${pending.quantidade || 1}x ${pending.itemNome}. Fale com o mestre.`,
+          timestamp: Date.now(),
+          isNew: true,
+        });
+        if (notifications.length > 100) notifications.length = 100;
+        tx.update(userRef, { notifications });
+      });
+
+      return { ok: true, status: "CANCELADA" };
+    }
+
+    await entregarCompra(pendingRef, pending, "Dinheiro", {
+      pendingExtra: { confirmadaPor: autor },
+      logExtra: { confirmadaPor: autor },
+    });
+
+    return { ok: true, status: "CONCLUIDA" };
+  }
+);
+
+// =============================================
 // PAGBANK — CRIAÇÃO DO CHECKOUT (callable)
 // O jogador clica em "Comprar por R$" → esta função valida tudo,
 // registra a intenção de compra e devolve o link seguro do PagBank.
-// O preço vem SEMPRE do Firestore; o navegador envia só itemId + metas.
 // =============================================
 exports.criarCheckoutPagBank = onCall(
   { secrets: [PAGBANK_TOKEN, RECAPTCHA_SECRET], region: "southamerica-east1" },
   async (request) => {
-    if (!request.auth) {
-      throw new HttpsError("unauthenticated", "Você precisa estar logado para comprar.");
-    }
-
-    const uid = request.auth.uid;
-    const email = request.auth.token.email || "";
-    const { itemId, selectedMetas, quantidade: reqQuantidade, recaptchaToken } = request.data || {};
-
-    // Verificação anti-bot ANTES de qualquer operação de pagamento
-    await verificarRecaptcha(recaptchaToken, "comprar_loja");
-
-    let quantidade = parseInt(reqQuantidade) || 1;
-    if (quantidade < 1) quantidade = 1;
-    if (quantidade > 99) quantidade = 99;
-
-    if (!itemId || typeof itemId !== "string") {
-      throw new HttpsError("invalid-argument", "itemId é obrigatório.");
-    }
-
-    const itemSnap = await db.collection("loja_itens").doc(itemId).get();
-    if (!itemSnap.exists) {
-      throw new HttpsError("not-found", "Item não encontrado.");
-    }
-    const item = itemSnap.data();
-
-    const valorCentavos = getValorCentavos(item);
-    if (valorCentavos <= 0) {
-      throw new HttpsError("failed-precondition", "Este item não está à venda por dinheiro real.");
-    }
-    // Campo real usado pelo projeto é `isVendaAtiva` (default true quando ausente)
-    if (item.isVendaAtiva === false) {
-      throw new HttpsError("failed-precondition", "Este item não está à venda no momento.");
-    }
-
-    // Mesma validação de metas de comprarComFragmentos
-    let metas = [];
-    if (item.modoSelecaoMeta) {
-      const limit = item.qtdSelecaoMeta || item.quantidadeMetasSelecionaveis || 1;
-      const allowed = item.metasVinculadas || [];
-      metas = Array.isArray(selectedMetas) ? selectedMetas : [];
-      if (metas.length > limit) {
-        throw new HttpsError("invalid-argument", `Você pode escolher no máximo ${limit} meta(s).`);
-      }
-      if (metas.some((m) => typeof m !== "string" || !allowed.includes(m))) {
-        throw new HttpsError("invalid-argument", "Meta inválida selecionada.");
-      }
-    } else {
-      metas = item.metasVinculadas || [];
-    }
-
-    // Registro da intenção de compra (também serve de trilha de auditoria)
-    const totalCentavos = valorCentavos * quantidade;
-    const pendingRef = db.collection("compras_pendentes").doc();
-    await pendingRef.set({
-      uid,
-      email,
-      itemId,
-      itemNome: item.nome,
-      valorCentavos,
-      quantidade,
-      totalCentavos,
-      selectedMetas: metas,
-      status: "AGUARDANDO_PAGAMENTO",
-      criadoEm: FieldValue.serverTimestamp(),
-    });
+    const { pendingRef, item, itemId, valorCentavos, quantidade } =
+      await registrarCompraPendente(request, "AGUARDANDO_PAGAMENTO");
 
     const body = {
       reference_id: pendingRef.id,
@@ -506,88 +665,11 @@ exports.pagbankWebhook = onRequest(
       }
 
       // Aplica os benefícios — MESMOS formatos da compra com Frag$
-      const itemSnap = await db.collection("loja_itens").doc(pending.itemId).get();
-      const item = itemSnap.exists ? itemSnap.data() : { nome: pending.itemNome, descricao: "" };
-      const metasNamesStr = await getMetasNames(pending.selectedMetas || []);
-      const userRef = await resolveUserRef(pending.uid, pending.email || "");
-
-      await db.runTransaction(async (tx) => {
-        const pSnap = await tx.get(pendingRef);
-        if (pSnap.data().status === "CONCLUIDA") return; // corrida entre notificações
-
-        const uSnap = await tx.get(userRef);
-        if (!uSnap.exists) throw new Error("Usuário não encontrado: " + pending.uid);
-        const data = uSnap.data();
-
-        const quantidade = pending.quantidade || 1;
-        const totalCentavos = pending.totalCentavos || pending.valorCentavos;
-        const valorReais = (totalCentavos / 100).toFixed(2).replace(".", ",");
-
-        const inventario = data.inventario || [];
-        const existingItemIndex = inventario.findIndex(i => i.nome === item.nome);
-        if (existingItemIndex !== -1) {
-          inventario[existingItemIndex].quantidade = (inventario[existingItemIndex].quantidade || 1) + quantidade;
-        } else {
-          inventario.push({
-            ...item,
-            quantidade: quantidade,
-            formaRecebimento: "Comprado na Loja (PagBank)",
-          });
-        }
-
-        const logsCompra = data.logsCompra || [];
-        logsCompra.push({
-          itemId: pending.itemId,
-          nome: item.nome,
-          valorPago: totalCentavos,
-          moeda: "BRL",
-          compraId: pendingRef.id,
-          data: new Date().toISOString(),
-        });
-
-        const apoios = data.apoios || [];
-        apoios.push({
-          nome: item.nome,
-          tipo: "Loja (PagBank)",
-          montante: quantidade,
-          meta: (pending.selectedMetas || []).join(","),
-          valor: valorReais,
-          dataInicio: new Date().toISOString().split("T")[0],
-          recebido: true,
-        });
-
-        const notifications = data.notifications || [];
-        notifications.unshift({
-          id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
-          type: "master_message",
-          message: `💳 Compra Aprovada: Você adquiriu ${quantidade}x ${item.nome} por R$ ${valorReais}.`,
-          timestamp: Date.now(),
-          isNew: true,
-          data: { highlight: "importante" },
-        });
-        if (notifications.length > 100) notifications.length = 100;
-
-        tx.update(userRef, { inventario, logsCompra, apoios, notifications });
-        tx.update(pendingRef, {
-          status: "CONCLUIDA",
-          concluidaEm: FieldValue.serverTimestamp(),
-        });
-
-        // Log imutável de transação em dinheiro real (equivalente ao frag_logs)
-        tx.set(db.collection("real_logs").doc(), {
-          uid: pending.uid,
-          jogador: data.displayName || data.email || pending.email || "",
-          itemId: pending.itemId,
-          itemNome: item.nome,
-          valorCentavos: totalCentavos,
-          moeda: "BRL",
-          compraId: pendingRef.id,
+      await entregarCompra(pendingRef, pending, "PagBank", {
+        logExtra: {
           checkoutId: pending.checkoutId || checkoutId || "",
           orderId: orderId || "",
-          origem: "Compra na Loja (PagBank)",
-          detalhe: `${quantidade}x - ` + (metasNamesStr ? `Metas: ${metasNamesStr}` : ""),
-          criadoEm: FieldValue.serverTimestamp(),
-        });
+        },
       });
 
       res.status(200).send("ok: benefícios aplicados");
