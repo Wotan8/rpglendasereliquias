@@ -271,18 +271,6 @@ service cloud.firestore {
       allow create, update, delete: if isMaster();
     }
 
-    // ========== ADICIONADO: Coleção de ViewMaps (Navegador de Mapa) ==========
-    match /viewmaps/{mapId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isMaster();
-    }
-
-    // ========== ADICIONADO: Configurações do ViewMap (mapa favorito) ==========
-    match /viewmap-settings/{settingId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isMaster();
-    }
-
     // ========== ADICIONADO: Coleções de Worldbuilding ==========
     match /worldbuilding-geography/{docId} {
       allow read: if isSignedIn();

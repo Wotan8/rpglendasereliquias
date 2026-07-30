@@ -1,12 +1,6 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // ViewMap tiles - authenticated users can read/write
-    match /viewmap-tiles/{fileName} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-    
     // Hexmap terrain images - authenticated users can read/write
     match /hexmap-terrain/{fileName} {
       allow read: if request.auth != null;
