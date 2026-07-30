@@ -182,7 +182,8 @@ function _npcBodySlots(partes) {
         const qty = Math.max(1, parseInt(bp.slots) || 1);
         for (let i = 0; i < qty; i++) {
             const key = qty > 1 ? `${bp.id}_${i + 1}` : bp.id;
-            slots[key] = { label: qty > 1 ? `${bp.nome} ${i + 1}` : bp.nome, icon: bp.icone || '🦴', part: bp };
+            // partId é o que shared/equip-slots.js espera; `part` continua para o resto daqui
+            slots[key] = { label: qty > 1 ? `${bp.nome} ${i + 1}` : bp.nome, icon: bp.icone || '🦴', part: bp, partId: bp.id };
         }
     });
     return slots;
@@ -534,7 +535,9 @@ window.openNpcEquipModal = function(itemId) {
     if (!slotKeys.length) { showAlert('⚠️ Defina as partes do corpo do NPC antes de equipar itens.', 'warning'); return; }
 
     // Slots ocupados por outros itens equipados
-    const ocupados = new Set(NI.items.filter(i => i.equipado && i.id !== itemId && i.slotAnatomico).map(i => i.slotAnatomico));
+    // Um item de vários slots (armadura completa, arma de duas mãos) bloqueia todos.
+    const ocupados = new Set(NI.items.filter(i => i.equipado && i.id !== itemId)
+        .flatMap(i => window.EquipSlots.slotsDoItem(i)));
 
     // Restringe às partes permitidas do item, se definidas
     const permitidas = Array.isArray(item.equipavelEm) && item.equipavelEm.length ? new Set(item.equipavelEm) : null;
@@ -582,9 +585,23 @@ window.confirmNpcEquip = async function(itemId) {
     const slot = document.getElementById('npcEquipSlot')?.value;
     const estado = document.getElementById('npcEquipEstado')?.value;
     if (!slot || !estado) return;
+
+    const n = _npc();
+    const bodySlots = _npcBodySlots(n?.partesDoCorpo);
+    const nomeParte = pid => (n?.partesDoCorpo || []).find(b => b.id === pid)?.nome || pid;
+    const plano = window.EquipSlots.planejarEquipar(item, slot, NI.items, bodySlots, {
+        catalog: window._npcSys?.equipment || window._systemData?.equipment,
+        labelParte: nomeParte,
+    });
+    if (!plano.ok) {
+        showAlert(`⚠️ "${item.nome}" precisa de slots ocupados: ${plano.faltando.join(', ')}`, 'warning');
+        return;
+    }
+
     try {
         await setDoc(doc(db, 'items', itemId), {
-            equipado: true, slotAnatomico: slot, estadoEquip: estado, parentItemId: null,
+            equipado: true, slotAnatomico: slot, slotsOcupados: plano.extras,
+            estadoEquip: estado, parentItemId: null,
             lastModified: new Date().toISOString()
         }, { merge: true });
         addLog(S.currentUser?.email, `🎒 Item "${item.nome}" equipado no NPC`, _npcNome(), 'items', {
@@ -600,7 +617,7 @@ window.npcUnequipItem = async function(itemId) {
     const item = NI.items.find(i => i.id === itemId); if (!item) return;
     try {
         await setDoc(doc(db, 'items', itemId), {
-            equipado: false, slotAnatomico: null, estadoEquip: null,
+            equipado: false, slotAnatomico: null, slotsOcupados: [], estadoEquip: null,
             lastModified: new Date().toISOString()
         }, { merge: true });
         addLog(S.currentUser?.email, `🎒 Item "${item.nome}" desequipado do NPC`, _npcNome(), 'items', {
@@ -720,7 +737,7 @@ window._executeNpcTransfer = async function(itemId, targetId, targetKind) {
     try {
         const updateData = {
             characterId: targetId,
-            equipado: false, slotAnatomico: null, estadoEquip: null, parentItemId: null,
+            equipado: false, slotAnatomico: null, slotsOcupados: [], estadoEquip: null, parentItemId: null,
             lastModified: new Date().toISOString()
         };
         if (targetKind === 'npc') {

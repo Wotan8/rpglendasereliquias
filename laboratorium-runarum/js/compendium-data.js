@@ -236,7 +236,7 @@ ${RUNO_TABELAS.confluencias.map(c => `<tr><td><b>${c.elemento}</b></td><td>${c.a
     },
     {
         id: 'energia', icone: '🫀', titulo: 'Parte VIII — Energia', html: `
-<p>⟐ <b>Energia Máxima = (VIG + PRS) × 3</b>. Descanso curto restaura ¼; longo, o total. Energia ≠ Determinação (DET paga Manobras; Energia paga magia que passa pelo corpo).</p>
+<p>⟐ <b>Energia Máxima = (VIG + PRS) × 3</b>. Descanso curto restaura ¼; longo, o total.</p>
 <p>⟐ <b>Taxa de Conversão Vital: 1 Energia = 5 Ess</b> — universal (Pulso, Sifão Vital).</p>
 <h4>Limites do Corpo (§8.6)</h4>
 <ul><li>Energia a 0: colapso</li><li>&gt;50% da Energia máx. em &lt;1 min: teste de VIG ou desmaia</li><li>&lt;25% da Energia: −2 em todos os testes</li></ul>`

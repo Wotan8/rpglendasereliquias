@@ -9,7 +9,7 @@ function initPhase5(container) {
             <div class="section-title">💫 Escolha sua Virtude</div>
             <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
                 A virtude é o ideal mais nobre que seu personagem persegue.
-                Quando agir de acordo com ela em momentos de sacrifício, você recupera Determinação.
+                Quando agir de acordo com ela em momentos de sacrifício, você recupera Energia.
             </p>
             <div class="selection-grid" id="virtueGrid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
     `;
@@ -26,7 +26,7 @@ function initPhase5(container) {
                 <div class="soul-card-subtitle">${escHtml(v.subtitulo)}</div>
                 <div class="soul-card-desc">${escHtml(v.descricao)}</div>
                 <div class="soul-card-recupera">
-                    <strong>🔄 Recupera Determinação quando:</strong>
+                    <strong>🔄 Recupera Energia quando:</strong>
                     ${escHtml(v.recupera)}
                 </div>
             </div>
@@ -46,7 +46,7 @@ function initPhase5(container) {
             <div class="section-title">🔥 Escolha seu Vício</div>
             <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
                 O vício é a fraqueza que habita seu coração.
-                Quando ceder a ele com consequências reais, você recupera Determinação.
+                Quando ceder a ele com consequências reais, você recupera Energia.
             </p>
             <div class="selection-grid" id="viceGrid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
     `;
@@ -63,7 +63,7 @@ function initPhase5(container) {
                 <div class="soul-card-subtitle">${escHtml(v.subtitulo)}</div>
                 <div class="soul-card-desc">${escHtml(v.descricao)}</div>
                 <div class="soul-card-recupera">
-                    <strong>🔄 Recupera 1 Determinação quando:</strong>
+                    <strong>🔄 Recupera 1 Energia quando:</strong>
                     ${escHtml(v.recupera)}
                 </div>
             </div>

@@ -13,11 +13,11 @@ function initPhase2(container) {
     for (const tribe of tribes) {
         const sel = wizardState.triboSelecionada === tribe.nome ? 'selected' : '';
         html += `
-            <div class="selection-card card-visual ${sel}" data-tribe="${escHtml(tribe.nome)}" onclick="selectTribe('${escHtml(tribe.nome)}')">
+            <div class="selection-card card-visual ${sel}" data-tribe="${escHtml(tribe.nome)}" onclick="selectTribe(this.dataset.tribe)">
                 ${tribe.imagemUrl ? `<img class="selection-card-img-full" src="${escHtml(tribe.imagemUrl)}" alt="${escHtml(tribe.nome)}" loading="lazy">` : '<div class="selection-card-img-placeholder">🏕️</div>'}
                 <div class="selection-card-title">${escHtml(tribe.nome)}</div>
                 <div class="selection-card-subtitle">${escHtml(tribe.subtitulo || tribe.lema || '')}</div>
-                <button type="button" class="selection-card-info-btn" title="Ver detalhes de ${escHtml(tribe.nome)}" onclick="openTribeModal('${escHtml(tribe.nome)}', event)">
+                <button type="button" class="selection-card-info-btn" title="Ver detalhes de ${escHtml(tribe.nome)}" onclick="openTribeModal(this.closest('.selection-card').dataset.tribe, event)">
                     <span class="info-icon">ℹ️</span>
                     <span class="info-text">Ver detalhes</span>
                 </button>

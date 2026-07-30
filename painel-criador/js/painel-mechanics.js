@@ -3386,6 +3386,7 @@ window._pecSelConfirm = function (fieldId) {
     if (!results || !hidden) return;
 
     // Get existing to preserve nivelInicial
+    const reg0 = window._eqSelCache?.[fieldId] || {};
     const existingIds = JSON.parse(hidden.value || '[]');
     const existingMap = new Map();
     existingIds.forEach(item => {
@@ -3556,6 +3557,7 @@ window._dvSelConfirm = function (fieldId) {
     if (!results || !hidden) return;
 
     // Preserve existing valorInicial, min, max
+    const reg0 = window._eqSelCache?.[fieldId] || {};
     const existingIds = JSON.parse(hidden.value || '[]');
     const existingMap = new Map();
     existingIds.forEach(item => {
@@ -3645,21 +3647,87 @@ export function vitalStatusOptions(vitalStatsCache) {
     return out;
 }
 
-export function buildEquipmentDerivedValueSelectorHTML(fieldKey, label, currentIds, cache, noun = 'Valor Derivado') {
+/**
+ * Atributos como opções de seletor. O id JÁ é a chave usada nos dots da ficha
+ * (state.mechanicBonuses['attr_des']), então não precisa de resolução depois.
+ */
+export const ATRIBUTOS_VINCULAVEIS = [
+    { id: 'attr_for', nome: 'FOR — Força', icone: '💪' },
+    { id: 'attr_des', nome: 'DES — Destreza', icone: '🤸' },
+    { id: 'attr_vig', nome: 'VIG — Vigor', icone: '🫀' },
+    { id: 'attr_int', nome: 'INT — Inteligência', icone: '📚' },
+    { id: 'attr_rac', nome: 'RAC — Raciocínio', icone: '🧩' },
+    { id: 'attr_prs', nome: 'PRS — Perseverança', icone: '🪨' },
+    { id: 'attr_pre', nome: 'PRE — Presença', icone: '✨' },
+    { id: 'attr_man', nome: 'MAN — Manipulação', icone: '🎭' },
+    { id: 'attr_aut', nome: 'AUT — Autocontrole', icone: '🧘' },
+];
+
+/**
+ * Perícias como opções de seletor. Guarda o ID do Firestore (não a chave), para
+ * que renomear a perícia no painel não desfaça o vínculo — a ficha resolve
+ * id → sk_<categoria>_<key> na hora de aplicar.
+ */
+export function periciaOptions(skillsCache) {
+    const ICONE = { mental: '🧠', fisico: '💪', social: '💬', combate: '⚔️', exclusivo: '⭐' };
+    return (skillsCache || []).map(s => ({
+        id: s.id,
+        nome: s.nome,
+        icone: ICONE[String(s.categoria || '').toLowerCase()] || '🎯',
+        publicado: s.publicado,
+    }));
+}
+
+/**
+ * Chip de um vínculo com modificador. Usado na montagem inicial e no redesenho
+ * do confirm — estava duplicado nos dois, e o ON/OFF de escopo seria a terceira
+ * cópia a divergir.
+ *
+ * O ON/OFF só aparece em Valor Derivado com `escopoItem` (hoje só Acerto e
+ * Dano). Os outros 78 já são globais, e o botão ali seria um controle morto.
+ */
+function _eqDvChip(fieldId, dvObj, d) {
+    const reg = window._eqSelCache?.[fieldId] || {};
+    const campo = reg.campo || 'modificador';
+    const rotulo = reg.rotulo || 'Modificador';
+    const icon = d.icone || '📊';
+    const mod = dvObj[campo] || 0;
+    const escopoOn = dvObj.escopo === 'global';
+    const toggle = d.escopoItem
+        ? `<label style="margin-left:8px;font-size:.7rem;cursor:pointer" title="OFF: aplica no ${esc(d.nome)} deste item. ON: aplica no ${esc(d.nome)} do personagem.">
+             <input type="checkbox" ${escopoOn ? 'checked' : ''} onchange="window._eqDvSelEscopoChange('${fieldId}','${d.id}',this.checked)"> global
+           </label>`
+        : '';
+    const passo = campo === 'quantidade' ? '1" min="1' : '0.01';
+    return `<div class="mechsel-chip" style="border-left-color:#3b82f6;"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${esc(rotulo)}: <input type="number" step="${passo}" value="${mod}" style="width:60px;padding:2px;font-size:0.7rem;" onchange="window._eqDvSelLevelChange('${fieldId}', '${d.id}', '${campo}', this.value)">${toggle}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${d.id}')">✕</button></div>`;
+}
+
+window._eqDvSelEscopoChange = function (fieldId, did, global) {
+    const hidden = document.getElementById(fieldId);
+    if (!hidden) return;
+    const data = JSON.parse(hidden.value || '[]');
+    const idx = data.findIndex(p => (typeof p === 'object' ? p.id === did : p === did));
+    if (idx < 0) return;
+    if (typeof data[idx] !== 'object') data[idx] = { id: did, modificador: 0 };
+    if (global) data[idx].escopo = 'global';
+    else delete data[idx].escopo;   // ausente = comportamento padrão do VD
+    hidden.value = JSON.stringify(data);
+};
+
+export function buildEquipmentDerivedValueSelectorHTML(fieldKey, label, currentIds, cache, noun = 'Valor Derivado', campo = 'modificador', rotulo = 'Modificador') {
     // O confirm redesenha os chips e precisa do MESMO cache que montou as opções
-    // (VDs ou Status Vitais). Sem isso ele caía sempre no cache de VDs.
-    (window._eqSelCache ||= {})[`field_${fieldKey}`] = { cache, noun };
+    // (VDs, Status Vitais, Atributos, Perícias, Partes do Corpo). Sem isso ele
+    // caía sempre no cache de VDs. `campo` diz que propriedade o número grava.
+    (window._eqSelCache ||= {})[`field_${fieldKey}`] = { cache, noun, campo, rotulo };
     const published = cache.filter(d => d.publicado !== false);
-    const parsedIds = (currentIds || []).map(item => typeof item === 'object' ? item : { id: item, modificador: 0 });
+    const parsedIds = (currentIds || []).map(item => typeof item === 'object' ? item : { id: item, [campo]: 0 });
     const selectedIds = parsedIds.map(p => p.id);
 
     const chips = parsedIds.map(dvObj => {
         const did = dvObj.id;
         const d = cache.find(x => x.id === did);
         if (!d) return '';
-        const icon = d.icone || '📊';
-        
-        return `<div class="mechsel-chip" style="border-left-color:#3b82f6;"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">Modificador: <input type="number" step="0.01" value="${dvObj.modificador || 0}" style="width:60px;padding:2px;font-size:0.7rem;" onchange="window._eqDvSelLevelChange('field_${fieldKey}', '${did}', 'modificador', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${did}')">✕</button></div>`;
+        return _eqDvChip(`field_${fieldKey}`, dvObj, d);
     }).join('');
 
     const opts = published.map(d => {
@@ -3690,6 +3758,7 @@ window._eqDvSelConfirm = function (fieldId) {
     const hidden = document.getElementById(fieldId);
     if (!results || !hidden) return;
 
+    const reg0 = window._eqSelCache?.[fieldId] || {};
     const existingIds = JSON.parse(hidden.value || '[]');
     const existingMap = new Map();
     existingIds.forEach(item => {
@@ -3699,10 +3768,11 @@ window._eqDvSelConfirm = function (fieldId) {
 
     const checked = Array.from(results.querySelectorAll('input[type="checkbox"]:checked')).map(cb => {
         const ex = existingMap.get(cb.value);
-        return {
-            id: cb.value,
-            modificador: ex ? (ex.modificador || 0) : 0
-        };
+        const campo = reg0.campo || 'modificador';
+        const novo = { id: cb.value, [campo]: ex ? (ex[campo] || 0) : 0 };
+        // Sem isto, reconfirmar o seletor zerava o ON/OFF de escopo já marcado.
+        if (ex?.escopo) novo.escopo = ex.escopo;
+        return novo;
     });
 
     hidden.value = JSON.stringify(checked);
@@ -3718,11 +3788,8 @@ window._eqDvSelConfirm = function (fieldId) {
             chipsEl.innerHTML = `<span style="color:var(--muted);font-size:.75rem">Nenhum ${noun} vinculado</span>`;
         } else {
             chipsEl.innerHTML = checked.map(dvObj => {
-                const did = dvObj.id;
-                const d = cache.find(x => x.id === did);
-                if (!d) return '';
-                const icon = d.icone || '📊';
-                return `<div class="mechsel-chip" style="border-left-color:#3b82f6;"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">Modificador: <input type="number" step="0.01" value="${dvObj.modificador || 0}" style="width:60px;padding:2px;font-size:0.7rem;" onchange="window._eqDvSelLevelChange('${fieldId}', '${did}', 'modificador', this.value)"></div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${did}')">✕</button></div>`;
+                const d = cache.find(x => x.id === dvObj.id);
+                return d ? _eqDvChip(fieldId, dvObj, d) : '';
             }).join('');
         }
     }

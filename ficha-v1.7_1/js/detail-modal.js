@@ -168,6 +168,9 @@ function buildRaceDetailHTML(raceName) {
         html += _renderTextBlock('💡 Curiosidades', raceData.curiosidades);
     }
 
+    // 📖 Livro vinculado (Worldbuilding) — leitura dos capítulos liberados
+    html += window.lvSecaoHTML ? window.lvSecaoHTML(raceData) : '';
+
     // Peculiaridades vinculadas
     const raceBuilt = window.RACES?.[raceName];
     if (raceBuilt?.peculiaridades?.length > 0) {
@@ -262,6 +265,9 @@ function buildClassDetailHTML(className) {
         }
         html += '</div></div>';
     }
+
+    // 📖 Livro vinculado (Worldbuilding) — leitura dos capítulos liberados
+    html += window.lvSecaoHTML ? window.lvSecaoHTML(classData) : '';
 
     // Peculiaridades de Classe
     if (window.CLASS_PECULIARITIES?.[className]?.length > 0) {
@@ -486,6 +492,9 @@ function openTriboDetail() {
         html += `<div class="detail-subtitle">${_escDetail(tribeData.subtitulo)}</div>`;
     }
     html += _renderTextBlock('📖 Descrição', tribeData.descricao);
+
+    // 📖 Livro vinculado (Worldbuilding) — leitura dos capítulos liberados
+    html += window.lvSecaoHTML ? window.lvSecaoHTML(tribeData) : '';
 
     // Peculiaridades de tribo
     const tribe = window.TRIBES?.[val];

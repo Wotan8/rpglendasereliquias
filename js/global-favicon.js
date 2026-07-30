@@ -3,6 +3,9 @@
 // Incluído em todas as páginas do projeto.
 // =============================================
 
+// Badge de versão: entra por aqui porque este arquivo já é carregado por TODAS
+// as páginas — assim a VERSION do sw.js aparece em todas sem editar nenhuma.
+import { mostrarBadgeDeVersao } from '/js/version-badge.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
@@ -85,7 +88,7 @@ else if (path.includes('wizard.html') || path.includes('criacao.html')) pageId =
 else if (path.includes('ficha-v1.7_1.html')) pageId = 'ficha';
 else if (path.includes('painel-mestre.html')) pageId = 'painel-mestre';
 else if (path.includes('painel-criador.html')) pageId = 'painel-criador';
-else if (path.includes('mapa') || path.includes('hexmap') || path.includes('viewmap')) pageId = 'mapa';
+else if (path.includes('mapa') || path.includes('hexmap')) pageId = 'mapa';
 else if (path.includes('tabuleiro.html') || path.includes('/tabuleiro/')) pageId = 'tabuleiro';
 else if (path.includes('worldbuilding.html') || path.includes('/worldbuilding/')) pageId = 'worldbuilding';
 else if (path.includes('laboratorium.html') || path.includes('/laboratorium-runarum/')) pageId = 'laboratorium';
@@ -151,3 +154,5 @@ async function updateManifestIcon(iconUrl) {
 }
 
 updateFavicon();
+
+mostrarBadgeDeVersao();

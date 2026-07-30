@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Check — Livro Vinculado</title>
+    <link rel="stylesheet" href="shared/tokens.css">
+    <link rel="stylesheet" href="shared/texto-mundo.css">
+    <style>
+        body { font-family: system-ui, sans-serif; background: #14110f; color: #eee; padding: 24px; }
+        .detail-section { border: 1px solid #333; border-radius: 8px; padding: 12px; margin: 12px 0; }
+        .detail-section-title { font-weight: 700; margin-bottom: 6px; }
+        .detail-tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+        .detail-tag { background: #2a2622; border: 1px solid #443; border-radius: 999px; padding: 4px 10px; font-size: .85rem; }
+        #res div { margin: 2px 0; }
+        .ok { color: #4ade80; } .fail { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <h1>📖 Livro Vinculado — check</h1>
+    <div id="res"></div>
+    <h3>Raça com capítulos escolhidos (só 1 e 3)</h3>
+    <div id="alvo1"></div>
+    <h3>Classe sem escolha (livro inteiro)</h3>
+    <div id="alvo2"></div>
+    <h3>Tribo sem livro (nada deve aparecer)</h3>
+    <div id="alvo3"></div>
+
+    <script src="shared/livro-vinculado.js"></script>
+    <script>
+        const ACERVO = {
+            livros: [
+                { id: 'b1', title: 'Crônicas de Vasteluna', description: 'O livro da raça.' },
+                { id: 'b2', title: 'Manual do Guerreiro' },
+            ],
+            caps: [
+                { id: 'c1', bookId: 'b1', order: 1, title: 'O Despertar', synopsis: 'Como tudo começou.', contentHTML: '<p>Texto do capítulo <b>um</b>.</p>' },
+                { id: 'c2', bookId: 'b1', order: 2, title: 'A Queda' },
+                { id: 'c3', bookId: 'b1', order: 3, title: 'O Retorno', contentHTML: '<p>Fim.</p>' },
+                { id: 'c9', bookId: 'b2', order: 1, title: 'Postura de Combate' },
+            ],
+        };
+        window.lvSeedLivros(ACERVO);
+
+        const raca = { nome: 'Elorin', livroVinculado: { bookId: 'b1', capituloIds: ['c1', 'c3'] } };
+        const classe = { nome: 'Guerreiro', livroVinculado: { bookId: 'b2', capituloIds: [] } };
+        const tribo = { nome: 'Comuno' };
+
+        document.getElementById('alvo1').innerHTML = window.lvSecaoHTML(raca);
+        document.getElementById('alvo2').innerHTML = window.lvSecaoHTML(classe);
+        document.getElementById('alvo3').innerHTML = window.lvSecaoHTML(tribo);
+
+        const res = document.getElementById('res');
+        const diz = (ok, txt) => res.insertAdjacentHTML('beforeend',
+            `<div class="${ok ? 'ok' : 'fail'}">${ok ? '✅' : '❌'} ${txt}</div>`);
+
+        const tick = () => new Promise(r => setTimeout(r, 0));
+        const btn = (sel) => document.querySelector(`${sel} button`);
+
+        // O preenchimento é assíncrono (promise do acervo).
+        (async () => {
+            await tick();
+
+            const b1 = btn('#alvo1');
+            diz(!!b1, 'raça mostra um botão único de abrir o livro');
+            diz(b1 && b1.textContent.includes('Abrir livro') && b1.textContent.includes('Crônicas de Vasteluna'),
+                'botão diz "Abrir livro" com o nome do livro');
+            diz(document.getElementById('alvo1').textContent.includes('2 capítulos disponíveis'),
+                'raça conta só os capítulos liberados (2)');
+
+            diz(document.getElementById('alvo2').textContent.includes('1 capítulo disponível'),
+                'classe sem escolha conta o livro inteiro do b2 (1)');
+            diz(document.getElementById('alvo3').innerHTML.trim() === '', 'tribo sem livro não renderiza nada');
+
+            // Livro de vários capítulos → sumário
+            b1.click();
+            await tick(); await tick();
+            let ov = document.getElementById('lvLeitor');
+            diz(!!ov && ov.textContent.includes('Sumário'), 'livro com vários capítulos abre no sumário');
+            const linhas = ov.querySelectorAll('.lv-box > div > button');
+            diz(linhas.length === 2, `sumário lista só os liberados (esperado 2, veio ${linhas.length})`);
+            diz(!ov.textContent.includes('A Queda'), 'sumário não vaza capítulo não liberado');
+
+            // Sumário → capítulo → volta
+            linhas[0].click();
+            await tick(); await tick();
+            ov = document.getElementById('lvLeitor');
+            diz(ov.querySelector('.texto-mundo')?.innerHTML.includes('<b>um</b>'), 'capítulo renderiza o HTML do texto');
+            const voltar = [...ov.querySelectorAll('button')].find(b => b.textContent.includes('Sumário'));
+            diz(!!voltar, 'capítulo tem botão de voltar ao sumário');
+            voltar.click();
+            await tick(); await tick();
+            diz(document.getElementById('lvLeitor').textContent.includes('Sumário'), 'voltar retorna ao sumário');
+
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+            await tick();
+            diz(!document.getElementById('lvLeitor'), 'ESC fecha o leitor');
+
+            // Livro de um capítulo só → vai direto ao texto, sem sumário
+            btn('#alvo2').click();
+            await tick(); await tick();
+            ov = document.getElementById('lvLeitor');
+            diz(ov && ov.textContent.includes('Postura de Combate') && !ov.textContent.includes('Sumário'),
+                'livro de 1 capítulo abre direto no texto');
+            ov.remove();
+        })();
+    </script>
+</body>
+</html>

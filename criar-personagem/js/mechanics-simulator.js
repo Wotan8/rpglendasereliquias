@@ -24,10 +24,28 @@ export function simulateDerivedValues() {
     const classe = window._systemData?.classes?.find(c => c.nome === state.classeSelecionada);
     const tribo = window._systemData?.tribes?.find(t => t.nome === state.triboSelecionada);
 
+    // Valores iniciais de VDs trazidos por peculiaridade (de qualquer fonte)
+    const pecInitials = {};
+    const coletarPecInitials = (pecIds) => {
+        (pecIds || []).forEach(entry => {
+            const pecId = typeof entry === 'object' && entry !== null ? entry.id : entry;
+            const pec = (window._systemData?.peculiarities || []).find(p => p.id === pecId);
+            (pec?.derivedValueIds || []).forEach(x => {
+                if (typeof x !== 'object' || x === null) return;
+                pecInitials[x.id] = (pecInitials[x.id] || 0) + (parseFloat(x.valorInicial) || 0);
+            });
+        });
+    };
+    coletarPecInitials(raca?.peculiaridadeIds);
+    coletarPecInitials(classe?.peculiaridadeIds);
+    coletarPecInitials(classe?.bonusIniciais);
+    coletarPecInitials(tribo?.peculiaridadeIds);
+    coletarPecInitials(state.peculiaridadesIndividuais);
+
     window.DERIVED_VALUES.forEach(dv => {
         results[dv.id] = 0;
         initialConstants[dv.id] = 0;
-        
+
         const sumFromSource = (source) => {
             if (!source || !source.derivedValueIds) return;
             const match = source.derivedValueIds.find(x => typeof x === 'object' ? x.id === dv.id : x === dv.id);
@@ -39,7 +57,21 @@ export function simulateDerivedValues() {
         sumFromSource(raca);
         sumFromSource(classe);
         sumFromSource(tribo);
+        // A ficha já conta o valorInicial de VD trazido por peculiaridade
+        // (pecDVInitials em renderDerivedValuesGrid); aqui também, senão wizard e
+        // ficha divergem no dia em que uma peculiaridade trouxer um VD com valor ≠ 0.
+        initialConstants[dv.id] += (pecInitials[dv.id] || 0);
     });
+
+    // A constante de Raça/Classe/Tribo é a BASE do valor derivado — as mecânicas
+    // incidem sobre ela, não depois dela (senão "×1,1 na Altura" multiplica zero).
+    for (const id in initialConstants) results[id] = initialConstants[id];
+
+    /* Snapshot da passada anterior. Refs a OUTRO valor derivado leem daqui, não de
+       `results`, replicando a ficha (onde `[Altura]` resolve pelo state.derived da
+       recalculada anterior). Sem isso, `Peso = (18+FOR+VIG) × [Altura]²` lê Altura
+       antes de a constante da raça e o ×% do Gigantismo entrarem — e sai zerado. */
+    let snapshot = {};
 
     // Função auxiliar para obter valor de uma ref (replica _resolveSheetRef do mechanics-engine)
     const getRefValue = (ref) => {
@@ -60,16 +92,28 @@ export function simulateDerivedValues() {
         };
         if (attrMap[ref]) return baseStats[attrMap[ref]];
         
+        // Perícia com prefixo explícito ("Perícia: X") — resolve ANTES dos VDs,
+        // porque o prefixo existe justamente para desambiguar nomes que existem
+        // nos dois lados (Exorcismo, Transcendência, Dosagem, Contracanto...).
+        if (ref.startsWith('Perícia: ')) {
+            const nome = ref.slice('Perícia: '.length);
+            for (const skills of Object.values(window.SKILLS || {})) {
+                const found = skills.find(s => s.name === nome);
+                if (found) return state.pericias?.[`sk_${found.key}`] || 0;
+            }
+            return 0;
+        }
+
         // Referência a outro Valor Derivado (por key, id ou DERIVED:key)
         const targetDv = window.DERIVED_VALUES.find(d => d.key === ref || d.id === ref || `DERIVED:${d.key}` === ref);
-        if (targetDv && results[targetDv.id] !== undefined) {
-            return results[targetDv.id];
+        if (targetDv && snapshot[targetDv.id] !== undefined) {
+            return snapshot[targetDv.id];
         }
 
         // Referência a DV pelo nome legível (como no TARGET_MAP)
         const dvByName = window.DERIVED_VALUES.find(d => d.nome === ref);
-        if (dvByName && results[dvByName.id] !== undefined) {
-            return results[dvByName.id];
+        if (dvByName && snapshot[dvByName.id] !== undefined) {
+            return snapshot[dvByName.id];
         }
 
         // Perícias — buscar no wizardState (sk_<key>)
@@ -187,6 +231,22 @@ export function simulateDerivedValues() {
             else if (op === '/' || op === '÷') results[targetDv.id] = val !== 0 ? results[targetDv.id] / val : 0;
         };
 
+        // Limites (tipo=limitar) coletados durante a passada e aplicados no fim dela,
+        // como faz _applyMechanicModifiers na ficha — um teto/piso não pode clampar
+        // no meio da soma, senão um modificador posterior fura o limite.
+        let limites = {};
+        const collectLimite = (calc) => {
+            const field = targetMap[calc.alvo];
+            if (!field || !field.startsWith('DERIVED:')) return;
+            const dv = window.DERIVED_VALUES.find(d => d.key === field.replace('DERIVED:', ''));
+            if (!dv) return;
+            const val = resolveCalcValue(calc);
+            const lim = limites[dv.id] || (limites[dv.id] = {});
+            if (calc.tipoLimite === 'bloqueio') lim.bloqueio = true;
+            else if (calc.tipoLimite === 'minimo') lim.min = lim.min === undefined ? val : Math.max(lim.min, val);
+            else if (calc.tipoLimite === 'maximo') lim.max = lim.max === undefined ? val : Math.min(lim.max, val);
+        };
+
         // Helper: aplicar uma mecânica completa
         const applyMechanic = (mech) => {
             if (!mech || !mech.config) return;
@@ -195,7 +255,9 @@ export function simulateDerivedValues() {
             const isPermanent = !mech.duracao || mech.duracao === 'permanente';
             if (!isPermanent || isConditional) return;
 
-            if (mech.tipo === 'modificar') {
+            if (mech.tipo === 'limitar') {
+                (mech.config.calculos || []).forEach(collectLimite);
+            } else if (mech.tipo === 'modificar') {
                 const calculos = Array.isArray(mech.config.calculos) ? mech.config.calculos
                     : mech.config.alvo ? [{ alvo: mech.config.alvo, operacao: mech.config.operacao, valor: mech.config.valor, valorTipo: mech.config.valorTipo || 'fixo', valorRef: mech.config.valorRef, valorMultiplicador: mech.config.valorMultiplicador, equacao: mech.config.equacao }]
                     : [];
@@ -251,72 +313,90 @@ export function simulateDerivedValues() {
             }
         };
 
-        // 2a. Mecânicas vinculadas diretamente aos DVs (via dv.mecanicaIds)
-        // Usa o mesmo applyMechanic para consistência total com o motor da ficha
-        const processedMechIds = new Set();
+        // Nível escolhido de uma peculiaridade (individual selecionada no wizard ou
+        // herdada e evoluída). Mecânicas evoluíveis rendem o valor DAQUELE nível.
+        const nivelDaPec = (pecId, entry) => {
+            const ind = (state.peculiaridadesIndividuais || []).find(p => p.id === pecId);
+            if (ind && ind.nivel) return ind.nivel;
+            const herdado = (state.niveisPeculiaridadesHerdadas || {})[pecId];
+            if (herdado) return herdado;
+            return (entry && typeof entry === 'object' && entry.nivelInicial) || 1;
+        };
 
-        window.DERIVED_VALUES.forEach(dv => {
-            if (dv.mecanicaIds && dv.mecanicaIds.length > 0) {
-                dv.mecanicaIds.forEach(mechId => {
-                    if (processedMechIds.has(mechId)) return;
-                    processedMechIds.add(mechId);
-                    const mech = window._systemData.mechanics.find(m => m.id === mechId);
-                    if (mech) applyMechanic(mech);
-                });
-            }
-        });
-
-        // 3. Aplicar mecânicas de peculiaridades (Raça, Classe, Tribo, Individuais)
-        // que tenham alvo em valores derivados
-        const applyPecMechanics = (pecIds) => {
+        const applyPecMechanics = (pecIds, processed) => {
             if (!pecIds || pecIds.length === 0) return;
             pecIds.forEach(pecIdEntry => {
                 const pecId = typeof pecIdEntry === 'object' ? pecIdEntry.id : pecIdEntry;
                 const pec = window._systemData.peculiarities.find(p => p.id === pecId);
                 if (!pec || !pec.mecanicaIds || pec.mecanicaIds.length === 0) return;
+                const nivel = nivelDaPec(pecId, pecIdEntry);
                 pec.mecanicaIds.forEach(mechId => {
-                    if (processedMechIds.has(mechId)) return;
-                    processedMechIds.add(mechId);
-                    const mech = window._systemData.mechanics.find(m => m.id === mechId);
+                    if (processed.has(mechId)) return;
+                    processed.add(mechId);
+                    let mech = window._systemData.mechanics.find(m => m.id === mechId);
+                    if (mech && mech.evoluivel && typeof window._adjustMechanicForLevel === 'function') {
+                        mech = window._adjustMechanicForLevel(mech, nivel);
+                    }
                     applyMechanic(mech);
                 });
             });
         };
 
-        // Raça: peculiaridadeIds
-        if (raca && raca.peculiaridadeIds) applyPecMechanics(raca.peculiaridadeIds);
-        // Classe: peculiaridadeIds + bonusIniciais
-        if (classe) {
-            if (classe.peculiaridadeIds) applyPecMechanics(classe.peculiaridadeIds);
-            if (classe.bonusIniciais) applyPecMechanics(classe.bonusIniciais);
-        }
-        // Tribo: peculiaridadeIds
-        if (tribo && tribo.peculiaridadeIds) applyPecMechanics(tribo.peculiaridadeIds);
-        // Individuais selecionadas pelo jogador
-        if (state.peculiaridadesIndividuais && state.peculiaridadesIndividuais.length > 0) {
-            applyPecMechanics(state.peculiaridadesIndividuais.map(p => p.id));
-        }
+        /* Uma passada resolve tudo do zero. São necessárias várias porque as fórmulas
+           encadeiam (Altura → Tamanho/Peso → Vitalidade/Carga/Deslocamento) e cada
+           passada só enxerga o snapshot da anterior. 4 cobrem a cadeia mais longa. */
+        const runPass = () => {
+            for (const id in initialConstants) results[id] = initialConstants[id];
+            const processed = new Set();
+            limites = {};
 
-        // 4. Aplicar mecânicas vinculadas a perícias que afetam DVs
-        if (window.SKILLS) {
-            for (const [cat, skills] of Object.entries(window.SKILLS)) {
-                for (const sk of skills) {
-                    if (!sk.mecanicaIds || sk.mecanicaIds.length === 0) continue;
-                    sk.mecanicaIds.forEach(mechId => {
-                        if (processedMechIds.has(mechId)) return;
-                        processedMechIds.add(mechId);
-                        const mech = window._systemData.mechanics.find(m => m.id === mechId);
-                        applyMechanic(mech);
-                    });
+            // 2a. Mecânicas vinculadas diretamente aos DVs (via dv.mecanicaIds)
+            window.DERIVED_VALUES.forEach(dv => {
+                (dv.mecanicaIds || []).forEach(mechId => {
+                    if (processed.has(mechId)) return;
+                    processed.add(mechId);
+                    const mech = window._systemData.mechanics.find(m => m.id === mechId);
+                    if (mech) applyMechanic(mech);
+                });
+            });
+
+            // 3. Peculiaridades (Raça, Classe, Tribo, Individuais)
+            if (raca && raca.peculiaridadeIds) applyPecMechanics(raca.peculiaridadeIds, processed);
+            if (classe) {
+                if (classe.peculiaridadeIds) applyPecMechanics(classe.peculiaridadeIds, processed);
+                if (classe.bonusIniciais) applyPecMechanics(classe.bonusIniciais, processed);
+            }
+            if (tribo && tribo.peculiaridadeIds) applyPecMechanics(tribo.peculiaridadeIds, processed);
+            if (state.peculiaridadesIndividuais && state.peculiaridadesIndividuais.length > 0) {
+                applyPecMechanics(state.peculiaridadesIndividuais.map(p => p.id), processed);
+            }
+
+            // 4. Mecânicas vinculadas a perícias que afetam DVs
+            if (window.SKILLS) {
+                for (const skills of Object.values(window.SKILLS)) {
+                    for (const sk of skills) {
+                        (sk.mecanicaIds || []).forEach(mechId => {
+                            if (processed.has(mechId)) return;
+                            processed.add(mechId);
+                            const mech = window._systemData.mechanics.find(m => m.id === mechId);
+                            applyMechanic(mech);
+                        });
+                    }
                 }
             }
-        }
-    }
 
-    // Aplicar as Constantes Iniciais de Raça/Classe/Tribo APÓS todas as mecânicas
-    for (const key in initialConstants) {
-        if (results[key] !== undefined) {
-            results[key] += initialConstants[key];
+            // Limites por último, sobre o valor já somado
+            for (const [dvId, lim] of Object.entries(limites)) {
+                if (results[dvId] === undefined) continue;
+                if (lim.bloqueio) { results[dvId] = 0; continue; }
+                if (lim.max !== undefined) results[dvId] = Math.min(results[dvId], lim.max);
+                if (lim.min !== undefined) results[dvId] = Math.max(results[dvId], lim.min);
+            }
+        };
+
+        for (let pass = 0; pass < 4; pass++) {
+            runPass();
+            snapshot = { ...results };
         }
     }
 

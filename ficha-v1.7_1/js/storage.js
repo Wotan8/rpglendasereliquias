@@ -118,6 +118,18 @@ function gatherData() {
     if (hpCur !== null) d.hpCurrent = hpCur;
     if (enerCur !== null) d.enerCurrent = enerCur;
     if (sanCur !== null) d.sanCurrent = sanCur;
+
+    // ===== Espelhar TODOS os Valores Derivados calculados =====
+    // Mesma razão do espelho dos Status Vitais acima: módulos externos (Tabuleiro,
+    // Combate) precisam ler VDs prontos sem replicar o motor de mecânicas. O
+    // Tabuleiro usa PERCEPCAO_VISUAL / PERCEPCAO para o alcance de visão do token.
+    // Chave = dv.key (nome sem acento, maiúsculas). Só números, nada de undefined
+    // (o Firestore recusa) e nada de NaN.
+    d.derivedTotals = {};
+    for (const [k, v] of Object.entries(_derived)) {
+        const n = typeof v === 'number' ? v : parseFloat(v);
+        if (!isNaN(n)) d.derivedTotals[k] = n;
+    }
     // Gather class module data
     d.classModuleData = typeof gatherClassModuleData === 'function'
         ? gatherClassModuleData()
@@ -295,6 +307,18 @@ function loadFromData(d) {
         }
         if (typeof recalcAll === 'function') setTimeout(recalcAll, 150);
         if (typeof renderAurasTab === 'function') setTimeout(renderAurasTab, 200);
+
+        // === Espelho dos Valores Derivados: preencher fichas antigas ao ABRIR ===
+        // O Tabuleiro lê `derivedTotals` para o alcance de visão por Percepção.
+        // Fichas salvas antes desse campo existir não o têm, e o autosave só
+        // dispara no evento `input` — ou seja, dependeria de alguém editar cada
+        // ficha. Aqui ela se corrige sozinha na primeira abertura (depois de
+        // recalcAll ter populado state.derived) e para de forçar save nas próximas.
+        if (!d.derivedTotals || !Object.keys(d.derivedTotals).length) {
+            setTimeout(() => {
+                if (typeof scheduleAutosave === 'function') scheduleAutosave();
+            }, 400);
+        }
 
         // === DESBLOQUEAR SAVES — dados totalmente carregados ===
         window._dataReady = true;

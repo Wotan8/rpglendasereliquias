@@ -21,9 +21,8 @@ function initPhase3(container) {
 
     for (const grupo of GRUPOS_ATRIBUTOS) {
         const sel = wizardState.grupoPrimario === grupo ? 'selected' : '';
-        const dis = wizardState.grupoFraco === grupo ? 'disabled' : '';
         html += `
-            <div class="group-card ${sel} ${dis}" data-group="${grupo}" onclick="selectPrimaryGroup('${grupo}')">
+            <div class="group-card ${sel}" data-group="${grupo}" onclick="selectPrimaryGroup('${grupo}')">
                 <div class="group-card-title">${getGroupEmoji(grupo)} ${grupo}</div>
                 <div class="group-card-points">${getGroupPoints(grupo)}</div>
                 <div class="group-card-label">${getGroupRole(grupo)}</div>
@@ -42,9 +41,8 @@ function initPhase3(container) {
 
     for (const grupo of GRUPOS_ATRIBUTOS) {
         const sel = wizardState.grupoFraco === grupo ? 'selected' : '';
-        const dis = wizardState.grupoPrimario === grupo ? 'disabled' : '';
         html += `
-            <div class="group-card ${sel} ${dis}" data-group="${grupo}" onclick="selectWeakGroup('${grupo}')">
+            <div class="group-card ${sel}" data-group="${grupo}" onclick="selectWeakGroup('${grupo}')">
                 <div class="group-card-title">${getGroupEmoji(grupo)} ${grupo}</div>
                 <div class="group-card-points">${getGroupPoints(grupo)}</div>
                 <div class="group-card-label">${getGroupRole(grupo)}</div>
@@ -118,19 +116,18 @@ function getGroupPoints(grupo) {
     return '?';
 }
 
-function selectPrimaryGroup(grupo) {
-    if (wizardState.grupoFraco === grupo) return;
-    wizardState.grupoPrimario = grupo;
-    resetAttrPoints();
-    forceRerender(getPhaseIndex(3));
-    saveWizardToStorage();
-}
+function selectPrimaryGroup(grupo) { setAttrGroup('grupoPrimario', 'grupoFraco', grupo); }
+function selectWeakGroup(grupo)    { setAttrGroup('grupoFraco', 'grupoPrimario', grupo); }
 
-function selectWeakGroup(grupo) {
-    if (wizardState.grupoPrimario === grupo) return;
-    wizardState.grupoFraco = grupo;
+// Reclicar no card selecionado desmarca; escolher um grupo já usado no outro
+// passo libera esse outro passo. Qualquer mudança zera os pontos distribuídos,
+// porque as pools mudam de tamanho junto com os grupos.
+function setAttrGroup(key, otherKey, grupo) {
+    wizardState[key] = wizardState[key] === grupo ? null : grupo;
+    if (wizardState[otherKey] === grupo) wizardState[otherKey] = null;
     resetAttrPoints();
     forceRerender(getPhaseIndex(3));
+    ExpTracker.updateDisplay();
     saveWizardToStorage();
 }
 

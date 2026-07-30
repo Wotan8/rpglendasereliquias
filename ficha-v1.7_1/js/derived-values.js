@@ -150,8 +150,11 @@ function renderDerivedValuesGrid() {
     if (racaNome && window.RACES?.[racaNome]?.peculiaridades) {
         processPecDV(window.RACES[racaNome].peculiaridades);
     }
-    if (classeNome && window.CLASSES?.[classeNome]?.peculiaridades) {
-        processPecDV(window.CLASSES[classeNome].peculiaridades);
+    // window.CLASS_PECULIARITIES[nome] JÁ É o array de peculiaridades — não há
+    // window.CLASSES nesta página (o loader nunca criou esse global), então a
+    // versão anterior deixava todo VD trazido por peculiaridade de classe invisível.
+    if (classeNome && window.CLASS_PECULIARITIES?.[classeNome]) {
+        processPecDV(window.CLASS_PECULIARITIES[classeNome]);
     }
     const triboNome = document.getElementById('selTribo')?.value || '';
     if (triboNome && window.TRIBES?.[triboNome]?.peculiaridades) {
@@ -838,11 +841,11 @@ function recalcAll() {
             initialConstant = initials[dvDef.id];
         }
 
-        // Aplicar mecânicas (bônus, penalidades, equações, multiplicadores)
-        value = _applyMechanicModifiers(dvKey, value, bonuses, limits);
-
-        // Aplicar constante inicial (Raça/Classe/Tribo)
-        value += initialConstant;
+        // Aplicar mecânicas (bônus, penalidades, equações, multiplicadores).
+        // A constante inicial de Raça/Classe/Tribo entra como BASE, antes dos
+        // modificadores gerais: sem isso um "×1,1 na Altura" (Gigantismo)
+        // multiplicaria 0 em vez de multiplicar a altura da raça.
+        value = _applyMechanicModifiers(dvKey, value, bonuses, limits, initialConstant);
 
         // Aplicar modificador constante da Véspera da Partida (Criar Personagem) SEMPRE após as mecânicas
         if (dvDef && state.derivedModifiers && state.derivedModifiers[dvDef.id]) {
@@ -921,7 +924,7 @@ function recalcAll() {
 /**
  * Aplica modificadores de mecânicas (bônus, mult, div, set, limites) a um valor derivado.
  */
-function _applyMechanicModifiers(key, value, bonuses, limits) {
+function _applyMechanicModifiers(key, value, bonuses, limits, baseExtra = 0) {
     const bonusKey = `DERIVED:${key}`;
 
     // === 1. AVALIAR MECÂNICAS BASE (Vinculadas) ===
@@ -943,6 +946,10 @@ function _applyMechanicModifiers(key, value, bonuses, limits) {
         value = Math.floor(value / bonuses[baseDivKey]);
     }
 
+    // Constante de Raça/Classe/Tribo: faz parte da base, então os modificadores
+    // gerais abaixo (incluindo × e ÷) incidem sobre ela.
+    value += baseExtra;
+
     // === 2. AVALIAR MODIFICADORES GERAIS (Peculiaridades, Itens, Condições) ===
     // "Definir fixo" (=) — overrides the base formula entirely
     const setKey = `SET:${bonusKey}`;
@@ -952,16 +959,17 @@ function _applyMechanicModifiers(key, value, bonuses, limits) {
 
     value += (bonuses[bonusKey] || 0);
 
-    // Multiplicadores de mecânicas
+    // Multiplicadores e divisores de mecânicas. Sem Math.floor (ao contrário das
+    // fórmulas BASE acima): estes incidem sobre valores fracionários — Altura em
+    // metros, onde 1,70 × 1,1 truncado viraria 1.
     const multKey = `MULT:${bonusKey}`;
     if (bonuses[multKey]) {
-        value = Math.floor(value * bonuses[multKey]);
+        value = Math.round(value * bonuses[multKey] * 100) / 100;
     }
 
-    // Divisores
     const divKey = `DIV:${bonusKey}`;
     if (bonuses[divKey] && bonuses[divKey] !== 0) {
-        value = Math.floor(value / bonuses[divKey]);
+        value = Math.round(value / bonuses[divKey] * 100) / 100;
     }
 
     // Limites

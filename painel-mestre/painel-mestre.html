@@ -393,6 +393,7 @@
                     <button class="sub-tab-btn active" data-subtab="apoios" onclick="switchSubTab('apoio','apoios')">🤝 Apoios</button>
                     <button class="sub-tab-btn" data-subtab="metas" onclick="switchSubTab('apoio','metas')">🎯 Metas</button>
                     <button class="sub-tab-btn" data-subtab="loja" onclick="switchSubTab('apoio','loja')">🛒 Loja</button>
+                    <button class="sub-tab-btn" data-subtab="compras" onclick="switchSubTab('apoio','compras'); carregarComprasDinheiro()">💵 Compras em Dinheiro</button>
                     <button class="sub-tab-btn" data-subtab="notificacoes" onclick="switchSubTab('apoio','notificacoes')">📢 Notificações</button>
                     <button class="sub-tab-btn" data-subtab="producao" onclick="switchSubTab('apoio','producao')">🏭 Produção</button>
                 </div>
@@ -459,6 +460,15 @@
                     </div>
                     <div id="lojaContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
                         <div style="text-align:center;padding:50px;color:var(--muted);grid-column:1/-1;">Carregando loja...</div>
+                    </div>
+                </div>
+                <div class="sub-tab-content" id="subtab-compras">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+                        <button class="btn btn-secondary btn-small" onclick="carregarComprasDinheiro()">🔄 Atualizar</button>
+                        <span style="color:var(--muted);font-size:.82rem">Confirme só depois de receber o dinheiro — a confirmação entrega o item na hora.</span>
+                    </div>
+                    <div id="comprasDinheiroContainer">
+                        <div style="text-align:center;padding:50px;color:var(--muted);">Carregando pedidos...</div>
                     </div>
                 </div>
                 <div class="sub-tab-content" id="subtab-notificacoes">
@@ -710,5 +720,6 @@
 
     <!-- MAIN MODULE -->
     <script src="../ficha-v1.7_1/js/system-data-loader.js"></script>
+    <script src="../shared/equip-slots.js?v=1"></script>
     <script type="module" src="js/main.js?v=6"></script>
 </body>

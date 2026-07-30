@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<!-- CHECK: contraste texto/fundo da ficha SEM a classe .dark no <html>
+     (jogador com tema claro salvo). Falha se algum campo voltar a ficar
+     com fundo quase-branco sob texto quase-branco (--lr-divine + --ink). -->
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="ficha-v1.7_1/css/styles_v2.css?v=10">
+<link rel="stylesheet" href="shared/tokens.css?v=8">
+<link rel="stylesheet" href="shared/lendas-reliquias.css?v=10">
+</head>
+<body>
+<div class="sheet" style="padding:24px">
+  <div class="tabs"><button class="tab">Combate</button></div>
+  <div class="row r3">
+    <div class="field"><label>Nome</label><input type="text" data-key="nome" value="Sona"></div>
+  </div>
+  <div class="mini-field"><input value="mini"></div>
+  <div class="vital-inputs"><input value="12"></div>
+  <div class="test-row"><input value="teste"></div>
+  <div class="equip-row"><input value="equip"></div>
+  <div class="inv-row"><input value="item"></div>
+  <div class="ritual-fields"><div class="field"><input value="ritual"></div></div>
+  <div class="estudo-row"><input value="estudo"></div>
+  <input class="dv-atual-input" value="8">
+  <button class="btn">Botao</button>
+  <span class="dot"></span>
+</div>
+<pre id="out" style="font:12px monospace;color:#F2F2F2"></pre>
+<script>
+function lum(s) {
+    const p = s.match(/\d+/g).map(n => { n /= 255; return n <= .03928 ? n / 12.92 : Math.pow((n + .055) / 1.055, 2.4); });
+    return .2126 * p[0] + .7152 * p[1] + .0722 * p[2];
+}
+// Fundo efetivo: sobe a arvore ate achar algo nao-transparente.
+function bgOf(el) {
+    for (let n = el; n; n = n.parentElement) {
+        const b = getComputedStyle(n).backgroundColor;
+        if (b && !/rgba\(0, 0, 0, 0\)|transparent/.test(b)) return b;
+    }
+    return 'rgb(14, 17, 23)';
+}
+const alvos = ['.tab', '.field input', '.mini-field input', '.vital-inputs input', '.test-row input',
+    '.equip-row input', '.inv-row input', '.ritual-fields .field input', '.estudo-row input',
+    '.dv-atual-input', '.btn', '.dot'];
+let falhas = 0;
+const linhas = alvos.map(sel => {
+    const el = document.querySelector(sel);
+    const cs = getComputedStyle(el);
+    const L1 = lum(cs.color), L2 = lum(bgOf(el));
+    const c = (Math.max(L1, L2) + .05) / (Math.min(L1, L2) + .05);
+    if (c < 4.5) falhas++;
+    return (c < 4.5 ? 'FALHA ' : 'ok    ') + sel.padEnd(30) + c.toFixed(2) + ':1';
+});
+out.textContent = 'html.dark? ' + document.documentElement.classList.contains('dark') + '\n'
+    + linhas.join('\n') + '\n\nfalhas: ' + falhas;
+window.__falhas = falhas;
+</script>
+</body>
+</html>

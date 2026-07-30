@@ -352,7 +352,7 @@ function escHtml(str) {
     if (!str) return '';
     const d = document.createElement('div');
     d.textContent = str;
-    return d.innerHTML;
+    return d.innerHTML.replace(/"/g, '&quot;'); // innerHTML não escapa aspas; atributos dependem disso
 }
 
 function createNarratorBox(text) {

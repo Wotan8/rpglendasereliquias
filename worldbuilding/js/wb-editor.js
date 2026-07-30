@@ -110,8 +110,9 @@ export const Editor = (() => {
             ? caps.map((a, i) => articleRow(a, i + 1)).join('')
             : '<p class="wbt-muted" style="margin:.4rem .2rem">Sem capítulos ainda.</p>';
         return `
-        <div class="wb-book" data-book="${b.id}">
-            <div class="wb-book__head">
+        <details class="wb-book" data-book="${b.id}">
+            <summary class="wb-book__head">
+                <span class="wb-book__caret">▸</span>
                 <div class="wb-book__cover" style="${b.cover ? `background-image:url('${esc(b.cover)}')` : ''}">${b.cover ? '' : '📖'}</div>
                 <div class="wb-book__meta">
                     <div class="wb-book__title">${esc(b.title || 'Livro sem título')}</div>
@@ -122,9 +123,9 @@ export const Editor = (() => {
                     <button class="btn btn-secondary btn-sm" data-editbook="${b.id}" title="Editar livro">⚙️</button>
                     <button class="btn btn-secondary btn-sm" data-addchap="${b.id}" title="Novo capítulo">＋ cap.</button>
                 </div>
-            </div>
+            </summary>
             <div class="wb-book__chapters">${capsHtml}</div>
-        </div>`;
+        </details>`;
     }
 
     function articleRow(a, num) {
@@ -144,10 +145,11 @@ export const Editor = (() => {
     function bindLibrary() {
         $('#newBook').onclick = () => openBookModal(null);
         $('#newLoose').onclick = () => openArticle(null, null);
+        // preventDefault: dentro do <summary>, qualquer clique abre/fecha o livro.
         contentBody().querySelectorAll('[data-editbook]').forEach(b =>
-            b.onclick = (e) => { e.stopPropagation(); openBookModal(books.find(x => x.id === b.dataset.editbook)); });
+            b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); openBookModal(books.find(x => x.id === b.dataset.editbook)); });
         contentBody().querySelectorAll('[data-addchap]').forEach(b =>
-            b.onclick = (e) => { e.stopPropagation(); openArticle(null, b.dataset.addchap); });
+            b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); openArticle(null, b.dataset.addchap); });
         contentBody().querySelectorAll('[data-openart]').forEach(el =>
             el.onclick = (e) => { if (e.target.closest('[data-delart]')) return; openArticle(artigos.find(x => x.id === el.dataset.openart), null); });
         contentBody().querySelectorAll('[data-delart]').forEach(b =>

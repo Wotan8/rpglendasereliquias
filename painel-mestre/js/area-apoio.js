@@ -1,5 +1,5 @@
 // ÁREA APOIO — Apoios, Metas, Notificações (Full Migration)
-import { db, collection, getDocs, getDoc, setDoc, doc, updateDoc, addDoc, deleteDoc, storage, ref, uploadBytes, getDownloadURL, runTransaction } from './firebase-config.js';
+import { db, collection, query, where, getDocs, getDoc, setDoc, doc, updateDoc, addDoc, deleteDoc, storage, ref, uploadBytes, getDownloadURL, runTransaction, functions, httpsCallable } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
@@ -26,6 +26,7 @@ export async function onTabActivated() {
     await loadApoioUsers();
     await carregarSistemaMetas();
     await carregarSistemaLoja();
+    await carregarComprasDinheiro();
     await carregarListaProducao();
 }
 
@@ -989,7 +990,6 @@ window.addLojaItemPersonagemRow = function(itemId = '', qtd = 1) {
     if(!itemId) select.value = '';
 };
 
-window.carregarSistemaLoja = async function() {
 // ============= COMPRAS EM DINHEIRO (aguardando o mestre) =============
 // O jogador pede na Loja, paga fora do site (dinheiro/PIX/transferência) e o
 // mestre confirma aqui. A entrega roda no servidor — mesma da compra online.
@@ -1052,6 +1052,7 @@ window.resolverCompraDinheiro = async function(compraId, aprovar) {
     }
 };
 
+window.carregarSistemaLoja = async function() {
     try {
         const snap = await getDocs(collection(db, 'loja_itens'));
         lojaItens = [];

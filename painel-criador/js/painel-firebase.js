@@ -3,7 +3,7 @@
 // Lendas e Relíquias (ficha-v1.7_1 style)
 // =============================================
 
-import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=10';
+import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, ATRIBUTOS_VINCULAVEIS, periciaOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=13';
 import { RUNIC_MODULE_DEF, buildRunicField, collectRunicField, importRunicSeed } from './painel-runic.js?v=1';
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -239,6 +239,9 @@ const MODULE_DEFS = {
             },
             { key: 'tags', label: '🏷️ Tags', type: 'tags', placeholder: 'Digite e Enter para adicionar (Ex: metálico, mágico, leve)' },
             { key: 'equipavelEm', label: 'Equipável em', type: 'body_parts_selector' },
+            // Slots ALÉM do principal. Espada de duas mãos = +1 Mão; armadura
+            // completa = +1 Pernas, +2 Braço. Bloqueia equipar se faltar slot livre.
+            { key: 'slotsAdicionais', label: '🧩 Slots Adicionais Ocupados (além do slot principal)', type: 'mechanic_selector', selectorTarget: 'bodyPartsQuantidade' },
             {
                 key: 'formaEquipar', label: 'Forma de equipar', type: 'select', options: [
                     { value: 'segurar', label: 'Segurar' },
@@ -283,6 +286,10 @@ const MODULE_DEFS = {
             // "Máxima" = bônus enquanto equipado. "Atual" = efeito de uso único,
             // só dispara no botão "Usar" da ficha (item consumível).
             { key: 'statusVitaisVinculados', label: '❤️ Status Vitais Vinculados (Máxima = ao equipar · Atual = ao usar)', type: 'mechanic_selector', selectorTarget: 'vitalStatus' },
+            // Dispensa criar mecânica só para somar/subtrair: a penalidade da peça
+            // mora na própria peça. Aplicados enquanto o item está equipado.
+            { key: 'atributosVinculados', label: '🎲 Atributos Vinculados (modificador ao equipar)', type: 'mechanic_selector', selectorTarget: 'attributes' },
+            { key: 'periciasVinculadas', label: '🎯 Perícias Vinculadas (modificador ao equipar)', type: 'mechanic_selector', selectorTarget: 'skillsModificador' },
             { key: 'condicaoIds', label: '💀 Condições Aplicadas ao Usar', type: 'mechanic_selector', selectorTarget: 'conditions' },
         ]
     },
@@ -1745,7 +1752,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                 
                 const wrap = document.getElementById(parentFieldPeculiaridade.id + '_wrap');
                 if (wrap) {
-                    import('./painel-mechanics.js?v=10').then(m => {
+                    import('./painel-mechanics.js?v=13').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
                         
@@ -1773,7 +1780,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                 const wrap = document.getElementById(legacyField.id + '_wrap');
                 if (wrap) {
                     const currentIds = JSON.parse(legacyField.value || '[]');
-                    import('./painel-mechanics.js?v=10').then(m => {
+                    import('./painel-mechanics.js?v=13').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
                         
@@ -1961,7 +1968,7 @@ window.saveSubFormValorDerivado = async function (e, vid, parentFieldKey) {
                 
                 const wrap = document.getElementById(parentFieldValorDerivado.id + '_wrap');
                 if (wrap) {
-                    import('./painel-mechanics.js?v=10').then(m => {
+                    import('./painel-mechanics.js?v=13').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Valores Derivados';
                         
@@ -2112,6 +2119,12 @@ function buildField(field, value, existingData) {
             wrap.innerHTML = buildEquipmentDerivedValueSelectorHTML(field.key, field.label, ids, derivedValuesCache);
         } else if (field.selectorTarget === 'vitalStatus') {
             wrap.innerHTML = buildEquipmentDerivedValueSelectorHTML(field.key, field.label, ids, vitalStatusOptions(vitalStatsCache), 'Status Vital');
+        } else if (field.selectorTarget === 'bodyPartsQuantidade') {
+            wrap.innerHTML = buildEquipmentDerivedValueSelectorHTML(field.key, field.label, ids, bodyPartsCache, 'Parte do Corpo', 'quantidade', 'Slots');
+        } else if (field.selectorTarget === 'attributes') {
+            wrap.innerHTML = buildEquipmentDerivedValueSelectorHTML(field.key, field.label, ids, ATRIBUTOS_VINCULAVEIS, 'Atributo');
+        } else if (field.selectorTarget === 'skillsModificador') {
+            wrap.innerHTML = buildEquipmentDerivedValueSelectorHTML(field.key, field.label, ids, periciaOptions(skillsCache), 'Perícia');
         } else if (field.selectorTarget === 'conditions') {
             wrap.innerHTML = buildConditionSelectorHTML(field.key, field.label, ids, conditionsCache);
         } else if (field.selectorTarget === 'maneuvers') {

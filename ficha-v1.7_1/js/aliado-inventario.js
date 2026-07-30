@@ -74,7 +74,8 @@
             const qty = Math.max(1, parseInt(bp.slots) || 1);
             for (let i = 0; i < qty; i++) {
                 const key = qty > 1 ? `${bp.id}_${i + 1}` : bp.id;
-                slots[key] = { label: qty > 1 ? `${bp.nome} ${i + 1}` : bp.nome, icon: bp.icone || '🦴', part: bp };
+                // partId é o que shared/equip-slots.js espera
+                slots[key] = { label: qty > 1 ? `${bp.nome} ${i + 1}` : bp.nome, icon: bp.icone || '🦴', part: bp, partId: bp.id };
             }
         });
         return slots;
@@ -396,7 +397,9 @@
         const slotKeys = Object.keys(slots);
         if (!slotKeys.length) { alert('O aliado não tem partes do corpo definidas. Peça ao Mestre para configurar a anatomia no Painel.'); return; }
 
-        const ocupados = new Set(AI.items.filter(i => i.equipado && i.id !== itemId && i.slotAnatomico).map(i => i.slotAnatomico));
+        // Item de vários slots bloqueia todos eles, não só o principal.
+        const ocupados = new Set(AI.items.filter(i => i.equipado && i.id !== itemId)
+            .flatMap(i => window.EquipSlots.slotsDoItem(i)));
         const permitidas = Array.isArray(item.equipavelEm) && item.equipavelEm.length ? new Set(item.equipavelEm) : null;
 
         const opts = slotKeys.map(k => {
@@ -442,10 +445,22 @@
         const slot = document.getElementById('aliadoEquipSlot')?.value;
         const estado = document.getElementById('aliadoEquipEstado')?.value;
         if (!slot || !estado) return;
+
+        const nomeParte = pid => _aliadoBodyParts().find(b => b.id === pid)?.nome || pid;
+        const plano = window.EquipSlots.planejarEquipar(item, slot, AI.items, _bodySlots(), {
+            catalog: window._inventoryState?.catalog,
+            labelParte: nomeParte,
+        });
+        if (!plano.ok) {
+            alert(`"${item.nome}" precisa de slots que nao estao livres: ${plano.faltando.join(", ")}`);
+            return;
+        }
+
         try {
             const { doc, setDoc } = await _fs();
             await setDoc(doc(window.db, 'items', itemId), {
-                equipado: true, slotAnatomico: slot, estadoEquip: estado, parentItemId: null,
+                equipado: true, slotAnatomico: slot, slotsOcupados: plano.extras,
+                estadoEquip: estado, parentItemId: null,
                 lastModified: new Date().toISOString()
             }, { merge: true });
             _log(`🎒 Item "${item.nome}" equipado no aliado "${_npcNome()}"`, [
@@ -463,7 +478,7 @@
         try {
             const { doc, setDoc } = await _fs();
             await setDoc(doc(window.db, 'items', itemId), {
-                equipado: false, slotAnatomico: null, estadoEquip: null,
+                equipado: false, slotAnatomico: null, slotsOcupados: [], estadoEquip: null,
                 lastModified: new Date().toISOString()
             }, { merge: true });
             _log(`🎒 Item "${item.nome}" desequipado do aliado "${_npcNome()}"`, [
@@ -593,7 +608,7 @@
             const { doc, setDoc, getDoc } = await _fs();
             const updateData = {
                 characterId: targetId,
-                equipado: false, slotAnatomico: null, estadoEquip: null, parentItemId: null,
+                equipado: false, slotAnatomico: null, slotsOcupados: [], estadoEquip: null, parentItemId: null,
                 lastModified: new Date().toISOString()
             };
             if (target.kind === 'npc') {

@@ -12,6 +12,7 @@ import {
 , writeBatch, deleteField, arrayUnion } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
 
 // ===== CONFIG =====
 const firebaseConfig = {
@@ -39,10 +40,11 @@ try {
     db = getFirestore(app);
 }
 const storage = getStorage(app);
+const functions = getFunctions(app, 'southamerica-east1');
 
 // ===== RE-EXPORT =====
 export {
-    app, auth, db, storage,
+    app, auth, db, storage, functions, httpsCallable,
     onAuthStateChanged, signOut,
     collection, query, where, orderBy, limit,
     onSnapshot, doc, getDoc, getDocs, setDoc,

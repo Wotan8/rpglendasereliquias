@@ -400,7 +400,11 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
 .wb-shelf { display: grid; gap: 14px; }
 
 .wb-book { border: 1px solid var(--lr-border, #333); border-radius: 14px; background: var(--lr-bg-1, #1f2630); overflow: hidden; }
-.wb-book__head { display: flex; gap: 14px; padding: 14px; align-items: flex-start; }
+.wb-book__head { display: flex; gap: 14px; padding: 14px; align-items: flex-start; cursor: pointer; list-style: none; }
+.wb-book__head::-webkit-details-marker { display: none; }
+.wb-book__head:hover { background: rgba(212,175,55,.06); }
+.wb-book__caret { flex: 0 0 auto; align-self: center; color: var(--lr-gold, #D4AF37); transition: transform .15s; }
+.wb-book[open] .wb-book__caret { transform: rotate(90deg); }
 .wb-book__cover {
     width: 60px; height: 82px; flex: 0 0 auto; border-radius: 8px;
     background: linear-gradient(135deg, #3a2f5e, #1b1530); background-size: cover; background-position: center;
@@ -522,7 +526,7 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
     .content-header { padding-top: 10px; padding-right: 12px; padding-bottom: 10px; gap: 8px; }
     .content-title { font-size: 1.25rem; }
     .btn-logout { padding: 7px 12px; font-size: .78rem; }
-    .btn-mestre, .btn-viewmap { padding: 7px 11px; font-size: .9rem; }
+    .btn-mestre { padding: 7px 11px; font-size: .9rem; }
     .user-display-name { font-size: .8rem; }
     .content-body { padding: 14px; }
 

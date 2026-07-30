@@ -1,0 +1,90 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>__check: separação Raças / Classes / Tribos</title>
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/styles_wizard.css">
+<style>
+    body { padding: 16px; font-family: system-ui, sans-serif; }
+    #out { font: 12px monospace; white-space: pre-wrap; background: #111; color: #9f9; padding: 10px; border-radius: 6px; }
+    .box { border: 1px solid #444; border-radius: 8px; padding: 10px; margin-top: 12px; }
+    .box > h4 { margin: 0 0 8px; color: #9cf; font: 700 13px system-ui; }
+</style>
+
+<div id="out">carregando…</div>
+<div class="box"><h4>phase1 — Raças</h4><div id="p1"></div></div>
+<div class="box"><h4>phase1B — Classes</h4><div id="p1b"></div></div>
+
+<script src="js/data.js"></script>
+<script src="../ficha-v1.7_1/js/mechanics-engine.js"></script>
+<script src="js/wizard-engine.js"></script>
+<script src="js/memory-manager.js"></script>
+<script src="js/system-data-loader.js"></script>
+<script src="js/race-module.js"></script>
+<script>
+    function escHtml(s) {
+        if (s === null || s === undefined) return '';
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+    // Stubs mínimos do app.js — só o que initPhase1/1B consomem.
+    function createNarratorBox(t) { return `<div class="narrator-box">${escHtml(t || '')}</div>`; }
+    function createMemoryBox(key, ph) { return `<div class="memory-box" data-memory-key="${key}"><textarea placeholder="${escHtml(ph)}"></textarea></div>`; }
+    function updateMiniPreview() {}
+    function saveWizardToStorage() {}
+    function forceRerender() {}
+
+    const log = [];
+    const T = (cond, ok, erro) => log.push((cond ? ' ok   ' : 'FALHA ') + (cond ? ok : erro));
+
+    fetch('__check-data.json', { cache: 'no-store' }).then(r => r.json()).then(data => {
+        Object.assign(window._systemData, data, { loaded: true });
+
+        // --- Estrutura das fases ---
+        const keys = FASES_WIZARD.map(f => f.key);
+        const idx = k => keys.indexOf(k);
+        T(FASES_WIZARD[idx('linhagem')].titulo === 'Raças', "etapa 'linhagem' renomeada para Raças", `titulo = ${FASES_WIZARD[idx('linhagem')].titulo}`);
+        T(idx('classes') === idx('linhagem') + 1, "'classes' vem logo depois de 'linhagem'", `classes em ${idx('classes')}, linhagem em ${idx('linhagem')}`);
+        T(idx('origens') === idx('classes') + 1, "'origens' (Tribos) vem depois de 'classes'", 'ordem errada');
+        T(FASES_WIZARD[idx('classes')].titulo === 'Classes', "nova etapa titulada 'Classes'", 'titulo errado');
+        T(FASES_WIZARD[idx('origens')].titulo === 'Tribos', "etapa 'origens' renomeada para Tribos", `titulo = ${FASES_WIZARD[idx('origens')].titulo}`);
+        T(document.querySelectorAll('#p1, #p1b').length === 2, 'containers de teste presentes', '');
+
+        // --- getPhaseIndex resolve pelos ids usados no código ---
+        [[2.5, 'peculiaridades'], [4, 'habilidades'], [7, 'equipamento'], [3, 'corpo']].forEach(([id, k]) => {
+            const i = getPhaseIndex(id);
+            T(FASES_WIZARD[i] && FASES_WIZARD[i].key === k, `getPhaseIndex(${id}) → ${k}`, `getPhaseIndex(${id}) → ${FASES_WIZARD[i] ? FASES_WIZARD[i].key : '?'}`);
+        });
+
+        // --- Render das duas fases ---
+        const p1 = document.getElementById('p1'), p1b = document.getElementById('p1b');
+        initPhase1(p1);
+        initPhase1B(p1b);
+
+        const nRacas = data.races.filter(r => r.publicado !== false).length;
+        const nClasses = data.classes.filter(c => c.publicado !== false).length;
+
+        T(!!p1.querySelector('#raceGrid'), 'phase1 tem a grade de raças', 'phase1 sem #raceGrid');
+        T(!p1.querySelector('#classGrid'), 'phase1 NÃO tem mais a grade de classes', 'phase1 ainda contém #classGrid');
+        T(p1.querySelectorAll('#raceGrid .selection-card').length === nRacas, `phase1 lista ${nRacas} raças`, 'contagem de raças errada');
+        T(!!p1.querySelector('[data-memory-key="linhagem_raca"]'), 'memória da raça continua na phase1', 'memória da raça sumiu');
+        T(!p1.querySelector('[data-memory-key="linhagem_classe"]'), 'memória da classe saiu da phase1', 'memória da classe ficou na phase1');
+
+        T(!!p1b.querySelector('#classGrid'), 'phase1B tem a grade de classes', 'phase1B sem #classGrid');
+        T(!p1b.querySelector('#raceGrid'), 'phase1B não tem grade de raças', 'phase1B contém #raceGrid');
+        T(p1b.querySelectorAll('#classGrid .selection-card').length === nClasses, `phase1B lista ${nClasses} classes`, 'contagem de classes errada');
+        T(!!p1b.querySelector('[data-memory-key="linhagem_classe"]'), 'memória da classe migrou para a phase1B', 'memória da classe não veio junto');
+
+        // --- Validação das duas etapas ---
+        wizardState.racaSelecionada = null; wizardState.classeSelecionada = null;
+        T(validatePhase(idx('linhagem')).valid === false, 'Raças bloqueia sem raça escolhida', 'Raças deixou passar vazia');
+        wizardState.racaSelecionada = 'Humano';
+        T(validatePhase(idx('linhagem')).valid === true, 'Raças libera só com a raça (não exige classe)', 'Raças ainda exige classe');
+        T(validatePhase(idx('classes')).valid === false, 'Classes bloqueia sem classe escolhida', 'Classes deixou passar vazia');
+        wizardState.classeSelecionada = 'Bardo';
+        T(validatePhase(idx('classes')).valid === true, 'Classes libera com a classe escolhida', 'Classes não liberou');
+
+        const falhas = log.filter(l => l.startsWith('FALHA')).length;
+        document.getElementById('out').textContent =
+            (falhas ? `❌ ${falhas} FALHA(S)\n\n` : `✅ ${log.length} VERIFICAÇÕES OK\n\n`) + log.join('\n');
+    }).catch(e => { document.getElementById('out').textContent = 'ERRO: ' + e.message + '\n' + e.stack; });
+</script>

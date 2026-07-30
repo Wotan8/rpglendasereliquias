@@ -81,7 +81,6 @@ export function initAuth(onReady) {
 window.goToMenu = () => { window.location.href = '../menu/menu.html'; };
 window.goToWorldbuilding = () => { window.location.href = '../worldbuilding/worldbuilding.html'; };
 window.goToHexmap = () => { window.location.href = '../hexmap.html'; };
-window.goToViewmap = () => { window.location.href = '../viewmap.html'; };
 
 window.logout = async function () {
     if (confirm('🚪 Tem certeza que deseja sair?')) {

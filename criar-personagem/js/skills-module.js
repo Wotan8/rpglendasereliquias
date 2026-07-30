@@ -79,19 +79,16 @@ function renderSkillStepSelectors() {
 
         let html = '';
         for (const grp of _skillGroups) {
-            // Is this group already selected in another step?
-            const selectedInStep = stateKeys.findIndex(k => wizardState[k] === grp);
             const isSelectedHere = wizardState[stateKeys[step]] === grp;
-            const isDisabled = selectedInStep >= 0 && selectedInStep !== step;
 
             html += `
-                <div class="group-card ${isSelectedHere ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
+                <div class="group-card ${isSelectedHere ? 'selected' : ''}"
                      data-skill-group="${grp}"
-                     onclick="${isDisabled ? '' : `selectSkillStep(${step}, '${grp}')`}"
-                     style="cursor:${isDisabled ? 'not-allowed' : 'pointer'};">
+                     onclick="selectSkillStep(${step}, '${grp}')"
+                     style="cursor:pointer;">
                     <div class="group-card-title">${_skillGroupLabels[grp]}</div>
                     <div class="group-card-points">${isSelectedHere ? pools[step] : '?'}</div>
-                    <div class="group-card-label">${isSelectedHere ? ['1º Maior', '2º Segundo', '3º Pior'][step] : (isDisabled ? _getSkillStepLabel(grp) : 'Selecione')}</div>
+                    <div class="group-card-label">${isSelectedHere ? ['1º Maior', '2º Segundo', '3º Pior'][step] : _getSkillStepLabel(grp)}</div>
                 </div>
             `;
         }
@@ -107,21 +104,24 @@ function _getSkillStepLabel(grp) {
     return 'Selecione';
 }
 
+// Mesma regra dos atributos: reclicar desmarca, e escolher um grupo já usado em
+// outro passo libera esse outro passo. Toda mudança zera as perícias distribuídas.
 function selectSkillStep(step, group) {
     const stateKeys = ['grupoPericiaPrimario', 'grupoPericia2', 'grupoPericiaFraco'];
 
-    // Don't allow selecting a group already used in another step
+    wizardState[stateKeys[step]] = wizardState[stateKeys[step]] === group ? null : group;
     for (let i = 0; i < stateKeys.length; i++) {
-        if (i !== step && wizardState[stateKeys[i]] === group) return;
+        if (i !== step && wizardState[stateKeys[i]] === group) wizardState[stateKeys[i]] = null;
     }
 
-    wizardState[stateKeys[step]] = group;
+    for (const key of Object.keys(wizardState.pericias || {})) wizardState.pericias[key] = 0;
 
     // Auto-assign the remaining group as "terceiro" (3 points)
     _autoAssignThirdGroup();
 
     renderSkillStepSelectors();
     renderSkillDistribution();
+    ExpTracker.updateDisplay();
     saveWizardToStorage();
 }
 

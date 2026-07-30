@@ -31,6 +31,16 @@ function _getCharacterBodySlots() {
 }
 
 
+/* Slots de equipamento: a lógica mora em shared/equip-slots.js, compartilhada
+   com o inventário de aliados e o de NPCs do painel do mestre. Aqui ficam só os
+   atalhos que injetam o catálogo/estado desta ficha. */
+const _slotsDoItem      = item => window.EquipSlots.slotsDoItem(item);
+const _itemOcupaSlot    = (item, slotKey) => window.EquipSlots.itemOcupaSlot(item, slotKey);
+const _slotsExtrasNecessarios = item =>
+    window.EquipSlots.slotsExtrasNecessarios(item, window._inventoryState?.catalog);
+const _reservarSlots    = (nec, bodySlots, ocupados, label) =>
+    window.EquipSlots.reservarSlots(nec, bodySlots, ocupados, label);
+
 // ===== EQUIP STATES — Estados de Equipamento =====
 const EQUIP_STATES = {
     empunhado:  { label: 'Empunhado',  icon: '✊', appliesMechanics: true,  description: 'Segurado ativamente nas mãos' },
@@ -285,6 +295,47 @@ function _campoDoItem(item, key) {
 const _statusVitaisDoItem = item => _campoDoItem(item, 'statusVitaisVinculados')
     .map(sv => (typeof sv === 'object' ? sv : { id: sv, modificador: 0 }));
 
+const _SK_PREFIXO = {
+    mental: 'sk_mental_', fisico: 'sk_fisico_', social: 'sk_social_',
+    combate: 'sk_combate_', exclusivo: 'sk_exclusivo_',
+};
+
+/**
+ * Perícia vinculada guarda o ID do Firestore; os dots da ficha usam
+ * sk_<categoria>_<key>. Resolver aqui deixa o vínculo sobreviver a renomeação.
+ */
+function _periciaDotKey(skillId) {
+    for (const cat of Object.keys(window.SKILLS || {})) {
+        const s = (window.SKILLS[cat] || []).find(x => x.id === skillId);
+        if (s) return (_SK_PREFIXO[cat] || 'sk_mental_') + s.key;
+    }
+    return null;
+}
+
+/**
+ * Modificadores de Atributo e Perícia dos itens equipados.
+ * Atributo já vem com a chave final (attr_des); perícia vem por id.
+ * Substitui o par booleano+modificar que existia só para somar/subtrair.
+ */
+function _aplicarAtributosEPericias(item) {
+    if (!window.state.mechanicBonuses) window.state.mechanicBonuses = {};
+    const bag = window.state.mechanicBonuses;
+
+    for (const a of _campoDoItem(item, 'atributosVinculados')) {
+        const mod = Number(a?.modificador) || 0;
+        if (!mod || !a.id) continue;
+        bag[a.id] = (bag[a.id] || 0) + mod;
+    }
+
+    for (const p of _campoDoItem(item, 'periciasVinculadas')) {
+        const mod = Number(p?.modificador) || 0;
+        if (!mod || !p.id) continue;
+        const chave = _periciaDotKey(p.id);
+        if (!chave) { console.warn(`⚠️ [item ${item.nome}] perícia ${p.id} não encontrada`); continue; }
+        bag[chave] = (bag[chave] || 0) + mod;
+    }
+}
+
 function applyEquippedItemsMechanics() {
     const items = window._inventoryState.items;
     const equipped = items.filter(itemTemEfeitosAtivos);
@@ -340,9 +391,13 @@ function applyEquippedItemsMechanics() {
                         const dvDef = window.DERIVED_VALUES.find(d => d.id === dvId);
                         if (dvDef) {
                             const targetKey = `DERIVED:${dvDef.key}`;
-                            // DV escopado → bag do item; DV global → bag do personagem
+                            // DV escopado → bag do item; DV global → bag do personagem.
+                            // O vínculo pode forçar global (escopo:'global'): é o que
+                            // deixa um escudo penalizar o Acerto do personagem em vez
+                            // de uma coluna de Acerto do próprio escudo.
+                            const escopado = dvDef.escopoItem && dvObj.escopo !== 'global';
                             let bag;
-                            if (dvDef.escopoItem) {
+                            if (escopado) {
                                 if (!window.state.itemBonuses) window.state.itemBonuses = {};
                                 if (!window.state.itemBonuses[item.id]) window.state.itemBonuses[item.id] = {};
                                 bag = window.state.itemBonuses[item.id];
@@ -365,6 +420,9 @@ function applyEquippedItemsMechanics() {
                 const k = `DERIVED:${sv.id}`;
                 window.state.mechanicBonuses[k] = (window.state.mechanicBonuses[k] || 0) + mod;
             }
+
+            // 1e) Atributos e Perícias vinculados
+            _aplicarAtributosEPericias(item);
         } finally {
             if (typeof window._meSetItemScope === 'function') window._meSetItemScope(null);
         }
@@ -969,7 +1027,9 @@ function _getCompatibleSlots(item) {
         if (!isNative && !canHold) continue;
         
         // Contar itens no slot (ignorando 'armazenado' e 'fixado')
-        const inSlot = items.filter(i => i.slotAnatomico === slotKey && i.equipado && i.estadoEquip !== 'armazenado' && i.estadoEquip !== 'fixado');
+        // _itemOcupaSlot e não slotAnatomico: sem isso a 2a mão de uma arma de
+        // duas mãos aparecia como slot livre aqui.
+        const inSlot = items.filter(i => _itemOcupaSlot(i, slotKey) && i.equipado && i.estadoEquip !== 'armazenado' && i.estadoEquip !== 'fixado');
         
         // mechanicBonuses
         const mechBonus = typeof state !== 'undefined' && state.mechanicBonuses ? (state.mechanicBonuses['slot_' + slotKey] || 0) : 0;
@@ -1197,7 +1257,7 @@ window.selectEquipSlot = function(slotKey) {
 
     // Filtrar availableStates: se o slot estiver cheio para itens normais, só permite 'fixado'
     const items = window._inventoryState.items;
-    const inSlot = items.filter(i => (i.slotAnatomico === slotKey || i.slotAnatomico2 === slotKey) && i.equipado && i.estadoEquip !== 'armazenado' && i.estadoEquip !== 'fixado');
+    const inSlot = items.filter(i => _itemOcupaSlot(i, slotKey) && i.equipado && i.estadoEquip !== 'armazenado' && i.estadoEquip !== 'fixado');
     const bodySlots = typeof _getCharacterBodySlots === 'function' ? _getCharacterBodySlots() : {};
     const slotDef = bodySlots[slotKey];
     
@@ -1333,7 +1393,7 @@ window.confirmEquip = async function(itemId) {
             if (k === slotKey) return false;
             if (!bodySlots[k].podeEmpunhar) return false;
             // Verificar se está ocupado
-            const isOccupied = items.some(i => (i.slotAnatomico === k || i.slotAnatomico2 === k) && i.equipado && i.estadoEquip !== 'armazenado');
+            const isOccupied = items.some(i => _itemOcupaSlot(i, k) && i.equipado && i.estadoEquip !== 'armazenado');
             return !isOccupied;
         });
 
@@ -1342,6 +1402,21 @@ window.confirmEquip = async function(itemId) {
             return;
         }
     }
+
+    // Slots adicionais do catálogo (armadura completa, set de peças). Somam-se à
+    // mão extra acima, que continua sendo o caso especial das armas de 2 mãos.
+    const jaTomados = [slotKey, otherHand].filter(Boolean);
+    const outrosItens = window._inventoryState.items.filter(i =>
+        i.id !== itemId && i.equipado && i.estadoEquip !== 'armazenado');
+    outrosItens.forEach(i => jaTomados.push(..._slotsDoItem(i)));
+
+    const nomeParte = pid => (window.state?.partesDoCorpo || []).find(b => b.id === pid)?.nome || pid;
+    const reserva = _reservarSlots(_slotsExtrasNecessarios(item), bodySlots, jaTomados, nomeParte);
+    if (!reserva.ok) {
+        alert(`"${item.nome}" precisa de slots que não estão livres:\n\n• ${reserva.faltando.join('\n• ')}\n\nDesequipe algo antes.`);
+        return;
+    }
+    const slotsExtras = [...(otherHand ? [otherHand] : []), ...reserva.slots];
 
     // Desabilitar botão para evitar cliques duplos
     const btn = document.getElementById('btnConfirmEquip');
@@ -1374,7 +1449,9 @@ window.confirmEquip = async function(itemId) {
             updateData.ownerId = user.uid;
         }
 
-        // Se arma de 2 mãos ou versátil com 2 mãos, marcar que ocupa o outro slot
+        // Todos os slots extras num só campo. slotAnatomico2 continua gravado
+        // para não quebrar leitura de código/dado antigo que ainda o consulta.
+        updateData.slotsOcupados = slotsExtras;
         updateData.slotAnatomico2 = otherHand;
 
         console.log('⬆️ Equipando item:', itemId, 'Slot:', slotKey, 'Estado:', stateKey, 'Data:', updateData);
@@ -1407,6 +1484,7 @@ window.unequipItem = async function(itemId) {
         const updateData = {
             equipado: false,
             slotAnatomico: null,
+            slotsOcupados: [],
             slotAnatomico2: null,
             estadoEquip: null,
             maosUsadas: null,

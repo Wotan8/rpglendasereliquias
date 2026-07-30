@@ -15,11 +15,11 @@ function initPhase1(container) {
     for (const race of races) {
         const sel = wizardState.racaSelecionada === race.nome ? 'selected' : '';
         html += `
-            <div class="selection-card card-visual ${sel}" data-race="${escHtml(race.nome)}" onclick="selectRace('${escHtml(race.nome)}')">
+            <div class="selection-card card-visual ${sel}" data-race="${escHtml(race.nome)}" onclick="selectRace(this.dataset.race)">
                 ${race.imagemUrl ? `<img class="selection-card-img-full" src="${escHtml(race.imagemUrl)}" alt="${escHtml(race.nome)}" loading="lazy">` : '<div class="selection-card-img-placeholder">🧬</div>'}
                 <div class="selection-card-title">${escHtml(race.nome)}</div>
                 <div class="selection-card-subtitle">${escHtml(race.subtitulo || '')}</div>
-                <button type="button" class="selection-card-info-btn" title="Ver detalhes de ${escHtml(race.nome)}" onclick="openRaceModal('${escHtml(race.nome)}', event)">
+                <button type="button" class="selection-card-info-btn" title="Ver detalhes de ${escHtml(race.nome)}" onclick="openRaceModal(this.closest('.selection-card').dataset.race, event)">
                     <span class="info-icon">ℹ️</span>
                     <span class="info-text">Ver detalhes</span>
                 </button>
@@ -52,12 +52,12 @@ function initPhase1B(container) {
         const sel = wizardState.classeSelecionada === cls.nome ? 'selected' : '';
         const citacao = cls.citacao || cls.citacaoIconica || '';
         html += `
-            <div class="selection-card card-visual ${sel}" data-class="${escHtml(cls.nome)}" onclick="selectClass('${escHtml(cls.nome)}')">
+            <div class="selection-card card-visual ${sel}" data-class="${escHtml(cls.nome)}" onclick="selectClass(this.dataset.class)">
                 ${cls.imagemUrl ? `<img class="selection-card-img-full" src="${escHtml(cls.imagemUrl)}" alt="${escHtml(cls.nome)}" loading="lazy">` : '<div class="selection-card-img-placeholder">⚔️</div>'}
                 <div class="selection-card-title">${escHtml(cls.nome)}</div>
                 <div class="selection-card-subtitle">${escHtml(cls.arquetipo || '')}</div>
                 ${citacao ? `<div class="selection-card-quote">"${escHtml(citacao).substring(0, 60)}${citacao.length > 60 ? '...' : ''}"</div>` : ''}
-                <button type="button" class="selection-card-info-btn" title="Ver detalhes de ${escHtml(cls.nome)}" onclick="openClassModal('${escHtml(cls.nome)}', event)">
+                <button type="button" class="selection-card-info-btn" title="Ver detalhes de ${escHtml(cls.nome)}" onclick="openClassModal(this.closest('.selection-card').dataset.class, event)">
                     <span class="info-icon">ℹ️</span>
                     <span class="info-text">Ver detalhes</span>
                 </button>

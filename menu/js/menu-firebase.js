@@ -1008,12 +1008,14 @@ function renderLojaItens() {
                                 <small>Comprar com Fragmentos</small>
                             </button>` : ''}
                         ${precoReal ? `
-                            <button class="loja-btn loja-btn-real" onclick="openCheckoutPagBank('${item.id}')">
-                                <span>💳 R$ ${precoReal}</span>
-                                <small>PIX · Cartão · Boleto</small>
+                            <button class="loja-btn loja-btn-real" onclick="openCheckoutReal('${item.id}')">
+                                <span>${MODO_PAGAMENTO_REAL === 'dinheiro' ? '💵' : '💳'} R$ ${precoReal}</span>
+                                <small>${MODO_PAGAMENTO_REAL === 'dinheiro' ? 'Pagar direto ao mestre' : 'PIX · Cartão · Boleto'}</small>
                             </button>` : ''}
                     </div>
-                    ${precoReal ? `<div class="loja-card-secure">🔒 Pagamento processado no ambiente seguro do PagBank</div>` : ''}
+                    ${precoReal ? `<div class="loja-card-secure">${MODO_PAGAMENTO_REAL === 'dinheiro'
+                        ? '🤝 Você combina o pagamento com o mestre; o item é liberado após a confirmação dele'
+                        : '🔒 Pagamento processado no ambiente seguro do PagBank'}</div>` : ''}
                 </div>
             </div>
         `;
@@ -1078,12 +1080,18 @@ async function getRecaptchaToken(action) {
     }
 }
 
+function rotuloBotaoCompra(mode) {
+    if (mode === 'pagbank') return '💳 Ir para o Pagamento';
+    if (mode === 'dinheiro') return '💵 Enviar Pedido ao Mestre';
+    return '✔️ Confirmar Compra';
+}
+
 // Abre o modal de confirmação de compra (usado pelos dois meios de pagamento)
 function openCheckoutModal(item, mode) {
     currentCheckoutItem = item;
     currentCheckoutMode = mode;
 
-    const isPagBank = mode === 'pagbank';
+    const isReal = mode !== 'frag';
     const valorCentavos = getItemValorCentavos(item);
     const precoLabel = isReal
         ? `<span style="color:var(--lr-nature);font-weight:700;">R$ ${(valorCentavos / 100).toFixed(2).replace('.', ',')}</span>`
@@ -1102,7 +1110,7 @@ function openCheckoutModal(item, mode) {
                 <input type="number" id="lojaCheckoutQuantity" value="1" min="1" max="99" oninput="updateCheckoutTotal()" style="width:60px;text-align:center;background:var(--lr-bg-1);border:1px solid rgba(255,255,255,0.1);color:var(--lr-text-1);border-radius:6px;padding:4px;font-family:var(--font);font-size:0.9rem;font-weight:600;">
             </div>
         </div>
-        ${isPagBank ? `<div style="font-size:0.8rem;color:var(--muted);margin-top:10px;border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;">🔒 Você será redirecionado ao ambiente <strong>seguro do PagBank</strong> para pagar com PIX, Cartão ou Boleto. O item é entregue automaticamente após a confirmação do pagamento.</div>` : ''}
+        ${isReal ? cartaoPixHtml() : ''}
     `;
 
     const metaSelector = document.getElementById('lojaCheckoutMetaSelector');
@@ -1133,7 +1141,7 @@ function openCheckoutModal(item, mode) {
     }
 
     const btn = document.getElementById('btnConfirmPurchase');
-    btn.innerHTML = isPagBank ? '💳 Ir para o Pagamento' : '✔️ Confirmar Compra';
+    btn.innerHTML = rotuloBotaoCompra(mode);
 
     document.getElementById('lojaCheckoutModal').style.display = 'flex';
 }
@@ -1147,7 +1155,7 @@ window.updateCheckoutTotal = function () {
     if (qty < 1) qty = 1;
     if (qty > 99) qty = 99;
 
-    const isPagBank = currentCheckoutMode === 'pagbank';
+    const isReal = currentCheckoutMode !== 'frag';
     const valorCentavos = getItemValorCentavos(currentCheckoutItem);
     const totalCentavos = valorCentavos * qty;
 
@@ -1190,10 +1198,10 @@ window.openCheckoutFrag = async function (itemId) {
     openCheckoutModal(item, 'frag');
 };
 
-window.openCheckoutPagBank = function (itemId) {
+window.openCheckoutReal = function (itemId) {
     const item = lojaItensData.find(i => i.id === itemId);
     if (!item) return;
-    openCheckoutModal(item, 'pagbank');
+    openCheckoutModal(item, MODO_PAGAMENTO_REAL);
 };
 
 window.confirmPurchaseFrag = async function () {
@@ -1212,6 +1220,31 @@ window.confirmPurchaseFrag = async function () {
     const btn = document.getElementById('btnConfirmPurchase');
     btn.disabled = true;
     btn.innerHTML = 'Processando...';
+
+    // ---- Fluxo Dinheiro: registra o pedido; o mestre confirma o recebimento ----
+    if (currentCheckoutMode === 'dinheiro') {
+        try {
+            const recaptchaToken = await getRecaptchaToken('comprar_loja');
+            const solicitar = httpsCallable(functions, 'solicitarCompraDinheiro');
+            await solicitar({ itemId: item.id, selectedMetas, quantidade, recaptchaToken });
+
+            document.getElementById('lojaCheckoutModal').style.display = 'none';
+            showAlert(
+                `✅ Pedido enviado! Pague ${quantidade}x ${item.nome} ao mestre. ` +
+                'Assim que ele confirmar, o item aparece no seu Repertório.',
+                'success',
+                10000
+            );
+        } catch (error) {
+            console.error('Erro ao solicitar compra em dinheiro:', error);
+            showAlert(`❌ Não foi possível registrar o pedido: ${error.message}`, 'danger');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = rotuloBotaoCompra('dinheiro');
+            currentCheckoutItem = null;
+        }
+        return;
+    }
 
     // ---- Fluxo PagBank: cria o checkout no servidor e redireciona ----
     if (currentCheckoutMode === 'pagbank') {
