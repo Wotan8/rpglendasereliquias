@@ -32,7 +32,12 @@ export const refObjeto = (objId) => doc(db, 'mesas', T.mesaId, 'tabuleiros', T.c
 export const refEstado = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'estado');
 export const refCombate = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'combate');
 export const refReguas = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'reguas');
-export const refPresenca = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'presenca');
+// Presença: um doc POR USUÁRIO. No doc único antigo, N pessoas mexendo o mouse
+// disputavam o mesmo doc (fila de escrita no servidor) e cada movimento reenviava
+// os N cursores para os N clientes. Separado, cada um escreve só no seu e o
+// snapshot entrega apenas o doc que mudou.
+export const colPresenca = () => collection(db, 'mesas', T.mesaId, 'presenca');
+export const refPresenca = (uid) => doc(db, 'mesas', T.mesaId, 'presenca', uid);
 export const refPings = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'pings');
 export const refLegenda = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'legenda');
 export const refMusica = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'musica');

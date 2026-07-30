@@ -4,12 +4,12 @@
 // - Ping com duplo-clique + Alt (mestre pode forçar a câmera dos outros)
 // - Tween de câmera reutilizável
 // =============================================
-import { setDoc, onSnapshot } from '../../painel-mestre/js/firebase-config.js';
+import { setDoc, deleteDoc, onSnapshot } from '../../painel-mestre/js/firebase-config.js';
 import { T, esc, markDirty, toast, uid } from './tab-state.js';
-import { refPresenca, refPings } from './tab-main.js';
+import { colPresenca, refPresenca, refPings } from './tab-main.js';
 
-// 300ms: o doc de presença é único para a mesa e concorre com as escritas do
-// token durante o arrasto. Cursor é enfeite — não vale gastar banda de escrita.
+// 300ms: mesmo com um doc de presença POR USUÁRIO, o Firestore sustenta ~1
+// escrita/s por doc — e cursor é enfeite, não vale gastar banda de escrita.
 const CURSOR_THROTTLE = 300;
 const HEARTBEAT = 10000;
 const CURSOR_TTL = 15000;
@@ -28,9 +28,12 @@ export function initPresenca() {
     T.cursoresRemotos = {};
     T.pingsAtivos = [];
 
-    // Listeners
-    T.unsubs.push(onSnapshot(refPresenca(), s => {
-        T.cursoresRemotos = s.exists() ? (s.data() || {}) : {};
+    // Listeners — só os docs que MUDARAM chegam (docChanges), não a mesa inteira
+    T.unsubs.push(onSnapshot(colPresenca(), s => {
+        s.docChanges().forEach(ch => {
+            if (ch.type === 'removed') delete T.cursoresRemotos[ch.doc.id];
+            else T.cursoresRemotos[ch.doc.id] = ch.doc.data();
+        });
         markDirty();
     }));
     T.unsubs.push(onSnapshot(refPings(), s => {
@@ -84,7 +87,8 @@ export function publicarCursor(mundo, forcado = false) {
     const payload = (mundo && cursoresAtivados())
         ? { x: Math.round(mundo.x), y: Math.round(mundo.y), nome, cor: minhaCor, t: agora, canvasId: T.canvasId }
         : null;
-    setDoc(refPresenca(), { [T.user.uid]: payload }, { merge: true }).catch(() => {});
+    // doc próprio: overwrite inteiro (é minúsculo); sumir = apagar o doc
+    (payload ? setDoc(refPresenca(T.user.uid), payload) : deleteDoc(refPresenca(T.user.uid))).catch(() => {});
 }
 
 /** Cursores remotos válidos (mesmo canvas, dentro do TTL). */

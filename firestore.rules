@@ -387,7 +387,13 @@ service cloud.firestore {
         }
       }
 
-      // Metadados ao vivo: estado/combate/réguas/presença/pings/legenda/musica
+      // Presença (cursores ao vivo): um doc POR USUÁRIO — cada um só escreve o próprio
+      match /presenca/{uid} {
+        allow read: if isSignedIn();
+        allow write: if isMaster() || (ehJogadorDaMesa() && request.auth.uid == uid);
+      }
+
+      // Metadados ao vivo: estado/combate/réguas/pings/legenda/musica
       match /tabuleiro-meta/{docId} {
         allow read: if isSignedIn();
         // legenda (teleprompter), estado (canvas ativo) e musica (playlists) são só do mestre
