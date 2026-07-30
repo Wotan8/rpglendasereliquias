@@ -160,15 +160,34 @@ const corHerdada = (css, vars) => doBody(css, /(?<!-)color\s*:\s*([^;]+)/) || va
 // sobre o fundo do tema, e não o da página, o acusava de errado.
 const fundoDaPagina = (css, vars) => doBody(css, /background(?:-color)?\s*:\s*([^;]+)/) || vars['--lr-bg-0'];
 
+// O fundo da pagina costuma ser gradiente (`linear-gradient(135deg,
+// var(--lr-bg-0), var(--lr-surface))` no login). resolve() devolve null nisso e
+// caia-se no branco do fallback — o que acusava o alert translucido do login de
+// ilegivel, quando na verdade ele cai num gradiente ESCURO. Basta a primeira
+// cor do gradiente: e contra ela que o translucido de cima compoe.
+function corDoFundo(valor, vars) {
+    if (!valor) return null;
+    const direto = resolve(valor, vars);
+    if (direto) return direto;
+    if (!/gradient\(/.test(valor)) return null;
+    for (const m of valor.matchAll(/var\(\s*--[\w-]+\s*(?:,[^()]*)?\)|#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)/g)) {
+        const c = resolve(m[0], vars);
+        if (c) return c.length > 3 ? c.slice(0, 3) : c;
+    }
+    return null;
+}
+
 export function ilegiveis(css, rel) {
     const achados = [];
-    const herdadaClaro = corHerdada(css, CLARO);
-    const herdadaEscuro = corHerdada(css, ESCURO);
     const locais = varsDoBody(css);
     const CLARO_L = { ...CLARO, ...locais };
     const ESCURO_L = { ...ESCURO, ...locais };
-    const fundoClaro = resolve(fundoDaPagina(css, CLARO), CLARO) || [255, 255, 255];
-    const fundoEscuro = resolve(fundoDaPagina(css, ESCURO), ESCURO) || [10, 13, 18];
+    // Com as vars do body: numa pagina que prende a paleta (login, hexmap,
+    // tabuleiro) o fundo e o texto herdado vem da paleta PRESA, nao do tema.
+    const herdadaClaro = corHerdada(css, CLARO_L);
+    const herdadaEscuro = corHerdada(css, ESCURO_L);
+    const fundoClaro = corDoFundo(fundoDaPagina(css, CLARO_L), CLARO_L) || [255, 255, 255];
+    const fundoEscuro = corDoFundo(fundoDaPagina(css, ESCURO_L), ESCURO_L) || [10, 13, 18];
     for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
         const sel = m[1].replace(/\/\*[\s\S]*?\*\//g, '').trim().replace(/\s+/g, ' ');
         if (!sel || sel.startsWith('@') || sel.startsWith('--')) continue;
@@ -244,8 +263,26 @@ function arquivosComInline(dir = RAIZ, saida = []) {
     return saida;
 }
 
+// Regra body do <style> da propria pagina. Sem isso o style inline era medido
+// sem saber em que pagina cai: o hexmap tem `body { background: #0a0e27 }` e
+// prende a paleta escura ali, mas o `color: #aaa` dos style inline dele era
+// comparado com as superficies CLARAS do tema e acusado de ilegivel. Levando o
+// body junto, cada style inline e medido contra o fundo e as vars da pagina
+// onde ele realmente vive.
+function bodyDaPagina(texto) {
+    const estilos = [...texto.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map(m => m[1]).join('\n');
+    let saida = '';
+    for (const m of estilos.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const sel = m[1].replace(/\/\*[\s\S]*?\*\//g, '').trim();
+        // Tira comentario do corpo: eu escrevo razoes com ":" e nome de token
+        // dentro deles, e isso poderia ser lido como declaracao.
+        if (/^(html\s*,\s*)?body$/.test(sel)) saida += `body { ${m[2].replace(/\/\*[\s\S]*?\*\//g, '')} }\n`;
+    }
+    return saida;
+}
+
 function inlineComoCss(texto) {
-    let css = '';
+    let css = bodyDaPagina(texto);
     // style="..." | style='...' | style.cssText = '...'
     for (const m of texto.matchAll(/style\s*=\s*(["'`])([^"'`]*?)\1|style\.cssText\s*=\s*(["'`])([^"'`]*?)\3/g)) {
         const decl = m[2] ?? m[4];
@@ -276,6 +313,15 @@ assert.equal(isca('.a { background: rgba(0,0,0,.06); color: var(--ink); }').leng
     'falso positivo: fundo translúcido não dá pra julgar sem saber o que está atrás');
 assert.equal(isca('.a { background: var(--nao-existe, #ffffff); color: #fff; }').length, 1,
     'token inexistente tem que cair no fallback');
+// Pagina que prende a paleta escura no body: o translucido em cima dela compoe
+// contra o fundo ESCURO da pagina, mesmo que o fundo seja gradiente. Era assim
+// que o alert do login aparecia como ilegivel sem ser.
+assert.equal(isca('body { --lr-nature: #3FAE6A; background: linear-gradient(135deg, #0A0D12 0%, #1A2029 100%); }'
+    + '.a { background: rgba(63,174,106,.2); color: #6FD79B; }').length, 0,
+    'nao leu a primeira cor do gradiente do body — translucido escuro virou branco');
+assert.equal(isca('body { background: linear-gradient(135deg, #FDFBF7 0%, #FFFFFF 100%); }'
+    + '.a { background: rgba(63,174,106,.2); color: #6FD79B; }').length, 1,
+    'gradiente CLARO no body tem que continuar acusando texto claro em cima');
 
 /* ---------- repo ---------- */
 const arquivos = cssDoRepo();
@@ -287,6 +333,17 @@ const achados = arquivos.flatMap(f =>
 const comInline = arquivosComInline();
 achados.push(...comInline.flatMap(f =>
     ilegiveis(inlineComoCss(readFileSync(f, 'utf8')), relative(RAIZ, f).replace(/\\/g, '/'))));
+
+// Bloco <style> dentro de HTML. Era ponto cego: a varredura pegava arquivo .css
+// e atributo style="...", mas nao isto — e a pagina de LOGIN inteira vive num
+// <style>. Foi por isso que ela ficou com titulo escuro em card escuro sem nada
+// acusar. 159 regras entraram na conta ao ligar isto (login, 404 e hexmap).
+const comStyle = comInline.filter(f => f.endsWith('.html'));
+achados.push(...comStyle.flatMap(f => {
+    const txt = readFileSync(f, 'utf8');
+    const css = [...txt.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map(m => m[1]).join('\n');
+    return css.trim() ? ilegiveis(css, relative(RAIZ, f).replace(/\\/g, '/')) : [];
+}));
 
 if (avisos.length && process.env.AVISOS) {
     console.log(`\n${avisos.length} regra(s) só com fundo neutro escuro/claro, sem cor declarada —`
@@ -314,7 +371,8 @@ assert.deepEqual(novos, [],
     + novos.join('\n')
     + `\n\nSe for intencional, acrescente a linha em shared/contraste-divida.txt.\n`);
 
-console.log(`ok — ${arquivos.length} CSS + ${comInline.length} arquivos com style inline varridos, `
+console.log(`ok — ${arquivos.length} CSS + ${comInline.length} arquivos com style inline`
+    + ` + ${comStyle.length} HTML com bloco <style> varridos, `
     + `0 regras novas abaixo de ${MINIMO}:1 nos dois temas`
     + (restam ? `\n     dívida pendente: ${restam} regra(s) em shared/contraste-divida.txt` : '')
     + (avisos.length ? ` | ${avisos.length} aviso(s), rode com AVISOS=1` : ''));

@@ -10,9 +10,15 @@
       #message { background: var(--lr-surface); border: 1px solid var(--lr-border); border-top: 2px solid var(--lr-gold); max-width: 360px; margin: 100px auto 16px; padding: 32px 24px 16px; border-radius: var(--lr-radius-lg); box-shadow: var(--lr-shadow-3); }
       #message h3 { color: var(--lr-text-2); font-weight: normal; font-size: 16px; margin: 16px 0 12px; }
       #message h2 { color: var(--lr-gold); font-family: var(--lr-font-title); font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-family: var(--lr-font-title); color: var(--lr-divine); margin: 0 0 16px;}
+      /* --lr-divine e branco fixo, e o card usa var(--lr-surface), que no tema
+         claro e branco: o titulo sumia (1.07:1). --lr-text-1 acompanha o tema. */
+      #message h1 { font-size: 22px; font-family: var(--lr-font-title); color: var(--lr-text-1); margin: 0 0 16px;}
       #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; color: var(--lr-text-2); }
-      #message a { display: block; text-align: center; background: var(--lr-gold); text-transform: uppercase; text-decoration: none; color: #1a1408; font-weight: 700; padding: 16px; border-radius: var(--lr-radius); }
+      /* Texto era #1a1408 cravado: no tema claro o --lr-gold e ouro ESCURO
+         (#6E5413), entao ficava tinta escura sobre fundo escuro (2.56:1). Usar
+         --lr-bg-0 resolve nos dois temas, porque ele e o ouro viram juntos:
+         papel sobre ouro escuro (6.91:1), tinta sobre ouro claro (9.25:1). */
+      #message a { display: block; text-align: center; background: var(--lr-gold); text-transform: uppercase; text-decoration: none; color: var(--lr-bg-0); font-weight: 700; padding: 16px; border-radius: var(--lr-radius); }
       #load { color: var(--lr-text-2); text-align: center; font-size: 13px; }
       @media (max-width: 600px) {
         body, #message { margin-top: 0; box-shadow: none; }

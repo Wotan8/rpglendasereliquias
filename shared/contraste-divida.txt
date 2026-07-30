@@ -17,8 +17,6 @@ ficha-v1.7_1/js/aliados.js  linha 263
 ficha-v1.7_1/js/runomancia-module.js  linha 479
 ficha-v1.7_1/js/runomancia-module.js  linha 493
 ficha-v1.7_1/js/runomancia-module.js  linha 496
-hexmap.html  linha 1073
-hexmap.html  linha 841
 hexmap.js  linha 1101
 hexmap.js  linha 592
 laboratorium-runarum/js/canvas.js  linha 53
