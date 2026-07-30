@@ -12,7 +12,8 @@
  *  • slot já tomado por OUTRO item não é reaproveitado;
  *  • exigência parcial não reserva nada pela metade sem acusar;
  *  • quantidade ausente vale 1, e a chave legada 'modificador' ainda é aceita;
- *  • planejarEquipar ignora o próprio item e o que está armazenado.
+ *  • planejarEquipar ignora o próprio item e o que está armazenado;
+ *  • principal na MESMA parte que a cobertura só cabe se sobrar slot na parte.
  *
  * Roda com: node shared/equip-slots.test.mjs
  */
@@ -166,6 +167,25 @@ function ctx(catalog = []) {
   const r = c._planejarEquipar(set, 'torso', todos, BODY);
   assert.equal(r.ok, false);
   assert.match(r.faltando[0], /2× Braço \(livre: 1\)/);
+}
+
+// --- principal na MESMA parte da cobertura ---------------------------------
+// O catálogo tinha 5 itens oferecendo como slot principal uma parte que o
+// próprio slotsAdicionais deles já consumia inteira. A ficha listava a opção e
+// a reserva recusava sempre: Manto de Linho na Cabeça, Cota de Malha no Ombro,
+// Peitoral de Aço nas Costas... A regra é quantidade <= slots_da_parte - 1.
+{
+  const c = ctx();
+  const manto = { id: 'm', slotsAdicionais: [{ id: 'CABECA', quantidade: 1 }] };
+  assert.equal(c._planejarEquipar(manto, 'cabeca', [], BODY, { labelParte: label }).ok, false,
+    'principal na Cabeça + cobrir a Cabeça pede 2 cabeças — o corpo só tem 1');
+  assert.equal(c._planejarEquipar(manto, 'torso', [], BODY, { labelParte: label }).ok, true,
+    'com o principal fora da parte coberta, o mesmo item equipa');
+
+  // Contraprova: pedir 1 Braço extra com o principal no Braço cabe, são 2.
+  const ombreiras = { id: 'o', slotsAdicionais: [{ id: 'BRACO', quantidade: 1 }] };
+  assert.equal(c._planejarEquipar(ombreiras, 'braco_1', [], BODY, { labelParte: label }).ok, true,
+    'parte de 2 slots aguenta principal + 1 de cobertura');
 }
 
 console.log('✅ equip-slots: todos os casos passaram');
