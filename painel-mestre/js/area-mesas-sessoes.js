@@ -184,7 +184,7 @@ window.viewSessionLog = function(logId) {
         log.loot ? `<div class="form-group"><label class="form-label">Loot</label><div style="color:var(--ink);white-space:pre-wrap">${escapeHtml(log.loot)}</div></div>` : '',
         log.hooks ? `<div class="form-group"><label class="form-label">Ganchos</label><div style="color:var(--ink);white-space:pre-wrap">${escapeHtml(log.hooks)}</div></div>` : '',
         log.moments ? `<div class="form-group"><label class="form-label">Momentos</label><div style="color:var(--ink);white-space:pre-wrap">${escapeHtml(log.moments)}</div></div>` : '',
-        log.dmNotes ? `<div class="form-group"><label class="form-label">Notas do Mestre</label><div style="color:#f87171;white-space:pre-wrap">${escapeHtml(log.dmNotes)}</div></div>` : '',
+        log.dmNotes ? `<div class="form-group"><label class="form-label">Notas do Mestre</label><div style="color:var(--lr-blood-2);white-space:pre-wrap">${escapeHtml(log.dmNotes)}</div></div>` : '',
     ].filter(Boolean).join('');
     m.innerHTML = `<div class="modal-content" style="max-width:800px"><div class="modal-header"><span class="modal-title">📝 Sessão #${log.sessionNumber || '?'} — ${log.dateReal || ''}</span><button class="modal-close" onclick="this.closest('.modal').remove()">✕</button></div><div class="modal-body" style="max-height:75vh;overflow-y:auto">
         ${log.gameDate ? `<div style="font-size:.88rem;color:var(--primary);margin-bottom:14px">🎮 Data no jogo: ${escapeHtml(log.gameDate)}</div>` : ''}

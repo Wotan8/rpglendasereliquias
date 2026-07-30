@@ -138,8 +138,8 @@ window.closeMesa = function() {
 window.openDeleteMesaModal = function() {
     if (!S.currentMesaId) return;
     const m = document.createElement('div'); m.className = 'modal active';
-    m.innerHTML = `<div class="modal-content" style="max-width:500px;border:3px solid var(--danger)"><div class="modal-header" style="background:linear-gradient(135deg,var(--danger),#dc2626)"><span class="modal-title" style="color:#fff">⚠️ Deletar Mesa</span><button class="modal-close" onclick="this.closest('.modal').remove()">✕</button></div><div class="modal-body">
-        <div style="color:#f87171;font-weight:700;margin-bottom:14px;text-align:center">Esta ação é IRREVERSÍVEL!</div>
+    m.innerHTML = `<div class="modal-content" style="max-width:500px;border:3px solid var(--danger)"><div class="modal-header" style="background:linear-gradient(135deg,var(--danger),#dc2626);color:#fff"><span class="modal-title">⚠️ Deletar Mesa</span><button class="modal-close" onclick="this.closest('.modal').remove()">✕</button></div><div class="modal-body">
+        <div style="color:var(--lr-blood-2);font-weight:700;margin-bottom:14px;text-align:center">Esta ação é IRREVERSÍVEL!</div>
         <p style="text-align:center;margin-bottom:8px">Mesa: <strong>${escapeHtml(S.currentMesaData?.nome)}</strong></p>
         <p style="text-align:center;margin-bottom:20px;font-size:.85rem;color:var(--muted)">Os personagens desta mesa nao serao apagados: ficam avulsos.</p>
         <div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancelar</button><button class="btn btn-danger" onclick="confirmDeleteMesa()">🗑️ DELETAR</button></div>

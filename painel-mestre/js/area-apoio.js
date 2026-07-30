@@ -201,7 +201,7 @@ function renderApoios(apoios) {
         return `
         <div style="background:var(--lr-bg-1);border:2px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                <div style="font-weight:800;color:var(--light)">${escapeHtml(a.nome||'Sem nome')} <span style="background:rgba(139,92,246,.2);color:var(--primary);padding:2px 8px;border-radius:8px;font-size:.78rem">x${a.montante||1}</span>${valorApoio(a) !== (parseInt(a.montante)||1) ? `<span title="Roleta múltipla de 3 conta 1 a cada 3" style="background:rgba(234,179,8,.15);color:#eab308;padding:2px 8px;border-radius:8px;font-size:.72rem;margin-left:4px">conta ${valorApoio(a)}</span>` : ''}</div>
+                <div style="font-weight:800;color:var(--light)">${escapeHtml(a.nome||'Sem nome')} <span style="background:rgba(139,92,246,.2);color:var(--primary);padding:2px 8px;border-radius:8px;font-size:.78rem">x${a.montante||1}</span>${valorApoio(a) !== (parseInt(a.montante)||1) ? `<span title="Roleta múltipla de 3 conta 1 a cada 3" style="background:rgba(234,179,8,.15);color:var(--lr-gold);padding:2px 8px;border-radius:8px;font-size:.72rem;margin-left:4px">conta ${valorApoio(a)}</span>` : ''}</div>
                 <div style="display:flex;gap:6px"><button class="btn btn-primary btn-small" onclick="editApoio(${i})">✏️</button><button class="btn btn-danger btn-small" onclick="deleteApoio(${i})">🗑️</button></div>
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;font-size:.85rem">
@@ -1085,9 +1085,9 @@ function renderLojaUI() {
         let tagsHtml = '';
         if (item.isExp) tagsHtml += `<span style="background:var(--primary);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">EXP: ${item.expAmount}${item.isExpVip ? ' (VIP)' : ''}</span>`;
         if (item.isRoleta) tagsHtml += `<span style="background:var(--secondary);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Roleta: ${item.roletaGiros}x</span>`;
-        if (item.isRerolagem) tagsHtml += `<span style="background:#f59e0b;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Re-roll: ${item.rerolagensAmount}x</span>`;
-        if (item.isNarrativo) tagsHtml += `<span style="background:#10b981;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Narrativo</span>`;
-        if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span style="background:#8b5cf6;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">🎒 Itens: ${item.personagemItensVinculados.length}</span>`;
+        if (item.isRerolagem) tagsHtml += `<span style="background:#B45309;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Re-roll: ${item.rerolagensAmount}x</span>`;
+        if (item.isNarrativo) tagsHtml += `<span style="background:#047857;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Narrativo</span>`;
+        if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span style="background:var(--lr-abyssal);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">🎒 Itens: ${item.personagemItensVinculados.length}</span>`;
         
         const imgHtml = item.imagem ? `<div style="height:120px;width:100%;background-image:url('${escapeHtml(item.imagem)}');background-size:contain;background-repeat:no-repeat;background-position:center;border-radius:8px;background-color:var(--lr-bg-1);"></div>` : '';
 

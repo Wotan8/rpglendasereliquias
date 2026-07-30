@@ -269,7 +269,11 @@
 .filter-chip-close {
     cursor: pointer; color: var(--muted); transition: color 0.2s;
 }
-.filter-chip-close:hover { color: var(--lr-divine); }
+/* Era --lr-divine: branco em cima do chip roxo a 20%, que no tema claro compoe
+   lavanda clara — o "x" sumia no hover (1.33:1). Precisa ser o --lr-blood-3, que
+   e o tom que VIRA com o tema: o blood-2 conserta o claro (4.79:1) e reprova no
+   escuro (3.92:1). Com o -3 da 7.19:1 e 6.77:1. */
+.filter-chip-close:hover { color: var(--lr-blood-3); }
 
 /* ============================================================
    FICHA DE NPC v2 — modo Rápido/Mecânico, campos híbridos,
@@ -298,7 +302,12 @@
     background: transparent; border: 1px solid var(--line); border-radius: 8px;
     color: var(--muted); padding: 6px 12px; font-size: .82rem; font-weight: 700; cursor: pointer;
 }
-.npcv2-section-btn.active { background: var(--primary-glow); border-color: var(--primary); color: var(--primary); }
+/* O texto era --primary, que o tokens.css resolve como OURO, em cima de um glow
+   ROXO: 4.44:1. Roxo nao resolve: a regra vale nos dois temas e o glow a 25% nao
+   deixa espaco (4.28:1 no escuro nem com o tom claro). O estado ativo ja se le
+   pelo glow e pela borda, entao o texto fica com a tinta do tema: 11.56:1 no
+   claro, 14.79:1 no escuro. */
+.npcv2-section-btn.active { background: var(--primary-glow); border-color: var(--primary); color: var(--lr-text-1); }
 .npcv2-section { display: none; }
 .npcv2-section.active { display: block; }
 

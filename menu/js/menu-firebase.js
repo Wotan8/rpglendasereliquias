@@ -447,9 +447,9 @@ async function loadInventory() {
                 let tagsHtml = '';
                 if (item.isExp) tagsHtml += `<span class="loja-tag" style="background:var(--primary);">⭐ EXP: ${item.expAmount}${item.isExpVip ? ' (VIP)' : ''}</span>`;
                 if (item.isRoleta) tagsHtml += `<span class="loja-tag" style="background:var(--secondary, #8b5cf6);">🎰 Roleta: ${item.roletaGiros}x</span>`;
-                if (item.isRerolagem) tagsHtml += `<span class="loja-tag" style="background:#f59e0b;">🎲 Re-roll: ${item.rerolagensAmount}x</span>`;
-                if (item.isNarrativo) tagsHtml += `<span class="loja-tag" style="background:#10b981;">📜 Benefício Narrativo</span>`;
-                if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span class="loja-tag" style="background:#8b5cf6;">🎒 Equipamentos Especiais</span>`;
+                if (item.isRerolagem) tagsHtml += `<span class="loja-tag" style="background:#B45309;">🎲 Re-roll: ${item.rerolagensAmount}x</span>`;
+                if (item.isNarrativo) tagsHtml += `<span class="loja-tag" style="background:#047857;">📜 Benefício Narrativo</span>`;
+                if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span class="loja-tag" style="background:var(--lr-abyssal);">🎒 Equipamentos Especiais</span>`;
 
                 return `
                 <div class="loja-card">
@@ -968,9 +968,9 @@ function renderLojaItens() {
         let tagsHtml = '';
         if (item.isExp) tagsHtml += `<span class="loja-tag" style="background:var(--primary);">⭐ EXP: ${item.expAmount}${item.isExpVip ? ' (VIP)' : ''}</span>`;
         if (item.isRoleta) tagsHtml += `<span class="loja-tag" style="background:var(--secondary, #8b5cf6);">🎰 Roleta: ${item.roletaGiros}x</span>`;
-        if (item.isRerolagem) tagsHtml += `<span class="loja-tag" style="background:#f59e0b;">🎲 Re-roll: ${item.rerolagensAmount}x</span>`;
-        if (item.isNarrativo) tagsHtml += `<span class="loja-tag" style="background:#10b981;">📜 Benefício Narrativo</span>`;
-        if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span class="loja-tag" style="background:#8b5cf6;">🎒 Equipamentos Especiais</span>`;
+        if (item.isRerolagem) tagsHtml += `<span class="loja-tag" style="background:#B45309;">🎲 Re-roll: ${item.rerolagensAmount}x</span>`;
+        if (item.isNarrativo) tagsHtml += `<span class="loja-tag" style="background:#047857;">📜 Benefício Narrativo</span>`;
+        if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span class="loja-tag" style="background:var(--lr-abyssal);">🎒 Equipamentos Especiais</span>`;
 
         let metasLabel = 'Nenhuma meta vinculada';
         if (item.modoSelecaoMeta) {
@@ -1049,11 +1049,11 @@ function cartaoPixHtml() {
             </div>
             <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">
                 <span style="font-size:0.8rem;color:var(--muted);">Chave (telefone)</span>
-                <strong style="font-family:monospace;font-size:0.95rem;color:#fff;letter-spacing:.02em;">${escapeHtml(PIX_CHAVE)}</strong>
+                <strong style="font-family:monospace;font-size:0.95rem;color:var(--lr-text-1);letter-spacing:.02em;">${escapeHtml(PIX_CHAVE)}</strong>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:4px;">
                 <span style="font-size:0.8rem;color:var(--muted);">Titular</span>
-                <strong style="font-size:0.9rem;color:#fff;">${escapeHtml(PIX_TITULAR)}</strong>
+                <strong style="font-size:0.9rem;color:var(--lr-text-1);">${escapeHtml(PIX_TITULAR)}</strong>
             </div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:10px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;">
                 Também aceito em dinheiro na mesa. Assim que o pagamento for confirmado, o item cai automaticamente no seu Repertório.
@@ -1099,7 +1099,7 @@ function openCheckoutModal(item, mode) {
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;">
                 <label for="lojaCheckoutQuantity" style="font-size:0.75rem;color:var(--muted);margin-bottom:2px;font-weight:700;">Quantidade</label>
-                <input type="number" id="lojaCheckoutQuantity" value="1" min="1" max="99" oninput="updateCheckoutTotal()" style="width:60px;text-align:center;background:var(--lr-bg-1);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:6px;padding:4px;font-family:var(--font);font-size:0.9rem;font-weight:600;">
+                <input type="number" id="lojaCheckoutQuantity" value="1" min="1" max="99" oninput="updateCheckoutTotal()" style="width:60px;text-align:center;background:var(--lr-bg-1);border:1px solid rgba(255,255,255,0.1);color:var(--lr-text-1);border-radius:6px;padding:4px;font-family:var(--font);font-size:0.9rem;font-weight:600;">
             </div>
         </div>
         ${isPagBank ? `<div style="font-size:0.8rem;color:var(--muted);margin-top:10px;border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;">🔒 Você será redirecionado ao ambiente <strong>seguro do PagBank</strong> para pagar com PIX, Cartão ou Boleto. O item é entregue automaticamente após a confirmação do pagamento.</div>` : ''}

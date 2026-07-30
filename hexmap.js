@@ -589,7 +589,7 @@ function updateAnnotationList() {
         return `
             <div class="annotation-item">
                 <strong>${ann.title || 'Sem título'}</strong>
-                <div style="font-size: 11px; color: #aaa; margin-top: 5px;">[${row}, ${col}]</div>
+                <div style="font-size: 11px; color: var(--lr-text-2); margin-top: 5px;">[${row}, ${col}]</div>
             </div>
         `;
     }).join('');
@@ -1098,7 +1098,7 @@ function openTerrainEditor() {
             </div>
             <div style="flex: 1;">
                 <div style="font-weight: 700; margin-bottom: 5px;">${terrain.name}</div>
-                <div style="font-size: 11px; color: #aaa;">
+                <div style="font-size: 11px; color: var(--lr-text-2);">
                     ${hasImage ? '✓ Imagem personalizada carregada' : 'Usando cor e emoji padrão'}
                 </div>
             </div>

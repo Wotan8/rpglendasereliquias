@@ -68,7 +68,7 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 }
 .tb-topbar .tb-spacer { flex: 1; }
 .tb-mode-badge { padding: 4px 10px; border-radius: 8px; font-size: .78rem; letter-spacing: .5px; }
-.tb-mode-badge.secret { background: rgba(91, 63, 184,.18); border: 1px solid rgba(91, 63, 184,.5); color: var(--lr-abyssal-2); }
+.tb-mode-badge.secret { background: rgba(91, 63, 184,.12); border: 1px solid rgba(91, 63, 184,.5); color: var(--lr-abyssal-2); }
 .tb-mode-badge.public { background: rgba(63, 174, 106,.15); border: 1px solid rgba(63, 174, 106,.45); color: #6ee7b7; }
 #tbMesaNome { font-weight: 800; font-size: .92rem; color: var(--tb-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 26vw; }
 #tbCanvasNome { font-size: .82rem; color: var(--tb-muted); cursor: pointer; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--tb-border); background: var(--tb-panel2); white-space: nowrap; }

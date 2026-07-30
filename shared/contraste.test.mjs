@@ -56,6 +56,34 @@ const PERMITIDAS = new Set([
     // padrao razoavel, e daqui nao da para saber qual cor vai cair ali.
     'ficha-v1.7_1/css/styles_v2.css .aura-grade-indicator',
     'ficha-v1.7_1/css/styles_v2.css .aura-grau-badge-display',
+    // O mesmo badge de grau de aura no painel do criador: fundo e `grau.cor`,
+    // escolhido no cadastro (painel-firebase.js).
+    'painel-criador/css/painel-criador.css .aura-grau-badge',
+    // Botao da loja: o fundo vem do modificador (.loja-btn-frag e gradiente
+    // indigo->ouro, .loja-btn-real e verde cheio). No tema CLARO o pior par com
+    // branco e 5.87:1, depois de escurecer o indigo.
+    // ATENCAO: a perna de ouro do gradiente vira #D4AF37 no tema escuro, e ali o
+    // branco da 1.96:1 — o mesmo branco-sobre-ouro ja aceito para .tab.active la
+    // em cima. Nao e medido porque a regra base e medida no tema claro. Se algum
+    // dia for tratado, a saida e `color: var(--lr-bg-0)`, que vira junto com o
+    // ouro (6.91:1 no claro, 9.25:1 no escuro).
+    'menu/css/menu.css .loja-btn',
+    // Pilula da loja: o fundo vem inline do menu-firebase.js, uma cor por tipo
+    // de item; as cravadas foram escurecidas para o branco ler (pior 5.02:1 nos
+    // dois temas). A excecao e a pilula de EXP, que usa var(--primary) = ouro:
+    // mesmo caso de branco-sobre-ouro do .loja-btn acima.
+    'menu/css/menu.css .loja-tag',
+    // Badge de fonte/tipo de mecanica: a regra compartilhada so pinta o texto; o
+    // fundo esta nas regras irmas e no style inline do painel-mechanics.js, que
+    // usa var(--fonte-X)/var(--type-X). Os acentos cravados foram escurecidos e
+    // dao 4.84:1 no minimo, nos dois temas. As variantes que apontam para
+    // var(--lr-gold) (classe, tribo) caem no branco-sobre-ouro do tema escuro,
+    // igual ao .tab.active.
+    'painel-criador/css/painel-criador.css .badge-fonte, .badge-tipo',
+    // O "x" de remover fica DENTRO de .tags-container .tag, que tem fundo
+    // var(--primary) (ouro): branco da 6.67:1 no tema claro. No escuro o ouro
+    // clareia e cai para 1.96:1 — mesmo branco-sobre-ouro do .tab.active.
+    'painel-criador/css/painel-criador.css .tags-container .tag button:hover',
 ]);
 
 /* ---------- cor ---------- */

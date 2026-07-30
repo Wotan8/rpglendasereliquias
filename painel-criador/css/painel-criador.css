@@ -1397,7 +1397,16 @@ html.dark ::-webkit-scrollbar-thumb:hover {
    VISUAL MECHANICS EDITOR — New Styles
    ============================================= */
 
-/* -- Type Colors -- */
+/* -- Type Colors --
+   Estes viram FUNDO de badge com texto branco fixo: o painel-mechanics.js monta
+   `<span class="badge-fonte" style="background:var(--fonte-${fonte})">`, e a
+   .badge-fonte/.badge-tipo pinta o texto com --lr-divine. Ou seja, cada valor
+   daqui precisa ser escuro o bastante para o branco ler em cima.
+
+   Os que vem de token passavam (6.02:1 a 11.43:1). Os quatro CRAVADOS nao: teal
+   #14B8A6 dava 2.33:1, ciano #06B6D4 2.27:1, laranja #F97316 2.62:1 e roxo
+   #A855F7 3.70:1. Escurecidos para o mesmo tom, o pior agora e 4.84:1.
+   Sao fixos nos dois temas de proposito — o texto em cima e branco fixo. */
 :root {
     --type-modificar: var(--lr-gold);
     --type-limitar: var(--lr-gold);
@@ -1405,18 +1414,18 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     --type-condicional: var(--lr-abyssal-2);
     --type-narrativo: var(--lr-text-2);
     --type-distribuir: var(--lr-abyssal);
-    --type-booleano: #14B8A6;
-    --type-condicional_encadeado: #A855F7;
+    --type-booleano: #0F766E;
+    --type-condicional_encadeado: #7E22CE;
     --fonte-raca: var(--lr-nature);
     --fonte-classe: var(--lr-gold);
     --fonte-tribo: var(--lr-gold);
     --fonte-peculiaridade: var(--lr-abyssal-2);
     --fonte-item: var(--lr-abyssal);
     --fonte-condicao: var(--lr-blood-2);
-    --fonte-booleana: #14B8A6;
+    --fonte-booleana: #0F766E;
     --fonte-manobra: var(--lr-abyssal-2);
-    --fonte-magia: #06B6D4;
-    --fonte-individual: #F97316;
+    --fonte-magia: #0E7490;
+    --fonte-individual: #C2410C;
     --fonte-generica: var(--lr-text-2);
 }
 
@@ -3483,7 +3492,12 @@ html.dark .meta-chip.chip-tag {
 .mech-eqreq-index {
     font-size: .7rem;
     font-weight: 800;
-    color: var(--lr-accent, #8b5cf6);
+    /* --lr-accent nao existe: caia no #8b5cf6 do fallback, 3.54:1 sobre o
+       proprio roxo a 12%. Tem que ser o -2, nao o --lr-abyssal: esta regra nao
+       tem irma html.dark, entao vale nos DOIS temas, e o abissal cheio dava
+       2.39:1 no escuro. O -2 vira junto com o tema — 10.23:1 no claro, 4.55:1
+       no escuro. */
+    color: var(--lr-abyssal-2);
     background: rgba(139, 92, 246, .12);
     border-radius: 6px;
     padding: 2px 7px;
@@ -3609,7 +3623,8 @@ html.dark .meta-chip.chip-tag {
 .cm-predef-num {
     font-size: .75rem;
     font-weight: 700;
-    color: #7dd3fc;
+    /* Azul claro cravado, 1.67:1 no painel claro. --lr-arcane segue o tema. */
+    color: var(--lr-arcane);
 }
 
 .cm-predef-valores {

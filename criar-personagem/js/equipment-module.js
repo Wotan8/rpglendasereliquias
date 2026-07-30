@@ -144,7 +144,7 @@ function initPhase7(container) {
         if (mechs.length > 0) {
             mecanicasMesaHtml = `
             <div style="background: rgba(0, 150, 255, 0.1); border: 1px solid rgba(0, 150, 255, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
-                <div style="font-size: 0.9rem; font-weight: bold; color: #4dabf7; margin-bottom: 8px;">
+                <div style="font-size: 0.9rem; font-weight: bold; color: var(--lr-arcane); margin-bottom: 8px;">
                     ✨ Bônus da Campanha (${escHtml(wizardState.mesaVinculada.nome || 'Mesa')})
                 </div>
                 <div style="font-size: 0.85rem; color: var(--light); margin-bottom: 8px;">

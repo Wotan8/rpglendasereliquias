@@ -260,7 +260,7 @@ function buildAliadoForm() {
                     <small style="color:var(--muted); font-size:.7rem; display:block; text-align:center;">Atual / Máx.</small>
                 </div>
                 <div class="field">
-                    <label style="color: #eab308;">⚡ Energia</label>
+                    <label style="color: var(--lr-gold);">⚡ Energia</label>
                     <div style="display:flex; gap:6px; align-items:center;">
                         <input type="number" id="al_ener_atual" value="0" style="text-align:center" title="Atual" placeholder="Atual">
                         <span style="color:var(--muted);">/</span>

@@ -19,7 +19,11 @@
     --dominado: var(--success, var(--lr-nature));
     --erro: var(--danger, var(--lr-blood-2));
 
-    /* Interior da bancada (canvas): sempre escuro, independente do tema */
+    /* Interior da bancada (canvas): sempre escuro, independente do tema.
+       Cuidado: --canvas-ink e --canvas-chip NAO podem ser cravados escuros aqui,
+       porque o modal de impressao (lab-print.css) tambem usa --canvas-chip e ele
+       segue o tema — cravar deixava chip escuro dentro de painel branco. Os
+       valores escuros ficam presos no .lab-canvas, la embaixo. */
     --canvas-ink: var(--lr-text-1);
     --canvas-muted: #8b93a7;
     --canvas-chip: var(--lr-surface);
@@ -169,6 +173,30 @@ body {
     border-radius: 8px; padding: 7px 10px; font-size: .76rem;
 }
 .lab-canvas {
+    /* A bancada e sempre escura (o fundo abaixo e gradiente #0e1018 cravado),
+       mas tudo que ela usa por dentro vinha de var de tema — o :root promete
+       "sempre escuro" e nao entregava. No tema CLARO o nome do no ficava em
+       1.10:1 (tinta escura no gradiente escuro do .lab-node-box), o custo do no
+       2.66:1, o rotulo "simulacao" 1.55:1 e o nivel do no 2.29:1.
+
+       Prendo aqui, e nao no :root, por dois motivos. Primeiro, --canvas-chip e
+       --lume tambem sao usados FORA do canvas, em superficie que segue o tema
+       (paleta, modal de impressao) — cravar escuro lá quebrava aqueles. Segundo,
+       nao serve prender --lr-text-1: var() declarado no :root ja e substituido
+       la, e o descendente herda o valor pronto, entao e a var INTERMEDIARIA que
+       precisa ser repintada. Quem consome usa var(--canvas-ink)/var(--lume)
+       direto, e essa busca resolve neste elemento.
+
+       Depois: nome do no 14.44:1, custo 9.03:1, "simulacao" 4.91:1, nivel
+       7.79:1. O --erro vai no tom claro porque o cheio parava em 3.71:1. */
+    --canvas-ink: #F2F2F2;
+    --canvas-chip: #1A2029;
+    --lume: #D4AF37;
+    --entrada: #3AA6FF;
+    --sinal: #8A6FE0;
+    --dominado: #3FAE6A;
+    --erro: #E08A93;
+
     position: relative; height: 62vh; height: 62dvh; min-height: 380px; overflow: auto;
     background:
         radial-gradient(circle at 1px 1px, rgba(139, 147, 167, .13) 1px, transparent 0) 0 0 / 26px 26px,

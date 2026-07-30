@@ -3635,7 +3635,8 @@ html.dark .detail-level-badge.positivo {
 
 html.dark .detail-level-badge.negativo {
     background: rgba(231, 76, 60, .15);
-    color: var(--lr-blood-2);
+    /* 3.86:1 em cima do proprio vermelho; o tom claro da 6.68:1. */
+    color: var(--lr-blood-3);
     border-color: rgba(231, 76, 60, .3);
 }
 
@@ -3649,7 +3650,9 @@ html.dark .detail-aura-name {
 }
 
 html.dark .detail-aura-grade {
-    background: rgba(91, 63, 184, .2);
+    /* Era .2: o roxo claro parava em 4.47:1, um fio abaixo do minimo. Baixando
+       o veu para .12 o fundo escurece e o mesmo texto da 4.72:1. */
+    background: rgba(91, 63, 184, .12);
     color: var(--lr-abyssal-2);
 }
 

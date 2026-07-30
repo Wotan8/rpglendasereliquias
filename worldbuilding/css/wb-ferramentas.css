@@ -95,7 +95,7 @@
 /* ── Grafos ────────────────────────────────────────────── */
 .wbt-graph-wrap { position: relative; }
 .wbt-graph { height: min(66vh, 620px); background: radial-gradient(600px 300px at 50% 0%, var(--lr-gold-soft), transparent), var(--lr-surface); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius); }
-.wbt-graph-legend { position: absolute; bottom: .8rem; left: .8rem; display: flex; gap: .8rem; flex-wrap: wrap; background: rgba(20,24,29,.88); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); padding: .45rem .7rem; font-size: var(--lr-fs-xs); color: var(--lr-text-2); }
+.wbt-graph-legend { position: absolute; bottom: .8rem; left: .8rem; display: flex; gap: .8rem; flex-wrap: wrap; background: var(--lr-surface-2); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); padding: .45rem .7rem; font-size: var(--lr-fs-xs); color: var(--lr-text-2); }
 .wbt-legdot { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: .3rem; vertical-align: middle; }
 
 /* ── Editor ────────────────────────────────────────────── */
@@ -363,7 +363,9 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
 .wb-health-card.is-warn { border-color: rgba(212,175,55,.5); }
 .wb-health-card.is-warn .wb-health-card__v { color: var(--lr-gold, #D4AF37); }
 .wb-health-card.is-info { border-color: rgba(58,166,255,.5); }
-.wb-health-card.is-info .wb-health-card__v { color: #3AA6FF; }
+/* As irmas is-warn/is-ok usam token; esta tinha azul cravado, que no card
+   claro (var(--lr-bg-1)) dava 2.60:1. */
+.wb-health-card.is-info .wb-health-card__v { color: var(--lr-arcane); }
 .wb-health-card.is-ok .wb-health-card__v { color: var(--lr-nature, #3FAE6A); }
 
 /* ── Campos read-only das fichas (NPC / Tribo do Criador) ──── */
@@ -430,12 +432,15 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
 .wb-chapter__meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 5px; font-size: .75rem; }
 
 .wb-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; font-size: .72rem; font-weight: 600; border: 1px solid transparent; }
-.wb-badge--pub { background: rgba(58,166,255,.14); color: #7cc4ff; border-color: rgba(58,166,255,.35); }
+/* Os tres badges tinham texto no tom CLARO do acento em cima do mesmo acento
+   a ~15%: no tema claro isso e claro sobre claro (1.38:1 a 1.54:1). Os tokens
+   acompanham o tema e ficam escuros no papel, claros no escuro. */
+.wb-badge--pub { background: rgba(58,166,255,.14); color: var(--lr-arcane); border-color: rgba(58,166,255,.35); }
 .wb-badge--priv { background: rgba(255,255,255,.06); color: var(--lr-text-2, #a99f8c); border-color: var(--lr-border, #333); }
 .wb-badge--soft { background: rgba(255,255,255,.05); color: var(--lr-text-2, #a99f8c); }
-.wb-badge--draft { background: rgba(160,160,160,.14); color: #c9c9c9; }
+.wb-badge--draft { background: rgba(160,160,160,.14); color: var(--lr-text-2); }
 .wb-badge--rev { background: rgba(212,175,55,.16); color: var(--lr-gold, #D4AF37); }
-.wb-badge--done { background: rgba(63,174,106,.16); color: #6fd79b; }
+.wb-badge--done { background: rgba(63,174,106,.16); color: var(--lr-nature); }
 
 /* Campos extras do editor de escrita */
 .wb-article-syn {

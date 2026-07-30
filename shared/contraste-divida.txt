@@ -1,47 +1,15 @@
-# Divida de contraste — regras abaixo de 4.5:1 que ja existiam quando
-# shared/contraste.test.mjs passou a medir translucido composto e style
-# inline em JS. Nao e lista de coisas aceitas: e fila de trabalho.
+# Divida de contraste — FILA VAZIA.
 #
-# Para queimar: corrija a regra e apague a linha daqui.
-# Regra nova abaixo do minimo quebra o teste mesmo com este arquivo.
+# Este arquivo lista regras abaixo de 4.5:1 que ja existiam quando
+# shared/contraste.test.mjs passou a medir translucido composto, style inline em
+# JS e bloco <style> em HTML. Nao e lista de coisas aceitas: e fila de trabalho.
 #
-# Padroes dominantes:
-#   rgba(91,63,184,a) / rgba(212,175,55,a)  chip de acento translucido
-#   rgba(14,17,23,a)  / rgba(31,38,48,a)    painel escuro cravado na mao
-#   color: var(--lr-divine)                 branco fixo como texto de corpo
-
-criar-personagem/js/equipment-module.js  linha 147
-ficha-v1.7_1/css/styles_v2.css  html.dark .detail-aura-grade
-ficha-v1.7_1/css/styles_v2.css  html.dark .detail-level-badge.negativo
-ficha-v1.7_1/js/aliados.js  linha 263
-ficha-v1.7_1/js/runomancia-module.js  linha 479
-ficha-v1.7_1/js/runomancia-module.js  linha 493
-ficha-v1.7_1/js/runomancia-module.js  linha 496
-hexmap.js  linha 1101
-hexmap.js  linha 592
-laboratorium-runarum/js/canvas.js  linha 53
-menu/css/menu.css  .loja-btn
-menu/css/menu.css  .loja-tag
-menu/js/menu-firebase.js  linha 1054
-menu/js/menu-firebase.js  linha 1058
-menu/js/menu-firebase.js  linha 1110
-painel-criador/css/painel-criador.css  .aura-grau-badge
-painel-criador/css/painel-criador.css  .badge-fonte, .badge-tipo
-painel-criador/css/painel-criador.css  .cm-predef-num
-painel-criador/css/painel-criador.css  .mech-eqreq-index
-painel-criador/css/painel-criador.css  .tags-container .tag button:hover
-painel-mestre/css/area-npcs.css  .filter-chip-close:hover
-painel-mestre/css/area-npcs.css  .npcv2-section-btn.active
-painel-mestre/js/area-apoio.js  linha 1089
-painel-mestre/js/area-apoio.js  linha 1090
-painel-mestre/js/area-apoio.js  linha 1091
-painel-mestre/js/area-apoio.js  linha 205
-painel-mestre/js/area-mesas-sessoes.js  linha 187
-painel-mestre/js/area-mesas.js  linha 141
-painel-mestre/js/area-mesas.js  linha 142
-tabuleiro/css/tabuleiro.css  .tb-mode-badge.secret
-worldbuilding/css/wb-ferramentas.css  .wb-badge--done
-worldbuilding/css/wb-ferramentas.css  .wb-badge--draft
-worldbuilding/css/wb-ferramentas.css  .wb-badge--pub
-worldbuilding/css/wb-ferramentas.css  .wb-health-card.is-info .wb-health-card__v
-worldbuilding/css/wb-ferramentas.css  .wbt-graph-legend
+# Comecou em 219 regras. Hoje esta em ZERO: qualquer regra abaixo do minimo
+# quebra o teste na hora, sem rede embaixo.
+#
+# Se algum dia precisar parquear uma regra, escreva uma linha no formato
+#   <caminho/do/arquivo>  <seletor ou "linha N">
+# exatamente como o teste imprime. Mas pense duas vezes antes: excecao
+# consciente e permanente — branco sobre gradiente, fundo que vem de dado —
+# mora em PERMITIDAS, no topo do teste, com o motivo escrito. Esta fila aqui e
+# so para o que vai ser consertado de verdade.

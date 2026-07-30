@@ -507,8 +507,11 @@
             font-size: 0.7rem;
             font-weight: 600;
             /* Era var(--primary), que tokens.css resolve como ouro: ouro sobre
-               chip roxo dava 4.25:1. Roxo do proprio chip da 5.54:1. */
-            color: var(--lr-abyssal);
+               chip roxo dava 4.25:1. Roxo tambem nao serve — esta regra nao tem
+               irma html.dark, logo vale nos DOIS temas, e o abissal reprova no
+               escuro (2.16:1; nem o tom -2 passa, 4.12:1). O chip ja se le como
+               roxo pelo fundo; o texto fica com a tinta do tema: 10.6:1 e 14.24:1. */
+            color: var(--lr-text-1);
         }
 
         /* Image Preview */
@@ -3124,7 +3127,10 @@
         .session-item-tag .remove-tag {
             background: none;
             border: none;
-            color: var(--danger);
+            /* Era var(--danger) (= --lr-blood-2): 4.79:1 no claro e 3.92:1 no
+               escuro em cima da tag roxa. Base neutra e vermelho so no hover e o
+               mesmo padrao do .filter-chip-close — 5.4:1 e 8.15:1. */
+            color: var(--lr-text-2);
             cursor: pointer;
             font-size: 1rem;
             padding: 0;
@@ -3133,8 +3139,10 @@
 
         .session-item-tag .remove-tag:hover {
             /* #ff6b6b e vermelho claro: sumia na tag clara do tema papel
-               (2.78:1). --lr-blood-2 acompanha o tema — 5.7:1 no claro. */
-            color: var(--lr-blood-2);
+               (2.78:1). Tem que ser o -3, que e o tom que VIRA com o tema: em cima
+               da tag roxa a 20% o blood-2 conserta o claro (4.79:1) e reprova no
+               escuro (3.92:1). Com o -3 da 7.19:1 e 6.77:1. */
+            color: var(--lr-blood-3);
         }
 
         /* Session Gallery */

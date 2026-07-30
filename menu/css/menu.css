@@ -1487,7 +1487,9 @@ html:not(.dark) .loja-card {
 .loja-btn:hover { filter: brightness(1.12); }
 .loja-btn:active { transform: scale(.98); }
 
-.loja-btn-frag { background: linear-gradient(135deg, #6366f1, var(--lr-gold)); }
+/* O indigo era #6366f1: a perna clara do gradiente dava 4.17:1 com o texto
+   branco do .loja-btn. Mesmo indigo, um passo mais fundo: 5.87:1. */
+.loja-btn-frag { background: linear-gradient(135deg, #4F46E5, var(--lr-gold)); }
 .loja-btn-real { background: linear-gradient(135deg, var(--lr-nature), var(--lr-nature)); }
 
 .loja-card-secure {

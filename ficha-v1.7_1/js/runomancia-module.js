@@ -476,7 +476,7 @@
             const hl = n.nivel === nivelDestaque ? 'style="background:rgba(139,92,246,.14)"' : '';
             const st = n.nivel <= atual ? '✅' : (n.nivel === atual + 1 ? '🎯' : '');
             return `<tr ${hl}><td>${st} Nv${n.nivel}</td><td>${n.custoEss ?? '—'} Ess</td><td>${exp} EXP</td>
-                <td>${sess} sessões${desconto ? ` <small style="color:#86efac">(−${desconto})</small>` : ''}</td>
+                <td>${sess} sessões${desconto ? ` <small style="color:var(--lr-nature)">(−${desconto})</small>` : ''}</td>
                 <td>${n.propriedades || '—'}</td></tr>`;
         }).join('');
 
@@ -490,10 +490,10 @@
             <div class="sub">${el.nomeLatim ? el.nomeLatim + ' · ' : ''}${grupo}${el.cor ? ' · Essência ' + el.cor : ''}</div>
             <div style="font-size:.8rem;line-height:1.5">${el.descricao || ''}</div>
             ${el.posicaoRegra ? `<div style="font-size:.74rem;margin-top:8px"><b style="color:var(--lr-abyssal)">Posição:</b> ${el.posicaoRegra}</div>` : ''}
-            ${el.limites ? `<div style="font-size:.74rem;margin-top:4px"><b style="color:#fca5a5">Limites:</b> ${el.limites}</div>` : ''}
+            ${el.limites ? `<div style="font-size:.74rem;margin-top:4px"><b style="color:var(--lr-blood-2)">Limites:</b> ${el.limites}</div>` : ''}
             <table><thead><tr><th>Nível</th><th>Custo (CT)</th><th>EXP</th><th>Tempo de Estudo</th><th>Propriedades</th></tr></thead>
             <tbody>${rows || '<tr><td colspan="5">Sem níveis cadastrados.</td></tr>'}</tbody></table>
-            <div style="font-size:.68rem;color:var(--lr-text-2)">Nível dominado pelo personagem: <b style="color:var(--lr-abyssal)">${atual || 'nenhum'}</b>${concedido > 0 ? ` <span style="color:#fbbf24">(${estudado} estudado + ${concedido} concedido por mecânica)</span>` : ''}.
+            <div style="font-size:.68rem;color:var(--lr-text-2)">Nível dominado pelo personagem: <b style="color:var(--lr-abyssal)">${atual || 'nenhum'}</b>${concedido > 0 ? ` <span style="color:var(--lr-gold)">(${estudado} estudado + ${concedido} concedido por mecânica)</span>` : ''}.
                 Custos e tempos vêm do cadastro no Painel do Criador; descontos aplicados pela configuração do módulo (Parte XI).</div>
             <div style="text-align:right;margin-top:10px"><button class="runo-btn" onclick="this.closest('.runo-modal-bk').remove()">Fechar</button></div>
         </div>`;
