@@ -113,7 +113,7 @@ function renderInventario() {
     const peso = eqItems.reduce((s,i) => s + (i.totalWeight||0), 0);
 
     el.innerHTML = `
-        <div style="background:rgba(30,27,75,.6);border:2px solid var(--border);border-radius:15px;padding:20px;margin-bottom:20px">
+        <div style="background:var(--lr-surface-2);border:2px solid var(--border);border-radius:15px;padding:20px;margin-bottom:20px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;padding-bottom:15px;border-bottom:2px solid var(--line)">
                 <div>
                     <div style="font-size:1.3rem;font-weight:700;color:var(--primary)">🎒 Equipados</div>

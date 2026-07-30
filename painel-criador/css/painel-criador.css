@@ -2766,6 +2766,10 @@ html.dark .settings-tab:hover {
 
 .btn-upload:disabled {
     background: var(--muted);
+    /* A cor ja vinha da regra base (var(--lr-bg-0), 7.43:1 no claro e 9.17:1 no
+       escuro em cima do --muted). Repito aqui so para a medicao ver: sem isso ela
+       supunha o texto herdado da PAGINA e acusava 2.32:1 que nao existe. */
+    color: var(--lr-bg-0);
     cursor: not-allowed;
 }
 
