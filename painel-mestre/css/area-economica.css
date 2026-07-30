@@ -15,7 +15,7 @@
 .container-viewer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .container-viewer-title{font-weight:800;color:var(--success);font-size:1.1rem}
 .btn-move-to-container{padding:10px 16px;font-size:.9rem;border:2px solid var(--success);background:rgba(63, 174, 106,.15);color:var(--success);border-radius:8px;cursor:pointer;font-weight:700;transition:all .2s;font-family:var(--font)}
-.btn-move-to-container:hover{background:var(--success);color:var(--lr-divine)}
+.btn-move-to-container:hover{background:var(--success);color:var(--lr-bg-0)}
 .econ-calculator{background:var(--lr-bg-1);border:2px solid var(--border);border-radius:12px;padding:20px}
 .econ-result{text-align:center;padding:20px;border-radius:12px;background:rgba(91, 63, 184,.1);border:2px solid rgba(91, 63, 184,.3)}
 @media(max-width:768px){.econ-items-grid{grid-template-columns:1fr}.avulsos-filters{flex-direction:column}}

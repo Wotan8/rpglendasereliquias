@@ -21,16 +21,16 @@ const IGNORAR = new Set(['.git', 'node_modules', 'graphify-out', 'sistema antigo
 const MINIMO = 4.5; // WCAG AA para texto normal
 
 // Regras que podem ficar abaixo do mínimo, com o motivo.
-// Branco sobre o ouro #D4AF37 dá 1.96:1. É o visual da aba ativa do tema
-// escuro desde antes desta varredura — não é regressão da paleta clara, e
-// trocar por `color: var(--lr-bg-0)` (tinta sobre ouro, 9.5:1) muda um
-// elemento que o usuário já conhece. Decisão dele, não do teste.
+//
+// O branco-sobre-ouro saiu daqui. Eram cinco entradas (.tab.active de tres
+// paginas, .pec-compact-badge, .pagination-btn.active) que aceitavam 1.96:1
+// porque o ouro clareia para #D4AF37 no tema escuro e o texto ficava branco.
+// Foram consertadas: onde o fundo e token de acento, o texto virou
+// `var(--lr-bg-0)`, que vira JUNTO com o acento (papel sobre ouro escuro no tema
+// claro, tinta sobre ouro claro no escuro). Onde o texto e branco fixo e o fundo
+// vem de outro lugar, o fundo virou literal escuro. As entradas que sobraram
+// abaixo sao so as que a medicao estatica nao consegue ver.
 const PERMITIDAS = new Set([
-    'ficha-v1.7_1/css/styles_v2.css html.dark .tab.active',
-    'ficha-v1.7_1/css/styles_v2.css html.dark .pec-compact-badge',
-    'menu/css/menu.css html.dark .tab.active',
-    'menu/css/menu.css html.dark .pagination-btn.active',
-    'painel-criador/css/painel-criador.css html.dark .tab.active',
     // Branco fixo sobre a pilula de Fragmentos, que e um gradiente roxo igual
     // nos dois temas. A medicao estatica nao le gradiente, entao mede o texto
     // contra as superficies da pagina — onde ele de fato nunca cai.
@@ -59,30 +59,21 @@ const PERMITIDAS = new Set([
     // O mesmo badge de grau de aura no painel do criador: fundo e `grau.cor`,
     // escolhido no cadastro (painel-firebase.js).
     'painel-criador/css/painel-criador.css .aura-grau-badge',
-    // Botao da loja: o fundo vem do modificador (.loja-btn-frag e gradiente
-    // indigo->ouro, .loja-btn-real e verde cheio). No tema CLARO o pior par com
-    // branco e 5.87:1, depois de escurecer o indigo.
-    // ATENCAO: a perna de ouro do gradiente vira #D4AF37 no tema escuro, e ali o
-    // branco da 1.96:1 — o mesmo branco-sobre-ouro ja aceito para .tab.active la
-    // em cima. Nao e medido porque a regra base e medida no tema claro. Se algum
-    // dia for tratado, a saida e `color: var(--lr-bg-0)`, que vira junto com o
-    // ouro (6.91:1 no claro, 9.25:1 no escuro).
+    // Botao da loja: o fundo vem do modificador, e as duas pernas de cada
+    // gradiente sao literais escuros justamente porque o texto aqui e branco
+    // fixo. Pior par: 5.87:1, igual nos dois temas.
     'menu/css/menu.css .loja-btn',
-    // Pilula da loja: o fundo vem inline do menu-firebase.js, uma cor por tipo
-    // de item; as cravadas foram escurecidas para o branco ler (pior 5.02:1 nos
-    // dois temas). A excecao e a pilula de EXP, que usa var(--primary) = ouro:
-    // mesmo caso de branco-sobre-ouro do .loja-btn acima.
+    // Pilula da loja: o fundo vem inline do menu-firebase.js, uma cor por tipo de
+    // item, todas literais escuros. Pior par com branco: 5.02:1 nos dois temas.
     'menu/css/menu.css .loja-tag',
     // Badge de fonte/tipo de mecanica: a regra compartilhada so pinta o texto; o
     // fundo esta nas regras irmas e no style inline do painel-mechanics.js, que
-    // usa var(--fonte-X)/var(--type-X). Os acentos cravados foram escurecidos e
-    // dao 4.84:1 no minimo, nos dois temas. As variantes que apontam para
-    // var(--lr-gold) (classe, tribo) caem no branco-sobre-ouro do tema escuro,
-    // igual ao .tab.active.
+    // usa var(--fonte-X)/var(--type-X). Todos esses acentos sao literais escuros,
+    // nenhum e var() de tema — exatamente porque o texto em cima e branco fixo.
+    // Pior par com branco: 4.84:1, igual nos dois temas.
     'painel-criador/css/painel-criador.css .badge-fonte, .badge-tipo',
-    // O "x" de remover fica DENTRO de .tags-container .tag, que tem fundo
-    // var(--primary) (ouro): branco da 6.67:1 no tema claro. No escuro o ouro
-    // clareia e cai para 1.96:1 — mesmo branco-sobre-ouro do .tab.active.
+    // O "x" de remover fica DENTRO de .tags-container .tag, cujo fundo agora e
+    // ouro escuro literal (#6E5413). O "x" usa var(--lr-bg-0), 6.91:1.
     'painel-criador/css/painel-criador.css .tags-container .tag button:hover',
 ]);
 

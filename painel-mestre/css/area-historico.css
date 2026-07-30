@@ -22,7 +22,7 @@
 .lv-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-right:auto}
 .lv-chip{background:rgba(91, 63, 184,.08);border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:6px 12px;font-size:.75rem;font-weight:700;cursor:pointer;transition:all .2s}
 .lv-chip:hover{border-color:var(--primary);color:var(--ink)}
-.lv-chip.active{background:var(--primary);border-color:var(--primary);color:var(--lr-divine)}
+.lv-chip.active{background:var(--primary);border-color:var(--primary);color:var(--lr-bg-0)}
 .lv-statusbar{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
 .lv-live{display:inline-flex;align-items:center;gap:6px;font-size:.68rem;font-weight:800;color:var(--lr-nature);letter-spacing:.5px}
 .lv-live-dot{width:8px;height:8px;border-radius:50%;background:var(--lr-nature);animation:lvPulse 1.6s infinite}

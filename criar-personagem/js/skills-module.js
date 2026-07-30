@@ -10,7 +10,7 @@ function initPhase4(container) {
         <div class="section" id="skillStep1">
             <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
                 <span>Passo 1 — A Maior (${regras.primario} pontos)</span>
-                <button class="btn btn-primary" style="font-size: 0.75rem; padding: 4px 8px; background: var(--primary); border: none; border-radius: 4px; color: #fff; cursor: pointer;" onclick="window.randomizeSkills()">🎲 Aleatorizar Perícias</button>
+                <button class="btn btn-primary" style="font-size: 0.75rem; padding: 4px 8px; background: #6E5413; border: none; border-radius: 4px; color: #fff; cursor: pointer;" onclick="window.randomizeSkills()">🎲 Aleatorizar Perícias</button>
             </div>
             <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
                 Qual grupo de perícias define você? Esse grupo recebe <strong>${regras.primario} pontos</strong>.

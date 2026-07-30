@@ -204,7 +204,7 @@ html.dark .field select {
 
 .btn-primary {
     background: var(--accent);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     border-color: var(--accent);
 }
 
@@ -215,7 +215,7 @@ html.dark .field select {
 
 .btn-success {
     background: var(--success);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     border-color: var(--success);
 }
 

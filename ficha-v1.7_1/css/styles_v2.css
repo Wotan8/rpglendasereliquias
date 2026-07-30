@@ -42,7 +42,7 @@ html.dark .tab {
 
 html.dark .tab.active {
     background: var(--lr-gold);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     border-color: var(--lr-gold)
 }
 
@@ -2063,7 +2063,7 @@ button:hover {
 .pec-nivel-info {
     display: inline-block;
     background: linear-gradient(135deg, var(--lr-gold), var(--lr-abyssal));
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     font-size: 10px;
     font-weight: 700;
     padding: 2px 8px;
@@ -2116,7 +2116,7 @@ html.dark .pec-compact-name {
 
 html.dark .pec-compact-badge {
     background: var(--lr-gold);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
 }
 
 html.dark .pec-dots-inline .dot.filled {
@@ -2514,7 +2514,7 @@ html.dark .bg-orange input {
 
 .exp-btn-ok {
     background: var(--lr-arcane);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
 }
 
 .exp-btn-ok:hover {
@@ -2614,7 +2614,7 @@ html.dark .bg-orange input {
     width: 100%;
     padding: 8px 16px;
     background: var(--lr-nature);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     border: none;
     border-radius: 6px;
     font-size: 12px;

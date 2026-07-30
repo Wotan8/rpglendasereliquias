@@ -53,7 +53,7 @@ html.dark .tab {
 
 html.dark .tab.active {
     background: var(--primary);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     border-color: var(--primary)
 }
 
@@ -233,7 +233,7 @@ body {
 
 .shortcut-btn:hover {
     background: var(--primary);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
 }
 
 .shortcut-btn.listening {
@@ -726,8 +726,7 @@ body {
 
 .btn-edit:hover {
     background: var(--primary);
-    color: var(--lr-divine)
-}
+    color: var(--lr-bg-0)}
 
 .btn-delete-card {
     border-color: var(--danger);
@@ -741,7 +740,7 @@ body {
 
 .btn-edit[style*="warning"]:hover {
     background: var(--warning);
-    color: var(--lr-divine) !important;
+    color: var(--lr-bg-0)!important;
 }
 
 /* ===== TOGGLE PUBLISH ===== */
@@ -1024,7 +1023,7 @@ body {
 
 .btn-array-add {
     background: var(--primary);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     border: none;
     padding: 4px 12px;
     border-radius: 6px;
@@ -1131,7 +1130,7 @@ body {
 
 .btn-save {
     background: var(--primary);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     border: none;
     padding: 10px 24px;
     border-radius: 8px;
@@ -1308,7 +1307,7 @@ html.dark .tags-container {
     align-items: center;
     gap: 4px;
     background: var(--primary);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     padding: 2px 8px;
     border-radius: 4px;
     font-size: .72rem;
@@ -1318,7 +1317,10 @@ html.dark .tags-container {
 .tags-container .tag button {
     background: none;
     border: none;
-    color: rgba(255, 255, 255, .7);
+    /* O "x" vive DENTRO da .tag, cujo fundo e ouro: branco a 70% morre quando o
+       ouro clareia no tema escuro. Tinta do fundo da pagina vira junto com ele. */
+    color: var(--lr-bg-0);
+    opacity: .7;
     cursor: pointer;
     font-size: .8rem;
     padding: 0 2px;
@@ -1326,7 +1328,8 @@ html.dark .tags-container {
 }
 
 .tags-container .tag button:hover {
-    color: var(--lr-divine)
+    color: var(--lr-bg-0);
+    opacity: 1
 }
 
 .tags-container input {
@@ -1403,30 +1406,32 @@ html.dark ::-webkit-scrollbar-thumb:hover {
    .badge-fonte/.badge-tipo pinta o texto com --lr-divine. Ou seja, cada valor
    daqui precisa ser escuro o bastante para o branco ler em cima.
 
-   Os que vem de token passavam (6.02:1 a 11.43:1). Os quatro CRAVADOS nao: teal
-   #14B8A6 dava 2.33:1, ciano #06B6D4 2.27:1, laranja #F97316 2.62:1 e roxo
-   #A855F7 3.70:1. Escurecidos para o mesmo tom, o pior agora e 4.84:1.
-   Sao fixos nos dois temas de proposito — o texto em cima e branco fixo. */
+   Por isso TODOS sao literais fixos, nenhum e var() de tema: token que clareia no
+   tema escuro derruba o branco (o ouro cai para 1.96:1, o verde para 2.81:1). Os
+   valores aqui sao os tons escuros da paleta, os mesmos que o tema claro usa, e
+   valem nos dois temas porque o texto em cima nunca muda. Antes disto os quatro
+   cravados ainda eram claros — teal #14B8A6 dava 2.33:1, ciano #06B6D4 2.27:1,
+   laranja #F97316 2.62:1, roxo #A855F7 3.70:1. Pior par agora: 4.84:1. */
 :root {
-    --type-modificar: var(--lr-gold);
-    --type-limitar: var(--lr-gold);
-    --type-conceder: var(--lr-nature);
-    --type-condicional: var(--lr-abyssal-2);
-    --type-narrativo: var(--lr-text-2);
-    --type-distribuir: var(--lr-abyssal);
+    --type-modificar: #6E5413;
+    --type-limitar: #6E5413;
+    --type-conceder: #256B42;
+    --type-condicional: #382678;
+    --type-narrativo: #4A5462;
+    --type-distribuir: #4A32A0;
     --type-booleano: #0F766E;
     --type-condicional_encadeado: #7E22CE;
-    --fonte-raca: var(--lr-nature);
-    --fonte-classe: var(--lr-gold);
-    --fonte-tribo: var(--lr-gold);
-    --fonte-peculiaridade: var(--lr-abyssal-2);
-    --fonte-item: var(--lr-abyssal);
-    --fonte-condicao: var(--lr-blood-2);
+    --fonte-raca: #256B42;
+    --fonte-classe: #6E5413;
+    --fonte-tribo: #6E5413;
+    --fonte-peculiaridade: #382678;
+    --fonte-item: #4A32A0;
+    --fonte-condicao: #A82C39;
     --fonte-booleana: #0F766E;
-    --fonte-manobra: var(--lr-abyssal-2);
+    --fonte-manobra: #382678;
     --fonte-magia: #0E7490;
     --fonte-individual: #C2410C;
-    --fonte-generica: var(--lr-text-2);
+    --fonte-generica: #4A5462;
 }
 
 /* -- Inline Editor Layout -- */
@@ -1736,7 +1741,7 @@ html.dark .mech-card {
 .tag-filter-chip.active {
     background: var(--primary);
     border-color: var(--primary);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     box-shadow: 0 2px 8px rgba(212, 175, 55, .3);
 }
 
@@ -1772,7 +1777,7 @@ html.dark .tag-filter-chip:hover {
     font-size: .68rem;
     font-weight: 800;
     background: var(--primary);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     padding: 1px 8px;
     border-radius: 12px;
     line-height: 1.5;
@@ -1887,7 +1892,7 @@ html.dark .mechsel-chip {
 
 .mechsel-add-btn {
     background: var(--primary);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     border: none;
     padding: 6px 14px;
     border-radius: 6px;
@@ -2004,7 +2009,7 @@ html.dark .mechsel-search-bar select {
 .mechsel-confirm {
     margin-top: 8px;
     background: var(--success);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     border: none;
     padding: 6px 14px;
     border-radius: 6px;
@@ -2691,7 +2696,7 @@ html.dark .settings-tab:hover {
 
 .btn-theme-large:hover {
     background: var(--primary);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
 }
 
 /* Favicons Tab */
@@ -2745,7 +2750,7 @@ html.dark .settings-tab:hover {
 
 .btn-upload {
     background: var(--primary);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     border: none;
     padding: 8px 12px;
     border-radius: 6px;
@@ -3140,7 +3145,7 @@ html.dark .enc-cond-row {
 
     .shortcut-btn:hover {
         background: var(--primary);
-        color: var(--lr-divine);
+        color: var(--lr-bg-0);
     }
 
     .shortcut-btn.listening {
@@ -3327,7 +3332,7 @@ html.dark .meta-chip.chip-tag {
 
 .btn-clear-filters:hover {
     background: var(--primary);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
 }
 
 /* ===== CLASS MODULES EDITOR — visual profissional ===== */

@@ -292,7 +292,7 @@
     padding: 8px 14px; font-weight: 800; font-size: .85rem; cursor: pointer;
     transition: all .15s ease;
 }
-.npcv2-mode-btn.active { background: var(--primary); color: var(--lr-divine); }
+.npcv2-mode-btn.active { background: var(--primary); color: var(--lr-bg-0); }
 
 .npcv2-sections {
     display: flex; gap: 6px; flex-wrap: wrap;

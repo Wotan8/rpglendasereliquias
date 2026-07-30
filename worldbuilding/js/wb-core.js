@@ -891,7 +891,7 @@ import {
             return `
                 <div class="feiras-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3 style="color: var(--light);">🏕️ Feiras Nômades</h3>
-                    <button class="btn btn-primary" onclick="openFeiraModal()" style="padding: 10px 20px; background: var(--primary); border: none; border-radius: 8px; color: white; cursor: pointer;">
+                    <button class="btn btn-primary" onclick="openFeiraModal()" style="padding: 10px 20px; background: #6E5413; border: none; border-radius: 8px; color: white; cursor: pointer;">
                         ➕ Nova Feira
                     </button>
                 </div>

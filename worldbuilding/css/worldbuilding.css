@@ -159,7 +159,7 @@
             background: linear-gradient(135deg, var(--success), var(--lr-nature));
             border: none;
             border-radius: 10px;
-            color: white;
+            color: var(--lr-bg-0);
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s;
@@ -490,7 +490,7 @@
             background: var(--primary);
             border: none;
             border-radius: 6px;
-            color: white;
+            color: var(--lr-bg-0);
             cursor: pointer;
             font-weight: 600;
             transition: all 0.2s;
@@ -634,7 +634,7 @@
         .quick-filter-btn.active {
             background: var(--primary);
             border-color: var(--primary);
-            color: white;
+            color: var(--lr-bg-0);
         }
 
         .filter-count {
@@ -742,7 +742,7 @@
 
         .tree-controls button:hover {
             background: var(--primary);
-            color: white;
+            color: var(--lr-bg-0);
         }
 
         .geography-tree {
@@ -865,7 +865,7 @@
 
         .view-btn.active {
             background: var(--primary);
-            color: white;
+            color: var(--lr-bg-0);
         }
 
         .view-btn:hover:not(.active) {
@@ -1172,7 +1172,7 @@
         .submundo-tab.active {
             background: var(--primary);
             border-color: var(--primary);
-            color: white;
+            color: var(--lr-bg-0);
         }
 
         /* Stats Grid */
@@ -1360,7 +1360,7 @@
         .preco-tab.active {
             background: var(--primary);
             border-color: var(--primary);
-            color: white;
+            color: var(--lr-bg-0);
         }
 
         .precos-table {
@@ -1624,7 +1624,7 @@
         .specialty-chip.selected {
             background: var(--primary);
             border-color: var(--primary);
-            color: white;
+            color: var(--lr-bg-0);
         }
 
         .escala-selector {
@@ -1717,17 +1717,17 @@
 
         .status-ouvido {
             background: var(--lr-gold);
-            color: var(--lr-divine);
+            color: var(--lr-bg-0);
         }
 
         .status-investigado {
             background: var(--lr-arcane);
-            color: var(--lr-divine);
+            color: var(--lr-bg-0);
         }
 
         .status-resolvido {
             background: var(--lr-nature);
-            color: var(--lr-divine);
+            color: var(--lr-bg-0);
         }
 
         .rumor-source-link {
@@ -2219,12 +2219,12 @@
 
         .btn-primary {
             background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
+            color: var(--lr-bg-0);
         }
 
         .btn-success {
             background: linear-gradient(135deg, var(--success), var(--lr-nature));
-            color: white;
+            color: var(--lr-bg-0);
         }
 
         .btn-danger {
@@ -2269,7 +2269,7 @@
 
         .alert-success {
             background: var(--success);
-            color: white;
+            color: var(--lr-bg-0);
         }
 
         .alert-danger {
@@ -2279,7 +2279,7 @@
 
         .alert-warning {
             background: var(--warning);
-            color: white;
+            color: var(--lr-bg-0);
         }
 
         /* Image Gallery */
@@ -2808,7 +2808,7 @@
             padding: 2px 8px;
             background: var(--secondary);
             border-radius: 4px;
-            color: white;
+            color: var(--lr-bg-0);
         }
 
         .quest-status {
@@ -3017,7 +3017,7 @@
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             border: none;
             border-radius: 8px;
-            color: white;
+            color: var(--lr-bg-0);
             font-weight: 600;
             cursor: pointer;
             white-space: nowrap;
@@ -3561,7 +3561,7 @@
 
         .day-nav-btn:hover {
             background: var(--primary);
-            color: white;
+            color: var(--lr-bg-0);
         }
 
         .day-nav-btn:disabled {
@@ -3869,7 +3869,7 @@
 
         .btn-time-save {
             background: linear-gradient(135deg, var(--success), var(--lr-nature));
-            color: white;
+            color: var(--lr-bg-0);
         }
 
         .btn-time-cancel {
@@ -4052,7 +4052,7 @@
 
         .wiki-tab.active {
             background: var(--primary);
-            color: white;
+            color: var(--lr-bg-0);
         }
 
         .wiki-grid {
@@ -4378,7 +4378,7 @@
 
         .btn-add-array-item:hover {
             background: var(--primary);
-            color: white;
+            color: var(--lr-bg-0);
         }
 
         .btn-remove-array-item {
@@ -4550,7 +4550,7 @@
 
         .view-mode-tab.active {
             background: var(--primary);
-            color: white;
+            color: var(--lr-bg-0);
         }
 
         /* =========================================================

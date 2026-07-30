@@ -38,7 +38,7 @@
 
 .tab-button.active {
     background: var(--primary);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     border-color: var(--primary);
     box-shadow: 0 4px 12px var(--primary-glow);
 }

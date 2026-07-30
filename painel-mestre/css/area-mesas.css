@@ -325,7 +325,7 @@
 
 .combat-stat-btn:hover {
     background: var(--primary);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     border-color: var(--primary);
 }
 

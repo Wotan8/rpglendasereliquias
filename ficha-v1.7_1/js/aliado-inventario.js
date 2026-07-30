@@ -164,7 +164,7 @@
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <span class="inv-badge" style="background:rgba(245,158,11,.15);color:var(--lr-gold);padding:3px 10px;border-radius:8px;font-size:.78rem;font-weight:700">⚖️ Pressão (equipados): ${pressao.toFixed(2)}</span>
-            <button class="btn" style="background:var(--success,#10b981);color:#fff;border-color:var(--success,#10b981)" onclick="AliadoInventario.openForm(null)">➕ Criar Item</button>
+            <button class="btn" style="background:#256B42;color:#fff;border-color:#256B42" onclick="AliadoInventario.openForm(null)">➕ Criar Item</button>
         </div>
         <div class="inv-section"><div class="inv-section-title">🎒 Equipados <span class="inv-section-count">${equipped.length}</span></div><div class="inv-section-grid">
             ${equipped.length ? equipped.map(i => row(i, true)).join('') : '<div class="inv-empty-small">Nenhum item equipado</div>'}

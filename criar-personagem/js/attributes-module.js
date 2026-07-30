@@ -9,7 +9,7 @@ function initPhase3(container) {
         <div class="section" id="attrStep1">
             <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
                 <span>Passo 1 — Grupo Primário (${REGRAS_CRIACAO.atributos.primario} pontos)</span>
-                <button class="btn btn-primary" style="font-size: 0.75rem; padding: 4px 8px; background: var(--primary); border: none; border-radius: 4px; color: #fff; cursor: pointer;" onclick="window.randomizeAttributes()">🎲 Aleatorizar Atributos</button>
+                <button class="btn btn-primary" style="font-size: 0.75rem; padding: 4px 8px; background: #6E5413; border: none; border-radius: 4px; color: #fff; cursor: pointer;" onclick="window.randomizeAttributes()">🎲 Aleatorizar Atributos</button>
             </div>
             <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
                 Qual área define você? O grupo primário recebe <strong>${REGRAS_CRIACAO.atributos.primario} pontos</strong>,

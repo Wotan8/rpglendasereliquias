@@ -102,7 +102,7 @@ body {
 }
 .lab-tab:hover { background: var(--pedra); }
 .lab-tab.ativo {
-    background: var(--primary, var(--lr-gold)); color: var(--lr-divine);
+    background: var(--primary, var(--lr-gold)); color: var(--lr-bg-0);
     border-color: var(--primary, var(--lr-gold));
 }
 
@@ -158,7 +158,7 @@ body {
 }
 #labRunaNome:focus { outline: 2px solid var(--primary, var(--lr-gold)); outline-offset: 1px; }
 .lab-canvas-barra button {
-    background: var(--primary, var(--lr-gold)); border: 1px solid var(--primary, var(--lr-gold)); color: var(--lr-divine);
+    background: var(--primary, var(--lr-gold)); border: 1px solid var(--primary, var(--lr-gold)); color: var(--lr-bg-0);
     border-radius: 8px; padding: 8px 12px; cursor: pointer; white-space: nowrap;
     font-family: var(--font); font-weight: 700; min-height: 40px;
 }

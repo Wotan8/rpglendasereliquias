@@ -445,8 +445,8 @@ async function loadInventory() {
                     : `<div class="loja-card-media inventory-media-fallback"></div>`;
 
                 let tagsHtml = '';
-                if (item.isExp) tagsHtml += `<span class="loja-tag" style="background:var(--primary);">⭐ EXP: ${item.expAmount}${item.isExpVip ? ' (VIP)' : ''}</span>`;
-                if (item.isRoleta) tagsHtml += `<span class="loja-tag" style="background:var(--secondary, #8b5cf6);">🎰 Roleta: ${item.roletaGiros}x</span>`;
+                if (item.isExp) tagsHtml += `<span class="loja-tag" style="background:#6E5413;">⭐ EXP: ${item.expAmount}${item.isExpVip ? ' (VIP)' : ''}</span>`;
+                if (item.isRoleta) tagsHtml += `<span class="loja-tag" style="background:#382678;">🎰 Roleta: ${item.roletaGiros}x</span>`;
                 if (item.isRerolagem) tagsHtml += `<span class="loja-tag" style="background:#B45309;">🎲 Re-roll: ${item.rerolagensAmount}x</span>`;
                 if (item.isNarrativo) tagsHtml += `<span class="loja-tag" style="background:#047857;">📜 Benefício Narrativo</span>`;
                 if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span class="loja-tag" style="background:var(--lr-abyssal);">🎒 Equipamentos Especiais</span>`;
@@ -457,7 +457,7 @@ async function loadInventory() {
                     <div class="loja-card-body">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                             <div class="loja-card-title" style="margin-bottom: 0;">${escapeHtml(item.nome || 'Item sem nome')}</div>
-                            <div class="inventory-item-quantity" style="margin-left: 8px; flex-shrink: 0; background: var(--primary); color: #fff; padding: 2px 10px; border-radius: 20px; font-weight: 700; font-size: 0.8rem;">x${item.quantidade || 0}</div>
+                            <div class="inventory-item-quantity" style="margin-left: 8px; flex-shrink: 0; background: #6E5413; color: #fff; padding: 2px 10px; border-radius: 20px; font-weight: 700; font-size: 0.8rem;">x${item.quantidade || 0}</div>
                         </div>
                         ${item.descricao || item['descrição'] ? `<div class="loja-card-desc" style="margin-bottom: 8px;">${escapeHtmlWithBreaks(item.descricao || item['descrição'])}</div>` : ''}
                         ${tagsHtml ? `<div class="loja-card-tags" style="margin-bottom: 12px;">${tagsHtml}</div>` : ''}
@@ -966,8 +966,8 @@ function renderLojaItens() {
 
     lojaItensData.forEach(item => {
         let tagsHtml = '';
-        if (item.isExp) tagsHtml += `<span class="loja-tag" style="background:var(--primary);">⭐ EXP: ${item.expAmount}${item.isExpVip ? ' (VIP)' : ''}</span>`;
-        if (item.isRoleta) tagsHtml += `<span class="loja-tag" style="background:var(--secondary, #8b5cf6);">🎰 Roleta: ${item.roletaGiros}x</span>`;
+        if (item.isExp) tagsHtml += `<span class="loja-tag" style="background:#6E5413;">⭐ EXP: ${item.expAmount}${item.isExpVip ? ' (VIP)' : ''}</span>`;
+        if (item.isRoleta) tagsHtml += `<span class="loja-tag" style="background:#382678;">🎰 Roleta: ${item.roletaGiros}x</span>`;
         if (item.isRerolagem) tagsHtml += `<span class="loja-tag" style="background:#B45309;">🎲 Re-roll: ${item.rerolagensAmount}x</span>`;
         if (item.isNarrativo) tagsHtml += `<span class="loja-tag" style="background:#047857;">📜 Benefício Narrativo</span>`;
         if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span class="loja-tag" style="background:var(--lr-abyssal);">🎒 Equipamentos Especiais</span>`;

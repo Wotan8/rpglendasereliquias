@@ -144,7 +144,7 @@
 
 .alert-success {
     background: linear-gradient(135deg, var(--lr-nature), var(--lr-nature));
-    color: white;
+    color: var(--lr-bg-0);
 }
 
 .alert-danger {
@@ -154,7 +154,7 @@
 
 .alert-warning {
     background: linear-gradient(135deg, var(--lr-gold), var(--lr-gold));
-    color: white;
+    color: var(--lr-bg-0);
 }
 
 @keyframes slideIn {
@@ -263,7 +263,7 @@ html.dark .mechsel-chip {
 
 .mechsel-add-btn {
     background: var(--primary);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     border: none;
     padding: 6px 14px;
     border-radius: 6px;
@@ -380,7 +380,7 @@ html.dark .mechsel-search-bar select {
 .mechsel-confirm {
     margin-top: 8px;
     background: var(--success);
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
     border: none;
     padding: 6px 14px;
     border-radius: 6px;

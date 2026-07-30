@@ -178,7 +178,7 @@ function buildAliadoForm() {
     return `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
         <h3 style="margin:0; font-size:1.3rem;">Ficha do Aliado</h3>
-        <button class="btn" style="background:var(--success, #10b981); color:white; border-color:var(--success, #10b981);" onclick="window.saveAliadoNpc()">💾 Salvar Alterações</button>
+        <button class="btn" style="background:#256B42; color:white; border-color:#256B42;" onclick="window.saveAliadoNpc()">💾 Salvar Alterações</button>
     </div>
 
     <div class="tabs" style="margin-bottom: 16px;">

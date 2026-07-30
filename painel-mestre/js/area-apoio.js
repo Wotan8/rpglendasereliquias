@@ -1083,8 +1083,8 @@ function renderLojaUI() {
         card.style.gap = '12px';
         
         let tagsHtml = '';
-        if (item.isExp) tagsHtml += `<span style="background:var(--primary);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">EXP: ${item.expAmount}${item.isExpVip ? ' (VIP)' : ''}</span>`;
-        if (item.isRoleta) tagsHtml += `<span style="background:var(--secondary);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Roleta: ${item.roletaGiros}x</span>`;
+        if (item.isExp) tagsHtml += `<span style="background:#6E5413;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">EXP: ${item.expAmount}${item.isExpVip ? ' (VIP)' : ''}</span>`;
+        if (item.isRoleta) tagsHtml += `<span style="background:#135E9E;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Roleta: ${item.roletaGiros}x</span>`;
         if (item.isRerolagem) tagsHtml += `<span style="background:#B45309;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Re-roll: ${item.rerolagensAmount}x</span>`;
         if (item.isNarrativo) tagsHtml += `<span style="background:#047857;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Narrativo</span>`;
         if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span style="background:var(--lr-abyssal);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">🎒 Itens: ${item.personagemItensVinculados.length}</span>`;

@@ -190,12 +190,12 @@
 
 .btn-primary {
     background: linear-gradient(135deg, var(--primary), var(--lr-abyssal));
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
 }
 
 .btn-success {
     background: linear-gradient(135deg, var(--lr-nature), var(--success));
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
 }
 
 .btn-danger {
@@ -205,7 +205,7 @@
 
 .btn-warning {
     background: linear-gradient(135deg, var(--lr-gold), var(--warning));
-    color: var(--lr-divine);
+    color: var(--lr-bg-0);
 }
 
 .btn-secondary {
