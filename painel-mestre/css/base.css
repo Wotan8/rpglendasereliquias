@@ -1,0 +1,90 @@
+/* =============================================
+   PAINEL DO MESTRE — Lendas e Relíquias
+   Design System: ficha-v1.7_1 (Dark-first)
+   ============================================= */
+
+:root {
+    --bg: var(--lr-bg-0);
+    --bg-gradient: linear-gradient(180deg, var(--lr-bg-0), var(--lr-bg-1));
+    --paper: var(--lr-surface);
+    --ink: var(--lr-text-1);
+    --muted: var(--lr-text-2);
+    --line: var(--lr-border);
+    --soft: var(--lr-border);
+    --chip: var(--lr-surface);
+    --radius: 10px;
+    --gap: 10px;
+    --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --primary: var(--lr-abyssal);
+    --primary-glow: rgba(91, 63, 184, 0.25);
+    --secondary: var(--lr-abyssal-2);
+    --danger: var(--lr-blood-2);
+    --success: var(--lr-nature);
+    --warning: var(--lr-gold);
+    --border: rgba(255, 255, 255, 0.1);
+    --dark: var(--lr-bg-0);
+    --darker: #020617;
+    --light: var(--lr-text-1);
+}
+
+/* ===== BASE ===== */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font);
+    background: var(--bg-gradient);
+    color: var(--ink);
+    min-height: 100vh;
+    line-height: 1.5;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--darker);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--lr-abyssal-2);
+}
+
+/* ===== SELECTION ===== */
+::selection {
+    background: var(--primary);
+    color: var(--lr-bg-0);
+}
+
+/* ===== GLOBAL UTILITY ===== */
+.hidden {
+    display: none !important;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}

@@ -6,21 +6,33 @@
     <title>Page Not Found</title>
 
     <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px 16px; border-radius: 3px; }
-      #message h3 { color: #888; font-weight: normal; font-size: 16px; margin: 16px 0 12px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
+      body { background: var(--lr-bg-0); color: var(--lr-text-1); font-family: var(--lr-font-body); margin: 0; padding: 0; }
+      #message { background: var(--lr-surface); border: 1px solid var(--lr-border); border-top: 2px solid var(--lr-gold); max-width: 360px; margin: 100px auto 16px; padding: 32px 24px 16px; border-radius: var(--lr-radius-lg); box-shadow: var(--lr-shadow-3); }
+      #message h3 { color: var(--lr-text-2); font-weight: normal; font-size: 16px; margin: 16px 0 12px; }
+      #message h2 { color: var(--lr-gold); font-family: var(--lr-font-title); font-size: 16px; margin: 0 0 8px; }
+      /* --lr-divine e branco fixo, e o card usa var(--lr-surface), que no tema
+         claro e branco: o titulo sumia (1.07:1). --lr-text-1 acompanha o tema. */
+      #message h1 { font-size: 22px; font-family: var(--lr-font-title); color: var(--lr-text-1); margin: 0 0 16px;}
+      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; color: var(--lr-text-2); }
+      /* Texto era #1a1408 cravado: no tema claro o --lr-gold e ouro ESCURO
+         (#6E5413), entao ficava tinta escura sobre fundo escuro (2.56:1). Usar
+         --lr-bg-0 resolve nos dois temas, porque ele e o ouro viram juntos:
+         papel sobre ouro escuro (6.91:1), tinta sobre ouro claro (9.25:1). */
+      #message a { display: block; text-align: center; background: var(--lr-gold); text-transform: uppercase; text-decoration: none; color: var(--lr-bg-0); font-weight: 700; padding: 16px; border-radius: var(--lr-radius); }
+      #load { color: var(--lr-text-2); text-align: center; font-size: 13px; }
       @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
+        body, #message { margin-top: 0; box-shadow: none; }
+        body { border-top: 3px solid var(--lr-gold); }
       }
     </style>
-  </head>
+  <script type="module" src="/js/global-favicon.js"></script>
+    <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="shared/tokens.css?v=11">
+    <link rel="stylesheet" href="shared/lendas-reliquias.css?v=2">
+</head>
   <body>
     <div id="message">
       <h2>404</h2>
@@ -31,3 +43,4 @@
     </div>
   </body>
 </html>
+

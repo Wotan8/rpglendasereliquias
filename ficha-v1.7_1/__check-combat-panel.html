@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<!-- Autoteste do Painel de Combate (js/combat-panel.js).
+     Abrir este arquivo no navegador: verde = passou, vermelho = quebrou.
+     Monta um esqueleto mínimo da ficha (campos canônicos + grid de Valores
+     Derivados) e checa render, espelhamento e os botões de ajuste. -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check — Painel de Combate</title>
+    <!-- Mesmo CSS da ficha: o resultado também serve de prévia visual -->
+    <link rel="stylesheet" href="css/styles_v2.css">
+    <link rel="stylesheet" href="css/combat-panel.css">
+    <link rel="stylesheet" href="../shared/tokens.css">
+    <link rel="stylesheet" href="../shared/lendas-reliquias.css">
+</head>
+<body class="wrap">
+    <div class="sheet">
+    <pre id="out" style="font:12px monospace;white-space:pre-wrap"></pre>
+
+    <!-- ==== Esqueleto da aba Principal (campos canônicos) ==== -->
+    <div id="tabPrincipal" hidden>
+        <input type="text" data-key="vit_atual" value="20">
+        <input type="text" id="vit_max_display" value="20">
+        <input type="text" data-key="san_atual" value="8">
+        <input type="text" id="san_max_display" value="10">
+        <input type="text" data-key="ener_atual" value="5">
+        <input type="text" id="ener_max_display" value="5">
+        <div id="derivedValuesGrid">
+            <div class="dv-block-container">
+                <div class="attr-block-title">Combate</div>
+                <!-- BLINDAGEM: statusCombate ON e sem campo Atual → card só de leitura -->
+                <div class="mini-field" data-dv-key="BLINDAGEM">
+                    <input id="dv_BLINDAGEM_display" value="3">
+                </div>
+                <div class="mini-field" data-dv-key="INICIATIVA">
+                    <input id="dv_INICIATIVA_display" value="4">
+                </div>
+                <div class="mini-field" data-dv-key="REACAO">
+                    <input id="dv_REACAO_display" value="2">
+                </div>
+            </div>
+            <div class="dv-block-container">
+                <div class="attr-block-title">Capacidade</div>
+                <!-- CARGA: tem Atual/Máx mas statusCombate OFF → fica nos chips -->
+                <div class="mini-field" data-dv-key="CARGA">
+                    <input id="dv_CARGA_atual" value="12">
+                    <input id="dv_CARGA_display" value="40">
+                </div>
+                <div class="mini-field" data-dv-key="FOLEGO">
+                    <input id="dv_FOLEGO_atual" value="2">
+                    <input id="dv_FOLEGO_display" value="5">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==== Esqueleto da aba Combate (igual ao da ficha) ==== -->
+    <div id="tabCombate">
+        <div class="section" id="combatHudSection">
+            <div class="section-title">⚔️ Status de Combate
+                <span class="cbt-tools">
+                    <label class="cbt-step-lbl">Δ <input type="number" id="cbtStep" value="1" min="1"></label>
+                </span>
+            </div>
+            <div class="cbt-combat-strip" id="cbtInitStrip" hidden>
+                <span class="cbt-init-tag" id="cbtInitTag">⚔️ Em combate</span>
+                <span class="cbt-init-ini">⚡ Iniciativa <b id="cbtInitVal">—</b></span>
+                <span class="cbt-init-pos" id="cbtInitPos"></span>
+            </div>
+            <div class="cbt-vitals" id="combatVitalsGrid"></div>
+            <div class="cbt-cond-tags" id="cbtCondTags" hidden></div>
+        </div>
+        <div class="section" id="combatValuesSection">
+            <div class="section-title">📊 Valores Rápidos</div>
+            <div id="combatValuesBlocks"></div>
+        </div>
+        <div class="section" id="conditionsSection">
+            <div class="section-title">🧪 Condições e Estados</div>
+            <div id="conditionsContainer">cards completos</div>
+        </div>
+        <div class="section" id="equipSection">
+            <div class="section-title">⚔️ Equipamentos</div>
+            <div>conteúdo</div>
+        </div>
+        <div class="section" id="classModulesSection">
+            <div class="section-title">🎓 Módulos de Classe</div>
+            <div id="classModulesContainer">manobras</div>
+        </div>
+    </div>
+
+    </div>
+
+    <script>
+        document.documentElement.classList.add('dark');
+        /* Stubs do que combat-panel.js consome da ficha real */
+        const DERIVED_FIELDS_MAP = {
+            VIT_MAX: { display: 'vit_max_display', atual: 'vit_atual' },
+            ENER_MAX: { display: 'ener_max_display', atual: 'ener_atual' },
+            SAN_MAX: { display: 'san_max_display', atual: 'san_atual' },
+        };
+        window.VITAL_STATS = [
+            { key: 'VIT_MAX', nome: 'Vitalidade', icone: '❤️' },
+            { key: 'SAN_MAX', nome: 'Sanidade', icone: '🧠' },
+            { key: 'ENER_MAX', nome: 'Energia', icone: '⚡' },
+        ];
+        window.DERIVED_VALUES = [
+            { id: 'b1', key: 'BLINDAGEM', nome: 'Blindagem', icone: '🛡️', prefixo: '', sufixo: '', statusCombate: true },
+            { id: 'i1', key: 'INICIATIVA', nome: 'Iniciativa', icone: '⚡', prefixo: '', sufixo: '' },
+            { id: 'r1', key: 'REACAO', nome: 'Reação', icone: '⚡', prefixo: '', sufixo: '' },
+            { id: 'c1', key: 'CARGA', nome: 'Carga', icone: '🎒', prefixo: '', sufixo: 'kg', campoAtual: true },
+            { id: 'f1', key: 'FOLEGO', nome: 'Fôlego', icone: '🌬️', prefixo: '', sufixo: '', campoAtual: true, statusCombate: true },
+        ];
+        window.state = {
+            derived: { INICIATIVA: 4, BLINDAGEM: 2.5, REACAO: 2, CARGA: 40, FOLEGO: 5 },
+            conditions: [
+                { nome: 'Envenenado', icone: '🤢', descricao: 'Perde 1 VIT por rodada', tempoRestante: '3' },
+                { nome: 'Marcado', icone: '🎯', descricao: '', tempoRestante: '' },
+            ],
+        };
+    </script>
+    <script src="js/combat-panel.js"></script>
+    <script>
+        const out = document.getElementById('out');
+        let fails = 0;
+        const eq = (msg, got, exp) => {
+            const ok = String(got) === String(exp);
+            if (!ok) fails++;
+            out.innerHTML += `<span style="color:${ok ? 'green' : 'red'}">${ok ? 'OK  ' : 'FALHOU'} ${msg}` +
+                (ok ? '' : ` — esperado "${exp}", veio "${got}"`) + '</span>\n';
+        };
+        const q = (s) => document.querySelector(s);
+        const canon = (k) => q(`[data-key="${k}"]`);
+
+        window.addEventListener('load', () => {
+            renderCombatPanel();
+
+            const cards = document.querySelectorAll('#combatVitalsGrid .cbt-vital');
+            eq('5 cards (3 vitais + 2 VDs marcados Status de Combate)', cards.length, 5);
+            eq('card 1 = Vitalidade', cards[0].querySelector('.cbt-nm').textContent, 'Vitalidade');
+            eq('VD sem statusCombate fica fora do HUD',
+                [...cards].some(c => c.querySelector('.cbt-nm').textContent === 'Carga'), false);
+
+            eq('Vitalidade 20/20 = 100%', cards[0].querySelector('.cbt-pct').textContent, '100%');
+            eq('Sanidade 8/10 mostra o máximo', cards[1].querySelector('.cbt-max').textContent, '10');
+            eq('barra da Sanidade em 80%', cards[1].querySelector('.cbt-bar > i').style.width, '80%');
+
+            // Blindagem: marcado como Status de Combate, sem campo Atual → só leitura
+            eq('card 4 = Blindagem', cards[3].querySelector('.cbt-nm').textContent, 'Blindagem');
+            eq('Blindagem é card estático', cards[3].classList.contains('is-static'), true);
+            eq('Blindagem mostra o valor', cards[3].querySelector('.cbt-static-val').textContent, '3');
+            eq('card estático não tem botões', cards[3].querySelector('.cbt-step'), null);
+            eq('card estático não tem barra', cards[3].querySelector('.cbt-bar'), null);
+
+            // Fôlego: Status de Combate COM campo Atual → card completo
+            eq('card 5 = Fôlego', cards[4].querySelector('.cbt-nm').textContent, 'Fôlego');
+            eq('Fôlego aponta pro campo canônico', cards[4].dataset.curSel, '#dv_FOLEGO_atual');
+            eq('Fôlego 2/5 = 40%', cards[4].querySelector('.cbt-pct').textContent, '40%');
+
+            // Chips: tudo que NÃO é Status de Combate, nos blocos da Principal
+            const blocks = document.querySelectorAll('#combatValuesBlocks .cbt-block');
+            eq('2 blocos de chips', blocks.length, 2);
+            eq('primeiro bloco aberto por padrão', blocks[0].open, true);
+            const chips = blocks[0].querySelectorAll('.cbt-chip');
+            eq('Blindagem saiu dos chips (está no HUD)', chips.length, 2);
+            eq('Iniciativa mostra state.derived', chips[0].querySelector('.cbt-chip-vl').textContent, '4');
+            eq('Reação mostra state.derived', chips[1].querySelector('.cbt-chip-vl').textContent, '2');
+            eq('Carga continua nos chips',
+                blocks[1].querySelector('.cbt-chip-nm').textContent, 'Carga');
+
+            // Condições em miniatura no rodapé do bloco
+            const tags = document.querySelectorAll('#cbtCondTags .cbt-cond-tag');
+            eq('2 miniaturas de condição', tags.length, 2);
+            eq('miniatura mostra o nome', tags[0].querySelector('.cbt-cond-nm').textContent, 'Envenenado');
+            eq('miniatura mostra rodadas restantes', tags[0].querySelector('.cbt-cond-t').textContent, '⏱️ 3');
+            eq('sem tempo definido, sem relógio', tags[1].querySelector('.cbt-cond-t'), null);
+
+            const condSec = document.getElementById('conditionsSection');
+            eq('bloco de Condições nasce retraído', condSec.classList.contains('cbt-collapsed'), true);
+            tags[0].click();
+            eq('clicar na miniatura abre o bloco', condSec.classList.contains('cbt-collapsed'), false);
+
+            // Stepper com passo Δ=3 → escreve no campo canônico da aba Principal
+            document.getElementById('cbtStep').value = '3';
+            cards[0].querySelector('[data-delta="-1"]').click();
+            eq('− aplica o passo no campo canônico', canon('vit_atual').value, '17');
+            eq('HUD espelha o novo valor', cards[0].querySelector('.cbt-cur').value, '17');
+            eq('barra recalculada', cards[0].querySelector('.cbt-bar > i').style.width, '85%');
+
+            cards[0].querySelector('[data-delta="1"]').click();
+            eq('+ soma o passo', canon('vit_atual').value, '20');
+
+            // Piso em 0 (sem teto — mecânicas de limitar cuidam disso)
+            document.getElementById('cbtStep').value = '999';
+            cards[1].querySelector('[data-delta="-1"]').click();
+            eq('nunca fica negativo', canon('san_atual').value, '0');
+            eq('0/10 marca estado crítico', cards[1].classList.contains('is-low'), true);
+
+            // Digitar no HUD escreve no canônico
+            const inp = cards[2].querySelector('.cbt-cur');
+            inp.value = '2';
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+            eq('digitar no HUD grava no canônico', canon('ener_atual').value, '2');
+
+            // Editar na aba Principal reflete no HUD
+            canon('ener_atual').value = '4';
+            canon('ener_atual').dispatchEvent(new Event('input', { bubbles: true }));
+            eq('editar na Principal espelha no HUD', cards[2].querySelector('.cbt-cur').value, '4');
+
+            // Não existe atalho para encher os status de volta: só o Mestre
+            // (ou o jogador digitando) muda isso.
+            eq('sem botão de restaurar ao máximo', document.getElementById('cbtRestore'), null);
+            eq('VD fora do HUD segue intocado', q('#dv_CARGA_atual').value, '12');
+
+            // Sanfona das seções (não afeta o HUD)
+            const equip = document.getElementById('equipSection');
+            equip.classList.remove('cbt-collapsed');   // no celular ela já nasce fechada
+            equip.querySelector('.section-title').click();
+            eq('clique no título recolhe a seção', equip.classList.contains('cbt-collapsed'), true);
+            equip.querySelector('.section-title').click();
+            eq('clique de novo reabre', equip.classList.contains('cbt-collapsed'), false);
+            const mods = document.getElementById('classModulesSection');
+            mods.querySelector('.section-title').click();
+            eq('Módulos de Classe recolhe', mods.classList.contains('cbt-collapsed'), true);
+            eq('conteúdo dos módulos some',
+                getComputedStyle(document.getElementById('classModulesContainer')).display, 'none');
+
+            eq('HUD não vira sanfona',
+                document.querySelector('#combatHudSection > .section-title').classList.contains('cbt-collapsible'), false);
+
+            // Iniciativa vinda do combate do Mestre (mesas/*/tabuleiro-meta/combate)
+            const strip = document.getElementById('cbtInitStrip');
+            window.currentCharacterId = 'char-abc';
+            const parts = [
+                { id: 'npc-1', npcId: 'n1', name: 'Goblin', initiative: 18 },
+                { id: 'char-1', characterId: 'char-abc', name: 'Eu', initiative: 12 },
+                { id: 'npc-2', npcId: 'n2', name: 'Lobo', initiative: 3 },
+            ];
+            const eu = parts.find(p => p.characterId === window.currentCharacterId);
+            eq('sem combate a faixa fica oculta', strip.hidden, true);
+
+            // turno 0 = Goblin (iniciativa 18, primeiro da ordem)
+            setCombatInitiative(eu, parts, { turnoAtual: 0, rodada: 1 });
+            eq('faixa aparece em combate', strip.hidden, false);
+            eq('mostra a iniciativa do Mestre', document.getElementById('cbtInitVal').textContent, '12');
+            eq('mostra posição e rodada', document.getElementById('cbtInitPos').textContent, '2º de 3 · Rodada 1');
+            eq('não é a vez do personagem', strip.classList.contains('is-turn'), false);
+            eq('rótulo neutro fora do turno', document.getElementById('cbtInitTag').textContent, '⚔️ Em combate');
+
+            // turno 1 = eu (2º da ordem)
+            setCombatInitiative(eu, parts, { turnoAtual: 1, rodada: 1 });
+            eq('destaca quando é a vez', strip.classList.contains('is-turn'), true);
+            eq('rótulo vira "Sua vez"', document.getElementById('cbtInitTag').textContent, '🎯 Sua vez!');
+
+            // turno 4 dá a volta na ordem (4 % 3 = 1) — continua sendo minha vez
+            setCombatInitiative(eu, parts, { turnoAtual: 4, rodada: 2 });
+            eq('turno dá a volta na lista', strip.classList.contains('is-turn'), true);
+            eq('rodada acompanha o Mestre', document.getElementById('cbtInitPos').textContent, '2º de 3 · Rodada 2');
+
+            setCombatInitiative(eu, parts, {});
+            eq('sem turno definido não destaca', strip.classList.contains('is-turn'), false);
+
+            setCombatInitiative(null, []);
+            eq('removido do combate esconde a faixa', strip.hidden, true);
+
+            out.innerHTML += fails === 0
+                ? '<span style="color:green">\n✅ tudo passou</span>'
+                : `<span style="color:red">\n❌ ${fails} falha(s)</span>`;
+        });
+    </script>
+</body>
+</html>

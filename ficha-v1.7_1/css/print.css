@@ -1,0 +1,513 @@
+/* PRINT STYLES */
+
+/* Hide modal and overlay by default */
+#printModal,
+#printOverlay {
+    display: none;
+}
+
+/* Modal Styling (Screen) */
+#printOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+#printModal {
+    background: var(--paper, var(--lr-divine));
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 300px;
+    max-width: 90%;
+    display: none;
+    flex-direction: column;
+    gap: 15px;
+    color: var(--ink, #000);
+}
+
+#printModal h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+.print-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.print-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.print-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.print-actions button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.btn-cancel {
+    background: var(--lr-text-1);
+    color: var(--lr-border);
+}
+
+.btn-print {
+    background: var(--lr-gold);
+    color: var(--lr-divine);
+}
+
+/* --- PRINT MEDIA QUERY --- */
+@media print {
+
+    /* Hide everything initially */
+    body>* {
+        display: none !important;
+    }
+
+    /* Reset Body */
+    body {
+        margin: 0;
+        padding: 0;
+        background: transparent !important;
+        /* Allow theme background */
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    @page {
+        size: A4 portrait;
+        margin: 5mm;
+    }
+
+    /* Show only the sheet */
+    .wrap {
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .sheet {
+        display: block !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        transform: none !important;
+        zoom: 1 !important;
+    }
+
+    /* Hide non-printable elements */
+    .no-print,
+    .toolbar,
+    .tabs,
+    .add-btn,
+    .rm-btn,
+    .info-btn,
+    .note-editor-modal,
+    #printOverlay {
+        display: none !important;
+    }
+
+    /* Force all tab contents to be hidden by default */
+    .tab-content {
+        display: none !important;
+    }
+
+    /* Show only selected tabs */
+    .tab-content.print-visible {
+        display: block !important;
+        page-break-after: always;
+    }
+
+    /* Remove page break from the last visible tab */
+    .tab-content.print-visible:last-of-type {
+        page-break-after: auto;
+    }
+
+    /* === RESTORE DESKTOP LAYOUT AND COMPACTING TOP SECTIONS === */
+    #tabPrincipal {
+        position: relative !important;
+        padding-top: 5px !important;
+    }
+
+    #tabPrincipal>.section:nth-child(1) .section-title,
+    #tabPrincipal>.section:nth-child(2) .section-title {
+        display: none !important;
+    }
+
+    #tabPrincipal>.section:nth-child(2),
+    #tabPrincipal>.section:nth-child(3) {
+        width: calc(100% - 155px) !important;
+        margin-bottom: 5px !important;
+        padding: 0 !important;
+        border: none !important;
+    }
+
+    #tabPrincipal>.section:nth-child(2) {
+        margin-top: -15px !important;
+    }
+
+    .id-wrapper {
+        display: block !important;
+    }
+
+    .id-fields {
+        display: grid !important;
+        grid-template-columns: 2fr 1.5fr 1fr !important;
+        row-gap: 8px !important;
+        column-gap: 15px !important;
+        width: calc(100% - 155px) !important;
+        margin-bottom: 12px !important;
+    }
+
+    .id-fields .row,
+    .id-fields .row.r3 {
+        display: contents !important;
+    }
+
+    .id-fields .field {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: baseline !important;
+        gap: 4px !important;
+        flex: 1 !important;
+        min-width: 0 !important;
+    }
+
+    .id-fields .field>div {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: baseline !important;
+        flex: 1 !important;
+        gap: 4px !important;
+    }
+
+    .id-fields .field label {
+        font-size: 11px !important;
+        font-weight: bold !important;
+        white-space: nowrap !important;
+        color: var(--ink) !important;
+    }
+
+    .id-fields .field label::after {
+        content: ":";
+    }
+
+    .id-fields .field input,
+    .id-fields .field select {
+        border: none !important;
+        border-bottom: 1px dotted var(--muted) !important;
+        padding: 0 4px !important;
+        background: transparent !important;
+        font-size: 11px !important;
+        color: var(--ink) !important;
+        border-radius: 0 !important;
+        outline: none !important;
+        box-shadow: none !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        flex: 1 !important;
+        min-width: 30px !important;
+        height: auto !important;
+        text-align: left !important;
+    }
+
+    .char-img-box {
+        position: absolute !important;
+        top: 0 !important;
+        right: 0 !important;
+        width: 140px !important;
+        height: 180px !important;
+        min-height: 180px !important;
+        border: 2px solid var(--line) !important;
+        background: transparent !important;
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+    }
+
+    .char-img-box .placeholder {
+        display: none !important;
+    }
+
+    .attrs {
+        grid-template-columns: 1fr 1fr 1fr !important;
+    }
+
+    .attr-block, .skill-block {
+        padding: 2px 4px !important;
+        margin-bottom: 2px !important;
+    }
+    
+    .attr-block-title, .skill-block-title {
+        font-size: 9px !important;
+        padding: 1px 0 !important;
+        margin-bottom: 1px !important;
+    }
+
+    .attr-item .print-abbr {
+        display: inline !important;
+        font-weight: 1000;
+        letter-spacing: .4px;
+        font-size: 10px !important;
+        text-transform: uppercase;
+    }
+
+    .attr-item .attr-name {
+        display: none !important;
+    }
+
+    .skills-row {
+        grid-template-columns: repeat(5, 1fr) !important;
+        gap: 5px !important;
+    }
+    
+    .sk-name {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        font-size: 8.5px !important;
+        line-height: 1.1 !important;
+    }
+    
+    .dots5, .dots3 {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+    }
+    
+    .dots5 .dot, .dots3 .dot {
+        display: none !important;
+    }
+    
+    .dots5::after, .dots3::after {
+        content: attr(data-print-val);
+        font-weight: 800 !important;
+        font-size: 11px !important;
+        color: var(--ink, #000) !important;
+    }
+
+    .mini {
+        grid-template-columns: repeat(6, 1fr) !important;
+    }
+
+    .vitals {
+        display: flex !important;
+        justify-content: space-between !important;
+        gap: 15px !important;
+        border: none !important;
+    }
+
+    .vital-box {
+        border: none !important;
+        padding: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 4px !important;
+        flex: 1;
+    }
+
+    .vital-box label {
+        font-size: 11px !important;
+        font-weight: bold !important;
+        color: var(--ink) !important;
+    }
+
+    .vital-inputs {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 4px !important;
+    }
+
+    .vital-inputs input {
+        border: none !important;
+        background: transparent !important;
+        font-size: 13px !important;
+        color: var(--ink) !important;
+        border-radius: 0 !important;
+        width: 40px !important;
+        text-align: center !important;
+        padding: 0 !important;
+        font-weight: normal !important;
+    }
+
+    .vital-inputs .sep {
+        color: var(--ink) !important;
+        font-weight: bold !important;
+        font-size: 14px !important;
+        margin: 0 4px !important;
+    }
+    
+    /* VALORES DERIVADOS */
+    #derivedValuesGrid {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 6px !important;
+        align-items: start !important;
+    }
+    
+    .dv-block-container {
+        border: 1px solid var(--line, #ccc) !important;
+        padding: 4px !important;
+        border-radius: 6px !important;
+        margin-bottom: 0 !important;
+        page-break-inside: avoid !important;
+    }
+    
+    .dv-block-container .combat-grid {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+    
+    .dv-block-container .mini-field {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        border: none !important;
+        padding: 0 !important;
+        background: transparent !important;
+        flex: 1 1 auto !important;
+        min-width: 40px !important;
+    }
+    
+    .dv-block-container .dv-label {
+        font-size: 11px !important;
+        font-weight: bold !important;
+        color: var(--ink) !important;
+        margin-bottom: 2px !important;
+    }
+    
+    .dv-block-container .derived-field {
+        border: none !important;
+        background: transparent !important;
+        font-size: 13px !important;
+        color: var(--ink) !important;
+        text-align: center !important;
+        padding: 0 !important;
+        font-weight: normal !important;
+        width: 100% !important;
+    }
+
+    .class-resources {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+
+    .equip-head.conditions,
+    .equip-row.conditions {
+        grid-template-columns: 2fr .8fr 2fr .8fr 40px !important;
+    }
+
+    .inv-head,
+    .inv-row {
+        grid-template-columns: 1.5fr 2.5fr .5fr 40px !important;
+    }
+
+
+    /* Ensure inputs are visible */
+    input,
+    textarea,
+    select {
+        background: transparent !important;
+        /* Ensure text color contrasts if background is white, but if dark mode is on, it should be fine. */
+    }
+
+    /* Fix for "Identificação" row specifically removed as we use flex now */
+
+    /* TESTES PRINCIPAIS COMPACT PRINT LAYOUT */
+    .print-only {
+        display: inline !important;
+    }
+
+    .test-head {
+        display: none !important;
+    }
+
+    .test-row {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 6px !important;
+        padding: 4px 6px !important;
+        margin-bottom: 2px !important;
+        border-radius: 4px !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        page-break-inside: avoid !important;
+    }
+
+    .test-row input {
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        color: var(--ink, #000) !important;
+        text-align: left !important;
+    }
+
+    .test-row .test-total-field {
+        order: 1 !important;
+        flex: 0 0 20px !important;
+        text-align: center !important;
+        font-weight: 900 !important;
+        font-size: 13px !important;
+    }
+
+    .test-row input:nth-of-type(1) {
+        /* Name */
+        order: 2 !important;
+        flex: 0 0 auto !important;
+        width: auto !important;
+        font-weight: 800 !important;
+        font-size: 11px !important;
+    }
+
+    .test-row .formula-paren:nth-of-type(1) {
+        order: 3 !important;
+        font-size: 10px !important;
+        color: var(--ink, #000) !important;
+    }
+
+    .test-row input:nth-of-type(2) {
+        /* Formula */
+        order: 4 !important;
+        flex: 1 !important;
+        font-size: 10px !important;
+        font-weight: normal !important;
+    }
+
+    .test-row .formula-paren:nth-of-type(2) {
+        order: 5 !important;
+        font-size: 10px !important;
+        color: var(--ink, #000) !important;
+    }
+
+}

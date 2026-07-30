@@ -11,44 +11,417 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/masters/$(request.auth.uid));
     }
 
-    // Carteirinha de mestre: apenas leitura por mestres. Nenhum write pelo cliente.
+    function isCriador() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid))
+          .data.role == 'criador';
+    }
+
+    // Campos que só o servidor (Cloud Functions) e mestres podem alterar
+    function naoMexeuEmCamposProtegidos() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['fragmentos', 'inventario', 'apoios', 'logsCompra', 'fragLastOp']);
+    }
+
+    // ========== Coleções do Painel de Criador (system/data/*) ==========
+    match /system/data/{collection}/{document} {
+      allow read: if isSignedIn();
+      allow write: if isCriador();
+    }
+
+    // Coleção de mestres (sem alterações)
     match /masters/{uid} {
       allow read: if isMaster();
       allow write: if false;
     }
 
-    // Fichas de personagem
-    match /characters/{charId} {
-      // Todos logados podem ler (ajuste para mais restrito se quiser)
+    // Coleção de usuários (TRANCADA — Frag$/inventário só via Cloud Function ou mestre)
+    match /users/{userId} {
       allow read: if isSignedIn();
 
-      // Criar só se o dono for quem está logado
-      allow create: if isSignedIn()
-        && request.resource.data.ownerUid == request.auth.uid;
+      // Criação do próprio doc: não pode nascer com saldo/inventário
+      allow create: if isSignedIn() && (
+        isMaster() ||
+        (request.auth.uid == userId &&
+         !request.resource.data.keys().hasAny(['fragmentos', 'inventario', 'apoios', 'logsCompra', 'fragLastOp']))
+      );
 
-      // Atualizar/Excluir se:
-      // - é o dono OU
-      // - é mestre
-      allow update, delete: if isSignedIn() && (
+      // Mestre mantém escrita total (painel-mestre concede Frag$ e apoios pelo cliente)
+      allow update: if isSignedIn() && (
+        isMaster() ||
+        (request.auth.uid == userId && naoMexeuEmCamposProtegidos())
+      );
+
+      allow delete: if isMaster();
+    }
+
+    // Auditoria de Fragmentos — escrita SOMENTE pelo servidor (Admin SDK ignora rules)
+    match /frag_logs/{logId} {
+      // Mestres veem tudo; jogador pode ver os logs da própria conta
+      allow read: if isSignedIn() && (isMaster() || resource.data.uid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    // Auditoria de transações em dinheiro real (PagBank) — escrita SOMENTE pelo servidor
+    match /real_logs/{logId} {
+      allow read: if isSignedIn() && (isMaster() || resource.data.uid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    // Compras pendentes (PagBank) — criadas/atualizadas SOMENTE pelas Cloud Functions.
+    // O jogador só lê as próprias compras; mestre lê todas; ninguém escreve pelo cliente.
+    match /compras_pendentes/{compraId} {
+      allow read: if isSignedIn() && (isMaster() || resource.data.uid == request.auth.uid);
+      allow write: if false;
+    }
+
+    // Coleção de personagens (CORRIGIDA)
+    match /characters/{characterId} {
+      // ✅ Leitura: QUALQUER usuário autenticado pode ver todos os personagens
+      // (necessário para rankings públicos)
+      allow read: if isSignedIn();
+
+      // ✅ Criação: usuário define ele mesmo como dono OU mestre pode criar para qualquer jogador
+      allow create: if isSignedIn() && (
+        request.resource.data.ownerUid == request.auth.uid || isMaster()
+      );
+
+      // ✅ CORREÇÃO DO BUG: Atualização precisa garantir que ownerUid não mude
+      allow update: if isSignedIn() && (
+        (resource.data.ownerUid == request.auth.uid && 
+         request.resource.data.ownerUid == resource.data.ownerUid) || 
+        isMaster()
+      );
+      
+      // ✅ Exclusão: dono OU mestre
+      allow delete: if isSignedIn() && (
         resource.data.ownerUid == request.auth.uid || isMaster()
       );
     }
 
-    // Logs de alterações
+    // ========== ADICIONADO: Coleção 'char' (ficha-v1.7_1) ==========
+    match /char/{charId} {
+      // Leitura: qualquer usuário autenticado (para listagens e rankings)
+      allow read: if isSignedIn();
+
+      // Criação: usuário define ele mesmo como dono OU mestre
+      allow create: if isSignedIn() && (
+        request.resource.data.ownerUid == request.auth.uid || isMaster()
+      );
+
+      // Atualização: dono (sem mudar ownerUid) OU mestre
+      allow update: if isSignedIn() && (
+        (resource.data.ownerUid == request.auth.uid && 
+         request.resource.data.ownerUid == resource.data.ownerUid) || 
+        isMaster()
+      );
+      
+      // Exclusão: dono OU mestre
+      allow delete: if isSignedIn() && (
+        resource.data.ownerUid == request.auth.uid || isMaster()
+      );
+    }
+
+    // Coleção de logs (sem alterações)
     match /logs/{logId} {
-      // Criar log: precisa estar logado e o log deve apontar para uma character existente.
-      allow create: if isSignedIn()
-        && exists(/databases/$(database)/documents/characters/$(request.resource.data.characterId))
-        && request.resource.data.userUid == request.auth.uid;
-
-      // Ler logs: mestres podem ler tudo; jogador pode ler logs da sua própria ficha
-      allow read: if isMaster()
-        || (isSignedIn()
-            && exists(/databases/$(database)/documents/characters/$(resource.data.characterId))
-            && get(/databases/$(database)/documents/characters/$(resource.data.characterId)).data.ownerUid == request.auth.uid);
-
-      // Nunca permitir update/delete de logs pelo cliente
+      allow create: if isSignedIn();
+      allow read: if isMaster();
       allow update, delete: if false;
+    }
+    
+    // ========== ADICIONADO: Coleção de NPCs ==========
+    match /npcs/{npcId} {
+      allow read: if isSignedIn();
+      allow update: if isSignedIn();
+      allow create, delete: if isMaster();
+    }
+    
+    // ========== CORRIGIDO: Coleção de Containers ==========
+    match /containers/{containerId} {
+      // ✅ Permitir leitura/query para usuários autenticados
+      allow read: if isSignedIn();
+
+      // ✅ Criação: dono OU mestre pode criar
+      allow create: if isSignedIn() && 
+        (request.resource.data.ownerId == request.auth.uid || request.resource.data.ownerUid == request.auth.uid || isMaster());
+
+      // ✅ Atualização: dono do container, dono do personagem vinculado, OU mestre
+      allow update: if isSignedIn() && (
+        // Dono do container pode atualizar (mantendo o mesmo ownerId/ownerUid)
+        (resource.data.ownerId == request.auth.uid && 
+         request.resource.data.ownerId == resource.data.ownerId) ||
+        (resource.data.ownerUid == request.auth.uid && 
+         request.resource.data.ownerUid == resource.data.ownerUid) ||
+        // Dono do personagem vinculado pode atualizar (verificando via characterId)
+        (exists(/databases/$(database)/documents/char/$(resource.data.characterId)) &&
+         get(/databases/$(database)/documents/char/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
+        // Mestre pode sempre atualizar
+        isMaster()
+      );
+      
+      // ✅ Exclusão: dono do container, dono do personagem, OU mestre
+      allow delete: if isSignedIn() && (
+        resource.data.ownerId == request.auth.uid || 
+        resource.data.ownerUid == request.auth.uid || 
+        (exists(/databases/$(database)/documents/char/$(resource.data.characterId)) &&
+         get(/databases/$(database)/documents/char/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
+        isMaster()
+      );
+    }
+    
+    // ========== CORRIGIDO: Coleção de Itens ==========
+    match /items/{itemId} {
+      // ✅ Permitir leitura/query para usuários autenticados
+      allow read: if isSignedIn();
+
+      // ✅ Criação: dono OU mestre pode criar
+      allow create: if isSignedIn() && 
+        (request.resource.data.ownerId == request.auth.uid || request.resource.data.ownerUid == request.auth.uid || isMaster());
+
+      // ✅ Atualização: dono do item, dono do personagem vinculado, OU mestre
+      allow update: if isSignedIn() && (
+        // Dono do item pode atualizar (mantendo o mesmo ownerId/ownerUid)
+        (resource.data.ownerId == request.auth.uid && 
+         request.resource.data.ownerId == resource.data.ownerId) ||
+        (resource.data.ownerUid == request.auth.uid && 
+         request.resource.data.ownerUid == resource.data.ownerUid) ||
+        // Dono do personagem vinculado pode atualizar (verificando via characterId)
+        (exists(/databases/$(database)/documents/char/$(resource.data.characterId)) &&
+         get(/databases/$(database)/documents/char/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
+        // Item vinculado a um NPC (aliado): segue a permissão da coleção 'npcs'
+        // (qualquer usuário autenticado pode atualizar NPCs, então idem para seus itens)
+        exists(/databases/$(database)/documents/npcs/$(resource.data.characterId)) ||
+        // Mestre pode sempre atualizar
+        isMaster()
+      );
+      
+      // ✅ Exclusão: dono do item, dono do personagem, OU mestre
+      allow delete: if isSignedIn() && (
+        resource.data.ownerId == request.auth.uid || 
+        resource.data.ownerUid == request.auth.uid || 
+        (exists(/databases/$(database)/documents/char/$(resource.data.characterId)) &&
+         get(/databases/$(database)/documents/char/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
+        // Item vinculado a um NPC (aliado): segue a permissão da coleção 'npcs'
+        exists(/databases/$(database)/documents/npcs/$(resource.data.characterId)) ||
+        isMaster()
+      );
+    }
+
+    // ========== ADICIONADO: Coleções de Economia ==========
+    match /economy-items/{itemId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /economy-locations/{locationId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /economy-events/{eventId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    // ========== ADICIONADO: Coleção de Coisas da Economia ==========
+    match /economy-coisas/{coisaId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    // ========== ADICIONADO: Coleção de Hexmaps ==========
+    match /hexmaps/{mapId} {
+      allow read: if isMaster();
+      allow create, update, delete: if isMaster();
+    }
+
+    // ========== ADICIONADO: Configurações do Hexmap (mapa padrão) ==========
+    match /hexmap-settings/{settingId} {
+      allow read: if isMaster();
+      allow create, update, delete: if isMaster();
+    }
+
+    // ========== ADICIONADO: Coleção de Configurações (Metas antigas e Lista de Produção) ==========
+    match /config/{configId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    // ========== ADICIONADO: Coleção de Metas Dinâmicas ==========
+    match /metas/{metaId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    // ========== ADICIONADO: Coleção da Loja (Itens de Repertório) ==========
+    match /loja_itens/{itemId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    // ========== ADICIONADO: Configurações Globais (Ex: Favicons) ==========
+    match /app-config/{docId} {
+      allow read: if true;
+      allow write: if isCriador();
+    }
+
+    // ========== ADICIONADO: Coleção de Configurações do Mestre ==========
+    match /mestre-config/{docId} {
+      allow read: if isMaster();
+      allow create, update, delete: if isMaster();
+    }
+
+    // ========== ADICIONADO: Coleções de Worldbuilding ==========
+    match /worldbuilding-geography/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /worldbuilding-factions/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /worldbuilding-history/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /worldbuilding-cultures/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /worldbuilding-magic/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /worldbuilding-religion/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    // ========== ADICIONADO: Coleção de Propriedades do Worldbuilding ==========
+    match /worldbuilding-properties/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    // Arestas dos Grafos de Conexão (genealogia + teia de facções)
+    match /worldbuilding-relations/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    // Linhagens familiares (⚜️ Casas / Clãs) — NOVA
+    match /worldbuilding-lineages/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    // Textos do Escritório do Cronista (contos e descrições)
+    match /worldbuilding-articles/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /worldbuilding-books/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    // ========== ADICIONADO: Coleções de Session Logs ==========
+    match /campaigns/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /session-logs/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    // ========== ADICIONADO: Configurações do Worldbuilding (campanha favorita) ==========
+    match /worldbuilding-settings/{settingId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /notifications/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    // ========== ADICIONADO: Coleção de Mesas (Campanhas) ==========
+    match /mesas/{mesaId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+
+      // ===== Subcoleções do Tabuleiro (VTT) — FASE 7.1 =====
+      // Leitura: qualquer usuário autenticado (o modo público filtra a visibilidade no cliente).
+      //
+      // LIMITAÇÃO HONESTA: as permissões finas por ferramenta (desenhar, medir, mover
+      // token específico...) vivem no doc do canvas e mudam com frequência; espelhá-las
+      // 1:1 nas rules exigiria múltiplos get() por write (custo e latência). O modelo
+      // adotado: jogador vinculado à mesa pode escrever nas subcoleções do tabuleiro,
+      // mas NÃO pode alterar a configuração dos canvases (grid, permissões, camadas,
+      // fog) — apenas o campo de exploração compartilhada.
+      function ehJogadorDaMesa() {
+        return isSignedIn() &&
+          request.auth.uid in get(/databases/$(database)/documents/mesas/$(mesaId)).data.jogadores;
+      }
+
+      // Doc do canvas: só o mestre configura; jogadores só atualizam a exploração (fog persistente)
+      match /tabuleiros/{canvasId} {
+        allow read: if isSignedIn();
+        allow create, delete: if isMaster();
+        allow update: if isMaster() ||
+          (ehJogadorDaMesa() &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['exploracao']));
+
+        // Objetos do canvas: mestre ou jogador da mesa (regras finas no cliente)
+        match /objetos/{objId} {
+          allow read: if isSignedIn();
+          allow write: if isMaster() || ehJogadorDaMesa();
+        }
+      }
+
+      // Presença (cursores ao vivo): um doc POR USUÁRIO — cada um só escreve o próprio
+      match /presenca/{uid} {
+        allow read: if isSignedIn();
+        allow write: if isMaster() || (ehJogadorDaMesa() && request.auth.uid == uid);
+      }
+
+      // Metadados ao vivo: estado/combate/réguas/pings/legenda/musica
+      match /tabuleiro-meta/{docId} {
+        allow read: if isSignedIn();
+        // legenda (teleprompter), estado (canvas ativo) e musica (playlists) são só do mestre
+        allow write: if isMaster() ||
+          (ehJogadorDaMesa() && docId != 'legenda' && docId != 'estado' && docId != 'musica');
+      }
+
+      // Demais subcoleções futuras da mesa
+      match /{document=**} {
+        allow read: if isSignedIn();
+        allow write: if isMaster() || ehJogadorDaMesa();
+      }
+    }
+
+    // ========== ADICIONADO: Coleções do Submundo ==========
+    match /worldbuilding-submundo-feiras/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /worldbuilding-submundo-reputacoes/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
+    }
+
+    match /worldbuilding-rumors/{docId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isMaster();
     }
   }
 }

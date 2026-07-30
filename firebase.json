@@ -4,7 +4,13 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "functions/**",
+      "graphify-out/**",
+      "sistema antigo e lore/**",
+      "**/__check-*",
+      "**/*.test.mjs",
+      "*.rules"
     ],
     "rewrites": [
       {
@@ -14,14 +20,59 @@
     ],
     "headers": [
       {
+        "source": "**/*.html",
+        "headers": [
+          { "key": "Content-Type", "value": "text/html; charset=utf-8" },
+          { "key": "Cache-Control", "value": "public, max-age=3600" }
+        ]
+      },
+      {
+        "source": "**/*.js",
+        "headers": [
+          { "key": "Content-Type", "value": "application/javascript; charset=utf-8" },
+          { "key": "Cache-Control", "value": "public, max-age=3600" }
+        ]
+      },
+      {
+        "source": "**/*.css",
+        "headers": [
+          { "key": "Content-Type", "value": "text/css; charset=utf-8" },
+          { "key": "Cache-Control", "value": "public, max-age=3600" }
+        ]
+      },
+      {
         "source": "**",
         "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=3600"
-          }
+          { "key": "Cache-Control", "value": "public, max-age=3600" }
+        ]
+      },
+      {
+        "source": "/sw.js",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+          { "key": "Service-Worker-Allowed", "value": "/" }
+        ]
+      },
+      {
+        "source": "/manifest.json",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" },
+          { "key": "Content-Type", "value": "application/manifest+json; charset=utf-8" }
         ]
       }
     ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": ["node_modules", ".git"]
+    }
+  ],
+  "storage": {
+    "rules": "storage.rules"
   }
 }

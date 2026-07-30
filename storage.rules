@@ -1,0 +1,51 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Hexmap terrain images - authenticated users can read/write
+    match /hexmap-terrain/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Character images - authenticated users can read/write
+    match /char-images/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Favicons - public read, authenticated users can write (UI blocks non-creators)
+    match /app-assets/favicons/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Loja items images - authenticated users can read/write
+    match /loja-itens/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Tabuleiro (VTT) — mapas, tokens e imagens do canva
+    match /tabuleiro-images/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Imagens diagramadas nos textos do Escritório do Cronista
+    match /worldbuilding-images/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Runic element glyph images (Painel do Criador → Elementos Rúnicos)
+    match /runic-elements/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Default: deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

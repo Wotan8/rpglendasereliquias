@@ -1,0 +1,499 @@
+/* =============================================
+   ÁREA — NPCs (Global NPC CRUD)
+   ============================================= */
+
+/* ===== NPC GRID ===== */
+.npcs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+/* ===== NPC CARD ===== */
+.npc-card {
+    background: var(--lr-bg-1);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.npc-card:hover {
+    border-color: rgba(91, 63, 184, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.npc-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.npc-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.npc-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.npc-name {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.npc-type-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    background: rgba(91, 63, 184, 0.2);
+    color: var(--primary);
+    margin-top: 4px;
+}
+
+.npc-image-container {
+    width: 100%;
+    height: 260px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    background: var(--lr-bg-1);
+}
+
+.npc-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+}
+
+.npc-personalidades {
+    margin-bottom: 8px;
+}
+
+.npc-personalidade {
+    margin-bottom: 4px;
+}
+
+.npc-detail-label {
+    font-size: 0.82rem;
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.npc-detail-label-light {
+    font-size: 0.82rem;
+    color: var(--muted);
+}
+
+.npc-trejeitos {
+    margin-bottom: 6px;
+}
+
+.npc-frases {
+    margin-bottom: 8px;
+}
+
+.npc-frases-label {
+    font-size: 0.82rem;
+    color: var(--lr-text-2);
+    font-style: italic;
+}
+
+.npc-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+.npc-tag {
+    background: rgba(91, 63, 184, 0.15);
+    color: var(--primary);
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+/* ===== NPC FILTERS ===== */
+.npc-filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    align-items: flex-end;
+}
+
+.npc-filters .form-group {
+    flex: 1;
+    min-width: 150px;
+    margin-bottom: 0;
+}
+
+.npc-filters .form-input,
+.npc-filters .form-select {
+    padding: 8px 12px;
+    font-size: 0.82rem;
+}
+
+/* ===== NPC ACTIONS BAR ===== */
+.npc-actions-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.no-npcs {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--muted);
+    font-size: 1rem;
+    grid-column: 1 / -1;
+}
+
+/* ===== NPC FORM (inside modal) ===== */
+.npc-form-input,
+.npc-form-textarea,
+.npc-form-select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid var(--line);
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-family: var(--font);
+    background: var(--lr-bg-1);
+    color: var(--light);
+    transition: border-color 0.15s;
+}
+
+.npc-form-input:focus,
+.npc-form-textarea:focus,
+.npc-form-select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.npc-form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.npc-attribute-input {
+    width: 100%;
+    padding: 8px;
+    text-align: center;
+    border: 2px solid var(--line);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 800;
+    font-family: var(--font);
+    background: var(--lr-bg-1);
+    color: var(--primary);
+}
+
+.npc-attribute-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .npcs-grid {
+        grid-template-columns: 1fr;
+    }
+    .npc-filters-main-bar { flex-direction: column; align-items: stretch !important; }
+    .npc-filters-main-bar .form-group { width: 100%; }
+    .npc-filters-main-bar button { width: 100%; justify-content: center; }
+}
+
+/* ===== ADVANCED FILTERS ===== */
+.npc-advanced-panel {
+    background: var(--lr-bg-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 14px;
+    animation: slideDown 0.3s ease-out;
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.adv-filters-section {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.adv-filters-section:last-child {
+    border-bottom: none; margin-bottom: 0; padding-bottom: 0;
+}
+.adv-filters-header {
+    font-size: 0.9rem; font-weight: 700; color: var(--primary); margin-bottom: 8px;
+}
+.adv-filters-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px;
+}
+.attrs-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+.range-inputs {
+    display: flex; gap: 4px;
+}
+.range-inputs input {
+    width: 50%; text-align: center;
+}
+.filter-badge {
+    background: var(--danger); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 12px; font-weight: bold;
+}
+.filter-chip {
+    display: inline-flex; align-items: center; gap: 6px; background: rgba(91, 63, 184, 0.2); border: 1px solid rgba(91, 63, 184, 0.4); color: var(--lr-text-1); font-size: 0.8rem; padding: 4px 10px; border-radius: 16px;
+}
+.filter-chip-close {
+    cursor: pointer; color: var(--muted); transition: color 0.2s;
+}
+/* Era --lr-divine: branco em cima do chip roxo a 20%, que no tema claro compoe
+   lavanda clara — o "x" sumia no hover (1.33:1). Precisa ser o --lr-blood-3, que
+   e o tom que VIRA com o tema: o blood-2 conserta o claro (4.79:1) e reprova no
+   escuro (3.92:1). Com o -3 da 7.19:1 e 6.77:1. */
+.filter-chip-close:hover { color: var(--lr-blood-3); }
+
+/* ============================================================
+   FICHA DE NPC v2 — modo Rápido/Mecânico, campos híbridos,
+   peculiaridades, valores derivados com override e vínculos
+   ============================================================ */
+.npcv2-toolbar {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.npcv2-mode-toggle {
+    display: inline-flex; border: 1px solid var(--line);
+    border-radius: 10px; overflow: hidden;
+}
+.npcv2-mode-btn {
+    background: transparent; border: none; color: var(--muted);
+    padding: 8px 14px; font-weight: 800; font-size: .85rem; cursor: pointer;
+    transition: all .15s ease;
+}
+.npcv2-mode-btn.active { background: var(--primary); color: var(--lr-bg-0); }
+
+.npcv2-sections {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--line); margin-bottom: 16px; padding-bottom: 8px;
+}
+.npcv2-section-btn {
+    background: transparent; border: 1px solid var(--line); border-radius: 8px;
+    color: var(--muted); padding: 6px 12px; font-size: .82rem; font-weight: 700; cursor: pointer;
+}
+/* O texto era --primary, que o tokens.css resolve como OURO, em cima de um glow
+   ROXO: 4.44:1. Roxo nao resolve: a regra vale nos dois temas e o glow a 25% nao
+   deixa espaco (4.28:1 no escuro nem com o tom claro). O estado ativo ja se le
+   pelo glow e pela borda, entao o texto fica com a tinta do tema: 11.56:1 no
+   claro, 14.79:1 no escuro. */
+.npcv2-section-btn.active { background: var(--primary-glow); border-color: var(--primary); color: var(--lr-text-1); }
+.npcv2-section { display: none; }
+.npcv2-section.active { display: block; }
+
+.npcv2-block-title {
+    font-weight: 800; color: var(--primary); margin-bottom: 10px;
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+}
+.npcv2-hint { font-size: .75rem; font-weight: 500; color: var(--muted); }
+
+/* Modo rápido esconde tudo que depende dos registros */
+.npcv2-modo-rapido .npcv2-only-mecanico { display: none !important; }
+
+/* Peculiaridades */
+.npcv2-pec-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px;
+    margin-bottom: 6px; font-size: .85rem;
+}
+.npcv2-pec-nome { font-weight: 700; flex: 1; min-width: 120px; }
+.npcv2-pec-fonte {
+    font-size: .7rem; font-weight: 800; text-transform: uppercase;
+    color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px;
+}
+.npcv2-pec-nivel { font-size: .78rem; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+.npcv2-pec-nivel input { width: 52px; text-align: center; background: transparent; border: 1px solid var(--line); border-radius: 6px; color: inherit; padding: 2px 4px; }
+.npcv2-pec-del {
+    background: transparent; border: none; color: var(--muted);
+    cursor: pointer; font-size: .9rem; padding: 2px 6px; border-radius: 6px;
+}
+.npcv2-pec-del:hover { color: var(--lr-blood-2); background: rgba(201, 79, 92, .12); }
+.npcv2-pec-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.npcv2-pec-add .form-input, .npcv2-pec-add .form-select { flex: 1; min-width: 160px; }
+
+/* Atributos */
+.npcv2-attrs-grid {
+    display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; margin-bottom: 8px;
+}
+@media (max-width: 760px) { .npcv2-attrs-grid { grid-template-columns: repeat(3, 1fr); } }
+.npcv2-attr-cell { text-align: center; }
+.npcv2-attr-label { font-size: .72rem; font-weight: 800; color: var(--muted); margin-bottom: 4px; }
+.npcv2-attr-input { text-align: center; font-weight: 800; color: var(--primary); }
+.npcv2-attr-eff { font-size: .72rem; color: var(--success, var(--lr-nature)); min-height: 16px; margin-top: 2px; }
+
+/* Valores derivados */
+.npcv2-dv-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;
+}
+.npcv2-dv-cell {
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px;
+}
+.npcv2-dv-cell.locked { border-color: var(--warning, var(--lr-gold)); }
+.npcv2-dv-label {
+    font-size: .72rem; font-weight: 800; color: var(--muted); margin-bottom: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help;
+}
+.npcv2-dv-value { display: flex; align-items: center; gap: 4px; }
+.npcv2-dv-input { text-align: center; font-weight: 800; }
+.npcv2-dv-cell.locked .npcv2-dv-input { color: var(--warning, var(--lr-gold)); }
+.npcv2-dv-reset {
+    background: transparent; border: 1px solid var(--line); border-radius: 6px;
+    color: var(--muted); cursor: pointer; padding: 4px 6px; font-size: .8rem;
+}
+.npcv2-dv-reset:hover { color: var(--primary); border-color: var(--primary); }
+.npcv2-dv-atual {
+    width: 100%; margin-top: 6px; text-align: center;
+    background: transparent; border: 1px dashed var(--line); border-radius: 6px;
+    color: inherit; padding: 3px; font-size: .8rem;
+}
+
+/* Extras */
+.npcv2-extra-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.npcv2-extra-row .form-input:first-child { flex: 2; }
+.npcv2-extra-row .form-input:nth-child(2) { flex: 1; }
+
+/* Infos / avisos */
+.npcv2-info-row {
+    font-size: .82rem; padding: 6px 10px; border-left: 3px solid var(--primary);
+    background: var(--primary-glow); border-radius: 0 8px 8px 0; margin-bottom: 6px;
+}
+.npcv2-avisos { font-size: .78rem; color: var(--warning, var(--lr-gold)); margin-top: 10px; }
+
+/* Vínculos */
+.npcv2-vinc-list { display: flex; flex-direction: column; gap: 4px; }
+.npcv2-check {
+    display: flex; align-items: center; gap: 8px; font-size: .85rem; cursor: pointer;
+    padding: 4px 0;
+}
+.npcv2-vinc-rel { max-width: 200px; font-size: .8rem; padding: 4px 8px; }
+.npcv2-funcoes { margin-top: 4px; }
+
+/* ===== VD vinculado — botão de desvincular ===== */
+.npcv2-dv-cell { position: relative; }
+.npcv2-dv-unlink {
+    position: absolute; top: 4px; right: 4px;
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: .75rem; line-height: 1;
+    padding: 2px 5px; border-radius: 4px;
+}
+.npcv2-dv-unlink:hover { color: var(--lr-blood-2, #ef4444); background: rgba(201, 79, 92, .12); }
+
+/* ===== Módulos de Classe (Ficha de NPC) ===== */
+.npcv2-mod-box {
+    border: 1px solid var(--line); border-radius: 10px;
+    background: rgba(139, 92, 246, .04); margin-bottom: 10px; overflow: hidden;
+}
+.npcv2-mod-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; font-weight: 700; font-size: .9rem;
+    background: rgba(139, 92, 246, .08); border-bottom: 1px solid var(--line);
+}
+.npcv2-mod-head .npcv2-pec-fonte { margin-left: 8px; }
+.npcv2-mod-items { padding: 8px; }
+.npcv2-mod-item {
+    border: 1px solid var(--line); border-radius: 8px;
+    margin-bottom: 8px; overflow: hidden; background: rgba(15, 23, 42, .25);
+}
+.npcv2-mod-item-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 10px; font-size: .8rem; font-weight: 600;
+    background: rgba(51, 65, 85, .25); border-bottom: 1px solid var(--line);
+}
+.npcv2-mod-fields {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px; padding: 8px 10px;
+}
+.npcv2-mod-field label.form-label { font-size: .72rem; margin-bottom: 2px; }
+.npcv2-mod-sep {
+    grid-column: 1 / -1; font-weight: 700; font-size: .78rem;
+    color: var(--muted); text-transform: uppercase; letter-spacing: .04em;
+    border-bottom: 1px dashed var(--line); padding-bottom: 2px; margin-top: 4px;
+}
+.npcv2-mod-actions {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 0 8px 8px 8px;
+}
+
+/* ===== ATAQUES E EFEITOS ATIVOS (totais por item equipado) ===== */
+/* Rola na horizontal: o número de colunas cresce com os Valores Derivados
+   marcados com Escopo por Item no Painel do Criador. */
+#npcAtaquesWrap .atk-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+#npcAtaquesWrap .atk-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    min-width: 320px;
+}
+#npcAtaquesWrap .atk-table th {
+    text-align: center;
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted, #94a3b8);
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+    white-space: nowrap;
+}
+#npcAtaquesWrap .atk-table th.atk-col-item,
+#npcAtaquesWrap .atk-table td.atk-col-item {
+    text-align: left;
+    min-width: 150px;
+}
+#npcAtaquesWrap .atk-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+    text-align: center;
+    white-space: nowrap;
+}
+#npcAtaquesWrap .atk-item-name { display: block; font-weight: 600; }
+#npcAtaquesWrap .atk-item-state {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--muted, #94a3b8);
+}
+#npcAtaquesWrap .atk-dano {
+    font-weight: 700;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    color: var(--lr-gold);
+}
+#npcAtaquesWrap .atk-val strong { font-size: 1rem; }
+#npcAtaquesWrap .atk-delta {
+    margin-left: 4px;
+    font-size: 0.7rem;
+    color: var(--lr-nature);
+    font-weight: 700;
+}

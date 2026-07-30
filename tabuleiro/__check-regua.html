@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<title>__check — Régua e vértices do Tabuleiro</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<style>
+  html,body{margin:0;height:100%;background:#0b0e14;color:#e6e8ef;font:14px/1.6 Inter,system-ui,sans-serif}
+  #tbCanvas{position:fixed;inset:0;width:100vw;height:100vh}
+  #saida{position:fixed;inset:12px auto 12px 12px;width:520px;z-index:10;background:#12161f;
+         border:1px solid #2a3040;border-radius:12px;padding:14px;overflow:auto;max-height:calc(100vh - 24px)}
+  h1{font-size:1rem;margin:0 0 4px} p{margin:0 0 12px;color:#8b93a7;font-size:.8rem}
+  .ok{color:#34d399} .fail{color:#f87171;font-weight:700} .res{font-family:ui-monospace,monospace;font-size:.78rem}
+  #placar{font-weight:800;margin-top:10px;padding-top:10px;border-top:1px solid #2a3040}
+</style></head>
+<body>
+<canvas id="tbCanvas"></canvas>
+<div id="tbCoords"></div><div id="tbToasts"></div>
+<div class="tb-ctx" id="tbCtxMenu"></div><div id="tbPinPopup"></div>
+<div class="tb-side-panel" id="tbPropsPanel"><div class="tb-side-body" id="tbPropsBody"></div></div>
+<button id="tbLockBtn"></button>
+<div class="tb-modal" id="tbModal"><div class="tb-modal-content"><span class="tb-modal-title"></span><div class="tb-modal-body"></div></div></div>
+
+<div id="saida">
+  <h1>📏 Régua e vértices — check de ponteiro</h1>
+  <p>Dispara PointerEvents reais contra os handlers de <code>tab-tools.js</code>.
+     Cobre o que não dá para testar em Node: mouse (clique-a-clique e arrastando),
+     toque com 2º dedo, e a pinça continuando a funcionar fora da régua.</p>
+  <div id="res" class="res"></div>
+  <div id="placar"></div>
+</div>
+
+<script type="module">
+import { T, CAMADAS_PADRAO } from './js/tab-state.js';
+import { initTools, setTool } from './js/tab-tools.js';
+import { startRenderLoop } from './js/tab-render.js';
+
+// ---- estado mínimo de um canvas, sem Firestore ----
+T.mesaId = 'check'; T.mode = 'secret'; T.isMaster = true; T.user = { uid: 'u' };
+T.canvas = { grid: { size: 70, show: true, snap: true, tipo: 'quad' },
+             escala: { valorPorCelula: 1.5, unidade: 'm' }, camadas: CAMADAS_PADRAO, permissoes: {} };
+T.measureCfg.mostrarOutros = false;   // não publica régua compartilhada
+T.measureCfg.exib = 'instantaneo';
+// pointerId sintético não tem captura real: só aqui, vira no-op
+HTMLElement.prototype.setPointerCapture = function () {};
+startRenderLoop(); initTools();
+
+const cv = document.getElementById('tbCanvas');
+const ev = (t, x, y, botao, botoes, pid = 1, ptype = 'mouse') => cv.dispatchEvent(
+    new PointerEvent(t, { bubbles: true, cancelable: true, clientX: x, clientY: y,
+        button: botao, buttons: botoes, pointerId: pid, pointerType: ptype, isPrimary: pid === 1 }));
+const up = (x, y, botao, botoes, pid = 1, ptype = 'mouse') => window.dispatchEvent(
+    new PointerEvent('pointerup', { bubbles: true, cancelable: true, clientX: x, clientY: y,
+        button: botao, buttons: botoes, pointerId: pid, pointerType: ptype, isPrimary: pid === 1 }));
+const dbl = (x, y) => cv.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, clientX: x, clientY: y }));
+const tecla = (k) => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
+const pontos = () => T.temp?.pontos?.length ?? null;
+const zerar = () => { T.temp = null; setTool('measure'); };
+
+let ok = 0, falhou = 0;
+const linhas = [];
+const eq = (nome, obtido, esperado) => {
+    const passou = JSON.stringify(obtido) === JSON.stringify(esperado);
+    passou ? ok++ : falhou++;
+    linhas.push(`<div class="${passou ? 'ok' : 'fail'}">${passou ? '✅' : '❌'} ${nome}` +
+        (passou ? '' : ` — esperado ${JSON.stringify(esperado)}, veio ${JSON.stringify(obtido)}`) + '</div>');
+};
+
+// ===== A) MOUSE, fluxo natural: clica e solta, move livre, clica = vértice =====
+zerar();
+ev('pointerdown', 200, 200, 0, 1); up(200, 200, 0, 0);
+eq('A1 clique inicial mantém a régua viva', pontos(), 1);
+ev('pointermove', 400, 200, -1, 0);
+eq('A2 move sem botão não encerra', pontos(), 1);
+ev('pointerdown', 400, 200, 0, 1); up(400, 200, 0, 0);
+eq('A3 clique adiciona vértice', pontos(), 2);
+ev('pointerdown', 400, 400, 2, 2); up(400, 400, 2, 0);
+eq('A4 botão direito adiciona vértice', pontos(), 3);
+eq('A5 botão direito na régua não abre menu de contexto',
+   document.getElementById('tbCtxMenu').classList.contains('open'), false);
+ev('pointermove', 600, 400, -1, 0); dbl(600, 400);
+eq('A6 duplo-clique encerra', pontos(), null);
+
+// ===== B) MOUSE arrastando (comportamento antigo preservado) =====
+zerar();
+ev('pointerdown', 100, 100, 0, 1);
+ev('pointermove', 300, 100, -1, 1);
+ev('pointerdown', 300, 100, 2, 3);
+eq('B1 vértice com o botão esquerdo segurado', pontos(), 2);
+up(300, 100, 2, 1);
+eq('B2 soltar o direito não encerra', pontos(), 2);
+ev('pointermove', 300, 300, -1, 1); up(300, 300, 0, 0);
+eq('B3 soltar o esquerdo após arrastar encerra', pontos(), null);
+
+// ===== C) TOQUE: 2º dedo = vértice (antes virava pinça e matava a régua) =====
+zerar();
+ev('pointerdown', 200, 200, 0, 1, 1, 'touch');
+ev('pointermove', 400, 200, -1, 1, 1, 'touch');
+ev('pointerdown', 400, 200, 0, 1, 2, 'touch');
+eq('C1 2º dedo adiciona vértice', pontos(), 2);
+up(400, 200, 0, 1, 2, 'touch');
+eq('C2 levantar o 2º dedo não encerra', pontos(), 2);
+up(400, 200, 0, 0, 1, 'touch');
+eq('C3 levantar o 1º dedo encerra', pontos(), null);
+
+// ===== D) Teclado =====
+zerar();
+ev('pointerdown', 200, 200, 0, 1); up(200, 200, 0, 0); ev('pointermove', 400, 200, -1, 0);
+tecla('Escape'); eq('D1 Esc cancela', pontos(), null);
+zerar();
+ev('pointerdown', 200, 200, 0, 1); up(200, 200, 0, 0);
+ev('pointerdown', 400, 200, 0, 1); up(400, 200, 0, 0);
+tecla('Enter'); eq('D2 Enter encerra', pontos(), null);
+
+// ===== E) A pinça continua funcionando fora da régua =====
+T.temp = null; setTool('select');
+const z0 = T.cam.z;
+ev('pointerdown', 100, 100, 0, 1, 1, 'touch'); ev('pointerdown', 300, 100, 0, 1, 2, 'touch');
+ev('pointermove', 60, 100, -1, 1, 1, 'touch'); ev('pointermove', 340, 100, -1, 1, 2, 'touch');
+eq('E1 pinça ainda dá zoom', T.cam.z !== z0, true);
+up(60, 100, 0, 0, 1, 'touch'); up(340, 100, 0, 0, 2, 'touch');
+
+document.getElementById('res').innerHTML = linhas.join('');
+document.getElementById('placar').innerHTML = falhou
+    ? `<span class="fail">❌ ${falhou} falha(s) · ${ok} ok</span>`
+    : `<span class="ok">✅ ${ok}/${ok} passaram</span>`;
+</script>
+</body></html>

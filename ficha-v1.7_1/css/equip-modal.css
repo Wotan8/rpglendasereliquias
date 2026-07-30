@@ -1,0 +1,84 @@
+/* === EQUIP MODAL BUTTON GROUPS === */
+.inv-equip-slots-grid, .inv-equip-states-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.inv-equip-slot-option, .inv-equip-state-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: var(--lr-bg-0);
+    border: 2px solid rgba(91, 63, 184, 0.2);
+    border-radius: 12px;
+    color: var(--lr-text-2);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    font-size: 0.95rem;
+}
+
+.inv-equip-slot-option:hover, .inv-equip-state-option:hover {
+    border-color: rgba(91, 63, 184, 0.6);
+    background: rgba(91, 63, 184, 0.1);
+}
+
+.inv-equip-slot-option.selected, .inv-equip-state-option.selected {
+    background: rgba(91, 63, 184, 0.25);
+    border-color: var(--lr-abyssal);
+    color: var(--lr-text-1);
+    box-shadow: 0 0 12px rgba(91, 63, 184, 0.25);
+}
+
+.inv-equip-slot-option.full {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: rgba(201, 79, 92, 0.2);
+}
+
+.inv-equip-slot-option.full:hover {
+    background: var(--lr-bg-0);
+    border-color: rgba(201, 79, 92, 0.2);
+}
+
+.inv-equip-slot-icon, .inv-equip-state-icon {
+    font-size: 1.4rem;
+}
+
+.inv-equip-slot-label {
+    font-weight: 600;
+}
+
+.inv-equip-slot-cap {
+    font-size: 0.8rem;
+    color: var(--lr-text-2);
+    background: var(--lr-bg-1);
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.inv-equip-slot-full-tag {
+    font-size: 0.7rem;
+    background: rgba(201, 79, 92, 0.2);
+    border: 1px solid var(--lr-blood-2);
+    color: var(--lr-blood-3);
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-weight: bold;
+    margin-left: 4px;
+}
+
+.inv-equip-state-option > div {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+.inv-equip-state-option small {
+    color: var(--lr-text-2);
+    font-size: 0.8rem;
+    line-height: 1.2;
+}

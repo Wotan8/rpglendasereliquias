@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0E1117">
+    <title>Ficha Online</title>
+    <link rel="stylesheet" href="css/styles_v2.css?v=15">
+    <link rel="stylesheet" href="css/inventory.css?v=10">
+    <link rel="stylesheet" href="css/equip-modal.css?v=9">
+    <link rel="stylesheet" href="css/combat-panel.css?v=4">
+    <link rel="stylesheet" href="css/conhecimento.css?v=2">
+    <link rel="stylesheet" href="../shared/texto-mundo.css?v=1">
+    <link rel="stylesheet" href="../shared/tokens.css?v=11">
+    <link rel="stylesheet" href="css/print.css?v=7">
+<script type="module" src="/js/global-favicon.js"></script>
+    <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../shared/lendas-reliquias.css?v=12">
+</head>
+
+<body>
+
+    <!-- Loading Screen (enquanto verifica autenticação) -->
+    <div id="loadingScreen"
+        style="position:fixed;inset:0;z-index:99999;background:var(--lr-bg-0);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+        <div
+            style="width:48px;height:48px;border:4px solid rgba(91, 63, 184,0.2);border-top:4px solid var(--lr-abyssal);border-radius:50%;animation:spin 1s linear infinite">
+        </div>
+        <span style="color:var(--lr-text-2);font-family:sans-serif;font-size:0.95rem">Verificando autenticação...</span>
+    </div>
+    <style>
+        @keyframes spin {
+            0% {
+                transform: rotate(0)
+            }
+
+            100% {
+                transform: rotate(360deg)
+            }
+        }
+    </style>
+
+    <!-- Indicador de save Firebase -->
+    <div id="firebaseSaveIndicator" class="firebase-save-indicator"></div>
+
+    <!-- Toast container para upgrades de EXP -->
+    <div id="expToastContainer" class="exp-toast-container"></div>
+
+    <!-- Toolbar — ordem padronizada: [🚪 Sair] [🏠 Menu] [contextuais] [spacer] [🖨️] [🌙] [Nome] -->
+    <div class="toolbar no-print" style="display:none">
+        <button onclick="logout()" title="Sair da conta"
+            style="background:var(--lr-blood-2);color:var(--lr-divine);border:none;font-weight:700">🚪 Sair</button>
+        <button onclick="window.location.href='../menu/menu.html'" title="Menu principal"
+            style="background: var(--lr-surface-2); color: var(--ink); border: none; font-weight: 700">🏠 Menu</button>
+        <div class="spacer"></div>
+        <span class="hint-toolbar">Ficha Online</span>
+        <button onclick="openPrintModal()" title="Imprimir ficha">🖨️</button>
+        <button id="btnThemeToggle" onclick="toggleTheme()" title="Alternar tema">🌙</button>
+        <span id="userInfo" style="display:none">
+            <span id="userDisplayName"
+                style="color:var(--lr-text-2);font-size:0.8rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle"
+                title=""></span>
+        </span>
+    </div>
+
+    <div class="wrap" style="display:none">
+        <div class="sheet">
+
+            <div class="tabs no-print" id="tabBar">
+                <button class="tab active" data-tab="tabPrincipal">Principal</button>
+                <button class="tab" data-tab="tabCombate">Combate</button>
+                <button class="tab" data-tab="tabInventario">Inventário</button>
+                <button class="tab" data-tab="tabPeculiaridades">Peculiaridades</button>
+                <button class="tab" data-tab="tabAura">Aura</button>
+                <button class="tab" data-tab="tabAliados">Aliados</button>
+                <button class="tab" data-tab="tabConhecimento">Conhecimento</button>
+                <button class="tab" data-tab="tabNotas">Notas</button>
+            </div>
+
+            <!-- ======== PRINCIPAL ======== -->
+            <div class="tab-content active" id="tabPrincipal">
+                <div class="section">
+                    <div class="section-title">Identificação</div>
+                    <div class="id-wrapper">
+                                                <div class="id-fields">
+                            <div class="row" style="grid-template-columns: 1.5fr 1fr 60px;">
+                                <div class="field"><label>Nome <span class="info-btn" id="infoIdentity" onclick="openIdentityDetail()" title="Ver Identidade do Personagem">ℹ️</span></label><input type="text" data-key="nome"
+                                        placeholder="Nome do personagem"></div>
+                                <div class="field"><label>Jogador</label><input type="text" data-key="jogador"
+                                        placeholder="Nome do jogador"></div>
+                                <div class="field"><label>Sessões</label><input type="text" data-key="sessoes"
+                                        placeholder="0" maxlength="3" style="text-align: center;"></div>
+                            </div>
+                            
+                            <!-- Hidden fields for Identity Data -->
+                            <input type="hidden" data-key="aparencia">
+                            <input type="hidden" data-key="motivacao">
+                            <input type="hidden" data-key="medo">
+                            <input type="hidden" data-key="arrependimento">
+
+                            <div class="row" style="grid-template-columns: 0.25fr 1fr 1fr 1fr;">
+                                <div class="field"><label>Idade</label><input type="text" data-key="idade" placeholder="0" maxlength="4" style="text-align: center;"></div>
+                                <div class="field"><label>Raça <span class="info-btn" id="infoRaca" onclick="openRaceDetail()" title="Ver detalhes da raça">ℹ️</span></label><select id="selRaca" data-key="raca">
+                                        <option value="">— Selecione —</option>
+                                    </select></div>
+                                <div class="field"><label>Classe <span class="info-btn" id="infoClasse" onclick="openClassDetail()" title="Ver detalhes da classe">ℹ️</span></label><select data-key="classe" id="selClasse">
+                                        <option value="">— Selecione —</option>
+                                    </select></div>
+                                <div class="field"><label>Tribo <span class="info-btn" id="infoTribo" onclick="openTriboDetail()" title="Ver detalhes da tribo">ℹ️</span></label><select id="selTribo" data-key="tribo">
+                                        <option value="">— Selecione —</option>
+                                    </select></div>
+                            </div>
+                            <div class="row r3">
+                                <div class="field"><label>⭐ Experiência</label>
+                                    <div style="display:flex;gap:4px">
+                                        <input type="text" data-key="exp" placeholder="Rest." style="flex:1">
+                                        <input type="text" data-key="exp_total" placeholder="Total" style="flex:1">
+                                    </div>
+                                </div>
+                                <div class="field"><label>Virtude</label><input type="text" data-key="virtude"
+                                        placeholder="Ex: Coragem"></div>
+                                <div class="field"><label>Vício</label><input type="text" data-key="vicio"
+                                        placeholder="Ex: Ganância"></div>
+                            </div>
+                        </div>
+                        <div class="char-img-box" onclick="document.getElementById('charImgInput').click()">
+                            <div class="placeholder" id="charImgPlaceholder"><span>📷</span>Adicionar<br>Foto</div>
+                            <img id="charImgPreview" style="display:none">
+                            <input type="file" id="charImgInput" accept="image/*">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Atributos <span class="exp-cost">5 EXP por nível</span></div>
+                    <div class="attrs">
+                        <div class="attr-block">
+                            <div class="attr-block-title">Físico</div>
+                            <div class="attr-item"><span class="attr-name" data-attr-key="FOR">Força</span><span
+                                    class="print-abbr">FOR</span>
+                                <div class="dots5" data-attr="attr_for"></div>
+                            </div>
+                            <div class="attr-item"><span class="attr-name" data-attr-key="DES">Destreza</span><span
+                                    class="print-abbr">DES</span>
+                                <div class="dots5" data-attr="attr_des"></div>
+                            </div>
+                            <div class="attr-item"><span class="attr-name" data-attr-key="VIG">Vigor</span><span
+                                    class="print-abbr">VIG</span>
+                                <div class="dots5" data-attr="attr_vig"></div>
+                            </div>
+                        </div>
+                        <div class="attr-block">
+                            <div class="attr-block-title">Mental</div>
+                            <div class="attr-item"><span class="attr-name" data-attr-key="INT">Inteligência</span><span
+                                    class="print-abbr">INT</span>
+                                <div class="dots5" data-attr="attr_int"></div>
+                            </div>
+                            <div class="attr-item"><span class="attr-name" data-attr-key="RAC">Raciocínio</span><span
+                                    class="print-abbr">RAC</span>
+                                <div class="dots5" data-attr="attr_rac"></div>
+                            </div>
+                            <div class="attr-item"><span class="attr-name" data-attr-key="PRS">Perseverança</span><span
+                                    class="print-abbr">PRS</span>
+                                <div class="dots5" data-attr="attr_prs"></div>
+                            </div>
+                        </div>
+                        <div class="attr-block">
+                            <div class="attr-block-title">Social</div>
+                            <div class="attr-item"><span class="attr-name" data-attr-key="PRE">Presença</span><span
+                                    class="print-abbr">PRE</span>
+                                <div class="dots5" data-attr="attr_pre"></div>
+                            </div>
+                            <div class="attr-item"><span class="attr-name" data-attr-key="MAN">Manipulação</span><span
+                                    class="print-abbr">MAN</span>
+                                <div class="dots5" data-attr="attr_man"></div>
+                            </div>
+                            <div class="attr-item"><span class="attr-name" data-attr-key="AUT">Autocontrole</span><span
+                                    class="print-abbr">AUT</span>
+                                <div class="dots5" data-attr="attr_aut"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5 BLOCOS DE PERÍCIAS LADO A LADO -->
+                <div class="section">
+                    <div class="section-title">Perícias <span class="exp-cost">Custo variável por perícia
+                            EXP</span></div>
+                    <div class="skills-row">
+                        <div class="skill-block">
+                            <div class="skill-block-title">Mental</div>
+                            <div id="skillsMental"></div>
+                        </div>
+                        <div class="skill-block">
+                            <div class="skill-block-title">Físico</div>
+                            <div id="skillsFisico"></div>
+                        </div>
+                        <div class="skill-block">
+                            <div class="skill-block-title">Social</div>
+                            <div id="skillsSocial"></div>
+                        </div>
+                        <div class="skill-block">
+                            <div class="skill-block-title">Combate</div>
+                            <div id="skillsCombate"></div>
+                        </div>
+                        <div class="skill-block">
+                            <div class="skill-block-title">Exclusivo</div>
+                            <div id="skillsExclusivo"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Status Vitais</div>
+                    <div class="vitals">
+                        <div class="vital-box"><label class="vital-label" data-vital-key="VIT_MAX">❤️ Vitalidade</label>
+                            <div class="vital-inputs"><input type="text" data-key="vit_atual" placeholder="0"><span
+                                    class="sep">/</span><input type="text" id="vit_max_display" class="derived-field"
+                                    title="Definido por mecânicas do sistema" value="0"></div>
+                        </div>
+                        <div class="vital-box"><label class="vital-label" data-vital-key="SAN_MAX">🧠 Sanidade</label>
+                            <div class="vital-inputs"><input type="text" data-key="san_atual" placeholder="0"><span
+                                    class="sep">/</span><input type="text" id="san_max_display" class="derived-field"
+                                    title="Definido por mecânicas do sistema" value="0"></div>
+                        </div>
+                        <div class="vital-box"><label class="vital-label" data-vital-key="ENER_MAX">⚡ Energia</label>
+                            <div class="vital-inputs"><input type="text" data-key="ener_atual" placeholder="0"><span
+                                    class="sep">/</span><input type="text" id="ener_max_display" class="derived-field"
+                                    title="Definido por mecânicas do sistema" value="0"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Valores Derivados</div>
+                    <div id="derivedValuesGrid">
+                        <!-- Populated dynamically from Firebase -->
+                    </div>
+                </div>
+
+
+
+                <!-- TESTES OPCIONAIS -->
+                <div class="section">
+                    <div class="section-title">Testes Opcionais <button class="no-print" id="btnToggleColorMode"
+                            onclick="toggleGlobalColorMode()" title="Personalizar Cores"
+                            style="background:none;border:none;cursor:pointer;font-size:1.2rem;margin-left:8px">🎨</button>
+                    </div>
+                    <div class="test-head">
+                        <span>Nome</span><span>Fórmula</span><span>Total</span><span></span>
+                    </div>
+                    <div id="mainTestsContainer" class="main-tests-list"></div>
+                    <button class="add-btn no-print" onclick="addTest()" style="margin-top:8px">+ Adicionar
+                        Teste</button>
+                </div>
+            </div>
+
+            <!-- ======== COMBATE ======== -->
+            <div class="tab-content" id="tabCombate">
+                <!-- HUD: espelha os campos canônicos da aba Principal (combat-panel.js) -->
+                <div class="section" id="combatHudSection">
+                    <div class="section-title">⚔️ Status de Combate
+                        <span class="cbt-tools no-print">
+                            <label class="cbt-step-lbl" title="Quantidade aplicada pelos botões − e +">Δ
+                                <input type="number" id="cbtStep" value="1" min="1" inputmode="numeric">
+                            </label>
+                        </span>
+                    </div>
+                    <!-- Preenchido pelo combate da mesa (Painel do Mestre) -->
+                    <div class="cbt-combat-strip" id="cbtInitStrip" hidden aria-live="polite">
+                        <span class="cbt-init-tag" id="cbtInitTag">⚔️ Em combate</span>
+                        <span class="cbt-init-ini" title="Iniciativa definida pelo Mestre">⚡ Iniciativa <b id="cbtInitVal">—</b></span>
+                        <span class="cbt-init-pos" id="cbtInitPos"></span>
+                    </div>
+                    <div class="cbt-vitals" id="combatVitalsGrid"></div>
+                    <!-- Condições ativas em miniatura (bloco completo mais abaixo) -->
+                    <div class="cbt-cond-tags" id="cbtCondTags" hidden></div>
+                </div>
+                <div class="section" id="combatValuesSection">
+                    <div class="section-title">📊 Valores Rápidos</div>
+                    <div id="combatValuesBlocks"></div>
+                </div>
+                <div class="section" id="activeEffectsSection" style="display:none">
+                    <div class="section-title">⚔️ Ataques e Efeitos Ativos</div>
+                    <div class="atk-table-wrap">
+                        <table class="atk-table" id="activeEffectsTable"></table>
+                    </div>
+                </div>
+                <div class="section" id="conditionsSection">
+                    <div class="section-title">🧪 Condições e Estados</div>
+                    <div id="conditionsContainer" class="cond-cards-grid"></div>
+                    <button class="add-btn no-print" onclick="addCondition()" style="margin-top:8px">+ Adicionar Condição</button>
+                </div>
+                <div class="section" id="equipSection">
+                    <div class="section-title">⚔️ Equipamentos</div>
+                    <div class="inv-pressure-bar" id="invPressureBar">
+                        <span id="invPressureDisplay">⚖️ Pressão: 0</span>
+                    </div>
+                    <div class="inv-equipped-grid" id="equippedItemsGrid">
+                        <div class="inv-empty">
+                            <span class="inv-empty-icon">⚔️</span>
+                            <span>Nenhum item equipado</span>
+                            <small class="inv-empty-hint">Equipe itens na aba Inventário</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="section" id="classModulesSection" style="display:none">
+                    <div class="section-title">🎓 Módulos de Classe</div>
+                    <div id="classModulesContainer"></div>
+                </div>
+            </div>
+
+            <!-- ======== INVENTÁRIO ======== -->
+            <div class="tab-content" id="tabInventario">
+                <div class="section">
+                    <div class="section-title">📋 Inventário
+                        <button class="add-btn no-print" onclick="mergeInventoryItems()" style="margin-left:auto;font-size:0.8rem;padding:4px 12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:var(--lr-arcane-2);" title="Mesclar itens idênticos em stacks">🔀 Mesclar</button>
+                        <button class="add-btn no-print" onclick="openItemFormModal('Criar Item')" style="font-size:0.8rem;padding:4px 12px;">+ Criar Item</button>
+                    </div>
+                    <div id="inventoryItemsGrid">
+                        <div class="inv-empty">
+                            <span class="inv-empty-icon">📦</span>
+                            <span>Inventário vazio</span>
+                            <small class="inv-empty-hint">Crie itens ou receba do Mestre</small>
+                        </div>
+                    </div>
+                    <div id="containerViewer"></div>
+                </div>
+
+            </div>
+
+            <!-- ======== PECULIARIDADES ======== -->
+            <div class="tab-content" id="tabPeculiaridades">
+                <div class="section">
+                    <div class="section-title">
+                        <span id="raceTitle">Peculiaridades</span>
+                        <span id="raceSubtitle" class="race-subtitle"></span>
+                    </div>
+                    <div id="raceHint" style="font-size:12px;color:var(--muted);text-align:center;padding:20px;">
+                        Selecione uma raça para ver suas peculiaridades.
+                    </div>
+                    <div id="peculiaridadesGrid" class="peculiaridades-grid"></div>
+                </div>
+            </div>
+
+            <!-- ======== AURA ======== -->
+            <div class="tab-content" id="tabAura">
+                <div class="section">
+                    <div class="section-title">Auras</div>
+                    <div id="auraMortalidadeContainer"></div>
+                    <div id="aurasPropriedadeContainer"></div>
+                    <div id="auraEmptyHint" style="font-size:12px;color:var(--muted);text-align:center;padding:20px;">
+                        Nenhuma aura ativa. Auras são concedidas pelo Mestre ou por Peculiaridades.
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== ALIADOS ======== -->
+            <div class="tab-content" id="tabAliados">
+                <div class="section">
+                    <div class="section-title">🤝 Aliados</div>
+                    <div id="aliadosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; padding: 12px 0;">
+                        <div style="font-size:12px;color:var(--muted);text-align:center;grid-column: 1/-1;padding:20px;">
+                            Carregando aliados...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== CONHECIMENTO ======== -->
+            <div class="tab-content" id="tabConhecimento">
+                <div class="section">
+                    <div class="section-title">📚 Biblioteca — o que você já pode ler</div>
+                    <div id="conhecimentoContainer">
+                        <p style="font-size:12px;color:var(--muted);text-align:center;padding:20px 0;">Abra esta aba
+                            para carregar a biblioteca.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== NOTAS ======== -->
+            <div class="tab-content" id="tabNotas">
+                <div class="section">
+                    <div class="section-title">📝 Minhas Notas <button class="no-print" onclick="createNote()"
+                            style="font-size:11px;padding:6px 12px;">+ Nova Nota</button></div>
+                    <div id="notesContainer">
+                        <p style="font-size:12px;color:var(--muted);text-align:center;padding:20px 0;">Nenhuma nota
+                            ainda.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- NOTE MODAL -->
+    <div class="note-editor-modal hidden" id="noteModal">
+        <div class="note-editor">
+            <div class="note-editor-header">
+                <button onclick="closeNoteEditor()" style="font-size:11px;padding:6px 12px;">← Voltar</button>
+                <input type="text" id="noteEditorTitle" placeholder="Título da nota">
+                <button id="noteSaveBtn" onclick="saveNote()" style="font-size:11px;padding:6px 12px;">💾 Salvar</button>
+            </div>
+            <div class="note-editor-toolbar">
+                <button onclick="execCmd('bold')"><b>B</b></button>
+                <button onclick="execCmd('italic')"><i>I</i></button>
+                <button onclick="execCmd('underline')"><u>U</u></button>
+                <button onclick="execCmd('strikeThrough')"><s>S</s></button>
+                <button onclick="execCmd('insertUnorderedList')">• Lista</button>
+                <button onclick="execCmd('insertOrderedList')">1. Num</button>
+                <button onclick="execCmd('insertHorizontalRule')">— Linha</button>
+            </div>
+            <div class="note-editor-content">
+                <div contenteditable="true" id="noteEditorBody"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DETAIL MODAL (Raça / Classe / Peculiaridade) -->
+    <div class="detail-modal hidden" id="detailModal">
+        <div class="detail-modal-content">
+            <button class="detail-modal-close" onclick="closeDetailModal()">✕</button>
+            <div class="detail-modal-body" id="detailModalBody"></div>
+        </div>
+    </div>
+
+    <!-- ALIADO MODAL (Fast Mode) -->
+    <div class="detail-modal hidden" id="aliadoNpcModal">
+        <div class="detail-modal-content" style="max-width: 700px;">
+            <button class="detail-modal-close" onclick="closeAliadoModal()">✕</button>
+            <div class="detail-modal-body" id="aliadoNpcModalBody" style="padding: 20px;">
+                <!-- Content injected by aliados.js -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts externos -->
+    <script src="js/data.js"></script>
+    <script src="js/system-data-loader.js?v=3"></script>
+    <script src="js/mechanics-engine.js?v=25"></script>
+    <script src="js/race-peculiarities.js"></script>
+    <script src="../shared/livro-vinculado.js?v=1"></script>
+    <script src="js/detail-modal.js"></script>
+    <script src="js/class-tests-data.js"></script>
+    <script src="js/class-tests.js"></script>
+    <script src="js/derived-values.js?v=3"></script>
+    <script src="js/app.js"></script>
+    <script src="../shared/theme.js"></script>
+    <script src="js/exp-upgrade.js"></script>
+    <script src="js/core.js"></script>
+    <script src="js/class-modules-renderer.js?v=22"></script>
+    <script src="js/runomancia-module.js?v=2"></script>
+    <script src="js/item-scope-calc.js?v=1"></script>
+    <script src="../shared/equip-slots.js?v=1"></script>
+    <script src="js/inventory.js?v=12"></script>
+    <script src="js/combat-panel.js?v=3"></script>
+    <script src="js/notes.js"></script>
+    <script src="js/aura.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/drag-drop.js"></script>
+    <script src="js/print.js"></script>
+    <script src="js/mesa-tab.js?v=3"></script>
+    <script src="js/char-logger.js?v=7"></script>
+    <script src="js/aliado-inventario.js?v=7"></script>
+    <script type="module" src="js/aliados.js?v=7"></script>
+    <script type="module" src="js/conhecimento.js?v=4"></script>
+    <script src="js/abas-condicionais.js?v=4"></script>
+    <script type="module" src="js/firebase.js"></script>
+</body>
+
+</html>

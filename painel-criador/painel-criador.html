@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Criador — Lendas e Relíquias</title>
+    <meta name="description" content="Painel de Criador — Onde o mundo de Vasteluna é forjado.">
+    <link rel="stylesheet" href="css/painel-criador.css?v=13">
+    <script type="module" src="/js/global-favicon.js"></script>
+    <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../shared/tokens.css?v=11">
+    <link rel="stylesheet" href="../shared/lendas-reliquias.css?v=2">
+</head>
+
+<body>
+
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">🔧 Carregando Painel de Criador...</div>
+    </div>
+
+
+    <!-- Main Content -->
+    <div class="wrap" style="display:none">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <button class="sidebar-toggle" onclick="toggleSidebar()" id="sidebarToggle" title="Recolher / Expandir">
+                <span class="emoji" id="sidebarToggleIcon">◀</span>
+                <span class="text">Recolher</span>
+            </button>
+
+            <!-- Tabs -->
+            <div class="tabs" id="tabBar">
+                <button class="tab active" data-module="races" onclick="switchModule('races', this)"><span class="emoji">🧬</span><span class="text"> Raças</span></button>
+                <button class="tab" data-module="classes" onclick="switchModule('classes', this)"><span class="emoji">⚔️</span><span class="text"> Classes</span></button>
+                <button class="tab" data-module="tribes" onclick="switchModule('tribes', this)"><span class="emoji">🏕️</span><span class="text"> Tribos</span></button>
+                <button class="tab" data-module="derivedValues" onclick="switchModule('derivedValues', this)"><span class="emoji">📊</span><span class="text"> Valores Derivados</span></button>
+                <button class="tab" data-module="classModules" onclick="switchModule('classModules', this)"><span class="emoji">📦</span><span class="text"> Módulos de Classe</span></button>
+                <button class="tab" data-module="peculiarities" onclick="switchModule('peculiarities', this)"><span class="emoji">✨</span><span class="text"> Peculiaridades</span></button>
+                <button class="tab" data-module="skills" onclick="switchModule('skills', this)"><span class="emoji">📚</span><span class="text"> Perícias</span></button>
+                <button class="tab" data-module="mechanics" onclick="switchModule('mechanics', this)"><span class="emoji">🔧</span><span class="text"> Mecânicas</span></button>
+                <button class="tab" data-module="equipment" onclick="switchModule('equipment', this)"><span class="emoji">🗡️</span><span class="text"> Equipamentos</span></button>
+                <button class="tab" data-module="conditions" onclick="switchModule('conditions', this)"><span class="emoji">💀</span><span class="text"> Condições</span></button>
+                <button class="tab" data-module="auras" onclick="switchModule('auras', this)"><span class="emoji">🌟</span><span class="text"> Auras</span></button>
+                <button class="tab" data-module="bodyParts" onclick="switchModule('bodyParts', this)"><span class="emoji">🦴</span><span class="text"> Partes do Corpo</span></button>
+                <button class="tab" data-module="itemRules" onclick="switchModule('itemRules', this)"><span class="emoji">⚙️</span><span class="text"> Regras de Item</span></button>
+                <button class="tab" data-module="vitalStats" onclick="switchModule('vitalStats', this)"><span class="emoji">❤️</span><span class="text"> Status Vitais</span></button>
+                <button class="tab" data-module="knowledge" onclick="switchModule('knowledge', this)"><span class="emoji">📚</span><span class="text"> Conhecimento</span></button>
+                <button class="tab" data-module="maneuvers" onclick="switchModule('maneuvers', this)"><span class="emoji">💥</span><span class="text"> Manobras</span></button>
+                <button class="tab" data-module="spells" onclick="switchModule('spells', this)"><span class="emoji">🔮</span><span class="text"> Magias</span></button>
+                <button class="tab" data-module="runicElements" onclick="switchModule('runicElements', this)"><span class="emoji">ᛟ</span><span class="text"> Elementos Rúnicos</span></button>
+            </div>
+        </div>
+
+        <div class="sheet">
+            <!-- Toolbar — ordem padronizada: [🚪 Sair] [🏠 Menu] [contextuais] [spacer] [Nome] -->
+            <div class="toolbar" style="display:none">
+                <button class="btn-logout" onclick="logout()" title="Sair da conta">🚪 Sair</button>
+                <button onclick="goToMenu()" title="Menu principal">🏠 Menu</button>
+                <button id="btnSettings" onclick="openSettingsModal()" title="Configurações">⚙️</button>
+                <span class="hint-toolbar" style="margin-left: auto;">Lendas e Relíquias — Painel de Criador</span>
+                <span id="userDisplayName" class="user-display" title=""></span>
+            </div>
+
+            <!-- Header -->
+            <div class="menu-header">
+                <h1>✨🔧 Painel de Criador 🛡️⚙️</h1>
+                <p class="subtitle">Onde o mundo de Vasteluna é forjado.</p>
+            </div>
+
+            <div id="alertArea"></div>
+
+            <!-- Module Content Area -->
+            <div id="moduleContent">
+                <!-- Filter Bar -->
+                <div class="filter-bar" id="filterBar">
+                    <div class="search-wrap">
+                        <input type="text" id="searchInput" placeholder="🔍 Buscar por nome, descrição ou tag..." oninput="filterItems()">
+                        <button type="button" id="btnClearSearch" class="btn-clear-search" onclick="clearSearch()" title="Limpar busca" style="display:none">✕</button>
+                    </div>
+                    <select id="sortSelect" class="filter-select" onchange="filterItems()" title="Ordenar por">
+                        <option value="padrao">↕️ Padrão</option>
+                        <option value="nome">🔤 Nome A–Z</option>
+                        <option value="recente">🕒 Mais recentes</option>
+                    </select>
+                    <label>
+                        <input type="checkbox" id="filterPublished" onchange="filterItems()">
+                        Apenas publicados
+                    </label>
+                    <span id="resultsCount" class="results-count"></span>
+                </div>
+
+                <!-- Create Card -->
+                <div class="create-card" id="createCard" onclick="openForm()">
+                    <div class="icon">➕</div>
+                    <div class="title" id="createCardTitle">Criar Novo Registro</div>
+                    <div class="desc">Adicione um novo item ao cenário</div>
+                </div>
+
+                <!-- ᛟ Importação do Compêndio (visível só em Elementos Rúnicos) -->
+                <button id="runicSeedBtn" onclick="runicImportSeed()" style="display:none;margin:0 0 14px;padding:10px 16px;border-radius:10px;border:1px dashed rgba(91, 63, 184,.5);background:rgba(91, 63, 184,.1);color:var(--lr-abyssal-2);font-weight:700;cursor:pointer;width:100%">📥 Importar Compêndio (64 elementos)</button>
+
+                <!-- Items Grid -->
+                <div class="items-grid" id="itemsGrid"></div>
+
+                <!-- Empty State -->
+                <div class="empty-state" id="emptyState" style="display:none">
+                    <div class="icon">📭</div>
+                    <div class="text">Nenhum registro encontrado</div>
+                    <div class="hint">Clique no card acima para criar o primeiro!</div>
+                </div>
+            </div>
+
+            <!-- Inline Mechanics Editor (hidden by default) -->
+            <div id="mechanicsEditorArea" style="display:none"></div>
+
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div class="modal" id="deleteModal">
+        <div class="modal-content">
+            <div class="modal-icon">⚠️</div>
+            <div class="modal-title">ATENÇÃO!</div>
+            <div class="modal-text">
+                Tem certeza que deseja <strong>APAGAR PERMANENTEMENTE</strong> o registro
+                <strong id="deleteItemName"></strong>?<br><br>
+                Esta ação <strong>NÃO PODE SER DESFEITA</strong>!
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-modal btn-cancel" onclick="closeDeleteModal()">❌ Cancelar</button>
+                <button class="btn-modal btn-confirm" onclick="confirmDelete()">🗑️ Sim, Apagar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Modal -->
+    <div class="modal form-modal" id="formModal">
+        <div class="modal-content">
+            <div class="form-header">
+                <h2 id="formTitle">Novo Registro</h2>
+                <button class="btn-close-form" onclick="closeForm()">✕</button>
+            </div>
+            <form id="dynamicForm" onsubmit="handleFormSubmit(event)">
+                <div id="formFields" class="form-body"></div>
+                <div class="form-actions">
+                    <div class="form-toggle toggle-publicado-container" style="padding:0">
+                        <label class="toggle-publish">
+                            <input type="checkbox" id="field_publicado">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label">Publicado</span>
+                    </div>
+                    <div class="buttons-group" style="display:flex; gap:10px;">
+                        <button type="button" class="btn-modal btn-cancel" onclick="closeForm()">Cancelar</button>
+                        <button type="submit" class="btn-save" id="btnSave">💾 Salvar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content settings-modal-content">
+            <div class="form-header">
+                <h2>⚙️ Configurações do Sistema</h2>
+                <button class="btn-close-form" onclick="closeSettingsModal()">✕</button>
+            </div>
+            
+            <div class="settings-tabs">
+                <button class="settings-tab active" data-target="settings-theme">🎨 Tema</button>
+                <button class="settings-tab" data-target="settings-favicons">🖼️ Favicons</button>
+                <button class="settings-tab" data-target="settings-permissions">🔐 Permissões</button>
+                <button class="settings-tab" data-target="settings-shortcuts">⌨️ Atalhos</button>
+            </div>
+
+            <div class="settings-body">
+                <!-- Theme Section -->
+                <div id="settings-theme" class="settings-section active">
+                    <h3>Aparência do Painel</h3>
+                    <p class="subtitle">Alterne entre o modo claro e escuro para a interface do Painel do Criador.</p>
+                    <button class="btn-theme-large" id="btnThemeToggleModal">🌙 Alternar Tema</button>
+                </div>
+
+                <!-- Favicons Section -->
+                <div id="settings-favicons" class="settings-section">
+                    <h3>Gerenciador de Favicons</h3>
+                    <p class="subtitle">Faça upload da imagem de ícone para as páginas do sistema. (Máx: 2MB, .png/.ico)</p>
+                    
+                    <div class="favicon-grid" id="faviconUploadsContainer">
+                        <!-- Gerado dinamicamente via JS -->
+                    </div>
+                </div>
+
+                <!-- Permissions Section -->
+                <div id="settings-permissions" class="settings-section">
+                    <h3>Controle de Acesso (RBAC)</h3>
+                    <p class="subtitle">Gerencie os papéis dos usuários cadastrados no sistema.</p>
+                    
+                    <div class="filter-bar" style="margin-bottom: 10px; margin-top: 10px;">
+                        <input type="text" id="userSearchInput" placeholder="🔍 Buscar usuário por nome ou email...">
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="users-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome / Email</th>
+                                    <th>Data Cadastro</th>
+                                    <th>Cargo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <!-- Preenchido dinamicamente -->
+                                <tr>
+                                    <td colspan="3" style="text-align:center">Carregando usuários...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Shortcuts Section -->
+                <div id="settings-shortcuts" class="settings-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3>Atalhos no Criador</h3>
+                            <p class="subtitle">Personalize os botões de acesso rápido e navegação do Painel.</p>
+                        </div>
+                        <button class="btn-theme-large" id="btnResetShortcuts" style="font-size: 0.75rem; padding: 6px 12px;">🔄 Restaurar Padrões</button>
+                    </div>
+
+                    <div class="shortcuts-grid" id="shortcutsContainer">
+                        <!-- Gerado dinamicamente via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Module -->
+    <script type="module" src="js/painel-firebase.js?v=9"></script>
+    <script type="module" src="js/settings-manager.js?v=7"></script>
+    <script type="module" src="js/shortcuts-manager.js?v=7"></script>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+            const icon = document.getElementById('sidebarToggleIcon');
+            if (sidebar.classList.contains('collapsed')) {
+                icon.textContent = '▶';
+            } else {
+                icon.textContent = '◀';
+            }
+        }
+    </script>
+</body>
+
+</html>

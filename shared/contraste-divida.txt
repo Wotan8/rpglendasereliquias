@@ -1,0 +1,15 @@
+# Divida de contraste — FILA VAZIA.
+#
+# Este arquivo lista regras abaixo de 4.5:1 que ja existiam quando
+# shared/contraste.test.mjs passou a medir translucido composto, style inline em
+# JS e bloco <style> em HTML. Nao e lista de coisas aceitas: e fila de trabalho.
+#
+# Comecou em 219 regras. Hoje esta em ZERO: qualquer regra abaixo do minimo
+# quebra o teste na hora, sem rede embaixo.
+#
+# Se algum dia precisar parquear uma regra, escreva uma linha no formato
+#   <caminho/do/arquivo>  <seletor ou "linha N">
+# exatamente como o teste imprime. Mas pense duas vezes antes: excecao
+# consciente e permanente — branco sobre gradiente, fundo que vem de dado —
+# mora em PERMITIDAS, no topo do teste, com o motivo escrito. Esta fila aqui e
+# so para o que vai ser consertado de verdade.

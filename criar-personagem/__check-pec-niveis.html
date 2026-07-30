@@ -1,0 +1,160 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__check: tabela de custo por nível das pecs avulsas</title>
+<script>document.write(['css/styles.css','css/styles_wizard.css']
+    .map(h => `<li${''}nk rel="stylesheet" href="${h}?nocache=${Date.now()}">`).join(''));</script>
+<style>
+    body { padding: 16px; font-family: system-ui, sans-serif; }
+    #out { font: 12px monospace; white-space: pre-wrap; background: #111; color: #9f9; padding: 10px; border-radius: 6px; }
+    .demo { border: 1px solid #444; border-radius: 8px; padding: 12px; margin-top: 12px; }
+    .demo > h4 { margin: 0 0 8px; color: #9cf; font: 700 13px system-ui; }
+</style>
+
+<div id="out">carregando…</div>
+<div class="demo"><h4>Render real (todas as pecs avulsas com níveis)</h4><div id="demo"></div></div>
+
+<!-- ?nocache: o service worker precacheia estes arquivos e serviria a versão
+     antiga; um check tem que ler sempre o que está no disco. -->
+<script>document.write(['../ficha-v1.7_1/js/mechanics-engine.js','js/system-data-loader.js','js/peculiarities-module.js']
+    .map(s => `<scr${''}ipt src="${s}?nocache=${Date.now()}"></scr${''}ipt>`).join(''));</script>
+<script>
+    function escHtml(s) {
+        if (s === null || s === undefined) return '';
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+    window.wizardState = { peculiaridadesIndividuais: [], expSources: {} };
+
+    const log = [];
+    const T = (cond, ok, erro) => log.push((cond ? ' ok   ' : 'FALHA ') + (cond ? ok : erro));
+
+    fetch('__check-data.json', { cache: 'no-store' }).then(r => r.json()).then(data => {
+        Object.assign(window._systemData, data, { loaded: true });
+        buildIndividualPeculiarities();
+
+        const todas = window.INDIVIDUAL_PECULIARITIES || [];
+        const comNiveis = todas.filter(p => p.tipo === 'evolutivo' && p.nivelMax > 1);
+        T(comNiveis.length > 0, `${comNiveis.length} de ${todas.length} pecs avulsas têm níveis`, 'nenhuma pec com níveis — nada a testar');
+
+        let demoHtml = '';
+        for (const pec of comNiveis) {
+            const html = generatePecLevelTable(pec, 1);
+            const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
+            const linhas = [...doc.querySelectorAll('tbody tr')];
+
+            T(linhas.length === pec.nivelMax,
+                `${pec.nome}: tabela tem ${pec.nivelMax} linhas`,
+                `${pec.nome}: esperado ${pec.nivelMax} linhas, achei ${linhas.length}`);
+
+            // 1) O "total acumulado" da tabela tem que ser o MESMO número que
+            //    setPecLevel cobra — ambos saem de pecDeltaAcumulado.
+            let divergiu = null, somaDegraus = 0;
+            linhas.forEach((tr, idx) => {
+                const nivel = idx + 1;
+                const total = tr.querySelector('.pec-total').textContent.trim();
+                const degrau = tr.querySelector('.pec-degrau').textContent.trim();
+                const esperado = fmtExpDelta(pecDeltaAcumulado(pec, nivel));
+                if (total !== esperado) divergiu = `Nv.${nivel}: tabela diz ${total}, cobrança é ${esperado}`;
+                const n = parseFloat(degrau.replace('−', '-').replace(/[^\d.-]/g, '')) || 0;
+                somaDegraus += degrau.startsWith('−') ? -Math.abs(n) : Math.abs(n);
+            });
+            T(!divergiu, `${pec.nome}: total acumulado bate com o valor cobrado`, `${pec.nome}: ${divergiu}`);
+
+            // 2) Soma dos degraus == total final (tabela internamente coerente)
+            const totalFinal = pecDeltaAcumulado(pec, pec.nivelMax);
+            T(somaDegraus === totalFinal,
+                `${pec.nome}: soma dos degraus (${somaDegraus}) = total final (${totalFinal})`,
+                `${pec.nome}: degraus somam ${somaDegraus} mas o total é ${totalFinal}`);
+
+            // 3) Botão de nível anuncia o mesmo total da tabela
+            let btnErro = null;
+            for (let i = 1; i <= pec.nivelMax; i++) {
+                const b = new DOMParser().parseFromString(pecLevelBtnHtml(pec, i, false), 'text/html').querySelector('button');
+                if (parseInt(b.dataset.level, 10) !== i) btnErro = `botão ${i} sem data-level correto`;
+                const exp = b.querySelector('.pec-level-exp').textContent.trim();
+                const esperado = fmtExpDelta(pecDeltaAcumulado(pec, i));
+                if (exp !== esperado) btnErro = `botão Nv.${i} diz ${exp}, tabela diz ${esperado}`;
+            }
+            T(!btnErro, `${pec.nome}: botões anunciam o mesmo total`, `${pec.nome}: ${btnErro}`);
+
+            demoHtml += `<div style="margin-bottom:18px"><div class="pec-level-selector" style="margin-bottom:6px">` +
+                Array.from({ length: pec.nivelMax }, (_, k) => pecLevelBtnHtml(pec, k + 1, k === 0)).join('') +
+                `</div>${html}</div>`;
+        }
+
+        // 4) Pec sem níveis não pode gerar tabela
+        const semNiveis = todas.find(p => !(p.tipo === 'evolutivo' && p.nivelMax > 1));
+        if (semNiveis) T(generatePecLevelTable(semNiveis, 1) === '',
+            `pec sem níveis (${semNiveis.nome}) não gera tabela`, `${semNiveis.nome} gerou tabela indevida`);
+
+        // 5) Nível 0 = nada pago. Precisa ser testado numa pec cujo Nv.1 NÃO
+        //    seja grátis, senão o assert passa por acidente.
+        const pagante = comNiveis.find(p => pecDeltaAcumulado(p, 1) !== 0) || comNiveis[0];
+        T(pecDeltaAcumulado(pagante, 0) === 0,
+            `nível 0 custa zero (testado em ${pagante.nome}, cujo Nv.1 = ${fmtExpDelta(pecDeltaAcumulado(pagante, 1))})`,
+            `nível 0 devolveu ${pecDeltaAcumulado(pagante, 0)} em ${pagante.nome}`);
+
+        // 5b) O valor grande do card acompanha o nível — e volta ao Nv.1 ao
+        //     desselecionar. Testa no DOM real, não só no cálculo.
+        const alvo = comNiveis.find(p => {
+            const t = [...Array(p.nivelMax)].map((_, k) => pecDeltaAcumulado(p, k + 1));
+            return new Set(t).size === t.length; // níveis com valores distintos
+        });
+        if (!alvo) {
+            T(false, '', 'nenhuma pec com totais distintos por nível para testar o card');
+        } else {
+            const palco = document.createElement('div');
+            document.body.appendChild(palco);
+            palco.style.display = 'none';
+
+            // Card sem seleção: tem que anunciar o Nv.1
+            wizardState.peculiaridadesIndividuais = [];
+            palco.innerHTML = buildPecCard2(alvo, '');
+            const custoEl = palco.querySelector('.pec-list-cost');
+            T(!!custoEl, `${alvo.nome}: card tem elemento de custo`, `${alvo.nome}: sem .pec-list-cost`);
+            T(custoEl.textContent.trim() === fmtExpDelta(pecDeltaAcumulado(alvo, 1)),
+                `${alvo.nome}: sem seleção mostra o Nv.1 (${fmtExpDelta(pecDeltaAcumulado(alvo, 1))})`,
+                `${alvo.nome}: sem seleção mostra "${custoEl.textContent.trim()}"`);
+
+            // Repinta para cada nível e confere contra a tabela
+            let erroNivel = null;
+            for (let i = 1; i <= alvo.nivelMax; i++) {
+                atualizarPecCardExp(alvo.id, i);
+                const esperado = fmtExpDelta(pecDeltaAcumulado(alvo, i));
+                const lido = palco.querySelector('.pec-list-cost').textContent.trim();
+                if (lido !== esperado) erroNivel = `Nv.${i}: card diz "${lido}", total é ${esperado}`;
+            }
+            T(!erroNivel, `${alvo.nome}: valor grande acompanha os ${alvo.nivelMax} níveis`, `${alvo.nome}: ${erroNivel}`);
+
+            // Volta ao Nv.1 (o que togglePeculiarity2 faz ao desselecionar)
+            atualizarPecCardExp(alvo.id, alvo.nivelMax);
+            atualizarPecCardExp(alvo.id, 1);
+            T(palco.querySelector('.pec-list-cost').textContent.trim() === fmtExpDelta(pecDeltaAcumulado(alvo, 1)),
+                `${alvo.nome}: ao desselecionar volta ao Nv.1`,
+                `${alvo.nome}: não voltou ao Nv.1`);
+
+            // Card montado com nível já selecionado abre mostrando aquele nível
+            const nvAlto = alvo.nivelMax;
+            wizardState.peculiaridadesIndividuais = [{ id: alvo.id, nivel: nvAlto }];
+            palco.innerHTML = buildPecCard2(alvo, 'selected');
+            T(palco.querySelector('.pec-list-cost').textContent.trim() === fmtExpDelta(pecDeltaAcumulado(alvo, nvAlto)),
+                `${alvo.nome}: card já selecionado no Nv.${nvAlto} abre com o total certo`,
+                `${alvo.nome}: abriu com "${palco.querySelector('.pec-list-cost').textContent.trim()}"`);
+            wizardState.peculiaridadesIndividuais = [];
+            palco.remove();
+        }
+
+        // 6) Sem quebra horizontal: a tabela rola dentro da própria caixa
+        document.getElementById('demo').innerHTML = demoHtml;
+        const estouro = [...document.querySelectorAll('.pec-tabela-scroll')]
+            .filter(el => getComputedStyle(el).overflowX !== 'auto').length;
+        T(estouro === 0, 'tabelas rolam na própria caixa (não empurram a página)', `${estouro} tabela(s) sem overflow-x`);
+        T(document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+            'página não rola na horizontal', `página rola: ${document.documentElement.scrollWidth}px > ${document.documentElement.clientWidth}px`);
+
+        const falhas = log.filter(l => l.startsWith('FALHA')).length;
+        document.getElementById('out').textContent =
+            (falhas ? `❌ ${falhas} FALHA(S)\n\n` : `✅ ${log.length} VERIFICAÇÕES OK\n\n`) + log.join('\n');
+    }).catch(e => { document.getElementById('out').textContent = 'ERRO: ' + e.message + '\n' + e.stack; });
+</script>

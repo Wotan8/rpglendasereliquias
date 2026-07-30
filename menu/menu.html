@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0E1117">
+    <title>Menu</title>
+    <link rel="stylesheet" href="css/menu.css?v=13">
+    <link rel="stylesheet" href="../shared/tokens.css?v=11">
+    <script src="../shared/theme.js"></script>
+    <!-- reCAPTCHA v3 (invisível) — protege a criação de checkout PagBank contra bots/abuso.
+         ⚠️ Substitua SUA_CHAVE_DE_SITE_RECAPTCHA pela Site Key do reCAPTCHA v3 (console do Google). -->
+    <script src="https://www.google.com/recaptcha/api.js?render=6Lc3_lUtAAAAAFhlPCUXgJSdL3zLnzFUwx_ZbIzT"></script>
+    <script type="module" src="/js/global-favicon.js"></script>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0E1117">
+    <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../shared/lendas-reliquias.css?v=2">
+</head>
+
+<body>
+
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">⚔️ Carregando personagens...</div>
+    </div>
+
+    <!-- Toolbar — ordem padronizada: [🚪 Sair] [🏠 Menu] [contextuais] [spacer] [🌙 Tema] [Nome] -->
+    <div class="toolbar" style="display:none">
+        <button onclick="logout()" title="Sair da conta"
+            style="background:var(--lr-blood-2);color:var(--lr-divine);border:none;font-weight:700">🚪 Sair</button>
+
+        <button id="btnPainelMestre"
+            style="display:none;background:rgba(212, 175, 55,.2);border-color:rgba(212, 175, 55,.5);color:var(--lr-gold)"
+            onclick="window.location.href='../painel-mestre/painel-mestre.html'">👑 Painel de Mestre</button>
+        <button id="btnPainelCriador"
+            style="display:none;background:rgba(212, 175, 55,.2);border-color:rgba(212, 175, 55,.5);color:var(--lr-gold-2)"
+            onclick="window.location.href='../painel-criador/painel-criador.html'">🔧 Painel Criador</button>
+        <button id="btnWorldbuilding"
+            style="display:none;background:rgba(212, 175, 55,.2);border-color:rgba(212, 175, 55,.5);color:var(--lr-gold-2)"
+            onclick="window.location.href='../worldbuilding/worldbuilding.html'">🌐 Worldbuilding</button>
+        <div class="spacer"></div>
+        <span class="hint-toolbar">Menu</span>
+        <button id="btnThemeToggle" onclick="toggleTheme()" title="Alternar tema">🌙</button>
+        <span id="userDisplayName"
+            style="color:var(--lr-text-2);font-size:.8rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+            title=""></span>
+    </div>
+
+    <!-- Main Content -->
+    <div class="wrap" style="display:none">
+        <div class="sheet">
+
+            <!-- Header -->
+            <div class="menu-header">
+                <h1>✨🌀RPG LeR🛡️🗡️</h1>
+                <p class="subtitle">O berço e o túmulo das lendas que jamais serão esquecidas.</p>
+            </div>
+
+            <div id="alertArea"></div>
+
+            <!-- Tabs -->
+            <div class="tabs" id="tabBar">
+                <button class="tab active" onclick="switchTab('personagens')">👥 Personagens</button>
+                <button class="tab" onclick="switchTab('inventario')">🎒 Repertório</button>
+                <button class="tab" onclick="switchTab('loja')">🛒 Loja</button>
+                <button class="tab" onclick="switchTab('metas')">🎯 Metas</button>
+                <button class="tab" onclick="switchTab('notificacoes')" style="position:relative">
+                    🔔 Notificações
+                    <span class="badge" id="notificationBadge" style="display:none">0</span>
+                </button>
+                <div class="frag-wallet" title="Fragmentos — sua moeda para adquirir itens na Loja"
+                    onclick="switchTab('loja')">
+                    <svg class="frag-gem" viewBox="0 0 24 24" aria-hidden="true">
+                        <defs>
+                            <linearGradient id="fragGemGrad" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#a5b4fc" />
+                                <stop offset="45%" stop-color="#6366f1" />
+                                <stop offset="100%" stop-color="#4338ca" />
+                            </linearGradient>
+                        </defs>
+                        <polygon points="6,3 18,3 22,9 12,21 2,9" fill="url(#fragGemGrad)" stroke="#c7d2fe"
+                            stroke-width="0.8" stroke-linejoin="round" />
+                        <polyline points="2,9 22,9" stroke="#e0e7ff" stroke-width="0.7" opacity="0.85" />
+                        <polyline points="6,3 8.5,9 12,21 15.5,9 18,3" fill="none" stroke="#e0e7ff" stroke-width="0.7"
+                            opacity="0.7" />
+                        <polygon points="8,4.2 11,4.2 9,7" fill="#ffffff" opacity="0.55" />
+                    </svg>
+                    <span class="frag-amount" id="fragmentosValue">0</span>
+                    <span class="frag-label">Frag$</span>
+                </div>
+            </div>
+
+            <!-- ======== ABA PERSONAGENS ======== -->
+            <div class="tab-content active" id="tab-personagens">
+
+                <!-- Cards Criar Personagem -->
+                <div class="create-card-row">
+                    <div class="create-card create-card-main" onclick="createNewCharacter()">
+                        <div class="icon">➕</div>
+                        <div class="title">Criar Novo Personagem</div>
+                        <div class="desc">Comece uma nova aventura!</div>
+                    </div>
+                    <div class="create-card create-card-blank" onclick="createBlankCharacter()">
+                        <div class="icon">📄</div>
+                        <div class="title">Nova Ficha em Branco</div>
+                    </div>
+                </div>
+
+                <!-- Grid de Personagens -->
+                <div class="characters-grid" id="charactersGrid"></div>
+
+                <!-- Estado vazio -->
+                <div class="empty-state" id="emptyState" style="display:none">
+                    <div class="icon">🎭</div>
+                    <div class="text">Você ainda não tem personagens</div>
+                    <div class="hint">Clique no card acima para criar seu primeiro personagem!</div>
+                </div>
+            </div>
+
+            <!-- ======== ABA REPERTÓRIO ======== -->
+            <div class="tab-content" id="tab-inventario">
+                <div class="inventory-header">
+                    <div class="total-apoios-label">Total de Apoios</div>
+                    <div class="total-apoios" id="totalApoios">0</div>
+                </div>
+
+                <div class="inventory-title">🎒 Repertório de Jogador</div>
+
+                <div class="inventory-grid" id="inventoryGrid"></div>
+
+                <div class="empty-state" id="emptyInventory" style="display:none">
+                    <div class="icon">📦</div>
+                    <div class="text">Seu inventário está vazio</div>
+                    <div class="hint">Itens que você receber aparecerão aqui</div>
+                </div>
+            </div>
+
+            <!-- ======== ABA LOJA ======== -->
+            <div class="tab-content" id="tab-loja">
+                <div class="menu-header" style="margin-bottom:10px">
+                    <h1 style="font-size:1.2rem">🛒 Loja de Recompensas</h1>
+                </div>
+                <p class="notifications-info" style="margin-bottom:20px;">Use seus Fragmentos ou pague com dinheiro real
+                    (PIX ou em mãos, combinado direto com o mestre) para adquirir itens e fortalecer suas
+                    histórias.</p>
+
+                <div class="inventory-grid" id="lojaGrid"></div>
+
+                <div class="empty-state" id="emptyLoja" style="display:none">
+                    <div class="icon">🛒</div>
+                    <div class="text">A loja está vazia</div>
+                    <div class="hint">Não há itens disponíveis para venda no momento.</div>
+                </div>
+            </div>
+
+            <!-- ======== ABA METAS ======== -->
+            <div class="tab-content" id="tab-metas">
+                <div class="menu-header" style="margin-bottom:10px">
+                    <h1 style="font-size:1.2rem">🎯 Metas da Campanha</h1>
+                </div>
+                <p class="notifications-info" style="margin-bottom:20px;">Cada item adquirido na Loja vira um apoio e
+                    empurra as metas abaixo. Elas são coletivas: o esforço de toda a mesa soma no mesmo lugar, e o que
+                    for desbloqueado vale para todos.</p>
+
+                <div id="metasLoading" class="empty-state" style="display:none">
+                    <div class="icon">⏳</div>
+                    <div class="text">Somando os apoios da mesa...</div>
+                </div>
+
+                <div class="metas-grid" id="metasGrid"></div>
+
+                <div class="empty-state" id="emptyMetas" style="display:none">
+                    <div class="icon">🎯</div>
+                    <div class="text">Nenhuma meta ativa</div>
+                    <div class="hint">O mestre ainda não publicou metas para a campanha.</div>
+                </div>
+            </div>
+
+            <!-- ======== ABA NOTIFICAÇÕES ======== -->
+            <div class="tab-content" id="tab-notificacoes">
+                <div class="menu-header" style="margin-bottom:10px">
+                    <h1 style="font-size:1.2rem">🔔 Notificações</h1>
+                </div>
+                <p class="notifications-info">Últimas 100 notificações são armazenadas. Notificações mais antigas são
+                    removidas automaticamente.</p>
+
+                <div id="notificationsList"></div>
+
+                <div id="paginationContainer" class="pagination-container" style="display:none"></div>
+
+                <div class="empty-state" id="emptyNotifications" style="display:none">
+                    <div class="icon">🔔</div>
+                    <div class="text">Nenhuma notificação</div>
+                    <div class="hint">Você será notificado quando houver novidades</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal de Exclusão -->
+    <div class="modal" id="deleteModal">
+        <div class="modal-content">
+            <div class="modal-icon">⚠️</div>
+            <div class="modal-title">ATENÇÃO!</div>
+            <div class="modal-text">
+                Tem certeza que deseja <strong>APAGAR PERMANENTEMENTE</strong> o personagem
+                <strong id="deleteCharacterName"></strong>?<br><br>
+                Esta ação <strong>NÃO PODE SER DESFEITA</strong>!
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-modal btn-cancel" onclick="closeDeleteModal()">❌ Cancelar</button>
+                <button class="btn-modal btn-confirm" onclick="confirmDelete()">🗑️ Sim, Apagar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Checkout Loja -->
+    <div class="modal" id="lojaCheckoutModal">
+        <div class="modal-content" style="max-width:500px;text-align:left;">
+            <div class="modal-header"
+                style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                <span class="modal-title" style="font-size:1.2rem;font-weight:700;">🛒 Confirmar Compra</span>
+                <button class="modal-close" onclick="document.getElementById('lojaCheckoutModal').style.display='none'"
+                    style="background:transparent;border:none;color:var(--text);font-size:1.2rem;cursor:pointer;">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="lojaCheckoutItemInfo"
+                    style="margin-bottom:15px;background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;"></div>
+                <div id="lojaCheckoutMetaSelector" style="display:none;margin-bottom:15px;">
+                    <div style="font-weight:600;margin-bottom:8px;">Escolha a(s) Meta(s) para atrelar o apoio:</div>
+                    <div id="lojaCheckoutMetaList"
+                        style="display:flex;flex-direction:column;gap:8px;max-height:150px;overflow-y:auto;background:rgba(0,0,0,0.1);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-buttons" style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                <button class="btn-modal btn-cancel"
+                    onclick="document.getElementById('lojaCheckoutModal').style.display='none'">Cancelar</button>
+                <button class="btn-modal btn-confirm" id="btnConfirmPurchase" onclick="confirmPurchaseFrag()">✔️
+                    Confirmar Compra</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Module -->
+    <script type="module" src="js/menu-firebase.js?v=7"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>check — laço de seleção, Espaço e tempo de viagem</title>
+<style>
+ body{font:14px system-ui;background:#0e1117;color:#e6e6e6;padding:16px}
+ canvas{border:1px solid #333;background:#151a22;touch-action:none;cursor:default}
+ .ok{color:#3fae6a}.bad{color:#c94f5c}
+ pre{background:#1f2630;padding:10px;border-radius:6px;line-height:1.7}
+ b{color:#8b5cf6}
+</style>
+</head>
+<body>
+<h3>Laço de seleção · Espaço para arrastar · Tempo de viagem</h3>
+<p>Arraste no vazio para laçar. Segure <b>Espaço</b> e arraste para mover a câmera.
+   Arraste um item laçado para mover o conjunto. <b>Delete</b> exclui.</p>
+<canvas id="cv" width="640" height="380"></canvas>
+<pre id="log"></pre>
+<script type="module">
+import { normalizarRet, bboxDentroDoRet } from './js/tab-grid.js';
+import { fmtDuracao, fmtViagem, refViagemPorDia } from './js/tab-state.js';
+
+const log = document.getElementById('log');
+const linha = (t, ok) => log.innerHTML += `<span class="${ok ? 'ok' : 'bad'}">${ok ? '✅' : '❌'}</span> ${t}\n`;
+
+// --- asserções puras (mesmas do teste em node, aqui rodando no navegador) ---
+linha(`fmtDuracao(13.6) = "${fmtDuracao(13.6)}"`, fmtDuracao(13.6) === '1 dia 5h 36min');
+linha(`20 km a 880/dia → "${fmtViagem({valor:20,unidade:'km'},880)}"`,
+      fmtViagem({valor:20,unidade:'km'},880).includes('11min'));
+linha(`refViagemPorDia('km') = ${refViagemPorDia('km')}`, refViagemPorDia('km') === 25);
+linha('laço não engole bbox maior que ele',
+      bboxDentroDoRet({x:-500,y:-500,w:2000,h:2000},{x:0,y:0,w:100,h:100}) === false);
+
+// --- simulação interativa mínima do gesto ---
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const objs = [
+  {id:'A',x:60,y:60,w:60,h:60,cor:'#22d3ee'}, {id:'B',x:150,y:80,w:50,h:50,cor:'#f59e0b'},
+  {id:'C',x:90,y:170,w:70,h:40,cor:'#3fae6a'}, {id:'D',x:400,y:120,w:80,h:80,cor:'#c94f5c'},
+  {id:'FUNDO',x:20,y:20,w:600,h:340,cor:'rgba(139,92,246,.10)'},
+];
+let cam={x:0,y:0}, sel=[], gesto=null, espaco=false;
+const mundo = e => { const r=cv.getBoundingClientRect(); return {x:e.clientX-r.left+cam.x, y:e.clientY-r.top+cam.y}; };
+const dentro=(o,p)=>p.x>=o.x&&p.x<=o.x+o.w&&p.y>=o.y&&p.y<=o.y+o.h;
+
+addEventListener('keydown',e=>{ if(e.code==='Space'){e.preventDefault(); espaco=true; cv.style.cursor='grab';}
+  if(e.key==='Delete'&&sel.length){ const n=sel.length; for(const id of sel) objs.splice(objs.findIndex(o=>o.id===id),1); sel=[]; linha(`Delete removeu ${n} objeto(s)`,true); pinta(); }});
+addEventListener('keyup',e=>{ if(e.code==='Space'){espaco=false; cv.style.cursor='default';}});
+
+cv.addEventListener('pointerdown',e=>{
+  const w=mundo(e);
+  if(espaco){ gesto={tipo:'pan',x0:e.clientX,y0:e.clientY,cam:{...cam}}; return; }
+  const alvo=[...objs].reverse().find(o=>o.id!=='FUNDO'&&dentro(o,w));
+  if(alvo&&sel.length>1&&sel.includes(alvo.id)){
+    gesto={tipo:'multi',w0:w,it:sel.map(id=>{const o=objs.find(x=>x.id===id);return{id,x0:o.x,y0:o.y}})};
+    linha(`arrastando conjunto de ${sel.length}`,true); return;
+  }
+  if(alvo){ sel=[alvo.id]; pinta(); return; }
+  sel=[]; gesto={tipo:'laco',a:w,b:w}; pinta();
+});
+cv.addEventListener('pointermove',e=>{
+  if(!gesto) return; const w=mundo(e);
+  if(gesto.tipo==='pan'){ cam.x=gesto.cam.x-(e.clientX-gesto.x0); cam.y=gesto.cam.y-(e.clientY-gesto.y0); }
+  if(gesto.tipo==='laco') gesto.b=w;
+  if(gesto.tipo==='multi'){ const dx=w.x-gesto.w0.x,dy=w.y-gesto.w0.y;
+    for(const it of gesto.it){const o=objs.find(x=>x.id===it.id); o.x=it.x0+dx; o.y=it.y0+dy;} }
+  pinta();
+});
+addEventListener('pointerup',()=>{
+  if(gesto?.tipo==='laco'){ const r=normalizarRet(gesto.a,gesto.b);
+    sel=objs.filter(o=>bboxDentroDoRet(o,r)).map(o=>o.id);
+    linha(`laço ${Math.round(r.w)}x${Math.round(r.h)} → [${sel.join(', ')||'nada'}]`, !sel.includes('FUNDO'));
+  }
+  gesto=null; pinta();
+});
+
+function pinta(){
+  ctx.clearRect(0,0,cv.width,cv.height); ctx.save(); ctx.translate(-cam.x,-cam.y);
+  for(const o of objs){ ctx.fillStyle=o.cor; ctx.fillRect(o.x,o.y,o.w,o.h);
+    ctx.fillStyle='#fff'; ctx.font='11px system-ui'; ctx.fillText(o.id,o.x+3,o.y+12); }
+  if(sel.length){ ctx.strokeStyle='#8b5cf6'; ctx.lineWidth=sel.length>1?1.5:2; ctx.setLineDash([5,3]);
+    for(const id of sel){ const o=objs.find(x=>x.id===id); if(o) ctx.strokeRect(o.x,o.y,o.w,o.h); } ctx.setLineDash([]); }
+  if(gesto?.tipo==='laco'){ const r=normalizarRet(gesto.a,gesto.b);
+    ctx.fillStyle='rgba(139,92,246,.12)'; ctx.fillRect(r.x,r.y,r.w,r.h);
+    ctx.strokeStyle='#8b5cf6'; ctx.lineWidth=1.5; ctx.setLineDash([6,4]); ctx.strokeRect(r.x,r.y,r.w,r.h); ctx.setLineDash([]); }
+  ctx.restore();
+  ctx.fillStyle='#94a3b8'; ctx.font='12px system-ui';
+  ctx.fillText(`cam ${Math.round(cam.x)},${Math.round(cam.y)} · Espaço:${espaco?'ON':'off'} · sel:${sel.length}`,8,372);
+}
+pinta();
+window.__dbg = () => ({ cam: {...cam}, sel: [...sel], espaco, objs: objs.map(o => ({id:o.id, x:Math.round(o.x), y:Math.round(o.y)})) });
+</script>
+</body>
+</html>

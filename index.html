@@ -11,9 +11,46 @@
             box-sizing: border-box;
         }
 
+        /* O login e sempre escuro: nasceu assim (#0f172a -> #1e1b4b no fundo,
+           card indigo, titulo roxo claro) e nao tem botao de tema, porque vem
+           ANTES de entrar no app. Quando as cores viraram token, o card
+           continuou cravado escuro mas o texto passou a seguir o tema — e como
+           esta pagina nunca recebe html.dark, tudo resolvia na paleta CLARA:
+           titulo #4A32A0 e labels #4A5462 em cima de card #1F2630, e o fundo
+           virava papel. Dai o titulo sumindo e o cartao escuro na pagina clara.
+
+           Prendo a paleta ESCURA COMPLETA no body, mesmo padrao do tabuleiro.
+           Tem que ser no body: este <style> vem ANTES de tokens.css, entao
+           declarar no :root aqui perderia. tokens.css tambem tem uma regra
+           body, mas so com overscroll-behavior — nao colide com estas vars, e
+           o `color: var(--lr-text-1)` do lendas-reliquias.css passa a resolver
+           contra elas. Meia paleta aqui traria o bug de volta pela metade. */
         body {
+            --lr-bg-0:        #0A0D12;
+            --lr-bg-1:        #12161D;
+            --lr-surface:     #1A2029;
+            --lr-surface-2:   #222933;
+            --lr-border:      #30363D;
+            --lr-border-soft: #262C33;
+            --lr-text-1:      #F2F2F2;
+            --lr-text-2:      #A8B3C2;
+            --lr-gold:        #D4AF37;
+            --lr-gold-2:      #E5C558;
+            --lr-arcane:      #3AA6FF;
+            --lr-abyssal:     #5B3FB8;
+            --lr-abyssal-2:   #8A6FE0;
+            --lr-nature:      #3FAE6A;
+            --lr-blood-2:     #C94F5C;
+            /* Tons claros para TEXTO em cima do proprio acento a 20%: o
+               --lr-nature e o --lr-blood-2 cheios davam 3.99:1 e 2.89:1 dentro
+               dos alerts. Como esta pagina e sempre escura, valor fixo aqui nao
+               quebra por tema. (--lr-nature-2 nao existe global; a paleta tem
+               -2 para ouro, arcano, abissal e sangue, mas nao para natureza.) */
+            --lr-nature-2:    #6FD79B;
+            --lr-blood-3:     #E08A93;
+
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            background: linear-gradient(135deg, var(--lr-bg-0) 0%, var(--lr-surface) 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -22,13 +59,13 @@
         }
 
         .login-container {
-            background: rgba(30, 27, 75, 0.95);
+            background: rgba(31, 38, 48, 0.95);
             border-radius: 20px;
             padding: 40px;
             max-width: 450px;
             width: 100%;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            border: 2px solid rgba(139, 92, 246, 0.3);
+            border: 2px solid rgba(91, 63, 184, 0.3);
         }
 
         .logo {
@@ -39,14 +76,18 @@
 
         h1 {
             text-align: center;
-            color: #8b5cf6;
+            /* Era var(--lr-abyssal): roxo escuro, 2.64:1 no card. Na pratica o
+               lendas-reliquias.css ja sobrescreve h1 com --lr-text-1 (carrega
+               depois), entao o titulo ja renderizava branco — isto so alinha a
+               regra com o que aparece na tela e tira a armadilha. */
+            color: var(--lr-text-1);
             margin-bottom: 10px;
             font-size: 1.8rem;
         }
 
         .subtitle {
             text-align: center;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             margin-bottom: 30px;
             font-size: 0.9rem;
         }
@@ -57,7 +98,7 @@
 
         label {
             display: block;
-            color: #cbd5e1;
+            color: var(--lr-text-2);
             margin-bottom: 8px;
             font-weight: 600;
             font-size: 0.9rem;
@@ -66,24 +107,24 @@
         input {
             width: 100%;
             padding: 14px;
-            background: rgba(15, 23, 42, 0.8);
-            border: 2px solid #334155;
+            background: rgba(14, 17, 23, 0.8);
+            border: 2px solid var(--lr-surface-2);
             border-radius: 10px;
-            color: #f8fafc;
+            color: var(--lr-divine);
             font-size: 1rem;
             transition: all 0.3s;
         }
 
         input:focus {
             outline: none;
-            border-color: #8b5cf6;
-            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+            border-color: var(--lr-abyssal);
+            box-shadow: 0 0 0 3px rgba(91, 63, 184, 0.2);
         }
 
         .btn {
             width: 100%;
             padding: 16px;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            background: linear-gradient(135deg, var(--lr-abyssal), var(--lr-abyssal-2));
             color: white;
             border: none;
             border-radius: 12px;
@@ -98,7 +139,7 @@
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+            box-shadow: 0 10px 30px rgba(91, 63, 184, 0.4);
         }
 
         .btn:active {
@@ -107,25 +148,29 @@
 
         .btn-secondary {
             background: rgba(51, 65, 85, 0.6);
-            border: 2px solid #334155;
+            border: 2px solid var(--lr-surface-2);
         }
 
         .toggle-form {
             text-align: center;
             margin-top: 20px;
-            color: #94a3b8;
+            color: var(--lr-text-2);
             font-size: 0.9rem;
         }
 
         .toggle-form a {
-            color: #8b5cf6;
+            /* Roxo nao serve de texto em cima deste card: --lr-abyssal da 2.1:1
+               e --lr-abyssal-2 para em 4.0:1 (o #8b5cf6 original dava 3.65 —
+               este link nunca passou de AA). Ouro e o --primary do projeto e
+               da 7.35:1, entao o link de acao virou ouro. */
+            color: var(--lr-gold);
             text-decoration: none;
             font-weight: 600;
             cursor: pointer;
         }
 
         .toggle-form a:hover {
-            color: #ec4899;
+            color: var(--lr-gold-2);
         }
 
         .alert {
@@ -138,27 +183,28 @@
         }
 
         .alert-success {
-            background: rgba(16, 185, 129, 0.2);
-            border: 2px solid #10b981;
-            color: #10b981;
+            background: rgba(63, 174, 106, 0.2);
+            border: 2px solid var(--lr-nature);
+            color: var(--lr-nature-2);
         }
 
         .alert-danger {
-            background: rgba(239, 68, 68, 0.2);
-            border: 2px solid #ef4444;
-            color: #ef4444;
+            background: rgba(201, 79, 92, 0.2);
+            border: 2px solid var(--lr-blood-2);
+            color: var(--lr-blood-3);
         }
 
         .alert-warning {
-            background: rgba(245, 158, 11, 0.2);
-            border: 2px solid #f59e0b;
-            color: #f59e0b;
+            background: rgba(212, 175, 55, 0.2);
+            border: 2px solid var(--lr-gold);
+            color: var(--lr-gold);
         }
 
         .loading {
             display: none;
             text-align: center;
-            color: #8b5cf6;
+            /* Mesmo caso do link: roxo escuro nao le em cima do card. */
+            color: var(--lr-gold);
             margin-top: 10px;
             font-weight: 600;
         }
@@ -171,8 +217,8 @@
         .role-selector {
             margin: 20px 0;
             padding: 15px;
-            background: rgba(139, 92, 246, 0.1);
-            border: 2px solid #8b5cf6;
+            background: rgba(91, 63, 184, 0.1);
+            border: 2px solid var(--lr-abyssal);
             border-radius: 10px;
         }
 
@@ -181,21 +227,21 @@
             align-items: center;
             padding: 12px;
             margin: 8px 0;
-            background: rgba(15, 23, 42, 0.6);
-            border: 2px solid #334155;
+            background: rgba(14, 17, 23, 0.6);
+            border: 2px solid var(--lr-surface-2);
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s;
         }
 
         .role-option:hover {
-            border-color: #8b5cf6;
-            background: rgba(139, 92, 246, 0.15);
+            border-color: var(--lr-abyssal);
+            background: rgba(91, 63, 184, 0.15);
         }
 
         .role-option.selected {
-            border-color: #8b5cf6;
-            background: rgba(139, 92, 246, 0.2);
+            border-color: var(--lr-abyssal);
+            background: rgba(91, 63, 184, 0.2);
         }
 
         .role-option input[type="radio"] {
@@ -210,13 +256,13 @@
 
         .role-title {
             font-weight: 700;
-            color: #f8fafc;
+            color: var(--lr-divine);
             margin-bottom: 3px;
             font-size: 1rem;
         }
 
         .role-desc {
-            color: #94a3b8;
+            color: var(--lr-text-2);
             font-size: 0.8rem;
         }
 
@@ -225,8 +271,8 @@
             display: none;
             margin-top: 15px;
             padding: 15px;
-            background: rgba(245, 158, 11, 0.1);
-            border: 2px solid #f59e0b;
+            background: rgba(212, 175, 55, 0.1);
+            border: 2px solid var(--lr-gold);
             border-radius: 10px;
             animation: slideDown 0.3s ease;
         }
@@ -247,7 +293,7 @@
         }
 
         .code-info {
-            color: #f59e0b;
+            color: var(--lr-gold);
             font-size: 0.85rem;
             margin-bottom: 10px;
             text-align: center;
@@ -264,6 +310,15 @@
             }
         }
     </style>
+<script type="module" src="/js/global-favicon.js"></script>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0E1117">
+    <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="shared/tokens.css?v=11">
+    <link rel="stylesheet" href="shared/lendas-reliquias.css?v=2">
 </head>
 <body>
     <div class="login-container">
@@ -339,7 +394,7 @@
                 <div class="form-group">
                     <input type="password" id="masterCode" placeholder="Código fornecido pelo administrador" autocomplete="off">
                 </div>
-                <div style="font-size: 0.75rem; color: #94a3b8; text-align: center; margin-top: 5px;">
+                <div style="font-size: 0.75rem; color: var(--lr-text-2); text-align: center; margin-top: 5px;">
                     Apenas quem possui o código pode ser Mestre
                 </div>
             </div>
@@ -358,6 +413,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // ============= CONFIGURAÇÃO =============
         // 🔐 ALTERE ESTE CÓDIGO PARA O SEU CÓDIGO SECRETO DE MESTRE
@@ -378,7 +434,19 @@
         // Inicializar Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
+        // 💾 PERSISTÊNCIA OFFLINE (Firebase v10+): cache local em IndexedDB.
+        // Leituras funcionam offline e escritas ficam na fila e sincronizam
+        // automaticamente quando a conexão voltar. Multi-tab habilitado.
+        let db;
+        try {
+            db = initializeFirestore(app, {
+                localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+            });
+            console.log('💾 Firestore: cache offline (IndexedDB) ativado.');
+        } catch (e) {
+            console.warn('💾 Firestore: cache offline indisponível, usando memória.', e);
+            db = getFirestore(app);
+        }
 
         // Funções auxiliares
         function showAlert(message, type) {
@@ -461,15 +529,18 @@
                     localStorage.setItem('userName', user.displayName || 'Jogador');
                     localStorage.setItem('userRole', role);
                     
+                    localStorage.setItem('authConfirmed', 'true');
+                    localStorage.setItem('authTimestamp', Date.now().toString());
+
                     console.log('✅ Role do usuário:', role);
                     
                     // Redirecionar baseado na role
                     if (role === 'mestre') {
                         console.log('👑 Redirecionando para painel do mestre...');
-                        window.location.href = 'mestre.html';
+                        window.location.href = 'painel-mestre/painel-mestre.html';
                     } else {
                         console.log('🎭 Redirecionando para ficha do jogador...');
-                        window.location.href = 'ficha.html';
+                        window.location.href = 'menu/menu.html';
                     }
                 } else {
                     // Se não encontrar o documento, assumir jogador (para contas antigas)
@@ -484,8 +555,11 @@
                     localStorage.setItem('userEmail', user.email);
                     localStorage.setItem('userName', user.displayName || 'Jogador');
                     localStorage.setItem('userRole', 'jogador');
+
+                    localStorage.setItem('authConfirmed', 'true');
+                    localStorage.setItem('authTimestamp', Date.now().toString());
                     
-                    window.location.href = 'ficha.html';
+                    window.location.href = 'menu/menu.html';
                 }
             } catch (error) {
                 console.error('❌ Erro ao verificar role:', error);

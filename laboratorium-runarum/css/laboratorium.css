@@ -1,0 +1,385 @@
+/* =====================================================================
+   ᛟ LABORATORIUM RUNARUM — Oficina arcana
+   Visual padronizado com o restante do site (shared/tokens.css):
+   painéis "paper" sobre fundo escuro, com tema claro/escuro unificado.
+   A bancada de montagem (canvas) permanece sempre escura, como uma
+   ardósia de trabalho — os lumes rúnicos (âmbar/ciano/violeta) só
+   existem ali dentro. Responsivo: 3 colunas → empilhadas no celular.
+   ===================================================================== */
+:root {
+    /* Superfícies mapeadas para os tokens do site (mudam com o tema) */
+    --bancada: var(--paper);
+    --pedra: var(--chip);
+    --borda: var(--soft);
+
+    /* Semântica rúnica (jogo) — não muda com o tema */
+    --lume: var(--lr-gold);          /* essência em fluxo */
+    --entrada: var(--lr-arcane);
+    --sinal: var(--lr-abyssal-2);
+    --dominado: var(--success, var(--lr-nature));
+    --erro: var(--danger, var(--lr-blood-2));
+
+    /* Interior da bancada (canvas): sempre escuro, independente do tema.
+       Cuidado: --canvas-ink e --canvas-chip NAO podem ser cravados escuros aqui,
+       porque o modal de impressao (lab-print.css) tambem usa --canvas-chip e ele
+       segue o tema — cravar deixava chip escuro dentro de painel branco. Os
+       valores escuros ficam presos no .lab-canvas, la embaixo. */
+    --canvas-ink: var(--lr-text-1);
+    --canvas-muted: #8b93a7;
+    --canvas-chip: var(--lr-surface);
+    --canvas-borda: #2a2f45;
+
+    /* Compatibilidade: títulos usam a mesma fonte do restante do site */
+    --font-titulo: var(--font);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; min-height: 100%; }
+body {
+    background: var(--bg-gradient, linear-gradient(180deg, var(--lr-bg-0), var(--lr-bg-1))) fixed;
+    color: var(--ink); font-family: var(--font); font-size: 14px;
+}
+
+/* ---------- LOADING ---------- */
+.lab-loading {
+    position: fixed; inset: 0; display: flex; flex-direction: column; gap: 14px;
+    align-items: center; justify-content: center; color: #8b93a7; z-index: 50;
+    background: var(--bg-gradient, var(--lr-bg-0));
+}
+.lab-loading-runa {
+    font-size: 64px; color: var(--lume);
+    animation: lume 1.6s ease-in-out infinite;
+    text-shadow: 0 0 24px rgba(212, 175, 55, .5);
+}
+@keyframes lume { 0%,100% { opacity:.55; transform:scale(.96);} 50% { opacity:1; transform:scale(1.04);} }
+
+/* ---------- TOPO ---------- */
+.lab-wrap {
+    max-width: 1500px; margin: 0 auto;
+    padding: 12px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+}
+.lab-topo {
+    /* Cabeçalho padronizado: UMA linha; excedente rola horizontalmente */
+    display: flex; align-items: center; gap: 14px; flex-wrap: nowrap;
+    overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; white-space: nowrap;
+    padding: 10px 14px; background: var(--bancada);
+    border: 1px solid var(--borda); border-radius: var(--radius);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, .25);
+}
+.lab-topo > * { flex: 0 0 auto; }
+.lab-sair {
+    background: rgba(201, 79, 92, .18); border: 1px solid rgba(201, 79, 92, .5);
+    color: var(--ink); border-radius: 8px; padding: 6px 10px; cursor: pointer;
+    font-size: 1rem; line-height: 1; transition: background .15s;
+}
+.lab-sair:hover { background: rgba(201, 79, 92, .32); }
+.lab-topo h1 {
+    margin: 0; font-family: var(--font); font-weight: 900; font-size: 1.2rem;
+    letter-spacing: -.2px; color: var(--ink);
+    flex: 1 1 auto; min-width: 0;
+}
+.lab-topo h1 .runa { color: var(--lume); }
+.lab-voltar,
+.lab-topo .theme-toggle {
+    background: var(--pedra); color: var(--ink); border: 1px solid var(--borda);
+    border-radius: 8px; min-width: 40px; min-height: 40px; cursor: pointer; font-size: 16px;
+    font-family: var(--font);
+}
+.lab-voltar:hover,
+.lab-topo .theme-toggle:hover { border-color: var(--primary, var(--lume)); }
+.lab-char { margin-left: auto; text-align: right; color: var(--muted); font-size: .8rem; line-height: 1.35; }
+.lab-char b { color: var(--ink); }
+
+/* ---------- ABAS (mesmo padrão visual do Menu/Ficha) ---------- */
+.lab-tabs { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+.lab-tab {
+    background: var(--bancada); border: 2px solid var(--borda); color: var(--ink);
+    padding: 8px 16px; border-radius: var(--radius); cursor: pointer;
+    font-size: 11px; font-weight: 800; font-family: var(--font);
+    text-transform: uppercase; letter-spacing: .3px;
+    min-height: 40px;
+    transition: all .15s;
+}
+.lab-tab:hover { background: var(--pedra); }
+.lab-tab.ativo {
+    background: var(--primary, var(--lr-gold)); color: var(--lr-bg-0);
+    border-color: var(--primary, var(--lr-gold));
+}
+
+/* ---------- LAYOUT MONTAGEM ---------- */
+.lab-montagem { display: grid; grid-template-columns: 280px 1fr 330px; gap: 10px; align-items: start; }
+.lab-col {
+    background: var(--bancada); border: 1px solid var(--borda); border-radius: var(--radius);
+    padding: 10px; min-height: 200px;
+}
+.lab-col-titulo { font-family: var(--font); font-weight: 800; color: var(--ink); margin-bottom: 8px; font-size: .9rem; }
+.lab-col-titulo small { color: var(--muted); font-weight: 600; font-size: .68rem; }
+
+/* ---------- PALETA ---------- */
+#labSearch {
+    width: 100%; background: var(--pedra); border: 1px solid var(--borda); color: var(--ink);
+    border-radius: 8px; padding: 7px 10px; margin-bottom: 8px;
+}
+.lab-paleta { max-height: 66vh; max-height: 66dvh; overflow-y: auto; padding-right: 4px; }
+.lab-pal-grupo { margin-bottom: 10px; }
+.lab-pal-titulo {
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted); border-bottom: 1px dashed var(--borda); padding-bottom: 3px; margin-bottom: 5px;
+}
+.lab-pal-item {
+    display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+    background: var(--pedra); border: 1px solid var(--borda); color: var(--ink);
+    border-radius: 8px; padding: 6px 8px; margin-bottom: 4px; cursor: pointer; font-size: .8rem;
+    transition: border-color .15s, transform .1s;
+}
+.lab-pal-item:hover { transform: translateX(2px); }
+.lab-pal-item.dom { border-left: 3px solid var(--dominado); }
+.lab-pal-item.dom:hover { border-color: var(--dominado); }
+.lab-pal-item.sim { opacity: .55; border-left: 3px solid var(--borda); }
+.lab-pal-item.sim:hover { opacity: .85; border-color: var(--sinal); }
+.lab-pal-item img { width: 22px; height: 22px; object-fit: contain; }
+.lab-pal-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.lab-pal-nome { flex: 1; }
+.lab-pal-nv { font-size: .65rem; color: var(--dominado); }
+.lab-pal-nv.sim { color: var(--sinal); font-style: italic; }
+.lab-pal-info { color: var(--muted); font-size: .8rem; }
+.lab-pal-info:hover { color: var(--lume); }
+.lab-legenda { display: flex; gap: 12px; margin-top: 8px; font-size: .68rem; color: var(--muted); }
+.lab-legenda .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
+.lab-legenda .dot.dom { background: var(--dominado); }
+.lab-legenda .dot.sim { background: var(--sinal); }
+
+/* ---------- CANVAS ---------- */
+.lab-col-canvas { padding: 8px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.lab-canvas-barra { display: flex; gap: 8px; }
+#labRunaNome {
+    flex: 1; min-width: 0; background: var(--pedra); border: 1px solid var(--borda); color: var(--ink);
+    border-radius: 8px; padding: 8px 10px; min-height: 40px; font-family: var(--font);
+}
+#labRunaNome:focus { outline: 2px solid var(--primary, var(--lr-gold)); outline-offset: 1px; }
+.lab-canvas-barra button {
+    background: var(--primary, var(--lr-gold)); border: 1px solid var(--primary, var(--lr-gold)); color: var(--lr-bg-0);
+    border-radius: 8px; padding: 8px 12px; cursor: pointer; white-space: nowrap;
+    font-family: var(--font); font-weight: 700; min-height: 40px;
+}
+.lab-canvas-barra button:hover:not(:disabled) { filter: brightness(1.08); }
+.lab-canvas-barra button:disabled {
+    background: var(--pedra); border-color: var(--borda); color: var(--muted); cursor: not-allowed;
+}
+.lab-canvas-barra button.perigo { background: var(--pedra); border-color: var(--borda); color: var(--muted); }
+.lab-canvas-barra button.perigo:hover { border-color: var(--erro); color: var(--erro); }
+.lab-sim-aviso {
+    background: rgba(138, 111, 224, .08); border: 1px solid var(--sinal); color: var(--ink);
+    border-radius: 8px; padding: 7px 10px; font-size: .76rem;
+}
+.lab-canvas {
+    /* A bancada e sempre escura (o fundo abaixo e gradiente #0e1018 cravado),
+       mas tudo que ela usa por dentro vinha de var de tema — o :root promete
+       "sempre escuro" e nao entregava. No tema CLARO o nome do no ficava em
+       1.10:1 (tinta escura no gradiente escuro do .lab-node-box), o custo do no
+       2.66:1, o rotulo "simulacao" 1.55:1 e o nivel do no 2.29:1.
+
+       Prendo aqui, e nao no :root, por dois motivos. Primeiro, --canvas-chip e
+       --lume tambem sao usados FORA do canvas, em superficie que segue o tema
+       (paleta, modal de impressao) — cravar escuro lá quebrava aqueles. Segundo,
+       nao serve prender --lr-text-1: var() declarado no :root ja e substituido
+       la, e o descendente herda o valor pronto, entao e a var INTERMEDIARIA que
+       precisa ser repintada. Quem consome usa var(--canvas-ink)/var(--lume)
+       direto, e essa busca resolve neste elemento.
+
+       Depois: nome do no 14.44:1, custo 9.03:1, "simulacao" 4.91:1, nivel
+       7.79:1. O --erro vai no tom claro porque o cheio parava em 3.71:1. */
+    --canvas-ink: #F2F2F2;
+    --canvas-chip: #1A2029;
+    --lume: #D4AF37;
+    --entrada: #3AA6FF;
+    --sinal: #8A6FE0;
+    --dominado: #3FAE6A;
+    --erro: #E08A93;
+
+    position: relative; height: 62vh; height: 62dvh; min-height: 380px; overflow: auto;
+    background:
+        radial-gradient(circle at 1px 1px, rgba(139, 147, 167, .13) 1px, transparent 0) 0 0 / 26px 26px,
+        linear-gradient(180deg, #0e1018, #10131e);
+    border: 1px solid var(--borda); border-radius: var(--radius);
+    /* 📱 rolagem vertical da página liberada; o bloqueio de gesto fica só nos nós (.lab-node) */
+    touch-action: pan-y;
+}
+.lab-links { position: absolute; top: 0; left: 0; pointer-events: none; }
+.lab-links .lab-link { pointer-events: stroke; }
+.lab-hint {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    text-align: center; color: var(--canvas-muted); font-size: .85rem; pointer-events: none; line-height: 1.7;
+}
+.lab-canvas-dica { color: var(--muted); font-size: .68rem; line-height: 1.6; }
+
+/* --- Nós --- */
+.lab-node { position: absolute; cursor: grab; user-select: none; z-index: 2; touch-action: none; }
+.lab-node--drag { cursor: grabbing; z-index: 5; }
+.lab-node-img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; filter: drop-shadow(0 0 8px rgba(212, 175, 55,.25)); }
+.lab-node-box {
+    width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; text-align: center; padding: 6px;
+    background: linear-gradient(180deg, #1c2030, #151827);
+    border: 1.5px solid var(--el-cor, var(--borda)); border-radius: 14px;
+    box-shadow: 0 0 14px color-mix(in srgb, var(--el-cor, var(--lr-text-2)) 22%, transparent), inset 0 0 20px rgba(0,0,0,.45);
+}
+.lab-node-nome { font-family: var(--font); font-weight: 700; font-size: .72rem; line-height: 1.15; color: var(--canvas-ink); }
+.lab-node-latim { font-size: .58rem; font-style: italic; color: var(--canvas-muted); }
+.lab-node--sim { opacity: .62; }
+.lab-node--sim .lab-node-box { border-style: dashed; }
+.lab-node--sim::after {
+    content: "simulação"; position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%);
+    font-size: .55rem; color: var(--sinal); font-style: italic; white-space: nowrap;
+}
+.lab-node--selected .lab-node-box {
+    border-color: var(--lume);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--lume) 40%, transparent), inset 0 0 20px rgba(0,0,0,.45);
+}
+.lab-node--selected .lab-node-img {
+    filter: drop-shadow(0 0 8px var(--lume)) drop-shadow(0 0 12px var(--lume));
+}
+.lab-selection-box {
+    position: absolute; border: 1px dashed var(--lume); background: rgba(212, 175, 55, 0.15); z-index: 50; pointer-events: none;
+}
+.lab-cp {
+    position: absolute; width: 12px; height: 12px; border-radius: 50%;
+    transform: translate(-50%, -50%); border: 2px solid var(--lr-bg-0); z-index: 3;
+    box-shadow: 0 0 6px currentColor;
+}
+.lab-node-del, .lab-node-nivel {
+    position: absolute; border: 1px solid var(--canvas-borda); background: var(--canvas-chip); color: var(--canvas-ink);
+    border-radius: 8px; cursor: pointer; font-size: .6rem; padding: 2px 6px; z-index: 4;
+}
+.lab-node-del { top: -9px; right: -9px; color: var(--canvas-muted); border-radius: 50%; width: 22px; height: 22px; padding: 0; }
+.lab-node-del:hover { color: var(--erro); border-color: var(--erro); }
+.lab-node-nivel { top: -9px; left: -9px; color: var(--lume); border-color: var(--lume); }
+.lab-node-custo {
+    position: absolute; bottom: -13px; right: 0; font-size: .58rem; color: var(--lume); opacity: .9;
+}
+.lab-node--sim .lab-node-custo { bottom: -26px; }
+
+/* ---------- AUDITORIA ---------- */
+.lab-col-audit { max-height: 78vh; overflow-y: auto; }
+.lab-aud-topo { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.lab-aud-ct {
+    display: flex; flex-direction: column; align-items: center;
+    background: var(--pedra); border: 1px solid var(--lume); border-radius: 10px; padding: 6px 14px;
+}
+.lab-aud-ct span { font-size: .6rem; color: var(--muted); letter-spacing: .1em; }
+.lab-aud-ct b { font-size: 1.5rem; color: var(--lume); }
+.lab-aud-ct small { font-size: .58rem; color: var(--muted); }
+.lab-aud-nat { font-family: var(--font-titulo); font-size: .9rem; }
+.lab-aud-tab { width: 100%; border-collapse: collapse; font-size: .76rem; }
+.lab-aud-tab td { padding: 5px 4px; border-bottom: 1px dashed var(--borda); vertical-align: top; }
+.lab-aud-tab td:first-child { color: var(--muted); width: 52%; }
+.lab-aud-det { margin: 8px 0; font-size: .74rem; }
+.lab-aud-det summary { cursor: pointer; color: var(--muted); }
+.lab-aud-row { display: flex; justify-content: space-between; padding: 3px 2px; border-bottom: 1px dotted var(--borda); }
+.lab-aud-issues { margin-top: 8px; display: flex; flex-direction: column; gap: 5px; }
+.lab-issue { font-size: .73rem; line-height: 1.45; border-radius: 8px; padding: 6px 8px; border: 1px solid; }
+.lab-issue.erro { border-color: var(--erro); background: rgba(201, 79, 92,.07); }
+.lab-issue.aviso { border-color: var(--lume); background: rgba(212, 175, 55,.06); }
+.lab-issue.info { border-color: var(--borda); background: rgba(139,147,167,.05); color: var(--muted); }
+.lab-issue.ok { border-color: var(--dominado); background: rgba(63, 174, 106,.06); }
+
+/* ---------- GRIMÓRIO ---------- */
+.lab-grimorio { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.lab-grim-card {
+    background: var(--bancada); border: 1px solid var(--borda); border-radius: var(--radius); padding: 12px;
+}
+.lab-grim-head { display: flex; justify-content: space-between; align-items: center; font-family: var(--font); font-weight: 800; }
+.lab-grim-ct { color: var(--lume); font-size: .8rem; border: 1px solid var(--lume); border-radius: 999px; padding: 2px 9px; }
+.lab-grim-meta { color: var(--muted); font-size: .72rem; margin: 5px 0 8px; }
+.lab-grim-comp { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.lab-chip {
+    background: var(--pedra); border: 1px solid var(--borda); border-radius: 999px;
+    padding: 2px 8px; font-size: .66rem;
+}
+.lab-chip small { color: var(--lume); }
+.lab-chip.dom { border-color: var(--dominado); color: var(--dominado); }
+.lab-chip.sim { border-color: var(--sinal); color: var(--sinal); }
+.lab-grim-acoes { display: flex; gap: 6px; }
+.lab-grim-acoes button {
+    background: var(--pedra); border: 1px solid var(--borda); color: var(--ink);
+    border-radius: 8px; padding: 5px 10px; cursor: pointer; font-size: .74rem;
+}
+.lab-grim-acoes button:hover { border-color: var(--lume); }
+.lab-grim-acoes button.perigo:hover { border-color: var(--erro); color: var(--erro); }
+
+/* ---------- COMPÊNDIO ---------- */
+.lab-compendio { max-width: 900px; margin: 0 auto; }
+.lab-comp-sec {
+    background: var(--bancada); border: 1px solid var(--borda); border-radius: var(--radius);
+    margin-bottom: 8px; overflow: hidden;
+}
+.lab-comp-sec summary {
+    cursor: pointer; padding: 11px 14px; font-family: var(--font); font-weight: 800; color: var(--ink);
+    list-style: none;
+}
+.lab-comp-sec summary::-webkit-details-marker { display: none; }
+.lab-comp-sec[open] summary { border-bottom: 1px solid var(--borda); }
+/* Tipografia do corpo vem de shared/texto-mundo.css (mesma folha do
+   Escritório do Cronista). O seletor duplo repete o tamanho de leitura
+   daqui porque aquela folha carrega depois desta — e mantém o compêndio
+   correto mesmo se o container ainda não tiver a classe. */
+.lab-comp-body { padding: 12px 16px; }
+.lab-comp-body, .lab-comp-body.texto-mundo { font-size: .82rem; line-height: 1.65; }
+.lab-comp-body h4 { color: var(--ink); font-family: var(--font); font-weight: 800; margin: 14px 0 6px; }
+.lab-comp-body table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: .76rem; }
+.lab-comp-body th, .lab-comp-body td { border: 1px solid var(--borda); padding: 5px 7px; text-align: left; vertical-align: top; }
+.lab-comp-body th { background: var(--pedra); color: var(--muted); font-weight: 600; }
+.lab-comp-body em { color: var(--muted); }
+
+/* ---------- MODAL ---------- */
+.lab-modal {
+    position: fixed; inset: 0; background: rgba(4, 6, 12, .78); z-index: 60;
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.lab-modal-caixa {
+    position: relative; background: var(--bancada); border: 1px solid var(--lume);
+    border-radius: var(--radius); max-width: 640px; width: 100%; max-height: 84vh; overflow-y: auto;
+    padding: 18px; box-shadow: 0 0 40px rgba(212, 175, 55,.15);
+}
+.lab-modal-x {
+    position: absolute; top: 8px; right: 10px; background: none; border: none;
+    color: var(--muted); font-size: 16px; cursor: pointer;
+}
+.lab-modal-corpo h3 { font-family: var(--font); font-weight: 800; color: var(--ink); margin: 0 0 6px; }
+.lab-modal-corpo h3 small { color: var(--muted); font-weight: normal; }
+.lab-modal-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.lab-modal-img { float: right; width: 110px; margin: 0 0 8px 12px; }
+.lab-modal-tab { width: 100%; border-collapse: collapse; font-size: .72rem; margin-top: 8px; }
+.lab-modal-tab th, .lab-modal-tab td { border: 1px solid var(--borda); padding: 4px 6px; }
+.lab-modal-tab th { background: var(--pedra); color: var(--muted); }
+.lab-modal-tab tr.sel td { background: rgba(212, 175, 55,.1); }
+
+/* ---------- MISC ---------- */
+.lab-empty { text-align: center; color: var(--muted); padding: 30px 12px; line-height: 1.8; grid-column: 1/-1; }
+.lab-toast {
+    position: fixed; bottom: 22px; left: 50%; transform: translate(-50%, 16px);
+    background: var(--bancada); border: 1px solid var(--lume); color: var(--ink);
+    border-radius: 10px; padding: 10px 18px; opacity: 0; transition: .3s; z-index: 70; font-size: .84rem;
+}
+.lab-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- RESPONSIVO ---------- */
+@media (max-width: 1100px) {
+    .lab-montagem { grid-template-columns: 240px 1fr; }
+    .lab-col-audit { grid-column: 1 / -1; max-height: none; }
+}
+@media (max-width: 720px) {
+    .lab-montagem { grid-template-columns: 1fr; }
+    .lab-paleta { max-height: 34vh; max-height: 34dvh; }
+    .lab-canvas { height: 52vh; height: 52dvh; min-height: 300px; }
+    .lab-char { text-align: left; margin-left: 0; width: 100%; }
+    .lab-modal-caixa { max-height: 88vh; max-height: 88dvh; }
+}
+
+/* Toque: itens da paleta e ações com alvo confortável */
+@media (pointer: coarse) {
+    .lab-pal-item { min-height: 40px; }
+    .lab-grim-acoes button { min-height: 40px; padding: 8px 12px; }
+    .lab-modal-x { font-size: 20px; padding: 8px 12px; }
+    .lab-node-del { width: 26px; height: 26px; }
+}

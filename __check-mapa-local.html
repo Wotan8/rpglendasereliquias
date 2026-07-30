@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Check — Mapa Tático do Local</title>
+    <link rel="stylesheet" href="shared/tokens.css">
+    <link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=2">
+    <style>
+        body { background: var(--lr-bg-0); color: var(--lr-text-1); font-family: var(--lr-font-body); margin: 0; padding: 24px; }
+        #res { white-space: pre-wrap; font-family: monospace; font-size: 13px; }
+        .ok { color: #3FAE6A; } .fail { color: #C94F5C; font-weight: 700; }
+        .btn { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--lr-border); background: var(--lr-surface); color: var(--lr-text-1); cursor: pointer; }
+        .btn-secondary { } .btn-success { border-color: #3FAE6A; } .btn-sm { font-size: 12px; }
+    </style>
+</head>
+
+<body>
+    <h1>Check — editor de mapa tático</h1>
+    <div id="res">rodando…</div>
+
+    <script type="module">
+        import './worldbuilding/js/wb-mapa-local.js';
+        const casos = [];
+        const t = (nome, fn) => { try { casos.push([nome, !!fn(), '']); } catch (e) { casos.push([nome, false, e.message]); } };
+        const espera = (ms) => new Promise(r => setTimeout(r, ms));
+        // O clique dispara um handler ASSÍNCRONO (getDoc sem auth pode demorar
+        // até rejeitar) — espere a condição, nunca um tempo fixo.
+        const ate = async (fn, ms = 10000) => {
+            const t0 = Date.now();
+            while (Date.now() - t0 < ms) { if (fn()) return true; await espera(120); }
+            return false;
+        };
+
+        // O botão flutuante de menu é criado pelo wb-main.js, que este check
+        // não carrega — recriado aqui só para valer a regra CSS que o esconde.
+        const nav = document.createElement('button');
+        nav.id = 'wbNavToggle'; nav.className = 'wb-nav-toggle'; nav.textContent = '«';
+        document.body.appendChild(nav);
+
+        // Regressão: o clique REAL passa pelo atributo onclick gerado pelo
+        // wb-core — era aqui que aspas no nome quebravam o handler em silêncio.
+        const host = document.createElement('div');
+        host.innerHTML = `<button id="btnFicha" type="button" onclick="abrirMapaLocal('geo_fake')">abrir</button>`;
+        document.body.appendChild(host);
+        document.getElementById('btnFicha').click();
+        const abriu = await ate(() => document.getElementById('wbMapaLocal'));
+        t('clique no botão da ficha abre o editor', () => abriu);
+
+        t('overlay montado', () => document.getElementById('wbMapaLocal'));
+        t('barra de config presente', () => document.getElementById('wbmlLargura') && document.getElementById('wbmlAmbiente') && document.getElementById('wbmlLuzAtiva'));
+        t('6 ferramentas (parede, porta, janela, luz, npc, apagar)', () =>
+            document.querySelectorAll('[data-wbml-tool]').length === 6);
+        t('estado vazio visível', () => !document.getElementById('wbmlVazio').hidden);
+        t('parede começa ativa', () => document.querySelector('[data-wbml-tool="parede"]').classList.contains('is-on'));
+
+        // troca de ferramenta (dentro de t(): se o overlay não abriu, vira ❌ e não mata o script)
+        t('troca para luz marca o botão', () => {
+            document.querySelector('[data-wbml-tool="luz"]').click();
+            return document.querySelector('[data-wbml-tool="luz"]').classList.contains('is-on')
+                && !document.querySelector('[data-wbml-tool="parede"]').classList.contains('is-on');
+        });
+
+        // salvar sem mapa deve avisar, não gravar
+        t('salvar sem mapa avisa', () => { document.getElementById('wbmlSalvar').click(); return true; });
+        await espera(100);
+        t('aviso ⚠️ apareceu', () => document.getElementById('wbmlDica').textContent.includes('⚠️'));
+
+        // Regressão: `display:flex` do CSS vencia o atributo [hidden] e o
+        // overlay "Nenhum mapa ainda" ficava NA FRENTE do mapa enviado.
+        t('overlay some quando hidden (upload feito)', () => {
+            const vazio = document.getElementById('wbmlVazio');
+            vazio.hidden = true;
+            const sumiu = getComputedStyle(vazio).display === 'none';
+            vazio.hidden = false;
+            return sumiu;
+        });
+
+        // O botão flutuante de menu (z-index 1300 > overlay) cobria o título.
+        t('botão de menu do worldbuilding some com o editor aberto', () =>
+            getComputedStyle(document.getElementById('wbNavToggle')).display === 'none');
+
+        // Formas de parede
+        t('4 formas de parede disponíveis', () => document.querySelectorAll('[data-wbml-forma]').length === 4);
+        t('linha começa ativa', () => document.querySelector('[data-wbml-forma="linha"]').classList.contains('is-on'));
+        t('trocar para elipse marca só ela', () => {
+            document.querySelector('[data-wbml-forma="elipse"]').click();
+            return document.querySelector('[data-wbml-forma="elipse"]').classList.contains('is-on')
+                && !document.querySelector('[data-wbml-forma="linha"]').classList.contains('is-on');
+        });
+
+        // Cada ferramenta mostra só os seus controles
+        t('grupo de forma só aparece em Parede', () => {
+            document.querySelector('[data-wbml-tool="parede"]').click();
+            const forma = getComputedStyle(document.getElementById('wbmlGrupoParede')).display !== 'none';
+            const luz = getComputedStyle(document.getElementById('wbmlGrupoLuz')).display === 'none';
+            return forma && luz;
+        });
+        t('grupo de NPC só aparece em NPC', () => {
+            document.querySelector('[data-wbml-tool="npc"]').click();
+            return getComputedStyle(document.getElementById('wbmlGrupoNpc')).display !== 'none'
+                && getComputedStyle(document.getElementById('wbmlGrupoParede')).display === 'none';
+        });
+        t('camadas do NPC: tokens e DM', () => {
+            const opts = [...document.getElementById('wbmlNpcCamada').options].map(o => o.value);
+            return opts.length === 2 && opts.includes('tokens') && opts.includes('dm');
+        });
+
+        // ESC fecha (bubbles: como um teclado de verdade)
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        t('ESC fecha o editor', () => !document.getElementById('wbMapaLocal'));
+        t('botão de menu volta ao fechar', () =>
+            getComputedStyle(document.getElementById('wbNavToggle')).display !== 'none');
+
+        const falhas = casos.filter(c => !c[1]).length;
+        document.getElementById('res').innerHTML =
+            `<b class="${falhas ? 'fail' : 'ok'}">${falhas ? falhas + ' FALHA(S)' : 'TODOS OS ' + casos.length + ' CASOS PASSARAM'}</b>\n\n` +
+            casos.map(([n, ok, err]) => `<span class="${ok ? 'ok' : 'fail'}">${ok ? '✅' : '❌'} ${n}${err ? ' — ' + err : ''}</span>`).join('\n');
+    </script>
+</body>
+
+</html>

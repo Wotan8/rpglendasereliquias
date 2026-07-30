@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0E1117">
+    <title>ᛟ Laboratorium Runarum — Lendas & Relíquias</title>
+    <link rel="stylesheet" href="css/laboratorium.css?v=2">
+    <link rel="stylesheet" href="css/lab-print.css">
+    <link rel="stylesheet" href="../shared/tokens.css?v=11">
+    <script src="../shared/theme.js"></script>
+    <script type="module" src="/js/global-favicon.js"></script>
+    <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../shared/lendas-reliquias.css?v=2">
+    <link rel="stylesheet" href="../shared/texto-mundo.css?v=1">
+</head>
+<body>
+    <!-- LOADING -->
+    <div id="labLoading" class="lab-loading">
+        <div class="lab-loading-runa">ᛟ</div>
+        <span>Acendendo os lumes do Laboratorium…</span>
+    </div>
+
+    <!-- APP -->
+    <div id="labWrap" class="lab-wrap" style="display:none">
+        <!-- Cabeçalho padronizado — UMA linha: [🚪 Sair] [Menu/Voltar] [contextuais] [🌙 Tema] [Nome] -->
+        <header class="lab-topo">
+            <button class="lab-sair" onclick="labLogout()" title="Sair da conta">🚪</button>
+            <button class="lab-voltar" onclick="history.length > 1 ? history.back() : location.href='../menu/menu.html'" title="Voltar à ficha / menu">←</button>
+            <h1><span class="runa">ᛟ</span> Laboratorium Runarum</h1>
+            <button id="btnThemeToggle" class="theme-toggle" onclick="toggleTheme()" title="Alternar tema claro/escuro">🌙</button>
+            <div id="labCharInfo" class="lab-char"></div>
+        </header>
+
+        <nav class="lab-tabs">
+            <button class="lab-tab ativo" data-tab="montagem">🛠️ Montagem</button>
+            <button class="lab-tab" data-tab="grimorio">📖 Grimório</button>
+            <button class="lab-tab" data-tab="compendio">📜 Compêndio</button>
+        </nav>
+
+        <!-- ===== MONTAGEM ===== -->
+        <main class="lab-pane lab-montagem" data-pane="montagem">
+            <aside class="lab-col lab-col-paleta">
+                <div class="lab-col-titulo">Elementos Rúnicos <small>(do Painel do Criador)</small></div>
+                <input id="labSearch" type="search" placeholder="🔎 Buscar elemento…">
+                <div id="labPalette" class="lab-paleta"></div>
+                <div class="lab-legenda">
+                    <span><i class="dot dom"></i> dominado</span>
+                    <span><i class="dot sim"></i> simulação</span>
+                </div>
+            </aside>
+
+            <section class="lab-col lab-col-canvas">
+                <div class="lab-canvas-barra">
+                    <input id="labRunaNome" type="text" placeholder="Nome da runa (ex.: Lanterna Perene)">
+                    <button id="labBtnSalvar" disabled>📖 Gravar no Grimório</button>
+                    <button id="labBtnPdf" disabled title="Monte um circuito primeiro">📄 PDF</button>
+                    <button id="labBtnLimpar" class="perigo">🧹</button>
+                </div>
+                <div id="labSimAviso" class="lab-sim-aviso" style="display:none"></div>
+                <div id="labCanvas" class="lab-canvas"></div>
+                <div class="lab-canvas-dica">
+                    Clique num elemento da paleta para adicioná-lo · arraste para posicionar · aproxime
+                    <b style="color:var(--lr-gold)">saída</b> de <b style="color:var(--lr-arcane)">entrada</b> (ou
+                    <b style="color:var(--lr-abyssal-2)">sinal↔sinal</b>) para encaixar · clique numa ligação para rompê-la ·
+                    clique em <b>NvX</b> para mudar o nível · duplo clique abre os detalhes.
+                </div>
+            </section>
+
+            <aside class="lab-col lab-col-audit">
+                <div class="lab-col-titulo">Auditoria do Projeto <small>(§6 — ao vivo)</small></div>
+                <div id="labAudit"></div>
+            </aside>
+        </main>
+
+        <!-- ===== GRIMÓRIO ===== -->
+        <main class="lab-pane" data-pane="grimorio" style="display:none">
+            <div id="labGrimorio" class="lab-grimorio"></div>
+        </main>
+
+        <!-- ===== COMPÊNDIO ===== -->
+        <main class="lab-pane" data-pane="compendio" style="display:none">
+            <div id="labCompendio" class="lab-compendio"></div>
+        </main>
+    </div>
+
+    <!-- MODAL DE ELEMENTO -->
+    <div id="labModal" class="lab-modal" style="display:none">
+        <div class="lab-modal-caixa">
+            <button class="lab-modal-x">✕</button>
+            <div class="lab-modal-corpo"></div>
+        </div>
+    </div>
+
+    <!-- FOLHA TÉCNICA (impressão / PDF) — precisa ser filha direta do <body>:
+         o @media print esconde os irmãos e deixa só ela. -->
+    <div id="labPrintSheet" class="lab-print-sheet" style="display:none" aria-hidden="true"></div>
+
+    <!-- Scripts (ordem importa) -->
+    <script src="js/compendium-data.js"></script>
+    <script src="js/rune-engine.js"></script>
+    <script src="js/canvas.js"></script>
+    <script src="js/rune-export.js"></script>
+    <script src="js/lab-app.js"></script>
+    <script type="module" src="js/lab-firebase.js"></script>
+</body>
+</html>

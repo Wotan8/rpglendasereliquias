@@ -1,0 +1,141 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>__check: modal de classe (módulos + VDs + pecs retráteis)</title>
+<link rel="stylesheet" href="css/styles_wizard.css">
+<style>
+    body { padding: 16px; font-family: system-ui, sans-serif; }
+    #bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    #bar button { padding: 6px 10px; cursor: pointer; }
+    /* O modal é position:fixed; aqui deixamos inline pra inspecionar */
+    .detail-modal { position: static !important; background: none !important; display: block !important; }
+    .detail-modal-content { max-height: none !important; }
+    #out { font: 12px monospace; white-space: pre-wrap; background: #111; color: #9f9; padding: 8px; border-radius: 6px; }
+</style>
+
+<div id="bar"></div>
+<div id="out">carregando…</div>
+<div id="host"></div>
+
+<script src="../ficha-v1.7_1/js/mechanics-engine.js"></script>
+<script src="js/system-data-loader.js"></script>
+<script src="js/race-module.js"></script>
+<script>
+    // escHtml vive em app.js, que arrasta o wizard inteiro. Cópia mínima aqui.
+    function escHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    const log = [];
+    fetch('__check-data.json', { cache: 'no-store' }).then(r => r.json()).then(data => {
+        Object.assign(window._systemData, data, { loaded: true });
+        window.RACES = buildRacesFromFirebase(); // o builder retorna em vez de atribuir
+        buildClassDataFromFirebase();
+        buildDerivedValuesFromFirebase();
+
+        const nomes = data.classes.map(c => c.nome).sort();
+        document.getElementById('bar').innerHTML = nomes
+            .map(n => `<button onclick="mostrar('${n.replace(/'/g, "\\'")}')">${escHtml(n)}</button>`).join('');
+
+        // Asserts: renderiza toda classe e confere as seções esperadas.
+        for (const c of data.classes) {
+            document.getElementById('classModal')?.remove();
+            openClassModal(c.nome);
+            const m = document.getElementById('classModal');
+            if (!m) { log.push(`FALHA ${c.nome}: modal não abriu`); continue; }
+
+            // Localiza a seção pelo título e conta os <details> dentro dela.
+            const secao = titulo => {
+                const t = [...m.querySelectorAll('.detail-section-title')].find(x => x.textContent.includes(titulo));
+                return t ? t.parentElement : null;
+            };
+            const secMod = secao('Módulos da Classe');
+            const secPec = secao('Peculiaridades de Classe');
+
+            const mods = (c.modulosDaClasse || []).length;
+            const dets = secMod ? secMod.querySelectorAll('.detail-collapse').length : 0;
+            const pecs = (window.CLASS_PECULIARITIES[c.nome] || []).length;
+            const detsPec = secPec ? secPec.querySelectorAll('.detail-collapse').length : 0;
+            const abertos = m.querySelectorAll('.detail-collapse[open]').length;
+            const dvs = (c.derivedValueIds || []).length;
+            const secDV = secao('Valores Derivados');
+            const temDV = !!secDV;
+            const detsDV = secDV ? secDV.querySelectorAll('.detail-collapse').length : 0;
+            // VD sem fórmula resolvida = mecânica órfã ou não cadastrada
+            const dvSemFormula = secDV ? [...secDV.querySelectorAll('.detail-collapse')]
+                .filter(d => !d.querySelector('.cm-formula')).length : 0;
+
+            // Estatísticas estruturadas: nenhum item pode ficar só com parágrafo
+            // quando o módulo tem schema preenchido.
+            let semStats = 0;
+            for (const item of m.querySelectorAll('.cm-item')) {
+                if (!item.querySelector('.cm-stat')) semStats++;
+            }
+            const itensTotal = m.querySelectorAll('.cm-item').length;
+
+            // Botão do Laboratorium: só em classes com usaRunomancia
+            const lab = [...m.querySelectorAll('a.btn')].find(a => (a.getAttribute('href') || '').includes('laboratorium'));
+            const deveTerLab = c.usaRunomancia === true;
+
+            const erros = [];
+            if (deveTerLab && !lab) erros.push('usaRunomancia=true mas sem botão do Laboratorium');
+            if (!deveTerLab && lab) erros.push('botão do Laboratorium apareceu sem usaRunomancia');
+            if (lab && lab.target !== '_blank') erros.push('botão do Laboratorium não abre em nova aba');
+            if (mods !== dets) erros.push(`módulos: esperado ${mods} <details>, achei ${dets}`);
+            if (pecs !== detsPec) erros.push(`pecs: esperado ${pecs} <details>, achei ${detsPec}`);
+            if (abertos !== 0) erros.push(`${abertos} bloco(s) já abertos — deviam nascer fechados`);
+            if (dvs > 0 && !temDV) erros.push(`tem ${dvs} derivedValueIds mas seção de VDs não apareceu`);
+            if (dvs !== detsDV) erros.push(`VDs: esperado ${dvs} <details>, achei ${detsDV}`);
+            if (semStats) erros.push(`${semStats}/${itensTotal} itens sem nenhum chip de estatística`);
+
+            const aviso = (dvSemFormula ? `  ⚠ ${dvSemFormula} VD(s) sem fórmula` : '') + (lab ? '  ᛟ lab' : '');
+            log.push(`${erros.length ? 'FALHA' : ' ok  '} ${c.nome.padEnd(22)} mods=${mods}/${dets} pecs=${pecs}/${detsPec} VDs=${dvs}/${detsDV} itens=${itensTotal}${aviso}${erros.length ? '\n        ' + erros.join('\n        ') : ''}`);
+            document.getElementById('classModal')?.remove();
+        }
+
+        // ===== RAÇAS: mesmo padrão de blocos retráteis =====
+        log.push('');
+        for (const r of data.races) {
+            document.getElementById('raceModal')?.remove();
+            openRaceModal(r.nome);
+            const m = document.getElementById('raceModal');
+            if (!m) { log.push(`FALHA ${r.nome}: modal não abriu`); continue; }
+
+            const secao = titulo => {
+                const t = [...m.querySelectorAll('.detail-section-title')].find(x => x.textContent.includes(titulo));
+                return t ? t.parentElement : null;
+            };
+            const secDV = secao('Valores Derivados');
+            const secPec = secao('Peculiaridades Raciais');
+
+            const dvs = (r.derivedValueIds || []).length;
+            const detsDV = secDV ? secDV.querySelectorAll('.detail-collapse').length : 0;
+            const pecs = (window.RACES[r.nome]?.peculiaridades || []).length;
+            const detsPec = secPec ? secPec.querySelectorAll('.detail-collapse').length : 0;
+            const abertos = m.querySelectorAll('.detail-collapse[open]').length;
+            const comInicial = m.querySelectorAll('.cm-stat').length;
+
+            const erros = [];
+            if (dvs !== detsDV) erros.push(`VDs: esperado ${dvs} <details>, achei ${detsDV}`);
+            if (pecs !== detsPec) erros.push(`pecs: esperado ${pecs} <details>, achei ${detsPec}`);
+            if (abertos !== 0) erros.push(`${abertos} bloco(s) já abertos`);
+            if (m.querySelector('.detail-pec-list')) erros.push('ainda usa lista plana .detail-pec-list');
+
+            log.push(`${erros.length ? 'FALHA' : ' ok  '} 🧬 ${r.nome.padEnd(19)} VDs=${dvs}/${detsDV} pecs=${pecs}/${detsPec} vlrInicial=${comInicial}${erros.length ? '\n        ' + erros.join('\n        ') : ''}`);
+            document.getElementById('raceModal')?.remove();
+        }
+
+        const falhas = log.filter(l => l.startsWith('FALHA')).length;
+        document.getElementById('out').textContent =
+            (falhas ? `❌ ${falhas} FALHA(S)\n\n` : `✅ ${data.classes.length} CLASSES + ${data.races.length} RAÇAS OK\n\n`) + log.join('\n');
+        mostrar('Bardo');
+    }).catch(e => { document.getElementById('out').textContent = 'ERRO: ' + e.message; });
+
+    function mostrar(nome) {
+        document.getElementById('classModal')?.remove();
+        openClassModal(nome);
+        const m = document.getElementById('classModal');
+        if (m) document.getElementById('host').replaceChildren(m);
+    }
+</script>

@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "lendasereliquiasrpg"
-  }
+    "default": "rpg-lendasereliquias"
+  },
+  "targets": {},
+  "etags": {}
 }

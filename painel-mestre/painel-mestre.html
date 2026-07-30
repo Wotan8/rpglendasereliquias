@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0E1117">
+    <title>Lendas e Relíquias — Painel do Mestre</title>
+    <link rel="stylesheet" href="css/base.css?v=1">
+    <link rel="stylesheet" href="css/layout.css?v=4">
+    <link rel="stylesheet" href="css/tabs.css?v=1">
+    <link rel="stylesheet" href="css/modais.css?v=2">
+    <link rel="stylesheet" href="css/area-mesas.css?v=2">
+    <link rel="stylesheet" href="css/area-npcs.css?v=5">
+    <link rel="stylesheet" href="css/area-economica.css?v=2">
+    <link rel="stylesheet" href="css/area-apoio.css?v=1">
+    <link rel="stylesheet" href="css/area-historico.css?v=2">
+    <link rel="stylesheet" href="../ficha-v1.7_1/css/inventory.css?v=3">
+    <link rel="stylesheet" href="../ficha-v1.7_1/css/equip-modal.css?v=2">
+<script type="module" src="/js/global-favicon.js"></script>
+    <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../shared/tokens.css?v=11">
+    <link rel="stylesheet" href="../shared/lendas-reliquias.css?v=2">
+    <script src="../shared/theme.js?v=1"></script>
+</head>
+<body>
+    <!-- LOADING -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Carregando Painel do Mestre...</div>
+    </div>
+
+    <!-- TOOLBAR — ordem padronizada: [🚪 Sair] [🏠 Menu] [contextuais] [spacer] [Nome] -->
+    <div class="toolbar" style="display:none">
+        <button onclick="logout()" title="Sair da conta"
+            style="background:var(--lr-blood-2);color:var(--lr-divine);border:none;font-weight:700">🚪 Sair</button>
+        <button onclick="goToMenu()" title="Menu principal">🏠 Menu</button>
+        <button onclick="goToWorldbuilding()">🌍 Worldbuilding</button>
+        <button onclick="goToHexmap()">🗺️ Hexmap</button>
+        <div class="spacer"></div>
+        <button id="btnThemeToggle" onclick="toggleTheme()" title="Alternar tema">🌙</button>
+        <div class="user-info">
+            <span class="user-name" id="userDisplayName"></span>
+        </div>
+    </div>
+
+    <!-- MAIN WRAP -->
+    <div class="wrap" style="display:none">
+        <div class="sheet">
+            <div class="menu-header">
+                <h1>⚔️ Painel do Mestre</h1>
+                <div class="subtitle">Lendas e Relíquias — Gestão de Campanha</div>
+            </div>
+
+            <!-- TABS -->
+            <div class="tabs">
+                <button class="tab-button active" data-tab="mesas" onclick="switchTab('mesas')">🎲 MESAS</button>
+                <button class="tab-button" data-tab="npcs" onclick="switchTab('npcs')">👥 NPCs</button>
+                <button class="tab-button" data-tab="economica" onclick="switchTab('economica')">💰 ECONÔMICA</button>
+                <button class="tab-button" data-tab="apoio" onclick="switchTab('apoio')">🤝 APOIO</button>
+                <button class="tab-button" data-tab="historico" onclick="switchTab('historico')">📜 HISTÓRICO</button>
+            </div>
+
+            <!-- TAB: MESAS -->
+            <div class="tab-content active" id="tab-mesas">
+                <!-- SCREEN 1: Mesa Selection -->
+                <div id="mesa-selection-screen">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+                        <h2 style="font-size:1.1rem;font-weight:800;color:var(--light);margin:0">🎲 Suas Mesas</h2>
+                        <button class="btn btn-success btn-small" onclick="openCreateMesaModal()">➕ Criar Mesa</button>
+                    </div>
+                    <div id="mesasGrid" class="mesas-grid">
+                        <div style="text-align:center;padding:50px;color:var(--muted);grid-column:1/-1">Carregando mesas...</div>
+                    </div>
+                </div>
+
+                <!-- SCREEN 2: Mesa Auth -->
+                <div id="mesa-auth-screen" style="display:none">
+                    <div class="mesa-auth-box">
+                        <button class="btn btn-secondary btn-small" onclick="backToMesaList()" style="align-self:flex-start">← Voltar</button>
+                        <div style="font-size:2.5rem;margin:10px 0">🔒</div>
+                        <h2 id="mesaAuthName" style="font-size:1.2rem;font-weight:800;color:var(--light);margin-bottom:4px"></h2>
+                        <p style="color:var(--muted);font-size:.88rem;margin-bottom:20px">Digite a senha para acessar esta mesa</p>
+                        <input type="password" class="form-input" id="mesaPasswordInput" placeholder="Senha da mesa..." style="text-align:center;max-width:300px" onkeydown="if(event.key==='Enter')authenticateMesa()">
+                        <button class="btn btn-primary" onclick="authenticateMesa()" style="margin-top:12px">🔓 Entrar</button>
+                    </div>
+                </div>
+
+                <!-- SCREEN 3: Mesa Content (after auth) -->
+                <div id="mesa-content" style="display:none">
+                    <div class="mesa-header-bar">
+                        <button class="btn btn-secondary btn-small" onclick="closeMesa()">← Mesas</button>
+                        <button class="btn btn-primary btn-small" onclick="openTabuleiro()" title="Abrir o Tabuleiro (VTT) desta mesa em modo secreto">🗺️ Tabuleiro</button>
+                        <h2 id="mesaContentName" style="font-size:1.1rem;font-weight:800;color:var(--primary);margin:0"></h2>
+                        <button class="btn btn-danger btn-small" onclick="openDeleteMesaModal()">🗑️</button>
+                    </div>
+                    <div class="sub-tabs">
+                        <button class="sub-tab-btn active" data-subtab="m-jogadores" onclick="switchMesaSubTab('m-jogadores')">👥 Jogadores</button>
+                        <button class="sub-tab-btn" data-subtab="m-personagens" onclick="switchMesaSubTab('m-personagens')">🎭 Personagens</button>
+                        <button class="sub-tab-btn" data-subtab="m-sessoes" onclick="switchMesaSubTab('m-sessoes')">📝 Sessões</button>
+                        <button class="sub-tab-btn" data-subtab="m-config" onclick="switchMesaSubTab('m-config')">⚙️ Config</button>
+                        <button class="sub-tab-btn" data-subtab="m-npcs" onclick="switchMesaSubTab('m-npcs')">👹 NPCs</button>
+                        <button class="sub-tab-btn" data-subtab="m-inventario" onclick="switchMesaSubTab('m-inventario')">📦 Kits</button>
+                        <button class="sub-tab-btn" data-subtab="m-notas" onclick="switchMesaSubTab('m-notas')">📝 Notas</button>
+                        <button class="sub-tab-btn" data-subtab="m-combate" onclick="switchMesaSubTab('m-combate')">⚔️ Combate</button>
+                        <button class="sub-tab-btn" data-subtab="m-logs" onclick="switchMesaSubTab('m-logs')">📜 Logs</button>
+                    </div>
+
+                    <!-- Sub-tab: Jogadores -->
+                    <div class="sub-tab-content active" id="subtab-m-jogadores">
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                            <button class="btn btn-success btn-small" onclick="openLinkPlayerModal()">➕ Vincular Jogador</button>
+                            <button class="btn btn-primary btn-small" onclick="openMesaNotificationModal()">📢 Notificar</button>
+                        </div>
+                        <div id="mesaPlayersList" class="player-list">
+                            <div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Carregando jogadores...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: Personagens -->
+                    <div class="sub-tab-content" id="subtab-m-personagens">
+                        <div class="exp-controls">
+                            <button class="btn btn-warning btn-small" id="btnToggleExp" onclick="toggleExpMode()">⭐ +EXP</button>
+                            <button class="btn btn-primary btn-small" id="btnToggleInventario" onclick="toggleMesaInventoryMode()" style="margin-left: 8px;">🎒 Repertório</button>
+                            <button class="btn btn-primary btn-small" id="btnToggleCondicoes" onclick="toggleMesaConditionsMode()" style="margin-left: 8px;">💀 Condições</button>
+                            <button class="btn btn-primary btn-small" id="btnTogglePeculiaridades" onclick="toggleMesaPeculiaridadesMode()" style="margin-left: 8px;">✨ Peculiaridades</button>
+                        </div>
+                        <div id="expBulkActions" style="display:none;gap:8px;margin-bottom:12px">
+                            <button class="btn btn-success btn-small" onclick="applyExpBulk(true)">✅ +ADD</button>
+                            <button class="btn btn-danger btn-small" onclick="applyExpBulk(false)">❌ -RMV</button>
+                            <button class="btn btn-secondary btn-small" onclick="toggleExpMode()">Cancelar</button>
+                        </div>
+                        <div class="player-list" id="mesaCharactersGrid">
+                            <div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Carregando personagens...</div>
+                        </div>
+                        <div id="mesaCharactersInventoryContainer" style="display:none; margin-top: 16px;">
+                            <div style="text-align:center;padding:40px;color:var(--muted)">Carregando inventários...</div>
+                        </div>
+                        <div id="mesaCharactersConditionsContainer" style="display:none; margin-top: 16px;">
+                            <div style="text-align:center;padding:40px;color:var(--muted)">Carregando condições...</div>
+                        </div>
+                        <div id="mesaCharactersPeculiaridadesContainer" style="display:none; margin-top: 16px;">
+                            <div style="text-align:center;padding:40px;color:var(--muted)">Carregando peculiaridades...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: Sessões -->
+                    <div class="sub-tab-content" id="subtab-m-sessoes">
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                            <button class="btn btn-success btn-small" onclick="openCreateSessionLogModal()">➕ Novo Log</button>
+                        </div>
+                        <div id="sessionLogsList">
+                            <div style="text-align:center;padding:50px;color:var(--muted)"><div style="font-size:2.5rem;margin-bottom:12px">📝</div>Carregando logs de sessão...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: Config -->
+                    <div class="sub-tab-content" id="subtab-m-config">
+                        <div id="mesaConfigContent">
+                            <div style="text-align:center;padding:50px;color:var(--muted)">Carregando configurações...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: NPCs -->
+                    <div class="sub-tab-content" id="subtab-m-npcs">
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                            <button class="btn btn-success btn-small" onclick="openCreateMesaNpcModal()">➕ Novo NPC</button>
+                            <button class="btn btn-primary btn-small" onclick="openLinkNpcModal()">🔗 Vincular NPC</button>
+                        </div>
+                        <div id="mesaNpcsList" class="npcs-grid">
+                            <div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Carregando NPCs...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: Repertório -->
+                    <div class="sub-tab-content" id="subtab-m-inventario">
+                        <div id="mesaInventarioContent">
+                            <div style="text-align:center;padding:50px;color:var(--muted)">Carregando inventários...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: Notas -->
+                    <div class="sub-tab-content" id="subtab-m-notas">
+                        <div id="mesaNotasContent">
+                            <div style="text-align:center;padding:50px;color:var(--muted)">Carregando notas...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: Combate -->
+                    <div class="sub-tab-content" id="subtab-m-combate">
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                            <button class="btn btn-primary btn-small" onclick="addCharacterToCombat()">➕ Personagem</button>
+                            <button class="btn btn-warning btn-small" onclick="addNpcToCombat()">➕ NPC</button>
+                            <button class="btn btn-secondary btn-small" onclick="addCustomToCombat()">➕ Custom</button>
+                            <button class="btn btn-success btn-small" onclick="sortCombatByInitiative()">🔄 Ordenar</button>
+                            <button class="btn btn-danger btn-small" onclick="clearCombat()">🗑️ Limpar</button>
+                        </div>
+                        <div id="combatList" class="combat-list"><div class="no-combat">Nenhum participante no combate</div></div>
+                    </div>
+
+                    <!-- Sub-tab: Logs -->
+                    <div class="sub-tab-content" id="subtab-m-logs">
+                        <div id="mesaLogsFilters"></div>
+                        <div id="mesaLogsList"><div class="no-logs">Carregando logs da mesa...</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: NPCs -->
+            <div class="tab-content" id="tab-npcs">
+                <div class="npc-actions-bar">
+                    <button class="btn btn-success btn-small" onclick="openNpcModal()">➕ Novo NPC</button>
+                    <button class="btn btn-primary btn-small" onclick="selectAllFilteredNpcs()">☑️ Sel. Todos</button>
+                    <button class="btn btn-secondary btn-small" onclick="duplicateSelectedNpcs()">📋 Duplicar</button>
+                    <button class="btn btn-warning btn-small" onclick="exportSelectedNpcs()">📤 Exportar</button>
+                    <button class="btn btn-primary btn-small" onclick="openSpecialExportModal()">📦 Ex.Especial</button>
+                    <button class="btn btn-secondary btn-small" onclick="bulkImportNpcs()">📥 Importar</button>
+                    <button class="btn btn-danger btn-small" onclick="deleteSelectedNpcs()">🗑️ Deletar</button>
+                </div>
+                <div class="npc-filters-advanced-container">
+                    <!-- Nível 1: Barra Principal -->
+                    <div class="npc-filters-main-bar" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:8px;">
+                        <div class="form-group" style="flex: 1; min-width: 200px;">
+                            <label class="form-label">Buscar Geral</label>
+                            <input type="text" class="form-input" id="npcSearchInput" placeholder="Nome, local, tags, história..." oninput="debounceFilterNpcs()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Ordenação</label>
+                            <select class="form-select" id="npcSortSelect" onchange="filterNpcs()">
+                                <option value="nome-asc">Nome A-Z</option>
+                                <option value="nome-desc">Nome Z-A</option>
+                                <option value="ai-desc">AI ↓</option>
+                                <option value="ai-asc">AI ↑</option>
+                                <option value="vit-desc">VIT ↓</option>
+                                <option value="vit-asc">VIT ↑</option>
+                                <option value="recente">Mais recente</option>
+                                <option value="antigo">Mais antigo</option>
+                                <option value="random">Aleatório</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="toggleAdvancedNpcFilters()" style="height: 38px; display:flex; align-items:center; gap:6px;">
+                            ⚙️ Filtros <span id="advFilterBadge" class="filter-badge" style="display:none">0</span>
+                        </button>
+                        <button class="btn btn-secondary" id="clearAdvFiltersBtn" onclick="clearAllNpcFilters()" style="height: 38px; display:none;">🧹 Limpar</button>
+                        <div style="margin-left:auto; font-size:0.85rem; color:var(--muted); font-weight:600; display:flex; align-items:center; height:38px;" id="npcCountDisplay">
+                            Carregando...
+                        </div>
+                    </div>
+                    
+                    <!-- Chips de Filtros Ativos -->
+                    <div id="npcActiveFilterChips" class="active-filter-chips" style="display:none; gap:6px; flex-wrap:wrap; margin-bottom:10px;"></div>
+
+                    <!-- Nível 2: Painel Avançado -->
+                    <div id="npcAdvancedPanel" class="npc-advanced-panel" style="display:none;">
+                        
+                        <div class="adv-filters-section">
+                            <div class="adv-filters-header">📋 Identificação</div>
+                            <div class="adv-filters-grid">
+                                <div class="form-group"><label class="form-label">Tipo</label><select class="form-select adv-filter" id="advF_tipo" onchange="filterNpcs()"><option value="">Todos</option><option value="npc">👤 NPC</option><option value="criatura">🐉 Criatura</option></select></div>
+                                <div class="form-group"><label class="form-label">Porte</label><select class="form-select adv-filter" id="advF_porte" onchange="filterNpcs()"><option value="">Todos</option><option value="Míudo">Míudo</option><option value="Pequeno">Pequeno</option><option value="Médio">Médio</option><option value="Grande">Grande</option><option value="Enorme">Enorme</option><option value="Colossal">Colossal</option></select></div>
+                                <div class="form-group"><label class="form-label">Papel</label><input type="text" class="form-input adv-filter" id="advF_papel" placeholder="Ex: Ferreiro" oninput="debounceFilterNpcs()"></div>
+                                <div class="form-group"><label class="form-label">Local</label><input type="text" class="form-input adv-filter" id="advF_local" placeholder="Ex: Kensari" oninput="debounceFilterNpcs()"></div>
+                                <div class="form-group"><label class="form-label">Raça</label><input type="text" class="form-input adv-filter" id="advF_raca" placeholder="Ex: Humano" oninput="debounceFilterNpcs()"></div>
+                                <div class="form-group"><label class="form-label">Tribo</label><input type="text" class="form-input adv-filter" id="advF_tribo" placeholder="Tribo..." oninput="debounceFilterNpcs()"></div>
+                                <div class="form-group"><label class="form-label">Classe</label><input type="text" class="form-input adv-filter" id="advF_classe" placeholder="Classe..." oninput="debounceFilterNpcs()"></div>
+                                <div class="form-group"><label class="form-label">Tags (CSV)</label><input type="text" class="form-input adv-filter" id="advF_tags" placeholder="tag1, tag2..." oninput="debounceFilterNpcs()"></div>
+                                <div class="form-group"><label class="form-label">Imagem</label><select class="form-select adv-filter" id="advF_imagem" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Com imagem</option><option value="nao">Sem imagem</option></select></div>
+                            </div>
+                        </div>
+
+                        <div class="adv-filters-section">
+                            <div class="adv-filters-header">💪 Atributos (Min/Max)</div>
+                            <div class="adv-filters-grid attrs-grid">
+                                <div class="form-group"><label class="form-label">INT</label><div class="range-inputs"><input type="number" id="advF_int_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_int_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">RAC</label><div class="range-inputs"><input type="number" id="advF_rac_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_rac_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">PRS</label><div class="range-inputs"><input type="number" id="advF_prs_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_prs_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">FOR</label><div class="range-inputs"><input type="number" id="advF_for_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_for_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">DES</label><div class="range-inputs"><input type="number" id="advF_des_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_des_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">VIG</label><div class="range-inputs"><input type="number" id="advF_vig_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_vig_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">PRE</label><div class="range-inputs"><input type="number" id="advF_pre_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_pre_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">MAN</label><div class="range-inputs"><input type="number" id="advF_man_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_man_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">AUT</label><div class="range-inputs"><input type="number" id="advF_aut_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_aut_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">AI</label><div class="range-inputs"><input type="number" id="advF_ai_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_ai_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                            </div>
+                        </div>
+
+                        <div class="adv-filters-section">
+                            <div class="adv-filters-header">📊 Valores Derivados (Min/Max)</div>
+                            <div class="adv-filters-grid">
+                                <div class="form-group"><label class="form-label">VIT</label><div class="range-inputs"><input type="number" id="advF_vit_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_vit_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">ENER</label><div class="range-inputs"><input type="number" id="advF_ener_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_ener_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                                <div class="form-group"><label class="form-label">SAN</label><div class="range-inputs"><input type="number" id="advF_san_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_san_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                            </div>
+                        </div>
+
+                        <div class="adv-filters-section">
+                            <div class="adv-filters-header">🎭 Role-Play</div>
+                            <div class="adv-filters-grid">
+                                <div class="form-group"><label class="form-label">Motivação</label><select class="form-select adv-filter" id="advF_mot" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Tem</option><option value="nao">Não tem</option></select></div>
+                                <div class="form-group"><label class="form-label">Segredos</label><select class="form-select adv-filter" id="advF_seg" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Tem</option><option value="nao">Não tem</option></select></div>
+                                <div class="form-group"><label class="form-label">Aliado</label><select class="form-select adv-filter" id="advF_ali" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Tem</option><option value="nao">Não tem</option></select></div>
+                                <div class="form-group"><label class="form-label">Rival</label><select class="form-select adv-filter" id="advF_riv" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Tem</option><option value="nao">Não tem</option></select></div>
+                                <div class="form-group"><label class="form-label">Devedor</label><select class="form-select adv-filter" id="advF_dev" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Tem</option><option value="nao">Não tem</option></select></div>
+                                <div class="form-group" style="grid-column: 1 / -1;"><label class="form-label">Busca RP Livre</label><input type="text" class="form-input adv-filter" id="advF_rpBusca" placeholder="Pesquisa em toda história, motivações, segredos, falas..." oninput="debounceFilterNpcs()"></div>
+                            </div>
+                        </div>
+
+                        <div class="adv-filters-section">
+                            <div class="adv-filters-header">🎁 Loot</div>
+                            <div class="adv-filters-grid">
+                                <div class="form-group"><label class="form-label">Tem itens?</label><select class="form-select adv-filter" id="advF_lootItens" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Sim</option><option value="nao">Não</option></select></div>
+                                <div class="form-group"><label class="form-label">Tem pistas?</label><select class="form-select adv-filter" id="advF_lootPistas" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Sim</option><option value="nao">Não</option></select></div>
+                                <div class="form-group"><label class="form-label">Complicações?</label><select class="form-select adv-filter" id="advF_lootComp" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Sim</option><option value="nao">Não</option></select></div>
+                                <div class="form-group"><label class="form-label">Luns (Extração)</label><div class="range-inputs"><input type="number" id="advF_luns_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_luns_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
+                            </div>
+                        </div>
+
+                        <div class="adv-filters-section" id="advF_criaturaSection">
+                            <div class="adv-filters-header">🐉 Criatura</div>
+                            <div class="adv-filters-grid">
+                                <div class="form-group"><label class="form-label">Nível de Ameaça</label><select class="form-select adv-filter" id="advF_ameaca" onchange="filterNpcs()"><option value="">Todos</option><option value="inofensivo">Inofensivo</option><option value="baixo">Baixo</option><option value="medio">Médio</option><option value="alto">Alto</option><option value="letal">Letal</option></select></div>
+                                <div class="form-group"><label class="form-label">Habitat</label><input type="text" class="form-input adv-filter" id="advF_habitat" placeholder="Ex: Floresta" oninput="debounceFilterNpcs()"></div>
+                                <div class="form-group"><label class="form-label">Dieta</label><input type="text" class="form-input adv-filter" id="advF_dieta" placeholder="Ex: Carnívoro" oninput="debounceFilterNpcs()"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="adv-filters-section">
+                            <div class="adv-filters-header">🔗 Vínculo de Mesa</div>
+                            <div class="adv-filters-grid">
+                                <div class="form-group"><label class="form-label">Vínculo</label><select class="form-select adv-filter" id="advF_vinculo" onchange="onVinculoChange()"><option value="">Indiferente</option><option value="com_mesa">Vinculado a alguma</option><option value="sem_mesa">Sem vínculo</option><option value="especifica">Mesa específica...</option></select></div>
+                                <div class="form-group" id="advF_mesaEspecificaContainer" style="display:none;"><label class="form-label">Mesa Específica</label><select class="form-select adv-filter" id="advF_mesaEsp" onchange="filterNpcs()"><option value="">Selecione...</option></select></div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="npcs-grid" id="npcsList"><div class="no-npcs">Carregando NPCs...</div></div>
+            </div>
+
+            <!-- TAB: ECONÔMICA -->
+            <div class="tab-content" id="tab-economica">
+                <div class="sub-tabs">
+                    <button class="sub-tab-btn active" data-subtab="avulsos" onclick="switchSubTab('economica','avulsos')">📦 Recursos Avulsos</button>
+                    <button class="sub-tab-btn" data-subtab="criar" onclick="switchSubTab('economica','criar')">🛠️ Criar Recurso</button>
+                    <button class="sub-tab-btn" data-subtab="economia" onclick="switchSubTab('economica','economia')">💹 Motor Econômico</button>
+                </div>
+                <div class="sub-tab-content active" id="subtab-avulsos">
+                    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+                        <button class="btn btn-success btn-small" onclick="openAddAvulsoItemModal()">➕ Novo Recurso</button>
+                    </div>
+                    <div class="avulsos-filters">
+                        <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="avulsosFilterTipo" onchange="applyAvulsosFilters()"><option value="">Todos</option><option value="Arma">Arma</option><option value="Vestimenta">Vestimenta</option><option value="Projétil">Projétil</option><option value="Objeto">Objeto</option><option value="Container">Container</option><option value="Lunis">Lunis</option></select></div>
+                        <div class="form-group"><label class="form-label">Categoria</label><select class="form-select" id="avulsosFilterCategoria" onchange="applyAvulsosFilters()"><option value="">Todas</option><option value="comida">Comida</option><option value="equipamento">Equipamento</option><option value="armas">Armas</option><option value="armaduras">Armaduras</option><option value="magia">Magia</option><option value="materias">Matérias</option></select></div>
+                        <div class="form-group"><label class="form-label">Buscar</label><input type="text" class="form-input" id="avulsosFilterSearch" placeholder="Nome..." oninput="applyAvulsosFilters()"></div>
+                    </div>
+                    <div id="avulsosItemsCount" style="font-size:.78rem;color:var(--muted);margin-bottom:10px"></div>
+                    <div id="avulsosItemsContainer" style="display:none"><div id="avulsosItemsList"></div></div>
+                    <div id="avulsosItemsEmpty" style="text-align:center;padding:40px;color:var(--muted)">Nenhum recurso avulso encontrado</div>
+                    <div id="avulsoContainerViewer" class="container-viewer" style="display:none">
+                        <div class="container-viewer-header"><span class="container-viewer-title">📂 <span id="avulsoContainerName"></span></span><button class="btn btn-danger btn-small" onclick="closeAvulsoContainerViewer()">✕ Fechar</button></div>
+                        <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Tam. máx: <span id="containerMaxSize">5</span></div>
+                        <div id="containerItemsList"></div>
+                    </div>
+                </div>
+                <div class="sub-tab-content" id="subtab-criar">
+                    <div style="text-align:center;padding:20px;color:var(--muted);margin-bottom:16px">📥 Importar recursos via JSON</div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                        <button class="btn btn-secondary btn-small" onclick="downloadItemTemplate()">📄 Template</button>
+                        <label class="btn btn-primary btn-small" style="cursor:pointer">📁 Arquivo<input type="file" id="jsonFileInput" accept=".json" onchange="handleJsonFileUpload(event)" style="display:none"></label>
+                    </div>
+                    <div id="selectedFileName" style="font-size:.82rem;color:var(--muted);margin-bottom:10px">Nenhum arquivo selecionado</div>
+                    <textarea class="form-textarea" id="jsonTextInput" rows="8" placeholder="Cole o JSON aqui..." style="margin-bottom:14px"></textarea>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+                        <button class="btn btn-primary btn-small" onclick="previewJsonItems()">👁️ Pré-visualizar</button>
+                        <button class="btn btn-success btn-small" onclick="importJsonItemsToAvulso()">📥 Importar</button>
+                        <button class="btn btn-secondary btn-small" onclick="clearJsonInput()">🗑️ Limpar</button>
+                    </div>
+                    <div id="jsonPreviewArea" style="display:none">
+                        <div id="jsonPreviewCount" style="font-size:.82rem;color:var(--muted);margin-bottom:10px"></div>
+                        <div id="jsonPreviewList" style="display:grid;gap:10px"></div>
+                    </div>
+                </div>
+                <div class="sub-tab-content" id="subtab-economia">
+                    <div style="text-align:center;padding:50px;color:var(--muted)"><div style="font-size:2.5rem;margin-bottom:12px">💹</div>Motor Econômico — carregando...</div>
+                </div>
+            </div>
+
+            <!-- TAB: APOIO -->
+            <div class="tab-content" id="tab-apoio">
+                <div class="sub-tabs">
+                    <button class="sub-tab-btn active" data-subtab="apoios" onclick="switchSubTab('apoio','apoios')">🤝 Apoios</button>
+                    <button class="sub-tab-btn" data-subtab="metas" onclick="switchSubTab('apoio','metas')">🎯 Metas</button>
+                    <button class="sub-tab-btn" data-subtab="loja" onclick="switchSubTab('apoio','loja')">🛒 Loja</button>
+                    <button class="sub-tab-btn" data-subtab="compras" onclick="switchSubTab('apoio','compras'); carregarComprasDinheiro()">💵 Compras em Dinheiro</button>
+                    <button class="sub-tab-btn" data-subtab="notificacoes" onclick="switchSubTab('apoio','notificacoes')">📢 Notificações</button>
+                    <button class="sub-tab-btn" data-subtab="producao" onclick="switchSubTab('apoio','producao')">🏭 Produção</button>
+                </div>
+                <div class="sub-tab-content active" id="subtab-apoios">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                        <select class="form-select" id="apoioUserSelect" onchange="loadUserApoios()" style="flex:1;min-width:200px"><option value="">Selecione um jogador...</option></select>
+                    </div>
+
+                    <div id="apoiosStatusMenu" class="sub-tabs" style="display: none; margin-bottom: 20px;">
+                        <button class="sub-tab-btn" id="btn-inner-compras" onclick="switchInnerApoioTab('compras')">🛒 Logs de Compra</button>
+                        <button class="sub-tab-btn active" id="btn-inner-apoios" onclick="switchInnerApoioTab('apoios')">🤝 Logs de Apoio</button>
+                        <button class="sub-tab-btn" id="btn-inner-repertorio" onclick="switchInnerApoioTab('repertorio')">🎒 Repertório</button>
+                    </div>
+
+                    <div id="inner-tab-compras" style="display: none;">
+                        <div id="comprasList"><div style="text-align:center;padding:40px;color:var(--muted)">Selecione um jogador para ver as compras</div></div>
+                    </div>
+
+                    <div id="inner-tab-apoios" style="display: none;">
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                            <button class="btn btn-success btn-small" onclick="openAddApoioModal()">➕ Novo Apoio</button>
+                            <button class="btn btn-primary btn-small" id="btnManageFrag" onclick="openManageFragModal()" style="display:none">💎 Fragmentos</button>
+                        </div>
+                        <div class="apoio-filters" id="apoiosFiltros">
+                            <div class="form-group"><label class="form-label">Status</label><select class="form-select" id="filtroStatus" onchange="aplicarFiltrosApoios()"><option value="todos">Todos</option><option value="nao-recebidos">Não Recebidos</option><option value="recebidos">Recebidos</option></select></div>
+                            <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="filtroTipo" onchange="aplicarFiltrosApoios()"><option value="todos">Todos</option></select></div>
+                            <div class="form-group"><label class="form-label">Data Início</label><input type="date" class="form-input" id="filtroDataInicio" onchange="aplicarFiltrosApoios()"></div>
+                            <div class="form-group"><label class="form-label">Data Fim</label><input type="date" class="form-input" id="filtroDataFim" onchange="aplicarFiltrosApoios()"></div>
+                            <button class="btn btn-secondary btn-small" onclick="limparFiltrosApoios()" style="align-self:flex-end">🗑️ Limpar</button>
+                        </div>
+                        <div id="apoiosList"><div style="text-align:center;padding:40px;color:var(--muted)">Selecione um jogador para ver apoios</div></div>
+                    </div>
+
+                    <div id="inner-tab-repertorio" style="display: none;">
+                        <!-- Sistema de Repertório -->
+                        <div id="repertorioSection" style="display: none; margin-bottom: 25px;">
+                            <div style="background: var(--lr-surface-2); border: 2px solid var(--border); border-radius: 15px; padding: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary);">🎒 Repertório do Jogador</div>
+                                    <button class="btn btn-success" onclick="openAddItemRepertorioModal()" style="padding: 8px 20px; font-size: 0.9rem;">
+                                        ➕ Adicionar Item
+                                    </button>
+                                </div>
+                                <div id="repertorioList">
+                                    <div style="text-align: center; padding: 40px; color: var(--lr-text-2);">
+                                        O repertório está vazio
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sub-tab-content" id="subtab-metas">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                        <button class="btn btn-success btn-small" onclick="openMetaModal()">➕ Nova Meta</button>
+                    </div>
+                    <div id="metasContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+                        <div style="text-align:center;padding:50px;color:var(--muted);grid-column:1/-1;">Carregando metas...</div>
+                    </div>
+                </div>
+                <div class="sub-tab-content" id="subtab-loja">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                        <button class="btn btn-success btn-small" onclick="openLojaModal()">➕ Novo Item</button>
+                    </div>
+                    <div id="lojaContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+                        <div style="text-align:center;padding:50px;color:var(--muted);grid-column:1/-1;">Carregando loja...</div>
+                    </div>
+                </div>
+                <div class="sub-tab-content" id="subtab-compras">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+                        <button class="btn btn-secondary btn-small" onclick="carregarComprasDinheiro()">🔄 Atualizar</button>
+                        <span style="color:var(--muted);font-size:.82rem">Confirme só depois de receber o dinheiro — a confirmação entrega o item na hora.</span>
+                    </div>
+                    <div id="comprasDinheiroContainer">
+                        <div style="text-align:center;padding:50px;color:var(--muted);">Carregando pedidos...</div>
+                    </div>
+                </div>
+                <div class="sub-tab-content" id="subtab-notificacoes">
+                    <button class="btn btn-primary" onclick="openSendNotificationModal()">📢 Enviar Notificação</button>
+                </div>
+                <div class="sub-tab-content" id="subtab-producao">
+                    <div style="margin-bottom:16px;display:flex;gap:8px">
+                        <button class="btn btn-success btn-small" onclick="adicionarItemProducao()">➕ Adicionar Item</button>
+                    </div>
+                    <table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:2px solid var(--line)"><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">☰</th><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">NOME</th><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">PROGRESSO</th><th style="padding:10px;text-align:center;color:var(--muted);font-size:.78rem">AÇÃO</th></tr></thead><tbody id="listaProducaoBody"></tbody></table>
+                </div>
+            </div>
+
+            <!-- TAB: HISTÓRICO -->
+            <div class="tab-content" id="tab-historico">
+                <div id="historicoFilters"></div>
+                <div id="logsList"><div class="no-logs">Carregando histórico...</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAIS GLOBAIS -->
+    <!-- NPC Modal -->
+    <div id="npcModal" class="modal"><div class="modal-content" style="max-width:900px"><div class="modal-header"><span class="modal-title" id="npcModalTitle">Novo NPC</span><button class="modal-close" onclick="closeNpcModal()">✕</button></div><div class="modal-body" id="npcModalBody"></div></div></div>
+
+    <!-- Send Notification Modal -->
+    <div id="sendNotificationModal" class="modal"><div class="modal-content" style="max-width:600px"><div class="modal-header"><span class="modal-title">📢 Enviar Notificação</span><button class="modal-close" onclick="closeSendNotificationModal()">✕</button></div><div class="modal-body">
+        <div class="form-group"><label class="form-label">Mensagem *</label><textarea class="form-textarea" id="notificationMessage" rows="4" placeholder="Digite a mensagem..."></textarea></div>
+        <div class="form-group"><label class="form-label">Destaque</label><div style="display:flex;gap:12px"><label style="cursor:pointer;display:flex;align-items:center;gap:6px"><input type="radio" name="notificationHighlight" value="normal" checked> Normal</label><label style="cursor:pointer;display:flex;align-items:center;gap:6px"><input type="radio" name="notificationHighlight" value="importante"> Importante</label><label style="cursor:pointer;display:flex;align-items:center;gap:6px"><input type="radio" name="notificationHighlight" value="urgente"> Urgente</label></div></div>
+        <div class="form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="selectAllPlayers" onchange="toggleAllPlayersSelection()" style="width:18px;height:18px"> <span class="form-label" style="margin:0">Selecionar Todos</span></label></div>
+        <div id="playerCheckboxList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;max-height:250px;overflow-y:auto"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px"><button class="btn btn-secondary" onclick="closeSendNotificationModal()">Cancelar</button><button class="btn btn-primary" onclick="sendMasterNotification()">📤 Enviar</button></div>
+    </div></div></div>
+
+    <!-- Meta Modal -->
+    <div id="metaModal" class="modal">
+        <div class="modal-content" style="max-width:700px">
+            <div class="modal-header">
+                <span class="modal-title" id="metaModalTitle">Nova Meta</span>
+                <button class="modal-close" onclick="closeMetaModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="meta_id">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <div class="form-group">
+                        <label class="form-label">Nome / Título *</label>
+                        <input type="text" class="form-input" id="meta_nome" placeholder="Ex: Equipamentos Lendários">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Slug (Identificador)</label>
+                        <input type="text" class="form-input" id="meta_slug" placeholder="Ex: equipamentos">
+                        <div style="font-size:0.75rem;color:var(--muted);margin-top:4px">Para legado use: 'classe', 'raca', ou 'lore'.</div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 16px;">
+                    <label class="form-label">Descrição</label>
+                    <textarea class="form-input" id="meta_descricao" rows="3"
+                        placeholder="O que é esta meta e por que vale a pena apoiá-la? Este texto aparece para os jogadores na aba Metas."></textarea>
+                    <div style="font-size:0.75rem;color:var(--muted);margin-top:4px">Visível para os jogadores no Menu.</div>
+                </div>
+
+                <div class="form-group" style="margin-top: 16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <label class="form-label" style="margin:0;">Etapas da Meta</label>
+                        <button class="btn btn-primary btn-small" onclick="addMetaEtapa()">➕ Adicionar Etapa</button>
+                    </div>
+                    <div id="metaEtapasContainer" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;padding-right:4px;">
+                        <!-- Dynamic Steps here -->
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+                    <button class="btn btn-secondary" onclick="closeMetaModal()">Cancelar</button>
+                    <button class="btn btn-success" onclick="saveMeta()">💾 Salvar Meta</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loja Modal -->
+    <div id="lojaModal" class="modal">
+        <div class="modal-content" style="max-width:750px;max-height:90vh;overflow-y:auto;">
+            <div class="modal-header">
+                <span class="modal-title" id="lojaModalTitle">Novo Item da Loja</span>
+                <button class="modal-close" onclick="closeLojaModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="loja_id">
+                
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Nome *</label>
+                        <input type="text" class="form-input" id="loja_nome" placeholder="Ex: Baú de Ouro">
+                        <div style="margin-top:10px;">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                <input type="checkbox" id="loja_is_venda_ativa" style="width:18px;height:18px" checked> <strong>À Venda (Ativo na Loja)</strong>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Imagem</label>
+                        <input type="file" class="form-input" id="loja_imagem" accept="image/*">
+                        <div id="loja_imagem_preview" style="margin-top:6px;max-height:80px;display:none;"></div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label class="form-label">Descrição</label>
+                    <textarea class="form-textarea" id="loja_descricao" rows="2" placeholder="Descrição do item..."></textarea>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                    <div class="form-group">
+                        <label class="form-label">Preço em R$ <span style="font-weight:400;font-size:0.75rem;color:var(--muted);">(vazio = não vende por dinheiro)</span></label>
+                        <input type="number" class="form-input" id="loja_valor_rs" placeholder="0,00" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Valor Frag$</label>
+                        <input type="number" class="form-input" id="loja_valor_frag" placeholder="0" min="0">
+                    </div>
+                </div>
+                
+                <!-- Propriedades Condicionais -->
+                <div style="border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:12px;margin-bottom:16px;background:rgba(0,0,0,0.1);">
+                    <div style="font-weight:700;color:var(--primary);margin-bottom:12px;">⚙️ Recompensas Específicas</div>
+                    
+                    <!-- EXP -->
+                    <div style="margin-bottom:10px;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="loja_is_exp" onchange="toggleLojaFields()" style="width:18px;height:18px"> <strong>É EXP?</strong>
+                        </label>
+                        <div id="loja_exp_fields" style="display:none;margin-top:8px;padding-left:26px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="form-group"><label class="form-label">Quantidade de EXP</label><input type="number" class="form-input" id="loja_exp_amount" min="1"></div>
+                            <div class="form-group" style="display:flex;align-items:flex-end;"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;"><input type="checkbox" id="loja_exp_vip" style="width:18px;height:18px"> É EXP VIP?</label></div>
+                        </div>
+                    </div>
+
+                    <!-- Roleta -->
+                    <div style="margin-bottom:10px;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="loja_is_roleta" onchange="toggleLojaFields()" style="width:18px;height:18px"> <strong>É Roleta?</strong>
+                        </label>
+                        <div id="loja_roleta_fields" style="display:none;margin-top:8px;padding-left:26px;">
+                            <div class="form-group"><label class="form-label">Quantidade de Giros</label><input type="number" class="form-input" id="loja_roleta_giros" min="1"></div>
+                        </div>
+                    </div>
+
+                    <!-- Re-rolagem -->
+                    <div style="margin-bottom:10px;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="loja_is_rerolagem" onchange="toggleLojaFields()" style="width:18px;height:18px"> <strong>É Re-rolagem?</strong>
+                        </label>
+                        <div id="loja_rerolagem_fields" style="display:none;margin-top:8px;padding-left:26px;">
+                            <div class="form-group"><label class="form-label">Quantidade de Re-rolagens</label><input type="number" class="form-input" id="loja_rerolagem_amount" min="1"></div>
+                        </div>
+                    </div>
+
+                    <!-- Narrativo -->
+                    <div style="margin-bottom:10px;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="loja_is_narrativo" onchange="toggleLojaFields()" style="width:18px;height:18px"> <strong>É Narrativo?</strong>
+                        </label>
+                        <div id="loja_narrativo_fields" style="display:none;margin-top:8px;padding-left:26px;display:grid;grid-template-columns:1fr;gap:10px;">
+                            <div class="form-group"><label class="form-label">Quantidade de Aplicações</label><input type="number" class="form-input" id="loja_narrativo_aplicacoes" min="1"></div>
+                            <div class="form-group"><label class="form-label">Descrição do Benefício</label><input type="text" class="form-input" id="loja_narrativo_beneficio"></div>
+                            <div class="form-group"><label class="form-label">Quando pode ser aplicado</label><input type="text" class="form-input" id="loja_narrativo_quando"></div>
+                        </div>
+                    </div>
+
+                    <!-- Item de Personagem -->
+                    <div>
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="loja_is_item_personagem" onchange="toggleLojaFields()" style="width:18px;height:18px"> <strong>É Item de Personagem?</strong>
+                        </label>
+                        <div id="loja_item_personagem_fields" style="display:none;margin-top:8px;padding-left:26px;">
+                            <div class="form-group" style="margin-bottom:10px;">
+                                <label class="form-label">Adicionar Item Físico</label>
+                                <div style="display:flex;gap:8px;">
+                                    <select class="form-select" id="loja_item_personagem_select" style="flex:1;">
+                                        <option value="">Carregando equipamentos...</option>
+                                    </select>
+                                    <button class="btn btn-primary btn-small" onclick="addLojaItemPersonagemRow()">Adicionar</button>
+                                </div>
+                            </div>
+                            <div id="loja_item_personagem_list" style="display:grid;gap:8px;max-height:150px;overflow-y:auto;background:rgba(0,0,0,0.2);padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.05);">
+                                <!-- Linhas dinâmicas -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metas -->
+                <div style="border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:12px;background:rgba(0,0,0,0.1);">
+                    <div style="font-weight:700;color:var(--primary);margin-bottom:12px;">🎯 Integração com Metas</div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Metas Vinculadas</label>
+                        <div id="loja_metas_list" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:150px;overflow-y:auto;background:rgba(0,0,0,0.2);padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.05);">
+                            <!-- Dinâmico -->
+                            <div style="color:var(--muted);font-size:0.8rem;">Carregando metas...</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:10px;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;">
+                            <input type="checkbox" id="loja_modo_meta_selecao" onchange="toggleLojaFields()" checked style="width:18px;height:18px"> 
+                            <strong>O Jogador escolhe a Meta?</strong> <span style="font-size:0.75rem;color:var(--muted)">(OFF = Bate todas as vinculadas)</span>
+                        </label>
+                        <div id="loja_modo_meta_fields" style="display:none;padding-left:26px;">
+                            <div class="form-group"><label class="form-label">Qtd. de Metas Selecionáveis</label><input type="number" class="form-input" id="loja_meta_selecionaveis" min="1" value="1"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+                    <button class="btn btn-secondary" onclick="closeLojaModal()">Cancelar</button>
+                    <button class="btn btn-success" onclick="saveLojaItem()">💾 Salvar Item</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Fragmentos -->
+    <div id="manageFragModal" class="modal">
+        <div class="modal-content" style="max-width:400px">
+            <div class="modal-header">
+                <span class="modal-title">💎 Gerenciar Fragmentos</span>
+                <button class="modal-close" onclick="closeManageFragModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom:15px">
+                    Saldo atual do jogador: <strong id="fragCurrentBalance" style="color:var(--primary);font-size:1.2rem">0</strong>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Quantidade</label>
+                    <input type="number" id="fragAmount" class="form-input" placeholder="Ex: 50" min="1">
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:15px">
+                <button class="btn btn-danger" onclick="updatePlayerFrag('remove')">➖ Remover</button>
+                <button class="btn btn-success" onclick="updatePlayerFrag('add')">➕ Adicionar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JSZip -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <!-- MAIN MODULE -->
+    <script src="../ficha-v1.7_1/js/system-data-loader.js"></script>
+    <script src="../shared/equip-slots.js?v=1"></script>
+    <script type="module" src="js/main.js?v=6"></script>
+</body>

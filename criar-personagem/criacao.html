@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criação de Personagem</title>
+    <meta name="description" content="Wizard interativo de criação de personagem para o RPG Lendas e Relíquias v1.7">
+    <meta name="theme-color" content="#0E1117">
+    <link rel="stylesheet" href="css/styles.css?v=4">
+    <link rel="stylesheet" href="css/styles_wizard.css?v=9">
+    <link rel="stylesheet" href="../shared/tokens.css?v=11">
+<script type="module" src="/js/global-favicon.js"></script>
+    <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../shared/lendas-reliquias.css?v=2">
+    <link rel="stylesheet" href="../shared/texto-mundo.css?v=1">
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">⚔️ Preparando o ritual de criação...</div>
+    </div>
+
+    <!-- Toolbar — ordem padronizada: [🚪 Sair] [🏠 Menu] [contextuais] [spacer] [🌙 Tema] [Nome] -->
+    <div class="toolbar" style="display:none">
+        <button onclick="logout()" title="Sair da conta"
+            style="background:var(--lr-blood-2);color:var(--lr-divine);border:none;font-weight:700">🚪 Sair</button>
+        <button onclick="if(confirm('Voltar ao menu? Seu progresso será salvo.')) window.location.href='../menu/menu.html'"
+            title="Menu principal">🏠 Menu</button>
+        <div class="spacer"></div>
+        <span class="hint-toolbar">Criação de Personagem</span>
+        <button id="btnThemeToggle" onclick="toggleTheme()" title="Alternar tema">🌙</button>
+        <span id="userDisplayName"
+            style="color:var(--lr-text-2);font-size:.8rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    </div>
+
+    <!-- Main Content -->
+    <div class="wrap" style="display:none">
+        <div class="sheet">
+
+            <!-- Mini Preview -->
+            <div class="mini-preview" id="miniPreview" style="display:none;margin-bottom:12px;"></div>
+
+            <!-- Progress Bar -->
+            <div class="wizard-progress" id="progressBar"></div>
+
+            <!-- Phase Containers -->
+            <div class="phase-container" id="phase0"></div>
+            <div class="phase-container" id="phase1"></div>
+            <div class="phase-container" id="phase2"></div>
+            <div class="phase-container" id="phase3"></div>
+            <div class="phase-container" id="phase4"></div>
+            <div class="phase-container" id="phase5"></div>
+            <div class="phase-container" id="phase6"></div>
+            <div class="phase-container" id="phase7"></div>
+            <div class="phase-container" id="phase8"></div>
+            <div class="phase-container" id="phase9"></div>
+            <div class="phase-container" id="phase10"></div>
+            <div class="phase-container" id="phase11"></div>
+
+        </div>
+    </div>
+
+    <!-- Navigation Footer -->
+    <div class="wizard-footer" style="display:none">
+        <button class="btn" id="btnBack" onclick="goBack()" disabled>← Voltar</button>
+        <span class="wizard-footer-info" id="footerInfo"></span>
+        
+        <!-- EXP Display -->
+        <div class="exp-display" id="expDisplay" style="display:none;">
+            <div class="exp-row">
+                <span class="exp-label">REST.</span>
+                <span class="exp-value" id="expValue">0</span>
+            </div>
+            <div class="exp-sep"></div>
+            <div class="exp-row">
+                <span class="exp-label">TOTAL</span>
+                <span class="exp-value exp-total-value" id="expTotalValue">0</span>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" id="btnNext" onclick="goNext()">Avançar →</button>
+    </div>
+
+    <!-- Scripts (regular, not module) -->
+    <script src="js/data.js?v=6"></script>
+    <script src="../shared/theme.js"></script>
+    <script src="../shared/livro-vinculado.js?v=1"></script>
+    <script src="js/wizard-engine.js?v=6"></script>
+    <script src="js/exp-tracker.js?v=6"></script>
+    <script src="js/memory-manager.js"></script>
+    <script src="js/storage.js?v=6"></script>
+    <script src="../ficha-v1.7_1/js/mechanics-engine.js?v=6"></script>
+    <script src="js/system-data-loader.js?v=6"></script>
+    <script src="js/app.js?v=7"></script>
+
+    <!-- Phase Modules -->
+    <script src="js/race-module.js"></script>
+    <script src="js/tribe-module.js"></script>
+    <script src="js/peculiarities-module.js"></script>
+    <script src="js/attributes-module.js?v=6"></script>
+    <script src="js/skills-module.js?v=6"></script>
+    <script src="js/soul-module.js"></script>
+    <script src="js/npcs-module.js"></script>
+    <script src="js/equipment-module.js?v=6"></script>
+    <script src="js/finale-module.js?v=6"></script>
+    <script type="module">
+        import { simulateDerivedValues, getDynamicCreationLimit } from './js/mechanics-simulator.js?v=6';
+        window.simulateDerivedValues = simulateDerivedValues;
+        window.getDynamicCreationLimit = getDynamicCreationLimit;
+    </script>
+
+    <!-- Firebase Module (ESM) -->
+    <script type="module" src="js/firebase.js"></script>
+
+</body>
+</html>
+

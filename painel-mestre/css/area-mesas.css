@@ -1,0 +1,516 @@
+/* =============================================
+   ÁREA — MESAS (Campanha-focused hub)
+   ============================================= */
+
+/* ===== MESAS GRID ===== */
+.mesas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+}
+
+/* ===== MESA CARD ===== */
+.mesa-card {
+    background: var(--lr-bg-1);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.mesa-card:hover {
+    border-color: rgba(91, 63, 184, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.mesa-card.active {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.mesa-card-name {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--light);
+    margin-bottom: 6px;
+}
+
+.mesa-card-desc {
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+/* ===== MESA AUTH BOX ===== */
+.mesa-auth-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* ===== MESA HEADER BAR ===== */
+.mesa-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: rgba(91, 63, 184, 0.06);
+    border: 2px solid rgba(91, 63, 184, 0.15);
+    border-radius: 12px;
+}
+
+/* ===== PLAYER LIST ===== */
+.player-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+.player-card {
+    background: var(--lr-bg-1);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: all 0.3s;
+}
+
+.player-card:hover {
+    border-color: rgba(91, 63, 184, 0.3);
+}
+
+.player-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--primary-glow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+.player-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.player-name {
+    font-weight: 700;
+    color: var(--light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.player-email {
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+
+/* ===== EXP CONTROLS ===== */
+.exp-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    align-items: center;
+}
+
+/* ===== STAT BOX ===== */
+.stat-box {
+    background: var(--lr-bg-1);
+    border-radius: 8px;
+    padding: 8px;
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.stat-value {
+    font-weight: 800;
+    color: var(--light);
+}
+
+/* ===== SESSÃO LOG ===== */
+.sessao-card {
+    background: var(--lr-bg-1);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 10px;
+    transition: all 0.3s;
+}
+
+.sessao-card:hover {
+    border-color: rgba(91, 63, 184, 0.3);
+}
+
+.sessao-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.sessao-titulo {
+    font-weight: 800;
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.sessao-data {
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+
+.sessao-resumo {
+    font-size: 0.88rem;
+    color: var(--ink);
+    line-height: 1.6;
+}
+
+/* ===== COMBAT SYSTEM ===== */
+.combat-participant {
+    background: var(--lr-bg-1);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 10px;
+    transition: all 0.3s;
+}
+
+.combat-participant:hover {
+    border-color: rgba(91, 63, 184, 0.3);
+}
+
+.combat-participant-npc:hover {
+    border-color: rgba(212, 175, 55, 0.4);
+    cursor: pointer;
+}
+
+.combat-participant-custom {
+    border-left: 4px solid var(--danger);
+}
+
+.combat-initiative {
+    width: 60px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.combat-initiative-value {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: var(--primary);
+    line-height: 1;
+}
+
+.combat-initiative-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.combat-name {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--light);
+}
+
+.combat-type {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    background: rgba(91, 63, 184, 0.2);
+    color: var(--primary);
+    margin-left: 8px;
+}
+
+.combat-details {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-top: 4px;
+}
+
+.combat-stats {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.combat-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 120px;
+}
+
+.combat-stat-npc {
+    min-width: 150px;
+}
+
+.combat-stat-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.combat-stat-bar {
+    flex: 1;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.combat-stat-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.3s;
+}
+
+.combat-stat-value {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--light);
+    white-space: nowrap;
+    min-width: 50px;
+    text-align: right;
+}
+
+.combat-stat-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--muted);
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    font-family: var(--font);
+}
+
+.combat-stat-btn:hover {
+    background: var(--primary);
+    color: var(--lr-bg-0);
+    border-color: var(--primary);
+}
+
+.combat-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.combat-initiative-input {
+    width: 55px;
+    text-align: center;
+    padding: 8px;
+    border: 2px solid var(--line);
+    border-radius: 8px;
+    background: var(--lr-bg-1);
+    color: var(--light);
+    font-weight: 700;
+    font-size: 0.88rem;
+    font-family: var(--font);
+}
+
+.combat-abilities-container {
+    margin-top: 10px;
+    width: 100%;
+}
+
+.combat-abilities-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.combat-abilities-input {
+    width: 100%;
+    min-height: 60px;
+    padding: 8px;
+    border: 2px solid var(--line);
+    border-radius: 8px;
+    background: var(--lr-bg-1);
+    color: var(--light);
+    font-size: 0.82rem;
+    font-family: var(--font);
+    resize: vertical;
+}
+
+.no-combat {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--muted);
+    font-size: 1rem;
+}
+
+/* ===== MESA NOTE CARDS (Ficha v1.7 style) ===== */
+.mesa-note-card {
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--lr-bg-1);
+}
+
+.mesa-note-card:hover {
+    background: rgba(91, 63, 184, 0.06);
+    border-color: rgba(91, 63, 184, 0.3);
+}
+
+.mesa-note-title-row {
+    font-weight: 800;
+    font-size: 0.88rem;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--light);
+}
+
+.mesa-note-preview {
+    font-size: 0.82rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.5;
+}
+
+.mesa-note-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.mesa-note-actions button {
+    padding: 4px 8px;
+    font-size: 0.78rem;
+    min-width: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--font);
+}
+
+.mesa-note-actions button:hover {
+    background: rgba(91, 63, 184, 0.15);
+    border-color: rgba(91, 63, 184, 0.3);
+    color: var(--light);
+}
+
+.mesa-note-actions .mesa-note-del:hover {
+    background: rgba(201, 79, 92, 0.15);
+    border-color: rgba(201, 79, 92, 0.3);
+    color: var(--lr-blood-3);
+}
+
+/* ===== MESA NOTE EDITOR TOOLBAR ===== */
+.mesa-note-editor-toolbar {
+    display: flex;
+    gap: 4px;
+    padding: 6px 8px;
+    border: 2px solid var(--line);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    background: var(--lr-bg-1);
+}
+
+.mesa-note-editor-toolbar button {
+    padding: 4px 10px;
+    font-size: 0.82rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--font);
+    min-width: 32px;
+    text-align: center;
+}
+
+.mesa-note-editor-toolbar button:hover {
+    background: rgba(91, 63, 184, 0.15);
+    border-color: rgba(91, 63, 184, 0.3);
+    color: var(--light);
+}
+
+.mesa-note-editor-body {
+    border-radius: 0 0 8px 8px !important;
+    border-top: none !important;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .mesas-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mesa-header-bar {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+    }
+
+    .combat-participant {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .combat-actions {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .combat-stats {
+        flex-direction: column;
+    }
+
+    .player-list {
+        grid-template-columns: 1fr;
+    }
+}

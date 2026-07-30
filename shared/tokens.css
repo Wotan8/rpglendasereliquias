@@ -1,0 +1,211 @@
+/* =====================================================================
+   LENDAS & RELÍQUIAS — DESIGN TOKENS (Fonte única de verdade)
+   ---------------------------------------------------------------------
+   Identidade: "Tecnologia Rúnica Ancestral" — pedra escura, ferro
+   forjado, ouro discreto, cristais de Essência. Ver DESIGN-SYSTEM.md
+   na raiz do projeto antes de alterar QUALQUER valor daqui.
+
+   Carregar em toda página, DEPOIS do CSS local da página e ANTES de
+   /shared/lendas-reliquias.css.
+   ===================================================================== */
+
+:root {
+    /* ---------- 1. PALETA CANÔNICA — TEMA CLARO (pergaminho) --------
+       Papel claro e tinta escura. Os acentos são as versões escurecidas
+       dos mesmos matizes: o dourado/arcano/abissal do tema escuro não é
+       legível sobre papel (o ouro #D4AF37 dá 1.9:1 no branco).
+       O tema escuro está em `html.dark`, logo abaixo — os dois usam os
+       MESMOS nomes de token, então nenhum CSS de página precisa saber
+       em qual tema está. */
+    --lr-bg-0:        #F7F6F1;   /* Fundo principal — pergaminho       */
+    --lr-bg-1:        #EDEBE3;   /* Fundo secundário — papel sombreado */
+    --lr-surface:     #FFFFFF;   /* Cards / superfícies — folha limpa  */
+    --lr-surface-2:   #F3F1EA;   /* Superfície elevada (hover/nested)  */
+    --lr-border:      #CFC9BA;   /* Bordas — vinco do papel            */
+    --lr-border-soft: #E3DFD3;   /* Bordas internas discretas          */
+
+    --lr-text-1:      #14181D;   /* Texto principal — tinta            */
+    /* Escurecido de #55606E: em cima de chip translúcido de slate
+       (rgba(100,116,139,.3), usado em .highlight-tag e afins) o valor antigo
+       dava 4.34:1 — abaixo do mínimo. Agora 5.21:1 lá e 7.43:1 no papel. */
+    --lr-text-2:      #4A5462;   /* Texto secundário / rótulos         */
+    --lr-divine:      #F6F7FB;   /* Branco Divino — texto sobre cor    */
+
+    --lr-gold:        #6E5413;   /* Dourado — ação primária, foco      */
+    --lr-gold-2:      #57420C;   /* Dourado escuro (hover / texto)     */
+    --lr-bronze:      #7A5223;   /* Bronze envelhecido — secundário    */
+    --lr-arcane:      #135E9E;   /* Azul Arcano — informação, links    */
+    --lr-arcane-2:    #0E4676;   /* Azul Arcano escuro                 */
+    --lr-abyssal:     #4A32A0;   /* Roxo Abissal — místico, raro       */
+    --lr-abyssal-2:   #382678;   /* Roxo Abissal escuro                */
+    --lr-nature:      #256B42;   /* Verde Natureza — sucesso, cura     */
+    --lr-blood:       #8B1E2D;   /* Vermelho Sangue — perigo (fundos)  */
+    --lr-blood-2:     #A82C39;   /* Vermelho Sangue (texto)            */
+    --lr-blood-3:     #7A1F29;   /* Vermelho forte (texto auxiliar)    */
+
+    /* Tintas translúcidas (fundos de chips, alerts, glows) */
+    --lr-gold-soft:    rgba(212, 175, 55, 0.14);
+    --lr-arcane-soft:  rgba(58, 166, 255, 0.14);
+    --lr-abyssal-soft: rgba(91, 63, 184, 0.18);
+    --lr-nature-soft:  rgba(63, 174, 106, 0.14);
+    --lr-blood-soft:   rgba(139, 30, 45, 0.22);
+
+    /* ---------- 2. TIPOGRAFIA -------------------------------------- */
+    --lr-font-title:    'Cinzel', 'Times New Roman', serif;            /* Títulos      */
+    --lr-font-subtitle: 'Cormorant Garamond', Georgia, serif;          /* Subtítulos   */
+    --lr-font-body:     'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; /* Texto e UI */
+
+    --lr-fs-xs:   0.72rem;
+    --lr-fs-sm:   0.82rem;
+    --lr-fs-md:   0.95rem;
+    --lr-fs-lg:   1.15rem;
+    --lr-fs-xl:   1.45rem;
+    --lr-fs-2xl:  1.9rem;
+    --lr-lh-tight: 1.2;
+    --lr-lh-body:  1.55;
+    --lr-track-title: 0.06em;    /* espaçamento de letras em títulos   */
+
+    /* ---------- 3. ESPAÇAMENTO ------------------------------------- */
+    --lr-space-1: 4px;
+    --lr-space-2: 8px;
+    --lr-space-3: 12px;
+    --lr-space-4: 16px;
+    --lr-space-5: 24px;
+    --lr-space-6: 32px;
+    --lr-space-7: 48px;
+
+    /* ---------- 4. BORDAS E RAIOS (pouco arredondados, robustos) --- */
+    --lr-radius-sm: 4px;
+    --lr-radius:    6px;
+    --lr-radius-lg: 8px;
+    --lr-border-w:  1px;
+
+    /* ---------- 5. SOMBRAS (profundidade suave) -------------------- */
+    /* Sombra pesada de tema escuro vira borrão sujo em papel: no claro a
+       profundidade é sutil. `html.dark` repõe as originais. */
+    --lr-shadow-1: 0 1px 2px rgba(20, 24, 29, 0.10);
+    --lr-shadow-2: 0 4px 12px rgba(20, 24, 29, 0.10);
+    --lr-shadow-3: 0 12px 32px rgba(20, 24, 29, 0.14);
+    --lr-glow-gold:   0 0 0 3px rgba(110, 84, 19, 0.28);
+    --lr-glow-arcane: 0 0 0 3px rgba(19, 94, 158, 0.25);
+
+    /* ---------- 6. ANIMAÇÕES (120–180ms, discretas) ---------------- */
+    --lr-t-fast: 120ms;
+    --lr-t-base: 150ms;
+    --lr-t-slow: 180ms;
+    --lr-ease:   cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* ---------- 7. Z-INDEX ----------------------------------------- */
+    --lr-z-base:    1;
+    --lr-z-sticky:  100;
+    --lr-z-dropdown:500;
+    --lr-z-overlay: 900;
+    --lr-z-modal:   1000;
+    --lr-z-toast:   1100;
+
+    /* ---------- 8. OPACIDADE --------------------------------------- */
+    --lr-op-disabled: 0.45;
+    --lr-op-muted:    0.7;
+
+    /* =================================================================
+       9. ALIASES LEGADOS — mapeiam os nomes antigos usados pelos CSS
+          existentes para a paleta L&R. NÃO remover: é o que faz todo
+          módulo antigo e futuro herdar a identidade automaticamente.
+       ================================================================= */
+    --bg:          var(--lr-bg-0);
+    --bg-gradient: linear-gradient(180deg, var(--lr-bg-0), var(--lr-bg-1));
+    --paper:       var(--lr-surface);
+    --ink:         var(--lr-text-1);
+    --muted:       var(--lr-text-2);
+    --line:        var(--lr-border);
+    --soft:        var(--lr-surface-2);
+    --chip:        var(--lr-bg-1);
+    --radius:      var(--lr-radius);
+    --gap:         var(--lr-space-3);
+    --font:        var(--lr-font-body);
+
+    --accent:      var(--lr-gold);
+    --primary:     var(--lr-gold);
+    --accent-glow: rgba(212, 175, 55, 0.30);
+
+    --success:     var(--lr-nature);
+    --danger:      var(--lr-blood-2);
+    --warning:     var(--lr-gold-2);
+    --secondary:   var(--lr-arcane);
+
+    /* Nomes que o JS já usa em style inline, sempre na forma
+       `var(--text, #f8fafc)`. Nenhum deles era definido em lugar nenhum, ou
+       seja: renderizavam o fallback escuro cravado e ignoravam o tema — era
+       o que deixava os cards da aba Mesa pretos no tema claro. Definir aqui
+       conserta todos os usos de uma vez, sem caçar style inline em 12 JS. */
+    --text:         var(--lr-text-1);
+    --text-muted:   var(--lr-text-2);
+    --bg-panel:     var(--lr-surface);
+    --bg-card:      var(--lr-surface);
+    --card:         var(--lr-surface);
+    --border:       var(--lr-border);
+    --border-color: var(--lr-border);
+}
+
+/* ---------- TEMA ESCURO — pedra e ferro ------------------------------
+   A identidade oficial de L&R. Os aliases legados (--ink, --paper, ...)
+   não precisam ser repetidos aqui: eles apontam para estes tokens via
+   var(), então re-resolvem sozinhos quando a classe entra. */
+html.dark {
+    --lr-bg-0:        #0A0D12;   /* Fundo principal — pedra negra      */
+    --lr-bg-1:        #12161D;   /* Fundo secundário — pedra lavrada   */
+    --lr-surface:     #1A2029;   /* Cards / superfícies — ferro fosco  */
+    --lr-surface-2:   #222933;   /* Superfície elevada (hover/nested)  */
+    --lr-border:      #30363D;   /* Bordas — aço escovado              */
+    --lr-border-soft: #262C33;   /* Bordas internas discretas          */
+
+    --lr-text-1:      #F2F2F2;   /* Texto principal                    */
+    --lr-text-2:      #A8B3C2;   /* Texto secundário / rótulos         */
+
+    --lr-gold:        #D4AF37;   /* Dourado — ação primária, foco      */
+    --lr-gold-2:      #E5C558;   /* Dourado claro (hover / texto)      */
+    --lr-bronze:      #9D6B2F;   /* Bronze envelhecido — secundário    */
+    --lr-arcane:      #3AA6FF;   /* Azul Arcano — informação, links    */
+    --lr-arcane-2:    #7CC0FF;   /* Azul Arcano claro                  */
+    --lr-abyssal:     #5B3FB8;   /* Roxo Abissal — místico, raro       */
+    --lr-abyssal-2:   #8A6FE0;   /* Roxo Abissal claro                 */
+    --lr-nature:      #3FAE6A;   /* Verde Natureza — sucesso, cura     */
+    --lr-blood-2:     #C94F5C;   /* Vermelho Sangue claro (texto)      */
+    --lr-blood-3:     #E08A93;   /* Vermelho suave (texto auxiliar)    */
+
+    --lr-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.45);
+    --lr-shadow-2: 0 4px 12px rgba(0, 0, 0, 0.40);
+    --lr-shadow-3: 0 12px 32px rgba(0, 0, 0, 0.50);
+    --lr-glow-gold:   0 0 0 3px rgba(212, 175, 55, 0.22);
+    --lr-glow-arcane: 0 0 0 3px rgba(58, 166, 255, 0.22);
+}
+
+/* =====================================================================
+   BASE CROSS-PLATFORM (vale para todas as páginas)
+   ===================================================================== */
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+/* iOS Safari dá zoom automático ao focar campos com fonte < 16px. */
+@media (max-width: 768px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+}
+
+body {
+    overscroll-behavior-y: none;
+}
+
+/* Acessibilidade: respeitar preferência de movimento reduzido */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}

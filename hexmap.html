@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="app-canvas">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lendas Hexmap - Editor de Mapas Hexagonais para RPG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            /* Esta pagina e sempre escura (fundo #0a0e27 cravado, sem botao de
+               tema), mas usa alguns tokens: --lr-blood-2 no botao de apagar
+               mapa, mais gold, nature, text-2 e bg-1. Sem prender, eles
+               resolviam na paleta CLARA em cima do fundo escuro — o
+               .btn-delete-map ficava vermelho escuro sobre vermelho escuro
+               (2.32:1). Mesmo padrao do tabuleiro e do login: paleta ESCURA
+               presa no body, que vence tokens.css por heranca. */
+            --lr-bg-0:        #0A0D12;
+            --lr-bg-1:        #12161D;
+            --lr-surface:     #1A2029;
+            --lr-surface-2:   #222933;
+            --lr-border:      #30363D;
+            --lr-border-soft: #262C33;
+            --lr-text-1:      #F2F2F2;
+            --lr-text-2:      #A8B3C2;
+            --lr-gold:        #D4AF37;
+            --lr-gold-2:      #E5C558;
+            --lr-arcane:      #3AA6FF;
+            --lr-abyssal:     #5B3FB8;
+            --lr-abyssal-2:   #8A6FE0;
+            --lr-nature:      #3FAE6A;
+            --lr-blood-2:     #C94F5C;
+            --lr-blood-3:     #E08A93;
+
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0a0e27;
+            color: #eee;
+            overflow: hidden;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0e27 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(102, 126, 234, 0.2);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            color: #667eea;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .user-info {
+            display: none;
+        }
+
+        .header-user-info {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            margin-left: 20px;
+            padding-left: 20px;
+            border-left: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header-user-info.visible {
+            display: flex;
+        }
+
+        .user-email {
+            color: var(--lr-text-2);
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .btn-logout {
+            background: linear-gradient(135deg, var(--lr-blood-2), var(--lr-blood-2));
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-logout:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(201, 79, 92, 0.4);
+        }
+
+        .btn-back {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-back:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 280px 1fr 320px;
+            grid-template-rows: 70px 1fr 50px;
+            height: 100vh;
+            gap: 0;
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            white-space: nowrap;
+        }
+
+        .header > * { flex: 0 0 auto; }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1 1 auto !important;
+            min-width: 40px;
+        }
+
+        .logo {
+            font-size: 2.5em;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: nowrap;
+        }
+
+        .header-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .header-btn.saving {
+            background: rgba(255, 215, 0, 0.3);
+            border-color: #ffd700;
+        }
+
+        .left-panel {
+            background: #16213e;
+            padding: 25px;
+            overflow-y: auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .panel-section {
+            margin-bottom: 30px;
+        }
+
+        .panel-section h3 {
+            color: #ffd700;
+            margin-bottom: 15px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+        }
+
+        .terrain-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .terrain-item {
+            aspect-ratio: 1;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            position: relative;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+        }
+
+        .terrain-item:hover {
+            transform: scale(1.1);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+
+        .terrain-item.active {
+            border-color: #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+            transform: scale(1.1);
+        }
+
+        .terrain-name {
+            font-size: 9px;
+            margin-top: 5px;
+            text-align: center;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .canvas-container {
+            background: #0a0e27;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #hexCanvas {
+            cursor: crosshair;
+            display: block;
+        }
+
+        .canvas-overlay {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 13px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .overlay-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #ffd700;
+            font-size: 14px;
+        }
+
+        .overlay-item {
+            margin: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .right-panel {
+            background: #16213e;
+            padding: 25px;
+            overflow-y: auto;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tool-button {
+            width: 100%;
+            padding: 14px;
+            margin: 6px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .tool-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .tool-button.danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .tool-button.success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .input-group {
+            margin: 18px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #ffd700;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .input-group input,
+        .input-group select,
+        .input-group textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 2px solid #667eea;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus,
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #ffd700;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .input-group textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: inherit;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+        }
+
+        .slider-value {
+            background: #667eea;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 700;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .footer {
+            grid-column: 1 / -1;
+            background: #0f0f1e;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            font-size: 13px;
+            color: #888;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .zoom-display {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .zoom-button {
+            width: 36px;
+            height: 36px;
+            /* #667eea era claro demais para o texto branco do botao (3.66:1).
+               Mesmo azul, mais fundo: 5.35:1. */
+            background: #4c5fd7;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+
+        .zoom-button:hover {
+            background: #764ba2;
+            transform: scale(1.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content h2 {
+            color: #ffd700;
+            margin-bottom: 25px;
+            font-size: 26px;
+        }
+
+        .hex-info-card {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 18px;
+            border-radius: 10px;
+            margin: 12px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .annotation-list {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .annotation-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #ffd700;
+            transition: all 0.3s;
+        }
+
+        .annotation-item:hover {
+            background: rgba(0, 0, 0, 0.5);
+            transform: translateX(5px);
+        }
+
+        .layer-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin: 10px 0;
+            transition: all 0.3s;
+        }
+
+        .layer-toggle:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: #555;
+            border-radius: 26px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #4CAF50;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+            transition: 0.3s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle-switch.active::after {
+            left: 27px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .stat-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            transition: all 0.3s;
+        }
+
+        .stat-box:hover {
+            border-color: rgba(102, 126, 234, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .minimap {
+            width: 100%;
+            height: 180px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 3px solid #667eea;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        @media (max-width: 1200px) {
+            .app-container {
+                grid-template-columns: 250px 1fr 280px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr auto auto auto;
+            }
+
+            .left-panel,
+            .right-panel {
+                border: none;
+            }
+        }
+
+        .app-container.fullscreen {
+            grid-template-columns: 1fr 320px;
+        }
+
+        .app-container.fullscreen .left-panel {
+            display: none;
+        }
+
+        .app-container.fullscreen .footer {
+            grid-column: 1 / -1;
+        }
+
+        .app-container.view-mode .left-panel {
+            display: none !important;
+        }
+
+        .app-container.view-mode {
+            grid-template-columns: 1fr 350px;
+        }
+
+        .measurement-panel {
+            position: absolute;
+            top: 80px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 2px solid #ffd700;
+            min-width: 280px;
+            display: none;
+        }
+
+        .measurement-panel.active {
+            display: block;
+        }
+
+        .measurement-title {
+            font-weight: 700;
+            color: #ffd700;
+            font-size: 16px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .measurement-info {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid #ffd700;
+        }
+
+        .measurement-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffd700;
+            margin: 5px 0;
+        }
+
+        .measurement-label {
+            font-size: 12px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .measurement-instruction {
+            font-size: 13px;
+            color: #aaa;
+            font-style: italic;
+            margin-top: 10px;
+        }
+
+        /* Map selector styles */
+        .map-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .map-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .map-item:hover {
+            background: rgba(0, 0, 0, 0.5);
+            transform: translateX(5px);
+            border-left-color: #ffd700;
+        }
+
+        .map-item-info {
+            flex: 1;
+        }
+
+        .map-item-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #ffd700;
+        }
+
+        .map-item-details {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        .map-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-delete-map {
+            background: rgba(201, 79, 92, 0.2);
+            border: 2px solid var(--lr-blood-2);
+            /* Em cima do proprio vermelho a 20% o --lr-blood-2 da 3.58:1; o tom
+               claro --lr-blood-3 da 6.19:1. */
+            color: var(--lr-blood-3);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+
+        /* --lr-blood-2 e vermelho de TEXTO: como fundo ele reprova com branco
+           (4.42:1) e com tinta (4.41:1) — nenhum dos dois serve. --lr-blood e o
+           vermelho de FUNDO da paleta e da 9.05:1 com branco. */
+        .btn-delete-map:hover {
+            background: var(--lr-blood);
+            color: white;
+        }
+
+        .alert {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            z-index: 10002;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Branco em cima destes acentos cheios nao lia: 2.81:1 no verde e
+           2.10:1 no ouro. Tinta escura sobre acento claro da 6.93:1 e 9.25:1; no
+           vermelho, que reprova dos dois lados, troco o token pelo --lr-blood de
+           fundo e mantenho o branco (9.05:1). */
+        .alert-success {
+            background: var(--lr-nature);
+            color: var(--lr-bg-0);
+        }
+
+        .alert-danger {
+            background: var(--lr-blood);
+            color: white;
+        }
+
+        .alert-warning {
+            background: var(--lr-gold);
+            color: var(--lr-bg-0);
+        }
+    </style>
+<script type="module" src="/js/global-favicon.js"></script>
+    <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="shared/tokens.css?v=11">
+    <link rel="stylesheet" href="shared/lendas-reliquias.css?v=2">
+</head>
+
+<body class="app-canvas">
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">🗺️ Carregando Hexmap...</div>
+    </div>
+
+    <div class="app-container">
+        <!-- Cabeçalho padronizado — UMA linha: [🚪 Sair] [🏠 Menu] [contextuais] [Nome] -->
+        <div class="header">
+            <button class="btn-logout" onclick="logout()" title="Sair da conta">🚪 SAIR</button>
+            <button class="btn-back" onclick="window.location.href='painel-mestre/painel-mestre.html'"
+                title="Menu — Painel do Mestre">🏠</button>
+            <div class="header-left">
+                <div class="logo">🗺️</div>
+                <h1>Lendas Hexmap</h1>
+            </div>
+            <div class="header-actions">
+                <button class="header-btn" onclick="toggleViewMode()" id="viewModeBtn">
+                    <span id="viewModeIcon">👁️</span> <span id="viewModeText">Modo Exibição</span>
+                </button>
+                <button class="header-btn" onclick="toggleFullscreen()" id="fullscreenBtn">
+                    🖥️ Maximizar
+                </button>
+                <button class="header-btn" onclick="saveProject()" id="saveBtn">💾 Salvar</button>
+                <button class="header-btn" onclick="showLoadModal()">📂 Carregar</button>
+                <div class="header-user-info" id="headerUserInfo">
+                    <span class="user-email" id="userDisplayName" style="cursor: default;" title="">Carregando...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="left-panel">
+            <div class="panel-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0;">🎨 Terrenos</h3>
+                    <button onclick="openTerrainEditor()"
+                        style="background: rgba(255,215,0,0.2); border: 2px solid #ffd700; border-radius: 6px; padding: 6px 12px; color: #ffd700; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.3s;"
+                        onmouseover="this.style.background='rgba(255,215,0,0.3)'"
+                        onmouseout="this.style.background='rgba(255,215,0,0.2)'">
+                        ✏️ Editar
+                    </button>
+                </div>
+                <div class="terrain-grid" id="terrainGrid"></div>
+            </div>
+
+            <div class="panel-section">
+                <h3>🛠️ Ferramentas</h3>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px;">
+                    <button class="tool-button" onclick="undo()" id="undoBtn" style="padding: 10px; margin: 0;">
+                        ↶ Desfazer
+                    </button>
+                    <button class="tool-button" onclick="redo()" id="redoBtn" style="padding: 10px; margin: 0;">
+                        ↷ Refazer
+                    </button>
+                </div>
+
+                <div class="input-group">
+                    <label>Modo de Edição</label>
+                    <select id="editMode" onchange="changeEditMode()">
+                        <option value="paint">🎨 Pintar Terreno</option>
+                        <option value="annotate">📝 Adicionar Nota</option>
+                        <option value="erase">🗑️ Apagar</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Tamanho do Pincel</label>
+                    <div class="slider-container">
+                        <input type="range" id="brushSize" min="1" max="5" value="1" oninput="updateBrushSize()">
+                        <span class="slider-value" id="brushSizeDisplay">1</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>⚙️ Camadas</h3>
+                <div class="layer-toggle">
+                    <div class="toggle-switch active" id="terrainToggle" onclick="toggleLayer('terrain')"></div>
+                    <span>Terreno</span>
+                </div>
+                <div class="layer-toggle">
+                    <div class="toggle-switch active" id="annotationsToggle" onclick="toggleLayer('annotations')"></div>
+                    <span>Anotações</span>
+                </div>
+                <div class="layer-toggle">
+                    <div class="toggle-switch active" id="gridToggle" onclick="toggleLayer('grid')"></div>
+                    <span>Grade</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="hexCanvas"></canvas>
+            <div class="canvas-overlay">
+                <div class="overlay-title">Controles</div>
+                <div class="overlay-item">🖱️ Clique: Editar hex</div>
+                <div class="overlay-item">🖱️ Arrastar: Mover mapa</div>
+                <div class="overlay-item">🖱️ Scroll: Zoom</div>
+                <div class="overlay-item">⌨️ Setas: Navegar hexs</div>
+                <div class="overlay-item">⌨️ Ctrl+Z: Desfazer</div>
+                <div class="overlay-item">⌨️ Ctrl+Y: Refazer</div>
+                <div class="overlay-item" id="mouseCoords">Mouse: -</div>
+            </div>
+
+            <div class="measurement-panel" id="measurementPanel">
+                <div class="measurement-title">
+                    📏 Medição de Distância
+                </div>
+                <div class="measurement-info">
+                    <div class="measurement-label">Distância</div>
+                    <div class="measurement-value" id="measurementDistance">0 km</div>
+                </div>
+                <div class="measurement-info">
+                    <div class="measurement-label">Tempo de Viagem</div>
+                    <div class="measurement-value" id="measurementTime">0 dias</div>
+                </div>
+                <div class="measurement-instruction">
+                    Clique no hex inicial, depois no hex final
+                </div>
+                <button class="tool-button" onclick="clearMeasurement()" style="margin-top: 15px; width: 100%;">
+                    🗑️ Limpar Medição
+                </button>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="panel-section">
+                <h3>📊 Estatísticas</h3>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-value" id="statTotal">0</div>
+                        <div class="stat-label">Total Hexes</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="statAnnotations">0</div>
+                        <div class="stat-label">Anotações</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section" id="measurementConfigSection" style="display: none;">
+                <h3>📏 Configuração de Medição</h3>
+                <div class="input-group">
+                    <label>KM por Hexágono</label>
+                    <input type="number" id="kmPerHexInput" min="1" max="100" value="10"
+                        onchange="updateMeasurementConfig()" style="background: rgba(255,255,255,0.1);">
+                </div>
+                <div class="input-group">
+                    <label>Horas por Hexágono</label>
+                    <input type="number" id="hoursPerHexInput" min="0.5" max="24" step="0.5" value="3"
+                        onchange="updateMeasurementConfig()" style="background: rgba(255,255,255,0.1);">
+                </div>
+                <div style="font-size: 12px; color: #888; margin-top: 10px;">
+                    💡 Ajuste baseado na velocidade de viagem e tamanho dos hexágonos
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>ℹ️ Hex Selecionado</h3>
+                <div class="hex-info-card" id="hexInfo">
+                    <p style="color: #888; text-align: center;">Clique em um hexágono</p>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>📝 Anotações Recentes</h3>
+                <div class="annotation-list" id="annotationList">
+                    <p style="color: #888; text-align: center; font-size: 12px;">Nenhuma anotação</p>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>🎬 Ações Rápidas</h3>
+                <button class="tool-button" onclick="showNewMapDialog()">🆕 Novo Mapa</button>
+                <button class="tool-button success" onclick="exportToJSON()">📥 Exportar JSON</button>
+                <button class="tool-button success" onclick="importFromJSON()">📤 Importar JSON</button>
+                <button class="tool-button" onclick="generateRandom()">🎲 Gerar Aleatório</button>
+                <button class="tool-button danger" onclick="clearMap()">🗑️ Limpar Tudo</button>
+            </div>
+
+            <canvas class="minimap" id="minimap"></canvas>
+        </div>
+
+        <div class="footer">
+            <div>Tamanho: <span id="mapDimensions">15x12</span></div>
+            <div class="zoom-display">
+                <button class="zoom-button" onclick="zoomOut()">-</button>
+                <span id="zoomLevel">100%</span>
+                <button class="zoom-button" onclick="zoomIn()">+</button>
+                <button class="zoom-button" onclick="resetView()">⟲</button>
+            </div>
+            <div>Hex: <span id="selectedHex">-</span></div>
+        </div>
+    </div>
+
+    <!-- Modal Novo Mapa -->
+    <div id="newMapModal" class="modal">
+        <div class="modal-content">
+            <h2>Criar Novo Mapa</h2>
+            <div class="input-group">
+                <label>Nome do Mapa</label>
+                <input type="text" id="newMapName" placeholder="Ex: Mapa do Reino" value="Novo Mapa">
+            </div>
+            <div class="input-group">
+                <label>Largura (hexágonos)</label>
+                <input type="number" id="newMapWidth" min="5" max="40" value="15">
+            </div>
+            <div class="input-group">
+                <label>Altura (hexágonos)</label>
+                <input type="number" id="newMapHeight" min="5" max="40" value="12">
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 25px;">
+                <button class="tool-button success" onclick="createNewMap()">Criar Mapa</button>
+                <button class="tool-button" onclick="closeModal('newMapModal')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Carregar Mapa -->
+    <div id="loadMapModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <h2>📂 Carregar Mapa</h2>
+            <div class="map-list" id="mapList">
+                <p style="color: #888; text-align: center; padding: 40px;">Carregando mapas...</p>
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 25px;">
+                <button class="tool-button" onclick="closeModal('loadMapModal')">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Anotação -->
+    <div id="annotationModal" class="modal">
+        <div class="modal-content">
+            <h2>Adicionar Anotação</h2>
+            <div class="input-group">
+                <label>Título</label>
+                <input type="text" id="annotationTitle" placeholder="Ex: Vila do Norte">
+            </div>
+            <div class="input-group">
+                <label>Descrição</label>
+                <textarea id="annotationText" placeholder="Descreva este local..."></textarea>
+            </div>
+            <div class="input-group">
+                <label>Tipo</label>
+                <select id="annotationType">
+                    <option value="location">🏰 Localização</option>
+                    <option value="encounter">⚔️ Encontro</option>
+                    <option value="treasure">💎 Tesouro</option>
+                    <option value="danger">☠️ Perigo</option>
+                    <option value="quest">📜 Missão</option>
+                    <option value="note">📝 Nota</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 25px;">
+                <button class="tool-button success" onclick="saveAnnotation()">Salvar</button>
+                <button class="tool-button" onclick="closeModal('annotationModal')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="jsonFileInput" accept=".json" onchange="handleJSONImport(event)">
+
+    <!-- Modal Editor de Terrenos -->
+    <div id="terrainEditorModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <h2>✏️ Editor de Terrenos</h2>
+            <p style="color: #aaa; margin-bottom: 20px;">Personalize cada terreno com imagens próprias.</p>
+
+            <div style="max-height: 60vh; overflow-y: auto;">
+                <div id="terrainEditorList"></div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 25px;">
+                <button class="tool-button danger" onclick="clearAllTerrainImages()">🗑️ Limpar Todas</button>
+                <button class="tool-button success" onclick="closeModal('terrainEditorModal')">✓ Concluído</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hexmap JS - DEVE carregar antes do Firebase para expor window.initHexmap -->
+    <script src="hexmap.js?v=6"></script>
+    <script>
+        // Verificar imediatamente se hexmap.js carregou corretamente
+        if (typeof window.initHexmap === 'function') {
+            console.log('[hexmap.html] ✅ hexmap.js carregado com sucesso');
+        } else {
+            console.error('[hexmap.html] ❌ ERRO: hexmap.js não definiu window.initHexmap!');
+            console.error('[hexmap.html] Valor atual:', window.initHexmap);
+        }
+    </script>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
+            authDomain: "rpg-lendasereliquias.firebaseapp.com",
+            projectId: "rpg-lendasereliquias",
+            storageBucket: "rpg-lendasereliquias.firebasestorage.app",
+            messagingSenderId: "546994339773",
+            appId: "1:546994339773:web:0116cf7c8667f113075cd4"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        // 💾 PERSISTÊNCIA OFFLINE (Firebase v10+): cache local em IndexedDB.
+        // Leituras funcionam offline e escritas ficam na fila e sincronizam
+        // automaticamente quando a conexão voltar. Multi-tab habilitado.
+        let db;
+        try {
+            db = initializeFirestore(app, {
+                localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+            });
+            console.log('💾 Firestore: cache offline (IndexedDB) ativado.');
+        } catch (e) {
+            console.warn('💾 Firestore: cache offline indisponível, usando memória.', e);
+            db = getFirestore(app);
+        }
+
+        let currentUser = null;
+        let currentMapId = null;
+        let currentMapName = 'Novo Mapa';
+        let defaultMapId = null;
+
+        // Verificar autenticação e se é mestre
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // Verificar se é mestre
+                const masterRef = doc(db, 'masters', user.uid);
+                const masterSnap = await getDoc(masterRef);
+
+                if (masterSnap.exists()) {
+                    currentUser = user;
+                    console.log('✅ Mestre logado:', user.email);
+
+                    const displayNameEl = document.getElementById('userDisplayName');
+                    displayNameEl.textContent = user.displayName || user.email;
+                    displayNameEl.title = user.email;
+                    document.getElementById('headerUserInfo').classList.add('visible');
+                    document.getElementById('loadingScreen').style.display = 'none';
+
+                    // Inicializar hexmap - aguardar carregamento do script
+                    let waitAttempts = 0;
+                    const maxAttempts = 100; // 5 segundos máximo
+                    const waitForHexmap = async () => {
+                        waitAttempts++;
+                        console.log(`[Hexmap] Tentativa ${waitAttempts}: window.initHexmap =`, typeof window.initHexmap);
+
+                        if (typeof window.initHexmap === 'function') {
+                            try {
+                                window.initHexmap();
+                                console.log('[Hexmap] ✅ Inicializado com sucesso!');
+
+                                // Carregar mapa padrão se existir
+                                await loadDefaultMap();
+                            } catch (err) {
+                                console.error('[Hexmap] ❌ Erro ao inicializar:', err);
+                            }
+                        } else if (waitAttempts < maxAttempts) {
+                            setTimeout(waitForHexmap, 50);
+                        } else {
+                            console.error('[Hexmap] ❌ Timeout: hexmap.js não carregou corretamente após 5 segundos');
+                            console.error('[Hexmap] window.initHexmap atual:', window.initHexmap);
+                        }
+                    };
+
+                    // Garantir que o DOM está pronto
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', waitForHexmap);
+                    } else {
+                        waitForHexmap();
+                    }
+                } else {
+                    console.log('❌ Acesso negado: não é mestre');
+                    alert('❌ Acesso negado! Apenas mestres podem acessar o Hexmap.');
+                    window.location.href = 'index.html';
+                }
+            } else {
+                console.log('❌ Usuário não autenticado. Redirecionando...');
+                window.location.href = 'index.html';
+            }
+        });
+
+        // Carregar mapa padrão
+        async function loadDefaultMap() {
+            try {
+                const settingsRef = doc(db, 'hexmap-settings', 'default');
+                const settingsSnap = await getDoc(settingsRef);
+
+                if (settingsSnap.exists()) {
+                    const data = settingsSnap.data();
+                    defaultMapId = data.defaultMapId;
+
+                    if (defaultMapId) {
+                        console.log('[Hexmap] 🗺️ Carregando mapa padrão:', defaultMapId);
+                        await window.loadMapFromFirebase(defaultMapId, true); // true = silent mode
+                    }
+                }
+            } catch (error) {
+                console.log('[Hexmap] Nenhum mapa padrão definido');
+            }
+        }
+
+        // Definir mapa como padrão
+        window.setDefaultMap = async function (mapId, mapName) {
+            try {
+                await setDoc(doc(db, 'hexmap-settings', 'default'), {
+                    defaultMapId: mapId,
+                    updatedAt: serverTimestamp()
+                });
+                defaultMapId = mapId;
+                showAlert(`⭐ "${mapName}" definido como mapa principal!`, 'success');
+                window.loadMapList(); // Refresh list
+            } catch (error) {
+                console.error('Erro ao definir mapa padrão:', error);
+                showAlert('❌ Erro ao definir mapa padrão', 'danger');
+            }
+        };
+
+        // Logout
+        window.logout = async function () {
+            if (confirm('🚪 Tem certeza que deseja sair?')) {
+                try {
+                    await signOut(auth);
+                    window.location.href = 'index.html';
+                } catch (error) {
+                    console.error('Erro ao fazer logout:', error);
+                    showAlert('❌ Erro ao sair. Tente novamente.', 'danger');
+                }
+            }
+        };
+
+        // Comprimir imagem para caber no limite do Firestore
+        // Redimensiona para max 200x200 e usa JPEG com qualidade 0.6
+        function compressImage(base64Data, maxSize = 200, quality = 0.6) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Redimensionar mantendo proporção
+                    if (width > height) {
+                        if (width > maxSize) {
+                            height = Math.round(height * maxSize / width);
+                            width = maxSize;
+                        }
+                    } else {
+                        if (height > maxSize) {
+                            width = Math.round(width * maxSize / height);
+                            height = maxSize;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Converter para JPEG com compressão
+                    const compressed = canvas.toDataURL('image/jpeg', quality);
+                    console.log(`[Compress] ${(base64Data.length / 1024).toFixed(1)}KB → ${(compressed.length / 1024).toFixed(1)}KB`);
+                    resolve(compressed);
+                };
+                img.src = base64Data;
+            });
+        }
+
+        // Comprimir todas as imagens de terreno
+        async function compressTerrainImages(terrainImages) {
+            const compressed = {};
+            for (const [key, data] of Object.entries(terrainImages)) {
+                if (data && data.startsWith('data:')) {
+                    compressed[key] = await compressImage(data);
+                } else {
+                    compressed[key] = data;
+                }
+            }
+            return compressed;
+        }
+
+        // Salvar projeto no Firebase
+        window.saveProjectToFirebase = async function (mapData) {
+            try {
+                const saveBtn = document.getElementById('saveBtn');
+                saveBtn.classList.add('saving');
+                saveBtn.innerHTML = '⏳ Salvando...';
+
+                const mapId = currentMapId || `map_${Date.now()}`;
+                const mapRef = doc(db, 'hexmaps', mapId);
+
+                // Comprimir imagens antes de salvar
+                let compressedImages = {};
+                if (mapData.terrainImages && Object.keys(mapData.terrainImages).length > 0) {
+                    saveBtn.innerHTML = '🗜️ Comprimindo imagens...';
+                    compressedImages = await compressTerrainImages(mapData.terrainImages);
+                }
+
+                const terrainImagesJson = JSON.stringify(compressedImages);
+
+                // Verificar tamanho
+                if (terrainImagesJson.length > 900000) { // 900KB para margem de segurança
+                    throw new Error('Imagens muito grandes mesmo após compressão. Tente usar imagens menores.');
+                }
+
+                await setDoc(mapRef, {
+                    name: currentMapName,
+                    mapWidth: mapData.mapWidth,
+                    mapHeight: mapData.mapHeight,
+                    hexMapJson: JSON.stringify(mapData.hexMap),
+                    annotationsJson: JSON.stringify(mapData.annotations),
+                    terrainImagesJson: terrainImagesJson,
+                    owner: currentUser.uid,
+                    ownerEmail: currentUser.email,
+                    updatedAt: serverTimestamp()
+                });
+
+                currentMapId = mapId;
+
+                saveBtn.classList.remove('saving');
+                saveBtn.innerHTML = '💾 Salvar';
+                showAlert('✅ Mapa salvo no Firebase!', 'success');
+
+                return true;
+            } catch (error) {
+                console.error('Erro ao salvar:', error);
+                const saveBtn = document.getElementById('saveBtn');
+                saveBtn.classList.remove('saving');
+                saveBtn.innerHTML = '💾 Salvar';
+                showAlert('❌ Erro ao salvar mapa: ' + error.message, 'danger');
+                return false;
+            }
+        };
+
+        // Carregar lista de mapas
+
+
+        window.loadMapList = async function () {
+            try {
+                const mapListEl = document.getElementById('mapList');
+                mapListEl.innerHTML = '<p style="color: #888; text-align: center; padding: 20px;">Carregando...</p>';
+
+                const querySnapshot = await getDocs(collection(db, 'hexmaps'));
+
+                if (querySnapshot.empty) {
+                    mapListEl.innerHTML = '<p style="color: #888; text-align: center; padding: 40px;">Nenhum mapa salvo ainda.</p>';
+                    return;
+                }
+
+                let html = '';
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const updatedAt = data.updatedAt ? new Date(data.updatedAt.seconds * 1000).toLocaleString('pt-BR') : 'N/A';
+                    const isDefault = doc.id === defaultMapId;
+
+                    html += `
+                        <div class="map-item" onclick="loadMapFromFirebase('${doc.id}')">
+                            <div class="map-item-info">
+                                <div class="map-item-name">
+                                    ${isDefault ? '⭐ ' : ''}${data.name || 'Sem nome'}
+                                </div>
+                                <div class="map-item-details">
+                                    ${data.mapWidth}x${data.mapHeight} hexágonos • Atualizado: ${updatedAt}
+                                </div>
+                            </div>
+                            <div class="map-item-actions">
+                                <button class="btn-delete-map" style="background: ${isDefault ? 'rgba(255,215,0,0.3)' : 'rgba(255,215,0,0.1)'}; border-color: #ffd700; color: #ffd700;" 
+                                    onclick="event.stopPropagation(); setDefaultMap('${doc.id}', '${(data.name || 'Sem nome').replace(/'/g, "\\'")}')"
+                                    title="Definir como mapa principal">${isDefault ? '⭐' : '☆'}</button>
+                                <button class="btn-delete-map" onclick="event.stopPropagation(); deleteMap('${doc.id}', '${(data.name || 'Sem nome').replace(/'/g, "\\'")}')" title="Excluir mapa">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                mapListEl.innerHTML = html;
+            } catch (error) {
+                console.error('Erro ao carregar lista:', error);
+                document.getElementById('mapList').innerHTML = '<p style="color: var(--lr-blood-2); text-align: center; padding: 40px;">Erro ao carregar mapas.</p>';
+            }
+        };
+
+        // Carregar mapa específico
+        window.loadMapFromFirebase = async function (mapId, silentMode = false) {
+            try {
+                const mapRef = doc(db, 'hexmaps', mapId);
+                const mapSnap = await getDoc(mapRef);
+
+                if (mapSnap.exists()) {
+                    const data = mapSnap.data();
+                    currentMapId = mapId;
+                    currentMapName = data.name || 'Sem nome';
+
+                    // Suporte a ambos os formatos: novo (URLs) e antigo (JSON base64)
+                    let terrainImages = {};
+                    if (data.terrainImageUrls && Object.keys(data.terrainImageUrls).length > 0) {
+                        // Novo formato: URLs diretas
+                        terrainImages = data.terrainImageUrls;
+                    } else if (data.terrainImagesJson) {
+                        // Formato antigo: JSON base64 (retrocompatibilidade)
+                        terrainImages = JSON.parse(data.terrainImagesJson);
+                    }
+
+                    window.loadMapData({
+                        mapWidth: data.mapWidth,
+                        mapHeight: data.mapHeight,
+                        hexMap: JSON.parse(data.hexMapJson || '[]'),
+                        annotations: JSON.parse(data.annotationsJson || '{}'),
+                        terrainImages: terrainImages
+                    });
+
+                    closeModal('loadMapModal');
+                    if (!silentMode) {
+                        showAlert(`✅ Mapa "${currentMapName}" carregado!`, 'success');
+                    }
+                } else {
+                    if (!silentMode) {
+                        showAlert('❌ Mapa não encontrado.', 'danger');
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao carregar mapa:', error);
+                if (!silentMode) {
+                    showAlert('❌ Erro ao carregar mapa: ' + error.message, 'danger');
+                }
+            }
+        };
+
+        // Deletar mapa
+        window.deleteMap = async function (mapId, mapName) {
+            if (confirm(`🗑️ Tem certeza que deseja excluir o mapa "${mapName}"?\n\nEsta ação não pode ser desfeita!`)) {
+                try {
+                    await deleteDoc(doc(db, 'hexmaps', mapId));
+                    showAlert(`✅ Mapa "${mapName}" excluído!`, 'success');
+
+                    // Se o mapa excluído é o atual, resetar
+                    if (currentMapId === mapId) {
+                        currentMapId = null;
+                        currentMapName = 'Novo Mapa';
+                    }
+
+                    // Recarregar lista
+                    window.loadMapList();
+                } catch (error) {
+                    console.error('Erro ao excluir:', error);
+                    showAlert('❌ Erro ao excluir mapa: ' + error.message, 'danger');
+                }
+            }
+        };
+
+        // Atualizar nome do mapa e resetar ID para criar novo mapa
+        window.setMapName = function (name, isNewMap = true) {
+            currentMapName = name;
+            // Se é um novo mapa, resetar o ID para que ao salvar crie um novo documento
+            if (isNewMap) {
+                currentMapId = null;
+                console.log('[Firebase] 🗺️ Novo mapa criado:', name);
+            }
+        };
+
+        // Resetar mapa atual (para criar um novo)
+        window.resetCurrentMap = function () {
+            currentMapId = null;
+            currentMapName = 'Novo Mapa';
+        };
+
+        // Mostrar modal de carregar
+        window.showLoadModal = function () {
+            document.getElementById('loadMapModal').style.display = 'flex';
+            window.loadMapList();
+        };
+
+        // Mostrar alerta
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+
+            setTimeout(() => {
+                alertDiv.style.opacity = '0';
+                alertDiv.style.transform = 'translateX(400px)';
+                setTimeout(() => alertDiv.remove(), 300);
+            }, 3000);
+        }
+        window.showAlert = showAlert;
+    </script>
+</body>
+
+</html>
