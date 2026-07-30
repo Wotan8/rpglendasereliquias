@@ -6,7 +6,7 @@
 // - Rolar iniciativa direto do mapa
 // =============================================
 import { db, doc, onSnapshot, setDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, markDirty, uid, can } from './tab-state.js';
+import { T, esc, toast, markDirty, uid, can, selecionar } from './tab-state.js';
 import { refCombate } from './tab-main.js';
 import { updObj, delObj, abrirPropriedades } from './tab-objects.js';
 import { SENSORES } from './tab-fog.js';
@@ -32,6 +32,10 @@ export function initHud() {
                 san: d.sanCurrent !== undefined ? d.sanCurrent : sanMax, sanMax,
                 conds: (d.conditions || []).map(x => ({ icone: x.icone || '💀', nome: x.nome || '' })),
             });
+            // VDs ao vivo: subir a Percepção na ficha muda o alcance de visão do
+            // token na hora, sem precisar reabrir o Tabuleiro.
+            const ch = T.chars.find(x => x.id === c.id);
+            if (ch) ch.derivedTotals = d.derivedTotals || ch.derivedTotals || {};
             markDirty();
         }, () => {});
         unsubsVitais.push(u);
@@ -174,7 +178,7 @@ export function abrirMenuRadial(o, sx, sy) {
             const e = prompt('Elevação (na unidade do canvas):', o.elev || 0);
             if (e !== null) updObj(o.id, { elev: parseFloat(e) || 0 });
         }});
-        acoes.push({ ic: '⚙️', tip: 'Propriedades', fn: () => { T.selection = o.id; abrirPropriedades(o.id); markDirty(); } });
+        acoes.push({ ic: '⚙️', tip: 'Propriedades', fn: () => { selecionar(o.id); abrirPropriedades(o.id); markDirty(); } });
         acoes.push({ ic: '🗑️', tip: 'Remover token', fn: () => delObj(o.id), danger: true });
     }
     if (!acoes.length) return;

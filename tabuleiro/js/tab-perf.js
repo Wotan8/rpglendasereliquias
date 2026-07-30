@@ -24,7 +24,9 @@ export const PERF = {
  */
 export function notifyObjectChange(o) {
     if (!o) { PERF.mapVersion++; PERF.wallsVersion++; return; }
-    if (o.layerId === 'mapa') PERF.mapVersion++;
+    // `tipo === 'imagem'` também conta: mover uma imagem PARA FORA da camada de
+    // mapa precisa invalidar o cache de mapas, e nesse write o layerId já é o novo.
+    if (o.layerId === 'mapa' || o.tipo === 'imagem') PERF.mapVersion++;
     if (o.layerId === 'luz' || o.tipo === 'luz' || o.tipo === 'porta' || o.tipo === 'janela') {
         PERF.wallsVersion++;
     }
@@ -37,6 +39,84 @@ export function notifyCanvasConfigChange() {
     PERF.mapVersion++;
     PERF.wallsVersion++;
     PERF.fogKey = '';
+}
+
+// =============================================
+// MEMO POR VERSÃO — cache dos polígonos de visibilidade, UM POR FONTE
+// Medido no __check-perf-arrasto: a chave única do fog fazia mover UM token
+// recalcular o raycast das 14 fontes (~1ms no desktop, vários ms no celular),
+// ~14x/s durante o arrasto. Com um memo por fonte, só a fonte que mudou
+// recalcula; mudar de versão (paredes/portas/config) invalida tudo.
+// =============================================
+export function criarMemoPorVersao(max = 256) {
+    let versaoAtual = -1;
+    const cache = new Map();
+    return {
+        obter(chave, versao, calcular) {
+            if (versao !== versaoAtual) { cache.clear(); versaoAtual = versao; }
+            if (cache.has(chave)) return cache.get(chave);
+            // ponytail: cheio = esvazia tudo; LRU só se aparecer thrashing real
+            if (cache.size >= max) cache.clear();
+            const v = calcular();
+            cache.set(chave, v);
+            return v;
+        },
+        tamanho() { return cache.size; },
+    };
+}
+
+// =============================================
+// MEDIÇÃO POR ETAPA
+// Liga com ?perf=1 (HUD na tela, serve para perfilar NO CELULAR) ou setando
+// MEDIR.ativo nos harness. Desligada, o custo é um if por chamada.
+// =============================================
+export const MEDIR = { ativo: false, etapas: new Map() }; // nome -> { ms, n, max }
+
+/** Executa `fn` cronometrando na etapa `nome` (no-op com a medição desligada). */
+export function medir(nome, fn) {
+    if (!MEDIR.ativo) return fn();
+    const t0 = performance.now();
+    try { return fn(); }
+    finally {
+        const dt = performance.now() - t0;
+        let e = MEDIR.etapas.get(nome);
+        if (!e) MEDIR.etapas.set(nome, e = { ms: 0, n: 0, max: 0 });
+        e.ms += dt; e.n++; if (dt > e.max) e.max = dt;
+    }
+}
+
+/** Só conta ocorrências (ex.: pointermove/s), sem cronometrar. */
+export function contar(nome) {
+    if (!MEDIR.ativo) return;
+    let e = MEDIR.etapas.get(nome);
+    if (!e) MEDIR.etapas.set(nome, e = { ms: 0, n: 0, max: 0 });
+    e.n++;
+}
+
+export function zerarMedicao() { MEDIR.etapas.clear(); }
+
+/** [{ nome, ms, n, max, mediaMs }] ordenado por tempo total. */
+export function relatorioMedicao() {
+    return [...MEDIR.etapas.entries()]
+        .map(([nome, e]) => ({ nome, ms: e.ms, n: e.n, max: e.max, mediaMs: e.n ? e.ms / e.n : 0 }))
+        .sort((a, b) => b.ms - a.ms);
+}
+
+/** HUD de medição no aparelho real: abra o tabuleiro com ?perf=1. */
+export function iniciarHudMedicaoSePedido() {
+    if (!/[?&]perf=1/.test(location.search)) return;
+    MEDIR.ativo = true;
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:99;background:rgba(10,14,22,.88);' +
+        'color:#7dd3fc;font:11px/1.5 ui-monospace,monospace;padding:6px 8px;border-radius:6px;' +
+        'pointer-events:none;white-space:pre;max-width:92vw;overflow:hidden';
+    document.body.appendChild(el);
+    setInterval(() => {
+        const linhas = relatorioMedicao()
+            .map(r => `${r.nome.padEnd(12)} ${r.ms.toFixed(1).padStart(6)}ms/s  n=${String(r.n).padStart(4)}  max=${r.max.toFixed(1)}`);
+        el.textContent = linhas.join('\n') || 'perf: aguardando…';
+        zerarMedicao();
+    }, 1000);
 }
 
 // =============================================

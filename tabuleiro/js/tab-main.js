@@ -6,7 +6,7 @@ import {
     collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc,
     onSnapshot, query, where, writeBatch
 } from '../../painel-mestre/js/firebase-config.js';
-import { T, CAMADAS_PADRAO, PERMISSOES_LISTA, esc, uid, toast, markDirty, camadasVisiveis, optsUnidade } from './tab-state.js';
+import { T, CAMADAS_PADRAO, PERMISSOES_LISTA, esc, uid, toast, markDirty, camadasVisiveis, optsUnidade, popNavegacaoValida, refViagemPorDia, HORAS_DE_MARCHA, ehEcoAtrasado, LERP_TOKEN_MS, marcarRecebimentoReguas, configDoCanvasMudou } from './tab-state.js';
 import { notifyObjectChange, notifyCanvasConfigChange } from './tab-perf.js';
 import { startRenderLoop, centerCamera } from './tab-render.js';
 import { initTools } from './tab-tools.js';
@@ -97,7 +97,13 @@ async function carregarChars() {
     snap.forEach(d => {
         const raw = d.data(); const f = raw.fields || {};
         const desloc = parseFloat(f.deslocamento ?? raw.deslocamento);
-        T.chars.push({ id: d.id, nome: f.nome || raw.nome || 'Sem nome', charImg: raw.charImg || '', ownerUid: raw.ownerUid, ownerEmail: raw.ownerEmail, raca: f.raca, classe: f.classe, desloc: isNaN(desloc) ? null : desloc });
+        T.chars.push({
+            id: d.id, nome: f.nome || raw.nome || 'Sem nome', charImg: raw.charImg || '',
+            ownerUid: raw.ownerUid, ownerEmail: raw.ownerEmail, raca: f.raca, classe: f.classe,
+            desloc: isNaN(desloc) ? null : desloc,
+            // VDs prontos espelhados pela ficha — o alcance de visão por Percepção lê daqui
+            derivedTotals: raw.derivedTotals || {},
+        });
     });
 }
 async function carregarNpcs() {
@@ -178,9 +184,12 @@ async function iniciarSync() {
         atualizarBarraCanvas();
     }));
 
-    // Réguas compartilhadas
+    // Réguas compartilhadas — expiração pelo relógio LOCAL de recebimento,
+    // nunca pelo `t` do outro aparelho (ver marcarRecebimentoReguas)
     T.unsubs.push(onSnapshot(refReguas(), s => {
-        T.reguasRemotas = s.exists() ? s.data() : {};
+        const novas = s.exists() ? s.data() : {};
+        T.reguasRecebidas = marcarRecebimentoReguas(T.reguasRemotas, novas, T.reguasRecebidas, Date.now());
+        T.reguasRemotas = novas;
         markDirty();
     }));
 }
@@ -194,17 +203,25 @@ export async function trocarCanvas(id, escreverEstado) {
     notifyCanvasConfigChange();
     limparHistorico();   // undo/redo é por canvas
     T.selection = null;
+    T.selecionados = [];
     abrirPropriedades(null);
 
     T.unsubCanvasDoc = onSnapshot(refCanvas(id), s => {
         if (!s.exists()) return;
+        const anterior = T.canvas;
         T.canvas = { id: s.id, ...s.data() };
         carregarExploracao(); // F3.1: memória de exploração (merge entre clientes)
-        notifyCanvasConfigChange();
-        resolverPermissoes();
-        atualizarBarraCanvas();
-        window._renderCamadasPanel && window._renderCamadasPanel();
-        aplicarModoUI();
+        // Só exploração mudou (save do fog persistente, ~1 a cada 3s durante
+        // arrasto no público)? Então NADA de invalidação geral: re-renderizar o
+        // mapa inteiro + reconstruir paredes + recalcular todos os polígonos +
+        // repintar painéis era o que congelava o token remoto por segundos.
+        if (configDoCanvasMudou(anterior, T.canvas)) {
+            notifyCanvasConfigChange();
+            resolverPermissoes();
+            atualizarBarraCanvas();
+            window._renderCamadasPanel && window._renderCamadasPanel();
+            aplicarModoUI();
+        }
         markDirty();
     });
     T.unsubObjetos = onSnapshot(refObjetos(id), s => {
@@ -212,21 +229,29 @@ export async function trocarCanvas(id, escreverEstado) {
             if (ch.type === 'removed') {
                 notifyObjectChange(T.objects.get(ch.doc.id) || ch.doc.data());
                 T.objects.delete(ch.doc.id);
+                T.selecionados = T.selecionados.filter(x => x !== ch.doc.id);
                 if (T.selection === ch.doc.id) { T.selection = null; abrirPropriedades(null); }
             }
             else {
                 notifyObjectChange(ch.doc.data());
                 const local = T.objects.get(ch.doc.id);
                 const novo = { id: ch.doc.id, ...ch.doc.data() };
-                // Não sobrescrever objeto que estou arrastando agora
+                // Eco atrasado do meu próprio arrasto: descartar (ver ehEcoAtrasado)
+                if (ehEcoAtrasado(local, novo, T.user?.uid)) return;
+                // Não sobrescrever objeto que estou arrastando agora: a posição
+                // local é a verdade até eu soltar. `pontos` entra na proteção
+                // junto com x/y — sem isso, arrastar desenho, porta ou janela
+                // tremia brigando com o eco do próprio write.
                 if (local && local.__dragging) {
-                    Object.assign(local, novo, { x: local.x, y: local.y, __dragging: true, __fogPos: local.__fogPos });
+                    const meu = { x: local.x, y: local.y, __dragging: true, __fogPos: local.__fogPos };
+                    if (local.pontos) meu.pontos = local.pontos;
+                    Object.assign(local, novo, meu);
                 } else {
                     // F2.1: lerp — token movido por OUTRO usuário anima até a nova posição
                     if (local && novo.tipo === 'token' && novo.lastWriter && novo.lastWriter !== T.user?.uid &&
                         (Math.abs((novo.x||0) - (local.x||0)) > 0.5 || Math.abs((novo.y||0) - (local.y||0)) > 0.5)) {
                         const de = posDisplay(local);
-                        T.anims.set(ch.doc.id, { x0: de.x, y0: de.y, t0: Date.now(), dur: 200 });
+                        T.anims.set(ch.doc.id, { x0: de.x, y0: de.y, t0: Date.now(), dur: LERP_TOKEN_MS });
                     }
                     // preserva a posição confirmada do fog enquanto `movendo` estiver ativo (F2.3)
                     if (local && local.__fogPos && novo.movendo) novo.__fogPos = local.__fogPos;
@@ -348,6 +373,37 @@ function atualizarBarraCanvas() {
     if (btn) btn.style.display = (T.mode === 'secret' || T.estado?.combateVisivelPublico) ? '' : 'none';
 }
 
+// ===== NAVEGAÇÃO ENTRE MAPAS (alfinete → canvas vinculado, com trilha de "voltar") =====
+const _navStack = [];   // [{id, nome}] — só no modo secreto; o público segue o canvas AO VIVO
+
+function atualizarBtnVoltar() {
+    const btn = document.getElementById('tbNavVoltar');
+    if (!btn) return;
+    const topo = _navStack[_navStack.length - 1];
+    btn.style.display = (T.mode === 'secret' && topo) ? '' : 'none';
+    if (topo) btn.textContent = `← ${topo.nome}`;
+}
+
+function limparNavegacao() { _navStack.length = 0; atualizarBtnVoltar(); }
+
+window.tbAbrirMapaVinculado = async function(canvasId) {
+    if (T.mode !== 'secret' || !T.isMaster) return;
+    const alvo = T.canvases.find(c => c.id === canvasId);
+    if (!alvo) { toast('⚠️ O mapa vinculado não existe mais', 'warning'); return; }
+    _navStack.push({ id: T.canvasId, nome: T.canvases.find(c => c.id === T.canvasId)?.nome || 'Mapa' });
+    await transicaoDeCena(() => trocarCanvas(canvasId, false));
+    atualizarBtnVoltar();
+    toast(`🗺️ ${alvo.nome}`);
+};
+
+window.tbNavVoltar = async function() {
+    const ant = popNavegacaoValida(_navStack, id => T.canvases.some(c => c.id === id));
+    atualizarBtnVoltar();
+    if (!ant) return;
+    await transicaoDeCena(() => trocarCanvas(ant.id, false));
+    atualizarBtnVoltar();
+};
+
 // ===== PAINEL DE CANVASES =====
 window.tbAbrirCanvases = function() {
     if (T.mode !== 'secret' || !T.isMaster) return;
@@ -367,7 +423,7 @@ window.tbAbrirCanvases = function() {
         <div class="tb-muted" style="margin-top:8px;font-size:.78rem">📡 define qual canvas os jogadores veem no modo público. Cada canvas salva tudo automaticamente.</div>
     `);
 };
-window.tbIrCanvas = async (id) => { fecharModal(); await trocarCanvas(id, false); };
+window.tbIrCanvas = async (id) => { fecharModal(); limparNavegacao(); await trocarCanvas(id, false); };
 window.tbAtivarCanvas = async (id) => { await setDoc(refEstado(), { canvasAtivoId: id }, { merge: true }); toast('📡 Canvas exibido ao público'); fecharModal(); };
 window.tbNovoCanvas = async () => {
     const nome = prompt('Nome do novo canvas:', 'Tabuleiro ' + (T.canvases.length + 1));
@@ -429,6 +485,15 @@ window.tbAbrirConfig = function() {
         <div class="tb-form-grid">
             <label class="tb-check"><input type="checkbox" id="cfg_lock" ${c.bloquearMovimento!==false?'checked':''}> 🧱 Bloquear movimento através de paredes (jogadores)</label>
             <label>Altura de cada andar (elevação)<input type="number" id="cfg_andar" value="${c.andarAltura||5}" min="1" step="0.5"></label>
+            <label>🛤️ Viagem do grupo por dia (${e.unidade||'m'}/dia · para rotas · vazio = sem cálculo)
+                <input type="number" id="cfg_viagem" value="${c.viagemPorDia || ''}" min="0" step="1"
+                    placeholder="≈ ${refViagemPorDia(e.unidade || 'm')} (grupo a pé)"></label>
+        </div>
+        <div class="tb-muted" style="font-size:.75rem;margin-top:6px;line-height:1.6">
+            📖 Referência: a pé, um grupo de humanos comuns cobre <b>≈ ${refViagemPorDia(e.unidade || 'm')} ${esc(e.unidade || 'm')}/dia</b>
+            (cerca de 3 km/h ao longo de ${HORAS_DE_MARCHA} h de marcha, já contando pausas para descanso e refeições).
+            Montado ou de carroça em estrada boa, dobre esse valor; por trilha ruim, mata fechada ou montanha, corte pela metade.
+            Um “dia” aqui vale ${HORAS_DE_MARCHA} h de marcha — é essa a base das horas e minutos mostrados nas rotas.
         </div>
         <hr class="tb-hr">
         <div class="tb-section-title">🌦️ Clima</div>
@@ -467,6 +532,7 @@ window.tbSalvarConfig = async function() {
             luzDinamica: { ativa: v('cfg_luz').checked, modo: v('cfg_modo').value, fogSecretOpacity: (parseInt(v('cfg_fog').value)||0)/100, memoria: v('cfg_memoria').checked },
             bloquearMovimento: v('cfg_lock').checked,
             andarAltura: parseFloat(v('cfg_andar').value)||5,
+            viagemPorDia: parseFloat(v('cfg_viagem').value)||0,
             clima: { tipo: v('cfg_clima').value, intensidade: parseFloat(v('cfg_climaInt').value)||1 },
         });
         fecharModal(); toast('✅ Configurações salvas');

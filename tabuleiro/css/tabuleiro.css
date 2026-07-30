@@ -211,6 +211,8 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 .tb-mostrar-card img { width: 100%; height: 90px; object-fit: cover; border-radius: 7px; }
 .tb-mostrar-noimg { width: 100%; height: 90px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; background: var(--tb-bg); border-radius: 7px; }
 .tb-mostrar-nome { font-weight: 700; font-size: .8rem; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-mostrar-acoes { display: flex; gap: 4px; justify-content: center; margin-top: 6px; }
+.tb-mostrar-acoes .tb-btn { padding: 3px 8px; font-size: .85rem; }
 
 /* ===== Janela de Combate ===== */
 .tb-window {

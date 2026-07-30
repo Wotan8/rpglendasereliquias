@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<title>__check — Perf do arrasto (medição por etapa)</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="css/tabuleiro.css">
+<style>
+  html,body{margin:0;height:100%;background:#0b0e14;color:#e6e8ef;font:14px/1.6 Inter,system-ui,sans-serif}
+  #tbCanvas{position:fixed;inset:0;width:100vw;height:100vh}
+  #saida{position:fixed;inset:12px auto 12px 12px;width:640px;z-index:10;background:#12161f;
+         border:1px solid #2a3040;border-radius:12px;padding:14px;overflow:auto;max-height:calc(100vh - 24px)}
+  h1{font-size:1rem;margin:0 0 4px} p{margin:0 0 10px;color:#8b93a7;font-size:.8rem}
+  h2{font-size:.85rem;margin:14px 0 4px;color:#7dd3fc}
+  table{border-collapse:collapse;font:11px ui-monospace,monospace;width:100%}
+  td,th{border:1px solid #2a3040;padding:2px 6px;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  .ok{color:#34d399}.fail{color:#f87171;font-weight:700}
+  #placar{font-weight:800;margin-top:10px;padding-top:10px;border-top:1px solid #2a3040}
+</style></head>
+<body>
+<canvas id="tbCanvas"></canvas>
+<!-- o boot do tab-main escreve aqui quando não acha `?mesa=` -->
+<div id="tbLoading" hidden></div>
+<div id="tbCoords"></div><div id="tbToasts"></div>
+<div class="tb-ctx" id="tbCtxMenu"></div><div id="tbPinPopup"></div>
+<div class="tb-side-panel" id="tbPropsPanel"><div class="tb-side-body" id="tbPropsBody"></div></div>
+<button id="tbLockBtn"></button>
+<div class="tb-modal" id="tbModal"><div class="tb-modal-content"><span class="tb-modal-title"></span><div class="tb-modal-body"></div></div></div>
+
+<div id="saida">
+  <h1>⏱️ Perf do arrasto — carga do "Tabuleiro 1"</h1>
+  <p>108 objetos (3 mapas, 11 tokens, 79 desenhos, 11 luzes, porta, alfinete, loot, terreno),
+     78 paredes, 3 visões, luz dinâmica dia + memória. Mede ms por etapa do frame e o
+     custo por <code>pointermove</code>, como jogador (público) e como mestre (secreto).</p>
+  <div id="res"></div>
+  <div id="placar">rodando…</div>
+</div>
+
+<script type="module">
+import { T, CAMADAS_PADRAO, markDirty } from './js/tab-state.js';
+import { initTools, setTool } from './js/tab-tools.js';
+import { startRenderLoop, desenharUmFrame } from './js/tab-render.js';
+import { initGirar } from './js/tab-girar.js';
+import { PERF, MEDIR, zerarMedicao, relatorioMedicao } from './js/tab-perf.js';
+import { medirTrajeto } from './js/tab-grid.js';
+import { upcEm, unidadeEm, cfgGrid } from './js/tab-state.js';
+import { terrenosDoCanvas } from './js/tab-templates.js';
+
+const GS = 70, CX = 4000, CY = 4000;   // centro do mundo, longe do 0 por realismo
+T.mesaId = 'check'; T.canvasId = 'check';
+T.user = { uid: 'u' }; T.chars = [{ id: 'c1', nome: 'Herói', ownerUid: 'u' }];
+T.canvas = {
+    grid: { size: GS, tipo: 'quad', show: true },
+    escala: { valorPorCelula: 1.5, unidade: 'm' },
+    camadas: CAMADAS_PADRAO, permissoes: {},
+    luzDinamica: { ativa: true, modo: 'dia', memoria: true, fogSecretOpacity: 0.3 },
+    bloquearMovimento: true,
+};
+T.perms = { moverToken: true, medir: true };
+T.measureCfg.medirToken = true;
+T.measureCfg.mostrarOutros = true;
+HTMLElement.prototype.setPointerCapture = function () {};
+
+// ===== CENÁRIO =====
+let seq = 0;
+const add = (o) => { const id = 'o' + (++seq); T.objects.set(id, { id, visivelPublico: true, ...o }); return T.objects.get(id); };
+
+// 3 mapas (imagens pré-carregadas direto no cache — sem rede)
+function mapaFake(cor, px) {
+    const c = document.createElement('canvas'); c.width = px; c.height = px;
+    const g = c.getContext('2d'); g.fillStyle = cor; g.fillRect(0, 0, px, px);
+    g.strokeStyle = '#0004'; for (let i = 0; i < px; i += 64) { g.strokeRect(i, 0, 64, px); }
+    const img = new Image(); img.src = c.toDataURL();
+    return img;
+}
+const imgs = [mapaFake('#3b4252', 1024), mapaFake('#434c5e', 512), mapaFake('#4c566a', 512)];
+await Promise.all(imgs.map(i => i.decode()));
+imgs.forEach((img, i) => T.imgCache.set('mapa' + i, { img, ok: true }));
+add({ tipo: 'imagem', layerId: 'mapa', url: 'mapa0', x: CX - 2200, y: CY - 1600, w: 4400, h: 3200, larguraReal: 90, unidade: 'm', z: 1 });
+add({ tipo: 'imagem', layerId: 'mapa', url: 'mapa1', x: CX - 2200, y: CY - 1600, w: 900, h: 900, z: 2 });
+add({ tipo: 'imagem', layerId: 'mapa', url: 'mapa2', x: CX + 1300, y: CY + 700, w: 900, h: 900, z: 3 });
+
+// 78 paredes (26 polilinhas de 3 segmentos na camada de luz), fora do corredor
+// livre do arrasto: x∈[CX-200, CX+1200], y∈[CY-200, CY+800].
+const paredes = [];
+for (let i = 0; i < 26; i++) {
+    const ang = (i / 26) * Math.PI * 2;
+    const R = 900 + (i % 3) * 160;
+    const bx = CX + 500 + Math.cos(ang) * R, by = CY + 300 + Math.sin(ang) * R;
+    const pts = [
+        { x: bx, y: by },
+        { x: bx + 120, y: by + 40 },
+        { x: bx + 140, y: by + 160 },
+        { x: bx + 20, y: by + 200 },
+    ];
+    paredes.push(add({ tipo: 'desenho', layerId: 'luz', forma: 'livre', pontos: pts, cor: '#f97316', grossura: 4 }));
+}
+
+// 11 tokens (o primeiro é do jogador, com visão; +2 visões de NPC)
+const tokenJog = add({ tipo: 'token', layerId: 'tokens', x: CX, y: CY, nome: 'Herói', tamanhoCelulas: 1, rot: 0,
+    vinculo: { tipo: 'char', id: 'c1' }, visao: { ativa: true, alcance: 9, angulo: 360, tipo: 'padrao' } });
+for (let i = 1; i < 11; i++) {
+    const o = add({ tipo: 'token', layerId: 'tokens', x: CX - 800 + (i % 4) * 400, y: CY - 600 + Math.floor(i / 4) * 380,
+        nome: 'NPC ' + i, tamanhoCelulas: 1, rot: 0 });
+    if (i <= 2) o.visao = { ativa: true, alcance: 9, angulo: 360, tipo: 'padrao' };
+}
+
+// 79 desenhos comuns (camada tokens), espalhados
+for (let i = 0; i < 79; i++) {
+    const bx = CX - 2000 + (i % 10) * 400, by = CY - 1400 + Math.floor(i / 10) * 340;
+    const pts = []; for (let k = 0; k < 12; k++) pts.push({ x: bx + k * 14, y: by + Math.sin(k) * 30 });
+    add({ tipo: 'desenho', layerId: 'tokens', forma: 'livre', pontos: pts, cor: '#3b82f6', grossura: 4 });
+}
+
+// 11 luzes acesas
+for (let i = 0; i < 11; i++) {
+    add({ tipo: 'luz', layerId: 'luz', x: CX - 1500 + i * 300, y: CY - 500 + (i % 2) * 700, alcance: 6, cor: '#ffdd99' });
+}
+// porta fechada, alfinete, loot, terreno (cruza o corredor do arrasto)
+add({ tipo: 'porta', layerId: 'luz', pontos: [{ x: CX + 1500, y: CY - 300 }, { x: CX + 1500, y: CY - 100 }], aberta: false, x: CX + 1500, y: CY - 300 });
+add({ tipo: 'alfinete', layerId: 'tokens', x: CX - 300, y: CY - 300, cor: '#ef4444', titulo: 'Pin' });
+add({ tipo: 'loot', layerId: 'tokens', x: CX + 300, y: CY - 250, nome: 'Baú' });
+add({ tipo: 'terreno', layerId: 'dm', mult: 2, pontos: [
+    { x: CX + 300, y: CY - 150 }, { x: CX + 700, y: CY - 150 }, { x: CX + 700, y: CY + 350 }, { x: CX + 300, y: CY + 350 }] });
+
+const totalObjetos = T.objects.size;
+
+// ===== BOOT =====
+T.mode = 'public'; T.isMaster = false;
+T.cam = { x: CX, y: CY, z: 0.5 };
+localStorage.setItem('tb_cursores', 'off');   // sem writes de cursor no bench
+startRenderLoop(); initTools(); initGirar();
+setTool('select');
+MEDIR.ativo = true;
+
+const cv = document.getElementById('tbCanvas');
+const rect = () => cv.getBoundingClientRect();
+const ev = (t, x, y, botao, botoes, pid = 1, ptype = 'mouse') => cv.dispatchEvent(
+    new PointerEvent(t, { bubbles: true, cancelable: true, clientX: x, clientY: y,
+        button: botao, buttons: botoes, pointerId: pid, pointerType: ptype, isPrimary: pid === 1 }));
+const up = (x, y) => window.dispatchEvent(
+    new PointerEvent('pointerup', { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, buttons: 0, pointerId: 1, pointerType: 'mouse', isPrimary: true }));
+// Cadência de frame SEM requestAnimationFrame: com a aba/pane oculto o rAF
+// congela e o harness ficaria pendurado. 16ms de timeout + frame desenhado na
+// mão dão a mesma cadência com o relógio de verdade andando (o que importa
+// para os portões de 70ms do fog e 300ms de escrita).
+const tick = () => new Promise(r => setTimeout(r, 16));
+
+const resultados = {};
+const linhas = [];
+function registrar(nome, extra = {}) {
+    const rel = relatorioMedicao();
+    resultados[nome] = { etapas: rel, ...extra };
+    const frame = rel.find(r => r.nome === 'frame');
+    linhas.push(`<h2>${nome} ${frame ? `— ${frame.n} frames · ${(frame.ms / frame.n).toFixed(2)} ms/frame (max ${frame.max.toFixed(1)})` : ''}${extra.nota ? ` · ${extra.nota}` : ''}</h2>` +
+        '<table><tr><th>etapa</th><th>total ms</th><th>n</th><th>média ms</th><th>max ms</th></tr>' +
+        rel.map(r => `<tr><td>${r.nome}</td><td>${r.ms.toFixed(1)}</td><td>${r.n}</td><td>${r.mediaMs.toFixed(3)}</td><td>${r.max.toFixed(2)}</td></tr>`).join('') +
+        '</table>');
+    document.getElementById('res').innerHTML = linhas.join('');
+    zerarMedicao();
+}
+
+// ===== BENCHES SÍNCRONOS =====
+function benchParado(nome, n, prep) {
+    desenharUmFrame(); T.dirty = false;   // aquece caches
+    zerarMedicao();
+    for (let i = 0; i < n; i++) { if (prep) prep(i); desenharUmFrameMedido(); T.dirty = false; }
+    registrar(nome);
+}
+// desenharUmFrame não passa pelo loop(), então o wrapper 'frame' é feito aqui
+import { medir } from './js/tab-perf.js';
+function desenharUmFrameMedido() { medir('frame', desenharUmFrame); }
+
+async function rodar() {
+    // O boot do tab-main roda no DOMContentLoaded (DEPOIS deste módulo, por causa
+    // do top-level await) e, sem ?mesa=, zera o mesaId e força mode 'secret'.
+    // Espera o boot passar e restaura o estado do harness.
+    await new Promise(r => {
+        window.addEventListener('DOMContentLoaded', () => setTimeout(r, 0), { once: true });
+        setTimeout(r, 400);   // rede de segurança se o evento já passou
+    });
+    T.mesaId = 'check'; T.mode = 'public'; T.isMaster = false;
+    PERF.fogKey = ''; markDirty();
+
+    // --- JOGADOR (público) ---
+    benchParado('jogador · parado (tudo em cache)', 120);
+    benchParado('jogador · pan (recompõe fog, polys em cache)', 120, () => { T.cam.x += 4; });
+    T.cam.x = CX;
+    benchParado('jogador · polys forçados (raycast todo frame)', 60, () => { PERF.fogKey = ''; });
+
+    // --- arrasto real, cadência de rAF ---
+    const r = rect();
+    const sx = r.width / 2, sy = r.height / 2;   // token está no centro da câmera
+    ev('pointerdown', sx, sy, 0, 1);
+    zerarMedicao();
+    const t0 = performance.now();
+    // L: direita (24 células), waypoint, baixo (8), waypoint, esquerda parcial
+    const passos = 240;
+    for (let i = 0; i < passos; i++) {
+        let x = sx, y = sy;
+        if (i < 120) { x = sx + (i / 120) * 500; }
+        else if (i === 120) { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })); x = sx + 500; }
+        else if (i < 180) { x = sx + 500; y = sy + ((i - 120) / 60) * 280; }
+        else if (i === 180) { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })); x = sx + 500; y = sy + 280; }
+        else { x = sx + 500 - ((i - 180) / 60) * 300; y = sy + 280; }
+        ev('pointermove', x, y, -1, 1);
+        desenharUmFrameMedido(); T.dirty = false;
+        await tick();
+    }
+    const wallMs = performance.now() - t0;
+    up(sx + 200, sy + 280);
+    registrar('jogador · ARRASTO real (240 moves em cadência de rAF)', { nota: `${(wallMs / 240).toFixed(2)} ms/move de parede a parede`, wallMs });
+
+    // --- medirTrajeto isolado ---
+    const cfgT = { ...cfgGrid(), upc: (pt) => upcEm(pt), unidade: unidadeEm({ x: CX, y: CY }), terrenos: terrenosDoCanvas() };
+    const isolados = {};
+    for (const celulas of [10, 40, 80]) {
+        const pts = [{ x: CX, y: CY }, { x: CX + celulas * GS, y: CY }];
+        const reps = 300;
+        const t1 = performance.now();
+        for (let i = 0; i < reps; i++) medirTrajeto(pts, cfgT);
+        isolados[celulas + ' células'] = ((performance.now() - t1) / reps * 1000).toFixed(1) + ' µs/chamada';
+    }
+    resultados['medirTrajeto isolado'] = isolados;
+    linhas.push('<h2>medirTrajeto isolado (2 pontos, terreno + escala de mapa ativos)</h2><table>' +
+        Object.entries(isolados).map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('') + '</table>');
+    zerarMedicao();
+
+    // --- MESTRE (secreto): 3 visões + 11 luzes recortadas por fonte ---
+    T.mode = 'secret'; T.isMaster = true;
+    PERF.fogKey = ''; markDirty();
+    benchParado('mestre · parado (tudo em cache)', 120);
+    benchParado('mestre · polys forçados (raycast todo frame)', 60, () => { PERF.fogKey = ''; });
+
+    document.getElementById('placar').innerHTML =
+        `<span class="ok">MEDIÇÃO CONCLUÍDA</span> — ${totalObjetos} objetos em cena` +
+        (totalObjetos === 108 ? '' : ` <span class="fail">(esperava 108!)</span>`);
+    window.__RESULTADO = resultados;
+    window.__dbg = { T, PERF, desenharUmFrame, markDirty, tokenJog, CX, CY };
+    window.__PRONTO = true;
+}
+
+const morrer = (msg, stack) => {
+    document.getElementById('placar').innerHTML = `<span class="fail">💥 ${msg}</span><br><pre>${(stack || '').split('\n').slice(0, 5).join('\n')}</pre>`;
+};
+window.addEventListener('error', (e) => morrer(e.message, e.error?.stack));
+window.addEventListener('unhandledrejection', (e) => morrer(String(e.reason), e.reason?.stack));
+rodar().catch(e => morrer(String(e), e?.stack));
+</script>
+</body></html>

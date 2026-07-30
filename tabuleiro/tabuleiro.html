@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>🗺️ Tabuleiro — Lendas e Relíquias</title>
-    <link rel="stylesheet" href="css/tabuleiro.css?v=3">
+    <link rel="stylesheet" href="css/tabuleiro.css?v=4">
     <script type="module" src="/js/global-favicon.js"></script>
     <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,6 +27,7 @@
         <span id="tbModeBadge" class="tb-mode-badge"></span>
         <span id="tbMesaNome"></span>
         <span id="tbCanvasNome" onclick="if(window.tbAbrirCanvases)tbAbrirCanvases()" title="Trocar de canvas"></span>
+        <button class="tb-btn tb-btn-small" id="tbNavVoltar" style="display:none" onclick="tbNavVoltar()" title="Voltar ao mapa anterior">← Voltar</button>
         <span class="tb-spacer"></span>
         <button class="tb-btn tb-btn-small" id="btnCursores" title="Cursores ao vivo">👥</button>
         <button class="tb-btn tb-btn-small" id="btnRelogio" onclick="tbNovoRelogio()" title="Relógio de progresso">⏱️</button>
@@ -47,7 +48,7 @@
         <div class="tb-sep"></div>
         <button class="tb-tool" id="toolDraw" data-tool="draw" data-tip="Desenho Livre (Ctrl+F)">🖌️</button>
         <button class="tb-tool" id="toolText" data-tool="text" data-tip="Texto (Ctrl+G)">🔤</button>
-        <button class="tb-tool" id="toolMeasure" data-tool="measure" data-tip="Medir (Ctrl+M) — botão direito cria vértices">📏</button>
+        <button class="tb-tool" id="toolMeasure" data-tool="measure" data-tip="Medir (Ctrl+M) — clique a clique: cada clique é um vértice, duplo-clique encerra">📏</button>
         <div class="tb-sep"></div>
         <button class="tb-tool" id="toolPin" data-tool="pin" data-tip="Alfinetes">📌</button>
         <button class="tb-tool" id="toolLight" data-tool="light" data-tip="Iluminação — luz, portas e janelas">💡</button>
@@ -84,7 +85,7 @@
         <div class="tb-section-title" style="margin:0">📏 Medir</div>
         <div class="tb-subrow">
             <label>Forma<select id="mFormaSel">
-                <option value="linha">📐 Linha (botão direito = vértice)</option>
+                <option value="linha">📐 Linha (clique = vértice · duplo-clique encerra)</option>
                 <option value="caneta">🖊️ Caneta (riscar o mapa)</option>
             </select></label>
         </div>

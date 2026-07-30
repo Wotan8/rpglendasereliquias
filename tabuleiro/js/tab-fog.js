@@ -16,7 +16,12 @@ const EXP = {
     bits: null,                        // Uint8Array (1 byte = 8 células)
     sujo: false,
     carregadaDe: null,                 // canvasId de onde carregou
+    versao: 0,                         // contador p/ invalidar o fog composto em cache
+    ultimoB64: null,                   // último `dados` sincronizado (salvo ou carregado) — corta o merge do eco
 };
+
+/** Muda a cada célula nova explorada — chave de cache do fog composto. */
+export function versaoExploracao() { return EXP.versao; }
 let saveTimer = null;
 
 export const SENSORES = [
@@ -40,10 +45,16 @@ export function carregarExploracao() {
         if (trocouCanvas || !EXP.sujo) {
             clearTimeout(saveTimer);
             EXP.x0 = 0; EXP.y0 = 0; EXP.cols = 0; EXP.rows = 0; EXP.bits = null; EXP.sujo = false;
+            EXP.ultimoB64 = null;
+            EXP.versao++;
             markDirty();
         }
         return;
     }
+    // Eco do que já está aplicado (o próprio save voltando, duas vezes: a
+    // compensação local e o ack do servidor): o merge O(células) rodava
+    // inteiro à toa, no meio do arrasto.
+    if (!trocouCanvas && e.dados === EXP.ultimoB64) return;
     try {
         const bin = atob(e.dados);
         const inBits = new Uint8Array(bin.length);
@@ -52,6 +63,7 @@ export function carregarExploracao() {
             EXP.x0 = e.x0 | 0; EXP.y0 = e.y0 | 0; EXP.cols = e.cols | 0; EXP.rows = e.rows | 0;
             EXP.bits = inBits;
             EXP.sujo = false;
+            EXP.versao++;
         } else {
             // MERGE (OR): outro cliente pode ter explorado células diferentes
             const cols = e.cols | 0, rows = e.rows | 0, x0 = e.x0 | 0, y0 = e.y0 | 0;
@@ -63,6 +75,7 @@ export function carregarExploracao() {
             }
             // marcarCelula seta sujo apenas para células novas; snapshot recebido não precisa re-salvar
         }
+        EXP.ultimoB64 = e.dados;
         markDirty();
     } catch (err) { console.warn('exploracao load', err); }
 }
@@ -72,22 +85,28 @@ function agendarSave() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
         if (!EXP.bits || !T.canvasId) return;
+        // Arrasto em andamento: o payload da exploração (dezenas de KB) entra
+        // na frente dos writes de posição no MESMO stream do Firestore e o
+        // token remoto congela esperando o upload. Espera o arrasto acabar.
+        if (T.dragAtivo) { agendarSave(); return; }
         try {
             let bin = '';
             const b = EXP.bits;
             for (let i = 0; i < b.length; i += 0x8000) {
                 bin += String.fromCharCode.apply(null, b.subarray(i, Math.min(i + 0x8000, b.length)));
             }
+            const dados = btoa(bin);
             await updateDoc(refCanvas(), {
-                exploracao: { x0: EXP.x0, y0: EXP.y0, cols: EXP.cols, rows: EXP.rows, dados: btoa(bin) },
+                exploracao: { x0: EXP.x0, y0: EXP.y0, cols: EXP.cols, rows: EXP.rows, dados },
             });
+            EXP.ultimoB64 = dados;
             EXP.sujo = false;
         } catch (e) { console.warn('exploracao save', e); }
     }, 3000);
 }
 
 export async function resetarExploracao() {
-    EXP.bits = null; EXP.cols = EXP.rows = 0; EXP.sujo = false;
+    EXP.bits = null; EXP.cols = EXP.rows = 0; EXP.sujo = false; EXP.versao++;
     try { await updateDoc(refCanvas(), { exploracao: null }); toast('🌫️ Memória de exploração resetada'); markDirty(); }
     catch (e) { toast('❌ Erro ao resetar exploração', 'danger'); }
 }
@@ -126,7 +145,7 @@ function marcarCelula(cx, cy) {
     if (x < 0 || y < 0 || x >= EXP.cols || y >= EXP.rows) return;
     const i = y * EXP.cols + x;
     const antes = EXP.bits[i >> 3] & (1 << (i & 7));
-    if (!antes) { EXP.bits[i >> 3] |= (1 << (i & 7)); EXP.sujo = true; }
+    if (!antes) { EXP.bits[i >> 3] |= (1 << (i & 7)); EXP.sujo = true; EXP.versao++; }
 }
 
 export function celulaExplorada(cx, cy) {

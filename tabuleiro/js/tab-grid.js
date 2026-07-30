@@ -173,6 +173,48 @@ export function faixaDe(elev, alturaAndar = 5) {
     return Math.floor((elev || 0) / alturaAndar);
 }
 
+// ---------- RETÂNGULO DE SELEÇÃO ----------
+/** Dois cantos quaisquer → retângulo normalizado {x,y,w,h}. */
+export function normalizarRet(a, b) {
+    return {
+        x: Math.min(a.x, b.x), y: Math.min(a.y, b.y),
+        w: Math.abs(b.x - a.x), h: Math.abs(b.y - a.y),
+    };
+}
+
+/** A bbox cabe INTEIRA dentro do retângulo? (contenção, não interseção — senão
+ *  laçar dois tokens levaria o mapa de fundo junto). */
+export function bboxDentroDoRet(b, r) {
+    return b.x >= r.x && b.y >= r.y && b.x + b.w <= r.x + r.w && b.y + b.h <= r.y + r.h;
+}
+
+// ---------- SIMPLIFICAÇÃO DE TRAÇADO (Ramer–Douglas–Peucker) ----------
+function distPerp(p, a, b) {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const l2 = dx * dx + dy * dy;
+    if (!l2) return Math.hypot(p.x - a.x, p.y - a.y);
+    const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2));
+    return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+}
+
+/**
+ * Reduz os vértices de um traçado livre preservando a forma (tolerância em px
+ * de mundo). Um arrasto de rota gera um ponto a cada poucos px — sem isso a
+ * rota de viagem incha o documento no Firestore à toa.
+ */
+export function simplificarPontos(pontos, tol) {
+    if (!pontos || pontos.length <= 2) return pontos || [];
+    let maxD = 0, idx = 0;
+    const a = pontos[0], b = pontos[pontos.length - 1];
+    for (let i = 1; i < pontos.length - 1; i++) {
+        const d = distPerp(pontos[i], a, b);
+        if (d > maxD) { maxD = d; idx = i; }
+    }
+    if (maxD <= tol) return [a, b];
+    return simplificarPontos(pontos.slice(0, idx + 1), tol).slice(0, -1)
+        .concat(simplificarPontos(pontos.slice(idx), tol));
+}
+
 // ---------- DETECÇÃO AUTOMÁTICA DE GRADE ----------
 /**
  * Encontra o período dominante de um sinal 1D por autocorrelação normalizada.

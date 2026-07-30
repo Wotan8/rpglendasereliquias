@@ -4,6 +4,18 @@
 // =============================================
 
 /**
+ * ID do vídeo a partir de qualquer forma de link do YouTube (watch, youtu.be,
+ * embed, shorts, music). Devolve null quando não é YouTube — aí é arquivo direto.
+ */
+export function idDoYoutube(url) {
+    if (typeof url !== 'string') return null;
+    const s = url.trim();
+    if (!/^(https?:\/\/)?([\w-]+\.)*(youtube(-nocookie)?\.com|youtu\.be)\//i.test(s)) return null;
+    const m = s.match(/(?:[?&]v=|youtu\.be\/|\/embed\/|\/shorts\/|\/live\/|\/v\/)([\w-]{11})(?![\w-])/);
+    return m ? m[1] : null;
+}
+
+/**
  * Compara o que a mesa está tocando com o que ESTE aparelho já toca.
  * @param tocando  { faixaId: t0 } — vindo do Firestore
  * @param temFaixa (faixaId) => boolean — a faixa ainda existe e tem url?

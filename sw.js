@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v104';
+const VERSION = 'v112';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -82,6 +82,7 @@ const PRECACHE_URLS = [
   '/hexmap.js',
   '/index.html',
   '/js/global-favicon.js',
+  '/js/version-badge.js',
   '/laboratorium-runarum/css/lab-print.css',
   '/laboratorium-runarum/css/laboratorium.css',
   '/laboratorium-runarum/js/canvas.js',
@@ -157,6 +158,9 @@ const PRECACHE_URLS = [
   '/tabuleiro/js/tab-musica-calc.js',
   '/tabuleiro/js/tab-local.js',
   '/tabuleiro/js/tab-girar.js',
+  '/tabuleiro/js/tab-perf.js',
+  '/tabuleiro/js/tab-write-queue.js',
+  '/shared/equip-slots.js',
   '/shared/lendas-reliquias.css',
   '/shared/livro-vinculado.js',
   '/shared/local-tatico.js',
@@ -251,6 +255,12 @@ self.addEventListener('fetch', event => {
   // Hosts não listados: não intercepta
   if (!CACHEABLE_HOSTS.includes(url.host)) return;
 
+  // O PRÓPRIO sw.js nunca sai do cache. A badge de versão o busca para saber o
+  // que está publicado; servindo a cópia velha, ela comparava v104 com v104 e
+  // nunca acusava aba desatualizada — justo o que ela existe para detectar.
+  // (`cache: 'no-store'` no fetch controla o cache HTTP, não o Service Worker.)
+  if (url.origin === self.location.origin && url.pathname === '/sw.js') return;
+
   // Navegações (HTML): SWR com fallback offline para o shell
   if (request.mode === 'navigate') {
     event.respondWith(staleWhileRevalidate(request, { navigationFallback: true }));
@@ -299,5 +309,13 @@ async function staleWhileRevalidate(request, opts = {}) {
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  }
+  // A página pergunta qual VERSION este worker está rodando. É a única forma de
+  // saber o que de fato está servindo os assets: o arquivo no servidor pode já
+  // ser mais novo que o worker que ainda controla a aba. Ver js/version-badge.js
+  if (event.data && event.data.type === 'GET_VERSION') {
+    const resposta = { type: 'VERSION', version: VERSION, cache: STATIC_CACHE };
+    if (event.ports && event.ports[0]) event.ports[0].postMessage(resposta);
+    else if (event.source) event.source.postMessage(resposta);
   }
 });

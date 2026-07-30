@@ -5,23 +5,26 @@
 // Cursores/Pings, Menu radial, Undo/Redo, Atalhos e toque.
 // =============================================
 import { setDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, markDirty, gridSize, can, camadasVisiveis, objVisivel, tokenDoUsuario, pxParaUnidades, fmtDist, getCamada, cfgGrid, upcEm, unidadeEm, sincLarguraReal, CENARIO_INTERATIVO } from './tab-state.js';
+import { T, esc, toast, markDirty, gridSize, can, camadasVisiveis, objVisivel, tokenDoUsuario, pxParaUnidades, fmtDist, fmtViagem, getCamada, cfgGrid, upcEm, unidadeEm, sincLarguraReal, selecionar, CENARIO_INTERATIVO,
+         deveAtualizarPasso, DRAG_WRITE_MS, DRAG_PASSO_CELULA } from './tab-state.js';
 import { refReguas, abrirModal, fecharModal } from './tab-main.js';
 import { screenToWorld, worldToScreen, bboxOf, handlesOf, centerCamera, paredesDeMovimento, getImg } from './tab-render.js';
-import { addObj, updObj, delObj, maxZ, abrirPropriedades, uploadArquivo } from './tab-objects.js';
-import { snapPonto, medirTrajeto, trajetoColide } from './tab-grid.js';
+import { addObj, updObj, updObjLocal, moverEmLote, delObj, maxZ, abrirPropriedades, uploadArquivo } from './tab-objects.js';
+import { snapPonto, medirTrajeto, trajetoColide, simplificarPontos, normalizarRet, bboxDentroDoRet } from './tab-grid.js';
+import { criarFilaDeEscrita } from './tab-write-queue.js';
 import { publicarCursor, enviarPing } from './tab-presenca.js';
 import { abrirMenuRadial } from './tab-hud.js';
 import { pontoVisivelAgora } from './tab-fog.js';
 import { confirmarTemplate, confirmarTerreno, terrenosDoCanvas, tplCfg } from './tab-templates.js';
 import { desfazer, refazer, registrarOp } from './tab-undo.js';
 import { anguloDoMovimento, temCone } from './tab-girar.js';
+import { medir, contar } from './tab-perf.js';
 
 let cv;
 let ponteiro = null;    // estado do gesto atual
 let luzSubTool = 'luz'; // luz | porta | janela
-let reguaTimer = 0;
-const DRAG_THROTTLE = 100; // F2.2: padronizado
+let espacoApertado = false;  // Espaço segurado = arrastar o canva com o botão esquerdo
+const DRAG_THROTTLE = DRAG_WRITE_MS; // F2.2: padronizado (ver tab-state)
 
 // Toque: pinch + long-press
 const pointersAtivos = new Map();
@@ -38,6 +41,19 @@ export function initTools() {
     cv.addEventListener('contextmenu', e => e.preventDefault());
     cv.addEventListener('dblclick', onDblClick);
     window.addEventListener('keydown', onKey);
+    window.addEventListener('keyup', (e) => {
+        if (e.target.matches?.('input,textarea,select')) return;
+        if (e.key === ' ' || e.code === 'Space') {
+            espacoApertado = false;
+            if (cv) cv.style.cursor = T.tool === 'move' ? 'grab' : '';
+        }
+    });
+    // Perder o foco da janela com o Espaço apertado deixava o canva travado em pan
+    window.addEventListener('blur', () => {
+        if (!espacoApertado) return;
+        espacoApertado = false;
+        if (cv) cv.style.cursor = T.tool === 'move' ? 'grab' : '';
+    });
 
     document.querySelectorAll('.tb-tool[data-tool]').forEach(b => {
         b.addEventListener('click', () => setTool(b.dataset.tool));
@@ -110,6 +126,26 @@ function labelMedida(pts) {
     return { label: fmtDist(info), sub: `${Math.round(info.celulas * 10) / 10} cel`, info };
 }
 
+// ===== ROTAS DE VIAGEM =====
+// Um desenho (livre/linha) vira rota com `ehRota: true`: tracejado no render e
+// distância/dias na mesma régua do resto (hex/diagonal/terreno/escala do mapa).
+function infoRota(o) {
+    const pts = o.pontos || [];
+    return medirTrajeto(pts, { ...cfgGrid(), upc: (pt) => upcEm(pt), unidade: unidadeEm(pts[0]), terrenos: terrenosDoCanvas() });
+}
+window._tbInfoRota = (id) => {
+    const o = T.objects.get(id);
+    if (!o || !o.ehRota) return '';
+    return fmtViagem(infoRota(o), T.canvas?.viagemPorDia);
+};
+
+function converterEmRota(o) {
+    // ponytail: tolerância fixa (~gs/16) — traçado a mão perde o tremido, não a forma; expor na UI só se incomodar
+    const pontos = simplificarPontos(o.pontos || [], gridSize() / 16);
+    updObj(o.id, { ehRota: true, pontos });
+    toast(window._tbInfoRota(o.id) || '🛤️ Rota criada');
+}
+
 function deslocDoToken(o) {
     // limite de deslocamento vindo da ficha (se existir)
     if (o.vinculo?.tipo === 'char') {
@@ -124,7 +160,8 @@ function podeMoverObj(o) {
     if (o.bloqueado) return false;
     if (T.isMaster) return true;
     if (o.tipo === 'token' && tokenDoUsuario(o)) return can('moverToken');
-    if (o.tipo === 'loot') return can('moverToken');
+    // loot segue a MESMA permissão de interação do cenário (portas/janelas/luzes)
+    if (o.tipo === 'loot') return can('interagirCenario');
     if (o.criadoPor === T.user?.uid) return true;
     return false;
 }
@@ -218,6 +255,24 @@ function onDown(e) {
     cv.setPointerCapture(e.pointerId);
     const scr = evPos(e), w = evWorld(e);
 
+    // ---- Toque: 2º dedo durante o arrasto = vértice (equivale ao botão direito) ----
+    // Consome o toque inteiro: nada de pinça/long-press no meio de um movimento.
+    if (e.pointerType === 'touch' && ponteiro?.tipo === 'dragObj' && ponteiro.trail) {
+        pointersAtivos.set(e.pointerId, scr);
+        cancelarLongPress();
+        if (addWaypoint()) toast('📍 Vértice adicionado');
+        return;
+    }
+
+    // ---- Toque: 2º dedo durante a régua = vértice (equivale ao botão direito) ----
+    if (e.pointerType === 'touch' && ponteiro?.tipo === 'measure' && T.temp?.tipo === 'medida' && !T.temp.caneta) {
+        pointersAtivos.set(e.pointerId, scr);
+        cancelarLongPress();
+        T.temp.pontos.push(snapMedida(w));
+        markDirty(); toast('📍 Vértice adicionado');
+        return;
+    }
+
     // ---- Pinch-zoom (2 dedos) — F7.4 ----
     pointersAtivos.set(e.pointerId, scr);
     if (pointersAtivos.size === 2) {
@@ -244,11 +299,7 @@ function onDown(e) {
         // então o teste de baixo capturava o clique e empurrava o vértice em
         // T.temp.pontos — que o onMove reconstrói do trail a cada movimento.
         // O vértice ia para o lugar errado e sumia no frame seguinte.
-        if (ponteiro?.tipo === 'dragObj' && ponteiro.trail) {
-            const o = T.objects.get(ponteiro.id);
-            if (o) { ponteiro.trail.push({ x: o.x, y: o.y }); markDirty(); }
-            return;
-        }
+        if (ponteiro?.tipo === 'dragObj' && ponteiro.trail) { addWaypoint(); return; }
         if (T.temp?.tipo === 'medida' && T.measureCfg.forma !== 'caneta') {
             T.temp.pontos.push(snapMedida(w));
             markDirty();
@@ -260,6 +311,13 @@ function onDown(e) {
     if (e.button === 1) { ponteiro = { tipo: 'pan', scr, cam: { ...T.cam }, botao: 1, moveu: false }; return; }
     if (e.button !== 0) return;
 
+    // Espaço segurado: o botão esquerdo arrasta o canva, qualquer que seja a
+    // ferramenta — atalho padrão de editor, evita trocar para ✋ e voltar.
+    if (espacoApertado) {
+        ponteiro = { tipo: 'pan', scr, cam: { ...T.cam }, botao: 0, moveu: false };
+        return;
+    }
+
     switch (T.tool) {
         case 'select': {
             const h = pickHandle(w);
@@ -270,27 +328,38 @@ function onDown(e) {
                 if (o.tipo === 'relogio' && T.isMaster && T.mode === 'secret' && !e.shiftKey && !o.bloqueado) {
                     const cheias = Math.min((o.cheias || 0) + 1, o.fatias || 6);
                     updObj(o.id, { cheias });
-                    T.selection = o.id; markDirty();
+                    selecionar(o.id); markDirty();
                     return;
                 }
-                T.selection = o.id;
+                // Clicar num item já laçado arrasta o conjunto inteiro
+                if (T.selecionados.length > 1 && T.selecionados.includes(o.id) && podeMoverObj(o)) {
+                    iniciarDragMulti(w, e.pointerId);
+                    markDirty();
+                    break;
+                }
+                selecionar(o.id);
                 abrirPropriedades(o.id);
                 markDirty();
                 if (podeMoverObj(o)) {
-                    iniciarDragObj(o, w);
+                    iniciarDragObj(o, w, e.pointerId);
                 } else ponteiro = { tipo: 'clickObj', id: o.id };
                 if (o.tipo === 'alfinete') mostrarPopupAlfinete(o);
+                if (o.tipo === 'desenho' && o.ehRota) toast(window._tbInfoRota(o.id));
             } else {
-                T.selection = null; abrirPropriedades(null); markDirty();
-                ponteiro = { tipo: 'pan', scr, cam: { ...T.cam }, botao: 0, moveu: false };
+                // Canva vazio: laço de seleção (para arrastar o canva, use ✋,
+                // o botão direito ou o Espaço)
+                selecionar(null); abrirPropriedades(null);
+                T.temp = { tipo: 'marquee', a: w, b: w };
+                ponteiro = { tipo: 'marquee' };
+                markDirty();
             }
             break;
         }
         case 'move': {
             const o = pickObject(w);
             if (o && podeMoverObj(o)) {
-                T.selection = o.id; abrirPropriedades(o.id);
-                iniciarDragObj(o, w);
+                selecionar(o.id); abrirPropriedades(o.id);
+                iniciarDragObj(o, w, e.pointerId);
                 cv.style.cursor = 'grabbing';
             } else ponteiro = { tipo: 'pan', scr, cam: { ...T.cam }, botao: 0, moveu: false };
             break;
@@ -308,9 +377,15 @@ function onDown(e) {
         }
         case 'measure': {
             if (!can('medir') && !T.isMaster) { toast('⚠️ Sem permissão para medir', 'warning'); return; }
+            // Régua já aberta no modo clique-a-clique: este clique é mais um vértice
+            if (T.temp?.tipo === 'medida' && T.temp.modoClique) {
+                T.temp.pontos.push(snapMedida(w));
+                markDirty();
+                return;
+            }
             const p0 = T.measureCfg.forma === 'caneta' ? w : snapMedida(w);
             T.temp = { tipo: 'medida', pontos: [p0], atual: null, caneta: T.measureCfg.forma === 'caneta' };
-            ponteiro = { tipo: 'measure' };
+            ponteiro = { tipo: 'measure', scr, moveu: false, pointerId: e.pointerId };
             break;
         }
         case 'pin': {
@@ -356,29 +431,100 @@ function bloqueioAtivo() {
     return T.canvas?.bloquearMovimento !== false && !T.isMaster;
 }
 
-function iniciarDragObj(o, w) {
+/**
+ * Fixa um vértice no trajeto do token que está sendo arrastado — é o que
+ * transforma o arrasto em rota (e faz a régua somar trecho a trecho).
+ * Botão direito (mouse) e 2º dedo (toque) caem os dois aqui.
+ * @returns true se o vértice foi realmente criado.
+ */
+function addWaypoint() {
+    const o = T.objects.get(ponteiro.id);
+    if (!o) return false;
+    const ult = ponteiro.trail[ponteiro.trail.length - 1];
+    if (Math.hypot(o.x - ult.x, o.y - ult.y) < 1) return false; // parado: vértice repetido não vira rota
+    ponteiro.trail.push({ x: o.x, y: o.y });
+    markDirty();
+    return true;
+}
+
+/**
+ * Arrasto do conjunto laçado. O grupo é RÍGIDO: um único offset (dx, dy) vindo
+ * do ponteiro é aplicado a todos os itens, só no estado LOCAL, e a gravação é
+ * um commit em lote ao soltar. Antes cada objeto escrevia por conta própria
+ * durante o arrasto e os ecos do Firestore voltavam intercalados, embaralhando
+ * as posições relativas do grupo.
+ */
+function iniciarDragMulti(w, pointerId) {
+    const moviveis = T.selecionados.map(id => T.objects.get(id)).filter(o => o && podeMoverObj(o));
+    const travados = T.selecionados.length - moviveis.length;
+    const itens = moviveis.map(o => ({
+        id: o.id, x0: o.x, y0: o.y,
+        pontos0: o.pontos ? o.pontos.map(p => ({ ...p })) : null,
+    }));
+    // __dragging blinda cada item contra o eco do snapshot durante o arrasto;
+    // __fogPos é o ponto de partida da visão, que acompanha o grupo em passos.
+    for (const o of moviveis) {
+        o.__dragging = true;
+        if (o.tipo === 'token') o.__fogPos = { x: o.x, y: o.y };
+    }
+    T.dragAtivo = true;
+    ponteiro = { tipo: 'dragMulti', itens, w0: w, pointerId, moveu: false };
+    if (travados) toast(`🔒 ${travados} item(ns) da seleção estão travados e ficaram no lugar`, 'warning');
+}
+
+/** Tudo que está contido no retângulo e visível no modo atual. */
+function selecionarNoRetangulo(r) {
+    if (r.w < 3 && r.h < 3) { selecionar(null); abrirPropriedades(null); return; }   // clique seco = só limpa
+    const visiveis = new Set(camadasVisiveis().map(c => c.id));
+    if (T.mode === 'secret') {
+        const luz = (T.canvas?.camadas || []).find(c => c.tipo === 'luz');
+        if (luz) visiveis.add(luz.id);
+    }
+    const ids = [...T.objects.values()]
+        .filter(o => visiveis.has(o.layerId) && objVisivel(o) && bboxDentroDoRet(bboxOf(o), r))
+        .sort((a, b) => (a.z || 0) - (b.z || 0))
+        .map(o => o.id);
+
+    T.selecionados = ids;
+    T.selection = ids.length === 1 ? ids[0] : null;
+    abrirPropriedades(T.selection);
+    if (ids.length > 1) toast(`✅ ${ids.length} objetos selecionados — arraste para mover, Delete para excluir`);
+    else if (!ids.length) toast('Nada dentro do laço', 'warning');
+}
+
+function iniciarDragObj(o, w, pointerId) {
     ponteiro = {
-        tipo: 'dragObj', id: o.id, w0: w, x0: o.x, y0: o.y,
+        tipo: 'dragObj', id: o.id, w0: w, x0: o.x, y0: o.y, pointerId,
         pontos0: o.pontos ? o.pontos.map(p => ({ ...p })) : null,
         moveu: false, ultimoWrite: 0,
         trail: o.tipo === 'token' ? [{ x: o.x, y: o.y }] : null, // waypoints
         // F4.6: a parede segura o token DURANTE o arrasto — nada de atravessar e voltar no fim
         segs: segsDoArrasto(o),
         ultimoValido: { x: o.x, y: o.y },
+        ultWrite: { x: o.x, y: o.y },   // última posição enviada ao Firestore
     };
     const lo = T.objects.get(o.id);
     if (lo) {
         lo.__dragging = true;
-        if (lo.tipo === 'token') lo.__fogPos = { x: lo.x, y: lo.y }; // F2.3: fog congelado no ponto de partida
+        if (lo.tipo === 'token') lo.__fogPos = { x: lo.x, y: lo.y }; // ponto de partida do fog; anda em passos junto com o arrasto
     }
+    T.dragAtivo = true;   // segura o save da exploração até soltar (ver tab-fog)
 }
 
 function cancelarLongPress() { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; } }
 
+// Elemento das coordenadas em cache + último texto: era um getElementById e uma
+// escrita no DOM a CADA pointermove, 60x por segundo durante todo o arrasto.
+let elCoords = null, ultCoords = '';
+
 function onMove(e) {
+    contar('pointermove');
     const scr = evPos(e), w = evWorld(e);
-    const coords = document.getElementById('tbCoords');
-    if (coords) coords.textContent = `${Math.round(w.x)}, ${Math.round(w.y)} · ${Math.round(T.cam.z * 100)}%`;
+    if (!elCoords) elCoords = document.getElementById('tbCoords');
+    if (elCoords) {
+        const txt = `${Math.round(w.x)}, ${Math.round(w.y)} · ${Math.round(T.cam.z * 100)}%`;
+        if (txt !== ultCoords) { elCoords.textContent = txt; ultCoords = txt; }
+    }
 
     // Cursor ao vivo (F2.4)
     publicarCursor(w);
@@ -408,6 +554,9 @@ function onMove(e) {
         if (T.temp?.tipo === 'terreno') { T.temp.atual = w; markDirty(); }
         return;
     }
+    if (ponteiro.tipo === 'measure' && !ponteiro.moveu && ponteiro.scr &&
+        Math.abs(scr.x - ponteiro.scr.x) + Math.abs(scr.y - ponteiro.scr.y) > 6) ponteiro.moveu = true;
+
     switch (ponteiro.tipo) {
         case 'pan': {
             const dx = (scr.x - ponteiro.scr.x) / T.cam.z, dy = (scr.y - ponteiro.scr.y) / T.cam.z;
@@ -426,6 +575,9 @@ function onMove(e) {
                 if (direito && !ponteiro.direitoAntes && addWaypoint()) toast('📍 Vértice fixado');
                 ponteiro.direitoAntes = direito;
             }
+            // só o dedo/ponteiro que iniciou o arrasto move o objeto — o 2º dedo
+            // está ali para marcar vértice, não para teleportar o token até ele
+            if (ponteiro.pointerId != null && e.pointerId !== ponteiro.pointerId) break;
             const o = T.objects.get(ponteiro.id); if (!o) break;
             const dx = w.x - ponteiro.w0.x, dy = w.y - ponteiro.w0.y;
             if (Math.abs(dx) + Math.abs(dy) > 2) { ponteiro.moveu = true; cancelarLongPress(); }
@@ -452,10 +604,20 @@ function onMove(e) {
                 o.x = nx; o.y = ny;
                 const patch = o.tipo === 'token' ? { x: nx, y: ny, movendo: true } : { x: nx, y: ny };
                 if (mira != null && mira !== o.rot) { o.rot = mira; patch.rot = mira; }
-                // F2.2/F2.3: deltas com flag `movendo` (clientes remotos seguram o fog)
-                updObj(o.id, patch, DRAG_THROTTLE);
-                // F4.4: preview de custo com waypoints e terreno
-                if (o.tipo === 'token' && T.measureCfg.medirToken) {
+                // F2.2/F2.3: deltas com flag `movendo` (clientes remotos seguram o fog).
+                // Só escreve quando andou meia célula desde a última escrita: ajuste
+                // fino de posição gerava write sem ninguém notar diferença do outro
+                // lado, e write sobrando no mesmo documento é o que enfileira no
+                // servidor. O write FINAL do onUp é sempre imediato.
+                if (deveAtualizarPasso(ponteiro.ultWrite, { x: nx, y: ny }, gridSize() * DRAG_PASSO_CELULA)) {
+                    ponteiro.ultWrite = { x: nx, y: ny };
+                    updObj(o.id, patch, DRAG_THROTTLE);
+                } else {
+                    updObjLocal(o.id, patch);
+                }
+                // F4.4: preview de custo com waypoints e terreno.
+                // Marcou vértice = quer ver a rota, mesmo com "medir token" desligado.
+                if (o.tipo === 'token' && (T.measureCfg.medirToken || ponteiro.trail?.length > 1)) medir('regua', () => {
                     const pts = [...ponteiro.trail, { x: nx, y: ny }];
                     const l = labelMedida(pts);
                     const limite = deslocDoToken(o);
@@ -467,9 +629,27 @@ function onMove(e) {
                         cor: excede ? '#ef4444' : '#22d3ee',
                     };
                     compartilharRegua(pts, l.label);
-                }
+                });
             }
             markDirty();
+            break;
+        }
+        case 'marquee': {
+            if (T.temp?.tipo === 'marquee') { T.temp.b = w; markDirty(); }
+            break;
+        }
+        case 'dragMulti': {
+            if (ponteiro.pointerId != null && e.pointerId !== ponteiro.pointerId) break;
+            // Offset único, sem snap por item: encaixar cada token no grid
+            // separadamente arredondaria uns para um lado e outros para o outro,
+            // que é justamente o que "tratar como um objeto só" precisa evitar.
+            const dx = w.x - ponteiro.w0.x, dy = w.y - ponteiro.w0.y;
+            if (Math.abs(dx) + Math.abs(dy) > 2) { ponteiro.moveu = true; cancelarLongPress(); }
+            for (const it of ponteiro.itens) {
+                updObjLocal(it.id, it.pontos0
+                    ? { pontos: it.pontos0.map(p => ({ x: p.x + dx, y: p.y + dy })) }
+                    : { x: it.x0 + dx, y: it.y0 + dy });
+            }
             break;
         }
         case 'resize': {
@@ -532,11 +712,17 @@ async function onUp(e) {
     if (pinch) { if (pointersAtivos.size < 2) pinch = null; return; }
     // Soltar o botão direito durante a medição (vértice) não encerra a régua
     if (ponteiro && ponteiro.tipo === 'measure' && e.button === 2) return;
+    // Idem no toque: levantar o 2º dedo (o que marcou o vértice) não encerra
+    if (ponteiro && ponteiro.tipo === 'measure' && ponteiro.pointerId != null && e.pointerId !== ponteiro.pointerId) return;
     // Soltar o botão direito durante o arrasto (waypoint) não encerra o arrasto
     if (ponteiro && ponteiro.tipo === 'dragObj' && e.button === 2) return;
+    // Idem no toque: levantar o 2º dedo (o que marcou o vértice) não solta o token
+    if (ponteiro && ponteiro.tipo === 'dragObj' && ponteiro.pointerId != null && e.pointerId !== ponteiro.pointerId) return;
     const p = ponteiro; ponteiro = null;
     if (T.tool === 'move') cv.style.cursor = 'grab';
     if (!p) return;
+    // Cobre todos os fins de arrasto (soltar, cancelar, colisão) num lugar só
+    if (p.tipo === 'dragObj' || p.tipo === 'dragMulti') T.dragAtivo = false;
 
     if (p.tipo === 'pan' && p.botao === 2 && !p.moveu && p.alvoCtx) {
         abrirCtxOuRadial(p.alvoCtx, e.clientX, e.clientY);
@@ -553,10 +739,16 @@ async function onUp(e) {
             if (o.tipo === 'token' && p.segs && p.moveu) {
                 const hit = trajetoColide(trail || [{ x: p.x0, y: p.y0 }, { x: o.x, y: o.y }], p.segs);
                 if (hit) {
-                    o.x = p.x0; o.y = p.y0;
+                    // Recua para a ÚLTIMA posição válida, não para o ponto de partida.
+                    // O clamp do onMove faz o token deslizar rente à parede, e esse
+                    // rasante às vezes conta como toque aqui — cancelar o percurso
+                    // inteiro fazia o token "voltar para onde estava" no fim de um
+                    // movimento legítimo. Agora ele fica onde deu para chegar.
+                    const volta = p.ultimoValido || { x: p.x0, y: p.y0 };
+                    o.x = volta.x; o.y = volta.y;
                     delete o.__fogPos;
-                    updObj(o.id, { x: p.x0, y: p.y0, movendo: false });
-                    toast('🧱 Movimento bloqueado por parede/porta fechada', 'warning');
+                    updObj(o.id, { x: volta.x, y: volta.y, movendo: false });
+                    toast('🧱 Parede no caminho — o token parou onde deu para chegar', 'warning');
                     if (T.temp?.tipo === 'medida') { T.temp = null; limparReguaCompartilhada(); }
                     markDirty();
                     return;
@@ -583,6 +775,50 @@ async function onUp(e) {
         if (T.temp?.tipo === 'medida') { T.temp = null; limparReguaCompartilhada(); markDirty(); }
         return;
     }
+    if (p.tipo === 'marquee') {
+        const t = T.temp; T.temp = null;
+        if (t) selecionarNoRetangulo(normalizarRet(t.a, t.b));
+        markDirty();
+        return;
+    }
+    if (p.tipo === 'dragMulti') {
+        const liberar = () => {
+            for (const it of p.itens) {
+                const o = T.objects.get(it.id); if (!o) continue;
+                delete o.__dragging; delete o.__fogPos;   // fog volta a acompanhar a posição real
+            }
+            markDirty();
+        };
+        // Clique sem arrastar não gera write nenhum
+        if (!p.moveu) { liberar(); return; }
+
+        const patches = [];
+        for (const it of p.itens) {
+            const o = T.objects.get(it.id); if (!o) continue;
+            patches.push({ id: it.id, patch: o.pontos ? { pontos: o.pontos } : { x: o.x, y: o.y } });
+        }
+        try {
+            // Um commit para o grupo inteiro: chega tudo junto ou não chega nada
+            await moverEmLote(patches);
+            for (const it of p.itens) {
+                const o = T.objects.get(it.id); if (!o) continue;
+                registrarOp(it.pontos0
+                    ? { tipo: 'patch', id: it.id, antes: { pontos: it.pontos0 }, depois: { pontos: o.pontos } }
+                    : { tipo: 'patch', id: it.id, antes: { x: it.x0, y: it.y0 }, depois: { x: o.x, y: o.y } });
+            }
+            toast(`✅ ${patches.length} objetos movidos juntos`);
+        } catch (err) {
+            console.error(err);
+            // Grupo volta inteiro para a origem: melhor desfazer que deixar meio movido
+            for (const it of p.itens) {
+                updObjLocal(it.id, it.pontos0 ? { pontos: it.pontos0 } : { x: it.x0, y: it.y0 });
+            }
+            toast('❌ Não consegui mover o grupo — posições restauradas', 'danger');
+        } finally {
+            liberar();
+        }
+        return;
+    }
     if (p.tipo === 'resize') {
         const o = T.objects.get(p.id);
         if (o) {
@@ -605,15 +841,16 @@ async function onUp(e) {
         return;
     }
     if (p.tipo === 'measure' && T.temp) {
-        const t = T.temp;
-        const pts = t.caneta ? t.pontos : t.pontos.concat(t.atual ? [t.atual] : []);
-        T.temp = null;
-        limparReguaCompartilhada();
-        if (pts.length >= 2 && T.measureCfg.exib === 'permanente') {
-            const l = labelMedida(pts);
-            await addObj({ tipo: 'medida', layerId: T.mode === 'secret' ? T.activeLayerId : 'tokens', pontos: pts, label: l.label, cor: '#22d3ee' });
+        // Clique seco (sem arrastar): a régua fica VIVA no modo clique-a-clique.
+        // Antes, soltar o botão encerrava e só dava para criar vértice segurando o
+        // botão esquerdo o tempo todo — ninguém mede assim no PC.
+        if (!p.moveu && !T.temp.caneta) {
+            T.temp.modoClique = true;
+            toast('📏 Clique para cada vértice · duplo-clique ou Enter encerra · Esc cancela');
+            markDirty();
+            return;
         }
-        markDirty();
+        await finalizarMedida();
         return;
     }
     if (p.tipo === 'segmento' && T.temp) {
@@ -635,6 +872,22 @@ async function onUp(e) {
     }
 }
 
+/** Fecha a medição em andamento (arrasto solto, duplo-clique ou Enter). */
+async function finalizarMedida() {
+    const t = T.temp; if (!t || t.tipo !== 'medida') return;
+    const pts = t.caneta ? t.pontos : t.pontos.concat(t.atual ? [t.atual] : []);
+    // duplo-clique deixa o último vértice e o ponto do cursor no mesmo lugar
+    const ult = pts[pts.length - 1], penult = pts[pts.length - 2];
+    if (penult && Math.hypot(ult.x - penult.x, ult.y - penult.y) < 2) pts.pop();
+    T.temp = null;
+    limparReguaCompartilhada();
+    if (pts.length >= 2 && T.measureCfg.exib === 'permanente') {
+        const l = labelMedida(pts);
+        await addObj({ tipo: 'medida', layerId: T.mode === 'secret' ? T.activeLayerId : 'tokens', pontos: pts, label: l.label, cor: '#22d3ee' });
+    }
+    markDirty();
+}
+
 function tokenSobPonto(w, ignorarId) {
     for (const o of T.objects.values()) {
         if (o.tipo !== 'token' || o.id === ignorarId || !objVisivel(o)) continue;
@@ -649,9 +902,10 @@ function abrirCtxOuRadial(o, x, y) {
         abrirMenuRadial(o, x, y);
         return;
     }
-    // No público o menu só existe para o cenário interativo (é o caminho do toque,
-    // que não tem duplo-clique).
-    if (T.mode !== 'secret' && !podeAcionarCenario(o)) return;
+    // No público o menu só existe para o cenário interativo e o loot (é o caminho
+    // do toque, que não tem duplo-clique).
+    if (T.mode !== 'secret' && !podeAcionarCenario(o) &&
+        !(o.tipo === 'loot' && can('interagirCenario'))) return;
     abrirMenuContexto(o, x, y);
 }
 
@@ -670,6 +924,8 @@ function onWheel(e) {
 
 function onDblClick(e) {
     const w = evWorld(e);
+    // Régua clique-a-clique: duplo-clique encerra
+    if (T.temp?.tipo === 'medida' && T.temp.modoClique) { finalizarMedida(); return; }
     // F2.5: Alt + duplo-clique = ping (Shift junto: mestre força a câmera)
     if (e.altKey) { enviarPing(w, e.shiftKey && T.isMaster); return; }
     // Terreno: duplo-clique fecha o polígono
@@ -688,6 +944,7 @@ function onDblClick(e) {
         window.tbAbrirNpcModal && window.tbAbrirNpcModal(o.vinculo.id, somenteLeitura);
         return;
     }
+    if (o.tipo === 'loot') { window.tbClickLoot && window.tbClickLoot(o.id); return; }
     if (o.tipo === 'mostrar') { window.tbClickMostrar && window.tbClickMostrar(o.id); }
 }
 
@@ -701,14 +958,28 @@ function onKey(e) {
         if (addWaypoint()) toast('📍 Vértice fixado');
         return;
     }
-    if (e.key === 'Escape') { T.temp = null; T.selection = null; abrirPropriedades(null); limparReguaCompartilhada(); markDirty(); return; }
+    // Espaço (fora de arrasto) = modo "mãozinha" temporário até soltar a tecla
+    if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        if (!espacoApertado) { espacoApertado = true; if (cv) cv.style.cursor = 'grab'; }
+        return;
+    }
+    if (e.key === 'Escape') { T.temp = null; selecionar(null); abrirPropriedades(null); limparReguaCompartilhada(); markDirty(); return; }
+    if (e.key === 'Enter' && T.temp?.tipo === 'medida' && T.temp.modoClique) { finalizarMedida(); return; }
     if (e.key === 'Enter' && T.tool === 'terreno' && T.temp?.tipo === 'terreno') {
         const pts = T.temp.pontos; T.temp = null; markDirty();
         confirmarTerreno(pts);
         return;
     }
     if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (T.selection) { const o = T.objects.get(T.selection); if (o && podeEditarObj(o)) delObj(T.selection); }
+        const ids = T.selecionados.length ? [...T.selecionados] : (T.selection ? [T.selection] : []);
+        let n = 0;
+        for (const id of ids) {
+            const o = T.objects.get(id);
+            if (o && podeEditarObj(o)) { delObj(id); n++; }
+        }
+        if (n > 1) toast(`🗑️ ${n} objetos excluídos`);
+        else if (ids.length && !n) toast('⚠️ Nada que você possa excluir na seleção', 'warning');
         return;
     }
     if (e.key === '?' && e.shiftKey) { abrirAjudaAtalhos(); return; }
@@ -753,14 +1024,18 @@ function abrirAjudaAtalhos() {
             <div><b>Ctrl+S</b> Selecionar · <b>Ctrl+F</b> Caneta · <b>Ctrl+D</b> Retângulo · <b>Ctrl+G</b> Texto · <b>Ctrl+M</b> Régua</div>
             <div><b>Ctrl+Z / Ctrl+Y</b> Desfazer / Refazer (mestre)</div>
             <div><b>Setas</b> Movem o token selecionado 1 célula</div>
+            <div><b>Selecionar (▶):</b> arraste no vazio para <b>laçar</b> tudo que couber dentro do retângulo · arraste um dos laçados para mover o conjunto</div>
+            <div><b>Espaço + arrastar</b> Move o canva sem trocar de ferramenta (o botão direito também arrasta)</div>
             <div><b>Alt + duplo-clique</b> Ping no mapa · <b>+Shift</b> (mestre) puxa a câmera de todos</div>
-            <div><b>Botão direito (arrastando token)</b> Adiciona waypoint ao trajeto</div>
-            <div><b>Botão direito (régua)</b> Adiciona vértice · <b>Botão direito (parado)</b> Menu de contexto</div>
+            <div><b>Régua:</b> clique para começar, um clique por vértice, <b>duplo-clique</b> ou <b>Enter</b> encerra · <b>Esc</b> cancela</div>
+            <div><b>Arrastando a régua:</b> botão direito também cria vértice · no toque, o 2º dedo faz o mesmo</div>
+            <div><b>Botão direito (arrastando token)</b> Adiciona waypoint · no toque, 2º dedo</div>
+            <div><b>Botão direito (parado)</b> Menu de contexto</div>
             <div><b>Duplo-clique / Enter</b> Fecha o polígono de terreno · <b>Esc</b> Cancela</div>
             <div><b>Duplo-clique</b> em 🚪 porta / 🪟 janela abre e fecha · em 💡 luz acende e apaga (jogadores precisam da permissão “Interagir com o cenário”)</div>
-            <div><b>Delete</b> Exclui a seleção · <b>Shift+?</b> Esta ajuda</div>
+            <div><b>Delete</b> Exclui a seleção (inclusive várias de uma vez) · <b>Shift+?</b> Esta ajuda</div>
             <div><b>🔒 Bloqueio:</b> menu de contexto/propriedades bloqueiam o objeto; clique no objeto bloqueado e use o botão 🔒 (Mestre) para desbloquear</div>
-            <div><b>Toque:</b> pinça = zoom · segurar = menu de contexto</div>
+            <div><b>Toque:</b> pinça = zoom · segurar = menu de contexto · <b>arrastando o token, tocar com um 2º dedo</b> fixa um vértice da rota</div>
         </div>`);
 }
 
@@ -781,17 +1056,28 @@ function clampCamera() {
 }
 
 // ===== RÉGUA COMPARTILHADA =====
+// A mesma fila de escrita do arrasto: no máximo 1 write por janela de 300ms,
+// mas SEMPRE com o estado mais novo aterrissando no fim (o throttle antigo
+// descartava a atualização — o último trecho da rota nunca chegava do outro
+// lado, e o rastro remoto ficava picado/incompleto).
+const filaRegua = criarFilaDeEscrita({
+    write: (_id, dados) => {
+        setDoc(refReguas(), { [T.user.uid]: dados }, { merge: true }).catch(()=>{});
+    },
+});
 function compartilharRegua(pontos, label) {
-    if (!T.measureCfg.mostrarOutros) return;
-    const agora = Date.now();
-    if (agora - reguaTimer < 130) return;
-    reguaTimer = agora;
+    if (!T.measureCfg.mostrarOutros || !T.user) return;
     const nome = T.isMaster ? 'Mestre' : (T.usersMap[T.user?.uid]?.nome || 'Jogador');
-    setDoc(refReguas(), { [T.user.uid]: { pontos: pontos.slice(-60), label, nome, cor: T.isMaster ? '#f59e0b' : '#f472b6', t: agora } }, { merge: true }).catch(()=>{});
+    filaRegua.enviar('regua', {
+        pontos: pontos.slice(-60), label, nome,
+        cor: T.isMaster ? '#f59e0b' : '#f472b6', t: Date.now(),
+    }, DRAG_WRITE_MS);
 }
 function limparReguaCompartilhada() {
     if (!T.user) return;
-    setDoc(refReguas(), { [T.user.uid]: null }, { merge: true }).catch(()=>{});
+    // Sem throttle: cancela qualquer rastro pendente e apaga já — o pendente
+    // não pode aterrissar DEPOIS do null e ressuscitar a régua.
+    filaRegua.enviar('regua', null, 0);
 }
 
 // ===== TEXTO =====
@@ -831,7 +1117,7 @@ function abrirModalTexto(w, objExistente) {
 // ===== ALFINETES AVANÇADOS (F6.1) =====
 async function criarAlfinete(w) {
     const id = await addObj({ tipo: 'alfinete', layerId: T.mode === 'secret' ? T.activeLayerId : 'tokens', x: w.x, y: w.y, cor: '#ef4444', titulo: '', descricao: '' });
-    T.selection = id;
+    selecionar(id);
     window.tbEditarAlfinete(id);
 }
 
@@ -847,9 +1133,12 @@ window.tbEditarAlfinete = function(id) {
             <label>Cor<input type="color" id="pin_c" value="${o.cor || '#ef4444'}"></label>
             <label>Imagem<input type="file" id="pin_img" accept="image/*"></label>
             ${T.mode === 'secret' ? `<label>Vincular NPC<select id="pin_npc"><option value="">— nenhum —</option>${npcs.map(n => `<option value="${n.id}" ${o.refTipo==='npc'&&o.refId===n.id?'selected':''}>${esc(n.nome)}</option>`).join('')}</select></label>` : ''}
+            ${T.mode === 'secret' ? `<label>🗺️ Mapa vinculado (abre outro canvas)<select id="pin_mapa"><option value="">— nenhum —</option>${(T.canvases || []).filter(c => c.id !== T.canvasId).map(c => `<option value="${c.id}" ${o.linkedCanvasId===c.id?'selected':''}>${esc(c.nome)}</option>`).join('')}</select></label>` : ''}
+            ${T.mode === 'secret' ? `<label>📖 Geografia/Propriedade (card de info)<select id="pin_geo"><option value="${esc(o.geoRef || '')}">⏳ carregando…</option></select></label>` : ''}
         </div>
         <div class="tb-modal-actions"><button class="tb-btn tb-btn-success" id="pin_ok">✅ Salvar</button></div>
     `);
+    if (T.mode === 'secret' && window.tbPreencherGeoSelect) window.tbPreencherGeoSelect();
     document.getElementById('pin_ok').onclick = async () => {
         const patch = {
             titulo: document.getElementById('pin_t').value,
@@ -858,6 +1147,10 @@ window.tbEditarAlfinete = function(id) {
         };
         const sel = document.getElementById('pin_npc');
         if (sel) { patch.refTipo = sel.value ? 'npc' : null; patch.refId = sel.value || null; }
+        const mapa = document.getElementById('pin_mapa');
+        if (mapa) patch.linkedCanvasId = mapa.value || null;
+        const geo = document.getElementById('pin_geo');
+        if (geo) patch.geoRef = geo.value || null;   // opção "carregando" já carrega o valor atual
         const file = document.getElementById('pin_img').files[0];
         if (file) {
             try { patch.imagem = await uploadArquivo(file); } catch (e) { toast('❌ Falha no upload da imagem', 'danger'); }
@@ -868,7 +1161,7 @@ window.tbEditarAlfinete = function(id) {
 };
 
 function mostrarPopupAlfinete(o) {
-    if (!o.titulo && !o.descricao && !o.imagem && !o.refId) return;
+    if (!o.titulo && !o.descricao && !o.imagem && !o.refId && !o.linkedCanvasId && !o.geoRef) return;
     const el = document.getElementById('tbPinPopup');
     const s = worldToScreen({ x: o.x, y: o.y });
     el.style.left = (s.x + 14) + 'px';
@@ -877,7 +1170,9 @@ function mostrarPopupAlfinete(o) {
         ${o.imagem ? `<img src="${esc(o.imagem)}" style="width:100%;max-height:130px;object-fit:cover;border-radius:6px;margin-bottom:6px">` : ''}
         <b>📌 ${esc(o.titulo || 'Alfinete')}</b>
         ${o.descricao ? `<div>${esc(o.descricao)}</div>` : ''}
-        ${o.refTipo === 'npc' && o.refId ? `<button class="tb-btn" style="margin-top:6px;font-size:.72rem" onclick="window.tbAbrirNpcModal&&window.tbAbrirNpcModal('${o.refId}')">👹 Abrir NPC</button>` : ''}`;
+        ${o.refTipo === 'npc' && o.refId ? `<button class="tb-btn" style="margin-top:6px;font-size:.72rem" onclick="window.tbAbrirNpcModal&&window.tbAbrirNpcModal('${o.refId}')">👹 Abrir NPC</button>` : ''}
+        ${T.mode === 'secret' && o.linkedCanvasId ? `<button class="tb-btn" style="margin-top:6px;font-size:.72rem" onclick="window.tbAbrirMapaVinculado&&tbAbrirMapaVinculado('${o.linkedCanvasId}')">🗺️ Abrir mapa vinculado</button>` : ''}
+        ${o.geoRef ? `<button class="tb-btn" style="margin-top:6px;font-size:.72rem" onclick="window.tbAbrirInfoGeo&&tbAbrirInfoGeo('${o.id}')">📖 Ver informações</button>` : ''}`;
     el.classList.add('open');
     clearTimeout(el._t);
     el._t = setTimeout(() => el.classList.remove('open'), 5000);
@@ -897,6 +1192,13 @@ function abrirMenuContexto(o, x, y) {
     if (o.tipo === 'mostrar' && window.tbMenuMostrar) { window.tbMenuMostrar(o.id, x, y); return; }
     // Jogador: só os acionamentos do cenário, nada de ocultar/excluir/z-ordem
     if (T.mode !== 'secret') {
+        if (o.tipo === 'loot' && can('interagirCenario')) {
+            renderMenuContexto(menu, [{
+                t: o.item?.ehContainer ? '🧰 Abrir baú' : '📦 Pegar item',
+                fn: () => window.tbClickLoot && window.tbClickLoot(o.id),
+            }], x, y);
+            return;
+        }
         if (!podeAcionarCenario(o)) return;
         const rotulo = o.tipo === 'luz' ? (o.apagada ? '💡 Acender' : '🕯️ Apagar')
             : o.aberta ? (o.tipo === 'porta' ? '🚪 Fechar porta' : '🪟 Fechar janela')
@@ -911,14 +1213,25 @@ function abrirMenuContexto(o, x, y) {
     if (o.tipo === 'porta') itens.push({ t: o.aberta ? '🚪 Fechar porta' : '🚪 Abrir porta', fn: () => updObj(o.id, { aberta: !o.aberta }) });
     if (o.tipo === 'janela') itens.push({ t: o.aberta ? '🪟 Fechar janela' : '🪟 Abrir janela (deixa passar)', fn: () => updObj(o.id, { aberta: !o.aberta }) });
     if (o.tipo === 'luz') itens.push({ t: o.apagada ? '💡 Acender' : '🕯️ Apagar', fn: () => updObj(o.id, { apagada: !o.apagada }) });
+    if (o.tipo === 'loot') {
+        itens.push({ t: o.item?.ehContainer ? '🧰 Abrir baú' : '📦 Entregar item...', fn: () => window.tbClickLoot && window.tbClickLoot(o.id) });
+        if (o.item) itens.push({ t: '↩️ Devolver à Caixa do Mestre', fn: () => window.tbDevolverLoot && window.tbDevolverLoot(o.id) });
+    }
     if (o.tipo === 'alfinete') itens.push({ t: '📝 Editar alfinete', fn: () => window.tbEditarAlfinete(o.id) });
+    if (o.tipo === 'alfinete' && o.linkedCanvasId) itens.push({ t: '🗺️ Abrir mapa vinculado', fn: () => window.tbAbrirMapaVinculado(o.linkedCanvasId) });
+    if (o.tipo === 'alfinete' && o.geoRef) itens.push({ t: '📖 Ver informações do local', fn: () => window.tbAbrirInfoGeo(o.id) });
+    if (o.tipo === 'desenho' && ['livre', 'linha'].includes(o.forma || 'livre')) {
+        itens.push(o.ehRota
+            ? { t: '✏️ Desfazer rota de viagem', fn: () => updObj(o.id, { ehRota: false }) }
+            : { t: '🛤️ Transformar em rota de viagem', fn: () => converterEmRota(o) });
+    }
     if (o.tipo === 'relogio') {
         itens.push({ t: '➖ Voltar fatia', fn: () => updObj(o.id, { cheias: Math.max(0, (o.cheias || 0) - 1) }) });
         itens.push({ t: '🔄 Zerar relógio', fn: () => updObj(o.id, { cheias: 0 }) });
     }
     if (o.tipo === 'template') itens.push({ t: '🎯 Limpar alvos', fn: () => updObj(o.id, { alvos: [] }) });
     itens.push({ t: '⬆️ Trazer para frente', fn: () => updObj(o.id, { z: maxZ() + 1 }) });
-    itens.push({ t: '⚙️ Propriedades', fn: () => { T.selection = o.id; abrirPropriedades(o.id); markDirty(); } });
+    itens.push({ t: '⚙️ Propriedades', fn: () => { selecionar(o.id); abrirPropriedades(o.id); markDirty(); } });
     itens.push({ t: '🗑️ Excluir', fn: () => delObj(o.id), danger: true });
     renderMenuContexto(menu, itens, x, y);
 }

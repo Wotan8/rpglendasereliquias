@@ -8,7 +8,7 @@
 // Mora fora do tab-tools.js de propósito: registra o próprio listener e
 // não disputa arquivo com as ferramentas de ponteiro.
 // =============================================
-import { T, markDirty, tokenDoUsuario, can } from './tab-state.js';
+import { T, markDirty, tokenDoUsuario, can, anguloDoMovimento } from './tab-state.js';
 import { worldToScreen } from './tab-render.js';
 import { updObj } from './tab-objects.js';
 
@@ -35,15 +35,9 @@ export function girarToken(id, graus) {
 }
 window.tbGirarToken = girarToken;
 
-/**
- * Direção de um deslocamento, no mesmo referencial de `rot` (0 = para cima,
- * cresce no sentido horário). `null` quando o passo é curto demais — sem esse
- * piso o token fica tremendo de lado a cada pixel do arrasto.
- */
-export function anguloDoMovimento(dx, dy, minimo = 4) {
-    if (Math.hypot(dx, dy) < minimo) return null;
-    return ((Math.round(Math.atan2(dy, dx) * 180 / Math.PI) + 90) % 360 + 360) % 360;
-}
+// A conversão de ângulo vive em tab-state.js, junto com `rotParaCanvas`
+// (as duas metades da mesma convenção). Reexportado para não mexer nos imports.
+export { anguloDoMovimento };
 
 /** O token só precisa mirar se a visão (ou a luz) dele for um cone. */
 export function temCone(o) {

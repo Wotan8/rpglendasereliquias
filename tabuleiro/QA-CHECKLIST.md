@@ -31,7 +31,13 @@ Teste com 2 navegadores: um no modo **secreto** (mestre) e um no **público** (j
 - [ ] Config de barras por token (todos/dono/mestre/off) respeitada no público.
 - [ ] Condições (da ficha e do combate) aparecem como ícones ao redor do token.
 - [ ] Nome, barras e ícones mantêm o MESMO tamanho na tela em qualquer zoom.
-- [ ] 🎁 Mostrar → botão direito → "Transformar em loot": vira caixinha 📦; arrastar sobre um token abre a entrega pré-selecionada e o loot some ao entregar.
+- [ ] 🎁 Mostrar → cards de Equipamento têm botões 🖼️ (mostrar), 🧰 (dropar loot) e 📦 (mandar p/ Caixa do Mestre); os da Caixa têm 🖼️/🧰 e 📂 (abrir contêiner).
+- [ ] Loot no mapa aparece SEM borda/nome — só a imagem do item (fallback 📦/🧰 sem imagem).
+- [ ] Loot dropado da Caixa some da Caixa (e volta por "↩️ Devolver à Caixa" no botão direito do mestre).
+- [ ] Jogador com "Interagir com o cenário" dá duplo-clique (ou toque longo) no loot e pega SEM escolher quantidade (fixa no que o mestre dropou); no modo Secreto o mestre edita a quantidade.
+- [ ] Contêiner dropado: propriedades/baú têm "📌 Fixo no mapa"; fixo = jogador só pega o conteúdo; pegável = pode pegar o baú inteiro. Jogador precisa do token AO LADO do baú para abrir.
+- [ ] Janela do baú também GUARDA itens: lista o inventário do alvo selecionado (soltos, não equipados, sem contêiner) e "⬇️ Guardar" move o item para dentro do baú.
+- [ ] Arrastar loot sobre um token abre a entrega pré-selecionada e o loot some ao entregar.
 - [ ] Botão direito num token abre o menu radial (ficha, iniciativa d20, visão, luz, invisível, condição, tamanho, elevação, remover).
 - [ ] Participante ativo do combate ganha anel amarelo pulsante no mapa (público só se o combate estiver visível).
 

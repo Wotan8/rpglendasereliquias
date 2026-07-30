@@ -8,7 +8,9 @@ import { setDoc, onSnapshot } from '../../painel-mestre/js/firebase-config.js';
 import { T, esc, markDirty, toast, uid } from './tab-state.js';
 import { refPresenca, refPings } from './tab-main.js';
 
-const CURSOR_THROTTLE = 200;
+// 300ms: o doc de presença é único para a mesa e concorre com as escritas do
+// token durante o arrasto. Cursor é enfeite — não vale gastar banda de escrita.
+const CURSOR_THROTTLE = 300;
 const HEARTBEAT = 10000;
 const CURSOR_TTL = 15000;
 const PING_DUR = 2200;

@@ -2,8 +2,8 @@
 // TABULEIRO — "Mostrar" (NPCs, Equipamentos, Caixa do Mestre)
 // + Ficha rápida de NPC + entrega de itens ao inventário
 // =============================================
-import { db, collection, doc, getDoc, getDocs, addDoc, updateDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, markDirty } from './tab-state.js';
+import { db, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, writeBatch } from '../../painel-mestre/js/firebase-config.js';
+import { T, esc, toast, markDirty, gridSize, tokenDoUsuario } from './tab-state.js';
 import { abrirModal, fecharModal } from './tab-main.js';
 import { addObj, updObj, delObj, vincularNpcNaMesa } from './tab-objects.js';
 import { screenToWorld } from './tab-render.js';
@@ -29,9 +29,10 @@ async function carregarEquip() {
     return equipCatalogo;
 }
 async function carregarCaixa() {
-    const snap = await getDocs(collection(db, 'items'));
+    // where() no servidor: antes baixava a coleção 'items' INTEIRA a cada abertura do modal
+    const snap = await getDocs(query(collection(db, 'items'), where('characterId', '==', caixaId())));
     caixaItens = [];
-    snap.forEach(d => { const x = d.data(); if (x.characterId === caixaId()) caixaItens.push({ id: d.id, ...x }); });
+    snap.forEach(d => caixaItens.push({ id: d.id, ...d.data() }));
     return caixaItens;
 }
 
@@ -77,21 +78,38 @@ function renderListaMostrar() {
     } else if (aba === 'equip') {
         cards = (equipCatalogo||[]).filter(i => (i.nome||'').toLowerCase().includes(busca)).map(i => card({
             img: i.imagem || i.imagemUrl, nome: i.nome || 'Item', sub: `${i.tipo || 'Equipamento'}${i.peso ? ' · ' + i.peso + 'kg' : ''}`,
-            onclick: `tbColocarMostrar('equip','${i.id}')`
+            acoes: [
+                { ic: '🖼️', tip: 'Mostrar na mesa', fn: `tbColocarMostrar('equip','${i.id}')` },
+                { ic: '🧰', tip: 'Dropar como loot no mapa', fn: `tbDroparLoot('equip','${i.id}')` },
+                { ic: '📦', tip: 'Adicionar à Caixa do Mestre', fn: `tbAddCaixa('${i.id}')` },
+            ]
         }));
     } else {
-        cards = (caixaItens||[]).filter(i => (i.nome||'').toLowerCase().includes(busca)).map(i => card({
-            img: i.imagem || i.imagemUrl, nome: i.nome || 'Item', sub: `${i.tipo || 'Item'}${i.quantidade ? ' · x' + i.quantidade : ''}`,
-            onclick: `tbColocarMostrar('caixa','${i.id}')`
-        }));
+        const todos = caixaItens || [];
+        cards = todos.filter(i => !i.parentItemId && (i.nome||'').toLowerCase().includes(busca)).map(i => {
+            const nDentro = i.ehContainer ? todos.filter(x => x.parentItemId === i.id).length : 0;
+            const acoes = [
+                { ic: '🖼️', tip: 'Mostrar na mesa', fn: `tbColocarMostrar('caixa','${i.id}')` },
+                { ic: '🧰', tip: 'Dropar como loot no mapa', fn: `tbDroparLoot('caixa','${i.id}')` },
+            ];
+            if (i.ehContainer) acoes.push({ ic: '📂', tip: 'Abrir contêiner', fn: `tbAbrirContainerCaixa('${i.id}')` });
+            return card({
+                img: i.imagem || i.imagemUrl, nome: i.nome || 'Item',
+                sub: i.ehContainer ? `📂 Contêiner · ${nDentro} item(ns)` : `${i.tipo || 'Item'}${i.quantidade ? ' · x' + i.quantidade : ''}`,
+                acoes
+            });
+        });
     }
     el.innerHTML = cards.join('') || '<div class="tb-muted" style="grid-column:1/-1;text-align:center;padding:20px">Nada encontrado</div>';
 }
-function card({ img, nome, sub, onclick }) {
-    return `<div class="tb-mostrar-card" onclick="${onclick}">
+function card({ img, nome, sub, onclick, acoes }) {
+    const botoes = acoes?.length ? `<div class="tb-mostrar-acoes">${acoes.map(a =>
+        `<button class="tb-btn tb-btn-small" title="${a.tip}" onclick="event.stopPropagation();${a.fn}">${a.ic}</button>`).join('')}</div>` : '';
+    return `<div class="tb-mostrar-card" ${onclick ? `onclick="${onclick}"` : 'style="cursor:default"'}>
         ${img ? `<img src="${esc(img)}">` : '<div class="tb-mostrar-noimg">🖼️</div>'}
         <div class="tb-mostrar-nome">${esc(nome)}</div>
         <div class="tb-muted" style="font-size:.72rem">${esc(sub)}</div>
+        ${botoes}
     </div>`;
 }
 
@@ -159,6 +177,262 @@ window.tbColocarMostrar = async function(refTipo, refId) {
     toast('🎁 Colocado no canva (oculto do público). Botão direito para configurar a exibição.');
 };
 
+// =====================================================================
+// LOOT NO MAPA — o objeto do canvas carrega o item EMBUTIDO (`item` e,
+// para contêineres, `itensDentro`). Assim tudo sincroniza pelo snapshot
+// de objetos que já existe (zero reads/listeners extras) e o jogador
+// consegue pegar dentro das regras do Firestore: ele cria um item novo
+// no próprio personagem, sem precisar editar docs da Caixa do Mestre.
+// =====================================================================
+const semId = ({ id, parentItemId, characterId, equipado, ...campos }) => campos;
+function baseNovoItem(targetId) {
+    return {
+        characterId: targetId, mesaId: T.mesaId, parentItemId: null, equipado: false,
+        createdAt: new Date().toISOString(), createdBy: T.user?.email || null, ownerUid: T.user?.uid || null,
+    };
+}
+
+window.tbDroparLoot = async function(refTipo, refId) {
+    const src = refTipo === 'equip' ? (equipCatalogo||[]).find(x => x.id === refId)
+                                    : (caixaItens||[]).find(x => x.id === refId);
+    if (!src) return;
+    const centro = screenToWorld({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+    const obj = {
+        tipo: 'loot', layerId: 'tokens',
+        x: centro.x, y: centro.y,
+        nome: src.nome || 'Item', url: src.imagem || src.imagemUrl || '',
+        quantidade: src.quantidade || 1,
+        item: semId(src), visivelPublico: true,
+    };
+    try {
+        if (refTipo === 'caixa') {
+            // item da caixa SAI da caixa ao virar loot — senão duplica
+            const filhos = (caixaItens||[]).filter(i => i.parentItemId === refId);
+            if (src.ehContainer) {
+                obj.itensDentro = filhos.map(f => ({ id: f.id, ...semId(f) }));
+                obj.fixo = false;
+            }
+            const lote = writeBatch(db);
+            lote.delete(doc(db, 'items', refId));
+            filhos.forEach(f => lote.delete(doc(db, 'items', f.id)));
+            await lote.commit();
+            caixaItens = null;
+        }
+        await addObj(obj);
+        fecharModal();
+        toast(src.ehContainer ? '🧰 Baú dropado — duplo-clique nele para configurar fixo/pegável'
+                              : '🧰 Loot dropado no mapa');
+    } catch (e) { console.error(e); toast('❌ Erro ao dropar o loot', 'danger'); }
+};
+
+window.tbAddCaixa = async function(refId) {
+    const tpl = (equipCatalogo||[]).find(x => x.id === refId); if (!tpl) return;
+    try {
+        await addDoc(collection(db, 'items'), {
+            ...semId(tpl), ...baseNovoItem(caixaId()),
+            quantidade: 1, origemTemplateId: refId,
+        });
+        await carregarCaixa();
+        const btn = document.querySelector('#tbModal .tb-tab[data-aba="caixa"]');
+        if (btn) btn.textContent = `📦 Caixa do Mestre (${caixaItens.length})`;
+        if (window._msAba === 'caixa') renderListaMostrar();
+        toast('📦 Adicionado à Caixa do Mestre');
+    } catch (e) { console.error(e); toast('❌ Erro ao adicionar à caixa', 'danger'); }
+};
+
+// ===== CONTÊINER DENTRO DA CAIXA DO MESTRE =====
+window.tbAbrirContainerCaixa = async function(contId) {
+    if (!caixaItens) await carregarCaixa();
+    const cont = caixaItens.find(x => x.id === contId); if (!cont) return;
+    const dentro = caixaItens.filter(i => i.parentItemId === contId);
+    const fora = caixaItens.filter(i => !i.parentItemId && i.id !== contId && !i.ehContainer);
+    const linha = (i, guardar) => `<div class="tb-list-row">
+        ${i.imagem || i.imagemUrl ? `<img src="${esc(i.imagem || i.imagemUrl)}" style="width:28px;height:28px;object-fit:cover;border-radius:6px;flex:none">` : '<span style="width:28px;text-align:center;flex:none">📦</span>'}
+        <div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(i.nome || 'Item')} <span class="tb-muted">x${i.quantidade || 1}</span></div>
+        <button class="tb-btn tb-btn-small" onclick="tbMoverNoContainer('${i.id}','${contId}',${guardar})">${guardar ? '⬇️ Guardar' : '⬆️ Tirar'}</button>
+    </div>`;
+    abrirModal(`📂 ${esc(cont.nome || 'Contêiner')}`, `
+        <div class="tb-muted" style="font-size:.78rem;margin-bottom:4px">Dentro do contêiner (${dentro.length})</div>
+        <div class="tb-list" style="max-height:24vh;overflow-y:auto">${dentro.map(i => linha(i, false)).join('') || '<div class="tb-muted" style="text-align:center;padding:12px">Vazio</div>'}</div>
+        <div class="tb-muted" style="font-size:.78rem;margin:10px 0 4px">Guardar item da Caixa do Mestre</div>
+        <div class="tb-list" style="max-height:24vh;overflow-y:auto">${fora.map(i => linha(i, true)).join('') || '<div class="tb-muted" style="text-align:center;padding:12px">Nada solto na caixa</div>'}</div>
+        <div class="tb-modal-actions"><button class="tb-btn" onclick="tbAbrirMostrar()">⬅️ Voltar</button></div>
+    `, true);
+};
+window.tbMoverNoContainer = async function(itemId, contId, guardar) {
+    try {
+        await updateDoc(doc(db, 'items', itemId), { parentItemId: guardar ? contId : null, equipado: false });
+        await carregarCaixa();
+        tbAbrirContainerCaixa(contId);
+    } catch (e) { console.error(e); toast('❌ Erro ao mover o item', 'danger'); }
+};
+
+// ===== INTERAÇÃO COM O LOOT (duplo-clique / toque) =====
+function tokenMeuPerto(o) {
+    const gs = gridSize();
+    for (const t of T.objects.values()) {
+        if (!tokenDoUsuario(t)) continue;
+        if (Math.hypot(t.x - o.x, t.y - o.y) <= ((t.tamanhoCelulas || 1) / 2 + 1.1) * gs) return true;
+    }
+    return false;
+}
+
+window.tbClickLoot = function(objId) {
+    const o = T.objects.get(objId); if (!o || o.tipo !== 'loot') return;
+    const mestre = T.mode === 'secret' || T.isMaster;
+    if (!mestre && !T.perms?.interagirCenario) return;
+    if (o.item?.ehContainer) {
+        if (!mestre && !tokenMeuPerto(o)) { toast('🚶 Aproxime seu token do baú para abrir', 'warning'); return; }
+        abrirBau(objId);
+        return;
+    }
+    abrirPegarLoot(o);
+};
+
+function optsAlvo(tokenAlvo) {
+    const selMarca = (tipo, id) => tokenAlvo?.vinculo?.tipo === tipo && tokenAlvo.vinculo.id === id ? 'selected' : '';
+    if (T.mode === 'secret' || T.isMaster) return [
+        ...T.chars.map(c => `<option value="char:${c.id}" ${selMarca('char', c.id)}>🎭 ${esc(c.nome)}</option>`),
+        ...T.npcs.map(n => `<option value="npc:${n.id}" ${selMarca('npc', n.id)}>👹 ${esc(n.nome || 'NPC')}</option>`),
+    ].join('');
+    return T.chars.filter(c => c.ownerUid === T.user?.uid)
+        .map(c => `<option value="char:${c.id}">🎭 ${esc(c.nome)}</option>`).join('');
+}
+
+function abrirPegarLoot(o, tokenAlvo) {
+    const mestre = T.mode === 'secret';
+    const alvos = optsAlvo(tokenAlvo);
+    if (!alvos) { toast('⚠️ Você não tem personagem nesta mesa', 'warning'); return; }
+    const qtd = o.quantidade || 1;
+    abrirModal(`📦 ${esc(o.nome || 'Loot')}`, `
+        <div class="tb-form-grid tb-form-grid-1">
+            <label>Adicionar ao inventário de<select id="ei_alvo">${alvos}</select></label>
+            ${mestre ? `<label>Quantidade<input type="number" id="ei_qtd" value="${qtd}" min="1"></label>`
+                     : `<div class="tb-muted">Quantidade: x${qtd}</div>`}
+        </div>
+        <div class="tb-modal-actions">
+            <button class="tb-btn" onclick="tbFecharModal()">Cancelar</button>
+            <button class="tb-btn tb-btn-success" onclick="tbEntregarItem('${o.id}', true)">✅ Pegar</button>
+        </div>`);
+}
+
+// ===== BAÚ (contêiner dropado no mapa) =====
+function abrirBau(objId) {
+    const o = T.objects.get(objId); if (!o) return;
+    const mestre = T.mode === 'secret';
+    const itens = o.itensDentro || [];
+    const alvos = optsAlvo();
+    if (!alvos) { toast('⚠️ Você não tem personagem nesta mesa', 'warning'); return; }
+    const podePegarBau = mestre || !o.fixo;
+    abrirModal(`🧰 ${esc(o.nome || 'Baú')}`, `
+        ${mestre ? `<label class="tb-check" style="margin-bottom:8px"><input type="checkbox" ${o.fixo ? 'checked' : ''} onchange="tbBauFixo('${objId}',this.checked)"> 📌 Fixo no mapa (jogadores pegam só o conteúdo, não o baú)</label>` : ''}
+        <div class="tb-form-grid tb-form-grid-1"><label>Inventário de<select id="bau_alvo" onchange="tbBauCarregarInv('${objId}')">${alvos}</select></label></div>
+        <div class="tb-muted" style="font-size:.78rem;margin:8px 0 4px">Dentro do baú (${itens.length})</div>
+        <div class="tb-list" style="max-height:26vh;overflow-y:auto">
+            ${itens.map(it => `<div class="tb-list-row">
+                ${it.imagem || it.imagemUrl ? `<img src="${esc(it.imagem || it.imagemUrl)}" style="width:28px;height:28px;object-fit:cover;border-radius:6px;flex:none">` : '<span style="width:28px;text-align:center;flex:none">📦</span>'}
+                <div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.nome || 'Item')} <span class="tb-muted">x${it.quantidade || 1}</span></div>
+                <button class="tb-btn tb-btn-small tb-btn-success" onclick="tbPegarDoBau('${objId}','${it.id}')">🎒 Pegar</button>
+            </div>`).join('') || '<div class="tb-muted" style="text-align:center;padding:16px">Baú vazio</div>'}
+        </div>
+        <div class="tb-muted" style="font-size:.78rem;margin:10px 0 4px">Guardar item do inventário no baú</div>
+        <div class="tb-list" id="bau_inv" style="max-height:22vh;overflow-y:auto"></div>
+        <div class="tb-modal-actions">
+            ${podePegarBau ? `<button class="tb-btn" onclick="tbPegarBauInteiro('${objId}')">🧰 Pegar o baú${itens.length ? ' com tudo' : ''}</button>` : ''}
+            ${mestre ? `<button class="tb-btn" onclick="tbDevolverLoot('${objId}')">↩️ Devolver à Caixa</button>` : ''}
+        </div>`);
+    window.tbBauCarregarInv(objId);
+}
+window.tbBauFixo = (objId, fixo) => updObj(objId, { fixo });
+
+// Inventário do alvo selecionado, carregado sob demanda (1 query por abertura/troca
+// de alvo — nada de listener). Cache local só para o clique de "Guardar".
+let bauInv = null;
+window.tbBauCarregarInv = async function(objId) {
+    const el = document.getElementById('bau_inv'); if (!el) return;
+    const alvo = document.getElementById('bau_alvo')?.value; if (!alvo) return;
+    const charId = alvo.split(':')[1];
+    el.innerHTML = '<div class="tb-muted" style="text-align:center;padding:10px">Carregando…</div>';
+    try {
+        const snap = await getDocs(query(collection(db, 'items'), where('characterId', '==', charId)));
+        const itens = [];
+        // sem baú dentro de baú, sem itens equipados nem os que já estão em contêiner
+        snap.forEach(d => { const x = d.data(); if (!x.parentItemId && !x.equipado && !x.ehContainer) itens.push({ id: d.id, ...x }); });
+        if (document.getElementById('bau_alvo')?.value !== alvo) return;   // trocou de alvo no meio
+        bauInv = { charId, itens };
+        el.innerHTML = itens.map(i => `<div class="tb-list-row">
+            ${i.imagem || i.imagemUrl ? `<img src="${esc(i.imagem || i.imagemUrl)}" style="width:28px;height:28px;object-fit:cover;border-radius:6px;flex:none">` : '<span style="width:28px;text-align:center;flex:none">📦</span>'}
+            <div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(i.nome || 'Item')} <span class="tb-muted">x${i.quantidade || 1}</span></div>
+            <button class="tb-btn tb-btn-small" onclick="tbGuardarNoBau('${objId}','${i.id}')">⬇️ Guardar</button>
+        </div>`).join('') || '<div class="tb-muted" style="text-align:center;padding:12px">Nada solto no inventário</div>';
+    } catch (e) { console.error(e); el.innerHTML = '<div class="tb-muted" style="text-align:center;padding:10px">❌ Erro ao carregar o inventário</div>'; }
+};
+
+window.tbGuardarNoBau = async function(objId, itemId) {
+    const o = T.objects.get(objId); if (!o) return;
+    const it = bauInv?.itens.find(x => x.id === itemId); if (!it) return;
+    try {
+        // apaga o doc primeiro (é a operação barrada pelas rules); só então embute no baú
+        await deleteDoc(doc(db, 'items', itemId));
+        updObj(objId, { itensDentro: [...(o.itensDentro || []), { id: itemId, ...semId(it) }] });
+        toast(`⬇️ ${it.nome || 'Item'} guardado no baú`);
+        abrirBau(objId);
+    } catch (e) { console.error(e); toast('❌ Erro ao guardar no baú', 'danger'); }
+};
+
+// ponytail: itensDentro é last-write-wins — dois jogadores pegando o MESMO item
+// no mesmo instante podem duplicá-lo; se acontecer na mesa, migrar para arrayRemove/transaction.
+window.tbPegarDoBau = async function(objId, itemId) {
+    const o = T.objects.get(objId); if (!o) return;
+    const itens = o.itensDentro || [];
+    const it = itens.find(x => x.id === itemId);
+    if (!it) { toast('⚠️ Esse item já foi pego', 'warning'); abrirBau(objId); return; }
+    const alvo = document.getElementById('bau_alvo')?.value; if (!alvo) return;
+    try {
+        await addDoc(collection(db, 'items'), { ...semId(it), ...baseNovoItem(alvo.split(':')[1]) });
+        updObj(objId, { itensDentro: itens.filter(x => x.id !== itemId) });
+        toast(`🎒 ${it.nome || 'Item'} transferido`);
+        abrirBau(objId);
+    } catch (e) { console.error(e); toast('❌ Erro ao pegar o item', 'danger'); }
+};
+
+window.tbPegarBauInteiro = async function(objId) {
+    const o = T.objects.get(objId); if (!o?.item) return;
+    const mestre = T.mode === 'secret';
+    if (!mestre && o.fixo) { toast('📌 Este baú é fixo no mapa', 'warning'); return; }
+    if (!mestre && !tokenMeuPerto(o)) { toast('🚶 Aproxime seu token do baú', 'warning'); return; }
+    const alvo = document.getElementById('bau_alvo')?.value; if (!alvo) return;
+    const targetId = alvo.split(':')[1];
+    try {
+        const lote = writeBatch(db);
+        const contRef = doc(collection(db, 'items'));
+        lote.set(contRef, { ...semId(o.item), ...baseNovoItem(targetId), quantidade: 1 });
+        (o.itensDentro || []).forEach(it =>
+            lote.set(doc(collection(db, 'items')), { ...semId(it), ...baseNovoItem(targetId), parentItemId: contRef.id }));
+        await lote.commit();
+        delObj(objId);
+        fecharModal();
+        toast('🧰 Baú adicionado ao inventário!');
+    } catch (e) { console.error(e); toast('❌ Erro ao pegar o baú', 'danger'); }
+};
+
+/** Mestre: devolve o loot (e o conteúdo, se for baú) para a Caixa do Mestre. */
+window.tbDevolverLoot = async function(objId) {
+    const o = T.objects.get(objId); if (!o?.item) return;
+    try {
+        const lote = writeBatch(db);
+        const contRef = doc(collection(db, 'items'));
+        lote.set(contRef, { ...semId(o.item), ...baseNovoItem(caixaId()), quantidade: o.quantidade || o.item.quantidade || 1 });
+        (o.itensDentro || []).forEach(it =>
+            lote.set(doc(collection(db, 'items')), { ...semId(it), ...baseNovoItem(caixaId()), parentItemId: o.item.ehContainer ? contRef.id : null }));
+        await lote.commit();
+        caixaItens = null;
+        delObj(objId);
+        fecharModal();
+        toast('↩️ Devolvido à Caixa do Mestre');
+    } catch (e) { console.error(e); toast('❌ Erro ao devolver', 'danger'); }
+};
+
 // ===== MENU DE CONTEXTO (botão direito) =====
 function menuMostrar(objId, x, y) {
     const o = T.objects.get(objId); if (!o) return;
@@ -182,7 +456,6 @@ function menuMostrar(objId, x, y) {
         ${extras}
         <div class="tb-ctx-item" data-acao="abrir">${o.refTipo === 'npc' ? '👹 Abrir ficha do NPC' : '🎒 Adicionar ao inventário...'}</div>
         ${fichaVisItem}
-        ${o.refTipo !== 'npc' ? '<div class="tb-ctx-item" data-acao="loot">📦 Transformar em loot no mapa</div>' : ''}
         <div class="tb-ctx-item tb-danger" data-acao="del">🗑️ Remover do canva</div>`;
     menu.style.left = Math.min(x, window.innerWidth - 260) + 'px';
     menu.style.top = Math.min(y, window.innerHeight - 320) + 'px';
@@ -198,21 +471,6 @@ function menuMostrar(objId, x, y) {
     menu.querySelector('[data-acao="abrir"]').onclick = () => { menu.classList.remove('open'); clickMostrar(objId); };
     const visFichaBtn = menu.querySelector('[data-acao="vis-ficha"]');
     if (visFichaBtn) visFichaBtn.onclick = () => { menu.classList.remove('open'); window.tbAlternarFichaNpc(o.refId); };
-    const lootBtn = menu.querySelector('[data-acao="loot"]');
-    if (lootBtn) lootBtn.onclick = async () => {
-        menu.classList.remove('open');
-        const src = T.objects.get(objId); if (!src) return;
-        // vira um token de loot arrastável; entrega ao soltar sobre um token
-        await addObj({
-            tipo: 'loot', layerId: 'tokens',
-            x: src.x + (src.w || 200) / 2, y: src.y + (src.h || 200) + 40,
-            nome: src.nome, url: src.url || '',
-            refTipo: src.refTipo, refId: src.refId,
-            visivelPublico: true,
-        });
-        delObj(objId);
-        toast('📦 Loot criado — arraste sobre um token para entregar');
-    };
     menu.querySelector('[data-acao="del"]').onclick = () => { menu.classList.remove('open'); delObj(objId); };
     setTimeout(() => document.addEventListener('pointerdown', function fecha(ev) {
         if (!menu.contains(ev.target)) { menu.classList.remove('open'); document.removeEventListener('pointerdown', fecha); }
@@ -389,40 +647,33 @@ function abrirEntregaItem(o) {
 /** F5.4: loot arrastado e solto sobre um token → fluxo de entrega pré-selecionado. */
 window.tbEntregarLoot = function(lootId, tokenAlvo) {
     const loot = T.objects.get(lootId); if (!loot) return;
-    const alvos = [
-        ...T.chars.map(c => `<option value="char:${c.id}" ${tokenAlvo.vinculo?.tipo==='char'&&tokenAlvo.vinculo.id===c.id?'selected':''}>🎭 ${esc(c.nome)}</option>`),
-        ...T.npcs.map(n => `<option value="npc:${n.id}" ${tokenAlvo.vinculo?.tipo==='npc'&&tokenAlvo.vinculo.id===n.id?'selected':''}>👹 ${esc(n.nome || 'NPC')}</option>`),
-    ].join('');
-    abrirModal(`📦 Entregar "${esc(loot.nome)}" para ${esc(tokenAlvo.nome || 'token')}`, `
-        <div class="tb-form-grid tb-form-grid-1">
-            <label>Adicionar ao inventário de<select id="ei_alvo">${alvos}</select></label>
-            <label>Quantidade<input type="number" id="ei_qtd" value="1" min="1"></label>
-        </div>
-        <div class="tb-modal-actions">
-            <button class="tb-btn" onclick="tbFecharModal()">Cancelar</button>
-            <button class="tb-btn tb-btn-success" onclick="tbEntregarItem('${lootId}', true)">✅ Entregar e remover loot</button>
-        </div>`);
+    if (loot.item?.ehContainer) { window.tbClickLoot(lootId); return; }
+    abrirPegarLoot(loot, tokenAlvo);
 };
 
 window.tbEntregarItem = async function(objId, removerLoot) {
     const o = T.objects.get(objId); if (!o) return;
     const alvo = document.getElementById('ei_alvo').value;
-    const qtd = parseInt(document.getElementById('ei_qtd').value) || 1;
+    // jogador não escolhe quantidade: o modal dele não tem o campo, vale o que o mestre dropou
+    const qtd = parseInt(document.getElementById('ei_qtd')?.value) || o.quantidade || 1;
     const targetId = alvo.split(':')[1];
     try {
-        if (o.refTipo === 'caixa') {
-            // transfere o item existente da caixa
+        if (o.item) {
+            // loot novo: item embutido no objeto do canvas
+            await addDoc(collection(db, 'items'), { ...semId(o.item), ...baseNovoItem(targetId), quantidade: qtd });
+        } else if (o.refTipo === 'caixa') {
+            // legado / objeto "mostrar": transfere o item existente da caixa
             await updateDoc(doc(db, 'items', o.refId), { characterId: targetId, quantidade: qtd });
             caixaItens = null;
         } else {
+            if (!equipCatalogo) await carregarEquip();
             const tpl = (equipCatalogo || []).find(x => x.id === o.refId) || {};
             const { id: _, ...campos } = tpl;
             await addDoc(collection(db, 'items'), {
                 ...campos,
                 nome: o.nome, imagem: o.url || campos.imagem || null,
-                characterId: targetId, mesaId: T.mesaId, quantidade: qtd,
+                ...baseNovoItem(targetId), quantidade: qtd,
                 origemTemplateId: o.refId || null,
-                createdAt: new Date().toISOString(), createdBy: T.user?.email || null, ownerUid: T.user?.uid || null,
             });
         }
         if (removerLoot) delObj(objId);

@@ -2,13 +2,14 @@
 // TABULEIRO — Objetos (CRUD), Uploads, Tokens, Camadas, Propriedades
 // =============================================
 import { db, storage, ref, uploadBytes, getDownloadURL, setDoc, updateDoc, deleteDoc, doc, writeBatch } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, uid, toast, markDirty, gridSize, getCamada, escalaCanvas, optsUnidade, pxDeLarguraReal, larguraRealDePx, vinculosComMesa } from './tab-state.js';
+import { T, esc, uid, toast, markDirty, gridSize, getCamada, escalaCanvas, optsUnidade, pxDeLarguraReal, larguraRealDePx, vinculosComMesa, alcanceDeVisao, fonteDoAlcance } from './tab-state.js';
 import { refObjeto, refObjetos, refCanvas, abrirModal, fecharModal } from './tab-main.js';
 import { notifyObjectChange } from './tab-perf.js';
-import { bboxOf, centerCamera, screenToWorld } from './tab-render.js';
+import { bboxOf, centerCamera, screenToWorld, derivedDoToken } from './tab-render.js';
 import { detectarGradeDeArquivo, faixaDe } from './tab-grid.js';
 import { registrarOp } from './tab-undo.js';
 import { SENSORES } from './tab-fog.js';
+import { criarFilaDeEscrita } from './tab-write-queue.js';
 
 // ===== CRUD =====
 export async function addObj(data) {
@@ -29,8 +30,27 @@ export async function addObj(data) {
     return id;
 }
 
-const _throttles = new Map();
 const CAMPOS_MOVIMENTO = new Set(['x', 'y', 'pontos', 'movendo']);
+
+// F2.2: todo write carrega lastWriter (anti-eco do lerp) e timestamp.
+// O try/catch não é decoração: trocar de canvas no meio de um arrasto deixava
+// erro solto no console do jogador. A fila garante que o write final do arrasto
+// não seja atropelado por um pendente antigo (ver tab-write-queue.js).
+const fila = criarFilaDeEscrita({
+    write: (id, p) => {
+        const stamp = Date.now();
+        // `__meuWrite` = o write mais recente que EU emiti para este objeto. O
+        // snapshot handler usa isso para descartar eco atrasado do próprio
+        // arrasto (ver tab-main.js): sem essa marca, um write intermediário que
+        // ainda estava em trânsito chegava depois do final e o token pulava de
+        // volta — o tremor ao soltar.
+        const o = T.objects.get(id);
+        if (o) o.__meuWrite = stamp;
+        updateDoc(refObjeto(id), { ...p, atualizadoEm: stamp, lastWriter: T.user?.uid || null })
+            .catch(e => console.warn('updObj', e));
+    },
+});
+
 export function updObj(id, patch, throttleMs = 0) {
     const o = T.objects.get(id);
     // F7.3: undo automático para patches de PROPRIEDADES (movimento é registrado nas tools)
@@ -40,28 +60,34 @@ export function updObj(id, patch, throttleMs = 0) {
         registrarOp({ tipo: 'patch', id, antes, depois: { ...patch } });
     }
     if (o) { Object.assign(o, patch); notifyObjectChange(o); markDirty(); }
-    // F2.2: todo write carrega lastWriter (anti-eco do lerp) e timestamp
-    const meta = () => ({ atualizadoEm: Date.now(), lastWriter: T.user?.uid || null });
-    // Recebe o patch por parâmetro: o disparo atrasado grava o ÚLTIMO
-    // acumulado (th.last), não o que originou o agendamento.
-    const write = async (p) => {
-        try { await updateDoc(refObjeto(id), { ...p, ...meta() }); }
-        catch (e) { console.warn('updObj', e); }
-    };
-    if (!throttleMs) { write(patch); return; }
-    const th = _throttles.get(id) || { t: 0, timer: null, last: null };
-    th.last = patch;
-    const agora = Date.now();
-    if (agora - th.t > throttleMs) { th.t = agora; write(patch); }
-    else {
-        clearTimeout(th.timer);
-        // Antes o refObjeto era chamado aqui, SÍNCRONO e fora de qualquer
-        // try/catch: sem canvas ativo (troca de cena no meio de um arrasto)
-        // virava erro solto no console do jogador. Passando por write(),
-        // a falha vira aviso como em todo o resto.
-        th.timer = setTimeout(() => { th.t = Date.now(); write(th.last); }, throttleMs);
+    fila.enviar(id, patch, throttleMs);
+}
+
+/** Patch só no objeto local: preview de arrasto, sem tocar no Firestore. */
+export function updObjLocal(id, patch) {
+    const o = T.objects.get(id);
+    if (!o) return;
+    Object.assign(o, patch);
+    notifyObjectChange(o);
+    markDirty();
+}
+
+/**
+ * Move vários objetos numa ÚNICA transação — o conjunto laçado se comporta como
+ * um objeto só. Com um write por objeto durante o arrasto, os ecos do Firestore
+ * voltavam intercalados e embaralhavam as posições relativas do grupo.
+ */
+export async function moverEmLote(itens) {
+    const meta = { atualizadoEm: Date.now(), lastWriter: T.user?.uid || null };
+    for (let i = 0; i < itens.length; i += 400) {
+        const lote = writeBatch(db);
+        for (const it of itens.slice(i, i + 400)) {
+            lote.update(refObjeto(it.id), { ...it.patch, ...meta });
+            const o = T.objects.get(it.id);
+            if (o) o.__meuWrite = meta.atualizadoEm;   // mesma proteção contra eco atrasado
+        }
+        await lote.commit();
     }
-    _throttles.set(id, th);
 }
 
 export async function delObj(id) {
@@ -69,6 +95,7 @@ export async function delObj(id) {
     if (atual) registrarOp({ tipo: 'del', id, dados: { ...atual } });
     notifyObjectChange(atual);
     T.objects.delete(id);
+    T.selecionados = T.selecionados.filter(x => x !== id);
     if (T.selection === id) { T.selection = null; abrirPropriedades(null); }
     markDirty();
     try { await deleteDoc(refObjeto(id)); } catch (e) { console.warn(e); }
@@ -207,6 +234,10 @@ window.tbAbrirToken = function() {
         <div class="tb-section-title">👁️ Visão do token (revela o mapa no modo público)</div>
         <div class="tb-form-grid">
             <label class="tb-check"><input type="checkbox" id="tk_visao" checked> Tem visão</label>
+            <label>Fonte do alcance<select id="tk_alcFonte">
+                <option value="fixo" selected>🔢 Valor fixo</option>
+                <option value="percepcao">👁️ Percepção Visual +2 (da ficha)</option>
+            </select></label>
             <label>Alcance da visão (${escalaCanvas().unidade})<input type="number" id="tk_alcance" value="9" min="0" step="0.5"></label>
             <label>Amplitude (graus)<input type="number" id="tk_angulo" value="360" min="10" max="360"></label>
             <label>Tipo de visão<select id="tk_sensor">${SENSORES.map(x => `<option value="${x.id}">${x.nome}</option>`).join('')}</select></label>
@@ -251,7 +282,13 @@ window.tbCriarToken = async function() {
             tamanhoCelulas: parseFloat(document.getElementById('tk_tam').value) || 1,
             visivelPublico: document.getElementById('tk_visPub').checked,
             vinculo, rot: 0,
-            visao: { ativa: document.getElementById('tk_visao').checked, alcance: parseFloat(document.getElementById('tk_alcance').value) || 9, angulo: parseInt(document.getElementById('tk_angulo').value) || 360, tipo: document.getElementById('tk_sensor').value || 'padrao' },
+            visao: {
+                ativa: document.getElementById('tk_visao').checked,
+                alcance: parseFloat(document.getElementById('tk_alcance').value) || 9,
+                alcanceFonte: document.getElementById('tk_alcFonte').value || 'fixo',
+                angulo: parseInt(document.getElementById('tk_angulo').value) || 360,
+                tipo: document.getElementById('tk_sensor').value || 'padrao',
+            },
             luz: { ativa: false, alcance: 3 },
             mostrarNome: true,
         });
@@ -415,7 +452,12 @@ export function abrirPropriedades(id, soAtualizar) {
         <label>Tamanho (células)<input type="number" step="0.25" min="0.25" value="${o.tamanhoCelulas||1}" onchange="tbProp('${id}','tamanhoCelulas',parseFloat(this.value)||1)"></label>
         <label class="tb-check"><input type="checkbox" ${o.mostrarNome!==false?'checked':''} onchange="tbProp('${id}','mostrarNome',this.checked)"> Mostrar nome</label>
         <label class="tb-check"><input type="checkbox" ${o.visao?.ativa?'checked':''} onchange="tbPropDeep('${id}','visao','ativa',this.checked)"> Tem visão</label>
-        <label>Alcance visão<input type="number" step="0.5" value="${o.visao?.alcance||9}" onchange="tbPropDeep('${id}','visao','alcance',parseFloat(this.value)||0)"></label>
+        <label>Fonte do alcance<select onchange="tbPropDeep('${id}','visao','alcanceFonte',this.value)">
+            <option value="fixo" ${(o.visao?.alcanceFonte||'fixo')==='fixo'?'selected':''}>🔢 Valor fixo</option>
+            <option value="percepcao" ${o.visao?.alcanceFonte==='percepcao'?'selected':''}>👁️ Percepção Visual +2 (da ficha)</option>
+        </select></label>
+        <label>Alcance visão (valor fixo)<input type="number" step="0.5" value="${o.visao?.alcance||9}" onchange="tbPropDeep('${id}','visao','alcance',parseFloat(this.value)||0)"></label>
+        ${o.visao?.ativa ? `<label class="tb-muted tb-form-full" style="font-size:.72rem;font-weight:600">${esc(rotuloAlcance(o))}</label>` : ''}
         <label>Amplitude (°)<input type="number" min="10" max="360" value="${o.visao?.angulo||360}" onchange="tbPropDeep('${id}','visao','angulo',parseInt(this.value)||360)"></label>
         <label>Direção (°)<input type="number" value="${o.rot||0}" onchange="tbProp('${id}','rot',parseFloat(this.value)||0)"></label>
         <label>Tipo de visão<select onchange="tbPropDeep('${id}','visao','tipo',this.value)">${SENSORES.map(x=>`<option value="${x.id}" ${((o.visao?.tipo)||'padrao')===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></label>
@@ -458,7 +500,8 @@ export function abrirPropriedades(id, soAtualizar) {
     if (o.tipo === 'desenho') extra = `
         <label>Cor<input type="color" value="${o.cor||'#3b82f6'}" onchange="tbProp('${id}','cor',this.value)"></label>
         <label>Grossura<input type="number" min="1" max="60" value="${o.grossura||4}" onchange="tbProp('${id}','grossura',parseInt(this.value)||4)"></label>
-        ${o.layerId === 'luz' ? `<label>Elevação da parede<input type="number" step="0.5" value="${o.elev||0}" onchange="tbProp('${id}','elev',parseFloat(this.value)||0)"></label>` : ''}`;
+        ${o.layerId === 'luz' ? `<label>Elevação da parede<input type="number" step="0.5" value="${o.elev||0}" onchange="tbProp('${id}','elev',parseFloat(this.value)||0)"></label>` : ''}
+        ${o.ehRota ? `<label class="tb-muted tb-form-full" style="font-size:.76rem;font-weight:600">${esc(window._tbInfoRota?.(id) || '')}<br>Velocidade em ⚙️ Configurações → 🛤️ Viagem do grupo por dia.</label>` : ''}`;
     if (o.tipo === 'template') extra = `
         <label>Cor<input type="color" value="${o.cor||'#f97316'}" onchange="tbProp('${id}','cor',this.value)"></label>
         <label>Opacidade (%)<input type="number" min="5" max="90" value="${Math.round((o.alpha??0.35)*100)}" onchange="tbProp('${id}','alpha',(parseInt(this.value)||35)/100)"></label>
@@ -472,7 +515,9 @@ export function abrirPropriedades(id, soAtualizar) {
         <label>Multiplicador de movimento<select onchange="tbProp('${id}','mult',parseFloat(this.value))">${[1.5,2,3,4].map(m=>`<option ${((o.mult)||2)===m?'selected':''}>x${m}</option>`).join('')}</select></label>`;
     if (o.tipo === 'loot') extra = `
         <label>Nome do item<input type="text" value="${esc(o.nome||'')}" onchange="tbProp('${id}','nome',this.value)"></label>
-        <label class="tb-muted" style="font-size:.72rem">📦 Arraste o loot sobre um token para entregá-lo.</label>`;
+        <label>Quantidade<input type="number" value="${o.quantidade||1}" min="1" onchange="tbProp('${id}','quantidade',parseInt(this.value)||1)"></label>
+        ${o.item?.ehContainer ? `<label class="tb-check"><input type="checkbox" ${o.fixo?'checked':''} onchange="tbProp('${id}','fixo',this.checked)"> 📌 Fixo no mapa</label>` : ''}
+        <label class="tb-muted" style="font-size:.72rem">📦 Duplo-clique entrega/abre · arraste sobre um token para entregar.</label>`;
 
     document.getElementById('tbPropsBody').innerHTML = `
         <div class="tb-props-title">${iconeTipo(o.tipo)} ${esc(o.nome || o.titulo || o.tipo)}</div>
@@ -490,6 +535,25 @@ export function abrirPropriedades(id, soAtualizar) {
         </div>`;
 }
 function iconeTipo(t) { return { imagem:'🖼️', token:'🎭', texto:'🔤', desenho:'✏️', medida:'📏', alfinete:'📌', luz:'💡', porta:'🚪', janela:'🪟', mostrar:'🎁', template:'🎯', terreno:'⛰️', relogio:'⏱️', loot:'📦' }[t] || '⬜'; }
+
+/** Alcance de visão realmente aplicado, com a origem e o efeito do dia. */
+function rotuloAlcance(o) {
+    const dia = T.canvas?.luzDinamica?.modo === 'dia';
+    const der = derivedDoToken(o);
+    const v = alcanceDeVisao(o.visao, der, dia);
+    const f = fonteDoAlcance(o.visao, der);
+    const porPercepcao = o.visao?.alcanceFonte === 'percepcao';
+    // Personagem vinculado mas sem VDs espelhados: a ficha nunca foi aberta desde
+    // que o espelho passou a existir. Sem dizer isso, a queda para o valor fixo
+    // fica indiagnosticável da cadeira do mestre.
+    const fichaSemVds = porPercepcao && o.vinculo?.tipo === 'char' && !Object.keys(der || {}).length;
+    const origem = f === 'visual' ? 'Percepção Visual +2'
+        : f === 'geral' ? 'Percepção +2 (a ficha não tem Percepção Visual)'
+        : fichaSemVds ? `valor fixo — ⚠️ abra a ficha de ${esc(o.nome || 'este personagem')} uma vez para o Tabuleiro ler a Percepção`
+        : porPercepcao ? 'valor fixo (token sem ficha vinculada)'
+        : 'valor fixo';
+    return `👁️ Em uso: ${Math.round(v * 10) / 10} ${escalaCanvas().unidade} — ${origem}${dia ? ' · ×3 por ser DIA' : ''}`;
+}
 
 window.tbProp = function(id, campo, valor, manterProporcao) {
     const patch = { [campo]: valor };
@@ -517,8 +581,14 @@ window.tbPropDeep = function(id, grupo, campo, valor) {
 window.tbZOrdem = (id, dir) => updObj(id, { z: dir > 0 ? maxZ() + 1 : minZ() - 1 });
 window.tbDuplicar = async (id) => {
     const o = T.objects.get(id); if (!o) return;
-    // `undefined` é recusado pelo Firestore — só mande `pontos` quando existir; e nunca copie flags locais.
-    const { id: _, __dragging, __fogPos, ...cp } = o;
+    // `undefined` é recusado pelo Firestore — só mande `pontos` quando existir; e
+    // nunca copie campo local. Filtrar por prefixo `__` em vez de listar um a um:
+    // cada campo local novo (ex.: __meuWrite) vazava para o banco em silêncio.
+    const cp = {};
+    for (const [k, v] of Object.entries(o)) {
+        if (k === 'id' || k.startsWith('__')) continue;
+        cp[k] = v;
+    }
     if (cp.pontos) cp.pontos = cp.pontos.map(p => ({ x: p.x + 40, y: p.y + 40 }));
     await addObj({ ...cp, x: (cp.x||0) + 40, y: (cp.y||0) + 40, z: maxZ() + 1 });
 };

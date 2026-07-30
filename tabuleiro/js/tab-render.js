@@ -8,16 +8,25 @@
 // F5: barras/condições/HUD constante, anel de iniciativa, anéis de alvo, loot
 // F6: clima, telhados, transições
 // =============================================
-import { T, gridSize, camadasVisiveis, objVisivel, markDirty, unidadesParaPx, esc, cfgGrid } from './tab-state.js';
-import { PERF, melhorBitmap, construirHashParedes, paredesProximas } from './tab-perf.js';
-import { snapPonto, axialParaPixel, axialRound, pixelParaAxial, mesmaFaixaElev, faixaDe, pontoEmPoligono } from './tab-grid.js';
-import { desenharExploracao, registrarExploracaoCelulas, tokenVisivelParaMim, carregarExploracao } from './tab-fog.js';
+import { T, gridSize, camadasVisiveis, objVisivel, markDirty, unidadesParaPx, esc, cfgGrid, politicaDeFog, alcanceDeVisao, rotParaCanvas, deveAtualizarPasso, FOG_PASSO_CELULA, FOG_INTERVALO_MS, REGUA_TTL_MS } from './tab-state.js';
+import { PERF, melhorBitmap, construirHashParedes, paredesProximas, medir, iniciarHudMedicaoSePedido, criarMemoPorVersao } from './tab-perf.js';
+import { snapPonto, axialParaPixel, axialRound, pixelParaAxial, mesmaFaixaElev, faixaDe, pontoEmPoligono, normalizarRet } from './tab-grid.js';
+import { desenharExploracao, registrarExploracaoCelulas, tokenVisivelParaMim, carregarExploracao, versaoExploracao } from './tab-fog.js';
 import { cursoresParaDesenhar, pingsParaDesenhar, haPingsAtivos, avancarTweenCamera, cursoresAtivados } from './tab-presenca.js';
 import { vitaisDoToken, barrasVisiveis, tokenAtivoDoCombate } from './tab-hud.js';
 import { desenharClima, climaAtivo, alphaTelhado } from './tab-clima.js';
 import { temCone, podeGirarToken, posicionarBotoesGirar, esconderBotoesGirar } from './tab-girar.js';
 
 let cv, ctx, fogCv, fogCtx, maskCv, maskCtx, luzCv, luzCtx;
+// Fog composto em MEIA resolução: a composição são 3+ passes de tela cheia e o
+// custo é fill-rate puro (medido: picos de 8–13ms até no desktop; no celular,
+// com dpr 3, é o pior passo do frame). O fog é um véu suave — meia resolução
+// esticada com smoothing é visualmente indistinguível e corta o fill em 4x.
+const FOG_ESCALA = 0.5;
+// Chave do fog já COMPOSTO em fogCv. Vazia = precisa recompor no próximo frame.
+let _fogComposto = '';
+// Cache por fonte dos polígonos de visibilidade (ver criarMemoPorVersao)
+const memoPolys = criarMemoPorVersao();
 let dpr = 1;
 let viewRect = null;
 
@@ -33,6 +42,7 @@ export function startRenderLoop() {
     mapCache.cv = document.createElement('canvas'); mapCache.ctx = mapCache.cv.getContext('2d');
     resize();
     window.addEventListener('resize', () => { resize(); markDirty(); });
+    iniciarHudMedicaoSePedido();
     requestAnimationFrame(loop);
 }
 
@@ -44,9 +54,10 @@ function resize() {
     dpr = window.devicePixelRatio || 1;
     const r = cv.getBoundingClientRect();
     cv.width = r.width * dpr; cv.height = r.height * dpr;
-    fogCv.width = cv.width; fogCv.height = cv.height;
-    maskCv.width = cv.width; maskCv.height = cv.height;
-    luzCv.width = cv.width; luzCv.height = cv.height;
+    const fw = Math.ceil(cv.width * FOG_ESCALA), fh = Math.ceil(cv.height * FOG_ESCALA);
+    fogCv.width = fw; fogCv.height = fh;
+    maskCv.width = fw; maskCv.height = fh;
+    luzCv.width = fw; luzCv.height = fh;
     mapCache.w = Math.round(cv.width * mapCache.pad);
     mapCache.h = Math.round(cv.height * mapCache.pad);
     mapCache.cv.width = mapCache.w; mapCache.cv.height = mapCache.h;
@@ -63,7 +74,7 @@ function loop() {
     if (climaAtivo()) T.dirty = true;
     if (T._luzAnimada) T.dirty = true;
     if (T._pulsoCombate) T.dirty = true;
-    if (T.dirty) { T.dirty = false; draw(); }
+    if (T.dirty) { T.dirty = false; medir('frame', draw); }
     requestAnimationFrame(loop);
 }
 
@@ -102,11 +113,25 @@ export function posDisplay(o) {
     return { x: a.x0 + (o.x - a.x0) * e, y: a.y0 + (o.y - a.y0) * e };
 }
 
-/** Posição CONFIRMADA para o fog (F2.3: nada de recalcular durante arrasto). */
+/**
+ * Posição do objeto para efeito de fog/visão.
+ * Parado: a posição exata. Em arrasto (local `__dragging` ou remoto `movendo`):
+ * ACOMPANHA o token, mas em passos de ~1/4 de célula. O passo não é frescura —
+ * o cache do fog é uma chave única para todas as fontes, então mover um token
+ * recalcula o polígono de visão e de luz de todo o canvas; a cada pixel isso é o
+ * gargalo do ADR-001. Ao soltar, cai no ramo exato e a visão encaixa no lugar.
+ * ponytail: passo fixo de 1/4 de célula; se ficar visível em zoom alto, dá para
+ * escalar o passo com T.cam.z (mais recálculo perto, menos longe).
+ */
 function posConfirmada(o) {
-    if (o.__dragging && o.__fogPos) return o.__fogPos;
-    if (o.movendo) { if (!o.__fogPos) o.__fogPos = { x: o.x, y: o.y }; return o.__fogPos; }
-    o.__fogPos = { x: o.x, y: o.y };
+    const arrastando = o.__dragging || o.movendo;
+    if (!arrastando) { o.__fogPos = { x: o.x, y: o.y }; o.__fogT = 0; return o.__fogPos; }
+    const agora = performance.now();
+    const desdeUltimo = o.__fogT ? agora - o.__fogT : Infinity;
+    if (deveAtualizarPasso(o.__fogPos, o, gridSize() * FOG_PASSO_CELULA, desdeUltimo, FOG_INTERVALO_MS)) {
+        o.__fogPos = { x: o.x, y: o.y };
+        o.__fogT = agora;
+    }
     return o.__fogPos;
 }
 
@@ -188,33 +213,37 @@ function draw() {
     ctx.fillStyle = '#0b0e14';
     ctx.fillRect(0, 0, cv.width / dpr, cv.height / dpr);
 
-    desenharBaseEstatica();
+    medir('base', desenharBaseEstatica);
 
-    ctx.save();
-    aplicarCamera(ctx, T.cam);
     const camadas = camadasVisiveis();
     const abaixo = camadas.filter(c => c.tipo !== 'mapa' && (c.abaixoDaLuz !== false || c.tipo === 'tokens' || c.tipo === 'dm'));
     const acima = camadas.filter(c => c.tipo !== 'mapa' && !abaixo.includes(c) && c.tipo !== 'luz');
-    for (const cam of abaixo) drawCamada(cam, viewRect);
-    // Público: o cenário interativo (porta/janela/luz) vai ANTES do fog — o jogador
-    // só enxerga a porta que está no campo de visão dele. (No secreto, depois.)
     const camLuz = camadas.find(c => c.tipo === 'luz');
-    if (camLuz && T.mode !== 'secret') drawCamada(camLuz, viewRect);
-    ctx.restore();
+    medir('objetos', () => {
+        ctx.save();
+        aplicarCamera(ctx, T.cam);
+        for (const cam of abaixo) drawCamada(cam, viewRect);
+        // Público: o cenário interativo (porta/janela/luz) vai ANTES do fog — o jogador
+        // só enxerga a porta que está no campo de visão dele. (No secreto, depois.)
+        if (camLuz && T.mode !== 'secret') drawCamada(camLuz, viewRect);
+        ctx.restore();
+    });
 
-    drawFog();
+    medir('fog', drawFog);
 
-    ctx.save();
-    aplicarCamera(ctx, T.cam);
-    for (const cam of acima) drawCamada(cam, viewRect);
-    if (camLuz && T.mode === 'secret') drawCamada(camLuz, viewRect);
-    drawTelhados();
-    drawSelecao();
-    drawTemp();
-    drawReguasRemotas();
-    drawCursores();
-    drawPings();
-    ctx.restore();
+    medir('overlay', () => {
+        ctx.save();
+        aplicarCamera(ctx, T.cam);
+        for (const cam of acima) drawCamada(cam, viewRect);
+        if (camLuz && T.mode === 'secret') drawCamada(camLuz, viewRect);
+        drawTelhados();
+        drawSelecao();
+        drawTemp();
+        drawReguasRemotas();
+        drawCursores();
+        drawPings();
+        ctx.restore();
+    });
 
     // Clima em espaço de tela
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -514,27 +543,17 @@ function drawCondicoes(pos, s, conds) {
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 
+// Só a imagem, sem borda/fundo/nome: o loot deve parecer parte do mapa.
 function drawLoot(o) {
-    const gs = gridSize();
-    const s = gs * 0.8;
+    const s = gridSize() * 0.8;
     const img = getImg(o.url);
     ctx.save();
-    ctx.fillStyle = 'rgba(120,53,15,.9)';
-    roundRect(o.x - s/2, o.y - s/2, s, s, s*0.15); ctx.fill();
-    ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = hud(2); ctx.stroke();
     if (img) {
-        ctx.save();
-        roundRect(o.x - s/2 + 3, o.y - s/2 + 3, s - 6, s - 6, s*0.1); ctx.clip();
-        ctx.drawImage(img, o.x - s/2 + 3, o.y - s/2 + 3, s - 6, s - 6);
-        ctx.restore();
+        ctx.drawImage(img, o.x - s/2, o.y - s/2, s, s);
     } else {
-        ctx.font = `${s*0.55}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText('📦', o.x, o.y);
+        ctx.font = `${s*0.7}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(o.item?.ehContainer ? '🧰' : '📦', o.x, o.y);
     }
-    const fs = hud(11);
-    ctx.font = `bold ${fs}px Arial`; ctx.textAlign='center'; ctx.textBaseline='top';
-    ctx.lineWidth = hud(3); ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(o.nome || 'Loot', o.x, o.y + s/2 + hud(3));
-    ctx.fillStyle = '#fde68a'; ctx.fillText(o.nome || 'Loot', o.x, o.y + s/2 + hud(3));
     ctx.restore();
 }
 
@@ -556,6 +575,7 @@ function drawDesenho(o, cam) {
     ctx.strokeStyle = isLuz ? '#f97316' : (o.cor || '#3b82f6');
     ctx.lineWidth = isLuz ? Math.max(3, 3/T.cam.z) : (o.grossura || 4);
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (o.ehRota) ctx.setLineDash([hud(14), hud(9)]);   // 🛤️ rota de viagem: tracejado constante na tela
     ctx.beginPath();
     if (o.forma === 'ret' && pts.length >= 2) {
         const a = pts[0], b = pts[pts.length-1];
@@ -569,6 +589,7 @@ function drawDesenho(o, cam) {
     }
     if (o.fill && (o.forma === 'ret' || o.forma === 'elipse')) { ctx.fillStyle = hexA(o.cor||'#3b82f6', 0.25); ctx.fill(); }
     ctx.stroke();
+    if (o.ehRota) ctx.setLineDash([]);
     if (isLuz && (o.elev || 0) !== 0) {
         ctx.font = `${hud(11)}px Arial`; ctx.fillStyle = '#fdba74';
         ctx.fillText(`▲${o.elev}`, pts[0].x + 6, pts[0].y - 6);
@@ -756,6 +777,18 @@ function drawSelecao() {
     // Some por padrão; desenharBussola reexibe no mesmo frame se couber —
     // assim os early returns abaixo não deixam os botões órfãos na tela.
     esconderBotoesGirar();
+    // Seleção por retângulo: contorno em cada item (as alças e a bússola abaixo
+    // continuam sendo só do item único, que é o que se redimensiona/gira).
+    if (T.selecionados?.length > 1) {
+        ctx.strokeStyle = '#8b5cf6';
+        ctx.lineWidth = 1.5/T.cam.z; ctx.setLineDash([5/T.cam.z, 3/T.cam.z]);
+        for (const id of T.selecionados) {
+            const o = T.objects.get(id); if (!o) continue;
+            const b = bboxOf(o);
+            ctx.strokeRect(b.x, b.y, b.w, b.h);
+        }
+        ctx.setLineDash([]);
+    }
     if (!T.selection) return;
     const o = T.objects.get(T.selection); if (!o) return;
     const b = bboxOf(o);
@@ -788,7 +821,7 @@ function desenharBussola(o, b) {
     if (!temCone(o) || !podeGirarToken(o)) return;
     const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
     const r = Math.max(b.w, b.h) / 2 + hud(5);
-    const dir = ((o.rot || 0) - 90) * Math.PI / 180;   // 0° = para cima
+    const dir = rotParaCanvas(o.rot) * Math.PI / 180;   // mesma conversão do cone
     const ang = (o.visao?.ativa && o.visao.angulo) || o.luz?.angulo || 360;
     const meia = Math.min(Math.PI, (ang * Math.PI / 180) / 2);
 
@@ -835,6 +868,16 @@ export function handlesOf(b) {
 
 function drawTemp() {
     const t = T.temp; if (!t) return;
+    if (t.tipo === 'marquee') {
+        const r = normalizarRet(t.a, t.b);
+        ctx.fillStyle = hexA('#8b5cf6', 0.12);
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+        ctx.strokeStyle = '#8b5cf6'; ctx.lineWidth = hud(1.5);
+        ctx.setLineDash([hud(6), hud(4)]);
+        ctx.strokeRect(r.x, r.y, r.w, r.h);
+        ctx.setLineDash([]);
+        return;
+    }
     if (t.tipo === 'desenho') drawDesenho({ pontos: t.pontos, cor: t.cor, grossura: t.grossura, forma: t.forma, fill: t.fill }, null);
     if (t.tipo === 'medida') drawLinhaMedida(t.pontos.concat(t.atual ? [t.atual] : []), t.cor || '#22d3ee', t.label, t.labelSub);
     if (t.tipo === 'segmento' && t.pontos.length) {
@@ -857,7 +900,11 @@ function drawReguasRemotas() {
     const agora = Date.now();
     for (const [u, r] of Object.entries(T.reguasRemotas || {})) {
         if (!r || u === T.user?.uid) continue;
-        if (!r.t || agora - r.t > 6000) continue;
+        // Expira pelo relógio LOCAL de recebimento — o `r.t` é do relógio do
+        // outro aparelho e não é comparável com o daqui (celular minutos fora
+        // de hora fazia a régua remota nunca aparecer).
+        const recebida = T.reguasRecebidas?.[u];
+        if (!recebida || agora - recebida > REGUA_TTL_MS) continue;
         drawLinhaMedida(r.pontos || [], r.cor || '#f472b6', r.label, r.nome);
     }
 }
@@ -912,10 +959,16 @@ function drawPings() {
 function drawFog() {
     const l = T.canvas?.luzDinamica;
     T._luzAnimada = false;
-    if (!l?.ativa) { T.visiveisAgora = null; T._litPolys = null; avisoEscuridao(false); return; }
+    if (!l?.ativa) {
+        T.visiveisAgora = null; T._litPolys = null;
+        _fogComposto = '';   // o canvas de fog não é mais válido
+        // Cenário de fog montado + luz dinâmica desligada = o jogador vê tudo
+        avisoFog(temCenarioDeFog() ? 'semFog' : null);
+        return;
+    }
     const dia = l.modo === 'dia';
     const op = T.mode === 'public' ? 1 : (l.fogSecretOpacity ?? 0.6);
-    if (op <= 0 && T.mode === 'secret') { T.visiveisAgora = null; return; }
+    if (op <= 0 && T.mode === 'secret') { T.visiveisAgora = null; _fogComposto = ''; return; }
 
     if (PERF.wallHashVersion !== PERF.wallsVersion) {
         PERF.wallHash = construirHashParedes(coletarParedes());
@@ -924,51 +977,92 @@ function drawFog() {
     }
 
     const escopo = (T.mode === 'secret' || T.isMaster) ? 'mestre' : 'jogador';
+    const pol = politicaDeFog({ luzAtiva: l.ativa, modo: l.modo, ehMestre: escopo === 'mestre' });
     const fontesVisao = coletarFontesDeVisao(escopo);
     const fontesLuz = coletarFontesDeLuz();
-    avisoEscuridao(!dia && fontesLuz.length === 0);
+    avisoFog(!dia && fontesLuz.length === 0 && algumTokenPrecisaDeLuz() ? 'escuro' : null);
     const alturaAndar = T.canvas?.andarAltura || 5;
 
     const ser = f => `${f.x|0},${f.y|0},${f.r|0},${f.ang||360},${(f.dir||0)|0},${f.sensor||'p'},${faixaDe(f.elev||0, alturaAndar)}`;
     const key = PERF.wallsVersion + '|' + escopo + '|' + (dia?'d':'n') + '|' +
         fontesVisao.map(ser).join(';') + '#' + fontesLuz.map(ser).join(';');
-    if (key !== PERF.fogKey || !PERF.fogPolys) {
-        const calc = (f, ignoraParedes) => visibilityPolygon(f, PERF.wallHash, ignoraParedes, alturaAndar);
-        const visao = fontesVisao.map(f => ({
-            f, poly: calc(f, f.sensor === 'tremorsense' || f.sensor === 'verdadeira'),
-            sensor: f.sensor || 'padrao',
-            precisaLuz: !dia && (!f.sensor || f.sensor === 'padrao' || f.sensor === 'verInvisivel'),
-        }));
-        const luz = fontesLuz.map(f => ({ f, poly: calc(f, false) }));
+    if (key !== PERF.fogKey || !PERF.fogPolys) medir('fog.polys', () => {
+        // Um memo POR FONTE: no arrasto só a fonte que se moveu recalcula o
+        // raycast — as outras 13 saem do cache. Paredes invalidam pela versão.
+        // `fresca` marca quem recalculou, para a exploração não revarrer as
+        // visões paradas a cada passo do arrasto.
+        const calc = (f, ignoraParedes) => {
+            let fresca = false;
+            const poly = memoPolys.obter(
+                ser(f) + '|' + (ignoraParedes ? 1 : 0), PERF.wallsVersion,
+                () => { fresca = true; return visibilityPolygon(f, PERF.wallHash, ignoraParedes, alturaAndar); });
+            return { poly, fresca };
+        };
+        const visao = fontesVisao.map(f => {
+            const c = calc(f, f.sensor === 'tremorsense' || f.sensor === 'verdadeira');
+            return {
+                f, poly: c.poly, fresca: c.fresca,
+                sensor: f.sensor || 'padrao',
+                precisaLuz: pol.exigeLuz && (!f.sensor || f.sensor === 'padrao' || f.sensor === 'verInvisivel'),
+            };
+        });
+        const luz = fontesLuz.map(f => { const c = calc(f, false); return { f, poly: c.poly, fresca: c.fresca }; });
         PERF.fogPolys = { visao, luz };
         PERF.fogKey = key;
         T.visiveisAgora = visao;
         T._litPolys = dia ? 'dia' : luz.map(e => e.poly);
-        // Memória de exploração (público): registra células vistas
+        // Memória de exploração (público): registra células vistas. Só as
+        // visões recalculadas — as paradas já registraram as suas. Exceção:
+        // luz mudou (acendeu/moveu) → célula antes escura pode ter ficado
+        // visível dentro de uma visão parada, então revarre todas.
         if (T.mode === 'public') {
-            registrarExploracaoCelulas(visao, T._litPolys);
+            const luzMudou = !dia && luz.some(e => e.fresca);
+            registrarExploracaoCelulas(luzMudou ? visao : visao.filter(e => e.fresca), T._litPolys);
         }
-    }
+    });
     if (!PERF.fogPolys) return;
 
     const { visao, luz } = PERF.fogPolys;
     T._luzAnimada = fontesLuz.some(f => f.animacao && f.animacao !== 'nenhuma') ||
                     fontesVisao.some(f => f.animacao && f.animacao !== 'nenhuma');
 
-    if (dia && T.mode === 'public') {
-        // Dia: sem fog no público (mas luzes coloridas ainda brilham)
-        desenharLuzesColoridas(luz);
+    // ===== FOG COMPOSTO EM CACHE =====
+    // Compor o fog custa três passes de tela cheia por quadro (limpar, pintar,
+    // rasterizar a exploração, cortar os polígonos) e isso rodava a CADA frame,
+    // mesmo com os polígonos já em cache — era o peso do arrasto no celular.
+    // Entre um passo da visão e outro, com a câmera parada, o resultado é idêntico
+    // pixel a pixel: então basta reaproveitar o canvas e blitar.
+    // Luz animada (tocha, pulso, estrobo) muda todo quadro por definição e fica de fora.
+    const chaveComposta = T._luzAnimada ? '' : [
+        PERF.fogKey, cv.width, cv.height, op, escopo, dia ? 'd' : 'n',
+        T.cam.x.toFixed(1), T.cam.y.toFixed(1), T.cam.z.toFixed(4),
+        T.mode === 'public' ? versaoExploracao() : 0,
+    ].join('|');
+    if (chaveComposta && chaveComposta === _fogComposto) {
+        medir('fog.blit', () => aplicarFogNaTela(luz));
         return;
     }
+    _fogComposto = chaveComposta;
+    medir('fog.compor', () => comporFog(visao, luz, pol, op));
+}
 
+/** Recompõe o fog no fogCv (3 passes de tela cheia) e aplica na tela. */
+function comporFog(visao, luz, pol, op) {
     // 1) base preta
+    // De DIA não existe escuridão, mas parede continua tapando a vista: o véu
+    // leve é só para o MESTRE enxergar o alcance das visões na tela dele. Para o
+    // jogador, o que está fora da linha de visão fica oculto de verdade — antes
+    // o público simplesmente pulava o fog de dia e via o mapa inteiro.
     fogCtx.setTransform(1, 0, 0, 1, 0, 0);
     fogCtx.clearRect(0, 0, fogCv.width, fogCv.height);
-    fogCtx.fillStyle = `rgba(2,4,10,${dia ? Math.min(op, 0.35) : op})`;
+    fogCtx.fillStyle = `rgba(2,4,10,${pol.veuLeve ? Math.min(op, 0.35) : op})`;
     fogCtx.fillRect(0, 0, fogCv.width, fogCv.height);
 
     // 2) memória explorada (recorte parcial) — só faz sentido no público
-    fogCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // (o "dpr" dos canvases de fog embute a meia resolução; o aplicarCamera
+    // trabalha em px de CSS e vale igual para qualquer densidade)
+    const dprFog = dpr * FOG_ESCALA;
+    fogCtx.setTransform(dprFog, 0, 0, dprFog, 0, 0);
     aplicarCamera(fogCtx, T.cam);
     if (T.mode === 'public') {
         fogCtx.globalCompositeOperation = 'destination-out';
@@ -978,20 +1072,22 @@ function drawFog() {
     }
 
     // 3) visível agora (recorte total)
-    if (escopo === 'mestre' || dia) {
+    if (pol.recortaLuzes) {
         // Mestre: recorte direto por fonte (visões + luzes), com gradiente e flicker
         fogCtx.globalCompositeOperation = 'destination-out';
         for (const e of [...visao, ...luz]) cortarPoly(fogCtx, e.f, e.poly);
         fogCtx.globalCompositeOperation = 'source-over';
     } else {
-        // Jogador: LoS ∩ luz p/ sensores que precisam de luz; sensores autônomos direto
+        // Jogador: LoS ∩ luz p/ sensores que precisam de luz; sensores autônomos direto.
+        // De dia todas as visões entram como autônomas (precisaLuz = false), então
+        // o recorte sai por linha de visão pura — sem exigir luz nenhuma.
         const precisam = visao.filter(e => e.precisaLuz);
         const autonomos = visao.filter(e => !e.precisaLuz);
         if (precisam.length) {
             // union(LoS) na máscara principal
             maskCtx.setTransform(1, 0, 0, 1, 0, 0);
             maskCtx.clearRect(0, 0, maskCv.width, maskCv.height);
-            maskCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            maskCtx.setTransform(dprFog, 0, 0, dprFog, 0, 0);
             aplicarCamera(maskCtx, T.cam);
             maskCtx.globalCompositeOperation = 'source-over';
             maskCtx.fillStyle = '#fff';
@@ -1003,7 +1099,7 @@ function drawFog() {
             // vê tudo preto por mais luzes que o mestre acenda.
             luzCtx.setTransform(1, 0, 0, 1, 0, 0);
             luzCtx.clearRect(0, 0, luzCv.width, luzCv.height);
-            luzCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            luzCtx.setTransform(dprFog, 0, 0, dprFog, 0, 0);
             aplicarCamera(luzCtx, T.cam);
             luzCtx.globalCompositeOperation = 'source-over';
             for (const e of luz) cortarPoly(luzCtx, e.f, e.poly, true);
@@ -1017,7 +1113,7 @@ function drawFog() {
             fogCtx.setTransform(1, 0, 0, 1, 0, 0);
             fogCtx.globalCompositeOperation = 'destination-out';
             fogCtx.drawImage(maskCv, 0, 0);
-            fogCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            fogCtx.setTransform(dprFog, 0, 0, dprFog, 0, 0);
             aplicarCamera(fogCtx, T.cam);
         }
         fogCtx.globalCompositeOperation = 'destination-out';
@@ -1025,12 +1121,14 @@ function drawFog() {
         fogCtx.globalCompositeOperation = 'source-over';
     }
 
-    // 4) aplica o fog
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(fogCv, 0, 0);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    aplicarFogNaTela(luz);
+}
 
-    // 5) brilho de luzes coloridas
+/** Passa o fog já composto para a tela e acende o brilho das luzes coloridas. */
+function aplicarFogNaTela(luz) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(fogCv, 0, 0, cv.width, cv.height);   // estica a meia resolução
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.save();
     aplicarCamera(ctx, T.cam);
     desenharLuzesColoridasWorld(luz);
@@ -1038,28 +1136,42 @@ function drawFog() {
 }
 
 /**
- * Aviso de cegueira (só o mestre vê): luz dinâmica em NOITE sem nenhuma
- * fonte de luz acesa = jogadores com visão padrão veem o canvas 100% preto.
- * O estado é legítimo pelas regras (escuro é escuro), mas é indiagnosticável
- * da cadeira do mestre — a tela DELE mostra o fog translúcido.
+ * Avisos de fog — só o mestre vê. Os dois estados abaixo são legítimos pelas
+ * regras, mas indiagnosticáveis da cadeira do mestre, porque a tela DELE mostra
+ * fog translúcido nas duas situações:
+ *   'escuro'  → noite sem nenhuma luz acesa: o jogador vê tudo PRETO.
+ *   'semFog'  → o jogador vê o mapa TODO apesar do cenário de fog montado
+ *               (modo ☀️ Dia não aplica fog no público, e luz desligada também não).
  */
-let _avisoLuzVisivel = false;
-function avisoEscuridao(escuroSemLuz) {
+let _avisoAtual = null;
+function avisoFog(estado) {
     if (T.mode !== 'secret') return;
-    const mostrar = !!escuroSemLuz && algumTokenPrecisaDeLuz();
-    if (mostrar === _avisoLuzVisivel) return;
-    _avisoLuzVisivel = mostrar;
-    let el = document.getElementById('tbAvisoLuz');
-    if (!mostrar) { if (el) el.remove(); return; }
-    el = document.createElement('div');
+    if (estado === _avisoAtual) return;
+    _avisoAtual = estado;
+    const antigo = document.getElementById('tbAvisoLuz');
+    if (antigo) antigo.remove();
+    if (!estado) return;
+    const el = document.createElement('div');
     el.id = 'tbAvisoLuz';
     el.style.cssText = 'position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:60;' +
         'background:rgba(139,30,45,.94);color:#fff;padding:8px 14px;border-radius:8px;font-size:.8rem;' +
         'cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.4);max-width:min(92vw,560px);text-align:center';
-    el.innerHTML = '🌙 <b>Noite sem nenhuma luz acesa</b> — jogadores com visão padrão estão vendo tudo PRETO. ' +
-        'Acenda uma luz, dê visão noturna ao token ou mude para ☀️ Dia. <u>Abrir configuração</u>';
+    el.innerHTML = estado === 'escuro'
+        ? '🌙 <b>Noite sem nenhuma luz acesa</b> — jogadores com visão padrão estão vendo tudo PRETO. ' +
+          'Acenda uma luz, dê visão noturna ao token ou mude para ☀️ Dia. <u>Abrir configuração</u>'
+        : '👁️ <b>Os jogadores estão vendo o mapa TODO</b> — este canvas tem paredes de visão montadas, mas a ' +
+          'iluminação dinâmica está DESLIGADA, então nenhum fog é aplicado no público. <u>Abrir configuração</u>';
     el.onclick = () => { if (typeof window.tbAbrirConfig === 'function') window.tbAbrirConfig(); };
     document.body.appendChild(el);
+}
+
+/** Existe cenário de fog montado neste canvas? (paredes, portas ou janelas na camada de luz) */
+function temCenarioDeFog() {
+    for (const o of T.objects.values()) {
+        if (o.layerId !== 'luz') continue;
+        if (o.tipo === 'desenho' || o.tipo === 'porta' || o.tipo === 'janela') return true;
+    }
+    return false;
 }
 
 function algumTokenPrecisaDeLuz() {
@@ -1071,12 +1183,6 @@ function algumTokenPrecisaDeLuz() {
     return false;
 }
 
-function desenharLuzesColoridas(luz) {
-    ctx.save();
-    aplicarCamera(ctx, T.cam);
-    desenharLuzesColoridasWorld(luz);
-    ctx.restore();
-}
 function desenharLuzesColoridasWorld(luz) {
     for (const e of luz) {
         const f = e.f;
@@ -1150,8 +1256,15 @@ function coletarParedes() {
     return segs;
 }
 
+/** VDs da ficha vinculada ao token (null para NPC/custom). */
+export function derivedDoToken(o) {
+    if (o?.vinculo?.tipo !== 'char') return null;
+    return T.chars.find(c => c.id === o.vinculo.id)?.derivedTotals || null;
+}
+
 function coletarFontesDeVisao(escopo) {
     const fontes = [];
+    const dia = T.canvas?.luzDinamica?.modo === 'dia';
     for (const o of T.objects.values()) {
         if (o.tipo !== 'token' || !o.visao?.ativa) continue;
         if (escopo === 'jogador') {
@@ -1166,8 +1279,9 @@ function coletarFontesDeVisao(escopo) {
         }
         const p = posConfirmada(o);
         fontes.push({
-            x: p.x, y: p.y, r: unidadesParaPx(o.visao.alcance || 6, p),
-            ang: o.visao.angulo, dir: o.rot || 0,
+            x: p.x, y: p.y,
+            r: unidadesParaPx(alcanceDeVisao(o.visao, derivedDoToken(o), dia), p),
+            ang: o.visao.angulo, dir: rotParaCanvas(o.rot),
             sensor: o.visao.tipo || 'padrao', elev: o.elev || 0,
         });
     }
@@ -1188,7 +1302,7 @@ function coletarFontesDeLuz() {
             fontes.push({
                 x: p.x, y: p.y, r: unidadesParaPx(o.luz.alcance || 3, p),
                 ang: o.luz.angulo && o.luz.angulo < 360 ? o.luz.angulo : undefined,
-                dir: o.rot || 0,
+                dir: rotParaCanvas(o.rot),
                 cor: o.luz.cor, animacao: o.luz.animacao, intensidadeAnim: o.luz.intensidadeAnim,
                 elev: o.elev || 0,
             });
