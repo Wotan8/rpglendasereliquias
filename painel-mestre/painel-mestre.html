@@ -99,7 +99,9 @@
                     <div class="sub-tabs">
                         <button class="sub-tab-btn active" data-subtab="m-jogadores" onclick="switchMesaSubTab('m-jogadores')">👥 Jogadores</button>
                         <button class="sub-tab-btn" data-subtab="m-personagens" onclick="switchMesaSubTab('m-personagens')">🎭 Personagens</button>
-                        <button class="sub-tab-btn" data-subtab="m-sessoes" onclick="switchMesaSubTab('m-sessoes')">📝 Sessões</button>
+                        <button class="sub-tab-btn" data-subtab="m-sessao" onclick="switchMesaSubTab('m-sessao')">🎬 Sessão</button>
+                        <button class="sub-tab-btn" data-subtab="m-sessoes" onclick="switchMesaSubTab('m-sessoes')">📜 Histórico de Sessões</button>
+                        <button class="sub-tab-btn" data-subtab="m-frentes" onclick="switchMesaSubTab('m-frentes')">🕰️ Frentes</button>
                         <button class="sub-tab-btn" data-subtab="m-config" onclick="switchMesaSubTab('m-config')">⚙️ Config</button>
                         <button class="sub-tab-btn" data-subtab="m-npcs" onclick="switchMesaSubTab('m-npcs')">👹 NPCs</button>
                         <button class="sub-tab-btn" data-subtab="m-inventario" onclick="switchMesaSubTab('m-inventario')">📦 Kits</button>
@@ -153,6 +155,24 @@
                         </div>
                         <div id="sessionLogsList">
                             <div style="text-align:center;padding:50px;color:var(--muted)"><div style="font-size:2.5rem;margin-bottom:12px">📝</div>Carregando logs de sessão...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: Sessão (página única: preparo → ao vivo → colheita) -->
+                    <div class="sub-tab-content" id="subtab-m-sessao">
+                        <div id="mesaSessaoAtual">
+                            <div style="text-align:center;padding:50px;color:var(--muted)">Carregando sessão...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: Frentes -->
+                    <div class="sub-tab-content" id="subtab-m-frentes">
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+                            <button class="btn btn-success btn-small" onclick="openFrenteModal()">➕ Nova Frente</button>
+                            <span style="font-size:.75rem;color:var(--muted)">O relógio avança quando os jogadores ignoram a frente — presságios disparam ao cruzar o limiar.</span>
+                        </div>
+                        <div id="mesaFrentesList">
+                            <div style="text-align:center;padding:50px;color:var(--muted)">Carregando frentes...</div>
                         </div>
                     </div>
 

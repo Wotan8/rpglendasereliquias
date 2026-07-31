@@ -6,6 +6,7 @@ import { addLog } from './logs.js';
 import { ensureNpcSystemData, pecsDaOrigem, modulosDaClasseNpc, resolveNpcClassModule } from './npc-system-data.js?v=1.5';
 import { calcularNpc, ATTR_SIGLAS } from './npc-calc-engine.js?v=1.6';
 import './npc-inventario.js?v=1.0'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
+import { npcNaMesa, mesasDoNpc, espelhoMesaId } from '../../shared/npc-mesas.js';
 
 let currentEditingNpc = null;
 let _npcModalUnsubscribe = null;
@@ -241,9 +242,10 @@ window.filterNpcs = function() {
 
         // Vínculo
         if (adv.advF_vinculo) {
-            if (adv.advF_vinculo === 'com_mesa' && !n.mesaId) return false;
-            if (adv.advF_vinculo === 'sem_mesa' && n.mesaId) return false;
-            if (adv.advF_vinculo === 'especifica' && adv.advF_mesaEsp && n.mesaId !== adv.advF_mesaEsp) return false;
+            const mesasN = mesasDoNpc(n);
+            if (adv.advF_vinculo === 'com_mesa' && !mesasN.length) return false;
+            if (adv.advF_vinculo === 'sem_mesa' && mesasN.length) return false;
+            if (adv.advF_vinculo === 'especifica' && adv.advF_mesaEsp && !npcNaMesa(n, adv.advF_mesaEsp)) return false;
         }
 
         return true;
@@ -381,8 +383,12 @@ function normalizeNpc(raw, sys) {
         }
     }
 
-    if (!Array.isArray(n.vinculos)) {
-        n.vinculos = n.mesaId ? [{ tipo: 'mesa', id: n.mesaId }] : [];
+    // `vinculos` é a lista canônica. Docs antigos (ou gravados por script) podem
+    // ter só o espelho `mesaId` — sem promover para vínculo, o editor abriria com
+    // a mesa desmarcada e o save seguinte desvincularia o NPC sem ninguém pedir.
+    if (!Array.isArray(n.vinculos)) n.vinculos = [];
+    if (n.mesaId && !n.vinculos.some(v => v?.tipo === 'mesa' && v.id === n.mesaId)) {
+        n.vinculos.push({ tipo: 'mesa', id: n.mesaId });
     }
 
     // Visibilidade da ficha no Tabuleiro (Secreto = componente do Painel do
@@ -1671,7 +1677,9 @@ function collectNpcData() {
     const funcao = [];
     if (document.getElementById('npcFuncAliado')?.checked) funcao.push('aliado');
 
-    const mesaVinc = n.vinculos.find(v => v.tipo === 'mesa');
+    // `vinculos` aceita várias mesas; `mesaId` guarda só a primeira, como espelho
+    // legado para telas antigas — quem lê pertencimento usa npcNaMesa().
+    const mesaEspelho = espelhoMesaId(n.vinculos);
 
     return {
         schemaVersion: 2,
@@ -1708,7 +1716,7 @@ function collectNpcData() {
         criatura: tipo === 'criatura' ? { habitat: g('npcHabitat'), comportamento: g('npcComportamento'), dieta: g('npcDieta'), nivelAmeaca: g('npcNivelAmeaca') } : null,
 
         vinculos: n.vinculos,
-        mesaId: mesaVinc ? mesaVinc.id : '', // espelho legado (área de mesas usa mesaId)
+        mesaId: mesaEspelho, // espelho legado da 1ª mesa (ver comentário acima)
 
         lastUpdate: new Date().toISOString(), lastUpdateBy: S.currentUser?.email
     };

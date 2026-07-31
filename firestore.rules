@@ -407,10 +407,20 @@ service cloud.firestore {
           (ehJogadorDaMesa() && docId != 'legenda' && docId != 'estado' && docId != 'musica');
       }
 
-      // Demais subcoleções futuras da mesa
-      match /{document=**} {
-        allow read: if isSignedIn();
-        allow write: if isMaster() || ehJogadorDaMesa();
+      // Frentes e Sessões — segredo de mestre: presságios, segredos e preparo
+      // não podem nem ser LIDOS por jogadores. Matches sobrepostos são OR no
+      // Firestore, então o catch-all abaixo também precisa excluí-los.
+      match /frentes/{frenteId} {
+        allow read, write: if isMaster();
+      }
+      match /sessoes/{sessaoId} {
+        allow read, write: if isMaster();
+      }
+
+      // Demais subcoleções futuras da mesa (exceto as só-do-mestre acima)
+      match /{sub}/{document=**} {
+        allow read: if isSignedIn() && sub != 'frentes' && sub != 'sessoes';
+        allow write: if (isMaster() || ehJogadorDaMesa()) && sub != 'frentes' && sub != 'sessoes';
       }
     }
 

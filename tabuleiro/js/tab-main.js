@@ -8,6 +8,7 @@ import {
 } from '../../painel-mestre/js/firebase-config.js';
 import { T, CAMADAS_PADRAO, PERMISSOES_LISTA, esc, uid, toast, markDirty, camadasVisiveis, optsUnidade, popNavegacaoValida, refViagemPorDia, HORAS_DE_MARCHA, ehEcoAtrasado, LERP_TOKEN_MS, marcarRecebimentoReguas, configDoCanvasMudou } from './tab-state.js';
 import { notifyObjectChange, notifyCanvasConfigChange } from './tab-perf.js';
+import { npcNaMesa } from '../../shared/npc-mesas.js';
 import { startRenderLoop, centerCamera } from './tab-render.js';
 import { initTools } from './tab-tools.js';
 import { initObjects, abrirPropriedades, addObj } from './tab-objects.js';
@@ -20,6 +21,7 @@ import { initTemplates } from './tab-templates.js';
 import { initMusica } from './tab-musica.js';
 import './tab-local.js';   // 📍 Locais do Worldbuilding (registra window.tbAbrirLocal)
 import { initGirar } from './tab-girar.js';
+import { initSessao } from './tab-sessao.js';
 import { carregarExploracao } from './tab-fog.js';
 import { limparHistorico } from './tab-undo.js';
 import { posDisplay, screenToWorld } from './tab-render.js';
@@ -83,6 +85,7 @@ window.addEventListener('DOMContentLoaded', () => {
             initCena();
             initTemplates();
             initMusica();
+            initSessao();
             startRenderLoop();
             document.getElementById('tbLoading').style.display = 'none';
         } catch (e) {
@@ -121,7 +124,7 @@ async function carregarNpcs() {
             snap.forEach(d => {
                 const n = { id: d.id, ...d.data() };
                 T.npcsTodos.push(n);
-                if (n.mesaId === T.mesaId) T.npcs.push(n);
+                if (npcNaMesa(n, T.mesaId)) T.npcs.push(n);
             });
             T.npcsTodos.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
             if (first) { first = false; resolve(); }
@@ -345,12 +348,16 @@ export function aplicarModoUI() {
     show('toolTerreno', secret);
     show('btnRelogio', secret);
     show('btnTeleprompter', secret);
+    show('btnSessao', secret);
     show('btnCursores', true);
 }
 
 // ===== RELÓGIOS (F6.2) =====
 window.tbNovoRelogio = function() {
     if (T.mode !== 'secret') return;
+    // Frentes ativas (T.frentes vem do tab-sessao.js, só no modo secreto)
+    const frentes = Object.values(T.frentes || {}).filter(f => f.status === 'ativa');
+    const optsFrente = frentes.map(f => `<option value="${f.id}">${esc(f.nome || '')} (${Math.min(f.relogio?.cheias||0, f.relogio?.fatias||6)}/${f.relogio?.fatias||6})</option>`).join('');
     abrirModal('⏱️ Novo Relógio de Progresso', `
         <div class="tb-form-grid">
             <label>Nome<input type="text" id="rl_nome" placeholder="Ex: Alarme da fortaleza"></label>
@@ -358,20 +365,27 @@ window.tbNovoRelogio = function() {
             <label>Cor<input type="color" id="rl_cor" value="#ef4444"></label>
             <label class="tb-check"><input type="checkbox" id="rl_pub"> Visível ao público</label>
         </div>
+        ${optsFrente ? `<div class="tb-form-grid" style="margin-top:6px">
+            <label>🕰️ Vincular a uma frente (opcional)<select id="rl_frente"><option value="">— nenhuma —</option>${optsFrente}</select></label>
+        </div>
+        <div class="tb-muted" style="font-size:.72rem;margin-top:4px">Vinculado, o relógio espelha a frente (avança pela colheita/Painel) e o público vê só as fatias, sem nome.</div>` : ''}
         <div class="tb-muted" style="font-size:.75rem;margin-top:6px">Clique no relógio para avançar uma fatia; botão direito para voltar/zerar.</div>
         <div class="tb-modal-actions"><button class="tb-btn tb-btn-success" onclick="tbCriarRelogio()">✅ Criar</button></div>
     `);
 };
 window.tbCriarRelogio = async function() {
     const centro = screenToWorld({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+    const frenteId = document.getElementById('rl_frente')?.value || '';
+    const f = frenteId ? (T.frentes || {})[frenteId] : null;
     await addObj({
         tipo: 'relogio', layerId: 'tokens',
         x: centro.x, y: centro.y,
-        nome: document.getElementById('rl_nome').value.trim(),
+        nome: document.getElementById('rl_nome').value.trim() || (f?.nome || ''),
         fatias: parseInt(document.getElementById('rl_fatias').value) || 6,
         cheias: 0,
         cor: document.getElementById('rl_cor').value,
         visivelPublico: document.getElementById('rl_pub').checked,
+        ...(f ? { frenteId, espelho: { fatias: f.relogio?.fatias || 6, cheias: Math.min(f.relogio?.cheias || 0, f.relogio?.fatias || 6) } } : {}),
     });
     fecharModal(); toast('⏱️ Relógio criado no centro da tela');
 };

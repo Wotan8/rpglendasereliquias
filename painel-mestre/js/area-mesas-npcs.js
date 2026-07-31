@@ -4,6 +4,7 @@
 import { db, collection, getDocs, getDoc, doc, addDoc, updateDoc, deleteDoc } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
+import { npcNaMesa, patchVinculoMesa } from '../../shared/npc-mesas.js';
 
 window._loadMesaNpcs = loadMesaNpcs;
 
@@ -13,7 +14,7 @@ async function loadMesaNpcs() {
     try {
         const snap = await getDocs(collection(db, 'npcs'));
         const npcs = [];
-        snap.forEach(d => { const data = d.data(); if (data.mesaId === S.currentMesaId) npcs.push({ id: d.id, ...data }); });
+        snap.forEach(d => { const data = d.data(); if (npcNaMesa(data, S.currentMesaId)) npcs.push({ id: d.id, ...data }); });
         if (!npcs.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Nenhum NPC vinculado a esta mesa</div>'; return; }
         el.innerHTML = npcs.map(n => {
             const tags = (n.tags||'').split(',').filter(t=>t.trim()).map(t=>`<span class="npc-tag">${escapeHtml(t.trim())}</span>`).join('');
@@ -41,7 +42,7 @@ window.openLinkNpcModal = async function() {
     try {
         const snap = await getDocs(collection(db, 'npcs'));
         const available = [];
-        snap.forEach(d => { const data = d.data(); if (data.mesaId !== S.currentMesaId) available.push({ id: d.id, ...data }); });
+        snap.forEach(d => { const data = d.data(); if (!npcNaMesa(data, S.currentMesaId)) available.push({ id: d.id, ...data }); });
         if (!available.length) { showAlert('⚠️ Nenhum NPC disponível para vincular', 'warning'); return; }
         const opts = available.map(n => `<option value="${n.id}">${escapeHtml(n.nome || 'Sem nome')} (${n.tipo || 'NPC'})</option>`).join('');
         const m = document.createElement('div'); m.className = 'modal active'; m.id = 'linkNpcModal';
@@ -53,11 +54,18 @@ window.openLinkNpcModal = async function() {
     } catch (e) { showAlert('❌ Erro', 'danger'); }
 };
 
+// Vincular/desvincular mexe SÓ nesta mesa — as outras campanhas do NPC ficam.
+async function _setVinculo(npcId, vincular) {
+    const snap = await getDoc(doc(db, 'npcs', npcId));
+    if (!snap.exists()) return;
+    await updateDoc(doc(db, 'npcs', npcId), patchVinculoMesa(snap.data(), S.currentMesaId, vincular));
+}
+
 window.linkNpcToMesa = async function() {
     const npcId = document.getElementById('ln_npcId')?.value;
     if (!npcId || !S.currentMesaId) return;
     try {
-        await updateDoc(doc(db, 'npcs', npcId), { mesaId: S.currentMesaId });
+        await _setVinculo(npcId, true);
         showAlert('✅ NPC vinculado!', 'success');
         document.getElementById('linkNpcModal')?.remove();
         await loadMesaNpcs();
@@ -67,7 +75,7 @@ window.linkNpcToMesa = async function() {
 window.unlinkNpcFromMesa = async function(npcId) {
     if (!confirm('Desvincular este NPC da mesa?')) return;
     try {
-        await updateDoc(doc(db, 'npcs', npcId), { mesaId: '' });
+        await _setVinculo(npcId, false);
         showAlert('✅ NPC desvinculado', 'success');
         await loadMesaNpcs();
     } catch (e) { showAlert('❌ Erro', 'danger'); }
@@ -97,6 +105,7 @@ window.createMesaNpc = async function() {
             papel: document.getElementById('mnpc_papel')?.value?.trim() || '',
             descricao: document.getElementById('mnpc_desc')?.value?.trim() || '',
             mesaId: S.currentMesaId,
+            vinculos: [{ tipo: 'mesa', id: S.currentMesaId }],
             createdAt: new Date().toISOString()
         });
         showAlert('✅ NPC criado e vinculado!', 'success');

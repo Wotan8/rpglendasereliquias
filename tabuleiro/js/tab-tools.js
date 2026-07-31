@@ -326,6 +326,13 @@ function onDown(e) {
             if (o) {
                 // Relógio: clique do mestre = avançar fatia (F6.2)
                 if (o.tipo === 'relogio' && T.isMaster && T.mode === 'secret' && !e.shiftKey && !o.bloqueado) {
+                    // Vinculado a frente: só exibição — o avanço passa pela
+                    // colheita/Painel para registrar motivo e disparar presságio
+                    if (o.frenteId) {
+                        toast('🕰️ Relógio de frente — avance pela colheita ou pelo Painel do Mestre');
+                        selecionar(o.id); markDirty();
+                        return;
+                    }
                     const cheias = Math.min((o.cheias || 0) + 1, o.fatias || 6);
                     updObj(o.id, { cheias });
                     selecionar(o.id); markDirty();
@@ -1227,7 +1234,7 @@ function abrirMenuContexto(o, x, y) {
             ? { t: '✏️ Desfazer rota de viagem', fn: () => updObj(o.id, { ehRota: false }) }
             : { t: '🛤️ Transformar em rota de viagem', fn: () => converterEmRota(o) });
     }
-    if (o.tipo === 'relogio') {
+    if (o.tipo === 'relogio' && !o.frenteId) {
         itens.push({ t: '➖ Voltar fatia', fn: () => updObj(o.id, { cheias: Math.max(0, (o.cheias || 0) - 1) }) });
         itens.push({ t: '🔄 Zerar relógio', fn: () => updObj(o.id, { cheias: 0 }) });
     }

@@ -666,7 +666,16 @@ function drawTerreno(o) {
 function drawRelogio(o) {
     const gs = gridSize();
     const r = gs * 0.7;
-    const fatias = o.fatias || 6, cheias = Math.min(o.cheias || 0, fatias);
+    // Vinculado a frente: mestre lê a frente ao vivo (T.frentes, tab-sessao);
+    // público lê o espelho gravado no objeto — e nunca vê o nome (pressão anônima)
+    let fatias = o.fatias || 6, cheias = Math.min(o.cheias || 0, fatias), nome = o.nome;
+    if (o.frenteId) {
+        const fr = (T.frentes || {})[o.frenteId];
+        const dados = fr ? { fatias: fr.relogio?.fatias || 6, cheias: fr.relogio?.cheias || 0 } : (o.espelho || {});
+        fatias = dados.fatias || 6;
+        cheias = Math.min(dados.cheias || 0, fatias);
+        if (T.mode !== 'secret') nome = '';
+    }
     ctx.save();
     ctx.beginPath(); ctx.arc(o.x, o.y, r, 0, Math.PI*2);
     ctx.fillStyle = 'rgba(17,24,39,.92)'; ctx.fill();
@@ -682,11 +691,11 @@ function drawRelogio(o) {
     }
     ctx.beginPath(); ctx.arc(o.x, o.y, r, 0, Math.PI*2);
     ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = hud(2); ctx.stroke();
-    if (o.nome) {
+    if (nome) {
         const fs = hud(13);
         ctx.font = `bold ${fs}px Arial`; ctx.textAlign='center'; ctx.textBaseline='top';
-        ctx.lineWidth = hud(3); ctx.strokeStyle='rgba(0,0,0,.85)'; ctx.strokeText(o.nome, o.x, o.y + r + hud(4));
-        ctx.fillStyle = '#f8fafc'; ctx.fillText(o.nome, o.x, o.y + r + hud(4));
+        ctx.lineWidth = hud(3); ctx.strokeStyle='rgba(0,0,0,.85)'; ctx.strokeText(nome, o.x, o.y + r + hud(4));
+        ctx.fillStyle = '#f8fafc'; ctx.fillText(nome, o.x, o.y + r + hud(4));
     }
     ctx.restore();
 }

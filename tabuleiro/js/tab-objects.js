@@ -2,7 +2,8 @@
 // TABULEIRO — Objetos (CRUD), Uploads, Tokens, Camadas, Propriedades
 // =============================================
 import { db, storage, ref, uploadBytes, getDownloadURL, setDoc, updateDoc, deleteDoc, doc, writeBatch } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, uid, toast, markDirty, gridSize, getCamada, escalaCanvas, optsUnidade, pxDeLarguraReal, larguraRealDePx, vinculosComMesa, alcanceDeVisao, fonteDoAlcance } from './tab-state.js';
+import { T, esc, uid, toast, markDirty, gridSize, getCamada, escalaCanvas, optsUnidade, pxDeLarguraReal, larguraRealDePx, alcanceDeVisao, fonteDoAlcance } from './tab-state.js';
+import { npcNaMesa, patchVinculoMesa } from '../../shared/npc-mesas.js';
 import { refObjeto, refObjetos, refCanvas, abrirModal, fecharModal } from './tab-main.js';
 import { notifyObjectChange } from './tab-perf.js';
 import { bboxOf, centerCamera, screenToWorld, derivedDoToken } from './tab-render.js';
@@ -189,9 +190,9 @@ window.tbConfirmarImagem = async function(url) {
 // `mesaId` deixa `vinculos` desatualizado e o editor desfaz o vínculo no próximo save.
 export async function vincularNpcNaMesa(npcId, vincular) {
     const n = T.npcsTodos.find(x => x.id === npcId);
-    const vinculos = vinculosComMesa(n?.vinculos, T.mesaId, vincular);
-    await updateDoc(doc(db, 'npcs', npcId), { mesaId: vincular ? T.mesaId : '', vinculos });
-    if (n) { n.mesaId = vincular ? T.mesaId : ''; n.vinculos = vinculos; }   // eco local até o snapshot
+    const patch = patchVinculoMesa(n, T.mesaId, vincular);
+    await updateDoc(doc(db, 'npcs', npcId), patch);
+    if (n) Object.assign(n, patch);   // eco local até o snapshot
 }
 
 // ===== TOKENS =====
@@ -203,7 +204,7 @@ window.tbTokenFiltraNpcs = function() {
     const bate = n => !busca || (n.nome || '').toLowerCase().includes(busca) || (n.papel || '').toLowerCase().includes(busca);
     const opt = n => `<option value="npc:${n.id}">${esc(n.nome || 'NPC')}${n.tipo === 'criatura' ? ' 🐉' : ''}${n.papel ? ' · ' + esc(n.papel) : ''}</option>`;
     const daMesa = T.npcs.filter(bate);
-    const fora = T.npcsTodos.filter(n => n.mesaId !== T.mesaId).filter(bate);
+    const fora = T.npcsTodos.filter(n => !npcNaMesa(n, T.mesaId)).filter(bate);
     const chars = T.chars.filter(c => !busca || (c.nome || '').toLowerCase().includes(busca))
         .map(c => `<option value="char:${c.id}">${esc(c.nome)}</option>`).join('');
     sel.innerHTML =

@@ -172,17 +172,6 @@ export function sincLarguraReal(o) {
 }
 
 /**
- * Nova lista `vinculos` do NPC ao entrar/sair de uma mesa.
- * Troca só o vínculo de mesa e preserva os outros tipos — o editor de NPCs salva
- * essa lista de volta, então perder um item aqui apaga o vínculo lá.
- */
-export function vinculosComMesa(vinculos, mesaId, vincular) {
-    const out = (Array.isArray(vinculos) ? vinculos : []).filter(v => v && v.tipo !== 'mesa');
-    if (vincular) out.push({ tipo: 'mesa', id: mesaId });
-    return out;
-}
-
-/**
  * Desempilha a próxima parada válida da trilha de navegação entre mapas
  * (continental → regional → local). Entradas de canvases excluídos são
  * puladas — sem isso o "Voltar" abriria um canvas que não existe mais.

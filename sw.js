@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v114';
+const VERSION = 'v120';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -116,11 +116,13 @@ const PRECACHE_URLS = [
   '/painel-mestre/js/area-historico.js',
   '/painel-mestre/js/area-mesas-condicoes.js',
   '/painel-mestre/js/area-mesas-config.js',
+  '/painel-mestre/js/area-mesas-frentes.js',
   '/painel-mestre/js/area-mesas-inventario.js',
   '/painel-mestre/js/area-mesas-logs.js',
   '/painel-mestre/js/area-mesas-notas.js',
   '/painel-mestre/js/area-mesas-npcs.js',
   '/painel-mestre/js/area-mesas-peculiaridades.js',
+  '/painel-mestre/js/area-mesas-sessao.js',
   '/painel-mestre/js/area-mesas-sessoes.js',
   '/painel-mestre/js/area-mesas.js',
   '/painel-mestre/js/area-npcs.js',
@@ -157,6 +159,7 @@ const PRECACHE_URLS = [
   '/tabuleiro/js/tab-musica.js',
   '/tabuleiro/js/tab-musica-calc.js',
   '/tabuleiro/js/tab-local.js',
+  '/tabuleiro/js/tab-sessao.js',
   '/tabuleiro/js/tab-girar.js',
   '/tabuleiro/js/tab-perf.js',
   '/tabuleiro/js/tab-write-queue.js',
@@ -164,6 +167,7 @@ const PRECACHE_URLS = [
   '/shared/lendas-reliquias.css',
   '/shared/livro-vinculado.js',
   '/shared/local-tatico.js',
+  '/shared/npc-mesas.js',
   '/shared/texto-mundo.css',
   '/shared/theme.js',
   '/shared/tokens.css',

@@ -5,7 +5,7 @@ import {
     T, UNIDADES, optsUnidade, CAMADAS_PADRAO, PERMISSOES_LISTA,
     pxDeLarguraReal, larguraRealDePx, sincLarguraReal,
     upcEm, unidadeEm, unidadesParaPx, pxParaUnidades, gridSize,
-    camadasVisiveis, objVisivel, vinculosComMesa, popNavegacaoValida,
+    camadasVisiveis, objVisivel, popNavegacaoValida,
     fmtViagem, fmtDuracao, refViagemPorDia, camposRevelados, selecionar, politicaDeFog,
     alcanceDeVisao, fonteDoAlcance, DV_PERCEPCAO, DV_PERCEPCAO_VISUAL,
     rotParaCanvas, anguloDoMovimento, deveAtualizarPasso, FOG_PASSO_CELULA, FOG_INTERVALO_MS,
@@ -13,6 +13,7 @@ import {
     ehEcoAtrasado, mapaSobPonto, T as TT,
 } from './tab-state.js';
 import { trajetoColide } from './tab-grid.js';
+import { comMesa, npcNaMesa, mesasDoNpc, espelhoMesaId, patchVinculoMesa } from '../../shared/npc-mesas.js';
 
 function canvas({ size = 70, valorPorCelula = 1.5, unidade = 'm' } = {}) {
     T.canvas = { grid: { size }, escala: { valorPorCelula, unidade } };
@@ -110,27 +111,47 @@ assert.ok(trajetoColide([{ x: 50, y: 10 }, { x: 50, y: 190 }, { x: 150, y: 190 }
 assert.equal(trajetoColide([{ x: 50, y: 100 }, { x: 150, y: 100 }], []), null, 'sem paredes, passa');
 
 // =====================================================================
-// VÍNCULO DE NPC COM A MESA
+// VÍNCULO DE NPC COM A MESA — um NPC pode servir VÁRIAS mesas ao mesmo tempo
 // `vinculos` é a lista do editor de NPCs; perder um item aqui apaga o vínculo lá.
 // =====================================================================
-assert.deepEqual(vinculosComMesa(undefined, 'M1', true), [{ tipo: 'mesa', id: 'M1' }], 'NPC sem vínculo nenhum');
-assert.deepEqual(vinculosComMesa([], 'M1', true), [{ tipo: 'mesa', id: 'M1' }]);
-assert.deepEqual(vinculosComMesa([{ tipo: 'mesa', id: 'M1' }], 'M1', false), [], 'desvincular limpa');
+assert.deepEqual(comMesa(undefined, 'M1', true), [{ tipo: 'mesa', id: 'M1' }], 'NPC sem vínculo nenhum');
+assert.deepEqual(comMesa([], 'M1', true), [{ tipo: 'mesa', id: 'M1' }]);
+assert.deepEqual(comMesa([{ tipo: 'mesa', id: 'M1' }], 'M1', false), [], 'desvincular limpa');
 
-// troca de mesa: sai da antiga, entra na nova (o espelho `mesaId` só cabe uma)
-assert.deepEqual(vinculosComMesa([{ tipo: 'mesa', id: 'M0' }], 'M1', true), [{ tipo: 'mesa', id: 'M1' }]);
+// 🔒 entrar numa mesa nova NÃO tira o NPC das outras (era o bug do vinculosComMesa)
+assert.deepEqual(comMesa([{ tipo: 'mesa', id: 'M0' }], 'M1', true),
+    [{ tipo: 'mesa', id: 'M0' }, { tipo: 'mesa', id: 'M1' }], 'duas mesas ao mesmo tempo');
+assert.deepEqual(comMesa([{ tipo: 'mesa', id: 'M0' }, { tipo: 'mesa', id: 'M1' }], 'M0', false),
+    [{ tipo: 'mesa', id: 'M1' }], 'sair de uma mesa mantém a outra');
+// vincular de novo não duplica
+assert.deepEqual(comMesa([{ tipo: 'mesa', id: 'M1' }], 'M1', true), [{ tipo: 'mesa', id: 'M1' }]);
 
 // 🔒 o que não é mesa TEM que sobreviver
 const outros = [{ tipo: 'char', id: 'c1' }, { tipo: 'mesa', id: 'M0' }, { tipo: 'npc', id: 'n9' }];
-assert.deepEqual(vinculosComMesa(outros, 'M1', true),
-    [{ tipo: 'char', id: 'c1' }, { tipo: 'npc', id: 'n9' }, { tipo: 'mesa', id: 'M1' }]);
-assert.deepEqual(vinculosComMesa(outros, 'M1', false),
-    [{ tipo: 'char', id: 'c1' }, { tipo: 'npc', id: 'n9' }], 'desvincular não leva os outros junto');
+assert.deepEqual(comMesa(outros, 'M1', true),
+    [{ tipo: 'char', id: 'c1' }, { tipo: 'mesa', id: 'M0' }, { tipo: 'npc', id: 'n9' }, { tipo: 'mesa', id: 'M1' }]);
 assert.deepEqual(outros.length, 3, 'não muta a lista original');
 
 // lixo no campo não derruba
-assert.deepEqual(vinculosComMesa('nao-e-array', 'M1', true), [{ tipo: 'mesa', id: 'M1' }]);
-assert.deepEqual(vinculosComMesa([null, { tipo: 'char', id: 'c1' }], 'M1', false), [{ tipo: 'char', id: 'c1' }]);
+assert.deepEqual(comMesa('nao-e-array', 'M1', true), [{ tipo: 'mesa', id: 'M1' }]);
+assert.deepEqual(comMesa([null, { tipo: 'char', id: 'c1' }], 'M1', false), [{ tipo: 'char', id: 'c1' }]);
+
+// pertencimento: vínculos OU espelho legado (docs antigos só têm mesaId)
+assert.equal(npcNaMesa({ vinculos: [{ tipo: 'mesa', id: 'M1' }] }, 'M1'), true);
+assert.equal(npcNaMesa({ vinculos: [{ tipo: 'mesa', id: 'M0' }, { tipo: 'mesa', id: 'M1' }] }, 'M1'), true, 'multi-mesa');
+assert.equal(npcNaMesa({ mesaId: 'M1' }, 'M1'), true, 'doc legado sem vinculos');
+assert.equal(npcNaMesa({ mesaId: 'M0' }, 'M1'), false);
+assert.equal(npcNaMesa({}, 'M1'), false, 'NPC solto');
+assert.equal(npcNaMesa({ mesaId: 'M1' }, ''), false, 'mesa vazia nunca casa');
+assert.deepEqual(mesasDoNpc({ mesaId: 'M1', vinculos: [{ tipo: 'mesa', id: 'M1' }, { tipo: 'mesa', id: 'M2' }] }),
+    ['M1', 'M2'], 'espelho não duplica');
+
+// espelho legado = primeira mesa da lista
+assert.equal(espelhoMesaId([{ tipo: 'char', id: 'c1' }, { tipo: 'mesa', id: 'M2' }]), 'M2');
+assert.equal(espelhoMesaId([]), '');
+assert.deepEqual(patchVinculoMesa({ vinculos: [{ tipo: 'mesa', id: 'M0' }] }, 'M1', true),
+    { vinculos: [{ tipo: 'mesa', id: 'M0' }, { tipo: 'mesa', id: 'M1' }], mesaId: 'M0' },
+    'patch mantém as duas e espelha a primeira');
 
 // =====================================================================
 // NAVEGAÇÃO ENTRE MAPAS — o "Voltar" pula canvases excluídos

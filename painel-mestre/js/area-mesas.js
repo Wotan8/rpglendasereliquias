@@ -24,6 +24,8 @@ window.switchMesaSubTab = function(subTabName) {
     if (subTabName === 'm-personagens') loadMesaCharacters();
     if (subTabName === 'm-jogadores') loadMesaPlayers();
     if (subTabName === 'm-sessoes' && window._loadSessionLogs) window._loadSessionLogs();
+    if (subTabName === 'm-frentes' && window._loadMesaFrentes) window._loadMesaFrentes();
+    if (subTabName === 'm-sessao' && window._loadMesaSessao) window._loadMesaSessao();
     if (subTabName === 'm-config' && window._loadMesaConfig) window._loadMesaConfig();
     if (subTabName === 'm-npcs' && window._loadMesaNpcs) window._loadMesaNpcs();
     if (subTabName === 'm-inventario' && window._loadMesaInventarios) window._loadMesaInventarios();
