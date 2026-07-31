@@ -163,6 +163,22 @@ assert.equal(cofre.trancado, true);
 assert.deepEqual(cofre.tranca, tranca, 'a config da tranca chega inteira ao Tabuleiro');
 assert.equal('trancado' in caixote, false, 'trancado sem tranca não viaja');
 
+// --- porta/janela trancadas usam o mesmo mecanismo ---
+const trancaPorta = { tipo: 'item', itemId: 'chv1', itemNome: 'Chave de Ferro', consumo: 'sim' };
+const mtPortas = {
+    ...mt, objetos: [
+        { tipo: 'porta', pontos: [{ x: 0, y: 0 }, { x: 100, y: 0 }], trancado: true, tranca: trancaPorta },
+        { tipo: 'janela', pontos: [{ x: 0, y: 50 }, { x: 100, y: 50 }], trancado: true, tranca: { tipo: 'tag', tag: 'pé-de-cabra', consumo: 'nao' } },
+        { tipo: 'porta', pontos: [{ x: 0, y: 90 }, { x: 100, y: 90 }] },
+    ],
+};
+const [, portaT, janelaT, portaLivre] = objetosDoLocal(mtPortas, { x: 0, y: 0, w: 1000 });
+assert.equal(portaT.trancado, true);
+assert.deepEqual(portaT.tranca, trancaPorta);
+assert.equal(portaT.aberta, false, 'trancada continua nascendo fechada');
+assert.equal(janelaT.trancado, true, 'janela tranca igual à porta');
+assert.equal('trancado' in portaLivre, false, 'porta livre não carrega o campo');
+
 assert.match(resumoDoLocal(mtItens), /3 itens/, 'o resumo conta por tipo, sem validar');
 
 // --- importarDungeonAlchemist: export Roll20 (.txt) vira mapaTatico ---

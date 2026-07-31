@@ -5,7 +5,7 @@
 import { db, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, writeBatch } from '../../painel-mestre/js/firebase-config.js';
 import { T, esc, toast, markDirty, gridSize, tokenDoUsuario } from './tab-state.js';
 import { abrirModal, fecharModal } from './tab-main.js';
-import { addObj, updObj, delObj, vincularNpcNaMesa } from './tab-objects.js';
+import { addObj, updObj, delObj, vincularNpcNaMesa, trancaConfigHtml } from './tab-objects.js';
 import { screenToWorld } from './tab-render.js';
 import { pontoVisivelAgora } from './tab-fog.js';
 
@@ -17,6 +17,7 @@ export function initMostrar() {
     window.tbMenuMostrar = menuMostrar;
     window.tbClickMostrar = clickMostrar;
     window.tbAbrirNpcModal = abrirNpcModal;
+    window.tbAbrirDestrancar = abrirDestrancar;   // portas/janelas trancadas (tab-tools)
 }
 
 function caixaId() { return '__caixa_mestre__' + T.mesaId; }
@@ -348,48 +349,6 @@ function abrirBau(objId) {
 }
 window.tbBauFixo = (objId, fixo) => updObj(objId, { fixo });
 
-// ===== TRANCA DO BAÚ =====
-// Config no modal do mestre; o estado (`trancado` + `tranca`) vive no próprio
-// objeto loot e sincroniza pelo snapshot de objetos, como qualquer outro campo.
-function trancaConfigHtml(objId, o) {
-    const tr = o.tranca || {};
-    const tipo = o.trancado ? (tr.tipo || 'item') : '';
-    return `
-    <div class="tb-form-grid" style="margin-bottom:8px">
-        <label>🔒 Tranca<select id="bau_tr_tipo" onchange="tbBauTranca('${objId}')">
-            <option value="">🔓 Livre</option>
-            <option value="item" ${tipo === 'item' ? 'selected' : ''}>🔒 Chave: item</option>
-            <option value="tag" ${tipo === 'tag' ? 'selected' : ''}>🔒 Chave: tag</option>
-        </select></label>
-        <label id="bau_tr_nome_w" style="${tipo === 'item' ? '' : 'display:none'}">Nome do item-chave<input type="text" id="bau_tr_nome" value="${esc(tr.itemNome || '')}" onchange="tbBauTranca('${objId}')"></label>
-        <label id="bau_tr_tag_w" style="${tipo === 'tag' ? '' : 'display:none'}">Tag da chave<input type="text" id="bau_tr_tag" value="${esc(tr.tag || '')}" onchange="tbBauTranca('${objId}')"></label>
-        <label id="bau_tr_consumo_w" style="${tipo ? '' : 'display:none'}">Consumo da chave<select id="bau_tr_consumo" onchange="tbBauTranca('${objId}')">
-            <option value="nao" ${(tr.consumo || 'nao') === 'nao' ? 'selected' : ''}>não consome</option>
-            <option value="sim" ${tr.consumo === 'sim' ? 'selected' : ''}>consome</option>
-            <option value="chance" ${tr.consumo === 'chance' ? 'selected' : ''}>chance de consumir</option>
-        </select></label>
-        <label id="bau_tr_chance_w" style="${tipo && tr.consumo === 'chance' ? '' : 'display:none'}">Chance %<input type="number" id="bau_tr_chance" value="${Number(tr.chance) || 50}" min="1" max="100" onchange="tbBauTranca('${objId}')"></label>
-    </div>`;
-}
-
-window.tbBauTranca = function(objId) {
-    const v = (id) => document.getElementById(id)?.value;
-    const tipo = v('bau_tr_tipo') || '';
-    const mostra = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
-    mostra('bau_tr_nome_w', tipo === 'item');
-    mostra('bau_tr_tag_w', tipo === 'tag');
-    mostra('bau_tr_consumo_w', !!tipo);
-    mostra('bau_tr_chance_w', !!tipo && v('bau_tr_consumo') === 'chance');
-    if (!tipo) { updObj(objId, { trancado: false, tranca: null }); return; }
-    const tranca = { tipo, consumo: v('bau_tr_consumo') || 'nao' };
-    if (tranca.consumo === 'chance') tranca.chance = Math.min(100, Math.max(1, parseInt(v('bau_tr_chance'), 10) || 50));
-    if (tipo === 'item') tranca.itemNome = (v('bau_tr_nome') || '').trim();
-    else tranca.tag = (v('bau_tr_tag') || '').trim();
-    // chave em branco tranca do mesmo jeito — o mestre está no meio da digitação;
-    // o jogador só destrava com chave que "serve", e nada serve até preencher.
-    updObj(objId, { trancado: true, tranca });
-};
-
 /** O item destranca esta tranca? (nome exato ou tag, sem caixa/acento rigoroso) */
 function chaveServe(it, tr) {
     if (!tr) return false;
@@ -431,17 +390,19 @@ function itemDoCache(itemId) {
     return null;
 }
 
-// ===== DESTRANCAR (jogador diante de baú trancado) =====
+// ===== DESTRANCAR (jogador diante de baú/porta/janela trancados) =====
+const NOME_TRANCAVEL = { porta: '🚪 Porta', janela: '🪟 Janela' };
 function abrirDestrancar(objId) {
     const o = T.objects.get(objId); if (!o) return;
     const tr = o.tranca || {};
     const meus = meusChars();
     if (!meus.length) { toast('⚠️ Você não tem personagem nesta mesa', 'warning'); return; }
+    const rotulo = o.tipo === 'loot' ? (o.nome || 'Baú') : (NOME_TRANCAVEL[o.tipo] || o.tipo);
     const precisa = tr.tipo === 'tag' ? `um item com a tag <b>${esc(tr.tag || '?')}</b>` : `o item <b>${esc(tr.itemNome || '?')}</b>`;
     const consumo = tr.consumo === 'sim' ? 'A chave é consumida ao usar.'
         : tr.consumo === 'chance' ? `⚠️ ${Number(tr.chance) || 50}% de chance de a chave ser consumida.`
         : 'A chave não é consumida.';
-    abrirModal(`🔒 ${esc(o.nome || 'Baú')} — trancado`, `
+    abrirModal(`🔒 ${esc(rotulo)} — trancado`, `
         <div class="tb-muted" style="font-size:.8rem;margin-bottom:8px">Precisa de ${precisa} <b>equipado</b> para destrancar. ${consumo}</div>
         <div class="tb-form-grid tb-form-grid-1"><label>Personagem<select id="dt_char" onchange="tbDestrancarLista('${objId}')">${meus.map(c => `<option value="${c.id}">🎭 ${esc(c.nome)}</option>`).join('')}</select></label></div>
         <div class="tb-muted" style="font-size:.76rem;margin:8px 0 4px">Itens equipados (mochilas mostram o que têm dentro)</div>
@@ -467,7 +428,11 @@ window.tbDestrancarLista = async function(objId) {
 
 window.tbUsarChave = async function(objId, itemId) {
     const o = T.objects.get(objId); if (!o) return;
-    if (!o.trancado) { abrirBau(objId); return; }   // outro jogador destrancou antes
+    const ehLoot = o.tipo === 'loot';
+    if (!o.trancado) {   // outro jogador destrancou antes
+        if (ehLoot) abrirBau(objId); else fecharModal();
+        return;
+    }
     const g = itemDoCache(itemId); if (!g) return;
     const it = g.item;
     if (!chaveServe(it, o.tranca)) return;
@@ -478,9 +443,15 @@ window.tbUsarChave = async function(objId, itemId) {
             if ((it.quantidade || 1) > 1) await updateDoc(doc(db, 'items', it.id), { quantidade: it.quantidade - 1 });
             else await deleteDoc(doc(db, 'items', it.id));
         }
-        updObj(objId, { trancado: false });
         toast(consumiu ? `🔓 Destrancado — ${it.nome || 'a chave'} foi consumido!` : `🔓 Destrancado — ${it.nome || 'a chave'} continua com você`, consumiu ? 'warning' : 'success');
-        abrirBau(objId);
+        if (ehLoot) {
+            updObj(objId, { trancado: false });
+            abrirBau(objId);
+        } else {
+            // porta/janela destrancada já abre — um write só, todo mundo vê
+            updObj(objId, { trancado: false, aberta: true });
+            fecharModal();
+        }
     } catch (e) { console.error(e); toast('❌ Erro ao usar a chave', 'danger'); }
 };
 

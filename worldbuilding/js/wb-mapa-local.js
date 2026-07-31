@@ -7,6 +7,7 @@
      ✏️ Paredes  — bloqueiam luz e visão (polilinha)
      🚪 Portas   — bloqueiam fechadas, abrem no tabuleiro
      🪟 Janelas  — deixam passar luz, bloqueiam visão fechadas
+        (ambas aceitam tranca: chave por item/tag, consumo opcional)
      💡 Luzes    — fontes com alcance (em unidades reais) e cor
      📦 Itens    — equipamentos dropados; baú (contêiner) aceita
                    itens dentro e a opção Fixo — vira loot no tabuleiro
@@ -25,8 +26,8 @@ const esc = (s = '') => String(s).replace(/[&<>"']/g, c =>
 const FERRAMENTAS = [
     ['mao', '✋ Mão', 'Arraste para deslocar o mapa. (Botão direito/meio e a roda funcionam em qualquer ferramenta.)'],
     ['parede', '✏️ Parede', 'Escolha a forma ao lado. Linha: um clique por vértice, duplo-clique ou Enter encerra. Esc cancela.'],
-    ['porta', '🚪 Porta', 'Dois cliques: início e fim da porta.'],
-    ['janela', '🪟 Janela', 'Dois cliques: início e fim da janela.'],
+    ['porta', '🚪 Porta', 'Dois cliques: início e fim da porta. A tranca (opcional) fica na barra de baixo.'],
+    ['janela', '🪟 Janela', 'Dois cliques: início e fim da janela. A tranca (opcional) fica na barra de baixo.'],
     ['luz', '💡 Luz', 'Um clique posiciona a luz (alcance e cor ao lado).'],
     ['npc', '🎭 NPC', 'Escolha o NPC e a camada ao lado, depois clique onde ele fica.'],
     ['item', '📦 Item', 'Escolha o equipamento ao lado e clique onde ele cai. Contêiner (baú) aceita itens dentro e a opção Fixo.'],
@@ -166,12 +167,14 @@ function montar() {
         <select id="wbmlBauSel"></select>
         <label>Qtd <input type="number" id="wbmlBauQtd" value="1" min="1" style="width:50px"></label>
         <button class="btn btn-secondary btn-sm" id="wbmlBauAdd">⬇️ Guardar no baú</button>
-        <span class="wbml-sep"></span>
-        <label>Tranca <select id="wbmlBauTranca">
+    </div>
+    <div class="wbml-tools" id="wbmlTrancaPanel" style="display:none">
+        <b>🔐 Tranca <span id="wbmlTrancaDoQue"></span>:</b>
+        <select id="wbmlBauTranca">
             <option value="">🔓 Livre</option>
             <option value="item">🔒 Chave: item</option>
             <option value="tag">🔒 Chave: tag</option>
-        </select></label>
+        </select>
         <select id="wbmlBauChave" style="display:none"></select>
         <input type="text" id="wbmlBauTag" placeholder="tag da chave" style="display:none;width:110px">
         <label id="wbmlBauConsumoWrap" style="display:none">Consumo <select id="wbmlBauConsumo">
@@ -243,7 +246,15 @@ function sincronizarGrupos() {
     const ehCont = !!itemSelecionado()?.ehContainer;
     mostra('#wbmlItemFixoWrap', E.tool === 'item' && ehCont);
     mostra('#wbmlBauPanel', E.tool === 'item' && ehCont);
-    if (ehCont) { bauRender(); trancaSincronizar(); }
+    if (ehCont) bauRender();
+    // Tranca vale para baú (contêiner), porta e janela — mesmo mecanismo
+    const trancavel = E.tool === 'porta' || E.tool === 'janela' || (E.tool === 'item' && ehCont);
+    mostra('#wbmlTrancaPanel', trancavel);
+    if (trancavel) {
+        const rot = $('#wbmlTrancaDoQue');
+        if (rot) rot.textContent = E.tool === 'porta' ? 'da próxima porta' : E.tool === 'janela' ? 'da próxima janela' : 'do próximo baú';
+        trancaSincronizar();
+    }
     const vp = $('#wbmlViewport');
     if (vp) vp.style.cursor = E.tool === 'mao' ? 'grab' : '';
 }
@@ -296,6 +307,9 @@ function trancaSincronizar() {
     mostra('#wbmlBauTag', tipo === 'tag');
     mostra('#wbmlBauConsumoWrap', !!tipo);
     mostra('#wbmlBauChanceWrap', !!tipo && $('#wbmlBauConsumo').value === 'chance');
+    // chave por item precisa do catálogo — porta/janela não passam pela
+    // ferramenta 📦 Item, então carrega aqui se ainda não veio
+    if (tipo === 'item' && !E.catalogo) carregarCatalogo();
 }
 
 /** Lê a config de tranca do painel; null = baú livre. */
@@ -420,6 +434,10 @@ function desenhar() {
         if (o.tipo === 'parede') seg(o.pontos, '#ef4444', null, `data-i="${i}"`);
         if (o.tipo === 'porta') seg(o.pontos, '#f59e0b', null, `data-i="${i}" stroke-width="6"`);
         if (o.tipo === 'janela') seg(o.pontos, '#38bdf8', '10 6', `data-i="${i}" stroke-width="5"`);
+        if ((o.tipo === 'porta' || o.tipo === 'janela') && o.trancado && o.pontos?.length >= 2) {
+            const m = { x: (o.pontos[0].x + o.pontos[1].x) / 2, y: (o.pontos[0].y + o.pontos[1].y) / 2 };
+            linhas.push(`<text x="${m.x}" y="${m.y}" font-size="22" text-anchor="middle" dominant-baseline="middle" stroke="none" data-i="${i}">🔒</text>`);
+        }
         if (o.tipo === 'luz') {
             const r = (Number(o.alcance) || 6) * pxPorUnidade();
             linhas.push(`<circle cx="${o.x}" cy="${o.y}" r="${r}" fill="${o.cor || '#ffdd99'}" fill-opacity=".14" stroke="${o.cor || '#ffdd99'}" stroke-dasharray="6 6" data-i="${i}"/>`);
@@ -577,7 +595,11 @@ function clique(p) {
         desenhar();
     } else if (E.tool === 'porta' || E.tool === 'janela') {
         if (!E.atual) { E.atual = [p]; desenhar(); return; }
-        mt.objetos.push({ tipo: E.tool, pontos: [E.atual[0], p] });
+        const o = { tipo: E.tool, pontos: [E.atual[0], p] };
+        const tranca = trancaAtual();
+        if (tranca) { o.trancado = true; o.tranca = tranca; }
+        else if ($('#wbmlBauTranca').value) dica('⚠️ Tranca ignorada: escolha a chave (item) ou preencha a tag.');
+        mt.objetos.push(o);
         E.atual = null;
         desenhar();
     } else if (E.tool === 'luz') {

@@ -493,11 +493,13 @@ export function abrirPropriedades(id, soAtualizar) {
         <label>Elevação<input type="number" step="0.5" value="${o.elev||0}" onchange="tbProp('${id}','elev',parseFloat(this.value)||0)"></label>`;
     if (o.tipo === 'porta') extra = `
         <label class="tb-check"><input type="checkbox" ${o.aberta?'checked':''} onchange="tbProp('${id}','aberta',this.checked)"> Porta aberta (não bloqueia luz nem movimento)</label>
-        <label>Elevação<input type="number" step="0.5" value="${o.elev||0}" onchange="tbProp('${id}','elev',parseFloat(this.value)||0)"></label>`;
+        <label>Elevação<input type="number" step="0.5" value="${o.elev||0}" onchange="tbProp('${id}','elev',parseFloat(this.value)||0)"></label>
+        ${trancaConfigHtml(id, o)}`;
     if (o.tipo === 'janela') extra = `
         <label class="tb-check"><input type="checkbox" ${o.aberta?'checked':''} onchange="tbProp('${id}','aberta',this.checked)"> 🪟 Janela aberta (deixa passar o movimento)</label>
         <label class="tb-muted" style="font-size:.72rem">🪟 Fechada: a luz passa, o movimento não.</label>
-        <label>Elevação<input type="number" step="0.5" value="${o.elev||0}" onchange="tbProp('${id}','elev',parseFloat(this.value)||0)"></label>`;
+        <label>Elevação<input type="number" step="0.5" value="${o.elev||0}" onchange="tbProp('${id}','elev',parseFloat(this.value)||0)"></label>
+        ${trancaConfigHtml(id, o)}`;
     if (o.tipo === 'desenho') extra = `
         <label>Cor<input type="color" value="${o.cor||'#3b82f6'}" onchange="tbProp('${id}','cor',this.value)"></label>
         <label>Grossura<input type="number" min="1" max="60" value="${o.grossura||4}" onchange="tbProp('${id}','grossura',parseInt(this.value)||4)"></label>
@@ -536,6 +538,49 @@ export function abrirPropriedades(id, soAtualizar) {
         </div>`;
 }
 function iconeTipo(t) { return { imagem:'🖼️', token:'🎭', texto:'🔤', desenho:'✏️', medida:'📏', alfinete:'📌', luz:'💡', porta:'🚪', janela:'🪟', mostrar:'🎁', template:'🎯', terreno:'⛰️', relogio:'⏱️', loot:'📦' }[t] || '⬜'; }
+
+// ===== TRANCA (baú, porta e janela) =====
+// Config do mestre: o estado (`trancado` + `tranca`) vive no próprio objeto e
+// sincroniza pelo snapshot, como qualquer campo. Usada no painel de
+// propriedades (porta/janela) e no modal do baú (tab-mostrar).
+export function trancaConfigHtml(objId, o) {
+    const tr = o.tranca || {};
+    const tipo = o.trancado ? (tr.tipo || 'item') : '';
+    return `
+    <div class="tb-form-grid" style="margin-bottom:8px">
+        <label>🔒 Tranca<select id="bau_tr_tipo" onchange="tbTrancaCfg('${objId}')">
+            <option value="">🔓 Livre</option>
+            <option value="item" ${tipo === 'item' ? 'selected' : ''}>🔒 Chave: item</option>
+            <option value="tag" ${tipo === 'tag' ? 'selected' : ''}>🔒 Chave: tag</option>
+        </select></label>
+        <label id="bau_tr_nome_w" style="${tipo === 'item' ? '' : 'display:none'}">Nome do item-chave<input type="text" id="bau_tr_nome" value="${esc(tr.itemNome || '')}" onchange="tbTrancaCfg('${objId}')"></label>
+        <label id="bau_tr_tag_w" style="${tipo === 'tag' ? '' : 'display:none'}">Tag da chave<input type="text" id="bau_tr_tag" value="${esc(tr.tag || '')}" onchange="tbTrancaCfg('${objId}')"></label>
+        <label id="bau_tr_consumo_w" style="${tipo ? '' : 'display:none'}">Consumo da chave<select id="bau_tr_consumo" onchange="tbTrancaCfg('${objId}')">
+            <option value="nao" ${(tr.consumo || 'nao') === 'nao' ? 'selected' : ''}>não consome</option>
+            <option value="sim" ${tr.consumo === 'sim' ? 'selected' : ''}>consome</option>
+            <option value="chance" ${tr.consumo === 'chance' ? 'selected' : ''}>chance de consumir</option>
+        </select></label>
+        <label id="bau_tr_chance_w" style="${tipo && tr.consumo === 'chance' ? '' : 'display:none'}">Chance %<input type="number" id="bau_tr_chance" value="${Number(tr.chance) || 50}" min="1" max="100" onchange="tbTrancaCfg('${objId}')"></label>
+    </div>`;
+}
+
+window.tbTrancaCfg = function(objId) {
+    const v = (id) => document.getElementById(id)?.value;
+    const tipo = v('bau_tr_tipo') || '';
+    const mostra = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+    mostra('bau_tr_nome_w', tipo === 'item');
+    mostra('bau_tr_tag_w', tipo === 'tag');
+    mostra('bau_tr_consumo_w', !!tipo);
+    mostra('bau_tr_chance_w', !!tipo && v('bau_tr_consumo') === 'chance');
+    if (!tipo) { updObj(objId, { trancado: false, tranca: null }); return; }
+    const tranca = { tipo, consumo: v('bau_tr_consumo') || 'nao' };
+    if (tranca.consumo === 'chance') tranca.chance = Math.min(100, Math.max(1, parseInt(v('bau_tr_chance'), 10) || 50));
+    if (tipo === 'item') tranca.itemNome = (v('bau_tr_nome') || '').trim();
+    else tranca.tag = (v('bau_tr_tag') || '').trim();
+    // chave em branco tranca do mesmo jeito — o mestre está no meio da digitação;
+    // o jogador só destrava com chave que "serve", e nada serve até preencher.
+    updObj(objId, { trancado: true, tranca });
+};
 
 /** Alcance de visão realmente aplicado, com a origem e o efeito do dia. */
 function rotuloAlcance(o) {

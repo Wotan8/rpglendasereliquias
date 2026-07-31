@@ -183,6 +183,11 @@ function podeAcionarCenario(o) {
 /** Abre/fecha porta e janela, acende/apaga luz. Um write, todo mundo vê. */
 function acionarCenario(o) {
     if (o.tipo === 'luz') { updObj(o.id, { apagada: !o.apagada }); toast(o.apagada ? '💡 Luz acesa' : '🕯️ Luz apagada'); return; }
+    // Trancada: jogador precisa da chave (mesmo mecanismo do baú); mestre ignora
+    if (o.trancado && !(T.mode === 'secret' || T.isMaster)) {
+        if (window.tbAbrirDestrancar) window.tbAbrirDestrancar(o.id);
+        return;
+    }
     updObj(o.id, { aberta: !o.aberta });
     const nome = o.tipo === 'porta' ? '🚪 Porta' : '🪟 Janela';
     toast(`${nome} ${o.aberta ? 'fechada' : 'aberta'}`);
@@ -1210,6 +1215,7 @@ function abrirMenuContexto(o, x, y) {
         }
         if (!podeAcionarCenario(o)) return;
         const rotulo = o.tipo === 'luz' ? (o.apagada ? '💡 Acender' : '🕯️ Apagar')
+            : o.trancado ? (o.tipo === 'porta' ? '🔒 Porta trancada — usar chave' : '🔒 Janela trancada — usar chave')
             : o.aberta ? (o.tipo === 'porta' ? '🚪 Fechar porta' : '🪟 Fechar janela')
             : (o.tipo === 'porta' ? '🚪 Abrir porta' : '🪟 Abrir janela');
         renderMenuContexto(menu, [{ t: rotulo, fn: () => acionarCenario(o) }], x, y);

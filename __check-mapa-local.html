@@ -126,6 +126,20 @@
             const el = document.getElementById('wbmlBauChance');
             return getComputedStyle(el.parentElement).display === 'none' && el.min === '1' && el.max === '100';
         });
+        t('painel de tranca aparece na ferramenta Porta', () => {
+            document.querySelector('[data-wbml-tool="porta"]').click();
+            return getComputedStyle(document.getElementById('wbmlTrancaPanel')).display !== 'none'
+                && document.getElementById('wbmlTrancaDoQue').textContent.includes('porta');
+        });
+        t('painel de tranca aparece na ferramenta Janela', () => {
+            document.querySelector('[data-wbml-tool="janela"]').click();
+            return getComputedStyle(document.getElementById('wbmlTrancaPanel')).display !== 'none'
+                && document.getElementById('wbmlTrancaDoQue').textContent.includes('janela');
+        });
+        t('painel de tranca some fora de porta/janela/baú', () => {
+            document.querySelector('[data-wbml-tool="luz"]').click();
+            return getComputedStyle(document.getElementById('wbmlTrancaPanel')).display === 'none';
+        });
 
         // ✋ Mão: cursor de arrasto no viewport
         t('mão troca o cursor do viewport para grab', () => {

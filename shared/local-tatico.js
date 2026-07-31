@@ -12,8 +12,8 @@
 //     luzAtiva: bool,             // liga a luz dinâmica ao importar
 //     objetos: [                  // coordenadas em px da imagem natural
 //       { tipo:'parede', pontos:[{x,y},...] },
-//       { tipo:'porta',  pontos:[a,b] },
-//       { tipo:'janela', pontos:[a,b] },
+//       { tipo:'porta',  pontos:[a,b], trancado?, tranca? },
+//       { tipo:'janela', pontos:[a,b], trancado?, tranca? },
 //       { tipo:'luz', x, y, alcance, cor, animacao? },  // alcance em unidades
 //       { tipo:'npc', npcId, nome, url, camada:'tokens'|'dm', x, y },
 //       { tipo:'item', itemId, nome, url, quantidade, item:{...}, x, y,
@@ -230,7 +230,9 @@ export function objetosDoLocal(mt, destino) {
             });
         } else if ((o.tipo === 'porta' || o.tipo === 'janela') && Array.isArray(o.pontos) && o.pontos.length >= 2) {
             const a = P(o.pontos[0]), b = P(o.pontos[1]);
-            out.push({ tipo: o.tipo, layerId: 'luz', pontos: [a, b], aberta: false, x: a.x, y: a.y });
+            const pj = { tipo: o.tipo, layerId: 'luz', pontos: [a, b], aberta: false, x: a.x, y: a.y };
+            if (o.trancado && o.tranca) { pj.trancado = true; pj.tranca = o.tranca; }
+            out.push(pj);
         } else if (o.tipo === 'luz' && o.x != null && o.y != null) {
             const p = P(o);
             const luz = {

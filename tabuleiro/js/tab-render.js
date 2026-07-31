@@ -821,7 +821,7 @@ function drawPorta(o) {
     ctx.beginPath(); ctx.moveTo(p[0].x, p[0].y); ctx.lineTo(p[1].x, p[1].y); ctx.stroke();
     ctx.setLineDash([]);
     ctx.font = `${18/T.cam.z}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('🚪', (p[0].x+p[1].x)/2, (p[0].y+p[1].y)/2); ctx.textAlign='left';
+    ctx.fillText(o.trancado && !o.aberta ? '🔒' : '🚪', (p[0].x+p[1].x)/2, (p[0].y+p[1].y)/2); ctx.textAlign='left';
 }
 function drawJanela(o) {
     const p = o.pontos || []; if (p.length < 2) return;
@@ -830,7 +830,7 @@ function drawJanela(o) {
     ctx.beginPath(); ctx.moveTo(p[0].x, p[0].y); ctx.lineTo(p[1].x, p[1].y); ctx.stroke();
     ctx.setLineDash([]);
     ctx.font = `${14/T.cam.z}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('🪟', (p[0].x+p[1].x)/2, (p[0].y+p[1].y)/2); ctx.textAlign='left';
+    ctx.fillText(o.trancado && !o.aberta ? '🔒' : '🪟', (p[0].x+p[1].x)/2, (p[0].y+p[1].y)/2); ctx.textAlign='left';
 }
 
 function drawSelecao() {
