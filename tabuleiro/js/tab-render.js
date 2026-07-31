@@ -25,6 +25,10 @@ let cv, ctx, fogCv, fogCtx, maskCv, maskCtx, luzCv, luzCtx;
 const FOG_ESCALA = 0.5;
 // Chave do fog já COMPOSTO em fogCv. Vazia = precisa recompor no próximo frame.
 let _fogComposto = '';
+// Fontes de luz/visão animadas VISÍVEIS no enquadramento atual (ver drawFog)
+// e a última assinatura quantizada delas — o loop só redesenha quando muda.
+let _fontesAnim = [];
+let _animAssin = '';
 // Cache por fonte dos polígonos de visibilidade (ver criarMemoPorVersao)
 const memoPolys = criarMemoPorVersao();
 let dpr = 1;
@@ -67,16 +71,32 @@ function resize() {
 function aplicarSmoothing(c) { c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high'; }
 
 function loop() {
+    tickLoop();
+    requestAnimationFrame(loop);
+}
+
+/** Um passo do loop: decide se este quadro precisa desenhar. True = desenhou. */
+function tickLoop() {
     // Animações contínuas → força redraw
     if (avancarTweenCamera()) T.dirty = true;
     if (T.anims && T.anims.size) T.dirty = true;
     if (haPingsAtivos()) T.dirty = true;
     if (climaAtivo()) T.dirty = true;
-    if (T._luzAnimada) T.dirty = true;
+    // Luz animada: redesenha só quando o FATOR quantizado de alguma fonte muda.
+    // Estrobo e pulso produzem quadros IDÊNTICOS entre um degrau e outro —
+    // redesenhar esses quadros era pagar a cena inteira por nada. Tocha muda
+    // quase todo quadro mesmo (flicker rápido), e aí redesenhar é o correto.
+    if (T._luzAnimada) {
+        const a = assinaturaAnim();
+        if (a !== _animAssin) { _animAssin = a; T.dirty = true; }
+    }
     if (T._pulsoCombate) T.dirty = true;
-    if (T.dirty) { T.dirty = false; medir('frame', draw); }
-    requestAnimationFrame(loop);
+    if (T.dirty) { T.dirty = false; medir('frame', draw); return true; }
+    return false;
 }
+
+/** O mesmo passo, exportado para os __check (com a aba oculta o rAF não roda). */
+export function __tickLoopParaTeste() { return tickLoop(); }
 
 // ===== Transformações =====
 export function worldToScreen(p) { return { x: (p.x - T.cam.x) * T.cam.z + cv.width / (2 * dpr), y: (p.y - T.cam.y) * T.cam.z + cv.height / (2 * dpr) }; }
@@ -1032,8 +1052,12 @@ function drawFog() {
     if (!PERF.fogPolys) return;
 
     const { visao, luz } = PERF.fogPolys;
-    T._luzAnimada = fontesLuz.some(f => f.animacao && f.animacao !== 'nenhuma') ||
-                    fontesVisao.some(f => f.animacao && f.animacao !== 'nenhuma');
+    // Só fonte animada QUE APARECE NO ENQUADRAMENTO conta: uma fora da tela não
+    // muda um pixel (o cortarPoly a descarta pelo mesmo culling) e mesmo assim
+    // mantinha a cena inteira redesenhando a 60fps em todos os clientes.
+    _fontesAnim = [...fontesVisao, ...fontesLuz]
+        .filter(f => f.animacao && f.animacao !== 'nenhuma' && !foraDaTela(f));
+    T._luzAnimada = _fontesAnim.length > 0;
 
     // ===== FOG COMPOSTO EM CACHE =====
     // Compor o fog custa três passes de tela cheia por quadro (limpar, pintar,
@@ -1041,13 +1065,15 @@ function drawFog() {
     // mesmo com os polígonos já em cache — era o peso do arrasto no celular.
     // Entre um passo da visão e outro, com a câmera parada, o resultado é idêntico
     // pixel a pixel: então basta reaproveitar o canvas e blitar.
-    // Luz animada (tocha, pulso, estrobo) muda todo quadro por definição e fica de fora.
-    const chaveComposta = T._luzAnimada ? '' : [
+    // Luz animada entra pela ASSINATURA quantizada: recompõe só quando o fator
+    // de animação dá um passo visível, em vez de anular o cache por inteiro.
+    const chaveComposta = [
         PERF.fogKey, cv.width, cv.height, op, escopo, dia ? 'd' : 'n',
         T.cam.x.toFixed(1), T.cam.y.toFixed(1), T.cam.z.toFixed(4),
         T.mode === 'public' ? versaoExploracao() : 0,
+        assinaturaAnim(),
     ].join('|');
-    if (chaveComposta && chaveComposta === _fogComposto) {
+    if (chaveComposta === _fogComposto) {
         medir('fog.blit', () => aplicarFogNaTela(luz));
         return;
     }
@@ -1218,10 +1244,28 @@ function fillPoly(c, poly) {
     c.fill();
 }
 
+/** A fonte (círculo x,y,r) está inteiramente fora do enquadramento? */
+function foraDaTela(f) {
+    return f.x + f.r < viewRect.x0 || f.x - f.r > viewRect.x1 ||
+           f.y + f.r < viewRect.y0 || f.y - f.r > viewRect.y1;
+}
+
+/**
+ * Assinatura das animações de luz visíveis, com o fator quantizado em passos
+ * de 0.04. É o que decide "este quadro é igual ao anterior?" — tanto no loop
+ * (pular o redesenho) quanto na chave do fog composto (pular a recomposição).
+ * O passo é invisível num flicker e transforma estrobo/pulso, que passam a
+ * maior parte do tempo parados num degrau, em quase-repouso.
+ */
+function assinaturaAnim() {
+    let s = '';
+    for (const f of _fontesAnim) s += Math.round(fatorAnim(f.animacao, f.intensidadeAnim) * 25) + ',';
+    return s;
+}
+
 function cortarPoly(c, f, poly, semGradiente) {
     if (!poly?.length) return;
-    // culling
-    if (f.x + f.r < viewRect.x0 || f.x - f.r > viewRect.x1 || f.y + f.r < viewRect.y0 || f.y - f.r > viewRect.y1) return;
+    if (foraDaTela(f)) return;   // culling
     const fator = fatorAnim(f.animacao, f.intensidadeAnim);
     if (semGradiente) {
         c.fillStyle = `rgba(0,0,0,${Math.min(1, fator)})`;

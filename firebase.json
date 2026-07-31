@@ -10,6 +10,7 @@
       "sistema antigo e lore/**",
       "**/__check-*",
       "**/*.test.mjs",
+      "temp_path.txt",
       "*.rules"
     ],
     "rewrites": [
