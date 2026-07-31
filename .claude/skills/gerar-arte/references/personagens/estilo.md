@@ -1,0 +1,23 @@
+[ESTILO ARTÍSTICO — OBRIGATÓRIO EM TODA IMAGEM]
+Ilustração digital 2D contemporânea em estilo cel-shading estilizado de alto orçamento, mesclando estética de animação com pintura digital semi-realista. Arte conceitual de RPG de fantasia medieval sombria e épica. O mundo é medieval — não existe tecnologia moderna, eletricidade, plástico ou materiais industriais. Tudo é forjado, costurado, esculpido ou colhido. O cenário respira pedra, madeira, couro, metal batido à mão, velas, tochas, fogueiras e luar.
+Lineart: Traço limpo, contínuo e bem definido com variação de espessura (line weight) — linhas externas (silhueta) ligeiramente mais grossas para destacar o personagem, linhas internas (detalhes do rosto, dobras de tecido) finas e afiadas. As linhas NÃO são puramente pretas — utilizam tons de marrom escuro ou cores análogas às áreas de sombra, suavizando a transição entre desenho e cor.
+Coloração e Sombreamento: Blocos sólidos de sombra com bordas bem marcadas (estilo anime/cel-shading), porém com uma das extremidades levemente suavizada por gradiente sutil para dar volume e tridimensionalidade. Paleta de cores saturada porém harmoniosa, com uso forte de cores complementares entre personagem e cenário. Predominância de subtons naturais e terrosos que conferem aspecto orgânico e medieval — ocres, marrons, verdes profundos, vermelhos queimados, dourados envelhecidos, cinzas de pedra. Oclusão ambiental com sombras mais profundas em fendas, dobras de roupa e sob o pescoço, separando camadas visuais.
+Iluminação e Profundidade: Fonte de luz direcional que remete a iluminação medieval — luz de tocha, vela, luar, sol filtrado entre copas de árvores, braseiros ou clareiras. Highlights nos cabelos e bordas das roupas. Rim light sutil nas bordas opostas à luz principal, destacando a silhueta. Fundo com renderização mais simples e leve efeito de desfoque (profundidade de campo), mantendo foco total e nitidez no personagem em primeiro plano. O fundo deve sugerir ambientação medieval: florestas ancestrais, muralhas de pedra, tavernas escuras, estradas de terra, ruínas, acampamentos com fogueira, templos antigos.
+Textura e Acabamento: Camada leve de ruído/granulação fina sobre a composição final (grain digital), removendo o aspecto plástico e aproximando de textura de pergaminho/mídia física. Pinceladas suaves visíveis em áreas de degradê, especialmente pele e fundos, conferindo aspecto de pintura manual. Texturas de materiais medievais devem ser visíveis — grão do couro, trama do tecido rústico, brilho fosco do metal batido, aspereza da madeira, poeira e terra.
+[FORMATO E ENQUADRAMENTO — OBRIGATÓRIO]
+
+Formato da imagem: RETRATO (vertical/portrait), proporção aproximada 2:3 ou 3:4.
+O personagem SEMPRE aparece de corpo inteiro ou quase inteiro (ver exceções raciais abaixo).
+O personagem deve parecer vivo — com expressão facial, gesto, postura ou ação que faça sentido com sua personalidade, classe e história descritas pelo usuário.
+O personagem é o foco absoluto da imagem, centralizado, com o fundo desfocado e complementar ao contexto narrativo.
+Ambientação SEMPRE medieval fantástica — sem elementos modernos de nenhum tipo.
+Não há necessidade de responder ao usuário com texto — apenas gerar a imagem do personagem.
+[AMBIENTAÇÃO MEDIEVAL — REGRAS DE MATERIALIDADE]
+Todo elemento visual deve respeitar a materialidade de um mundo de fantasia medieval:
+
+Tecidos: Linho, lã, seda bruta, algodão rústico, juta, couro curtido, peles de animais, camurça, veludo (apenas para nobreza). Nada de tecidos sintéticos ou com acabamento industrial.
+Metais: Ferro forjado, aço batido, bronze, cobre, prata, ouro. Armaduras com rebites visíveis, marcas de martelo, imperfeições artesanais. Nada de metal cromado, polido como espelho ou industrializado.
+Armas: Espadas, machados, lanças, arcos de madeira e corda, bestas, maças, cajados, adagas, clavas, martelos de guerra, foices. Tudo feito de madeira, osso, couro e metal forjado.
+Acessórios: Fivelas de metal, broches de bronze, cordas de cânhamo, bolsas de couro, cantis de couro ou argila, cintos com tachas, amuletos de osso/pedra/cristal, anéis rústicos, coroas de metal batido.
+Iluminação ambiente: Tochas, velas de cera, lamparinas de óleo, fogueiras, braseiros, luar, luz do sol natural. Nunca luz elétrica ou artificial moderna.
+Cenários sugeridos no fundo: Florestas densas e ancestrais, montanhas nevadas, desertos abrasadores, vilarejos de pedra e madeira, castelos e fortificações, tavernas com telhado de palha, templos em ruínas, cavernas com cristais, acampamentos com barracas de couro, estradas de terra batida, pontes de pedra sobre rios.

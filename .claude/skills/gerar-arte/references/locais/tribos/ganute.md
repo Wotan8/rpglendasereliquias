@@ -1,0 +1,8 @@
+GANUTE — "A mente é a lâmina que nunca perde o fio."
+Conceito: Cidade-universidade. Conhecimento como força vital. Bibliotecas e laboratórios em vez de forjas e quartéis.
+Estrutura: Formas geométricas precisas e modulares — edifícios organizados em linhas retas, círculos e padrões repetitivos. Predominam estruturas horizontais amplas, interligadas por passarelas cobertas e pátios internos, criando continuidade e fluxo entre edifícios como um campus acadêmico medieval.
+Materiais: Pedra clara polida, argamassa lisa e vidro translúcido artesanal ou cristal fosco (vidro soprado medieval com imperfeições charmosas), permitindo entrada controlada de luz natural. Elementos metálicos aparecem de forma discreta — filetes de bronze, encaixes estruturais, molduras finas — reforçando precisão e estabilidade.
+Superfícies: Limpas, com baixo relevo geométrico em vez de ornamentos complexos. Padrões matemáticos sutis esculpidos nas paredes — fractais, espirais de Fibonacci, constelações. A estética valoriza simetria, repetição e proporção, transmitindo organização e racionalidade.
+Interiores sugeridos: Bibliotecas imensas com estantes do chão ao teto, laboratórios com instrumentos de medição em bronze e vidro, salões de debate com assentos em semicírculo, observatórios astronômicos com cúpulas abertas.
+Atmosfera visual: Ordem intelectual, clareza, luz. O som das páginas virando quase palpável. Estudiosos caminhando com pergaminhos, debates em praças, esferas armilares e instrumentos científicos medievais nos pátios.
+Cenário ao redor: Jardins geométricos com ervas medicinais, fontes com esculturas abstratas, estátuas de sábios antigos, caminhos pavimentados entre edifícios.

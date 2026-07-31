@@ -38,6 +38,7 @@ async function main() {
     // 3. Fazer o Upload
     await bucket.upload(localPath, {
         destination: storagePath,
+        predefinedAcl: 'publicRead', // sem isso a URL publica da 403
         metadata: { contentType: 'image/png' } // default
     });
     

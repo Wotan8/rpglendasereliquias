@@ -16,7 +16,7 @@ D:\Imagem\US - Universo Soberano\RPG\Reliera\0- Mestre\Sistema de EXP\Prompt_Dis
 
 **O resumo da sessão pedida (varia por número):** procure com Glob dentro de
 `D:\Imagem\US - Universo Soberano\RPG\Reliera\0- Mestre\` por uma pasta que bata com a mesa/sessão
-(padrão observado: `Mesa1-Sessão<N>`, mas pode variar) e dentro dela um arquivo
+(padrão atual: `Sessões\Mesa1\Sessão<N>`; padrão antigo era `Mesa1-Sessão<N>`) e dentro dela um arquivo
 `RESUMO_Sessao<N>*.docx` (aceite variações de acento/maiúsculas). Se houver mais de um
 candidato ou nenhum, pergunte ao usuário em vez de adivinhar.
 

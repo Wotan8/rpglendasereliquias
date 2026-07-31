@@ -1,0 +1,8 @@
+COMUNO — "Da diversidade, encontramos a unidade."
+Conceito: Cosmopolitismo mercantil. Tribo de refugiados e imigrantes de todas as origens, vivendo do comércio intertribal.
+Referência arquitetônica: Inspirada na arquitetura colonial brasileira do Sul do Brasil — casarões robustos de madeira e pedra com influência europeia, adaptados para fantasia medieval.
+Estrutura: Casas de concreto artesanal (argamassa de cal), argila ou madeira, sempre bem próximas umas das outras, formando ruas estreitas e movimentadas. Construções robustas com estrutura aparente em madeira (vigas visíveis cruzando fachadas em estilo enxaimel medieval). Paredes grossas de alvenaria de pedra ou adobe rebocado.
+Telhados: Inclinados com telhas cerâmicas artesanais e beirais largos projetados para fora das paredes, protegendo as fachadas da chuva. Chaminés de pedra fumegantes.
+Janelas e cores: Janelas menores com molduras de madeira e persianas. Cores claras ou naturais — branco cal, creme, ocre claro, bege, com detalhes em madeira escura aparente.
+Atmosfera visual: Solidez, simplicidade, adaptação. Ruas fervilhando com diversidade — barracas de feira com especiarias, tecidos coloridos, pessoas de diferentes raças e tribos negociando. Cheiro de especiarias quase palpável na imagem através de fumaça e vapor saindo de cozinhas e barracas. Sotaques misturados na mesma rua — diversidade visual de vestimentas, raças e culturas convivendo.
+Cenário ao redor: Praças de mercado com barracas de madeira e tecido, carroças de comerciantes, animais de carga, poços d'água comunitários, igrejas/templos modestos, pontes de madeira sobre riachos.

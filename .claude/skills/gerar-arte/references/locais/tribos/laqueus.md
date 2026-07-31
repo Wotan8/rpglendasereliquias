@@ -1,0 +1,7 @@
+LAQUEUS — "Os Mestres do Engano"
+Conceito: Cidade-armadilha. Nada é o que parece. Cada construção esconde um segredo.
+Estrutura: Formas ambíguas e assimétricas — edifícios que parecem simples à primeira vista, mas têm volumes internos irregulares, paredes duplas e ângulos enganosos. Ruas que não seguem lógica aparente, criando trajetos confusos, becos falsos e praças que mudam de função. Estruturas que parecem frágeis ou abandonadas, mas são cuidadosamente planejadas.
+Materiais de disfarce: Pedra bruta, madeira envelhecida e reboco irregular, combinados para criar fachadas "comuns" e inofensivas. Superfícies desgastadas propositalmente. Por trás das fachadas, há mecanismos ocultos, painéis móveis e encaixes precisos — a qualidade real está escondida.
+Segredos visíveis (sutis): Marcas quase imperceptíveis nas paredes que indicam passagens ocultas, janelas que são portas, portas que são paredes, escadas que levam a becos sem saída enquanto a saída real está no chão. Pontos estruturais que sugerem colapso controlado — vigas posicionadas estrategicamente.
+Atmosfera visual: Desconfiança, ilusão, inteligência sutil. Tudo parece inocente e comum — uma vila qualquer — mas algo está errado. Sombras que não correspondem às formas, perspectivas que confundem, caminhos que parecem se contradizer. A cidade inteira funciona como um sistema de ilusões físicas.
+Cenário ao redor: Terreno irregular com colinas e vales que escondem linhas de visão, vegetação que encobre caminhos reais, placas de direção que podem estar erradas.

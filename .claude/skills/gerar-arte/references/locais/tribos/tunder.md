@@ -1,0 +1,7 @@
+TUNDER — "Os Cavaleiros do Trovão"
+Conceito: Fortalezas cavaleirescas. Nobreza militar equestre. Os mais rápidos de Vasteluna.
+Estrutura: Arquitetura vertical, elegante e fortificada — torres altas, muralhas de pedra e telhados inclinados. Edifícios com simetria, arcos bem definidos e volumes sólidos, transmitindo nobreza e autoridade. Pátios internos amplos e áreas abertas servindo como estábulos, espaços de treinamento equestre e organização das montarias.
+Materiais: Pedra bem talhada, madeira robusta e ferro, com acabamento refinado. Reforços metálicos em cada estrutura. Portões pesados capazes de receber cavalaria a galope. Detalhes decorativos discretos com formas que lembram raios ou símbolos de poder e velocidade — relâmpagos esculpidos em pedra, ferraduras estilizadas, cascos de cavalo em relevo.
+Estábulos: Grandes e bem cuidados — os Cavalos Trovão (raça maior e mais forte, com afinidade com raio) são tratados como nobreza. Estábulos maiores que muitas casas, com forjas anexas para ferrarias especializadas.
+Atmosfera visual: Velocidade, nobreza, poder trovejante. Bandeiras com insígnias de raio ao vento. Cavaleiros em armaduras completas montados em cavalos enormes nos pátios. Poeira levantando de galopes de treinamento. O trovão ecoa antes da poeira ser vista.
+Cenário ao redor: Planícies abertas ideais para cavalgada, estradas largas e pavimentadas, campos de treinamento equestre, cercas de madeira para currais extensos.

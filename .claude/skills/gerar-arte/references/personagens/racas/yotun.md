@@ -1,0 +1,6 @@
+YOTUN — "Os Gigantes / Guardiões dos Caminhos"
+Altura: 3,00m a 6,00m (colossal).
+Aparência: Corpo colossal, mandíbula avantajada com presas inferiores proeminentes. Pele robusta em tons de cinza, marrom ou verde-musgo, coberta de cicatrizes de batalha. Pernas longas, tronco largo e extremamente musculoso. Placas ósseas visíveis que se confundem com armadura natural.
+Vestimenta medieval colossal: Trajes rústicos feitos de couro grosso de criaturas enormes (pele de dragão, couro de besta titânica), placas de pedra esculpida presas com correntes de ferro grosso como armadura improvisada, faixas de corda de navio ao redor do torso, ombreiras de troncos de árvore ou pedregulhos amarrados. Cintos feitos de correntes de âncora com fivelas de ferro do tamanho de escudos. Armas colossais: martelos de guerra feitos de troncos com pedras amarradas, espadas do tamanho de um homem, escudos de pedra maciça, lanças de árvores inteiras com pontas de ferro.
+Expressão/Postura: Protetores, honrados, vigilantes — presença que faz o chão tremer. Olhar de sentinela milenar.
+Enquadramento: Corpo inteiro (com elementos de cenário que evidenciem a escala — árvores, rochas, construções que parecem pequenas ao lado dele).

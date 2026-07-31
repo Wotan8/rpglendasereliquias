@@ -1,0 +1,11 @@
+ELORIN — "Filhos da Floresta / Os Verdes"
+Altura: 1,70m a 1,90m (porte esbelto e gracioso).
+Referência étnica: Traços de indígenas sul-americanos, especialmente índios brasileiros — rosto com maçãs do rosto altas e largas, mandíbula definida porém suave, nariz largo e ligeiramente achatado na ponte com ponta arredondada, lábios cheios e bem delineados, sobrancelhas retas e espessas, olhos levemente amendoados e profundos, testa ampla. Pele com textura lisa e brilho saudável como se nutrida pela terra. Estrutura óssea forte mas elegante, com pescoço longo. Ombros proporcionais, corpo magro e atlético como de um caçador da floresta — musculatura definida mas não volumosa, como alguém que vive escalando árvores, nadando em rios e correndo entre as matas. Mãos firmes com dedos longos, como de alguém que trabalha com a terra.
+Pele: Tons de verde — do musgo claro ao esmeralda profundo. A pele verde deve parecer natural e orgânica, como se brotasse da própria floresta.
+Olhos: Esmeraldas luminosos que parecem brilhar na penumbra, com um leve brilho sobrenatural esverdeado.
+Orelhas: Pontudas, elevando-se acima do crânio (maiores e mais verticais que orelhas élficas tradicionais).
+Cabelos: Tons de verde, castanho ou negro. Frequentemente adornados com folhas, flores, cipós, penas ou sementes trançadas naturalmente.
+Adornos: Pinturas corporais tribais com pigmentos naturais (padrões geométricos, espirais, formas da fauna e flora), colares de sementes, ossos de animais pequenos, braceletes de cipó trançado, piercings de madeira ou pedra.
+Vestimenta medieval-tribal: Roupas de fibra natural e couro animal em tons terrosos e verdes — corseletes de casca de árvore trançada, ombreiras de osso e madeira esculpida, saias de fibra ou couro com franjas, botas altas de couro macio amarradas com cipó, capas de folhagem trançada, tiaras de galhos e flores. Armaduras feitas de casca de árvore endurecida, couro de feras da floresta e osso polido. Armas de madeira petrificada, osso afiado e pedra lascada, arcos de cipó e bambu. Nada de metal pesado — tudo orgânico e da floresta.
+Expressão/Postura: Sábios, reflexivos, reservados — olhar que enxerga além do visível, postura serena mas alerta como um predador da mata que observa tudo em silêncio.
+Enquadramento: Corpo inteiro.
