@@ -18,6 +18,10 @@ import { desenharClima, climaAtivo, alphaTelhado } from './tab-clima.js';
 import { temCone, podeGirarToken, posicionarBotoesGirar, esconderBotoesGirar } from './tab-girar.js';
 
 let cv, ctx, fogCv, fogCtx, maskCv, maskCtx, luzCv, luzCtx;
+// Clima em canvas overlay PRÓPRIO (DOM, acima do #tbCanvas): as partículas
+// andam todo quadro por natureza, mas só elas são redesenhadas — antes o clima
+// forçava T.dirty e a CENA INTEIRA (mapa, tokens, fog) redesenhava a 60fps.
+let climaCv, climaCtx, climaLimpo = true;
 // Fog composto em MEIA resolução: a composição são 3+ passes de tela cheia e o
 // custo é fill-rate puro (medido: picos de 8–13ms até no desktop; no celular,
 // com dpr 3, é o pior passo do frame). O fog é um véu suave — meia resolução
@@ -44,6 +48,12 @@ export function startRenderLoop() {
     // Máscara separada só para a UNIÃO das luzes — ver drawFog()
     luzCv = document.createElement('canvas'); luzCtx = luzCv.getContext('2d');
     mapCache.cv = document.createElement('canvas'); mapCache.ctx = mapCache.cv.getContext('2d');
+    // Overlay do clima: irmão logo após o #tbCanvas (pinta acima dele e abaixo
+    // de toda a UI). pointer-events:none — o canvas de baixo segue recebendo tudo.
+    climaCv = document.createElement('canvas');
+    climaCv.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none';
+    cv.insertAdjacentElement('afterend', climaCv);
+    climaCtx = climaCv.getContext('2d');
     resize();
     window.addEventListener('resize', () => { resize(); markDirty(); });
     iniciarHudMedicaoSePedido();
@@ -62,6 +72,7 @@ function resize() {
     fogCv.width = fw; fogCv.height = fh;
     maskCv.width = fw; maskCv.height = fh;
     luzCv.width = fw; luzCv.height = fh;
+    climaCv.width = cv.width; climaCv.height = cv.height; climaLimpo = true;
     mapCache.w = Math.round(cv.width * mapCache.pad);
     mapCache.h = Math.round(cv.height * mapCache.pad);
     mapCache.cv.width = mapCache.w; mapCache.cv.height = mapCache.h;
@@ -81,7 +92,8 @@ function tickLoop() {
     if (avancarTweenCamera()) T.dirty = true;
     if (T.anims && T.anims.size) T.dirty = true;
     if (haPingsAtivos()) T.dirty = true;
-    if (climaAtivo()) T.dirty = true;
+    // Clima NÃO suja a cena: anima sozinho no canvas overlay (ver desenharClimaOverlay)
+    desenharClimaOverlay();
     // Luz animada: redesenha só quando o FATOR quantizado de alguma fonte muda.
     // Estrobo e pulso produzem quadros IDÊNTICOS entre um degrau e outro —
     // redesenhar esses quadros era pagar a cena inteira por nada. Tocha muda
@@ -97,6 +109,25 @@ function tickLoop() {
 
 /** O mesmo passo, exportado para os __check (com a aba oculta o rAF não roda). */
 export function __tickLoopParaTeste() { return tickLoop(); }
+
+/** Anima o clima no canvas overlay; a cena embaixo continua em repouso. */
+function desenharClimaOverlay() {
+    if (!climaCtx) return;
+    if (!climaAtivo()) {
+        if (climaLimpo) return;                       // já está limpo: custo zero
+        climaCtx.setTransform(1, 0, 0, 1, 0, 0);
+        climaCtx.clearRect(0, 0, climaCv.width, climaCv.height);
+        climaLimpo = true;
+        return;
+    }
+    climaLimpo = false;
+    medir('clima', () => {
+        climaCtx.setTransform(1, 0, 0, 1, 0, 0);
+        climaCtx.clearRect(0, 0, climaCv.width, climaCv.height);
+        climaCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        desenharClima(climaCtx, climaCv.width / dpr, climaCv.height / dpr);
+    });
+}
 
 // ===== Transformações =====
 export function worldToScreen(p) { return { x: (p.x - T.cam.x) * T.cam.z + cv.width / (2 * dpr), y: (p.y - T.cam.y) * T.cam.z + cv.height / (2 * dpr) }; }
@@ -264,10 +295,7 @@ function draw() {
         drawPings();
         ctx.restore();
     });
-
-    // Clima em espaço de tela
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    desenharClima(ctx, cv.width / dpr, cv.height / dpr);
+    // (o clima vive no canvas overlay próprio — ver desenharClimaOverlay)
 }
 
 function aplicarCamera(c, cam) {
