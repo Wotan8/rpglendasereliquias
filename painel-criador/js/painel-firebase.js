@@ -2116,7 +2116,7 @@ function buildField(field, value, existingData) {
         } else if (field.selectorTarget === 'derivedValues') {
             wrap.innerHTML = buildDerivedValueSelectorHTML(field.key, field.label, ids, derivedValuesCache);
         } else if (field.selectorTarget === 'equipmentDerivedValues') {
-            wrap.innerHTML = buildEquipmentDerivedValueSelectorHTML(field.key, field.label, ids, derivedValuesCache);
+            wrap.innerHTML = buildEquipmentDerivedValueSelectorHTML(field.key, field.label, ids, derivedValuesCache, 'Valor Derivado', 'modificador', 'Modificador', true);
         } else if (field.selectorTarget === 'vitalStatus') {
             wrap.innerHTML = buildEquipmentDerivedValueSelectorHTML(field.key, field.label, ids, vitalStatusOptions(vitalStatsCache), 'Status Vital');
         } else if (field.selectorTarget === 'bodyPartsQuantidade') {

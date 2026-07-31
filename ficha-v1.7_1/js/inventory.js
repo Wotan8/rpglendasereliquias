@@ -385,29 +385,31 @@ function applyEquippedItemsMechanics() {
             if (dvList && dvList.length > 0 && window.DERIVED_VALUES) {
                 for (const dvObj of dvList) {
                     const dvId = dvObj.id || dvObj;
-                    const dvMod = dvObj.modificador || 0;
-
-                    if (dvMod != 0) {
-                        const dvDef = window.DERIVED_VALUES.find(d => d.id === dvId);
-                        if (dvDef) {
-                            const targetKey = `DERIVED:${dvDef.key}`;
-                            // DV escopado → bag do item; DV global → bag do personagem.
-                            // O vínculo pode forçar global (escopo:'global'): é o que
-                            // deixa um escudo penalizar o Acerto do personagem em vez
-                            // de uma coluna de Acerto do próprio escudo.
-                            const escopado = dvDef.escopoItem && dvObj.escopo !== 'global';
-                            let bag;
-                            if (escopado) {
-                                if (!window.state.itemBonuses) window.state.itemBonuses = {};
-                                if (!window.state.itemBonuses[item.id]) window.state.itemBonuses[item.id] = {};
-                                bag = window.state.itemBonuses[item.id];
-                            } else {
-                                if (!window.state.mechanicBonuses) window.state.mechanicBonuses = {};
-                                bag = window.state.mechanicBonuses;
-                            }
-                            bag[targetKey] = (bag[targetKey] || 0) + Number(dvMod);
-                        }
+                    const dvDef = window.DERIVED_VALUES.find(d => d.id === dvId);
+                    if (!dvDef) continue;
+                    // Equação de Valor do vínculo: resolvida aqui, com o item em
+                    // escopo (refs "Item: ..." valem para ESTE item), e somada ao
+                    // modificador fixo antes de cair no bag.
+                    const eqVal = (Array.isArray(dvObj.equacao) && dvObj.equacao.length && typeof resolveEquation === 'function')
+                        ? resolveEquation(dvObj.equacao) : 0;
+                    const total = (Number(dvObj.modificador) || 0) + eqVal;
+                    if (!total) continue;
+                    const targetKey = `DERIVED:${dvDef.key}`;
+                    // DV escopado → bag do item; DV global → bag do personagem.
+                    // O vínculo pode forçar global (escopo:'global'): é o que
+                    // deixa um escudo penalizar o Acerto do personagem em vez
+                    // de uma coluna de Acerto do próprio escudo.
+                    const escopado = dvDef.escopoItem && dvObj.escopo !== 'global';
+                    let bag;
+                    if (escopado) {
+                        if (!window.state.itemBonuses) window.state.itemBonuses = {};
+                        if (!window.state.itemBonuses[item.id]) window.state.itemBonuses[item.id] = {};
+                        bag = window.state.itemBonuses[item.id];
+                    } else {
+                        if (!window.state.mechanicBonuses) window.state.mechanicBonuses = {};
+                        bag = window.state.mechanicBonuses;
                     }
+                    bag[targetKey] = (bag[targetKey] || 0) + total;
                 }
             }
             // 1d) Status Vitais Vinculados — só os "_MAX". Os "_ATUAL" são efeito
