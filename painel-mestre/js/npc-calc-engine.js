@@ -668,23 +668,23 @@ function gatherItemOperations(sys, targetMap, ctx, avisos) {
         for (const mechId of (tpl?.mecanicaIds || [])) opsDaMecanica(sys.mechsById[mechId], item.id, label);
         for (const mechId of (item.mecanicaIdsProprias || [])) opsDaMecanica(sys.mechsById[mechId], item.id, label);
 
-        // Valores Derivados Vinculados (modificador fixo e/ou Equação de Valor):
-        // instância vence modelo. escopo:'global' no vínculo força o bag do NPC
-        // mesmo em DV com escopoItem (mesma regra da ficha).
+        // Valores Derivados Vinculados: a Equação de Valor substitui o
+        // modificador fixo (legado); instância vence modelo. escopo:'global'
+        // no vínculo força o bag do NPC mesmo em DV com escopoItem (mesma
+        // regra da ficha).
         const dvList = item.valoresDerivadosVinculados || tpl?.valoresDerivadosVinculados || [];
         for (const dvObj of dvList) {
             const dvId = dvObj.id || dvObj;
             const dvDef = (sys.derivedValues || []).find(d => d.id === dvId);
             if (!dvDef) continue;
             const scopeId = dvObj.escopo === 'global' ? null : item.id;
+            const temEq = Array.isArray(dvObj.equacao) && dvObj.equacao.length;
             const mod = Number(dvObj.modificador) || 0;
-            if (mod) pushOp(scopeId, {
+            if (!temEq && !mod) continue;
+            pushOp(scopeId, {
                 target: 'DV:' + dvDef.key, op: '+',
-                calc: { valorTipo: 'fixo', valor: mod }, fonte: label
-            });
-            if (Array.isArray(dvObj.equacao) && dvObj.equacao.length) pushOp(scopeId, {
-                target: 'DV:' + dvDef.key, op: '+',
-                calc: { equacao: dvObj.equacao }, fonte: label
+                calc: temEq ? { equacao: dvObj.equacao } : { valorTipo: 'fixo', valor: mod },
+                fonte: label
             });
         }
     }

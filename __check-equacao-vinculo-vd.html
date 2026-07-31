@@ -24,8 +24,8 @@ const cache = [
     { id: 'dv1', nome: 'Acerto', icone: '🎯', escopoItem: 'coluna', publicado: true },
     { id: 'dv2', nome: 'Blindagem', icone: '🛡️', publicado: true },
 ];
-// vínculo com modificador 2 e equação toda-fixa: 3 × 2 = 6 → Total 8
-const links = [{ id: 'dv1', modificador: 2, equacao: [{ tipo: 'fixo', valor: 3 }, { op: '×', tipo: 'fixo', valor: 2 }] }];
+// dv1: vínculo legado só com modificador — deve abrir migrado para a equação
+const links = [{ id: 'dv1', modificador: 2 }];
 
 document.getElementById('host').innerHTML =
     buildEquipmentDerivedValueSelectorHTML('valoresDerivadosVinculados', 'VDs Vinculados', links, cache,
@@ -34,41 +34,45 @@ document.getElementById('host').innerHTML =
 const fieldId = 'field_valoresDerivadosVinculados';
 const hidden = () => JSON.parse(document.getElementById(fieldId).value);
 const contId = `boolEquacao_DV_${fieldId}_dv1`;
+const cont = () => document.getElementById(contId);
+const prev = () => document.getElementById(contId + '_preview');
 
-// 1) chip renderiza a equação e o preview com total numérico
-log(!!document.getElementById(contId), 'container da equação renderizado no chip');
-log(document.getElementById(contId).querySelectorAll('.eq-term').length === 2, 'dois termos renderizados');
-const prev = document.getElementById(contId + '_preview');
-log(prev && prev.textContent.includes('Total: 8'), `preview mostra Total: 8 (got: "${prev?.textContent}")`);
+// 1) sem input de Modificador; legado migrado como termo fixo na equação
+log(!document.querySelector(`#${fieldId}_chips input[type="number"]`), 'input de Modificador não existe mais no chip');
+log(cont().querySelectorAll('.eq-term').length === 1 && cont().querySelector('.eq-term-valor').value === '2',
+    'modificador legado (2) aparece migrado como termo fixo da equação');
+log(prev().textContent.includes('Total: 2'), `preview mostra Total: 2 (got: "${prev().textContent}")`);
 
-// 2) editar termo e sincronizar grava a equação no hidden
-document.getElementById(contId).querySelector('.eq-term-valor').value = '5';
+// 2) editar e sincronizar grava a equação e ZERA o modificador legado
+cont().querySelector('.eq-term-valor').value = '5';
 window._eqDvEqSync(fieldId, 'dv1');
-const eq2 = hidden()[0].equacao;
-log(eq2.length === 2 && eq2[0].valor === 5 && eq2[1].op === '×' && eq2[1].valor === 2,
-    'sync grava equação editada no hidden');
-log(prev.textContent.includes('Total: 12'), `preview atualiza para Total: 12 (got: "${prev.textContent}")`);
+let l = hidden()[0];
+log(l.equacao?.length === 1 && l.equacao[0].valor === 5, 'equação editada gravada no hidden');
+log(l.modificador === 0, 'modificador legado zerado ao gravar equação');
+log(prev().textContent.includes('Total: 5'), `preview atualiza para Total: 5 (got: "${prev().textContent}")`);
 
-// 3) adicionar termo tipo ficha → preview vira simbólico
+// 3) termo de ficha → preview simbólico
 window._mechBoolAddTerm(`_DV_${fieldId}_dv1`);
-const terms = document.getElementById(contId).querySelectorAll('.eq-term');
-terms[2].querySelector('.eq-term-tipo').value = 'ficha';
-terms[2].querySelector('.eq-term-ref').value = 'FOR';
+const t2 = cont().querySelectorAll('.eq-term')[1];
+t2.querySelector('.eq-term-tipo').value = 'ficha';
+t2.querySelector('.eq-term-ref').value = 'FOR';
 window._eqDvEqSync(fieldId, 'dv1');
-log(hidden()[0].equacao.length === 3 && hidden()[0].equacao[2].tipo === 'ficha' && hidden()[0].equacao[2].ref === 'FOR',
+l = hidden()[0];
+log(l.equacao.length === 2 && l.equacao[1].tipo === 'ficha' && l.equacao[1].ref === 'FOR',
     'termo de ficha (FOR) gravado no hidden');
-log(prev.textContent.includes('FOR'), `preview simbólico cita FOR (got: "${prev.textContent}")`);
+log(prev().textContent.includes('FOR'), `preview simbólico cita FOR (got: "${prev().textContent}")`);
 
-// 4) confirm preserva equação e escopo
+// 4) confirm preserva equação
 document.querySelector(`#${fieldId}_results input[value="dv2"]`).checked = true;
 window._eqDvSelConfirm(fieldId);
 const after = hidden();
-log(after.length === 2 && Array.isArray(after.find(p => p.id === 'dv1').equacao) && after.find(p => p.id === 'dv1').equacao.length === 3,
+log(after.length === 2 && after.find(p => p.id === 'dv1').equacao?.length === 2,
     'reconfirmar seletor preserva a equação do vínculo');
 
-// 5) limpar remove a equação do hidden
+// 5) limpar remove a equação (e modificador já está zerado ⇒ vínculo neutro)
 window._eqDvEqClear(fieldId, 'dv1');
-log(!('equacao' in hidden().find(p => p.id === 'dv1')), 'limpar equação remove o campo do hidden');
+l = hidden().find(p => p.id === 'dv1');
+log(!('equacao' in l) && !l.modificador, 'limpar equação remove o campo e não ressuscita o modificador');
 
 // 6) equação com termo único vazio não persiste
 window._mechBoolAddTerm(`_DV_${fieldId}_dv1`);

@@ -3699,31 +3699,32 @@ function _eqDvChip(fieldId, dvObj, d) {
            </label>`
         : '';
     const passo = campo === 'quantidade' ? '1" min="1' : '0.01';
-    let eqHtml = '';
     if (reg.comEquacao) {
-        // Reusa o builder de termos das mecânicas: side único ⇒ container
-        // id "boolEquacao<side>", que é o que os handlers _mechBool* esperam.
-        // O wrapper sincroniza qualquer edição (input/change/click borbulham)
-        // de volta para o hidden do seletor via _eqDvEqSync.
+        // A Equação de Valor SUBSTITUI o Modificador (sem input numérico).
+        // Vínculo legado só com modificador aparece migrado: a equação abre
+        // pré-preenchida com ele como termo fixo. Reusa o builder de termos
+        // das mecânicas: side único ⇒ container id "boolEquacao<side>", que é
+        // o que os handlers _mechBool* esperam. O wrapper sincroniza qualquer
+        // edição (input/change/click borbulham) via _eqDvEqSync.
         const side = `_DV_${fieldId}_${d.id}`;
-        const eq = Array.isArray(dvObj.equacao) ? dvObj.equacao : [];
+        let eq = Array.isArray(dvObj.equacao) ? dvObj.equacao : [];
+        if (!eq.length && Number(mod)) eq = [{ tipo: 'fixo', valor: Number(mod) }];
         const terms = eq.map((t, ti) => _renderBoolEquationTerm(t, side, ti)).join('');
         const syncCall = `window._eqDvEqSync('${fieldId}','${d.id}')`;
-        eqHtml = `
+        return `<div class="mechsel-chip" style="border-left-color:#3b82f6;"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div>${toggle ? `<div class="mechsel-chip-preview">${toggle}</div>` : ''}
         <div class="eq-builder-section" oninput="${syncCall}" onchange="${syncCall}" onclick="${syncCall}">
-            <label class="eq-builder-label" style="font-size:.7rem">🧮 Equação de Valor <span id="boolEquacao${side}_preview" style="color:var(--muted);font-weight:normal">${esc(_eqDvEqPreviewStr(mod, eq))}</span></label>
+            <label class="eq-builder-label" style="font-size:.7rem">🧮 Equação de Valor <span id="boolEquacao${side}_preview" style="color:var(--muted);font-weight:normal">${esc(_eqDvEqPreviewStr(eq))}</span></label>
             <div class="eq-terms-container" id="boolEquacao${side}">${terms}</div>
             <button type="button" class="eq-add-term-btn" onclick="window._mechBoolAddTerm('${side}')">➕ Adicionar Termo</button>
             <button type="button" class="eq-add-term-btn" onclick="window._eqDvEqClear('${fieldId}','${d.id}')">🗑️ Limpar Equação</button>
-        </div>`;
+        </div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${d.id}')">✕</button></div>`;
     }
-    return `<div class="mechsel-chip" style="border-left-color:#3b82f6;"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${esc(rotulo)}: <input type="number" step="${passo}" value="${mod}" style="width:60px;padding:2px;font-size:0.7rem;" onchange="window._eqDvSelLevelChange('${fieldId}', '${d.id}', '${campo}', this.value)">${toggle}</div>${eqHtml}</div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${d.id}')">✕</button></div>`;
+    return `<div class="mechsel-chip" style="border-left-color:#3b82f6;"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${esc(rotulo)}: <input type="number" step="${passo}" value="${mod}" style="width:60px;padding:2px;font-size:0.7rem;" onchange="window._eqDvSelLevelChange('${fieldId}', '${d.id}', '${campo}', this.value)">${toggle}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${d.id}')">✕</button></div>`;
 }
 
 /** Preview do vínculo: total numérico quando a equação só tem termos fixos,
  *  senão a fórmula simbólica (o valor real só existe na ficha). */
-function _eqDvEqPreviewStr(mod, eq) {
-    mod = Number(mod) || 0;
+function _eqDvEqPreviewStr(eq) {
     if (!Array.isArray(eq) || !eq.length) return '';
     if (eq.every(t => t.tipo !== 'ficha' && t.tipo !== 'sort')) {
         let r = parseFloat(eq[0]?.valor) || 0;
@@ -3737,9 +3738,9 @@ function _eqDvEqPreviewStr(mod, eq) {
             else if (op === 'min') r = Math.min(r, v);
             else if (op === 'max') r = Math.max(r, v);
         }
-        return `— Total: ${mod + r}`;
+        return `— Total: ${r}`;
     }
-    return `— Total: ${mod} + ${_formatEquation(eq)}`;
+    return `— Total: ${_formatEquation(eq)}`;
 }
 
 /** Sincroniza a equação editada no chip para o hidden do seletor e refaz o preview. */
@@ -3754,11 +3755,18 @@ window._eqDvEqSync = function (fieldId, did) {
     const idx = data.findIndex(p => (typeof p === 'object' ? p.id === did : p === did));
     if (idx < 0) return;
     if (typeof data[idx] !== 'object') data[idx] = { id: did, modificador: 0 };
-    if (eq.length) data[idx].equacao = eq;
-    else delete data[idx].equacao;
+    if (eq.length) {
+        data[idx].equacao = eq;
+        // Equação substitui o Modificador — zera o legado para o vínculo ter
+        // uma fonte de valor só (a ficha ignora modificador quando há equação,
+        // mas dado limpo evita confusão em quem ler o Firestore).
+        data[idx].modificador = 0;
+    } else {
+        delete data[idx].equacao;
+    }
     hidden.value = JSON.stringify(data);
     const prev = document.getElementById(`boolEquacao_DV_${fieldId}_${did}_preview`);
-    if (prev) prev.textContent = _eqDvEqPreviewStr(data[idx].modificador || 0, eq);
+    if (prev) prev.textContent = _eqDvEqPreviewStr(eq);
 };
 
 window._eqDvEqClear = function (fieldId, did) {
