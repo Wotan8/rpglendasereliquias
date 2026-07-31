@@ -7,6 +7,7 @@ import { T, esc, toast, markDirty, gridSize, tokenDoUsuario } from './tab-state.
 import { abrirModal, fecharModal } from './tab-main.js';
 import { addObj, updObj, delObj, vincularNpcNaMesa } from './tab-objects.js';
 import { screenToWorld } from './tab-render.js';
+import { pontoVisivelAgora } from './tab-fog.js';
 
 let equipCatalogo = null;
 let caixaItens = null;
@@ -283,6 +284,7 @@ window.tbClickLoot = function(objId) {
     if (!mestre && !T.perms?.interagirCenario) return;
     if (o.item?.ehContainer) {
         if (!mestre && !tokenMeuPerto(o)) { toast('🚶 Aproxime seu token do baú para abrir', 'warning'); return; }
+        if (!mestre && o.trancado) { abrirDestrancar(objId); return; }
         abrirBau(objId);
         return;
     }
@@ -326,6 +328,7 @@ function abrirBau(objId) {
     const podePegarBau = mestre || !o.fixo;
     abrirModal(`🧰 ${esc(o.nome || 'Baú')}`, `
         ${mestre ? `<label class="tb-check" style="margin-bottom:8px"><input type="checkbox" ${o.fixo ? 'checked' : ''} onchange="tbBauFixo('${objId}',this.checked)"> 📌 Fixo no mapa (jogadores pegam só o conteúdo, não o baú)</label>` : ''}
+        ${mestre ? trancaConfigHtml(objId, o) : ''}
         <div class="tb-form-grid tb-form-grid-1"><label>Inventário de<select id="bau_alvo" onchange="tbBauCarregarInv('${objId}')">${alvos}</select></label></div>
         <div class="tb-muted" style="font-size:.78rem;margin:8px 0 4px">Dentro do baú (${itens.length})</div>
         <div class="tb-list" style="max-height:26vh;overflow-y:auto">
@@ -344,6 +347,142 @@ function abrirBau(objId) {
     window.tbBauCarregarInv(objId);
 }
 window.tbBauFixo = (objId, fixo) => updObj(objId, { fixo });
+
+// ===== TRANCA DO BAÚ =====
+// Config no modal do mestre; o estado (`trancado` + `tranca`) vive no próprio
+// objeto loot e sincroniza pelo snapshot de objetos, como qualquer outro campo.
+function trancaConfigHtml(objId, o) {
+    const tr = o.tranca || {};
+    const tipo = o.trancado ? (tr.tipo || 'item') : '';
+    return `
+    <div class="tb-form-grid" style="margin-bottom:8px">
+        <label>🔒 Tranca<select id="bau_tr_tipo" onchange="tbBauTranca('${objId}')">
+            <option value="">🔓 Livre</option>
+            <option value="item" ${tipo === 'item' ? 'selected' : ''}>🔒 Chave: item</option>
+            <option value="tag" ${tipo === 'tag' ? 'selected' : ''}>🔒 Chave: tag</option>
+        </select></label>
+        <label id="bau_tr_nome_w" style="${tipo === 'item' ? '' : 'display:none'}">Nome do item-chave<input type="text" id="bau_tr_nome" value="${esc(tr.itemNome || '')}" onchange="tbBauTranca('${objId}')"></label>
+        <label id="bau_tr_tag_w" style="${tipo === 'tag' ? '' : 'display:none'}">Tag da chave<input type="text" id="bau_tr_tag" value="${esc(tr.tag || '')}" onchange="tbBauTranca('${objId}')"></label>
+        <label id="bau_tr_consumo_w" style="${tipo ? '' : 'display:none'}">Consumo da chave<select id="bau_tr_consumo" onchange="tbBauTranca('${objId}')">
+            <option value="nao" ${(tr.consumo || 'nao') === 'nao' ? 'selected' : ''}>não consome</option>
+            <option value="sim" ${tr.consumo === 'sim' ? 'selected' : ''}>consome</option>
+            <option value="chance" ${tr.consumo === 'chance' ? 'selected' : ''}>chance de consumir</option>
+        </select></label>
+        <label id="bau_tr_chance_w" style="${tipo && tr.consumo === 'chance' ? '' : 'display:none'}">Chance %<input type="number" id="bau_tr_chance" value="${Number(tr.chance) || 50}" min="1" max="100" onchange="tbBauTranca('${objId}')"></label>
+    </div>`;
+}
+
+window.tbBauTranca = function(objId) {
+    const v = (id) => document.getElementById(id)?.value;
+    const tipo = v('bau_tr_tipo') || '';
+    const mostra = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+    mostra('bau_tr_nome_w', tipo === 'item');
+    mostra('bau_tr_tag_w', tipo === 'tag');
+    mostra('bau_tr_consumo_w', !!tipo);
+    mostra('bau_tr_chance_w', !!tipo && v('bau_tr_consumo') === 'chance');
+    if (!tipo) { updObj(objId, { trancado: false, tranca: null }); return; }
+    const tranca = { tipo, consumo: v('bau_tr_consumo') || 'nao' };
+    if (tranca.consumo === 'chance') tranca.chance = Math.min(100, Math.max(1, parseInt(v('bau_tr_chance'), 10) || 50));
+    if (tipo === 'item') tranca.itemNome = (v('bau_tr_nome') || '').trim();
+    else tranca.tag = (v('bau_tr_tag') || '').trim();
+    // chave em branco tranca do mesmo jeito — o mestre está no meio da digitação;
+    // o jogador só destrava com chave que "serve", e nada serve até preencher.
+    updObj(objId, { trancado: true, tranca });
+};
+
+/** O item destranca esta tranca? (nome exato ou tag, sem caixa/acento rigoroso) */
+function chaveServe(it, tr) {
+    if (!tr) return false;
+    const norm = (s) => String(s || '').trim().toLowerCase();
+    if (tr.tipo === 'tag') {
+        return !!norm(tr.tag) && (Array.isArray(it.tags) ? it.tags : []).some(t => norm(t) === norm(tr.tag));
+    }
+    if (tr.itemId && (it.origemTemplateId === tr.itemId || it.id === tr.itemId)) return true;
+    return !!norm(tr.itemNome) && norm(it.nome) === norm(tr.itemNome);
+}
+
+// ===== INVENTÁRIO EQUIPADO (usado p/ destrancar e p/ dropar no mapa) =====
+/** Itens equipados do personagem, com o conteúdo das mochilas/contêineres equipados. */
+async function carregarEquipados(charId) {
+    const snap = await getDocs(query(collection(db, 'items'), where('characterId', '==', charId)));
+    const todos = [];
+    snap.forEach(d => todos.push({ id: d.id, ...d.data() }));
+    return todos.filter(i => i.equipado && !i.parentItemId)
+        .map(i => ({ item: i, filhos: i.ehContainer ? todos.filter(x => x.parentItemId === i.id) : [] }));
+}
+
+const meusChars = () => (T.chars || []).filter(c => c.ownerUid === T.user?.uid);
+let invCache = null;   // { charId, grupos } — só para os cliques do modal aberto
+
+function linhaInv(i, botao, recuo = 0) {
+    return `<div class="tb-list-row" style="${recuo ? 'margin-left:22px' : ''}">
+        ${i.imagem || i.imagemUrl ? `<img src="${esc(i.imagem || i.imagemUrl)}" style="width:28px;height:28px;object-fit:cover;border-radius:6px;flex:none">` : `<span style="width:28px;text-align:center;flex:none">${i.ehContainer ? '🧰' : '📦'}</span>`}
+        <div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(i.nome || 'Item')} <span class="tb-muted">x${i.quantidade || 1}</span></div>
+        ${botao || ''}
+    </div>`;
+}
+
+function itemDoCache(itemId) {
+    for (const g of (invCache?.grupos || [])) {
+        if (g.item.id === itemId) return g;
+        const f = g.filhos.find(x => x.id === itemId);
+        if (f) return { item: f, filhos: [] };
+    }
+    return null;
+}
+
+// ===== DESTRANCAR (jogador diante de baú trancado) =====
+function abrirDestrancar(objId) {
+    const o = T.objects.get(objId); if (!o) return;
+    const tr = o.tranca || {};
+    const meus = meusChars();
+    if (!meus.length) { toast('⚠️ Você não tem personagem nesta mesa', 'warning'); return; }
+    const precisa = tr.tipo === 'tag' ? `um item com a tag <b>${esc(tr.tag || '?')}</b>` : `o item <b>${esc(tr.itemNome || '?')}</b>`;
+    const consumo = tr.consumo === 'sim' ? 'A chave é consumida ao usar.'
+        : tr.consumo === 'chance' ? `⚠️ ${Number(tr.chance) || 50}% de chance de a chave ser consumida.`
+        : 'A chave não é consumida.';
+    abrirModal(`🔒 ${esc(o.nome || 'Baú')} — trancado`, `
+        <div class="tb-muted" style="font-size:.8rem;margin-bottom:8px">Precisa de ${precisa} <b>equipado</b> para destrancar. ${consumo}</div>
+        <div class="tb-form-grid tb-form-grid-1"><label>Personagem<select id="dt_char" onchange="tbDestrancarLista('${objId}')">${meus.map(c => `<option value="${c.id}">🎭 ${esc(c.nome)}</option>`).join('')}</select></label></div>
+        <div class="tb-muted" style="font-size:.76rem;margin:8px 0 4px">Itens equipados (mochilas mostram o que têm dentro)</div>
+        <div class="tb-list" id="dt_lista" style="max-height:44vh;overflow-y:auto"><div class="tb-muted" style="text-align:center;padding:10px">Carregando…</div></div>`);
+    window.tbDestrancarLista(objId);
+}
+
+window.tbDestrancarLista = async function(objId) {
+    const el = document.getElementById('dt_lista'); if (!el) return;
+    const charId = document.getElementById('dt_char')?.value; if (!charId) return;
+    const o = T.objects.get(objId); if (!o) return;
+    try {
+        const grupos = await carregarEquipados(charId);
+        if (document.getElementById('dt_char')?.value !== charId) return;   // trocou no meio
+        invCache = { charId, grupos };
+        const chance = o.tranca?.consumo === 'chance' ? ` (${Number(o.tranca.chance) || 50}% de perder)` : o.tranca?.consumo === 'sim' ? ' (será consumido)' : '';
+        const btnUsar = (i) => chaveServe(i, o.tranca)
+            ? `<button class="tb-btn tb-btn-small tb-btn-success" onclick="tbUsarChave('${objId}','${i.id}')">🔑 Usar${esc(chance)}</button>` : '';
+        el.innerHTML = grupos.map(g => linhaInv(g.item, btnUsar(g.item)) + g.filhos.map(f => linhaInv(f, btnUsar(f), 1)).join('')).join('')
+            || '<div class="tb-muted" style="text-align:center;padding:14px">Nada equipado neste personagem</div>';
+    } catch (e) { console.error(e); el.innerHTML = '<div class="tb-muted" style="text-align:center;padding:10px">❌ Erro ao carregar o inventário</div>'; }
+};
+
+window.tbUsarChave = async function(objId, itemId) {
+    const o = T.objects.get(objId); if (!o) return;
+    if (!o.trancado) { abrirBau(objId); return; }   // outro jogador destrancou antes
+    const g = itemDoCache(itemId); if (!g) return;
+    const it = g.item;
+    if (!chaveServe(it, o.tranca)) return;
+    const consumo = o.tranca?.consumo || 'nao';
+    const consumiu = consumo === 'sim' || (consumo === 'chance' && Math.random() * 100 < (Number(o.tranca?.chance) || 50));
+    try {
+        if (consumiu) {
+            if ((it.quantidade || 1) > 1) await updateDoc(doc(db, 'items', it.id), { quantidade: it.quantidade - 1 });
+            else await deleteDoc(doc(db, 'items', it.id));
+        }
+        updObj(objId, { trancado: false });
+        toast(consumiu ? `🔓 Destrancado — ${it.nome || 'a chave'} foi consumido!` : `🔓 Destrancado — ${it.nome || 'a chave'} continua com você`, consumiu ? 'warning' : 'success');
+        abrirBau(objId);
+    } catch (e) { console.error(e); toast('❌ Erro ao usar a chave', 'danger'); }
+};
 
 // Inventário do alvo selecionado, carregado sob demanda (1 query por abertura/troca
 // de alvo — nada de listener). Cache local só para o clique de "Guardar".
@@ -432,6 +571,92 @@ window.tbDevolverLoot = async function(objId) {
         toast('↩️ Devolvido à Caixa do Mestre');
     } catch (e) { console.error(e); toast('❌ Erro ao devolver', 'danger'); }
 };
+
+// ===== INVENTÁRIO DO JOGADOR + DROP NO MAPA =====
+// O drop vira um objeto `loot` comum via addObj — sincroniza pelo snapshot de
+// objetos que já existe, e qualquer um (mestre ou jogador) pega pelo fluxo
+// normal de loot. Nenhum listener ou coleção nova.
+window.tbAbrirInventario = function() {
+    const meus = meusChars();
+    if (!meus.length) { toast('⚠️ Você não tem personagem nesta mesa', 'warning'); return; }
+    abrirModal('🎒 Meu Inventário', `
+        <div class="tb-form-grid tb-form-grid-1"><label>Personagem<select id="inv_char" onchange="tbInvRender()">${meus.map(c => `<option value="${c.id}">🎭 ${esc(c.nome)}</option>`).join('')}</select></label></div>
+        <div class="tb-muted" style="font-size:.76rem;margin:6px 0">Só o que está <b>Equipado</b> aparece. 🗺️ Dropar: depois clique num ponto do mapa <b>dentro da visão</b> do seu personagem (Esc cancela).</div>
+        <div class="tb-list" id="inv_lista" style="max-height:48vh;overflow-y:auto"><div class="tb-muted" style="text-align:center;padding:10px">Carregando…</div></div>`, true);
+    window.tbInvRender();
+};
+
+window.tbInvRender = async function() {
+    const el = document.getElementById('inv_lista'); if (!el) return;
+    const charId = document.getElementById('inv_char')?.value; if (!charId) return;
+    try {
+        const grupos = await carregarEquipados(charId);
+        if (document.getElementById('inv_char')?.value !== charId) return;
+        invCache = { charId, grupos };
+        const btn = (i, dentroDe) => `<button class="tb-btn tb-btn-small" title="${i.ehContainer ? 'Dropa o contêiner com tudo dentro' : dentroDe ? 'Tira da mochila e dropa no mapa' : 'Dropa no mapa'}" onclick="tbDroparMeuItem('${i.id}')">🗺️ Dropar</button>`;
+        el.innerHTML = grupos.map(g => linhaInv(g.item, btn(g.item)) + g.filhos.map(f => linhaInv(f, btn(f, true), 1)).join('')).join('')
+            || '<div class="tb-muted" style="text-align:center;padding:14px">Nada equipado neste personagem</div>';
+    } catch (e) { console.error(e); el.innerHTML = '<div class="tb-muted" style="text-align:center;padding:10px">❌ Erro ao carregar o inventário</div>'; }
+};
+
+let dropPend = null;   // { item, filhos } aguardando o clique no mapa
+
+window.tbDroparMeuItem = function(itemId) {
+    const g = itemDoCache(itemId); if (!g) return;
+    dropPend = g;
+    fecharModal();
+    document.addEventListener('pointerdown', dropClique, true);
+    document.addEventListener('keydown', dropEsc, true);
+    const cv = document.getElementById('tbCanvas');
+    if (cv) cv.style.cursor = 'copy';
+    toast(`🗺️ Clique onde ${esc(g.item.nome || 'o item')} vai cair — dentro da visão do personagem. Esc cancela.`);
+};
+
+function dropLimpar() {
+    dropPend = null;
+    document.removeEventListener('pointerdown', dropClique, true);
+    document.removeEventListener('keydown', dropEsc, true);
+    const cv = document.getElementById('tbCanvas');
+    if (cv) cv.style.cursor = '';
+}
+function dropEsc(ev) { if (ev.key === 'Escape') { dropLimpar(); toast('Drop cancelado'); } }
+
+function dropClique(ev) {
+    if (!dropPend) return dropLimpar();
+    if (ev.target?.id !== 'tbCanvas') return;   // cliques na UI seguem normais
+    ev.preventDefault(); ev.stopPropagation();
+    const p = screenToWorld({ x: ev.clientX, y: ev.clientY });
+    // Só onde o personagem enxerga (com luz dinâmica desligada vale tudo,
+    // igual à regra de visibilidade de tokens)
+    if (!T.isMaster && T.mode === 'public' && T.canvas?.luzDinamica?.ativa && !pontoVisivelAgora(p)) {
+        toast('🌫️ Seu personagem não enxerga esse ponto — solte dentro da visão dele', 'warning');
+        return;   // continua aguardando outro clique
+    }
+    const { item, filhos } = dropPend;
+    dropLimpar();
+    (async () => {
+        try {
+            // apaga os docs primeiro (regra do jogador: só mexe no que é dele);
+            // só então o loot nasce no canvas
+            const lote = writeBatch(db);
+            lote.delete(doc(db, 'items', item.id));
+            filhos.forEach(f => lote.delete(doc(db, 'items', f.id)));
+            await lote.commit();
+            const obj = {
+                tipo: 'loot', layerId: 'tokens', x: p.x, y: p.y,
+                nome: item.nome || 'Item', url: item.imagem || item.imagemUrl || '',
+                quantidade: item.quantidade || 1,
+                item: semId(item), visivelPublico: true,
+            };
+            if (item.ehContainer) {
+                obj.itensDentro = filhos.map(f => ({ id: f.id, ...semId(f) }));
+                obj.fixo = false;
+            }
+            await addObj(obj);
+            toast(`🗺️ ${item.nome || 'Item'} dropado no mapa`);
+        } catch (e) { console.error(e); toast('❌ Erro ao dropar o item', 'danger'); }
+    })();
+}
 
 // ===== MENU DE CONTEXTO (botão direito) =====
 function menuMostrar(objId, x, y) {

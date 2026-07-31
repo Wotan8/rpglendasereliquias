@@ -8,24 +8,28 @@
      🚪 Portas   — bloqueiam fechadas, abrem no tabuleiro
      🪟 Janelas  — deixam passar luz, bloqueiam visão fechadas
      💡 Luzes    — fontes com alcance (em unidades reais) e cor
+     📦 Itens    — equipamentos dropados; baú (contêiner) aceita
+                   itens dentro e a opção Fixo — vira loot no tabuleiro
 
    Tudo é salvo em `mapaTatico` no doc do Local (coordenadas em
    px da imagem natural). O tabuleiro importa este pacote pronto
    via shared/local-tatico.js — o Local vira um "prefab".
    ═══════════════════════════════════════════════════════════ */
 
-import { db, doc, updateDoc, storage, ref, uploadBytes, getDownloadURL } from './firebase-config.js';
+import { db, doc, updateDoc, collection, getDocs, storage, ref, uploadBytes, getDownloadURL } from './firebase-config.js';
 import { localPronto, pontosDaForma, comprimentoDaLinha, importarDungeonAlchemist, importarUVTT } from '../../shared/local-tatico.js';
 
 const esc = (s = '') => String(s).replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const FERRAMENTAS = [
+    ['mao', '✋ Mão', 'Arraste para deslocar o mapa. (Botão direito/meio e a roda funcionam em qualquer ferramenta.)'],
     ['parede', '✏️ Parede', 'Escolha a forma ao lado. Linha: um clique por vértice, duplo-clique ou Enter encerra. Esc cancela.'],
     ['porta', '🚪 Porta', 'Dois cliques: início e fim da porta.'],
     ['janela', '🪟 Janela', 'Dois cliques: início e fim da janela.'],
     ['luz', '💡 Luz', 'Um clique posiciona a luz (alcance e cor ao lado).'],
     ['npc', '🎭 NPC', 'Escolha o NPC e a camada ao lado, depois clique onde ele fica.'],
+    ['item', '📦 Item', 'Escolha o equipamento ao lado e clique onde ele cai. Contêiner (baú) aceita itens dentro e a opção Fixo.'],
     ['apagar', '🗑️ Apagar', 'Clique sobre um elemento para removê-lo.'],
 ];
 
@@ -46,9 +50,16 @@ const E = {                    // estado do editor aberto
     atual: null,               // pontos da parede/porta em andamento
     desenhando: null,          // arrasto em andamento (livre/ret/elipse)
     npcs: [],                  // NPCs vinculados a este Local
+    catalogo: null,            // catálogo de equipamentos (cache entre aberturas)
+    bau: [],                   // itens do PRÓXIMO baú a ser colocado
     zoom: 1, panX: 0, panY: 0,
     arrastando: null,
 };
+
+/** Mesmo corte do Tabuleiro (tab-mostrar): o doc do catálogo vira o `item`
+ *  embutido no loot sem os campos de posse/aninhamento. */
+const limparItem = ({ id, parentItemId, characterId, equipado, ...campos }) => campos;
+let bauSeq = 0;   // ids únicos p/ itens embutidos no baú (contrato: itensDentro[].id)
 
 const $ = (s) => document.querySelector(s);
 
@@ -78,7 +89,7 @@ window.abrirMapaLocal = async function (geoId, nome) {
     E.mt.objetos = (E.mt.objetos || []).filter(o => o.tipo !== 'npc' || E.npcs.some(n => n.id === o.npcId));
 
     E.tool = 'parede'; E.forma = 'linha';
-    E.atual = null; E.desenhando = null;
+    E.atual = null; E.desenhando = null; E.bau = [];
     E.zoom = 1; E.panX = 0; E.panY = 0;
     montar();
 };
@@ -140,8 +151,35 @@ function montar() {
                 <option value="dm">🕵️ DM (só o mestre)</option>
             </select></label>
         </span>
+        <span class="wbml-grupo" id="wbmlGrupoItem">
+            <label>Equipamento <select id="wbmlItem"><option value="">⏳ carregando catálogo…</option></select></label>
+            <label>Qtd <input type="number" id="wbmlItemQtd" value="1" min="1" style="width:50px"></label>
+            <label class="wbml-check" id="wbmlItemFixoWrap" style="display:none"><input type="checkbox" id="wbmlItemFixo"> 📌 Fixo (jogador pega só o conteúdo)</label>
+        </span>
         <span style="flex:1"></span>
         <span class="wbml-dica" id="wbmlDica"></span>
+    </div>
+    <div class="wbml-tools" id="wbmlBauPanel" style="display:none">
+        <b>🧰 Dentro do próximo baú (<span id="wbmlBauN">0</span>):</b>
+        <span id="wbmlBauLista" class="wbml-grupo"></span>
+        <span class="wbml-sep"></span>
+        <select id="wbmlBauSel"></select>
+        <label>Qtd <input type="number" id="wbmlBauQtd" value="1" min="1" style="width:50px"></label>
+        <button class="btn btn-secondary btn-sm" id="wbmlBauAdd">⬇️ Guardar no baú</button>
+        <span class="wbml-sep"></span>
+        <label>Tranca <select id="wbmlBauTranca">
+            <option value="">🔓 Livre</option>
+            <option value="item">🔒 Chave: item</option>
+            <option value="tag">🔒 Chave: tag</option>
+        </select></label>
+        <select id="wbmlBauChave" style="display:none"></select>
+        <input type="text" id="wbmlBauTag" placeholder="tag da chave" style="display:none;width:110px">
+        <label id="wbmlBauConsumoWrap" style="display:none">Consumo <select id="wbmlBauConsumo">
+            <option value="nao">não consome</option>
+            <option value="sim">consome a chave</option>
+            <option value="chance">chance de consumir</option>
+        </select></label>
+        <label id="wbmlBauChanceWrap" style="display:none"><input type="number" id="wbmlBauChance" value="50" min="1" max="100" style="width:52px">%</label>
     </div>
     <div class="wbml-viewport" id="wbmlViewport">
         <div class="wbml-stage" id="wbmlStage"></div>
@@ -167,9 +205,14 @@ function montar() {
         E.tool = b.dataset.wbmlTool; E.atual = null; E.desenhando = null;
         root.querySelectorAll('[data-wbml-tool]').forEach(x => x.classList.toggle('is-on', x === b));
         dica(FERRAMENTAS.find(f => f[0] === E.tool)?.[2] || '');
+        if (E.tool === 'item') carregarCatalogo();
         sincronizarGrupos();
         desenhar();
     });
+    $('#wbmlItem').addEventListener('change', sincronizarGrupos);
+    $('#wbmlBauAdd').onclick = bauGuardar;
+    $('#wbmlBauTranca').addEventListener('change', trancaSincronizar);
+    $('#wbmlBauConsumo').addEventListener('change', trancaSincronizar);
     root.querySelectorAll('[data-wbml-forma]').forEach(b => b.onclick = () => {
         E.forma = b.dataset.wbmlForma; E.atual = null; E.desenhando = null;
         root.querySelectorAll('[data-wbml-forma]').forEach(x => x.classList.toggle('is-on', x === b));
@@ -187,7 +230,7 @@ function montar() {
     ligarViewport();
     sincronizarGrupos();
     desenhar();
-    dica(FERRAMENTAS[0][2]);
+    dica(FERRAMENTAS.find(f => f[0] === E.tool)?.[2] || '');
 }
 
 /** Mostra só os controles da ferramenta ativa — a barra estava virando um mural. */
@@ -196,6 +239,93 @@ function sincronizarGrupos() {
     mostra('#wbmlGrupoParede', E.tool === 'parede');
     mostra('#wbmlGrupoLuz', E.tool === 'luz');
     mostra('#wbmlGrupoNpc', E.tool === 'npc');
+    mostra('#wbmlGrupoItem', E.tool === 'item');
+    const ehCont = !!itemSelecionado()?.ehContainer;
+    mostra('#wbmlItemFixoWrap', E.tool === 'item' && ehCont);
+    mostra('#wbmlBauPanel', E.tool === 'item' && ehCont);
+    if (ehCont) { bauRender(); trancaSincronizar(); }
+    const vp = $('#wbmlViewport');
+    if (vp) vp.style.cursor = E.tool === 'mao' ? 'grab' : '';
+}
+
+/* ── Catálogo de equipamentos + baú em construção ────────── */
+function itemSelecionado() {
+    return (E.catalogo || []).find(x => x.id === $('#wbmlItem')?.value) || null;
+}
+
+async function carregarCatalogo() {
+    if (E.catalogo) return;
+    try {
+        const snap = await getDocs(collection(db, 'system/data/equipment'));
+        const lista = [];
+        snap.forEach(d => { const x = d.data(); if (x.publicado !== false) lista.push({ id: d.id, ...x }); });
+        lista.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        E.catalogo = lista;
+    } catch (e) { console.warn('[mapa-local] catálogo', e); E.catalogo = []; }
+    const sel = $('#wbmlItem');
+    if (!sel) return;
+    sel.innerHTML = E.catalogo.length
+        ? E.catalogo.map(i => `<option value="${esc(i.id)}">${i.ehContainer ? '🧰 ' : ''}${esc(i.nome || 'Item')}</option>`).join('')
+        : '<option value="">— catálogo vazio ou sem acesso —</option>';
+    // baú não entra em baú — mesma regra do Tabuleiro
+    const selBau = $('#wbmlBauSel');
+    if (selBau) selBau.innerHTML = E.catalogo.filter(i => !i.ehContainer)
+        .map(i => `<option value="${esc(i.id)}">${esc(i.nome || 'Item')}</option>`).join('');
+    // a chave da tranca pode ser qualquer item do catálogo
+    const selChave = $('#wbmlBauChave');
+    if (selChave) selChave.innerHTML = E.catalogo
+        .map(i => `<option value="${esc(i.id)}">🔑 ${esc(i.nome || 'Item')}</option>`).join('');
+    sincronizarGrupos();
+}
+
+function bauGuardar() {
+    const c = (E.catalogo || []).find(x => x.id === $('#wbmlBauSel')?.value);
+    if (!c) return;
+    E.bau.push({
+        id: `wb${Date.now()}_${bauSeq++}`, ...limparItem(c),
+        quantidade: Math.max(1, parseInt($('#wbmlBauQtd').value, 10) || 1),
+    });
+    bauRender();
+}
+
+/** Mostra só os campos da tranca que fazem sentido para a escolha atual. */
+function trancaSincronizar() {
+    const tipo = $('#wbmlBauTranca')?.value || '';
+    const mostra = (id, v) => { const el = $(id); if (el) el.style.display = v ? '' : 'none'; };
+    mostra('#wbmlBauChave', tipo === 'item');
+    mostra('#wbmlBauTag', tipo === 'tag');
+    mostra('#wbmlBauConsumoWrap', !!tipo);
+    mostra('#wbmlBauChanceWrap', !!tipo && $('#wbmlBauConsumo').value === 'chance');
+}
+
+/** Lê a config de tranca do painel; null = baú livre. */
+function trancaAtual() {
+    const tipo = $('#wbmlBauTranca')?.value || '';
+    if (!tipo) return null;
+    const t = { tipo, consumo: $('#wbmlBauConsumo').value || 'nao' };
+    if (t.consumo === 'chance') t.chance = Math.min(100, Math.max(1, parseInt($('#wbmlBauChance').value, 10) || 50));
+    if (tipo === 'item') {
+        const c = (E.catalogo || []).find(x => x.id === $('#wbmlBauChave').value);
+        if (!c) return null;   // sem chave escolhida não tem tranca
+        t.itemId = c.id; t.itemNome = c.nome || '';
+    } else {
+        t.tag = ($('#wbmlBauTag').value || '').trim();
+        if (!t.tag) return null;
+    }
+    return t;
+}
+
+function bauRender() {
+    const el = $('#wbmlBauLista');
+    if (!el) return;
+    $('#wbmlBauN').textContent = E.bau.length;
+    el.innerHTML = E.bau.map((b, i) =>
+        `<button type="button" data-bau-i="${i}" title="Clique para tirar do baú">${esc(b.nome || 'Item')} ×${b.quantidade || 1} ✕</button>`).join('')
+        || '<span>vazio — o baú cai como estiver aqui</span>';
+    el.querySelectorAll('[data-bau-i]').forEach(b => b.onclick = () => {
+        E.bau.splice(Number(b.dataset.bauI), 1);
+        bauRender();
+    });
 }
 
 function dica(t) { const el = $('#wbmlDica'); if (el) el.textContent = t; }
@@ -295,6 +425,20 @@ function desenhar() {
             linhas.push(`<circle cx="${o.x}" cy="${o.y}" r="${r}" fill="${o.cor || '#ffdd99'}" fill-opacity=".14" stroke="${o.cor || '#ffdd99'}" stroke-dasharray="6 6" data-i="${i}"/>`);
             linhas.push(`<circle cx="${o.x}" cy="${o.y}" r="9" fill="${o.cor || '#ffdd99'}" data-i="${i}"/>`);
         }
+        if (o.tipo === 'item') {
+            const r = Math.max(10, raioNpc() * 0.7);
+            const cor = '#f0b429';
+            if (o.url) {
+                linhas.push(`<clipPath id="citem${i}"><circle cx="${o.x}" cy="${o.y}" r="${r}"/></clipPath>`);
+                linhas.push(`<image href="${esc(o.url)}" x="${o.x - r}" y="${o.y - r}" width="${r * 2}" height="${r * 2}" preserveAspectRatio="xMidYMid slice" clip-path="url(#citem${i})" data-i="${i}"/>`);
+            } else {
+                linhas.push(`<circle cx="${o.x}" cy="${o.y}" r="${r}" fill="${cor}" fill-opacity=".25" data-i="${i}"/>`);
+                linhas.push(`<text x="${o.x}" y="${o.y + r * 0.45}" font-size="${r * 1.2}" text-anchor="middle" stroke="none" data-i="${i}">${o.item?.ehContainer ? '🧰' : '📦'}</text>`);
+            }
+            linhas.push(`<circle cx="${o.x}" cy="${o.y}" r="${r}" fill="none" stroke="${cor}" stroke-width="3" data-i="${i}"/>`);
+            const rot = `${o.item?.ehContainer ? '🧰 ' : ''}${o.nome || 'Item'}${(o.quantidade || 1) > 1 ? ` ×${o.quantidade}` : ''}${o.fixo ? ' 📌' : ''}${o.trancado ? ' 🔒' : ''}`;
+            linhas.push(`<text x="${o.x}" y="${o.y - r - 6}" fill="${cor}" font-size="${r * 0.75}" text-anchor="middle" stroke="none">${esc(rot)}</text>`);
+        }
         if (o.tipo === 'npc') {
             const r = raioNpc();
             const cor = o.camada === 'dm' ? '#8A6FE0' : '#3FAE6A';
@@ -354,9 +498,12 @@ function ligarViewport() {
     }, { passive: false });
 
     vp.addEventListener('pointerdown', (ev) => {
-        if (ev.button === 2 || ev.button === 1) {   // pan com botão direito/meio
+        // pan com botão direito/meio em qualquer ferramenta; a ✋ Mão pan-eia
+        // também com o esquerdo (facilita trackpad/tablet)
+        if (ev.button === 2 || ev.button === 1 || (ev.button === 0 && E.tool === 'mao')) {
             E.arrastando = { x: ev.clientX, y: ev.clientY };
             vp.setPointerCapture(ev.pointerId);
+            if (E.tool === 'mao') vp.style.cursor = 'grabbing';
             ev.preventDefault();
             return;
         }
@@ -394,6 +541,7 @@ function ligarViewport() {
     });
     vp.addEventListener('pointerup', () => {
         E.arrastando = null;
+        if (E.tool === 'mao') vp.style.cursor = 'grab';
         if (!E.desenhando) return;
         const pts = E.desenhando;
         E.desenhando = null; E.ancora = null;
@@ -450,6 +598,26 @@ function clique(p) {
             x: p.x, y: p.y,
         });
         desenhar();
+    } else if (E.tool === 'item') {
+        const c = itemSelecionado();
+        if (!c) { dica('⚠️ Escolha um equipamento no seletor.'); return; }
+        const o = {
+            tipo: 'item', itemId: c.id, nome: c.nome || 'Item', url: c.imagem || c.imagemUrl || '',
+            quantidade: Math.max(1, parseInt($('#wbmlItemQtd').value, 10) || 1),
+            item: limparItem(c),
+            x: p.x, y: p.y,
+        };
+        if (c.ehContainer) {
+            o.fixo = $('#wbmlItemFixo').checked;
+            o.itensDentro = E.bau;
+            const tranca = trancaAtual();
+            if (tranca) { o.trancado = true; o.tranca = tranca; }
+            E.bau = [];   // o próximo baú começa vazio
+            bauRender();
+            dica(`🧰 Baú colocado com ${o.itensDentro.length} item(ns) dentro${o.fixo ? ' (fixo)' : ''}${tranca ? ' 🔒 trancado' : ''}${$('#wbmlBauTranca').value && !tranca ? ' — ⚠️ tranca ignorada: escolha a chave/tag' : ''}.`);
+        }
+        mt.objetos.push(o);
+        desenhar();
     } else if (E.tool === 'apagar') {
         const i = acharPerto(p);
         if (i >= 0) { mt.objetos.splice(i, 1); desenhar(); }
@@ -487,6 +655,7 @@ function acharPerto(p) {
         let d = Infinity;
         if (o.tipo === 'luz') d = Math.hypot(p.x - o.x, p.y - o.y) - 6;
         else if (o.tipo === 'npc') d = Math.hypot(p.x - o.x, p.y - o.y) - raioNpc;
+        else if (o.tipo === 'item') d = Math.hypot(p.x - o.x, p.y - o.y) - Math.max(10, raioNpc * 0.7);
         else if (Array.isArray(o.pontos)) {
             for (let k = 0; k < o.pontos.length - 1; k++) d = Math.min(d, dSeg(p, o.pontos[k], o.pontos[k + 1]));
         }

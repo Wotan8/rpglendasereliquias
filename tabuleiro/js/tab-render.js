@@ -602,6 +602,10 @@ function drawLoot(o) {
         ctx.font = `${s*0.7}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(o.item?.ehContainer ? '🧰' : '📦', o.x, o.y);
     }
+    if (o.trancado) {   // cadeado no canto — o jogador vê que precisa de chave
+        ctx.font = `${s*0.45}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('🔒', o.x + s * 0.32, o.y + s * 0.32);
+    }
     ctx.restore();
 }
 

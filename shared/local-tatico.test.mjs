@@ -114,6 +114,57 @@ const luzSimples = objetosDoLocal({ ...mt, objetos: [{ tipo: 'luz', x: 1, y: 1, 
 assert.equal('animacao' in luzSimples, false);
 assert.equal(luzSimples.cor, '#ffdd99', 'cor padrão de tocha');
 
+// --- itens dropados viram loot no tabuleiro (contrato do tab-mostrar) ---
+const mtItens = {
+    ...mt, objetos: [
+        { tipo: 'item', itemId: 'adaga', nome: 'Adaga', url: 'https://x/a.png', quantidade: 3, item: { nome: 'Adaga', peso: 0.5 }, x: 100, y: 50 },
+        {
+            tipo: 'item', itemId: 'bau1', nome: 'Baú', url: '', quantidade: 1, fixo: true,
+            item: { nome: 'Baú', ehContainer: true },
+            itensDentro: [{ id: 'wb1', nome: 'Poção', quantidade: 2 }],
+            x: 200, y: 100,
+        },
+        { tipo: 'item', x: 1, y: 1 },   // sem `item` embutido = inválido, pulado
+    ],
+};
+const lootObjs = objetosDoLocal(mtItens, { x: 0, y: 0, w: 2000 });
+assert.equal(lootObjs.length, 3, 'imagem + 2 loots');
+
+const lootSimples = lootObjs[1];
+assert.equal(lootSimples.tipo, 'loot');
+assert.equal(lootSimples.layerId, 'tokens');
+assert.deepEqual({ x: lootSimples.x, y: lootSimples.y }, { x: 200, y: 100 }, 'posição escalada 2×');
+assert.equal(lootSimples.quantidade, 3);
+assert.deepEqual(lootSimples.item, { nome: 'Adaga', peso: 0.5 }, 'item embutido segue intacto');
+assert.equal(lootSimples.visivelPublico, true);
+assert.equal('fixo' in lootSimples, false, 'fixo/itensDentro são contrato só de contêiner');
+assert.equal('itensDentro' in lootSimples, false);
+
+const lootBau = lootObjs[2];
+assert.equal(lootBau.fixo, true, 'baú fixo: jogador pega só o conteúdo');
+assert.deepEqual(lootBau.itensDentro, [{ id: 'wb1', nome: 'Poção', quantidade: 2 }]);
+assert.equal('trancado' in lootBau, false, 'sem tranca configurada, o loot não carrega o campo');
+
+// --- baú trancado: tranca passa intacta para o loot ---
+const tranca = { tipo: 'tag', tag: 'chave-velmora', consumo: 'chance', chance: 30 };
+const mtTrancado = {
+    ...mt, objetos: [{
+        tipo: 'item', itemId: 'bau2', nome: 'Cofre', quantidade: 1,
+        item: { nome: 'Cofre', ehContainer: true }, trancado: true, tranca,
+        itensDentro: [], x: 10, y: 10,
+    }, {
+        // trancado sem o objeto `tranca` = estado inválido, cai como livre
+        tipo: 'item', itemId: 'bau3', nome: 'Caixote', quantidade: 1,
+        item: { nome: 'Caixote', ehContainer: true }, trancado: true, x: 20, y: 20,
+    }],
+};
+const [, cofre, caixote] = objetosDoLocal(mtTrancado, { x: 0, y: 0, w: 1000 });
+assert.equal(cofre.trancado, true);
+assert.deepEqual(cofre.tranca, tranca, 'a config da tranca chega inteira ao Tabuleiro');
+assert.equal('trancado' in caixote, false, 'trancado sem tranca não viaja');
+
+assert.match(resumoDoLocal(mtItens), /3 itens/, 'o resumo conta por tipo, sem validar');
+
 // --- importarDungeonAlchemist: export Roll20 (.txt) vira mapaTatico ---
 const wall = (x1, y1, x2, y2, type, h = 1.8) => ({
     wall3D: { p1: { bottom: { x: x1, y: y1 }, top: { x: x1, y: y1 } }, p2: { bottom: { x: x2, y: y2 }, top: { x: x2, y: y2 } }, wallHeight: h },

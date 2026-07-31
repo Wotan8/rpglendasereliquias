@@ -49,8 +49,8 @@
 
         t('overlay montado', () => document.getElementById('wbMapaLocal'));
         t('barra de config presente', () => document.getElementById('wbmlLargura') && document.getElementById('wbmlAmbiente') && document.getElementById('wbmlLuzAtiva'));
-        t('6 ferramentas (parede, porta, janela, luz, npc, apagar)', () =>
-            document.querySelectorAll('[data-wbml-tool]').length === 6);
+        t('8 ferramentas (mão, parede, porta, janela, luz, npc, item, apagar)', () =>
+            document.querySelectorAll('[data-wbml-tool]').length === 8);
         t('estado vazio visível', () => !document.getElementById('wbmlVazio').hidden);
         t('parede começa ativa', () => document.querySelector('[data-wbml-tool="parede"]').classList.contains('is-on'));
 
@@ -104,6 +104,37 @@
         t('camadas do NPC: tokens e DM', () => {
             const opts = [...document.getElementById('wbmlNpcCamada').options].map(o => o.value);
             return opts.length === 2 && opts.includes('tokens') && opts.includes('dm');
+        });
+
+        // Ferramenta 📦 Item: grupo próprio; painel do baú só para contêiner
+        t('grupo de Item só aparece em Item', () => {
+            document.querySelector('[data-wbml-tool="item"]').click();
+            return getComputedStyle(document.getElementById('wbmlGrupoItem')).display !== 'none'
+                && getComputedStyle(document.getElementById('wbmlGrupoNpc')).display === 'none';
+        });
+        t('painel do baú escondido sem contêiner selecionado', () =>
+            getComputedStyle(document.getElementById('wbmlBauPanel')).display === 'none');
+        t('tranca do baú: livre / chave item / chave tag', () => {
+            const opts = [...document.getElementById('wbmlBauTranca').options].map(o => o.value);
+            return opts.length === 3 && opts.includes('') && opts.includes('item') && opts.includes('tag');
+        });
+        t('consumo da chave: não / sim / chance', () => {
+            const opts = [...document.getElementById('wbmlBauConsumo').options].map(o => o.value);
+            return opts.length === 3 && opts.includes('nao') && opts.includes('sim') && opts.includes('chance');
+        });
+        t('campo de chance começa escondido e tem 1–100%', () => {
+            const el = document.getElementById('wbmlBauChance');
+            return getComputedStyle(el.parentElement).display === 'none' && el.min === '1' && el.max === '100';
+        });
+
+        // ✋ Mão: cursor de arrasto no viewport
+        t('mão troca o cursor do viewport para grab', () => {
+            document.querySelector('[data-wbml-tool="mao"]').click();
+            return getComputedStyle(document.getElementById('wbmlViewport')).cursor === 'grab';
+        });
+        t('voltar para parede devolve o cursor', () => {
+            document.querySelector('[data-wbml-tool="parede"]').click();
+            return getComputedStyle(document.getElementById('wbmlViewport')).cursor !== 'grab';
         });
 
         // Import Dungeon Alchemist (export Roll20). O parse em si é coberto

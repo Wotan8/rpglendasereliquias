@@ -337,6 +337,7 @@ export function aplicarModoUI() {
     show('btnUploadImg', secret || T.perms.addImagem);
     show('btnLocal', secret);
     show('btnToken', secret);
+    show('btnInventario', !secret);
     show('btnMostrar', secret);
     show('btnCamadas', secret);
     show('btnConfig', secret);

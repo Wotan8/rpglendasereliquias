@@ -16,6 +16,11 @@
 //       { tipo:'janela', pontos:[a,b] },
 //       { tipo:'luz', x, y, alcance, cor, animacao? },  // alcance em unidades
 //       { tipo:'npc', npcId, nome, url, camada:'tokens'|'dm', x, y },
+//       { tipo:'item', itemId, nome, url, quantidade, item:{...}, x, y,
+//         fixo?, itensDentro?:[{id,...}],    // item = doc do catálogo sem id;
+//         trancado?, tranca?:{ tipo:'item'|'tag', itemId?, itemNome?, tag?,
+//                              consumo:'nao'|'sim'|'chance', chance? } },
+//                                            // fixo/itensDentro/tranca só p/ contêiner
 //     ],
 //   }
 // =============================================
@@ -70,6 +75,7 @@ export function resumoDoLocal(mt) {
     if (n('janela')) partes.push(`${n('janela')} janela${n('janela') > 1 ? 's' : ''}`);
     if (n('luz')) partes.push(`${n('luz')} luz${n('luz') > 1 ? 'es' : ''}`);
     if (n('npc')) partes.push(`${n('npc')} NPC${n('npc') > 1 ? 's' : ''}`);
+    if (n('item')) partes.push(`${n('item')} ite${n('item') > 1 ? 'ns' : 'm'}`);
     partes.push(mt.luzAtiva ? (mt.ambiente === 'dia' ? '☀️ dia' : '🌙 noite') : 'sem luz dinâmica');
     return partes.join(' · ');
 }
@@ -236,6 +242,21 @@ export function objetosDoLocal(mt, destino) {
             };
             if (o.animacao) luz.animacao = o.animacao;
             out.push(luz);
+        } else if (o.tipo === 'item' && o.item && o.x != null && o.y != null) {
+            const p = P(o);
+            const loot = {
+                tipo: 'loot', layerId: 'tokens', x: p.x, y: p.y,
+                nome: o.nome || 'Item', url: o.url || '',
+                quantidade: o.quantidade || 1,
+                item: o.item, visivelPublico: true,
+            };
+            // fixo/itensDentro/tranca são contrato só de contêiner no Tabuleiro
+            if (o.item.ehContainer) {
+                loot.fixo = !!o.fixo;
+                loot.itensDentro = Array.isArray(o.itensDentro) ? o.itensDentro : [];
+                if (o.trancado && o.tranca) { loot.trancado = true; loot.tranca = o.tranca; }
+            }
+            out.push(loot);
         } else if (o.tipo === 'npc' && o.npcId && o.x != null && o.y != null) {
             const p = P(o);
             const naDM = o.camada === 'dm';
