@@ -126,6 +126,17 @@
             const el = document.getElementById('wbmlBauChance');
             return getComputedStyle(el.parentElement).display === 'none' && el.min === '1' && el.max === '100';
         });
+        t('item-chave é busca (datalist), não texto solto', () => {
+            const el = document.getElementById('wbmlBauChave');
+            return el.tagName === 'INPUT' && el.getAttribute('list') === 'wbmlChaveDl'
+                && document.getElementById('wbmlChaveDl');
+        });
+        t('toggle 👁️ Exibir chave existe e começa escondido', () => {
+            const w = document.getElementById('wbmlBauExibirWrap');
+            return document.getElementById('wbmlBauExibir') && getComputedStyle(w).display === 'none';
+        });
+        t('campo de anotação secreta no painel do baú', () =>
+            document.getElementById('wbmlBauNota'));
         t('painel de tranca aparece na ferramenta Porta', () => {
             document.querySelector('[data-wbml-tool="porta"]').click();
             return getComputedStyle(document.getElementById('wbmlTrancaPanel')).display !== 'none'

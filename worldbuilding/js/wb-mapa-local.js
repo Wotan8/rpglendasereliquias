@@ -167,6 +167,8 @@ function montar() {
         <select id="wbmlBauSel"></select>
         <label>Qtd <input type="number" id="wbmlBauQtd" value="1" min="1" style="width:50px"></label>
         <button class="btn btn-secondary btn-sm" id="wbmlBauAdd">⬇️ Guardar no baú</button>
+        <span class="wbml-sep"></span>
+        <input type="text" id="wbmlBauNota" placeholder="🗒️ anotação secreta (só o mestre vê)" style="width:210px">
     </div>
     <div class="wbml-tools" id="wbmlTrancaPanel" style="display:none">
         <b>🔐 Tranca <span id="wbmlTrancaDoQue"></span>:</b>
@@ -175,8 +177,10 @@ function montar() {
             <option value="item">🔒 Chave: item</option>
             <option value="tag">🔒 Chave: tag</option>
         </select>
-        <select id="wbmlBauChave" style="display:none"></select>
+        <input type="text" id="wbmlBauChave" list="wbmlChaveDl" placeholder="🔍 item-chave…" style="display:none;width:140px">
+        <datalist id="wbmlChaveDl"></datalist>
         <input type="text" id="wbmlBauTag" placeholder="tag da chave" style="display:none;width:110px">
+        <label class="wbml-check" id="wbmlBauExibirWrap" style="display:none"><input type="checkbox" id="wbmlBauExibir"> 👁️ Exibir chave ao jogador</label>
         <label id="wbmlBauConsumoWrap" style="display:none">Consumo <select id="wbmlBauConsumo">
             <option value="nao">não consome</option>
             <option value="sim">consome a chave</option>
@@ -282,10 +286,9 @@ async function carregarCatalogo() {
     const selBau = $('#wbmlBauSel');
     if (selBau) selBau.innerHTML = E.catalogo.filter(i => !i.ehContainer)
         .map(i => `<option value="${esc(i.id)}">${esc(i.nome || 'Item')}</option>`).join('');
-    // a chave da tranca pode ser qualquer item do catálogo
-    const selChave = $('#wbmlBauChave');
-    if (selChave) selChave.innerHTML = E.catalogo
-        .map(i => `<option value="${esc(i.id)}">🔑 ${esc(i.nome || 'Item')}</option>`).join('');
+    // a chave da tranca pode ser qualquer item do catálogo — busca via datalist
+    const dl = $('#wbmlChaveDl');
+    if (dl) dl.innerHTML = E.catalogo.map(i => `<option value="${esc(i.nome || '')}">`).join('');
     sincronizarGrupos();
 }
 
@@ -305,6 +308,7 @@ function trancaSincronizar() {
     const mostra = (id, v) => { const el = $(id); if (el) el.style.display = v ? '' : 'none'; };
     mostra('#wbmlBauChave', tipo === 'item');
     mostra('#wbmlBauTag', tipo === 'tag');
+    mostra('#wbmlBauExibirWrap', !!tipo);
     mostra('#wbmlBauConsumoWrap', !!tipo);
     mostra('#wbmlBauChanceWrap', !!tipo && $('#wbmlBauConsumo').value === 'chance');
     // chave por item precisa do catálogo — porta/janela não passam pela
@@ -312,16 +316,19 @@ function trancaSincronizar() {
     if (tipo === 'item' && !E.catalogo) carregarCatalogo();
 }
 
-/** Lê a config de tranca do painel; null = baú livre. */
+/** Lê a config de tranca do painel; null = tranca sem chave (= livre). */
 function trancaAtual() {
     const tipo = $('#wbmlBauTranca')?.value || '';
     if (!tipo) return null;
-    const t = { tipo, consumo: $('#wbmlBauConsumo').value || 'nao' };
+    const t = { tipo, consumo: $('#wbmlBauConsumo').value || 'nao', exibirChave: $('#wbmlBauExibir').checked };
     if (t.consumo === 'chance') t.chance = Math.min(100, Math.max(1, parseInt($('#wbmlBauChance').value, 10) || 50));
     if (tipo === 'item') {
-        const c = (E.catalogo || []).find(x => x.id === $('#wbmlBauChave').value);
-        if (!c) return null;   // sem chave escolhida não tem tranca
-        t.itemId = c.id; t.itemNome = c.nome || '';
+        const nome = ($('#wbmlBauChave').value || '').trim();
+        if (!nome) return null;   // sem chave escolhida não tem tranca
+        // nome do catálogo carrega id e imagem (p/ "Exibir chave"); nome livre vale pelo texto
+        const c = (E.catalogo || []).find(x => (x.nome || '').trim().toLowerCase() === nome.toLowerCase());
+        t.itemNome = c?.nome || nome;
+        if (c) { t.itemId = c.id; if (c.imagem || c.imagemUrl) t.itemImg = c.imagem || c.imagemUrl; }
     } else {
         t.tag = ($('#wbmlBauTag').value || '').trim();
         if (!t.tag) return null;
@@ -634,7 +641,10 @@ function clique(p) {
             o.itensDentro = E.bau;
             const tranca = trancaAtual();
             if (tranca) { o.trancado = true; o.tranca = tranca; }
-            E.bau = [];   // o próximo baú começa vazio
+            const nota = ($('#wbmlBauNota').value || '').trim();
+            if (nota) o.notaSecreta = nota;
+            E.bau = [];   // o próximo baú começa vazio (anotação idem)
+            $('#wbmlBauNota').value = '';
             bauRender();
             dica(`🧰 Baú colocado com ${o.itensDentro.length} item(ns) dentro${o.fixo ? ' (fixo)' : ''}${tranca ? ' 🔒 trancado' : ''}${$('#wbmlBauTranca').value && !tranca ? ' — ⚠️ tranca ignorada: escolha a chave/tag' : ''}.`);
         }

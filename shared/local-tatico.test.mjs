@@ -146,12 +146,12 @@ assert.deepEqual(lootBau.itensDentro, [{ id: 'wb1', nome: 'Poção', quantidade:
 assert.equal('trancado' in lootBau, false, 'sem tranca configurada, o loot não carrega o campo');
 
 // --- baú trancado: tranca passa intacta para o loot ---
-const tranca = { tipo: 'tag', tag: 'chave-velmora', consumo: 'chance', chance: 30 };
+const tranca = { tipo: 'tag', tag: 'chave-velmora', consumo: 'chance', chance: 30, exibirChave: true };
 const mtTrancado = {
     ...mt, objetos: [{
         tipo: 'item', itemId: 'bau2', nome: 'Cofre', quantidade: 1,
         item: { nome: 'Cofre', ehContainer: true }, trancado: true, tranca,
-        itensDentro: [], x: 10, y: 10,
+        notaSecreta: 'o fundo é falso', itensDentro: [], x: 10, y: 10,
     }, {
         // trancado sem o objeto `tranca` = estado inválido, cai como livre
         tipo: 'item', itemId: 'bau3', nome: 'Caixote', quantidade: 1,
@@ -160,8 +160,10 @@ const mtTrancado = {
 };
 const [, cofre, caixote] = objetosDoLocal(mtTrancado, { x: 0, y: 0, w: 1000 });
 assert.equal(cofre.trancado, true);
-assert.deepEqual(cofre.tranca, tranca, 'a config da tranca chega inteira ao Tabuleiro');
+assert.deepEqual(cofre.tranca, tranca, 'a config da tranca (com exibirChave) chega inteira ao Tabuleiro');
+assert.equal(cofre.notaSecreta, 'o fundo é falso', 'anotação secreta do mestre viaja junto');
 assert.equal('trancado' in caixote, false, 'trancado sem tranca não viaja');
+assert.equal('notaSecreta' in caixote, false, 'sem anotação, o campo não existe');
 
 // --- porta/janela trancadas usam o mesmo mecanismo ---
 const trancaPorta = { tipo: 'item', itemId: 'chv1', itemNome: 'Chave de Ferro', consumo: 'sim' };

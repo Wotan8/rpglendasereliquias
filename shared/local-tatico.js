@@ -18,9 +18,10 @@
 //       { tipo:'npc', npcId, nome, url, camada:'tokens'|'dm', x, y },
 //       { tipo:'item', itemId, nome, url, quantidade, item:{...}, x, y,
 //         fixo?, itensDentro?:[{id,...}],    // item = doc do catálogo sem id;
-//         trancado?, tranca?:{ tipo:'item'|'tag', itemId?, itemNome?, tag?,
-//                              consumo:'nao'|'sim'|'chance', chance? } },
-//                                            // fixo/itensDentro/tranca só p/ contêiner
+//         trancado?, tranca?:{ tipo:'item'|'tag', itemId?, itemNome?, itemImg?,
+//                              tag?, consumo:'nao'|'sim'|'chance', chance?,
+//                              exibirChave? },
+//         notaSecreta? },                    // fixo/itensDentro/tranca/nota só p/ contêiner
 //     ],
 //   }
 // =============================================
@@ -257,6 +258,7 @@ export function objetosDoLocal(mt, destino) {
                 loot.fixo = !!o.fixo;
                 loot.itensDentro = Array.isArray(o.itensDentro) ? o.itensDentro : [];
                 if (o.trancado && o.tranca) { loot.trancado = true; loot.tranca = o.tranca; }
+                if (o.notaSecreta) loot.notaSecreta = o.notaSecreta;
             }
             out.push(loot);
         } else if (o.tipo === 'npc' && o.npcId && o.x != null && o.y != null) {

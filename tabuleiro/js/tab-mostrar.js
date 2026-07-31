@@ -330,6 +330,7 @@ function abrirBau(objId) {
     abrirModal(`🧰 ${esc(o.nome || 'Baú')}`, `
         ${mestre ? `<label class="tb-check" style="margin-bottom:8px"><input type="checkbox" ${o.fixo ? 'checked' : ''} onchange="tbBauFixo('${objId}',this.checked)"> 📌 Fixo no mapa (jogadores pegam só o conteúdo, não o baú)</label>` : ''}
         ${mestre ? trancaConfigHtml(objId, o) : ''}
+        ${mestre ? `<label style="display:block;margin-bottom:8px">🗒️ Anotação secreta (só o mestre vê)<textarea id="bau_nota" class="tb-input" rows="2" onchange="tbBauNota('${objId}',this.value)">${esc(o.notaSecreta || '')}</textarea></label>` : ''}
         <div class="tb-form-grid tb-form-grid-1"><label>Inventário de<select id="bau_alvo" onchange="tbBauCarregarInv('${objId}')">${alvos}</select></label></div>
         <div class="tb-muted" style="font-size:.78rem;margin:8px 0 4px">Dentro do baú (${itens.length})</div>
         <div class="tb-list" style="max-height:26vh;overflow-y:auto">
@@ -348,6 +349,16 @@ function abrirBau(objId) {
     window.tbBauCarregarInv(objId);
 }
 window.tbBauFixo = (objId, fixo) => updObj(objId, { fixo });
+window.tbBauNota = (objId, v) => updObj(objId, { notaSecreta: v });
+
+/** Preenche o datalist do item-chave (tab-objects) com o catálogo — sob demanda,
+ *  no primeiro foco do campo. Também deixa a lista acessível ao tbTrancaCfg. */
+window.tbTrancaDatalist = async function() {
+    const lista = await carregarEquip();
+    window._tbEquipLista = lista;
+    const dl = document.getElementById('bau_tr_dl');
+    if (dl && !dl.children.length) dl.innerHTML = lista.map(i => `<option value="${esc(i.nome || '')}">`).join('');
+};
 
 /** O item destranca esta tranca? (nome exato ou tag, sem caixa/acento rigoroso) */
 function chaveServe(it, tr) {
@@ -398,12 +409,23 @@ function abrirDestrancar(objId) {
     const meus = meusChars();
     if (!meus.length) { toast('⚠️ Você não tem personagem nesta mesa', 'warning'); return; }
     const rotulo = o.tipo === 'loot' ? (o.nome || 'Baú') : (NOME_TRANCAVEL[o.tipo] || o.tipo);
-    const precisa = tr.tipo === 'tag' ? `um item com a tag <b>${esc(tr.tag || '?')}</b>` : `o item <b>${esc(tr.itemNome || '?')}</b>`;
-    const consumo = tr.consumo === 'sim' ? 'A chave é consumida ao usar.'
-        : tr.consumo === 'chance' ? `⚠️ ${Number(tr.chance) || 50}% de chance de a chave ser consumida.`
-        : 'A chave não é consumida.';
+    // "Exibir chave" OFF: o jogador só fica sabendo que está trancado — a
+    // descoberta da chave é dele (o botão 🔑 aparece se ele tiver algo que serve)
+    let chaveInfo;
+    if (tr.exibirChave) {
+        const precisa = tr.tipo === 'tag' ? `um item com a tag <b>${esc(tr.tag || '?')}</b>` : `o item <b>${esc(tr.itemNome || '?')}</b>`;
+        const consumo = tr.consumo === 'sim' ? 'A chave é consumida ao usar.'
+            : tr.consumo === 'chance' ? `⚠️ ${Number(tr.chance) || 50}% de chance de a chave ser consumida.`
+            : 'A chave não é consumida.';
+        chaveInfo = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            ${tr.itemImg ? `<img src="${esc(tr.itemImg)}" style="width:38px;height:38px;object-fit:cover;border-radius:6px;flex:none">` : '<span style="font-size:24px;flex:none">🔑</span>'}
+            <div class="tb-muted" style="font-size:.8rem">Precisa de ${precisa} <b>equipado</b> para destrancar. ${consumo}</div>
+        </div>`;
+    } else {
+        chaveInfo = '<div class="tb-muted" style="font-size:.8rem;margin-bottom:8px">Está trancado. Talvez algum item equipado sirva de chave…</div>';
+    }
     abrirModal(`🔒 ${esc(rotulo)} — trancado`, `
-        <div class="tb-muted" style="font-size:.8rem;margin-bottom:8px">Precisa de ${precisa} <b>equipado</b> para destrancar. ${consumo}</div>
+        ${chaveInfo}
         <div class="tb-form-grid tb-form-grid-1"><label>Personagem<select id="dt_char" onchange="tbDestrancarLista('${objId}')">${meus.map(c => `<option value="${c.id}">🎭 ${esc(c.nome)}</option>`).join('')}</select></label></div>
         <div class="tb-muted" style="font-size:.76rem;margin:8px 0 4px">Itens equipados (mochilas mostram o que têm dentro)</div>
         <div class="tb-list" id="dt_lista" style="max-height:44vh;overflow-y:auto"><div class="tb-muted" style="text-align:center;padding:10px">Carregando…</div></div>`);

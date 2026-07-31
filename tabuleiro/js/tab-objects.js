@@ -553,8 +553,9 @@ export function trancaConfigHtml(objId, o) {
             <option value="item" ${tipo === 'item' ? 'selected' : ''}>🔒 Chave: item</option>
             <option value="tag" ${tipo === 'tag' ? 'selected' : ''}>🔒 Chave: tag</option>
         </select></label>
-        <label id="bau_tr_nome_w" style="${tipo === 'item' ? '' : 'display:none'}">Nome do item-chave<input type="text" id="bau_tr_nome" value="${esc(tr.itemNome || '')}" onchange="tbTrancaCfg('${objId}')"></label>
+        <label id="bau_tr_nome_w" style="${tipo === 'item' ? '' : 'display:none'}">Item-chave<input type="text" id="bau_tr_nome" list="bau_tr_dl" placeholder="🔍 buscar no catálogo…" value="${esc(tr.itemNome || '')}" onfocus="tbTrancaDatalist&&tbTrancaDatalist()" onchange="tbTrancaCfg('${objId}')"><datalist id="bau_tr_dl"></datalist></label>
         <label id="bau_tr_tag_w" style="${tipo === 'tag' ? '' : 'display:none'}">Tag da chave<input type="text" id="bau_tr_tag" value="${esc(tr.tag || '')}" onchange="tbTrancaCfg('${objId}')"></label>
+        <label class="tb-check" id="bau_tr_exibir_w" style="${tipo ? '' : 'display:none'}"><input type="checkbox" id="bau_tr_exibir" ${tr.exibirChave ? 'checked' : ''} onchange="tbTrancaCfg('${objId}')"> 👁️ Exibir a chave ao jogador (nome e imagem)</label>
         <label id="bau_tr_consumo_w" style="${tipo ? '' : 'display:none'}">Consumo da chave<select id="bau_tr_consumo" onchange="tbTrancaCfg('${objId}')">
             <option value="nao" ${(tr.consumo || 'nao') === 'nao' ? 'selected' : ''}>não consome</option>
             <option value="sim" ${tr.consumo === 'sim' ? 'selected' : ''}>consome</option>
@@ -570,13 +571,19 @@ window.tbTrancaCfg = function(objId) {
     const mostra = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
     mostra('bau_tr_nome_w', tipo === 'item');
     mostra('bau_tr_tag_w', tipo === 'tag');
+    mostra('bau_tr_exibir_w', !!tipo);
     mostra('bau_tr_consumo_w', !!tipo);
     mostra('bau_tr_chance_w', !!tipo && v('bau_tr_consumo') === 'chance');
     if (!tipo) { updObj(objId, { trancado: false, tranca: null }); return; }
     const tranca = { tipo, consumo: v('bau_tr_consumo') || 'nao' };
+    tranca.exibirChave = !!document.getElementById('bau_tr_exibir')?.checked;
     if (tranca.consumo === 'chance') tranca.chance = Math.min(100, Math.max(1, parseInt(v('bau_tr_chance'), 10) || 50));
-    if (tipo === 'item') tranca.itemNome = (v('bau_tr_nome') || '').trim();
-    else tranca.tag = (v('bau_tr_tag') || '').trim();
+    if (tipo === 'item') {
+        tranca.itemNome = (v('bau_tr_nome') || '').trim();
+        // nome que bate com o catálogo carrega id e imagem (p/ "Exibir chave")
+        const cat = (window._tbEquipLista || []).find(x => (x.nome || '').trim().toLowerCase() === tranca.itemNome.toLowerCase());
+        if (cat) { tranca.itemId = cat.id; if (cat.imagem || cat.imagemUrl) tranca.itemImg = cat.imagem || cat.imagemUrl; }
+    } else tranca.tag = (v('bau_tr_tag') || '').trim();
     // chave em branco tranca do mesmo jeito — o mestre está no meio da digitação;
     // o jogador só destrava com chave que "serve", e nada serve até preencher.
     updObj(objId, { trancado: true, tranca });
