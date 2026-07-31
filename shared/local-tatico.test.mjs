@@ -1,6 +1,6 @@
 // Rodar: node shared/local-tatico.test.mjs
 import assert from 'node:assert/strict';
-import { localPronto, resumoDoLocal, objetosDoLocal, pontosDaForma, comprimentoDaLinha } from './local-tatico.js';
+import { localPronto, resumoDoLocal, objetosDoLocal, pontosDaForma, comprimentoDaLinha, importarDungeonAlchemist } from './local-tatico.js';
 
 // --- pontosDaForma: retângulo e elipse viram polilinha fechada ---
 const ret = pontosDaForma('ret', { x: 0, y: 0 }, { x: 10, y: 4 });
@@ -113,5 +113,56 @@ assert.deepEqual(objetosDoLocal(mt, { x: 0, y: 0, w: 0 }), []);
 const luzSimples = objetosDoLocal({ ...mt, objetos: [{ tipo: 'luz', x: 1, y: 1, alcance: 3 }] }, { x: 0, y: 0, w: 1000 })[1];
 assert.equal('animacao' in luzSimples, false);
 assert.equal(luzSimples.cor, '#ffdd99', 'cor padrão de tocha');
+
+// --- importarDungeonAlchemist: export Roll20 (.txt) vira mapaTatico ---
+const wall = (x1, y1, x2, y2, type, h = 1.8) => ({
+    wall3D: { p1: { bottom: { x: x1, y: y1 }, top: { x: x1, y: y1 } }, p2: { bottom: { x: x2, y: y2 }, top: { x: x2, y: y2 } }, wallHeight: h },
+    type, open: false,
+});
+const daTxt = '!dungeonalchemist ' + JSON.stringify({
+    version: 3,
+    walls: [
+        wall(0, 0, 300, 0, 0),          // parede
+        wall(300, 0, 300, 300, 0),      // emenda na anterior → mesma polilinha
+        wall(600, 0, 750, 0, 1),        // porta (1 tile)
+        wall(900, 0, 1050, 0, 2),       // janela
+        wall(0, 600, 30, 600, 3),       // contorno de objeto…
+        wall(30, 600, 60, 630, 3),      // …encadeia
+        wall(0, 900, 150, 900, 4),      // muro baixo = parede
+        wall(500, 500, 500, 500, 0, 0), // marcador de ponta (p1==p2) — fora
+    ],
+    lights: [{ color: '#FF9800FF', intensity: 2.5, range: 750, position: { x: 150, y: 150 } }],
+    pixelsPerTile: 150,
+    grid: '10 8',                        // fonte = 1500×1200 px
+});
+
+// Imagem exportada em metade da resolução (750×600) → escala 0.5
+const da = importarDungeonAlchemist(daTxt, 750, 600);
+assert.ok(da, 'export válido é aceito');
+assert.equal(da.larguraReal, 15, '10 tiles × 1,5 m');
+assert.equal(da.unidade, 'm');
+assert.deepEqual(da.avisos, [], 'proporção bate — sem aviso');
+
+const tipos = da.objetos.map(o => o.tipo);
+assert.deepEqual(tipos, ['parede', 'porta', 'janela', 'parede', 'parede', 'luz']);
+
+const [par1, porta1, jan1, contorno, muro, luz1] = da.objetos;
+assert.deepEqual(par1.pontos, [{ x: 0, y: 0 }, { x: 150, y: 0 }, { x: 150, y: 150 }],
+    'segmentos emendados viram uma polilinha, já na escala da imagem');
+assert.deepEqual(porta1.pontos, [{ x: 300, y: 0 }, { x: 375, y: 0 }], 'type 1 = porta');
+assert.deepEqual(jan1.pontos, [{ x: 450, y: 0 }, { x: 525, y: 0 }], 'type 2 = janela');
+assert.equal(contorno.pontos.length, 3, 'contorno de objeto (type 3) também encadeia');
+assert.equal(muro.pontos.length, 2, 'type 4 vira parede comum');
+assert.deepEqual({ x: luz1.x, y: luz1.y }, { x: 75, y: 75 }, 'luz reescalada');
+assert.equal(luz1.alcance, 7.5, '750px ÷ 150px/tile × 1,5 m = 7,5 m');
+assert.equal(luz1.cor, '#FF9800', 'alpha do #RRGGBBAA cai fora');
+
+// Imagem cortada (proporção diferente do grid) gera aviso
+assert.equal(importarDungeonAlchemist(daTxt, 750, 350).avisos.length, 1);
+
+// Lixo não derruba
+assert.equal(importarDungeonAlchemist('qualquer coisa', 100, 100), null);
+assert.equal(importarDungeonAlchemist('!dungeonalchemist {"foo":1}', 100, 100), null);
+assert.equal(importarDungeonAlchemist('', 100, 100), null);
 
 console.log('✅ local-tatico: todos os testes passaram.');

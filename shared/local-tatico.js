@@ -75,6 +75,74 @@ export function resumoDoLocal(mt) {
 }
 
 /**
+ * Importa o export "Roll20" do Dungeon Alchemist (o .txt que acompanha o .jpg).
+ * O arquivo é um comando `!dungeonalchemist {json}` com:
+ *   walls[]: { wall3D:{p1:{bottom:{x,y}},p2:{bottom:{x,y}},wallHeight}, type, open }
+ *     type 0 = parede · 1 = porta · 2 = janela · 3 = contorno de objeto · 4 = muro baixo
+ *     (paredes com p1==p2 são marcadores de ponta — ignoradas)
+ *   lights[]: { color:"#RRGGBBAA", intensity, range(px), position:{x,y} }
+ *   pixelsPerTile, grid: "W H" (tiles) — espaço-fonte = W*ppt × H*ppt px
+ *
+ * Coordenadas são reescaladas para px da imagem natural (imgW×imgH) e a
+ * escala real assume o padrão do DA de 1 tile = 1,5 m (ajustável depois).
+ * @returns { larguraReal, unidade, objetos, avisos } ou null se não for um export válido
+ */
+export function importarDungeonAlchemist(texto, imgW, imgH, metrosPorTile = 1.5) {
+    const i = (texto || '').indexOf('{');
+    if (i < 0) return null;
+    let d;
+    try { d = JSON.parse(texto.slice(i)); } catch { return null; }
+    if (!Array.isArray(d.walls) || !d.grid) return null;
+    const ppt = Number(d.pixelsPerTile) || 150;
+    const [gw, gh] = String(d.grid).trim().split(/\s+/).map(Number);
+    if (!(gw > 0) || !(gh > 0)) return null;
+    const sx = imgW > 0 ? imgW / (gw * ppt) : 1;
+    const sy = imgH > 0 ? imgH / (gh * ppt) : 1;
+    const P = (p) => ({ x: Math.round(p.x * sx), y: Math.round(p.y * sy) });
+
+    const objetos = [];
+    let cadeia = null;              // polilinha de parede em crescimento
+    for (const w of d.walls) {
+        const p1 = w?.wall3D?.p1?.bottom, p2 = w?.wall3D?.p2?.bottom;
+        if (!p1 || !p2 || Math.hypot(p2.x - p1.x, p2.y - p1.y) < 1) continue;
+        const tipo = w.type === 1 ? 'porta' : w.type === 2 ? 'janela' : 'parede';
+        if (tipo !== 'parede') {
+            cadeia = null;
+            objetos.push({ tipo, pontos: [P(p1), P(p2)] });
+            continue;
+        }
+        // Segmentos consecutivos que se emendam viram UMA polilinha — os
+        // contornos de árvore/pedra (type 3) são dezenas de tracinhos de 30px
+        // e virariam centenas de objetos no raycasting do tabuleiro.
+        const a = P(p1), b = P(p2);
+        const fim = cadeia?.pontos[cadeia.pontos.length - 1];
+        if (fim && Math.hypot(fim.x - a.x, fim.y - a.y) <= 2) {
+            cadeia.pontos.push(b);
+        } else {
+            cadeia = { tipo: 'parede', pontos: [a, b] };
+            objetos.push(cadeia);
+        }
+    }
+
+    for (const l of (Array.isArray(d.lights) ? d.lights : [])) {
+        if (!l?.position) continue;
+        const p = P(l.position);
+        objetos.push({
+            tipo: 'luz', x: p.x, y: p.y,
+            // range em px do espaço-fonte → unidades reais (o tabuleiro espera unidades)
+            alcance: Math.round(((Number(l.range) || 0) / ppt) * metrosPorTile * 10) / 10 || metrosPorTile,
+            cor: /^#[0-9a-fA-F]{8}$/.test(l.color || '') ? l.color.slice(0, 7) : (l.color || '#ffdd99'),
+        });
+    }
+
+    const avisos = [];
+    if (imgW > 0 && imgH > 0 && Math.abs((imgW / imgH) / (gw / gh) - 1) > 0.02) {
+        avisos.push('A proporção da imagem não bate com o grid do .txt (imagem cortada ou reexportada?) — paredes podem desalinhar.');
+    }
+    return { larguraReal: Math.round(gw * metrosPorTile * 10) / 10, unidade: 'm', objetos, avisos };
+}
+
+/**
  * Converte o mapa tático em payloads de objetos do Tabuleiro.
  * @param mt       o mapaTatico validado por localPronto()
  * @param destino  { x, y, w } — canto superior-esquerdo no mundo e largura

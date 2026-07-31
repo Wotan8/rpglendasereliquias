@@ -15,7 +15,7 @@
    ═══════════════════════════════════════════════════════════ */
 
 import { db, doc, updateDoc, storage, ref, uploadBytes, getDownloadURL } from './firebase-config.js';
-import { localPronto, pontosDaForma, comprimentoDaLinha } from '../../shared/local-tatico.js';
+import { localPronto, pontosDaForma, comprimentoDaLinha, importarDungeonAlchemist } from '../../shared/local-tatico.js';
 
 const esc = (s = '') => String(s).replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -109,6 +109,7 @@ function montar() {
         <label class="wbml-check"><input type="checkbox" id="wbmlLuzAtiva" ${mt.luzAtiva !== false ? 'checked' : ''}> Luz dinâmica</label>
         <span class="wbml-sep"></span>
         <button class="btn btn-secondary btn-sm" id="wbmlTrocarImg">🖼️ ${mt.url ? 'Trocar mapa' : 'Enviar mapa'}</button>
+        <button class="btn btn-secondary btn-sm" id="wbmlImportDA" title="Selecione o .jpg e o .txt que o Dungeon Alchemist gera no export Roll20 — paredes, portas, janelas e luzes entram prontas.">⚗️ Dungeon Alchemist</button>
         <span style="flex:1"></span>
         <button class="btn btn-success btn-sm" id="wbmlSalvar">💾 Salvar</button>
         <button class="btn btn-secondary btn-sm" id="wbmlFechar">✖ Fechar</button>
@@ -147,15 +148,19 @@ function montar() {
         <div class="wbml-vazio" id="wbmlVazio" ${mt.url ? 'hidden' : ''}>
             <p>Nenhum mapa ainda.</p>
             <button class="btn btn-success" onclick="document.getElementById('wbmlTrocarImg').click()">🖼️ Enviar imagem do mapa</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('wbmlImportDA').click()">⚗️ Importar do Dungeon Alchemist</button>
         </div>
     </div>
-    <input type="file" id="wbmlArquivo" accept="image/*" hidden>`;
+    <input type="file" id="wbmlArquivo" accept="image/*" hidden>
+    <input type="file" id="wbmlArquivoDA" accept=".txt,image/*" multiple hidden>`;
     document.body.appendChild(root);
 
     $('#wbmlFechar').onclick = fechar;
     $('#wbmlSalvar').onclick = salvar;
     $('#wbmlTrocarImg').onclick = () => $('#wbmlArquivo').click();
     $('#wbmlArquivo').addEventListener('change', enviarMapa);
+    $('#wbmlImportDA').onclick = () => $('#wbmlArquivoDA').click();
+    $('#wbmlArquivoDA').addEventListener('change', importarDA);
     $('#wbmlUnidade').addEventListener('change', () => { $('#wbmlUnLuz').textContent = $('#wbmlUnidade').value; desenhar(); });
     $('#wbmlLargura').addEventListener('change', desenhar);
     root.querySelectorAll('[data-wbml-tool]').forEach(b => b.onclick = () => {
@@ -196,28 +201,59 @@ function sincronizarGrupos() {
 function dica(t) { const el = $('#wbmlDica'); if (el) el.textContent = t; }
 
 /* ── Upload do mapa ──────────────────────────────────────── */
+async function subirImagem(file) {
+    const nome = `${Date.now()}_${file.name.replace(/[^\w.-]/g, '_')}`;
+    const snap = await uploadBytes(ref(storage, `worldbuilding-images/locais/${nome}`), file);
+    const url = await getDownloadURL(snap.ref);
+    const dim = await new Promise(res => {
+        const i = new Image();
+        i.onload = () => res({ w: i.naturalWidth, h: i.naturalHeight });
+        i.onerror = () => res({ w: 0, h: 0 });
+        i.src = url;
+    });
+    E.mt.url = url; E.mt.imgW = dim.w; E.mt.imgH = dim.h;
+    $('#wbmlVazio').hidden = true;
+    $('#wbmlTrocarImg').textContent = '🖼️ Trocar mapa';
+    E.zoom = 1; E.panX = 0; E.panY = 0;
+}
+
 async function enviarMapa() {
     const file = $('#wbmlArquivo').files[0];
     $('#wbmlArquivo').value = '';
     if (!file || !file.type.startsWith('image/')) return;
     dica('⏳ Enviando mapa…');
     try {
-        const nome = `${Date.now()}_${file.name.replace(/[^\w.-]/g, '_')}`;
-        const snap = await uploadBytes(ref(storage, `worldbuilding-images/locais/${nome}`), file);
-        const url = await getDownloadURL(snap.ref);
-        const dim = await new Promise(res => {
-            const i = new Image();
-            i.onload = () => res({ w: i.naturalWidth, h: i.naturalHeight });
-            i.onerror = () => res({ w: 0, h: 0 });
-            i.src = url;
-        });
-        E.mt.url = url; E.mt.imgW = dim.w; E.mt.imgH = dim.h;
-        $('#wbmlVazio').hidden = true;
-        $('#wbmlTrocarImg').textContent = '🖼️ Trocar mapa';
-        E.zoom = 1; E.panX = 0; E.panY = 0;
+        await subirImagem(file);
         desenhar();
         dica('✅ Mapa carregado. Desenhe as paredes por cima.');
     } catch (e) { console.error(e); dica('❌ Falha no upload — tente de novo.'); }
+}
+
+/* ── Import Dungeon Alchemist (export Roll20: .jpg + .txt) ── */
+async function importarDA() {
+    const files = [...$('#wbmlArquivoDA').files];
+    $('#wbmlArquivoDA').value = '';
+    const txt = files.find(f => /\.txt$/i.test(f.name));
+    const img = files.find(f => f.type.startsWith('image/'));
+    if (!txt) { dica('⚠️ Inclua o .txt do export Roll20 (pode selecionar o .jpg junto para já trocar o mapa).'); return; }
+    dica('⏳ Importando Dungeon Alchemist…');
+    try {
+        if (img) await subirImagem(img);
+        if (!E.mt.url) { dica('⚠️ Este Local ainda não tem mapa — selecione o .jpg junto com o .txt.'); return; }
+        const res = importarDungeonAlchemist(await txt.text(), E.mt.imgW, E.mt.imgH);
+        if (!res) { dica('❌ Este .txt não parece um export Roll20 do Dungeon Alchemist.'); return; }
+        // Substitui o que veio do DA; NPCs posicionados à mão ficam.
+        E.mt.objetos = (E.mt.objetos || []).filter(o => o.tipo === 'npc').concat(res.objetos);
+        E.mt.larguraReal = res.larguraReal;
+        E.mt.unidade = res.unidade;
+        $('#wbmlLargura').value = res.larguraReal;
+        $('#wbmlUnidade').value = res.unidade;
+        $('#wbmlUnLuz').textContent = res.unidade;
+        desenhar();
+        const n = (t) => res.objetos.filter(o => o.tipo === t).length;
+        dica(`✅ Importado: ${n('parede')} paredes, ${n('porta')} portas, ${n('janela')} janelas, ${n('luz')} luzes · escala ${res.larguraReal} m (1 tile = 1,5 m — ajuste se preciso).`
+            + (res.avisos.length ? ` ⚠️ ${res.avisos.join(' ')}` : ''));
+    } catch (e) { console.error(e); dica('❌ Falha na importação — veja o console.'); }
 }
 
 /* ── Render (img + svg) ──────────────────────────────────── */

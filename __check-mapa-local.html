@@ -106,6 +106,24 @@
             return opts.length === 2 && opts.includes('tokens') && opts.includes('dm');
         });
 
+        // Import Dungeon Alchemist (export Roll20). O parse em si é coberto
+        // em shared/local-tatico.test.mjs — aqui só a fiação da UI.
+        t('botão ⚗️ Dungeon Alchemist presente', () => document.getElementById('wbmlImportDA'));
+        t('input do import aceita .txt + imagem, múltiplos', () => {
+            const i = document.getElementById('wbmlArquivoDA');
+            return i && i.multiple && i.accept.includes('.txt');
+        });
+        {
+            const input = document.getElementById('wbmlArquivoDA');
+            const dt = new DataTransfer();
+            dt.items.add(new File(['!dungeonalchemist {"version":3,"walls":[],"lights":[],"pixelsPerTile":150,"grid":"10 8"}'],
+                'Mapa.txt', { type: 'text/plain' }));
+            input.files = dt.files;
+            input.dispatchEvent(new Event('change'));
+        }
+        const avisouJpg = await ate(() => document.getElementById('wbmlDica').textContent.includes('.jpg'));
+        t('.txt sem mapa enviado avisa para incluir o .jpg', () => avisouJpg);
+
         // ESC fecha (bubbles: como um teclado de verdade)
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
         t('ESC fecha o editor', () => !document.getElementById('wbMapaLocal'));
