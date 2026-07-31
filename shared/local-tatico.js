@@ -143,6 +143,59 @@ export function importarDungeonAlchemist(texto, imgW, imgH, metrosPorTile = 1.5)
 }
 
 /**
+ * Importa o export UniversalVTT do Dungeon Alchemist (.dd2vtt — serve também
+ * para .uvtt/.df2vtt de outros geradores). JSON com a imagem EMBUTIDA:
+ *   resolution: { map_size:{x,y} (quadrados), pixels_per_grid }
+ *   line_of_sight / objects_line_of_sight: polilinhas em QUADRADOS → parede
+ *   portals: { bounds:[a,b], closed, ... } → porta (o formato NÃO distingue
+ *            janela de porta — quem era janela o mestre converte no editor)
+ *   lights: { position, range (quadrados), color "AARRGGBB", intensity }
+ *   environment.baked_lighting: luz já pintada na imagem (gera aviso)
+ *   image: base64 (PNG ou WEBP)
+ * @returns { larguraReal, unidade, objetos, avisos, imagemBase64, imgW, imgH } ou null
+ */
+export function importarUVTT(texto, metrosPorTile = 1.5) {
+    let d;
+    try { d = JSON.parse(texto); } catch { return null; }
+    const ppg = Number(d?.resolution?.pixels_per_grid);
+    const gw = Number(d?.resolution?.map_size?.x), gh = Number(d?.resolution?.map_size?.y);
+    if (!(ppg > 0) || !(gw > 0) || !(gh > 0) || typeof d.image !== 'string') return null;
+    const P = (p) => ({ x: Math.round(p.x * ppg), y: Math.round(p.y * ppg) });
+
+    const objetos = [];
+    for (const linha of [...(d.line_of_sight || []), ...(d.objects_line_of_sight || [])]) {
+        if (Array.isArray(linha) && linha.length >= 2) {
+            objetos.push({ tipo: 'parede', pontos: linha.map(P) });
+        }
+    }
+    for (const p of (Array.isArray(d.portals) ? d.portals : [])) {
+        if (Array.isArray(p?.bounds) && p.bounds.length >= 2) {
+            objetos.push({ tipo: 'porta', pontos: [P(p.bounds[0]), P(p.bounds[p.bounds.length - 1])] });
+        }
+    }
+    for (const l of (Array.isArray(d.lights) ? d.lights : [])) {
+        if (!l?.position) continue;
+        const p = P(l.position);
+        objetos.push({
+            tipo: 'luz', x: p.x, y: p.y,
+            alcance: Math.round((Number(l.range) || 0) * metrosPorTile * 10) / 10 || metrosPorTile,
+            // cor vem AARRGGBB (alpha PRIMEIRO — o oposto do export Roll20)
+            cor: /^[0-9a-fA-F]{8}$/.test(l.color || '') ? '#' + l.color.slice(2) : '#ffdd99',
+        });
+    }
+
+    const avisos = [];
+    if (d.environment?.baked_lighting) {
+        avisos.push('A imagem veio com a luz já pintada (baked) — para a luz dinâmica ficar limpa, exporte com Lighting: "Only export lights to VTT".');
+    }
+    return {
+        larguraReal: Math.round(gw * metrosPorTile * 10) / 10, unidade: 'm',
+        objetos, avisos,
+        imagemBase64: d.image, imgW: Math.round(gw * ppg), imgH: Math.round(gh * ppg),
+    };
+}
+
+/**
  * Converte o mapa tático em payloads de objetos do Tabuleiro.
  * @param mt       o mapaTatico validado por localPronto()
  * @param destino  { x, y, w } — canto superior-esquerdo no mundo e largura

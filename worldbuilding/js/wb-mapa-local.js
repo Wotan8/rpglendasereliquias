@@ -15,7 +15,7 @@
    ═══════════════════════════════════════════════════════════ */
 
 import { db, doc, updateDoc, storage, ref, uploadBytes, getDownloadURL } from './firebase-config.js';
-import { localPronto, pontosDaForma, comprimentoDaLinha, importarDungeonAlchemist } from '../../shared/local-tatico.js';
+import { localPronto, pontosDaForma, comprimentoDaLinha, importarDungeonAlchemist, importarUVTT } from '../../shared/local-tatico.js';
 
 const esc = (s = '') => String(s).replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -109,7 +109,7 @@ function montar() {
         <label class="wbml-check"><input type="checkbox" id="wbmlLuzAtiva" ${mt.luzAtiva !== false ? 'checked' : ''}> Luz dinâmica</label>
         <span class="wbml-sep"></span>
         <button class="btn btn-secondary btn-sm" id="wbmlTrocarImg">🖼️ ${mt.url ? 'Trocar mapa' : 'Enviar mapa'}</button>
-        <button class="btn btn-secondary btn-sm" id="wbmlImportDA" title="Selecione o .jpg e o .txt que o Dungeon Alchemist gera no export Roll20 — paredes, portas, janelas e luzes entram prontas.">⚗️ Dungeon Alchemist</button>
+        <button class="btn btn-secondary btn-sm" id="wbmlImportDA" title="Selecione o .dd2vtt (UniversalVTT, imagem embutida) OU o par .jpg + .txt (Roll20) que o Dungeon Alchemist gera — paredes, portas, janelas e luzes entram prontas.">⚗️ Dungeon Alchemist</button>
         <span style="flex:1"></span>
         <button class="btn btn-success btn-sm" id="wbmlSalvar">💾 Salvar</button>
         <button class="btn btn-secondary btn-sm" id="wbmlFechar">✖ Fechar</button>
@@ -152,7 +152,7 @@ function montar() {
         </div>
     </div>
     <input type="file" id="wbmlArquivo" accept="image/*" hidden>
-    <input type="file" id="wbmlArquivoDA" accept=".txt,image/*" multiple hidden>`;
+    <input type="file" id="wbmlArquivoDA" accept=".txt,.dd2vtt,.uvtt,.df2vtt,image/*" multiple hidden>`;
     document.body.appendChild(root);
 
     $('#wbmlFechar').onclick = fechar;
@@ -229,19 +229,30 @@ async function enviarMapa() {
     } catch (e) { console.error(e); dica('❌ Falha no upload — tente de novo.'); }
 }
 
-/* ── Import Dungeon Alchemist (export Roll20: .jpg + .txt) ── */
+/* ── Import Dungeon Alchemist (.dd2vtt OU .jpg + .txt Roll20) ── */
 async function importarDA() {
     const files = [...$('#wbmlArquivoDA').files];
     $('#wbmlArquivoDA').value = '';
+    const uvtt = files.find(f => /\.(dd2vtt|uvtt|df2vtt)$/i.test(f.name));
     const txt = files.find(f => /\.txt$/i.test(f.name));
     const img = files.find(f => f.type.startsWith('image/'));
-    if (!txt) { dica('⚠️ Inclua o .txt do export Roll20 (pode selecionar o .jpg junto para já trocar o mapa).'); return; }
+    if (!uvtt && !txt) { dica('⚠️ Selecione o .dd2vtt (UniversalVTT) ou o .txt do export Roll20 (com o .jpg junto para trocar o mapa).'); return; }
     dica('⏳ Importando Dungeon Alchemist…');
     try {
-        if (img) await subirImagem(img);
-        if (!E.mt.url) { dica('⚠️ Este Local ainda não tem mapa — selecione o .jpg junto com o .txt.'); return; }
-        const res = importarDungeonAlchemist(await txt.text(), E.mt.imgW, E.mt.imgH);
-        if (!res) { dica('❌ Este .txt não parece um export Roll20 do Dungeon Alchemist.'); return; }
+        let res;
+        if (uvtt) {
+            res = importarUVTT(await uvtt.text());
+            if (!res) { dica('❌ Este arquivo não parece um export UniversalVTT.'); return; }
+            // A imagem vem embutida em base64 — vira File e segue o upload normal.
+            const png = res.imagemBase64.startsWith('iVBOR');
+            const blob = await (await fetch(`data:image/${png ? 'png' : 'webp'};base64,${res.imagemBase64}`)).blob();
+            await subirImagem(new File([blob], `mapa-da.${png ? 'png' : 'webp'}`, { type: blob.type }));
+        } else {
+            if (img) await subirImagem(img);
+            if (!E.mt.url) { dica('⚠️ Este Local ainda não tem mapa — selecione o .jpg junto com o .txt.'); return; }
+            res = importarDungeonAlchemist(await txt.text(), E.mt.imgW, E.mt.imgH);
+            if (!res) { dica('❌ Este .txt não parece um export Roll20 do Dungeon Alchemist.'); return; }
+        }
         // Substitui o que veio do DA; NPCs posicionados à mão ficam.
         E.mt.objetos = (E.mt.objetos || []).filter(o => o.tipo === 'npc').concat(res.objetos);
         E.mt.larguraReal = res.larguraReal;
@@ -252,6 +263,7 @@ async function importarDA() {
         desenhar();
         const n = (t) => res.objetos.filter(o => o.tipo === t).length;
         dica(`✅ Importado: ${n('parede')} paredes, ${n('porta')} portas, ${n('janela')} janelas, ${n('luz')} luzes · escala ${res.larguraReal} m (1 tile = 1,5 m — ajuste se preciso).`
+            + (uvtt && n('porta') ? ' O UniversalVTT não separa janela de porta — converta no editor as que forem janelas.' : '')
             + (res.avisos.length ? ` ⚠️ ${res.avisos.join(' ')}` : ''));
     } catch (e) { console.error(e); dica('❌ Falha na importação — veja o console.'); }
 }

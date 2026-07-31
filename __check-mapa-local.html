@@ -109,9 +109,9 @@
         // Import Dungeon Alchemist (export Roll20). O parse em si é coberto
         // em shared/local-tatico.test.mjs — aqui só a fiação da UI.
         t('botão ⚗️ Dungeon Alchemist presente', () => document.getElementById('wbmlImportDA'));
-        t('input do import aceita .txt + imagem, múltiplos', () => {
+        t('input do import aceita .txt, .dd2vtt e imagem, múltiplos', () => {
             const i = document.getElementById('wbmlArquivoDA');
-            return i && i.multiple && i.accept.includes('.txt');
+            return i && i.multiple && i.accept.includes('.txt') && i.accept.includes('.dd2vtt');
         });
         {
             const input = document.getElementById('wbmlArquivoDA');

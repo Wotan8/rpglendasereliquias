@@ -1,6 +1,6 @@
 // Rodar: node shared/local-tatico.test.mjs
 import assert from 'node:assert/strict';
-import { localPronto, resumoDoLocal, objetosDoLocal, pontosDaForma, comprimentoDaLinha, importarDungeonAlchemist } from './local-tatico.js';
+import { localPronto, resumoDoLocal, objetosDoLocal, pontosDaForma, comprimentoDaLinha, importarDungeonAlchemist, importarUVTT } from './local-tatico.js';
 
 // --- pontosDaForma: retângulo e elipse viram polilinha fechada ---
 const ret = pontosDaForma('ret', { x: 0, y: 0 }, { x: 10, y: 4 });
@@ -164,5 +164,34 @@ assert.equal(importarDungeonAlchemist(daTxt, 750, 350).avisos.length, 1);
 assert.equal(importarDungeonAlchemist('qualquer coisa', 100, 100), null);
 assert.equal(importarDungeonAlchemist('!dungeonalchemist {"foo":1}', 100, 100), null);
 assert.equal(importarDungeonAlchemist('', 100, 100), null);
+
+// --- importarUVTT: export UniversalVTT (.dd2vtt) — coordenadas em quadrados ---
+const uvttTxt = JSON.stringify({
+    format: 0.2,
+    resolution: { map_origin: { x: 0, y: 0 }, map_size: { x: 10, y: 8 }, pixels_per_grid: 150 },
+    line_of_sight: [[{ x: 1, y: 1 }, { x: 3, y: 1 }, { x: 3, y: 2 }]],
+    objects_line_of_sight: [[{ x: 5, y: 5 }, { x: 5.2, y: 5.2 }]],
+    portals: [{ position: { x: 4, y: 1 }, bounds: [{ x: 3.5, y: 1 }, { x: 4.5, y: 1 }], rotation: 0, closed: false, freestanding: false }],
+    lights: [{ position: { x: 2, y: 2 }, range: 4, intensity: 2.8, color: 'ffFFAD00', shadows: true }],
+    environment: { baked_lighting: true, ambient_light: 'ffffffff' },
+    image: 'iVBORfake',
+});
+const uv = importarUVTT(uvttTxt);
+assert.ok(uv, 'export UVTT válido é aceito');
+assert.equal(uv.larguraReal, 15, '10 quadrados × 1,5 m');
+assert.deepEqual({ w: uv.imgW, h: uv.imgH }, { w: 1500, h: 1200 }, 'dimensões = grid × pixels_per_grid');
+assert.equal(uv.imagemBase64, 'iVBORfake', 'imagem embutida sai para o chamador subir');
+assert.deepEqual(uv.objetos.map(o => o.tipo), ['parede', 'parede', 'porta', 'luz'],
+    'line_of_sight e objects_line_of_sight viram parede; portal vira porta');
+assert.deepEqual(uv.objetos[0].pontos, [{ x: 150, y: 150 }, { x: 450, y: 150 }, { x: 450, y: 300 }],
+    'quadrados → px multiplicando por pixels_per_grid');
+assert.deepEqual(uv.objetos[2].pontos, [{ x: 525, y: 150 }, { x: 675, y: 150 }], 'porta usa os bounds');
+const luzUv = uv.objetos[3];
+assert.equal(luzUv.alcance, 6, 'range 4 quadrados × 1,5 m');
+assert.equal(luzUv.cor, '#FFAD00', 'cor AARRGGBB perde o alpha da FRENTE');
+assert.equal(uv.avisos.length, 1, 'baked_lighting gera aviso');
+
+assert.equal(importarUVTT('não é json'), null);
+assert.equal(importarUVTT('{"format":0.2}'), null, 'sem resolution/imagem não é UVTT');
 
 console.log('✅ local-tatico: todos os testes passaram.');
