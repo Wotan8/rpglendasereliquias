@@ -19,7 +19,7 @@ admin.initializeApp({ credential: admin.credential.cert(require('./rpg-lendasere
 const db = admin.firestore();
 const APPLY = process.argv.includes('--apply');
 
-const TAXA = { 'Leve': 0.15, 'Média': 0.22, 'Pesada': 0.30 };
+const TAXA = { 'Leve': 0.20, 'Média': 0.22, 'Pesada': 0.30 };
 const DONO = 'M2rZzlQkzxTrrddeFQ10S6zsfX62';   // mesmo criadoPor do resto do catálogo
 
 /* Pares (Ombro, Braço, Pernas, Pé) são UMA peça que toma os 2 slots — ficção

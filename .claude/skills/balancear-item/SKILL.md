@@ -74,9 +74,30 @@ As tags `Leve` / `Média` / `Pesada` já existem no catálogo e definem a taxa:
 
 | Classe | Blindagem por slot coberto |
 |---|---|
-| Leve | **0,15** |
+| Leve | **0,20** |
 | Média | **0,22** |
 | Pesada | **0,30** |
+
+A Leve subiu de 0,15 para 0,20 em 30/07/2026, e a Armadura Leve caiu de 5 para 4
+slots junto (0,80 · 1.200), senão ela dominava o Couro Cravejado e o Couro
+Reforçado (4 slots, 0,88, Furt −1) — mais Blindagem, mais barata e sem penalidade.
+
+**O teto por classe — a regra que resolveu a colisão Leve/Média.** Como Leve e
+Média estão a 10% uma da outra (0,20 vs 0,22), um conjunto Leve de 13 slots daria
+2,60 e arredondaria pro mesmo 2 do conjunto Médio (2,86), matando a Média (que
+ainda paga penalidade). A solução foi **limitar a cobertura alcançável de cada
+classe** em vez de mexer nas taxas:
+
+| Classe | Maior cobertura possível | Bl | Na mesa |
+|---|---|---|---|
+| Leve | 9 slots (Armadura Leve + as 4 avulsas) | 1,80 | **1** |
+| Média | 13 slots | 2,86 | **2** |
+| Pesada | 13 slots | 3,90 | **3** |
+
+A linha Leve avulsa cobre só Cabeça, Pescoço, Braço e Cintura de propósito.
+**Pernas e Pé não têm peça Leve, e é isso que segura o teto** — criar uma greva
+ou bota Leve leva a faixa a 2,60 e reabre o problema. Antes de acrescentar
+qualquer peça Leve nova, confira em quanto fica o máximo da faixa.
 
 `Blindagem base = taxa × slots cobertos`
 
@@ -98,7 +119,7 @@ completa = 13 slots; Bl base sai da taxa da seção 4 (`taxa × 13`):
 | Proteção | Bl base | tier 0 | tier 3 | tier 5 |
 |---|---|---|---|---|
 | nu | 0 | **3,2** | 0,6 | 0,4 |
-| Leve completa | 1,95 | 4,3 | 2,5 | 2,0 |
+| Leve completa | 2,60 | 4,9 | 2,7 | 2,1 |
 | Média completa | 2,86 | 5,2 | 2,8 | 2,1 |
 | Pesada completa | 3,90 | **6,7** | 3,2 | 2,3 |
 | Pesada + Escudo Torre | 5,10 | 10,0 | 5,5 | 4,2 |

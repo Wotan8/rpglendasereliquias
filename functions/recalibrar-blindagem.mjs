@@ -18,7 +18,7 @@ const APPLY = process.argv.includes('--apply');
    As tags graduadas (Média III, Pesada I...) foram removidas do catálogo, então
    a taxa vem da tag guarda-chuva.
    Ancorada em: Pesada × 13 slots = 3,90 (o alvo do arnês completo). */
-const TAXA = { 'Leve': 0.15, 'Média': 0.22, 'Pesada': 0.30 };
+const TAXA = { 'Leve': 0.20, 'Média': 0.22, 'Pesada': 0.30 };
 
 /* Cobertura proposta. `principal` é o slot onde a peça aparece na ficha;
    `extras` são os slots ADICIONAIS ocupados (vai em slotsAdicionais).
@@ -40,8 +40,8 @@ const COBERTURA = {
     'Brigandina':          { principal: 'Torso', extras: { 'Costas': 1, 'Ombro': 2, 'Cintura': 1 } },                                                              // 5
     'Couro Cravejado':     { principal: 'Torso', extras: { 'Costas': 1, 'Ombro': 2 } },                                                                            // 4
     'Couro Reforçado':     { principal: 'Torso', extras: { 'Costas': 1, 'Ombro': 2 } },                                                                            // 4
-    // ---- Leves (0,15/slot) ----
-    'Armadura Leve':       { principal: 'Torso', extras: { 'Costas': 1, 'Ombro': 2, 'Cintura': 1 } },                                                              // 5
+    // ---- Leves (0,20/slot) ----
+    'Armadura Leve':       { principal: 'Torso', extras: { 'Costas': 1, 'Ombro': 2 } },                                                                            // 4
     'Couro Batido':        { principal: 'Torso', extras: { 'Costas': 1, 'Cintura': 1 } },                                                                          // 3
     'Gibão Acolchoado':    { principal: 'Torso', extras: { 'Costas': 1 } },                                                                                        // 2
     'Couro Leve':          { principal: 'Torso', extras: { 'Costas': 1 } },                                                                                        // 2
