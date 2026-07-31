@@ -3,10 +3,10 @@
 // - Vitais ao vivo (chars: listener no doc; NPCs/custom: participante do combate)
 // - Condições (char.conditions + condicoes do combate)
 // - Menu radial de token
-// - Rolar iniciativa direto do mapa
+// - Rolar iniciativa direto do mapa (1d10 + VD Iniciativa)
 // =============================================
 import { db, doc, onSnapshot, setDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, markDirty, uid, can, selecionar } from './tab-state.js';
+import { T, esc, toast, markDirty, uid, can, selecionar, bonusIniciativa, DADO_INICIATIVA } from './tab-state.js';
 import { refCombate } from './tab-main.js';
 import { updObj, delObj, abrirPropriedades } from './tab-objects.js';
 import { SENSORES } from './tab-fog.js';
@@ -120,19 +120,28 @@ export function tokenAtivoDoCombate() {
 }
 
 // ---------- ROLAR INICIATIVA DO MAPA ----------
+/** VDs de onde sai a Iniciativa do token: ficha do personagem ou NPC. */
+function fonteIniciativa(o) {
+    if (o.vinculo?.tipo === 'char') return T.chars.find(c => c.id === o.vinculo.id)?.derivedTotals || null;
+    if (o.vinculo?.tipo === 'npc') return T.npcs.find(n => n.id === o.vinculo.id)?.valoresDer || null;
+    return null;   // token custom não tem ficha — rola o dado puro
+}
+
 export async function rolarIniciativa(o) {
-    const d20 = 1 + Math.floor(Math.random() * 20);
+    const dado = 1 + Math.floor(Math.random() * DADO_INICIATIVA);
+    const bonus = bonusIniciativa(fonteIniciativa(o));
+    const total = dado + bonus;
     const parts = (T.combate?.participantes || []).map(p => ({ ...p }));
     let p = participanteDoToken(o);
     if (p) {
         p = parts.find(x => x.id === p.id);
-        p.initiative = d20;
+        p.initiative = total;
     } else {
         // cria participante mínimo a partir do token
         const v = vitaisDoToken(o) || { hp: 10, hpMax: 10, ener: 5, enerMax: 5, san: 100, sanMax: 100 };
         const novo = {
             id: (o.vinculo?.tipo || 'tok') + '-' + Date.now(),
-            name: o.nome || 'Token', initiative: d20,
+            name: o.nome || 'Token', initiative: total,
             type: o.vinculo?.tipo === 'char' ? 'Jogador' : o.vinculo?.tipo === 'npc' ? 'NPC' : 'Inimigo',
             details: 'Adicionado pelo Tabuleiro',
             hpCurrent: v.hp, hpMax: v.hpMax, enerCurrent: v.ener, enerMax: v.enerMax,
@@ -145,7 +154,7 @@ export async function rolarIniciativa(o) {
     }
     try {
         await setDoc(refCombate(), { participantes: parts, atualizadoEm: Date.now() }, { merge: true });
-        toast(`🎲 Iniciativa de ${esc(o.nome || 'token')}: ${d20}`);
+        toast(`🎲 Iniciativa de ${esc(o.nome || 'token')}: ${total} (1d${DADO_INICIATIVA}: ${dado}${bonus ? ` ${bonus > 0 ? '+' : '−'} ${Math.abs(bonus)}` : ''})`);
     } catch (e) { toast('❌ Erro ao rolar iniciativa', 'danger'); }
 }
 
@@ -165,7 +174,7 @@ export function abrirMenuRadial(o, sx, sy) {
     if (o.bloqueado) {
         if (secreto) acoes.push({ ic: '🔒', tip: 'Desbloquear objeto', fn: () => window.tbDesbloquearObj?.(o.id) });
     } else if (secreto) {
-        acoes.push({ ic: '🎲', tip: 'Rolar iniciativa (d20)', fn: () => rolarIniciativa(o) });
+        acoes.push({ ic: '🎲', tip: `Rolar iniciativa (1d${DADO_INICIATIVA} + Iniciativa)`, fn: () => rolarIniciativa(o) });
         acoes.push({ ic: o.visao?.ativa ? '👁️' : '🙈', tip: 'Alternar visão', fn: () => updObj(o.id, { visao: { ...(o.visao||{}), ativa: !o.visao?.ativa } }) });
         acoes.push({ ic: o.luz?.ativa ? '🔦' : '💡', tip: 'Alternar luz', fn: () => updObj(o.id, { luz: { ...(o.luz||{ alcance: 3 }), ativa: !o.luz?.ativa } }) });
         acoes.push({ ic: o.invisivel ? '✨' : '👻', tip: o.invisivel ? 'Tornar visível' : 'Tornar invisível', fn: () => updObj(o.id, { invisivel: !o.invisivel }) });

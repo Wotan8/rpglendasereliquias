@@ -8,6 +8,7 @@ import {
     camadasVisiveis, objVisivel, popNavegacaoValida,
     fmtViagem, fmtDuracao, refViagemPorDia, camposRevelados, selecionar, politicaDeFog,
     alcanceDeVisao, fonteDoAlcance, DV_PERCEPCAO, DV_PERCEPCAO_VISUAL,
+    bonusIniciativa, DV_INICIATIVA, DADO_INICIATIVA,
     rotParaCanvas, anguloDoMovimento, deveAtualizarPasso, FOG_PASSO_CELULA, FOG_INTERVALO_MS,
     DRAG_WRITE_MS, DRAG_PASSO_CELULA, LERP_TOKEN_MS,
     ehEcoAtrasado, mapaSobPonto, T as TT,
@@ -508,4 +509,19 @@ assert.equal(configDoCanvasMudou(base, com({ exploracao: null, grid: { size: 100
 assert.equal(configDoCanvasMudou(null, base), true, 'primeira carga: invalida');
 assert.equal(configDoCanvasMudou({ ...base, id: 'outro' }, base), true, 'trocou de canvas: invalida');
 
-console.log('✅ tab-state: escala, unidades, larguraReal, cenário, paredes, vínculo de NPC, navegação, viagem, card, fog, alcance, cone, passo do fog, eco atrasado e cache de mapas OK');
+// ===== INICIATIVA (1d10 + VD) =====
+assert.equal(DADO_INICIATIVA, 10, 'a rolagem do mapa usa 1d10');
+// ficha do personagem: derivedTotals com a key do sistema
+assert.equal(bonusIniciativa({ [DV_INICIATIVA]: 4, PERCEPCAO: 9 }), 4);
+// NPC v2: espelho legado `INI` (mesma fonte de onde saem VIT/ENER/SAN)
+assert.equal(bonusIniciativa({ VIT: 30, INI: 3 }), 3, 'NPC usa o espelho legado INI');
+assert.equal(bonusIniciativa({ overrides: { [DV_INICIATIVA]: 5 } }), 5, 'NPC sem espelho cai no override');
+assert.equal(bonusIniciativa({ [DV_INICIATIVA]: 2, INI: 99 }), 2, 'key do sistema tem prioridade sobre o legado');
+// sem ficha / sem o VD / lixo: rola o dado puro, nunca NaN
+assert.equal(bonusIniciativa(null), 0, 'token custom não tem VD');
+assert.equal(bonusIniciativa({}), 0);
+assert.equal(bonusIniciativa({ [DV_INICIATIVA]: 'abc' }), 0, 'valor não numérico não vira NaN');
+assert.equal(bonusIniciativa({ [DV_INICIATIVA]: 0, INI: 7 }), 0, 'zero é um bônus válido, não "vazio"');
+assert.equal(bonusIniciativa({ [DV_INICIATIVA]: -2 }), -2, 'bônus negativo é respeitado');
+
+console.log('✅ tab-state: escala, unidades, larguraReal, cenário, paredes, vínculo de NPC, navegação, viagem, card, fog, alcance, cone, passo do fog, iniciativa, eco atrasado e cache de mapas OK');

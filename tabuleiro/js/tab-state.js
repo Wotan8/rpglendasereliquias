@@ -421,6 +421,21 @@ export function alcanceDeVisao(visao, derived, dia) {
     return dia ? base * MULT_VISAO_DIA : base;
 }
 
+// ===== INICIATIVA =====
+// Rolagem do mapa: 1d10 + o VD Iniciativa do personagem/NPC.
+// A ficha grava `derivedTotals.INICIATIVA`; o NPC v2 espelha o valor final em
+// `valoresDer.INI` (mesmo espelho legado de onde saem VIT/ENER/SAN aqui).
+export const DV_INICIATIVA = 'INICIATIVA';
+export const DADO_INICIATIVA = 10;
+
+/** Bônus de Iniciativa a partir dos VDs (ficha ou NPC). 0 quando não houver. */
+export function bonusIniciativa(fonte) {
+    if (!fonte) return 0;
+    const v = numOuNulo(fonte[DV_INICIATIVA]) ?? numOuNulo(fonte.INI)
+        ?? numOuNulo(fonte.overrides?.[DV_INICIATIVA]);
+    return v ?? 0;
+}
+
 /** De qual VD o alcance saiu — para explicar o número na UI. */
 export function fonteDoAlcance(visao, derived) {
     if (visao?.alcanceFonte !== 'percepcao') return 'fixo';
