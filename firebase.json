@@ -10,6 +10,7 @@
       "sistema antigo e lore/**",
       "**/__check-*",
       "**/*.test.mjs",
+      "BRIEFING.md",
       "temp_path.txt",
       "*.rules"
     ],
