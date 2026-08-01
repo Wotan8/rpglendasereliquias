@@ -1,7 +1,7 @@
 // =============================================
 // ÁREA MESAS — Mesa Selection, Auth, Players, Characters, EXP
 // =============================================
-import { db, collection, getDocs, getDoc, setDoc, deleteDoc, doc, addDoc, updateDoc, query, where } from './firebase-config.js';
+import { db, collection, getDocs, getDoc, setDoc, deleteDoc, doc, addDoc, updateDoc, query, where, orderBy, limit } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
@@ -36,7 +36,7 @@ window.switchMesaSubTab = function(subTabName) {
 
 // ===== SCREEN MANAGEMENT =====
 function showScreen(screenId) {
-    ['mesa-selection-screen','mesa-auth-screen','mesa-content'].forEach(id => {
+    ['mesa-selection-screen','mesa-content'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = id === screenId ? '' : 'none';
     });
@@ -47,6 +47,13 @@ async function loadMesas() {
     try {
         const snap = await getDocs(collection(db, 'mesas'));
         const mesas = []; snap.forEach(d => mesas.push({ id: d.id, ...d.data() }));
+        // Sessão mais recente de cada mesa, só para exibir no card.
+        await Promise.all(mesas.map(async m => {
+            try {
+                const s = await getDocs(query(collection(db, 'mesas', m.id, 'sessoes'), orderBy('numero', 'desc'), limit(1)));
+                if (!s.empty) m._sessao = s.docs[0].data();
+            } catch (e) { /* mesa sem sessões: card mostra "—" */ }
+        }));
         S.setAllMesas(mesas);
         renderMesaList();
     } catch (e) { console.error('❌ Erro mesas:', e); showAlert('❌ Erro ao carregar mesas', 'danger'); }
@@ -60,11 +67,18 @@ function renderMesaList() {
         return;
     }
     grid.innerHTML = S.allMesas.map(m => `
-        <div class="mesa-card" onclick="selectMesa('${m.id}')">
+        <div class="mesa-card">
             <div class="mesa-card-name">🎲 ${escapeHtml(m.nome || 'Sem nome')}</div>
             <div class="mesa-card-desc">👥 ${(m.jogadores||[]).length} jogador(es)</div>
+            <div class="mesa-card-desc" style="margin-top:4px">🎬 ${sessaoLabel(m._sessao)}</div>
             <div class="mesa-card-desc" style="font-size:.75rem;margin-top:4px">Criada em ${m.createdAt ? new Date(m.createdAt).toLocaleDateString('pt-BR') : '-'}</div>
         </div>`).join('');
+}
+
+const FASES = { preparo: 'em preparo', aoVivo: 'ao vivo', fechada: 'fechada' };
+function sessaoLabel(s) {
+    if (!s) return 'Nenhuma sessão ainda';
+    return `Sessão ${s.numero || '?'} — ${FASES[s.fase] || s.fase || '-'}`;
 }
 
 // ===== CREATE MESA =====
@@ -90,23 +104,18 @@ window.createMesa = async function() {
     } catch (e) { showAlert('❌ Erro: ' + e.message, 'danger'); }
 };
 
-// ===== SELECT & AUTH =====
-window.selectMesa = function(mesaId) {
-    const mesa = S.allMesas.find(m => m.id === mesaId);
-    if (!mesa) return;
-    S.setCurrentMesaId(mesaId);
-    S.setCurrentMesaData(mesa);
-    document.getElementById('mesaAuthName').textContent = mesa.nome;
-    document.getElementById('mesaPasswordInput').value = '';
-    showScreen('mesa-auth-screen');
-};
-
-window.backToMesaList = function() { showScreen('mesa-selection-screen'); };
-
+// ===== LOGIN (nome da mesa + senha) =====
 window.authenticateMesa = function() {
-    const pwd = document.getElementById('mesaPasswordInput')?.value;
-    if (!S.currentMesaData) return;
-    if (pwd !== S.currentMesaData.senha) { showAlert('❌ Senha incorreta', 'danger'); return; }
+    const nome = document.getElementById('mesaNameInput')?.value?.trim() || '';
+    const pwd = document.getElementById('mesaPasswordInput')?.value || '';
+    if (!nome || !pwd) { showAlert('⚠️ Preencha nome e senha', 'warning'); return; }
+    const mesa = S.allMesas.find(m => (m.nome || '').trim().toLowerCase() === nome.toLowerCase());
+    // Mesma mensagem para nome errado e senha errada: não entrega quais mesas existem.
+    if (!mesa || pwd !== mesa.senha) { showAlert('❌ Nome ou senha incorretos', 'danger'); return; }
+    S.setCurrentMesaId(mesa.id);
+    S.setCurrentMesaData(mesa);
+    document.getElementById('mesaNameInput').value = '';
+    document.getElementById('mesaPasswordInput').value = '';
     openMesa();
 };
 

@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="css/layout.css?v=4">
     <link rel="stylesheet" href="css/tabs.css?v=1">
     <link rel="stylesheet" href="css/modais.css?v=2">
-    <link rel="stylesheet" href="css/area-mesas.css?v=2">
+    <link rel="stylesheet" href="css/area-mesas.css?v=3">
     <link rel="stylesheet" href="css/area-npcs.css?v=5">
     <link rel="stylesheet" href="css/area-economica.css?v=2">
     <link rel="stylesheet" href="css/area-apoio.css?v=1">
@@ -74,16 +74,14 @@
                     <div id="mesasGrid" class="mesas-grid">
                         <div style="text-align:center;padding:50px;color:var(--muted);grid-column:1/-1">Carregando mesas...</div>
                     </div>
-                </div>
 
-                <!-- SCREEN 2: Mesa Auth -->
-                <div id="mesa-auth-screen" style="display:none">
-                    <div class="mesa-auth-box">
-                        <button class="btn btn-secondary btn-small" onclick="backToMesaList()" style="align-self:flex-start">← Voltar</button>
+                    <!-- LOGIN DA MESA -->
+                    <div class="mesa-auth-box" style="margin-top:24px">
                         <div style="font-size:2.5rem;margin:10px 0">🔒</div>
-                        <h2 id="mesaAuthName" style="font-size:1.2rem;font-weight:800;color:var(--light);margin-bottom:4px"></h2>
-                        <p style="color:var(--muted);font-size:.88rem;margin-bottom:20px">Digite a senha para acessar esta mesa</p>
-                        <input type="password" class="form-input" id="mesaPasswordInput" placeholder="Senha da mesa..." style="text-align:center;max-width:300px" onkeydown="if(event.key==='Enter')authenticateMesa()">
+                        <h2 style="font-size:1.2rem;font-weight:800;color:var(--light);margin-bottom:4px">Login</h2>
+                        <p style="color:var(--muted);font-size:.88rem;margin-bottom:20px">Digite o nome e a senha da mesa para entrar</p>
+                        <input type="text" class="form-input" id="mesaNameInput" placeholder="Nome da mesa..." style="text-align:center;max-width:300px" onkeydown="if(event.key==='Enter')authenticateMesa()">
+                        <input type="password" class="form-input" id="mesaPasswordInput" placeholder="Senha da mesa..." style="text-align:center;max-width:300px;margin-top:8px" onkeydown="if(event.key==='Enter')authenticateMesa()">
                         <button class="btn btn-primary" onclick="authenticateMesa()" style="margin-top:12px">🔓 Entrar</button>
                     </div>
                 </div>
@@ -741,5 +739,5 @@
     <!-- MAIN MODULE -->
     <script src="../ficha-v1.7_1/js/system-data-loader.js"></script>
     <script src="../shared/equip-slots.js?v=1"></script>
-    <script type="module" src="js/main.js?v=6"></script>
+    <script type="module" src="js/main.js?v=7"></script>
 </body>
