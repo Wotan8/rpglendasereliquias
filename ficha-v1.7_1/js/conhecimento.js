@@ -100,8 +100,9 @@ async function carregarConhecimento() {
  * peculiaridade dele. Livro publicado no Worldbuilding NAO basta — "public"
  * so diz que existe para jogadores, nao que este personagem tem acesso.
  *
- * Formato salvo pelo Painel do Criador:
- *   livroVinculado = { bookId, capituloIds: [] }   // vazio = livro inteiro
+ * Uma fonte pode carregar mais de um livro (Druida: Alquimancia + Totemancia).
+ * Os dois formatos salvos vem normalizados por window.lvNormalizar:
+ *   { bookId, capituloIds: [] }   // capituloIds vazio = livro inteiro
  *
  * Retorna Map bookId -> Set(capituloIds) ou null quando o livro inteiro vale.
  */
@@ -121,12 +122,12 @@ function _livrosDoPersonagem() {
 
     const mapa = new Map();
     for (const f of fontes) {
-        const lv = f && f.livroVinculado;
-        if (!lv || !lv.bookId) continue;
-        const caps = Array.isArray(lv.capituloIds) ? lv.capituloIds.filter(Boolean) : [];
-        if (!mapa.has(lv.bookId)) mapa.set(lv.bookId, caps.length ? new Set(caps) : null);
-        else if (mapa.get(lv.bookId) && caps.length) caps.forEach(c => mapa.get(lv.bookId).add(c));
-        else mapa.set(lv.bookId, null);   // outra fonte libera o livro inteiro
+        for (const lv of window.lvNormalizar(f)) {
+            const caps = Array.isArray(lv.capituloIds) ? lv.capituloIds.filter(Boolean) : [];
+            if (!mapa.has(lv.bookId)) mapa.set(lv.bookId, caps.length ? new Set(caps) : null);
+            else if (mapa.get(lv.bookId) && caps.length) caps.forEach(c => mapa.get(lv.bookId).add(c));
+            else mapa.set(lv.bookId, null);   // outra fonte libera o livro inteiro
+        }
     }
     return mapa;
 }

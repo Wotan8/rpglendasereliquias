@@ -10,10 +10,13 @@
      • criar-personagem → "Ver detalhes" da Raça / Classe / Tribo
      • ficha-v1.7_1     → ícone ℹ️ ao lado dos selects
 
-   Um botão só ("Abrir livro X"). Livro de um capítulo abre direto no
-   texto; livro de vários abre no sumário, e cada capítulo tem volta.
+   Um botão por livro ("Abrir livro X"). Livro de um capítulo abre direto
+   no texto; livro de vários abre no sumário, e cada capítulo tem volta.
 
-   Formato salvo no doc: livroVinculado = { bookId, capituloIds: [] }
+   Dois formatos convivem no doc, sem migração:
+     livroVinculado  = { bookId, capituloIds: [] }    ← legado, um livro
+     livrosVinculados = [{ bookId, capituloIds: [] }] ← atual, vários
+   Quem lê passa pelo normalizar() (window.lvNormalizar).
    ===================================================================== */
 (function () {
     let _p = null;        // promise do carregamento (uma vez por página)
@@ -39,6 +42,17 @@
         return _p;
     }
 
+    /**
+     * Vínculos da entidade, sempre como array. O array novo manda quando
+     * existe (mesmo vazio); sem ele, cai no objeto único do formato legado.
+     */
+    function normalizar(entidade) {
+        const lista = Array.isArray(entidade?.livrosVinculados)
+            ? entidade.livrosVinculados
+            : (entidade?.livroVinculado ? [entidade.livroVinculado] : []);
+        return lista.filter(v => v && v.bookId);
+    }
+
     /** Capítulos que o vínculo libera. Lista vazia de IDs = o livro inteiro. */
     function capitulosDo(vinc, caps) {
         const ids = Array.isArray(vinc.capituloIds) ? vinc.capituloIds : [];
@@ -51,29 +65,36 @@
      * devolve string vazia e nada é carregado.
      */
     function secaoHTML(entidade) {
-        const vinc = entidade?.livroVinculado;
-        if (!vinc || !vinc.bookId) return '';
+        const vincs = normalizar(entidade);
+        if (!vincs.length) return '';
         const slot = 'lvSec' + (++_seq);
-        const idx = _vinculos.push(vinc) - 1;
+        const base = _vinculos.length;
+        _vinculos.push(...vincs);
 
         carregar().then(({ livros, caps }) => {
             const el = document.getElementById(slot);
             if (!el) return;
-            const livro = livros.find(l => l.id === vinc.bookId);
-            const lista = livro ? capitulosDo(vinc, caps) : [];
-            if (!lista.length) { el.remove(); return; }
 
-            el.innerHTML = `
-                <div class="detail-section">
-                    <div class="detail-section-title">📖 Livro vinculado</div>
+            const blocos = vincs.map((vinc, i) => {
+                const livro = livros.find(l => l.id === vinc.bookId);
+                const lista = livro ? capitulosDo(vinc, caps) : [];
+                if (!lista.length) return '';
+                return `
                     ${livro.description ? `<div class="detail-section-text">${esc(livro.description)}</div>` : ''}
                     <button type="button" class="btn" style="margin-top:10px;font-weight:700"
-                        onclick="window.lvAbrirLivro(${idx})">
+                        onclick="window.lvAbrirLivro(${base + i})">
                         📖 Abrir livro “${esc(livro.title || 'Sem título')}”
                     </button>
                     <div style="font-size:.78rem;opacity:.7;margin-top:6px">
                         ${lista.length} ${lista.length === 1 ? 'capítulo disponível' : 'capítulos disponíveis'} para leitura
-                    </div>
+                    </div>`;
+            }).filter(Boolean);
+            if (!blocos.length) { el.remove(); return; }
+
+            el.innerHTML = `
+                <div class="detail-section">
+                    <div class="detail-section-title">📖 ${blocos.length === 1 ? 'Livro vinculado' : 'Livros vinculados'}</div>
+                    ${blocos.join('<div style="height:1px;background:var(--soft,#333);margin:14px 0"></div>')}
                 </div>`;
         }).catch(e => console.error('📖 Livro vinculado:', e));
 
@@ -162,6 +183,7 @@
         e.stopPropagation();
     }, true);
 
+    window.lvNormalizar = normalizar;
     window.lvSecaoHTML = secaoHTML;
     window.lvAbrirLivro = abrirLivro;
     window.lvLerCapitulo = lerCapitulo;

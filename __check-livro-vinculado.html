@@ -24,6 +24,8 @@
     <div id="alvo2"></div>
     <h3>Tribo sem livro (nada deve aparecer)</h3>
     <div id="alvo3"></div>
+    <h3>Classe com DOIS livros (formato novo)</h3>
+    <div id="alvo4"></div>
 
     <script src="shared/livro-vinculado.js"></script>
     <script>
@@ -41,13 +43,24 @@
         };
         window.lvSeedLivros(ACERVO);
 
+        // Formato legado (objeto único) — docs em produção seguem assim para sempre.
         const raca = { nome: 'Elorin', livroVinculado: { bookId: 'b1', capituloIds: ['c1', 'c3'] } };
         const classe = { nome: 'Guerreiro', livroVinculado: { bookId: 'b2', capituloIds: [] } };
         const tribo = { nome: 'Comuno' };
+        // Formato novo (array) — e o legado junto, para provar que o array manda.
+        const druida = {
+            nome: 'Druida',
+            livroVinculado: { bookId: 'b1', capituloIds: ['c2'] },
+            livrosVinculados: [
+                { bookId: 'b1', capituloIds: ['c1'] },
+                { bookId: 'b2', capituloIds: [] },
+            ],
+        };
 
         document.getElementById('alvo1').innerHTML = window.lvSecaoHTML(raca);
         document.getElementById('alvo2').innerHTML = window.lvSecaoHTML(classe);
         document.getElementById('alvo3').innerHTML = window.lvSecaoHTML(tribo);
+        document.getElementById('alvo4').innerHTML = window.lvSecaoHTML(druida);
 
         const res = document.getElementById('res');
         const diz = (ok, txt) => res.insertAdjacentHTML('beforeend',
@@ -101,6 +114,29 @@
             ov = document.getElementById('lvLeitor');
             diz(ov && ov.textContent.includes('Postura de Combate') && !ov.textContent.includes('Sumário'),
                 'livro de 1 capítulo abre direto no texto');
+            ov.remove();
+
+            // ===== Formato novo: dois livros na mesma entidade =====
+            const sec4 = document.getElementById('alvo4');
+            const botoes4 = sec4.querySelectorAll('button');
+            diz(botoes4.length === 2, `entidade com 2 livros mostra 2 botões (veio ${botoes4.length})`);
+            diz(sec4.textContent.includes('Livros vinculados'), 'título vai para o plural com vários livros');
+            diz(botoes4[0]?.textContent.includes('Crônicas de Vasteluna')
+                && botoes4[1]?.textContent.includes('Manual do Guerreiro'), 'um botão para cada livro, na ordem');
+            diz(!sec4.textContent.includes('A Queda'),
+                'array novo manda: o livroVinculado legado da mesma entidade é ignorado');
+
+            // Cada botão abre o seu próprio livro (índices independentes).
+            botoes4[1].click();
+            await tick(); await tick();
+            ov = document.getElementById('lvLeitor');
+            diz(ov && ov.textContent.includes('Postura de Combate'), 'o 2º botão abre o 2º livro');
+            ov.remove();
+
+            botoes4[0].click();
+            await tick(); await tick();
+            ov = document.getElementById('lvLeitor');
+            diz(ov && ov.textContent.includes('Texto do capítulo'), 'o 1º botão abre o 1º livro');
             ov.remove();
         })();
     </script>

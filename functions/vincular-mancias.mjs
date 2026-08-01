@@ -20,6 +20,10 @@ const APLICAR = process.argv.includes('--apply');
 const norm = (s) => String(s ?? '').toLowerCase()
   .normalize('NFD').replace(/[̀-ͯ]/g, '');
 
+// Mesma leitura de shared/livro-vinculado.js: array novo manda, senão o legado.
+const vinculosDe = (e) => (Array.isArray(e.livrosVinculados) ? e.livrosVinculados
+  : (e.livroVinculado ? [e.livroVinculado] : [])).filter(v => v && v.bookId);
+
 const books = (await db.collection('worldbuilding-books').get()).docs.map(d => ({ id: d.id, ...d.data() }));
 const chapters = (await db.collection('worldbuilding-articles').get()).docs.map(d => ({ id: d.id, ...d.data() }));
 const classes = (await db.collection('system/data/classes').get()).docs.map(d => ({ id: d.id, ...d.data() }));
@@ -42,23 +46,33 @@ for (const { book, mancia } of mancias) {
   for (const cls of usam) plano.push({ cls, book, mancia, caps: chapters.filter(c => c.bookId === book.id).length });
 }
 
+// O vínculo é acrescentado, nunca substitui: a mesma classe pode já ter
+// outro livro por outro motivo, e pode usar mais de uma mancia.
+const novos = new Map();   // classeId → lista final de vínculos
+for (const p of plano) {
+  const lista = novos.get(p.cls.id) || vinculosDe(p.cls);
+  p.jaTinha = lista.some(v => v.bookId === p.book.id);
+  if (!p.jaTinha) novos.set(p.cls.id, [...lista, { bookId: p.book.id, capituloIds: [] }]);
+}
+
 console.log(`\n===== PLANO (${plano.length} vínculos) =====`);
 for (const p of plano) {
-  const antes = p.cls.livroVinculado?.bookId;
+  const antes = vinculosDe(p.cls).length;
   console.log(`• ${p.cls.nome.padEnd(22)} → "${p.book.title}" (${p.caps} cap., livro inteiro)` +
-    `${antes ? `   [substitui ${antes}]` : ''}${p.book.public === true ? '' : '   ⚠️ livro NÃO público no Cronista'}`);
+    `${p.jaTinha ? '   [já vinculado — nada a fazer]' : (antes ? `   [soma aos ${antes} livro(s) que já tem]` : '')}` +
+    `${p.book.public === true ? '' : '   ⚠️ livro NÃO público no Cronista'}`);
 }
 const semLivro = classes.filter(c => !plano.some(p => p.cls.id === c.id));
 console.log(`\nSem mancia (ficam sem livro): ${semLivro.map(c => c.nome).join(', ') || '—'}`);
 
 if (!APLICAR) { console.log('\n(dry-run — rode com --apply para gravar)'); process.exit(); }
 
-for (const p of plano) {
-  await db.doc(`system/data/classes/${p.cls.id}`).update({
-    livroVinculado: { bookId: p.book.id, capituloIds: [] },
+for (const [clsId, lista] of novos) {
+  await db.doc(`system/data/classes/${clsId}`).update({
+    livrosVinculados: lista,
     updatedAt: admin.firestore.Timestamp.now(),
   });
-  console.log(`✅ ${p.cls.nome} → ${p.book.title}`);
+  console.log(`✅ ${classes.find(c => c.id === clsId).nome} → ${lista.length} livro(s) vinculado(s)`);
 }
-console.log(`\n${plano.length} classe(s) atualizada(s).`);
+console.log(`\n${novos.size} classe(s) atualizada(s).`);
 process.exit();

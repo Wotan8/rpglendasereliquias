@@ -23,9 +23,12 @@ for (const b of books.sort((a, b2) => (a.order ?? 0) - (b2.order ?? 0))) {
 
 console.log('\n===== CLASSES (system/data/classes) =====');
 for (const c of classes.sort((a, b2) => (a.nome || '').localeCompare(b2.nome || ''))) {
-  const v = c.livroVinculado;
+  // Array novo manda; sem ele, o objeto único do formato legado.
+  const vs = (Array.isArray(c.livrosVinculados) ? c.livrosVinculados
+    : (c.livroVinculado ? [c.livroVinculado] : [])).filter(v => v && v.bookId);
   console.log(`• "${c.nome}"  id=${c.id}  publicado=${c.publicado !== false}  usaRunomancia=${c.usaRunomancia === true}`);
   console.log(`    arquetipo: ${c.arquetipo || '—'} | especialidade: ${String(c.especialidade || '—').replace(/\s+/g, ' ').slice(0, 120)}`);
-  console.log(`    livroVinculado: ${v ? `${v.bookId} (caps: ${(v.capituloIds || []).length || 'todos'})` : '—'}`);
+  console.log(`    livros vinculados (${vs.length}${Array.isArray(c.livrosVinculados) ? '' : ', formato legado'}): ` +
+    (vs.map(v => `${v.bookId} (caps: ${(v.capituloIds || []).length || 'todos'})`).join(' | ') || '—'));
 }
 process.exit();

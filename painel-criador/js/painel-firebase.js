@@ -82,7 +82,7 @@ const MODULE_DEFS = {
             { key: 'curiosidades', label: 'Curiosidades', type: 'tags', placeholder: 'Digite e pressione Enter' },
             { key: 'imagemUrl', label: 'URL da Imagem', type: 'text', placeholder: 'https://...' },
             { key: 'ordem', label: 'Ordem no Select', type: 'number', placeholder: '0' },
-            { key: 'livroVinculado', label: '📖 Livro Vinculado (Worldbuilding)', type: 'book_link' },
+            { key: 'livrosVinculados', label: '📖 Livros Vinculados (Worldbuilding)', type: 'book_link' },
             { key: 'partesDoCorpo', label: '🦴 Anatomia — Partes do Corpo', type: 'body_parts_editor' },
         ]
     },
@@ -118,7 +118,7 @@ const MODULE_DEFS = {
             { key: 'testesDeClasse', label: '🎯 Testes de Classe (Rolagens)', type: 'class_tests_editor' },
             { key: 'usaRunomancia', label: 'ᛟ Usa Runomancia? (ON/OFF)', type: 'boolean' },
             { key: 'modulosDaClasse', label: '📦 Módulos da Classe', type: 'class_module_linker' },
-            { key: 'livroVinculado', label: '📖 Livro Vinculado (Worldbuilding)', type: 'book_link' },
+            { key: 'livrosVinculados', label: '📖 Livros Vinculados (Worldbuilding)', type: 'book_link' },
             { key: 'imagemUrl', label: 'URL da Imagem', type: 'text', placeholder: 'https://...' },
         ]
     },
@@ -138,7 +138,7 @@ const MODULE_DEFS = {
                     { key: 'opcao', label: 'Opção alternativa', type: 'text' }
                 ]
             },
-            { key: 'livroVinculado', label: '📖 Livro Vinculado (Worldbuilding)', type: 'book_link' },
+            { key: 'livrosVinculados', label: '📖 Livros Vinculados (Worldbuilding)', type: 'book_link' },
             { key: 'cultura', label: 'Cultura e Costumes', type: 'textarea', required: true },
             { key: 'governo', label: 'Governo', type: 'textarea', required: true },
             { key: 'economia', label: 'Economia', type: 'textarea', required: true },
@@ -2240,7 +2240,9 @@ function buildField(field, value, existingData) {
 
     // === 📖 LIVRO VINCULADO (raça / classe / tribo) ===
     if (field.type === 'book_link') {
-        wrap.innerHTML = _buildBookLinkHTML(field.key, field.label, value);
+        // Normaliza aqui (e não pelo `value`) para a entidade que só tem o
+        // campo legado `livroVinculado` abrir com ele já na lista.
+        wrap.innerHTML = _buildBookLinkHTML(field.key, field.label, window.lvNormalizar(existingData));
         return wrap;
     }
 
@@ -2998,47 +3000,69 @@ function _buildWbChapterSelectorHTML(fieldKey, label, value, required) {
 }
 
 // ---------------------------------------------------------------------
-// 📖 LIVRO VINCULADO — um livro por raça/classe/tribo + quais capítulos
-// o jogador enxerga. Nenhum capítulo marcado = o livro inteiro.
-// Salvo como { bookId, capituloIds: [] } e lido por shared/livro-vinculado.js.
+// 📖 LIVROS VINCULADOS — N livros por raça/classe/tribo + quais capítulos
+// o jogador enxerga em cada um. Nenhum capítulo marcado = o livro inteiro.
+// Salvo como livrosVinculados: [{ bookId, capituloIds: [] }] e lido por
+// shared/livro-vinculado.js. Entidade com o campo legado `livroVinculado`
+// abre com ele na lista e passa a gravar no campo novo — o legado fica no
+// doc, intocado, e é ignorado assim que o array existe.
 // ---------------------------------------------------------------------
-function _buildBookLinkHTML(fieldKey, label, value) {
-    const vinc = (value && typeof value === 'object') ? value : {};
+function _buildBookLinkHTML(fieldKey, label, vincs) {
+    return `
+        <label>${escapeHtml(label)}</label>
+        <div id="lvRows_${fieldKey}">${(vincs || []).map(v => _buildBookLinkRowHTML(fieldKey, v)).join('')}</div>
+        <button type="button" class="btn-array-add" onclick="window._lvAddBook('${fieldKey}')">➕ Adicionar livro</button>
+        <div class="cm-hint">Sem nenhum capítulo marcado, o livro inteiro fica visível para o jogador.</div>
+    `;
+}
+
+function _buildBookLinkRowHTML(fieldKey, vinc) {
+    vinc = vinc || {};
     const opts = '<option value="">— nenhum livro —</option>' + wbBooksCache
         .map(b => `<option value="${escapeHtml(b.id)}" ${vinc.bookId === b.id ? 'selected' : ''}>📗 ${escapeHtml(b.title || 'Livro sem título')}</option>`)
         .join('');
 
     return `
-        <label>${escapeHtml(label)}</label>
-        <select id="field_${fieldKey}_book" onchange="window._lvOnBookChange('${fieldKey}')">${opts}</select>
-        <div class="multi-select-container" style="max-height:200px;overflow-y:auto;margin-top:8px" id="lvCaps_${fieldKey}">
-            ${_buildBookChaptersHTML(fieldKey, vinc.bookId, Array.isArray(vinc.capituloIds) ? vinc.capituloIds : [])}
-        </div>
-        <div class="cm-hint">Sem nenhum capítulo marcado, o livro inteiro fica visível para o jogador.</div>
-    `;
+        <div class="lv-row" data-lv-row="${fieldKey}" style="border:1px solid var(--soft,#333);border-radius:8px;padding:10px;margin-bottom:8px">
+            <div style="display:flex;gap:8px;align-items:center">
+                <select style="flex:1" data-lv-book onchange="window._lvOnBookChange(this)">${opts}</select>
+                <button type="button" class="btn-array-remove" onclick="this.closest('.lv-row').remove()">✕</button>
+            </div>
+            <div class="multi-select-container" style="max-height:200px;overflow-y:auto;margin-top:8px" data-lv-caps>
+                ${_buildBookChaptersHTML(vinc.bookId, Array.isArray(vinc.capituloIds) ? vinc.capituloIds : [])}
+            </div>
+        </div>`;
 }
 
-function _buildBookChaptersHTML(fieldKey, bookId, marcados) {
+function _buildBookChaptersHTML(bookId, marcados) {
     if (!bookId) return '<div class="cm-hint" style="margin:0">Escolha um livro para liberar capítulos.</div>';
     const caps = wbChaptersCache.filter(c => c.bookId === bookId);
     if (!caps.length) return '<div class="cm-hint" style="margin:0">⚠️ Este livro ainda não tem capítulos.</div>';
     return caps.map((c, i) => `
-        <label class="multi-select-option"><input type="checkbox" data-lv-cap="${fieldKey}" value="${escapeHtml(c.id)}"
+        <label class="multi-select-option"><input type="checkbox" value="${escapeHtml(c.id)}"
             ${marcados.includes(c.id) ? 'checked' : ''}> ${i + 1}. ${escapeHtml(c.title || 'Sem título')}</label>`).join('');
 }
 
+window._lvAddBook = function (fieldKey) {
+    document.getElementById(`lvRows_${fieldKey}`)
+        ?.insertAdjacentHTML('beforeend', _buildBookLinkRowHTML(fieldKey, null));
+};
+
 // Trocar de livro zera os capítulos marcados (eram de outro livro).
-window._lvOnBookChange = function (fieldKey) {
-    const box = document.getElementById(`lvCaps_${fieldKey}`);
-    const bookId = document.getElementById(`field_${fieldKey}_book`)?.value || '';
-    if (box) box.innerHTML = _buildBookChaptersHTML(fieldKey, bookId, []);
+window._lvOnBookChange = function (sel) {
+    const box = sel.closest('.lv-row')?.querySelector('[data-lv-caps]');
+    if (box) box.innerHTML = _buildBookChaptersHTML(sel.value, []);
 };
 
 function _collectBookLink(fieldKey) {
-    const bookId = document.getElementById(`field_${fieldKey}_book`)?.value || '';
-    if (!bookId) return null;
-    const capituloIds = Array.from(document.querySelectorAll(`[data-lv-cap="${fieldKey}"]:checked`)).map(cb => cb.value);
-    return { bookId, capituloIds };
+    return Array.from(document.querySelectorAll(`[data-lv-row="${fieldKey}"]`)).map(row => {
+        const bookId = row.querySelector('[data-lv-book]')?.value || '';
+        if (!bookId) return null;
+        return {
+            bookId,
+            capituloIds: Array.from(row.querySelectorAll('[data-lv-caps] input:checked')).map(cb => cb.value),
+        };
+    }).filter(Boolean);
 }
 
 window._knSyncChapterTitle = function (sel) {
