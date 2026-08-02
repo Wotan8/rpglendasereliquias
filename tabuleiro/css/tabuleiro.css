@@ -92,23 +92,33 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 .tb-mini-btn.tb-danger:hover { background: rgba(201, 79, 92,.25); }
 
 /* ===== Barra de ferramentas lateral ===== */
+/* São 15 botões + 4 separadores numa coluna só: em altura fixa de 40px a barra
+   pede ~730px de tela e vazava por baixo do player numa janela comum. Botão e
+   respiro acompanham a ALTURA da janela (o eixo que aperta), com teto no
+   tamanho de antes e piso no que ainda dá para acertar com o dedo — assim a
+   barra inteira cabe até em ~500px de altura sem rolagem, sem wrap e sem mexer
+   no `left` das sub-barras. */
 .tb-toolbar {
+    --tb-tool-size: clamp(24px, 4.4vh, 40px);
+    --tb-tool-gap: clamp(2px, .6vh, 6px);
     position: fixed; left: 10px; top: 60px; z-index: 45;
-    display: flex; flex-direction: column; gap: 6px;
-    background: var(--tb-panel); border: 1px solid var(--tb-border); border-radius: 12px; padding: 8px 6px;
+    display: flex; flex-direction: column; gap: var(--tb-tool-gap);
+    background: var(--tb-panel); border: 1px solid var(--tb-border); border-radius: 12px;
+    padding: var(--tb-tool-gap) 6px;
     box-shadow: 0 8px 24px rgba(0,0,0,.45);
 }
-.tb-toolbar .tb-sep { height: 1px; background: var(--tb-border); margin: 3px 4px; }
+.tb-toolbar .tb-sep { height: 1px; background: var(--tb-border); margin: 0 4px; }
 .tb-tool {
-    width: 40px; height: 40px; border-radius: 9px; border: 1px solid transparent;
-    background: none; color: var(--tb-light); font-size: 1.15rem; cursor: pointer;
+    width: var(--tb-tool-size); height: var(--tb-tool-size);
+    border-radius: 9px; border: 1px solid transparent;
+    background: none; color: var(--tb-light); font-size: clamp(.85rem, 2.2vh, 1.15rem); cursor: pointer;
     display: flex; align-items: center; justify-content: center; position: relative;
 }
 .tb-tool:hover { background: var(--tb-panel2); border-color: var(--tb-border); }
 .tb-tool.active { background: rgba(91, 63, 184,.22); border-color: var(--tb-primary); }
 .tb-tool[data-tip]:hover::after {
     content: attr(data-tip);
-    position: absolute; left: 50px; top: 50%; transform: translateY(-50%);
+    position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%);
     background: #0f1420; border: 1px solid var(--tb-border); color: var(--tb-light);
     padding: 5px 10px; border-radius: 8px; font-size: .74rem; white-space: nowrap; z-index: 60;
 }

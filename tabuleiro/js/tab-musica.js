@@ -27,7 +27,7 @@ const tocadores = new Map();   // faixaId -> tocador (áudio ou YouTube)
 // incorporar seria recriado a cada snapshot, num laço de retentativa.
 const falhas = new Map();
 let barra = null, caixaYT = null, caixaUI = null;
-let recolhida = false;
+let recolhida = true;   // abre recolhido: o player aberto tapa a barra de ferramentas
 let bloqueado = false;      // navegador barrou o autoplay (precisa de um clique)
 let volumeLocal = 1;        // por dispositivo — NÃO sincroniza
 let timerVol = null;
