@@ -153,6 +153,10 @@ function saveToStorage() {
 /* ===== LOAD FROM DATA (reusável: chamada do localStorage e do Firebase) ===== */
 function loadFromData(d) {
     try {
+        // Livro que o MESTRE amarrou neste personagem (Tabuleiro → 📖 Livros →
+        // 🎭 Vincular). Só entra na aba Conhecimento; a ficha nunca grava isso de
+        // volta (o save é merge), então o vínculo do mestre não se perde aqui.
+        state.livrosVinculados = d.livrosVinculados || [];
         if (d.dots) { state.dots = d.dots; document.querySelectorAll('.dots5[data-attr]').forEach(c => refreshDots(c, c.dataset.attr)); }
         if (d.fields) Object.entries(d.fields).forEach(([k, v]) => { const el = document.querySelector(`[data-key="${k}"]`); if (el) el.value = v; });
         if (d.notes) { state.notes = d.notes; renderNotes(); }

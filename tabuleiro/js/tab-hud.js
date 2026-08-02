@@ -10,6 +10,7 @@ import { T, esc, toast, markDirty, uid, can, selecionar, bonusIniciativa, DADO_I
 import { refCombate } from './tab-main.js';
 import { updObj, delObj, abrirPropriedades } from './tab-objects.js';
 import { SENSORES } from './tab-fog.js';
+import { cenaAtiva, comCenaAtivaPatch } from '../../shared/combate-cenas.js';
 
 // charId -> { hp, hpMax, ener, enerMax, san, sanMax, conds:[{icone,nome}] }
 export const VITAIS = new Map();
@@ -82,7 +83,7 @@ export function vitaisDoToken(o) {
 }
 
 export function participanteDoToken(o) {
-    const parts = T.combate?.participantes || [];
+    const parts = cenaAtiva(T.combate).participantes || [];
     if (o.vinculo?.tipo === 'char') return parts.find(p => p.characterId === o.vinculo.id) || null;
     if (o.vinculo?.tipo === 'npc') return parts.find(p => p.npcId === o.vinculo.id) || null;
     return parts.find(p => p.isCustom && p.name === o.nome) || null;
@@ -104,9 +105,11 @@ export function barrasVisiveis(o) {
 
 /** Token do participante ativo do combate (anel pulsante). */
 export function tokenAtivoDoCombate() {
-    const c = T.combate;
+    const c = T.combate && cenaAtiva(T.combate);
     if (!c || !(c.participantes || []).length) return null;
-    if (T.mode === 'public' && !T.estado?.combateVisivelPublico) return null;
+    // O anel de turno vale no público também: é a informação mais básica da mesa
+    // ("é a sua vez") e não vaza nada — token fora da visão nem chega a ser
+    // desenhado. O painel de combate continua preso ao `combateVisivelPublico`.
     const parts = c.participantes.slice().sort((a, b) => (b.initiative||0) - (a.initiative||0));
     const p = parts[(c.turnoAtual || 0) % parts.length];
     if (!p) return null;
@@ -131,7 +134,7 @@ export async function rolarIniciativa(o) {
     const dado = 1 + Math.floor(Math.random() * DADO_INICIATIVA);
     const bonus = bonusIniciativa(fonteIniciativa(o));
     const total = dado + bonus;
-    const parts = (T.combate?.participantes || []).map(p => ({ ...p }));
+    const parts = (cenaAtiva(T.combate).participantes || []).map(p => ({ ...p }));
     let p = participanteDoToken(o);
     if (p) {
         p = parts.find(x => x.id === p.id);
@@ -153,7 +156,7 @@ export async function rolarIniciativa(o) {
         parts.push(novo);
     }
     try {
-        await setDoc(refCombate(), { participantes: parts, atualizadoEm: Date.now() }, { merge: true });
+        await setDoc(refCombate(), { ...comCenaAtivaPatch(T.combate, { participantes: parts }), atualizadoEm: Date.now() }, { merge: true });
         toast(`🎲 Iniciativa de ${esc(o.nome || 'token')}: ${total} (1d${DADO_INICIATIVA}: ${dado}${bonus ? ` ${bonus > 0 ? '+' : '−'} ${Math.abs(bonus)}` : ''})`);
     } catch (e) { toast('❌ Erro ao rolar iniciativa', 'danger'); }
 }
@@ -224,10 +227,10 @@ async function adicionarCondicao(o) {
         // Fallback caso o módulo de combate não esteja carregado
         const nome = prompt('Condição (ex: Envenenado, Caído):');
         if (!nome) return;
-        const parts = (T.combate?.participantes || []).map(pp => ({ ...pp }));
+        const parts = (cenaAtiva(T.combate).participantes || []).map(pp => ({ ...pp }));
         const pp = parts.find(x => x.id === p.id); if (!pp) return;
         pp.condicoes = [...(pp.condicoes || []), nome.trim()];
-        try { await setDoc(refCombate(), { participantes: parts, atualizadoEm: Date.now() }, { merge: true }); }
+        try { await setDoc(refCombate(), { ...comCenaAtivaPatch(T.combate, { participantes: parts }), atualizadoEm: Date.now() }, { merge: true }); }
         catch (e) { toast('❌ Erro', 'danger'); }
     }
 }

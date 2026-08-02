@@ -8,8 +8,9 @@
 // Colheita: frentes avançam/recuam (computeAvanco compartilhado), resumo,
 //           fase 'fechada'. Segredos não revelados herdam para a próxima.
 // =============================================
-import { db, collection, getDocs, doc, addDoc, updateDoc, setDoc, query, where, orderBy, limit } from './firebase-config.js';
+import { db, collection, getDocs, getDoc, doc, addDoc, updateDoc, setDoc, query, where, orderBy, limit } from './firebase-config.js';
 import * as S from './state.js';
+import { comCena, comCenaNova } from '../../shared/combate-cenas.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { computeAvanco } from './area-mesas-frentes.js';
 
@@ -435,10 +436,18 @@ window.sesEncontroExcluir = async function(encId) {
 
 window.sesEncontroIniciar = async function(encId) {
     const enc = (_sessao.encontros || []).find(x => x.id === encId); if (!enc) return;
-    if (!confirm(`Iniciar "${enc.nome}"? Isto substitui o combate atual da mesa.`)) return;
+    if (!confirm(`Iniciar "${enc.nome}"? Isto abre uma cena de combate com o nome do encontro.`)) return;
     try {
-        await setDoc(doc(db, 'mesas', S.currentMesaId, 'tabuleiro-meta', 'combate'),
-            { participantes: enc.participantes || [], turnoAtual: 0, rodada: 1, atualizadoEm: Date.now() }, { merge: true });
+        // O encontro vira uma CENA nova (as outras continuam armadas). Precisa do
+        // doc atual para não derrubar as cenas existentes — uma leitura, e só
+        // quando o mestre inicia um encontro de verdade.
+        const ref = doc(db, 'mesas', S.currentMesaId, 'tabuleiro-meta', 'combate');
+        const atual = (await getDoc(ref)).data() || null;
+        const novo = comCenaNova(atual, 'enc-' + encId, enc.nome || 'Encontro');
+        await setDoc(ref, {
+            ...comCena(novo, 'enc-' + encId, { participantes: enc.participantes || [] }),
+            atualizadoEm: Date.now(),
+        }, { merge: true });
         if (window._loadCombatFromMesa) window._loadCombatFromMesa();
         showAlert('⚔️ Encontro iniciado — combate sincronizado com o Tabuleiro', 'success');
     } catch (e) { showAlert('❌ Erro: ' + e.message, 'danger'); }

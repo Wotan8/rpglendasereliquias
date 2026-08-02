@@ -113,6 +113,9 @@ function _livrosDoPersonagem() {
     const acha = (lista, nome) => nome && (lista || []).find(d => d.nome === nome || d.id === nome);
 
     const fontes = [
+        // o proprio personagem e uma fonte: e onde o mestre amarra um livro
+        // direto nele pelo Tabuleiro (mesmo formato `livrosVinculados`)
+        window.state || null,
         acha(sd.races, val('raca')),
         acha(sd.classes, val('classe')),
         acha(sd.tribes, val('tribo')),
@@ -122,6 +125,10 @@ function _livrosDoPersonagem() {
     for (const p of pecs) fontes.push(acha(sd.peculiarities, p && (p.nome || p.key || p)));
 
     const mapa = new Map();
+    // Livro amarrado DIRETO no personagem pelo mestre passa por cima da regra de
+    // publicacao: ele escolheu a dedo quem le. Vai colado no Map (a chamada e uma
+    // so) para nao ter de mudar a assinatura em toda a cadeia.
+    mapa.diretos = new Set(window.lvNormalizar(window.state || null).map(v => v.bookId));
     for (const f of fontes) {
         for (const lv of window.lvNormalizar(f)) {
             const caps = Array.isArray(lv.capituloIds) ? lv.capituloIds.filter(Boolean) : [];
@@ -148,7 +155,8 @@ function renderConhecimento() {
         // raca/classe/tribo/peculiaridade apontando para o livro.
         const p = pubDoLivro(livro);
         const vinculado = alcance.has(livro.id);
-        if (!(p.geral || p.conhGeral || (p.conhVinculo && vinculado))) continue;
+        const direto = alcance.diretos?.has(livro.id);
+        if (!(p.geral || p.conhGeral || (p.conhVinculo && vinculado) || direto)) continue;
         // O vinculo pode liberar so alguns capitulos; publicacao aberta e o livro inteiro.
         const soEsses = (p.geral || p.conhGeral) ? null : alcance.get(livro.id);
         const caps = _capitulos.filter(c => c.bookId === livro.id

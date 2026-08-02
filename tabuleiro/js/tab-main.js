@@ -115,6 +115,9 @@ async function carregarChars() {
             desloc: isNaN(desloc) ? null : desloc,
             // VDs prontos espelhados pela ficha — o alcance de visão por Percepção lê daqui
             derivedTotals: raw.derivedTotals || {},
+            // livros que o MESTRE amarrou neste personagem (📖 Livros → 🎭 Vincular).
+            // Vem de carona nesta query, que já traz o doc inteiro — leitura zero.
+            livrosVinculados: raw.livrosVinculados || [],
         });
     });
 }

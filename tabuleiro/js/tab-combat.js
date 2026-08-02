@@ -3,11 +3,17 @@
 // Sincroniza com Painel do Mestre > Mesas > Combate
 // =============================================
 import { db, doc, setDoc, updateDoc, getDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast } from './tab-state.js';
+import { T, esc, toast, uid } from './tab-state.js';
 import { refCombate, refEstado } from './tab-main.js';
 import { VITAIS } from './tab-hud.js';
+import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena } from '../../shared/combate-cenas.js';
 
 let janelaAberta = false;
+
+// Vitais aceitam meio ponto (VIT 21,9) e somar/subtrair 1 em float acumula lixo:
+// virava "9.899999999999999/21.9". Arredonda na CONTA (o que é gravado e
+// sincronizado com a ficha) e na exibição, que também recebe valor sujo de fora.
+const vNum = (v) => Math.round((Number(v) || 0) * 100) / 100;
 
 export function initCombat() {
     window._renderCombate = render;
@@ -35,24 +41,76 @@ window.tbToggleCombate = function() {
     render();
 };
 
+/** Participantes da cena ABERTA (é o que a janela mostra e edita). */
+const partsDaCena = () => cenaAtiva(T.combate).participantes || [];
+
+/**
+ * Grava a cena ABERTA. O doc sai inteiro de `docDeCenas` (dentro dos helpers),
+ * então o espelho que a ficha lê nunca fica para trás — ver shared/combate-cenas.js.
+ */
 async function salvar(participantes, patchExtra) {
     try {
-        await setDoc(refCombate(), { participantes, atualizadoEm: Date.now(), ...(patchExtra || {}) }, { merge: true });
+        await setDoc(refCombate(),
+            { ...comCenaAtivaPatch(T.combate, { participantes, ...(patchExtra || {}) }), atualizadoEm: Date.now() },
+            { merge: true });
     } catch (e) { console.error(e); toast('❌ Erro ao salvar combate', 'danger'); }
+}
+
+/** Escreve o doc já montado por um helper de cena (criar/trocar/apagar). */
+async function salvarDoc(docNovo) {
+    try {
+        await setDoc(refCombate(), { ...docNovo, atualizadoEm: Date.now() }, { merge: true });
+    } catch (e) { console.error(e); toast('❌ Erro ao salvar as cenas', 'danger'); }
+}
+
+window.tbCenaTrocar = (id) => salvarDoc(comTrocaDeCena(T.combate, id));
+window.tbCenaNova = () => {
+    const nome = prompt('Nome da cena de combate:', 'Cena ' + (cenasDoDoc(T.combate).length + 1));
+    if (nome === null) return;
+    salvarDoc(comCenaNova(T.combate, 'c' + uid(), nome.trim() || 'Nova cena'));
+};
+window.tbCenaRenomear = (id) => {
+    const atual = cenasDoDoc(T.combate).find(c => c.id === id);
+    const nome = prompt('Nome da cena:', atual?.nome || '');
+    if (nome === null) return;
+    salvarDoc(comCenaAtivaPatch(T.combate, { nome: nome.trim() || 'Cena' }));
+};
+window.tbCenaApagar = (id) => {
+    const c = cenasDoDoc(T.combate).find(x => x.id === id);
+    if (!confirm(`Apagar a cena "${c?.nome || ''}" e os participantes dela?`)) return;
+    salvarDoc(semCena(T.combate, id));
+};
+
+/** Abas das cenas — só no secreto: quem cria e alterna é o mestre. */
+function abasDeCena() {
+    const cenas = cenasDoDoc(T.combate);
+    const ativa = cenaAtiva(T.combate).id;
+    return `<div class="tb-cena-abas">
+        ${cenas.map(c => `<button class="tb-cena-aba ${c.id === ativa ? 'ativa' : ''}"
+            onclick="${c.id === ativa ? `tbCenaRenomear('${c.id}')` : `tbCenaTrocar('${c.id}')`}"
+            title="${c.id === ativa ? 'Clique para renomear' : 'Abrir esta cena'}">
+            ${esc(c.nome || 'Cena')}<span class="tb-cena-n">${(c.participantes || []).length}</span>
+            ${c.id === ativa && cenas.length > 1 ? `<span class="tb-cena-x" onclick="event.stopPropagation();tbCenaApagar('${c.id}')" title="Apagar cena">✕</span>` : ''}
+        </button>`).join('')}
+        <button class="tb-cena-aba nova" onclick="tbCenaNova()" title="Nova cena de combate">＋</button>
+    </div>`;
 }
 
 function render() {
     const body = document.getElementById('tbCombatBody');
     if (!body || !janelaAberta) return;
-    const c = T.combate;
-    const parts = (c?.participantes || []).slice().sort((a, b) => (b.initiative||0) - (a.initiative||0));
     const secreto = T.mode === 'secret';
+    const cena = cenaAtiva(T.combate);
+    const parts = (cena.participantes || []).slice().sort((a, b) => (b.initiative||0) - (a.initiative||0));
+    // As abas são do mestre: o público vê só a cena que ele deixou aberta.
+    const abas = secreto ? abasDeCena() : '';
 
     if (!parts.length) {
-        body.innerHTML = '<div class="tb-muted" style="padding:16px;text-align:center">Nenhum participante.<br>Adicione pelo Painel do Mestre › Mesas › ⚔️ Combate.</div>';
+        body.innerHTML = abas + '<div class="tb-muted" style="padding:16px;text-align:center">Nenhum participante nesta cena.<br>Adicione pelo Painel do Mestre › Mesas › ⚔️ Combate.</div>';
         return;
     }
     // normaliza: remover participantes deixava turnoAtual fora da lista ("Turno 5/3")
+    const c = cena;
     const turno = ((c?.turnoAtual || 0) % parts.length + parts.length) % parts.length;
 
     let topo = '';
@@ -67,7 +125,7 @@ function render() {
         topo = `<div class="tb-combat-controls"><span class="tb-combat-round">Ordem dos turnos${c?.rodada ? ' · Rodada ' + c.rodada : ''}</span></div>`;
     }
 
-    body.innerHTML = topo + parts.map((p, i) => {
+    body.innerHTML = abas + topo + parts.map((p, i) => {
         const atual = i === turno % parts.length;
         const podeCtrl = secreto;
         const barra = (label, cur, max, cor) => {
@@ -76,7 +134,7 @@ function render() {
                 ${podeCtrl ? `<button class="tb-cstat-btn" onclick="tbCombStat('${p.id}','${label}',-1)">−</button>` : ''}
                 <span class="tb-cstat-lb">${label}</span>
                 <div class="tb-cstat-bar"><div style="width:${pct}%;background:${cor}"></div></div>
-                <span class="tb-cstat-v">${cur}/${max}</span>
+                <span class="tb-cstat-v">${vNum(cur)}/${vNum(max)}</span>
                 ${podeCtrl ? `<button class="tb-cstat-btn" onclick="tbCombStat('${p.id}','${label}',1)">+</button>` : ''}
             </div>`;
         };
@@ -127,7 +185,7 @@ function render() {
 
 // ===== Ações (modo secreto) =====
 window.tbCombTurno = async function(dir) {
-    const c = T.combate || {}; const n = (c.participantes || []).length || 1;
+    const c = cenaAtiva(T.combate); const n = (c.participantes || []).length || 1;
     let turno = (c.turnoAtual || 0) + dir;
     let rodada = c.rodada || 1;
     const rodadaAntes = rodada;
@@ -147,7 +205,7 @@ window.tbCombVisibilidade = async function() {
 };
 
 window.tbCombStat = async function(pid, stat, amt) {
-    const parts = (T.combate?.participantes || []).map(p => ({ ...p }));
+    const parts = partsDaCena().map(p => ({ ...p }));
     const p = parts.find(x => x.id === pid); if (!p) return;
     const map = { VIT: ['hpCurrent', 'hpMax'], ENER: ['enerCurrent', 'enerMax'], SAN: ['sanCurrent', 'sanMax'] };
     const [cur, max] = map[stat];
@@ -176,7 +234,7 @@ window.tbCombStat = async function(pid, stat, amt) {
         }
     }
 
-    const novoVal = Math.max(0, Math.min(curVal + amt, maxVal));
+    const novoVal = vNum(Math.max(0, Math.min(curVal + amt, maxVal)));
     p[cur] = novoVal;
     await salvar(parts);
 
@@ -318,7 +376,7 @@ window.tbCombCondAdd = async function(pid) {
  * @param {object|null} tpl - Template da condição do sistema (ou null para personalizada)
  */
 async function aplicarCondicaoCombate(pid, nome, tpl) {
-    const parts = (T.combate?.participantes || []).map(p => ({ ...p }));
+    const parts = partsDaCena().map(p => ({ ...p }));
     const p = parts.find(x => x.id === pid); if (!p) return;
     p.condicoes = [...(p.condicoes || []), nome.trim()];
     await salvar(parts);
@@ -368,7 +426,7 @@ async function aplicarCondicaoCombate(pid, nome, tpl) {
 }
 
 window.tbCombCondRm = async function(pid, i) {
-    const parts = (T.combate?.participantes || []).map(p => ({ ...p }));
+    const parts = partsDaCena().map(p => ({ ...p }));
     const p = parts.find(x => x.id === pid); if (!p) return;
     const removida = (p.condicoes || [])[i];
     p.condicoes = (p.condicoes || []).filter((_, ci) => ci !== i);
@@ -409,6 +467,6 @@ window.tbCombCondRm = async function(pid, i) {
 
 window.tbCombRemover = async function(pid) {
     if (!confirm('Remover do combate?')) return;
-    const parts = (T.combate?.participantes || []).filter(p => p.id !== pid);
+    const parts = partsDaCena().filter(p => p.id !== pid);
     await salvar(parts);
 };

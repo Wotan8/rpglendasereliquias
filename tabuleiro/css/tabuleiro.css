@@ -233,6 +233,25 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 .tb-window.open { display: flex; }
 .tb-win-head { padding: 10px 12px; font-weight: 800; font-size: .88rem; border-bottom: 1px solid var(--tb-border); display: flex; justify-content: space-between; align-items: center; cursor: move; background: var(--tb-panel2); user-select: none; }
 .tb-win-body { padding: 10px; overflow-y: auto; }
+/* Abas de CENA de combate: a aberta é maior, as outras encolhem e ficam
+   apagadas — o mestre bate o olho e sabe em qual está. O '＋' é a última. */
+.tb-cena-abas { display: flex; align-items: flex-end; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
+.tb-cena-aba {
+    display: flex; align-items: center; gap: 5px; cursor: pointer;
+    background: var(--tb-panel2); border: 1px solid var(--tb-border); border-bottom-color: transparent;
+    color: var(--tb-muted); font: inherit; font-size: .7rem; padding: 3px 7px;
+    border-radius: 8px 8px 0 0; max-width: 42%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tb-cena-aba:hover { color: var(--tb-light); border-color: var(--tb-primary); }
+.tb-cena-aba.ativa {
+    background: rgba(91, 63, 184,.22); border-color: var(--tb-primary);
+    color: var(--tb-light); font-size: .82rem; font-weight: 700; padding: 6px 10px;
+}
+.tb-cena-aba.nova { font-size: .9rem; padding: 3px 9px; color: var(--tb-light); }
+.tb-cena-n { opacity: .6; font-size: .66rem; }
+.tb-cena-x { opacity: .6; padding: 0 2px; }
+.tb-cena-x:hover { opacity: 1; color: var(--lr-blood-3, #ef4444); }
+
 .tb-combat-controls { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
 .tb-combat-round { font-size: .78rem; font-weight: 800; color: var(--lr-abyssal-2); flex: 1; text-align: center; }
 .tb-combat-p { display: flex; gap: 9px; align-items: flex-start; padding: 9px; border: 1px solid var(--tb-border); border-radius: 10px; margin-bottom: 8px; background: var(--tb-panel2); }

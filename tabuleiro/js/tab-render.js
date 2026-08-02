@@ -258,7 +258,13 @@ function draw() {
     T._meusTokens = tokensDaVisao();
     T._alvos = coletarAlvosDeTemplates();
     T._tokenAtivo = tokenAtivoDoCombate();
-    T._pulsoCombate = !!T._tokenAtivo;
+    // O pulso do anel é a ÚNICA animação contínua da cena parada: com ele ligado
+    // a tela inteira redesenha a 60fps em todos os aparelhos enquanto durar o
+    // combate. Só liga quando o anel vai mesmo aparecer — token na tela e não
+    // tapado pelo fog. (Mesma ideia do culling das luzes animadas.)
+    T._pulsoCombate = !!T._tokenAtivo
+        && !foraDaTela({ x: T._tokenAtivo.x, y: T._tokenAtivo.y, r: gridSize() })
+        && tokenVisivelParaMim(T._tokenAtivo, T._meusTokens);
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = '#0b0e14';

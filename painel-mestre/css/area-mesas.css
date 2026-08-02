@@ -374,6 +374,14 @@
     font-size: 1rem;
 }
 
+/* Cenas de combate — a mesma lista de cenas que o Tabuleiro mostra em abas */
+.combat-cenas { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.combat-cena-sel {
+    flex: 1; min-width: 160px; background: var(--surface-2, #1b2130); color: var(--light);
+    border: 1px solid var(--border, #333); border-radius: 8px; padding: 6px 8px;
+    font-family: var(--font); font-size: .85rem;
+}
+
 /* ===== MESA NOTE CARDS (Ficha v1.7 style) ===== */
 .mesa-note-card {
     border: 2px solid var(--border);

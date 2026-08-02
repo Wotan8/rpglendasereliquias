@@ -4,10 +4,23 @@
 import { db, collection, getDocs, getDoc, setDoc, updateDoc, doc, onSnapshot, query, where, deleteField } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
+import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena } from '../../shared/combate-cenas.js';
 
 let combatListeners = {};
 
+// Vitais aceitam meio ponto (VIT 21,9), e somar/subtrair 1 repetidas vezes em
+// float acumula lixo: virava "9.899999999999999/21.9" na tela e no doc. Arredonda
+// na CONTA (o que é gravado e sincronizado com a ficha) e na exibição, que
+// também mostra valor vindo sujo de fora.
+const vNum = (v) => Math.round((Number(v) || 0) * 100) / 100;
+
 // ===== PERSISTÊNCIA (sincroniza com o Tabuleiro/VTT) =====
+// Doc de combate como veio do servidor — a base para remontar as CENAS sem
+// perder as que não estão abertas (ver shared/combate-cenas.js).
+let _docCombate = null;
+
+const refDocCombate = () => doc(db, 'mesas', S.currentMesaId, 'tabuleiro-meta', 'combate');
+
 let _persistTimer = null;
 function persistCombat() {
     if (!S.currentMesaId) return;
@@ -15,28 +28,89 @@ function persistCombat() {
     _persistTimer = setTimeout(async () => {
         try {
             const participantes = S.combatParticipants.map(p => ({ ...p }));
-            await setDoc(doc(db, 'mesas', S.currentMesaId, 'tabuleiro-meta', 'combate'),
-                { participantes, atualizadoEm: Date.now() }, { merge: true });
+            // grava DENTRO da cena aberta; o helper devolve o doc com o espelho
+            const novo = comCenaAtivaPatch(_docCombate, { participantes });
+            _docCombate = { ..._docCombate, ...novo };
+            await setDoc(refDocCombate(), { ...novo, atualizadoEm: Date.now() }, { merge: true });
         } catch (e) { console.warn('persistCombat', e); }
     }, 400);
+}
+
+/** Escreve um doc já montado pelos helpers de cena e recarrega a lista. */
+async function salvarCenas(novo) {
+    _docCombate = { ..._docCombate, ...novo };
+    try { await setDoc(refDocCombate(), { ...novo, atualizadoEm: Date.now() }, { merge: true }); }
+    catch (e) { console.warn('salvarCenas', e); }
+    S.setCombatParticipants(cenaAtiva(_docCombate).participantes || []);
+    renderCombatList();
+}
+
+window.combatCenaTrocar = (id) => salvarCenas(comTrocaDeCena(_docCombate, id));
+window.combatCenaNova = () => {
+    const nome = prompt('Nome da cena de combate:', 'Cena ' + (cenasDoDoc(_docCombate).length + 1));
+    if (nome === null) return;
+    salvarCenas(comCenaNova(_docCombate, 'c' + Date.now().toString(36), nome.trim() || 'Nova cena'));
+};
+window.combatCenaRenomear = () => {
+    const atual = cenaAtiva(_docCombate);
+    const nome = prompt('Nome da cena:', atual.nome || '');
+    if (nome === null) return;
+    salvarCenas(comCenaAtivaPatch(_docCombate, { nome: nome.trim() || 'Cena' }));
+};
+window.combatCenaApagar = () => {
+    const atual = cenaAtiva(_docCombate);
+    if (!confirm(`Apagar a cena "${atual.nome}" e os participantes dela?`)) return;
+    salvarCenas(semCena(_docCombate, atual.id));
+};
+
+/** Seletor de cenas no topo da lista (no Tabuleiro isso vira abas). */
+function barraDeCenas() {
+    const cenas = cenasDoDoc(_docCombate);
+    const ativa = cenaAtiva(_docCombate).id;
+    return `<div class="combat-cenas">
+        <select class="combat-cena-sel" onchange="combatCenaTrocar(this.value)" title="Cena de combate">
+            ${cenas.map(c => `<option value="${c.id}" ${c.id === ativa ? 'selected' : ''}>
+                🎬 ${escapeHtml(c.nome || 'Cena')} (${(c.participantes || []).length})</option>`).join('')}
+        </select>
+        <button class="btn btn-sm" onclick="combatCenaNova()" title="Nova cena">➕ Cena</button>
+        <button class="btn btn-sm" onclick="combatCenaRenomear()" title="Renomear a cena aberta">✏️</button>
+        ${cenas.length > 1 ? `<button class="btn btn-sm btn-danger" onclick="combatCenaApagar()" title="Apagar a cena aberta">🗑️</button>` : ''}
+    </div>`;
 }
 
 window._loadCombatFromMesa = async function() {
     if (!S.currentMesaId) return;
     try {
-        const snap = await getDoc(doc(db, 'mesas', S.currentMesaId, 'tabuleiro-meta', 'combate'));
+        const snap = await getDoc(refDocCombate());
         Object.values(combatListeners).forEach(u => { if (typeof u === 'function') u(); });
         combatListeners = {};
         if (snap.exists()) {
-            const parts = snap.data().participantes || [];
+            _docCombate = snap.data();
+            const parts = cenaAtiva(_docCombate).participantes || [];
             S.setCombatParticipants(parts);
             parts.forEach(p => {
                 if (p.characterId) setupCombatListener(p.characterId, p.id);
                 if (p.npcId) setupCombatNpcListener(p.npcId, p.id);
             });
         } else {
+            _docCombate = null;
             S.setCombatParticipants([]);
         }
+        // O mestre também mexe nas cenas pelo Tabuleiro. Sem ouvir o doc, este
+        // lado remontaria `cenas` a partir de uma cópia velha e APAGARIA a cena
+        // criada lá. O listener só atualiza a base do merge; a lista aqui só é
+        // redesenhada quando a cena ABERTA muda, para não atropelar edição em
+        // andamento. Um listener, um doc — o mesmo que o tabuleiro já paga.
+        combatListeners.__doc = onSnapshot(refDocCombate(), s => {
+            if (!s.exists()) return;
+            const antes = _docCombate ? cenaAtiva(_docCombate).id : null;
+            _docCombate = s.data();
+            const agora = cenaAtiva(_docCombate).id;
+            if (agora !== antes) {
+                S.setCombatParticipants(cenaAtiva(_docCombate).participantes || []);
+                renderCombatList();
+            }
+        }, e => console.warn('combate doc', e));
         renderCombatList();
     } catch (e) { console.warn('loadCombat', e); }
 };
@@ -137,7 +211,7 @@ function updateParticipantStats(pid) {
         const pct = max > 0 ? (cur/max)*100 : 0;
         const el = document.getElementById(`combat-${stat}-${pid}`);
         const fill = document.getElementById(`combat-${stat}-fill-${pid}`);
-        if (el) el.textContent = `${cur}/${max}`;
+        if (el) el.textContent = `${vNum(cur)}/${vNum(max)}`;
         if (fill) { fill.style.width = pct + '%'; if (stat === 'vit') fill.style.background = pct <= 25 ? 'linear-gradient(90deg,#dc2626,#ef4444)' : 'linear-gradient(90deg,#10b981,#34d399)'; if (stat === 'san') fill.style.background = pct <= 25 ? 'linear-gradient(90deg,#dc2626,#ef4444)' : 'linear-gradient(90deg,#6366f1,#8b5cf6)'; }
     });
 }
@@ -205,9 +279,9 @@ window.confirmAddCustom = function() {
 window.adjustCombatStat = function(pid, stat, amt, ev) {
     if (ev) ev.stopPropagation();
     const p = S.combatParticipants.find(x => x.id === pid); if (!p) return;
-    if (stat === 'vit') p.hpCurrent = Math.max(0, Math.min(p.hpCurrent + amt, p.hpMax));
-    else if (stat === 'ener') p.enerCurrent = Math.max(0, Math.min(p.enerCurrent + amt, p.enerMax));
-    else if (stat === 'san') p.sanCurrent = Math.max(0, Math.min(p.sanCurrent + amt, p.sanMax));
+    if (stat === 'vit') p.hpCurrent = vNum(Math.max(0, Math.min(p.hpCurrent + amt, p.hpMax)));
+    else if (stat === 'ener') p.enerCurrent = vNum(Math.max(0, Math.min(p.enerCurrent + amt, p.enerMax)));
+    else if (stat === 'san') p.sanCurrent = vNum(Math.max(0, Math.min(p.sanCurrent + amt, p.sanMax)));
     updateParticipantStats(pid);
     persistCombat();
 
@@ -295,8 +369,9 @@ window.openCombatNpcModal = function(pid) { const p = S.combatParticipants.find(
 export function renderCombatList() {
     persistCombat();
     const el = document.getElementById('combatList'); if (!el) return;
-    if (!S.combatParticipants.length) { el.innerHTML = '<div class="no-combat">Nenhum participante no combate</div>'; return; }
-    el.innerHTML = S.combatParticipants.map(p => {
+    const cenas = barraDeCenas();
+    if (!S.combatParticipants.length) { el.innerHTML = cenas + '<div class="no-combat">Nenhum participante nesta cena</div>'; return; }
+    el.innerHTML = cenas + S.combatParticipants.map(p => {
         const isPlayer = p.type === 'Jogador', isNpc = p.isNpc === true, isCustom = p.isCustom === true;
         const hasStats = isPlayer || isNpc || isCustom, hasCtrl = isNpc || isCustom;
         let stats = '', abil = '';
@@ -307,9 +382,9 @@ export function renderCombatList() {
             const btn = (stat, id) => hasCtrl ? `<button class="combat-stat-btn" onclick="adjustCombatStat('${p.id}','${stat}',-1,event)">−</button>` : '';
             const btnP = (stat, id) => hasCtrl ? `<button class="combat-stat-btn" onclick="adjustCombatStat('${p.id}','${stat}',1,event)">+</button>` : '';
             stats = `<div class="combat-stats">
-                <div class="combat-stat-item ${hasCtrl?'combat-stat-npc':''}">${btn('vit')}<span class="combat-stat-label">❤️ VIT</span><div class="combat-stat-bar"><div class="combat-stat-fill" id="combat-vit-fill-${p.id}" style="width:${vp}%;background:${vc}"></div></div><span class="combat-stat-value" id="combat-vit-${p.id}">${p.hpCurrent}/${p.hpMax}</span>${btnP('vit')}</div>
-                <div class="combat-stat-item ${hasCtrl?'combat-stat-npc':''}">${btn('ener')}<span class="combat-stat-label">🔥 ENER</span><div class="combat-stat-bar"><div class="combat-stat-fill" id="combat-ener-fill-${p.id}" style="width:${ep}%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div><span class="combat-stat-value" id="combat-ener-${p.id}">${p.enerCurrent}/${p.enerMax}</span>${btnP('ener')}</div>
-                <div class="combat-stat-item ${hasCtrl?'combat-stat-npc':''}">${btn('san')}<span class="combat-stat-label">🧠 SAN</span><div class="combat-stat-bar"><div class="combat-stat-fill" id="combat-san-fill-${p.id}" style="width:${sp}%;background:${sc}"></div></div><span class="combat-stat-value" id="combat-san-${p.id}">${p.sanCurrent}/${p.sanMax}</span>${btnP('san')}</div>
+                <div class="combat-stat-item ${hasCtrl?'combat-stat-npc':''}">${btn('vit')}<span class="combat-stat-label">❤️ VIT</span><div class="combat-stat-bar"><div class="combat-stat-fill" id="combat-vit-fill-${p.id}" style="width:${vp}%;background:${vc}"></div></div><span class="combat-stat-value" id="combat-vit-${p.id}">${vNum(p.hpCurrent)}/${vNum(p.hpMax)}</span>${btnP('vit')}</div>
+                <div class="combat-stat-item ${hasCtrl?'combat-stat-npc':''}">${btn('ener')}<span class="combat-stat-label">🔥 ENER</span><div class="combat-stat-bar"><div class="combat-stat-fill" id="combat-ener-fill-${p.id}" style="width:${ep}%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div><span class="combat-stat-value" id="combat-ener-${p.id}">${vNum(p.enerCurrent)}/${vNum(p.enerMax)}</span>${btnP('ener')}</div>
+                <div class="combat-stat-item ${hasCtrl?'combat-stat-npc':''}">${btn('san')}<span class="combat-stat-label">🧠 SAN</span><div class="combat-stat-bar"><div class="combat-stat-fill" id="combat-san-fill-${p.id}" style="width:${sp}%;background:${sc}"></div></div><span class="combat-stat-value" id="combat-san-${p.id}">${vNum(p.sanCurrent)}/${vNum(p.sanMax)}</span>${btnP('san')}</div>
             </div>`;
         }
         if (isCustom) abil = `<div class="combat-abilities-container" onclick="event.stopPropagation()"><label class="combat-abilities-label">⚔️ Habilidades:</label><textarea class="combat-abilities-input" onchange="updateCustomAbilities('${p.id}',this.value)">${p.combatAbilities||''}</textarea></div>`;

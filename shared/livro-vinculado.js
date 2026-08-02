@@ -218,6 +218,28 @@
         if (bookId) abrirSumario({ bookId, capituloIds: [] });
     }
 
+    /**
+     * Card de livro da estante. `acao` é o JS do clique — sem ele, abre o livro
+     * inteiro. Quem monta seção própria (a estante do jogador tem a do Cronista
+     * em cima da dela) reaproveita o mesmo card por aqui, via lvCardLivro.
+     */
+    function cardLivro(l, n, acao) {
+        return `
+        <button type="button" class="lv-livro" onclick="${acao || `window.lvAbrirLivroId('${esc(l.id)}')`}"
+            style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+                   background:var(--lr-surface-2,rgba(255,255,255,.06));color:inherit;font:inherit;
+                   border:1px solid var(--lr-border,#333);border-radius:10px;padding:10px 12px">
+            <span style="width:44px;height:60px;flex:none;border-radius:6px;display:flex;align-items:center;justify-content:center;
+                background:${l.cover ? `url('${esc(l.cover)}') center/cover` : 'var(--lr-bg-1,rgba(255,255,255,.06))'}">${l.cover ? '' : '📖'}</span>
+            <span style="flex:1;min-width:0">
+                <span style="display:block;font-weight:700">${esc(l.title || 'Livro sem título')}</span>
+                ${l.description ? `<span style="display:block;opacity:.75;font-size:.85rem">${esc(l.description)}</span>` : ''}
+                <span style="display:block;opacity:.6;font-size:.78rem">${n} ${n === 1 ? 'capítulo' : 'capítulos'}</span>
+            </span>
+            <span style="opacity:.6">›</span>
+        </button>`;
+    }
+
     /** Sumário do livro. Livro de um capítulo só pula direto para o texto. */
     function abrirSumario(vinc) {
         if (!vinc) return;
@@ -333,22 +355,7 @@
                 .map(l => ({ l, n: caps.filter(c => c.bookId === l.id && estado(c, l) !== 'oculto').length }))
                 .filter(x => x.n > 0)
                 .sort((a, b) => (a.l.order ?? 0) - (b.l.order ?? 0) || (a.l.title || '').localeCompare(b.l.title || ''));
-            const cards = lista.map(({ l, n }) => {
-                return `
-                <button type="button" class="lv-livro" onclick="window.lvAbrirLivroId('${esc(l.id)}')"
-                    style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
-                           background:var(--lr-surface-2,rgba(255,255,255,.06));color:inherit;font:inherit;
-                           border:1px solid var(--lr-border,#333);border-radius:10px;padding:10px 12px">
-                    <span style="width:44px;height:60px;flex:none;border-radius:6px;display:flex;align-items:center;justify-content:center;
-                        background:${l.cover ? `url('${esc(l.cover)}') center/cover` : 'var(--lr-bg-1,rgba(255,255,255,.06))'}">${l.cover ? '' : '📖'}</span>
-                    <span style="flex:1;min-width:0">
-                        <span style="display:block;font-weight:700">${esc(l.title || 'Livro sem título')}</span>
-                        ${l.description ? `<span style="display:block;opacity:.75;font-size:.85rem">${esc(l.description)}</span>` : ''}
-                        <span style="display:block;opacity:.6;font-size:.78rem">${n} ${n === 1 ? 'capítulo' : 'capítulos'}</span>
-                    </span>
-                    <span style="opacity:.6">›</span>
-                </button>`;
-            }).join('');
+            const cards = lista.map(({ l, n }) => cardLivro(l, n)).join('');
             _pintar(`
                 <h2 style="margin:0 0 14px">${esc(_bib.titulo || '📚 Biblioteca')}</h2>
                 ${_bib.cabecalho || ''}
@@ -370,6 +377,10 @@
     window.lvSecaoHTML = secaoHTML;
     window.lvAbrirLivro = abrirLivro;
     window.lvAbrirLivroId = abrirLivroId;
+    // Sumário de um RECORTE do livro ({bookId, capituloIds}) — é como a estante
+    // do jogador abre só os capítulos que o mestre exibiu.
+    window.lvAbrirVinculo = abrirSumario;
+    window.lvCardLivro = cardLivro;
     window.lvLerCapitulo = lerCapitulo;
     window.lvBiblioteca = biblioteca;
     window.lvVoltar = voltar;

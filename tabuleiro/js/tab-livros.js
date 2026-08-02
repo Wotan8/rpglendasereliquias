@@ -20,9 +20,9 @@
 // que não roda no tabuleiro — e chutar liberaria leitura que o jogador não tem.
 // Falha fechado e manda para a ficha, onde a conta é a de verdade.
 // =============================================
-import { db, collection, doc, getDoc, getDocs, setDoc } from '../../painel-mestre/js/firebase-config.js';
+import { db, collection, doc, getDoc, getDocs, setDoc, updateDoc } from '../../painel-mestre/js/firebase-config.js';
 import { T, toast, esc, capsExibidos, focoExibido } from './tab-state.js';
-import { refEstado } from './tab-main.js';
+import { refEstado, abrirModal, fecharModal } from './tab-main.js';
 import { livroDoMestre, pubDoLivro } from '../../shared/livros-pub.js';
 
 export function initLivros() {
@@ -61,9 +61,11 @@ function abrirEstante() {
                 const ids = caps.map(c => c.id);
                 if (!ids.length) return '';
                 const todos = ids.every(id => exibidos().includes(id));
-                return todos
+                const exibir = todos
                     ? `<button type="button" class="tb-btn tb-btn-small tb-btn-danger" onclick="tbPararLivroTodo('${ids.join(',')}')">⛔ Parar o livro inteiro</button>`
                     : `<button type="button" class="tb-btn tb-btn-small" onclick="tbExibirLivro('${ids.join(',')}')">📡 Exibir todos os capítulos</button>`;
+                return `<div style="display:flex;gap:8px;flex-wrap:wrap">${exibir}
+                    <button type="button" class="tb-btn tb-btn-small" onclick="tbVincularLivro('${esc(livro.id)}')">🎭 Vincular a personagem</button></div>`;
             },
             acaoCapitulo: (cap) => exibidos().includes(cap.id)
                 ? `<button type="button" class="tb-btn tb-btn-small tb-btn-danger" onclick="tbPararCap('${esc(cap.id)}')">⛔ Parar</button>`
@@ -73,6 +75,49 @@ function abrirEstante() {
     }
     abrirEstanteJogador();
 }
+
+/* ===== VÍNCULO DE LIVRO COM PERSONAGEM (mestre) ===== */
+// Grava `livrosVinculados` no doc do personagem — o MESMO formato que raça,
+// classe e tribo já usam. Com isso o livro aparece sozinho em "Meus Livros" do
+// tabuleiro e na aba Conhecimento da ficha, sem código novo dos dois lados.
+// A ficha salva com merge, então o vínculo do mestre não é apagado por lá.
+const temLivro = (c, bookId) => (c.livrosVinculados || []).some(v => v?.bookId === bookId);
+
+window.tbVincularLivro = function(bookId) {
+    if (!T.isMaster) return;
+    const linhas = (T.chars || []).map(c =>
+        `<label class="tb-check" style="flex-direction:row;align-items:center;gap:8px">
+            <input type="checkbox" data-vinc-char="${esc(c.id)}" ${temLivro(c, bookId) ? 'checked' : ''}>
+            🎭 ${esc(c.nome)}
+         </label>`).join('');
+    abrirModal('🎭 Vincular livro a personagem', `
+        <div class="tb-muted" style="font-size:.8rem;margin-bottom:10px">
+            O livro passa a aparecer em <b>📖 Meus Livros</b> do Tabuleiro e na aba
+            <b>Conhecimento</b> da ficha de quem for marcado.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">${linhas || '<span class="tb-muted">Nenhum personagem nesta mesa.</span>'}</div>
+        <div class="tb-modal-actions"><button class="tb-btn tb-btn-success" onclick="tbSalvarVinculoLivro('${esc(bookId)}')">💾 Salvar</button></div>`);
+};
+
+window.tbSalvarVinculoLivro = async function(bookId) {
+    const marcados = new Set([...document.querySelectorAll('[data-vinc-char]')]
+        .filter(i => i.checked).map(i => i.dataset.vincChar));
+    try {
+        // um write só por personagem QUE MUDOU — marcar todo mundo de novo não grava nada
+        for (const c of (T.chars || [])) {
+            const tem = temLivro(c, bookId), quer = marcados.has(c.id);
+            if (tem === quer) continue;
+            const lista = quer
+                ? [...(c.livrosVinculados || []), { bookId, capituloIds: [] }]
+                : (c.livrosVinculados || []).filter(v => v?.bookId !== bookId);
+            await updateDoc(doc(db, 'char', c.id), { livrosVinculados: lista });
+            c.livrosVinculados = lista;          // espelho local: sem reler a mesa
+            _acesso.delete(c.id);                // a estante desse personagem recarrega
+        }
+        fecharModal();
+        toast(`🎭 Vínculo salvo para ${marcados.size} ${marcados.size === 1 ? 'personagem' : 'personagens'}`);
+    } catch (e) { console.error(e); toast('❌ Erro ao vincular o livro', 'danger'); }
+};
 
 /* ===== ESTANTE DO JOGADOR ===== */
 
@@ -94,7 +139,9 @@ async function carregarAcesso(charId) {
     const raw = chSnap.exists() ? chSnap.data() : {};
     const f = raw.fields || {};
     const acha = (lista, nome) => nome && lista.find(d => d.nome === nome || d.id === nome);
-    const fontes = [acha(races, f.raca), acha(classes, f.classe), acha(tribes, f.tribo)];
+    // `raw` entra como fonte: é onde mora o livro que o mestre amarrou direto
+    // NESTE personagem (mesmo formato `livrosVinculados` de raça/classe/tribo).
+    const fontes = [raw, acha(races, f.raca), acha(classes, f.classe), acha(tribes, f.tribo)];
     // mesma leitura da ficha: peculiaridade individual também carrega livro
     for (const p of (raw.peculiaridadesIndividuais || raw.peculiarities || [])) {
         fontes.push(acha(pecs, p && (p.nome || p.key || p)));
@@ -111,7 +158,10 @@ async function carregarAcesso(charId) {
         }
     }
     const regras = new Set(knowledge.map(r => r.capituloId).filter(Boolean));
-    const dados = { vinculos, regras };
+    // Livro amarrado DIRETO no personagem passa por cima da regra de publicação:
+    // o mestre escolheu a dedo quem lê (mesma regra da aba Conhecimento da ficha).
+    const diretos = new Set((window.lvNormalizar?.(raw) || []).map(v => v.bookId));
+    const dados = { vinculos, regras, diretos };
     _acesso.set(charId, dados);
     return dados;
 }
@@ -144,7 +194,7 @@ async function abrirEstanteJogador() {
     if (!meus.some(c => c.id === _charId)) _charId = meus[0].id;
     const charId = _charId;
     try {
-        const { vinculos, regras } = await carregarAcesso(charId);
+        const { vinculos, regras, diretos } = await carregarAcesso(charId);
         if (charId !== _charId) return;   // trocou de personagem no meio
         const troca = meus.length > 1
             ? `<div style="margin-bottom:12px"><select onchange="tbEstanteDoChar(this.value)"
@@ -153,30 +203,41 @@ async function abrirEstanteJogador() {
                    ${meus.map(c => `<option value="${esc(c.id)}" ${c.id === charId ? 'selected' : ''}>🎭 ${esc(c.nome)}</option>`).join('')}
                </select></div>`
             : '';
-        // O que o mestre está exibindo entra no TOPO da estante: é o único jeito de
-        // voltar para a leitura depois de fechar a janela, e o único de alcançar
-        // capítulo fora do vínculo do personagem. Os títulos saem do acervo que a
-        // própria estante já vai carregar (memoizado no leitor) — sem leitura extra.
+        // O que o mestre exibiu vira a PRIMEIRA seção, em cards de livro iguais aos
+        // da estante: clicar abre o sumário só com os capítulos exibidos — ou o
+        // texto direto, quando é um capítulo só (o leitor já faz esse atalho).
+        // O acervo sai do cache do leitor, que a estante ia carregar de qualquer
+        // jeito: nenhuma leitura a mais.
         const noAr = exibidos();
         const acervo = noAr.length ? await window.lvCarregarLivros?.() : null;
-        const exibindo = noAr.length
-            ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding:8px 10px;
-                      border-radius:10px;background:rgba(52,211,153,.10);border:1px solid var(--lr-nature,#34d399);font-size:.85rem">
-                   📡 <b>O mestre está exibindo</b>
-                   ${noAr.map(id => {
-                       const t = acervo?.caps.find(c => c.id === id)?.title || 'Capítulo';
-                       return `<button type="button" class="tb-btn tb-btn-small" onclick="tbAbrirExibido('${esc(id)}')">📖 ${esc(t)}</button>`;
-                   }).join('')}
-               </div>`
-            : '';
+        const porLivro = new Map();
+        for (const id of noAr) {
+            const cap = acervo?.caps.find(c => c.id === id);
+            if (!cap?.bookId) continue;
+            if (!porLivro.has(cap.bookId)) porLivro.set(cap.bookId, []);
+            porLivro.get(cap.bookId).push(id);
+        }
+        const cardsCronista = [...porLivro.entries()].map(([bookId, ids]) => {
+            const livro = acervo.livros.find(l => l.id === bookId) || { id: bookId, title: 'Livro' };
+            const args = `{bookId:'${esc(bookId)}',capituloIds:['${ids.map(esc).join("','")}']}`;
+            return window.lvCardLivro?.(livro, ids.length, `window.lvAbrirVinculo(${args})`) || '';
+        }).join('');
+
         window.lvBiblioteca({
-            titulo: '📖 Meus Livros',
-            cabecalho: exibindo + troca,
+            // Com o mestre exibindo algo, o título passa a ser da PRIMEIRA seção e
+            // "Meus Livros" vira o subtítulo da segunda — sem opção nova no leitor.
+            titulo: cardsCronista ? '📖 Livros do Cronista' : '📖 Meus Livros',
+            cabecalho: cardsCronista
+                ? `<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">${cardsCronista}</div>
+                   <h2 style="margin:0 0 14px">📖 Meus Livros</h2>${troca}`
+                : troca,
             filtro: (l) => {
+                if (diretos.has(l.id)) return true;      // vínculo direto do mestre
                 const p = pubDoLivro(l);
                 return p.geral || p.conhGeral || (p.conhVinculo && vinculos.has(l.id));
             },
             capituloEstado: (cap, livro) => {
+                if (noAr.includes(cap.id)) return 'liberado';               // o mestre mandou exibir
                 const p = pubDoLivro(livro);
                 const soEsses = (p.geral || p.conhGeral) ? null : vinculos.get(cap.bookId);
                 if (soEsses && !soEsses.has(cap.id)) return 'oculto';      // fora do recorte do vínculo
