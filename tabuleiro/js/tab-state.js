@@ -77,7 +77,22 @@ export const CAMADAS_PADRAO = [
     { id: 'tokens', nome: '🎭 Tokens', tipo: 'tokens', ordem: 1, visivelPublico: true,  abaixoDaLuz: true },
     { id: 'dm',     nome: '🕵️ DM',     tipo: 'dm',     ordem: 2, visivelPublico: false, abaixoDaLuz: true },
     { id: 'luz',    nome: '💡 Luz',    tipo: 'luz',    ordem: 3, visivelPublico: false, abaixoDaLuz: false },
+    // Vitrine: fica ACIMA de tudo, inclusive do fog (é `abaixoDaLuz: false` que
+    // manda o desenho para o passe de overlay). O que entra aqui nasce oculto do
+    // público — quem libera é o 👁️ de cada objeto.
+    { id: 'mostrar', nome: '🖼️ Mostrar', tipo: 'mostrar', ordem: 4, visivelPublico: true, abaixoDaLuz: false },
 ];
+
+/**
+ * Camadas do canvas + as PADRÃO que faltarem. Canvas criado antes de uma camada
+ * nova existir não some do mapa nem precisa de migração no banco: a camada
+ * aparece na hora de carregar e só é gravada se o mestre mexer nas camadas.
+ */
+export function mesclarCamadasPadrao(camadas) {
+    const atuais = Array.isArray(camadas) ? camadas : [];
+    const faltando = CAMADAS_PADRAO.filter(p => !atuais.some(c => c.id === p.id));
+    return faltando.length ? [...atuais, ...faltando] : atuais;
+}
 
 export const PERMISSOES_LISTA = [
     { key: 'moverToken',   label: 'Mover o próprio token' },

@@ -55,6 +55,13 @@ export function startRenderLoop() {
     cv.insertAdjacentElement('afterend', climaCv);
     climaCtx = climaCv.getContext('2d');
     resize();
+    // 🔴 O evento `resize` da janela NÃO é confiável para isto: em tela dividida,
+    // barra do navegador aparecendo/sumindo no celular e mudança de viewport por
+    // ferramenta, a CAIXA do canvas muda sem ele disparar — e aí o buffer fica do
+    // tamanho antigo e o navegador ESTICA a cena (a "tela distorcida"). Quem sabe
+    // o tamanho real do elemento é o ResizeObserver. O listener de janela fica
+    // como reserva para troca de monitor, que muda o dpr sem mudar a caixa.
+    if (window.ResizeObserver) new ResizeObserver(() => { resize(); markDirty(); }).observe(cv);
     window.addEventListener('resize', () => { resize(); markDirty(); });
     iniciarHudMedicaoSePedido();
     requestAnimationFrame(loop);
@@ -64,9 +71,22 @@ export function startRenderLoop() {
  *  requestAnimationFrame não dispara e o harness ficaria esperando para sempre. */
 export function desenharUmFrame() { draw(); }
 
+let _tamAnterior = null;
 function resize() {
     dpr = window.devicePixelRatio || 1;
     const r = cv.getBoundingClientRect();
+    // Janela redimensionada = mesmo pedaço de MUNDO na tela. Sem isto, encolher a
+    // janela cortava a cena (e quem não tem "ver além do mapa" ficava preso ao
+    // enquadramento torto, porque a câmera dele é grudada no mapa). O fator é o
+    // menor dos dois eixos: assim nada que estava à vista some.
+    if (_tamAnterior && r.width > 0 && r.height > 0) {
+        const k = Math.min(r.width / _tamAnterior.w, r.height / _tamAnterior.h);
+        if (isFinite(k) && k > 0 && Math.abs(k - 1) > 0.002) {
+            T.cam.z = Math.max(0.04, Math.min(6, T.cam.z * k));
+        }
+    }
+    _tamAnterior = { w: r.width || 1, h: r.height || 1 };
+    T._aposResize?.();   // reencaixa a câmera de quem é preso ao mapa (tab-tools)
     cv.width = r.width * dpr; cv.height = r.height * dpr;
     const fw = Math.ceil(cv.width * FOG_ESCALA), fh = Math.ceil(cv.height * FOG_ESCALA);
     fogCv.width = fw; fogCv.height = fh;
@@ -275,6 +295,11 @@ function draw() {
     const camadas = camadasVisiveis();
     const abaixo = camadas.filter(c => c.tipo !== 'mapa' && (c.abaixoDaLuz !== false || c.tipo === 'tokens' || c.tipo === 'dm'));
     const acima = camadas.filter(c => c.tipo !== 'mapa' && !abaixo.includes(c) && c.tipo !== 'luz');
+    // 🖼️ Vitrine: sai da fila do `acima` para ser desenhada por ÚLTIMO — acima do
+    // fog, da camada de luz e até dos telhados. É a camada de exibir imagem para
+    // a mesa; nada pode passar na frente dela.
+    const camVitrine = acima.find(c => c.tipo === 'mostrar');
+    const acimaSemVitrine = camVitrine ? acima.filter(c => c !== camVitrine) : acima;
     const camLuz = camadas.find(c => c.tipo === 'luz');
     medir('objetos', () => {
         ctx.save();
@@ -291,9 +316,10 @@ function draw() {
     medir('overlay', () => {
         ctx.save();
         aplicarCamera(ctx, T.cam);
-        for (const cam of acima) drawCamada(cam, viewRect);
+        for (const cam of acimaSemVitrine) drawCamada(cam, viewRect);
         if (camLuz && T.mode === 'secret') drawCamada(camLuz, viewRect);
         drawTelhados();
+        if (camVitrine) drawCamada(camVitrine, viewRect);
         drawSelecao();
         drawTemp();
         drawReguasRemotas();

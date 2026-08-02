@@ -83,6 +83,12 @@ export function initTools() {
         toast(luzSubTool === 'luz' ? '💡 Clique no mapa para inserir luz' : luzSubTool === 'porta' ? '🚪 Arraste para criar a porta' : '🪟 Arraste para criar a janela');
     }));
 
+    // Redimensionar muda o que cabe na tela: a câmera de quem não pode "ver além
+    // do mapa" precisa ser reencaixada, senão o jogador fica olhando para fora do
+    // mapa sem ter como voltar (o clamp só rodava no arrasto/zoom). O gancho é
+    // chamado pelo resize do render — que ouve o ResizeObserver, não só a janela.
+    T._aposResize = clampCamera;
+
     setTool('select');
 }
 

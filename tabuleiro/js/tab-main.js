@@ -6,7 +6,7 @@ import {
     collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc,
     onSnapshot, query, where, writeBatch
 } from '../../painel-mestre/js/firebase-config.js';
-import { T, CAMADAS_PADRAO, PERMISSOES_LISTA, esc, uid, toast, markDirty, camadasVisiveis, optsUnidade, popNavegacaoValida, refViagemPorDia, HORAS_DE_MARCHA, ehEcoAtrasado, duracaoLerp, marcarRecebimentoReguas, configDoCanvasMudou } from './tab-state.js';
+import { T, CAMADAS_PADRAO, mesclarCamadasPadrao, PERMISSOES_LISTA, esc, uid, toast, markDirty, camadasVisiveis, optsUnidade, popNavegacaoValida, refViagemPorDia, HORAS_DE_MARCHA, ehEcoAtrasado, duracaoLerp, marcarRecebimentoReguas, configDoCanvasMudou } from './tab-state.js';
 import { notifyObjectChange, notifyCanvasConfigChange } from './tab-perf.js';
 import { npcNaMesa } from '../../shared/npc-mesas.js';
 import { startRenderLoop, centerCamera } from './tab-render.js';
@@ -232,6 +232,7 @@ export async function trocarCanvas(id, escreverEstado) {
         if (!s.exists()) return;
         const anterior = T.canvas;
         T.canvas = { id: s.id, ...s.data() };
+        T.canvas.camadas = mesclarCamadasPadrao(T.canvas.camadas);
         carregarExploracao(); // F3.1: memória de exploração (merge entre clientes)
         // Só exploração mudou (save do fog persistente, ~1 a cada 3s durante
         // arrasto no público)? Então NADA de invalidação geral: re-renderizar o
@@ -599,15 +600,42 @@ window.tbAbrirPermissoes = function() {
         return `<div class="tb-perm-row">
             <div class="tb-perm-user"><b>${esc(info.nome)}</b><div class="tb-muted" style="font-size:.75rem">${esc(chars || 'sem personagem')}</div></div>
             <div class="tb-perm-checks">
-                ${PERMISSOES_LISTA.map(pl => `<label class="tb-check tb-check-sm"><input type="checkbox" data-uid="${u}" data-perm="${pl.key}" ${p[pl.key]?'checked':''}> ${pl.label}</label>`).join('')}
+                ${PERMISSOES_LISTA.map(pl => `<label class="tb-check tb-check-sm"><input type="checkbox" data-uid="${u}" data-perm="${pl.key}" ${p[pl.key]?'checked':''} onchange="tbPermSync('${pl.key}')"> ${pl.label}</label>`).join('')}
             </div>
         </div>`;
     }).join('');
+    // Linha da MESA: marcar aqui marca a mesma permissão em todo mundo. É só um
+    // atalho de preenchimento — o que vai para o banco continua sendo a
+    // permissão de cada jogador, então dá para ajustar um deles depois.
+    const todos = `<div class="tb-perm-row" style="border-color:var(--tb-primary)">
+        <div class="tb-perm-user"><b>🌐 Toda a mesa</b><div class="tb-muted" style="font-size:.75rem">${jogadores.length} ${jogadores.length === 1 ? 'jogador' : 'jogadores'}</div></div>
+        <div class="tb-perm-checks">
+            ${PERMISSOES_LISTA.map(pl => {
+                const marcados = jogadores.filter(u => (perms[u] || {})[pl.key]).length;
+                return `<label class="tb-check tb-check-sm"><input type="checkbox" data-todos="${pl.key}"
+                    ${marcados === jogadores.length ? 'checked' : ''} onchange="tbPermTodos('${pl.key}',this.checked)"> ${pl.label}</label>`;
+            }).join('')}
+        </div>
+    </div>`;
     abrirModal('🔑 Permissões de Edição (modo público)', `
-        <div class="tb-muted" style="font-size:.8rem;margin-bottom:10px">Permissões individuais por jogador, válidas para <b>este canvas</b>.</div>
+        <div class="tb-muted" style="font-size:.8rem;margin-bottom:10px">Válidas para <b>este canvas</b>. A linha da mesa aplica a permissão a todos de uma vez; abaixo dá para acertar caso a caso.</div>
+        ${todos}
         ${linhas}
         <div class="tb-modal-actions"><button class="tb-btn tb-btn-success" onclick="tbSalvarPermissoes()">💾 Salvar</button></div>
     `);
+    PERMISSOES_LISTA.forEach(pl => window.tbPermSync(pl.key));   // meio-marcado já na abertura
+};
+/** Marca/desmarca a permissão de TODOS os jogadores da lista aberta. */
+window.tbPermTodos = function(perm, valor) {
+    document.querySelectorAll(`#tbModal input[data-perm="${perm}"]`).forEach(i => { i.checked = valor; });
+};
+/** Devolve a caixa da mesa ao estado certo quando um jogador é ajustado sozinho. */
+window.tbPermSync = function(perm) {
+    const ind = [...document.querySelectorAll(`#tbModal input[data-perm="${perm}"]`)];
+    const box = document.querySelector(`#tbModal input[data-todos="${perm}"]`);
+    if (!box) return;
+    box.checked = ind.length > 0 && ind.every(i => i.checked);
+    box.indeterminate = !box.checked && ind.some(i => i.checked);
 };
 window.tbSalvarPermissoes = async function() {
     const perms = {};

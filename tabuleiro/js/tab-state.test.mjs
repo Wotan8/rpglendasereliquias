@@ -5,7 +5,7 @@ import {
     T, UNIDADES, optsUnidade, CAMADAS_PADRAO, PERMISSOES_LISTA,
     pxDeLarguraReal, larguraRealDePx, sincLarguraReal,
     upcEm, unidadeEm, unidadesParaPx, pxParaUnidades, gridSize,
-    camadasVisiveis, objVisivel, tokensDaVisao, popNavegacaoValida,
+    camadasVisiveis, objVisivel, tokensDaVisao, mesclarCamadasPadrao, popNavegacaoValida,
     fmtViagem, fmtDuracao, refViagemPorDia, camposRevelados, selecionar, politicaDeFog,
     alcanceDeVisao, fonteDoAlcance, DV_PERCEPCAO, DV_PERCEPCAO_VISUAL,
     bonusIniciativa, DV_INICIATIVA, DADO_INICIATIVA,
@@ -94,6 +94,24 @@ assert.equal(objVisivel({ tipo: 'token', layerId: 'dm' }), false, 'camada DM seg
 
 // --- a permissão não abre outras portas ---
 assert.equal(camadasVisiveis().some(c => c.tipo === 'dm'), false);
+
+// --- 🖼️ camada Mostrar: visível ao público, mas objeto a objeto ---
+assert.equal(camadasVisiveis().some(c => c.tipo === 'mostrar'), true, 'a vitrine existe para o jogador');
+assert.equal(objVisivel({ tipo: 'mostrar', layerId: 'mostrar' }), true, 'liberado por padrão na camada');
+assert.equal(objVisivel({ tipo: 'mostrar', layerId: 'mostrar', visivelPublico: false }), false,
+    '🔒 é o 👁️ do objeto que decide — o que o mestre coloca nasce oculto');
+assert.equal(CAMADAS_PADRAO.find(c => c.tipo === 'mostrar').abaixoDaLuz, false,
+    '🔒 abaixoDaLuz falso é o que joga a vitrine para o passe ACIMA do fog');
+
+// canvas antigo (sem a camada nova) ganha ela ao carregar, sem migrar o banco
+const velho = CAMADAS_PADRAO.filter(c => c.id !== 'mostrar');
+assert.equal(mesclarCamadasPadrao(velho).length, CAMADAS_PADRAO.length);
+assert.equal(mesclarCamadasPadrao(velho).some(c => c.id === 'mostrar'), true);
+assert.equal(mesclarCamadasPadrao(CAMADAS_PADRAO), CAMADAS_PADRAO, 'nada faltando: devolve o mesmo array');
+assert.equal(mesclarCamadasPadrao(undefined).length, CAMADAS_PADRAO.length, 'canvas sem camadas não quebra');
+// camada custom do mestre sobrevive à mesclagem
+const comCustom = [...velho, { id: 'x1', nome: 'Minha', tipo: 'custom', ordem: 9 }];
+assert.equal(mesclarCamadasPadrao(comCustom).some(c => c.id === 'x1'), true);
 
 // --- mestre no secreto vê tudo ---
 T.mode = 'secret'; T.isMaster = true;

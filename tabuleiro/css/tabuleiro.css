@@ -235,21 +235,21 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 .tb-win-body { padding: 10px; overflow-y: auto; }
 /* Abas de CENA de combate: a aberta é maior, as outras encolhem e ficam
    apagadas — o mestre bate o olho e sabe em qual está. O '＋' é a última. */
-.tb-cena-abas { display: flex; align-items: flex-end; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
+.tb-cena-abas { display: flex; align-items: flex-end; gap: 3px; flex-wrap: wrap; margin-bottom: 7px; }
 .tb-cena-aba {
-    display: flex; align-items: center; gap: 5px; cursor: pointer;
+    display: flex; align-items: center; gap: 3px; cursor: pointer;
     background: var(--tb-panel2); border: 1px solid var(--tb-border); border-bottom-color: transparent;
-    color: var(--tb-muted); font: inherit; font-size: .7rem; padding: 3px 7px;
-    border-radius: 8px 8px 0 0; max-width: 42%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    color: var(--tb-muted); font: inherit; font-size: .62rem; padding: 1px 5px; line-height: 1.5;
+    border-radius: 6px 6px 0 0; max-width: 34%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .tb-cena-aba:hover { color: var(--tb-light); border-color: var(--tb-primary); }
 .tb-cena-aba.ativa {
     background: rgba(91, 63, 184,.22); border-color: var(--tb-primary);
-    color: var(--tb-light); font-size: .82rem; font-weight: 700; padding: 6px 10px;
+    color: var(--tb-light); font-size: .72rem; font-weight: 700; padding: 3px 7px;
 }
-.tb-cena-aba.nova { font-size: .9rem; padding: 3px 9px; color: var(--tb-light); }
-.tb-cena-n { opacity: .6; font-size: .66rem; }
-.tb-cena-x { opacity: .6; padding: 0 2px; }
+.tb-cena-aba.nova { font-size: .72rem; padding: 1px 6px; color: var(--tb-light); }
+.tb-cena-n { opacity: .55; font-size: .58rem; }
+.tb-cena-x { opacity: .55; padding: 0 1px; }
 .tb-cena-x:hover { opacity: 1; color: var(--lr-blood-3, #ef4444); }
 
 .tb-combat-controls { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }

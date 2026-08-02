@@ -168,7 +168,9 @@ window.tbColocarMostrar = async function(refTipo, refId) {
     if (refTipo === 'caixa') { const i = (caixaItens||[]).find(x => x.id === refId); nome = i?.nome || 'Item'; url = i?.imagem || i?.imagemUrl || ''; }
     const centro = screenToWorld({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
     await addObj({
-        tipo: 'mostrar', layerId: T.activeLayerId === 'luz' ? 'tokens' : T.activeLayerId,
+        // Vitrine sempre: a camada 🖼️ Mostrar fica acima de tudo, inclusive do
+        // fog — é o único lugar onde a imagem aparece inteira para a mesa.
+        tipo: 'mostrar', layerId: 'mostrar',
         x: centro.x - 110, y: centro.y - 110, w: 220, h: 220,
         refTipo, refId, nome, url,
         visivelPublico: false,
@@ -176,7 +178,7 @@ window.tbColocarMostrar = async function(refTipo, refId) {
         extrasVisiveis: [],
     });
     fecharModal();
-    toast('🎁 Colocado no canva (oculto do público). Botão direito para configurar a exibição.');
+    toast('🎁 Na camada 🖼️ Mostrar, oculto do público. Botão direito → 👁️ Exibir ao público.');
 };
 
 // =====================================================================

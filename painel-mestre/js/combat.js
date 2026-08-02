@@ -26,6 +26,7 @@ function persistCombat() {
     if (!S.currentMesaId) return;
     clearTimeout(_persistTimer);
     _persistTimer = setTimeout(async () => {
+        _persistTimer = null;   // é o que destrava o listener a receber mudança de fora
         try {
             const participantes = S.combatParticipants.map(p => ({ ...p }));
             // grava DENTRO da cena aberta; o helper devolve o doc com o espelho
@@ -103,13 +104,22 @@ window._loadCombatFromMesa = async function() {
         // andamento. Um listener, um doc — o mesmo que o tabuleiro já paga.
         combatListeners.__doc = onSnapshot(refDocCombate(), s => {
             if (!s.exists()) return;
-            const antes = _docCombate ? cenaAtiva(_docCombate).id : null;
             _docCombate = s.data();
-            const agora = cenaAtiva(_docCombate).id;
-            if (agora !== antes) {
-                S.setCombatParticipants(cenaAtiva(_docCombate).participantes || []);
-                renderCombatList();
-            }
+            const parts = cenaAtiva(_docCombate).participantes || [];
+            // Write meu ainda na fila (o mestre está mexendo AQUI): o snapshot é
+            // velho por definição, ignorar. Sem essa guarda, o eco do próprio
+            // write redesenharia a lista no meio da digitação.
+            if (_persistTimer) return;
+            if (JSON.stringify(parts) === JSON.stringify(S.combatParticipants)) return;
+            S.setCombatParticipants(parts);
+            // participante que entrou pelo Tabuleiro também precisa do listener de
+            // vitais aqui — senão a barra dele só se mexe depois de recarregar
+            parts.forEach(p => {
+                if (combatListeners[p.id]) return;
+                if (p.characterId) setupCombatListener(p.characterId, p.id);
+                if (p.npcId) setupCombatNpcListener(p.npcId, p.id);
+            });
+            pintarCombate();
         }, e => console.warn('combate doc', e));
         renderCombatList();
     } catch (e) { console.warn('loadCombat', e); }
@@ -366,8 +376,14 @@ window.removeFromCombat = function(pid) {
 window.openCombatNpcModal = function(pid) { const p = S.combatParticipants.find(x => x.id === pid); if (p?.npcId && window.openNpcEditModal) window.openNpcEditModal(p.npcId); };
 
 // ===== RENDER =====
+/** Redesenha E grava — é o caminho de quem MEXEU na lista aqui. */
 export function renderCombatList() {
     persistCombat();
+    pintarCombate();
+}
+
+/** Só redesenha. Quem veio de fora (listener) não pode regravar o que recebeu. */
+function pintarCombate() {
     const el = document.getElementById('combatList'); if (!el) return;
     const cenas = barraDeCenas();
     if (!S.combatParticipants.length) { el.innerHTML = cenas + '<div class="no-combat">Nenhum participante nesta cena</div>'; return; }
