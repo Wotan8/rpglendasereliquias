@@ -351,6 +351,7 @@ export function aplicarModoUI() {
     show('toolText', secret || T.perms.addTexto);
     show('toolMeasure', secret || T.perms.medir);
     show('toolPin', secret || T.perms.alfinete);
+    show('toolFoco', secret);
     show('toolLight', secret);
     show('btnUploadImg', secret || T.perms.addImagem);
     show('btnLocal', secret);

@@ -43,7 +43,11 @@ export function initPresenca() {
         if (p.origem === T.user?.uid) return;
         if (p.canvasId && p.canvasId !== T.canvasId) return;
         dispararPingLocal(p);
-        if (p.forcar && !T.isMaster) tweenCamera(p.x, p.y, Math.max(T.cam.z, 0.8), 650);
+        // Puxa a câmera de TODA tela pública — inclusive a TV do mestre, que roda
+        // na conta dele. Só a tela secreta (a de trabalho, de onde o foco partiu)
+        // fica parada; antes o teste era `!T.isMaster` e o Público do mestre não
+        // acompanhava o próprio foco.
+        if (p.forcar && T.mode !== 'secret') tweenCamera(p.x, p.y, Math.max(T.cam.z, 0.8), 650);
     }));
 
     // Heartbeat (mantém o cursor "vivo" mesmo parado)

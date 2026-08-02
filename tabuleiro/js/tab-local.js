@@ -81,8 +81,11 @@ window.tbAddLocal = async function (geoId) {
         const payloads = objetosDoLocal(mt, destino);
         let z = maxZ();
         for (const p of payloads) {
-            // A imagem do mapa fica no fundo; o resto segue a ordem normal.
-            await addObj(p.tipo === 'imagem' ? { ...p, z: ++z } : { ...p, z: ++z });
+            // A imagem do mapa fica no fundo e nasce BLOQUEADA: é o objeto que mais
+            // sai do lugar sem querer (ele cobre a tela inteira, então qualquer
+            // arrasto fora de um token pega nele) e mover o mapa desalinha paredes,
+            // portas e luzes de uma vez. Desbloqueia no 🔒 quando precisar ajustar.
+            await addObj(p.tipo === 'imagem' ? { ...p, z: ++z, bloqueado: true } : { ...p, z: ++z });
         }
         // Iluminação ambiente do Local. Regra: importar só REFORÇA o fog, nunca
         // enfraquece. Trazer um Local de dia (ou sem luz dinâmica) para um canvas

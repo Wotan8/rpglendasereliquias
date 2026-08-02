@@ -102,8 +102,9 @@ export function setTool(t) {
     barra('tbLuzBar', t === 'light');
     barra('tbTemplateBar', t === 'template');
     barra('tbTerrenoBar', t === 'terreno');
-    cv.style.cursor = { select: 'default', move: 'grab', draw: 'crosshair', text: 'text', measure: 'crosshair', pin: 'copy', light: 'crosshair', template: 'crosshair', terreno: 'crosshair' }[t] || 'default';
+    cv.style.cursor = { select: 'default', move: 'grab', draw: 'crosshair', text: 'text', measure: 'crosshair', pin: 'copy', light: 'crosshair', template: 'crosshair', terreno: 'crosshair', foco: 'crosshair' }[t] || 'default';
     if (t === 'terreno') toast('⛰️ Clique para adicionar vértices · duplo-clique/Enter fecha · Esc cancela');
+    if (t === 'foco') toast('🔭 Clique no ponto — a tela de todos vai até ele');
     markDirty();
 }
 
@@ -409,6 +410,15 @@ function onDown(e) {
         case 'pin': {
             if (!can('alfinete') && !T.isMaster) { toast('⚠️ Sem permissão para alfinetes', 'warning'); return; }
             criarAlfinete(w);
+            break;
+        }
+        case 'foco': {
+            // Ping FORÇADO: o mesmo caminho do Alt+Shift+clique, mas como
+            // ferramenta — a tela de todo mundo (menos a secreta, que é a de
+            // trabalho) viaja até o ponto. Zero estado novo: um campo no doc de
+            // pings que a mesa já escuta.
+            if (T.mode !== 'secret') return;
+            enviarPing(w, true);
             break;
         }
         case 'light': {

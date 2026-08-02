@@ -186,15 +186,16 @@ function abrirExibido(capId) {
 
 async function abrirEstanteJogador() {
     const meus = meusChars();
-    // Sem personagem na mesa não há estante — mas a leitura exibida continua valendo
-    if (!meus.length) {
-        if (exibidos().length) return abrirExibido();
-        toast('⚠️ Você não tem personagem nesta mesa', 'warning'); return;
-    }
-    if (!meus.some(c => c.id === _charId)) _charId = meus[0].id;
+    // 🔴 Sem personagem NÃO é motivo para pular a estante. Era: o mestre olhando
+    // o próprio Modo Público (a conta dele não tem personagem) clicava em
+    // 📖 Livros e caía direto no último capítulo exibido, sem ver estante
+    // nenhuma. Agora a estante abre do mesmo jeito — só sem a parte pessoal.
+    if (!meus.some(c => c.id === _charId)) _charId = meus[0]?.id || null;
     const charId = _charId;
     try {
-        const { vinculos, regras, diretos } = await carregarAcesso(charId);
+        const { vinculos, regras, diretos } = charId
+            ? await carregarAcesso(charId)
+            : { vinculos: new Map(), regras: new Set(), diretos: new Set() };
         if (charId !== _charId) return;   // trocou de personagem no meio
         const troca = meus.length > 1
             ? `<div style="margin-bottom:12px"><select onchange="tbEstanteDoChar(this.value)"
@@ -223,13 +224,16 @@ async function abrirEstanteJogador() {
             return window.lvCardLivro?.(livro, ids.length, `window.lvAbrirVinculo(${args})`) || '';
         }).join('');
 
+        // Sem personagem (espectador, ou o mestre olhando o próprio Público) a
+        // segunda seção não é "Meus Livros": é o que a mesa toda pode ler.
+        const nomeSecao2 = charId ? '📖 Meus Livros' : '📚 Livros da mesa';
         window.lvBiblioteca({
             // Com o mestre exibindo algo, o título passa a ser da PRIMEIRA seção e
-            // "Meus Livros" vira o subtítulo da segunda — sem opção nova no leitor.
-            titulo: cardsCronista ? '📖 Livros do Cronista' : '📖 Meus Livros',
+            // a segunda vira subtítulo — sem opção nova no leitor.
+            titulo: cardsCronista ? '📖 Livros do Cronista' : nomeSecao2,
             cabecalho: cardsCronista
                 ? `<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">${cardsCronista}</div>
-                   <h2 style="margin:0 0 14px">📖 Meus Livros</h2>${troca}`
+                   <h2 style="margin:0 0 14px">${nomeSecao2}</h2>${troca}`
                 : troca,
             filtro: (l) => {
                 if (diretos.has(l.id)) return true;      // vínculo direto do mestre
