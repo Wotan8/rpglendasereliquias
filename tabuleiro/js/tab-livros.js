@@ -30,6 +30,7 @@ export function initLivros() {
     window.tbExibirCapitulo = exibirCapitulo;
     window.tbPararLivro = pararExibicao;
     window.tbEstanteDoChar = estanteDoChar;
+    window.tbAbrirExibido = abrirExibido;
 }
 
 function abrirEstante() {
@@ -94,9 +95,26 @@ function estanteDoChar(charId) {
     abrirEstanteJogador();
 }
 
+/**
+ * Reabre o capítulo que o mestre está exibindo AGORA.
+ * O `sincLivroExibido` só age quando o carimbo muda, então quem fechou a janela
+ * ficava sem volta até o mestre reexibir. Entra pelo id direto, sem passar pelo
+ * filtro da estante: o mestre pode exibir capítulo fora do alcance do personagem
+ * — foi ele quem escolheu mostrar.
+ */
+function abrirExibido() {
+    const capId = T.estado?.livroExibido?.capId;
+    if (!capId) { toast('ℹ️ O mestre não está exibindo nenhum capítulo agora'); return; }
+    window.lvLerCapitulo?.(capId);
+}
+
 async function abrirEstanteJogador() {
     const meus = meusChars();
-    if (!meus.length) { toast('⚠️ Você não tem personagem nesta mesa', 'warning'); return; }
+    // Sem personagem na mesa não há estante — mas a leitura exibida continua valendo
+    if (!meus.length) {
+        if (T.estado?.livroExibido?.capId) return abrirExibido();
+        toast('⚠️ Você não tem personagem nesta mesa', 'warning'); return;
+    }
     if (!meus.some(c => c.id === _charId)) _charId = meus[0].id;
     const charId = _charId;
     try {
@@ -109,9 +127,18 @@ async function abrirEstanteJogador() {
                    ${meus.map(c => `<option value="${esc(c.id)}" ${c.id === charId ? 'selected' : ''}>🎭 ${esc(c.nome)}</option>`).join('')}
                </select></div>`
             : '';
+        // O que o mestre está exibindo entra no TOPO da estante: é o único jeito de
+        // voltar para a leitura depois de fechar a janela.
+        const exibindo = T.estado?.livroExibido?.capId
+            ? `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:8px 10px;
+                      border-radius:10px;background:rgba(52,211,153,.10);border:1px solid var(--lr-nature,#34d399);font-size:.85rem">
+                   📡 O mestre está exibindo um capítulo
+                   <button type="button" class="tb-btn tb-btn-small" onclick="tbAbrirExibido()">📖 Abrir leitura</button>
+               </div>`
+            : '';
         window.lvBiblioteca({
             titulo: '📖 Meus Livros',
-            cabecalho: troca,
+            cabecalho: exibindo + troca,
             filtro: (l) => {
                 const p = pubDoLivro(l);
                 return p.geral || p.conhGeral || (p.conhVinculo && vinculos.has(l.id));

@@ -425,6 +425,16 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 .tb-mus-edit { gap: 6px; }
 .tb-mus-edit .tb-input { padding: 5px 8px; font-size: .78rem; }
 
+/* Celular DEITADO (e qualquer janela baixa): nem com o botão no piso de 24px a
+   coluna única cabe — 14 botões pedem ~380px e sobra menos que isso. Aí a barra
+   quebra em duas colunas (os separadores saem, senão brigam pelo lugar) e as
+   sub-barras andam para a direita para não ficar por baixo. */
+@media (max-height: 460px) {
+    .tb-toolbar { flex-wrap: wrap; max-height: calc(100vh - 70px); align-content: flex-start; }
+    .tb-toolbar .tb-sep { display: none; }
+    .tb-subbar { left: 84px; }
+}
+
 @media (max-width: 720px) {
     #tbMesaNome { display: none; }
     .tb-side-panel { width: 230px; }
