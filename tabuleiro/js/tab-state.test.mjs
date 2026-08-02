@@ -464,6 +464,26 @@ assert.equal(ocioso(2000, duracaoLerp(2000)), 1000,
     'pausa de verdade ainda deixa o token parado — e deve mesmo, ninguém está arrastando');
 
 // =====================================================================
+// 📖 CAPÍTULOS EXIBIDOS — vários ao mesmo tempo, sem migrar doc antigo
+// =====================================================================
+import { capsExibidos, focoExibido } from './tab-state.js';
+
+assert.deepEqual(capsExibidos({ caps: ['a', 'b'], foco: 'b' }), ['a', 'b']);
+assert.equal(focoExibido({ caps: ['a', 'b'], foco: 'b' }), 'b', 'o foco é o que abre sozinho na mesa');
+assert.deepEqual(capsExibidos({ caps: [], foco: null }), [], 'lista vazia = nada no ar');
+
+// 🔒 formato antigo (um capítulo só) continua valendo — mesa parada há meses
+assert.deepEqual(capsExibidos({ capId: 'x', t: 1 }), ['x'], 'doc antigo vira lista de um');
+assert.equal(focoExibido({ capId: 'x', t: 1 }), 'x', 'e o antigo abre sozinho como antes');
+
+// nada exibido / lixo no campo não vira capítulo fantasma
+assert.deepEqual(capsExibidos(null), []);
+assert.deepEqual(capsExibidos(undefined), []);
+assert.deepEqual(capsExibidos({ caps: ['a', null, ''] }), ['a'], 'buraco na lista não abre leitor vazio');
+assert.equal(focoExibido(null), null);
+assert.equal(focoExibido({ caps: ['a'] }), null, 'lista sem foco não arranca ninguém para a leitura');
+
+// =====================================================================
 // ECO ATRASADO DO PRÓPRIO ARRASTO
 // 🔴 A regressão trancada: um write intermediário do arrasto aterrissando
 // depois do final jogava o token de volta ao meio do caminho — o tremor ao

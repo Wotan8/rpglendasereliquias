@@ -323,6 +323,19 @@ export function configDoCanvasMudou(antes, depois) {
     return JSON.stringify(semExp(antes)) !== JSON.stringify(semExp(depois));
 }
 
+// ---- 📖 Capítulos exibidos para a mesa (tabuleiro-meta/estado.livroExibido) ----
+// Formato atual: { caps: [id], foco: id, t }. O antigo era um capítulo só
+// (`capId`) — mesa que ficou parada desde então continua funcionando sem migração.
+/** Todos os capítulos que o mestre deixou disponíveis agora. */
+export function capsExibidos(exib) {
+    if (Array.isArray(exib?.caps)) return exib.caps.filter(Boolean);
+    return exib?.capId ? [exib.capId] : [];
+}
+/** O que abre sozinho na tela de todo mundo — o último "Exibir" do mestre. */
+export function focoExibido(exib) {
+    return exib?.foco || exib?.capId || null;
+}
+
 /** TTL da régua remota, contado do RECEBIMENTO local (ms). */
 export const REGUA_TTL_MS = 6000;
 

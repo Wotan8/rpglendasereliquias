@@ -238,6 +238,7 @@
                 <div style="font-size:.8rem;opacity:.7;margin-bottom:4px">📖 Livro</div>
                 <h2 style="margin:0 0 8px">${esc(livro.title || 'Sem título')}</h2>
                 ${livro.description ? `<p style="opacity:.8;font-style:italic;margin:0 0 18px">${esc(livro.description)}</p>` : ''}
+                ${(_bib && _bib.acaoLivro) ? `<div style="margin:0 0 16px">${_bib.acaoLivro(livro, lista)}</div>` : ''}
                 <div style="font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;opacity:.7;margin-bottom:8px">Sumário</div>
                 <div style="display:flex;flex-direction:column;gap:6px">
                     ${lista.map((c, i) => {
@@ -313,6 +314,8 @@
      * Estante de livros. Opções, todas do chamador:
      *   filtro(livro)              → quais livros entram (publicação, ver livros-pub.js)
      *   acaoCapitulo(cap)          → botão extra por capítulo ("Exibir na mesa")
+     *   acaoLivro(livro, caps)     → botão extra no topo do sumário ("Exibir o livro
+     *                                inteiro"); `caps` são os capítulos à vista
      *   capituloEstado(cap, livro) → 'liberado' | 'bloqueado' | 'oculto'
      *   notaBloqueio               → explicação do cadeado
      *   cabecalho                  → HTML entre o título e os livros

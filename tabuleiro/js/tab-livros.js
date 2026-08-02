@@ -9,8 +9,9 @@
 //
 // CUSTO: a exibição é UM campo (`livroExibido`) no doc que todo mundo já
 // escuta — tabuleiro-meta/estado. Nada de listener novo, nada de objeto no
-// canvas, nada de HTML de capítulo trafegando no doc: vai só o id, e cada
-// aparelho busca o capítulo (2 leituras) apenas quando ele muda. O leitor em si
+// canvas, nada de HTML de capítulo trafegando no doc: vão só os ids, e cada
+// aparelho busca o capítulo (2 leituras) apenas quando o FOCO muda. Exibir o
+// livro inteiro é um write só, com a lista de ids. O leitor em si
 // é o shared/livro-vinculado.js, o mesmo da ficha. A estante do jogador só
 // busca ficha e dados de sistema no PRIMEIRO clique, e guarda para a sessão.
 //
@@ -20,28 +21,53 @@
 // Falha fechado e manda para a ficha, onde a conta é a de verdade.
 // =============================================
 import { db, collection, doc, getDoc, getDocs, setDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, toast, esc } from './tab-state.js';
+import { T, toast, esc, capsExibidos, focoExibido } from './tab-state.js';
 import { refEstado } from './tab-main.js';
 import { livroDoMestre, pubDoLivro } from '../../shared/livros-pub.js';
 
 export function initLivros() {
     window.db = window.db || db;             // o leitor compartilhado lê daqui
     window.tbAbrirLivros = abrirEstante;
-    window.tbExibirCapitulo = exibirCapitulo;
-    window.tbPararLivro = pararExibicao;
+    window.tbExibirCap = (id) => mudarExibicao([...exibidos(), id], id);
+    window.tbPararCap = (id) => mudarExibicao(exibidos().filter(x => x !== id), null, id);
+    window.tbExibirLivro = (ids) => { const l = ids.split(','); mudarExibicao([...exibidos(), ...l], l[0]); };
+    window.tbPararLivroTodo = (ids) => {
+        const l = ids.split(',');
+        mudarExibicao(exibidos().filter(x => !l.includes(x)), null, ...l);
+    };
+    window.tbPararTudo = () => mudarExibicao([], null);
     window.tbEstanteDoChar = estanteDoChar;
     window.tbAbrirExibido = abrirExibido;
 }
 
+const exibidos = () => capsExibidos(T.estado?.livroExibido);
+
 function abrirEstante() {
     if (!window.lvBiblioteca) { toast('❌ Leitor de livros não carregou', 'danger'); return; }
     if (T.mode === 'secret' && T.isMaster) {
+        const noAr = exibidos().length;
         window.lvBiblioteca({
             titulo: '📖 Livros do Cronista',
             filtro: livroDoMestre,
-            acaoCapitulo: (cap) => cap.id === T.estado?.livroExibido?.capId
-                ? `<button type="button" class="tb-btn tb-btn-small tb-btn-danger" onclick="tbPararLivro()">⛔ Parar</button>`
-                : `<button type="button" class="tb-btn tb-btn-small" onclick="tbExibirCapitulo('${esc(cap.id)}')">📡 Exibir</button>`,
+            // "Parar tudo" mora aqui porque o que está no ar pode vir de livros diferentes
+            cabecalho: noAr
+                ? `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;padding:8px 10px;
+                          border-radius:10px;background:rgba(52,211,153,.10);border:1px solid var(--lr-nature,#34d399);font-size:.85rem">
+                       📡 ${noAr} ${noAr === 1 ? 'capítulo exibido' : 'capítulos exibidos'} para a mesa
+                       <button type="button" class="tb-btn tb-btn-small tb-btn-danger" onclick="tbPararTudo()">⛔ Parar tudo</button>
+                   </div>`
+                : '',
+            acaoLivro: (livro, caps) => {
+                const ids = caps.map(c => c.id);
+                if (!ids.length) return '';
+                const todos = ids.every(id => exibidos().includes(id));
+                return todos
+                    ? `<button type="button" class="tb-btn tb-btn-small tb-btn-danger" onclick="tbPararLivroTodo('${ids.join(',')}')">⛔ Parar o livro inteiro</button>`
+                    : `<button type="button" class="tb-btn tb-btn-small" onclick="tbExibirLivro('${ids.join(',')}')">📡 Exibir todos os capítulos</button>`;
+            },
+            acaoCapitulo: (cap) => exibidos().includes(cap.id)
+                ? `<button type="button" class="tb-btn tb-btn-small tb-btn-danger" onclick="tbPararCap('${esc(cap.id)}')">⛔ Parar</button>`
+                : `<button type="button" class="tb-btn tb-btn-small" onclick="tbExibirCap('${esc(cap.id)}')">📡 Exibir</button>`,
         });
         return;
     }
@@ -102,17 +128,17 @@ function estanteDoChar(charId) {
  * filtro da estante: o mestre pode exibir capítulo fora do alcance do personagem
  * — foi ele quem escolheu mostrar.
  */
-function abrirExibido() {
-    const capId = T.estado?.livroExibido?.capId;
-    if (!capId) { toast('ℹ️ O mestre não está exibindo nenhum capítulo agora'); return; }
-    window.lvLerCapitulo?.(capId);
+function abrirExibido(capId) {
+    const alvo = capId || focoExibido(T.estado?.livroExibido) || exibidos()[0];
+    if (!alvo) { toast('ℹ️ O mestre não está exibindo nenhum capítulo agora'); return; }
+    window.lvLerCapitulo?.(alvo);
 }
 
 async function abrirEstanteJogador() {
     const meus = meusChars();
     // Sem personagem na mesa não há estante — mas a leitura exibida continua valendo
     if (!meus.length) {
-        if (T.estado?.livroExibido?.capId) return abrirExibido();
+        if (exibidos().length) return abrirExibido();
         toast('⚠️ Você não tem personagem nesta mesa', 'warning'); return;
     }
     if (!meus.some(c => c.id === _charId)) _charId = meus[0].id;
@@ -128,12 +154,19 @@ async function abrirEstanteJogador() {
                </select></div>`
             : '';
         // O que o mestre está exibindo entra no TOPO da estante: é o único jeito de
-        // voltar para a leitura depois de fechar a janela.
-        const exibindo = T.estado?.livroExibido?.capId
-            ? `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:8px 10px;
+        // voltar para a leitura depois de fechar a janela, e o único de alcançar
+        // capítulo fora do vínculo do personagem. Os títulos saem do acervo que a
+        // própria estante já vai carregar (memoizado no leitor) — sem leitura extra.
+        const noAr = exibidos();
+        const acervo = noAr.length ? await window.lvCarregarLivros?.() : null;
+        const exibindo = noAr.length
+            ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding:8px 10px;
                       border-radius:10px;background:rgba(52,211,153,.10);border:1px solid var(--lr-nature,#34d399);font-size:.85rem">
-                   📡 O mestre está exibindo um capítulo
-                   <button type="button" class="tb-btn tb-btn-small" onclick="tbAbrirExibido()">📖 Abrir leitura</button>
+                   📡 <b>O mestre está exibindo</b>
+                   ${noAr.map(id => {
+                       const t = acervo?.caps.find(c => c.id === id)?.title || 'Capítulo';
+                       return `<button type="button" class="tb-btn tb-btn-small" onclick="tbAbrirExibido('${esc(id)}')">📖 ${esc(t)}</button>`;
+                   }).join('')}
                </div>`
             : '';
         window.lvBiblioteca({
@@ -155,22 +188,29 @@ async function abrirEstanteJogador() {
     } catch (e) { console.error(e); toast('❌ Erro ao abrir seus livros', 'danger'); }
 }
 
-async function exibirCapitulo(capId) {
+/**
+ * Grava a lista de capítulos exibidos. `foco` é o que abre sozinho na tela de
+ * todo mundo; `saindo` são ids que deixaram de ser exibidos.
+ *
+ * O carimbo `t` só anda quando o FOCO muda: tirar ou somar um capítulo lateral
+ * não pode arrancar a mesa do que ela está lendo. Continua sendo UM campo no
+ * doc que todos já escutam — nenhum listener novo, um write por clique.
+ */
+async function mudarExibicao(caps, foco, ...saindo) {
+    const antes = T.estado?.livroExibido;
+    const focoAntes = focoExibido(antes);
+    // tirei do ar justamente o que estava aberto? então ninguém fica com foco
+    const alvo = foco || (saindo.includes(focoAntes) ? null : focoAntes);
+    const lista = [...new Set(caps)].filter(Boolean);
+    const livroExibido = lista.length
+        ? { caps: lista, foco: alvo, t: alvo === focoAntes ? (antes?.t || Date.now()) : Date.now() }
+        : null;
     try {
-        // `t` é o que faz o outro lado perceber a troca — inclusive reexibir o
-        // mesmo capítulo depois de o jogador ter fechado a janela.
-        await setDoc(refEstado(), { livroExibido: { capId, t: Date.now() } }, { merge: true });
-        toast('📡 Capítulo exibido para a mesa');
-        window.lvRepintar?.();   // o botão vira "parar" onde o mestre está
-    } catch (e) { console.error(e); toast('❌ Erro ao exibir o capítulo', 'danger'); }
-}
-
-async function pararExibicao() {
-    try {
-        await setDoc(refEstado(), { livroExibido: null }, { merge: true });
-        toast('⛔ Exibição encerrada');
-        window.lvRepintar?.();
-    } catch (e) { console.error(e); toast('❌ Erro ao encerrar a exibição', 'danger'); }
+        await setDoc(refEstado(), { livroExibido }, { merge: true });
+        toast(!lista.length ? '⛔ Exibição encerrada'
+            : `📡 ${lista.length} ${lista.length === 1 ? 'capítulo exibido' : 'capítulos exibidos'} para a mesa`);
+        window.lvRepintar?.();   // os botões viram "parar" onde o mestre está
+    } catch (e) { console.error(e); toast('❌ Erro ao mudar a exibição', 'danger'); }
 }
 
 // Chamado a cada snapshot do doc `estado` (tab-main). Só age quando o carimbo
@@ -179,10 +219,11 @@ async function pararExibicao() {
 let _visto = null;
 export function sincLivroExibido(exib) {
     if (T.mode !== 'public') return;        // no secreto quem navega é o mestre, pela estante
-    const t = exib?.capId ? (exib.t || 0) : 0;
+    const foco = focoExibido(exib);
+    const t = foco ? (exib.t || 0) : 0;
     if (t === _visto) return;
     const primeira = _visto === null;
     _visto = t;
     if (!t) { if (!primeira && window.lvLeitorAberto?.()) window.lvFechar(); return; }
-    window.lvLerCapitulo?.(exib.capId);     // quem chega no meio já abre no capítulo
+    window.lvLerCapitulo?.(foco);           // quem chega no meio já abre no capítulo
 }

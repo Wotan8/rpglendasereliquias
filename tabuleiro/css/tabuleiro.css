@@ -433,6 +433,9 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
     .tb-toolbar { flex-wrap: wrap; max-height: calc(100vh - 70px); align-content: flex-start; }
     .tb-toolbar .tb-sep { display: none; }
     .tb-subbar { left: 84px; }
+    /* com duas colunas a barra desce até o rodapé e engolia a pilha do player
+       (que fica no canto de baixo à esquerda): ela troca de canto */
+    .tb-musica { left: auto; right: 14px; bottom: 14px; }
 }
 
 @media (max-width: 720px) {
