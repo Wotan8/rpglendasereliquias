@@ -14,6 +14,7 @@ import { initTools } from './tab-tools.js';
 import { initObjects, abrirPropriedades, addObj } from './tab-objects.js';
 import { initCombat } from './tab-combat.js';
 import { initMostrar } from './tab-mostrar.js';
+import { initLivros, sincLivroExibido } from './tab-livros.js';
 import { initPresenca } from './tab-presenca.js';
 import { initHud } from './tab-hud.js';
 import { initCena, transicaoDeCena } from './tab-cena.js';
@@ -80,6 +81,7 @@ window.addEventListener('DOMContentLoaded', () => {
             initObjects();
             initCombat();
             initMostrar();
+            initLivros();
             initPresenca();
             initHud();
             initCena();
@@ -162,6 +164,7 @@ async function iniciarSync() {
                 trocarCanvas(alvo, false);
             }
         }
+        sincLivroExibido(T.estado.livroExibido);   // 📖 capítulo que o mestre exibe
         atualizarBarraCanvas();
         markDirty();
     }));
@@ -339,6 +342,7 @@ export function aplicarModoUI() {
     show('btnToken', secret);
     show('btnInventario', !secret);
     show('btnMostrar', secret);
+    show('btnLivros', secret);
     show('btnCamadas', secret);
     show('btnConfig', secret);
     show('btnPerms', secret);

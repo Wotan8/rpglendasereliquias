@@ -67,6 +67,12 @@
             `<div class="${ok ? 'ok' : 'fail'}">${ok ? '✅' : '❌'} ${txt}</div>`);
 
         const tick = () => new Promise(r => setTimeout(r, 0));
+        // O leitor pinta depois da promise do acervo — esperar o elemento aparecer
+        // é mais honesto do que contar ticks.
+        const espera = async (sel, n = 40) => {
+            for (let i = 0; i < n; i++) { const el = document.querySelector(sel); if (el) return el; await tick(); }
+            return null;
+        };
         const btn = (sel) => document.querySelector(`${sel} button`);
 
         // O preenchimento é assíncrono (promise do acervo).
@@ -89,7 +95,7 @@
             await tick(); await tick();
             let ov = document.getElementById('lvLeitor');
             diz(!!ov && ov.textContent.includes('Sumário'), 'livro com vários capítulos abre no sumário');
-            const linhas = ov.querySelectorAll('.lv-box > div > button');
+            const linhas = ov.querySelectorAll('button.lv-cap');
             diz(linhas.length === 2, `sumário lista só os liberados (esperado 2, veio ${linhas.length})`);
             diz(!ov.textContent.includes('A Queda'), 'sumário não vaza capítulo não liberado');
 
@@ -137,7 +143,54 @@
             await tick(); await tick();
             ov = document.getElementById('lvLeitor');
             diz(ov && ov.textContent.includes('Texto do capítulo'), 'o 1º botão abre o 1º livro');
-            ov.remove();
+            window.lvFechar();
+
+            // ===== Biblioteca (Painel do Mestre / Tabuleiro) =====
+            window.lvBiblioteca({
+                titulo: '📖 Estante',
+                filtro: (l) => l.id === 'b1',
+                acaoCapitulo: (cap) => `<button type="button" class="lv-acao" data-cap="${cap.id}">📡</button>`,
+            });
+            await tick(); await tick();
+            ov = document.getElementById('lvLeitor');
+            const livros = ov.querySelectorAll('button.lv-livro');
+            diz(livros.length === 1, `estante respeita o filtro (esperado 1, veio ${livros.length})`);
+            diz(ov.textContent.includes('3 capítulos'), 'card do livro conta os capítulos');
+
+            livros[0].click();
+            await tick(); await tick();
+            ov = document.getElementById('lvLeitor');
+            diz(ov.querySelectorAll('button.lv-cap').length === 3,
+                'pela estante o livro abre inteiro, sem recorte de vínculo');
+            diz(ov.querySelectorAll('button.lv-acao').length === 3, 'cada capítulo ganha a ação do chamador');
+
+            ov.querySelector('button.lv-cap').click();
+            await tick(); await tick();
+            ov = document.getElementById('lvLeitor');
+            diz(!!ov.querySelector('button.lv-acao'), 'a ação também aparece dentro do capítulo');
+            let volta = [...ov.querySelectorAll('button')].find(b => b.textContent.includes('Sumário'));
+            volta.click(); await tick(); await tick();
+            volta = [...document.getElementById('lvLeitor').querySelectorAll('button')].find(b => b.textContent.includes('Estante'));
+            diz(!!volta, 'do sumário dá para voltar à estante');
+            volta.click();
+            diz(!!await espera('button.lv-livro'), 'voltar chega na estante');
+
+            // Repintar mantém o lugar (é o que roda quando o mestre exibe um capítulo)
+            document.querySelector('button.lv-livro').click();
+            await espera('button.lv-cap');
+            window.lvRepintar();
+            await tick(); await tick();
+            diz(document.getElementById('lvLeitor').querySelectorAll('button.lv-cap').length === 3,
+                'repintar redesenha o sumário, sem voltar para a estante');
+
+            // Fechar limpa a trilha: leitura de vínculo depois disso não herda o "← Estante"
+            window.lvFechar();
+            btn('#alvo2').click();
+            await tick(); await tick();
+            ov = document.getElementById('lvLeitor');
+            diz(![...ov.querySelectorAll('button')].some(b => b.textContent.includes('Estante')),
+                'fechar apaga a trilha de volta da estante');
+            window.lvFechar();
         })();
     </script>
 </body>

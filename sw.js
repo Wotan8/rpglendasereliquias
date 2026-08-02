@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v130';
+const VERSION = 'v131';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -114,6 +114,7 @@ const PRECACHE_URLS = [
   '/painel-mestre/js/area-apoio.js',
   '/painel-mestre/js/area-economica.js',
   '/painel-mestre/js/area-historico.js',
+  '/painel-mestre/js/area-livros.js',
   '/painel-mestre/js/area-mesas-condicoes.js',
   '/painel-mestre/js/area-mesas-config.js',
   '/painel-mestre/js/area-mesas-frentes.js',
@@ -158,6 +159,7 @@ const PRECACHE_URLS = [
   '/tabuleiro/js/tab-undo.js',
   '/tabuleiro/js/tab-musica.js',
   '/tabuleiro/js/tab-musica-calc.js',
+  '/tabuleiro/js/tab-livros.js',
   '/tabuleiro/js/tab-local.js',
   '/tabuleiro/js/tab-sessao.js',
   '/tabuleiro/js/tab-girar.js',
@@ -166,6 +168,7 @@ const PRECACHE_URLS = [
   '/shared/equip-slots.js',
   '/shared/lendas-reliquias.css',
   '/shared/livro-vinculado.js',
+  '/shared/livros-pub.js',
   '/shared/local-tatico.js',
   '/shared/npc-mesas.js',
   '/shared/texto-mundo.css',

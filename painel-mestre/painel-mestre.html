@@ -23,7 +23,9 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="../shared/tokens.css?v=11">
     <link rel="stylesheet" href="../shared/lendas-reliquias.css?v=2">
+    <link rel="stylesheet" href="../shared/texto-mundo.css?v=1">
     <script src="../shared/theme.js?v=1"></script>
+    <script src="../shared/livro-vinculado.js?v=3"></script>
 </head>
 <body>
     <!-- LOADING -->
@@ -60,6 +62,7 @@
                 <button class="tab-button" data-tab="npcs" onclick="switchTab('npcs')">👥 NPCs</button>
                 <button class="tab-button" data-tab="economica" onclick="switchTab('economica')">💰 ECONÔMICA</button>
                 <button class="tab-button" data-tab="apoio" onclick="switchTab('apoio')">🤝 APOIO</button>
+                <button class="tab-button" data-tab="livros" onclick="switchTab('livros')">📖 LIVROS</button>
                 <button class="tab-button" data-tab="historico" onclick="switchTab('historico')">📜 HISTÓRICO</button>
             </div>
 
@@ -501,6 +504,11 @@
             </div>
 
             <!-- TAB: HISTÓRICO -->
+            <!-- TAB: LIVROS (Escritório do Cronista, publicação "Mestre" ou "Geral") -->
+            <div class="tab-content" id="tab-livros">
+                <div id="livrosLista"><div style="text-align:center;padding:40px;color:var(--muted)">Carregando a estante...</div></div>
+            </div>
+
             <div class="tab-content" id="tab-historico">
                 <div id="historicoFilters"></div>
                 <div id="logsList"><div class="no-logs">Carregando histórico...</div></div>
@@ -739,5 +747,5 @@
     <!-- MAIN MODULE -->
     <script src="../ficha-v1.7_1/js/system-data-loader.js"></script>
     <script src="../shared/equip-slots.js?v=1"></script>
-    <script type="module" src="js/main.js?v=7"></script>
+    <script type="module" src="js/main.js?v=8"></script>
 </body>

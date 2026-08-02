@@ -16,6 +16,7 @@
 
 import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { statusDoCapitulo } from './conhecimento-calc.js';
+import { pubDoLivro } from '../../shared/livros-pub.js';
 
 let _carregado = false;
 let _livros = [], _capitulos = [], _regras = {};
@@ -96,9 +97,9 @@ async function carregarConhecimento() {
 
 
 /**
- * Livros que o personagem alcanca: os vinculados a raca, classe, tribo ou
- * peculiaridade dele. Livro publicado no Worldbuilding NAO basta — "public"
- * so diz que existe para jogadores, nao que este personagem tem acesso.
+ * Livros VINCULADOS a este personagem: os da raca, classe, tribo ou
+ * peculiaridade dele. E so metade da conta — a outra metade e a publicacao
+ * do livro (shared/livros-pub.js), avaliada em renderConhecimento().
  *
  * Uma fonte pode carregar mais de um livro (Druida: Alquimancia + Totemancia).
  * Os dois formatos salvos vem normalizados por window.lvNormalizar:
@@ -142,9 +143,14 @@ function renderConhecimento() {
     const alcance = _livrosDoPersonagem();
 
     for (const livro of _livros) {
-        if (!livro.public) continue;      // livro privado nem existe para o jogador
-        if (!alcance.has(livro.id)) continue;   // e nao basta existir: tem que estar vinculado
-        const soEsses = alcance.get(livro.id);
+        // Publicacao do livro (shared/livros-pub.js): "Geral" e "Conhecimento Geral"
+        // valem para qualquer personagem; "Conhecimento Vinculo" so para quem tem
+        // raca/classe/tribo/peculiaridade apontando para o livro.
+        const p = pubDoLivro(livro);
+        const vinculado = alcance.has(livro.id);
+        if (!(p.geral || p.conhGeral || (p.conhVinculo && vinculado))) continue;
+        // O vinculo pode liberar so alguns capitulos; publicacao aberta e o livro inteiro.
+        const soEsses = (p.geral || p.conhGeral) ? null : alcance.get(livro.id);
         const caps = _capitulos.filter(c => c.bookId === livro.id
             && (!soEsses || soEsses.has(c.id)));
         const linhas = [];

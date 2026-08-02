@@ -18,6 +18,7 @@ let npcsModule = null;
 let economicaModule = null;
 let apoioModule = null;
 let historicoModule = null;
+let livrosModule = null;
 
 // ===== MESA SUB-MODULES (lazy-loaded on sub-tab switch) =====
 let mesaSessoesLoaded = false;
@@ -97,6 +98,13 @@ window.switchTab = async function (tabName) {
                     apoioModule = await import('./area-apoio.js' + V);
                 }
                 if (apoioModule.onTabActivated) apoioModule.onTabActivated();
+                break;
+
+            case 'livros':
+                if (!livrosModule) {
+                    livrosModule = await import('./area-livros.js' + V);
+                }
+                if (livrosModule.onTabActivated) livrosModule.onTabActivated();
                 break;
 
             case 'historico':

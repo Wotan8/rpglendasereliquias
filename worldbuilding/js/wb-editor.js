@@ -21,6 +21,7 @@
 import { db, collection, getDocs, doc, setDoc, deleteDoc } from './firebase-config.js';
 import { WB, esc, uid, ToolModal, setTitle, contentBody, searchables, KIND } from './wb-utils.js';
 import { TOOLBAR_HTML, bindRich } from './wb-rich.js';
+import { PUBLICACOES, pubDoLivro } from '../../shared/livros-pub.js';
 
 export const Editor = (() => {
     let books = [], artigos = [], atual = null;
@@ -58,6 +59,13 @@ export const Editor = (() => {
     const pubBadge = (isPub) => isPub
         ? '<span class="wb-badge wb-badge--pub">🌐 Público</span>'
         : '<span class="wb-badge wb-badge--priv">🔒 Privado</span>';
+    /* Livro tem quatro publicações (shared/livros-pub.js) — o selo mostra as marcadas. */
+    const pubBadgesLivro = (b) => {
+        const p = pubDoLivro(b);
+        const selos = PUBLICACOES.filter(([k]) => p[k])
+            .map(([, label]) => `<span class="wb-badge wb-badge--pub">${label.replace('Publicar ', '')}</span>`);
+        return selos.join(' ') || '<span class="wb-badge wb-badge--priv">🔒 Não publicado</span>';
+    };
     const statusBadge = (st) => {
         const map = { rascunho: ['✏️ Rascunho', 'draft'], revisao: ['🔍 Em revisão', 'rev'], publicado: ['✅ Publicado', 'done'] };
         const [label, cls] = map[st] || map.rascunho;
@@ -116,7 +124,7 @@ export const Editor = (() => {
                 <div class="wb-book__cover" style="${b.cover ? `background-image:url('${esc(b.cover)}')` : ''}">${b.cover ? '' : '📖'}</div>
                 <div class="wb-book__meta">
                     <div class="wb-book__title">${esc(b.title || 'Livro sem título')}</div>
-                    <div class="wb-book__badges">${pubBadge(b.public)} <span class="wb-badge wb-badge--soft">${caps.length} cap.</span> <span class="wb-badge wb-badge--soft">${palavras.toLocaleString('pt-BR')} palavras</span></div>
+                    <div class="wb-book__badges">${pubBadgesLivro(b)} <span class="wb-badge wb-badge--soft">${caps.length} cap.</span> <span class="wb-badge wb-badge--soft">${palavras.toLocaleString('pt-BR')} palavras</span></div>
                     ${b.description ? `<p class="wb-book__desc">${esc(b.description)}</p>` : ''}
                 </div>
                 <div class="wb-book__actions">
@@ -165,13 +173,21 @@ export const Editor = (() => {
     /* ══════════════ LIVRO (modal) ══════════════ */
     function openBookModal(book = null) {
         const b = book || { id: uid('book'), title: '', description: '', cover: '', public: false, order: books.length };
+        const pub = pubDoLivro(book);   // livro novo nasce sem publicação nenhuma
+        if (!book) Object.keys(pub).forEach(k => pub[k] = false);
         ToolModal.open(`
             <h2>${book ? '⚙️ Editar livro' : '📗 Novo livro'}</h2>
             <div class="wbt-form">
                 <label>Título do livro <input id="bkTitle" class="form-input" value="${esc(b.title)}" placeholder="Ex: Crônicas de Eldoria — Vol. I"></label>
                 <label>Sinopse / descrição <textarea id="bkDesc" class="form-textarea" placeholder="Do que trata este livro?">${esc(b.description || '')}</textarea></label>
                 <label>Capa (URL de imagem) <input id="bkCover" class="form-input" value="${esc(b.cover || '')}" placeholder="https://…"></label>
-                <label class="wbt-check"><input type="checkbox" id="bkPublic" ${b.public ? 'checked' : ''}> 🌐 Livro público (visível para jogadores)</label>
+                <div class="wbt-muted" style="margin:.6rem 0 .2rem;font-weight:700">📖 Publicações</div>
+                ${PUBLICACOES.map(([k, label, dica]) => `
+                    <label class="wbt-check"><input type="checkbox" id="bkPub_${k}" ${pub[k] ? 'checked' : ''}>
+                        ${label} <span class="wbt-muted">— ${dica}</span></label>`).join('')}
+                <div class="wbt-muted" style="font-size:.8rem;margin-top:.2rem">
+                    Capítulo a capítulo, quem tranca é a aba Conhecimento do Painel do Criador.
+                </div>
                 <div class="wbt-actions">
                     ${book ? '<button class="btn btn-danger" id="bkDel">🗑️ Excluir livro</button>' : ''}
                     <button class="btn btn-success" id="bkSave">💾 Salvar livro</button>
@@ -181,7 +197,10 @@ export const Editor = (() => {
             b.title = $('#bkTitle').value.trim() || 'Livro sem título';
             b.description = $('#bkDesc').value.trim();
             b.cover = $('#bkCover').value.trim();
-            b.public = $('#bkPublic').checked;
+            b.pub = Object.fromEntries(PUBLICACOES.map(([k]) => [k, $('#bkPub_' + k).checked]));
+            // `public` continua gravado só para o legado: uma vez que `pub` existe no
+            // doc, é ele que manda em toda leitura (shared/livros-pub.js).
+            b.public = !!(b.pub.geral || b.pub.conhGeral || b.pub.conhVinculo);
             b.updatedAt = now();
             b.updatedBy = WB().user?.email || '';
             if (!b.createdAt) b.createdAt = now();
