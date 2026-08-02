@@ -640,7 +640,9 @@ function onMove(e) {
                         labelSub: excede ? '⚠️ excede o deslocamento!' : l.sub,
                         cor: excede ? '#ef4444' : '#22d3ee',
                     };
-                    compartilharRegua(pts, l.label);
+                    // A régua do arrasto do MESTRE só sai daqui se ele deixou
+                    // ligado em ⚙️ — desligado não gera write nenhum.
+                    if (!T.isMaster || T.canvas?.reguaPublica !== false) compartilharRegua(pts, l.label);
                 });
             }
             markDirty();

@@ -490,7 +490,7 @@ assert.equal(mapaSobPonto({ x: 10, y: 10 })?.id, 'novo', 'e passa a ver o mapa d
 // (o t vem do relogio do outro aparelho; um celular minutos fora de hora
 // fazia a regua nascer "expirada" e nunca aparecer)
 // =====================================================================
-import { marcarRecebimentoReguas, REGUA_TTL_MS } from './tab-state.js';
+import { marcarRecebimentoReguas, REGUA_TTL_MS, reguaVisivelAqui } from './tab-state.js';
 
 const AGORA = 1_000_000;
 // regua nova: carimba o relogio LOCAL, ignorando o quao torto o t remoto esteja
@@ -514,6 +514,19 @@ assert.equal(rec.b, AGORA + 5000, 'so a que mudou recarimba');
 rec = marcarRecebimentoReguas({ a: atrasado }, { a: null }, { a: AGORA }, AGORA + 100);
 assert.equal('a' in rec, false, 'null limpa o carimbo');
 assert.ok(REGUA_TTL_MS >= 1000, 'TTL em ms, contado do recebimento local');
+
+// --- quem desenha a regua de quem (o Publico do Mestre e a MESMA conta) ---
+T.user = { uid: 'EU' }; T.temp = null;
+T.mode = 'secret';
+assert.equal(reguaVisivelAqui('OUTRO'), true, 'regua dos outros sempre entra');
+assert.equal(reguaVisivelAqui('EU'), false, 'a janela que mede ja desenha a propria em T.temp');
+T.mode = 'public';
+assert.equal(reguaVisivelAqui('EU'), true, '🔒 o publico do mestre TEM de mostrar a regua do arrasto dele');
+T.temp = { tipo: 'medida' };
+assert.equal(reguaVisivelAqui('EU'), false, 'se o publico e quem esta medindo, nao desenha duas vezes');
+assert.equal(reguaVisivelAqui('OUTRO'), true);
+T.temp = null; T.user = null;
+assert.equal(reguaVisivelAqui('OUTRO'), true, 'sem usuario carregado ainda, regua alheia entra');
 
 // =====================================================================
 // configDoCanvasMudou — save de exploracao nao pode invalidar o mundo

@@ -516,6 +516,7 @@ window.tbAbrirConfig = function() {
         <div class="tb-section-title">🚶 Movimento & Andares</div>
         <div class="tb-form-grid">
             <label class="tb-check"><input type="checkbox" id="cfg_lock" ${c.bloquearMovimento!==false?'checked':''}> 🧱 Bloquear movimento através de paredes (jogadores)</label>
+            <label class="tb-check"><input type="checkbox" id="cfg_reguaPub" ${c.reguaPublica!==false?'checked':''}> 📏 Exibir régua no Público do Mestre (o arrasto de token no secreto aparece na TV e para os jogadores)</label>
             <label>Altura de cada andar (elevação)<input type="number" id="cfg_andar" value="${c.andarAltura||5}" min="1" step="0.5"></label>
             <label>🛤️ Viagem do grupo por dia (${e.unidade||'m'}/dia · para rotas · vazio = sem cálculo)
                 <input type="number" id="cfg_viagem" value="${c.viagemPorDia || ''}" min="0" step="1"
@@ -563,6 +564,7 @@ window.tbSalvarConfig = async function() {
             escala: { valorPorCelula: parseFloat(v('cfg_vpc').value)||1.5, unidade: v('cfg_un').value },
             luzDinamica: { ativa: v('cfg_luz').checked, modo: v('cfg_modo').value, fogSecretOpacity: (parseInt(v('cfg_fog').value)||0)/100, memoria: v('cfg_memoria').checked },
             bloquearMovimento: v('cfg_lock').checked,
+            reguaPublica: v('cfg_reguaPub').checked,
             andarAltura: parseFloat(v('cfg_andar').value)||5,
             viagemPorDia: parseFloat(v('cfg_viagem').value)||0,
             clima: { tipo: v('cfg_clima').value, intensidade: parseFloat(v('cfg_climaInt').value)||1 },

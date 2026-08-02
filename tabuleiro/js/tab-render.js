@@ -8,7 +8,7 @@
 // F5: barras/condições/HUD constante, anel de iniciativa, anéis de alvo, loot
 // F6: clima, telhados, transições
 // =============================================
-import { T, gridSize, camadasVisiveis, objVisivel, markDirty, unidadesParaPx, esc, cfgGrid, politicaDeFog, alcanceDeVisao, rotParaCanvas, deveAtualizarPasso, tokensDaVisao, FOG_PASSO_CELULA, FOG_INTERVALO_MS, REGUA_TTL_MS } from './tab-state.js';
+import { T, gridSize, camadasVisiveis, objVisivel, markDirty, unidadesParaPx, esc, cfgGrid, politicaDeFog, alcanceDeVisao, rotParaCanvas, deveAtualizarPasso, tokensDaVisao, reguaVisivelAqui, FOG_PASSO_CELULA, FOG_INTERVALO_MS, REGUA_TTL_MS } from './tab-state.js';
 import { PERF, melhorBitmap, construirHashParedes, paredesProximas, medir, iniciarHudMedicaoSePedido, criarMemoPorVersao } from './tab-perf.js';
 import { snapPonto, axialParaPixel, axialRound, pixelParaAxial, mesmaFaixaElev, faixaDe, pontoEmPoligono, normalizarRet } from './tab-grid.js';
 import { desenharExploracao, registrarExploracaoCelulas, tokenVisivelParaMim, carregarExploracao, versaoExploracao } from './tab-fog.js';
@@ -950,7 +950,7 @@ function drawTemp() {
 function drawReguasRemotas() {
     const agora = Date.now();
     for (const [u, r] of Object.entries(T.reguasRemotas || {})) {
-        if (!r || u === T.user?.uid) continue;
+        if (!r || !reguaVisivelAqui(u)) continue;
         // Expira pelo relógio LOCAL de recebimento — o `r.t` é do relógio do
         // outro aparelho e não é comparável com o daqui (celular minutos fora
         // de hora fazia a régua remota nunca aparecer).

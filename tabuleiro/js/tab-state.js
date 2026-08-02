@@ -327,6 +327,18 @@ export function configDoCanvasMudou(antes, depois) {
 export const REGUA_TTL_MS = 6000;
 
 /**
+ * A régua compartilhada de `uidDono` deve ser desenhada NESTA janela?
+ * A régua do próprio uid é pulada porque a janela que está medindo já a desenha
+ * ao vivo em `T.temp`. A exceção é o PÚBLICO do mestre (a TV): é outra janela,
+ * com o mesmo uid e sem `T.temp` nenhum — sem isso a régua do arrasto dele
+ * chegava nos jogadores e nunca na própria TV.
+ */
+export function reguaVisivelAqui(uidDono) {
+    if (uidDono !== T.user?.uid) return true;
+    return T.mode === 'public' && T.temp?.tipo !== 'medida';
+}
+
+/**
  * Carimbo local de chegada de cada régua compartilhada. O `t` que vem no doc é
  * do relógio do OUTRO aparelho — um celular minutos atrasado fazia a régua
  * nascer "expirada" e nunca aparecer. O `t` só serve para detectar que a régua
