@@ -372,9 +372,27 @@ export const FOG_INTERVALO_MS = 70;
 export const DRAG_WRITE_MS = 300;
 /** Passo mínimo, em células, para uma escrita intermediária valer a pena. */
 export const DRAG_PASSO_CELULA = 0.5;
-/** Lerp do token remoto. Casado com DRAG_WRITE_MS: menor deixa o token parado
- *  esperando a próxima posição; maior atrasa sem ganho nenhum. */
+/** Lerp do token remoto quando ainda não dá para medir o ritmo (1º trecho). */
 export const LERP_TOKEN_MS = 320;
+/** Piso e teto da duração do lerp — protege de rajada e de pausa longa. */
+export const LERP_MIN_MS = 120;
+// Teto = arrasto mais lento que ainda é arrasto (meia célula por segundo). Acima
+// disso o outro lado está praticamente parado, e esticar o trecho viraria câmera
+// lenta: melhor um passo curto e o token esperando de verdade.
+export const LERP_MAX_MS = 1000;
+
+/**
+ * Quanto o token remoto leva para percorrer o trecho recém-chegado.
+ * O intervalo entre as escritas do arrasto VARIA: o portão é de meia célula, então
+ * quem arrasta devagar escreve a cada segundo e quem corre escreve a cada 300ms.
+ * Com duração FIXA o token chegava e ficava parado esperando a próxima posição —
+ * era o "pulando" de quem assiste. Interpolar pelo intervalo MEDIDO faz o trecho
+ * terminar bem quando o próximo aterrissa, e o movimento fica contínuo.
+ */
+export function duracaoLerp(intervalo) {
+    if (!(intervalo > 0)) return LERP_TOKEN_MS;
+    return Math.min(LERP_MAX_MS, Math.max(LERP_MIN_MS, intervalo));
+}
 
 /**
  * Passou o bastante — em distância **e** em tempo — para valer uma atualização?

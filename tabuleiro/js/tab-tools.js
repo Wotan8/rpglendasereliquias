@@ -642,7 +642,7 @@ function onMove(e) {
                     };
                     // A régua do arrasto do MESTRE só sai daqui se ele deixou
                     // ligado em ⚙️ — desligado não gera write nenhum.
-                    if (!T.isMaster || T.canvas?.reguaPublica !== false) compartilharRegua(pts, l.label);
+                    if (!T.isMaster || T.canvas?.reguaPublica !== false) compartilharRegua(pts, l.label, o.id);
                 });
             }
             markDirty();
@@ -1081,11 +1081,13 @@ const filaRegua = criarFilaDeEscrita({
         (dados ? setDoc(ref, dados) : deleteDoc(ref)).catch(() => {});
     },
 });
-function compartilharRegua(pontos, label) {
+function compartilharRegua(pontos, label, tokenId) {
     if (!T.measureCfg.mostrarOutros || !T.user) return;
     const nome = T.isMaster ? 'Mestre' : (T.usersMap[T.user?.uid]?.nome || 'Jogador');
     filaRegua.enviar('regua', {
         pontos: pontos.slice(-60), label, nome,
+        // token do arrasto: do outro lado a ponta da seta ancora no centro dele
+        tokenId: tokenId || null,
         cor: T.isMaster ? '#f59e0b' : '#f472b6', t: Date.now(),
     }, DRAG_WRITE_MS);
 }

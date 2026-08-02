@@ -6,7 +6,7 @@ import {
     collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc,
     onSnapshot, query, where, writeBatch
 } from '../../painel-mestre/js/firebase-config.js';
-import { T, CAMADAS_PADRAO, PERMISSOES_LISTA, esc, uid, toast, markDirty, camadasVisiveis, optsUnidade, popNavegacaoValida, refViagemPorDia, HORAS_DE_MARCHA, ehEcoAtrasado, LERP_TOKEN_MS, marcarRecebimentoReguas, configDoCanvasMudou } from './tab-state.js';
+import { T, CAMADAS_PADRAO, PERMISSOES_LISTA, esc, uid, toast, markDirty, camadasVisiveis, optsUnidade, popNavegacaoValida, refViagemPorDia, HORAS_DE_MARCHA, ehEcoAtrasado, duracaoLerp, marcarRecebimentoReguas, configDoCanvasMudou } from './tab-state.js';
 import { notifyObjectChange, notifyCanvasConfigChange } from './tab-perf.js';
 import { npcNaMesa } from '../../shared/npc-mesas.js';
 import { startRenderLoop, centerCamera } from './tab-render.js';
@@ -267,10 +267,21 @@ export async function trocarCanvas(id, escreverEstado) {
                     Object.assign(local, novo, meu);
                 } else {
                     // F2.1: lerp — token movido por OUTRO usuário anima até a nova posição
+                    novo.__ultRec = local?.__ultRec;   // chegada do trecho anterior (mede o ritmo do arrasto)
                     if (local && novo.tipo === 'token' && novo.lastWriter && novo.lastWriter !== T.user?.uid &&
                         (Math.abs((novo.x||0) - (local.x||0)) > 0.5 || Math.abs((novo.y||0) - (local.y||0)) > 0.5)) {
                         const de = posDisplay(local);
-                        T.anims.set(ch.doc.id, { x0: de.x, y0: de.y, t0: Date.now(), dur: LERP_TOKEN_MS });
+                        const agora = Date.now();
+                        T.anims.set(ch.doc.id, {
+                            x0: de.x, y0: de.y, t0: agora,
+                            // ritmo REAL do outro lado, não um número fixo (ver duracaoLerp)
+                            dur: duracaoLerp(local.__ultRec ? agora - local.__ultRec : 0),
+                            // arrasto em curso = trecho de um percurso: velocidade constante.
+                            // A desaceleração só faz sentido no write final, que é o token
+                            // chegando; no meio do caminho ela vira o solavanco a cada trecho.
+                            linear: !!novo.movendo,
+                        });
+                        novo.__ultRec = agora;
                     }
                     // preserva a posição confirmada do fog enquanto `movendo` estiver ativo (F2.3)
                     if (local && local.__fogPos && novo.movendo) novo.__fogPos = local.__fogPos;

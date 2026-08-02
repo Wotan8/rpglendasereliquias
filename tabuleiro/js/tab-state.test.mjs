@@ -10,7 +10,7 @@ import {
     alcanceDeVisao, fonteDoAlcance, DV_PERCEPCAO, DV_PERCEPCAO_VISUAL,
     bonusIniciativa, DV_INICIATIVA, DADO_INICIATIVA,
     rotParaCanvas, anguloDoMovimento, deveAtualizarPasso, FOG_PASSO_CELULA, FOG_INTERVALO_MS,
-    DRAG_WRITE_MS, DRAG_PASSO_CELULA, LERP_TOKEN_MS,
+    DRAG_WRITE_MS, DRAG_PASSO_CELULA, LERP_TOKEN_MS, LERP_MIN_MS, LERP_MAX_MS, duracaoLerp,
     ehEcoAtrasado, mapaSobPonto, T as TT,
 } from './tab-state.js';
 import { trajetoColide } from './tab-grid.js';
@@ -439,6 +439,29 @@ for (let f = 1; f <= 60; f++) {
     if (deveAtualizarPasso({ x: 0, y: 0 }, { x: 10, y: 0 }, passoWrite, f * 16.7, DRAG_WRITE_MS)) semWrite++;
 }
 assert.equal(semWrite, 0, 'encostar o token uns pixels não fala com o servidor');
+
+// =====================================================================
+// DURAÇÃO DO LERP REMOTO — o token do outro lado tem que DESLIZAR
+// 🔴 A regressão trancada: a duração era FIXA (320ms) mas o intervalo entre as
+// escritas varia (o portão é meia célula). Arrasto devagar = escrita a cada
+// ~800ms: o token remoto andava 320ms e ficava 480ms PARADO esperando a
+// próxima posição. Era o "fica pulando" de quem assiste o arrasto.
+// =====================================================================
+assert.equal(duracaoLerp(0), LERP_TOKEN_MS, '1º trecho não tem ritmo para medir: cai no padrão');
+assert.equal(duracaoLerp(320), 320, 'ritmo normal: o trecho dura exatamente o intervalo medido');
+assert.equal(duracaoLerp(50), LERP_MIN_MS, 'rajada não vira teleporte');
+assert.equal(duracaoLerp(5000), LERP_MAX_MS, 'pausa longa não vira token em câmera lenta');
+assert.equal(duracaoLerp(-5), LERP_TOKEN_MS, 'relógio torto não vira duração negativa');
+assert.ok(LERP_MIN_MS < DRAG_WRITE_MS && DRAG_WRITE_MS < LERP_MAX_MS,
+    'o intervalo típico de escrita tem de caber ENTRE o piso e o teto, senão sempre grampeia');
+
+// tempo ocioso entre um trecho e o próximo: é ele que aparece como solavanco
+const ocioso = (intervalo, dur) => Math.max(0, intervalo - dur);
+assert.ok(ocioso(800, LERP_TOKEN_MS) > 400, 'era isso que acontecia com duração fixa');
+assert.equal(ocioso(800, duracaoLerp(800)), 0, 'arrasto devagar: anda o trecho inteiro');
+assert.equal(ocioso(300, duracaoLerp(300)), 0, 'arrasto normal: idem');
+assert.equal(ocioso(2000, duracaoLerp(2000)), 1000,
+    'pausa de verdade ainda deixa o token parado — e deve mesmo, ninguém está arrastando');
 
 // =====================================================================
 // ECO ATRASADO DO PRÓPRIO ARRASTO

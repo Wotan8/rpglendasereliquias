@@ -160,7 +160,7 @@ export function posDisplay(o) {
     if (!a) return { x: o.x, y: o.y };
     let k = (Date.now() - a.t0) / a.dur;
     if (k >= 1) { T.anims.delete(o.id); return { x: o.x, y: o.y }; }
-    const e = 1 - Math.pow(1 - k, 3);
+    const e = a.linear ? k : 1 - Math.pow(1 - k, 3);
     return { x: a.x0 + (o.x - a.x0) * e, y: a.y0 + (o.y - a.y0) * e };
 }
 
@@ -956,7 +956,15 @@ function drawReguasRemotas() {
         // de hora fazia a régua remota nunca aparecer).
         const recebida = T.reguasRecebidas?.[u];
         if (!recebida || agora - recebida > REGUA_TTL_MS) continue;
-        drawLinhaMedida(r.pontos || [], r.cor || '#f472b6', r.label, r.nome);
+        // A ponta da régua é o CENTRO do token arrastado. Os dois viajam em
+        // documentos diferentes e aterrissam em instantes diferentes: desenhar o
+        // ponto que veio no doc deixava a seta descolada do token, que ainda está
+        // interpolando. Ancorar na posição de exibição gruda os dois em qualquer
+        // direção (mestre vendo jogador e jogador vendo mestre).
+        let pts = r.pontos || [];
+        const tk = r.tokenId && T.objects.get(r.tokenId);
+        if (tk && pts.length) { pts = pts.slice(); pts[pts.length - 1] = posDisplay(tk); }
+        drawLinhaMedida(pts, r.cor || '#f472b6', r.label, r.nome);
     }
 }
 
