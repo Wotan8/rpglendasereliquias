@@ -105,7 +105,7 @@
             el.innerHTML = `
                 <div class="detail-section">
                     <div class="detail-section-title">📖 ${blocos.length === 1 ? 'Livro vinculado' : 'Livros vinculados'}</div>
-                    ${blocos.join('<div style="height:1px;background:var(--soft,#333);margin:14px 0"></div>')}
+                    ${blocos.join('<div style="height:1px;background:var(--lr-border,#333);margin:14px 0"></div>')}
                 </div>`;
         }).catch(e => console.error('📖 Livro vinculado:', e));
 
@@ -120,7 +120,7 @@
         ov = document.createElement('div');
         ov.id = 'lvLeitor';
         ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.78);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto';
-        ov.innerHTML = `<div class="lv-box" style="background:var(--bg-card,#161616);color:var(--text,#eee);border:1px solid var(--soft,#333);border-radius:12px;max-width:820px;width:100%;padding:28px 24px;position:relative"></div>`;
+        ov.innerHTML = `<div class="lv-box" style="background:var(--lr-surface,#161616);color:var(--lr-text-1,#eee);border:1px solid var(--lr-border,#333);border-radius:12px;max-width:820px;width:100%;padding:28px 24px;position:relative"></div>`;
         ov.addEventListener('click', (e) => { if (e.target === ov) fechar(); });
         document.body.appendChild(ov);
         return ov.querySelector('.lv-box');
@@ -137,7 +137,7 @@
     function _pintar(html) {
         const box = _caixa();
         box.innerHTML = `
-            <button type="button" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted,#999);font-size:1.3rem;cursor:pointer;line-height:1"
+            <button type="button" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--lr-text-2,#999);font-size:1.3rem;cursor:pointer;line-height:1"
                 onclick="window.lvFechar()" title="Fechar">✕</button>
             ${html}`;
         document.getElementById('lvLeitor').scrollTop = 0;
@@ -183,8 +183,8 @@
                         <div style="display:flex;align-items:center;gap:6px">
                             <button type="button" class="lv-cap" onclick="window.lvLerCapitulo('${esc(c.id)}')"
                                 style="display:flex;align-items:baseline;gap:10px;flex:1;min-width:0;text-align:left;cursor:pointer;
-                                       background:var(--bg,rgba(255,255,255,.03));color:inherit;font:inherit;
-                                       border:1px solid var(--soft,#333);border-radius:8px;padding:10px 12px">
+                                       background:var(--lr-surface-2,rgba(255,255,255,.06));color:inherit;font:inherit;
+                                       border:1px solid var(--lr-border,#333);border-radius:8px;padding:10px 12px">
                                 <span style="opacity:.6;min-width:1.6em">${i + 1}.</span>
                                 <span style="flex:1">${esc(c.title || 'Sem título')}</span>
                                 <span style="opacity:.6">›</span>
@@ -261,10 +261,10 @@
                 return `
                 <button type="button" class="lv-livro" onclick="window.lvAbrirLivroId('${esc(l.id)}')"
                     style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
-                           background:var(--bg,rgba(255,255,255,.03));color:inherit;font:inherit;
-                           border:1px solid var(--soft,#333);border-radius:10px;padding:10px 12px">
+                           background:var(--lr-surface-2,rgba(255,255,255,.06));color:inherit;font:inherit;
+                           border:1px solid var(--lr-border,#333);border-radius:10px;padding:10px 12px">
                     <span style="width:44px;height:60px;flex:none;border-radius:6px;display:flex;align-items:center;justify-content:center;
-                        background:${l.cover ? `url('${esc(l.cover)}') center/cover` : 'rgba(255,255,255,.06)'}">${l.cover ? '' : '📖'}</span>
+                        background:${l.cover ? `url('${esc(l.cover)}') center/cover` : 'var(--lr-bg-1,rgba(255,255,255,.06))'}">${l.cover ? '' : '📖'}</span>
                     <span style="flex:1;min-width:0">
                         <span style="display:block;font-weight:700">${esc(l.title || 'Livro sem título')}</span>
                         ${l.description ? `<span style="display:block;opacity:.75;font-size:.85rem">${esc(l.description)}</span>` : ''}
