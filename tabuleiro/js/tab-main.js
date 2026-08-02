@@ -342,7 +342,7 @@ export function aplicarModoUI() {
     show('btnToken', secret);
     show('btnInventario', !secret);
     show('btnMostrar', secret);
-    show('btnLivros', secret);
+    show('btnLivros', true);   // mestre vê a estante dele; jogador, a do personagem
     show('btnCamadas', secret);
     show('btnConfig', secret);
     show('btnPerms', secret);

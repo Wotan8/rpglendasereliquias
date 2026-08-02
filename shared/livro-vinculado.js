@@ -112,35 +112,93 @@
         return `<div id="${slot}"></div>`;
     }
 
-    /* ===== Leitor (por cima de qualquer modal já aberto) ===== */
+    /* ===== Leitor — JANELA flutuante, por cima de qualquer modal já aberto =====
+       Sem fundo escuro bloqueando a tela: no Tabuleiro o jogador continua
+       mexendo no mapa com o livro aberto onde ele largou. Arrasta pela barra
+       de cima; o tamanho é o `resize` nativo do CSS (canto inferior direito).
+       A geometria escolhida sobrevive à navegação E ao fechar/reabrir. */
+
+    let _geo = null;   // { left, top, w, h } da última posição/tamanho escolhidos
 
     function _caixa() {
         let ov = document.getElementById('lvLeitor');
         if (ov) return ov.querySelector('.lv-box');
+
+        const w = Math.min(820, window.innerWidth - 24);
+        const h = Math.min(700, window.innerHeight - 80);
+        const g = _geo || { left: Math.max(12, (window.innerWidth - w) / 2), top: 56, w, h };
+
         ov = document.createElement('div');
         ov.id = 'lvLeitor';
-        ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.78);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto';
-        ov.innerHTML = `<div class="lv-box" style="background:var(--lr-surface,#161616);color:var(--lr-text-1,#eee);border:1px solid var(--lr-border,#333);border-radius:12px;max-width:820px;width:100%;padding:28px 24px;position:relative"></div>`;
-        ov.addEventListener('click', (e) => { if (e.target === ov) fechar(); });
+        ov.style.cssText = `position:fixed;left:${g.left}px;top:${g.top}px;width:${g.w}px;height:${g.h}px;
+            z-index:100000;resize:both;overflow:hidden;min-width:280px;min-height:180px;
+            max-width:100vw;max-height:100vh;border-radius:12px;
+            box-shadow:0 18px 50px rgba(0,0,0,.55);display:flex;flex-direction:column`;
+        ov.innerHTML = `
+            <div class="lv-barra" style="display:flex;align-items:center;gap:8px;flex:none;cursor:grab;user-select:none;
+                background:var(--lr-bg-1,#12161d);color:var(--lr-text-2,#999);
+                border:1px solid var(--lr-border,#333);border-bottom:none;border-radius:12px 12px 0 0;padding:6px 10px">
+                <span style="letter-spacing:.25em;opacity:.6">⠿</span>
+                <span style="flex:1;font-size:.78rem">📖 Leitura — arraste para mover, canto inferior para redimensionar</span>
+                <button type="button" onclick="window.lvFechar()" title="Fechar"
+                    style="background:none;border:none;color:inherit;font-size:1.2rem;cursor:pointer;line-height:1">✕</button>
+            </div>
+            <div class="lv-box" style="flex:1;min-height:0;overflow:auto;
+                background:var(--lr-surface,#161616);color:var(--lr-text-1,#eee);
+                border:1px solid var(--lr-border,#333);border-top:none;border-radius:0 0 12px 12px;
+                padding:22px 24px 26px;position:relative"></div>`;
         document.body.appendChild(ov);
+        _arrastar(ov);
+        // O resize nativo não avisa ninguém — o observer só guarda o tamanho final.
+        if (window.ResizeObserver) new ResizeObserver(() => _guardarGeo(ov)).observe(ov);
         return ov.querySelector('.lv-box');
+    }
+
+    function _guardarGeo(ov) {
+        _geo = { left: ov.offsetLeft, top: ov.offsetTop, w: ov.offsetWidth, h: ov.offsetHeight };
+    }
+
+    /** Arrasto pela barra. Ponteiro capturado: não escapa nem se passar por cima
+     *  do canvas do tabuleiro, que come eventos de mouse. */
+    function _arrastar(ov) {
+        const barra = ov.querySelector('.lv-barra');
+        let dx = 0, dy = 0;
+        barra.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('button')) return;
+            dx = e.clientX - ov.offsetLeft;
+            dy = e.clientY - ov.offsetTop;
+            barra.setPointerCapture(e.pointerId);
+            barra.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+        barra.addEventListener('pointermove', (e) => {
+            if (!barra.hasPointerCapture(e.pointerId)) return;
+            // sempre sobra um pedaço na tela — janela perdida fora da borda não volta
+            ov.style.left = Math.min(Math.max(-ov.offsetWidth + 80, e.clientX - dx), window.innerWidth - 80) + 'px';
+            ov.style.top = Math.min(Math.max(0, e.clientY - dy), window.innerHeight - 40) + 'px';
+        });
+        const soltar = (e) => {
+            if (!barra.hasPointerCapture(e.pointerId)) return;
+            barra.releasePointerCapture(e.pointerId);
+            barra.style.cursor = 'grab';
+            _guardarGeo(ov);
+        };
+        barra.addEventListener('pointerup', soltar);
+        barra.addEventListener('pointercancel', soltar);
     }
 
     /* Fechar limpa a trilha de volta: senão o "← Biblioteca" de uma leitura
        futura apontaria para a estante da vez anterior. */
     function fechar() {
         const ov = document.getElementById('lvLeitor');
-        if (ov) ov.remove();
+        if (ov) { _guardarGeo(ov); ov.remove(); }
         _bib = null; _sum = null; _repintar = null;
     }
 
     function _pintar(html) {
         const box = _caixa();
-        box.innerHTML = `
-            <button type="button" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--lr-text-2,#999);font-size:1.3rem;cursor:pointer;line-height:1"
-                onclick="window.lvFechar()" title="Fechar">✕</button>
-            ${html}`;
-        document.getElementById('lvLeitor').scrollTop = 0;
+        box.innerHTML = html;
+        box.scrollTop = 0;
     }
 
     const _btnVoltar = (rotulo, destino) =>
@@ -166,10 +224,13 @@
         _repintar = () => abrirSumario(vinc);
         carregar().then(({ livros, caps }) => {
             const livro = livros.find(l => l.id === vinc.bookId);
-            const lista = livro ? capitulosDo(vinc, caps) : [];
+            // `capituloEstado` é do chamador (a estante do jogador tranca o que
+            // ele ainda não desbloqueou); sem ele, tudo liberado.
+            const estado = (c) => (_bib && _bib.capituloEstado) ? _bib.capituloEstado(c, livro) : 'liberado';
+            const lista = (livro ? capitulosDo(vinc, caps) : []).filter(c => estado(c) !== 'oculto');
             if (!lista.length) return;
-            // um capítulo só: sem sumário, e o "voltar" (se houver) é a estante
-            if (lista.length === 1) { _sum = null; return lerCapitulo(lista[0].id); }
+            // um capítulo só e liberado: sem sumário, e o "voltar" (se houver) é a estante
+            if (lista.length === 1 && estado(lista[0]) === 'liberado') { _sum = null; return lerCapitulo(lista[0].id); }
             _sum = vinc;
 
             _pintar(`
@@ -179,19 +240,25 @@
                 ${livro.description ? `<p style="opacity:.8;font-style:italic;margin:0 0 18px">${esc(livro.description)}</p>` : ''}
                 <div style="font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;opacity:.7;margin-bottom:8px">Sumário</div>
                 <div style="display:flex;flex-direction:column;gap:6px">
-                    ${lista.map((c, i) => `
-                        <div style="display:flex;align-items:center;gap:6px">
-                            <button type="button" class="lv-cap" onclick="window.lvLerCapitulo('${esc(c.id)}')"
-                                style="display:flex;align-items:baseline;gap:10px;flex:1;min-width:0;text-align:left;cursor:pointer;
+                    ${lista.map((c, i) => {
+                        const linha = `<span style="opacity:.6;min-width:1.6em">${i + 1}.</span>
+                                       <span style="flex:1">${esc(c.title || 'Sem título')}</span>`;
+                        const caixa = `display:flex;align-items:baseline;gap:10px;flex:1;min-width:0;text-align:left;
                                        background:var(--lr-surface-2,rgba(255,255,255,.06));color:inherit;font:inherit;
-                                       border:1px solid var(--lr-border,#333);border-radius:8px;padding:10px 12px">
-                                <span style="opacity:.6;min-width:1.6em">${i + 1}.</span>
-                                <span style="flex:1">${esc(c.title || 'Sem título')}</span>
-                                <span style="opacity:.6">›</span>
-                            </button>
+                                       border:1px solid var(--lr-border,#333);border-radius:8px;padding:10px 12px`;
+                        const corpo = estado(c) === 'bloqueado'
+                            ? `<div class="lv-cap-lock" style="${caixa};opacity:.6" title="${esc(_bib.notaBloqueio || 'Requisitos não cumpridos')}">
+                                   ${linha}<span>🔒</span></div>`
+                            : `<button type="button" class="lv-cap" onclick="window.lvLerCapitulo('${esc(c.id)}')"
+                                   style="${caixa};cursor:pointer">${linha}<span style="opacity:.6">›</span></button>`;
+                        return `<div style="display:flex;align-items:center;gap:6px">
+                            ${corpo}
                             ${(_bib && _bib.acaoCapitulo) ? _bib.acaoCapitulo(c) : ''}
-                        </div>`).join('')}
-                </div>`);
+                        </div>`;
+                    }).join('')}
+                </div>
+                ${(_bib && _bib.notaBloqueio && lista.some(c => estado(c) === 'bloqueado'))
+                    ? `<div style="font-size:.78rem;opacity:.7;margin-top:10px">🔒 ${esc(_bib.notaBloqueio)}</div>` : ''}`);
         }).catch(e => console.error('📖 Livro vinculado:', e));
     }
 
@@ -243,9 +310,12 @@
     }
 
     /**
-     * Estante de livros. `filtro(livro)` escolhe quais entram (publicação —
-     * ver shared/livros-pub.js) e `acaoCapitulo(cap)` pendura um botão extra
-     * em cada capítulo (o "Exibir na mesa" do tabuleiro).
+     * Estante de livros. Opções, todas do chamador:
+     *   filtro(livro)              → quais livros entram (publicação, ver livros-pub.js)
+     *   acaoCapitulo(cap)          → botão extra por capítulo ("Exibir na mesa")
+     *   capituloEstado(cap, livro) → 'liberado' | 'bloqueado' | 'oculto'
+     *   notaBloqueio               → explicação do cadeado
+     *   cabecalho                  → HTML entre o título e os livros
      */
     function biblioteca(opts) {
         _bib = opts || {};
@@ -253,11 +323,14 @@
         _repintar = () => biblioteca(_bib);
         _pintar('<div style="opacity:.7;padding:10px 0">Carregando a estante…</div>');
         carregar().then(({ livros, caps }) => {
+            const estado = (c, l) => _bib.capituloEstado ? _bib.capituloEstado(c, l) : 'liberado';
             const lista = livros
                 .filter(l => !_bib.filtro || _bib.filtro(l))
-                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.title || '').localeCompare(b.title || ''));
-            const cards = lista.map(l => {
-                const n = caps.filter(c => c.bookId === l.id).length;
+                // livro sem nenhum capítulo à vista não vira card — só frustraria
+                .map(l => ({ l, n: caps.filter(c => c.bookId === l.id && estado(c, l) !== 'oculto').length }))
+                .filter(x => x.n > 0)
+                .sort((a, b) => (a.l.order ?? 0) - (b.l.order ?? 0) || (a.l.title || '').localeCompare(b.l.title || ''));
+            const cards = lista.map(({ l, n }) => {
                 return `
                 <button type="button" class="lv-livro" onclick="window.lvAbrirLivroId('${esc(l.id)}')"
                     style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
@@ -275,6 +348,7 @@
             }).join('');
             _pintar(`
                 <h2 style="margin:0 0 14px">${esc(_bib.titulo || '📚 Biblioteca')}</h2>
+                ${_bib.cabecalho || ''}
                 ${cards ? `<div style="display:flex;flex-direction:column;gap:8px">${cards}</div>`
                         : '<p style="opacity:.75">Nenhum livro publicado para esta lista.</p>'}`);
         }).catch(e => console.error('📖 Biblioteca:', e));

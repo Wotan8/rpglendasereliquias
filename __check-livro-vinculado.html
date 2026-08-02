@@ -183,6 +183,44 @@
             diz(document.getElementById('lvLeitor').querySelectorAll('button.lv-cap').length === 3,
                 'repintar redesenha o sumário, sem voltar para a estante');
 
+            // ===== Janela: arrastar, redimensionar e travar capítulo =====
+            window.lvFechar();
+            window.lvBiblioteca({
+                titulo: '📖 Estante', filtro: () => true,
+                capituloEstado: (cap, livro) => cap.id === 'c2' ? 'bloqueado' : (cap.id === 'c3' ? 'oculto' : 'liberado'),
+                notaBloqueio: 'Requisitos na ficha',
+            });
+            await espera('button.lv-livro');
+            let jan = document.getElementById('lvLeitor');
+            diz(jan.getBoundingClientRect().width < window.innerWidth,
+                'a janela não cobre a tela (dá para seguir jogando atrás)');
+
+            document.querySelector('button.lv-livro').click();
+            await espera('button.lv-cap');
+            jan = document.getElementById('lvLeitor');
+            diz(jan.querySelectorAll('.lv-cap-lock').length === 1, 'capítulo bloqueado aparece com cadeado');
+            diz(!jan.querySelector('.lv-cap-lock')?.onclick, 'capítulo bloqueado não abre a leitura');
+            diz(!jan.textContent.includes('O Retorno'), 'capítulo oculto some do sumário');
+            diz(jan.textContent.includes('Requisitos na ficha'), 'a nota explica o cadeado');
+
+            // arrastar pela barra
+            const barra = jan.querySelector('.lv-barra');
+            const antes = jan.getBoundingClientRect().left;
+            const ev = (t, x, y) => barra.dispatchEvent(new PointerEvent(t, { pointerId: 1, clientX: x, clientY: y, bubbles: true }));
+            barra.setPointerCapture = () => {}; barra.releasePointerCapture = () => {}; barra.hasPointerCapture = () => true;
+            ev('pointerdown', 400, 20); ev('pointermove', 250, 120); ev('pointerup', 250, 120);
+            const depois = jan.getBoundingClientRect().left;
+            diz(depois !== antes && depois >= 0, `arrastar move a janela (${Math.round(antes)} → ${Math.round(depois)})`);
+            diz(getComputedStyle(jan).resize === 'both', 'a janela tem alça de redimensionar');
+
+            // a posição escolhida volta na próxima abertura
+            const pos = { l: jan.style.left, t: jan.style.top };
+            window.lvFechar();
+            window.lvBiblioteca({ titulo: '📖 Estante', filtro: () => true });
+            await espera('button.lv-livro');
+            jan = document.getElementById('lvLeitor');
+            diz(jan.style.left === pos.l && jan.style.top === pos.t, 'a janela reabre onde o jogador deixou');
+
             // Fechar limpa a trilha: leitura de vínculo depois disso não herda o "← Estante"
             window.lvFechar();
             btn('#alvo2').click();
