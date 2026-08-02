@@ -519,3 +519,19 @@ export function tokenDoUsuario(o) {
     const ch = T.chars.find(c => c.id === o.vinculo.id);
     return !!ch && ch.ownerUid === T.user?.uid;
 }
+
+/**
+ * Tokens que ditam o que a TELA enxerga (fog, visão, tokens desenhados).
+ * O mestre não tem token: no PÚBLICO (a TV da sessão) a tela passa a ser a
+ * união da visão do GRUPO. Sem isso o mestre entrava como "mestre" no público
+ * e a TV entregava sala iluminada vazia e NPC que ninguém estava vendo.
+ */
+export function tokensDaVisao() {
+    if (T.mode === 'secret') return [];
+    const out = [];
+    for (const o of T.objects.values()) {
+        if (o.tipo !== 'token' || o.vinculo?.tipo !== 'char') continue;
+        if (T.isMaster ? objVisivel(o) : tokenDoUsuario(o)) out.push(o);
+    }
+    return out;
+}

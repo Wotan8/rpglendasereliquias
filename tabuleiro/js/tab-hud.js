@@ -92,7 +92,7 @@ export function participanteDoToken(o) {
 export function barrasVisiveis(o) {
     const modo = o.barras || 'todos';
     if (modo === 'off') return false;
-    if (T.isMaster) return true;
+    if (T.mode === 'secret') return true;   // no público (TV) nem o mestre vê barra de mestre
     if (modo === 'mestre') return false;
     if (modo === 'dono') {
         if (o.vinculo?.tipo !== 'char') return false;

@@ -8,7 +8,7 @@
 // F5: barras/condições/HUD constante, anel de iniciativa, anéis de alvo, loot
 // F6: clima, telhados, transições
 // =============================================
-import { T, gridSize, camadasVisiveis, objVisivel, markDirty, unidadesParaPx, esc, cfgGrid, politicaDeFog, alcanceDeVisao, rotParaCanvas, deveAtualizarPasso, FOG_PASSO_CELULA, FOG_INTERVALO_MS, REGUA_TTL_MS } from './tab-state.js';
+import { T, gridSize, camadasVisiveis, objVisivel, markDirty, unidadesParaPx, esc, cfgGrid, politicaDeFog, alcanceDeVisao, rotParaCanvas, deveAtualizarPasso, tokensDaVisao, FOG_PASSO_CELULA, FOG_INTERVALO_MS, REGUA_TTL_MS } from './tab-state.js';
 import { PERF, melhorBitmap, construirHashParedes, paredesProximas, medir, iniciarHudMedicaoSePedido, criarMemoPorVersao } from './tab-perf.js';
 import { snapPonto, axialParaPixel, axialRound, pixelParaAxial, mesmaFaixaElev, faixaDe, pontoEmPoligono, normalizarRet } from './tab-grid.js';
 import { desenharExploracao, registrarExploracaoCelulas, tokenVisivelParaMim, carregarExploracao, versaoExploracao } from './tab-fog.js';
@@ -255,7 +255,7 @@ function draw() {
     viewRect = calcularViewRect(T.cam, 1.05);
 
     // pré-cálculos do frame
-    T._meusTokens = meusTokens();
+    T._meusTokens = tokensDaVisao();
     T._alvos = coletarAlvosDeTemplates();
     T._tokenAtivo = tokenAtivoDoCombate();
     T._pulsoCombate = !!T._tokenAtivo;
@@ -302,17 +302,6 @@ function aplicarCamera(c, cam) {
     c.translate(cv.width / (2*dpr), cv.height / (2*dpr));
     c.scale(cam.z, cam.z);
     c.translate(-cam.x, -cam.y);
-}
-
-function meusTokens() {
-    if (T.mode === 'secret' || T.isMaster) return [];
-    const out = [];
-    for (const o of T.objects.values()) {
-        if (o.tipo !== 'token' || o.vinculo?.tipo !== 'char') continue;
-        const ch = T.chars.find(c => c.id === o.vinculo.id);
-        if (ch?.ownerUid === T.user?.uid) out.push(o);
-    }
-    return out;
 }
 
 function coletarAlvosDeTemplates() {
@@ -603,7 +592,7 @@ function drawLoot(o) {
         ctx.fillText(o.item?.ehContainer ? '🧰' : '📦', o.x, o.y);
     }
     // Cadeado só para o MESTRE — o jogador descobre a tranca ao interagir
-    if (o.trancado && (T.mode === 'secret' || T.isMaster)) {
+    if (o.trancado && T.mode === 'secret') {
         ctx.font = `${s*0.45}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('🔒', o.x + s * 0.32, o.y + s * 0.32);
     }
@@ -822,7 +811,7 @@ function drawPorta(o) {
     ctx.beginPath(); ctx.moveTo(p[0].x, p[0].y); ctx.lineTo(p[1].x, p[1].y); ctx.stroke();
     ctx.setLineDash([]);
     ctx.font = `${18/T.cam.z}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(o.trancado && !o.aberta && (T.mode === 'secret' || T.isMaster) ? '🔒' : '🚪', (p[0].x+p[1].x)/2, (p[0].y+p[1].y)/2); ctx.textAlign='left';
+    ctx.fillText(o.trancado && !o.aberta && T.mode === 'secret' ? '🔒' : '🚪', (p[0].x+p[1].x)/2, (p[0].y+p[1].y)/2); ctx.textAlign='left';
 }
 function drawJanela(o) {
     const p = o.pontos || []; if (p.length < 2) return;
@@ -831,7 +820,7 @@ function drawJanela(o) {
     ctx.beginPath(); ctx.moveTo(p[0].x, p[0].y); ctx.lineTo(p[1].x, p[1].y); ctx.stroke();
     ctx.setLineDash([]);
     ctx.font = `${14/T.cam.z}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(o.trancado && !o.aberta && (T.mode === 'secret' || T.isMaster) ? '🔒' : '🪟', (p[0].x+p[1].x)/2, (p[0].y+p[1].y)/2); ctx.textAlign='left';
+    ctx.fillText(o.trancado && !o.aberta && T.mode === 'secret' ? '🔒' : '🪟', (p[0].x+p[1].x)/2, (p[0].y+p[1].y)/2); ctx.textAlign='left';
 }
 
 function drawSelecao() {
@@ -1038,7 +1027,9 @@ function drawFog() {
         PERF.fogKey = '';
     }
 
-    const escopo = (T.mode === 'secret' || T.isMaster) ? 'mestre' : 'jogador';
+    // Público = TV da sessão: mesmo o mestre olha pela visão do grupo (só o
+    // modo secreto é a tela particular dele, e ninguém além do mestre a abre).
+    const escopo = T.mode === 'secret' ? 'mestre' : 'jogador';
     const pol = politicaDeFog({ luzAtiva: l.ativa, modo: l.modo, ehMestre: escopo === 'mestre' });
     const fontesVisao = coletarFontesDeVisao(escopo);
     const fontesLuz = coletarFontesDeLuz();
@@ -1356,9 +1347,10 @@ function coletarFontesDeVisao(escopo) {
         if (escopo === 'jogador') {
             const meu = (T._meusTokens || []).some(t => t.id === o.id);
             if (!meu) {
-                // fallback: jogador sem token próprio vê pela visão pública do grupo
+                // fallback: sem token próprio (espectador) vê pela visão do GRUPO —
+                // só tokens de personagem: pela visão do NPC era o vazamento da TV
                 if ((T._meusTokens || []).length) continue;
-                if (!objVisivel(o)) continue;
+                if (o.vinculo?.tipo !== 'char' || !objVisivel(o)) continue;
             }
         } else {
             if (T.mode === 'public' && !objVisivel(o)) continue;

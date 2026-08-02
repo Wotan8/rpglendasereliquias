@@ -243,9 +243,15 @@ export function pontoVisivelAgora(p) {
  * - tokens próprios sempre visíveis
  * - invisível: só com sensor verInvisivel/verdadeira cobrindo o ponto
  * - demais: precisam estar na área "visível agora"
+ *
+ * 🔧 Futura otimização: roda por token A CADA QUADRO e cada chamada testa
+ * ponto-em-polígono contra todas as visões (polígono de raycast tem centenas de
+ * vértices). Com o mestre agora entrando por aqui no público, são 3 telas
+ * pagando o custo. Cachear o resultado por `PERF.fogKey` (só muda quando visão
+ * ou parede muda) resolve sem tocar na regra.
  */
 export function tokenVisivelParaMim(o, meusTokens) {
-    if (T.mode === 'secret' || T.isMaster) return true;
+    if (T.mode === 'secret') return true;   // público é a TV: vale para o mestre também
     const luz = T.canvas?.luzDinamica;
     if (!luz?.ativa) return o.invisivel ? false : true;
     if (meusTokens.some(t => t.id === o.id)) return true;

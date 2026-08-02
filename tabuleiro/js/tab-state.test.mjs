@@ -5,7 +5,7 @@ import {
     T, UNIDADES, optsUnidade, CAMADAS_PADRAO, PERMISSOES_LISTA,
     pxDeLarguraReal, larguraRealDePx, sincLarguraReal,
     upcEm, unidadeEm, unidadesParaPx, pxParaUnidades, gridSize,
-    camadasVisiveis, objVisivel, popNavegacaoValida,
+    camadasVisiveis, objVisivel, tokensDaVisao, popNavegacaoValida,
     fmtViagem, fmtDuracao, refViagemPorDia, camposRevelados, selecionar, politicaDeFog,
     alcanceDeVisao, fonteDoAlcance, DV_PERCEPCAO, DV_PERCEPCAO_VISUAL,
     bonusIniciativa, DV_INICIATIVA, DADO_INICIATIVA,
@@ -99,6 +99,36 @@ assert.equal(camadasVisiveis().some(c => c.tipo === 'dm'), false);
 T.mode = 'secret'; T.isMaster = true;
 assert.equal(objVisivel(naLuz('desenho')), true);
 assert.equal(camadasVisiveis().length, CAMADAS_PADRAO.length);
+
+// =====================================================================
+// QUEM DITA A VISÃO DA TELA (tokensDaVisao)
+// 🔴 A regressão trancada: no MODO PÚBLICO (a TV da sessão) o mestre entrava
+// como "mestre" — a tela recortava por TODA luz e por visão de NPC, e a TV
+// entregava sala iluminada vazia e inimigo que nenhum jogador estava vendo.
+// =====================================================================
+T.canvas = { camadas: CAMADAS_PADRAO };
+T.chars = [{ id: 'c1', ownerUid: 'j1' }, { id: 'c2', ownerUid: 'j2' }];
+T.objects = new Map(Object.entries({
+    t1:  { id: 't1', tipo: 'token', layerId: 'tokens', vinculo: { tipo: 'char', id: 'c1' } },
+    t2:  { id: 't2', tipo: 'token', layerId: 'tokens', vinculo: { tipo: 'char', id: 'c2' } },
+    npc: { id: 'npc', tipo: 'token', layerId: 'tokens', vinculo: { tipo: 'npc', id: 'n1' } },
+    esc2:{ id: 'esc2', tipo: 'token', layerId: 'tokens', visivelPublico: false, vinculo: { tipo: 'char', id: 'c2' } },
+    luz: { id: 'luz', tipo: 'luz', layerId: 'luz' },
+}));
+const idsDaVisao = () => tokensDaVisao().map(o => o.id);
+
+T.mode = 'public'; T.isMaster = true; T.user = { uid: 'mestre' };
+assert.deepEqual(idsDaVisao(), ['t1', 't2'], '🔒 mestre na TV enxerga pela união do GRUPO');
+assert.equal(idsDaVisao().includes('npc'), false, '🔒 visão de NPC nunca entra no público');
+assert.equal(idsDaVisao().includes('esc2'), false, 'token escondido do público não dá visão na TV');
+
+T.mode = 'public'; T.isMaster = false; T.user = { uid: 'j1' };
+assert.deepEqual(idsDaVisao(), ['t1'], 'jogador enxerga só pelos tokens dele');
+T.user = { uid: 'espectador' };
+assert.deepEqual(idsDaVisao(), [], 'sem token próprio a lista é vazia (o fallback do grupo é do render)');
+
+T.mode = 'secret'; T.isMaster = true;
+assert.deepEqual(idsDaVisao(), [], 'no secreto o mestre não tem visão limitada');
 
 // =====================================================================
 // PAREDE BLOQUEIA MOVIMENTO (a colisão que o clamp do arrasto usa)
