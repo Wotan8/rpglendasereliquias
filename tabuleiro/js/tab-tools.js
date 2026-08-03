@@ -336,20 +336,12 @@ function onDown(e) {
             if (h) { ponteiro = { tipo: 'resize', id: T.selection, handle: h.k, b0: h.b, w0: w }; return; }
             const o = pickObject(w);
             if (o) {
-                // Relógio: clique do mestre = avançar fatia (F6.2)
-                if (o.tipo === 'relogio' && T.isMaster && T.mode === 'secret' && !e.shiftKey && !o.bloqueado) {
-                    // Vinculado a frente: só exibição — o avanço passa pela
-                    // colheita/Painel para registrar motivo e disparar presságio
-                    if (o.frenteId) {
-                        toast('🕰️ Relógio de frente — avance pela colheita ou pelo Painel do Mestre');
-                        selecionar(o.id); markDirty();
-                        return;
-                    }
-                    const cheias = Math.min((o.cheias || 0) + 1, o.fatias || 6);
-                    updObj(o.id, { cheias });
-                    selecionar(o.id); markDirty();
-                    return;
-                }
+                // Relógio (F6.2): o clique SECO avança a fatia — mas arrastar tem
+                // de mover o relógio. Antes o clique retornava aqui e ele ficava
+                // preso no lugar, sem jeito de reposicionar. Agora o arrasto começa
+                // normalmente e o avanço só acontece no soltar, se não andou.
+                const relogioSeco = o.tipo === 'relogio' && T.isMaster && T.mode === 'secret'
+                    && !e.shiftKey && !o.bloqueado;
                 // Clicar num item já laçado arrasta o conjunto inteiro
                 if (T.selecionados.length > 1 && T.selecionados.includes(o.id) && podeMoverObj(o)) {
                     iniciarDragMulti(w, e.pointerId);
@@ -361,6 +353,7 @@ function onDown(e) {
                 markDirty();
                 if (podeMoverObj(o)) {
                     iniciarDragObj(o, w, e.pointerId);
+                    if (relogioSeco) ponteiro.avancarRelogio = true;
                 } else ponteiro = { tipo: 'clickObj', id: o.id };
                 if (o.tipo === 'alfinete') mostrarPopupAlfinete(o);
                 if (o.tipo === 'desenho' && o.ehRota) toast(window._tbInfoRota(o.id));
@@ -783,6 +776,19 @@ async function onUp(e) {
                     markDirty();
                     return;
                 }
+            }
+
+            // Relógio: clique seco (não arrastou) = avança a fatia
+            if (p.avancarRelogio && !p.moveu) {
+                if (o.frenteId) {
+                    // Vinculado a frente: só exibição — o avanço passa pela
+                    // colheita/Painel para registrar motivo e disparar presságio
+                    toast('🕰️ Relógio de frente — avance pela colheita ou pelo Painel do Mestre');
+                } else {
+                    updObj(o.id, { cheias: Math.min((o.cheias || 0) + 1, o.fatias || 6) });
+                }
+                markDirty();
+                return;
             }
 
             delete o.__fogPos; // F2.3: agora o fog recalcula na posição final
