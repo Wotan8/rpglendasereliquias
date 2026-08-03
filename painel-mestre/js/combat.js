@@ -21,6 +21,21 @@ let _docCombate = null;
 
 const refDocCombate = () => doc(db, 'mesas', S.currentMesaId, 'tabuleiro-meta', 'combate');
 
+// Campos que ESTE painel edita. O resto do participante (condições aplicadas no
+// Tabuleiro, vínculos) vem sempre da cópia mais nova do servidor.
+const CAMPOS_DO_PAINEL = ['name', 'type', 'details', 'initiative', 'combatAbilities',
+    'hpCurrent', 'hpMax', 'enerCurrent', 'enerMax', 'sanCurrent', 'sanMax'];
+
+/** Participante pronto para gravar: sem campo local (`__*`) e sem sobrescrever o alheio. */
+function paraGravar(local, remoto) {
+    const limpo = {};
+    for (const [k, v] of Object.entries(local)) if (!k.startsWith('__')) limpo[k] = v;
+    if (!remoto) return limpo;
+    const meus = {};
+    for (const k of CAMPOS_DO_PAINEL) if (k in limpo) meus[k] = limpo[k];
+    return { ...remoto, ...meus };
+}
+
 let _persistTimer = null;
 function persistCombat() {
     if (!S.currentMesaId) return;
@@ -28,7 +43,12 @@ function persistCombat() {
     _persistTimer = setTimeout(async () => {
         _persistTimer = null;   // é o que destrava o listener a receber mudança de fora
         try {
-            const participantes = S.combatParticipants.map(p => ({ ...p }));
+            // 🔒 O Tabuleiro escreve na MESMA lista. Mandar a cópia local inteira
+            // apagava o que chegou de lá enquanto este write esperava os 400ms —
+            // uma condição aplicada no tabuleiro sumia sozinha. Merge por id.
+            const remotos = cenaAtiva(_docCombate).participantes || [];
+            const participantes = S.combatParticipants.map(p =>
+                paraGravar(p, remotos.find(x => x.id === p.id)));
             // grava DENTRO da cena aberta; o helper devolve o doc com o espelho
             const novo = comCenaAtivaPatch(_docCombate, { participantes });
             _docCombate = { ..._docCombate, ...novo };
@@ -110,8 +130,13 @@ window._loadCombatFromMesa = async function() {
             // velho por definição, ignorar. Sem essa guarda, o eco do próprio
             // write redesenharia a lista no meio da digitação.
             if (_persistTimer) return;
-            if (JSON.stringify(parts) === JSON.stringify(S.combatParticipants)) return;
-            S.setCombatParticipants(parts);
+            // compara sem os campos locais (`__`), senão o eco do próprio write
+            // parece sempre diferente e a lista repinta à toa
+            if (JSON.stringify(parts) === JSON.stringify(S.combatParticipants.map(p => paraGravar(p)))) return;
+            // as condições da ficha são locais: preserva ao adotar a lista remota
+            const condsLocais = new Map(S.combatParticipants.map(p => [p.id, p.__conds]));
+            S.setCombatParticipants(parts.map(p =>
+                condsLocais.has(p.id) ? { ...p, __conds: condsLocais.get(p.id) } : p));
             // participante que entrou pelo Tabuleiro também precisa do listener de
             // vitais aqui — senão a barra dele só se mexe depois de recarregar
             parts.forEach(p => {
@@ -185,7 +210,15 @@ function setupCombatListener(charId, pid) {
         p.enerCurrent = d.enerCurrent !== undefined ? d.enerCurrent : em; p.enerMax = em;
         p.sanCurrent = d.sanCurrent !== undefined ? d.sanCurrent : sm; p.sanMax = sm;
         p.name = f.nome || d.nome || p.name;
+        // condições da FICHA (local, prefixo __ não vai para o banco) — é o que
+        // deixa a lista daqui mostrar o mesmo que a janela do Tabuleiro
+        const condsAntes = JSON.stringify(p.__conds || []);
+        p.__conds = (d.conditions || []).map(c => c?.nome).filter(Boolean);
         updateParticipantStats(pid);
+        // repinte inteiro SÓ quando a lista de condições muda: a ficha salva
+        // sozinha o tempo todo e redesenhar a lista a cada save roubaria o foco
+        // de quem estiver digitando iniciativa ou habilidades aqui.
+        if (JSON.stringify(p.__conds) !== condsAntes) pintarCombate();
         persistCombat();
     }); combatListeners[pid] = unsub;
 }
@@ -206,8 +239,11 @@ function setupCombatNpcListener(npcId, pid) {
         p.enerCurrent = (atual.ENER !== undefined && atual.ENER !== null) ? Math.min(atual.ENER, enerMax) : enerMax; p.enerMax = enerMax;
         p.sanCurrent = (atual.SAN !== undefined && atual.SAN !== null) ? Math.min(atual.SAN, sanMax) : sanMax; p.sanMax = sanMax;
         p.name = n.nome || p.name;
-        
+        const condsAntes = JSON.stringify(p.__conds || []);
+        p.__conds = (n.conditions || []).map(c => c?.nome).filter(Boolean);
+
         updateParticipantStats(pid);
+        if (JSON.stringify(p.__conds) !== condsAntes) pintarCombate();
         persistCombat();
     });
     combatListeners[pid] = unsub;
@@ -408,6 +444,13 @@ function pintarCombate() {
         const cls = isCustom ? 'combat-participant-custom' : isNpc ? 'combat-participant-npc' : '';
         const npcHint = isNpc ? '<span style="font-size:.7rem;color:var(--lr-text-2);margin-left:5px">📋 detalhes</span>' : '';
         const btnRestore = hasStats ? `<button class="btn btn-secondary btn-small" onclick="restoreCombatStats('${p.id}',event)" title="Restaurar VIT/ENER/SAN ao máximo">🛌</button>` : '';
-        return `<div class="combat-participant ${cls}" ${click}><div class="combat-initiative"><div class="combat-initiative-value">${p.initiative}</div><div class="combat-initiative-label">Iniciativa</div></div><div style="flex:1"><div class="combat-name">${escapeHtml(p.name)}${npcHint}</div><span class="combat-type">${p.type}</span><div class="combat-details">${escapeHtml(p.details||'')}</div>${stats}${abil}</div><div class="combat-actions" onclick="event.stopPropagation()"><input type="number" class="combat-initiative-input" value="${p.initiative}" onchange="updateInitiative('${p.id}',this.value)">${btnRestore}<button class="btn btn-danger btn-small" onclick="removeFromCombat('${p.id}')">🗑️</button></div></div>`;
+        // Condições: as do combate (aplicadas no Tabuleiro) + as da ficha. Aqui é
+        // leitura — quem aplica e tira é o Tabuleiro ou a ficha, e as duas pontas
+        // escrevem nos mesmos docs, então isto reflete na hora.
+        const conds = [...new Set([...(p.condicoes || []), ...(p.__conds || [])])];
+        const condsHtml = conds.length
+            ? `<div class="combat-conds">${conds.map(c => `<span class="combat-cond">${escapeHtml(c)}</span>`).join('')}</div>`
+            : '';
+        return `<div class="combat-participant ${cls}" ${click}><div class="combat-initiative"><div class="combat-initiative-value">${p.initiative}</div><div class="combat-initiative-label">Iniciativa</div></div><div style="flex:1"><div class="combat-name">${escapeHtml(p.name)}${npcHint}</div><span class="combat-type">${p.type}</span><div class="combat-details">${escapeHtml(p.details||'')}</div>${stats}${condsHtml}${abil}</div><div class="combat-actions" onclick="event.stopPropagation()"><input type="number" class="combat-initiative-input" value="${p.initiative}" onchange="updateInitiative('${p.id}',this.value)">${btnRestore}<button class="btn btn-danger btn-small" onclick="removeFromCombat('${p.id}')">🗑️</button></div></div>`;
     }).join('');
 }

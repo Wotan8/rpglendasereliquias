@@ -38,6 +38,11 @@ export function initHud() {
             const ch = T.chars.find(x => x.id === c.id);
             if (ch) ch.derivedTotals = d.derivedTotals || ch.derivedTotals || {};
             markDirty();
+            // A janela de Combate lê os vitais do personagem DAQUI (VITAIS), então
+            // sem este repinte ela ficava com o número velho quando o dano vinha do
+            // Painel do Mestre ou da própria ficha. É barato: sai na hora se a
+            // janela estiver fechada.
+            window._renderCombate?.();
         }, () => {});
         unsubsVitais.push(u);
         T.unsubs.push(u);

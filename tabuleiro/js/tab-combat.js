@@ -44,6 +44,13 @@ window.tbToggleCombate = function() {
 /** Participantes da cena ABERTA (é o que a janela mostra e edita). */
 const partsDaCena = () => cenaAtiva(T.combate).participantes || [];
 
+/** Condições que vieram da FICHA do participante (char ao vivo por VITAIS, NPC pelo doc). */
+function condsDaFicha(p) {
+    if (p.characterId) return (VITAIS.get(p.characterId)?.conds || []).map(c => c.nome).filter(Boolean);
+    if (p.npcId) return (T.npcs.find(n => n.id === p.npcId)?.conditions || []).map(c => c?.nome || c).filter(Boolean);
+    return [];
+}
+
 /**
  * Grava a cena ABERTA. O doc sai inteiro de `docDeCenas` (dentro dos helpers),
  * então o espelho que a ficha lê nunca fica para trás — ver shared/combate-cenas.js.
@@ -167,8 +174,14 @@ function render() {
             ${barra('VIT', hpC, hpM, 'linear-gradient(90deg,#10b981,#34d399)')}
             ${barra('ENER', enerC, enerM, 'linear-gradient(90deg,#f59e0b,#fbbf24)')}
             ${barra('SAN', sanC, sanM, 'linear-gradient(90deg,#6366f1,#8b5cf6)')}` : '';
+        // Condição tem DUAS fontes: a do combate (`p.condicoes`) e a da ficha do
+        // personagem/NPC. Quem aplica pelo combate grava nas duas, mas quem aplica
+        // pela ficha só tem a de lá — e essa não aparecia aqui. A janela mostra a
+        // união; o ✕ só existe para as do combate, que são as que este lado tira.
+        const daFicha = condsDaFicha(p).filter(n => !(p.condicoes || []).includes(n));
         const conds = (p.condicoes || []).map((cd, ci) =>
-            `<span class="tb-cond">${esc(cd)}${secreto ? ` <b onclick="tbCombCondRm('${p.id}',${ci})">✕</b>` : ''}</span>`).join('');
+            `<span class="tb-cond">${esc(cd)}${secreto ? ` <b onclick="tbCombCondRm('${p.id}',${ci})">✕</b>` : ''}</span>`).join('')
+            + daFicha.map(n => `<span class="tb-cond" title="Aplicada na ficha — remova por lá">${esc(n)}</span>`).join('');
         const abrirNpc = secreto && p.npcId ? `onclick="tbAbrirNpcModal('${p.npcId}')" style="cursor:pointer" title="Abrir ficha do NPC"` : '';
         return `<div class="tb-combat-p ${atual ? 'atual' : ''}">
             <div class="tb-combat-init">${p.initiative ?? 0}</div>

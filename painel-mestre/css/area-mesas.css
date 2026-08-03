@@ -374,6 +374,13 @@
     font-size: 1rem;
 }
 
+/* Condições do participante — espelho do que o Tabuleiro/ficha aplicaram */
+.combat-conds { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.combat-cond {
+    background: rgba(201, 79, 92, .16); border: 1px solid var(--lr-blood-3, #c94f5c);
+    color: var(--light); border-radius: 999px; padding: 1px 8px; font-size: .68rem; font-weight: 700;
+}
+
 /* Cenas de combate — a mesma lista de cenas que o Tabuleiro mostra em abas */
 .combat-cenas { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .combat-cena-sel {
