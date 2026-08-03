@@ -226,13 +226,19 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 
 /* ===== Janela de Combate ===== */
 .tb-window {
-    position: fixed; right: 16px; top: 64px; z-index: 46; width: 340px; max-height: 74vh;
+    position: fixed; right: 16px; top: 64px; z-index: 46; width: 340px; max-height: 92vh;
     background: var(--tb-panel); border: 1px solid var(--tb-border); border-radius: 14px;
     display: none; flex-direction: column; overflow: hidden; box-shadow: 0 16px 44px rgba(0,0,0,.55);
+    /* Redimensionar pelo canto: é o `resize` do próprio navegador — nada de
+       handle nem listener de ponteiro. O `overflow: hidden` acima é o que o
+       habilita. Sessão e Combate ganham juntos, é a mesma janela. */
+    resize: both; min-width: 260px; min-height: 150px;
 }
 .tb-window.open { display: flex; }
 .tb-win-head { padding: 10px 12px; font-weight: 800; font-size: .88rem; border-bottom: 1px solid var(--tb-border); display: flex; justify-content: space-between; align-items: center; cursor: move; background: var(--tb-panel2); user-select: none; }
-.tb-win-body { padding: 10px; overflow-y: auto; }
+/* flex:1 + min-height:0 = ao esticar a janela quem cresce é a LISTA, não uma
+   faixa vazia embaixo dela (e o scroll continua sendo do corpo). */
+.tb-win-body { padding: 10px; overflow-y: auto; flex: 1; min-height: 0; }
 /* Abas de CENA de combate: a aberta é maior, as outras encolhem e ficam
    apagadas — o mestre bate o olho e sabe em qual está. O '＋' é a última. */
 .tb-cena-abas { display: flex; align-items: flex-end; gap: 3px; flex-wrap: wrap; margin-bottom: 7px; }

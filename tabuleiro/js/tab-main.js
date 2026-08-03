@@ -399,7 +399,9 @@ window.tbCriarRelogio = async function() {
     const frenteId = document.getElementById('rl_frente')?.value || '';
     const f = frenteId ? (T.frentes || {})[frenteId] : null;
     await addObj({
-        tipo: 'relogio', layerId: 'tokens',
+        // Vitrine: o relógio é placar, não peça de cenário — fica acima do fog e
+        // de tudo, como o resto do que a mesa precisa enxergar sempre.
+        tipo: 'relogio', layerId: 'mostrar',
         x: centro.x, y: centro.y,
         nome: document.getElementById('rl_nome').value.trim() || (f?.nome || ''),
         fatias: parseInt(document.getElementById('rl_fatias').value) || 6,
