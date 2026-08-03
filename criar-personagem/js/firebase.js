@@ -79,11 +79,17 @@ onAuthStateChanged(auth, async (user) => {
                         introducao: cfg.textoIntroducao || '',
                         mecanicasObjetoPessoal: cfg.mecanicasObjetoPessoal || []
                     };
-                    // Pre-set EXP from mesa config
-                    window.wizardState.expInicial = cfg.expInicial ?? 100;
-                    // Register EXP source (will be picked up by ExpTracker on init)
-                    if (typeof ExpTracker !== 'undefined' && ExpTracker.addSource) {
-                        ExpTracker.addSource('exp_inicial', cfg.expInicial ?? 100, 'EXP Inicial (Mesa)');
+                    // As fontes de EXP são registradas no initWizard (app.js), depois
+                    // do restore do localStorage — registrar aqui seria sobrescrito.
+
+                    // A mesa só guarda o e-mail do mestre (createdBy); o nome de
+                    // exibição vive em users/. Sem achar, fica o e-mail mesmo.
+                    try {
+                        const uSnap = await getDocs(query(collection(db, 'users'), where('email', '==', mesaData.createdBy || '')));
+                        const u = uSnap.docs[0]?.data();
+                        if (u) window.wizardState.mesaVinculada.mestreNome = u.nome || u.displayName || u.email;
+                    } catch (err) {
+                        console.warn('⚠️ Erro ao buscar o nome do mestre:', err);
                     }
 
                     // Recuperar o nível da sessão atual da mesa (maior número de sessão)
@@ -99,12 +105,16 @@ onAuthStateChanged(auth, async (user) => {
                         
                         if (maxSession > 0) {
                             window.wizardState.mesaVinculada.sessaoAtual = maxSession;
-                            if (typeof ExpTracker !== 'undefined' && ExpTracker.addSource) {
-                                ExpTracker.addSource('exp_sessao', maxSession, 'Nível da sessão da mesa');
-                            }
                         }
                     } catch (err) {
                         console.warn('⚠️ Erro ao recuperar sessões da mesa:', err);
+                    }
+
+                    // Nome da mesa no topo — reaproveita o hint da toolbar
+                    const hint = document.querySelector('.hint-toolbar');
+                    if (hint) {
+                        hint.innerHTML = '<span style="color:var(--accent);font-weight:800;letter-spacing:.3px"></span> · Criação de Personagem';
+                        hint.firstChild.textContent = '🎭 ' + window.wizardState.mesaVinculada.nome;
                     }
 
                     console.log('✅ Config da mesa carregada:', window.wizardState.mesaVinculada);

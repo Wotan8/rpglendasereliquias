@@ -9,28 +9,32 @@ window.initWizard = function () {
 
     console.log('🧙 Iniciando Wizard de Criação...');
 
+    // A mesa vem do Firestore (firebase.js) logo antes desta chamada e é sempre
+    // mais nova que o localStorage — nem o restore nem o reset podem sobrescrevê-la,
+    // senão o jogador fica com o EXP inicial e o nº de sessão de dias atrás.
+    const mesaDoServidor = wizardState.mesaVinculada;
+
     // Check for saved state
     if (hasWizardSave()) {
         if (confirm('📂 Encontramos um personagem em progresso. Deseja continuar de onde parou?')) {
             loadWizardFromStorage();
         } else {
             clearWizardStorage();
-            // Preserve mesaVinculada (set from URL param before initWizard)
-            const savedMesa = wizardState.mesaVinculada;
-            const savedMesaExp = wizardState.expInicial;
             resetWizardState();
-            if (savedMesa) {
-                wizardState.mesaVinculada = savedMesa;
-                wizardState.expInicial = savedMesaExp;
-            }
         }
     }
+    if (mesaDoServidor) wizardState.mesaVinculada = mesaDoServidor;
 
-    // If mesa is linked (from URL), ensure EXP is registered
+    // Mesa vinculada → EXP inicial da mesa + nº da sessão atual. Único lugar
+    // que registra estas duas fontes.
     if (wizardState.mesaVinculada) {
-        ExpTracker.addSource('exp_inicial', wizardState.mesaVinculada.expInicial ?? 100, 'EXP Inicial (Mesa)');
-        if (wizardState.mesaVinculada.sessaoAtual > 0) {
-            ExpTracker.addSource('exp_sessao', wizardState.mesaVinculada.sessaoAtual, 'Nível da sessão da mesa');
+        const mesa = wizardState.mesaVinculada;
+        wizardState.expInicial = mesa.expInicial ?? 100;
+        ExpTracker.addSource('exp_inicial', wizardState.expInicial, 'EXP Inicial (Mesa)');
+        if (mesa.sessaoAtual > 0) {
+            ExpTracker.addSource('exp_sessao', mesa.sessaoAtual, `Sessão #${mesa.sessaoAtual} da mesa`);
+        } else {
+            ExpTracker.removeSource('exp_sessao'); // sobra de uma criação salva de outra mesa
         }
     }
 
@@ -439,6 +443,12 @@ function renderPhase0(container) {
         ? `EXP Inicial <span style="font-size:.78rem;color:var(--muted);">(definido pelo Mestre — ${escHtml(wizardState.mesaVinculada.mestreNome || 'Mesa')})</span>`
         : `EXP Inicial <span style="font-size:.78rem;color:var(--muted);">(definido pelo Mestre)</span>`;
 
+    // Mesa em andamento: o jogador entra com o EXP inicial + 1 por sessão já jogada
+    const sessaoAtual = wizardState.mesaVinculada?.sessaoAtual || 0;
+    const expSoma = (mesaExp != null && sessaoAtual > 0)
+        ? `<span style="font-size:.95rem;font-weight:800;color:var(--accent, #d4af37);white-space:nowrap;">+ ${sessaoAtual} = ${mesaExp + sessaoAtual} EXPs Iniciais da mesa</span>`
+        : '';
+
     html += `
         <div class="section">
             <div class="section-title">⭐ Experiência Inicial</div>
@@ -448,11 +458,14 @@ function renderPhase0(container) {
             </p>
             <div class="field">
                 <label>${expLabel}</label>
-                <input type="number" id="inputExpInicial" min="0" step="1"
-                    value="${expValue}" ${expReadonly}
-                    placeholder="0"
-                    style="max-width:200px;font-size:1.2rem;font-weight:900;text-align:center;"
-                    oninput="setExpInicial(parseInt(this.value) || 0)">
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <input type="number" id="inputExpInicial" min="0" step="1"
+                        value="${expValue}" ${expReadonly}
+                        placeholder="0"
+                        style="max-width:200px;font-size:1.2rem;font-weight:900;text-align:center;"
+                        oninput="setExpInicial(parseInt(this.value) || 0)">
+                    ${expSoma}
+                </div>
             </div>
         </div>
     `;
@@ -799,10 +812,17 @@ function renderResumo(c) { c.innerHTML = '<p style="color:var(--muted);text-alig
 
 /* ===== DOMContentLoaded fallback ===== */
 document.addEventListener('DOMContentLoaded', () => {
+    // Com ?mesaId= quem inicializa é o firebase.js — é ele que traz o EXP inicial
+    // da mesa e o nº da sessão. Entrar de fallback aqui criaria o personagem sem
+    // vínculo e sem EXP nenhum, então espera bem mais e avisa em vez de seguir.
+    const temMesa = !!new URLSearchParams(location.search).get('mesaId');
     setTimeout(() => {
-        if (!_wizardInitialized) {
-            console.log('⚠️ Firebase não detectado, tentando inicializar offline...');
-            window.initWizard();
+        if (_wizardInitialized) return;
+        if (temMesa) {
+            alert('⚠️ Não foi possível carregar a configuração da mesa. Recarregue a página.');
+            return;
         }
-    }, 2000);
+        console.log('⚠️ Firebase não detectado, tentando inicializar offline...');
+        window.initWizard();
+    }, temMesa ? 15000 : 2000);
 });

@@ -1,12 +1,32 @@
 /* ===== EXP TRACKER — Controle centralizado de EXP ===== */
 
+/* Teto de EXP líquida que as Desvantagens avulsas podem render na criação.
+   ≈5 sessões de jogo (a rubrica do Mestre paga 2-4 EXP por sessão). Sem ele,
+   pegar todas as desvantagens rende ~160 EXP contra os ~62 da EXP Inicial —
+   empilhar defeito viraria a estratégia dominante da criação. Só limita as
+   individuais (`pec_`); as herdadas de raça/classe/tribo não são escolhidas. */
+const TETO_GANHO_DESVANTAGENS = 20;
+
 const ExpTracker = {
     _listeners: [],
 
     /** Registra uma fonte de EXP */
     addSource(key, amount, label) {
         wizardState.expSources[key] = { amount, label };
+        if (key.startsWith('pec_') && this._ganhoPecBruto() > TETO_GANHO_DESVANTAGENS
+            && typeof showWizardToast === 'function') {
+            showWizardToast(`⚠️ Teto de ${TETO_GANHO_DESVANTAGENS} EXP em Desvantagens atingido — o excedente não conta.`, 'error');
+        }
         this._notify();
+    },
+
+    /** Soma bruta do que as desvantagens individuais renderiam, sem o teto. */
+    _ganhoPecBruto() {
+        let g = 0;
+        for (const [key, src] of Object.entries(wizardState.expSources)) {
+            if (key.startsWith('pec_') && src.amount > 0) g += src.amount;
+        }
+        return g;
     },
 
     /** Remove uma fonte de EXP */
@@ -15,13 +35,14 @@ const ExpTracker = {
         this._notify();
     },
 
-    /** Retorna o EXP atual do pool (restante) */
+    /** Retorna o EXP atual do pool (restante), já com o teto de desvantagens */
     getTotal() {
         let total = 0;
-        for (const src of Object.values(wizardState.expSources)) {
+        for (const [key, src] of Object.entries(wizardState.expSources)) {
+            if (key.startsWith('pec_') && src.amount > 0) continue;
             total += src.amount;
         }
-        return total;
+        return total + Math.min(this._ganhoPecBruto(), TETO_GANHO_DESVANTAGENS);
     },
 
     /** Retorna EXP restante (alias para getTotal) */
@@ -109,10 +130,12 @@ const ExpTracker = {
 
     calcExpTotal() {
         let totalSourcesGained = 0;
-        for (const src of Object.values(wizardState.expSources)) {
+        for (const [key, src] of Object.entries(wizardState.expSources)) {
+            if (key.startsWith('pec_')) continue;   // entra abaixo, já com o teto
             if (src.amount > 0) totalSourcesGained += src.amount;
         }
-        return this.calcAttrExpTotal() + this.calcSkillExpTotal() + totalSourcesGained;
+        return this.calcAttrExpTotal() + this.calcSkillExpTotal() + totalSourcesGained
+            + Math.min(this._ganhoPecBruto(), TETO_GANHO_DESVANTAGENS);
     },
 
     /* ===== DISPLAY ===== */
