@@ -18,6 +18,10 @@ const PING_DUR = 2200;
 let ultEnvio = 0;
 let heartbeatTimer = null;
 let minhaCor = '#f472b6';
+// Identidade desta ABA. O uid não serve para dizer "fui eu": o mestre tem duas
+// telas na mesma conta (secreta e o Público na TV), e o que a secreta manda
+// precisa chegar na pública.
+const JANELA = uid();
 
 export function cursoresAtivados() {
     return localStorage.getItem('tb_cursores') !== 'off';
@@ -40,13 +44,14 @@ export function initPresenca() {
         const d = s.exists() ? s.data() : null;
         const p = d?.ultimo;
         if (!p || !p.t || Date.now() - p.t > 8000) return;
-        if (p.origem === T.user?.uid) return;
+        // 🔴 Quem pula é a JANELA que mandou (ela já desenhou o ping na hora),
+        // não a conta. Pular por uid descartava o ping também no Público do
+        // mestre — mesma conta, outra tela — e o 🔭 Foco não puxava a TV dele.
+        if (p.janela === JANELA) return;
         if (p.canvasId && p.canvasId !== T.canvasId) return;
         dispararPingLocal(p);
-        // Puxa a câmera de TODA tela pública — inclusive a TV do mestre, que roda
-        // na conta dele. Só a tela secreta (a de trabalho, de onde o foco partiu)
-        // fica parada; antes o teste era `!T.isMaster` e o Público do mestre não
-        // acompanhava o próprio foco.
+        // Foco puxa a câmera de toda tela pública, inclusive a TV do mestre. A
+        // tela secreta (a de trabalho, de onde o clique partiu) fica parada.
         if (p.forcar && T.mode !== 'secret') tweenCamera(p.x, p.y, Math.max(T.cam.z, 0.8), 650);
     }));
 
@@ -114,7 +119,7 @@ export function enviarPing(mundo, forcar = false) {
     const p = {
         id: uid(), x: Math.round(mundo.x), y: Math.round(mundo.y),
         cor: minhaCor, nome, t: Date.now(),
-        forcar: forcar && T.isMaster, origem: T.user?.uid, canvasId: T.canvasId,
+        forcar: forcar && T.isMaster, origem: T.user?.uid, janela: JANELA, canvasId: T.canvasId,
     };
     dispararPingLocal(p);
     setDoc(refPings(), { ultimo: p }, { merge: true }).catch(() => {});
