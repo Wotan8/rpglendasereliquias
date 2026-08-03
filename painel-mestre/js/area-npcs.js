@@ -596,7 +596,7 @@ function buildNpcForm() {
             <span class="npcv2-hint npcv2-only-mecanico">calculados pelas mecânicas — clique em um valor para travar um override 🔒</span>
         </div>
         <div class="npcv2-hint" style="margin-bottom:6px">A ficha lista apenas os VDs vinculados a este NPC (VDs marcados como "Todo personagem tem este valor?" entram automaticamente). Use ✕ para desvincular.</div>
-        <div class="npcv2-dv-grid" id="npcDvGrid"></div>
+        <div id="npcDvGrid"></div>
         <div class="npcv2-pec-add npcv2-only-mecanico" style="margin-top:8px;display:flex;gap:10px">
             <select class="form-select" id="npcDvPicker" style="flex:1"></select>
             <button class="btn btn-secondary btn-small" onclick="addNpcDv()">➕ Vincular VD</button>
@@ -1166,9 +1166,7 @@ function renderDvGrid() {
     const vinc = F.npc.valoresDer.vinculados || [];
     const dvs = allDvs.filter(dv => !dv.isVital && vinc.includes(dv.key));
 
-    const renderFn = (list, container, emptyMsg, removable) => {
-        if (!list.length) { container.innerHTML = `<div style="color:var(--muted);font-size:.85rem">${emptyMsg}</div>`; return; }
-        container.innerHTML = list.map(dv => {
+    const cellHtml = (dv, removable) => {
             const locked = dv.override !== null;
             const sysRef = (F.sys.vitalStats || []).find(x => x.key === dv.key) || (F.sys.derivedValues || []).find(x => x.key === dv.key) || {};
             const desc = sysRef.descricao || 'Sem descrição cadastrada.';
@@ -1202,11 +1200,33 @@ function renderDvGrid() {
                 </div>
                 ${atual}
             </div>`;
-        }).join('');
     };
 
-    renderFn(vitals, vGrid, 'Nenhum status vital cadastrado no Painel de Criador.', false);
-    renderFn(dvs, dGrid, 'Nenhum Valor Derivado vinculado a este NPC. Use "➕ Vincular VD" abaixo.', true);
+    const vazio = msg => `<div style="color:var(--muted);font-size:.85rem">${msg}</div>`;
+
+    vGrid.innerHTML = vitals.length
+        ? vitals.map(dv => cellHtml(dv, false)).join('')
+        : vazio('Nenhum status vital cadastrado no Painel de Criador.');
+
+    // VDs agrupados pelo bloco do cadastro; a ordem já vem de F.sys.derivedValues
+    // (ordenado por blocoOrdem → ordem), que é a ordem de inserção de F.calc.derived.
+    if (!dvs.length) {
+        dGrid.innerHTML = vazio('Nenhum Valor Derivado vinculado a este NPC. Use "➕ Vincular VD" abaixo.');
+    } else {
+        const blocoPorKey = new Map((F.sys.derivedValues || []).map(d => [d.key, d]));
+        const blocos = new Map();
+        for (const dv of dvs) {
+            const ref = blocoPorKey.get(dv.key) || {};
+            const id = ref.blocoId || 'geral';
+            if (!blocos.has(id)) blocos.set(id, { nome: ref.blocoNome || 'Geral', dvs: [] });
+            blocos.get(id).dvs.push(dv);
+        }
+        dGrid.innerHTML = [...blocos.values()].map(b => `
+            <div class="npcv2-dv-bloco">
+                <div class="npcv2-dv-bloco-title">${escapeHtml(b.nome)}</div>
+                <div class="npcv2-dv-grid">${b.dvs.map(dv => cellHtml(dv, true)).join('')}</div>
+            </div>`).join('');
+    }
 
     renderDvPicker();
     renderExtras();

@@ -50,7 +50,8 @@ export async function ensureNpcSystemData() {
             mechanics: sd.mechanics || [],
             skills: sd.skills || [],
             derivedValues: (sd.derivedValues || [])
-                .slice().sort((a, b) => (a.ordem || 99) - (b.ordem || 99))
+                .slice().sort((a, b) => (Number(a.blocoOrdem) || 999) - (Number(b.blocoOrdem) || 999)
+                                     || (a.ordem || 99) - (b.ordem || 99))
                 .map(dv => ({
                     id: dv.id,
                     key: dv.key || dv.id,
@@ -62,6 +63,8 @@ export async function ensureNpcSystemData() {
                     mecanicaIds: dv.mecanicaIds || [],
                     campoAtual: dv.campoAtual || false,
                     todoPersonagem: dv.todoPersonagem || false,
+                    blocoId: dv.blocoId || 'geral',
+                    blocoNome: dv.blocoNome || 'Geral',
                     // '' = global | 'coluna' = por item | 'dano' = concatena no dano
                     escopoItem: dv.escopoItem || ''
                 })),

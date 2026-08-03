@@ -358,6 +358,11 @@
 .npcv2-dv-cell {
     border: 1px solid var(--line); border-radius: 10px; padding: 8px;
 }
+.npcv2-dv-bloco + .npcv2-dv-bloco { margin-top: 12px; }
+.npcv2-dv-bloco-title {
+    font-size: .74rem; font-weight: 800; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px;
+}
 .npcv2-dv-cell.locked { border-color: var(--warning, var(--lr-gold)); }
 .npcv2-dv-label {
     font-size: .72rem; font-weight: 800; color: var(--muted); margin-bottom: 4px;

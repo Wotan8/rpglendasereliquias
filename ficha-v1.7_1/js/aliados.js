@@ -1,8 +1,35 @@
-import { collection, getDocs, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { collection, getDocs, doc, getDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 let _aliadosLoaded = false;
 let currentAliadoNpc = null;
 let currentAliadoOpts = {};
+let _charIdAtual = null;
+
+/* ---------------------------------------------------------------------
+   🤝 LEALDADE — 0 a 10, por vínculo (não por NPC): o mesmo aliado pode
+   andar com dois personagens e confiar em cada um de um jeito.
+   Mora em npcs/{id}.vinculos[n].lealdade, ao lado do id do personagem.
+   Sobe e desce por decisão narrativa do Mestre (±1 por sessão; ±2/±3 em
+   eventos marcantes). Abaixo de 3 o vínculo se desfaz e o aliado volta a
+   exigir consentimento.
+   --------------------------------------------------------------------- */
+const LEALDADE_MIN = 0, LEALDADE_MAX = 10;
+
+/** Lealdade deste NPC com este personagem. Vínculo sem o campo = 0. */
+function lealdadeDe(npc, charId) {
+    const v = (npc?.vinculos || []).find(v => v.tipo === 'personagem' && v.id === charId);
+    const n = Number(v?.lealdade);
+    return Number.isFinite(n) ? Math.min(LEALDADE_MAX, Math.max(LEALDADE_MIN, n)) : 0;
+}
+
+window.lealdadeDe = lealdadeDe;   // usado pelo harness __check-lealdade.html
+
+function corDaLealdade(n) {
+    if (n <= 2) return '#ef4444';   // desconfiança — vínculo não se sustenta
+    if (n <= 5) return '#f59e0b';   // convivência
+    if (n <= 8) return '#22c55e';   // confiança — faixa de vínculo
+    return '#8b5cf6';               // devoção
+}
 
 // Escutar clique na aba
 document.addEventListener('DOMContentLoaded', () => {
@@ -49,6 +76,7 @@ async function loadAliados(charId) {
             return n.vinculos.some(v => v.tipo === 'personagem' && v.id === charId);
         });
 
+        _charIdAtual = charId;
         renderAliados(vinculados);
         _aliadosLoaded = true;
     } catch (e) {
@@ -78,6 +106,7 @@ function renderAliados(aliados) {
 
     grid.innerHTML = aliados.map(n => {
         const hasImg = !!n.imagem;
+        const leal = lealdadeDe(n, _charIdAtual);
         return `
         <div class="npc-card" style="background:var(--bg-panel, #1e293b); border:1px solid var(--border, #334155); border-radius:8px; padding:10px; cursor:pointer; transition:transform 0.1s;"
              onclick="window.openAliadoModal('${n.id}')"
@@ -90,12 +119,50 @@ function renderAliados(aliados) {
             <div style="font-size:0.8rem; color:var(--text, #e2e8f0); opacity:0.8;">
                 ${n.tipo === 'criatura' ? '🐉 Criatura' : '👤 NPC'} ${n.classe?.custom ? ' - ' + escapeHtml(n.classe.custom) : ''}
             </div>
+            <div style="display:flex; align-items:center; gap:6px; margin-top:8px; font-size:0.75rem; color:var(--muted, #94a3b8);"
+                 title="Lealdade: quanto este aliado confia em você. Sobe e desce por decisão do Mestre.">
+                <span>🤝 Lealdade</span>
+                <button type="button" onclick="event.stopPropagation(); window.ajustarLealdade('${n.id}', -1)"
+                    style="width:20px;height:20px;line-height:1;border:1px solid var(--border,#334155);border-radius:4px;background:transparent;color:inherit;cursor:pointer;padding:0"
+                    ${leal <= LEALDADE_MIN ? 'disabled' : ''}>−</button>
+                <strong style="color:${corDaLealdade(leal)}; min-width:2.2em; text-align:center; font-size:0.9rem">${leal}</strong>
+                <button type="button" onclick="event.stopPropagation(); window.ajustarLealdade('${n.id}', 1)"
+                    style="width:20px;height:20px;line-height:1;border:1px solid var(--border,#334155);border-radius:4px;background:transparent;color:inherit;cursor:pointer;padding:0"
+                    ${leal >= LEALDADE_MAX ? 'disabled' : ''}>+</button>
+                <span style="opacity:.6">/ ${LEALDADE_MAX}</span>
+            </div>
             <div style="font-size:0.75rem; color:var(--muted, #94a3b8); margin-top:4px;">
                 <em>Clique para visualizar a ficha</em>
             </div>
         </div>`;
     }).join('');
 }
+
+/**
+ * Ajusta a Lealdade deste aliado com o personagem aberto.
+ * Relê o doc antes de gravar: `vinculos` é o campo canônico do NPC e pode ter
+ * mudado noutra mesa desde que a aba carregou — só o item deste personagem é tocado.
+ */
+window.ajustarLealdade = async function (npcId, delta) {
+    if (!_charIdAtual) return;
+    try {
+        const ref = doc(window.db, 'npcs', npcId);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) return;
+
+        const vinculos = (snap.data().vinculos || []).map(v => {
+            if (v.tipo !== 'personagem' || v.id !== _charIdAtual) return v;
+            const atual = Number.isFinite(Number(v.lealdade)) ? Number(v.lealdade) : 0;
+            return { ...v, lealdade: Math.min(LEALDADE_MAX, Math.max(LEALDADE_MIN, atual + delta)) };
+        });
+
+        await updateDoc(ref, { vinculos });
+        _aliadosLoaded = false;
+        await loadAliados(_charIdAtual);
+    } catch (e) {
+        console.error('Erro ao ajustar Lealdade', e);
+    }
+};
 
 window.openAliadoModal = async function(npcId, opts) {
     const modal = document.getElementById('aliadoNpcModal');
@@ -121,6 +188,7 @@ window.openAliadoModal = async function(npcId, opts) {
 
         body.innerHTML = buildAliadoForm();
         fillAliadoForm(currentAliadoNpc);
+        await renderAliadoDerivedValues(currentAliadoNpc);
         await renderAliadoClassModules(currentAliadoNpc);
         if (currentAliadoOpts.readonly) _applyAliadoReadonly(body);
     } catch (e) {
@@ -287,6 +355,13 @@ function buildAliadoForm() {
             </div>
             <div class="row">
                 <div class="field"><label>📚 Perícias</label><textarea id="al_skills" rows="2" placeholder="Perícias relevantes (Texto Livre)..."></textarea></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📊 Valores Derivados</div>
+            <div id="al_dv_grid">
+                <div style="color:var(--muted);font-size:.85rem;">Calculando...</div>
             </div>
         </div>
 
@@ -560,6 +635,49 @@ function _vitalAtual(npc, sigla) {
     const k = _vitalKeyFor(sigla);
     if (k && at[k] != null && at[k] !== '') return at[k];
     return '';
+}
+
+/* 📊 Valores Derivados do NPC — mesmos números da Ficha do Mestre (o cálculo vem
+   do npc-calc-engine), agrupados pelo bloco do cadastro e na ordem cadastrada.
+   Só leitura: quem edita VD de NPC é o Mestre, no Painel. */
+async function renderAliadoDerivedValues(npc) {
+    const box = document.getElementById('al_dv_grid');
+    if (!box) return;
+    try {
+        const [{ ensureNpcSystemData }, { calcularNpc }] = await Promise.all([
+            import('../../painel-mestre/js/npc-system-data.js'),
+            import('../../painel-mestre/js/npc-calc-engine.js')
+        ]);
+        const sys = await ensureNpcSystemData();
+        const calc = calcularNpc(npc, sys);
+
+        // sys.derivedValues já vem ordenado por blocoOrdem → ordem
+        const vinc = new Set(npc.valoresDer?.vinculados || []);
+        const lista = (sys.derivedValues || []).filter(dv => vinc.has(dv.key));
+        if (!lista.length) {
+            box.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Nenhum Valor Derivado vinculado a este NPC.</div>';
+            return;
+        }
+
+        let html = '', blocoAtual = null;
+        for (const dv of lista) {
+            if (dv.blocoId !== blocoAtual) {
+                if (blocoAtual !== null) html += '</div>';
+                blocoAtual = dv.blocoId;
+                html += `<div style="margin-top:10px;margin-bottom:5px;font-weight:bold;color:var(--muted);text-transform:uppercase;font-size:.8rem;padding-bottom:3px;">${escapeHtml(dv.blocoNome || 'Geral')}</div>`
+                     + `<div class="row" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));">`;
+            }
+            const val = calc.derived[dv.key]?.final ?? 0;
+            html += `<div class="field" style="display:flex;flex-direction:row;align-items:center;justify-content:space-between;padding:4px 8px;" title="${escapeHtml(dv.descricao || '')}">
+                <label style="margin:0;">${dv.icone || '📊'} ${escapeHtml(dv.nome)}</label>
+                <strong style="min-width:50px;text-align:center;">${escapeHtml(dv.prefixo)}${val}${escapeHtml(dv.sufixo)}</strong>
+            </div>`;
+        }
+        box.innerHTML = html + '</div>';
+    } catch (e) {
+        console.warn('⚠️ Não foi possível calcular os Valores Derivados do aliado:', e);
+        box.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Valores Derivados indisponíveis.</div>';
+    }
 }
 
 function fillAliadoForm(npc) {
