@@ -71,6 +71,46 @@ function resolveEquation(equacao, ctx) {
     return result;
 }
 
+/* Propriedades do item em escopo — refs "Item: ..." e "Projétil: ...".
+ * Cópia fiel de _ME_ITEM_PROPS (ficha-v1.7_1/js/mechanics-engine.js): os dois
+ * motores são reimplementações paralelas por design, e divergir aqui faz o
+ * mesmo item render números diferentes na ficha e no painel do mestre.
+ * `fio` é o nome antigo da Qualidade — alias mantido para item não migrado. */
+const _NPC_ITEM_PROPS = {
+    'Peso/Pressão': it => it.pressaoOverride ?? it.pressaoBase ?? it.peso,
+    'Tamanho': it => it.tamanho,
+    'Multiplicador de Pressão': (it, tpl) => it.multiplicadorPressao ?? tpl?.multiplicadorPressao ?? 1,
+    'Capacidade do Container': (it, tpl) => it.capacidadeContainer ?? tpl?.capacidadeContainer,
+    'Preço': (it, tpl) => it.preco ?? tpl?.preco,
+    'Liga': (it, tpl) => it.liga ?? tpl?.liga,
+    'Qualidade': (it, tpl) => it.qualidade ?? tpl?.qualidade ?? it.fio ?? tpl?.fio ?? 0,
+    'Fio': (it, tpl) => it.qualidade ?? tpl?.qualidade ?? it.fio ?? tpl?.fio ?? 0,
+    'Afiação': (it, tpl) => it.afiacao ?? tpl?.afiacao ?? 0,
+    'Quantidade': it => it.quantidade ?? 1
+};
+
+function _npcPropDe(item, prop, ctx) {
+    const fn = _NPC_ITEM_PROPS[prop];
+    if (!fn || !item) return 0;
+    const tpl = item.modeloId ? (ctx.equipCatalog || []).find(t => t.id === item.modeloId) : null;
+    const num = parseFloat(fn(item, tpl));   // Liga vem como string ('0'..'5')
+    return isNaN(num) ? 0 : num;
+}
+
+function _npcItemProp(prop, ctx) {
+    if (!ctx?.itemEscopo) return 0;
+    return _npcPropDe((ctx.inventoryItems || []).find(i => i.id === ctx.itemEscopo), prop, ctx);
+}
+
+/** Arco e besta dão o dado; a Qualidade e a Afiação vêm do maço apontado. */
+function _npcProjetilProp(prop, ctx) {
+    if (!ctx?.itemEscopo) return 0;
+    const items = ctx.inventoryItems || [];
+    const arma = items.find(i => i.id === ctx.itemEscopo);
+    if (!arma || !arma.projetilId) return 0;
+    return _npcPropDe(items.find(i => i.id === arma.projetilId), prop, ctx);
+}
+
 function resolveTerm(term, ctx) {
     if (!term) return 0;
     if (term.tipo === 'ficha') return resolveRef(term.ref, ctx);
@@ -98,6 +138,12 @@ function rollSortTerm(term) {
 function resolveRef(ref, ctx) {
     if (!ref) return 0;
     if (ref === 'Nível') return ctx.nivel;
+
+    // Propriedades do item que concedeu a op (ctx.itemEscopo) e do maço que
+    // ele aponta. Espelha _ME_ITEM_PROPS/_meProjetilProp da ficha — sem isto,
+    // a arma de um NPC perde a Qualidade e a Afiação em silêncio.
+    if (ref.startsWith('Item: ')) return _npcItemProp(ref.slice(6), ctx);
+    if (ref.startsWith('Projétil: ')) return _npcProjetilProp(ref.slice(10), ctx);
 
     const target = ctx.targetMap[ref];
     if (target && target.startsWith('ATTR:')) {
@@ -627,6 +673,11 @@ function gatherItemOperations(sys, targetMap, ctx, avisos) {
     }
 
     const pushOp = (itemId, op) => {
+        // `donoItemId` viaja com a op para que as refs "Item: ..." resolvam
+        // contra a peça que concedeu o bônus — inclusive quando ela cai no bag
+        // global (vínculo com escopo:'global', como a penalidade do Escudo
+        // de Torre). É o equivalente do _meSetItemScope da ficha.
+        op.donoItemId = itemId || null;
         if (itemId && dvEscopo[op.target]) {
             (porItem[itemId] = porItem[itemId] || []).push(op);
         } else {
@@ -727,23 +778,32 @@ function applyOpsToValue(target, baseValue, ops, limites, ctx, fontes) {
     let value = baseValue;
     const mine = ops.filter(o => o.target === target);
 
+    /* Resolve a op com o item que a concedeu em escopo, e devolve o escopo
+       anterior — sem isto, "Item: Qualidade" resolveria 0 no bag global. */
+    const valorDaOp = o => {
+        const anterior = ctx.itemEscopo;
+        ctx.itemEscopo = o.donoItemId || null;
+        try { return resolveCalcValue(o.calc, ctx); }
+        finally { ctx.itemEscopo = anterior; }
+    };
+
     // 1) SET (=) sobrescreve a base
     for (const o of mine) {
         if (o.op === '=') {
-            value = resolveCalcValue(o.calc, ctx);
+            value = valorDaOp(o);
             fontes.push({ fonte: o.fonte, texto: `= ${fmt(value)}` });
         }
     }
     // 2) Somas e subtrações
     for (const o of mine) {
-        const v = (o.op === '+' || o.op === '-') ? resolveCalcValue(o.calc, ctx) : null;
+        const v = (o.op === '+' || o.op === '-') ? valorDaOp(o) : null;
         if (o.op === '+') { value += v; fontes.push({ fonte: o.fonte, texto: `+${fmt(v)}` }); }
         else if (o.op === '-') { value -= v; fontes.push({ fonte: o.fonte, texto: `-${fmt(v)}` }); }
     }
     // 3) Multiplicações e divisões
     for (const o of mine) {
-        if (o.op === '×' || o.op === '*') { const v = resolveCalcValue(o.calc, ctx); value *= v; fontes.push({ fonte: o.fonte, texto: `×${fmt(v)}` }); }
-        else if (o.op === '÷' || o.op === '/') { const v = resolveCalcValue(o.calc, ctx); if (v !== 0) value /= v; fontes.push({ fonte: o.fonte, texto: `÷${fmt(v)}` }); }
+        if (o.op === '×' || o.op === '*') { const v = valorDaOp(o); value *= v; fontes.push({ fonte: o.fonte, texto: `×${fmt(v)}` }); }
+        else if (o.op === '÷' || o.op === '/') { const v = valorDaOp(o); if (v !== 0) value /= v; fontes.push({ fonte: o.fonte, texto: `÷${fmt(v)}` }); }
     }
     // 4) Limites
     for (const l of limites.filter(x => x.target === target)) {
