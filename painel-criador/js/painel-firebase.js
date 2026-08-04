@@ -284,6 +284,11 @@ const MODULE_DEFS = {
             // Afiação comum (ferreiro, dano físico). A Arcana é tipada e entra
             // pelos Valores Derivados de Dano por Essência, um vínculo por canal.
             { key: 'afiacao', label: '⚔️ Afiação (acabamento — teto é a Qualidade da peça)', type: 'number', placeholder: '0 a 5' },
+            // Reforço é a Afiação da proteção. Como a Qualidade, soma na Blindagem
+            // GRAVADA da peça — o campo é o registro do que foi pago, e o audit
+            // cobra que a Blindagem tenha subido junto.
+            { key: 'reforco', label: '🛡️ Reforço (acabamento de proteção — teto é a Qualidade)', type: 'number', placeholder: '0 a 5' },
+            { key: 'blindagemQ0', label: '⚓ Blindagem quando nova (âncora do audit — não editar à toa)', type: 'number', placeholder: '0' },
             { key: 'preco', label: '💰 Preço base (L$)', type: 'number', placeholder: 'Ex: 1100' },
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
             { key: 'imagemUrl', label: 'Imagem (URL)', type: 'text', placeholder: 'https://...' },

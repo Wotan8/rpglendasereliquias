@@ -84,13 +84,18 @@ for (const e of eq) {
                permite é silencioso — subir a Qualidade e esquecer a Blindagem.
                `blindagemQ0` é a âncora que torna esse esquecimento visível. */
             const q0 = e.blindagemQ0;
+            const ref = Number(e.reforco) || 0;
             if (q0 === undefined) {
                 problemas.push(`SEM ÂNCORA · ${e.nome}: falta blindagemQ0 (rode protecao-qualidade-base.mjs)`);
-            } else if (q === 0 && bl !== Number(q0)) {
-                problemas.push(`BLINDAGEM DIVERGE DA BASE · ${e.nome}: ${bl} com Qualidade 0, mas blindagemQ0 é ${q0}`);
-            } else if (q > 0 && bl <= Number(q0)) {
-                problemas.push(`QUALIDADE SUBIU E A BLINDAGEM NÃO · ${e.nome} (${classe} Q${q}): Blindagem ${bl} continua na base ${q0} — grave o valor da tabela do §5.6`);
+            } else if (q === 0 && ref === 0 && bl !== Number(q0)) {
+                problemas.push(`BLINDAGEM DIVERGE DA BASE · ${e.nome}: ${bl} sem Qualidade nem Reforço, mas blindagemQ0 é ${q0}`);
+            } else if ((q > 0 || ref > 0) && bl <= Number(q0)) {
+                const pago = [q > 0 ? `Qualidade ${q}` : null, ref > 0 ? `Reforço ${ref}` : null].filter(Boolean).join(' e ');
+                problemas.push(`PAGOU E NÃO GRAVOU · ${e.nome} (${classe}): ${pago}, mas a Blindagem ${bl} continua na base ${q0} — grave o valor novo (§5.5/§5.6)`);
             }
+            // A corrente: Liga ≥ Qualidade ≥ Reforço (o Reforço é a Afiação da proteção)
+            if (ref > q)
+                problemas.push(`REFORÇO ACIMA DA QUALIDADE · ${e.nome} (${classe}): Reforço ${ref} com Qualidade ${q}`);
             // fraqueza tipada precisa acompanhar a Blindagem: delta = floor(bl/2) − bl
             for (const v of vinc) {
                 const n = vdNome(v.id);
