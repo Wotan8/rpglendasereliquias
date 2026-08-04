@@ -1,0 +1,620 @@
+/* =====================================================================
+   LENDAS & RELÍQUIAS — FICHA DE ALIADO / NPC PÚBLICO  (#aliadoNpcModal)
+   ---------------------------------------------------------------------
+   Componente compartilhado por DOIS hosts:
+     • Ficha de Personagem  → aba Aliados (link no <head>)
+     • Tabuleiro            → NPC "Público" (injetado por tab-mostrar.js)
+
+   Antes existiam duas cópias divergentes desta folha (styles_v2.css e
+   tabuleiro/css/tab-npc-sheet.css, esta última com hex cravado na mão).
+   Agora é UMA só, escopada em #aliadoNpcModal — não toca body/html, então
+   pode entrar no tabuleiro sem conflito.
+
+   ORDEM DE CARREGAMENTO: depois de tokens.css e lendas-reliquias.css.
+   Só tokens var(--lr-…). Regras completas: DESIGN-SYSTEM.md.
+   ===================================================================== */
+
+/* =====================================================================
+   1. CÂMARA — overlay e caixa
+   ===================================================================== */
+
+/* O componente roda em dois hosts com resets diferentes — não dá para
+   depender do box-sizing de nenhum deles. */
+#aliadoNpcModal,
+#aliadoNpcModal *,
+#aliadoNpcModal *::before,
+#aliadoNpcModal *::after { box-sizing: border-box; }
+
+#aliadoNpcModal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--lr-z-toast);
+    padding: var(--lr-space-3);
+    /* Véu derivado do próprio fundo do tema (pedra no escuro, papel no
+       claro) — não existe token de scrim e o manual proíbe cor cravada. */
+    background: color-mix(in srgb, var(--lr-bg-0) 78%, transparent);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    font-family: var(--lr-font-body);
+}
+
+#aliadoNpcModal.hidden { display: none; }
+
+#aliadoNpcModal .detail-modal-content {
+    background: var(--lr-surface);
+    color: var(--lr-text-1);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-top: 2px solid var(--lr-gold);
+    border-radius: var(--lr-radius-lg);
+    box-shadow: var(--lr-shadow-3);
+    width: 100%;
+    max-width: 760px;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+#aliadoNpcModal .detail-modal-close {
+    position: absolute;
+    top: var(--lr-space-2);
+    right: var(--lr-space-2);
+    z-index: var(--lr-z-sticky);
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: var(--lr-border-w) solid var(--lr-border) !important;
+    border-radius: var(--lr-radius) !important;
+    background: var(--lr-bg-1) !important;
+    color: var(--lr-text-2) !important;
+    font-size: var(--lr-fs-sm);
+    line-height: 1;
+    box-shadow: none;
+    transform: none;
+}
+
+#aliadoNpcModal .detail-modal-close:hover {
+    background: var(--lr-blood-soft) !important;
+    border-color: var(--lr-blood-2) !important;
+    color: var(--lr-blood-3) !important;
+    transform: none;
+}
+
+/* O padding vive nas seções: o cabeçalho precisa encostar nas bordas. */
+#aliadoNpcModal .detail-modal-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0;
+    scroll-behavior: smooth;
+}
+
+/* =====================================================================
+   2. CABEÇALHO — retrato, nome e ação primária (fica colado no topo)
+   ===================================================================== */
+
+/* Cabeçalho + abas viajam juntos: um único sticky, sem offset mágico. */
+#aliadoNpcModal .al-topbar {
+    position: sticky;
+    top: 0;
+    z-index: var(--lr-z-sticky);
+    background: var(--lr-surface);
+}
+
+#aliadoNpcModal .al-head {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-3);
+    padding: var(--lr-space-3) var(--lr-space-4);
+    padding-right: var(--lr-space-6);   /* espaço do ✕ */
+    background: var(--lr-surface);
+    border-bottom: var(--lr-border-w) solid var(--lr-border);
+}
+
+#aliadoNpcModal .al-portrait {
+    flex: 0 0 auto;
+    width: 52px;
+    height: 52px;
+    border-radius: var(--lr-radius);
+    border: var(--lr-border-w) solid var(--lr-border);
+    background: var(--lr-bg-1);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-lg);
+}
+
+#aliadoNpcModal .al-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+    display: none;
+}
+#aliadoNpcModal .al-portrait.has-img img { display: block; }
+#aliadoNpcModal .al-portrait.has-img .al-portrait-rune { display: none; }
+
+#aliadoNpcModal .al-head-main {
+    flex: 1;
+    min-width: 0;
+}
+
+#aliadoNpcModal .al-head-kicker {
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--lr-text-2);
+}
+
+#aliadoNpcModal .al-head-name {
+    margin: 2px 0 0;
+    font-family: var(--lr-font-title);
+    font-size: var(--lr-fs-lg);
+    font-weight: 600;
+    letter-spacing: var(--lr-track-title);
+    line-height: var(--lr-lh-tight);
+    color: var(--lr-text-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Ação primária = ouro, uma por tela, sempre no mesmo canto. */
+#aliadoNpcModal .al-save {
+    flex: 0 0 auto;
+    padding: var(--lr-space-2) var(--lr-space-3);
+    border: var(--lr-border-w) solid var(--lr-gold);
+    border-radius: var(--lr-radius);
+    background: var(--lr-gold);
+    color: var(--lr-bg-0);
+    font-family: var(--lr-font-body);
+    font-size: var(--lr-fs-sm);
+    font-weight: 700;
+    white-space: nowrap;
+}
+#aliadoNpcModal .al-save:hover:not(:disabled) {
+    background: var(--lr-gold-2);
+    border-color: var(--lr-gold-2);
+}
+
+/* =====================================================================
+   3. ABAS — nunca quebram, rolagem própria (regra especial do manual)
+   ===================================================================== */
+
+#aliadoNpcModal .tabs {
+    margin: 0;
+    padding: var(--lr-space-2) var(--lr-space-4);
+    gap: var(--lr-space-1);
+    background: var(--lr-bg-1);
+    border-bottom: var(--lr-border-w) solid var(--lr-border);
+}
+
+#aliadoNpcModal .tabs .tab {
+    padding: 6px var(--lr-space-3);
+    border: var(--lr-border-w) solid transparent;
+    border-radius: var(--lr-radius);
+    background: transparent;
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+#aliadoNpcModal .tabs .tab:hover { color: var(--lr-text-1); background: var(--lr-surface-2); }
+
+/* Aba ativa: fio dourado — a runa acesa. */
+#aliadoNpcModal .tabs .tab.active {
+    color: var(--lr-gold-2);
+    background: var(--lr-gold-soft);
+    border-color: var(--lr-gold);
+    box-shadow: inset 0 -2px 0 var(--lr-gold);
+}
+
+#aliadoNpcModal .tab-content { display: none; padding: var(--lr-space-4); }
+#aliadoNpcModal .tab-content.active { display: block; }
+
+/* =====================================================================
+   4. SEÇÕES E CAMPOS
+   ===================================================================== */
+
+#aliadoNpcModal .section {
+    border: var(--lr-border-w) solid var(--lr-border-soft);
+    border-radius: var(--lr-radius-lg);
+    background: var(--lr-bg-1);
+    padding: var(--lr-space-3);
+    margin-bottom: var(--lr-space-3);
+}
+#aliadoNpcModal .section:last-child { margin-bottom: 0; }
+
+#aliadoNpcModal .section-title {
+    display: block;
+    margin: 0 0 var(--lr-space-3);
+    padding-bottom: var(--lr-space-2);
+    border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
+    font-size: var(--lr-fs-xs);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--lr-text-1);
+}
+
+#aliadoNpcModal .row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--lr-space-2);
+    margin-bottom: var(--lr-space-2);
+}
+#aliadoNpcModal .row:last-child { margin-bottom: 0; }
+
+#aliadoNpcModal .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-space-1);
+    min-width: 0;
+}
+
+#aliadoNpcModal .field label {
+    margin: 0;
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--lr-text-2);
+}
+
+/* :where() zera a especificidade do seletor base de campo. Sem isso, os
+   :not() dele empatavam ou venciam as regras de ESTADO (desabilitado) e de
+   COMPONENTE (.al-attr, .al-stat), que precisam ter a última palavra. */
+#aliadoNpcModal :where(input:not([type="checkbox"]):not([type="radio"]), textarea, select) {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px var(--lr-space-2);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-surface);
+    color: var(--lr-text-1);
+    font-family: var(--lr-font-body);
+    font-size: var(--lr-fs-sm);
+    outline: none;
+    transition:
+        border-color var(--lr-t-base) var(--lr-ease),
+        box-shadow   var(--lr-t-base) var(--lr-ease);
+}
+
+#aliadoNpcModal input:focus,
+#aliadoNpcModal textarea:focus,
+#aliadoNpcModal select:focus {
+    border-color: var(--lr-gold);
+    box-shadow: var(--lr-glow-gold);
+    outline: none;
+}
+
+#aliadoNpcModal textarea { resize: vertical; line-height: var(--lr-lh-body); }
+
+/* Somente leitura (jogador abrindo NPC público no Tabuleiro): o campo vira
+   TEXTO GRAVADO, não um input apagado. Legibilidade cheia, zero chrome. */
+#aliadoNpcModal input:disabled,
+#aliadoNpcModal textarea:disabled,
+#aliadoNpcModal select:disabled {
+    border-color: transparent;
+    background: transparent;
+    color: var(--lr-text-1);
+    opacity: 1;
+    cursor: default;
+    padding-left: 0;
+    padding-right: 0;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* =====================================================================
+   5. VITAIS E ATRIBUTOS — o que o Mestre precisa achar em 1 segundo
+   ===================================================================== */
+
+#aliadoNpcModal .al-vitals {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--lr-space-2);
+}
+
+#aliadoNpcModal .al-vital {
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-surface);
+    padding: var(--lr-space-2);
+    text-align: center;
+    min-width: 0;
+}
+
+#aliadoNpcModal .al-vital-label {
+    display: block;
+    margin-bottom: var(--lr-space-1);
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--lr-text-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#aliadoNpcModal .al-vital-pair {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--lr-space-1);
+}
+#aliadoNpcModal .al-vital-pair input {
+    text-align: center;
+    padding: 5px 2px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+#aliadoNpcModal .al-vital-sep { color: var(--lr-text-2); font-weight: 700; }
+#aliadoNpcModal .al-vital-hint {
+    display: block;
+    margin-top: var(--lr-space-1);
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2);
+}
+
+#aliadoNpcModal .al-attrs {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: var(--lr-space-1);
+}
+
+#aliadoNpcModal .al-attr {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius-sm);
+    background: var(--lr-surface);
+    padding: var(--lr-space-1);
+}
+#aliadoNpcModal .al-attr label {
+    text-align: center;
+    font-size: var(--lr-fs-xs);
+    letter-spacing: 0.03em;
+}
+#aliadoNpcModal .al-attr input {
+    border: none;
+    background: transparent;
+    padding: 2px 0;
+    text-align: center;
+    font-size: var(--lr-fs-md);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+#aliadoNpcModal .al-attr input:focus {
+    box-shadow: none;
+    border-color: transparent;
+}
+#aliadoNpcModal .al-attr:focus-within {
+    border-color: var(--lr-gold);
+    box-shadow: var(--lr-glow-gold);
+}
+
+/* =====================================================================
+   6. LINHAS DE LEITURA — Valores Derivados e Perícias (rótulo → número)
+   ===================================================================== */
+
+#aliadoNpcModal .al-group-title {
+    margin: var(--lr-space-3) 0 var(--lr-space-2);
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--lr-text-2);
+}
+#aliadoNpcModal .al-group-title:first-child { margin-top: 0; }
+
+#aliadoNpcModal .al-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--lr-space-1);
+}
+
+#aliadoNpcModal .al-stat {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lr-space-2);
+    padding: 5px var(--lr-space-2);
+    border: var(--lr-border-w) solid var(--lr-border-soft);
+    border-radius: var(--lr-radius-sm);
+    background: var(--lr-surface);
+    min-width: 0;
+}
+#aliadoNpcModal .al-stat label {
+    margin: 0;
+    text-transform: none;
+    font-size: var(--lr-fs-sm);
+    font-weight: 500;
+    color: var(--lr-text-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#aliadoNpcModal .al-stat strong {
+    flex: 0 0 auto;
+    min-width: 46px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+#aliadoNpcModal .al-stat input {
+    flex: 0 0 auto;
+    width: 52px;
+    padding: 3px var(--lr-space-1);
+    text-align: center;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* =====================================================================
+   7. MÓDULOS DE CLASSE
+   ===================================================================== */
+
+#aliadoNpcModal .al-mod {
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-surface);
+    margin-bottom: var(--lr-space-2);
+    overflow: hidden;
+}
+#aliadoNpcModal .al-mod:last-child { margin-bottom: 0; }
+
+#aliadoNpcModal .al-mod-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lr-space-2);
+    padding: var(--lr-space-2) var(--lr-space-3);
+    background: var(--lr-bg-1);
+    border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
+    font-size: var(--lr-fs-sm);
+    font-weight: 700;
+}
+
+#aliadoNpcModal .al-mod-body { padding: var(--lr-space-2); }
+
+#aliadoNpcModal .al-mod-item {
+    border: var(--lr-border-w) solid var(--lr-border-soft);
+    border-radius: var(--lr-radius-sm);
+    margin-bottom: var(--lr-space-2);
+    overflow: hidden;
+}
+#aliadoNpcModal .al-mod-item:last-of-type { margin-bottom: var(--lr-space-2); }
+
+#aliadoNpcModal .al-mod-item-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lr-space-2);
+    padding: 5px var(--lr-space-2);
+    background: var(--lr-bg-1);
+    border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
+}
+
+#aliadoNpcModal .al-mod-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: var(--lr-space-2);
+    padding: var(--lr-space-2);
+}
+
+#aliadoNpcModal .al-mod-sep {
+    grid-column: 1 / -1;
+    padding-bottom: 2px;
+    margin-top: var(--lr-space-1);
+    border-bottom: var(--lr-border-w) dashed var(--lr-border);
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--lr-text-2);
+}
+
+#aliadoNpcModal .al-mod-del {
+    background: none;
+    border: none;
+    padding: 2px var(--lr-space-1);
+    border-radius: var(--lr-radius-sm);
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-xs);
+    line-height: 1;
+}
+#aliadoNpcModal .al-mod-del:hover { color: var(--lr-blood-3); background: var(--lr-blood-soft); }
+
+#aliadoNpcModal .al-mod-add {
+    padding: var(--lr-space-1) var(--lr-space-3);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-bg-1);
+    color: var(--lr-text-1);
+    font-family: var(--lr-font-body);
+    font-size: var(--lr-fs-xs);
+    font-weight: 600;
+}
+#aliadoNpcModal .al-mod-add:hover { border-color: var(--lr-gold); color: var(--lr-gold-2); }
+
+/* =====================================================================
+   8. ESTADOS — carregando, vazio, erro, rodapé
+   ===================================================================== */
+
+#aliadoNpcModal .al-loading,
+#aliadoNpcModal .al-empty,
+#aliadoNpcModal .al-error {
+    font-size: var(--lr-fs-sm);
+    color: var(--lr-text-2);
+    line-height: var(--lr-lh-body);
+}
+
+#aliadoNpcModal .al-loading,
+#aliadoNpcModal .al-error {
+    padding: var(--lr-space-6) var(--lr-space-4);
+    text-align: center;
+}
+#aliadoNpcModal .al-error { color: var(--lr-blood-2); }
+
+#aliadoNpcModal .al-foot {
+    padding: var(--lr-space-3) var(--lr-space-4) var(--lr-space-4);
+    font-size: var(--lr-fs-xs);
+    line-height: var(--lr-lh-body);
+    color: var(--lr-text-2);
+    text-align: center;
+    border-top: var(--lr-border-w) solid var(--lr-border-soft);
+}
+
+/* =====================================================================
+   9. RESPONSIVO — mesma funcionalidade em qualquer largura
+   ===================================================================== */
+
+@media (max-width: 640px) {
+    #aliadoNpcModal { padding: 0; }
+    #aliadoNpcModal .detail-modal-content {
+        max-width: 100%;
+        max-height: 100%;
+        height: 100%;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+    }
+    #aliadoNpcModal .tab-content { padding: var(--lr-space-3); }
+    #aliadoNpcModal .al-head { padding: var(--lr-space-2) var(--lr-space-3); padding-right: var(--lr-space-6); }
+    #aliadoNpcModal .tabs { padding: var(--lr-space-2) var(--lr-space-3); }
+    #aliadoNpcModal .al-portrait { width: 44px; height: 44px; }
+    #aliadoNpcModal .al-head-name { font-size: var(--lr-fs-md); }
+    #aliadoNpcModal .al-save { padding: var(--lr-space-2); }
+
+    /* Vitais e atributos continuam TODOS visíveis, só reempacotados. */
+    #aliadoNpcModal .al-attrs { grid-template-columns: repeat(5, 1fr); }
+    #aliadoNpcModal .al-stat-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 400px) {
+    #aliadoNpcModal .al-attrs { grid-template-columns: repeat(3, 1fr); }
+    /* Os três vitais continuam lado a lado: é o que o Mestre mais olha.
+       Só o rótulo encolhe. */
+    #aliadoNpcModal .al-vital { padding: var(--lr-space-1); }
+    #aliadoNpcModal .al-vital-pair input { padding: 5px 0; min-width: 0; }
+}

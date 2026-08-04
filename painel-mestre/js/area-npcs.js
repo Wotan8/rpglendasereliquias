@@ -497,29 +497,33 @@ window.openNpcEditModal = window.openNpcModal;
 /* ===== CONSTRUÇÃO DO FORMULÁRIO ===== */
 function buildNpcForm() {
     return `
-    <div class="npcv2-toolbar">
-        <div class="npcv2-mode-toggle" title="Rápido: preenchimento manual. Mecânico: usa raças, classes, tribos e peculiaridades dos registros, com cálculo automático.">
-            <button type="button" id="modoRapidoBtn" class="npcv2-mode-btn" onclick="setNpcModo('rapido')">📝 Rápido</button>
-            <button type="button" id="modoMecanicoBtn" class="npcv2-mode-btn" onclick="setNpcModo('mecanico')">⚙️ Mecânico</button>
+    <div class="npcv2-topbar">
+        <div class="npcv2-toolbar">
+            <div class="npcv2-mode-toggle" title="Rápido: preenchimento manual. Mecânico: usa raças, classes, tribos e peculiaridades dos registros, com cálculo automático.">
+                <button type="button" id="modoRapidoBtn" class="npcv2-mode-btn" onclick="setNpcModo('rapido')">📝 Rápido</button>
+                <button type="button" id="modoMecanicoBtn" class="npcv2-mode-btn" onclick="setNpcModo('mecanico')">⚙️ Mecânico</button>
+            </div>
+            <div class="npcv2-toolbar-actions">
+                <button class="btn btn-secondary btn-small npcv2-only-mecanico" onclick="exportNpcFromForm()">📤 Exportar</button>
+                <button class="btn btn-danger btn-small" onclick="deleteCurrentNpc()">🗑️ Excluir</button>
+                <button class="btn btn-success btn-small" onclick="saveNpc()">💾 Salvar</button>
+            </div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-secondary btn-small npcv2-only-mecanico" onclick="exportNpcFromForm()">📤 Exportar</button>
-            <button class="btn btn-danger btn-small" onclick="deleteCurrentNpc()">🗑️ Excluir</button>
-            <button class="btn btn-success btn-small" onclick="saveNpc()">💾 Salvar</button>
-        </div>
-    </div>
 
-    <div class="npcv2-sections">
-        <button type="button" class="npcv2-section-btn" data-sec="identidade" onclick="npcSwitchSection('identidade')">📋 Identidade</button>
-        <button type="button" class="npcv2-section-btn" data-sec="mecanica" onclick="npcSwitchSection('mecanica')">⚙️ Mecânica</button>
-        <button type="button" class="npcv2-section-btn" data-sec="inventario" onclick="npcSwitchSection('inventario')">🎒 Inventário</button>
-        <button type="button" class="npcv2-section-btn" data-sec="roleplay" onclick="npcSwitchSection('roleplay')">🎭 Role Play</button>
-        <button type="button" class="npcv2-section-btn" data-sec="loot" onclick="npcSwitchSection('loot')">🎁 Loot</button>
-        <button type="button" class="npcv2-section-btn" data-sec="vinculos" onclick="npcSwitchSection('vinculos')">🔗 Vínculos</button>
+        <div class="npcv2-sections">
+            <button type="button" class="npcv2-section-btn" data-sec="identidade" onclick="npcSwitchSection('identidade')">📋 Identidade</button>
+            <button type="button" class="npcv2-section-btn" data-sec="mecanica" onclick="npcSwitchSection('mecanica')">⚙️ Mecânica</button>
+            <button type="button" class="npcv2-section-btn" data-sec="inventario" onclick="npcSwitchSection('inventario')">🎒 Inventário</button>
+            <button type="button" class="npcv2-section-btn" data-sec="roleplay" onclick="npcSwitchSection('roleplay')">🎭 Role Play</button>
+            <button type="button" class="npcv2-section-btn" data-sec="loot" onclick="npcSwitchSection('loot')">🎁 Loot</button>
+            <button type="button" class="npcv2-section-btn" data-sec="vinculos" onclick="npcSwitchSection('vinculos')">🔗 Vínculos</button>
+        </div>
     </div>
 
     <!-- ============ SEÇÃO: IDENTIDADE ============ -->
     <div class="npcv2-section" id="npcSec_identidade">
+      <div class="npcv2-card">
+        <div class="npcv2-block-title">📋 Quem é</div>
         <div class="form-group"><label class="form-label">🖼️ Imagem URL</label><input type="text" class="form-input" id="npcImagem" placeholder="https://..."><div id="npcImgPreview" style="display:none;margin-top:8px;text-align:center"><img id="npcImgTag" style="max-height:200px;border-radius:10px"></div></div>
         <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px">
             <div class="form-group"><label class="form-label">Nome *</label><input type="text" class="form-input" id="npcNome" placeholder="Nome do NPC"></div>
@@ -540,8 +544,12 @@ function buildNpcForm() {
             <div class="form-group"><label class="form-label">Tamanho</label><input type="text" class="form-input" id="npcTamanho"></div>
             <div class="form-group"><label class="form-label">🏷️ Tags (separadas por vírgula)</label><input type="text" class="form-input" id="npcTags" placeholder="tag1, tag2"></div>
         </div>
+      </div>
+
+      <div class="npcv2-card">
+        <div class="npcv2-block-title">👁️ Exibição e funções</div>
         <div class="form-group">
-            <label class="form-label">👁️ Visibilidade da ficha no Tabuleiro</label>
+            <label class="form-label">Visibilidade da ficha no Tabuleiro</label>
             <select class="form-select" id="npcVisibilidade" onchange="F_set('visibilidade', this.value)">
                 <option value="secreto">🕵️ Secreto — abre a ficha completa do Painel do Mestre</option>
                 <option value="publico">📢 Público — abre a ficha de Aliado (Modo Rápido)</option>
@@ -553,7 +561,9 @@ function buildNpcForm() {
                 <label class="npcv2-check"><input type="checkbox" id="npcAliadoProprio"> É o próprio? <span class="npcv2-hint">(se OFF, a vinculação gera um clone independente)</span></label>
             </div>
         </div>
-        <div id="creatureFieldsSection" style="display:none"><hr style="border-color:var(--line);margin:16px 0"><div style="font-weight:800;color:var(--warning);margin-bottom:10px">🐉 Campos de Criatura</div>
+      </div>
+
+        <div id="creatureFieldsSection" class="npcv2-card" style="display:none"><div class="npcv2-block-title">🐉 Campos de Criatura</div>
             <div class="form-group"><label class="form-label">Habitat</label><input type="text" class="form-input" id="npcHabitat"></div>
             <div class="form-group"><label class="form-label">Comportamento</label><textarea class="form-textarea" id="npcComportamento" rows="2"></textarea></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -565,7 +575,7 @@ function buildNpcForm() {
 
     <!-- ============ SEÇÃO: MECÂNICA ============ -->
     <div class="npcv2-section" id="npcSec_mecanica">
-        <div id="npcPecsWrap" class="npcv2-only-mecanico">
+        <div id="npcPecsWrap" class="npcv2-card npcv2-only-mecanico">
             <div class="npcv2-block-title">🧬 Peculiaridades</div>
             <div id="npcPecsList"></div>
             <div class="npcv2-pec-add">
@@ -576,77 +586,88 @@ function buildNpcForm() {
             </div>
         </div>
 
-        <div class="npcv2-block-title" style="margin-top:14px">💪 Atributos <span class="npcv2-hint" id="attrHint"></span></div>
-        <div class="npcv2-attrs-grid" id="npcAttrsGrid">
-            ${ATTR_SIGLAS.map(a => `
-                <div class="npcv2-attr-cell">
-                    <div class="npcv2-attr-label">${a}</div>
-                    <input type="number" class="form-input npcv2-attr-input" id="npcAttr_${a}" value="0"
-                        oninput="F.npc.atributos['${a}']=parseInt(this.value)||0;recalcStats()">
-                    <div class="npcv2-attr-eff" id="npcAttrEff_${a}"></div>
-                </div>`).join('')}
+        <div class="npcv2-card">
+            <div class="npcv2-block-title">❤️ Status Vitais
+                <span class="npcv2-hint npcv2-only-mecanico">calculados pelas mecânicas — clique em um valor para travar um override 🔒</span>
+            </div>
+            <div class="npcv2-dv-grid" id="npcVitalStatsGrid"></div>
         </div>
 
-        <div class="npcv2-block-title" style="margin-top:14px">❤️ Status Vitais
-            <span class="npcv2-hint npcv2-only-mecanico">calculados pelas mecânicas — clique em um valor para travar um override 🔒</span>
-        </div>
-        <div class="npcv2-dv-grid" id="npcVitalStatsGrid"></div>
-
-        <div class="npcv2-block-title" style="margin-top:14px">📊 Valores Derivados
-            <span class="npcv2-hint npcv2-only-mecanico">calculados pelas mecânicas — clique em um valor para travar um override 🔒</span>
-        </div>
-        <div class="npcv2-hint" style="margin-bottom:6px">A ficha lista apenas os VDs vinculados a este NPC (VDs marcados como "Todo personagem tem este valor?" entram automaticamente). Use ✕ para desvincular.</div>
-        <div id="npcDvGrid"></div>
-        <div class="npcv2-pec-add npcv2-only-mecanico" style="margin-top:8px;display:flex;gap:10px">
-            <select class="form-select" id="npcDvPicker" style="flex:1"></select>
-            <button class="btn btn-secondary btn-small" onclick="addNpcDv()">➕ Vincular VD</button>
+        <div class="npcv2-card">
+            <div class="npcv2-block-title">💪 Atributos <span class="npcv2-hint" id="attrHint"></span></div>
+            <div class="npcv2-attrs-grid" id="npcAttrsGrid">
+                ${ATTR_SIGLAS.map(a => `
+                    <div class="npcv2-attr-cell">
+                        <div class="npcv2-attr-label">${a}</div>
+                        <input type="number" class="form-input npcv2-attr-input" id="npcAttr_${a}" value="0"
+                            oninput="F.npc.atributos['${a}']=parseInt(this.value)||0;recalcStats()">
+                        <div class="npcv2-attr-eff" id="npcAttrEff_${a}"></div>
+                    </div>`).join('')}
+            </div>
         </div>
 
-        <div id="npcAtaquesWrap" class="npcv2-only-mecanico" style="margin-top:14px;display:none">
+        <div class="npcv2-card">
+            <div class="npcv2-block-title">📊 Valores Derivados
+                <span class="npcv2-hint npcv2-only-mecanico">calculados pelas mecânicas — clique em um valor para travar um override 🔒</span>
+            </div>
+            <div class="npcv2-hint" style="margin-bottom:8px">A ficha lista apenas os VDs vinculados a este NPC (VDs marcados como "Todo personagem tem este valor?" entram automaticamente). Use ✕ para desvincular.</div>
+            <div id="npcDvGrid"></div>
+            <div class="npcv2-pec-add npcv2-only-mecanico">
+                <select class="form-select" id="npcDvPicker" style="flex:1"></select>
+                <button class="btn btn-secondary btn-small" onclick="addNpcDv()">➕ Vincular VD</button>
+            </div>
+        </div>
+
+        <div id="npcAtaquesWrap" class="npcv2-card npcv2-only-mecanico" style="display:none">
             <div class="npcv2-block-title">⚔️ Ataques e Efeitos Ativos
                 <span class="npcv2-hint">totais por item equipado (base do NPC + o que o item acrescenta)</span>
             </div>
             <div class="atk-table-wrap"><table class="atk-table" id="npcAtaquesTable"></table></div>
         </div>
 
-        <div id="npcClassModulesWrap" class="npcv2-only-mecanico" style="margin-top:14px">
+        <div id="npcClassModulesWrap" class="npcv2-card npcv2-only-mecanico">
             <div class="npcv2-block-title">🧩 Módulos de Classe
                 <span class="npcv2-hint">herdados da classe selecionada ou vinculados manualmente</span>
             </div>
             <div id="npcClassModulesList"></div>
-            <div class="npcv2-pec-add" style="margin-top:8px;display:flex;gap:10px">
+            <div class="npcv2-pec-add">
                 <select class="form-select" id="npcModPicker" style="flex:1"></select>
                 <button class="btn btn-secondary btn-small" onclick="addNpcClassModule()">➕ Vincular módulo</button>
             </div>
         </div>
 
-        <div class="npcv2-block-title" style="margin-top:14px">➕ Valores extras <span class="npcv2-hint">informações fora dos registros</span></div>
-        <div id="npcExtrasList"></div>
-        <button class="btn btn-secondary btn-small" onclick="addExtraDv()">➕ Adicionar valor extra</button>
+        <div class="npcv2-card">
+            <div class="npcv2-block-title">➕ Valores extras <span class="npcv2-hint">informações fora dos registros</span></div>
+            <div id="npcExtrasList"></div>
+            <button class="btn btn-secondary btn-small" onclick="addExtraDv()">➕ Adicionar valor extra</button>
+        </div>
 
-        <div id="npcInfosWrap" style="display:none">
-            <div class="npcv2-block-title" style="margin-top:14px">📜 Efeitos e capacidades (das peculiaridades)</div>
+        <div id="npcInfosWrap" class="npcv2-card" style="display:none">
+            <div class="npcv2-block-title">📜 Efeitos e capacidades (das peculiaridades)</div>
             <div id="npcInfosList"></div>
         </div>
-        <div id="npcAvisosWrap" style="display:none"><div id="npcAvisosList" class="npcv2-avisos"></div></div>
+        <div id="npcAvisosWrap" class="npcv2-card" style="display:none"><div id="npcAvisosList" class="npcv2-avisos"></div></div>
 
-        <div class="form-group" style="margin-top:14px"><label class="form-label">⚔️ Ataques</label><textarea class="form-textarea" id="npcAtaques" rows="3" placeholder="Ataques e danos..."></textarea></div>
-        <div class="form-group"><label class="form-label">📚 Perícias</label><textarea class="form-textarea" id="npcSkills" rows="2" placeholder="Perícias relevantes... (Texto Livre)"></textarea></div>
+        <div class="npcv2-card">
+            <div class="npcv2-block-title">⚔️ Combate e perícias em texto livre</div>
+            <div class="form-group"><label class="form-label">Ataques</label><textarea class="form-textarea" id="npcAtaques" rows="3" placeholder="Ataques e danos..."></textarea></div>
+            <div class="form-group"><label class="form-label">📚 Perícias</label><textarea class="form-textarea" id="npcSkills" rows="2" placeholder="Perícias relevantes... (Texto Livre)"></textarea></div>
+        </div>
 
         <!-- ============ SEÇÃO: PERÍCIAS ESTRUTURADAS ============ -->
-        <div id="npcStructuredSkillsWrap" style="margin-top: 14px;">
-            <div class="npcv2-block-title" style="margin-bottom:8px">🎯 Perícias Estruturadas</div>
-            
+        <div id="npcStructuredSkillsWrap" class="npcv2-card">
+            <div class="npcv2-block-title">🎯 Perícias Estruturadas</div>
+
             <div class="npcv2-only-mecanico" style="margin-bottom:12px">
                 <label class="npcv2-check">
                     <input type="checkbox" id="npcHasDefaultSkills" onchange="toggleDefaultSkills(this.checked)"> Tem todas as Perícias Padrões?
                 </label>
             </div>
-            
-            <div class="npcv2-pec-add npcv2-only-mecanico" style="margin-bottom:12px; display:flex; gap:10px;">
+
+            <div class="npcv2-pec-add npcv2-only-mecanico" style="margin-bottom:12px">
                 <select class="form-select" id="npcSkillPicker" style="flex:1"></select>
                 <button class="btn btn-secondary btn-small" onclick="addSkillIndividual()">➕ Adicionar</button>
-                
+
                 <select class="form-select" id="npcSkillCategoryPicker" style="flex:1;">
                     <option value="">-- Adicionar por Categoria --</option>
                     <option value="físico">Físico</option>
@@ -657,82 +678,105 @@ function buildNpcForm() {
                 </select>
                 <button class="btn btn-secondary btn-small" onclick="addSkillByCategory()">➕ Categoria</button>
             </div>
-            
+
             <div class="npcv2-attrs-grid" id="npcStructuredSkillsGrid" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));"></div>
         </div>
     </div>
 
     <!-- ============ SEÇÃO: INVENTÁRIO ============ -->
     <div class="npcv2-section" id="npcSec_inventario">
-        <div class="npcv2-block-title">🦴 Partes do Corpo & Slots
-            <span class="npcv2-hint">NPCs comuns usam a anatomia padrão (humanoide); criaturas podem ter anatomias personalizadas</span>
+        <div class="npcv2-card">
+            <div class="npcv2-block-title">🦴 Partes do Corpo &amp; Slots
+                <span class="npcv2-hint">NPCs comuns usam a anatomia padrão (humanoide); criaturas podem ter anatomias personalizadas</span>
+            </div>
+            <div class="npcv2-pec-add" style="margin-top:0;margin-bottom:8px">
+                <button class="btn btn-secondary btn-small" onclick="npcApplyDefaultBodyParts()" title="Aplica as partes marcadas como padrão no Painel de Criador (mesmas de Humano)">🧍 Aplicar Padrão Humanoide</button>
+                <select class="form-select" id="npcBodyPartPicker" style="max-width:220px"></select>
+                <button class="btn btn-secondary btn-small" onclick="npcAddBodyPartFromRegistry()">➕ Do registro</button>
+                <button class="btn btn-secondary btn-small" onclick="npcAddBodyPartCustom()">✏️ Parte personalizada</button>
+            </div>
+            <div id="npcBodyPartsList"></div>
         </div>
-        <div class="npcv2-pec-add" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-            <button class="btn btn-secondary btn-small" onclick="npcApplyDefaultBodyParts()" title="Aplica as partes marcadas como padrão no Painel de Criador (mesmas de Humano)">🧍 Aplicar Padrão Humanoide</button>
-            <select class="form-select" id="npcBodyPartPicker" style="max-width:220px"></select>
-            <button class="btn btn-secondary btn-small" onclick="npcAddBodyPartFromRegistry()">➕ Do registro</button>
-            <button class="btn btn-secondary btn-small" onclick="npcAddBodyPartCustom()">✏️ Parte personalizada</button>
-        </div>
-        <div id="npcBodyPartsList"></div>
 
-        <hr style="border-color:var(--line);margin:16px 0">
-
-        <div class="npcv2-block-title">🎒 Itens do NPC
-            <span class="npcv2-hint">criação e gerenciamento completo — os itens ficam na coleção de itens e podem ser transferidos</span>
+        <div class="npcv2-card">
+            <div class="npcv2-block-title">🎒 Itens do NPC
+                <span class="npcv2-hint">criação e gerenciamento completo — os itens ficam na coleção de itens e podem ser transferidos</span>
+            </div>
+            <div id="npcInventoryList"></div>
         </div>
-        <div id="npcInventoryList"></div>
     </div>
 
     <!-- ============ SEÇÃO: ROLE PLAY ============ -->
     <div class="npcv2-section" id="npcSec_roleplay">
-        <div class="form-group"><label class="form-label">Personalidade 1</label><input type="text" class="form-input" id="npcPersonalidade1"></div>
-        <div class="form-group"><label class="form-label">Personalidade 2</label><input type="text" class="form-input" id="npcPersonalidade2"></div>
-        <div class="form-group"><label class="form-label">Personalidade 3</label><input type="text" class="form-input" id="npcPersonalidade3"></div>
-        <div class="form-group"><label class="form-label">Trejeitos</label><input type="text" class="form-input" id="npcTrejeitos"></div>
-        <div class="form-group"><label class="form-label">Motivação</label><textarea class="form-textarea" id="npcMotivacao" rows="2"></textarea></div>
-        <div class="form-group"><label class="form-label">Segredos</label><textarea class="form-textarea" id="npcSegredos" rows="2"></textarea></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-            <div class="form-group"><label class="form-label">Aliado</label><input type="text" class="form-input" id="npcAliado"></div>
-            <div class="form-group"><label class="form-label">Rival</label><input type="text" class="form-input" id="npcRival"></div>
-            <div class="form-group"><label class="form-label">Devedor</label><input type="text" class="form-input" id="npcDevedor"></div>
+        <div class="npcv2-card">
+            <div class="npcv2-block-title">🎭 Presença em cena</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                <div class="form-group"><label class="form-label">Personalidade 1</label><input type="text" class="form-input" id="npcPersonalidade1"></div>
+                <div class="form-group"><label class="form-label">Personalidade 2</label><input type="text" class="form-input" id="npcPersonalidade2"></div>
+                <div class="form-group"><label class="form-label">Personalidade 3</label><input type="text" class="form-input" id="npcPersonalidade3"></div>
+            </div>
+            <div class="form-group"><label class="form-label">Trejeitos</label><input type="text" class="form-input" id="npcTrejeitos"></div>
+            <div class="form-group"><label class="form-label">💬 Frases</label><textarea class="form-textarea" id="npcFrases" rows="2"></textarea></div>
         </div>
-        <div class="form-group"><label class="form-label">💬 Frases</label><textarea class="form-textarea" id="npcFrases" rows="2"></textarea></div>
-        <div class="form-group"><label class="form-label">📖 História</label><textarea class="form-textarea" id="npcHistoria" rows="3"></textarea></div>
+
+        <div class="npcv2-card">
+            <div class="npcv2-block-title">🎯 O que move e o que esconde</div>
+            <div class="form-group"><label class="form-label">Motivação</label><textarea class="form-textarea" id="npcMotivacao" rows="2"></textarea></div>
+            <div class="form-group"><label class="form-label">Segredos</label><textarea class="form-textarea" id="npcSegredos" rows="2"></textarea></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                <div class="form-group"><label class="form-label">Aliado</label><input type="text" class="form-input" id="npcAliado"></div>
+                <div class="form-group"><label class="form-label">Rival</label><input type="text" class="form-input" id="npcRival"></div>
+                <div class="form-group"><label class="form-label">Devedor</label><input type="text" class="form-input" id="npcDevedor"></div>
+            </div>
+        </div>
+
+        <div class="npcv2-card">
+            <div class="npcv2-block-title">📖 História</div>
+            <div class="form-group" style="margin-bottom:0"><textarea class="form-textarea" id="npcHistoria" rows="4"></textarea></div>
+        </div>
     </div>
 
     <!-- ============ SEÇÃO: LOOT ============ -->
     <div class="npcv2-section" id="npcSec_loot">
-        <div class="form-group"><label class="form-label">Itens</label><textarea class="form-textarea" id="npcItens" rows="2"></textarea></div>
-        <div class="form-group"><label class="form-label">Luns</label><input type="text" class="form-input" id="npcLuns"></div>
-        <div class="form-group"><label class="form-label">Pistas</label><textarea class="form-textarea" id="npcPistas" rows="2"></textarea></div>
-        <div class="form-group"><label class="form-label">Complicações</label><textarea class="form-textarea" id="npcComplicacoes" rows="2"></textarea></div>
+        <div class="npcv2-card">
+            <div class="npcv2-block-title">🎁 O que fica para trás</div>
+            <div class="form-group"><label class="form-label">Itens</label><textarea class="form-textarea" id="npcItens" rows="2"></textarea></div>
+            <div class="form-group"><label class="form-label">Luns</label><input type="text" class="form-input" id="npcLuns"></div>
+            <div class="form-group"><label class="form-label">Pistas</label><textarea class="form-textarea" id="npcPistas" rows="2"></textarea></div>
+            <div class="form-group"><label class="form-label">Complicações</label><textarea class="form-textarea" id="npcComplicacoes" rows="2"></textarea></div>
+        </div>
     </div>
 
     <!-- ============ SEÇÃO: VÍNCULOS ============ -->
     <div class="npcv2-section" id="npcSec_vinculos">
-        <div class="npcv2-block-title">🗺️ Mesas</div>
-        <div id="npcVincMesas" class="npcv2-vinc-list"><div style="color:var(--muted);font-size:.85rem">Carregando mesas...</div></div>
-        
-        <div class="npcv2-block-title" style="margin-top:14px; color: var(--primary);">🤝 Aliados (Personagens)</div>
-        <div id="npcVincAliados"></div>
-        <div class="npcv2-pec-add" style="margin-top:8px; display:flex; gap:10px;">
-            <select class="form-select" id="vincAliadoMesaPicker" style="max-width:180px" onchange="filterVincAliadoChars(this.value)"><option value="">Filtrar Mesa...</option></select>
-            <select class="form-select" id="vincAliadoCharPicker" style="flex:1"><option value="">Selecione a Mesa primeiro...</option></select>
-            <button class="btn btn-primary btn-small" onclick="addVincAliado()">➕ Vincular como Aliado</button>
+        <div class="npcv2-card">
+            <div class="npcv2-block-title">🗺️ Mesas</div>
+            <div id="npcVincMesas" class="npcv2-vinc-list"><div class="npcv2-empty">Carregando mesas...</div></div>
         </div>
-        <div class="npcv2-hint" style="margin-top:4px">O sistema respeitará a configuração "É o próprio?" da aba Identidade (Mecânico).</div>
 
-        <div class="npcv2-block-title" style="margin-top:14px">👥 Vínculos Gerais (Não Aliados)</div>
-        <div id="npcVincChars"></div>
-        <div class="npcv2-pec-add" style="margin-top:8px; display:flex; gap:10px;">
-            <select class="form-select" id="vincCharPicker" style="flex:1"><option value="">Carregando personagens...</option></select>
-            <input type="text" class="form-input" id="vincCharRelacao" style="flex:1" placeholder="Relação (Mentor, Irmã...)">
-            <button class="btn btn-secondary btn-small" onclick="addVincChar()">➕ Vincular</button>
+        <div class="npcv2-card">
+            <div class="npcv2-block-title">🤝 Aliados (Personagens)</div>
+            <div id="npcVincAliados"></div>
+            <div class="npcv2-pec-add">
+                <select class="form-select" id="vincAliadoMesaPicker" style="max-width:180px" onchange="filterVincAliadoChars(this.value)"><option value="">Filtrar Mesa...</option></select>
+                <select class="form-select" id="vincAliadoCharPicker" style="flex:1"><option value="">Selecione a Mesa primeiro...</option></select>
+                <button class="btn btn-primary btn-small" onclick="addVincAliado()">➕ Vincular como Aliado</button>
+            </div>
+            <div class="npcv2-hint" style="margin-top:6px">O sistema respeitará a configuração "É o próprio?" da aba Identidade (Mecânico).</div>
         </div>
-        <div class="npcv2-hint" style="margin-top:4px">Vínculos criados na criação de personagem aparecerão aqui com a origem "criação".</div>
+
+        <div class="npcv2-card">
+            <div class="npcv2-block-title">👥 Vínculos Gerais (Não Aliados)</div>
+            <div id="npcVincChars"></div>
+            <div class="npcv2-pec-add">
+                <select class="form-select" id="vincCharPicker" style="flex:1"><option value="">Carregando personagens...</option></select>
+                <input type="text" class="form-input" id="vincCharRelacao" style="flex:1" placeholder="Relação (Mentor, Irmã...)">
+                <button class="btn btn-secondary btn-small" onclick="addVincChar()">➕ Vincular</button>
+            </div>
+            <div class="npcv2-hint" style="margin-top:6px">Vínculos criados na criação de personagem aparecerão aqui com a origem "criação".</div>
+        </div>
     </div>
-
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px"><button class="btn btn-secondary" onclick="closeNpcModal()">Cancelar</button><button class="btn btn-success" onclick="saveNpc()">💾 Salvar</button></div>`;
+`;
 }
 
 /* ===== CAMPO HÍBRIDO (registro OU personalizado) ===== */
@@ -832,7 +876,7 @@ window.setNpcModo = function(modo) {
 function renderPecs() {
     const el = document.getElementById('npcPecsList'); if (!el) return;
     if (!F.npc.peculiaridades.length) {
-        el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:6px 0">Nenhuma peculiaridade. Selecione uma raça/classe/tribo do registro ou adicione abaixo.</div>';
+        el.innerHTML = '<div class="npcv2-empty">Nenhuma peculiaridade. Selecione uma raça/classe/tribo do registro ou adicione abaixo.</div>';
         return;
     }
     el.innerHTML = F.npc.peculiaridades.map((p, idx) => {
@@ -945,7 +989,7 @@ function renderNpcClassModules() {
     const list = document.getElementById('npcClassModulesList'); if (!list) return;
     const mods = F.npc.modulosClasse || [];
     if (!mods.length) {
-        list.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:6px 0">Nenhum módulo vinculado. Selecione uma classe do registro (os módulos dela entram automaticamente) ou vincule manualmente abaixo.</div>';
+        list.innerHTML = '<div class="npcv2-empty">Nenhum módulo vinculado. Selecione uma classe do registro (os módulos dela entram automaticamente) ou vincule manualmente abaixo.</div>';
     } else {
         list.innerHTML = mods.map((vinc, mi) => {
             const def = _npcModDef(vinc);
@@ -977,7 +1021,7 @@ function renderNpcClassModules() {
                     <span>${def.icone || '📦'} ${escapeHtml(def.titulo)} ${fonte}</span>
                     <button class="npcv2-pec-del" onclick="removeNpcClassModule(${mi})" title="Desvincular módulo">✕</button>
                 </div>
-                <div class="npcv2-mod-items">${itens || '<div style="color:var(--muted);font-size:.8rem;padding:4px 2px">Nenhum item.</div>'}</div>
+                <div class="npcv2-mod-items">${itens || '<div class="npcv2-empty">Nenhum item.</div>'}</div>
                 <div class="npcv2-mod-actions">
                     <button class="btn btn-secondary btn-small" onclick="addNpcModuleItem(${mi})">➕ Novo item</button>
                     ${predefSel}
@@ -1202,7 +1246,7 @@ function renderDvGrid() {
             </div>`;
     };
 
-    const vazio = msg => `<div style="color:var(--muted);font-size:.85rem">${msg}</div>`;
+    const vazio = msg => `<div class="npcv2-empty">${msg}</div>`;
 
     vGrid.innerHTML = vitals.length
         ? vitals.map(dv => cellHtml(dv, false)).join('')
@@ -1333,7 +1377,7 @@ async function loadVinculosUI() {
             mesasEl.innerHTML = mesas.length ? mesas.map(m => {
                 const checked = F.npc.vinculos.some(v => v.tipo === 'mesa' && v.id === m.id);
                 return `<label class="npcv2-check"><input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleVincMesa('${m.id}',this.checked)"> 🗺️ ${escapeHtml(m.nome || 'Sem nome')}</label>`;
-            }).join('') : '<div style="color:var(--muted);font-size:.85rem">Nenhuma mesa cadastrada.</div>';
+            }).join('') : '<div class="npcv2-empty">Nenhuma mesa cadastrada.</div>';
         }
         
         const aliadoMesaPicker = document.getElementById('vincAliadoMesaPicker');
@@ -1365,7 +1409,7 @@ async function loadVinculosUI() {
 function renderVincChars() {
     const el = document.getElementById('npcVincChars'); if (!el) return;
     const vincs = F.npc.vinculos.filter(v => v.tipo === 'personagem' && String(v.relacao).toLowerCase() !== 'aliado');
-    if (!vincs.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:6px 0">Nenhum personagem vinculado.</div>'; } else {
+    if (!vincs.length) { el.innerHTML = '<div class="npcv2-empty">Nenhum personagem vinculado.</div>'; } else {
         el.innerHTML = vincs.map(v => {
             const c = (window._npcVincChars || []).find(x => x.id === v.id);
             const idx = F.npc.vinculos.indexOf(v);
@@ -1385,7 +1429,7 @@ window._renderVincChars = renderVincChars;
 window.renderVincAliados = function() {
     const el = document.getElementById('npcVincAliados'); if (!el) return;
     const vincs = F.npc.vinculos.filter(v => v.tipo === 'personagem' && String(v.relacao).toLowerCase() === 'aliado');
-    if (!vincs.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:6px 0">Nenhum aliado vinculado.</div>'; return; }
+    if (!vincs.length) { el.innerHTML = '<div class="npcv2-empty">Nenhum aliado vinculado.</div>'; return; }
     el.innerHTML = vincs.map(v => {
         const c = (window._npcVincChars || []).find(x => x.id === v.id);
         const idx = F.npc.vinculos.indexOf(v);
@@ -1542,7 +1586,7 @@ window.renderStructuredSkills = function() {
     }
 
     if (!F.npc.periciasEstruturadas.length) {
-        grid.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Nenhuma perícia adicionada.</div>';
+        grid.innerHTML = '<div class="npcv2-empty">Nenhuma perícia adicionada.</div>';
         grid.style.display = 'block';
         return;
     }

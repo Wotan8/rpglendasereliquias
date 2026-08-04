@@ -24,11 +24,13 @@ function lealdadeDe(npc, charId) {
 
 window.lealdadeDe = lealdadeDe;   // usado pelo harness __check-lealdade.html
 
-function corDaLealdade(n) {
-    if (n <= 2) return '#ef4444';   // desconfiança — vínculo não se sustenta
-    if (n <= 5) return '#f59e0b';   // convivência
-    if (n <= 8) return '#22c55e';   // confiança — faixa de vínculo
-    return '#8b5cf6';               // devoção
+/* Faixa da escala → classe de SIGNIFICADO (perigo / atenção / sucesso /
+   místico). A cor mora em styles_v2.css, em token, e vira com o tema. */
+function faixaDaLealdade(n) {
+    if (n <= 2) return 'leal-perigo';    // desconfiança — vínculo não se sustenta
+    if (n <= 5) return 'leal-atencao';   // convivência
+    if (n <= 8) return 'leal-sucesso';   // confiança — faixa de vínculo
+    return 'leal-mistico';               // devoção
 }
 
 // Escutar clique na aba
@@ -108,30 +110,28 @@ function renderAliados(aliados) {
         const hasImg = !!n.imagem;
         const leal = lealdadeDe(n, _charIdAtual);
         return `
-        <div class="npc-card" style="background:var(--bg-panel, #1e293b); border:1px solid var(--border, #334155); border-radius:8px; padding:10px; cursor:pointer; transition:transform 0.1s;"
+        <div class="npc-card"
              onclick="window.openAliadoModal('${n.id}')"
              onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border, #334155); padding-bottom:6px; margin-bottom:8px;">
-                <div style="font-weight:bold; color:var(--primary, #8b5cf6); font-size:1rem;">${escapeHtml(n.nome || 'Sem Nome')}</div>
-                <div style="font-size:0.75rem; background:#334155; padding:2px 6px; border-radius:4px; color:white;">Nível ${n.nivel || 1}</div>
+            <div class="aliado-card-head">
+                <div class="aliado-card-nome">${escapeHtml(n.nome || 'Sem Nome')}</div>
+                <div class="aliado-card-nivel">Nível ${n.nivel || 1}</div>
             </div>
-            ${hasImg ? `<div style="text-align:center; margin-bottom:8px;"><img src="${escapeHtml(n.imagem)}" style="max-width:100%; max-height:100px; border-radius:4px; object-fit:cover;"></div>` : ''}
-            <div style="font-size:0.8rem; color:var(--text, #e2e8f0); opacity:0.8;">
+            ${hasImg ? `<img class="aliado-card-img" src="${escapeHtml(n.imagem)}" alt="">` : ''}
+            <div class="aliado-card-tipo">
                 ${n.tipo === 'criatura' ? '🐉 Criatura' : '👤 NPC'} ${n.classe?.custom ? ' - ' + escapeHtml(n.classe.custom) : ''}
             </div>
-            <div style="display:flex; align-items:center; gap:6px; margin-top:8px; font-size:0.75rem; color:var(--muted, #94a3b8);"
+            <div class="aliado-card-leal"
                  title="Lealdade: quanto este aliado confia em você. Sobe e desce por decisão do Mestre.">
                 <span>🤝 Lealdade</span>
-                <button type="button" onclick="event.stopPropagation(); window.ajustarLealdade('${n.id}', -1)"
-                    style="width:20px;height:20px;line-height:1;border:1px solid var(--border,#334155);border-radius:4px;background:transparent;color:inherit;cursor:pointer;padding:0"
+                <button type="button" class="aliado-card-leal-btn" onclick="event.stopPropagation(); window.ajustarLealdade('${n.id}', -1)"
                     ${leal <= LEALDADE_MIN ? 'disabled' : ''}>−</button>
-                <strong style="color:${corDaLealdade(leal)}; min-width:2.2em; text-align:center; font-size:0.9rem">${leal}</strong>
-                <button type="button" onclick="event.stopPropagation(); window.ajustarLealdade('${n.id}', 1)"
-                    style="width:20px;height:20px;line-height:1;border:1px solid var(--border,#334155);border-radius:4px;background:transparent;color:inherit;cursor:pointer;padding:0"
+                <strong class="aliado-card-leal-num ${faixaDaLealdade(leal)}">${leal}</strong>
+                <button type="button" class="aliado-card-leal-btn" onclick="event.stopPropagation(); window.ajustarLealdade('${n.id}', 1)"
                     ${leal >= LEALDADE_MAX ? 'disabled' : ''}>+</button>
-                <span style="opacity:.6">/ ${LEALDADE_MAX}</span>
+                <span>/ ${LEALDADE_MAX}</span>
             </div>
-            <div style="font-size:0.75rem; color:var(--muted, #94a3b8); margin-top:4px;">
+            <div class="aliado-card-hint">
                 <em>Clique para visualizar a ficha</em>
             </div>
         </div>`;
@@ -171,7 +171,7 @@ window.openAliadoModal = async function(npcId, opts) {
 
     currentAliadoOpts = opts || {};
 
-    body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">⏳ Carregando dados do aliado...</div>';
+    body.innerHTML = '<div class="al-loading">⏳ Carregando dados do aliado...</div>';
     modal.classList.remove('hidden');
 
     try {
@@ -193,7 +193,7 @@ window.openAliadoModal = async function(npcId, opts) {
         if (currentAliadoOpts.readonly) _applyAliadoReadonly(body);
     } catch (e) {
         console.error(e);
-        body.innerHTML = '<div style="color:var(--danger);padding:20px;text-align:center;">❌ Erro ao carregar dados do aliado.</div>';
+        body.innerHTML = '<div class="al-error">❌ Erro ao carregar dados do aliado.</div>';
     }
 };
 
@@ -244,17 +244,26 @@ window.aliadoSwitchSection = function(secId) {
 
 function buildAliadoForm() {
     return `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <h3 style="margin:0; font-size:1.3rem;">Ficha do Aliado</h3>
-        <button class="btn" style="background:#256B42; color:white; border-color:#256B42;" onclick="window.saveAliadoNpc()">💾 Salvar Alterações</button>
-    </div>
+    <div class="al-topbar">
+        <div class="al-head">
+            <div class="al-portrait" id="al_portrait">
+                <span class="al-portrait-rune" aria-hidden="true">🜲</span>
+                <img id="al_portrait_img" alt="">
+            </div>
+            <div class="al-head-main">
+                <div class="al-head-kicker">Ficha do Aliado</div>
+                <h3 class="al-head-name" id="al_head_name">—</h3>
+            </div>
+            <button class="al-save" onclick="window.saveAliadoNpc()">💾 Salvar</button>
+        </div>
 
-    <div class="tabs" style="margin-bottom: 16px;">
-        <button type="button" class="tab active" data-sec="identidade" onclick="aliadoSwitchSection('identidade')">Identidade</button>
-        <button type="button" class="tab" data-sec="mecanica" onclick="aliadoSwitchSection('mecanica')">Mecânica</button>
-        <button type="button" class="tab" data-sec="inventario" onclick="aliadoSwitchSection('inventario')">Inventário</button>
-        <button type="button" class="tab" data-sec="roleplay" onclick="aliadoSwitchSection('roleplay')">Role Play</button>
-        <button type="button" class="tab" data-sec="loot" onclick="aliadoSwitchSection('loot')">Loot</button>
+        <div class="tabs">
+            <button type="button" class="tab active" data-sec="identidade" onclick="aliadoSwitchSection('identidade')">Identidade</button>
+            <button type="button" class="tab" data-sec="mecanica" onclick="aliadoSwitchSection('mecanica')">Mecânica</button>
+            <button type="button" class="tab" data-sec="inventario" onclick="aliadoSwitchSection('inventario')">Inventário</button>
+            <button type="button" class="tab" data-sec="roleplay" onclick="aliadoSwitchSection('roleplay')">Role Play</button>
+            <button type="button" class="tab" data-sec="loot" onclick="aliadoSwitchSection('loot')">Loot</button>
+        </div>
     </div>
 
     <!-- ============ SEÇÃO: IDENTIDADE ============ -->
@@ -262,10 +271,10 @@ function buildAliadoForm() {
         <div class="section">
             <div class="section-title">Informações Básicas</div>
             <div class="row">
-                <div class="field"><label>🖼️ Imagem URL</label><input type="text" id="al_imagem" placeholder="https://..."></div>
+                <div class="field"><label>🖼️ Imagem URL</label><input type="text" id="al_imagem" placeholder="https://..." oninput="alRefreshPortrait()"></div>
             </div>
             <div class="row" style="grid-template-columns: 2fr 1fr 1fr;">
-                <div class="field"><label>Nome *</label><input type="text" id="al_nome" placeholder="Nome do NPC"></div>
+                <div class="field"><label>Nome *</label><input type="text" id="al_nome" placeholder="Nome do NPC" oninput="alRefreshHeadName()"></div>
                 <div class="field">
                     <label>Tipo *</label>
                     <select id="al_tipo">
@@ -305,46 +314,33 @@ function buildAliadoForm() {
     <!-- ============ SEÇÃO: MECÂNICA ============ -->
     <div class="tab-content" id="alSec_mecanica">
         <div class="section">
-            <div class="section-title">Atributos</div>
-            <div class="row" id="al_attr_grid" style="grid-template-columns: repeat(9, 1fr);">
-                ${['FOR','DES','VIG','INT','RAC','PRS','PRE','MAN','AUT'].map(a => `
-                    <div class="field">
-                        <label style="text-align:center">${a}</label>
-                        <input type="number" id="al_attr_${a}" value="0" style="text-align:center">
-                    </div>`).join('')}
+            <div class="section-title">Status Vitais</div>
+            <div class="al-vitals">
+                ${[
+                    ['❤️ Vitalidade', 'al_vit_atual', 'al_vit'],
+                    ['⚡ Energia',    'al_ener_atual', 'al_ener'],
+                    ['🧠 Sanidade',   'al_san_atual', 'al_san']
+                ].map(([label, idAtual, idMax]) => `
+                <div class="al-vital">
+                    <span class="al-vital-label">${label}</span>
+                    <div class="al-vital-pair">
+                        <input type="number" id="${idAtual}" value="0" title="Atual" placeholder="Atual">
+                        <span class="al-vital-sep">/</span>
+                        <input type="number" id="${idMax}" value="0" title="Máximo" placeholder="Máx.">
+                    </div>
+                    <small class="al-vital-hint">Atual / Máx.</small>
+                </div>`).join('')}
             </div>
         </div>
 
         <div class="section">
-            <div class="section-title">Status Vitais</div>
-            <div class="row" style="grid-template-columns: repeat(3, 1fr);">
-                <div class="field">
-                    <label style="color: #ef4444;">❤️ Vitalidade</label>
-                    <div style="display:flex; gap:6px; align-items:center;">
-                        <input type="number" id="al_vit_atual" value="0" style="text-align:center" title="Atual" placeholder="Atual">
-                        <span style="color:var(--muted);">/</span>
-                        <input type="number" id="al_vit" value="0" style="text-align:center" title="Máximo" placeholder="Máx.">
-                    </div>
-                    <small style="color:var(--muted); font-size:.7rem; display:block; text-align:center;">Atual / Máx.</small>
-                </div>
-                <div class="field">
-                    <label style="color: var(--lr-gold);">⚡ Energia</label>
-                    <div style="display:flex; gap:6px; align-items:center;">
-                        <input type="number" id="al_ener_atual" value="0" style="text-align:center" title="Atual" placeholder="Atual">
-                        <span style="color:var(--muted);">/</span>
-                        <input type="number" id="al_ener" value="0" style="text-align:center" title="Máximo" placeholder="Máx.">
-                    </div>
-                    <small style="color:var(--muted); font-size:.7rem; display:block; text-align:center;">Atual / Máx.</small>
-                </div>
-                <div class="field">
-                    <label style="color: #3b82f6;">🧠 Sanidade</label>
-                    <div style="display:flex; gap:6px; align-items:center;">
-                        <input type="number" id="al_san_atual" value="0" style="text-align:center" title="Atual" placeholder="Atual">
-                        <span style="color:var(--muted);">/</span>
-                        <input type="number" id="al_san" value="0" style="text-align:center" title="Máximo" placeholder="Máx.">
-                    </div>
-                    <small style="color:var(--muted); font-size:.7rem; display:block; text-align:center;">Atual / Máx.</small>
-                </div>
+            <div class="section-title">Atributos</div>
+            <div class="al-attrs" id="al_attr_grid">
+                ${['FOR','DES','VIG','INT','RAC','PRS','PRE','MAN','AUT'].map(a => `
+                    <div class="al-attr">
+                        <label for="al_attr_${a}">${a}</label>
+                        <input type="number" id="al_attr_${a}" value="0">
+                    </div>`).join('')}
             </div>
         </div>
 
@@ -361,7 +357,7 @@ function buildAliadoForm() {
         <div class="section">
             <div class="section-title">📊 Valores Derivados</div>
             <div id="al_dv_grid">
-                <div style="color:var(--muted);font-size:.85rem;">Calculando...</div>
+                <div class="al-empty">Calculando...</div>
             </div>
         </div>
 
@@ -373,7 +369,7 @@ function buildAliadoForm() {
         <div class="section" id="al_class_modules_section">
             <div class="section-title">🧩 Módulos de Classe</div>
             <div id="al_class_modules">
-                <div style="color:var(--muted);font-size:.85rem;">Carregando módulos...</div>
+                <div class="al-empty">Carregando módulos...</div>
             </div>
         </div>
     </div>
@@ -383,7 +379,7 @@ function buildAliadoForm() {
         <div class="section">
             <div class="section-title">Inventário do Aliado</div>
             <div id="aliadoInvRoot">
-                <div style="color:var(--muted);font-size:.85rem;padding:8px">Abra esta aba para carregar o inventário.</div>
+                <div class="al-empty">Abra esta aba para carregar o inventário.</div>
             </div>
         </div>
     </div>
@@ -446,7 +442,7 @@ function buildAliadoForm() {
         </div>
     </div>
     
-    <div style="font-size:0.75rem; color:var(--muted); text-align:center; margin-top:20px; padding-top:10px;">
+    <div class="al-foot">
         <strong>Nota:</strong> Mecânicas complexas, peculiaridades e vínculos estendidos devem ser gerenciados pelo Mestre no painel dedicado.
     </div>
     `;
@@ -506,7 +502,7 @@ function _alModFieldHtml(mi, ii, field, item) {
     const label = escapeHtml(field.label || key || '');
     const set = (prop, expr) => `alSetModField(${mi},${ii},'${prop}',${expr})`;
     if (field.tipo === 'separador') {
-        return `<div style="grid-column:1/-1;font-weight:700;font-size:.75rem;color:var(--muted);text-transform:uppercase;border-bottom:1px dashed var(--line);padding-bottom:2px;margin-top:4px;">${label}</div>`;
+        return `<div class="al-mod-sep">${label}</div>`;
     }
     if (field.tipo === 'botao') return '';
     const val = item[key];
@@ -524,10 +520,10 @@ function _alModFieldHtml(mi, ii, field, item) {
     } else if (field.tipo === 'number' || field.tipo === 'contador' || field.tipo === 'avaliacao') {
         input = `<input type="number" value="${escapeHtml(String(val ?? ''))}" oninput="${set(key, "this.value===''?'':parseFloat(this.value)||0")}">`;
     } else if (field.tipo === 'progress') {
-        input = `<div style="display:flex;gap:6px;align-items:center;">
-            <input type="text" style="text-align:center;" placeholder="0" value="${escapeHtml(String(item[key + '_atual'] ?? ''))}" oninput="${set(key + '_atual', 'this.value')}">
-            <span style="color:var(--muted);">/</span>
-            <input type="text" style="text-align:center;" placeholder="0" value="${escapeHtml(String(item[key + '_total'] ?? ''))}" oninput="${set(key + '_total', 'this.value')}">
+        input = `<div class="al-vital-pair">
+            <input type="text" placeholder="0" value="${escapeHtml(String(item[key + '_atual'] ?? ''))}" oninput="${set(key + '_atual', 'this.value')}">
+            <span class="al-vital-sep">/</span>
+            <input type="text" placeholder="0" value="${escapeHtml(String(item[key + '_total'] ?? ''))}" oninput="${set(key + '_total', 'this.value')}">
         </div>`;
     } else if (field.tipo === 'data') {
         input = `<input type="date" value="${escapeHtml(String(val ?? ''))}" oninput="${set(key, 'this.value')}">`;
@@ -543,7 +539,7 @@ async function renderAliadoClassModules(npc) {
 
     const vincs = Array.isArray(npc.modulosClasse) ? npc.modulosClasse : [];
     if (!vincs.length) {
-        wrap.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Nenhum Módulo de Classe vinculado a este aliado. O Mestre pode vincular módulos na Ficha de NPC do Painel do Mestre.</div>';
+        wrap.innerHTML = '<div class="al-empty">Nenhum Módulo de Classe vinculado a este aliado. O Mestre pode vincular módulos na Ficha de NPC do Painel do Mestre.</div>';
         return;
     }
 
@@ -551,26 +547,26 @@ async function renderAliadoClassModules(npc) {
 
     wrap.innerHTML = vincs.map((vinc, mi) => {
         const def = _alResolveModDef(vinc, defs);
-        if (!def) return `<div style="color:var(--muted);font-size:.8rem;margin-bottom:8px;">⚠️ Módulo não encontrado no registro.</div>`;
+        if (!def) return `<div class="al-empty">⚠️ Módulo não encontrado no registro.</div>`;
         const itens = (vinc.itens || []).map((item, ii) => `
-            <div style="border:1px solid var(--line);border-radius:8px;margin-bottom:8px;overflow:hidden;">
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 10px;font-size:.8rem;font-weight:600;border-bottom:1px solid var(--line);background:rgba(139,92,246,.06);">
+            <div class="al-mod-item">
+                <div class="al-mod-item-head">
                     <span>${escapeHtml(item._predefNome || `${def.titulo} #${ii + 1}`)}</span>
-                    <button type="button" class="al-mod-btn" style="background:none;border:none;color:#ef4444;cursor:pointer;" onclick="alRemoveModItem(${mi},${ii})" title="Remover item">✕</button>
+                    <button type="button" class="al-mod-btn al-mod-del" onclick="alRemoveModItem(${mi},${ii})" title="Remover item">✕</button>
                 </div>
-                <div class="row" style="grid-template-columns:repeat(auto-fill,minmax(170px,1fr));padding:8px 10px;">
+                <div class="al-mod-fields">
                     ${def.schema.map(f => _alModFieldHtml(mi, ii, f, item)).join('')}
                 </div>
             </div>`).join('');
         const addBtn = def.permitirCriacaoJogador
-            ? `<button type="button" class="btn al-mod-btn" style="font-size:.78rem;padding:4px 10px;" onclick="alAddModItem(${mi})">➕ Novo item</button>`
+            ? `<button type="button" class="al-mod-btn al-mod-add" onclick="alAddModItem(${mi})">➕ Novo item</button>`
             : '';
-        return `<div style="border:1px solid var(--line);border-radius:10px;margin-bottom:12px;overflow:hidden;">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;font-weight:700;background:rgba(139,92,246,.08);border-bottom:1px solid var(--line);">
+        return `<div class="al-mod">
+            <div class="al-mod-head">
                 <span>${def.icone} ${escapeHtml(def.titulo)}</span>
             </div>
-            <div style="padding:8px;">
-                ${itens || '<div style="color:var(--muted);font-size:.8rem;padding:2px;">Nenhum item.</div>'}
+            <div class="al-mod-body">
+                ${itens || '<div class="al-empty">Nenhum item.</div>'}
                 ${addBtn}
             </div>
         </div>`;
@@ -655,7 +651,7 @@ async function renderAliadoDerivedValues(npc) {
         const vinc = new Set(npc.valoresDer?.vinculados || []);
         const lista = (sys.derivedValues || []).filter(dv => vinc.has(dv.key));
         if (!lista.length) {
-            box.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Nenhum Valor Derivado vinculado a este NPC.</div>';
+            box.innerHTML = '<div class="al-empty">Nenhum Valor Derivado vinculado a este NPC.</div>';
             return;
         }
 
@@ -664,21 +660,38 @@ async function renderAliadoDerivedValues(npc) {
             if (dv.blocoId !== blocoAtual) {
                 if (blocoAtual !== null) html += '</div>';
                 blocoAtual = dv.blocoId;
-                html += `<div style="margin-top:10px;margin-bottom:5px;font-weight:bold;color:var(--muted);text-transform:uppercase;font-size:.8rem;padding-bottom:3px;">${escapeHtml(dv.blocoNome || 'Geral')}</div>`
-                     + `<div class="row" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));">`;
+                html += `<div class="al-group-title">${escapeHtml(dv.blocoNome || 'Geral')}</div>`
+                     + `<div class="al-stat-grid">`;
             }
             const val = calc.derived[dv.key]?.final ?? 0;
-            html += `<div class="field" style="display:flex;flex-direction:row;align-items:center;justify-content:space-between;padding:4px 8px;" title="${escapeHtml(dv.descricao || '')}">
-                <label style="margin:0;">${dv.icone || '📊'} ${escapeHtml(dv.nome)}</label>
-                <strong style="min-width:50px;text-align:center;">${escapeHtml(dv.prefixo)}${val}${escapeHtml(dv.sufixo)}</strong>
+            html += `<div class="al-stat" title="${escapeHtml(dv.descricao || '')}">
+                <label>${dv.icone || '📊'} ${escapeHtml(dv.nome)}</label>
+                <strong>${escapeHtml(dv.prefixo)}${val}${escapeHtml(dv.sufixo)}</strong>
             </div>`;
         }
         box.innerHTML = html + '</div>';
     } catch (e) {
         console.warn('⚠️ Não foi possível calcular os Valores Derivados do aliado:', e);
-        box.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Valores Derivados indisponíveis.</div>';
+        box.innerHTML = '<div class="al-empty">Valores Derivados indisponíveis.</div>';
     }
 }
+
+/* Cabeçalho da ficha — espelha nome e retrato enquanto o campo é editado.
+   Só apresentação: nada aqui é lido no salvamento. */
+window.alRefreshHeadName = function() {
+    const el = document.getElementById('al_head_name');
+    if (el) el.textContent = document.getElementById('al_nome')?.value.trim() || '—';
+};
+
+window.alRefreshPortrait = function() {
+    const box = document.getElementById('al_portrait');
+    const img = document.getElementById('al_portrait_img');
+    const url = document.getElementById('al_imagem')?.value.trim() || '';
+    if (!box || !img) return;
+    img.onerror = () => box.classList.remove('has-img');
+    img.src = url;
+    box.classList.toggle('has-img', !!url);
+};
 
 function fillAliadoForm(npc) {
     document.getElementById('al_imagem').value = npc.imagem || '';
@@ -695,6 +708,9 @@ function fillAliadoForm(npc) {
     document.getElementById('al_local').value = npc.local || '';
     document.getElementById('al_tamanho').value = npc.tamanho || '';
     document.getElementById('al_tags').value = npc.tags || '';
+
+    window.alRefreshHeadName();
+    window.alRefreshPortrait();
 
     ['FOR','DES','VIG','INT','RAC','PRS','PRE','MAN','AUT'].forEach(a => {
         document.getElementById('al_attr_' + a).value = (npc.atributos && npc.atributos[a]) || 0;
@@ -720,7 +736,7 @@ function fillAliadoForm(npc) {
     const skillsGrid = document.getElementById('al_structured_skills_grid');
     const psList = npc.periciasEstruturadas || [];
     if (!psList.length) {
-        skillsGrid.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Nenhuma perícia adicionada (Acesse o Painel do Mestre para vincular perícias do sistema).</div>';
+        skillsGrid.innerHTML = '<div class="al-empty">Nenhuma perícia adicionada (Acesse o Painel do Mestre para vincular perícias do sistema).</div>';
     } else {
         const sysSkills = window._systemData?.skills || [];
         const grouped = {};
@@ -734,15 +750,15 @@ function fillAliadoForm(npc) {
         const catKeys = Object.keys(grouped).sort((a,b) => a.localeCompare(b));
         let html = '';
         for (const cat of catKeys) {
-            html += `<div style="margin-top:10px; margin-bottom: 5px; font-weight: bold; color: var(--muted); text-transform: uppercase; font-size: 0.8rem; padding-bottom: 3px;">${escapeHtml(cat)}</div>`;
-            html += `<div class="row" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));">`;
-            
+            html += `<div class="al-group-title">${escapeHtml(cat)}</div>`;
+            html += `<div class="al-stat-grid">`;
+
             grouped[cat].sort((a,b) => (a.s.nome||'').localeCompare(b.s.nome||'')).forEach(item => {
                 const { ps, s, idx } = item;
                 html += `
-                <div class="field" style="display:flex; flex-direction:row; align-items:center; justify-content:space-between; padding: 4px 8px;">
-                    <label style="margin:0;">${escapeHtml(s.nome)}</label>
-                    <input type="number" class="al_skill_input" data-idx="${idx}" value="${ps.nivel}" min="0" max="10" style="width: 50px; text-align: center;">
+                <div class="al-stat">
+                    <label>${escapeHtml(s.nome)}</label>
+                    <input type="number" class="al_skill_input" data-idx="${idx}" value="${ps.nivel}" min="0" max="10">
                 </div>`;
             });
             html += `</div>`;
@@ -863,7 +879,7 @@ window.saveAliadoNpc = async function() {
 
         btn.textContent = '✅ Salvo!';
         setTimeout(() => {
-            btn.textContent = '💾 Salvar Alterações';
+            btn.textContent = '💾 Salvar';
             btn.disabled = false;
         }, 2000);
         
@@ -873,7 +889,7 @@ window.saveAliadoNpc = async function() {
         console.error("Erro ao salvar Aliado:", e);
         btn.textContent = '❌ Erro';
         setTimeout(() => {
-            btn.textContent = '💾 Salvar Alterações';
+            btn.textContent = '💾 Salvar';
             btn.disabled = false;
         }, 2000);
     }

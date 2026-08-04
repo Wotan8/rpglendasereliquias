@@ -45,6 +45,7 @@ Três camadas, carregadas **nesta ordem exata** em toda página:
 |---|---|---|
 | `/shared/tokens.css` | Todas as variáveis: cores, tipografia, espaçamento, raios, sombras, transições, z-index, opacidade. Inclui **aliases legados** (`--bg`, `--paper`, `--ink`, `--accent`, `--primary`…) que fazem o CSS antigo herdar a paleta nova. | Só com aprovação de design. Nunca remover os aliases legados. |
 | `/shared/lendas-reliquias.css` | Identidade aplicada a **componentes** (botões, inputs, tabelas, abas, modais, badges, scrollbars, toasts, skeleton…). | Sim, para estender a componentes novos — sempre usando tokens. |
+| `/shared/<componente>.css` | Folha de um componente que roda em **mais de uma página**, sempre escopada por um `#id` e sem tocar `body`/`html`. Carrega **depois** da camada 3. Hoje: `ficha-aliado.css` (Ficha de Aliado, usada pela Ficha de Personagem e pelo Tabuleiro). | Sim — mesma regra: só `var(--lr-…)`. |
 | CSS do módulo | Apenas layout e particularidades do módulo. | Sim — **somente com `var(--lr-…)`**, jamais cores/valores fixos. |
 
 ### Regra de ouro

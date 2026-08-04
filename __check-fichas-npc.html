@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0E1117">
+<title>Check — Ficha de NPC/Criaturas e Ficha de Aliado</title>
+
+<!-- 1. CSS local dos módulos -->
+<link rel="stylesheet" href="painel-mestre/css/base.css">
+<link rel="stylesheet" href="painel-mestre/css/modais.css">
+<link rel="stylesheet" href="painel-mestre/css/area-npcs.css?v=6">
+<!-- 2. Tokens -->
+<link rel="stylesheet" href="shared/tokens.css">
+<!-- 3. Identidade -->
+<link rel="stylesheet" href="shared/lendas-reliquias.css">
+<!-- 4. Componente da Ficha de Aliado -->
+<link rel="stylesheet" href="shared/ficha-aliado.css">
+
+<style>
+  /* Só do harness — não representa nenhuma página real. */
+  .chk-bar {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 9999;
+      display: flex; gap: var(--lr-space-2); align-items: center; flex-wrap: wrap;
+      padding: var(--lr-space-2) var(--lr-space-3);
+      background: var(--lr-bg-1);
+      border-bottom: var(--lr-border-w) solid var(--lr-border);
+      font: 600 var(--lr-fs-sm)/1 var(--lr-font-body);
+      color: var(--lr-text-1);
+  }
+  .chk-bar button {
+      padding: var(--lr-space-1) var(--lr-space-3);
+      border: var(--lr-border-w) solid var(--lr-border);
+      border-radius: var(--lr-radius);
+      background: var(--lr-surface); color: var(--lr-text-1);
+      font: inherit;
+  }
+  .chk-bar button:hover { border-color: var(--lr-gold); color: var(--lr-gold-2); }
+  .chk-stage { padding-top: 46px; }
+  /* Os dois modais ficam abertos lado a lado em vez de sobrepostos. */
+  #npcModal, #aliadoNpcModal {
+      position: static; inset: auto; display: block;
+      background: none; backdrop-filter: none; padding: var(--lr-space-3);
+  }
+  #npcModal .modal-content, #aliadoNpcModal .detail-modal-content {
+      max-height: 78vh; margin: 0 auto;
+  }
+</style>
+</head>
+<body>
+
+<div class="chk-bar">
+    <strong>Check — Fichas de NPC e de Aliado</strong>
+    <button onclick="document.documentElement.classList.toggle('dark')">🌙 Alternar tema</button>
+    <button onclick="document.getElementById('npcModalBody').classList.toggle('npcv2-modo-rapido')">📝 Alternar Rápido/Mecânico</button>
+    <button onclick="roAliado()">👁️ Alternar somente-leitura (Aliado)</button>
+    <span id="chkOverflow"></span>
+</div>
+
+<div class="chk-stage">
+
+<!-- ================= FICHA DE NPC / CRIATURAS ================= -->
+<div id="npcModal" class="modal">
+  <div class="modal-content" style="max-width:900px">
+    <div class="modal-header"><span class="modal-title" id="npcModalTitle">Vigia do Portão Baixo</span><button class="modal-close">✕</button></div>
+    <div class="modal-body" id="npcModalBody">
+
+      <div class="npcv2-topbar">
+        <div class="npcv2-toolbar">
+            <div class="npcv2-mode-toggle">
+                <button type="button" class="npcv2-mode-btn">📝 Rápido</button>
+                <button type="button" class="npcv2-mode-btn active">⚙️ Mecânico</button>
+            </div>
+            <div class="npcv2-toolbar-actions">
+                <button class="btn btn-secondary btn-small npcv2-only-mecanico">📤 Exportar</button>
+                <button class="btn btn-danger btn-small">🗑️ Excluir</button>
+                <button class="btn btn-success btn-small">💾 Salvar</button>
+            </div>
+        </div>
+        <div class="npcv2-sections">
+            <button type="button" class="npcv2-section-btn active">📋 Identidade</button>
+            <button type="button" class="npcv2-section-btn">⚙️ Mecânica</button>
+            <button type="button" class="npcv2-section-btn">🎒 Inventário</button>
+            <button type="button" class="npcv2-section-btn">🎭 Role Play</button>
+            <button type="button" class="npcv2-section-btn">🎁 Loot</button>
+            <button type="button" class="npcv2-section-btn">🔗 Vínculos</button>
+        </div>
+      </div>
+
+      <div class="npcv2-section active">
+        <div class="npcv2-card">
+          <div class="npcv2-block-title">🧬 Peculiaridades</div>
+          <div>
+            <div class="npcv2-pec-row">
+              <span class="npcv2-pec-nome">Couro Endurecido</span>
+              <span class="npcv2-pec-fonte">raça</span>
+              <span class="npcv2-pec-nivel">Nível <input type="number" value="2"></span>
+              <button class="npcv2-pec-del">🗑️</button>
+            </div>
+            <div class="npcv2-pec-row">
+              <span class="npcv2-pec-nome">Vigilância Noturna</span>
+              <span class="npcv2-pec-fonte">avulsa</span>
+              <span class="npcv2-pec-nivel">Nível <input type="number" value="1"></span>
+              <button class="npcv2-pec-del">🗑️</button>
+            </div>
+          </div>
+          <div class="npcv2-pec-add">
+            <input type="text" class="form-input" placeholder="🔍 Buscar no registro...">
+            <select class="form-select"><option>Selecione…</option></select>
+            <button class="btn btn-secondary btn-small">➕ Do registro</button>
+            <button class="btn btn-secondary btn-small">✏️ Personalizada</button>
+          </div>
+        </div>
+
+        <div class="npcv2-card">
+          <div class="npcv2-block-title">❤️ Status Vitais
+            <span class="npcv2-hint npcv2-only-mecanico">calculados pelas mecânicas — clique em um valor para travar um override 🔒</span>
+          </div>
+          <div class="npcv2-dv-grid">
+            <div class="npcv2-dv-cell"><div class="npcv2-dv-label">❤️ Vitalidade</div>
+              <div class="npcv2-dv-value"><input type="number" class="form-input npcv2-dv-input" value="34" readonly></div>
+              <input type="number" class="npcv2-dv-atual" placeholder="atual" value="27"></div>
+            <div class="npcv2-dv-cell locked"><div class="npcv2-dv-label">⚡ Energia 🔒</div>
+              <div class="npcv2-dv-value"><input type="number" class="form-input npcv2-dv-input" value="12">
+                <button class="npcv2-dv-reset">↺</button></div>
+              <input type="number" class="npcv2-dv-atual" placeholder="atual" value="9"></div>
+            <div class="npcv2-dv-cell"><div class="npcv2-dv-label">🧠 Sanidade</div>
+              <div class="npcv2-dv-value"><input type="number" class="form-input npcv2-dv-input" value="18" readonly></div>
+              <input type="number" class="npcv2-dv-atual" placeholder="atual"></div>
+          </div>
+        </div>
+
+        <div class="npcv2-card">
+          <div class="npcv2-block-title">💪 Atributos <span class="npcv2-hint">soma 24 · limite do nível 3</span></div>
+          <div class="npcv2-attrs-grid">
+            <div class="npcv2-attr-cell"><div class="npcv2-attr-label">FOR</div><input type="number" class="form-input npcv2-attr-input" value="4"><div class="npcv2-attr-eff">+1</div></div>
+            <div class="npcv2-attr-cell"><div class="npcv2-attr-label">DES</div><input type="number" class="form-input npcv2-attr-input" value="3"><div class="npcv2-attr-eff"></div></div>
+            <div class="npcv2-attr-cell"><div class="npcv2-attr-label">VIG</div><input type="number" class="form-input npcv2-attr-input" value="5"><div class="npcv2-attr-eff">+2</div></div>
+            <div class="npcv2-attr-cell"><div class="npcv2-attr-label">INT</div><input type="number" class="form-input npcv2-attr-input" value="2"><div class="npcv2-attr-eff"></div></div>
+            <div class="npcv2-attr-cell"><div class="npcv2-attr-label">RAC</div><input type="number" class="form-input npcv2-attr-input" value="2"><div class="npcv2-attr-eff"></div></div>
+            <div class="npcv2-attr-cell"><div class="npcv2-attr-label">PRS</div><input type="number" class="form-input npcv2-attr-input" value="3"><div class="npcv2-attr-eff"></div></div>
+            <div class="npcv2-attr-cell"><div class="npcv2-attr-label">PRE</div><input type="number" class="form-input npcv2-attr-input" value="1"><div class="npcv2-attr-eff"></div></div>
+            <div class="npcv2-attr-cell"><div class="npcv2-attr-label">MAN</div><input type="number" class="form-input npcv2-attr-input" value="2"><div class="npcv2-attr-eff"></div></div>
+            <div class="npcv2-attr-cell"><div class="npcv2-attr-label">AUT</div><input type="number" class="form-input npcv2-attr-input" value="2"><div class="npcv2-attr-eff"></div></div>
+          </div>
+        </div>
+
+        <div class="npcv2-card">
+          <div class="npcv2-block-title">📊 Valores Derivados
+            <span class="npcv2-hint npcv2-only-mecanico">clique em um valor para travar um override 🔒</span>
+          </div>
+          <div class="npcv2-hint" style="margin-bottom:8px">A ficha lista apenas os VDs vinculados a este NPC. Use ✕ para desvincular.</div>
+          <div>
+            <div class="npcv2-dv-bloco">
+              <div class="npcv2-dv-bloco-title">Defesa</div>
+              <div class="npcv2-dv-grid">
+                <div class="npcv2-dv-cell"><button class="npcv2-dv-unlink">✕</button><div class="npcv2-dv-label">🛡️ Blindagem</div><div class="npcv2-dv-value"><input type="number" class="form-input npcv2-dv-input" value="3" readonly></div></div>
+                <div class="npcv2-dv-cell"><button class="npcv2-dv-unlink">✕</button><div class="npcv2-dv-label">🌀 Esquiva</div><div class="npcv2-dv-value"><input type="number" class="form-input npcv2-dv-input" value="2" readonly></div></div>
+                <div class="npcv2-dv-cell locked"><button class="npcv2-dv-unlink">✕</button><div class="npcv2-dv-label">🪨 Resistência 🔒</div><div class="npcv2-dv-value"><input type="number" class="form-input npcv2-dv-input" value="6"><button class="npcv2-dv-reset">↺</button></div></div>
+              </div>
+            </div>
+            <div class="npcv2-dv-bloco">
+              <div class="npcv2-dv-bloco-title">Movimento</div>
+              <div class="npcv2-dv-grid">
+                <div class="npcv2-dv-cell"><button class="npcv2-dv-unlink">✕</button><div class="npcv2-dv-label">👟 Deslocamento</div><div class="npcv2-dv-value"><input type="number" class="form-input npcv2-dv-input" value="9" readonly></div></div>
+                <div class="npcv2-dv-cell"><button class="npcv2-dv-unlink">✕</button><div class="npcv2-dv-label">⏱️ Iniciativa</div><div class="npcv2-dv-value"><input type="number" class="form-input npcv2-dv-input" value="4" readonly></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="npcv2-pec-add npcv2-only-mecanico">
+            <select class="form-select" style="flex:1"><option>Carga</option></select>
+            <button class="btn btn-secondary btn-small">➕ Vincular VD</button>
+          </div>
+        </div>
+
+        <div class="npcv2-card npcv2-only-mecanico">
+          <div class="npcv2-block-title">⚔️ Ataques e Efeitos Ativos <span class="npcv2-hint">totais por item equipado</span></div>
+          <div class="atk-table-wrap" id="npcAtaquesWrap">
+            <div class="atk-table-wrap">
+            <table class="atk-table">
+              <thead><tr><th class="atk-col-item">Item</th><th>Dano</th><th>Acerto</th><th>Alcance</th><th>Blindagem</th></tr></thead>
+              <tbody>
+                <tr><td class="atk-col-item"><span class="atk-item-name">Alabarda de Guarda</span><span class="atk-item-state">2 mãos · equipada</span></td>
+                    <td class="atk-dano">2d6+4</td><td class="atk-val"><strong>7</strong><span class="atk-delta">+2</span></td><td>2</td><td>—</td></tr>
+                <tr><td class="atk-col-item"><span class="atk-item-name">Brigantina Reforçada</span><span class="atk-item-state">torso · equipada</span></td>
+                    <td class="atk-dano">—</td><td class="atk-val"><strong>5</strong></td><td>—</td><td class="atk-val"><strong>3</strong><span class="atk-delta">+3</span></td></tr>
+              </tbody>
+            </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="npcv2-card npcv2-only-mecanico">
+          <div class="npcv2-block-title">🧩 Módulos de Classe <span class="npcv2-hint">herdados da classe selecionada</span></div>
+          <div class="npcv2-mod-box">
+            <div class="npcv2-mod-head"><span>📿 Patuás <span class="npcv2-pec-fonte">classe</span></span></div>
+            <div class="npcv2-mod-items">
+              <div class="npcv2-mod-item">
+                <div class="npcv2-mod-item-head"><span>Patuá do Cão Fiel</span><button class="npcv2-pec-del">✕</button></div>
+                <div class="npcv2-mod-fields">
+                  <div class="npcv2-mod-sep">Vínculo</div>
+                  <div class="npcv2-mod-field"><label class="form-label">Espírito</label><input type="text" class="form-input" value="Cão de Caça"></div>
+                  <div class="npcv2-mod-field"><label class="form-label">Lealdade</label><input type="number" class="form-input" value="7"></div>
+                </div>
+              </div>
+            </div>
+            <div class="npcv2-mod-actions"><button class="btn btn-secondary btn-small">➕ Novo item</button></div>
+          </div>
+        </div>
+
+        <div class="npcv2-card">
+          <div class="npcv2-block-title">📜 Efeitos e capacidades (das peculiaridades)</div>
+          <div class="npcv2-info-row">📋 <strong>Couro Endurecido:</strong> ignora o primeiro ponto de dano cortante por rodada.</div>
+          <div class="npcv2-info-row">📋 <strong>Vigilância Noturna:</strong> não sofre penalidade por escuridão parcial.</div>
+          <div class="npcv2-avisos"><div>⚠️ Nível 3 permite 24 pontos de atributo; a ficha soma 24.</div></div>
+        </div>
+
+        <div class="npcv2-card">
+          <div class="npcv2-block-title">🗺️ Mesas</div>
+          <div class="npcv2-vinc-list">
+            <label class="npcv2-check"><input type="checkbox" checked> Reliera — Mesa 1</label>
+            <label class="npcv2-check"><input type="checkbox"> Reliera — Mesa 2</label>
+          </div>
+        </div>
+
+        <div class="npcv2-card"><div class="npcv2-block-title">👥 Vínculos Gerais</div><div class="npcv2-empty">Nenhum personagem vinculado.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== FICHA DE ALIADO ===================== -->
+<div class="detail-modal" id="aliadoNpcModal">
+  <div class="detail-modal-content">
+    <button class="detail-modal-close">✕</button>
+    <div class="detail-modal-body" id="aliadoNpcModalBody">
+
+      <div class="al-topbar">
+        <div class="al-head">
+            <div class="al-portrait" id="al_portrait">
+                <span class="al-portrait-rune" aria-hidden="true">🜲</span>
+                <img id="al_portrait_img" alt="">
+            </div>
+            <div class="al-head-main">
+                <div class="al-head-kicker">Ficha do Aliado</div>
+                <h3 class="al-head-name" id="al_head_name">Brida, a Ferreira de Vaugh</h3>
+            </div>
+            <button class="al-save">💾 Salvar</button>
+        </div>
+        <div class="tabs">
+            <button type="button" class="tab active">Identidade</button>
+            <button type="button" class="tab">Mecânica</button>
+            <button type="button" class="tab">Inventário</button>
+            <button type="button" class="tab">Role Play</button>
+            <button type="button" class="tab">Loot</button>
+        </div>
+      </div>
+
+      <div class="tab-content active">
+        <div class="section">
+          <div class="section-title">Status Vitais</div>
+          <div class="al-vitals">
+            <div class="al-vital"><span class="al-vital-label">❤️ Vitalidade</span>
+              <div class="al-vital-pair"><input type="number" value="21"><span class="al-vital-sep">/</span><input type="number" value="28"></div>
+              <small class="al-vital-hint">Atual / Máx.</small></div>
+            <div class="al-vital"><span class="al-vital-label">⚡ Energia</span>
+              <div class="al-vital-pair"><input type="number" value="8"><span class="al-vital-sep">/</span><input type="number" value="14"></div>
+              <small class="al-vital-hint">Atual / Máx.</small></div>
+            <div class="al-vital"><span class="al-vital-label">🧠 Sanidade</span>
+              <div class="al-vital-pair"><input type="number" value="16"><span class="al-vital-sep">/</span><input type="number" value="16"></div>
+              <small class="al-vital-hint">Atual / Máx.</small></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Atributos</div>
+          <div class="al-attrs">
+            <div class="al-attr"><label>FOR</label><input type="number" value="5"></div>
+            <div class="al-attr"><label>DES</label><input type="number" value="3"></div>
+            <div class="al-attr"><label>VIG</label><input type="number" value="4"></div>
+            <div class="al-attr"><label>INT</label><input type="number" value="3"></div>
+            <div class="al-attr"><label>RAC</label><input type="number" value="2"></div>
+            <div class="al-attr"><label>PRS</label><input type="number" value="2"></div>
+            <div class="al-attr"><label>PRE</label><input type="number" value="1"></div>
+            <div class="al-attr"><label>MAN</label><input type="number" value="4"></div>
+            <div class="al-attr"><label>AUT</label><input type="number" value="2"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Informações Básicas</div>
+          <div class="row"><div class="field"><label>🖼️ Imagem URL</label><input type="text" placeholder="https://..."></div></div>
+          <div class="row" style="grid-template-columns: 2fr 1fr 1fr;">
+            <div class="field"><label>Nome *</label><input type="text" value="Brida"></div>
+            <div class="field"><label>Tipo *</label><select><option>👤 NPC</option><option>🐉 Criatura</option></select></div>
+            <div class="field"><label>Nível</label><input type="number" value="3"></div>
+          </div>
+          <div class="row" style="grid-template-columns: 1fr 1fr 1fr;">
+            <div class="field"><label>Raça</label><input type="text" value="Humana"></div>
+            <div class="field"><label>Classe</label><input type="text" value="Ferreira"></div>
+            <div class="field"><label>Tribo</label><input type="text"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">📊 Valores Derivados</div>
+          <div>
+            <div class="al-group-title">Defesa</div>
+            <div class="al-stat-grid">
+              <div class="al-stat"><label>🛡️ Blindagem</label><strong>4</strong></div>
+              <div class="al-stat"><label>🌀 Esquiva</label><strong>2</strong></div>
+              <div class="al-stat"><label>🪨 Resistência a Fogo</label><strong>+1</strong></div>
+            </div>
+            <div class="al-group-title">Ofício</div>
+            <div class="al-stat-grid">
+              <div class="al-stat"><label>🔨 Forja</label><strong>7</strong></div>
+              <div class="al-stat"><label>⚖️ Carga</label><strong>38kg</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">🎯 Perícias Estruturadas</div>
+          <div class="al-group-title">Físico</div>
+          <div class="al-stat-grid">
+            <div class="al-stat"><label>Atletismo</label><input type="number" value="2"></div>
+            <div class="al-stat"><label>Fortitude</label><input type="number" value="3"></div>
+          </div>
+          <div class="al-group-title">Social</div>
+          <div class="al-stat-grid">
+            <div class="al-stat"><label>Barganha</label><input type="number" value="4"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">🧩 Módulos de Classe</div>
+          <div class="al-mod">
+            <div class="al-mod-head"><span>🔨 Encomendas</span></div>
+            <div class="al-mod-body">
+              <div class="al-mod-item">
+                <div class="al-mod-item-head"><span>Encomenda #1</span><button class="al-mod-btn al-mod-del">✕</button></div>
+                <div class="al-mod-fields">
+                  <div class="al-mod-sep">Peça</div>
+                  <div class="field"><label>Item</label><input type="text" value="Elmo de aço"></div>
+                  <div class="field"><label>Progresso</label>
+                    <div class="al-vital-pair"><input type="text" value="2"><span class="al-vital-sep">/</span><input type="text" value="5"></div>
+                  </div>
+                </div>
+              </div>
+              <button class="al-mod-btn al-mod-add">➕ Novo item</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="al-foot"><strong>Nota:</strong> Mecânicas complexas, peculiaridades e vínculos estendidos devem ser gerenciados pelo Mestre no painel dedicado.</div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script type="module" src="shared/theme.js"></script>
+<script>
+function roAliado() {
+    const body = document.getElementById('aliadoNpcModalBody');
+    const on = !body.dataset.ro;
+    body.dataset.ro = on ? '1' : '';
+    if (!on) delete body.dataset.ro;
+    body.querySelectorAll('input, textarea, select').forEach(el => { el.disabled = on; });
+    body.querySelectorAll('button').forEach(b => { if (!b.classList.contains('tab')) b.style.display = on ? 'none' : ''; });
+}
+// Sentinela do manual: a PÁGINA nunca rola na horizontal.
+function checkOverflow() {
+    const over = document.documentElement.scrollWidth > document.documentElement.clientWidth;
+    const el = document.getElementById('chkOverflow');
+    el.textContent = over ? '❌ ROLAGEM HORIZONTAL DA PÁGINA' : '✅ sem rolagem horizontal · ' + window.innerWidth + 'px';
+    el.style.color = over ? 'var(--lr-blood-2)' : 'var(--lr-nature)';
+}
+addEventListener('resize', checkOverflow);
+checkOverflow();
+</script>
+</body>
+</html>

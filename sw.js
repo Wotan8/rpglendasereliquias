@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v148';
+const VERSION = 'v149';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -167,6 +167,7 @@ const PRECACHE_URLS = [
   '/tabuleiro/js/tab-write-queue.js',
   '/shared/combate-cenas.js',
   '/shared/equip-slots.js',
+  '/shared/ficha-aliado.css',
   '/shared/lendas-reliquias.css',
   '/shared/livro-vinculado.js',
   '/shared/livros-pub.js',

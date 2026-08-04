@@ -6,36 +6,39 @@
 .npcs-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 14px;
+    gap: var(--lr-space-3);
 }
 
 /* ===== NPC CARD ===== */
 .npc-card {
     background: var(--lr-bg-1);
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    padding: 18px;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
+    padding: var(--lr-space-4);
     cursor: pointer;
-    transition: all 0.3s;
+    transition:
+        border-color var(--lr-t-base) var(--lr-ease),
+        box-shadow   var(--lr-t-base) var(--lr-ease),
+        transform    var(--lr-t-base) var(--lr-ease);
 }
 
 .npc-card:hover {
-    border-color: rgba(91, 63, 184, 0.4);
+    border-color: var(--lr-gold);
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--lr-shadow-2);
 }
 
 .npc-card-header {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
+    gap: var(--lr-space-2);
+    margin-bottom: var(--lr-space-2);
 }
 
 .npc-checkbox {
     width: 18px;
     height: 18px;
-    accent-color: var(--primary);
+    accent-color: var(--lr-gold);
     cursor: pointer;
     flex-shrink: 0;
 }
@@ -46,9 +49,9 @@
 }
 
 .npc-name {
-    font-size: 1.1rem;
+    font-size: var(--lr-fs-md);
     font-weight: 800;
-    color: var(--light);
+    color: var(--lr-text-1);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -56,21 +59,21 @@
 
 .npc-type-badge {
     display: inline-block;
-    padding: 3px 10px;
-    border-radius: 6px;
-    font-size: 0.72rem;
+    padding: 3px var(--lr-space-2);
+    border-radius: var(--lr-radius-sm);
+    font-size: var(--lr-fs-xs);
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
-    background: rgba(91, 63, 184, 0.2);
-    color: var(--primary);
-    margin-top: 4px;
+    letter-spacing: 0.03em;
+    background: var(--lr-abyssal-soft);
+    color: var(--lr-text-1);
+    margin-top: var(--lr-space-1);
 }
 
 .npc-image-container {
     width: 100%;
     height: 260px;
-    border-radius: 10px;
+    border-radius: var(--lr-radius);
     overflow: hidden;
     margin-bottom: 12px;
     background: var(--lr-bg-1);
@@ -92,14 +95,14 @@
 }
 
 .npc-detail-label {
-    font-size: 0.82rem;
-    color: var(--ink);
+    font-size: var(--lr-fs-sm);
+    color: var(--lr-text-1);
     font-weight: 600;
 }
 
 .npc-detail-label-light {
-    font-size: 0.82rem;
-    color: var(--muted);
+    font-size: var(--lr-fs-sm);
+    color: var(--lr-text-2);
 }
 
 .npc-trejeitos {
@@ -111,7 +114,7 @@
 }
 
 .npc-frases-label {
-    font-size: 0.82rem;
+    font-size: var(--lr-fs-sm);
     color: var(--lr-text-2);
     font-style: italic;
 }
@@ -119,16 +122,16 @@
 .npc-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px;
-    margin-top: 8px;
+    gap: var(--lr-space-1);
+    margin-top: var(--lr-space-2);
 }
 
 .npc-tag {
-    background: rgba(91, 63, 184, 0.15);
-    color: var(--primary);
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 0.72rem;
+    background: var(--lr-abyssal-soft);
+    color: var(--lr-text-1);
+    padding: 3px var(--lr-space-2);
+    border-radius: var(--lr-radius-sm);
+    font-size: var(--lr-fs-xs);
     font-weight: 600;
 }
 
@@ -137,7 +140,7 @@
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
-    margin-bottom: 16px;
+    margin-bottom: var(--lr-space-4);
     align-items: flex-end;
 }
 
@@ -150,68 +153,23 @@
 .npc-filters .form-input,
 .npc-filters .form-select {
     padding: 8px 12px;
-    font-size: 0.82rem;
+    font-size: var(--lr-fs-sm);
 }
 
 /* ===== NPC ACTIONS BAR ===== */
 .npc-actions-bar {
     display: flex;
-    gap: 8px;
+    gap: var(--lr-space-2);
     flex-wrap: wrap;
-    margin-bottom: 14px;
+    margin-bottom: var(--lr-space-3);
 }
 
 .no-npcs {
     text-align: center;
-    padding: 50px 20px;
-    color: var(--muted);
-    font-size: 1rem;
+    padding: var(--lr-space-7) var(--lr-space-5);
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-md);
     grid-column: 1 / -1;
-}
-
-/* ===== NPC FORM (inside modal) ===== */
-.npc-form-input,
-.npc-form-textarea,
-.npc-form-select {
-    width: 100%;
-    padding: 10px 14px;
-    border: 2px solid var(--line);
-    border-radius: 8px;
-    font-size: 0.88rem;
-    font-family: var(--font);
-    background: var(--lr-bg-1);
-    color: var(--light);
-    transition: border-color 0.15s;
-}
-
-.npc-form-input:focus,
-.npc-form-textarea:focus,
-.npc-form-select:focus {
-    outline: none;
-    border-color: var(--primary);
-}
-
-.npc-form-textarea {
-    resize: vertical;
-    min-height: 80px;
-}
-
-.npc-attribute-input {
-    width: 100%;
-    padding: 8px;
-    text-align: center;
-    border: 2px solid var(--line);
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 800;
-    font-family: var(--font);
-    background: var(--lr-bg-1);
-    color: var(--primary);
-}
-
-.npc-attribute-input:focus {
-    outline: none;
-    border-color: var(--primary);
 }
 
 /* ===== RESPONSIVE ===== */
@@ -227,47 +185,52 @@
 /* ===== ADVANCED FILTERS ===== */
 .npc-advanced-panel {
     background: var(--lr-bg-1);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px;
-    margin-bottom: 14px;
-    animation: slideDown 0.3s ease-out;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    padding: var(--lr-space-3);
+    margin-bottom: var(--lr-space-3);
+    animation: slideDown var(--lr-t-slow) var(--lr-ease);
 }
 @keyframes slideDown {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
 .adv-filters-section {
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    margin-bottom: var(--lr-space-4);
+    padding-bottom: var(--lr-space-3);
+    border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
 }
 .adv-filters-section:last-child {
     border-bottom: none; margin-bottom: 0; padding-bottom: 0;
 }
 .adv-filters-header {
-    font-size: 0.9rem; font-weight: 700; color: var(--primary); margin-bottom: 8px;
+    font-size: var(--lr-fs-sm); font-weight: 700; color: var(--lr-text-1); margin-bottom: var(--lr-space-2);
+    text-transform: uppercase; letter-spacing: 0.06em;
 }
 .adv-filters-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--lr-space-2);
 }
 .attrs-grid {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
 }
 .range-inputs {
-    display: flex; gap: 4px;
+    display: flex; gap: var(--lr-space-1);
 }
 .range-inputs input {
     width: 50%; text-align: center;
 }
 .filter-badge {
-    background: var(--danger); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 12px; font-weight: bold;
+    background: var(--lr-blood); color: var(--lr-divine); font-size: var(--lr-fs-xs);
+    padding: 2px var(--lr-space-1); border-radius: var(--lr-radius-sm); font-weight: 700;
 }
 .filter-chip {
-    display: inline-flex; align-items: center; gap: 6px; background: rgba(91, 63, 184, 0.2); border: 1px solid rgba(91, 63, 184, 0.4); color: var(--lr-text-1); font-size: 0.8rem; padding: 4px 10px; border-radius: 16px;
+    display: inline-flex; align-items: center; gap: var(--lr-space-1);
+    background: var(--lr-abyssal-soft); border: var(--lr-border-w) solid var(--lr-border);
+    color: var(--lr-text-1); font-size: var(--lr-fs-sm);
+    padding: var(--lr-space-1) var(--lr-space-2); border-radius: var(--lr-radius-sm);
 }
 .filter-chip-close {
-    cursor: pointer; color: var(--muted); transition: color 0.2s;
+    cursor: pointer; color: var(--lr-text-2); transition: color var(--lr-t-base) var(--lr-ease);
 }
 /* Era --lr-divine: branco em cima do chip roxo a 20%, que no tema claro compoe
    lavanda clara — o "x" sumia no hover (1.33:1). Precisa ser o --lr-blood-3, que
@@ -276,182 +239,394 @@
 .filter-chip-close:hover { color: var(--lr-blood-3); }
 
 /* ============================================================
-   FICHA DE NPC v2 — modo Rápido/Mecânico, campos híbridos,
-   peculiaridades, valores derivados com override e vínculos
+   FICHA DE NPC / CRIATURAS — modo Rápido/Mecânico, campos
+   híbridos, peculiaridades, valores derivados com override,
+   módulos de classe e vínculos.
+
+   Mesma folha em dois hosts: o modal #npcModal do Painel do
+   Mestre e o mesmo modal injetado pelo Tabuleiro (tab-mostrar.js).
+   Só tokens var(--lr-…) — ver DESIGN-SYSTEM.md.
    ============================================================ */
+
+/* A ficha roda em dois hosts com resets diferentes (base.css no Painel,
+   tabuleiro.css no VTT) — não dá para depender do reset de nenhum deles. */
+#npcModal,
+#npcModal *,
+#npcModal *::before,
+#npcModal *::after { box-sizing: border-box; }
+
+/* ----- A câmara: cabeçalho preso, corpo rolando ------------- */
+#npcModal .modal-content {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;              /* quem rola é o corpo */
+}
+#npcModal .modal-header {
+    flex: 0 0 auto;
+    background: var(--lr-bg-1);
+}
+#npcModal .modal-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0;
+    scroll-behavior: smooth;
+}
+
+/* ----- Barra fixa: modo + ações + seções -------------------- */
+/* Some junto com o topo do corpo, então o Mestre nunca perde o
+   Salvar nem a navegação no meio de uma ficha longa. */
+.npcv2-topbar {
+    position: sticky;
+    top: 0;
+    z-index: var(--lr-z-sticky);
+    background: var(--lr-bg-1);
+    border-bottom: var(--lr-border-w) solid var(--lr-border);
+}
+
 .npcv2-toolbar {
     display: flex; justify-content: space-between; align-items: center;
-    gap: 10px; flex-wrap: wrap; margin-bottom: 14px;
+    gap: var(--lr-space-2); flex-wrap: wrap;
+    padding: var(--lr-space-2) var(--lr-space-4);
 }
+.npcv2-toolbar-actions { display: flex; gap: var(--lr-space-2); flex-wrap: wrap; }
+
 .npcv2-mode-toggle {
-    display: inline-flex; border: 1px solid var(--line);
-    border-radius: 10px; overflow: hidden;
+    display: inline-flex;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    overflow: hidden;
 }
 .npcv2-mode-btn {
-    background: transparent; border: none; color: var(--muted);
-    padding: 8px 14px; font-weight: 800; font-size: .85rem; cursor: pointer;
-    transition: all .15s ease;
+    background: transparent; border: none; border-radius: 0;
+    color: var(--lr-text-2);
+    padding: var(--lr-space-2) var(--lr-space-3);
+    font-weight: 700; font-size: var(--lr-fs-sm);
+    white-space: nowrap;
 }
-.npcv2-mode-btn.active { background: var(--primary); color: var(--lr-bg-0); }
+.npcv2-mode-btn:hover { color: var(--lr-text-1); background: var(--lr-surface-2); }
+.npcv2-mode-btn.active { background: var(--lr-gold); color: var(--lr-bg-0); }
 
+/* Abas da ficha: nunca quebram, rolagem própria (regra do manual). */
 .npcv2-sections {
-    display: flex; gap: 6px; flex-wrap: wrap;
-    border-bottom: 1px solid var(--line); margin-bottom: 16px; padding-bottom: 8px;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--lr-space-1);
+    padding: 0 var(--lr-space-4) var(--lr-space-2);
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    scroll-behavior: smooth;
 }
+.npcv2-sections::-webkit-scrollbar { display: none; }
+
 .npcv2-section-btn {
-    background: transparent; border: 1px solid var(--line); border-radius: 8px;
-    color: var(--muted); padding: 6px 12px; font-size: .82rem; font-weight: 700; cursor: pointer;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    background: transparent;
+    border: var(--lr-border-w) solid transparent;
+    border-radius: var(--lr-radius);
+    color: var(--lr-text-2);
+    padding: var(--lr-space-1) var(--lr-space-3);
+    font-size: var(--lr-fs-xs); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.05em;
 }
-/* O texto era --primary, que o tokens.css resolve como OURO, em cima de um glow
-   ROXO: 4.44:1. Roxo nao resolve: a regra vale nos dois temas e o glow a 25% nao
-   deixa espaco (4.28:1 no escuro nem com o tom claro). O estado ativo ja se le
-   pelo glow e pela borda, entao o texto fica com a tinta do tema: 11.56:1 no
-   claro, 14.79:1 no escuro. */
-.npcv2-section-btn.active { background: var(--primary-glow); border-color: var(--primary); color: var(--lr-text-1); }
-.npcv2-section { display: none; }
+.npcv2-section-btn:hover { color: var(--lr-text-1); background: var(--lr-surface-2); }
+/* Aba ativa: fio dourado inferior — a runa acesa. */
+.npcv2-section-btn.active {
+    color: var(--lr-gold-2);
+    background: var(--lr-gold-soft);
+    border-color: var(--lr-gold);
+    box-shadow: inset 0 -2px 0 var(--lr-gold);
+}
+
+.npcv2-section { display: none; padding: var(--lr-space-4); }
 .npcv2-section.active { display: block; }
 
-.npcv2-block-title {
-    font-weight: 800; color: var(--primary); margin-bottom: 10px;
-    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+/* ----- Blocos de conteúdo ---------------------------------- */
+.npcv2-card {
+    border: var(--lr-border-w) solid var(--lr-border-soft);
+    border-radius: var(--lr-radius-lg);
+    background: var(--lr-bg-1);
+    padding: var(--lr-space-3);
+    margin-bottom: var(--lr-space-3);
 }
-.npcv2-hint { font-size: .75rem; font-weight: 500; color: var(--muted); }
+.npcv2-card:last-child { margin-bottom: 0; }
+.npcv2-card > .form-group:last-child,
+.npcv2-card > .npcv2-card-body > .form-group:last-child { margin-bottom: 0; }
+
+/* Hierarquia por peso e espaço, não por cor: o ouro fica reservado
+   à ação primária, ao foco e à aba ativa. */
+.npcv2-block-title {
+    display: flex; align-items: baseline; gap: var(--lr-space-2); flex-wrap: wrap;
+    margin: 0 0 var(--lr-space-3);
+    padding-bottom: var(--lr-space-2);
+    border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
+    font-size: var(--lr-fs-xs); font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--lr-text-1);
+}
+.npcv2-hint {
+    font-size: var(--lr-fs-xs); font-weight: 500;
+    text-transform: none; letter-spacing: 0;
+    color: var(--lr-text-2);
+}
 
 /* Modo rápido esconde tudo que depende dos registros */
+/* Vale também para o .npcv2-card inteiro que só tem conteúdo mecânico. */
 .npcv2-modo-rapido .npcv2-only-mecanico { display: none !important; }
 
-/* Peculiaridades */
+/* ----- Peculiaridades -------------------------------------- */
 .npcv2-pec-row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px;
-    margin-bottom: 6px; font-size: .85rem;
+    display: flex; align-items: center; gap: var(--lr-space-2);
+    flex-wrap: wrap;   /* no celular a linha quebra em vez de vazar do card */
+    padding: var(--lr-space-1) var(--lr-space-2);
+    border: var(--lr-border-w) solid var(--lr-border-soft);
+    border-radius: var(--lr-radius-sm);
+    background: var(--lr-surface);
+    margin-bottom: var(--lr-space-1);
+    font-size: var(--lr-fs-sm);
 }
-.npcv2-pec-nome { font-weight: 700; flex: 1; min-width: 120px; }
+.npcv2-pec-nome { font-weight: 600; flex: 1; min-width: 120px; }
 .npcv2-pec-fonte {
-    font-size: .7rem; font-weight: 800; text-transform: uppercase;
-    color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px;
+    font-size: var(--lr-fs-xs); font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--lr-text-2);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius-sm);
+    padding: 1px var(--lr-space-1);
+    white-space: nowrap;
 }
-.npcv2-pec-nivel { font-size: .78rem; color: var(--muted); display: flex; align-items: center; gap: 4px; }
-.npcv2-pec-nivel input { width: 52px; text-align: center; background: transparent; border: 1px solid var(--line); border-radius: 6px; color: inherit; padding: 2px 4px; }
+.npcv2-pec-nivel {
+    font-size: var(--lr-fs-xs); color: var(--lr-text-2);
+    display: flex; align-items: center; gap: var(--lr-space-1);
+}
+.npcv2-pec-nivel input {
+    width: 52px; text-align: center;
+    background: var(--lr-bg-1);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius-sm);
+    color: inherit; padding: 2px var(--lr-space-1);
+    font-variant-numeric: tabular-nums;
+}
 .npcv2-pec-del {
-    background: transparent; border: none; color: var(--muted);
-    cursor: pointer; font-size: .9rem; padding: 2px 6px; border-radius: 6px;
+    background: transparent; border: none;
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-sm);
+    padding: 2px var(--lr-space-1);
+    border-radius: var(--lr-radius-sm);
 }
-.npcv2-pec-del:hover { color: var(--lr-blood-2); background: rgba(201, 79, 92, .12); }
-.npcv2-pec-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.npcv2-pec-del:hover { color: var(--lr-blood-3); background: var(--lr-blood-soft); }
+.npcv2-pec-add {
+    display: flex; gap: var(--lr-space-2); flex-wrap: wrap;
+    margin-top: var(--lr-space-2);
+}
 .npcv2-pec-add .form-input, .npcv2-pec-add .form-select { flex: 1; min-width: 160px; }
 
-/* Atributos */
+/* ----- Atributos: placas compactas, número em destaque ------ */
 .npcv2-attrs-grid {
-    display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; margin-bottom: 8px;
+    display: grid; grid-template-columns: repeat(9, 1fr);
+    gap: var(--lr-space-1);
 }
-@media (max-width: 760px) { .npcv2-attrs-grid { grid-template-columns: repeat(3, 1fr); } }
-.npcv2-attr-cell { text-align: center; }
-.npcv2-attr-label { font-size: .72rem; font-weight: 800; color: var(--muted); margin-bottom: 4px; }
-.npcv2-attr-input { text-align: center; font-weight: 800; color: var(--primary); }
-.npcv2-attr-eff { font-size: .72rem; color: var(--success, var(--lr-nature)); min-height: 16px; margin-top: 2px; }
+.npcv2-attr-cell {
+    display: flex; flex-direction: column; gap: 2px;
+    min-width: 0; text-align: center;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius-sm);
+    background: var(--lr-surface);
+    padding: var(--lr-space-1);
+}
+.npcv2-attr-cell:focus-within {
+    border-color: var(--lr-gold);
+    box-shadow: var(--lr-glow-gold);
+}
+.npcv2-attr-label {
+    font-size: var(--lr-fs-xs); font-weight: 700;
+    letter-spacing: 0.03em; color: var(--lr-text-2);
+}
+.npcv2-attr-input.form-input {
+    border: none; background: transparent; padding: 2px 0;
+    text-align: center;
+    font-size: var(--lr-fs-md); font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--lr-text-1);
+}
+.npcv2-attr-input.form-input:focus { box-shadow: none; border-color: transparent; }
+.npcv2-attr-eff {
+    font-size: var(--lr-fs-xs); color: var(--lr-nature);
+    min-height: 15px; font-variant-numeric: tabular-nums;
+}
 
-/* Valores derivados */
+/* ----- Valores derivados e status vitais -------------------- */
 .npcv2-dv-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: var(--lr-space-2);
 }
 .npcv2-dv-cell {
-    border: 1px solid var(--line); border-radius: 10px; padding: 8px;
+    position: relative;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-surface);
+    padding: var(--lr-space-2);
+    min-width: 0;
 }
-.npcv2-dv-bloco + .npcv2-dv-bloco { margin-top: 12px; }
+.npcv2-dv-bloco + .npcv2-dv-bloco { margin-top: var(--lr-space-3); }
 .npcv2-dv-bloco-title {
-    font-size: .74rem; font-weight: 800; color: var(--muted);
-    text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px;
+    font-size: var(--lr-fs-xs); font-weight: 700;
+    color: var(--lr-text-2);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: var(--lr-space-2);
 }
-.npcv2-dv-cell.locked { border-color: var(--warning, var(--lr-gold)); }
+/* Override travado pelo Mestre = estado, e estado é ouro. */
+.npcv2-dv-cell.locked { border-color: var(--lr-gold); }
 .npcv2-dv-label {
-    font-size: .72rem; font-weight: 800; color: var(--muted); margin-bottom: 4px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help;
+    font-size: var(--lr-fs-xs); font-weight: 700;
+    color: var(--lr-text-2);
+    margin-bottom: var(--lr-space-1);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    cursor: help;
+    padding-right: var(--lr-space-4);   /* espaço do ✕ */
 }
-.npcv2-dv-value { display: flex; align-items: center; gap: 4px; }
-.npcv2-dv-input { text-align: center; font-weight: 800; }
-.npcv2-dv-cell.locked .npcv2-dv-input { color: var(--warning, var(--lr-gold)); }
+.npcv2-dv-value { display: flex; align-items: center; gap: var(--lr-space-1); }
+.npcv2-dv-input.form-input {
+    text-align: center; font-weight: 700;
+    font-size: var(--lr-fs-md);
+    font-variant-numeric: tabular-nums;
+    padding: var(--lr-space-1);
+}
+.npcv2-dv-cell.locked .npcv2-dv-input.form-input { color: var(--lr-gold-2); }
+.npcv2-dv-input.form-input[readonly] {
+    background: transparent;
+    border-color: var(--lr-border-soft);
+    cursor: pointer;
+}
 .npcv2-dv-reset {
-    background: transparent; border: 1px solid var(--line); border-radius: 6px;
-    color: var(--muted); cursor: pointer; padding: 4px 6px; font-size: .8rem;
+    flex: 0 0 auto;
+    background: transparent;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius-sm);
+    color: var(--lr-text-2);
+    padding: var(--lr-space-1);
+    font-size: var(--lr-fs-sm); line-height: 1;
 }
-.npcv2-dv-reset:hover { color: var(--primary); border-color: var(--primary); }
+.npcv2-dv-reset:hover { color: var(--lr-gold-2); border-color: var(--lr-gold); }
 .npcv2-dv-atual {
-    width: 100%; margin-top: 6px; text-align: center;
-    background: transparent; border: 1px dashed var(--line); border-radius: 6px;
-    color: inherit; padding: 3px; font-size: .8rem;
+    width: 100%; margin-top: var(--lr-space-1); text-align: center;
+    background: transparent;
+    border: var(--lr-border-w) dashed var(--lr-border);
+    border-radius: var(--lr-radius-sm);
+    color: var(--lr-text-1);
+    padding: 3px; font-size: var(--lr-fs-sm);
+    font-variant-numeric: tabular-nums;
 }
 
-/* Extras */
-.npcv2-extra-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+/* Desvincular VD: discreto, mas sempre alcançável no toque. */
+.npcv2-dv-unlink {
+    position: absolute; top: var(--lr-space-1); right: var(--lr-space-1);
+    background: none; border: none;
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-xs); line-height: 1;
+    padding: 2px 5px; border-radius: var(--lr-radius-sm);
+    opacity: 0;
+    transition: opacity var(--lr-t-fast) var(--lr-ease);
+}
+.npcv2-dv-cell:hover .npcv2-dv-unlink,
+.npcv2-dv-cell:focus-within .npcv2-dv-unlink,
+.npcv2-dv-unlink:focus-visible { opacity: 1; }
+.npcv2-dv-unlink:hover { color: var(--lr-blood-3); background: var(--lr-blood-soft); }
+@media (hover: none), (pointer: coarse) {
+    .npcv2-dv-unlink { opacity: 1; }
+}
+
+/* ----- Extras / infos / avisos ------------------------------ */
+.npcv2-extra-row {
+    display: flex; gap: var(--lr-space-2); align-items: center;
+    margin-bottom: var(--lr-space-1);
+}
 .npcv2-extra-row .form-input:first-child { flex: 2; }
 .npcv2-extra-row .form-input:nth-child(2) { flex: 1; }
 
-/* Infos / avisos */
 .npcv2-info-row {
-    font-size: .82rem; padding: 6px 10px; border-left: 3px solid var(--primary);
-    background: var(--primary-glow); border-radius: 0 8px 8px 0; margin-bottom: 6px;
+    font-size: var(--lr-fs-sm);
+    padding: var(--lr-space-1) var(--lr-space-2);
+    border-left: 3px solid var(--lr-arcane);
+    background: var(--lr-arcane-soft);
+    border-radius: 0 var(--lr-radius-sm) var(--lr-radius-sm) 0;
+    margin-bottom: var(--lr-space-1);
+    line-height: var(--lr-lh-body);
 }
-.npcv2-avisos { font-size: .78rem; color: var(--warning, var(--lr-gold)); margin-top: 10px; }
+.npcv2-avisos {
+    font-size: var(--lr-fs-sm);
+    color: var(--lr-blood-2);
+    margin-top: var(--lr-space-3);
+    line-height: var(--lr-lh-body);
+}
 
-/* Vínculos */
-.npcv2-vinc-list { display: flex; flex-direction: column; gap: 4px; }
+/* ----- Vínculos -------------------------------------------- */
+.npcv2-vinc-list { display: flex; flex-direction: column; gap: var(--lr-space-1); }
 .npcv2-check {
-    display: flex; align-items: center; gap: 8px; font-size: .85rem; cursor: pointer;
-    padding: 4px 0;
+    display: flex; align-items: center; gap: var(--lr-space-2);
+    font-size: var(--lr-fs-sm); cursor: pointer;
+    padding: var(--lr-space-1) 0;
+    color: var(--lr-text-1);
 }
-.npcv2-vinc-rel { max-width: 200px; font-size: .8rem; padding: 4px 8px; }
-.npcv2-funcoes { margin-top: 4px; }
+.npcv2-vinc-rel { max-width: 200px; font-size: var(--lr-fs-sm); padding: var(--lr-space-1) var(--lr-space-2); }
+.npcv2-funcoes { margin-top: var(--lr-space-1); }
 
-/* ===== VD vinculado — botão de desvincular ===== */
-.npcv2-dv-cell { position: relative; }
-.npcv2-dv-unlink {
-    position: absolute; top: 4px; right: 4px;
-    background: none; border: none; cursor: pointer;
-    color: var(--muted); font-size: .75rem; line-height: 1;
-    padding: 2px 5px; border-radius: 4px;
-}
-.npcv2-dv-unlink:hover { color: var(--lr-blood-2, #ef4444); background: rgba(201, 79, 92, .12); }
-
-/* ===== Módulos de Classe (Ficha de NPC) ===== */
+/* ----- Módulos de Classe ----------------------------------- */
 .npcv2-mod-box {
-    border: 1px solid var(--line); border-radius: 10px;
-    background: rgba(139, 92, 246, .04); margin-bottom: 10px; overflow: hidden;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-surface);
+    margin-bottom: var(--lr-space-2);
+    overflow: hidden;
 }
 .npcv2-mod-head {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 12px; font-weight: 700; font-size: .9rem;
-    background: rgba(139, 92, 246, .08); border-bottom: 1px solid var(--line);
+    gap: var(--lr-space-2);
+    padding: var(--lr-space-2) var(--lr-space-3);
+    font-weight: 700; font-size: var(--lr-fs-sm);
+    background: var(--lr-bg-1);
+    border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
 }
-.npcv2-mod-head .npcv2-pec-fonte { margin-left: 8px; }
-.npcv2-mod-items { padding: 8px; }
+.npcv2-mod-head .npcv2-pec-fonte { margin-left: var(--lr-space-2); }
+.npcv2-mod-items { padding: var(--lr-space-2); }
 .npcv2-mod-item {
-    border: 1px solid var(--line); border-radius: 8px;
-    margin-bottom: 8px; overflow: hidden; background: rgba(15, 23, 42, .25);
+    border: var(--lr-border-w) solid var(--lr-border-soft);
+    border-radius: var(--lr-radius-sm);
+    margin-bottom: var(--lr-space-2);
+    overflow: hidden;
 }
 .npcv2-mod-item-head {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 5px 10px; font-size: .8rem; font-weight: 600;
-    background: rgba(51, 65, 85, .25); border-bottom: 1px solid var(--line);
+    gap: var(--lr-space-2);
+    padding: 5px var(--lr-space-2);
+    font-size: var(--lr-fs-xs); font-weight: 700;
+    background: var(--lr-bg-1);
+    border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
 }
 .npcv2-mod-fields {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 8px; padding: 8px 10px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: var(--lr-space-2); padding: var(--lr-space-2);
 }
-.npcv2-mod-field label.form-label { font-size: .72rem; margin-bottom: 2px; }
+.npcv2-mod-field label.form-label { font-size: var(--lr-fs-xs); margin-bottom: 2px; }
 .npcv2-mod-sep {
-    grid-column: 1 / -1; font-weight: 700; font-size: .78rem;
-    color: var(--muted); text-transform: uppercase; letter-spacing: .04em;
-    border-bottom: 1px dashed var(--line); padding-bottom: 2px; margin-top: 4px;
+    grid-column: 1 / -1; font-weight: 700; font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2); text-transform: uppercase; letter-spacing: 0.04em;
+    border-bottom: var(--lr-border-w) dashed var(--lr-border);
+    padding-bottom: 2px; margin-top: var(--lr-space-1);
 }
 .npcv2-mod-actions {
-    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
-    padding: 0 8px 8px 8px;
+    display: flex; gap: var(--lr-space-2); align-items: center; flex-wrap: wrap;
+    padding: 0 var(--lr-space-2) var(--lr-space-2);
 }
 
-/* ===== ATAQUES E EFEITOS ATIVOS (totais por item equipado) ===== */
-/* Rola na horizontal: o número de colunas cresce com os Valores Derivados
-   marcados com Escopo por Item no Painel do Criador. */
+/* ----- Ataques e efeitos ativos ----------------------------- */
+/* Rola na horizontal: o número de colunas cresce com os Valores
+   Derivados marcados com Escopo por Item no Painel do Criador. */
 #npcAtaquesWrap .atk-table-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -459,18 +634,16 @@
 #npcAtaquesWrap .atk-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.85rem;
+    font-size: var(--lr-fs-sm);
     min-width: 320px;
 }
 #npcAtaquesWrap .atk-table th {
     text-align: center;
-    padding: 6px 10px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--muted, #94a3b8);
-    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+    padding: var(--lr-space-1) var(--lr-space-2);
+    font-size: var(--lr-fs-xs); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--lr-text-2);
+    border-bottom: var(--lr-border-w) solid var(--lr-border);
     white-space: nowrap;
 }
 #npcAtaquesWrap .atk-table th.atk-col-item,
@@ -479,26 +652,55 @@
     min-width: 150px;
 }
 #npcAtaquesWrap .atk-table td {
-    padding: 8px 10px;
-    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+    padding: var(--lr-space-2);
+    border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
     text-align: center;
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 #npcAtaquesWrap .atk-item-name { display: block; font-weight: 600; }
 #npcAtaquesWrap .atk-item-state {
     display: block;
-    font-size: 0.7rem;
-    color: var(--muted, #94a3b8);
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2);
 }
 #npcAtaquesWrap .atk-dano {
     font-weight: 700;
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
-    color: var(--lr-gold);
+    color: var(--lr-text-1);
 }
-#npcAtaquesWrap .atk-val strong { font-size: 1rem; }
+#npcAtaquesWrap .atk-val strong { font-size: var(--lr-fs-md); }
 #npcAtaquesWrap .atk-delta {
-    margin-left: 4px;
-    font-size: 0.7rem;
+    margin-left: var(--lr-space-1);
+    font-size: var(--lr-fs-xs);
     color: var(--lr-nature);
     font-weight: 700;
+}
+
+/* ----- Estados vazios da ficha ------------------------------ */
+.npcv2-empty {
+    font-size: var(--lr-fs-sm);
+    color: var(--lr-text-2);
+    line-height: var(--lr-lh-body);
+}
+
+/* ----- Responsivo: mesma funcionalidade, outro empacotamento -- */
+@media (max-width: 900px) {
+    .npcv2-attrs-grid { grid-template-columns: repeat(5, 1fr); }
+}
+@media (max-width: 768px) {
+    #npcModal { padding: 0; }
+    #npcModal .modal-content {
+        max-height: 100vh;
+        height: 100%;
+        border-radius: 0;
+    }
+    .npcv2-toolbar { padding: var(--lr-space-2) var(--lr-space-3); }
+    .npcv2-sections { padding: 0 var(--lr-space-3) var(--lr-space-2); }
+    .npcv2-section { padding: var(--lr-space-3); }
+    .npcv2-toolbar-actions { flex: 1; justify-content: flex-end; }
+}
+@media (max-width: 520px) {
+    .npcv2-attrs-grid { grid-template-columns: repeat(3, 1fr); }
+    .npcv2-dv-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
 }

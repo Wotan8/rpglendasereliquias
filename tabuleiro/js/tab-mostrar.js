@@ -767,9 +767,9 @@ function _tbEnsureAliadoModalDom() {
     if (document.getElementById('aliadoNpcModal')) return;
     const div = document.createElement('div');
     div.innerHTML = `<div class="detail-modal hidden" id="aliadoNpcModal">
-        <div class="detail-modal-content" style="max-width: 700px;">
+        <div class="detail-modal-content">
             <button class="detail-modal-close" onclick="closeAliadoModal()">✕</button>
-            <div class="detail-modal-body" id="aliadoNpcModalBody" style="padding: 20px;"></div>
+            <div class="detail-modal-body" id="aliadoNpcModalBody"></div>
         </div>
     </div>`;
     document.body.appendChild(div.firstElementChild);
@@ -779,7 +779,7 @@ function _tbEnsureAliadoModalDom() {
 async function abrirFichaMestreNpc(npc) {
     try {
         _tbInjectCss('../painel-mestre/css/modais.css', 'tbCssPmModais');
-        _tbInjectCss('../painel-mestre/css/area-npcs.css', 'tbCssPmAreaNpcs');
+        _tbInjectCss('../painel-mestre/css/area-npcs.css?v=6', 'tbCssPmAreaNpcs');
         _tbEnsureNpcModalDom();
 
         const [S] = await Promise.all([
@@ -802,7 +802,7 @@ async function abrirFichaMestreNpc(npc) {
 /* Ficha de Aliado (componente da Ficha de Personagem), forçando Modo Rápido */
 async function abrirFichaAliadoNpc(npc, opts = {}) {
     try {
-        _tbInjectCss('css/tab-npc-sheet.css', 'tbCssNpcSheet');
+        _tbInjectCss('../shared/ficha-aliado.css?v=1', 'tbCssNpcSheet');
         _tbEnsureAliadoModalDom();
         window.db = window.db || db;
 
@@ -811,7 +811,7 @@ async function abrirFichaAliadoNpc(npc, opts = {}) {
         catch (e) { console.warn('⚠️ aliado-inventario indisponível no tabuleiro:', e); }
 
         if (!window.openAliadoModal) {
-            await import('../../ficha-v1.7_1/js/aliados.js?v=7');
+            await import('../../ficha-v1.7_1/js/aliados.js?v=8');
         }
         await window.openAliadoModal(npc.id, { readonly: !!opts.readonly, forceRapido: true });
     } catch (e) {
