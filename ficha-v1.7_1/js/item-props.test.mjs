@@ -58,6 +58,20 @@ assert.equal(prop('Preço', { items: [simples], catalog: inv.catalog }), 0);
 assert.equal(prop('Liga', { items: [simples], catalog: inv.catalog }), 0);
 assert.equal(prop('Tamanho', { items: [simples], catalog: inv.catalog }), 0);
 
+// --- Fio e Afiação: entram na Equação de Dano (`FOR + Item: Fio + Item: Afiação`) ---
+const GRAAL_TPL = { id: 'tplGraal', nome: 'Espada Longa', liga: '5', fio: '4', afiacao: 4 };
+const espada = { id: 'i1', nome: 'Espada Longa', modeloId: 'tplGraal', peso: 2 };
+const invGraal = { items: [espada], catalog: [GRAAL_TPL] };
+assert.equal(prop('Fio', invGraal), 4, 'Fio vem do modelo e sai numérico');
+assert.equal(prop('Afiação', invGraal), 4, 'Afiação idem');
+// Peça sem Fio precisa dar 0 — undefined faria a equação inteira virar NaN.
+assert.equal(prop('Fio', { items: [simples], catalog: inv.catalog }), 0, 'sem Fio vale 0');
+assert.equal(prop('Afiação', { items: [simples], catalog: inv.catalog }), 0, 'sem Afiação vale 0');
+// A instância vence o modelo: uma lâmina afiada não muda o catálogo inteiro.
+assert.equal(prop('Fio', { items: [{ ...espada, fio: 2 }], catalog: [GRAAL_TPL] }), 2, 'instância sobrepõe o modelo');
+// Trava do Livro (5.5): Fio ≤ Liga − 1. Aqui só o dado; quem valida é o audit.
+assert.ok(prop('Fio', invGraal) <= prop('Liga', invGraal) - 1, 'Fio 4 cabe na Liga 5');
+
 // --- container: multiplicador cai no modelo, com default 1 ---
 const mochila = { id: 'i1', nome: 'Mochila', modeloId: 'tplMochila', peso: 2, ehContainer: true };
 assert.equal(prop('Multiplicador de Pressão', { items: [mochila], catalog: inv.catalog }), 0.5);
@@ -76,7 +90,7 @@ assert.equal(prop('Cor', inv), 0, 'propriedade inexistente vale 0');
 // --- o prefixo cortado em _resolveSheetRef bate com as chaves do mapa ---
 assert.equal('Item: Peso/Pressão'.slice(6), 'Peso/Pressão');
 assert.ok(src.includes("ref.startsWith('Item: ')"), 'branch de Item: some do _resolveSheetRef');
-for (const chave of ['Peso/Pressão', 'Tamanho', 'Preço', 'Liga', 'Quantidade', 'Multiplicador de Pressão', 'Capacidade do Container']) {
+for (const chave of ['Peso/Pressão', 'Tamanho', 'Preço', 'Liga', 'Fio', 'Afiação', 'Quantidade', 'Multiplicador de Pressão', 'Capacidade do Container']) {
   assert.equal(prop(chave, inv) === 0 || typeof prop(chave, inv) === 'number', true);
 }
 

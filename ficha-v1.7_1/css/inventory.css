@@ -1265,6 +1265,21 @@
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
     color: var(--lr-gold);
 }
+/* Canais de Essência: parcelas paralelas ao dano físico, uma tag por cor. */
+.atk-canais {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.atk-canal {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 10px;
+    border: 1px solid var(--lr-border, rgba(255, 255, 255, .15));
+    white-space: nowrap;
+}
 .atk-val strong { font-size: 1rem; }
 .atk-delta {
     margin-left: 4px;

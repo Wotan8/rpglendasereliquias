@@ -24,9 +24,9 @@ const [eq, dvs, bp, skills] = await Promise.all(['equipment', 'derivedValues', '
 const artigo = (await db.doc(ARTIGO).get()).data();
 
 const BL = dvs.find(d => d.nome === 'Blindagem').id;
-const DESLOC = dvs.find(d => d.nome === 'Desloc. Terrestre').id;
 const FURT = skills.find(s => s.nome === 'Furtividade').id;
 const NOME = Object.fromEntries(bp.map(p => [p.id, p.nome]));
+const NOME_VD = Object.fromEntries(dvs.map(d => [d.id, d.nome]));
 
 const blDe = e => (e.valoresDerivadosVinculados || []).find(v => v.id === BL)?.modificador ?? 0;
 const slotsDe = e => 1 + (e.slotsAdicionais || []).reduce((a, s) => a + s.quantidade, 0);
@@ -37,10 +37,10 @@ const penDe = e => {
     const p = [];
     const des = (e.atributosVinculados || []).find(a => a.id === 'attr_des')?.modificador;
     const furt = (e.periciasVinculadas || []).find(x => x.id === FURT)?.modificador;
-    const dl = (e.valoresDerivadosVinculados || []).find(v => v.id === DESLOC)?.modificador;
     if (des) p.push(`DES ${des}`);
     if (furt) p.push(`Furt ${furt}`);
-    if (dl) p.push(`Desloc ${dl}`);
+    for (const v of e.valoresDerivadosVinculados || [])
+        if (v.id !== BL && v.modificador < 0) p.push(`${NOME_VD[v.id] || v.id} ${v.modificador}`);
     return p.join(' · ') || '—';
 };
 const coberturaDe = e => {

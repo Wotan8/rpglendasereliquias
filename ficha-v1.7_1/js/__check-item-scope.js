@@ -10,6 +10,8 @@ const DVS = [
     { key: 'BONUS_DANO', nome: 'Bônus de Dano', icone: '💥', escopoItem: 'dano' },
     { key: 'APARAR', nome: 'Teste de Aparar', icone: '🛡️', escopoItem: 'coluna' },
     { key: 'CARGA', nome: 'Carga', icone: '⚖️', escopoItem: '' },   // global, deve ser ignorado
+    { key: 'DANO_VERMELHA', nome: 'Dano Vermelha', icone: '🔥', escopoItem: 'dano-canal' },
+    { key: 'DANO_VERDE', nome: 'Dano Verde', icone: '🌿', escopoItem: 'dano-canal' },
 ];
 
 // Base global do personagem (raça/classe/peculiaridade já somadas)
@@ -104,6 +106,42 @@ const CATALOG = [{ id: 'tpl-espada', nome: 'Espada Longa', formulaDano: '1d10' }
     assert.strictEqual(r.temAlgo, false, 'item sem dano e sem delta não entra');
 }
 
+// --- 7b) Canal de Essência NÃO entra na fórmula física ---
+// Era o bug: todo escopoItem 'dano' caía num somaDano único, então a Blindagem
+// comum do alvo absorvia o dano elemental.
+{
+    const derived = { ...DERIVED, DANO_VERMELHA: 4, DANO_VERDE: 2 };
+    const ctx = { derivedValues: DVS, derived, itemBonuses: {}, catalog: CATALOG };
+    const r = computeItemScopedTotals({ id: 'espada', modeloId: 'tpl-espada' }, ctx);
+
+    assert.strictEqual(r.dano, '1d10+2', `físico só com o Dano genérico, veio ${r.dano}`);
+    assert.strictEqual(r.canais.length, 2, 'dois canais separados');
+    assert.strictEqual(r.canais.find(c => c.key === 'DANO_VERMELHA').total, 4, 'Vermelha 4 isolada');
+    assert.strictEqual(r.canais.find(c => c.key === 'DANO_VERDE').total, 2, 'Verde 2 isolada');
+}
+
+// --- 7c) Canal recebe o delta do item, e canal zerado não aparece ---
+{
+    const derived = { ...DERIVED, DANO_VERMELHA: 0, DANO_VERDE: 0 };
+    const itemBonuses = { tocha: { 'DERIVED:DANO_VERMELHA': 3 } };
+    const ctx = { derivedValues: DVS, derived, itemBonuses, catalog: [] };
+    const r = computeItemScopedTotals({ id: 'tocha', formulaDano: '1d4' }, ctx);
+
+    assert.strictEqual(r.canais.length, 1, 'canal zerado fica fora');
+    assert.strictEqual(r.canais[0].key, 'DANO_VERMELHA', 'sobrou a Vermelha do item');
+    assert.strictEqual(r.canais[0].total, 3, 'base 0 + 3 do item');
+}
+
+// --- 7d) Sem fórmula de dano não há canal (mesma regra do dano genérico) ---
+{
+    const derived = { ...DERIVED, DANO_VERMELHA: 4 };
+    const ctx = { derivedValues: DVS, derived, itemBonuses: {}, catalog: [] };
+    const r = computeItemScopedTotals({ id: 'anel' }, ctx);
+
+    assert.deepStrictEqual(r.canais, [], 'anel sem dado não carrega canal');
+    assert.strictEqual(r.temAlgo, false, 'e não entra na tabela');
+}
+
 // --- 8) Operadores SET / MULT / DIV do bag do item ---
 {
     assert.strictEqual(applyItemBag(5, 'ACERTO', { 'SET:DERIVED:ACERTO': 10 }), 10, 'SET sobrescreve a base');
@@ -121,4 +159,4 @@ const CATALOG = [{ id: 'tpl-espada', nome: 'Espada Longa', formulaDano: '1d10' }
     assert.strictEqual(getItemFormulaDano({}, CATALOG), '', 'sem fórmula = string vazia');
 }
 
-console.log('✅ item-scope-calc: 9 grupos de asserções passaram.');
+console.log('✅ item-scope-calc: 12 grupos de asserções passaram.');

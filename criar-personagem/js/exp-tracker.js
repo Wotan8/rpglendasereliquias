@@ -1,11 +1,13 @@
 /* ===== EXP TRACKER — Controle centralizado de EXP ===== */
 
 /* Teto de EXP líquida que as Desvantagens avulsas podem render na criação.
-   ≈5 sessões de jogo (a rubrica do Mestre paga 2-4 EXP por sessão). Sem ele,
-   pegar todas as desvantagens rende ~160 EXP contra os ~62 da EXP Inicial —
+   ≈8 sessões de jogo (a rubrica do Mestre paga 2-4 EXP por sessão). Sem ele,
+   pegar todas as desvantagens rende ~200 EXP contra os ~62 da EXP Inicial —
    empilhar defeito viraria a estratégia dominante da criação. Só limita as
-   individuais (`pec_`); as herdadas de raça/classe/tribo não são escolhidas. */
-const TETO_GANHO_DESVANTAGENS = 20;
+   individuais (`pec_`); as herdadas de raça/classe/tribo não são escolhidas.
+   30 paga o Nanismo até quase o Nv4; o Nv5 fica de propósito como escolha de
+   sabor, não de otimização. */
+const TETO_GANHO_DESVANTAGENS = 30;
 
 const ExpTracker = {
     _listeners: [],

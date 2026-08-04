@@ -792,6 +792,11 @@ const _ME_ITEM_PROPS = {
     'Capacidade do Container': (it, tpl) => it.capacidadeContainer ?? tpl?.capacidadeContainer,
     'Preço': (it, tpl) => it.preco ?? tpl?.preco,
     'Liga': (it, tpl) => it.liga ?? tpl?.liga,
+    // Fio é o poder da peça e Afiação é o gume mantido sobre ele (Livro, 5.5/5.6).
+    // Os dois entram na Equação de Dano: `FOR + Item: Fio + Item: Afiação`.
+    // Peça sem Fio vale 0 — não undefined, senão a equação inteira vira NaN.
+    'Fio': (it, tpl) => it.fio ?? tpl?.fio ?? 0,
+    'Afiação': (it, tpl) => it.afiacao ?? tpl?.afiacao ?? 0,
     'Quantidade': it => it.quantidade ?? 1
 };
 

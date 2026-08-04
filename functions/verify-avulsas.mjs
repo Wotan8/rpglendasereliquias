@@ -64,7 +64,7 @@ const base = rodar([]);
 console.log('BASE (Humano, FOR/DES/VIG 2, Agilidade 2)');
 console.log('  ', fmt(base), '\n');
 
-for (const [nome, niveis] of [['Gigantismo', [1, 2, 3]], ['Nanismo', [1, 2, 3]], ['Corpulento', [1, 3]], ['Franzino', [1, 3]], ['Glutão', [1, 2]], ['Manco', [1, 2]], ['Caolho', [1]], ['Veterano de Guerra', [1, 3]], ['Olfato Apurado', [1, 2, 3]]]) {
+for (const [nome, niveis] of [["Gigantismo", [1,2,3,4,5]], ["Nanismo", [1,2,3,4,5]], ['Corpulento', [1,3,4,5]], ['Franzino', [1,3,4]], ['Glutão', [1, 2]], ['Manco', [1,2,3,4]], ['Caolho', [1,2,3]], ['Veterano de Guerra', [1, 3]], ['Olfato Apurado', [1, 2, 3]]]) {
   const pec = pecByName(nome);
   if (!pec) { console.log(`${nome}: NÃO ENCONTRADA`); continue; }
   console.log(nome);

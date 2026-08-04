@@ -3856,3 +3856,127 @@ html.dark .detail-aura-grade {
         gap: 8px;
     }
 }
+
+/* =====================================================================
+   ABA ALIADOS — LISTA DE CARDS (#aliadosGrid)
+   ---------------------------------------------------------------------
+   Montada em innerHTML por js/aliados.js. Vinha com hex cravado no style
+   inline (#1e293b, #334155, #8b5cf6, #e2e8f0, #94a3b8 e a escala de
+   Lealdade), então o card ficava com cor de tema escuro também no claro.
+   Aqui é só var(--lr-…), e vira sozinho com o tema.
+
+   Escopado em #aliadosGrid porque `.npc-card` também existe no Painel do
+   Mestre e no wizard, com estilos próprios — daqui não se toca neles.
+   A Ficha de Aliado em si (#aliadoNpcModal) mora em shared/ficha-aliado.css.
+   ===================================================================== */
+
+#aliadosGrid .npc-card {
+    background: var(--lr-surface);
+    color: var(--lr-text-1);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
+    padding: var(--lr-space-3);
+    cursor: pointer;
+    transition: transform var(--lr-t-fast) var(--lr-ease);
+}
+
+#aliadosGrid .aliado-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--lr-space-2);
+    border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
+    padding-bottom: var(--lr-space-2);
+    margin-bottom: var(--lr-space-2);
+}
+
+#aliadosGrid .aliado-card-nome {
+    font-weight: 700;
+    font-size: var(--lr-fs-md);
+    color: var(--lr-gold-2);
+}
+
+#aliadosGrid .aliado-card-nivel {
+    flex: 0 0 auto;
+    font-size: var(--lr-fs-xs);
+    background: var(--lr-bg-1);
+    color: var(--lr-text-2);
+    border-radius: var(--lr-radius-sm);
+    padding: var(--lr-space-1) var(--lr-space-2);
+}
+
+#aliadosGrid .aliado-card-img {
+    display: block;
+    max-width: 100%;
+    max-height: 100px;
+    margin: 0 auto var(--lr-space-2);
+    border-radius: var(--lr-radius-sm);
+    object-fit: cover;
+}
+
+#aliadosGrid .aliado-card-tipo {
+    font-size: var(--lr-fs-sm);
+    color: var(--lr-text-2);
+}
+
+#aliadosGrid .aliado-card-leal {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-2);
+    margin-top: var(--lr-space-2);
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2);
+}
+
+/* O "/ 10" era `opacity:.6`, o que derrubava o texto secundário para ~3:1
+   no papel. Quem separa o número da escala é o peso e a cor da faixa. */
+#aliadosGrid .aliado-card-leal-num {
+    min-width: 2.2em;
+    text-align: center;
+    font-size: var(--lr-fs-md);
+}
+
+#aliadosGrid .aliado-card-leal-btn {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    line-height: 1;
+    font-size: var(--lr-fs-sm);
+    font-weight: 700;
+    background: var(--lr-bg-1);
+    color: var(--lr-text-1);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius-sm);
+    cursor: pointer;
+    transition: background-color var(--lr-t-fast) var(--lr-ease);
+}
+
+#aliadosGrid .aliado-card-leal-btn:hover:not(:disabled) {
+    background: var(--lr-surface-2);
+}
+
+#aliadosGrid .aliado-card-leal-btn:disabled {
+    opacity: var(--lr-op-disabled);
+    cursor: not-allowed;
+}
+
+#aliadosGrid .aliado-card-hint {
+    margin-top: var(--lr-space-1);
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2);
+}
+
+/* Escala de Lealdade (0–10) — cores de SIGNIFICADO do sistema, nunca do
+   conteúdo: perigo, atenção, sucesso e místico. Medido sobre o fundo do
+   card (--lr-surface): no claro dá 6.8 / 9.6 / 6.4 / 12.2:1. */
+#aliadosGrid .leal-perigo  { color: var(--lr-blood-2); }
+#aliadosGrid .leal-atencao { color: var(--lr-gold-2); }
+#aliadosGrid .leal-sucesso { color: var(--lr-nature); }
+#aliadosGrid .leal-mistico { color: var(--lr-abyssal-2); }
+
+/* No ferro do tema escuro os dois extremos não passam: --lr-blood-2 cai
+   para 3.71:1 (por isso o manual reserva -3 para texto) e --lr-abyssal-2
+   para 4.23:1 — e não existe um "-3" abissal, então o roxo é clareado com
+   o próprio texto do tema. Escuro: 6.4 / 9.7 / 5.8 / 5.6:1. */
+html.dark #aliadosGrid .leal-perigo  { color: var(--lr-blood-3); }
+html.dark #aliadosGrid .leal-mistico { color: color-mix(in srgb, var(--lr-abyssal-2) 82%, var(--lr-text-1)); }

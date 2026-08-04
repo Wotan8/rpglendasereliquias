@@ -80,16 +80,33 @@ for (const e of eq) {
 
     /* --- Arma / projétil --- */
     if (ehArma || tags.some(t => ['Flecha', 'Virote', 'Munição'].includes(t))) {
-        let fio = 0; const canais = [];
+        // O Fio agora é campo. Os canais arcanos continuam saindo dos vínculos
+        // de Dano por Essência — um por canal, e a soma deles também não passa
+        // do Fio (Livro, 5.5).
+        const fio = Number(e.fio) || 0;
+        const afiacao = Number(e.afiacao) || 0;
+        const liga = e.liga == null ? null : Number(e.liga);
+        const canais = [];
+        let arcanoTotal = 0;
         for (const v of vinc) {
             const n = vdNome(v.id);
-            if (!n.startsWith('Dano') && !n.startsWith('Acerto')) continue;
+            if (!/^Dano .+/.test(n)) continue;               // Dano <Essência>
             const f = Array.isArray(v.equacao) ? fioDaEquacao(v.equacao) : (Number(v.modificador) || 0);
-            fio += f;
+            arcanoTotal += f;
             if (f) canais.push(`${n} ${f > 0 ? '+' : ''}${f}`);
         }
         armas.push({ nome: e.nome, dado: e.formulaDano || '—', cat: e.categoriaArma || '—', fio, grau: fio + 1, canais });
-        if (fio > 4) problemas.push(`FIO ACIMA DO TETO · ${e.nome}: ${fio} Fios (máximo 4 = Grau 5)`);
+
+        /* As três travas encaixadas do Livro, 5.5 */
+        if (fio > 4) problemas.push(`FIO ACIMA DO TETO · ${e.nome}: ${fio} (máximo 4 = Grau 5)`);
+        if (liga != null && fio > liga - 1)
+            problemas.push(`FIO ACIMA DA LIGA · ${e.nome}: Fio ${fio} com Liga ${liga} (o teto é ${Math.max(0, liga - 1)})`);
+        if (afiacao > fio)
+            problemas.push(`AFIAÇÃO ACIMA DO FIO · ${e.nome}: Afiação ${afiacao} com Fio ${fio}`);
+        if (arcanoTotal > fio)
+            problemas.push(`AFIAÇÃO ARCANA ACIMA DO FIO · ${e.nome}: ${arcanoTotal} somando os canais, com Fio ${fio}`);
+        if (fio > 0 && liga == null)
+            problemas.push(`FIO SEM LIGA · ${e.nome}: Fio ${fio} numa peça sem Liga declarada`);
         // Rede e Enredantes não causam dano por design — não são falha de cadastro.
         if (ehArma && !e.formulaDano && !tags.includes('Enredante')) problemas.push(`ARMA SEM DADO · ${e.nome}: tipo Arma sem formulaDano`);
         if (ehArma && !e.categoriaArma) problemas.push(`ARMA SEM CATEGORIA · ${e.nome}`);

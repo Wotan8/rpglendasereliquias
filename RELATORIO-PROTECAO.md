@@ -1,6 +1,6 @@
 # Capítulo 5 — o que mudou na proteção
 
-Gerado do Firestore em 30/07/2026. Fonte da verdade: coleção
+Gerado do Firestore em 31/07/2026. Fonte da verdade: coleção
 `system/data/equipment`. O capítulo publicado é `worldbuilding-articles/art-regras-jogador-05` (campo `contentHTML`).
 
 ⭑ = peça nova, criada nesta revisão.
@@ -70,24 +70,24 @@ a classe Média deixaria de ter razão de existir.
 
 | Peça | Classe | Slots | Blindagem | Cobertura | Peso | Preço | Penalidade |
 |---|---|---|---|---|---|---|---|
-| Armadura de Torneio | Pesada | 13 | **3,90** | Torso, Cabeça, Pescoço, Costas, Ombro×2, Braço×2, Cintura, Pernas×2, Pé×2 | 6 | 20.000 | DES -3 · Furt -5 · Desloc -2 |
+| Armadura de Torneio | Pesada | 13 | **3,90** | Torso, Cabeça, Pescoço, Costas, Ombro×2, Braço×2, Cintura, Pernas×2, Pé×2 | 6 | 20.000 | DES -3 · Furt -5 · Desloc. Terrestre -2 |
 | Armadura Completa | Pesada | 11 | **3,30** | Torso, Costas, Ombro×2, Braço×2, Cintura, Pernas×2, Pé×2 | 5 | 12.000 | DES -2 · Furt -4 |
 | Cota de Placas | Pesada | 8 | **2,40** | Torso, Pescoço, Costas, Ombro×2, Braço×2, Cintura | 4 | 5.500 | DES -1 · Furt -3 |
 | Meia-Armadura | Pesada | 8 | **2,40** | Torso, Cabeça, Pescoço, Costas, Ombro×2, Braço×2 | 4 | 9.000 | DES -1 · Furt -3 |
 | Cota de Malha | Média | 7 | **1,54** | Torso, Costas, Ombro×2, Braço×2, Cintura | 1 | 3.000 | DES -1 · Furt -2 |
 | Peitoral de Aço | Média | 6 | **1,32** | Torso, Pescoço, Costas, Ombro×2, Cintura | 1 | 2.800 | DES -1 · Furt -2 |
-| Escudo de Torre | Escudo | 1 | **1,20** | Mão | 4 | 1.800 | Desloc -1 |
+| Escudo de Torre | Escudo | 1 | **1,20** | Mão | 4 | 1.800 | Acerto -2 · Desloc. Terrestre -1 |
 | Brigandina | Média | 5 | **1,10** | Torso, Costas, Ombro×2, Cintura | 3 | 3.500 | DES -1 · Furt -1 |
-| Escudo Grande | Escudo | 1 | **0,90** | Mão | 3 | 1.000 | — |
+| Escudo Grande | Escudo | 1 | **0,90** | Mão | 3 | 1.000 | Acerto -1 |
 | Couro Cravejado | Média | 4 | **0,88** | Torso, Costas, Ombro×2 | 2 | 1.800 | Furt -1 |
 | Couro Reforçado | Média | 4 | **0,88** | Torso, Costas, Ombro×2 | 2 | 1.500 | Furt -1 |
 | Armadura Leve | Leve | 4 | **0,80** | Torso, Costas, Ombro×2 | 1 | 1.200 | — |
 | Braçadeiras de Placas ⭑ | Pesada | 2 | **0,60** | Braço×2 | 1 | 2.200 | DES -1 |
 | Couraça de Placas ⭑ | Pesada | 2 | **0,60** | Torso, Costas | 2 | 3.800 | Furt -1 |
 | Couro Batido | Leve | 3 | **0,60** | Torso, Costas, Cintura | 1 | 800 | — |
-| Escarpes de Placas ⭑ | Pesada | 2 | **0,60** | Pé×2 | 1 | 4.000 | Furt -1 · Desloc -1 |
+| Escarpes de Placas ⭑ | Pesada | 2 | **0,60** | Pé×2 | 1 | 4.000 | Furt -1 · Desloc. Terrestre -1 |
 | Escudo Médio | Escudo | 1 | **0,60** | Mão | 1 | 500 | — |
-| Grevas de Placas ⭑ | Pesada | 2 | **0,60** | Pernas×2 | 1 | 5.000 | DES -1 · Furt -1 · Desloc -1 |
+| Grevas de Placas ⭑ | Pesada | 2 | **0,60** | Pernas×2 | 1 | 5.000 | DES -1 · Furt -1 · Desloc. Terrestre -1 |
 | Ombreiras de Placas ⭑ | Pesada | 2 | **0,60** | Ombro×2 | 1 | 2.000 | — |
 | Botas Ferradas ⭑ | Média | 2 | **0,44** | Pé×2 | 1 | 1.600 | Furt -1 |
 | Braçadeiras de Couro ⭑ | Média | 2 | **0,44** | Braço×2 | 1 | 900 | — |
@@ -115,32 +115,13 @@ a classe Média deixaria de ter razão de existir.
 
 Nenhuma — todos os valores que o capítulo já traz conferem com o banco.
 
-## B. Peças que FALTAM no capítulo (18)
+## B. Peças que FALTAM no capítulo (0)
 
-| Peça | Classe | Slots | Blindagem | Cobertura | Peso | Preço | Penalidade |
-|---|---|---|---|---|---|---|---|
-| Braçadeiras de Placas ⭑ | Pesada | 2 | **0,60** | Braço×2 | 1 | 2.200 | DES -1 |
-| Couraça de Placas ⭑ | Pesada | 2 | **0,60** | Torso, Costas | 2 | 3.800 | Furt -1 |
-| Escarpes de Placas ⭑ | Pesada | 2 | **0,60** | Pé×2 | 1 | 4.000 | Furt -1 · Desloc -1 |
-| Grevas de Placas ⭑ | Pesada | 2 | **0,60** | Pernas×2 | 1 | 5.000 | DES -1 · Furt -1 · Desloc -1 |
-| Ombreiras de Placas ⭑ | Pesada | 2 | **0,60** | Ombro×2 | 1 | 2.000 | — |
-| Botas Ferradas ⭑ | Média | 2 | **0,44** | Pé×2 | 1 | 1.600 | Furt -1 |
-| Braçadeiras de Couro ⭑ | Média | 2 | **0,44** | Braço×2 | 1 | 900 | — |
-| Calças de Malha ⭑ | Média | 2 | **0,44** | Pernas×2 | 1 | 1.900 | DES -1 · Furt -1 |
-| Mangas Acolchoadas ⭑ | Leve | 2 | **0,40** | Braço×2 | 1 | 800 | DES -1 · Furt -1 |
-| Elmo de Placas ⭑ | Pesada | 1 | **0,30** | Cabeça | 1 | 5.000 | DES -1 · Furt -1 |
-| Faldar de Placas ⭑ | Pesada | 1 | **0,30** | Cintura | 1 | 1.000 | — |
-| Gorjal de Aço ⭑ | Pesada | 1 | **0,30** | Pescoço | 1 | 1.000 | Furt -1 |
-| Cinturão Rebitado ⭑ | Média | 1 | **0,22** | Cintura | 1 | 500 | — |
-| Coifa de Malha ⭑ | Média | 1 | **0,22** | Cabeça | 1 | 1.600 | Furt -1 |
-| Gorjal de Malha ⭑ | Média | 1 | **0,22** | Pescoço | 1 | 500 | — |
-| Capuz Acolchoado ⭑ | Leve | 1 | **0,20** | Cabeça | 1 | 900 | Furt -1 |
-| Cinta Acolchoada ⭑ | Leve | 1 | **0,20** | Cintura | 1 | 400 | — |
-| Gola de Couro ⭑ | Leve | 1 | **0,20** | Pescoço | 1 | 400 | — |
+Nenhuma.
 
-## C. Linhas que já estão certas (18)
+## C. Linhas que já estão certas (36)
 
-Armadura de Torneio · Armadura Completa · Cota de Placas · Meia-Armadura · Cota de Malha · Peitoral de Aço · Escudo de Torre · Brigandina · Escudo Grande · Couro Cravejado · Couro Reforçado · Armadura Leve · Couro Batido · Escudo Médio · Couro Leve · Gibão Acolchoado · Manto de Linho · Broquel
+Armadura de Torneio · Armadura Completa · Cota de Placas · Meia-Armadura · Cota de Malha · Peitoral de Aço · Escudo de Torre · Brigandina · Escudo Grande · Couro Cravejado · Couro Reforçado · Armadura Leve · Braçadeiras de Placas · Couraça de Placas · Couro Batido · Escarpes de Placas · Escudo Médio · Grevas de Placas · Ombreiras de Placas · Botas Ferradas · Braçadeiras de Couro · Calças de Malha · Couro Leve · Gibão Acolchoado · Mangas Acolchoadas · Manto de Linho · Broquel · Elmo de Placas · Faldar de Placas · Gorjal de Aço · Cinturão Rebitado · Coifa de Malha · Gorjal de Malha · Capuz Acolchoado · Cinta Acolchoada · Gola de Couro
 
 ## D. Outras mudanças de dado que o texto pode citar
 

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Check — Lealdade</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #14110f; color: #eee; padding: 24px; }
+        #res div { margin: 3px 0; font-size: .92rem; }
+        .ok { color: #4ade80; } .fail { color: #ef4444; font-weight: 700; }
+        h1 { font-size: 1.2rem; }
+        p.nota { color: #999; font-size: .85rem; max-width: 60ch; }
+    </style>
+</head>
+<body>
+    <h1>🤝 Lealdade — check</h1>
+    <p class="nota">
+        A Lealdade mora no <strong>vínculo</strong> (<code>npcs[].vinculos[n].lealdade</code>), não no NPC:
+        o mesmo aliado anda com dois personagens e confia em cada um de um jeito. É esse o ponto que
+        quebra silenciosamente se a leitura pegar o vínculo errado — por isso o check.
+    </p>
+    <div id="res"></div>
+
+    <script type="module" src="ficha-v1.7_1/js/aliados.js"></script>
+    <script type="module">
+        const res = document.getElementById('res');
+        let falhas = 0;
+        const eq = (nome, obtido, esperado) => {
+            const ok = obtido === esperado;
+            if (!ok) falhas++;
+            res.insertAdjacentHTML('beforeend',
+                `<div class="${ok ? 'ok' : 'fail'}">${ok ? '✅' : '❌'} ${nome} → <code>${obtido}</code>${ok ? '' : ` (esperado <code>${esperado}</code>)`}</div>`);
+        };
+
+        // aliados.js expõe window.lealdadeDe ao carregar (import do Firebase é assíncrono)
+        const pronto = await new Promise(r => {
+            let t = 0;
+            const i = setInterval(() => {
+                if (window.lealdadeDe || ++t > 60) { clearInterval(i); r(!!window.lealdadeDe); }
+            }, 50);
+        });
+        if (!pronto) {
+            res.innerHTML = '<div class="fail">❌ window.lealdadeDe não apareceu — aliados.js não carregou.</div>';
+        } else {
+            const L = window.lealdadeDe;
+
+            // O caso que importa: um NPC que anda com dois personagens diferentes.
+            const lobo = { nome: 'Lobo', vinculos: [
+                { tipo: 'personagem', id: 'charA', lealdade: 7 },
+                { tipo: 'personagem', id: 'charB', lealdade: 2 },
+                { tipo: 'mesa', id: 'mesa1' },
+            ] };
+            eq('lealdade com charA', L(lobo, 'charA'), 7);
+            eq('lealdade com charB (não pode vazar a do A)', L(lobo, 'charB'), 2);
+            eq('personagem sem vínculo', L(lobo, 'charZ'), 0);
+
+            // Vínculo antigo, gravado antes da Lealdade existir.
+            eq('vínculo sem o campo → 0', L({ vinculos: [{ tipo: 'personagem', id: 'c1' }] }, 'c1'), 0);
+
+            // Um vínculo de mesa com o mesmo id não pode ser confundido com o do personagem.
+            eq('vínculo de mesa com id igual é ignorado',
+               L({ vinculos: [{ tipo: 'mesa', id: 'c1', lealdade: 9 }] }, 'c1'), 0);
+
+            // Clamp na leitura, para dado sujo não pintar a barra fora da escala.
+            eq('acima de 10 satura', L({ vinculos: [{ tipo: 'personagem', id: 'c1', lealdade: 44 }] }, 'c1'), 10);
+            eq('negativo satura em 0', L({ vinculos: [{ tipo: 'personagem', id: 'c1', lealdade: -3 }] }, 'c1'), 0);
+            eq('texto do Firestore vira número', L({ vinculos: [{ tipo: 'personagem', id: 'c1', lealdade: '5' }] }, 'c1'), 5);
+            eq('lixo não-numérico → 0', L({ vinculos: [{ tipo: 'personagem', id: 'c1', lealdade: 'muita' }] }, 'c1'), 0);
+
+            // Bordas
+            eq('NPC sem vinculos', L({}, 'c1'), 0);
+            eq('NPC undefined', L(undefined, 'c1'), 0);
+
+            res.insertAdjacentHTML('beforeend',
+                `<div style="margin-top:14px;font-weight:700" class="${falhas ? 'fail' : 'ok'}">${falhas ? `${falhas} falha(s)` : 'todos passaram'}</div>`);
+        }
+    </script>
+</body>
+</html>

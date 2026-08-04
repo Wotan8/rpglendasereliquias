@@ -559,9 +559,13 @@ function renderActiveEffects() {
         }
     }
     const temDano = linhas.some(l => l.dano);
+    // Canais de Essência: parcelas paralelas ao dano físico, cada uma reduzida
+    // pela Blindagem da própria cor no alvo. Uma coluna só, com todas.
+    const temCanais = linhas.some(l => l.canais && l.canais.length);
 
     let html = '<thead><tr><th class="atk-col-item">Item</th>';
     if (temDano) html += '<th>💥 Dano</th>';
+    if (temCanais) html += '<th title="Cada canal é reduzido pela Blindagem daquela Essência no alvo, não pela Blindagem física.">🌈 Canais</th>';
     for (const c of colDefs) html += `<th title="${_escHtml(c.nome)}">${c.icone} ${_escHtml(c.nome)}</th>`;
     html += '</tr></thead><tbody>';
 
@@ -573,6 +577,11 @@ function renderActiveEffects() {
                 ${estado ? `<small class="atk-item-state">${estado.icon} ${estado.label}</small>` : ''}
             </td>`;
         if (temDano) html += `<td class="atk-dano">${l.dano ? _escHtml(l.dano) : '—'}</td>`;
+        if (temCanais) {
+            const cs = (l.canais || []).map(c =>
+                `<span class="atk-canal" title="${_escHtml(c.nome)}">${c.icone} ${c.total}</span>`).join('');
+            html += `<td class="atk-canais">${cs || '—'}</td>`;
+        }
         for (const cd of colDefs) {
             const c = l.colunas.find(x => x.key === cd.key);
             if (!c) { html += '<td class="atk-val">—</td>'; continue; }
@@ -1773,10 +1782,20 @@ window.openItemDetail = function(itemId) {
                 <span class="inv-escopo-total">= ${_escHtml(c.prefixo)}${c.total}${_escHtml(c.sufixo)}</span>
             </div>`).join('');
 
-        if (r.dano || linhas) {
+        // Canal de Essência é parcela separada: o alvo reduz cada uma com a
+        // Blindagem da própria cor, então cada canal ganha a sua linha.
+        const canaisHtml = (r.canais || []).map(c =>
+            `<div class="inv-escopo-row">
+                <span class="inv-escopo-nome">${c.icone} ${_escHtml(c.nome)}</span>
+                <span class="inv-escopo-calc"><em>canal separado</em></span>
+                <span class="inv-escopo-total inv-escopo-dano">${c.total > 0 ? '+' : ''}${c.total}</span>
+            </div>`).join('');
+
+        if (r.dano || canaisHtml || linhas) {
             escopoHtml = `<div class="inv-detail-escopo${ativo ? '' : ' inv-escopo-inativo'}">
                 <span class="inv-detail-label">⚔️ Com este item${ativo ? '' : ' <em>(efeitos inativos — equipe na forma prevista)</em>'}</span>
                 ${r.dano ? `<div class="inv-escopo-row"><span class="inv-escopo-nome">💥 Dano</span><span class="inv-escopo-total inv-escopo-dano">${_escHtml(r.dano)}</span></div>` : ''}
+                ${canaisHtml}
                 ${linhas}
             </div>`;
         }
