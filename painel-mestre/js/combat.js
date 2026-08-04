@@ -420,6 +420,10 @@ export function renderCombatList() {
 
 /** Só redesenha. Quem veio de fora (listener) não pode regravar o que recebeu. */
 function pintarCombate() {
+    // Selo com o nº de participantes na sub-aba ⚔️ Combate. Fica aqui, e não em
+    // `renderCombatList`, porque o listener do Tabuleiro entra direto por esta
+    // função — é por aqui que TODO repinte passa.
+    window._mesaAtualizarSelos?.();
     const el = document.getElementById('combatList'); if (!el) return;
     const cenas = barraDeCenas();
     if (!S.combatParticipants.length) { el.innerHTML = cenas + '<div class="no-combat">Nenhum participante nesta cena</div>'; return; }

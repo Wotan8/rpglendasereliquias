@@ -7,6 +7,7 @@ import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { notifyUsers } from './notify.js';
 import { renderCombatList } from './combat.js';
+import { initPrefsDaMesa } from './area-mesas-prefs.js';
 
 export async function onTabActivated() { await loadMesas(); }
 
@@ -119,14 +120,16 @@ window.authenticateMesa = function() {
     openMesa();
 };
 
-function openMesa() {
+async function openMesa() {
     document.getElementById('mesaContentName').textContent = '🎲 ' + (S.currentMesaData?.nome || '');
     showScreen('mesa-content');
-    // Reset to first subtab
-    switchMesaSubTab('m-jogadores');
-    loadMesaPlayers();
     // Carrega combate persistido (sincronizado com o Tabuleiro)
     if (window._loadCombatFromMesa) window._loadCombatFromMesa();
+    // A aba que abre vem da FASE da sessão, não de um nome cravado: em preparo
+    // ou ao vivo cai em 🎬 Sessão, sem sessão aberta cai em 🕰️ Frentes. Antes
+    // abria sempre em Jogadores — a aba que o mestre menos precisa.
+    // `switchMesaSubTab` já dispara o loader da aba escolhida.
+    switchMesaSubTab(await initPrefsDaMesa(S.currentMesaId));
 }
 
 // ===== TABULEIRO (VTT) =====

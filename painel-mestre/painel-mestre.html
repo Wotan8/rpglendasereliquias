@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0E1117">
     <title>Lendas e Relíquias — Painel do Mestre</title>
-    <link rel="stylesheet" href="css/base.css?v=1">
-    <link rel="stylesheet" href="css/layout.css?v=4">
-    <link rel="stylesheet" href="css/tabs.css?v=1">
+    <link rel="stylesheet" href="css/base.css?v=2">
+    <link rel="stylesheet" href="css/layout.css?v=5">
+    <link rel="stylesheet" href="css/tabs.css?v=2">
     <link rel="stylesheet" href="css/modais.css?v=2">
-    <link rel="stylesheet" href="css/area-mesas.css?v=3">
+    <link rel="stylesheet" href="css/area-mesas.css?v=4">
     <link rel="stylesheet" href="css/area-npcs.css?v=6">
     <link rel="stylesheet" href="css/area-economica.css?v=2">
     <link rel="stylesheet" href="css/area-apoio.css?v=1">
@@ -95,24 +95,50 @@
                         <button class="btn btn-secondary btn-small" onclick="closeMesa()">← Mesas</button>
                         <button class="btn btn-primary btn-small" onclick="openTabuleiro()" title="Abrir o Tabuleiro (VTT) desta mesa em modo secreto">🗺️ Tabuleiro</button>
                         <h2 id="mesaContentName" style="font-size:1.1rem;font-weight:800;color:var(--primary);margin:0"></h2>
+                        <div class="mesa-ajustes">
+                            <button class="mesa-ajuste-btn" id="btnMesaDensidade" onclick="mesaAlternarDensidade()" title="Alternar densidade da área Mesa">▤ Confortável</button>
+                            <button class="mesa-ajuste-btn" id="btnMesaAbas" onclick="mesaAlternarConfigAbas()" title="Escolher quais sub-abas aparecem">⚙️ Abas</button>
+                            <div class="mesa-abas-config" id="mesaAbasConfig"></div>
+                        </div>
                         <button class="btn btn-danger btn-small" onclick="openDeleteMesaModal()">🗑️</button>
                     </div>
-                    <div class="sub-tabs">
-                        <button class="sub-tab-btn active" data-subtab="m-jogadores" onclick="switchMesaSubTab('m-jogadores')">👥 Jogadores</button>
-                        <button class="sub-tab-btn" data-subtab="m-personagens" onclick="switchMesaSubTab('m-personagens')">🎭 Personagens</button>
-                        <button class="sub-tab-btn" data-subtab="m-sessao" onclick="switchMesaSubTab('m-sessao')">🎬 Sessão</button>
-                        <button class="sub-tab-btn" data-subtab="m-sessoes" onclick="switchMesaSubTab('m-sessoes')">📜 Histórico de Sessões</button>
-                        <button class="sub-tab-btn" data-subtab="m-frentes" onclick="switchMesaSubTab('m-frentes')">🕰️ Frentes</button>
-                        <button class="sub-tab-btn" data-subtab="m-config" onclick="switchMesaSubTab('m-config')">⚙️ Config</button>
-                        <button class="sub-tab-btn" data-subtab="m-npcs" onclick="switchMesaSubTab('m-npcs')">👹 NPCs</button>
-                        <button class="sub-tab-btn" data-subtab="m-inventario" onclick="switchMesaSubTab('m-inventario')">📦 Kits</button>
-                        <button class="sub-tab-btn" data-subtab="m-notas" onclick="switchMesaSubTab('m-notas')">📝 Notas</button>
-                        <button class="sub-tab-btn" data-subtab="m-combate" onclick="switchMesaSubTab('m-combate')">⚔️ Combate</button>
-                        <button class="sub-tab-btn" data-subtab="m-logs" onclick="switchMesaSubTab('m-logs')">📜 Logs</button>
+                    <!-- Sub-abas em 3 grupos, pelo momento em que o mestre precisa de cada
+                         uma. A ordem dentro do grupo e quais aparecem são configuráveis
+                         (⚙️ Ajustes); a aba que abre sozinha depende da fase da sessão. -->
+                    <div class="sub-tab-grupos" id="mesaSubTabs">
+                        <div class="sub-tab-grupo">
+                            <span class="sub-tab-grupo-nome">Sessão</span>
+                            <div class="sub-tabs" role="tablist" aria-label="Sessão">
+                                <button class="sub-tab-btn" data-subtab="m-sessao" onclick="switchMesaSubTab('m-sessao')">🎬 Sessão</button>
+                                <button class="sub-tab-btn" data-subtab="m-combate" onclick="switchMesaSubTab('m-combate')">⚔️ Combate</button>
+                                <button class="sub-tab-btn" data-subtab="m-personagens" onclick="switchMesaSubTab('m-personagens')">🎭 Personagens</button>
+                                <button class="sub-tab-btn" data-subtab="m-notas" onclick="switchMesaSubTab('m-notas')">📝 Notas</button>
+                            </div>
+                        </div>
+                        <div class="sub-tab-grupo">
+                            <span class="sub-tab-grupo-nome">Campanha</span>
+                            <div class="sub-tabs" role="tablist" aria-label="Campanha">
+                                <button class="sub-tab-btn" data-subtab="m-frentes" onclick="switchMesaSubTab('m-frentes')">🕰️ Frentes</button>
+                                <button class="sub-tab-btn" data-subtab="m-npcs" onclick="switchMesaSubTab('m-npcs')">👹 NPCs</button>
+                                <button class="sub-tab-btn" data-subtab="m-inventario" onclick="switchMesaSubTab('m-inventario')">📦 Kits</button>
+                                <button class="sub-tab-btn" data-subtab="m-sessoes" onclick="switchMesaSubTab('m-sessoes')">📜 Histórico</button>
+                            </div>
+                        </div>
+                        <div class="sub-tab-grupo">
+                            <span class="sub-tab-grupo-nome">Mesa</span>
+                            <div class="sub-tabs" role="tablist" aria-label="Mesa">
+                                <button class="sub-tab-btn" data-subtab="m-jogadores" onclick="switchMesaSubTab('m-jogadores')">👥 Jogadores</button>
+                                <button class="sub-tab-btn" data-subtab="m-config" onclick="switchMesaSubTab('m-config')">⚙️ Config</button>
+                                <button class="sub-tab-btn" data-subtab="m-logs" onclick="switchMesaSubTab('m-logs')">📜 Logs</button>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Sub-tab: Jogadores -->
-                    <div class="sub-tab-content active" id="subtab-m-jogadores">
+                    <!-- Sem `active` de partida: quem decide qual painel abre é a fase da
+                         sessão (area-mesas-prefs.js). Deixar este marcado fazia Jogadores
+                         piscar na tela antes de saltar para a aba certa. -->
+                    <div class="sub-tab-content" id="subtab-m-jogadores">
                         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
                             <button class="btn btn-success btn-small" onclick="openLinkPlayerModal()">➕ Vincular Jogador</button>
                             <button class="btn btn-primary btn-small" onclick="openMesaNotificationModal()">📢 Notificar</button>
@@ -747,5 +773,5 @@
     <!-- MAIN MODULE -->
     <script src="../ficha-v1.7_1/js/system-data-loader.js"></script>
     <script src="../shared/equip-slots.js?v=1"></script>
-    <script type="module" src="js/main.js?v=8"></script>
+    <script type="module" src="js/main.js?v=9"></script>
 </body>

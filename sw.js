@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v154';
+const VERSION = 'v155';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -123,6 +123,7 @@ const PRECACHE_URLS = [
   '/painel-mestre/js/area-mesas-notas.js',
   '/painel-mestre/js/area-mesas-npcs.js',
   '/painel-mestre/js/area-mesas-peculiaridades.js',
+  '/painel-mestre/js/area-mesas-prefs.js',
   '/painel-mestre/js/area-mesas-sessao.js',
   '/painel-mestre/js/area-mesas-sessoes.js',
   '/painel-mestre/js/area-mesas.js',

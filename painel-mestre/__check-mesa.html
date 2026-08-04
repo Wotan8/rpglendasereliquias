@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>__check — Área Mesa (harness de layout, sem Firebase)</title>
+    <!-- MESMA ordem de painel-mestre.html: CSS local → tokens → identidade -->
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/tabs.css">
+    <link rel="stylesheet" href="css/modais.css">
+    <link rel="stylesheet" href="css/area-mesas.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../shared/tokens.css">
+    <link rel="stylesheet" href="../shared/lendas-reliquias.css">
+    <script src="../shared/theme.js"></script>
+</head>
+<body>
+    <div class="toolbar">
+        <button style="background:var(--lr-blood-2);color:var(--lr-divine);border:none;font-weight:700">🚪 Sair</button>
+        <button>🏠 Menu</button>
+        <button>🌍 Worldbuilding</button>
+        <button>🗺️ Hexmap</button>
+        <div class="spacer"></div>
+        <button id="btnThemeToggle" onclick="toggleTheme()">🌙</button>
+    </div>
+
+    <div class="wrap">
+        <div class="sheet">
+            <div class="menu-header">
+                <h1>⚔️ Painel do Mestre</h1>
+                <div class="subtitle">Lendas e Relíquias — Gestão de Campanha</div>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-button active">🎲 MESAS</button>
+                <button class="tab-button">👥 NPCs</button>
+                <button class="tab-button">💰 ECONÔMICA</button>
+                <button class="tab-button">🤝 APOIO</button>
+                <button class="tab-button">📖 LIVROS</button>
+                <button class="tab-button">📜 HISTÓRICO</button>
+            </div>
+
+            <div id="mesa-content" class="mesa-densidade-confortavel">
+            <div class="mesa-header-bar">
+                <button class="btn btn-secondary btn-small">← Mesas</button>
+                <button class="btn btn-primary btn-small">🗺️ Tabuleiro</button>
+                <h2 style="font-size:1.1rem;font-weight:800;color:var(--primary);margin:0">Grau Espectro</h2>
+                <div class="mesa-ajustes">
+                    <button class="mesa-ajuste-btn" id="btnMesaDensidade">▤ Confortável</button>
+                    <button class="mesa-ajuste-btn" id="btnMesaAbas">⚙️ Abas</button>
+                    <div class="mesa-abas-config" id="mesaAbasConfig"></div>
+                </div>
+                <button class="btn btn-danger btn-small">🗑️</button>
+            </div>
+
+            <!-- BARRA DE SUB-ABAS — 3 grupos -->
+            <div class="sub-tab-grupos" id="mesaSubTabs">
+                <div class="sub-tab-grupo">
+                    <span class="sub-tab-grupo-nome">Sessão</span>
+                    <div class="sub-tabs" role="tablist" aria-label="Sessão">
+                        <button class="sub-tab-btn active" data-subtab="m-sessao">🎬 Sessão</button>
+                        <button class="sub-tab-btn" data-subtab="m-combate" data-selo="4">⚔️ Combate</button>
+                        <button class="sub-tab-btn" data-subtab="m-personagens">🎭 Personagens</button>
+                        <button class="sub-tab-btn" data-subtab="m-notas">📝 Notas</button>
+                    </div>
+                </div>
+                <div class="sub-tab-grupo">
+                    <span class="sub-tab-grupo-nome">Campanha</span>
+                    <div class="sub-tabs" role="tablist" aria-label="Campanha">
+                        <button class="sub-tab-btn" data-subtab="m-frentes">🕰️ Frentes</button>
+                        <button class="sub-tab-btn" data-subtab="m-npcs">👹 NPCs</button>
+                        <button class="sub-tab-btn" data-subtab="m-inventario">📦 Kits</button>
+                        <button class="sub-tab-btn" data-subtab="m-sessoes">📜 Histórico</button>
+                    </div>
+                </div>
+                <div class="sub-tab-grupo">
+                    <span class="sub-tab-grupo-nome">Mesa</span>
+                    <div class="sub-tabs" role="tablist" aria-label="Mesa">
+                        <button class="sub-tab-btn" data-subtab="m-jogadores">👥 Jogadores</button>
+                        <button class="sub-tab-btn" data-subtab="m-config">⚙️ Config</button>
+                        <button class="sub-tab-btn" data-subtab="m-logs">📜 Logs</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="exp-controls">
+                <button class="btn btn-warning btn-small">⭐ +EXP</button>
+                <button class="btn btn-primary btn-small">🎒 Repertório</button>
+                <button class="btn btn-primary btn-small">💀 Condições</button>
+                <button class="btn btn-primary btn-small">✨ Peculiaridades</button>
+            </div>
+
+            <div class="player-list">
+                <div class="player-card">
+                    <div class="player-avatar">S</div>
+                    <div class="player-info">
+                        <div class="player-name">Sona Vhalen</div>
+                        <div class="player-email">jogador@exemplo.com</div>
+                    </div>
+                </div>
+                <div class="player-card">
+                    <div class="player-avatar">K</div>
+                    <div class="player-info">
+                        <div class="player-name">Kaeda de Ferro</div>
+                        <div class="player-email">outro@exemplo.com</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="combat-participant" style="margin-top:16px">
+                <div class="combat-initiative">
+                    <div class="combat-initiative-value">17</div>
+                    <div class="combat-initiative-label">INIC</div>
+                </div>
+                <div style="flex:1">
+                    <div class="combat-name">Sona Vhalen <span class="combat-type">Jogador</span></div>
+                    <div class="combat-stats">
+                        <div class="combat-stat-item">
+                            <div class="combat-stat-label">VIT</div>
+                            <div class="combat-stat-bar"><div class="combat-stat-fill" style="width:70%;background:var(--lr-nature)"></div></div>
+                            <div class="combat-stat-value">14/20</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div><!-- /#mesa-content -->
+        </div>
+    </div>
+    <script>
+        // Só o suficiente para exercitar densidade e o dropdown de abas no harness.
+        document.getElementById('btnMesaDensidade').onclick = function () {
+            const c = document.getElementById('mesa-content');
+            const compacto = c.classList.toggle('mesa-densidade-compacto');
+            c.classList.toggle('mesa-densidade-confortavel', !compacto);
+            this.textContent = compacto ? '▤ Compacto' : '▤ Confortável';
+            this.classList.toggle('active', compacto);
+        };
+        document.getElementById('btnMesaAbas').onclick = function () {
+            const cx = document.getElementById('mesaAbasConfig');
+            if (!cx.innerHTML) {
+                cx.innerHTML = '<div class="mesa-abas-config-titulo">Sub-abas visíveis</div>' +
+                    [...document.querySelectorAll('#mesaSubTabs .sub-tab-btn')].map(b =>
+                        `<label><input type="checkbox" checked><span style="flex:1">${b.textContent.trim()}</span>
+                         <button class="mesa-ajuste-btn">↑</button><button class="mesa-ajuste-btn">↓</button></label>`).join('');
+            }
+            cx.classList.toggle('open');
+            this.classList.toggle('active', cx.classList.contains('open'));
+        };
+    </script>
+</body>
+</html>

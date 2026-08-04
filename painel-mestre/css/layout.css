@@ -6,8 +6,8 @@
 .loading-screen {
     position: fixed;
     inset: 0;
-    z-index: 99999;
-    background: var(--bg);
+    z-index: var(--lr-z-modal);
+    background: var(--lr-bg-0);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -18,8 +18,8 @@
 .loading-spinner {
     width: 48px;
     height: 48px;
-    border: 4px solid rgba(91, 63, 184, 0.2);
-    border-top: 4px solid var(--primary);
+    border: 3px solid var(--lr-border);
+    border-top-color: var(--lr-gold);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -51,20 +51,22 @@
 
 .toolbar button {
     border: 1px solid var(--lr-border);
-    background: var(--lr-surface-2);
-    color: var(--ink);
+    background: var(--lr-bg-1);
+    color: var(--lr-text-1);
     font-weight: 600;
-    padding: 8px 14px;
-    border-radius: var(--radius);
-    font-size: 12px;
+    padding: var(--lr-space-2) var(--lr-space-3);
+    border-radius: var(--lr-radius);
+    font-size: var(--lr-fs-sm);
     cursor: pointer;
-    font-family: var(--font);
-    transition: background 0.15s, transform 0.15s;
+    font-family: var(--lr-font-body);
+    /* transição e `:active` de metal pressionado vêm de lendas-reliquias.css */
 }
 
+/* Hover é superfície neutra: subir 1px a cada passada do mouse é enfeite, e o
+   manual reserva o deslocamento para o `:active` (metal pressionado). */
 .toolbar button:hover {
-    background: rgba(255, 255, 255, 0.12);
-    transform: translateY(-1px);
+    background: var(--lr-surface-2);
+    border-color: var(--lr-text-2);
 }
 
 .toolbar .spacer {
@@ -81,7 +83,7 @@
 
 .toolbar .user-info .user-name {
     font-weight: 700;
-    color: var(--primary);
+    color: var(--lr-text-2);
     max-width: 200px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -89,73 +91,76 @@
 }
 
 /* ===== WRAP + SHEET ===== */
+/* 1560px + centralizado é a régua do manual para monitor largo; 1200 deixava
+   a área Mesa apertada à toa em qualquer tela moderna. */
 .wrap {
-    max-width: 1200px;
-    margin: 14px auto 0;
-    padding: 0 16px 32px;
+    max-width: 1560px;
+    margin: var(--lr-space-3) auto 0;
+    padding: 0 var(--lr-space-4) var(--lr-space-6);
 }
 
 .sheet {
-    background: var(--paper);
-    color: var(--ink);
-    border-radius: 14px;
-    padding: 18px;
-    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+    background: var(--lr-surface);
+    color: var(--lr-text-1);
+    border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
+    padding: var(--lr-space-5);
+    box-shadow: var(--lr-shadow-3);
     overflow: hidden;
 }
 
 /* ===== HEADER ===== */
+/* O h1 era gradiente recortado em texto (`-webkit-text-fill-color:transparent`
+   sobre `linear-gradient(ouro, arcano)`) — e como a cascata já tinha trocado
+   `--primary`/`--secondary`, o resultado era um título ouro-para-azul. É o
+   truque de 2015 que mais gritava "amador" na tela. Hierarquia agora é
+   tamanho, peso, letra lapidada e espaço, como manda o manual. */
 .menu-header {
     text-align: center;
-    margin-bottom: 16px;
+    margin-bottom: var(--lr-space-5);
+    padding-bottom: var(--lr-space-4);
+    border-bottom: 1px solid var(--lr-border-soft);
 }
 
 .menu-header h1 {
-    font-size: clamp(1.4rem, 3vw, 1.8rem);
-    font-weight: 900;
-    letter-spacing: -0.3px;
-    margin-bottom: 4px;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    font-size: var(--lr-fs-xl);
+    font-weight: 600;
+    letter-spacing: var(--lr-track-title);
+    color: var(--lr-text-1);
+    margin-bottom: var(--lr-space-1);
 }
 
 .menu-header .subtitle {
-    font-size: 0.8rem;
-    color: var(--muted);
+    font-family: var(--lr-font-subtitle);
+    font-size: var(--lr-fs-md);
+    color: var(--lr-text-2);
     font-weight: 500;
 }
 
 /* ===== ALERT TOAST ===== */
+/* Toast: superfície calma com filete de significado à esquerda, como no resto
+   do sistema. Eram três `linear-gradient(135deg, X, X)` — gradiente de uma cor
+   só, ou seja, o custo de um gradiente sem gradiente nenhum. */
 .alert {
     position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 15px 25px;
-    border-radius: var(--radius);
-    font-weight: 700;
-    font-size: 0.9rem;
-    z-index: 100000;
-    animation: slideIn 0.3s ease-out, fadeOut 0.3s ease-in 2.7s forwards;
+    top: var(--lr-space-5);
+    right: var(--lr-space-5);
+    padding: var(--lr-space-3) var(--lr-space-4);
+    border-radius: var(--lr-radius);
+    font-weight: 600;
+    font-size: var(--lr-fs-sm);
+    z-index: var(--lr-z-toast);
+    animation: slideIn var(--lr-t-slow) var(--lr-ease), fadeOut var(--lr-t-slow) var(--lr-ease) 2.7s forwards;
     max-width: 400px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    background: var(--lr-surface);
+    color: var(--lr-text-1);
+    border: 1px solid var(--lr-border);
+    box-shadow: var(--lr-shadow-3);
 }
 
-.alert-success {
-    background: linear-gradient(135deg, var(--lr-nature), var(--lr-nature));
-    color: var(--lr-bg-0);
-}
-
-.alert-danger {
-    background: linear-gradient(135deg, var(--lr-blood-2), var(--lr-blood-2));
-    color: white;
-}
-
-.alert-warning {
-    background: linear-gradient(135deg, var(--lr-gold), var(--lr-gold));
-    color: var(--lr-bg-0);
-}
+.alert-success { border-left: 3px solid var(--lr-nature); }
+.alert-danger  { border-left: 3px solid var(--lr-blood-2); }
+.alert-warning { border-left: 3px solid var(--lr-gold); }
 
 @keyframes slideIn {
     from { transform: translateX(100%); opacity: 0; }
@@ -275,8 +280,10 @@ html.dark .mechsel-chip {
     transition: background .15s;
 }
 
+/* Era um azul cravado (#3b5ae6) por cima de um botão que a cascata já tinha
+   virado ouro — sobra de uma paleta antiga. */
 .mechsel-add-btn:hover {
-    background: #3b5ae6;
+    background: var(--lr-gold-2);
 }
 
 .mechsel-search {

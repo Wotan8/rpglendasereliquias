@@ -1,30 +1,27 @@
 /* =============================================
-   PAINEL DO MESTRE — Lendas e Relíquias
-   Design System: ficha-v1.7_1 (Dark-first)
+   PAINEL DO MESTRE — Base
+   ---------------------------------------------
+   Ver DESIGN-SYSTEM.md na raiz. Só `var(--lr-…)`.
+
+   ⚠️ Este arquivo carrega ANTES de shared/tokens.css (é a ordem correta:
+   CSS local → tokens → identidade). Logo, tudo que tokens.css declara no
+   `:root` VENCE o que for declarado aqui, por ser mais tarde na cascata.
+
+   O `:root` daqui tinha 22 variáveis; 19 eram sobrescritas por tokens.css e
+   só existiam para enganar quem lesse o arquivo — `--primary` dizia roxo e
+   valia ouro, `--font` dizia Segoe UI e valia Inter, `--radius` dizia 10px e
+   valia 6px. Foram removidas. Sobraram as três que tokens.css NÃO define,
+   e que portanto de fato valem alguma coisa.
    ============================================= */
 
 :root {
-    --bg: var(--lr-bg-0);
-    --bg-gradient: linear-gradient(180deg, var(--lr-bg-0), var(--lr-bg-1));
-    --paper: var(--lr-surface);
-    --ink: var(--lr-text-1);
-    --muted: var(--lr-text-2);
-    --line: var(--lr-border);
-    --soft: var(--lr-border);
-    --chip: var(--lr-surface);
-    --radius: 10px;
-    --gap: 10px;
-    --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --primary: var(--lr-abyssal);
-    --primary-glow: rgba(91, 63, 184, 0.25);
-    --secondary: var(--lr-abyssal-2);
-    --danger: var(--lr-blood-2);
-    --success: var(--lr-nature);
-    --warning: var(--lr-gold);
-    --border: rgba(255, 255, 255, 0.1);
-    --dark: var(--lr-bg-0);
-    --darker: #020617;
+    /* Texto de destaque. 68 usos no painel; tokens.css não tem `--light`. */
     --light: var(--lr-text-1);
+    /* Anel do estado ativo. Era roxo cravado — sobre um botão que a cascata
+       já tinha virado ouro, dava um halo roxo em volta de metal dourado. */
+    --primary-glow: var(--lr-gold-soft);
+    /* Poço mais fundo que o fundo da página (trilho de scrollbar, insets). */
+    --darker: var(--lr-bg-0);
 }
 
 /* ===== BASE ===== */
@@ -41,37 +38,17 @@ html {
 }
 
 body {
-    font-family: var(--font);
+    font-family: var(--lr-font-body);
     background: var(--bg-gradient);
-    color: var(--ink);
+    color: var(--lr-text-1);
     min-height: 100vh;
-    line-height: 1.5;
+    line-height: var(--lr-lh-body);
 }
 
-/* ===== SCROLLBAR ===== */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--darker);
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--primary);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--lr-abyssal-2);
-}
-
-/* ===== SELECTION ===== */
-::selection {
-    background: var(--primary);
-    color: var(--lr-bg-0);
-}
+/* Scrollbar, seleção de texto e foco vêm de shared/lendas-reliquias.css, que
+   carrega depois — as regras que existiam aqui eram sobrescritas por ele de
+   qualquer forma (e pintavam o polegar de ouro, quando o manual pede o ferro
+   de `--lr-border`). */
 
 /* ===== GLOBAL UTILITY ===== */
 .hidden {
