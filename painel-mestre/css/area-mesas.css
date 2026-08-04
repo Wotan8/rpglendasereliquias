@@ -383,10 +383,16 @@
 
 /* Cenas de combate — a mesma lista de cenas que o Tabuleiro mostra em abas */
 .combat-cenas { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+/* Era `var(--surface-2, #1b2130)` com `var(--light)` por cima: --surface-2 nao
+   existe em lugar nenhum, entao o fundo caia sempre no hex escuro cravado
+   enquanto o texto seguia o tema — tinta escura sobre pedra escura no claro
+   (1.11:1). Agora e um campo como qualquer outro do painel. */
 .combat-cena-sel {
-    flex: 1; min-width: 160px; background: var(--surface-2, #1b2130); color: var(--light);
-    border: 1px solid var(--border, #333); border-radius: 8px; padding: 6px 8px;
-    font-family: var(--font); font-size: .85rem;
+    flex: 1; min-width: 160px;
+    background: var(--lr-bg-1); color: var(--lr-text-1);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius); padding: var(--lr-space-1) var(--lr-space-2);
+    font-family: var(--lr-font-body); font-size: var(--lr-fs-sm);
 }
 
 /* ===== MESA NOTE CARDS (Ficha v1.7 style) ===== */

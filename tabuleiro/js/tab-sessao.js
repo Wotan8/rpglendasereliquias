@@ -117,7 +117,7 @@ function render() {
             <span style="flex:1">${esc(f.nome || '')}</span>
             <span class="tb-muted">${Math.min(f.relogio?.cheias || 0, f.relogio?.fatias || 6)}/${f.relogio?.fatias || 6}</span>
         </div>`).join('');
-    const sec = (t, corpo) => `<div style="margin-bottom:10px"><div style="font-size:.7rem;font-weight:800;color:var(--tb-muted);text-transform:uppercase;margin-bottom:3px">${t}</div>${corpo}</div>`;
+    const sec = (t, corpo) => `<div style="margin-bottom:10px"><div class="tb-muted" style="font-size:.7rem;font-weight:800;text-transform:uppercase;margin-bottom:3px">${t}</div>${corpo}</div>`;
 
     el.innerHTML = `
         <div style="font-weight:800;font-size:.85rem;margin-bottom:8px">Sessão ${s.numero || '?'} <span class="tb-muted" style="font-weight:400;font-size:.72rem">· ${s.fase === 'aoVivo' ? '🔴 ao vivo' : '📋 preparo'}${s.dataJogo ? ' · 🎮 ' + esc(s.dataJogo) : ''}</span></div>
