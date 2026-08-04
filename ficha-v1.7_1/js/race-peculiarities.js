@@ -43,7 +43,7 @@ function _setDerivedInitialValues(raceData) {
             // Atualizar display na grid
             const displayEl = document.getElementById(`dv_${dvDef.key}_display`);
             if (displayEl) {
-                displayEl.value = Number.isInteger(valorInicial) ? valorInicial : parseFloat(valorInicial.toFixed(1));
+                displayEl.value = Number.isInteger(valorInicial) ? valorInicial : parseFloat(valorInicial.toFixed(2));
             }
         }
     }

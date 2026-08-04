@@ -17,6 +17,9 @@
         ENER_MAX: 'var(--lr-arcane)',
     };
 
+    /** Blocos com blocoOrdem abaixo disto nascem abertos na aba Combate. */
+    const BLOCO_ABERTO_ATE = 30;
+
     let _sig = '';   // assinatura da estrutura montada (evita rebuild a cada recalc)
 
     const _esc = (s) => String(s == null ? '' : s)
@@ -25,7 +28,15 @@
     const _fmt = (v) => {
         const n = parseFloat(v);
         if (isNaN(n)) return 0;
-        return Number.isInteger(n) ? n : parseFloat(n.toFixed(1));
+        return Number.isInteger(n) ? n : parseFloat(n.toFixed(2));
+    };
+
+    /** Como o valor aparece no chip. VD marcado com `arredondaMesa` (Blindagem e
+     *  as tipadas) mostra o inteiro que se usa na mesa, igual à aba Principal —
+     *  senão a mesma Blindagem apareceria 3 num lugar e 3,9 no outro. */
+    const _fmtDV = (v, dv) => {
+        if (dv && dv.arredondaMesa && typeof dvValorDeMesa === 'function') return dvValorDeMesa(v);
+        return _fmt(v);
     };
 
     /* ===== FONTES DE DADOS =====
@@ -78,12 +89,17 @@
         const blocks = [];
         document.querySelectorAll('#derivedValuesGrid .dv-block-container').forEach(bc => {
             const nome = bc.querySelector('.attr-block-title')?.textContent?.trim() || 'Geral';
+            const ordem = Number(bc.dataset.blocoOrdem ?? 999);
             const dvs = [];
             bc.querySelectorAll('.mini-field[data-dv-key]').forEach(mf => {
+                // VD espelho que está valendo o mesmo que o espelhado não entra:
+                // a grid da Principal já o esconde, e aqui ele viraria uma fileira
+                // de zeros repetidos (as 13 Essências, as 3 de golpe).
+                if (mf.classList.contains('dv-espelho-igual')) return;
                 const dv = _dvByKey(mf.dataset.dvKey);
                 if (dv && !dv.statusCombate) dvs.push(dv);   // o resto já está no HUD
             });
-            if (dvs.length) blocks.push({ nome, dvs });
+            if (dvs.length) blocks.push({ nome, ordem, dvs });
         });
         return blocks;
     }
@@ -173,7 +189,10 @@
                 ? vitals.map(vitalCardHTML).join('')
                 : '<div class="cbt-empty">Nenhum status vital configurado.</div>';
             blocksEl.innerHTML = blocks.length
-                ? blocks.map((b, i) => blockHTML(b, i === 0)).join('')
+                // Combate (1), Blindagens por Essência (2) e o Ofício do
+                // personagem (20–28) nascem abertos: é o que se consulta na
+                // rodada. Do 30 pra baixo, fechado.
+                ? blocks.map(b => blockHTML(b, b.ordem < BLOCO_ABERTO_ATE)).join('')
                 : '<div class="cbt-empty">Nenhum valor derivado aplicável.</div>';
             bindChipTooltips();
         }
@@ -216,8 +235,18 @@
         const derived = (window.state && window.state.derived) || {};
         document.querySelectorAll('#combatValuesBlocks .cbt-chip').forEach(chip => {
             const v = derived[chip.dataset.dvKey];
+            const dv = _dvByKey(chip.dataset.dvKey);
             chip.querySelector('.cbt-chip-vl').textContent =
-                (v === undefined ? '—' : `${chip.dataset.pre || ''}${_fmt(v)}${chip.dataset.suf || ''}`);
+                (v === undefined ? '—' : `${chip.dataset.pre || ''}${_fmtDV(v, dv)}${chip.dataset.suf || ''}`);
+
+            // Chegou aqui porque diverge do espelhado — diz de que lado.
+            if (!dv || !dv.espelhaVD) return;
+            const espelhado = (window.DERIVED_VALUES || []).find(d => d.nome === dv.espelhaVD);
+            if (!espelhado) return;
+            const base = _fmtDV(derived[espelhado.key] ?? 0, espelhado);
+            const meu = _fmtDV(v ?? 0, dv);
+            chip.classList.toggle('is-fraqueza', meu < base);
+            chip.classList.toggle('is-resistencia', meu > base);
         });
     }
 

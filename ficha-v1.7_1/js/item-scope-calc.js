@@ -4,8 +4,14 @@
  * Isso é o que permite o autoteste em __check-item-scope.js rodar no node.
  *
  * Um Valor Derivado marcado no Painel do Criador com `escopoItem`:
- *   'coluna' → ganha coluna própria em "Ataques e Efeitos Ativos"
- *   'dano'   → concatena na Fórmula de Dano do item (ex: 1d10 → 1d10+5)
+ *   'coluna'      → ganha coluna própria em "Ataques e Efeitos Ativos"
+ *   'dano'        → concatena na Fórmula de Dano do item (ex: 1d10 → 1d10+5)
+ *   'dano-canal'  → parcela de uma Essência, devolvida SEPARADA em `canais`
+ *
+ * Canal NÃO entra na fórmula física. Cada Essência é um golpe paralelo que o
+ * alvo reduz com a Blindagem daquela cor, não com a Blindagem física — somar
+ * tudo num número só faria a Blindagem comum absorver dano elemental. A ficha
+ * só sabe a parcela do atacante; a subtração acontece do lado do alvo.
  *
  * Total por item = base global + delta daquele item.
  *   base  = state.derived[key], que já reúne raça/classe/peculiaridade/condição
@@ -39,9 +45,9 @@ function getItemFormulaDano(item, catalog) {
     return '';
 }
 
-/** Formata um número para exibição: inteiro puro, senão 1 casa decimal. */
+/** Formata um número para exibição: inteiro puro, senão até 2 casas decimais. */
 function _fmtNum(v) {
-    return Number.isInteger(v) ? v : parseFloat(Number(v).toFixed(1));
+    return Number.isInteger(v) ? v : parseFloat(Number(v).toFixed(2));
 }
 
 /**
@@ -53,7 +59,7 @@ function _fmtNum(v) {
  * @param {object} ctx.derived        state.derived (bases globais)
  * @param {object} ctx.itemBonuses    state.itemBonuses
  * @param {Array}  ctx.catalog        window._inventoryState.catalog
- * @returns {{ dano: string, colunas: Array, temAlgo: boolean }}
+ * @returns {{ dano: string, canais: Array, colunas: Array, temAlgo: boolean }}
  */
 function computeItemScopedTotals(item, ctx) {
     ctx = ctx || {};
@@ -62,6 +68,7 @@ function computeItemScopedTotals(item, ctx) {
     const bag = (ctx.itemBonuses || {})[item && item.id] || {};
 
     const colunas = [];
+    let canais = [];
     let somaDano = 0;
     let temBonusDano = false;
 
@@ -74,6 +81,18 @@ function computeItemScopedTotals(item, ctx) {
 
         if (dv.escopoItem === 'dano') {
             somaDano += total;
+            if (bonus !== 0) temBonusDano = true;
+            continue;
+        }
+
+        if (dv.escopoItem === 'dano-canal') {
+            // Canal zerado não é canal: só polui o golpe.
+            if (total !== 0) {
+                canais.push({
+                    key: dv.key, nome: dv.nome, icone: dv.icone || '💥',
+                    total: _fmtNum(total),
+                });
+            }
             if (bonus !== 0) temBonusDano = true;
             continue;
         }
@@ -98,6 +117,9 @@ function computeItemScopedTotals(item, ctx) {
     let dano = '';
     if (formula) dano = somaFmt !== 0 ? `${formula}${somaFmt > 0 ? '+' : ''}${somaFmt}` : formula;
 
+    // Mesma regra dos canais: sem dado não há golpe onde pendurar a parcela.
+    if (!formula) canais = [];
+
     // Armadilha comum: item que concede bônus de dano mas não tem fórmula — o
     // bônus fica preso a ele e não aparece em lugar nenhum. Para somar no dano
     // de TODAS as armas, use um Valor Derivado global, ou uma mecânica com
@@ -114,7 +136,7 @@ function computeItemScopedTotals(item, ctx) {
     // dano ou algum delta numa coluna. Armadura neutra fica fora.
     const temAlgo = !!formula || colunas.some(c => c.bonus !== 0);
 
-    return { dano, colunas, temAlgo };
+    return { dano, canais, colunas, temAlgo };
 }
 
 // Exposto para o browser (script tag) e para o node (autoteste)

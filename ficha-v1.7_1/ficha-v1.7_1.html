@@ -6,10 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0E1117">
     <title>Ficha Online</title>
-    <link rel="stylesheet" href="css/styles_v2.css?v=15">
+    <link rel="stylesheet" href="css/styles_v2.css?v=16">
     <link rel="stylesheet" href="css/inventory.css?v=10">
     <link rel="stylesheet" href="css/equip-modal.css?v=9">
-    <link rel="stylesheet" href="css/combat-panel.css?v=4">
+    <link rel="stylesheet" href="css/combat-panel.css?v=5">
     <link rel="stylesheet" href="css/conhecimento.css?v=2">
     <link rel="stylesheet" href="../shared/texto-mundo.css?v=1">
     <link rel="stylesheet" href="../shared/tokens.css?v=11">
@@ -20,6 +20,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="../shared/lendas-reliquias.css?v=12">
+    <!-- Componente da Ficha de Aliado (#aliadoNpcModal), compartilhado com o Tabuleiro -->
+    <link rel="stylesheet" href="../shared/ficha-aliado.css?v=1">
 </head>
 
 <body>
@@ -430,9 +432,9 @@
 
     <!-- ALIADO MODAL (Fast Mode) -->
     <div class="detail-modal hidden" id="aliadoNpcModal">
-        <div class="detail-modal-content" style="max-width: 700px;">
+        <div class="detail-modal-content">
             <button class="detail-modal-close" onclick="closeAliadoModal()">✕</button>
-            <div class="detail-modal-body" id="aliadoNpcModalBody" style="padding: 20px;">
+            <div class="detail-modal-body" id="aliadoNpcModalBody">
                 <!-- Content injected by aliados.js -->
             </div>
         </div>
@@ -440,14 +442,14 @@
 
     <!-- Scripts externos -->
     <script src="js/data.js"></script>
-    <script src="js/system-data-loader.js?v=3"></script>
+    <script src="js/system-data-loader.js?v=4"></script>
     <script src="js/mechanics-engine.js?v=25"></script>
     <script src="js/race-peculiarities.js"></script>
     <script src="../shared/livro-vinculado.js?v=5"></script>
     <script src="js/detail-modal.js"></script>
     <script src="js/class-tests-data.js"></script>
     <script src="js/class-tests.js"></script>
-    <script src="js/derived-values.js?v=3"></script>
+    <script src="js/derived-values.js?v=4"></script>
     <script src="js/app.js"></script>
     <script src="../shared/theme.js"></script>
     <script src="js/exp-upgrade.js"></script>
@@ -457,7 +459,7 @@
     <script src="js/item-scope-calc.js?v=1"></script>
     <script src="../shared/equip-slots.js?v=1"></script>
     <script src="js/inventory.js?v=12"></script>
-    <script src="js/combat-panel.js?v=3"></script>
+    <script src="js/combat-panel.js?v=4"></script>
     <script src="js/notes.js"></script>
     <script src="js/aura.js"></script>
     <script src="js/storage.js"></script>

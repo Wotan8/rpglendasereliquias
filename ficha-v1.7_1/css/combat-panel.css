@@ -348,6 +348,15 @@
 
 .cbt-chip:hover { border-color: var(--lr-gold); }
 
+/* Blindagem tipada só aparece aqui quando diverge da geral. O chip diz de que
+   lado, para o jogador não ter que comparar com o número do bloco de cima. */
+.cbt-chip.is-fraqueza { border-color: var(--lr-blood); }
+.cbt-chip.is-resistencia { border-color: var(--lr-nature); }
+.cbt-chip.is-fraqueza .cbt-chip-vl { color: var(--lr-blood-2); }
+.cbt-chip.is-resistencia .cbt-chip-vl { color: var(--lr-nature); }
+.cbt-chip.is-fraqueza .cbt-chip-nm::after { content: ' ▼'; }
+.cbt-chip.is-resistencia .cbt-chip-nm::after { content: ' ▲'; }
+
 .cbt-chip-ic { font-size: 11px; flex-shrink: 0; }
 
 .cbt-chip-nm {

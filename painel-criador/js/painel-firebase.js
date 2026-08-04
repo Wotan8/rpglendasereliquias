@@ -331,9 +331,11 @@ const MODULE_DEFS = {
                 // vazio fora daqui evita opção duplicada. Vazio = global (padrão).
                 key: 'escopoItem', label: '🎒 Escopo por Item Equipado (vazio = global, um valor só para o personagem)', type: 'select', options: [
                     { value: 'coluna', label: '📊 Por item equipado: coluna própria em "Ataques e Efeitos Ativos"' },
-                    { value: 'dano', label: '💥 Por item equipado: soma na Fórmula de Dano (ex: 1d10 → 1d10+5)' }
+                    { value: 'dano', label: '💥 Por item equipado: soma na Fórmula de Dano (ex: 1d10 → 1d10+5)' },
+                    { value: 'dano-canal', label: '🌈 Canal de Essência: parcela SEPARADA do golpe (reduzida pela Blindagem daquela cor, não pela física)' }
                 ]
             },
+            { key: 'arredondaMesa', label: '🎲 Arredonda na mesa? (exibe o inteiro — p/ baixo, mín. 1 se > 0 — e mostra a fração exata no tooltip do nome. Ex.: Blindagem)', type: 'boolean' },
             { key: 'campoAtual', label: 'Tem campo "Atual" (editável)?', type: 'boolean' },
             { key: 'campoEditavel', label: 'Campo editável pelo jogador?', type: 'boolean' },
             { key: 'statusCombate', label: '⚔️ Status de Combate? (fixa no topo da aba Combate da ficha)', type: 'boolean' },

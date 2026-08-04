@@ -760,7 +760,7 @@ function applyOpsToValue(target, baseValue, ops, limites, ctx, fontes) {
     return value;
 }
 
-function fmt(v) { return Number.isInteger(v) ? v : parseFloat(Number(v).toFixed(1)); }
+function fmt(v) { return Number.isInteger(v) ? v : parseFloat(Number(v).toFixed(2)); }
 
 /* ===== FUNÇÃO PRINCIPAL ===== */
 

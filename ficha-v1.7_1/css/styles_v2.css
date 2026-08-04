@@ -2808,6 +2808,35 @@ html.dark .pec-capacidade {
     font-size: 10px;
 }
 
+/* VD espelho: enquanto vale o mesmo que o VD espelhado não tem o que dizer.
+   Dezesseis Blindagens repetindo o mesmo número seriam ruído puro. */
+.mini-field.dv-espelho-igual {
+    display: none;
+}
+
+/* Divergiu: o rótulo diz de que lado, para o jogador não ter que comparar. */
+.mini-field.dv-fraqueza .dv-label::after,
+.mini-field.dv-resistencia .dv-label::after {
+    content: attr(data-dv-marca);
+    margin-left: 6px;
+    font-size: 10px;
+    font-weight: 700;
+}
+.mini-field.dv-fraqueza .dv-label::after { color: var(--lr-blood); }
+.mini-field.dv-resistencia .dv-label::after { color: var(--lr-nature); }
+
+.mini-field.dv-fraqueza .derived-field { border-color: var(--lr-blood); }
+.mini-field.dv-resistencia .derived-field { border-color: var(--lr-nature); }
+
+.dv-tooltip-exato {
+    border-top: 1px solid var(--lr-border);
+    padding-top: 6px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    font-size: 11px;
+    color: var(--lr-text-2);
+}
+
 .dv-tooltip-creation-const {
     border-top: 1px solid var(--lr-border);
     padding-top: 6px;

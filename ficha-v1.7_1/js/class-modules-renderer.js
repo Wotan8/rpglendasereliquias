@@ -1764,7 +1764,7 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
                 const dvDef = allDVs.find(d => d.id === dvId);
                 if (dvDef) {
                     const rawVal = state.derived?.[dvDef.key];
-                    const valor = rawVal !== undefined ? (Number.isInteger(rawVal) ? rawVal : parseFloat(Number(rawVal).toFixed(1))) : '—';
+                    const valor = rawVal !== undefined ? (Number.isInteger(rawVal) ? rawVal : parseFloat(Number(rawVal).toFixed(2))) : '—';
                     preview.innerHTML = '';
                     preview.dataset.dvId = dvDef.id;
                     preview.dataset.dvKeyRef = dvDef.key;
@@ -1806,7 +1806,7 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
             const dvDef = (window.DERIVED_VALUES || []).find(d => d.id === dvId);
             if (dvDef) {
                 const rawVal = state.derived?.[dvDef.key];
-                const valor = rawVal !== undefined ? (Number.isInteger(rawVal) ? rawVal : parseFloat(Number(rawVal).toFixed(1))) : '—';
+                const valor = rawVal !== undefined ? (Number.isInteger(rawVal) ? rawVal : parseFloat(Number(rawVal).toFixed(2))) : '—';
                 const chipDiv = document.createElement('div');
                 chipDiv.className = 'cm-dv-chip';
                 chipDiv.dataset.dvKeyRef = dvDef.key;
@@ -2209,7 +2209,7 @@ function _updateAllDVDisplaysInModules() {
         const dvDef = allDVs.find(d => d.id === preview.dataset.dvId) || allDVs.find(d => d.key === dvKey);
         if (!dvDef) return;
         const rawVal = state.derived?.[dvDef.key];
-        const valor = rawVal !== undefined ? (Number.isInteger(rawVal) ? rawVal : parseFloat(Number(rawVal).toFixed(1))) : '—';
+        const valor = rawVal !== undefined ? (Number.isInteger(rawVal) ? rawVal : parseFloat(Number(rawVal).toFixed(2))) : '—';
         const valSpan = preview.querySelector('.cm-dv-value');
         if (valSpan) valSpan.textContent = `${dvDef.prefixo || ''}${valor}${dvDef.sufixo || ''}`;
     });
@@ -2220,7 +2220,7 @@ function _updateAllDVDisplaysInModules() {
         const dvDef = allDVs.find(d => d.key === dvKey);
         if (!dvDef) return;
         const rawVal = state.derived?.[dvDef.key];
-        const valor = rawVal !== undefined ? (Number.isInteger(rawVal) ? rawVal : parseFloat(Number(rawVal).toFixed(1))) : '—';
+        const valor = rawVal !== undefined ? (Number.isInteger(rawVal) ? rawVal : parseFloat(Number(rawVal).toFixed(2))) : '—';
         const valSpan = chip.querySelector('.cm-dv-value');
         if (valSpan) valSpan.textContent = `${dvDef.prefixo || ''}${valor}${dvDef.sufixo || ''}`;
     });

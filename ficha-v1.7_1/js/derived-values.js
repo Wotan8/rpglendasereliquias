@@ -208,6 +208,8 @@ function renderDerivedValuesGrid() {
         const blockContainer = document.createElement('div');
         blockContainer.className = 'dv-block-container';
         blockContainer.style.marginBottom = '16px';
+        // A aba Combate usa a ordem para decidir quais blocos nascem abertos.
+        blockContainer.dataset.blocoOrdem = block.ordem;
 
         if (block.nome) {
             const titleEl = document.createElement('div');
@@ -229,7 +231,7 @@ function renderDerivedValuesGrid() {
         // Label com ícone + nome curto
         const label = document.createElement('label');
         label.className = 'dv-label';
-        if (dv.descricao || (dv.mechPreviews && dv.mechPreviews.length)) {
+        if (dv.descricao || (dv.mechPreviews && dv.mechPreviews.length) || dv.arredondaMesa) {
             label.classList.add('has-tooltip');
         }
         label.textContent = `${dv.icone} ${dv.nome}`;
@@ -687,6 +689,15 @@ function showDvTooltip(e) {
         if (dv.descricao) {
             html += `<div class="dv-tooltip-desc">${_escHtml(dv.descricao)}</div>`;
         }
+        // Valor exato de um VD que exibe arredondado na mesa (ex.: Blindagem).
+        if (dv.arredondaMesa) {
+            const exato = Number(state.derived?.[dv.key] || 0);
+            if (!Number.isInteger(exato)) {
+                html += `<div class="dv-tooltip-exato">Valor exato: <strong>`
+                     + `${_escHtml(exato.toFixed(2).replace('.', ','))}</strong>`
+                     + ` &middot; na mesa vale ${dvValorDeMesa(exato)}</div>`;
+            }
+        }
         // Constante de Criação (modificador definido no slider da Véspera da Partida)
         const creationMod = state.derivedModifiers?.[dvId];
         if (creationMod && creationMod !== 0) {
@@ -855,7 +866,7 @@ function recalcAll() {
         // Atualizar campo na grid dinâmica
         const displayEl = document.getElementById(`dv_${dvKey}_display`);
         if (displayEl) {
-            displayEl.value = Number.isInteger(value) ? value : parseFloat(value.toFixed(1));
+            displayEl.value = dvFormatarExibicao(value, dvDef);
         }
 
         // Se DV tem campoAtual, atualizar o atributo max (informativo) — sem clampar o valor atual.
@@ -876,6 +887,12 @@ function recalcAll() {
         // Guardar em state.derived para referências cruzadas
         if (!state.derived) state.derived = {};
         state.derived[dvKey] = value;
+
+        // VD espelho (Blindagem Cortante, Blindagem Vermelha...): nasce igual ao
+        // geral e só interessa quando alguma peça vestida foge do padrão. Igual
+        // ao espelhado, some da grid — senão são dezesseis linhas repetindo o
+        // mesmo número. Diferente, marca se é fraqueza ou resistência.
+        _dvAplicarEspelho(dvDef, dvKey, value);
     }
 
     // 3) Aplicar limites em atributos e perícias (teto trunca state.dots)
@@ -936,14 +953,16 @@ function _applyMechanicModifiers(key, value, bonuses, limits, baseExtra = 0) {
     const baseAddKey = `BASE:${bonusKey}`;
     value += (bonuses[baseAddKey] || 0);
 
+    // × e ÷ das fórmulas BASE arredondam a 2 casas, igual aos gerais abaixo.
+    // Truncar aqui zerava Blindagem tipada e qualquer VD fracionário.
     const baseMultKey = `BASE_MULT:${bonusKey}`;
     if (bonuses[baseMultKey]) {
-        value = Math.floor(value * bonuses[baseMultKey]);
+        value = Math.round(value * bonuses[baseMultKey] * 100) / 100;
     }
 
     const baseDivKey = `BASE_DIV:${bonusKey}`;
     if (bonuses[baseDivKey] && bonuses[baseDivKey] !== 0) {
-        value = Math.floor(value / bonuses[baseDivKey]);
+        value = Math.round(value / bonuses[baseDivKey] * 100) / 100;
     }
 
     // Constante de Raça/Classe/Tribo: faz parte da base, então os modificadores
@@ -1157,13 +1176,62 @@ function applyMechanicBonusesToDots() {
     }
 }
 
+/* ===== VALOR DE MESA =====
+ * Alguns Valores Derivados são guardados fracionados mas usados inteiros na
+ * mesa — a Blindagem é o caso: soma-se tudo que está vestido, arredonda para
+ * baixo, e o total vale no mínimo 1 se for maior que zero (Livro, 5.4).
+ * O VD marcado com `arredondaMesa` exibe o número de mesa; a fração exata
+ * aparece no tooltip do nome. */
+function dvValorDeMesa(v) {
+    if (!(v > 0)) return Math.floor(v) || 0;
+    return Math.max(1, Math.floor(v));
+}
+
+/** Número que vai para o campo: de mesa se o VD pedir, senão até 2 casas. */
+function dvFormatarExibicao(value, dvDef) {
+    if (dvDef && dvDef.arredondaMesa) return dvValorDeMesa(value);
+    return Number.isInteger(value) ? value : parseFloat(value.toFixed(2));
+}
+
+/* ===== VD ESPELHO =====
+ * Um VD com `espelhaVD` herda o valor de outro (Blindagem Cortante lê Blindagem)
+ * e só existe para o caso em que uma peça vestida cede ou resiste àquele tipo.
+ * Enquanto for igual ao espelhado não tem o que dizer, então sai da grid.
+ * Quando diverge, mostra de que lado: menor é fraqueza, maior é resistência.
+ */
+function _dvAplicarEspelho(dvDef, dvKey, value) {
+    if (!dvDef || !dvDef.espelhaVD) return;
+    const campo = document.querySelector(`.mini-field[data-dv-key="${dvKey}"]`);
+    if (!campo) return;
+
+    const espelhado = (window.DERIVED_VALUES || []).find(d => d.nome === dvDef.espelhaVD);
+    // Sem o espelhado carregado não dá para comparar — melhor mostrar do que sumir.
+    if (!espelhado) { campo.classList.remove('dv-espelho-igual'); return; }
+
+    const base = Number(state.derived?.[espelhado.key] ?? 0);
+    const mostrado = dvFormatarExibicao(value, dvDef);
+    const baseMostrada = dvFormatarExibicao(base, espelhado);
+
+    campo.classList.toggle('dv-espelho-igual', mostrado === baseMostrada);
+    campo.classList.toggle('dv-fraqueza', mostrado < baseMostrada);
+    campo.classList.toggle('dv-resistencia', mostrado > baseMostrada);
+
+    // O ::after do CSS lê o atributo do PRÓPRIO elemento — tem que ir no label.
+    const label = campo.querySelector('.dv-label');
+    if (label) {
+        label.dataset.dvMarca = mostrado < baseMostrada ? '▼ fraco'
+            : mostrado > baseMostrada ? '▲ resiste' : '';
+    }
+}
+
 function updateDerivedField(key, value) {
     const mapping = DERIVED_FIELDS_MAP[key];
     if (!mapping) return;
 
     const displayEl = document.getElementById(mapping.display);
     if (displayEl) {
-        displayEl.value = Number.isInteger(value) ? value : parseFloat(value.toFixed(1));
+        const dvDef = (window.DERIVED_VALUES || []).find(d => d.key === key);
+        displayEl.value = dvFormatarExibicao(value, dvDef);
     }
 
     if (mapping.atual) {
@@ -1246,7 +1314,7 @@ function syncModuleDerivedValuesUI() {
         if (!dvDef) return;
 
         const rawVal = state.derived[dvKey];
-        const valor = rawVal !== undefined ? (Number.isInteger(rawVal) ? rawVal : parseFloat(Number(rawVal).toFixed(1))) : '—';
+        const valor = rawVal !== undefined ? dvFormatarExibicao(Number(rawVal), dvDef) : '—';
         const displayStr = `${dvDef.prefixo || ''}${valor}${dvDef.sufixo || ''}`;
 
         const valSpan = el.querySelector('.cm-dv-value');

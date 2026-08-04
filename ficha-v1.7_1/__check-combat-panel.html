@@ -27,7 +27,7 @@
         <input type="text" data-key="ener_atual" value="5">
         <input type="text" id="ener_max_display" value="5">
         <div id="derivedValuesGrid">
-            <div class="dv-block-container">
+            <div class="dv-block-container" data-bloco-ordem="1">
                 <div class="attr-block-title">Combate</div>
                 <!-- BLINDAGEM: statusCombate ON e sem campo Atual → card só de leitura -->
                 <div class="mini-field" data-dv-key="BLINDAGEM">
@@ -40,7 +40,25 @@
                     <input id="dv_REACAO_display" value="2">
                 </div>
             </div>
-            <div class="dv-block-container">
+            <!-- Blindagens espelho: as iguais à geral chegam aqui já marcadas
+                 com dv-espelho-igual (quem marca é derived-values.js) e não
+                 podem virar chip. As que divergem, sim. -->
+            <div class="dv-block-container" data-bloco-ordem="2">
+                <div class="attr-block-title">Blindagem por Golpe</div>
+                <div class="mini-field dv-espelho-igual" data-dv-key="BLINDAGEM_CORTANTE">
+                    <input id="dv_BLINDAGEM_CORTANTE_display" value="3">
+                </div>
+                <div class="mini-field dv-espelho-igual" data-dv-key="BLINDAGEM_PERFURANTE">
+                    <input id="dv_BLINDAGEM_PERFURANTE_display" value="3">
+                </div>
+                <div class="mini-field dv-fraqueza" data-dv-key="BLINDAGEM_CONTUNDENTE">
+                    <input id="dv_BLINDAGEM_CONTUNDENTE_display" value="1">
+                </div>
+                <div class="mini-field dv-resistencia" data-dv-key="BLINDAGEM_VERMELHA">
+                    <input id="dv_BLINDAGEM_VERMELHA_display" value="5">
+                </div>
+            </div>
+            <div class="dv-block-container" data-bloco-ordem="70">
                 <div class="attr-block-title">Capacidade</div>
                 <!-- CARGA: tem Atual/Máx mas statusCombate OFF → fica nos chips -->
                 <div class="mini-field" data-dv-key="CARGA">
@@ -110,16 +128,31 @@
             { id: 'r1', key: 'REACAO', nome: 'Reação', icone: '⚡', prefixo: '', sufixo: '' },
             { id: 'c1', key: 'CARGA', nome: 'Carga', icone: '🎒', prefixo: '', sufixo: 'kg', campoAtual: true },
             { id: 'f1', key: 'FOLEGO', nome: 'Fôlego', icone: '🌬️', prefixo: '', sufixo: '', campoAtual: true, statusCombate: true },
+            { id: 't1', key: 'BLINDAGEM_CORTANTE', nome: 'Blindagem Cortante', icone: '🗡️', prefixo: '', sufixo: '', arredondaMesa: true, espelhaVD: 'Blindagem' },
+            { id: 't2', key: 'BLINDAGEM_PERFURANTE', nome: 'Blindagem Perfurante', icone: '🏹', prefixo: '', sufixo: '', arredondaMesa: true, espelhaVD: 'Blindagem' },
+            { id: 't3', key: 'BLINDAGEM_CONTUNDENTE', nome: 'Blindagem Contundente', icone: '🔨', prefixo: '', sufixo: '', arredondaMesa: true, espelhaVD: 'Blindagem' },
+            { id: 't4', key: 'BLINDAGEM_VERMELHA', nome: 'Blindagem Vermelha', icone: '🔥', prefixo: '', sufixo: '', arredondaMesa: true, espelhaVD: 'Blindagem' },
         ];
+        /* combat-panel.js usa dvValorDeMesa() de derived-values.js — aqui só o stub. */
+        function dvValorDeMesa(v) {
+            if (!(v > 0)) return Math.floor(v) || 0;
+            return Math.max(1, Math.floor(v));
+        }
         window.state = {
-            derived: { INICIATIVA: 4, BLINDAGEM: 2.5, REACAO: 2, CARGA: 40, FOLEGO: 5 },
+            derived: {
+                INICIATIVA: 4, BLINDAGEM: 2.5, REACAO: 2, CARGA: 40, FOLEGO: 5,
+                // 2,5 → mesa 2. Cortante e Perfurante herdam; Contundente cede
+                // (metade); Vermelha resiste (uma vez e meia).
+                BLINDAGEM_CORTANTE: 2.5, BLINDAGEM_PERFURANTE: 2.5,
+                BLINDAGEM_CONTUNDENTE: 1.25, BLINDAGEM_VERMELHA: 3.75,
+            },
             conditions: [
                 { nome: 'Envenenado', icone: '🤢', descricao: 'Perde 1 VIT por rodada', tempoRestante: '3' },
                 { nome: 'Marcado', icone: '🎯', descricao: '', tempoRestante: '' },
             ],
         };
     </script>
-    <script src="js/combat-panel.js"></script>
+    <script src="js/combat-panel.js?v=4"></script>
     <script>
         const out = document.getElementById('out');
         let fails = 0;
@@ -159,14 +192,28 @@
 
             // Chips: tudo que NÃO é Status de Combate, nos blocos da Principal
             const blocks = document.querySelectorAll('#combatValuesBlocks .cbt-block');
-            eq('2 blocos de chips', blocks.length, 2);
-            eq('primeiro bloco aberto por padrão', blocks[0].open, true);
+            eq('3 blocos de chips', blocks.length, 3);
+            // Abre por blocoOrdem, não por posição: Combate(1) sim, Capacidade(70) não
+            eq('bloco de ordem baixa nasce aberto', blocks[0].open, true);
+            eq('bloco de ordem alta nasce fechado', blocks[2].open, false);
             const chips = blocks[0].querySelectorAll('.cbt-chip');
             eq('Blindagem saiu dos chips (está no HUD)', chips.length, 2);
             eq('Iniciativa mostra state.derived', chips[0].querySelector('.cbt-chip-vl').textContent, '4');
             eq('Reação mostra state.derived', chips[1].querySelector('.cbt-chip-vl').textContent, '2');
             eq('Carga continua nos chips',
-                blocks[1].querySelector('.cbt-chip-nm').textContent, 'Carga');
+                blocks[2].querySelector('.cbt-chip-nm').textContent, 'Carga');
+
+            // === Blindagens espelho ===
+            const esp = blocks[1].querySelectorAll('.cbt-chip');
+            eq('só as 2 que divergem viram chip', esp.length, 2);
+            eq('Cortante (igual à geral) não virou chip',
+                [...esp].some(c => c.querySelector('.cbt-chip-nm').textContent.startsWith('Blindagem Cortante')), false);
+            eq('chip 1 = Contundente', esp[0].querySelector('.cbt-chip-nm').textContent, 'Blindagem Contundente');
+            eq('Contundente marcado como fraqueza', esp[0].classList.contains('is-fraqueza'), true);
+            eq('Contundente 1,25 arredonda para a mesa', esp[0].querySelector('.cbt-chip-vl').textContent, '1');
+            eq('chip 2 = Vermelha', esp[1].querySelector('.cbt-chip-nm').textContent, 'Blindagem Vermelha');
+            eq('Vermelha marcada como resistência', esp[1].classList.contains('is-resistencia'), true);
+            eq('Vermelha 3,75 arredonda para a mesa', esp[1].querySelector('.cbt-chip-vl').textContent, '3');
 
             // Condições em miniatura no rodapé do bloco
             const tags = document.querySelectorAll('#cbtCondTags .cbt-cond-tag');

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>check — VD espelho (fraqueza e resistência)</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/lendas-reliquias.css">
+<link rel="stylesheet" href="css/styles_v2.css">
+<style>
+    body { padding: 24px; font-family: system-ui, sans-serif; background: var(--lr-bg-0, #14110e); color: var(--lr-text-1, #ddd); }
+    h1 { font-size: 16px; margin: 0 0 4px; }
+    p.nota { font-size: 12px; opacity: .7; margin: 0 0 18px; max-width: 62ch; }
+    .grid { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+    .caso { border-top: 1px solid var(--lr-border, #333); padding-top: 10px; margin-top: 18px; }
+    .caso h2 { font-size: 13px; margin: 0 0 8px; opacity: .8; font-weight: 600; }
+    #veredito { margin-top: 26px; padding: 12px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+    .ok { background: #16351f; color: #7ee08f; }
+    .falhou { background: #3a1717; color: #ff9a9a; white-space: pre-line; }
+</style>
+</head>
+<body>
+
+<h1>VD espelho — o que a ficha mostra</h1>
+<p class="nota">
+    Reproduz o DOM e as classes que <code>_dvAplicarEspelho()</code> aplica em
+    <code>derived-values.js</code>. Serve para conferir o CSS: linha igual ao
+    espelhado some, linha divergente marca de que lado. Os números são os da
+    Armadura de Torneio com a fraqueza cadastrada.
+</p>
+
+<div class="caso">
+    <h2>Vestindo Armadura de Torneio (Blindagem 3,90 · cede a Contundente e à Vermelha)</h2>
+    <div class="grid" id="grid"></div>
+</div>
+
+<div id="veredito"></div>
+
+<script>
+/* Cópia fiel da regra de exibição: valor de mesa, e a comparação usa o EXIBIDO. */
+function valorDeMesa(v) {
+    if (!(v > 0)) return Math.floor(v) || 0;
+    return Math.max(1, Math.floor(v));
+}
+
+/* [nome, ícone, valor cru, valor cru do espelhado ou null se for uma base] */
+const LINHAS = [
+    ['Blindagem',              '🛡️',  3.90, null],
+    ['Blindagem Cortante',     '🗡️',  3.90, 3.90],
+    ['Blindagem Perfurante',   '🏹',  3.90, 3.90],
+    ['Blindagem Contundente',  '🔨',  1.95, 3.90],
+    ['Blindagem Arcana',       '✨',  0,    null],
+    ['Blindagem Vermelha',     '🔥', -2,    0],
+    ['Blindagem Amarela',      '☀️',  3,    0],
+];
+
+const grid = document.getElementById('grid');
+const falhas = [];
+
+for (const [nome, icone, cru, espelhado] of LINHAS) {
+    const campo = document.createElement('div');
+    campo.className = 'mini-field';
+    campo.dataset.dvKey = nome;
+
+    const label = document.createElement('label');
+    label.className = 'dv-label';
+    label.textContent = `${icone} ${nome}`;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'derived-field';
+    input.value = valorDeMesa(cru);
+    input.readOnly = true;
+
+    campo.append(label, input);
+    grid.appendChild(campo);
+
+    if (espelhado === null) continue;               // é uma base, nunca some
+
+    const mostrado = valorDeMesa(cru), base = valorDeMesa(espelhado);
+    campo.classList.toggle('dv-espelho-igual', mostrado === base);
+    campo.classList.toggle('dv-fraqueza', mostrado < base);
+    campo.classList.toggle('dv-resistencia', mostrado > base);
+    label.dataset.dvMarca = mostrado < base ? '▼ fraco' : mostrado > base ? '▲ resiste' : '';
+}
+
+/* --- verificação --- */
+const ver = (nome, esperado) => {
+    const el = grid.querySelector(`[data-dv-key="${nome}"]`);
+    const visivel = getComputedStyle(el).display !== 'none';
+    const marca = el.querySelector('.dv-label').dataset.dvMarca || '';
+    const got = !visivel ? 'escondido' : (marca || 'visível sem marca');
+    if (got !== esperado) falhas.push(`${nome}: esperava "${esperado}", veio "${got}"`);
+};
+
+ver('Blindagem Cortante',    'escondido');            // igual ao geral
+ver('Blindagem Perfurante',  'escondido');            // igual ao geral
+ver('Blindagem Contundente', '▼ fraco');              // 3,90 → 1,95 = mesa 1 contra 3
+ver('Blindagem Vermelha',    '▼ fraco');              // −2 contra Arcana 0
+ver('Blindagem Amarela',     '▲ resiste');            // 3 contra Arcana 0
+
+/* o número exibido também tem que bater */
+const num = n => grid.querySelector(`[data-dv-key="${n}"] .derived-field`).value;
+if (num('Blindagem') !== '3')             falhas.push(`Blindagem: esperava 3, veio ${num('Blindagem')}`);
+if (num('Blindagem Contundente') !== '1') falhas.push(`Contundente: esperava 1, veio ${num('Blindagem Contundente')}`);
+if (num('Blindagem Vermelha') !== '-2')   falhas.push(`Vermelha: esperava -2 (amplifica), veio ${num('Blindagem Vermelha')}`);
+
+const v = document.getElementById('veredito');
+if (falhas.length) { v.className = 'falhou'; v.textContent = '✗ FALHOU\n' + falhas.join('\n'); }
+else { v.className = 'ok'; v.textContent = '✓ 8 verificações passaram — 2 linhas escondidas, 2 fraquezas, 1 resistência, 3 números.'; }
+</script>
+</body>
+</html>

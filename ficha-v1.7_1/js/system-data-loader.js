@@ -922,6 +922,12 @@ function buildDerivedValuesFromFirebase() {
             statusCombate: dv.statusCombate === true,
             // '' = global (padrão) | 'coluna' = por item | 'dano' = por item, concatena no dano
             escopoItem: dv.escopoItem || '',
+            // Exibe o valor de mesa (arredondado p/ baixo, mín. 1 se > 0) no campo,
+            // e a fração exata no tooltip do nome. Ver Livro de Regras, 5.4.
+            arredondaMesa: dv.arredondaMesa === true,
+            // Nome do VD que este espelha (Blindagem Cortante espelha Blindagem).
+            // Some da grid enquanto for igual ao espelhado.
+            espelhaVD: dv.espelhaVD || '',
             blocoId: dv.blocoId || '',
             blocoNome: dv.blocoNome || '',
             blocoOrdem: dv.blocoOrdem,
