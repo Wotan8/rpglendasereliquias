@@ -982,6 +982,16 @@ function _applyMechanicModifiers(key, value, bonuses, limits, baseExtra = 0) {
 
     value += (bonuses[bonusKey] || 0);
 
+    // Teto sobre a parcela de PEÇAS (tipoLimite 'maximo_itens'). O bag geral
+    // acima já somou tudo; aqui devolvemos só o excesso que veio de item, para
+    // que peculiaridade e condição continuem passando inteiras. Ver Domínio de
+    // proteção: sem o treino, o que o aço rende para no atributo.
+    const capItens = bonuses[`ITEMCAP:${bonusKey}`];
+    if (capItens !== undefined) {
+        const dasPecas = bonuses[`ITEM:${bonusKey}`] || 0;
+        if (dasPecas > capItens) value -= (dasPecas - capItens);
+    }
+
     // Multiplicadores e divisores de mecânicas. Sem Math.floor (ao contrário das
     // fórmulas BASE acima): estes incidem sobre valores fracionários — Altura em
     // metros, onde 1,70 × 1,1 truncado viraria 1.

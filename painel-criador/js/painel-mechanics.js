@@ -325,6 +325,7 @@ export function generatePreviewText(data) {
                 if (c.tipoLimite === 'maximo') return `${alvo}: máximo ${valStr}`;
                 if (c.tipoLimite === 'minimo') return `${alvo}: mínimo ${valStr}`;
                 if (c.tipoLimite === 'clamp') return `${alvo}: min ${_formatCalcValue({...c, valor: c.valorMinimo, valorRef: c.valorRefMin})}, max ${valStr}`;
+                if (c.tipoLimite === 'maximo_itens') return `${alvo}: o que vem de itens não passa de ${valStr}`;
                 return `${alvo}: limite`;
             }).join('; ');
         } else {
@@ -782,6 +783,7 @@ function _renderCalcRowLimitar(calc, index) {
                     <option value="maximo" ${tl === 'maximo' ? 'selected' : ''}>Teto (máximo)</option>
                     <option value="minimo" ${tl === 'minimo' ? 'selected' : ''}>Piso (mínimo)</option>
                     <option value="clamp" ${tl === 'clamp' ? 'selected' : ''}>Ambos (clamp)</option>
+                    <option value="maximo_itens" ${tl === 'maximo_itens' ? 'selected' : ''}>Teto só do que vem de itens equipados</option>
                     <option value="bloqueio" ${tl === 'bloqueio' ? 'selected' : ''}>Bloqueio (= 0)</option>
                 </select>
             </div>

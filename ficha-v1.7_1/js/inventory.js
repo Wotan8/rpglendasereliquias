@@ -414,6 +414,11 @@ function applyEquippedItemsMechanics() {
                         bag = window.state.mechanicBonuses;
                     }
                     bag[targetKey] = (bag[targetKey] || 0) + total;
+                    // Trilha paralela só do que veio de PEÇA. O bag geral mistura
+                    // peculiaridade, condição e item no mesmo número, e um teto
+                    // sobre ele puniria coisa que não é equipamento. Quem limita
+                    // (Domínio de proteção) morde só esta parcela.
+                    if (!escopado) bag[`ITEM:${targetKey}`] = (bag[`ITEM:${targetKey}`] || 0) + total;
                 }
             }
             // 1d) Status Vitais Vinculados — só os "_MAX". Os "_ATUAL" são efeito

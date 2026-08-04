@@ -51,9 +51,12 @@ function aplicar(item, dvList) {
 const escudo = { id: 'escudo1', nome: 'Escudo Grande' };
 
 // --- VD já global: sempre no personagem ------------------------------------
+// A chave "ITEM:" é a trilha paralela do que veio de PEÇA — é ela que o teto
+// do Domínio de proteção morde, sem tocar no que peculiaridade e condição
+// somam no mesmo alvo. Ver teto-de-itens.test.mjs.
 {
     const r = aplicar(escudo, [{ id: 'dv-blind', modificador: 3 }]);
-    assert.deepEqual(r.global, { 'DERIVED:BLINDAGEM': 3 });
+    assert.deepEqual(r.global, { 'DERIVED:BLINDAGEM': 3, 'ITEM:DERIVED:BLINDAGEM': 3 });
     assert.deepEqual(r.porItem, {}, 'VD global nunca vai para o bag do item');
 }
 
@@ -68,7 +71,7 @@ const escudo = { id: 'escudo1', nome: 'Escudo Grande' };
 // --- VD escudo com escopo global: bag do personagem ------------------------
 {
     const r = aplicar(escudo, [{ id: 'dv-acerto', modificador: -1, escopo: 'global' }]);
-    assert.deepEqual(r.global, { 'DERIVED:ACERTO': -1 },
+    assert.deepEqual(r.global, { 'DERIVED:ACERTO': -1, 'ITEM:DERIVED:ACERTO': -1 },
         'com a flag, a penalidade do escudo atinge o Acerto do personagem');
     assert.deepEqual(r.porItem, {}, 'e não cria coluna no próprio escudo');
 }
@@ -80,9 +83,14 @@ const escudo = { id: 'escudo1', nome: 'Escudo Grande' };
         { id: 'dv-dano', modificador: 5 },
         { id: 'dv-blind', modificador: 4 },
     ]);
-    assert.deepEqual(r.global, { 'DERIVED:ACERTO': -2, 'DERIVED:BLINDAGEM': 4 });
+    assert.deepEqual(r.global, {
+        'DERIVED:ACERTO': -2, 'ITEM:DERIVED:ACERTO': -2,
+        'DERIVED:BLINDAGEM': 4, 'ITEM:DERIVED:BLINDAGEM': 4
+    });
     assert.deepEqual(r.porItem, { escudo1: { 'DERIVED:DANO': 5 } },
         'Dano sem flag segue escopado, mesmo com Acerto global no mesmo item');
+    assert.ok(!('ITEM:DERIVED:DANO' in r.global),
+        'VD escopado não deixa rastro na trilha de itens do bag global');
 }
 
 // --- escopo diferente de 'global' não ativa nada ---------------------------
@@ -111,8 +119,9 @@ const escudo = { id: 'escudo1', nome: 'Escudo Grande' };
         ctx.dvList = [{ id: 'dv-acerto', modificador: mod, escopo: 'global' }];
         vm.runInContext(BLOCO, ctx);
     }
-    assert.deepEqual(plain(ctx.state.mechanicBonuses), { 'DERIVED:ACERTO': -3 },
-        'dois itens com escopo global somam');
+    assert.deepEqual(plain(ctx.state.mechanicBonuses),
+        { 'DERIVED:ACERTO': -3, 'ITEM:DERIVED:ACERTO': -3 },
+        'dois itens com escopo global somam — nas duas trilhas');
 }
 
 console.log('✅ vd-escopo-global: todos os casos passaram');

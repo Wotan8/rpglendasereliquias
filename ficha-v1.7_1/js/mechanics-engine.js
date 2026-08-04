@@ -1832,6 +1832,15 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
                 state.mechanicLimits[field] = { tipo: 'minimo', max: null, min: resolvedVal };
             } else if (calc.tipoLimite === 'clamp') {
                 state.mechanicLimits[field] = { tipo: 'clamp', max: resolvedVal, min: calc.valorMinimo ?? 0 };
+            } else if (calc.tipoLimite === 'maximo_itens') {
+                // Teto só sobre a parcela vinda de peças equipadas (trilha
+                // ITEM: preenchida pelo inventário). O que peculiaridade e
+                // condição somam passa inteiro — Domínio limita equipamento,
+                // não o corpo. Menor teto vence quando há mais de um.
+                if (!state.mechanicBonuses) state.mechanicBonuses = {};
+                const k = `ITEMCAP:${field}`;
+                state.mechanicBonuses[k] = state.mechanicBonuses[k] === undefined
+                    ? resolvedVal : Math.min(state.mechanicBonuses[k], resolvedVal);
             }
         }
     }
