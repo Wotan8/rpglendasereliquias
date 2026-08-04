@@ -257,9 +257,10 @@ function _formatCalcValue(calc) {
 
 function _formatEquation(equacao) {
     if (!Array.isArray(equacao) || equacao.length === 0) return '?';
-    // Check if any term uses min/max — if so, format as min(A, B, ...) or max(A, B, ...)
-    const hasMinMax = equacao.some(t => t.op === 'min' || t.op === 'max');
-    if (hasMinMax && equacao.length > 1) {
+    // Só usa a forma menor(A, B, …) quando a equação INTEIRA é um min/max.
+    // Equação mista (fold sequencial) mostraria a conta errada nessa forma.
+    const soMinMax = equacao.length > 1 && equacao.slice(1).every(t => t.op === 'min' || t.op === 'max');
+    if (soMinMax) {
         const fnName = equacao[1].op === 'min' ? 'menor' : 'maior';
         const parts = equacao.map(t => {
             if (t.tipo === 'ficha') return `[${t.ref || '?'}]`;
@@ -271,7 +272,7 @@ function _formatEquation(equacao) {
     let str = '';
     for (let i = 0; i < equacao.length; i++) {
         const t = equacao[i];
-        if (i > 0 && t.op) str += ` ${t.op} `;
+        if (i > 0 && t.op) str += (t.op === 'min' || t.op === 'max') ? ` ⌊${t.op}⌋ ` : ` ${t.op} `;
         if (t.tipo === 'ficha') str += `[${t.ref || '?'}]`;
         else if (t.tipo === 'sort') str += `🎲${t.min ?? '?'}~${t.max ?? '?'}`;
         else str += (t.valor ?? '?');

@@ -1992,9 +1992,11 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
 /* ===== FORMAT EQUATION PREVIEW ===== */
 function _formatEquationPreview(equacao) {
     if (!Array.isArray(equacao) || equacao.length === 0) return '?';
-    // Check if any term uses min/max — format as menor(A, B) or maior(A, B)
-    const hasMinMax = equacao.some(t => t.op === 'min' || t.op === 'max');
-    if (hasMinMax && equacao.length > 1) {
+    // Só usa a forma menor(A, B, …) quando a equação INTEIRA é um min/max.
+    // Equação mista (ex.: Qualidade + Afiação ⌊min Teto⌋ + FOR) é um fold
+    // sequencial e a forma de função mentiria sobre a conta.
+    const soMinMax = equacao.length > 1 && equacao.slice(1).every(t => t.op === 'min' || t.op === 'max');
+    if (soMinMax) {
         const fnName = equacao[1].op === 'min' ? 'menor' : 'maior';
         const parts = equacao.map(t => {
             if (t.tipo === 'ficha') return `[${t.ref || '?'}]`;
@@ -2006,7 +2008,7 @@ function _formatEquationPreview(equacao) {
     let str = '';
     for (let i = 0; i < equacao.length; i++) {
         const t = equacao[i];
-        if (i > 0 && t.op) str += ` ${t.op} `;
+        if (i > 0 && t.op) str += (t.op === 'min' || t.op === 'max') ? ` ⌊${t.op}⌋ ` : ` ${t.op} `;
         if (t.tipo === 'ficha') str += `[${t.ref || '?'}]`;
         else if (t.tipo === 'sort') str += `🎲${t.min ?? '?'}~${t.max ?? '?'}`;
         else str += (t.valor ?? '?');
