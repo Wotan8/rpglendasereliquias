@@ -814,6 +814,24 @@ function _meItemProp(prop) {
     return isNaN(num) ? 0 : num;
 }
 
+/* Refs "Projétil: ..." — propriedades do maço apontado pela arma em escopo
+ * (campo projetilId da instância). Arco e besta dão o dado; Qualidade e
+ * Afiação vêm da ponta (Livro, 5.6 v2). O vínculo é explícito, escolhido na
+ * ficha: com dois maços na aljava, dedução automática escolheria errado em
+ * silêncio. Sem projétil apontado (ou apontando item que já não existe): 0. */
+function _meProjetilProp(prop) {
+    const fn = _ME_ITEM_PROPS[prop];
+    if (!fn || !_meItemScope) return 0;
+    const items = window._inventoryState?.items || [];
+    const arma = items.find(i => i.id === _meItemScope);
+    if (!arma || !arma.projetilId) return 0;
+    const proj = items.find(i => i.id === arma.projetilId);
+    if (!proj) return 0;
+    const tpl = proj.modeloId ? (window._inventoryState?.catalog || []).find(t => t.id === proj.modeloId) : null;
+    const num = parseFloat(fn(proj, tpl));
+    return isNaN(num) ? 0 : num;
+}
+
 /** Bag de destino de um bônus: o do item em escopo, ou o global do personagem. */
 function _meBonusBag(rawField) {
     if (_meItemScope && _meIsItemScopedTarget(rawField)) {
@@ -1107,6 +1125,7 @@ function _resolveSheetRef(ref, mult) {
 
     // Propriedades do item em escopo (peso, tamanho, preço, liga...)
     if (ref.startsWith('Item: ')) return _meItemProp(ref.slice(6)) * mult;
+    if (ref.startsWith('Projétil: ')) return _meProjetilProp(ref.slice(10)) * mult;
 
     // Check attributes (includes mechanic bonuses / highlighted levels)
     const attrKey = TARGET_MAP[ref];

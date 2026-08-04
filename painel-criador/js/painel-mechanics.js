@@ -165,6 +165,8 @@ export function getMechanicTargetsHTML() {
 <option value="Item: Liga">⚒️ Liga do Item (0–5)</option>
 <option value="Item: Qualidade">⭐ Qualidade do Item (0–5)</option>
 <option value="Item: Afiação">🗡️ Afiação do Item</option>
+<option value="Projétil: Qualidade">🎯 Qualidade do Projétil apontado</option>
+<option value="Projétil: Afiação">🎯 Afiação do Projétil apontado</option>
 <option value="Item: Quantidade">🔢 Quantidade do Item</option>
 <option value="Item: Multiplicador de Pressão">📦 Multiplicador de Pressão (conteúdo)</option>
 <option value="Item: Capacidade do Container">🎒 Capacidade do Container (itens)</option>
@@ -627,6 +629,8 @@ function getValueSourceHTML() {
 <option value="Item: Liga">⚒️ Liga do Item (0–5)</option>
 <option value="Item: Qualidade">⭐ Qualidade do Item (0–5)</option>
 <option value="Item: Afiação">🗡️ Afiação do Item</option>
+<option value="Projétil: Qualidade">🎯 Qualidade do Projétil apontado</option>
+<option value="Projétil: Afiação">🎯 Afiação do Projétil apontado</option>
 <option value="Item: Quantidade">🔢 Quantidade do Item</option>
 <option value="Item: Multiplicador de Pressão">📦 Multiplicador de Pressão (conteúdo)</option>
 <option value="Item: Capacidade do Container">🎒 Capacidade do Container (itens)</option>

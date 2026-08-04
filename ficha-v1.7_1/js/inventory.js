@@ -1542,6 +1542,25 @@ window.closeEquipModal = function() {
     window._equipModalState = null;
 };
 
+/** Aponta (ou desaponta, com id vazio) o maço que alimenta uma arma de disparo. */
+window.vincularProjetil = async function(armaId, projetilId) {
+    const item = window._inventoryState.items.find(i => i.id === armaId);
+    if (!item) return;
+    try {
+        const patch = { projetilId: projetilId || null, lastModified: new Date().toISOString() };
+        const user = _getCurrentUser();
+        if (item.ownerUid) patch.ownerUid = item.ownerUid; else if (user) patch.ownerUid = user.uid;
+        if (item.ownerId) patch.ownerId = item.ownerId; else if (user) patch.ownerId = user.uid;
+        await _firestoreSetDoc('items', armaId, patch);
+        Object.assign(item, patch);
+        renderEquippedItems();
+        if (typeof recalcAll === 'function') recalcAll();
+    } catch (e) {
+        console.error('❌ Erro ao apontar projétil:', e);
+        alert('Erro ao apontar projétil: ' + e.message);
+    }
+};
+
 // Legacy compat — old toggleEquip still works for unequip
 window.toggleEquip = async function(itemId, equip) {
     if (equip) {
@@ -1801,6 +1820,30 @@ window.openItemDetail = function(itemId) {
         }
     }
 
+    // Arco/besta: o dado é da arma, mas Qualidade e Afiação vêm do maço
+    // apontado (Livro, 5.6 v2). O vínculo é escolhido aqui — com dois maços
+    // na aljava, dedução automática escolheria errado em silêncio.
+    let projetilHtml = '';
+    if (item.tipo === 'Arma') {
+        const tagsArma = _campoDoItem(item, 'tags');
+        const tagProj = tagsArma.includes('Arco') ? 'Flecha' : tagsArma.includes('Besta') ? 'Virote' : null;
+        if (tagProj) {
+            const projs = window._inventoryState.items.filter(i => {
+                if (i.tipo !== 'Projétil') return false;
+                const t = _campoDoItem(i, 'tags');
+                // do tipo certo — ou sem tipo declarado (munição genérica)
+                return t.includes(tagProj) || (!t.includes('Flecha') && !t.includes('Virote'));
+            });
+            projetilHtml = `<div class="inv-detail-mechs">
+                <span class="inv-detail-label">🎯 Projétil apontado (${tagProj === 'Flecha' ? 'flechas' : 'virotes'})</span>
+                <select onchange="vincularProjetil('${item.id}', this.value)" style="width:100%;margin-top:4px">
+                    <option value="">— sem projétil: a arma dispara só o dado —</option>
+                    ${projs.map(p => `<option value="${p.id}" ${item.projetilId === p.id ? 'selected' : ''}>${_escHtml(p.nome)} ×${parseInt(p.quantidade) || 1}</option>`).join('')}
+                </select>
+            </div>`;
+        }
+    }
+
     const modal = document.createElement('div');
     modal.className = 'inv-modal';
     modal.id = 'invDetailModal';
@@ -1827,6 +1870,7 @@ window.openItemDetail = function(itemId) {
                 ${item.ehContainer ? `<div class="inv-detail-field"><span class="inv-detail-label">Peso Máximo</span><span>⚖️ ${item.pesoMaximoContainer || '∞'}</span></div>` : ''}
                 ${item.ehContainer ? `<div class="inv-detail-field"><span class="inv-detail-label">Multiplicador</span><span>×${item.multiplicadorPressao || 1}</span></div>` : ''}
             </div>
+            ${projetilHtml}
             ${item.descricao ? `<div class="inv-detail-desc">${_escHtml(item.descricao)}</div>` : ''}
             ${escopoHtml}
             ${mechPreview ? `<div class="inv-detail-mechs"><span class="inv-detail-label">Efeitos</span>${mechPreview}</div>` : ''}
