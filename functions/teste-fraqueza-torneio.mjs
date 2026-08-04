@@ -5,7 +5,7 @@
  * exemplo "Blindagem 3, contra o que ela cede, 1"). Aqui isso vira dado.
  *
  *   Blindagem 3 (v2, inteira)  →  Contundente: metade (floor)  →  vínculo de −2
- *   Blindagem Arcana 0  →  cede à Vermelha  →  vínculo de −2  (VALOR DE TESTE)
+ *   Blindagem Arcana 0  →  cede à Ígnea (Vermelha/Fogo)  →  vínculo de −2  (VALOR DE TESTE)
  *
  * ⚠ A fraqueza à Vermelha é só para provar que a Blindagem Arcana desce abaixo
  * de zero. Se não for para ficar, rode com --limpar.
@@ -31,7 +31,7 @@ const nm = id => (vds.find(v => v.id === id) || {}).nome || '?';
 const item = eq.find(e => e.nome === 'Armadura de Torneio');
 if (!item) { console.error('🔴 Armadura de Torneio não encontrada.'); process.exit(1); }
 
-const blCont = vd('Blindagem Contundente'), blVerm = vd('Blindagem Vermelha');
+const blCont = vd('Blindagem Contundente'), blVerm = vd('Blindagem Ígnea');
 if (!blCont || !blVerm) { console.error('🔴 Blindagens tipadas não encontradas.'); process.exit(1); }
 
 const atual = item.valoresDerivadosVinculados || [];
@@ -47,7 +47,7 @@ const metade = Math.floor(blInt / 2) - blInt;
 const novo = LIMPAR ? semTipadas : [
     ...semTipadas,
     { id: blCont.id, modificador: metade },   // cede ao Contundente: perde metade
-    { id: blVerm.id, modificador: -2 }        // TESTE: cede à Vermelha
+    { id: blVerm.id, modificador: -2 }        // TESTE: cede à Ígnea (Vermelha/Fogo)
 ];
 
 console.log('\nvínculos depois:');

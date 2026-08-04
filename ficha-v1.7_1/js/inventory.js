@@ -328,7 +328,11 @@ function _aplicarAtributosEPericias(item) {
     }
 
     for (const p of _campoDoItem(item, 'periciasVinculadas')) {
-        const mod = Number(p?.modificador) || 0;
+        // Equação de Valor vence o modificador fixo, como no caminho dos VDs —
+        // resolvida com o item em escopo (refs "Item: ..." valem para ESTE item).
+        // É o que dá o "+Qualidade no Bloquear" dos escudos sem regra nova.
+        const temEq = Array.isArray(p?.equacao) && p.equacao.length && typeof resolveEquation === 'function';
+        const mod = temEq ? (Number(resolveEquation(p.equacao)) || 0) : (Number(p?.modificador) || 0);
         if (!mod || !p.id) continue;
         const chave = _periciaDotKey(p.id);
         if (!chave) { console.warn(`⚠️ [item ${item.nome}] perícia ${p.id} não encontrada`); continue; }
