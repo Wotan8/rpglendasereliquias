@@ -4,7 +4,7 @@
  * A Armadura de Torneio cedendo ao Contundente já está no livro (§5.4, no
  * exemplo "Blindagem 3, contra o que ela cede, 1"). Aqui isso vira dado.
  *
- *   Blindagem 3,90  →  Contundente: metade  →  vínculo de −1,95
+ *   Blindagem 3 (v2, inteira)  →  Contundente: metade (floor)  →  vínculo de −2
  *   Blindagem Arcana 0  →  cede à Vermelha  →  vínculo de −2  (VALOR DE TESTE)
  *
  * ⚠ A fraqueza à Vermelha é só para provar que a Blindagem Arcana desce abaixo
@@ -40,7 +40,10 @@ console.log(`${item.nome} — Blindagem atual: ${blFisica ? blFisica.modificador
 if (!blFisica) { console.error('🔴 a peça não vincula Blindagem. Abortando.'); process.exit(1); }
 
 const semTipadas = atual.filter(v => ![blCont.id, blVerm.id].includes(v.id));
-const metade = -(Number(blFisica.modificador) / 2);
+// v2: Blindagem é inteira e a fraqueza deixa a peça com metade (floor).
+// O vínculo guarda o DELTA inteiro: floor(bl/2) − bl  (ex.: 3 → fica 1 → −2).
+const blInt = Number(blFisica.modificador);
+const metade = Math.floor(blInt / 2) - blInt;
 const novo = LIMPAR ? semTipadas : [
     ...semTipadas,
     { id: blCont.id, modificador: metade },   // cede ao Contundente: perde metade

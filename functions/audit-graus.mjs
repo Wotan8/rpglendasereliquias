@@ -24,8 +24,15 @@ const [eq, vds, sks, attrs] = await Promise.all(
 
 const vdNome = id => (vds.find(v => v.id === id) || {}).nome || `?${id}`;
 const r2 = v => Math.round(v * 100) / 100;
-const TAXA_BASE = { 'Leve': 0.20, 'Média': 0.22, 'Pesada': 0.30 };
-const taxaNoGrau = (base, g) => r2(base * Math.pow(1.35, g));   // g = Qualidade (0 = taxa base)
+/* Blindagem inteira (v2): total do corpo por classe × Qualidade. Peça avulsa
+   nunca passa do total da classe na sua Qualidade. Escudos têm valor fixo. */
+const TOTAL_CLASSE = {
+    'Leve': [1, 1, 2, 2, 3, 3],
+    'Média': [2, 3, 3, 4, 5, 6],
+    'Pesada': [3, 4, 5, 6, 7, 9]
+};
+const ESCUDOS = { 'Broquel': 0, 'Escudo de Torre': 2, 'Escudo Grande': 1, 'Escudo Médio': 1 };
+const TAXA_BASE = { 'Leve': 1, 'Média': 1, 'Pesada': 1 };   // só detecção de classe pela tag
 
 /* Fio literal de uma equação: soma dos termos numéricos (os refs de ficha são
    o corpo do personagem, não poder do item). */
@@ -57,15 +64,29 @@ for (const e of eq) {
         const bl = vinc.filter(v => vdNome(v.id) === 'Blindagem')
             .reduce((s, v) => s + (Number(v.modificador) || 0), 0);
         const slots = 1 + (e.slotsAdicionais || []).reduce((s, x) => s + (x.quantidade || 0), 0);
+        const q = Number(e.qualidade ?? e.fio) || 0;
+
+        if (!Number.isInteger(bl))
+            problemas.push(`BLINDAGEM FRACIONÁRIA · ${e.nome}: ${bl} — a v2 só aceita inteiro declarado na peça`);
+
         if (ehEscudo) {
-            protecoes.push({ nome: e.nome, classe: 'Escudo', slots: 1, bl: r2(bl), taxa: r2(bl), grau: 0, nota: 'escudo não escala Blindagem por Qualidade' });
+            protecoes.push({ nome: e.nome, classe: 'Escudo', slots: 1, bl: r2(bl), grau: 0, nota: 'escudo não escala Blindagem por Qualidade' });
+            if (e.nome in ESCUDOS && bl !== ESCUDOS[e.nome])
+                problemas.push(`ESCUDO FORA DA TABELA · ${e.nome}: Blindagem ${bl} (fixo da v2: ${ESCUDOS[e.nome]})`);
         } else {
-            const taxa = r2(bl / slots);
-            const base = TAXA_BASE[classe];
-            let grau = null;
-            for (let g = 0; g <= 5; g++) if (Math.abs(taxa - taxaNoGrau(base, g)) < 0.015) { grau = g; break; }
-            protecoes.push({ nome: e.nome, classe, slots, bl: r2(bl), taxa, grau });
-            if (grau === null) problemas.push(`TAXA FORA DA ESCADA · ${e.nome} (${classe}): ${taxa}/slot não bate com nenhum Grau (base ${base})`);
+            protecoes.push({ nome: e.nome, classe, slots, bl: r2(bl), grau: q });
+            const teto = (TOTAL_CLASSE[classe] || [])[Math.min(q, 5)];
+            if (teto != null && bl > teto)
+                problemas.push(`BLINDAGEM ACIMA DO TOTAL DA CLASSE · ${e.nome} (${classe} Q${q}): ${bl} > ${teto}`);
+            // fraqueza tipada precisa acompanhar a Blindagem: delta = floor(bl/2) − bl
+            for (const v of vinc) {
+                const n = vdNome(v.id);
+                if (/^Blindagem .+/.test(n) && Number(v.modificador) < 0) {
+                    const esperado = Math.floor(bl / 2) - bl;
+                    if (Number(v.modificador) !== esperado)
+                        problemas.push(`FRAQUEZA DESCASADA · ${e.nome}: ${n} ${v.modificador} (esperado ${esperado} para Blindagem ${bl})`);
+                }
+            }
         }
         continue;
     }
@@ -152,8 +173,8 @@ console.log(`\n─── Proteções por classe ───`);
 for (const c of ['Leve', 'Média', 'Pesada', 'Escudo']) {
     const l = protecoes.filter(p => p.classe === c);
     if (!l.length) continue;
-    const taxas = [...new Set(l.map(p => p.taxa))].sort((a, b) => a - b);
-    console.log(`  ${c.padEnd(7)} ${String(l.length).padStart(2)} peças · taxa/slot: ${taxas.join(', ')}`);
+    const valores = [...new Set(l.map(p => p.bl))].sort((a, b) => a - b);
+    console.log(`  ${c.padEnd(7)} ${String(l.length).padStart(2)} peças · Blindagem: ${valores.join(', ')}`);
 }
 
 console.log(`\n─── Problemas (${problemas.length}) ───`);
@@ -166,7 +187,7 @@ if (TODOS) {
         console.log(`  Q${a.grau}  ${a.nome.padEnd(30)} ${String(a.dado).padEnd(12)} ${a.cat}`);
     console.log(`\n─── Todas as proteções ───`);
     for (const p of protecoes.sort((x, y) => x.classe.localeCompare(y.classe) || x.nome.localeCompare(y.nome)))
-        console.log(`  Q${p.grau ?? '?'}  ${p.classe.padEnd(7)} ${p.nome.padEnd(26)} ${String(p.slots).padStart(2)} slots  Bl ${String(p.bl).padStart(5)}  ${p.taxa}/slot`);
+        console.log(`  Q${p.grau ?? '?'}  ${p.classe.padEnd(7)} ${p.nome.padEnd(26)} ${String(p.slots).padStart(2)} slots  Bl ${String(p.bl).padStart(3)}`);
 }
 console.log('');
 process.exit(0);
