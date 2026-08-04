@@ -1,95 +1,219 @@
 /* =============================================
    TABULEIRO — Estilos (VTT Lendas e Relíquias)
+   ---------------------------------------------
+   Conforme DESIGN-SYSTEM.md: nada de cor, fonte, raio, sombra ou
+   transição em valor fixo — só `var(--lr-…)` e os aliases `--tb-*`
+   declarados logo abaixo.
+
+   Linguagem de interação (uma só, o resto herda dela):
+     hover      → superfície neutra sobe (--lr-surface-2), sem acento
+     ativo/sel. → ouro: fundo --lr-gold-soft, borda --lr-gold
+     ação 1ª    → ouro sólido com tinta escura
+     abissal    → só o modo SECRETO (místico/oculto), para o roxo continuar
+                  significando alguma coisa
+     arcano     → informação (coordenadas, girar token)
+     natureza   → ao vivo / tocando / sincronizado
+     sangue     → destrutivo
+
+   Escada de z-index (mantida em números crus de propósito: são 13 níveis
+   e a ordem entre eles já está certa — trocá-la por tokens seria risco
+   sem ganho visível):
+     40  coordenadas, zoom          90  popup de alfinete
+     44  sub-barras, player         92  botão de cadeado
+     45  ferramentas, painéis       100 modal do tabuleiro
+     46  janelas (combate/sessão)   110 menu de contexto
+     50  barra superior             150 toasts
+     60  tooltip da ferramenta      200 loading, picker de condição
+     240 menu radial · 290 legenda · 300 fade · 1000 modais injetados
    ============================================= */
-:root {
-    --tb-bg: #0b0e14;
-    --tb-panel: #12161f;
-    --tb-panel2: #1a2030;
-    --tb-border: #2a3244;
-    /* O tabuleiro e sempre escuro (e um mapa de batalha, nao segue o tema).
-       Por isso estas cores sao fixas nos valores do tema escuro: puxa-las de
-       var(--lr-*) fazia o texto virar tinta escura sobre os paineis escuros
-       quando o jogador estava no tema claro. */
-    --tb-light: #F6F7FB;
-    --tb-muted: #A8B3C2;
-    --tb-primary: #5B3FB8;
-    --tb-success: #3FAE6A;
-    --tb-danger: #C94F5C;
-    --tb-warning: #D4AF37;
+
+/* O Tabuleiro NÃO segue o tema: é um mapa de batalha, sempre escuro.
+   tokens.css carrega DEPOIS deste arquivo, então redeclarar no `:root`
+   não adianta — fixamos em `html, body`, que vence por herança para tudo
+   que está dentro (e é onde shared/contraste.test.mjs procura a paleta
+   presa de uma página). Sem isso, quem estivesse no tema claro via painel
+   branco sobre o mapa preto e tinta escura sobre painel escuro. */
+html, body {
+    /* Paleta ESCURA COMPLETA — os mesmos valores de `html.dark` em tokens.css. */
+    --lr-bg-0:        #0A0D12;
+    --lr-bg-1:        #12161D;
+    --lr-surface:     #1A2029;
+    --lr-surface-2:   #222933;
+    --lr-border:      #30363D;
+    --lr-border-soft: #262C33;
+    --lr-text-1:      #F2F2F2;
+    --lr-text-2:      #A8B3C2;
+    --lr-gold:        #D4AF37;
+    --lr-gold-2:      #E5C558;
+    --lr-bronze:      #9D6B2F;
+    --lr-arcane:      #3AA6FF;
+    --lr-arcane-2:    #7CC0FF;
+    --lr-abyssal:     #5B3FB8;
+    --lr-abyssal-2:   #8A6FE0;
+    --lr-nature:      #3FAE6A;
+    --lr-blood-2:     #C94F5C;
+    --lr-blood-3:     #E08A93;
+    /* Sombra e brilho também: as versões do tema claro são suaves demais
+       para aparecer sobre painel escuro. */
+    --lr-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.45);
+    --lr-shadow-2: 0 4px 12px rgba(0, 0, 0, 0.40);
+    --lr-shadow-3: 0 12px 32px rgba(0, 0, 0, 0.50);
+    --lr-glow-gold: 0 0 0 3px rgba(212, 175, 55, 0.22);
+
+    /* Véu dos modais. rgba não se deriva de um token hex, então o valor
+       mora aqui, num lugar só: é --lr-bg-0 a 72%. */
+    --tb-scrim: rgba(10, 13, 18, .72);
+    /* Barra superior: as barras flutuantes se penduram nela em vez de
+       repetir 60px na mão. */
+    --tb-bar-h: 48px;
+    --tb-abaixo-da-barra: calc(var(--tb-bar-h) + var(--lr-space-3));
+    /* Largura da coluna da direita. As janelas arrastáveis (Combate, Sessão)
+       nascem à ESQUERDA dela — antes as duas abriam no mesmo canto e a de
+       combate cobria inteirinho o painel de Camadas. */
+    --tb-painel-w: 270px;
+
+    /* Aliases --tb-*: nomes locais antigos. Mantidos porque tab-main.js e
+       tab-sessao.js usam var(--tb-primary)/var(--tb-muted) em style inline
+       — agora apontam para a paleta oficial, não para uma cópia paralela. */
+    --tb-bg:      var(--lr-bg-0);
+    --tb-panel:   var(--lr-surface);
+    --tb-panel2:  var(--lr-surface-2);
+    --tb-border:  var(--lr-border);
+    --tb-light:   var(--lr-text-1);
+    --tb-muted:   var(--lr-text-2);
+    --tb-primary: var(--lr-gold);
+    --tb-success: var(--lr-nature);
+    --tb-danger:  var(--lr-blood-2);
+    --tb-warning: var(--lr-gold);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-/* O tabuleiro nao segue o tema: e um mapa de batalha, sempre escuro. Como
-   tokens.css carrega DEPOIS deste arquivo, nao adianta redeclarar no :root —
-   fixamos no body, que vence por heranca para tudo que esta dentro. Sem isso,
-   quem estivesse no tema claro via acento escuro sobre painel escuro. */
-body {
-    /* Paleta ESCURA COMPLETA. Antes eu fixava so os acentos, e superficie e
-       texto continuavam seguindo o tema: no claro, --lr-surface virava branco
-       e --lr-text-1 virava tinta escura, entao qualquer modal ou painel que
-       usasse esses tokens aparecia branco em cima do tabuleiro preto. */
-    --lr-bg-0:      #0A0D12;
-    --lr-bg-1:      #12161D;
-    --lr-surface:   #1A2029;
-    --lr-border:    #30363D;
-    --lr-border-soft: #262C33;
-    --lr-text-1:    #F2F2F2;
-    --lr-gold:      #D4AF37;
-    --lr-surface-2: #262E3A;
-    --lr-text-2:    #A8B3C2;
-    --lr-gold-2:    #E5C558;
-    --lr-arcane:    #3AA6FF;
-    --lr-arcane-2:  #7CC0FF;
-    --lr-abyssal:   #5B3FB8;
-    --lr-abyssal-2: #8A6FE0;
-    --lr-nature:    #3FAE6A;
-    --lr-blood-2:   #C94F5C;
-    --lr-blood-3:   #E08A93;
-}
 
-html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: var(--tb-light); font-family: 'Segoe UI', Arial, sans-serif; }
+html, body {
+    height: 100%; overflow: hidden;
+    background: var(--lr-bg-0); color: var(--lr-text-1);
+    font-family: var(--lr-font-body);
+}
 
 #tbCanvas { position: fixed; inset: 0; width: 100vw; height: 100vh; touch-action: none; }
 
+/* ===== Ícones ===== */
+/* Os <symbol> ficam no sprite em tabuleiro.html; aqui só a forma de exibir.
+   Traço fino e geométrico (DESIGN-SYSTEM §5) e `currentColor`: é isso que faz
+   o ícone acender em ouro junto com o botão ativo — emoji nunca seguiu cor,
+   nem tema, nem estado. */
+.tb-ico {
+    width: 18px; height: 18px; flex: none;
+    fill: none; stroke: currentColor;
+    stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+    pointer-events: none;   /* o clique é sempre do botão, nunca do traço */
+    vertical-align: -.2em;
+}
+/* Na barra de ferramentas o ícone acompanha o botão, que já encolhe junto com
+   a altura da janela (`--tb-tool-size` e `font-size` em clamp). */
+.tb-tool .tb-ico { width: 1.25em; height: 1.25em; }
+.tb-btn-icon .tb-ico { width: 17px; height: 17px; }
+.tb-mini-btn .tb-ico, .tb-modal-close .tb-ico { width: 14px; height: 14px; }
+.tb-radial-item .tb-ico { width: 17px; height: 17px; }
+#tbLockBtn .tb-ico { width: 18px; height: 18px; }
+.tb-section-title .tb-ico, .tb-danger-link .tb-ico { width: 14px; height: 14px; }
+/* Ícone + rótulo na mesma linha, alinhados pelo meio (não pela base do texto). */
+.tb-section-title, .tb-danger-link,
+.tb-subbar button[data-shape], .tb-subbar button[data-luz], .tb-subbar button[data-tpl] {
+    display: inline-flex; align-items: center; gap: var(--lr-space-2);
+}
+/* Cabeçalho de painel: título à esquerda, ✕ à direita. */
+.tb-side-head > span, .tb-win-head > span { display: inline-flex; align-items: center; gap: var(--lr-space-2); min-width: 0; }
+
 /* ===== Loading ===== */
 #tbLoading {
-    position: fixed; inset: 0; z-index: 200; background: var(--tb-bg);
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
-    color: var(--tb-muted); font-size: .95rem;
+    position: fixed; inset: 0; z-index: 200; background: var(--lr-bg-0);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: var(--lr-space-3);
+    color: var(--lr-text-2); font-size: var(--lr-fs-md);
 }
-.tb-spinner { width: 42px; height: 42px; border: 4px solid var(--tb-border); border-top-color: var(--tb-primary); border-radius: 50%; animation: tbspin 1s linear infinite; }
+.tb-spinner {
+    width: 42px; height: 42px;
+    border: 3px solid var(--lr-border); border-top-color: var(--lr-gold);
+    border-radius: 50%; animation: tbspin 1s linear infinite;
+}
 @keyframes tbspin { to { transform: rotate(360deg); } }
 
 /* ===== Barra superior ===== */
 .tb-topbar {
-    position: fixed; top: 0; left: 0; right: 0; height: 48px; z-index: 50;
-    display: flex; align-items: center; gap: 10px; padding: 0 12px;
-    background: linear-gradient(180deg, rgba(18,22,31,.97), rgba(18,22,31,.88));
-    border-bottom: 1px solid var(--tb-border);
+    position: fixed; top: 0; left: 0; right: 0; height: var(--tb-bar-h); z-index: 50;
+    display: flex; align-items: center; gap: var(--lr-space-2);
+    padding: 0 var(--lr-space-3);
+    background: var(--lr-bg-1);
+    border-bottom: 1px solid var(--lr-border);
+    box-shadow: var(--lr-shadow-1);
+    /* São até 13 controles: no celular a BARRA rola nela mesma, a página
+       nunca rola na horizontal (DESIGN-SYSTEM §7). */
+    overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none;
 }
-.tb-topbar .tb-spacer { flex: 1; }
-.tb-mode-badge { padding: 4px 10px; border-radius: 8px; font-size: .78rem; letter-spacing: .5px; }
-.tb-mode-badge.secret { background: rgba(91, 63, 184,.12); border: 1px solid rgba(91, 63, 184,.5); color: var(--lr-abyssal-2); }
-.tb-mode-badge.public { background: rgba(63, 174, 106,.15); border: 1px solid rgba(63, 174, 106,.45); color: #6ee7b7; }
-#tbMesaNome { font-weight: 800; font-size: .92rem; color: var(--tb-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 26vw; }
-#tbCanvasNome { font-size: .82rem; color: var(--tb-muted); cursor: pointer; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--tb-border); background: var(--tb-panel2); white-space: nowrap; }
-.tb-tag-live { background: var(--tb-success); color: #04121c; border-radius: 5px; padding: 1px 6px; font-size: .64rem; font-weight: 900; margin-left: 4px; }
-.tb-tag-off { background: var(--lr-surface-2); color: var(--lr-text-2); border-radius: 5px; padding: 1px 6px; font-size: .64rem; font-weight: 700; margin-left: 4px; }
-#tbCoords { position: fixed; bottom: 8px; right: 12px; z-index: 40; font-size: .72rem; color: var(--tb-muted); background: rgba(18,22,31,.8); padding: 3px 8px; border-radius: 6px; }
+.tb-topbar::-webkit-scrollbar { display: none; }
+.tb-topbar > * { flex: 0 0 auto; }
+.tb-topbar .tb-spacer { flex: 1 1 auto; min-width: var(--lr-space-2); }
+.tb-mode-badge {
+    padding: var(--lr-space-1) var(--lr-space-2); border-radius: var(--lr-radius-sm);
+    font-size: var(--lr-fs-xs); letter-spacing: .05em; text-transform: uppercase;
+}
+.tb-mode-badge.secret { background: var(--lr-abyssal-soft); border: 1px solid var(--lr-abyssal); color: var(--lr-abyssal-2); }
+.tb-mode-badge.public { background: var(--lr-nature-soft); border: 1px solid var(--lr-nature); color: var(--lr-nature); }
+#tbMesaNome {
+    font-family: var(--lr-font-title); font-weight: 600; letter-spacing: var(--lr-track-title);
+    font-size: var(--lr-fs-sm); color: var(--lr-text-1);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 26vw;
+}
+#tbCanvasNome {
+    font-size: var(--lr-fs-xs); color: var(--lr-text-2); cursor: pointer;
+    padding: var(--lr-space-1) var(--lr-space-2); border-radius: var(--lr-radius-sm);
+    border: 1px solid var(--lr-border); background: var(--lr-surface); white-space: nowrap;
+    transition: border-color var(--lr-t-base) var(--lr-ease), background-color var(--lr-t-base) var(--lr-ease);
+}
+#tbCanvasNome:hover { background: var(--lr-surface-2); border-color: var(--lr-text-2); }
+.tb-tag-live { background: var(--lr-nature); color: var(--lr-bg-0); border-radius: var(--lr-radius-sm); padding: 1px 6px; font-size: var(--lr-fs-xs); font-weight: 800; margin-left: var(--lr-space-1); }
+.tb-tag-off { background: var(--lr-surface-2); color: var(--lr-text-2); border-radius: var(--lr-radius-sm); padding: 1px 6px; font-size: var(--lr-fs-xs); font-weight: 700; margin-left: var(--lr-space-1); }
+#tbCoords {
+    position: fixed; bottom: var(--lr-space-2); right: var(--lr-space-3); z-index: 40;
+    font-size: var(--lr-fs-xs); color: var(--lr-text-2); background: var(--lr-bg-1);
+    border: 1px solid var(--lr-border-soft);
+    padding: 2px var(--lr-space-2); border-radius: var(--lr-radius-sm);
+    font-variant-numeric: tabular-nums;
+}
 
 /* ===== Botões ===== */
 .tb-btn {
-    background: var(--tb-panel2); color: var(--tb-light); border: 1px solid var(--tb-border);
-    border-radius: 8px; padding: 7px 13px; font-size: .84rem; font-weight: 700; cursor: pointer;
-    transition: all .15s; display: inline-flex; align-items: center; gap: 6px;
+    background: var(--lr-bg-1); color: var(--lr-text-1); border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius); padding: var(--lr-space-2) var(--lr-space-3);
+    font-size: var(--lr-fs-sm); font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: var(--lr-space-1);
+    /* transição e `:active` de metal pressionado vêm de lendas-reliquias.css */
 }
-.tb-btn:hover { border-color: var(--tb-primary); transform: translateY(-1px); }
-.tb-btn-primary { background: linear-gradient(135deg, var(--lr-abyssal), var(--lr-abyssal)); border-color: transparent; }
-.tb-btn-success { background: linear-gradient(135deg, var(--lr-nature), var(--lr-nature)); border-color: transparent; }
-.tb-btn-danger { background: linear-gradient(135deg, var(--lr-blood-2), var(--lr-blood-2)); border-color: transparent; }
-.tb-btn-small { padding: 4px 9px; font-size: .76rem; }
-.tb-mini-btn { background: none; border: none; cursor: pointer; font-size: .85rem; padding: 3px 5px; border-radius: 6px; color: var(--tb-light); }
-.tb-mini-btn:hover { background: rgba(91, 63, 184,.2); }
-.tb-mini-btn.tb-danger:hover { background: rgba(201, 79, 92,.25); }
+.tb-btn:hover { background: var(--lr-surface-2); border-color: var(--lr-text-2); }
+.tb-btn-small { padding: var(--lr-space-1) var(--lr-space-2); font-size: var(--lr-fs-xs); }
+/* Botão só de ícone da barra superior: sem caixa. Sete ícones com moldura
+   viravam uma parede de chips — a moldura fica para quem tem rótulo, e a
+   hierarquia da barra aparece sozinha.
+   ⚠️ Declarado ANTES das variantes preenchidas: `btnCursores` ganha
+   `.tb-btn-primary` quando os cursores estão ligados, e o ouro tem de vencer. */
+.tb-btn-icon {
+    background: none; border-color: transparent;
+    padding: var(--lr-space-1) var(--lr-space-2); font-size: var(--lr-fs-md);
+}
+.tb-btn-icon:hover { background: var(--lr-surface-2); border-color: var(--lr-border); }
+
+.tb-btn-primary { background: var(--lr-gold); border-color: var(--lr-gold); color: var(--lr-bg-0); }
+.tb-btn-success { background: var(--lr-nature); border-color: var(--lr-nature); color: var(--lr-bg-0); }
+.tb-btn-danger  { background: var(--lr-blood); border-color: var(--lr-blood); color: var(--lr-divine); }
+.tb-btn-primary:hover, .tb-btn-success:hover, .tb-btn-danger:hover { filter: brightness(1.12); }
+
+.tb-mini-btn {
+    background: none; border: none; cursor: pointer; font-size: var(--lr-fs-sm);
+    padding: 2px var(--lr-space-1); border-radius: var(--lr-radius-sm); color: var(--lr-text-2);
+}
+.tb-mini-btn:hover { background: var(--lr-surface-2); color: var(--lr-text-1); }
+.tb-mini-btn.tb-danger:hover { background: var(--lr-blood-soft); color: var(--lr-blood-3); }
 
 /* ===== Barra de ferramentas lateral ===== */
 /* São 15 botões + 4 separadores numa coluna só: em altura fixa de 40px a barra
@@ -101,371 +225,472 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 .tb-toolbar {
     --tb-tool-size: clamp(24px, 4.4vh, 40px);
     --tb-tool-gap: clamp(2px, .6vh, 6px);
-    position: fixed; left: 10px; top: 60px; z-index: 45;
+    position: fixed; left: var(--lr-space-3); top: var(--tb-abaixo-da-barra); z-index: 45;
     display: flex; flex-direction: column; gap: var(--tb-tool-gap);
-    background: var(--tb-panel); border: 1px solid var(--tb-border); border-radius: 12px;
-    padding: var(--tb-tool-gap) 6px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.45);
+    background: var(--lr-surface); border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
+    padding: var(--tb-tool-gap) var(--lr-space-1);
+    box-shadow: var(--lr-shadow-3);
 }
-.tb-toolbar .tb-sep { height: 1px; background: var(--tb-border); margin: 0 4px; }
+.tb-toolbar .tb-sep { height: 1px; background: var(--lr-border-soft); margin: var(--lr-space-1) var(--lr-space-1); }
 .tb-tool {
     width: var(--tb-tool-size); height: var(--tb-tool-size);
-    border-radius: 9px; border: 1px solid transparent;
-    background: none; color: var(--tb-light); font-size: clamp(.85rem, 2.2vh, 1.15rem); cursor: pointer;
+    border-radius: var(--lr-radius); border: 1px solid transparent;
+    background: none; color: var(--lr-text-1); font-size: clamp(.85rem, 2.2vh, 1.15rem); cursor: pointer;
     display: flex; align-items: center; justify-content: center; position: relative;
 }
-.tb-tool:hover { background: var(--tb-panel2); border-color: var(--tb-border); }
-.tb-tool.active { background: rgba(91, 63, 184,.22); border-color: var(--tb-primary); }
+.tb-tool:hover { background: var(--lr-surface-2); border-color: var(--lr-border); }
+.tb-tool.active { background: var(--lr-gold-soft); border-color: var(--lr-gold); color: var(--lr-gold-2); }
 .tb-tool[data-tip]:hover::after {
     content: attr(data-tip);
-    position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%);
-    background: #0f1420; border: 1px solid var(--tb-border); color: var(--tb-light);
-    padding: 5px 10px; border-radius: 8px; font-size: .74rem; white-space: nowrap; z-index: 60;
+    position: absolute; left: calc(100% + var(--lr-space-3)); top: 50%; transform: translateY(-50%);
+    background: var(--lr-bg-0); border: 1px solid var(--lr-border); color: var(--lr-text-1);
+    padding: var(--lr-space-1) var(--lr-space-2); border-radius: var(--lr-radius-sm);
+    box-shadow: var(--lr-shadow-2);
+    font-size: var(--lr-fs-xs); white-space: nowrap; z-index: 60;
 }
 
-/* ===== Sub-barras (desenho, régua, luz) ===== */
+/* ===== Sub-barras (desenho, régua, luz, template, terreno) ===== */
+/* Só uma fica aberta por vez (tab-tools.js escolhe pela ferramenta ativa),
+   então todas nascem no topo da barra de ferramentas. Antes cada uma tinha
+   um `top:` cravado no HTML (120/170/265/305/345px) que só acertava a altura
+   de janela em que foi medido — com o botão em clamp(), descolavam. */
 .tb-subbar {
-    position: fixed; left: 68px; top: 60px; z-index: 44;
-    background: var(--tb-panel); border: 1px solid var(--tb-border); border-radius: 12px;
-    padding: 10px 12px; display: none; flex-direction: column; gap: 8px; min-width: 210px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.45);
+    position: fixed; left: 68px; top: var(--tb-abaixo-da-barra); z-index: 44;
+    background: var(--lr-surface); border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
+    padding: var(--lr-space-3); display: none; flex-direction: column;
+    gap: var(--lr-space-2); min-width: 210px; max-width: min(280px, calc(100vw - 84px));
+    max-height: calc(100vh - var(--tb-abaixo-da-barra) - var(--lr-space-3)); overflow-y: auto;
+    box-shadow: var(--lr-shadow-3);
 }
 .tb-subbar.open { display: flex; }
-.tb-subbar .tb-subrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.tb-subbar button[data-shape], .tb-subbar button[data-luz] {
-    background: var(--tb-panel2); border: 1px solid var(--tb-border); color: var(--tb-light);
-    border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: .78rem;
+.tb-subbar .tb-subrow { display: flex; align-items: center; gap: var(--lr-space-2); flex-wrap: wrap; }
+.tb-subbar button[data-shape], .tb-subbar button[data-luz], .tb-subbar button[data-tpl] {
+    background: var(--lr-bg-1); border: 1px solid var(--lr-border); color: var(--lr-text-1);
+    border-radius: var(--lr-radius); padding: var(--lr-space-2) var(--lr-space-2);
+    cursor: pointer; font-size: var(--lr-fs-xs); text-align: left;
 }
-.tb-subbar button.active { border-color: var(--tb-primary); background: rgba(91, 63, 184,.2); }
-.tb-subbar label { font-size: .74rem; color: var(--tb-muted); display: flex; flex-direction: column; gap: 3px; }
+.tb-subbar button[data-shape]:hover, .tb-subbar button[data-luz]:hover, .tb-subbar button[data-tpl]:hover {
+    background: var(--lr-surface-2); border-color: var(--lr-text-2);
+}
+.tb-subbar button.active { border-color: var(--lr-gold); background: var(--lr-gold-soft); color: var(--lr-gold-2); }
+.tb-subbar label { font-size: var(--lr-fs-xs); color: var(--lr-text-2); display: flex; flex-direction: column; gap: var(--lr-space-1); }
 .tb-subbar select, .tb-subbar input[type=number] {
-    background: var(--tb-panel2); border: 1px solid var(--tb-border); color: var(--tb-light);
-    border-radius: 7px; padding: 5px 7px; font-size: .8rem;
+    background: var(--lr-bg-1); border: 1px solid var(--lr-border); color: var(--lr-text-1);
+    border-radius: var(--lr-radius-sm); padding: var(--lr-space-1) var(--lr-space-2); font-size: var(--lr-fs-sm);
 }
 .tb-subbar input[type=color] { width: 40px; height: 30px; border: none; background: none; cursor: pointer; }
-.tb-danger-link { color: var(--lr-blood-3); cursor: pointer; font-size: .8rem; font-weight: 700; }
+.tb-danger-link { color: var(--lr-blood-3); cursor: pointer; font-size: var(--lr-fs-xs); font-weight: 700; }
 .tb-danger-link:hover { text-decoration: underline; }
+/* Nota de ajuda no pé de uma sub-barra: texto corrido, nunca do tamanho do dado. */
+.tb-subbar .tb-muted { font-size: var(--lr-fs-xs); line-height: var(--lr-lh-body); }
 
 /* ===== Painéis laterais direitos ===== */
 .tb-side-panel {
-    position: fixed; right: 10px; top: 60px; z-index: 45; width: 270px; max-height: calc(100vh - 80px);
-    background: var(--tb-panel); border: 1px solid var(--tb-border); border-radius: 12px;
+    position: fixed; right: var(--lr-space-3); top: var(--tb-abaixo-da-barra); z-index: 45;
+    width: var(--tb-painel-w); max-height: calc(100vh - var(--tb-abaixo-da-barra) - var(--lr-space-5));
+    background: var(--lr-surface); border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
     display: none; flex-direction: column; overflow: hidden;
-    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    box-shadow: var(--lr-shadow-3);
 }
 .tb-side-panel.open { display: flex; }
-.tb-side-head { padding: 10px 12px; font-weight: 800; font-size: .85rem; border-bottom: 1px solid var(--tb-border); display: flex; justify-content: space-between; align-items: center; }
-.tb-side-body { padding: 10px; overflow-y: auto; }
-#tbPropsPanel { top: auto; bottom: 16px; max-height: 62vh; }
+.tb-side-head, .tb-win-head {
+    font-family: var(--lr-font-title); font-weight: 600; letter-spacing: var(--lr-track-title);
+    font-size: var(--lr-fs-sm); color: var(--lr-text-1);
+    padding: var(--lr-space-2) var(--lr-space-3);
+    border-bottom: 1px solid var(--lr-border);
+    display: flex; justify-content: space-between; align-items: center; gap: var(--lr-space-2);
+}
+.tb-side-body { padding: var(--lr-space-3); overflow-y: auto; }
+#tbPropsPanel { top: auto; bottom: var(--lr-space-4); max-height: 62vh; }
 
 .tb-layer-row {
-    display: flex; align-items: center; justify-content: space-between; gap: 6px;
-    padding: 7px 9px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; font-size: .82rem;
+    display: flex; align-items: center; justify-content: space-between; gap: var(--lr-space-2);
+    padding: var(--lr-space-2); border-radius: var(--lr-radius); cursor: pointer;
+    border: 1px solid transparent; font-size: var(--lr-fs-sm);
+    transition: background-color var(--lr-t-fast) var(--lr-ease), border-color var(--lr-t-fast) var(--lr-ease);
 }
-.tb-layer-row:hover { background: var(--tb-panel2); }
-.tb-layer-row.active { border-color: var(--tb-primary); background: rgba(91, 63, 184,.15); }
+.tb-layer-row:hover { background: var(--lr-surface-2); }
+.tb-layer-row.active { border-color: var(--lr-gold); background: var(--lr-gold-soft); }
 .tb-layer-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tb-layer-btns { display: flex; }
 
-.tb-props-title { font-weight: 800; margin-bottom: 8px; font-size: .88rem; }
+.tb-props-title { font-weight: 700; margin-bottom: var(--lr-space-2); font-size: var(--lr-fs-sm); }
 
 /* ===== Formulários ===== */
-.tb-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tb-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--lr-space-3); }
 .tb-form-grid-1 { grid-template-columns: 1fr; }
-.tb-form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: .76rem; color: var(--tb-muted); font-weight: 700; }
+.tb-form-grid label { display: flex; flex-direction: column; gap: var(--lr-space-1); font-size: var(--lr-fs-xs); color: var(--lr-text-2); font-weight: 600; }
 .tb-form-grid input, .tb-form-grid select, .tb-form-grid textarea, .tb-input {
-    background: var(--tb-panel2); border: 1px solid var(--tb-border); color: var(--tb-light);
-    border-radius: 8px; padding: 8px 10px; font-size: .85rem; width: 100%; font-family: inherit;
+    background: var(--lr-bg-1); border: 1px solid var(--lr-border); color: var(--lr-text-1);
+    border-radius: var(--lr-radius); padding: var(--lr-space-2) var(--lr-space-3);
+    font-size: var(--lr-fs-sm); width: 100%; font-family: inherit;
 }
-.tb-form-grid input:focus, .tb-form-grid select:focus, .tb-form-grid textarea:focus, .tb-input:focus { outline: none; border-color: var(--tb-primary); }
+/* foco = borda de ouro + anel: `a runa desperta` (lendas-reliquias.css já
+   faz isso para input/select/textarea; aqui só para o .tb-input avulso) */
+.tb-input:focus { outline: none; border-color: var(--lr-gold); box-shadow: var(--lr-glow-gold); }
 .tb-form-grid input[type=color] { padding: 3px; height: 38px; }
-.tb-check { flex-direction: row !important; align-items: center; gap: 7px !important; cursor: pointer; }
+.tb-check { flex-direction: row !important; align-items: center; gap: var(--lr-space-2) !important; cursor: pointer; }
 .tb-check input { width: auto !important; }
-.tb-check-sm { font-size: .72rem !important; font-weight: 500 !important; }
-.tb-hr { border: none; border-top: 1px solid var(--tb-border); margin: 14px 0; }
-.tb-section-title { font-weight: 800; font-size: .84rem; margin-bottom: 8px; color: var(--lr-abyssal-2); }
-.tb-muted { color: var(--tb-muted); }
+.tb-check-sm { font-size: var(--lr-fs-xs) !important; font-weight: 400 !important; }
+.tb-hr { border: none; border-top: 1px solid var(--lr-border-soft); margin: var(--lr-space-4) 0; }
+/* Rótulo de seção: hierarquia por caixa alta e espaço, não por cor — era
+   roxo em todo painel, e aí o roxo não significava mais nada. */
+.tb-section-title {
+    font-weight: 700; font-size: var(--lr-fs-xs); margin-bottom: var(--lr-space-2);
+    color: var(--lr-text-2); text-transform: uppercase; letter-spacing: .06em;
+}
+.tb-muted { color: var(--lr-text-2); }
 
 /* ===== Modal ===== */
-.tb-modal { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.65); display: none; align-items: center; justify-content: center; padding: 16px; }
+.tb-modal { position: fixed; inset: 0; z-index: 100; background: var(--tb-scrim); display: none; align-items: center; justify-content: center; padding: var(--lr-space-4); }
 .tb-modal.active { display: flex; }
 .tb-modal-content {
-    background: var(--tb-panel); border: 1px solid var(--tb-border); border-radius: 14px;
+    background: var(--lr-surface); border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
     width: 100%; max-width: 560px; max-height: 88vh; display: flex; flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0,0,0,.6);
+    box-shadow: var(--lr-shadow-3);
+    /* o filete dourado no topo vem de lendas-reliquias.css ([class*=modal-content]) */
 }
-.tb-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--tb-border); }
-.tb-modal-title { font-weight: 800; font-size: .95rem; }
-.tb-modal-close { background: none; border: none; color: var(--tb-muted); font-size: 1.1rem; cursor: pointer; }
-.tb-modal-close:hover { color: var(--tb-danger); }
-.tb-modal-body { padding: 16px; overflow-y: auto; }
-.tb-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+.tb-modal-header { display: flex; justify-content: space-between; align-items: center; gap: var(--lr-space-3); padding: var(--lr-space-3) var(--lr-space-4); border-bottom: 1px solid var(--lr-border); }
+.tb-modal-title {
+    font-family: var(--lr-font-title); font-weight: 600; letter-spacing: var(--lr-track-title);
+    font-size: var(--lr-fs-md); color: var(--lr-text-1);
+}
+.tb-modal-close { background: none; border: none; color: var(--lr-text-2); font-size: var(--lr-fs-lg); cursor: pointer; line-height: 1; }
+.tb-modal-close:hover { color: var(--lr-blood-3); }
+.tb-modal-body { padding: var(--lr-space-4); overflow-y: auto; }
+.tb-modal-actions { display: flex; gap: var(--lr-space-3); justify-content: flex-end; margin-top: var(--lr-space-4); }
 
 /* ===== Listas ===== */
-.tb-list-row { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 8px; border: 1px solid transparent; font-size: .85rem; }
-.tb-list-row:hover { background: var(--tb-panel2); }
-.tb-list-row.sel { border-color: var(--tb-primary); background: rgba(91, 63, 184,.12); }
+.tb-list-row {
+    display: flex; align-items: center; gap: var(--lr-space-2);
+    padding: var(--lr-space-2) var(--lr-space-3); border-radius: var(--lr-radius);
+    border: 1px solid transparent; font-size: var(--lr-fs-sm);
+    transition: background-color var(--lr-t-fast) var(--lr-ease), border-color var(--lr-t-fast) var(--lr-ease);
+}
+.tb-list-row:hover { background: var(--lr-surface-2); }
+.tb-list-row.sel { border-color: var(--lr-gold); background: var(--lr-gold-soft); }
 
 /* ===== Permissões ===== */
-.tb-perm-row { border: 1px solid var(--tb-border); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
-.tb-perm-user { margin-bottom: 8px; }
-.tb-perm-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.tb-perm-row { border: 1px solid var(--lr-border); border-radius: var(--lr-radius); padding: var(--lr-space-3); margin-bottom: var(--lr-space-3); }
+.tb-perm-user { margin-bottom: var(--lr-space-2); }
+.tb-perm-checks { display: grid; grid-template-columns: 1fr 1fr; gap: var(--lr-space-1); }
 
 /* ===== Mostrar ===== */
-.tb-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
-.tb-tab { background: var(--tb-panel2); border: 1px solid var(--tb-border); color: var(--tb-muted); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: .8rem; font-weight: 700; }
-.tb-tab.active { color: var(--tb-light); border-color: var(--tb-primary); background: rgba(91, 63, 184,.16); }
-.tb-mostrar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; max-height: 46vh; overflow-y: auto; }
-.tb-mostrar-card { background: var(--tb-panel2); border: 1px solid var(--tb-border); border-radius: 10px; padding: 8px; cursor: pointer; text-align: center; transition: all .15s; }
-.tb-mostrar-card:hover { border-color: var(--tb-primary); transform: translateY(-2px); }
-.tb-mostrar-card img { width: 100%; height: 90px; object-fit: cover; border-radius: 7px; }
-.tb-mostrar-noimg { width: 100%; height: 90px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; background: var(--tb-bg); border-radius: 7px; }
-.tb-mostrar-nome { font-weight: 700; font-size: .8rem; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tb-mostrar-acoes { display: flex; gap: 4px; justify-content: center; margin-top: 6px; }
-.tb-mostrar-acoes .tb-btn { padding: 3px 8px; font-size: .85rem; }
+/* Abas: nunca quebram nem escondem texto — a barra rola sozinha (DESIGN-SYSTEM §7). */
+.tb-tabs {
+    display: flex; gap: var(--lr-space-2); flex-wrap: nowrap;
+    overflow-x: auto; overflow-y: hidden; scrollbar-width: none; scroll-behavior: smooth;
+    padding-bottom: 2px;
+}
+.tb-tabs::-webkit-scrollbar { display: none; }
+.tb-tab {
+    flex: 0 0 auto; white-space: nowrap;
+    background: var(--lr-bg-1); border: 1px solid var(--lr-border); color: var(--lr-text-2);
+    border-radius: var(--lr-radius); padding: var(--lr-space-2) var(--lr-space-3);
+    cursor: pointer; font-size: var(--lr-fs-sm); font-weight: 600;
+}
+.tb-tab:hover { background: var(--lr-surface-2); color: var(--lr-text-1); }
+.tb-tab.active { color: var(--lr-gold-2); border-color: var(--lr-gold); background: var(--lr-gold-soft); box-shadow: inset 0 -2px 0 var(--lr-gold); }
+.tb-mostrar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--lr-space-3); max-height: 46vh; overflow-y: auto; }
+.tb-mostrar-card {
+    background: var(--lr-bg-1); border: 1px solid var(--lr-border); border-radius: var(--lr-radius);
+    padding: var(--lr-space-2); cursor: pointer; text-align: center;
+    transition: background-color var(--lr-t-base) var(--lr-ease), border-color var(--lr-t-base) var(--lr-ease);
+}
+.tb-mostrar-card:hover { background: var(--lr-surface-2); border-color: var(--lr-gold); }
+.tb-mostrar-card img { width: 100%; height: 90px; object-fit: cover; border-radius: var(--lr-radius-sm); }
+.tb-mostrar-noimg { width: 100%; height: 90px; display: flex; align-items: center; justify-content: center; font-size: var(--lr-fs-xl); background: var(--lr-bg-0); border-radius: var(--lr-radius-sm); }
+.tb-mostrar-nome { font-weight: 600; font-size: var(--lr-fs-xs); margin-top: var(--lr-space-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-mostrar-acoes { display: flex; gap: var(--lr-space-1); justify-content: center; margin-top: var(--lr-space-2); }
+.tb-mostrar-acoes .tb-btn { padding: 2px var(--lr-space-2); font-size: var(--lr-fs-sm); }
 
 /* ===== Janela de Combate ===== */
 .tb-window {
-    position: fixed; right: 16px; top: 64px; z-index: 46; width: 340px; max-height: 92vh;
-    background: var(--tb-panel); border: 1px solid var(--tb-border); border-radius: 14px;
-    display: none; flex-direction: column; overflow: hidden; box-shadow: 0 16px 44px rgba(0,0,0,.55);
+    position: fixed; right: calc(var(--tb-painel-w) + var(--lr-space-3) + var(--lr-space-4));
+    top: var(--tb-abaixo-da-barra); z-index: 46;
+    width: 340px; max-height: calc(100vh - var(--tb-abaixo-da-barra) - var(--lr-space-4));
+    background: var(--lr-surface); border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
+    display: none; flex-direction: column; overflow: hidden; box-shadow: var(--lr-shadow-3);
     /* Redimensionar pelo canto: é o `resize` do próprio navegador — nada de
        handle nem listener de ponteiro. O `overflow: hidden` acima é o que o
        habilita. Sessão e Combate ganham juntos, é a mesma janela. */
     resize: both; min-width: 260px; min-height: 150px;
 }
 .tb-window.open { display: flex; }
-.tb-win-head { padding: 10px 12px; font-weight: 800; font-size: .88rem; border-bottom: 1px solid var(--tb-border); display: flex; justify-content: space-between; align-items: center; cursor: move; background: var(--tb-panel2); user-select: none; }
+.tb-win-head { cursor: move; background: var(--lr-bg-1); user-select: none; }
 /* flex:1 + min-height:0 = ao esticar a janela quem cresce é a LISTA, não uma
    faixa vazia embaixo dela (e o scroll continua sendo do corpo). */
-.tb-win-body { padding: 10px; overflow-y: auto; flex: 1; min-height: 0; }
-/* Abas de CENA de combate: a aberta é maior, as outras encolhem e ficam
-   apagadas — o mestre bate o olho e sabe em qual está. O '＋' é a última. */
-.tb-cena-abas { display: flex; align-items: flex-end; gap: 3px; flex-wrap: wrap; margin-bottom: 7px; }
+.tb-win-body { padding: var(--lr-space-3); overflow-y: auto; flex: 1; min-height: 0; }
+/* Abas de CENA de combate: a aberta acende em ouro. Todas do MESMO tamanho —
+   antes a ativa crescia de .62 para .72rem e a fileira inteira pulava a cada
+   clique. A barra rola sozinha em vez de quebrar em duas linhas. */
+.tb-cena-abas {
+    display: flex; align-items: flex-end; gap: 2px; margin-bottom: var(--lr-space-2);
+    flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
+}
+.tb-cena-abas::-webkit-scrollbar { display: none; }
 .tb-cena-aba {
-    display: flex; align-items: center; gap: 3px; cursor: pointer;
-    background: var(--tb-panel2); border: 1px solid var(--tb-border); border-bottom-color: transparent;
-    color: var(--tb-muted); font: inherit; font-size: .62rem; padding: 1px 5px; line-height: 1.5;
-    border-radius: 6px 6px 0 0; max-width: 34%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: var(--lr-space-1); cursor: pointer;
+    background: var(--lr-bg-1); border: 1px solid var(--lr-border); border-bottom-color: transparent;
+    color: var(--lr-text-2); font: inherit; font-size: var(--lr-fs-xs);
+    padding: 2px var(--lr-space-2); line-height: 1.5;
+    border-radius: var(--lr-radius-sm) var(--lr-radius-sm) 0 0;
+    max-width: 40%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.tb-cena-aba:hover { color: var(--tb-light); border-color: var(--tb-primary); }
+.tb-cena-aba:hover { color: var(--lr-text-1); background: var(--lr-surface-2); }
 .tb-cena-aba.ativa {
-    background: rgba(91, 63, 184,.22); border-color: var(--tb-primary);
-    color: var(--tb-light); font-size: .72rem; font-weight: 700; padding: 3px 7px;
+    background: var(--lr-gold-soft); border-color: var(--lr-gold);
+    color: var(--lr-gold-2); font-weight: 700; box-shadow: inset 0 2px 0 var(--lr-gold);
 }
-.tb-cena-aba.nova { font-size: .72rem; padding: 1px 6px; color: var(--tb-light); }
-.tb-cena-n { opacity: .55; font-size: .58rem; }
-.tb-cena-x { opacity: .55; padding: 0 1px; }
-.tb-cena-x:hover { opacity: 1; color: var(--lr-blood-3, #ef4444); }
+.tb-cena-aba.nova { color: var(--lr-text-1); }
+.tb-cena-n { opacity: .6; }
+.tb-cena-x { opacity: .6; padding: 0 1px; }
+.tb-cena-x:hover { opacity: 1; color: var(--lr-blood-3); }
 
-.tb-combat-controls { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
-.tb-combat-round { font-size: .78rem; font-weight: 800; color: var(--lr-abyssal-2); flex: 1; text-align: center; }
-.tb-combat-p { display: flex; gap: 9px; align-items: flex-start; padding: 9px; border: 1px solid var(--tb-border); border-radius: 10px; margin-bottom: 8px; background: var(--tb-panel2); }
-.tb-combat-p.atual { border-color: var(--tb-warning); box-shadow: 0 0 0 1px var(--tb-warning); background: rgba(212, 175, 55,.08); }
-.tb-combat-init { min-width: 36px; height: 36px; border-radius: 9px; background: var(--tb-bg); display: flex; align-items: center; justify-content: center; font-weight: 900; color: var(--tb-warning); }
-.tb-combat-nome { font-weight: 800; font-size: .84rem; }
-.tb-combat-tipo { font-size: .64rem; background: var(--tb-bg); border-radius: 5px; padding: 1px 6px; color: var(--tb-muted); margin-left: 4px; }
-.tb-cstat { display: flex; align-items: center; gap: 5px; margin-top: 4px; }
-.tb-cstat-lb { font-size: .62rem; font-weight: 800; color: var(--tb-muted); width: 30px; }
-.tb-cstat-bar { flex: 1; height: 7px; border-radius: 4px; background: var(--tb-bg); overflow: hidden; }
-.tb-cstat-bar > div { height: 100%; border-radius: 4px; transition: width .25s; }
-.tb-cstat-v { font-size: .66rem; min-width: 44px; text-align: right; color: var(--tb-light); }
-.tb-cstat-btn { width: 18px; height: 18px; border-radius: 5px; border: 1px solid var(--tb-border); background: var(--tb-bg); color: var(--tb-light); cursor: pointer; font-size: .7rem; line-height: 1; }
-.tb-cstat-btn:hover { border-color: var(--tb-primary); }
-.tb-conds { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-.tb-cond { background: rgba(201, 79, 92,.15); border: 1px solid rgba(201, 79, 92,.4); color: var(--lr-blood-3); border-radius: 6px; padding: 1px 7px; font-size: .66rem; font-weight: 700; }
+.tb-combat-controls { display: flex; align-items: center; gap: var(--lr-space-2); margin-bottom: var(--lr-space-3); flex-wrap: wrap; }
+.tb-combat-round { font-size: var(--lr-fs-xs); font-weight: 700; color: var(--lr-text-2); flex: 1; text-align: center; text-transform: uppercase; letter-spacing: .06em; }
+.tb-combat-p {
+    display: flex; gap: var(--lr-space-2); align-items: flex-start;
+    padding: var(--lr-space-2); border: 1px solid var(--lr-border); border-radius: var(--lr-radius);
+    margin-bottom: var(--lr-space-2); background: var(--lr-bg-1);
+}
+/* De quem é a vez: o único ouro sólido da janela. */
+.tb-combat-p.atual { border-color: var(--lr-gold); border-left: 3px solid var(--lr-gold); background: var(--lr-gold-soft); }
+.tb-combat-init { min-width: 36px; height: 36px; border-radius: var(--lr-radius); background: var(--lr-bg-0); display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--lr-gold); font-variant-numeric: tabular-nums; }
+.tb-combat-nome { font-weight: 700; font-size: var(--lr-fs-sm); }
+.tb-combat-tipo { font-size: var(--lr-fs-xs); background: var(--lr-bg-0); border-radius: var(--lr-radius-sm); padding: 1px 6px; color: var(--lr-text-2); margin-left: var(--lr-space-1); }
+.tb-cstat { display: flex; align-items: center; gap: var(--lr-space-1); margin-top: var(--lr-space-1); }
+.tb-cstat-lb { font-size: var(--lr-fs-xs); font-weight: 700; color: var(--lr-text-2); width: 32px; }
+.tb-cstat-bar { flex: 1; height: 6px; border-radius: var(--lr-radius-sm); background: var(--lr-bg-0); overflow: hidden; }
+.tb-cstat-bar > div { height: 100%; border-radius: var(--lr-radius-sm); transition: width var(--lr-t-slow) var(--lr-ease); }
+.tb-cstat-v { font-size: var(--lr-fs-xs); min-width: 46px; text-align: right; color: var(--lr-text-1); font-variant-numeric: tabular-nums; }
+.tb-cstat-btn { width: 18px; height: 18px; border-radius: var(--lr-radius-sm); border: 1px solid var(--lr-border); background: var(--lr-bg-0); color: var(--lr-text-1); cursor: pointer; font-size: var(--lr-fs-xs); line-height: 1; }
+.tb-cstat-btn:hover { border-color: var(--lr-gold); color: var(--lr-gold-2); }
+.tb-conds { display: flex; flex-wrap: wrap; gap: var(--lr-space-1); margin-top: var(--lr-space-2); }
+.tb-cond { background: var(--lr-blood-soft); border: 1px solid var(--lr-blood-2); color: var(--lr-blood-3); border-radius: var(--lr-radius-sm); padding: 1px var(--lr-space-2); font-size: var(--lr-fs-xs); font-weight: 600; }
 .tb-cond b { cursor: pointer; margin-left: 2px; }
-.tb-cond-add { background: none; border: 1px dashed var(--tb-border); color: var(--tb-muted); border-radius: 6px; padding: 1px 7px; font-size: .66rem; cursor: pointer; }
-.tb-cond-add:hover { color: var(--tb-light); border-color: var(--tb-primary); }
+.tb-cond-add { background: none; border: 1px dashed var(--lr-border); color: var(--lr-text-2); border-radius: var(--lr-radius-sm); padding: 1px var(--lr-space-2); font-size: var(--lr-fs-xs); cursor: pointer; }
+.tb-cond-add:hover { color: var(--lr-text-1); border-color: var(--lr-text-2); }
 
 /* ===== Picker de Condições (Combate / HUD) ===== */
 .tb-cond-picker-overlay {
     position: fixed; inset: 0; z-index: 200;
-    background: rgba(0, 0, 0, .55);
-    display: flex; align-items: center; justify-content: center; padding: 16px;
+    background: var(--tb-scrim);
+    display: flex; align-items: center; justify-content: center; padding: var(--lr-space-4);
     backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
 }
 .tb-cond-picker {
-    background: var(--tb-panel); border: 1px solid var(--tb-border); border-radius: 14px;
+    background: var(--lr-surface); border: 1px solid var(--lr-border);
+    border-top: 2px solid var(--lr-gold); border-radius: var(--lr-radius-lg);
     width: 100%; max-width: 420px; max-height: 78vh;
     display: flex; flex-direction: column; overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0,0,0,.6);
+    box-shadow: var(--lr-shadow-3);
 }
 .tb-cond-picker-head {
-    padding: 12px 16px; border-bottom: 1px solid var(--tb-border);
+    padding: var(--lr-space-3) var(--lr-space-4); border-bottom: 1px solid var(--lr-border);
     display: flex; justify-content: space-between; align-items: center;
 }
-.tb-cond-picker-head span { font-weight: 800; font-size: .92rem; }
+.tb-cond-picker-head span {
+    font-family: var(--lr-font-title); font-weight: 600; letter-spacing: var(--lr-track-title);
+    font-size: var(--lr-fs-md);
+}
 .tb-cond-picker-search {
-    margin: 10px 12px 6px; background: var(--tb-panel2); border: 1px solid var(--tb-border);
-    border-radius: 8px; padding: 8px 10px; color: var(--tb-light); font-size: .85rem; width: calc(100% - 24px);
+    margin: var(--lr-space-3) var(--lr-space-3) var(--lr-space-2);
+    background: var(--lr-bg-1); border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius); padding: var(--lr-space-2) var(--lr-space-3);
+    color: var(--lr-text-1); font-size: var(--lr-fs-sm); width: calc(100% - var(--lr-space-5));
     font-family: inherit;
 }
-.tb-cond-picker-search:focus { outline: none; border-color: var(--tb-primary); }
-.tb-cond-picker-list {
-    flex: 1; overflow-y: auto; padding: 6px 12px 12px;
-}
+.tb-cond-picker-list { flex: 1; overflow-y: auto; padding: var(--lr-space-2) var(--lr-space-3) var(--lr-space-3); }
 .tb-cond-picker-item {
-    display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px;
-    cursor: pointer; font-size: .84rem; border: 1px solid transparent; transition: all .12s;
+    display: flex; align-items: center; gap: var(--lr-space-2);
+    padding: var(--lr-space-2) var(--lr-space-3); border-radius: var(--lr-radius);
+    cursor: pointer; font-size: var(--lr-fs-sm); border: 1px solid transparent;
+    transition: background-color var(--lr-t-fast) var(--lr-ease), border-color var(--lr-t-fast) var(--lr-ease);
 }
-.tb-cond-picker-item:hover { background: var(--tb-panel2); border-color: var(--tb-border); }
-.tb-cond-picker-item .tb-cpi-icon { font-size: 1.1rem; min-width: 24px; text-align: center; }
-.tb-cond-picker-item .tb-cpi-nome { font-weight: 700; flex: 1; }
-.tb-cond-picker-item .tb-cpi-sub { font-size: .72rem; color: var(--tb-muted); }
+.tb-cond-picker-item:hover { background: var(--lr-surface-2); border-color: var(--lr-border); }
+.tb-cond-picker-item .tb-cpi-icon { font-size: var(--lr-fs-lg); min-width: 24px; text-align: center; }
+.tb-cond-picker-item .tb-cpi-nome { font-weight: 600; flex: 1; }
+.tb-cond-picker-item .tb-cpi-sub { font-size: var(--lr-fs-xs); color: var(--lr-text-2); }
 .tb-cond-picker-custom {
-    margin: 0 12px 12px; padding: 10px; border: 1px dashed var(--tb-border); border-radius: 10px;
-    background: rgba(91, 63, 184, .06);
+    margin: 0 var(--lr-space-3) var(--lr-space-3); padding: var(--lr-space-3);
+    border: 1px dashed var(--lr-border); border-radius: var(--lr-radius);
+    background: var(--lr-bg-1);
 }
-.tb-cond-picker-custom .tb-section-title { margin-bottom: 6px; font-size: .78rem; }
+.tb-cond-picker-custom .tb-section-title { margin-bottom: var(--lr-space-2); }
 .tb-cond-picker-custom input {
-    background: var(--tb-panel2); border: 1px solid var(--tb-border); border-radius: 8px;
-    padding: 7px 10px; color: var(--tb-light); font-size: .85rem; width: 100%;
-    font-family: inherit; margin-bottom: 6px;
+    background: var(--lr-bg-0); border: 1px solid var(--lr-border); border-radius: var(--lr-radius);
+    padding: var(--lr-space-2) var(--lr-space-3); color: var(--lr-text-1); font-size: var(--lr-fs-sm);
+    width: 100%; font-family: inherit; margin-bottom: var(--lr-space-2);
 }
-.tb-cond-picker-custom input:focus { outline: none; border-color: var(--tb-primary); }
 .tb-cond-picker-custom .tb-btn { width: 100%; justify-content: center; }
 
 /* ===== Menu de contexto ===== */
 .tb-ctx {
     position: fixed; z-index: 110; min-width: 220px;
-    background: var(--tb-panel); border: 1px solid var(--tb-border); border-radius: 10px; padding: 6px;
-    display: none; box-shadow: 0 14px 40px rgba(0,0,0,.6);
+    background: var(--lr-surface); border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius); padding: var(--lr-space-1);
+    display: none; box-shadow: var(--lr-shadow-3);
 }
 .tb-ctx.open { display: block; }
-.tb-ctx-title { font-size: .74rem; font-weight: 800; color: var(--lr-abyssal-2); padding: 5px 9px; }
-.tb-ctx-item { padding: 8px 10px; border-radius: 7px; font-size: .82rem; cursor: pointer; }
-.tb-ctx-item:hover { background: var(--tb-panel2); }
+.tb-ctx-title {
+    font-size: var(--lr-fs-xs); font-weight: 700; color: var(--lr-text-2);
+    text-transform: uppercase; letter-spacing: .06em;
+    padding: var(--lr-space-2) var(--lr-space-3) var(--lr-space-1);
+}
+.tb-ctx-item { padding: var(--lr-space-2) var(--lr-space-3); border-radius: var(--lr-radius-sm); font-size: var(--lr-fs-sm); cursor: pointer; }
+.tb-ctx-item:hover { background: var(--lr-surface-2); }
 .tb-ctx-item.tb-danger { color: var(--lr-blood-3); }
-.tb-ctx-check { display: flex; align-items: center; gap: 7px; padding: 6px 10px; font-size: .78rem; cursor: pointer; border-radius: 7px; }
-.tb-ctx-check:hover { background: var(--tb-panel2); }
+.tb-ctx-item.tb-danger:hover { background: var(--lr-blood-soft); }
+.tb-ctx-check { display: flex; align-items: center; gap: var(--lr-space-2); padding: var(--lr-space-2) var(--lr-space-3); font-size: var(--lr-fs-sm); cursor: pointer; border-radius: var(--lr-radius-sm); }
+.tb-ctx-check:hover { background: var(--lr-surface-2); }
 
 /* ===== Popup alfinete ===== */
 #tbPinPopup {
     position: fixed; z-index: 90; max-width: 260px; display: none;
-    background: var(--tb-panel); border: 1px solid var(--tb-warning); border-radius: 10px; padding: 10px 12px; font-size: .8rem;
-    box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    background: var(--lr-surface); border: 1px solid var(--lr-border);
+    border-top: 2px solid var(--lr-gold); border-radius: var(--lr-radius);
+    padding: var(--lr-space-3); font-size: var(--lr-fs-sm);
+    box-shadow: var(--lr-shadow-3);
 }
 #tbPinPopup.open { display: block; }
 #tbPinPopup b { color: var(--lr-gold-2); }
-#tbPinPopup div { margin-top: 5px; color: var(--tb-muted); white-space: pre-wrap; }
+#tbPinPopup div { margin-top: var(--lr-space-1); color: var(--lr-text-2); white-space: pre-wrap; }
 
 /* ===== 🔒 Botão de desbloqueio de objeto (F8 — só Mestre) ===== */
 #tbLockBtn {
     position: fixed; z-index: 92; display: none;
     transform: translate(-50%, -100%);
     width: 40px; height: 40px; border-radius: 50%;
-    background: var(--tb-panel); border: 2px solid #f59e0b; color: #f59e0b;
-    font-size: 18px; line-height: 1; cursor: pointer;
-    box-shadow: 0 8px 24px rgba(0,0,0,.55);
-    transition: background .15s, transform .1s;
+    background: var(--lr-surface); border: 2px solid var(--lr-gold); color: var(--lr-gold);
+    font-size: var(--lr-fs-lg); line-height: 1; cursor: pointer;
+    box-shadow: var(--lr-shadow-3);
 }
 #tbLockBtn.open { display: block; }
-#tbLockBtn:hover { background: rgba(245, 158, 11, .18); }
+#tbLockBtn:hover { background: var(--lr-gold-soft); }
 #tbLockBtn:active { transform: translate(-50%, -100%) scale(.92); }
 
 /* ===== Toasts ===== */
-#tbToasts { position: fixed; top: 58px; left: 50%; transform: translateX(-50%); z-index: 150; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
-.tb-toast {
-    background: var(--tb-panel); border: 1px solid var(--tb-success); color: var(--tb-light);
-    border-radius: 10px; padding: 9px 16px; font-size: .82rem; font-weight: 700;
-    box-shadow: 0 10px 30px rgba(0,0,0,.5); animation: tbin .25s ease; max-width: 90vw;
+#tbToasts { position: fixed; top: calc(var(--tb-bar-h) + var(--lr-space-2)); left: 50%; transform: translateX(-50%); z-index: 150; display: flex; flex-direction: column; gap: var(--lr-space-2); align-items: center; pointer-events: none; }
+/* Escopado pelo #id de propósito: lendas-reliquias.css pinta TODO [class*=toast]
+   com filete dourado e carrega depois — sem o id, as variantes de aviso e de
+   perigo ficavam idênticas à de sucesso. */
+#tbToasts .tb-toast {
+    background: var(--lr-surface); border: 1px solid var(--lr-border);
+    border-left: 3px solid var(--lr-nature); color: var(--lr-text-1);
+    border-radius: var(--lr-radius); padding: var(--lr-space-2) var(--lr-space-4);
+    font-size: var(--lr-fs-sm); font-weight: 600;
+    box-shadow: var(--lr-shadow-3); animation: tbin var(--lr-t-slow) var(--lr-ease); max-width: 90vw;
 }
-.tb-toast-warning { border-color: var(--tb-warning); }
-.tb-toast-danger { border-color: var(--tb-danger); }
-.tb-toast.out { opacity: 0; transform: translateY(-8px); transition: all .3s; }
+#tbToasts .tb-toast-warning { border-left-color: var(--lr-gold); }
+#tbToasts .tb-toast-danger { border-left-color: var(--lr-blood-2); }
+#tbToasts .tb-toast.out { opacity: 0; transform: translateY(-8px); transition: opacity var(--lr-t-slow) var(--lr-ease), transform var(--lr-t-slow) var(--lr-ease); }
 @keyframes tbin { from { opacity: 0; transform: translateY(-8px); } }
 
 /* ===== Zoom flutuante ===== */
-.tb-zoombar { position: fixed; bottom: 14px; left: 14px; z-index: 40; display: flex; gap: 6px; }
-.tb-zoombar button { width: 36px; height: 36px; border-radius: 9px; background: var(--tb-panel); border: 1px solid var(--tb-border); color: var(--tb-light); font-size: 1rem; cursor: pointer; }
-.tb-zoombar button:hover { border-color: var(--tb-primary); }
+.tb-zoombar { position: fixed; bottom: var(--lr-space-3); left: var(--lr-space-3); z-index: 40; display: flex; gap: var(--lr-space-1); }
+.tb-zoombar button { width: 36px; height: 36px; border-radius: var(--lr-radius); background: var(--lr-surface); border: 1px solid var(--lr-border); color: var(--lr-text-1); font-size: var(--lr-fs-md); cursor: pointer; box-shadow: var(--lr-shadow-1); }
+.tb-zoombar button:hover { background: var(--lr-surface-2); border-color: var(--lr-text-2); }
 
 /* ===== Player de música (modo secreto) ===== */
 .tb-form-grid .tb-form-full { grid-column: 1 / -1; }
 
 .tb-musica {
-    position: fixed; bottom: 60px; left: 14px; z-index: 44; width: 232px;
-    background: var(--tb-panel); border: 1px solid var(--tb-border); border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.45); overflow: hidden;
+    position: fixed; bottom: 60px; left: var(--lr-space-3); z-index: 44; width: 232px;
+    background: var(--lr-surface); border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
+    box-shadow: var(--lr-shadow-3); overflow: hidden;
 }
 .tb-musica.recolhida { width: auto; background: none; border: none; box-shadow: none; }
 .tb-musica.oculta { display: none; }
 .tb-musica-jogador { width: 180px; }
-.tb-mus-pe { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-top: 1px solid var(--tb-border); }
+.tb-mus-pe { display: flex; align-items: center; gap: var(--lr-space-2); padding: var(--lr-space-1) var(--lr-space-2); border-top: 1px solid var(--lr-border-soft); }
 .tb-musica-jogador .tb-mus-pe { border-top: none; }
-.tb-mus-icvol { font-size: .85rem; }
-.tb-mus-sync { font-size: .64rem; font-weight: 800; color: var(--lr-nature); white-space: nowrap; }
+.tb-mus-icvol { font-size: var(--lr-fs-sm); }
+.tb-mus-sync { font-size: var(--lr-fs-xs); font-weight: 700; color: var(--lr-nature); white-space: nowrap; }
 .tb-mus-destravar {
-    display: block; width: 100%; border: none; border-top: 1px solid var(--tb-border); cursor: pointer;
-    background: var(--tb-warning); color: #1a1206; font-size: .72rem; font-weight: 800; padding: 6px 8px;
+    display: block; width: 100%; border: none; border-top: 1px solid var(--lr-border); cursor: pointer;
+    background: var(--lr-gold); color: var(--lr-bg-0); font-size: var(--lr-fs-xs); font-weight: 700;
+    padding: var(--lr-space-2);
 }
+.tb-mus-destravar:hover { background: var(--lr-gold-2); }
 .tb-mus-pill {
-    width: 36px; height: 36px; border-radius: 9px; background: var(--tb-panel);
-    border: 1px solid var(--tb-border); color: var(--tb-light); font-size: 1rem; cursor: pointer; position: relative;
+    width: 36px; height: 36px; border-radius: var(--lr-radius); background: var(--lr-surface);
+    border: 1px solid var(--lr-border); color: var(--lr-text-1); font-size: var(--lr-fs-md);
+    cursor: pointer; position: relative; box-shadow: var(--lr-shadow-1);
 }
-.tb-mus-pill:hover { border-color: var(--tb-primary); }
+.tb-mus-pill:hover { background: var(--lr-surface-2); border-color: var(--lr-text-2); }
 .tb-mus-pill.on { border-color: var(--lr-nature); }
 .tb-mus-badge {
-    position: absolute; top: -5px; right: -5px; background: var(--tb-success); color: #04121c;
-    font-size: .6rem; font-weight: 900; border-radius: 8px; padding: 0 4px;
+    position: absolute; top: -5px; right: -5px; background: var(--lr-nature); color: var(--lr-bg-0);
+    font-size: var(--lr-fs-xs); font-weight: 800; border-radius: var(--lr-radius-sm); padding: 0 4px;
 }
 /* Players do YouTube: o embed oficial não pode ficar escondido (termos do YouTube,
    e iframe oculto não ganha autoplay). Ficam como miniaturas no topo da barra. */
-.tb-mus-yt { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; }
+.tb-mus-yt { display: flex; flex-wrap: wrap; gap: var(--lr-space-1); padding: var(--lr-space-1); }
 .tb-mus-yt:empty { display: none; }
-.tb-mus-ytitem { width: 112px; height: 63px; border-radius: 6px; overflow: hidden; background: #000; flex: none; }
+.tb-mus-ytitem { width: 112px; height: 63px; border-radius: var(--lr-radius-sm); overflow: hidden; background: var(--lr-bg-0); flex: none; }
 .tb-mus-ytitem iframe { display: block; border: 0; width: 112px; height: 63px; }
-.tb-mus-yticon { color: #ef4444; font-size: .6rem; margin-right: 3px; vertical-align: 1px; }
+.tb-mus-yticon { color: var(--lr-blood-2); font-size: var(--lr-fs-xs); margin-right: 3px; vertical-align: 1px; }
 
 .tb-mus-head {
-    display: flex; align-items: center; gap: 3px; padding: 5px 7px;
-    border-bottom: 1px solid var(--tb-border); background: var(--tb-panel2); font-size: .8rem;
+    display: flex; align-items: center; gap: var(--lr-space-1); padding: var(--lr-space-1) var(--lr-space-2);
+    border-bottom: 1px solid var(--lr-border); background: var(--lr-bg-1); font-size: var(--lr-fs-xs);
 }
 .tb-mus-sel {
-    flex: 1; min-width: 0; background: var(--tb-bg); border: 1px solid var(--tb-border);
-    color: var(--tb-light); border-radius: 6px; padding: 3px 5px; font-size: .74rem; font-family: inherit;
+    flex: 1; min-width: 0; background: var(--lr-bg-0); border: 1px solid var(--lr-border);
+    color: var(--lr-text-1); border-radius: var(--lr-radius-sm); padding: 3px var(--lr-space-1);
+    font-size: var(--lr-fs-xs); font-family: inherit;
 }
-.tb-mus-lista { max-height: 172px; overflow-y: auto; padding: 4px; }
-.tb-mus-vazio { color: var(--tb-muted); font-size: .72rem; padding: 8px 6px; text-align: center; }
+.tb-mus-lista { max-height: 172px; overflow-y: auto; padding: var(--lr-space-1); }
+.tb-mus-vazio { color: var(--lr-text-2); font-size: var(--lr-fs-xs); padding: var(--lr-space-2); text-align: center; }
 .tb-mus-row {
-    display: flex; align-items: center; gap: 5px; padding: 3px 4px; border-radius: 7px;
-    border: 1px solid transparent;
+    display: flex; align-items: center; gap: var(--lr-space-1); padding: 3px var(--lr-space-1);
+    border-radius: var(--lr-radius-sm); border: 1px solid transparent;
 }
-.tb-mus-row:hover { background: var(--tb-panel2); }
-.tb-mus-row.on { border-color: var(--lr-nature); background: rgba(52,211,153,.09); }
+.tb-mus-row:hover { background: var(--lr-surface-2); }
+.tb-mus-row.on { border-color: var(--lr-nature); background: var(--lr-nature-soft); }
 .tb-mus-play {
-    width: 24px; height: 24px; flex: none; border-radius: 6px; cursor: pointer;
-    background: var(--tb-bg); border: 1px solid var(--tb-border); color: var(--tb-light); font-size: .7rem;
+    width: 24px; height: 24px; flex: none; border-radius: var(--lr-radius-sm); cursor: pointer;
+    background: var(--lr-bg-0); border: 1px solid var(--lr-border); color: var(--lr-text-1); font-size: var(--lr-fs-xs);
 }
 .tb-mus-row.on .tb-mus-play { border-color: var(--lr-nature); animation: tbMusPulso 1.8s ease-in-out infinite; }
-@keyframes tbMusPulso { 50% { box-shadow: 0 0 0 3px rgba(52,211,153,.18); } }
+@keyframes tbMusPulso { 50% { box-shadow: 0 0 0 3px var(--lr-nature-soft); } }
 .tb-mus-nome {
-    flex: 1; min-width: 0; font-size: .74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    flex: 1; min-width: 0; font-size: var(--lr-fs-xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.tb-mus-loop { color: var(--tb-muted); font-size: .68rem; }
-.tb-mus-vol { width: 56px; flex: none; accent-color: var(--tb-primary); }
-.tb-mus-plrow { display: flex; align-items: flex-end; gap: 6px; }
-.tb-mus-plrow label { display: flex; flex-direction: column; gap: 4px; font-size: .76rem; color: var(--tb-muted); font-weight: 700; }
-.tb-mus-edit { gap: 6px; }
-.tb-mus-edit .tb-input { padding: 5px 8px; font-size: .78rem; }
+.tb-mus-loop { color: var(--lr-text-2); font-size: var(--lr-fs-xs); }
+.tb-mus-vol { width: 56px; flex: none; accent-color: var(--lr-gold); }
+.tb-mus-plrow { display: flex; align-items: flex-end; gap: var(--lr-space-2); }
+.tb-mus-plrow label { display: flex; flex-direction: column; gap: var(--lr-space-1); font-size: var(--lr-fs-xs); color: var(--lr-text-2); font-weight: 600; }
+.tb-mus-edit { gap: var(--lr-space-2); }
+.tb-mus-edit .tb-input { padding: var(--lr-space-1) var(--lr-space-2); font-size: var(--lr-fs-xs); }
 
 /* Celular DEITADO (e qualquer janela baixa): nem com o botão no piso de 24px a
    coluna única cabe — 14 botões pedem ~380px e sobra menos que isso. Aí a barra
    quebra em duas colunas (os separadores saem, senão brigam pelo lugar) e as
    sub-barras andam para a direita para não ficar por baixo. */
 @media (max-height: 460px) {
-    .tb-toolbar { flex-wrap: wrap; max-height: calc(100vh - 70px); align-content: flex-start; }
+    .tb-toolbar { flex-wrap: wrap; max-height: calc(100vh - var(--tb-abaixo-da-barra) - var(--lr-space-2)); align-content: flex-start; }
     .tb-toolbar .tb-sep { display: none; }
-    .tb-subbar { left: 84px; }
+    .tb-subbar { left: 84px; max-width: min(280px, calc(100vw - 100px)); }
     /* com duas colunas a barra desce até o rodapé e engolia a pilha do player
        (que fica no canto de baixo à esquerda): ela troca de canto */
-    .tb-musica { left: auto; right: 14px; bottom: 14px; }
+    .tb-musica { left: auto; right: var(--lr-space-3); bottom: var(--lr-space-3); }
 }
 
 @media (max-width: 720px) {
     #tbMesaNome { display: none; }
     .tb-side-panel { width: 230px; }
+    /* Sem largura para as duas colunas: a janela vira folha de largura cheia
+       e o painel lateral fica por cima dela — arrastar resolve, e no celular
+       raramente os dois estão abertos ao mesmo tempo. */
     .tb-window { width: 94vw; right: 3vw; }
     .tb-musica { width: 190px; }
 }
@@ -479,21 +704,22 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 }
 .tb-radial-centro {
     position: absolute; left: -21px; top: -21px; width: 42px; height: 42px;
-    border-radius: 50%; background: #1f2937; border: 2px solid var(--lr-abyssal);
+    border-radius: 50%; background: var(--lr-surface); border: 2px solid var(--lr-gold);
     display: flex; align-items: center; justify-content: center;
-    color: var(--lr-divine); font-weight: 700; pointer-events: none;
+    color: var(--lr-gold-2); font-weight: 700; pointer-events: none;
+    box-shadow: var(--lr-shadow-2);
 }
 .tb-radial-item {
     position: absolute; left: -19px; top: -19px; width: 38px; height: 38px;
-    border-radius: 50%; border: 1px solid rgba(148,163,184,.35);
-    background: rgba(17,24,39,.96); color: var(--lr-divine); font-size: 1rem;
+    border-radius: 50%; border: 1px solid var(--lr-border);
+    background: var(--lr-surface); color: var(--lr-text-1); font-size: var(--lr-fs-md);
     cursor: pointer; display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 14px rgba(0,0,0,.5);
-    transition: transform .12s, background .12s;
-    animation: tbRadialIn .16s ease-out;
+    box-shadow: var(--lr-shadow-2);
+    transition: transform var(--lr-t-fast) var(--lr-ease), background-color var(--lr-t-fast) var(--lr-ease);
+    animation: tbRadialIn var(--lr-t-slow) var(--lr-ease);
 }
-.tb-radial-item:hover { background: var(--lr-surface-2); scale: 1.12; }
-.tb-radial-danger:hover { background: var(--lr-blood); }
+.tb-radial-item:hover { background: var(--lr-surface-2); border-color: var(--lr-gold); scale: 1.12; }
+.tb-radial-danger:hover { background: var(--lr-blood); border-color: var(--lr-blood); }
 @keyframes tbRadialIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* Fade de transição de cena (F6.3) */
@@ -513,7 +739,8 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 .tb-legenda-texto {
     position: absolute; left: 50%; transform: translateX(-50%);
     bottom: 0; width: min(760px, 88vw);
-    color: var(--lr-divine); font-size: 1.25rem; line-height: 1.75; text-align: center;
+    color: var(--lr-divine); font-family: var(--lr-font-subtitle);
+    font-size: var(--lr-fs-xl); line-height: var(--lr-lh-body); text-align: center;
     text-shadow: 0 2px 10px rgba(0,0,0,.9);
     animation-name: tbLegendaSobe; animation-timing-function: linear; animation-fill-mode: forwards;
 }
@@ -526,47 +753,52 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 /* .modal — do Painel do Mestre (área de NPCs, combate) */
 .modal {
     position: fixed; inset: 0; z-index: 1000;
-    background: rgba(0, 0, 0, .65);
-    display: none; align-items: center; justify-content: center; padding: 16px;
+    background: var(--tb-scrim);
+    display: none; align-items: center; justify-content: center; padding: var(--lr-space-4);
     backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
 }
 .modal.active { display: flex; }
 .modal .modal-content {
-    background: var(--tb-panel); border: 1px solid var(--tb-border); border-radius: 14px;
+    background: var(--lr-surface); border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
     width: 100%; max-height: 88vh; display: flex; flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0,0,0,.6); overflow: hidden;
+    box-shadow: var(--lr-shadow-3); overflow: hidden;
 }
 .modal .modal-header {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 13px 16px; border-bottom: 1px solid var(--tb-border);
+    padding: var(--lr-space-3) var(--lr-space-4); border-bottom: 1px solid var(--lr-border);
 }
-.modal .modal-title { font-weight: 800; font-size: .95rem; color: var(--tb-light); }
+.modal .modal-title {
+    font-family: var(--lr-font-title); font-weight: 600; letter-spacing: var(--lr-track-title);
+    font-size: var(--lr-fs-md); color: var(--lr-text-1);
+}
 .modal .modal-close {
-    background: none; border: none; color: var(--tb-muted);
-    font-size: 1.1rem; cursor: pointer;
+    background: none; border: none; color: var(--lr-text-2);
+    font-size: var(--lr-fs-lg); cursor: pointer; line-height: 1;
 }
-.modal .modal-close:hover { color: var(--tb-danger); }
-.modal .modal-body { padding: 16px; overflow-y: auto; color: var(--tb-light); }
+.modal .modal-close:hover { color: var(--lr-blood-3); }
+.modal .modal-body { padding: var(--lr-space-4); overflow-y: auto; color: var(--lr-text-1); }
 
 /* .inv-modal — do módulo de Inventário/Condições do Painel do Mestre */
 .inv-modal {
     position: fixed; inset: 0; z-index: 1000;
-    background: rgba(0, 0, 0, .65);
-    display: none; align-items: center; justify-content: center; padding: 16px;
+    background: var(--tb-scrim);
+    display: none; align-items: center; justify-content: center; padding: var(--lr-space-4);
     backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
 }
 .inv-modal.active { display: flex; }
 .inv-modal .inv-modal-content {
-    background: var(--tb-panel); border: 1px solid var(--tb-border); border-radius: 14px;
+    background: var(--lr-surface); border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
     width: 100%; max-height: 88vh; display: flex; flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0,0,0,.6); overflow: hidden;
+    box-shadow: var(--lr-shadow-3); overflow: hidden;
 }
 
 /* .detail-modal (non-#aliadoNpcModal) — fallback genérico */
 .detail-modal:not(#aliadoNpcModal) {
     position: fixed; inset: 0; z-index: 1000;
-    background: rgba(0, 0, 0, .65);
-    display: flex; align-items: center; justify-content: center; padding: 16px;
+    background: var(--tb-scrim);
+    display: flex; align-items: center; justify-content: center; padding: var(--lr-space-4);
     backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
 }
 .detail-modal:not(#aliadoNpcModal).hidden { display: none; }
@@ -579,7 +811,7 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
     position: fixed;
     z-index: 45;
     display: flex;
-    gap: 6px;
+    gap: var(--lr-space-2);
     transform: translate(-50%, -50%);
     pointer-events: auto;
 }
@@ -587,15 +819,15 @@ html, body { height: 100%; overflow: hidden; background: var(--tb-bg); color: va
 #tbGirarBar button {
     width: 34px; height: 34px;
     border-radius: 50%;
-    border: 1px solid rgba(34, 211, 238, .55);
-    background: rgba(11, 14, 20, .82);
-    color: #22d3ee;
-    font-size: 1.05rem; line-height: 1;
+    border: 1px solid var(--lr-arcane);
+    background: var(--lr-surface);
+    color: var(--lr-arcane-2);
+    font-size: var(--lr-fs-md); line-height: 1;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    backdrop-filter: blur(4px);
+    box-shadow: var(--lr-shadow-2);
     touch-action: manipulation;
     user-select: none;
 }
-#tbGirarBar button:hover { background: rgba(34, 211, 238, .18); }
+#tbGirarBar button:hover { background: var(--lr-arcane-soft); }
 #tbGirarBar button:active { transform: scale(.9); }

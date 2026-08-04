@@ -16,7 +16,22 @@ consertos que não cabiam no escopo da vez.
   `criarMemoPorVersao` já serve. Não muda regra nenhuma.
 - **Risco:** baixo. Errar a invalidação = token aparecendo/sumindo com atraso.
 
-## 2. Espelho da cena ativa no doc de combate
+## 2. `backdrop-filter: blur()` nos modais injetados
+
+- **Local:** `css/tabuleiro.css` → `.modal`, `.inv-modal`, `.detail-modal`,
+  `.tb-cond-picker-overlay`.
+- **Problema:** o véu cobre a viewport inteira, então o compositor borra tudo
+  que está atrás — inclusive o `#tbCanvas` com o bitmap do mapa. Abrir a ficha
+  de um NPC ou o inventário paga isso enquanto o modal estiver aberto.
+- **Impacto:** não é por quadro de arrasto nem de fog (o modal só abre com o
+  mestre parado), mas num mapa de 8k em celular mediano o primeiro quadro
+  depois de abrir engasga.
+- **Conserto:** trocar o blur por opacidade um pouco maior no `--tb-scrim`, ou
+  aplicar o blur só no cartão do modal. Nenhuma regra muda.
+- **Risco:** baixo — é puramente estético.
+- **Achado em:** varredura de UI de 03/08/2026 (não foi introduzido por ela).
+
+## 3. Espelho da cena ativa no doc de combate
 
 - **Local:** `shared/combate-cenas.js` → `docDeCenas`.
 - **Problema:** os participantes da cena aberta vão duas vezes no mesmo doc

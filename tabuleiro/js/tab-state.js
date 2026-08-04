@@ -116,6 +116,14 @@ export function esc(t) {
     return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+/**
+ * Ícone do sprite SVG de tabuleiro.html. Os <symbol> moram lá (assim os botões
+ * estáticos não esperam módulo nenhum); aqui só devolvemos a referência, para
+ * não existir uma segunda cópia dos traços dentro do JS.
+ * @param {string} nome — sem o prefixo `i-`. Ex.: ico('dado')
+ */
+export function ico(nome) { return `<svg class="tb-ico"><use href="#i-${nome}"/></svg>`; }
+
 export function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
 export function toast(msg, type = 'success') {

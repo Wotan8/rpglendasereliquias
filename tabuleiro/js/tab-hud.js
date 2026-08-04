@@ -6,7 +6,7 @@
 // - Rolar iniciativa direto do mapa (1d10 + VD Iniciativa)
 // =============================================
 import { db, doc, onSnapshot, setDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, markDirty, uid, can, selecionar, bonusIniciativa, DADO_INICIATIVA } from './tab-state.js';
+import { T, esc, ico, toast, markDirty, uid, can, selecionar, bonusIniciativa, DADO_INICIATIVA } from './tab-state.js';
 import { refCombate } from './tab-main.js';
 import { updObj, delObj, abrirPropriedades } from './tab-objects.js';
 import { SENSORES } from './tab-fog.js';
@@ -176,27 +176,27 @@ export function abrirMenuRadial(o, sx, sy) {
     const acoes = [];
 
     if (o.vinculo?.tipo === 'npc' && (secreto || can('abrirNpc'))) {
-        acoes.push({ ic: '📋', tip: 'Abrir ficha do NPC', fn: () => window.tbAbrirNpcModal?.(o.vinculo.id, !secreto) });
+        acoes.push({ ic: 'prancheta', tip: 'Abrir ficha do NPC', fn: () => window.tbAbrirNpcModal?.(o.vinculo.id, !secreto) });
     }
     // 🔒 Token bloqueado: nenhuma ação de manipulação; Mestre vê apenas o desbloqueio
     if (o.bloqueado) {
-        if (secreto) acoes.push({ ic: '🔒', tip: 'Desbloquear objeto', fn: () => window.tbDesbloquearObj?.(o.id) });
+        if (secreto) acoes.push({ ic: 'cadeado', tip: 'Desbloquear objeto', fn: () => window.tbDesbloquearObj?.(o.id) });
     } else if (secreto) {
-        acoes.push({ ic: '🎲', tip: `Rolar iniciativa (1d${DADO_INICIATIVA} + Iniciativa)`, fn: () => rolarIniciativa(o) });
-        acoes.push({ ic: o.visao?.ativa ? '👁️' : '🙈', tip: 'Alternar visão', fn: () => updObj(o.id, { visao: { ...(o.visao||{}), ativa: !o.visao?.ativa } }) });
-        acoes.push({ ic: o.luz?.ativa ? '🔦' : '💡', tip: 'Alternar luz', fn: () => updObj(o.id, { luz: { ...(o.luz||{ alcance: 3 }), ativa: !o.luz?.ativa } }) });
-        acoes.push({ ic: o.invisivel ? '✨' : '👻', tip: o.invisivel ? 'Tornar visível' : 'Tornar invisível', fn: () => updObj(o.id, { invisivel: !o.invisivel }) });
-        acoes.push({ ic: '☠️', tip: 'Adicionar condição', fn: () => adicionarCondicao(o) });
-        acoes.push({ ic: '📐', tip: 'Tamanho...', fn: () => {
+        acoes.push({ ic: 'dado', tip: `Rolar iniciativa (1d${DADO_INICIATIVA} + Iniciativa)`, fn: () => rolarIniciativa(o) });
+        acoes.push({ ic: o.visao?.ativa ? 'olho' : 'olho-off', tip: 'Alternar visão', fn: () => updObj(o.id, { visao: { ...(o.visao||{}), ativa: !o.visao?.ativa } }) });
+        acoes.push({ ic: o.luz?.ativa ? 'luz' : 'luz-off', tip: 'Alternar luz', fn: () => updObj(o.id, { luz: { ...(o.luz||{ alcance: 3 }), ativa: !o.luz?.ativa } }) });
+        acoes.push({ ic: o.invisivel ? 'brilho' : 'fantasma', tip: o.invisivel ? 'Tornar visível' : 'Tornar invisível', fn: () => updObj(o.id, { invisivel: !o.invisivel }) });
+        acoes.push({ ic: 'caveira', tip: 'Adicionar condição', fn: () => adicionarCondicao(o) });
+        acoes.push({ ic: 'redimensionar', tip: 'Tamanho...', fn: () => {
             const t = prompt('Tamanho em células (0.5, 1, 2, 3...):', o.tamanhoCelulas || 1);
             if (t) updObj(o.id, { tamanhoCelulas: parseFloat(t) || 1 });
         }});
-        acoes.push({ ic: '🪜', tip: 'Elevação...', fn: () => {
+        acoes.push({ ic: 'elevacao', tip: 'Elevação...', fn: () => {
             const e = prompt('Elevação (na unidade do canvas):', o.elev || 0);
             if (e !== null) updObj(o.id, { elev: parseFloat(e) || 0 });
         }});
-        acoes.push({ ic: '⚙️', tip: 'Propriedades', fn: () => { selecionar(o.id); abrirPropriedades(o.id); markDirty(); } });
-        acoes.push({ ic: '🗑️', tip: 'Remover token', fn: () => delObj(o.id), danger: true });
+        acoes.push({ ic: 'engrenagem', tip: 'Propriedades', fn: () => { selecionar(o.id); abrirPropriedades(o.id); markDirty(); } });
+        acoes.push({ ic: 'lixeira', tip: 'Remover token', fn: () => delObj(o.id), danger: true });
     }
     if (!acoes.length) return;
 
@@ -206,7 +206,7 @@ export function abrirMenuRadial(o, sx, sy) {
             const ang = -Math.PI / 2 + (i / acoes.length) * Math.PI * 2;
             const x = Math.cos(ang) * R, y = Math.sin(ang) * R;
             return `<button class="tb-radial-item ${a.danger ? 'tb-radial-danger' : ''}" data-i="${i}" title="${esc(a.tip)}"
-                style="transform:translate(${x.toFixed(0)}px,${y.toFixed(0)}px)">${a.ic}</button>`;
+                style="transform:translate(${x.toFixed(0)}px,${y.toFixed(0)}px)">${ico(a.ic)}</button>`;
         }).join('');
     el.style.left = sx + 'px';
     el.style.top = sy + 'px';
