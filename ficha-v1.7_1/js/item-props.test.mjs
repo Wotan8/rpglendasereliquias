@@ -58,19 +58,24 @@ assert.equal(prop('Preço', { items: [simples], catalog: inv.catalog }), 0);
 assert.equal(prop('Liga', { items: [simples], catalog: inv.catalog }), 0);
 assert.equal(prop('Tamanho', { items: [simples], catalog: inv.catalog }), 0);
 
-// --- Fio e Afiação: entram na Equação de Dano (`FOR + Item: Fio + Item: Afiação`) ---
-const GRAAL_TPL = { id: 'tplGraal', nome: 'Espada Longa', liga: '5', fio: '4', afiacao: 4 };
+// --- Qualidade e Afiação: entram na Equação de Dano (`FOR + Item: Qualidade + Item: Afiação`) ---
+const GRAAL_TPL = { id: 'tplGraal', nome: 'Espada Longa', liga: '5', qualidade: '5', afiacao: 5 };
 const espada = { id: 'i1', nome: 'Espada Longa', modeloId: 'tplGraal', peso: 2 };
 const invGraal = { items: [espada], catalog: [GRAAL_TPL] };
-assert.equal(prop('Fio', invGraal), 4, 'Fio vem do modelo e sai numérico');
-assert.equal(prop('Afiação', invGraal), 4, 'Afiação idem');
-// Peça sem Fio precisa dar 0 — undefined faria a equação inteira virar NaN.
-assert.equal(prop('Fio', { items: [simples], catalog: inv.catalog }), 0, 'sem Fio vale 0');
+assert.equal(prop('Qualidade', invGraal), 5, 'Qualidade vem do modelo e sai numérica');
+assert.equal(prop('Afiação', invGraal), 5, 'Afiação idem');
+// Peça sem Qualidade precisa dar 0 — undefined faria a equação inteira virar NaN.
+assert.equal(prop('Qualidade', { items: [simples], catalog: inv.catalog }), 0, 'sem Qualidade vale 0');
 assert.equal(prop('Afiação', { items: [simples], catalog: inv.catalog }), 0, 'sem Afiação vale 0');
-// A instância vence o modelo: uma lâmina afiada não muda o catálogo inteiro.
-assert.equal(prop('Fio', { items: [{ ...espada, fio: 2 }], catalog: [GRAAL_TPL] }), 2, 'instância sobrepõe o modelo');
-// Trava do Livro (5.5): Fio ≤ Liga − 1. Aqui só o dado; quem valida é o audit.
-assert.ok(prop('Fio', invGraal) <= prop('Liga', invGraal) - 1, 'Fio 4 cabe na Liga 5');
+// A instância vence o modelo: uma lâmina refeita não muda o catálogo inteiro.
+assert.equal(prop('Qualidade', { items: [{ ...espada, qualidade: 2 }], catalog: [GRAAL_TPL] }), 2, 'instância sobrepõe o modelo');
+// Migração: o campo antigo `fio` e a ref antiga 'Fio' seguem valendo enquanto
+// houver instância antiga em ficha — item não migrado não pode virar 0.
+const LEGADO_TPL = { id: 'tplLegado', nome: 'Machado', liga: '4', fio: '3' };
+assert.equal(prop('Qualidade', { items: [{ id: 'i1', nome: 'Machado', modeloId: 'tplLegado', peso: 2 }], catalog: [LEGADO_TPL] }), 3, 'campo antigo fio alimenta a Qualidade');
+assert.equal(prop('Fio', invGraal), 5, "ref antiga 'Fio' é alias da Qualidade");
+// Trava do Livro (5.5): Qualidade ≤ Liga, não estrito. Aqui só o dado; quem valida é o audit.
+assert.ok(prop('Qualidade', invGraal) <= prop('Liga', invGraal), 'Qualidade 5 cabe na Liga 5');
 
 // --- container: multiplicador cai no modelo, com default 1 ---
 const mochila = { id: 'i1', nome: 'Mochila', modeloId: 'tplMochila', peso: 2, ehContainer: true };
@@ -90,7 +95,7 @@ assert.equal(prop('Cor', inv), 0, 'propriedade inexistente vale 0');
 // --- o prefixo cortado em _resolveSheetRef bate com as chaves do mapa ---
 assert.equal('Item: Peso/Pressão'.slice(6), 'Peso/Pressão');
 assert.ok(src.includes("ref.startsWith('Item: ')"), 'branch de Item: some do _resolveSheetRef');
-for (const chave of ['Peso/Pressão', 'Tamanho', 'Preço', 'Liga', 'Fio', 'Afiação', 'Quantidade', 'Multiplicador de Pressão', 'Capacidade do Container']) {
+for (const chave of ['Peso/Pressão', 'Tamanho', 'Preço', 'Liga', 'Qualidade', 'Fio', 'Afiação', 'Quantidade', 'Multiplicador de Pressão', 'Capacidade do Container']) {
   assert.equal(prop(chave, inv) === 0 || typeof prop(chave, inv) === 'number', true);
 }
 

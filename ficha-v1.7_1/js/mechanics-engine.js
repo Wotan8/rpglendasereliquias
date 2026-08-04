@@ -792,10 +792,13 @@ const _ME_ITEM_PROPS = {
     'Capacidade do Container': (it, tpl) => it.capacidadeContainer ?? tpl?.capacidadeContainer,
     'Preço': (it, tpl) => it.preco ?? tpl?.preco,
     'Liga': (it, tpl) => it.liga ?? tpl?.liga,
-    // Fio é o poder da peça e Afiação é o gume mantido sobre ele (Livro, 5.5/5.6).
-    // Os dois entram na Equação de Dano: `FOR + Item: Fio + Item: Afiação`.
-    // Peça sem Fio vale 0 — não undefined, senão a equação inteira vira NaN.
-    'Fio': (it, tpl) => it.fio ?? tpl?.fio ?? 0,
+    // Qualidade é o poder da peça (0–5) e Afiação o acabamento mantido sobre ela
+    // (Livro, 5.5/5.6). Entram na Equação de Dano: `FOR + Item: Qualidade + Item: Afiação`.
+    // Peça sem Qualidade vale 0 — não undefined, senão a equação inteira vira NaN.
+    // `fio` (campo) e 'Fio' (ref) são o nome antigo — o alias fica enquanto houver
+    // instância antiga em ficha de personagem, que a migração do catálogo não varre.
+    'Qualidade': (it, tpl) => it.qualidade ?? tpl?.qualidade ?? it.fio ?? tpl?.fio ?? 0,
+    'Fio': (it, tpl) => it.qualidade ?? tpl?.qualidade ?? it.fio ?? tpl?.fio ?? 0,
     'Afiação': (it, tpl) => it.afiacao ?? tpl?.afiacao ?? 0,
     'Quantidade': it => it.quantidade ?? 1
 };

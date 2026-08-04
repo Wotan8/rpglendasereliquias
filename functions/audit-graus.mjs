@@ -1,9 +1,9 @@
 /**
- * Audita o catálogo pela escada de Grau/Fio (skill balancear-item §4b).
+ * Audita o catálogo pela escada de Qualidade (v2 — Liga ≥ Qualidade ≥ Afiação).
  *
- *   Fio de arma      = modificador/equação nos VDs de Dano ou Acerto
- *   Grau             = Fio + 1
- *   Grau de proteção = taxa por slot contra a tabela ×1,35
+ *   Qualidade de arma      = campo `qualidade` (`fio` pré-migração)
+ *   Qualidade de proteção  = taxa por slot contra a escada antiga (morre no
+ *                            passo 2 da migração, Blindagem inteira por peça)
  *
  * Só lê. Não grava nada.
  *
@@ -25,7 +25,7 @@ const [eq, vds, sks, attrs] = await Promise.all(
 const vdNome = id => (vds.find(v => v.id === id) || {}).nome || `?${id}`;
 const r2 = v => Math.round(v * 100) / 100;
 const TAXA_BASE = { 'Leve': 0.20, 'Média': 0.22, 'Pesada': 0.30 };
-const taxaNoGrau = (base, g) => r2(base * Math.pow(1.35, g - 1));
+const taxaNoGrau = (base, g) => r2(base * Math.pow(1.35, g));   // g = Qualidade (0 = taxa base)
 
 /* Fio literal de uma equação: soma dos termos numéricos (os refs de ficha são
    o corpo do personagem, não poder do item). */
@@ -58,7 +58,7 @@ for (const e of eq) {
             .reduce((s, v) => s + (Number(v.modificador) || 0), 0);
         const slots = 1 + (e.slotsAdicionais || []).reduce((s, x) => s + (x.quantidade || 0), 0);
         if (ehEscudo) {
-            protecoes.push({ nome: e.nome, classe: 'Escudo', slots: 1, bl: r2(bl), taxa: r2(bl), grau: 1, nota: 'escudo não escala por Grau' });
+            protecoes.push({ nome: e.nome, classe: 'Escudo', slots: 1, bl: r2(bl), taxa: r2(bl), grau: 0, nota: 'escudo não escala Blindagem por Qualidade' });
         } else {
             const taxa = r2(bl / slots);
             const base = TAXA_BASE[classe];
@@ -74,16 +74,16 @@ for (const e of eq) {
     const acertoMagico = vinc.find(v => vdNome(v.id) === 'Acerto Mágico');
     if (acertoMagico) {
         const fio = Array.isArray(acertoMagico.equacao) ? fioDaEquacao(acertoMagico.equacao) : (Number(acertoMagico.modificador) || 0);
-        focos.push({ nome: e.nome, fio, grau: fio + 1 });
+        focos.push({ nome: e.nome, fio, grau: fio });
         continue;
     }
 
     /* --- Arma / projétil --- */
     if (ehArma || tags.some(t => ['Flecha', 'Virote', 'Munição'].includes(t))) {
-        // O Fio agora é campo. Os canais arcanos continuam saindo dos vínculos
-        // de Dano por Essência — um por canal, e a soma deles também não passa
-        // do Fio (Livro, 5.5).
-        const fio = Number(e.fio) || 0;
+        // A Qualidade é campo (`qualidade`; `fio` é o nome antigo, pré-migração).
+        // Os canais arcanos continuam saindo dos vínculos de Dano por Essência —
+        // um por canal, e a soma deles também não passa da Qualidade (Livro, 5.5).
+        const fio = Number(e.qualidade ?? e.fio) || 0;
         const afiacao = Number(e.afiacao) || 0;
         const liga = e.liga == null ? null : Number(e.liga);
         const canais = [];
@@ -95,18 +95,18 @@ for (const e of eq) {
             arcanoTotal += f;
             if (f) canais.push(`${n} ${f > 0 ? '+' : ''}${f}`);
         }
-        armas.push({ nome: e.nome, dado: e.formulaDano || '—', cat: e.categoriaArma || '—', fio, grau: fio + 1, canais });
+        armas.push({ nome: e.nome, dado: e.formulaDano || '—', cat: e.categoriaArma || '—', fio, grau: fio, canais });
 
-        /* As três travas encaixadas do Livro, 5.5 */
-        if (fio > 4) problemas.push(`FIO ACIMA DO TETO · ${e.nome}: ${fio} (máximo 4 = Grau 5)`);
-        if (liga != null && fio > liga - 1)
-            problemas.push(`FIO ACIMA DA LIGA · ${e.nome}: Fio ${fio} com Liga ${liga} (o teto é ${Math.max(0, liga - 1)})`);
+        /* As travas encaixadas do Livro, 5.5 — v2: Liga ≥ Qualidade ≥ Afiação */
+        if (fio > 5) problemas.push(`QUALIDADE ACIMA DO TETO · ${e.nome}: ${fio} (máximo 5 = Graal)`);
+        if (liga != null && fio > liga)
+            problemas.push(`QUALIDADE ACIMA DA LIGA · ${e.nome}: Qualidade ${fio} com Liga ${liga} (o teto é a própria Liga)`);
         if (afiacao > fio)
-            problemas.push(`AFIAÇÃO ACIMA DO FIO · ${e.nome}: Afiação ${afiacao} com Fio ${fio}`);
+            problemas.push(`AFIAÇÃO ACIMA DA QUALIDADE · ${e.nome}: Afiação ${afiacao} com Qualidade ${fio}`);
         if (arcanoTotal > fio)
-            problemas.push(`AFIAÇÃO ARCANA ACIMA DO FIO · ${e.nome}: ${arcanoTotal} somando os canais, com Fio ${fio}`);
+            problemas.push(`AFIAÇÃO ARCANA ACIMA DA QUALIDADE · ${e.nome}: ${arcanoTotal} somando os canais, com Qualidade ${fio}`);
         if (fio > 0 && liga == null)
-            problemas.push(`FIO SEM LIGA · ${e.nome}: Fio ${fio} numa peça sem Liga declarada`);
+            problemas.push(`QUALIDADE SEM LIGA · ${e.nome}: Qualidade ${fio} numa peça sem Liga declarada`);
         // Rede e Enredantes não causam dano por design — não são falha de cadastro.
         if (ehArma && !e.formulaDano && !tags.includes('Enredante')) problemas.push(`ARMA SEM DADO · ${e.nome}: tipo Arma sem formulaDano`);
         if (ehArma && !e.categoriaArma) problemas.push(`ARMA SEM CATEGORIA · ${e.nome}`);
@@ -136,17 +136,17 @@ for (const a of protecoes) for (const b of protecoes) {
 }
 
 /* ===== Relatório ===== */
-const dist = arr => { const d = {}; for (const x of arr) d[`Grau ${x.grau ?? '?'}`] = (d[`Grau ${x.grau ?? '?'}`] || 0) + 1; return d; };
+const dist = arr => { const d = {}; for (const x of arr) d[`Q${x.grau ?? '?'}`] = (d[`Q${x.grau ?? '?'}`] || 0) + 1; return d; };
 
-console.log(`\n═══ AUDITORIA DE GRAU — ${eq.length} itens no catálogo ═══\n`);
+console.log(`\n═══ AUDITORIA DE QUALIDADE — ${eq.length} itens no catálogo ═══\n`);
 console.log(`Armas e projéteis : ${String(armas.length).padStart(3)}   ${JSON.stringify(dist(armas))}`);
 console.log(`Proteções         : ${String(protecoes.length).padStart(3)}   ${JSON.stringify(dist(protecoes))}`);
 console.log(`Focos mágicos     : ${String(focos.length).padStart(3)}   ${JSON.stringify(dist(focos))}`);
 
-const acimaDoG1 = [...armas, ...focos].filter(x => x.grau !== 1);
-console.log(`\n─── Itens acima do Grau 1 (${acimaDoG1.length}) ───`);
-if (!acimaDoG1.length) console.log('  nenhum — catálogo 100% inicial');
-for (const a of acimaDoG1) console.log(`  Grau ${a.grau}  ${a.nome.padEnd(28)} ${a.fio > 0 ? '+' : ''}${a.fio} Fio   ${(a.canais || []).join(' · ')}`);
+const acimaDoQ0 = [...armas, ...focos].filter(x => x.grau !== 0);
+console.log(`\n─── Itens acima da Qualidade 0 (${acimaDoQ0.length}) ───`);
+if (!acimaDoQ0.length) console.log('  nenhum — catálogo 100% inicial');
+for (const a of acimaDoQ0) console.log(`  Q${a.grau}  ${a.nome.padEnd(28)} +${a.fio} de dano   ${(a.canais || []).join(' · ')}`);
 
 console.log(`\n─── Proteções por classe ───`);
 for (const c of ['Leve', 'Média', 'Pesada', 'Escudo']) {
@@ -163,10 +163,10 @@ for (const p of [...new Set(problemas)].sort()) console.log(`  ⚠ ${p}`);
 if (TODOS) {
     console.log(`\n─── Todas as armas ───`);
     for (const a of armas.sort((x, y) => x.nome.localeCompare(y.nome)))
-        console.log(`  Grau ${a.grau}  ${a.nome.padEnd(30)} ${String(a.dado).padEnd(12)} ${a.cat}`);
+        console.log(`  Q${a.grau}  ${a.nome.padEnd(30)} ${String(a.dado).padEnd(12)} ${a.cat}`);
     console.log(`\n─── Todas as proteções ───`);
     for (const p of protecoes.sort((x, y) => x.classe.localeCompare(y.classe) || x.nome.localeCompare(y.nome)))
-        console.log(`  Grau ${p.grau ?? '?'}  ${p.classe.padEnd(7)} ${p.nome.padEnd(26)} ${String(p.slots).padStart(2)} slots  Bl ${String(p.bl).padStart(5)}  ${p.taxa}/slot`);
+        console.log(`  Q${p.grau ?? '?'}  ${p.classe.padEnd(7)} ${p.nome.padEnd(26)} ${String(p.slots).padStart(2)} slots  Bl ${String(p.bl).padStart(5)}  ${p.taxa}/slot`);
 }
 console.log('');
 process.exit(0);

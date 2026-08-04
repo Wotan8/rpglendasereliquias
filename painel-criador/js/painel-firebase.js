@@ -270,20 +270,20 @@ const MODULE_DEFS = {
                 ]
             },
             {
-                // O Fio é o poder da peça, e o Grau é só o nome da faixa (Fio + 1).
-                // Rótulo traz os dois para não precisar de campo separado.
-                // Trava do Livro (5.5): o Fio nunca passa da Liga menos um.
-                key: 'fio', label: '🧵 Fio (poder da peça — nunca passa da Liga menos 1)', type: 'select', options: [
-                    { value: '0', label: '0 — Grau 1, Inicial' },
-                    { value: '1', label: '1 — Grau 2, Veterano' },
-                    { value: '2', label: '2 — Grau 3, Mestre' },
-                    { value: '3', label: '3 — Grau 4, Obra Prima' },
-                    { value: '4', label: '4 — Grau 5, Graal' }
+                // A Qualidade é o poder da peça e o nome da faixa vai junto no rótulo.
+                // Trava do Livro (5.5): a Qualidade nunca passa da Liga.
+                key: 'qualidade', label: '⭐ Qualidade (poder da peça — nunca passa da Liga)', type: 'select', options: [
+                    { value: '0', label: '0 — Inicial' },
+                    { value: '1', label: '1 — Veterano' },
+                    { value: '2', label: '2 — Especialista' },
+                    { value: '3', label: '3 — Mestre' },
+                    { value: '4', label: '4 — Obra-Prima' },
+                    { value: '5', label: '5 — Graal' }
                 ]
             },
             // Afiação comum (ferreiro, dano físico). A Arcana é tipada e entra
             // pelos Valores Derivados de Dano por Essência, um vínculo por canal.
-            { key: 'afiacao', label: '⚔️ Afiação (gume do ferreiro — teto é o Fio da peça)', type: 'number', placeholder: '0 a 4' },
+            { key: 'afiacao', label: '⚔️ Afiação (acabamento — teto é a Qualidade da peça)', type: 'number', placeholder: '0 a 5' },
             { key: 'preco', label: '💰 Preço base (L$)', type: 'number', placeholder: 'Ex: 1100' },
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
             { key: 'imagemUrl', label: 'Imagem (URL)', type: 'text', placeholder: 'https://...' },
