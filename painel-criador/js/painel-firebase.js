@@ -3,7 +3,7 @@
 // Lendas e Relíquias (ficha-v1.7_1 style)
 // =============================================
 
-import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, ATRIBUTOS_VINCULAVEIS, periciaOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=13';
+import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, ATRIBUTOS_VINCULAVEIS, periciaOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=14';
 import { RUNIC_MODULE_DEF, buildRunicField, collectRunicField, importRunicSeed } from './painel-runic.js?v=1';
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -1769,7 +1769,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                 
                 const wrap = document.getElementById(parentFieldPeculiaridade.id + '_wrap');
                 if (wrap) {
-                    import('./painel-mechanics.js?v=13').then(m => {
+                    import('./painel-mechanics.js?v=14').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
                         
@@ -1797,7 +1797,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                 const wrap = document.getElementById(legacyField.id + '_wrap');
                 if (wrap) {
                     const currentIds = JSON.parse(legacyField.value || '[]');
-                    import('./painel-mechanics.js?v=13').then(m => {
+                    import('./painel-mechanics.js?v=14').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
                         
@@ -1985,7 +1985,7 @@ window.saveSubFormValorDerivado = async function (e, vid, parentFieldKey) {
                 
                 const wrap = document.getElementById(parentFieldValorDerivado.id + '_wrap');
                 if (wrap) {
-                    import('./painel-mechanics.js?v=13').then(m => {
+                    import('./painel-mechanics.js?v=14').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Valores Derivados';
                         
