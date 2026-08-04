@@ -78,6 +78,19 @@ for (const e of eq) {
             const teto = (TOTAL_CLASSE[classe] || [])[Math.min(q, 5)];
             if (teto != null && bl > teto)
                 problemas.push(`BLINDAGEM ACIMA DO TOTAL DA CLASSE · ${e.nome} (${classe} Q${q}): ${bl} > ${teto}`);
+
+            /* Opção A: em proteção a Blindagem é valor de cadastro, gravado à
+               mão quando a peça sobe de Qualidade (Livro, 5.6). O erro que isso
+               permite é silencioso — subir a Qualidade e esquecer a Blindagem.
+               `blindagemQ0` é a âncora que torna esse esquecimento visível. */
+            const q0 = e.blindagemQ0;
+            if (q0 === undefined) {
+                problemas.push(`SEM ÂNCORA · ${e.nome}: falta blindagemQ0 (rode protecao-qualidade-base.mjs)`);
+            } else if (q === 0 && bl !== Number(q0)) {
+                problemas.push(`BLINDAGEM DIVERGE DA BASE · ${e.nome}: ${bl} com Qualidade 0, mas blindagemQ0 é ${q0}`);
+            } else if (q > 0 && bl <= Number(q0)) {
+                problemas.push(`QUALIDADE SUBIU E A BLINDAGEM NÃO · ${e.nome} (${classe} Q${q}): Blindagem ${bl} continua na base ${q0} — grave o valor da tabela do §5.6`);
+            }
             // fraqueza tipada precisa acompanhar a Blindagem: delta = floor(bl/2) − bl
             for (const v of vinc) {
                 const n = vdNome(v.id);
