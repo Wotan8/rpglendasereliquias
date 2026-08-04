@@ -18,14 +18,22 @@
     <script src="../shared/theme.js"></script>
 </head>
 <body>
+    <script src="../shared/lr-icones.js"></script>
     <div class="toolbar">
-        <button style="background:var(--lr-blood-2);color:var(--lr-divine);border:none;font-weight:700">🚪 Sair</button>
-        <button>🏠 Menu</button>
-        <button>🌍 Worldbuilding</button>
-        <button>🗺️ Hexmap</button>
+        <button style="background:var(--lr-blood-2);color:var(--lr-divine);border:none;font-weight:700"><svg class="lr-ico"><use href="#i-sair"/></svg> Sair</button>
+        <button><svg class="lr-ico"><use href="#i-casa"/></svg> Menu</button>
+        <button><svg class="lr-ico"><use href="#i-globo"/></svg> Worldbuilding</button>
+        <button><svg class="lr-ico"><use href="#i-mapa"/></svg> Hexmap</button>
         <div class="spacer"></div>
-        <button id="btnThemeToggle" onclick="toggleTheme()">🌙</button>
+        <button id="btnThemeToggle" onclick="toggleTheme()"><svg class="lr-ico"><use href="#i-lua"/></svg></button>
     </div>
+    <div class="wrap" style="margin-bottom:0"><div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-small"><svg class="lr-ico"><use href="#i-mais"/></svg> Primário</button>
+        <button class="btn btn-success btn-small"><svg class="lr-ico"><use href="#i-check"/></svg> Sucesso</button>
+        <button class="btn btn-danger btn-small"><svg class="lr-ico"><use href="#i-lixeira"/></svg> Perigo</button>
+        <button class="btn btn-warning btn-small"><svg class="lr-ico"><use href="#i-estrela"/></svg> Aviso</button>
+        <button class="btn btn-secondary btn-small"><svg class="lr-ico"><use href="#i-recarregar"/></svg> Secundário</button>
+    </div></div>
 
     <div class="wrap">
         <div class="sheet">

@@ -378,6 +378,32 @@ dialog {
 }
 
 /* =====================================================================
+   10.1 ÍCONES — traço fino gravado (sprite em /shared/lr-icones.js)
+   Herdam `currentColor`: o ícone acende junto com o estado do controle,
+   coisa que emoji nunca fez (não segue cor, nem tema, nem estado).
+   ===================================================================== */
+
+.lr-ico {
+    width: 17px;
+    height: 17px;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;   /* o clique é sempre do controle, nunca do traço */
+    vertical-align: -0.2em;
+}
+
+/* Controle com ícone + rótulo: alinhados pelo meio, não pela base do texto. */
+:where(button, .btn, .tab-button, a):has(> .lr-ico) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lr-space-2);
+}
+
+/* =====================================================================
    11. RESPONSIVIDADE — mesmo poder em qualquer dispositivo
    ===================================================================== */
 

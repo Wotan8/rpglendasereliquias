@@ -1,5 +1,11 @@
 /* =============================================
-   MODAIS — Generic + Specific modals
+   MODAIS, FORMULÁRIOS E BOTÕES
+   ---------------------------------------------
+   Ver DESIGN-SYSTEM.md. Só var(--lr-…).
+   Esta folha define o `.btn` que o painel inteiro usa — era onde moravam os
+   cinco gradientes de botão que o manual proíbe (o `.btn-primary` chegava a
+   degradar de OURO para ROXO), o `translateY(-1px)` no hover e o anel de foco
+   roxo. Consertar aqui conserta todas as abas de uma vez.
    ============================================= */
 
 /* ===== MODAL BASE ===== */
@@ -7,248 +13,201 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.75);
-    z-index: 9999;
+    background: rgba(10, 13, 18, 0.72);   /* --lr-bg-0 a 72%; rgba não se deriva de token hex */
+    z-index: var(--lr-z-modal);
     justify-content: center;
     align-items: flex-start;
-    padding: 20px;
+    padding: var(--lr-space-4);
     overflow-y: auto;
     backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 }
 
-.modal.active {
-    display: flex;
-}
+.modal.active { display: flex; }
 
+/* Filete dourado no topo é a assinatura de modal do sistema (a moldura
+   inteira dourada de antes gritava mais que o conteúdo). */
 .modal-content {
-    background: var(--paper);
-    border: 2px solid var(--primary);
-    border-radius: 14px;
+    background: var(--lr-surface);
+    border: 1px solid var(--lr-border);
+    border-top: 2px solid var(--lr-gold);
+    border-radius: var(--lr-radius-lg);
     width: 100%;
     max-width: 800px;
     max-height: 90vh;
     overflow-y: auto;
     margin: auto;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    animation: modalSlideIn 0.25s ease-out;
+    box-shadow: var(--lr-shadow-3);
+    animation: modalSlideIn var(--lr-t-slow) var(--lr-ease);
 }
 
 @keyframes modalSlideIn {
-    from { transform: translateY(-20px) scale(0.97); opacity: 0; }
-    to { transform: translateY(0) scale(1); opacity: 1; }
+    from { transform: translateY(-8px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
 
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 18px 20px;
-    border-bottom: 2px solid var(--line);
-    background: rgba(91, 63, 184, 0.06);
+    gap: var(--lr-space-3);
+    padding: var(--lr-space-4);
+    border-bottom: 1px solid var(--lr-border);
+    background: var(--lr-bg-1);
 }
 
 .modal-title {
-    font-size: 1.1rem;
-    font-weight: 900;
-    color: var(--primary);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
+    font-family: var(--lr-font-title);
+    font-size: var(--lr-fs-md);
+    font-weight: 600;
+    color: var(--lr-text-1);
+    letter-spacing: var(--lr-track-title);
 }
 
 .modal-close {
     width: 32px;
     height: 32px;
-    border: 2px solid var(--line);
+    border: 1px solid var(--lr-border);
     background: transparent;
-    color: var(--muted);
-    border-radius: 8px;
+    color: var(--lr-text-2);
+    border-radius: var(--lr-radius);
     cursor: pointer;
-    font-size: 1rem;
+    font-size: var(--lr-fs-md);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.15s;
-    font-family: var(--font);
+    flex: 0 0 auto;
+    font-family: var(--lr-font-body);
 }
 
 .modal-close:hover {
-    border-color: var(--danger);
-    color: var(--danger);
-    background: rgba(201, 79, 92, 0.1);
+    border-color: var(--lr-blood-2);
+    color: var(--lr-blood-3);
+    background: var(--lr-blood-soft);
 }
 
-.modal-body {
-    padding: 20px;
-}
+.modal-body { padding: var(--lr-space-4); }
 
 .modal-footer {
     display: flex;
-    gap: 10px;
+    gap: var(--lr-space-2);
     justify-content: flex-end;
-    padding: 15px 20px;
-    border-top: 2px solid var(--line);
+    padding: var(--lr-space-3) var(--lr-space-4);
+    border-top: 1px solid var(--lr-border);
 }
 
-/* ===== FORM ELEMENTS ===== */
-.form-section {
-    margin-bottom: 20px;
-}
+/* ===== FORMULÁRIOS ===== */
+.form-section { margin-bottom: var(--lr-space-5); }
 
+/* Rótulo de seção era roxo em todo formulário do painel — hierarquia agora é
+   caixa alta, peso e espaço, e o acento fica para quem precisa de acento. */
 .section-title {
-    font-size: 0.9rem;
-    font-weight: 800;
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
-    color: var(--primary);
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid rgba(91, 63, 184, 0.2);
+    letter-spacing: 0.06em;
+    color: var(--lr-text-2);
+    margin-bottom: var(--lr-space-3);
+    padding-bottom: var(--lr-space-2);
+    border-bottom: 1px solid var(--lr-border-soft);
 }
 
 .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: var(--lr-space-3);
 }
 
-.form-group {
-    margin-bottom: 12px;
-}
+.form-group { margin-bottom: var(--lr-space-3); }
 
 .form-label {
     display: block;
-    font-size: 0.78rem;
-    font-weight: 800;
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
-    color: var(--muted);
-    margin-bottom: 5px;
+    letter-spacing: 0.06em;
+    color: var(--lr-text-2);
+    margin-bottom: var(--lr-space-1);
 }
 
 .form-input,
 .form-select,
 .form-textarea {
     width: 100%;
-    padding: 10px 14px;
-    border: 2px solid var(--line);
-    border-radius: 8px;
-    font-size: 0.88rem;
-    font-family: var(--font);
+    padding: var(--lr-space-2) var(--lr-space-3);
+    border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    font-size: var(--lr-fs-sm);
+    font-family: var(--lr-font-body);
     background: var(--lr-bg-1);
-    color: var(--light);
-    transition: border-color 0.15s, box-shadow 0.15s;
+    color: var(--lr-text-1);
+    transition: border-color var(--lr-t-base) var(--lr-ease), box-shadow var(--lr-t-base) var(--lr-ease);
 }
 
+/* Foco = borda de ouro com anel: a runa desperta. Era roxo. */
 .form-input:focus,
 .form-select:focus,
 .form-textarea:focus {
     outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(91, 63, 184, 0.15);
+    border-color: var(--lr-gold);
+    box-shadow: var(--lr-glow-gold);
 }
 
 .form-input::placeholder,
-.form-textarea::placeholder {
-    color: var(--lr-text-2);
-}
+.form-textarea::placeholder { color: var(--lr-text-2); }
 
-.form-textarea {
-    resize: vertical;
-    min-height: 80px;
-}
+.form-textarea { resize: vertical; min-height: 80px; }
+.form-select { cursor: pointer; }
 
-.form-select {
-    cursor: pointer;
-}
-
-/* ===== BUTTONS ===== */
+/* ===== BOTÕES ===== */
 .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 10px 18px;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 0.85rem;
+    gap: var(--lr-space-2);
+    padding: var(--lr-space-2) var(--lr-space-4);
+    border-radius: var(--lr-radius);
+    font-weight: 600;
+    font-size: var(--lr-fs-sm);
     cursor: pointer;
-    transition: all 0.2s;
-    border: none;
-    font-family: var(--font);
+    border: 1px solid transparent;
+    font-family: var(--lr-font-body);
     text-transform: uppercase;
-    letter-spacing: 0.2px;
+    letter-spacing: 0.03em;
+    /* transição e o `:active` de metal pressionado (translateY(1px)) vêm de
+       lendas-reliquias.css. O hover subia 1px e ganhava sombra — enfeite. */
 }
 
-.btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
+.btn:hover { filter: brightness(1.12); }
 
-.btn:active {
-    transform: translateY(0);
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, var(--primary), var(--lr-abyssal));
-    color: var(--lr-bg-0);
-}
-
-.btn-success {
-    background: linear-gradient(135deg, var(--lr-nature), var(--success));
-    color: var(--lr-bg-0);
-}
-
-.btn-danger {
-    background: linear-gradient(135deg, var(--lr-blood-2), var(--danger));
-    color: var(--lr-divine);
-}
-
-.btn-warning {
-    background: linear-gradient(135deg, var(--lr-gold), var(--warning));
-    color: var(--lr-bg-0);
-}
+/* Cada variante é uma cor sólida de significado. Nenhuma é gradiente, e a
+   tinta é sempre a que passa contraste sobre o preenchimento: sangue ESCURO
+   com tinta clara (o `--lr-blood-2` de antes dava 3.5:1 com texto branco). */
+.btn-primary { background: var(--lr-gold); color: var(--lr-bg-0); }
+.btn-success { background: var(--lr-nature); color: var(--lr-bg-0); }
+.btn-danger  { background: var(--lr-blood); color: var(--lr-divine); }
+.btn-warning { background: var(--lr-bronze); color: var(--lr-divine); }
 
 .btn-secondary {
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--muted);
-    border: 2px solid var(--line);
+    background: var(--lr-bg-1);
+    color: var(--lr-text-2);
+    border-color: var(--lr-border);
 }
+.btn-secondary:hover { background: var(--lr-surface-2); color: var(--lr-text-1); border-color: var(--lr-text-2); filter: none; }
 
-.btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: var(--ink);
-}
+.btn-small { padding: var(--lr-space-1) var(--lr-space-3); font-size: var(--lr-fs-xs); }
 
-.btn-small {
-    padding: 6px 12px;
-    font-size: 0.78rem;
-}
+/* ===== VARIANTE DE MODAL PERIGOSO ===== */
+/* Era um gradiente de dois vermelhos cravados (#1a0a0a → #2d0a0a) no corpo e
+   outro no cabeçalho. Agora é a mesma superfície de sempre com o filete
+   trocado para sangue — o aviso está no filete e no título, não no cenário. */
+.modal-danger .modal-content { border-top-color: var(--lr-blood-2); }
+.modal-danger .modal-header { background: var(--lr-blood-soft); }
+.modal-danger .modal-title { color: var(--lr-blood-3); }
 
-/* ===== DANGER MODAL VARIANT ===== */
-.modal-danger .modal-content {
-    border-color: var(--danger);
-    background: linear-gradient(135deg, #1a0a0a, #2d0a0a);
-}
-
-.modal-danger .modal-header {
-    background: linear-gradient(135deg, var(--danger), var(--lr-blood-2));
-}
-
-.modal-danger .modal-title {
-    color: white;
-}
-
-/* ===== RESPONSIVE ===== */
+/* ===== RESPONSIVO ===== */
 @media (max-width: 768px) {
-    .modal-content {
-        max-height: 95vh;
-    }
-
-    .form-row {
-        grid-template-columns: 1fr;
-    }
-
-    .modal-footer {
-        flex-wrap: wrap;
-    }
+    .modal-content { max-height: 95vh; }
+    .form-row { grid-template-columns: 1fr; }
+    .modal-footer { flex-wrap: wrap; }
 }

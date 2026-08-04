@@ -1,21 +1,30 @@
-/* AREA ECONOMICA */
-.econ-items-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
-.item-draggable{cursor:grab;transition:all .3s}
+/* AREA ECONOMICA — ver DESIGN-SYSTEM.md. Só var(--lr-…). */
+.econ-items-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--mesa-gap,var(--lr-space-3))}
+
+/* Arrastar item: o alvo de soltar fala por BORDA, não por brilho colorido.
+   Azul arcano = "cai aqui"; verde natureza = "funde com este". */
+.item-draggable{cursor:grab;transition:opacity var(--lr-t-base) var(--lr-ease),transform var(--lr-t-base) var(--lr-ease)}
 .item-draggable:active{cursor:grabbing}
-.item-dragging{opacity:.5;transform:scale(.98);border-color:var(--primary)!important}
-.item-drag-over{border-color:rgba(58, 166, 255,.6)!important;box-shadow:0 0 12px rgba(58, 166, 255,.3)!important}
-.item-drop-merge{border-color:rgba(63, 174, 106,.6)!important;box-shadow:0 0 12px rgba(63, 174, 106,.3)!important}
-.item-card{background:var(--lr-bg-1);border:2px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px}
-.item-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-.item-name{font-weight:700;color:var(--light);font-size:.95rem}
-.item-details{font-size:.82rem;color:var(--muted)}
-.avulsos-filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-end}
+.item-dragging{opacity:.5;transform:scale(.98);border-color:var(--lr-gold)!important}
+.item-drag-over{border-color:var(--lr-arcane)!important;background:var(--lr-arcane-soft)!important}
+.item-drop-merge{border-color:var(--lr-nature)!important;background:var(--lr-nature-soft)!important}
+
+.item-card{background:var(--lr-bg-1);border:1px solid var(--lr-border);border-radius:var(--lr-radius);padding:var(--lr-space-3);margin-bottom:var(--lr-space-2)}
+.item-header{display:flex;justify-content:space-between;align-items:center;gap:var(--lr-space-2);margin-bottom:var(--lr-space-2)}
+.item-name{font-weight:700;color:var(--lr-text-1);font-size:var(--lr-fs-md)}
+.item-details{font-size:var(--lr-fs-sm);color:var(--lr-text-2)}
+.avulsos-filters{display:flex;gap:var(--lr-space-3);flex-wrap:wrap;margin-bottom:var(--lr-space-4);align-items:flex-end}
 .avulsos-filters .form-group{flex:1;min-width:150px;margin-bottom:0}
-.container-viewer{background:rgba(63, 174, 106,.05);border:2px solid rgba(63, 174, 106,.3);border-radius:12px;padding:20px;margin:14px 0}
-.container-viewer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.container-viewer-title{font-weight:800;color:var(--success);font-size:1.1rem}
-.btn-move-to-container{padding:10px 16px;font-size:.9rem;border:2px solid var(--success);background:rgba(63, 174, 106,.15);color:var(--success);border-radius:8px;cursor:pointer;font-weight:700;transition:all .2s;font-family:var(--font)}
-.btn-move-to-container:hover{background:var(--success);color:var(--lr-bg-0)}
-.econ-calculator{background:var(--lr-bg-1);border:2px solid var(--border);border-radius:12px;padding:20px}
-.econ-result{text-align:center;padding:20px;border-radius:12px;background:rgba(91, 63, 184,.1);border:2px solid rgba(91, 63, 184,.3)}
+
+.container-viewer{background:var(--lr-bg-1);border:1px solid var(--lr-border);border-top:2px solid var(--lr-nature);border-radius:var(--lr-radius);padding:var(--lr-space-4);margin:var(--lr-space-3) 0}
+.container-viewer-header{display:flex;justify-content:space-between;align-items:center;gap:var(--lr-space-2);margin-bottom:var(--lr-space-3)}
+.container-viewer-title{font-family:var(--lr-font-title);font-weight:600;letter-spacing:var(--lr-track-title);color:var(--lr-text-1);font-size:var(--lr-fs-lg)}
+
+.btn-move-to-container{padding:var(--lr-space-2) var(--lr-space-4);font-size:var(--lr-fs-sm);border:1px solid var(--lr-nature);background:var(--lr-nature-soft);color:var(--lr-nature);border-radius:var(--lr-radius);cursor:pointer;font-weight:600;font-family:var(--lr-font-body)}
+.btn-move-to-container:hover{background:var(--lr-nature);color:var(--lr-bg-0)}
+
+.econ-calculator{background:var(--lr-bg-1);border:1px solid var(--lr-border);border-radius:var(--lr-radius);padding:var(--lr-space-4)}
+/* Resultado do cálculo: é informação, não mistério — arcano, não abissal. */
+.econ-result{text-align:center;padding:var(--lr-space-4);border-radius:var(--lr-radius);background:var(--lr-arcane-soft);border:1px solid var(--lr-arcane)}
+
 @media(max-width:768px){.econ-items-grid{grid-template-columns:1fr}.avulsos-filters{flex-direction:column}}

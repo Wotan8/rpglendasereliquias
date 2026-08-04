@@ -8,12 +8,12 @@
     <link rel="stylesheet" href="css/base.css?v=2">
     <link rel="stylesheet" href="css/layout.css?v=5">
     <link rel="stylesheet" href="css/tabs.css?v=2">
-    <link rel="stylesheet" href="css/modais.css?v=2">
+    <link rel="stylesheet" href="css/modais.css?v=3">
     <link rel="stylesheet" href="css/area-mesas.css?v=4">
     <link rel="stylesheet" href="css/area-npcs.css?v=6">
-    <link rel="stylesheet" href="css/area-economica.css?v=2">
-    <link rel="stylesheet" href="css/area-apoio.css?v=1">
-    <link rel="stylesheet" href="css/area-historico.css?v=2">
+    <link rel="stylesheet" href="css/area-economica.css?v=3">
+    <link rel="stylesheet" href="css/area-apoio.css?v=2">
+    <link rel="stylesheet" href="css/area-historico.css?v=3">
     <link rel="stylesheet" href="../ficha-v1.7_1/css/inventory.css?v=3">
     <link rel="stylesheet" href="../ficha-v1.7_1/css/equip-modal.css?v=2">
 <script type="module" src="/js/global-favicon.js"></script>
@@ -22,12 +22,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="../shared/tokens.css?v=11">
-    <link rel="stylesheet" href="../shared/lendas-reliquias.css?v=2">
+    <link rel="stylesheet" href="../shared/lendas-reliquias.css?v=3">
     <link rel="stylesheet" href="../shared/texto-mundo.css?v=1">
     <script src="../shared/theme.js?v=1"></script>
     <script src="../shared/livro-vinculado.js?v=5"></script>
 </head>
 <body>
+    <!-- Sprite de ícones (traço fino, herda currentColor). Script clássico no topo
+         do body: injeta antes do resto ser lido, então botão estático já nasce
+         com ícone. Mesmo sprite do Tabuleiro. -->
+    <script src="../shared/lr-icones.js?v=1"></script>
+
     <!-- LOADING -->
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-spinner"></div>
@@ -37,12 +42,12 @@
     <!-- TOOLBAR — ordem padronizada: [🚪 Sair] [🏠 Menu] [contextuais] [spacer] [Nome] -->
     <div class="toolbar" style="display:none">
         <button onclick="logout()" title="Sair da conta"
-            style="background:var(--lr-blood-2);color:var(--lr-divine);border:none;font-weight:700">🚪 Sair</button>
-        <button onclick="goToMenu()" title="Menu principal">🏠 Menu</button>
-        <button onclick="goToWorldbuilding()">🌍 Worldbuilding</button>
-        <button onclick="goToHexmap()">🗺️ Hexmap</button>
+            style="background:var(--lr-blood-2);color:var(--lr-divine);border:none;font-weight:700"><svg class="lr-ico"><use href="#i-sair"/></svg> Sair</button>
+        <button onclick="goToMenu()" title="Menu principal"><svg class="lr-ico"><use href="#i-casa"/></svg> Menu</button>
+        <button onclick="goToWorldbuilding()"><svg class="lr-ico"><use href="#i-globo"/></svg> Worldbuilding</button>
+        <button onclick="goToHexmap()"><svg class="lr-ico"><use href="#i-mapa"/></svg> Hexmap</button>
         <div class="spacer"></div>
-        <button id="btnThemeToggle" onclick="toggleTheme()" title="Alternar tema">🌙</button>
+        <button id="btnThemeToggle" onclick="toggleTheme()" title="Alternar tema"><svg class="lr-ico"><use href="#i-lua"/></svg></button>
         <div class="user-info">
             <span class="user-name" id="userDisplayName"></span>
         </div>
@@ -52,18 +57,18 @@
     <div class="wrap" style="display:none">
         <div class="sheet">
             <div class="menu-header">
-                <h1>⚔️ Painel do Mestre</h1>
+                <h1><svg class="lr-ico"><use href="#i-espadas"/></svg> Painel do Mestre</h1>
                 <div class="subtitle">Lendas e Relíquias — Gestão de Campanha</div>
             </div>
 
             <!-- TABS -->
             <div class="tabs">
-                <button class="tab-button active" data-tab="mesas" onclick="switchTab('mesas')">🎲 MESAS</button>
-                <button class="tab-button" data-tab="npcs" onclick="switchTab('npcs')">👥 NPCs</button>
-                <button class="tab-button" data-tab="economica" onclick="switchTab('economica')">💰 ECONÔMICA</button>
-                <button class="tab-button" data-tab="apoio" onclick="switchTab('apoio')">🤝 APOIO</button>
-                <button class="tab-button" data-tab="livros" onclick="switchTab('livros')">📖 LIVROS</button>
-                <button class="tab-button" data-tab="historico" onclick="switchTab('historico')">📜 HISTÓRICO</button>
+                <button class="tab-button active" data-tab="mesas" onclick="switchTab('mesas')"><svg class="lr-ico"><use href="#i-dado"/></svg> MESAS</button>
+                <button class="tab-button" data-tab="npcs" onclick="switchTab('npcs')"><svg class="lr-ico"><use href="#i-pessoas"/></svg> NPCs</button>
+                <button class="tab-button" data-tab="economica" onclick="switchTab('economica')"><svg class="lr-ico"><use href="#i-moeda"/></svg> ECONÔMICA</button>
+                <button class="tab-button" data-tab="apoio" onclick="switchTab('apoio')"><svg class="lr-ico"><use href="#i-apoio"/></svg> APOIO</button>
+                <button class="tab-button" data-tab="livros" onclick="switchTab('livros')"><svg class="lr-ico"><use href="#i-livro"/></svg> LIVROS</button>
+                <button class="tab-button" data-tab="historico" onclick="switchTab('historico')"><svg class="lr-ico"><use href="#i-arquivo"/></svg> HISTÓRICO</button>
             </div>
 
             <!-- TAB: MESAS -->
@@ -71,8 +76,8 @@
                 <!-- SCREEN 1: Mesa Selection -->
                 <div id="mesa-selection-screen">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-                        <h2 style="font-size:1.1rem;font-weight:800;color:var(--light);margin:0">🎲 Suas Mesas</h2>
-                        <button class="btn btn-success btn-small" onclick="openCreateMesaModal()">➕ Criar Mesa</button>
+                        <h2 style="font-size:1.1rem;font-weight:800;color:var(--light);margin:0"><svg class="lr-ico"><use href="#i-dado"/></svg> Suas Mesas</h2>
+                        <button class="btn btn-success btn-small" onclick="openCreateMesaModal()"><svg class="lr-ico"><use href="#i-mais"/></svg> Criar Mesa</button>
                     </div>
                     <div id="mesasGrid" class="mesas-grid">
                         <div style="text-align:center;padding:50px;color:var(--muted);grid-column:1/-1">Carregando mesas...</div>
@@ -80,27 +85,27 @@
 
                     <!-- LOGIN DA MESA -->
                     <div class="mesa-auth-box" style="margin-top:24px">
-                        <div style="font-size:2.5rem;margin:10px 0">🔒</div>
+                        <div style="font-size:2.5rem;margin:10px 0"><svg class="lr-ico"><use href="#i-cadeado"/></svg></div>
                         <h2 style="font-size:1.2rem;font-weight:800;color:var(--light);margin-bottom:4px">Login</h2>
                         <p style="color:var(--muted);font-size:.88rem;margin-bottom:20px">Digite o nome e a senha da mesa para entrar</p>
                         <input type="text" class="form-input" id="mesaNameInput" placeholder="Nome da mesa..." style="text-align:center;max-width:300px" onkeydown="if(event.key==='Enter')authenticateMesa()">
                         <input type="password" class="form-input" id="mesaPasswordInput" placeholder="Senha da mesa..." style="text-align:center;max-width:300px;margin-top:8px" onkeydown="if(event.key==='Enter')authenticateMesa()">
-                        <button class="btn btn-primary" onclick="authenticateMesa()" style="margin-top:12px">🔓 Entrar</button>
+                        <button class="btn btn-primary" onclick="authenticateMesa()" style="margin-top:12px"><svg class="lr-ico"><use href="#i-cadeado-aberto"/></svg> Entrar</button>
                     </div>
                 </div>
 
                 <!-- SCREEN 3: Mesa Content (after auth) -->
                 <div id="mesa-content" style="display:none">
                     <div class="mesa-header-bar">
-                        <button class="btn btn-secondary btn-small" onclick="closeMesa()">← Mesas</button>
-                        <button class="btn btn-primary btn-small" onclick="openTabuleiro()" title="Abrir o Tabuleiro (VTT) desta mesa em modo secreto">🗺️ Tabuleiro</button>
+                        <button class="btn btn-secondary btn-small" onclick="closeMesa()"><svg class="lr-ico"><use href="#i-seta-esq"/></svg> Mesas</button>
+                        <button class="btn btn-primary btn-small" onclick="openTabuleiro()" title="Abrir o Tabuleiro (VTT) desta mesa em modo secreto"><svg class="lr-ico"><use href="#i-mapa"/></svg> Tabuleiro</button>
                         <h2 id="mesaContentName" style="font-size:1.1rem;font-weight:800;color:var(--primary);margin:0"></h2>
                         <div class="mesa-ajustes">
-                            <button class="mesa-ajuste-btn" id="btnMesaDensidade" onclick="mesaAlternarDensidade()" title="Alternar densidade da área Mesa">▤ Confortável</button>
-                            <button class="mesa-ajuste-btn" id="btnMesaAbas" onclick="mesaAlternarConfigAbas()" title="Escolher quais sub-abas aparecem">⚙️ Abas</button>
+                            <button class="mesa-ajuste-btn" id="btnMesaDensidade" onclick="mesaAlternarDensidade()" title="Alternar densidade da área Mesa"><svg class="lr-ico"><use href="#i-densidade"/></svg> Confortável</button>
+                            <button class="mesa-ajuste-btn" id="btnMesaAbas" onclick="mesaAlternarConfigAbas()" title="Escolher quais sub-abas aparecem"><svg class="lr-ico"><use href="#i-engrenagem"/></svg> Abas</button>
                             <div class="mesa-abas-config" id="mesaAbasConfig"></div>
                         </div>
-                        <button class="btn btn-danger btn-small" onclick="openDeleteMesaModal()">🗑️</button>
+                        <button class="btn btn-danger btn-small" onclick="openDeleteMesaModal()"><svg class="lr-ico"><use href="#i-lixeira"/></svg></button>
                     </div>
                     <!-- Sub-abas em 3 grupos, pelo momento em que o mestre precisa de cada
                          uma. A ordem dentro do grupo e quais aparecem são configuráveis
@@ -109,27 +114,27 @@
                         <div class="sub-tab-grupo">
                             <span class="sub-tab-grupo-nome">Sessão</span>
                             <div class="sub-tabs" role="tablist" aria-label="Sessão">
-                                <button class="sub-tab-btn" data-subtab="m-sessao" onclick="switchMesaSubTab('m-sessao')">🎬 Sessão</button>
-                                <button class="sub-tab-btn" data-subtab="m-combate" onclick="switchMesaSubTab('m-combate')">⚔️ Combate</button>
-                                <button class="sub-tab-btn" data-subtab="m-personagens" onclick="switchMesaSubTab('m-personagens')">🎭 Personagens</button>
-                                <button class="sub-tab-btn" data-subtab="m-notas" onclick="switchMesaSubTab('m-notas')">📝 Notas</button>
+                                <button class="sub-tab-btn" data-subtab="m-sessao" onclick="switchMesaSubTab('m-sessao')"><svg class="lr-ico"><use href="#i-legenda"/></svg> Sessão</button>
+                                <button class="sub-tab-btn" data-subtab="m-combate" onclick="switchMesaSubTab('m-combate')"><svg class="lr-ico"><use href="#i-espadas"/></svg> Combate</button>
+                                <button class="sub-tab-btn" data-subtab="m-personagens" onclick="switchMesaSubTab('m-personagens')"><svg class="lr-ico"><use href="#i-token"/></svg> Personagens</button>
+                                <button class="sub-tab-btn" data-subtab="m-notas" onclick="switchMesaSubTab('m-notas')"><svg class="lr-ico"><use href="#i-texto"/></svg> Notas</button>
                             </div>
                         </div>
                         <div class="sub-tab-grupo">
                             <span class="sub-tab-grupo-nome">Campanha</span>
                             <div class="sub-tabs" role="tablist" aria-label="Campanha">
-                                <button class="sub-tab-btn" data-subtab="m-frentes" onclick="switchMesaSubTab('m-frentes')">🕰️ Frentes</button>
-                                <button class="sub-tab-btn" data-subtab="m-npcs" onclick="switchMesaSubTab('m-npcs')">👹 NPCs</button>
-                                <button class="sub-tab-btn" data-subtab="m-inventario" onclick="switchMesaSubTab('m-inventario')">📦 Kits</button>
-                                <button class="sub-tab-btn" data-subtab="m-sessoes" onclick="switchMesaSubTab('m-sessoes')">📜 Histórico</button>
+                                <button class="sub-tab-btn" data-subtab="m-frentes" onclick="switchMesaSubTab('m-frentes')"><svg class="lr-ico"><use href="#i-relogio"/></svg> Frentes</button>
+                                <button class="sub-tab-btn" data-subtab="m-npcs" onclick="switchMesaSubTab('m-npcs')"><svg class="lr-ico"><use href="#i-dragao"/></svg> NPCs</button>
+                                <button class="sub-tab-btn" data-subtab="m-inventario" onclick="switchMesaSubTab('m-inventario')"><svg class="lr-ico"><use href="#i-caixa"/></svg> Kits</button>
+                                <button class="sub-tab-btn" data-subtab="m-sessoes" onclick="switchMesaSubTab('m-sessoes')"><svg class="lr-ico"><use href="#i-arquivo"/></svg> Histórico</button>
                             </div>
                         </div>
                         <div class="sub-tab-grupo">
                             <span class="sub-tab-grupo-nome">Mesa</span>
                             <div class="sub-tabs" role="tablist" aria-label="Mesa">
-                                <button class="sub-tab-btn" data-subtab="m-jogadores" onclick="switchMesaSubTab('m-jogadores')">👥 Jogadores</button>
-                                <button class="sub-tab-btn" data-subtab="m-config" onclick="switchMesaSubTab('m-config')">⚙️ Config</button>
-                                <button class="sub-tab-btn" data-subtab="m-logs" onclick="switchMesaSubTab('m-logs')">📜 Logs</button>
+                                <button class="sub-tab-btn" data-subtab="m-jogadores" onclick="switchMesaSubTab('m-jogadores')"><svg class="lr-ico"><use href="#i-pessoas"/></svg> Jogadores</button>
+                                <button class="sub-tab-btn" data-subtab="m-config" onclick="switchMesaSubTab('m-config')"><svg class="lr-ico"><use href="#i-engrenagem"/></svg> Config</button>
+                                <button class="sub-tab-btn" data-subtab="m-logs" onclick="switchMesaSubTab('m-logs')"><svg class="lr-ico"><use href="#i-arquivo"/></svg> Logs</button>
                             </div>
                         </div>
                     </div>
@@ -140,8 +145,8 @@
                          piscar na tela antes de saltar para a aba certa. -->
                     <div class="sub-tab-content" id="subtab-m-jogadores">
                         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-                            <button class="btn btn-success btn-small" onclick="openLinkPlayerModal()">➕ Vincular Jogador</button>
-                            <button class="btn btn-primary btn-small" onclick="openMesaNotificationModal()">📢 Notificar</button>
+                            <button class="btn btn-success btn-small" onclick="openLinkPlayerModal()"><svg class="lr-ico"><use href="#i-mais"/></svg> Vincular Jogador</button>
+                            <button class="btn btn-primary btn-small" onclick="openMesaNotificationModal()"><svg class="lr-ico"><use href="#i-megafone"/></svg> Notificar</button>
                         </div>
                         <div id="mesaPlayersList" class="player-list">
                             <div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Carregando jogadores...</div>
@@ -151,14 +156,14 @@
                     <!-- Sub-tab: Personagens -->
                     <div class="sub-tab-content" id="subtab-m-personagens">
                         <div class="exp-controls">
-                            <button class="btn btn-warning btn-small" id="btnToggleExp" onclick="toggleExpMode()">⭐ +EXP</button>
-                            <button class="btn btn-primary btn-small" id="btnToggleInventario" onclick="toggleMesaInventoryMode()" style="margin-left: 8px;">🎒 Repertório</button>
-                            <button class="btn btn-primary btn-small" id="btnToggleCondicoes" onclick="toggleMesaConditionsMode()" style="margin-left: 8px;">💀 Condições</button>
-                            <button class="btn btn-primary btn-small" id="btnTogglePeculiaridades" onclick="toggleMesaPeculiaridadesMode()" style="margin-left: 8px;">✨ Peculiaridades</button>
+                            <button class="btn btn-warning btn-small" id="btnToggleExp" onclick="toggleExpMode()"><svg class="lr-ico"><use href="#i-estrela"/></svg> +EXP</button>
+                            <button class="btn btn-primary btn-small" id="btnToggleInventario" onclick="toggleMesaInventoryMode()" style="margin-left: 8px;"><svg class="lr-ico"><use href="#i-mochila"/></svg> Repertório</button>
+                            <button class="btn btn-primary btn-small" id="btnToggleCondicoes" onclick="toggleMesaConditionsMode()" style="margin-left: 8px;"><svg class="lr-ico"><use href="#i-caveira"/></svg> Condições</button>
+                            <button class="btn btn-primary btn-small" id="btnTogglePeculiaridades" onclick="toggleMesaPeculiaridadesMode()" style="margin-left: 8px;"><svg class="lr-ico"><use href="#i-brilho"/></svg> Peculiaridades</button>
                         </div>
                         <div id="expBulkActions" style="display:none;gap:8px;margin-bottom:12px">
-                            <button class="btn btn-success btn-small" onclick="applyExpBulk(true)">✅ +ADD</button>
-                            <button class="btn btn-danger btn-small" onclick="applyExpBulk(false)">❌ -RMV</button>
+                            <button class="btn btn-success btn-small" onclick="applyExpBulk(true)"><svg class="lr-ico"><use href="#i-check"/></svg> +ADD</button>
+                            <button class="btn btn-danger btn-small" onclick="applyExpBulk(false)"><svg class="lr-ico"><use href="#i-fechar"/></svg> -RMV</button>
                             <button class="btn btn-secondary btn-small" onclick="toggleExpMode()">Cancelar</button>
                         </div>
                         <div class="player-list" id="mesaCharactersGrid">
@@ -178,10 +183,10 @@
                     <!-- Sub-tab: Sessões -->
                     <div class="sub-tab-content" id="subtab-m-sessoes">
                         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-                            <button class="btn btn-success btn-small" onclick="openCreateSessionLogModal()">➕ Novo Log</button>
+                            <button class="btn btn-success btn-small" onclick="openCreateSessionLogModal()"><svg class="lr-ico"><use href="#i-mais"/></svg> Novo Log</button>
                         </div>
                         <div id="sessionLogsList">
-                            <div style="text-align:center;padding:50px;color:var(--muted)"><div style="font-size:2.5rem;margin-bottom:12px">📝</div>Carregando logs de sessão...</div>
+                            <div style="text-align:center;padding:50px;color:var(--muted)"><div style="font-size:2.5rem;margin-bottom:12px"><svg class="lr-ico"><use href="#i-texto"/></svg></div>Carregando logs de sessão...</div>
                         </div>
                     </div>
 
@@ -195,7 +200,7 @@
                     <!-- Sub-tab: Frentes -->
                     <div class="sub-tab-content" id="subtab-m-frentes">
                         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
-                            <button class="btn btn-success btn-small" onclick="openFrenteModal()">➕ Nova Frente</button>
+                            <button class="btn btn-success btn-small" onclick="openFrenteModal()"><svg class="lr-ico"><use href="#i-mais"/></svg> Nova Frente</button>
                             <span style="font-size:.75rem;color:var(--muted)">O relógio avança quando os jogadores ignoram a frente — presságios disparam ao cruzar o limiar.</span>
                         </div>
                         <div id="mesaFrentesList">
@@ -213,8 +218,8 @@
                     <!-- Sub-tab: NPCs -->
                     <div class="sub-tab-content" id="subtab-m-npcs">
                         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-                            <button class="btn btn-success btn-small" onclick="openCreateMesaNpcModal()">➕ Novo NPC</button>
-                            <button class="btn btn-primary btn-small" onclick="openLinkNpcModal()">🔗 Vincular NPC</button>
+                            <button class="btn btn-success btn-small" onclick="openCreateMesaNpcModal()"><svg class="lr-ico"><use href="#i-mais"/></svg> Novo NPC</button>
+                            <button class="btn btn-primary btn-small" onclick="openLinkNpcModal()"><svg class="lr-ico"><use href="#i-elo"/></svg> Vincular NPC</button>
                         </div>
                         <div id="mesaNpcsList" class="npcs-grid">
                             <div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1">Carregando NPCs...</div>
@@ -238,11 +243,11 @@
                     <!-- Sub-tab: Combate -->
                     <div class="sub-tab-content" id="subtab-m-combate">
                         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-                            <button class="btn btn-primary btn-small" onclick="addCharacterToCombat()">➕ Personagem</button>
-                            <button class="btn btn-warning btn-small" onclick="addNpcToCombat()">➕ NPC</button>
-                            <button class="btn btn-secondary btn-small" onclick="addCustomToCombat()">➕ Custom</button>
-                            <button class="btn btn-success btn-small" onclick="sortCombatByInitiative()">🔄 Ordenar</button>
-                            <button class="btn btn-danger btn-small" onclick="clearCombat()">🗑️ Limpar</button>
+                            <button class="btn btn-primary btn-small" onclick="addCharacterToCombat()"><svg class="lr-ico"><use href="#i-mais"/></svg> Personagem</button>
+                            <button class="btn btn-warning btn-small" onclick="addNpcToCombat()"><svg class="lr-ico"><use href="#i-mais"/></svg> NPC</button>
+                            <button class="btn btn-secondary btn-small" onclick="addCustomToCombat()"><svg class="lr-ico"><use href="#i-mais"/></svg> Custom</button>
+                            <button class="btn btn-success btn-small" onclick="sortCombatByInitiative()"><svg class="lr-ico"><use href="#i-recarregar"/></svg> Ordenar</button>
+                            <button class="btn btn-danger btn-small" onclick="clearCombat()"><svg class="lr-ico"><use href="#i-lixeira"/></svg> Limpar</button>
                         </div>
                         <div id="combatList" class="combat-list"><div class="no-combat">Nenhum participante no combate</div></div>
                     </div>
@@ -258,13 +263,13 @@
             <!-- TAB: NPCs -->
             <div class="tab-content" id="tab-npcs">
                 <div class="npc-actions-bar">
-                    <button class="btn btn-success btn-small" onclick="openNpcModal()">➕ Novo NPC</button>
-                    <button class="btn btn-primary btn-small" onclick="selectAllFilteredNpcs()">☑️ Sel. Todos</button>
-                    <button class="btn btn-secondary btn-small" onclick="duplicateSelectedNpcs()">📋 Duplicar</button>
-                    <button class="btn btn-warning btn-small" onclick="exportSelectedNpcs()">📤 Exportar</button>
-                    <button class="btn btn-primary btn-small" onclick="openSpecialExportModal()">📦 Ex.Especial</button>
-                    <button class="btn btn-secondary btn-small" onclick="bulkImportNpcs()">📥 Importar</button>
-                    <button class="btn btn-danger btn-small" onclick="deleteSelectedNpcs()">🗑️ Deletar</button>
+                    <button class="btn btn-success btn-small" onclick="openNpcModal()"><svg class="lr-ico"><use href="#i-mais"/></svg> Novo NPC</button>
+                    <button class="btn btn-primary btn-small" onclick="selectAllFilteredNpcs()"><svg class="lr-ico"><use href="#i-caixa-marcada"/></svg> Sel. Todos</button>
+                    <button class="btn btn-secondary btn-small" onclick="duplicateSelectedNpcs()"><svg class="lr-ico"><use href="#i-duplicar"/></svg> Duplicar</button>
+                    <button class="btn btn-warning btn-small" onclick="exportSelectedNpcs()"><svg class="lr-ico"><use href="#i-saida"/></svg> Exportar</button>
+                    <button class="btn btn-primary btn-small" onclick="openSpecialExportModal()"><svg class="lr-ico"><use href="#i-caixa"/></svg> Ex.Especial</button>
+                    <button class="btn btn-secondary btn-small" onclick="bulkImportNpcs()"><svg class="lr-ico"><use href="#i-entrada"/></svg> Importar</button>
+                    <button class="btn btn-danger btn-small" onclick="deleteSelectedNpcs()"><svg class="lr-ico"><use href="#i-lixeira"/></svg> Deletar</button>
                 </div>
                 <div class="npc-filters-advanced-container">
                     <!-- Nível 1: Barra Principal -->
@@ -278,19 +283,19 @@
                             <select class="form-select" id="npcSortSelect" onchange="filterNpcs()">
                                 <option value="nome-asc">Nome A-Z</option>
                                 <option value="nome-desc">Nome Z-A</option>
-                                <option value="ai-desc">AI ↓</option>
-                                <option value="ai-asc">AI ↑</option>
-                                <option value="vit-desc">VIT ↓</option>
-                                <option value="vit-asc">VIT ↑</option>
+                                <option value="ai-desc">AI <svg class="lr-ico"><use href="#i-seta-baixo"/></svg></option>
+                                <option value="ai-asc">AI <svg class="lr-ico"><use href="#i-seta-cima"/></svg></option>
+                                <option value="vit-desc">VIT <svg class="lr-ico"><use href="#i-seta-baixo"/></svg></option>
+                                <option value="vit-asc">VIT <svg class="lr-ico"><use href="#i-seta-cima"/></svg></option>
                                 <option value="recente">Mais recente</option>
                                 <option value="antigo">Mais antigo</option>
                                 <option value="random">Aleatório</option>
                             </select>
                         </div>
                         <button class="btn btn-primary" onclick="toggleAdvancedNpcFilters()" style="height: 38px; display:flex; align-items:center; gap:6px;">
-                            ⚙️ Filtros <span id="advFilterBadge" class="filter-badge" style="display:none">0</span>
+                            <svg class="lr-ico"><use href="#i-engrenagem"/></svg> Filtros <span id="advFilterBadge" class="filter-badge" style="display:none">0</span>
                         </button>
-                        <button class="btn btn-secondary" id="clearAdvFiltersBtn" onclick="clearAllNpcFilters()" style="height: 38px; display:none;">🧹 Limpar</button>
+                        <button class="btn btn-secondary" id="clearAdvFiltersBtn" onclick="clearAllNpcFilters()" style="height: 38px; display:none;"><svg class="lr-ico"><use href="#i-limpar"/></svg> Limpar</button>
                         <div style="margin-left:auto; font-size:0.85rem; color:var(--muted); font-weight:600; display:flex; align-items:center; height:38px;" id="npcCountDisplay">
                             Carregando...
                         </div>
@@ -303,9 +308,9 @@
                     <div id="npcAdvancedPanel" class="npc-advanced-panel" style="display:none;">
                         
                         <div class="adv-filters-section">
-                            <div class="adv-filters-header">📋 Identificação</div>
+                            <div class="adv-filters-header"><svg class="lr-ico"><use href="#i-duplicar"/></svg> Identificação</div>
                             <div class="adv-filters-grid">
-                                <div class="form-group"><label class="form-label">Tipo</label><select class="form-select adv-filter" id="advF_tipo" onchange="filterNpcs()"><option value="">Todos</option><option value="npc">👤 NPC</option><option value="criatura">🐉 Criatura</option></select></div>
+                                <div class="form-group"><label class="form-label">Tipo</label><select class="form-select adv-filter" id="advF_tipo" onchange="filterNpcs()"><option value="">Todos</option><option value="npc"><svg class="lr-ico"><use href="#i-pessoa"/></svg> NPC</option><option value="criatura"><svg class="lr-ico"><use href="#i-dragao"/></svg> Criatura</option></select></div>
                                 <div class="form-group"><label class="form-label">Porte</label><select class="form-select adv-filter" id="advF_porte" onchange="filterNpcs()"><option value="">Todos</option><option value="Míudo">Míudo</option><option value="Pequeno">Pequeno</option><option value="Médio">Médio</option><option value="Grande">Grande</option><option value="Enorme">Enorme</option><option value="Colossal">Colossal</option></select></div>
                                 <div class="form-group"><label class="form-label">Papel</label><input type="text" class="form-input adv-filter" id="advF_papel" placeholder="Ex: Ferreiro" oninput="debounceFilterNpcs()"></div>
                                 <div class="form-group"><label class="form-label">Local</label><input type="text" class="form-input adv-filter" id="advF_local" placeholder="Ex: Kensari" oninput="debounceFilterNpcs()"></div>
@@ -318,7 +323,7 @@
                         </div>
 
                         <div class="adv-filters-section">
-                            <div class="adv-filters-header">💪 Atributos (Min/Max)</div>
+                            <div class="adv-filters-header"><svg class="lr-ico"><use href="#i-forca"/></svg> Atributos (Min/Max)</div>
                             <div class="adv-filters-grid attrs-grid">
                                 <div class="form-group"><label class="form-label">INT</label><div class="range-inputs"><input type="number" id="advF_int_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_int_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
                                 <div class="form-group"><label class="form-label">RAC</label><div class="range-inputs"><input type="number" id="advF_rac_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_rac_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
@@ -334,7 +339,7 @@
                         </div>
 
                         <div class="adv-filters-section">
-                            <div class="adv-filters-header">📊 Valores Derivados (Min/Max)</div>
+                            <div class="adv-filters-header"><svg class="lr-ico"><use href="#i-grafico"/></svg> Valores Derivados (Min/Max)</div>
                             <div class="adv-filters-grid">
                                 <div class="form-group"><label class="form-label">VIT</label><div class="range-inputs"><input type="number" id="advF_vit_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_vit_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
                                 <div class="form-group"><label class="form-label">ENER</label><div class="range-inputs"><input type="number" id="advF_ener_min" placeholder="Min" class="form-input adv-filter" oninput="debounceFilterNpcs()"><input type="number" id="advF_ener_max" placeholder="Max" class="form-input adv-filter" oninput="debounceFilterNpcs()"></div></div>
@@ -343,7 +348,7 @@
                         </div>
 
                         <div class="adv-filters-section">
-                            <div class="adv-filters-header">🎭 Role-Play</div>
+                            <div class="adv-filters-header"><svg class="lr-ico"><use href="#i-token"/></svg> Role-Play</div>
                             <div class="adv-filters-grid">
                                 <div class="form-group"><label class="form-label">Motivação</label><select class="form-select adv-filter" id="advF_mot" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Tem</option><option value="nao">Não tem</option></select></div>
                                 <div class="form-group"><label class="form-label">Segredos</label><select class="form-select adv-filter" id="advF_seg" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Tem</option><option value="nao">Não tem</option></select></div>
@@ -355,7 +360,7 @@
                         </div>
 
                         <div class="adv-filters-section">
-                            <div class="adv-filters-header">🎁 Loot</div>
+                            <div class="adv-filters-header"><svg class="lr-ico"><use href="#i-mostrar"/></svg> Loot</div>
                             <div class="adv-filters-grid">
                                 <div class="form-group"><label class="form-label">Tem itens?</label><select class="form-select adv-filter" id="advF_lootItens" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Sim</option><option value="nao">Não</option></select></div>
                                 <div class="form-group"><label class="form-label">Tem pistas?</label><select class="form-select adv-filter" id="advF_lootPistas" onchange="filterNpcs()"><option value="">Indiferente</option><option value="sim">Sim</option><option value="nao">Não</option></select></div>
@@ -365,7 +370,7 @@
                         </div>
 
                         <div class="adv-filters-section" id="advF_criaturaSection">
-                            <div class="adv-filters-header">🐉 Criatura</div>
+                            <div class="adv-filters-header"><svg class="lr-ico"><use href="#i-dragao"/></svg> Criatura</div>
                             <div class="adv-filters-grid">
                                 <div class="form-group"><label class="form-label">Nível de Ameaça</label><select class="form-select adv-filter" id="advF_ameaca" onchange="filterNpcs()"><option value="">Todos</option><option value="inofensivo">Inofensivo</option><option value="baixo">Baixo</option><option value="medio">Médio</option><option value="alto">Alto</option><option value="letal">Letal</option></select></div>
                                 <div class="form-group"><label class="form-label">Habitat</label><input type="text" class="form-input adv-filter" id="advF_habitat" placeholder="Ex: Floresta" oninput="debounceFilterNpcs()"></div>
@@ -374,7 +379,7 @@
                         </div>
                         
                         <div class="adv-filters-section">
-                            <div class="adv-filters-header">🔗 Vínculo de Mesa</div>
+                            <div class="adv-filters-header"><svg class="lr-ico"><use href="#i-elo"/></svg> Vínculo de Mesa</div>
                             <div class="adv-filters-grid">
                                 <div class="form-group"><label class="form-label">Vínculo</label><select class="form-select adv-filter" id="advF_vinculo" onchange="onVinculoChange()"><option value="">Indiferente</option><option value="com_mesa">Vinculado a alguma</option><option value="sem_mesa">Sem vínculo</option><option value="especifica">Mesa específica...</option></select></div>
                                 <div class="form-group" id="advF_mesaEspecificaContainer" style="display:none;"><label class="form-label">Mesa Específica</label><select class="form-select adv-filter" id="advF_mesaEsp" onchange="filterNpcs()"><option value="">Selecione...</option></select></div>
@@ -389,13 +394,13 @@
             <!-- TAB: ECONÔMICA -->
             <div class="tab-content" id="tab-economica">
                 <div class="sub-tabs">
-                    <button class="sub-tab-btn active" data-subtab="avulsos" onclick="switchSubTab('economica','avulsos')">📦 Recursos Avulsos</button>
-                    <button class="sub-tab-btn" data-subtab="criar" onclick="switchSubTab('economica','criar')">🛠️ Criar Recurso</button>
-                    <button class="sub-tab-btn" data-subtab="economia" onclick="switchSubTab('economica','economia')">💹 Motor Econômico</button>
+                    <button class="sub-tab-btn active" data-subtab="avulsos" onclick="switchSubTab('economica','avulsos')"><svg class="lr-ico"><use href="#i-caixa"/></svg> Recursos Avulsos</button>
+                    <button class="sub-tab-btn" data-subtab="criar" onclick="switchSubTab('economica','criar')"><svg class="lr-ico"><use href="#i-ferramentas"/></svg> Criar Recurso</button>
+                    <button class="sub-tab-btn" data-subtab="economia" onclick="switchSubTab('economica','economia')"><svg class="lr-ico"><use href="#i-alta"/></svg> Motor Econômico</button>
                 </div>
                 <div class="sub-tab-content active" id="subtab-avulsos">
                     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-                        <button class="btn btn-success btn-small" onclick="openAddAvulsoItemModal()">➕ Novo Recurso</button>
+                        <button class="btn btn-success btn-small" onclick="openAddAvulsoItemModal()"><svg class="lr-ico"><use href="#i-mais"/></svg> Novo Recurso</button>
                     </div>
                     <div class="avulsos-filters">
                         <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="avulsosFilterTipo" onchange="applyAvulsosFilters()"><option value="">Todos</option><option value="Arma">Arma</option><option value="Vestimenta">Vestimenta</option><option value="Projétil">Projétil</option><option value="Objeto">Objeto</option><option value="Container">Container</option><option value="Lunis">Lunis</option></select></div>
@@ -406,23 +411,23 @@
                     <div id="avulsosItemsContainer" style="display:none"><div id="avulsosItemsList"></div></div>
                     <div id="avulsosItemsEmpty" style="text-align:center;padding:40px;color:var(--muted)">Nenhum recurso avulso encontrado</div>
                     <div id="avulsoContainerViewer" class="container-viewer" style="display:none">
-                        <div class="container-viewer-header"><span class="container-viewer-title">📂 <span id="avulsoContainerName"></span></span><button class="btn btn-danger btn-small" onclick="closeAvulsoContainerViewer()">✕ Fechar</button></div>
+                        <div class="container-viewer-header"><span class="container-viewer-title"><svg class="lr-ico"><use href="#i-pastas"/></svg> <span id="avulsoContainerName"></span></span><button class="btn btn-danger btn-small" onclick="closeAvulsoContainerViewer()"><svg class="lr-ico"><use href="#i-fechar"/></svg> Fechar</button></div>
                         <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Tam. máx: <span id="containerMaxSize">5</span></div>
                         <div id="containerItemsList"></div>
                     </div>
                 </div>
                 <div class="sub-tab-content" id="subtab-criar">
-                    <div style="text-align:center;padding:20px;color:var(--muted);margin-bottom:16px">📥 Importar recursos via JSON</div>
+                    <div style="text-align:center;padding:20px;color:var(--muted);margin-bottom:16px"><svg class="lr-ico"><use href="#i-entrada"/></svg> Importar recursos via JSON</div>
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-                        <button class="btn btn-secondary btn-small" onclick="downloadItemTemplate()">📄 Template</button>
-                        <label class="btn btn-primary btn-small" style="cursor:pointer">📁 Arquivo<input type="file" id="jsonFileInput" accept=".json" onchange="handleJsonFileUpload(event)" style="display:none"></label>
+                        <button class="btn btn-secondary btn-small" onclick="downloadItemTemplate()"><svg class="lr-ico"><use href="#i-arquivo"/></svg> Template</button>
+                        <label class="btn btn-primary btn-small" style="cursor:pointer"><svg class="lr-ico"><use href="#i-pastas"/></svg> Arquivo<input type="file" id="jsonFileInput" accept=".json" onchange="handleJsonFileUpload(event)" style="display:none"></label>
                     </div>
                     <div id="selectedFileName" style="font-size:.82rem;color:var(--muted);margin-bottom:10px">Nenhum arquivo selecionado</div>
                     <textarea class="form-textarea" id="jsonTextInput" rows="8" placeholder="Cole o JSON aqui..." style="margin-bottom:14px"></textarea>
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-                        <button class="btn btn-primary btn-small" onclick="previewJsonItems()">👁️ Pré-visualizar</button>
-                        <button class="btn btn-success btn-small" onclick="importJsonItemsToAvulso()">📥 Importar</button>
-                        <button class="btn btn-secondary btn-small" onclick="clearJsonInput()">🗑️ Limpar</button>
+                        <button class="btn btn-primary btn-small" onclick="previewJsonItems()"><svg class="lr-ico"><use href="#i-olho"/></svg> Pré-visualizar</button>
+                        <button class="btn btn-success btn-small" onclick="importJsonItemsToAvulso()"><svg class="lr-ico"><use href="#i-entrada"/></svg> Importar</button>
+                        <button class="btn btn-secondary btn-small" onclick="clearJsonInput()"><svg class="lr-ico"><use href="#i-lixeira"/></svg> Limpar</button>
                     </div>
                     <div id="jsonPreviewArea" style="display:none">
                         <div id="jsonPreviewCount" style="font-size:.82rem;color:var(--muted);margin-bottom:10px"></div>
@@ -430,19 +435,19 @@
                     </div>
                 </div>
                 <div class="sub-tab-content" id="subtab-economia">
-                    <div style="text-align:center;padding:50px;color:var(--muted)"><div style="font-size:2.5rem;margin-bottom:12px">💹</div>Motor Econômico — carregando...</div>
+                    <div style="text-align:center;padding:50px;color:var(--muted)"><div style="font-size:2.5rem;margin-bottom:12px"><svg class="lr-ico"><use href="#i-alta"/></svg></div>Motor Econômico — carregando...</div>
                 </div>
             </div>
 
             <!-- TAB: APOIO -->
             <div class="tab-content" id="tab-apoio">
                 <div class="sub-tabs">
-                    <button class="sub-tab-btn active" data-subtab="apoios" onclick="switchSubTab('apoio','apoios')">🤝 Apoios</button>
-                    <button class="sub-tab-btn" data-subtab="metas" onclick="switchSubTab('apoio','metas')">🎯 Metas</button>
-                    <button class="sub-tab-btn" data-subtab="loja" onclick="switchSubTab('apoio','loja')">🛒 Loja</button>
-                    <button class="sub-tab-btn" data-subtab="compras" onclick="switchSubTab('apoio','compras'); carregarComprasDinheiro()">💵 Compras em Dinheiro</button>
-                    <button class="sub-tab-btn" data-subtab="notificacoes" onclick="switchSubTab('apoio','notificacoes')">📢 Notificações</button>
-                    <button class="sub-tab-btn" data-subtab="producao" onclick="switchSubTab('apoio','producao')">🏭 Produção</button>
+                    <button class="sub-tab-btn active" data-subtab="apoios" onclick="switchSubTab('apoio','apoios')"><svg class="lr-ico"><use href="#i-apoio"/></svg> Apoios</button>
+                    <button class="sub-tab-btn" data-subtab="metas" onclick="switchSubTab('apoio','metas')"><svg class="lr-ico"><use href="#i-template"/></svg> Metas</button>
+                    <button class="sub-tab-btn" data-subtab="loja" onclick="switchSubTab('apoio','loja')"><svg class="lr-ico"><use href="#i-carrinho"/></svg> Loja</button>
+                    <button class="sub-tab-btn" data-subtab="compras" onclick="switchSubTab('apoio','compras'); carregarComprasDinheiro()"><svg class="lr-ico"><use href="#i-moeda"/></svg> Compras em Dinheiro</button>
+                    <button class="sub-tab-btn" data-subtab="notificacoes" onclick="switchSubTab('apoio','notificacoes')"><svg class="lr-ico"><use href="#i-megafone"/></svg> Notificações</button>
+                    <button class="sub-tab-btn" data-subtab="producao" onclick="switchSubTab('apoio','producao')"><svg class="lr-ico"><use href="#i-fabrica"/></svg> Produção</button>
                 </div>
                 <div class="sub-tab-content active" id="subtab-apoios">
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
@@ -450,9 +455,9 @@
                     </div>
 
                     <div id="apoiosStatusMenu" class="sub-tabs" style="display: none; margin-bottom: 20px;">
-                        <button class="sub-tab-btn" id="btn-inner-compras" onclick="switchInnerApoioTab('compras')">🛒 Logs de Compra</button>
-                        <button class="sub-tab-btn active" id="btn-inner-apoios" onclick="switchInnerApoioTab('apoios')">🤝 Logs de Apoio</button>
-                        <button class="sub-tab-btn" id="btn-inner-repertorio" onclick="switchInnerApoioTab('repertorio')">🎒 Repertório</button>
+                        <button class="sub-tab-btn" id="btn-inner-compras" onclick="switchInnerApoioTab('compras')"><svg class="lr-ico"><use href="#i-carrinho"/></svg> Logs de Compra</button>
+                        <button class="sub-tab-btn active" id="btn-inner-apoios" onclick="switchInnerApoioTab('apoios')"><svg class="lr-ico"><use href="#i-apoio"/></svg> Logs de Apoio</button>
+                        <button class="sub-tab-btn" id="btn-inner-repertorio" onclick="switchInnerApoioTab('repertorio')"><svg class="lr-ico"><use href="#i-mochila"/></svg> Repertório</button>
                     </div>
 
                     <div id="inner-tab-compras" style="display: none;">
@@ -461,15 +466,15 @@
 
                     <div id="inner-tab-apoios" style="display: none;">
                         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-                            <button class="btn btn-success btn-small" onclick="openAddApoioModal()">➕ Novo Apoio</button>
-                            <button class="btn btn-primary btn-small" id="btnManageFrag" onclick="openManageFragModal()" style="display:none">💎 Fragmentos</button>
+                            <button class="btn btn-success btn-small" onclick="openAddApoioModal()"><svg class="lr-ico"><use href="#i-mais"/></svg> Novo Apoio</button>
+                            <button class="btn btn-primary btn-small" id="btnManageFrag" onclick="openManageFragModal()" style="display:none"><svg class="lr-ico"><use href="#i-gema"/></svg> Fragmentos</button>
                         </div>
                         <div class="apoio-filters" id="apoiosFiltros">
                             <div class="form-group"><label class="form-label">Status</label><select class="form-select" id="filtroStatus" onchange="aplicarFiltrosApoios()"><option value="todos">Todos</option><option value="nao-recebidos">Não Recebidos</option><option value="recebidos">Recebidos</option></select></div>
                             <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="filtroTipo" onchange="aplicarFiltrosApoios()"><option value="todos">Todos</option></select></div>
                             <div class="form-group"><label class="form-label">Data Início</label><input type="date" class="form-input" id="filtroDataInicio" onchange="aplicarFiltrosApoios()"></div>
                             <div class="form-group"><label class="form-label">Data Fim</label><input type="date" class="form-input" id="filtroDataFim" onchange="aplicarFiltrosApoios()"></div>
-                            <button class="btn btn-secondary btn-small" onclick="limparFiltrosApoios()" style="align-self:flex-end">🗑️ Limpar</button>
+                            <button class="btn btn-secondary btn-small" onclick="limparFiltrosApoios()" style="align-self:flex-end"><svg class="lr-ico"><use href="#i-lixeira"/></svg> Limpar</button>
                         </div>
                         <div id="apoiosList"><div style="text-align:center;padding:40px;color:var(--muted)">Selecione um jogador para ver apoios</div></div>
                     </div>
@@ -479,9 +484,9 @@
                         <div id="repertorioSection" style="display: none; margin-bottom: 25px;">
                             <div style="background: var(--lr-surface-2); border: 2px solid var(--border); border-radius: 15px; padding: 20px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary);">🎒 Repertório do Jogador</div>
+                                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary);"><svg class="lr-ico"><use href="#i-mochila"/></svg> Repertório do Jogador</div>
                                     <button class="btn btn-success" onclick="openAddItemRepertorioModal()" style="padding: 8px 20px; font-size: 0.9rem;">
-                                        ➕ Adicionar Item
+                                        <svg class="lr-ico"><use href="#i-mais"/></svg> Adicionar Item
                                     </button>
                                 </div>
                                 <div id="repertorioList">
@@ -495,7 +500,7 @@
                 </div>
                 <div class="sub-tab-content" id="subtab-metas">
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-                        <button class="btn btn-success btn-small" onclick="openMetaModal()">➕ Nova Meta</button>
+                        <button class="btn btn-success btn-small" onclick="openMetaModal()"><svg class="lr-ico"><use href="#i-mais"/></svg> Nova Meta</button>
                     </div>
                     <div id="metasContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
                         <div style="text-align:center;padding:50px;color:var(--muted);grid-column:1/-1;">Carregando metas...</div>
@@ -503,7 +508,7 @@
                 </div>
                 <div class="sub-tab-content" id="subtab-loja">
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-                        <button class="btn btn-success btn-small" onclick="openLojaModal()">➕ Novo Item</button>
+                        <button class="btn btn-success btn-small" onclick="openLojaModal()"><svg class="lr-ico"><use href="#i-mais"/></svg> Novo Item</button>
                     </div>
                     <div id="lojaContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
                         <div style="text-align:center;padding:50px;color:var(--muted);grid-column:1/-1;">Carregando loja...</div>
@@ -511,7 +516,7 @@
                 </div>
                 <div class="sub-tab-content" id="subtab-compras">
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
-                        <button class="btn btn-secondary btn-small" onclick="carregarComprasDinheiro()">🔄 Atualizar</button>
+                        <button class="btn btn-secondary btn-small" onclick="carregarComprasDinheiro()"><svg class="lr-ico"><use href="#i-recarregar"/></svg> Atualizar</button>
                         <span style="color:var(--muted);font-size:.82rem">Confirme só depois de receber o dinheiro — a confirmação entrega o item na hora.</span>
                     </div>
                     <div id="comprasDinheiroContainer">
@@ -519,13 +524,13 @@
                     </div>
                 </div>
                 <div class="sub-tab-content" id="subtab-notificacoes">
-                    <button class="btn btn-primary" onclick="openSendNotificationModal()">📢 Enviar Notificação</button>
+                    <button class="btn btn-primary" onclick="openSendNotificationModal()"><svg class="lr-ico"><use href="#i-megafone"/></svg> Enviar Notificação</button>
                 </div>
                 <div class="sub-tab-content" id="subtab-producao">
                     <div style="margin-bottom:16px;display:flex;gap:8px">
-                        <button class="btn btn-success btn-small" onclick="adicionarItemProducao()">➕ Adicionar Item</button>
+                        <button class="btn btn-success btn-small" onclick="adicionarItemProducao()"><svg class="lr-ico"><use href="#i-mais"/></svg> Adicionar Item</button>
                     </div>
-                    <table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:2px solid var(--line)"><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">☰</th><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">NOME</th><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">PROGRESSO</th><th style="padding:10px;text-align:center;color:var(--muted);font-size:.78rem">AÇÃO</th></tr></thead><tbody id="listaProducaoBody"></tbody></table>
+                    <table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:2px solid var(--line)"><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem"><svg class="lr-ico"><use href="#i-menu"/></svg></th><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">NOME</th><th style="padding:10px;text-align:left;color:var(--muted);font-size:.78rem">PROGRESSO</th><th style="padding:10px;text-align:center;color:var(--muted);font-size:.78rem">AÇÃO</th></tr></thead><tbody id="listaProducaoBody"></tbody></table>
                 </div>
             </div>
 
@@ -544,15 +549,15 @@
 
     <!-- MODAIS GLOBAIS -->
     <!-- NPC Modal -->
-    <div id="npcModal" class="modal"><div class="modal-content" style="max-width:900px"><div class="modal-header"><span class="modal-title" id="npcModalTitle">Novo NPC</span><button class="modal-close" onclick="closeNpcModal()">✕</button></div><div class="modal-body" id="npcModalBody"></div></div></div>
+    <div id="npcModal" class="modal"><div class="modal-content" style="max-width:900px"><div class="modal-header"><span class="modal-title" id="npcModalTitle">Novo NPC</span><button class="modal-close" onclick="closeNpcModal()"><svg class="lr-ico"><use href="#i-fechar"/></svg></button></div><div class="modal-body" id="npcModalBody"></div></div></div>
 
     <!-- Send Notification Modal -->
-    <div id="sendNotificationModal" class="modal"><div class="modal-content" style="max-width:600px"><div class="modal-header"><span class="modal-title">📢 Enviar Notificação</span><button class="modal-close" onclick="closeSendNotificationModal()">✕</button></div><div class="modal-body">
+    <div id="sendNotificationModal" class="modal"><div class="modal-content" style="max-width:600px"><div class="modal-header"><span class="modal-title"><svg class="lr-ico"><use href="#i-megafone"/></svg> Enviar Notificação</span><button class="modal-close" onclick="closeSendNotificationModal()"><svg class="lr-ico"><use href="#i-fechar"/></svg></button></div><div class="modal-body">
         <div class="form-group"><label class="form-label">Mensagem *</label><textarea class="form-textarea" id="notificationMessage" rows="4" placeholder="Digite a mensagem..."></textarea></div>
         <div class="form-group"><label class="form-label">Destaque</label><div style="display:flex;gap:12px"><label style="cursor:pointer;display:flex;align-items:center;gap:6px"><input type="radio" name="notificationHighlight" value="normal" checked> Normal</label><label style="cursor:pointer;display:flex;align-items:center;gap:6px"><input type="radio" name="notificationHighlight" value="importante"> Importante</label><label style="cursor:pointer;display:flex;align-items:center;gap:6px"><input type="radio" name="notificationHighlight" value="urgente"> Urgente</label></div></div>
         <div class="form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="selectAllPlayers" onchange="toggleAllPlayersSelection()" style="width:18px;height:18px"> <span class="form-label" style="margin:0">Selecionar Todos</span></label></div>
         <div id="playerCheckboxList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;max-height:250px;overflow-y:auto"></div>
-        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px"><button class="btn btn-secondary" onclick="closeSendNotificationModal()">Cancelar</button><button class="btn btn-primary" onclick="sendMasterNotification()">📤 Enviar</button></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px"><button class="btn btn-secondary" onclick="closeSendNotificationModal()">Cancelar</button><button class="btn btn-primary" onclick="sendMasterNotification()"><svg class="lr-ico"><use href="#i-saida"/></svg> Enviar</button></div>
     </div></div></div>
 
     <!-- Meta Modal -->
@@ -560,7 +565,7 @@
         <div class="modal-content" style="max-width:700px">
             <div class="modal-header">
                 <span class="modal-title" id="metaModalTitle">Nova Meta</span>
-                <button class="modal-close" onclick="closeMetaModal()">✕</button>
+                <button class="modal-close" onclick="closeMetaModal()"><svg class="lr-ico"><use href="#i-fechar"/></svg></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="meta_id">
@@ -586,7 +591,7 @@
                 <div class="form-group" style="margin-top: 16px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                         <label class="form-label" style="margin:0;">Etapas da Meta</label>
-                        <button class="btn btn-primary btn-small" onclick="addMetaEtapa()">➕ Adicionar Etapa</button>
+                        <button class="btn btn-primary btn-small" onclick="addMetaEtapa()"><svg class="lr-ico"><use href="#i-mais"/></svg> Adicionar Etapa</button>
                     </div>
                     <div id="metaEtapasContainer" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;padding-right:4px;">
                         <!-- Dynamic Steps here -->
@@ -595,7 +600,7 @@
 
                 <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
                     <button class="btn btn-secondary" onclick="closeMetaModal()">Cancelar</button>
-                    <button class="btn btn-success" onclick="saveMeta()">💾 Salvar Meta</button>
+                    <button class="btn btn-success" onclick="saveMeta()"><svg class="lr-ico"><use href="#i-salvar"/></svg> Salvar Meta</button>
                 </div>
             </div>
         </div>
@@ -606,7 +611,7 @@
         <div class="modal-content" style="max-width:750px;max-height:90vh;overflow-y:auto;">
             <div class="modal-header">
                 <span class="modal-title" id="lojaModalTitle">Novo Item da Loja</span>
-                <button class="modal-close" onclick="closeLojaModal()">✕</button>
+                <button class="modal-close" onclick="closeLojaModal()"><svg class="lr-ico"><use href="#i-fechar"/></svg></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="loja_id">
@@ -646,7 +651,7 @@
                 
                 <!-- Propriedades Condicionais -->
                 <div style="border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:12px;margin-bottom:16px;background:rgba(0,0,0,0.1);">
-                    <div style="font-weight:700;color:var(--primary);margin-bottom:12px;">⚙️ Recompensas Específicas</div>
+                    <div style="font-weight:700;color:var(--primary);margin-bottom:12px;"><svg class="lr-ico"><use href="#i-engrenagem"/></svg> Recompensas Específicas</div>
                     
                     <!-- EXP -->
                     <div style="margin-bottom:10px;">
@@ -715,7 +720,7 @@
 
                 <!-- Metas -->
                 <div style="border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:12px;background:rgba(0,0,0,0.1);">
-                    <div style="font-weight:700;color:var(--primary);margin-bottom:12px;">🎯 Integração com Metas</div>
+                    <div style="font-weight:700;color:var(--primary);margin-bottom:12px;"><svg class="lr-ico"><use href="#i-template"/></svg> Integração com Metas</div>
                     
                     <div class="form-group">
                         <label class="form-label">Metas Vinculadas</label>
@@ -738,7 +743,7 @@
 
                 <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
                     <button class="btn btn-secondary" onclick="closeLojaModal()">Cancelar</button>
-                    <button class="btn btn-success" onclick="saveLojaItem()">💾 Salvar Item</button>
+                    <button class="btn btn-success" onclick="saveLojaItem()"><svg class="lr-ico"><use href="#i-salvar"/></svg> Salvar Item</button>
                 </div>
             </div>
         </div>
@@ -748,8 +753,8 @@
     <div id="manageFragModal" class="modal">
         <div class="modal-content" style="max-width:400px">
             <div class="modal-header">
-                <span class="modal-title">💎 Gerenciar Fragmentos</span>
-                <button class="modal-close" onclick="closeManageFragModal()">✕</button>
+                <span class="modal-title"><svg class="lr-ico"><use href="#i-gema"/></svg> Gerenciar Fragmentos</span>
+                <button class="modal-close" onclick="closeManageFragModal()"><svg class="lr-ico"><use href="#i-fechar"/></svg></button>
             </div>
             <div class="modal-body">
                 <div style="margin-bottom:15px">
@@ -761,8 +766,8 @@
                 </div>
             </div>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:15px">
-                <button class="btn btn-danger" onclick="updatePlayerFrag('remove')">➖ Remover</button>
-                <button class="btn btn-success" onclick="updatePlayerFrag('add')">➕ Adicionar</button>
+                <button class="btn btn-danger" onclick="updatePlayerFrag('remove')"><svg class="lr-ico"><use href="#i-menos"/></svg> Remover</button>
+                <button class="btn btn-success" onclick="updatePlayerFrag('add')"><svg class="lr-ico"><use href="#i-mais"/></svg> Adicionar</button>
             </div>
         </div>
     </div>
