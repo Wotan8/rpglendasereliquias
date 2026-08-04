@@ -895,6 +895,10 @@ function recalcAll() {
         _dvAplicarEspelho(dvDef, dvKey, value);
     }
 
+    // Bloco cujos VDs sumiram todos (as 16 Blindagens espelho, quando nenhuma
+    // peça vestida foge do padrão) fica com o título órfão e nada embaixo.
+    _dvOcultarBlocosVazios();
+
     // 3) Aplicar limites em atributos e perícias (teto trunca state.dots)
     for (const [field, limit] of Object.entries(limits)) {
         if (field.startsWith('attr_') || field.startsWith('sk_')) {
@@ -1222,6 +1226,19 @@ function _dvAplicarEspelho(dvDef, dvKey, value) {
         label.dataset.dvMarca = mostrado < baseMostrada ? '▼ fraco'
             : mostrado > baseMostrada ? '▲ resiste' : '';
     }
+}
+
+/* Um bloco só existe pelos campos que mostra. Se todos estão escondidos —
+ * caso normal das Blindagens por Golpe e por Essência, que espelham o geral —
+ * o título sozinho é ruído. Reavaliado a cada recálculo: equipou a peça que
+ * cede a um tipo, o bloco volta com ela. */
+function _dvOcultarBlocosVazios() {
+    document.querySelectorAll('.dv-block-container').forEach(bloco => {
+        const campos = bloco.querySelectorAll('.mini-field');
+        if (!campos.length) return;
+        const algumVisivel = [...campos].some(c => !c.classList.contains('dv-espelho-igual'));
+        bloco.classList.toggle('dv-bloco-vazio', !algumVisivel);
+    });
 }
 
 function updateDerivedField(key, value) {

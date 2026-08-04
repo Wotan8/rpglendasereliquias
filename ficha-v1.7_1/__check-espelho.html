@@ -104,9 +104,48 @@ if (num('Blindagem') !== '3')             falhas.push(`Blindagem: esperava 3, ve
 if (num('Blindagem Contundente') !== '1') falhas.push(`Contundente: esperava 1, veio ${num('Blindagem Contundente')}`);
 if (num('Blindagem Vermelha') !== '-2')   falhas.push(`Vermelha: esperava -2 (amplifica), veio ${num('Blindagem Vermelha')}`);
 
+/* --- bloco vazio: título órfão não pode ficar na tela ---
+   Mesma lógica de _dvOcultarBlocosVazios() em derived-values.js. Um bloco com
+   todos os campos escondidos (Blindagem por Golpe e por Essência, quando nada
+   vestido foge do padrão) precisa sumir inteiro, título junto. */
+function ocultarBlocosVazios(raiz) {
+    raiz.querySelectorAll('.dv-block-container').forEach(bloco => {
+        const campos = bloco.querySelectorAll('.mini-field');
+        if (!campos.length) return;
+        const algumVisivel = [...campos].some(c => !c.classList.contains('dv-espelho-igual'));
+        bloco.classList.toggle('dv-bloco-vazio', !algumVisivel);
+    });
+}
+
+const palco = document.createElement('div');
+palco.style.position = 'absolute';
+palco.style.left = '-9999px';
+palco.innerHTML = `
+  <div class="dv-block-container" id="blocoTodoIgual">
+    <div class="attr-block-title">Blindagem por Essência</div>
+    <div class="mini-field dv-espelho-igual"><label class="dv-label">a</label></div>
+    <div class="mini-field dv-espelho-igual"><label class="dv-label">b</label></div>
+  </div>
+  <div class="dv-block-container" id="blocoComDivergencia">
+    <div class="attr-block-title">Blindagem por Golpe</div>
+    <div class="mini-field dv-espelho-igual"><label class="dv-label">c</label></div>
+    <div class="mini-field dv-fraqueza"><label class="dv-label">d</label></div>
+  </div>
+  <div class="dv-block-container" id="blocoComum">
+    <div class="attr-block-title">Combate</div>
+    <div class="mini-field"><label class="dv-label">e</label></div>
+  </div>`;
+document.body.appendChild(palco);
+ocultarBlocosVazios(palco);
+
+const blocoVisivel = id => getComputedStyle(document.getElementById(id)).display !== 'none';
+if (blocoVisivel('blocoTodoIgual'))        falhas.push('bloco com todos os campos escondidos deveria sumir');
+if (!blocoVisivel('blocoComDivergencia'))  falhas.push('bloco com uma fraqueza deveria continuar visível');
+if (!blocoVisivel('blocoComum'))           falhas.push('bloco sem espelho nenhum deveria continuar visível');
+
 const v = document.getElementById('veredito');
 if (falhas.length) { v.className = 'falhou'; v.textContent = '✗ FALHOU\n' + falhas.join('\n'); }
-else { v.className = 'ok'; v.textContent = '✓ 8 verificações passaram — 2 linhas escondidas, 2 fraquezas, 1 resistência, 3 números.'; }
+else { v.className = 'ok'; v.textContent = '✓ 11 verificações passaram — 2 linhas escondidas, 2 fraquezas, 1 resistência, 3 números, 3 blocos.'; }
 </script>
 </body>
 </html>

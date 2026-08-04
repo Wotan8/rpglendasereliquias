@@ -2814,6 +2814,11 @@ html.dark .pec-capacidade {
     display: none;
 }
 
+/* Todos os campos do bloco escondidos: o título sozinho não diz nada. */
+.dv-block-container.dv-bloco-vazio {
+    display: none;
+}
+
 /* Divergiu: o rótulo diz de que lado, para o jogador não ter que comparar. */
 .mini-field.dv-fraqueza .dv-label::after,
 .mini-field.dv-resistencia .dv-label::after {
