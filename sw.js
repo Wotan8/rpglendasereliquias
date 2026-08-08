@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v164';
+const VERSION = 'v165';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -85,6 +85,7 @@ const PRECACHE_URLS = [
   '/js/version-badge.js',
   '/laboratorium-runarum/css/lab-print.css',
   '/laboratorium-runarum/css/laboratorium.css',
+  '/laboratorium-runarum/js/bancada.js',
   '/laboratorium-runarum/js/canvas.js',
   '/laboratorium-runarum/js/compendium-data.js',
   '/laboratorium-runarum/js/lab-app.js',

@@ -331,6 +331,16 @@ function buildAliadoForm() {
                     <small class="al-vital-hint">Atual / Máx.</small>
                 </div>`).join('')}
             </div>
+            <!-- Lealdade: eixo do companheiro (Bestiário, "Como se lê uma fera").
+                 0–10; melhorias a partir de 6, uma por ponto, teto 5. -->
+            <div class="al-vital" style="margin-top:8px;">
+                <span class="al-vital-label">🐾 Lealdade</span>
+                <div class="al-vital-pair">
+                    <input type="number" id="al_lealdade" value="0" min="0" max="10" title="Lealdade (0–10)">
+                    <span class="al-vital-sep">/ 10</span>
+                </div>
+                <small class="al-vital-hint">melhorias a partir de 6 — uma por ponto (teto 5)</small>
+            </div>
         </div>
 
         <div class="section">
@@ -729,6 +739,8 @@ function fillAliadoForm(npc) {
     document.getElementById('al_ener_atual').value = enerAt !== '' ? enerAt : _vitalMax(npc, 'ENER');
     document.getElementById('al_san_atual').value = sanAt !== '' ? sanAt : _vitalMax(npc, 'SAN');
 
+    document.getElementById('al_lealdade').value = npc.lealdade ?? 0;
+
     document.getElementById('al_ataques').value = npc.ataques || '';
     document.getElementById('al_skills').value = npc.skillsTexto || '';
 
@@ -838,6 +850,9 @@ window.saveAliadoNpc = async function() {
 
         updateData.ataques = document.getElementById('al_ataques').value.trim();
         updateData.skillsTexto = document.getElementById('al_skills').value.trim();
+
+        /* Lealdade 0–10 (clampada): eixo do companheiro — Regua §3.1 lê daqui. */
+        updateData.lealdade = Math.max(0, Math.min(10, parseInt(document.getElementById('al_lealdade')?.value) || 0));
 
         if (currentAliadoNpc.periciasEstruturadas) {
             const newPs = JSON.parse(JSON.stringify(currentAliadoNpc.periciasEstruturadas));

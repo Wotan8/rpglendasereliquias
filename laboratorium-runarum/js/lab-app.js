@@ -25,6 +25,7 @@
     window.labBoot = function () {
         elementsById = window.LabFB.elementsById || {};
         canvasEl = $('#labCanvas');
+        window.LabBancada?.boot?.();   // 🧰 Bancada: inventário do personagem
 
         const ctx = window.LabFB.ctx;
         $('#labCharInfo').innerHTML = ctx.nome
@@ -111,6 +112,7 @@
             tabelas: window.RUNO_TABELAS,
         });
         window._lastAudit = a;
+        window.LabBancada?.onAudit?.(a);   // 🧰 Bancada acompanha a auditoria
 
         const natTxt = { plena: '⟐ Runa Plena', auxiliar: 'Runa Auxiliar', incompleta: '⚠️ Núcleo incompleto', vazia: 'Mesa vazia' }[a.natureza];
         const g = a.gravacao;
@@ -122,7 +124,7 @@
             <table class="lab-aud-tab">
                 <tr><td>🎯 Alvo (Teste de Construção §6.2)</td><td><b>${a.alvo || '—'}</b>${a.redutorConflu ? ` <small>(inclui ${a.redutorConflu} de Confluência)</small>` : ''}</td></tr>
                 <tr><td>⏳ Gravação (§6.4)</td><td>${a.ct ? `<b>${fmtHoras(g.horas)}</b> <small>(CT÷5 h ×${Math.round(g.fatorTempo * 100)}%)</small>` : '—'}</td></tr>
-                <tr><td>💰 Material</td><td>${a.ct ? `<b>≈ ${g.material} L$</b>${g.multMaterial > 1 ? ` <small>(×${g.multMaterial} por elemento ${g.multMaterial === 3 ? 'Mestre' : 'Avançado'})</small>` : ''}` : '—'}</td></tr>
+                <tr><td>💰 Material</td><td>${a.ct ? `<b>≈ ${g.material} L$</b>${g.multMaterial > 1 ? ` <small>(×${g.multMaterial} por elemento ${g.multMaterial === 3 ? 'Mestre' : 'Avançado'})</small>` : ''} <small>· lista exata na 🧰 Bancada</small>` : '—'}</td></tr>
                 <tr><td>🔋 Armazenamento</td><td>${a.armazenamento.capacidade} Ess ${a.ct ? (a.armazenamento.suficiente ? '✅' : a.armazenamento.regimeContinuoOk ? '♻️ contínuo' : '⚠️ &lt; CT') : ''}</td></tr>
                 <tr><td>♨️ Exaustão</td><td>${a.exaustao.presente ? a.exaustao.capacidade + ' Ess' : '— ausente'}</td></tr>
             </table>
@@ -259,6 +261,7 @@
                 <div class="lab-grim-comp">${(r.composicao || []).map(c => `<span class="lab-chip">${esc(c.nome)} Nv${c.nivel} <small>${c.custo}</small></span>`).join('')}</div>
                 <div class="lab-grim-acoes">
                     <button data-acao="abrir">🛠️ Abrir na mesa</button>
+                    <button data-acao="ficha" title="Criar o item no Cartucho Rúnico da ficha">🜃 → Ficha</button>
                     <button data-acao="pdf" title="Imprimir / salvar em PDF">📄</button>
                     <button data-acao="excluir" class="perigo">🗑️</button>
                 </div>
@@ -275,6 +278,8 @@
                     $('#labRunaNome').value = r.nome;
                     LabCanvas.loadState(r.canvas);
                     switchTab('montagem');
+                } else if (b.dataset.acao === 'ficha') {
+                    window.LabBancada?.enviarParaFicha?.(r, toast);
                 } else if (b.dataset.acao === 'pdf') {
                     exportarRuna(r);
                 } else if (b.dataset.acao === 'excluir') {

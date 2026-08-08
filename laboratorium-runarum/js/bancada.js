@@ -1,0 +1,356 @@
+/* =====================================================================
+   ᛟ BANCADA — Materiais e carga da gravação (Laboratorium Runarum)
+   ---------------------------------------------------------------------
+   Lê o inventário do personagem (coleção `items`, characterId == charId),
+   reconhece o que serve à gravação (tag "Bancada Rúnica" no catálogo, mais
+   os Lunis), deixa selecionar instrumento e quantidades, e fecha duas
+   contas que a auditoria genérica não fechava:
+
+     1. MATERIAIS — a lista exata do que o ramo exige para o CT atual,
+        contra o que está selecionado. Falta aparece em vermelho, como
+        violação.
+     2. CARGA/EXAUSTÃO — os Lunis selecionados viram Ess (25/Luni, Ativados
+        = 100%), passam pelo teto de absorção do circuito (Sifão Cristalino
+        + Amplificador de Captação, §2.4) e pelo Armazenador; o excedente
+        corre ao Exaustor; o que sobrar é Sobrecarga, o que faltar é
+        Subcarga — com as tabelas §2.8–2.9 que já vivem em RUNO_TABELAS.
+
+   Comportamento de material (campo `comportamentoMaterial` do catálogo):
+     consumido    → quantidade desconta ao consumir
+     desgastavel  → +1 de `desgaste` na instância; estraga se 1d10 ≤ desgaste
+     resistente   → não gasta em uso normal
+
+   Requisitos por ramo (espec RUNIMAGO-CLASSE §6/§7):
+     Escripta   pincel ≥1 · tinta ⌈CT÷10⌉ doses · papel 1
+     Talha      talhadeira ≥1 (a superfície é o objeto alvo, fora daqui)
+     Tatuagem   agulhas max(1,⌈CT÷20⌉) · tinta ⌈CT÷10⌉ · Infusor no circuito
+   ===================================================================== */
+
+import { getFirestore, collection, getDocs, query, where, doc, updateDoc }
+    from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const LabBancada = (() => {
+
+    const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+
+    const state = {
+        carregado: false,
+        instancias: [],      // instâncias do personagem já casadas com o catálogo
+        lunsDisponiveis: 0,
+        ramo: 'escripta',
+        sel: {},             // instId -> qtd selecionada (ferramentas: 1 = em uso)
+        lunis: 0,
+        ultimaAudit: null,
+    };
+
+    // ---------- carga do inventário ----------
+    async function carregar() {
+        const fb = window.LabFB;
+        if (!fb?.charId) { state.carregado = true; render(); return; }
+        const db = fb.db || getFirestore();
+        const [itensSnap, catSnap] = await Promise.all([
+            getDocs(query(collection(db, 'items'), where('characterId', '==', fb.charId))),
+            getDocs(query(collection(db, 'system', 'data', 'equipment'),
+                where('tags', 'array-contains', 'Bancada Rúnica'))),
+        ]);
+        const catalogo = {};
+        catSnap.forEach(d => catalogo[d.id] = { id: d.id, ...d.data() });
+
+        const brutos = [];
+        itensSnap.forEach(d => brutos.push({ id: d.id, ...d.data() }));
+
+        /* Equipado direto, ou dentro de container equipado (pai equipado). */
+        const paisEquipados = new Set(brutos.filter(i => i.equipado && !i.parentItemId).map(i => i.id));
+        const acessivel = i => (i.equipado && !i.parentItemId) || (i.parentItemId && paisEquipados.has(i.parentItemId));
+
+        state.instancias = brutos
+            .map(i => ({ ...i, cat: catalogo[i.modeloId] || null }))
+            .filter(i => i.cat && acessivel(i));
+
+        /* Lunis: o dinheiro do inventário. Instância cujo nome/modelo contém "lun". */
+        state.lunsDisponiveis = brutos
+            .filter(i => /\blun/i.test(norm(i.nome || '')) && acessivel(i))
+            .reduce((s, i) => s + (Number(i.quantidade) || 0), 0);
+
+        /* pré-seleção: primeira ferramenta de cada tipo */
+        state.carregado = true;
+        render();
+    }
+
+    // ---------- requisitos por ramo ----------
+    const FERRAMENTA = { escripta: 'pincel', talha: 'talhadeira', tatuagem: 'agulha' };
+    function requisitos(ct) {
+        if (!ct) return [];
+        const tintas = Math.ceil(ct / 10);
+        if (state.ramo === 'escripta') return [
+            { tipo: 'ferramenta', casa: /pincel/i, rotulo: 'Pincel', qtd: 1 },
+            { tipo: 'consumo', casa: /tinta/i, rotulo: `Tinta (${tintas} dose${tintas > 1 ? 's' : ''})`, qtd: tintas },
+            { tipo: 'consumo', casa: /papel/i, rotulo: 'Papel de Gravação', qtd: 1 },
+        ];
+        if (state.ramo === 'talha') return [
+            { tipo: 'ferramenta', casa: /talhadeira/i, rotulo: 'Talhadeira', qtd: 1 },
+            { tipo: 'nota', rotulo: 'Superfície: o objeto alvo (fora do inventário)' },
+        ];
+        return [
+            { tipo: 'ferramenta', casa: /agulha/i, rotulo: `Agulhas (${Math.max(1, Math.ceil(ct / 20))})`, qtd: Math.max(1, Math.ceil(ct / 20)), consome: true },
+            { tipo: 'consumo', casa: /tinta/i, rotulo: `Tinta (${tintas} dose${tintas > 1 ? 's' : ''})`, qtd: tintas },
+            { tipo: 'circuito', rotulo: 'Infusor no circuito (§6.4 — superfície viva)' },
+        ];
+    }
+
+    /* Nó do canvas: { elementId, x, y, nivel, id } — id é o uid do NÓ. */
+    function circuitoTemInfusor() {
+        const nodes = window.LabCanvas?.getState?.()?.nodes || [];
+        const els = window.LabFB?.elementsById || {};
+        return nodes.some(n => /infusor/.test(norm(els[n.elementId]?.nome || '')));
+    }
+
+    /* teto de absorção §2.4: Sifão Cristalino Nv1 = 25 · Nv2–3 = 50;
+       + Amplificador de Captação Nv1/2/3 = 75/125/250. */
+    function tetoAbsorcao() {
+        const nodes = window.LabCanvas?.getState?.()?.nodes || [];
+        const els = window.LabFB?.elementsById || {};
+        let sifaoNv = 0, ampNv = 0;
+        for (const n of nodes) {
+            const nome = norm(els[n.elementId]?.nome || '');
+            const nv = Number(n.nivel || 1);
+            if (/sifao cristalino/.test(nome)) sifaoNv = Math.max(sifaoNv, nv);
+            if (/amplificador de captacao/.test(nome)) ampNv = Math.max(ampNv, nv);
+        }
+        if (!sifaoNv) return 0;
+        if (ampNv) return [0, 75, 125, 250][ampNv] || 250;
+        return sifaoNv >= 2 ? 50 : 25;
+    }
+
+    // ---------- as duas contas ----------
+    function contaMateriais(ct) {
+        const reqs = requisitos(ct);
+        return reqs.map(r => {
+            if (r.tipo === 'nota') return { ...r, ok: true, aviso: true };
+            if (r.tipo === 'circuito') return { ...r, ok: circuitoTemInfusor() };
+            const fontes = state.instancias.filter(i => r.casa.test(norm(i.cat.nome)));
+            const selecionado = fontes.reduce((s, i) => s + (Number(state.sel[i.id]) || 0), 0);
+            const disponivel = fontes.reduce((s, i) => s + (Number(i.quantidade) || 1), 0);
+            return { ...r, ok: selecionado >= r.qtd, selecionado, disponivel };
+        });
+    }
+
+    function contaCarga(a) {
+        const ct = a?.ct || 0;
+        const essIn = state.lunis * 25;                       // Ativados = 100% (§2.3)
+        const teto = tetoAbsorcao();
+        const captado = teto ? Math.min(essIn, teto) : 0;
+        const armazem = a?.armazenamento?.capacidade || 0;
+        const guardado = Math.min(captado, armazem);
+        const excedente = Math.max(0, captado - armazem);
+        const exaustor = a?.exaustao?.presente ? (a.exaustao.capacidade || 0) : 0;
+        const sobrecarga = Math.max(0, excedente - exaustor);
+        const pct = ct ? Math.floor((guardado / ct) * 100) : 0;
+        const tabela = (window.RUNO_TABELAS?.subcarga || []).find(r => pct >= r.min);
+        return { essIn, teto, captado, armazem, guardado, excedente, exaustor, sobrecarga, pct, faixa: tabela };
+    }
+
+    // ---------- UI ----------
+    function render() {
+        const a = state.ultimaAudit;
+        const host = document.getElementById('labBancada');
+        if (!host) return;
+        if (!window.LabFB?.charId) {
+            host.innerHTML = '<div class="lab-banc-vazio">🧰 Abra o Laboratorium pela ficha para usar a Bancada (inventário do personagem).</div>';
+            return;
+        }
+        if (!state.carregado) { host.innerHTML = '<div class="lab-banc-vazio">🧰 Lendo o inventário…</div>'; return; }
+
+        const ct = a?.ct || 0;
+        const mats = contaMateriais(ct);
+        const carga = contaCarga(a);
+        const grupos = { ferramenta: [], consumo: [] };
+        for (const i of state.instancias) {
+            const comp = i.cat.comportamentoMaterial || 'consumido';
+            (comp === 'consumido' ? grupos.consumo : grupos.ferramenta).push(i);
+        }
+
+        const linhaItem = i => {
+            const comp = i.cat.comportamentoMaterial || 'consumido';
+            const desg = Number(i.desgaste || 0);
+            const risco = comp === 'desgastavel' && desg >= 7 ? ` <b class="lab-banc-risco">⚠ ${desg * 10}% de estragar</b>` :
+                comp === 'desgastavel' && desg > 0 ? ` <small>desgaste ${desg}</small>` : '';
+            const dentro = i.parentItemId ? ' <small>📦</small>' : '';
+            if (comp === 'consumido') {
+                const max = Number(i.quantidade) || 1;
+                return `<div class="lab-banc-item"><label>${esc(i.cat.nome)}${dentro} <small>(${max})</small></label>
+                    <input type="number" min="0" max="${max}" value="${Number(state.sel[i.id]) || 0}" data-sel="${i.id}"></div>`;
+            }
+            return `<div class="lab-banc-item"><label><input type="checkbox" data-sel="${i.id}" ${state.sel[i.id] ? 'checked' : ''}>
+                ${esc(i.cat.nome)}${dentro}${risco}</label></div>`;
+        };
+
+        host.innerHTML = `
+            <div class="lab-banc-ramo">
+                ${['escripta', 'talha', 'tatuagem'].map(r =>
+                    `<button data-ramo="${r}" class="${state.ramo === r ? 'ativo' : ''}">${{ escripta: '🖌️ Escripta', talha: '🪨 Talha', tatuagem: '🪡 Tatuagem' }[r]}</button>`).join('')}
+            </div>
+            <div class="lab-banc-grupos">
+                <div><h5>Ferramentas</h5>${grupos.ferramenta.map(linhaItem).join('') || '<small>nenhuma equipada</small>'}</div>
+                <div><h5>Consumíveis</h5>${grupos.consumo.map(linhaItem).join('') || '<small>nenhum equipado</small>'}</div>
+                <div><h5>Carga</h5>
+                    <div class="lab-banc-item"><label>Lunis <small>(tem ${state.lunsDisponiveis})</small></label>
+                    <input type="number" min="0" max="${state.lunsDisponiveis}" value="${state.lunis}" data-lunis></div>
+                    <small>${state.lunis * 25} Ess brutos</small>
+                </div>
+            </div>
+            <div class="lab-banc-reqs">
+                <h5>Exige (${{ escripta: 'Escripta', talha: 'Talha', tatuagem: 'Tatuagem' }[state.ramo]}, CT ${ct})</h5>
+                ${ct ? mats.map(m => `<div class="lab-banc-req ${m.ok ? 'ok' : 'falta'}">${m.ok ? (m.aviso ? 'ℹ️' : '✅') : '⛔'} ${esc(m.rotulo)}${m.selecionado != null ? ` — sel. ${m.selecionado}${m.disponivel != null ? ` / tem ${m.disponivel}` : ''}` : ''}</div>`).join('')
+                    : '<small>Monte um circuito para ver os requisitos.</small>'}
+            </div>
+            ${ct ? `<div class="lab-banc-carga">
+                <h5>♨️ Balanço de carga</h5>
+                <div class="lab-banc-fluxo">${carga.essIn} Ess ${carga.teto ? `→ teto ${carga.teto}` : '→ <b class="lab-banc-risco">sem Sifão Cristalino</b>'} → armazém ${carga.armazem} → exaustor ${carga.exaustor}</div>
+                ${carga.faixa ? `<div class="lab-banc-req ${carga.pct >= 100 ? 'ok' : 'falta'}">${carga.pct >= 100 ? '✅' : '⚠️'} ${carga.pct}% do CT — <b style="color:${carga.faixa.cor}">${carga.faixa.nome}</b><br><small>${esc(carga.faixa.efeito)}</small></div>` : ''}
+                ${carga.sobrecarga > 0 ? (() => {
+                    const f = (window.RUNO_TABELAS?.sobrecarga || []).find(r => carga.sobrecarga >= r.min && carga.sobrecarga <= r.max);
+                    return `<div class="lab-banc-req falta">⛔ Sobrecarga de ${carga.sobrecarga} Ess — <span style="color:${f?.cor}">${esc(f?.efeito || '')}</span></div>`;
+                })() : ''}
+                ${carga.essIn > carga.teto && carga.teto ? `<div class="lab-banc-req falta">⚠️ ${carga.essIn - carga.teto} Ess acima do teto de absorção — carregue em série (§2.4)</div>` : ''}
+            </div>` : ''}
+            <button id="labBancConsumir" ${ct && mats.every(m => m.ok) ? '' : 'disabled'}
+                title="Desconta consumíveis, soma desgaste nas ferramentas e debita os Lunis">🔥 Consumir materiais da gravação</button>`;
+
+        host.querySelectorAll('[data-sel]').forEach(el => el.addEventListener('change', ev => {
+            const id = ev.target.dataset.sel;
+            state.sel[id] = ev.target.type === 'checkbox' ? (ev.target.checked ? 1 : 0) : Number(ev.target.value) || 0;
+            render();
+        }));
+        host.querySelector('[data-lunis]')?.addEventListener('change', ev => {
+            state.lunis = Math.max(0, Math.min(state.lunsDisponiveis, Number(ev.target.value) || 0)); render();
+        });
+        host.querySelectorAll('[data-ramo]').forEach(b => b.addEventListener('click', () => { state.ramo = b.dataset.ramo; render(); }));
+        host.querySelector('#labBancConsumir')?.addEventListener('click', consumir);
+    }
+
+    /* Desconta o que a gravação usa. Escritas mínimas e explícitas. */
+    async function consumir() {
+        if (!confirm('Consumir os materiais selecionados?\n(desconta consumíveis, +1 desgaste nas ferramentas, debita Lunis)')) return;
+        const db = window.LabFB.db || getFirestore();
+        const escritas = [];
+        for (const i of state.instancias) {
+            const q = Number(state.sel[i.id]) || 0;
+            if (!q) continue;
+            const comp = i.cat.comportamentoMaterial || 'consumido';
+            if (comp === 'consumido') {
+                escritas.push(updateDoc(doc(db, 'items', i.id), { quantidade: Math.max(0, (Number(i.quantidade) || 0) - q) }));
+                i.quantidade = Math.max(0, (Number(i.quantidade) || 0) - q);
+            } else if (comp === 'desgastavel') {
+                escritas.push(updateDoc(doc(db, 'items', i.id), { desgaste: Number(i.desgaste || 0) + 1 }));
+                i.desgaste = Number(i.desgaste || 0) + 1;
+            }
+        }
+        /* Lunis: debita da primeira pilha acessível */
+        if (state.lunis > 0) {
+            let restante = state.lunis;
+            const itensSnap = await getDocs(query(collection(db, 'items'), where('characterId', '==', window.LabFB.charId)));
+            const pilhas = []; itensSnap.forEach(d => { const it = { id: d.id, ...d.data() }; if (/\blun/i.test(norm(it.nome || ''))) pilhas.push(it); });
+            for (const p of pilhas) {
+                if (restante <= 0) break;
+                const tira = Math.min(restante, Number(p.quantidade) || 0);
+                if (tira > 0) { escritas.push(updateDoc(doc(db, 'items', p.id), { quantidade: (Number(p.quantidade) || 0) - tira })); restante -= tira; }
+            }
+            state.lunsDisponiveis -= state.lunis; state.lunis = 0;
+        }
+        await Promise.all(escritas).catch(e => console.error('bancada/consumir', e));
+        state.sel = {};
+        render();
+    }
+
+    // ---------- 🜃 enviar runa do Grimório para a ficha ----------
+    /* Cria o item no módulo Cartucho Rúnico (char.classModuleData.cartucho_runico),
+       no formato exato que a ficha lê: mapa chave-do-schema → valor.
+       Schema do Cartucho: 1 Nome · 2 Ramo · 3 CT · 4 Alvo · 5 Usos (contador) ·
+       6 Efeito · 7 Condições · 8 Gatilho/acesso · 9 Ficha técnica (link). */
+    const COND_ASPECTUS = {
+        fogo: 'Queimadura', terra: 'Imobilizado', natureza: 'Imobilizado',
+        vento: 'Desorientado', espacial: 'Desorientado', agua: 'Afogando',
+        necrotico: 'Definhado', luz: 'Ofuscado/Cego', abissal: 'Corrompido',
+        cristal: 'Opaco', temporal: 'Atordoado', poder: 'Sobrecarregado',
+        sangue: 'Hemorragia',
+    };
+
+    function calcularUsos(runa) {
+        const dots = { ...(window.LabFB.charData?.dots || {}), ...(window.LabFB.charData?.effectiveDots || {}) };
+        const achaDot = frag => {
+            let best = 0;
+            Object.keys(dots).forEach(k => { if (norm(k).replace(/[^a-z0-9]/g, '').includes(frag)) best = Math.max(best, Number(dots[k] || 0)); });
+            return best;
+        };
+        /* melhor tinta selecionada na Bancada define a qualidade */
+        const qualTinta = Math.max(0, ...state.instancias
+            .filter(i => /tinta/i.test(norm(i.cat?.nome)) && (Number(state.sel[i.id]) || 0) > 0)
+            .map(i => Number(i.cat.qualidadeMaterial || 0)));
+        const desconto = Math.ceil((runa.ct || 0) / 20);
+        if (state.ramo === 'tatuagem') return 999;   // permanente no portador
+        if (state.ramo === 'talha') return Math.max(10, 10 * (achaDot('talharunica') + qualTinta - desconto));
+        return Math.max(1, achaDot('escriptarunica') + qualTinta - desconto);
+    }
+
+    async function enviarParaFicha(runa, toast) {
+        const fb = window.LabFB;
+        if (!fb?.charId) { toast?.('❌ Abra o Laboratorium pela ficha para enviar runas.'); return; }
+        const ramoNome = { escripta: 'Escripta', talha: 'Talha', tatuagem: 'Tatuagem' }[state.ramo];
+        if (!confirm(`Criar "${runa.nome}" no Cartucho Rúnico da ficha?\nRamo: ${ramoNome} (mude na Bancada se for outro)`)) return;
+
+        /* efeito legível a partir da composição salva */
+        const nucleo = (runa.composicao || []).filter(c => /artus|aspectus/i.test(c.tipo || ''));
+        const sigilos = (runa.composicao || []).filter(c => !/artus|aspectus/i.test(c.tipo || ''));
+        const efeito = [
+            nucleo.length ? 'Núcleo: ' + nucleo.map(c => `${c.nome} Nv${c.nivel}`).join(' + ') : 'Runa Auxiliar (sem núcleo)',
+            sigilos.length ? 'Sigilus: ' + sigilos.map(c => c.nome).join(', ') : '',
+            `Gravação ${runa.gravacao?.horas || '?'} h · ver ficha técnica (PDF)`,
+        ].filter(Boolean).join('\n');
+
+        const condicoes = [...new Set(nucleo
+            .map(c => COND_ASPECTUS[norm(c.nome)]).filter(Boolean))].join(' · ');
+
+        const els = (runa.canvas?.nodes || []).map(n => norm(fb.elementsById[n.elementId]?.nome || ''));
+        const gatilho = els.some(n => /reconhecedor/.test(n)) ? 'Travada: Reconhecedor (só cadastrados)' :
+            els.some(n => /selector/.test(n)) ? 'Selector: só quem foi selecionado' :
+            els.some(n => /gatilho|sensor/.test(n)) ? 'Dispara sozinha (Gatilho/Sensor)' :
+            els.some(n => /toque/.test(n)) ? 'Toque simples — qualquer um ativa' : '';
+
+        const item = {
+            '1': runa.nome, '2': ramoNome, '3': runa.ct || 0, '4': runa.alvo || 0,
+            '5': calcularUsos(runa), '6': efeito, '7': condicoes, '8': gatilho, '9': '',
+            _origemGrimorio: runa.id,
+        };
+        try {
+            const db = fb.db || getFirestore();
+            const atuais = (fb.charData?.classModuleData?.cartucho_runico) || [];
+            const novos = [...atuais.filter(i => i._origemGrimorio !== runa.id), item];
+            await updateDoc(doc(db, 'char', fb.charId), {
+                'classModuleData.cartucho_runico': novos,
+                lastUpdate: new Date().toISOString(),
+            });
+            fb.charData = fb.charData || {};
+            fb.charData.classModuleData = { ...(fb.charData.classModuleData || {}), cartucho_runico: novos };
+            toast?.(`🜃 "${runa.nome}" no Cartucho Rúnico (${ramoNome}, ${item['5']} uso${item['5'] > 1 ? 's' : ''}). Recarregue a ficha.`);
+        } catch (e) {
+            console.error('bancada/enviarParaFicha', e);
+            toast?.('❌ Falha ao enviar — veja o console.');
+        }
+    }
+
+    return {
+        enviarParaFicha,
+        boot() {
+            /* injeta a seção logo abaixo da auditoria */
+            const audit = document.getElementById('labAudit');
+            if (audit && !document.getElementById('labBancada')) {
+                audit.insertAdjacentHTML('afterend', '<h4 class="lab-banc-titulo">🧰 Bancada</h4><div id="labBancada"></div>');
+            }
+            carregar();
+        },
+        onAudit(a) { state.ultimaAudit = a; if (state.carregado) render(); },
+    };
+})();
+window.LabBancada = LabBancada;

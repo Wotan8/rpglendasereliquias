@@ -383,3 +383,22 @@ body {
     .lab-modal-x { font-size: 20px; padding: 8px 12px; }
     .lab-node-del { width: 26px; height: 26px; }
 }
+
+/* ===== 🧰 BANCADA — materiais e carga da gravação ===== */
+.lab-banc-titulo { margin: 14px 0 6px; font-size: .85rem; letter-spacing: .04em; }
+#labBancada { display: flex; flex-direction: column; gap: 10px; font-size: .78rem; }
+.lab-banc-vazio { color: var(--tinta-fraca, #888); font-size: .75rem; padding: 6px 2px; }
+.lab-banc-ramo { display: flex; gap: 6px; }
+.lab-banc-ramo button { flex: 1; padding: 5px 4px; border: 1px solid var(--borda); border-radius: 8px; background: var(--pedra); cursor: pointer; font-size: .72rem; }
+.lab-banc-ramo button.ativo { border-color: var(--lume); background: rgba(212,175,55,.10); font-weight: 700; }
+.lab-banc-grupos { display: flex; flex-direction: column; gap: 8px; }
+.lab-banc-grupos h5, .lab-banc-reqs h5, .lab-banc-carga h5 { margin: 0 0 4px; font-size: .72rem; opacity: .8; }
+.lab-banc-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 2px; }
+.lab-banc-item input[type="number"] { width: 58px; padding: 3px 6px; border: 1px solid var(--borda); border-radius: 6px; background: var(--bancada); }
+.lab-banc-risco { color: var(--erro); }
+.lab-banc-req { border: 1px solid; border-radius: 8px; padding: 5px 8px; margin: 3px 0; font-size: .74rem; line-height: 1.4; }
+.lab-banc-req.ok { border-color: rgba(80,160,90,.5); background: rgba(80,160,90,.06); }
+.lab-banc-req.falta { border-color: var(--erro); background: rgba(201,79,92,.07); }
+.lab-banc-fluxo { font-size: .73rem; opacity: .85; margin-bottom: 4px; }
+#labBancConsumir { margin-top: 2px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--borda); background: var(--pedra); cursor: pointer; font-size: .76rem; }
+#labBancConsumir:disabled { opacity: .45; cursor: not-allowed; }
