@@ -376,8 +376,19 @@ export function medirEfeito(texto, duracaoTxt, tipados) {
        graça — a âncora de 1/3 de turno da §1.1. */
     /* `[^.;]` não servia: "D. Terrestre" tem ponto no meio e cortava a busca
        antes de chegar ao "sem provocar". */
-    if (/(?:mov[ea]|desloca|recua|retira)\w*[^;]{0,60}sem provocar/i.test(s)) {
+    if (/(?:mov[ea]|desloca|recua|retira|teleporta)\w*[^;]{0,60}sem provocar/i.test(s)) {
         u += TAXA.reposicionar; achados.push('reposicionar de graça');
+    }
+    /* Sair sem levar o ataque de oportunidade NEGA um ataque inimigo — coisa
+       diferente de só se mover, e é o que a taxa de reposicionar (1/3, e ainda
+       "a confirmar") não cobre. Vale uma ação negada, descontada por só valer
+       quando o inimigo teria mesmo revidado. */
+    if (/sem provocar[^.;]{0,30}(?:contra-?ataque|rea[çc][ãa]o|ataque)/i.test(s)) {
+        u += TAXA.acaoNegada * 0.5; achados.push('nega o contra-ataque');
+    }
+    /* Mover normalmente derruba a sua Reação; preservá-la é manter a defesa. */
+    if (/sem reduzir a Rea[çc][ãa]o/i.test(s)) {
+        u += TAXA.alvo; achados.push('mantém a Reação');
     }
     /* Dano FIXO, sem dado: "1 de dano sônico". O parser de dados não vê, e
        era o que deixava a Nota Penetrante inteira em branco. */
@@ -452,8 +463,22 @@ export function medirEfeito(texto, duracaoTxt, tipados) {
        rodada inteira de DPR a mais, por rodada que durar. */
     /* "gratuita"/"livre" faltavam: o Ladino executa Furto "como ação gratuita"
        e a manobra media zero — a coisa mais cara do jogo, em branco. */
-    const acaoExtra = /\+?\s*(\d+)?\s*a[çc][ãa]o (adicional|extra|gratuita|livre)|ganha(?:r)? (\d+ )?a[çc][ãa]o/i.exec(s);
-    if (acaoExtra) { const n = +(acaoExtra[1] || 1); u += n * TAXA.acaoNegada * rod; achados.push(`+${n} ação ×${rod}r`); }
+    /* "Se matar um inimigo: +1 ação" não tinha a palavra extra/adicional e
+       passava em branco — a coisa mais cara do jogo, invisível na Cólera. */
+    const acaoExtra = /\+\s*(\d+)\s*a[çc][ãa]o|\+?\s*(\d+)?\s*a[çc][ãa]o (adicional|extra|gratuita|livre)|ganha(?:r)? (\d+ )?a[çc][ãa]o/i.exec(s);
+    if (acaoExtra) { const n = +(acaoExtra[1] || acaoExtra[2] || 1); u += n * TAXA.acaoNegada * rod; achados.push(`+${n} ação ×${rod}r`); }
+    /* CONTRA-ATAQUE — um ataque a mais, disparado por gatilho do inimigo.
+       Vale uma rodada de DPR (1,000), mas só acontece quando o gatilho ocorre:
+       o inimigo errar é ~30% no par de referência, matar é menos. Metade, por
+       ser gatilho e não escolha. */
+    if (/contra-?ataque|contra-?atacar/i.test(s) && !/sem provocar contra-?ataque/i.test(s)) {
+        u += TAXA.acaoNegada * 0.5; achados.push('contra-ataque (gatilho)');
+    }
+    /* Devolver dano: metade do que entrou (~6,5 líquido) é ~3,2 de dano, e
+       ainda depende de passar num teste. Metade, mesma lógica do gatilho. */
+    if (/(?:cause|causa|devolve|reflete)\w*\s+metade do dano/i.test(s)) {
+        u += 6.5 / 2 * TAXA.dano * 0.5; achados.push('reflete metade do dano (gatilho)');
+    }
     /* Roubar ação por turno é o espelho: mesma taxa, sinal trocado. */
     const acaoPerdida = /perde(?:m)?\s+(\d+)\s+a[çc][ãa]o(?:\/|\s+por\s+)turno/i.exec(s);
     if (acaoPerdida) { const n = +acaoPerdida[1]; u += n * TAXA.acaoNegada * rod; achados.push(`-${n} ação/turno ×${rod}r`); }
@@ -531,8 +556,14 @@ for (const [t, esperado] of [['Congelamento', { 1: 0.10, 2: 1.00, 3: 1.32 }], ['
 }
 {   /* as taxas que existiam e nada acionava */
     assert.equal(medirEfeito('Sucesso: a arma do alvo cai.').unidades, TAXA.desarme, 'desarme aciona a própria taxa');
-    assert.equal(medirEfeito('Após atacar, move até metade do D. Terrestre, sem provocar contra-ataques.').unidades,
-        TAXA.reposicionar, 'reposicionar de graça');
+    /* Sair de perto sem levar o golpe é DUAS coisas: o movimento (1/3) e o
+       ataque inimigo negado (1,000 × 0,5 por só valer quando ele revidaria). */
+    {
+        const r = medirEfeito('Após atacar, move até metade do D. Terrestre, sem provocar contra-ataques.');
+        assert.equal(r.unidades, TAXA.reposicionar + TAXA.acaoNegada * 0.5, 'desengajar = mover + negar o contra-ataque');
+        assert.equal(r.achados.length, 2, 'as duas parcelas, separadas');
+    }
+    assert.equal(medirEfeito('Move 3m.').unidades, 0, 'mover sozinho, sem desengajar, não vale nada aqui');
     assert.equal(medirEfeito('Executa Furto como ação gratuita.').unidades, TAXA.acaoNegada, 'ação extra vale 1,000');
     assert.ok(medirEfeito('Cone de 3m: 1 de dano sônico.').unidades > 0, 'dano fixo sem dado tem que contar');
     assert.equal(medirEfeito('1d6 de dano').achados.filter(a => /dano/.test(a)).length, 1,
@@ -606,6 +637,13 @@ function custoDoBotao(ids) {
     return out;
 }
 
+/* HABILITADORAS — nomeadas no `requer` de outra habilidade. O pagamento delas
+   está lá na frente: Passos Sombrios entrega 0,32 sozinho e existe para
+   destravar o Golpe pelas Costas, que entrega 2,57. Cobrar 1,00 das duas conta
+   o par duas vezes e manda buffar justamente o que já está pago. */
+const HABILITADORAS = new Set(mods.flatMap(m => (m.itensPredefinidos || [])
+    .map(it => it.requer).filter(Boolean)));
+
 const linhas = [];
 for (const m of mods) {
     const lbl = Object.fromEntries((m.schema || []).map(f => [f.key, String(f.label || '')]));
@@ -661,8 +699,9 @@ for (const l of medidas.sort((a, b) => b.unidades - a.unidades)) {
     const esperado = pontos;
     const razao = l.unidades / esperado;
     /* Regra da casa: razão ≥ 1,00. Abaixo disso o efeito tem que subir. */
-    const ver = razao >= RAZAO_MINIMA ? '✅' : '🔵 precisa subir';
-    if (razao < RAZAO_MINIMA) foraDaFaixa.push({ ...l, razao, esperado });
+    const habilitadora = HABILITADORAS.has(l.nome);
+    const ver = razao >= RAZAO_MINIMA ? '✅' : habilitadora ? '🔗 habilitadora' : '🔵 precisa subir';
+    if (razao < RAZAO_MINIMA && !habilitadora) foraDaFaixa.push({ ...l, razao, esperado });
     console.log(`  ${l.classe.slice(0, 14).padEnd(15)} ${l.nome.slice(0, 26).padEnd(27)} ${n2(l.unidades).padStart(5)}   ${preco(l.custo).padEnd(16)} ${ver} ${razao.toFixed(2)}×`);
 }
 
