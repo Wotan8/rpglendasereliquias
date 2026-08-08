@@ -400,9 +400,18 @@ export function medirEfeito(texto, duracaoTxt, tipados) {
        taxa, sem inventar categoria nova. */
     const reacao = /([+-])\s*(\d+)\s*(?:na |de |a )?Rea[çc][ãa]o/i.exec(s);
     if (reacao) { u += +reacao[2] * TAXA.alvo * rod; achados.push(`${reacao[1]}${reacao[2]} Reação ×${rod}r`); }
-    /* "+1 em testes relacionados" é modificador de Alvo escrito sem a palavra. */
-    const emTestes = /([+-])\s*(\d+)\s+em\s+testes/i.exec(s);
-    if (emTestes) { u += +emTestes[2] * TAXA.alvo * rod; achados.push(`${emTestes[1]}${emTestes[2]} em testes ×${rod}r`); }
+    /* Modificador escrito SEM a palavra "Alvo": "+1 em testes relacionados",
+       "−1 em Percepção auditiva". É modificador do Alvo daqueles testes, e leva
+       o desconto de cláusula estreita como qualquer outro (§1.4). */
+    const emTestes = /([+-])\s*(\d+)\s+em\s+(testes[^.;,]{0,25}|(?:Percep|Atlet|Furtiv|Briga|Pontar|Vigor|Vontade|Persua|Intimid|Etiquet|Fluxom|Medicin|Sobreviv)\w*[^.;,]{0,20})/i.exec(s);
+    if (emTestes) {
+        /* fatorCondicional espera a cláusula na forma "de <perícia>"; sem o
+           prefixo, "Percepção auditiva" caía no default 1,00 e a Nota
+           Penetrante ia a 3,42× por um −1 que só vale para ouvir. */
+        const f = fatorCondicional('de ' + emTestes[3]);
+        u += +emTestes[2] * TAXA.alvo * rod * f;
+        achados.push(`${emTestes[1]}${emTestes[2]} em ${emTestes[3].trim().slice(0, 22)} ×${rod}r${f < 1 ? ` ×${f} cond.` : ''}`);
+    }
 
     /* Ação negada genérica, para o que não tem nome de condição. */
     if (!/atordoad/i.test(s) && /paralis|imobiliz|não pode agir|perde a (próxima )?a[çc][ãa]o/i.test(s)) {
