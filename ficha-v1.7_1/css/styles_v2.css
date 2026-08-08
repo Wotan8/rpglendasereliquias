@@ -3985,3 +3985,18 @@ html.dark .detail-aura-grade {
    o próprio texto do tema. Escuro: 6.4 / 9.7 / 5.8 / 5.6:1. */
 html.dark #aliadosGrid .leal-perigo  { color: var(--lr-blood-3); }
 html.dark #aliadosGrid .leal-mistico { color: color-mix(in srgb, var(--lr-abyssal-2) 82%, var(--lr-text-1)); }
+
+/* ===== Valor na Régua ao lado do nome da habilidade =====
+   Miúdo de propósito: é informação de balanceamento, não de jogo. O jogador
+   que quiser saber se a habilidade paga o que cobra olha; quem não quiser,
+   não tropeça nela. Carimbado por audit-regua-controle.mjs --gravar-regua. */
+.module-item-regua {
+    margin-left: 6px;
+    font-size: .62rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+    opacity: .55;
+    vertical-align: middle;
+    cursor: help;
+}
+.module-item-regua.abaixo { color: var(--lr-blood-3, #c94f5c); opacity: .85; }

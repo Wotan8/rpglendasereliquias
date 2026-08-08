@@ -654,7 +654,9 @@ const HABILITADORAS = new Set(mods.flatMap(m => (m.itensPredefinidos || [])
     .map(it => it.requer).filter(Boolean)));
 
 const linhas = [];
-for (const m of mods) {
+/* Módulo aposentado não entra na medição nem no espalhamento — senão o
+   "Manobras" antigo continua contando junto com os dois que o substituíram. */
+for (const m of mods.filter(x => x.publicado !== false)) {
     const lbl = Object.fromEntries((m.schema || []).map(f => [f.key, String(f.label || '')]));
     const botoes = (m.schema || []).filter(f => /botao/.test(f.tipo || '')).map(f => f.key);
     const kEfeito = Object.keys(lbl).find(k => /efeito|o que faz/i.test(lbl[k]));
@@ -675,7 +677,8 @@ for (const m of mods) {
         const tier = /^Custo\s+(\d+)/i.exec(String(m.titulo || ''));
         if (tier && !Object.keys(custo).length) custo['Harmonia/Energia'] = +tier[1];
         const { unidades, achados, alvos, rodadas } = medirEfeito(texto, v[kDur], it);
-        linhas.push({ classe: classeDo[m.id] || '—', modulo: m.titulo || m.id, nome: it.nome || '?',
+        linhas.push({ modId: m.id, itemId: it.id,
+                      classe: classeDo[m.id] || '—', modulo: m.titulo || m.id, nome: it.nome || '?',
                       unidades, achados, custo, alvos, rodadas, pontosTexto });
     }
 }
@@ -896,6 +899,44 @@ if (process.argv.includes('--folha')) {
 }
 
 console.log('\n' + '═'.repeat(78));
-console.log('Só leitura. --naoclassificadas lista as não alcançadas · --folha gera o markdown.');
+/* ── --gravar-regua: carimba o valor medido em cada habilidade ─────────────
+   Campo `regua` no item ({ razao, unidades, custo, em }). A ficha mostra a
+   razão miúda ao lado do nome, para o jogador e o mestre verem na hora se a
+   habilidade paga o que cobra. É a ÚNICA escrita deste script. */
+if (process.argv.includes('--gravar-regua')) {
+    const APLICAR_R = process.argv.includes('--apply');
+    const hoje = new Date().toISOString().slice(0, 10);
+    const porMod = new Map();
+    for (const l of linhas) {
+        if (!l.achados.length) continue;
+        const pontos = l.pontosTexto ?? Object.values(l.custo).reduce((s, q) => s + q, 0);
+        if (!pontos) continue;
+        (porMod.get(l.modId) ?? porMod.set(l.modId, []).get(l.modId))
+            .push({ itemId: l.itemId, nome: l.nome,
+                    regua: { razao: +(l.unidades / pontos).toFixed(2), unidades: +l.unidades.toFixed(2), custo: pontos, em: hoje } });
+    }
+    const total = [...porMod.values()].reduce((s, a) => s + a.length, 0);
+    console.log('\n' + '─'.repeat(78));
+    console.log(`GRAVAR RÉGUA — ${total} habilidades em ${porMod.size} módulos`);
+    for (const [mid, arr] of porMod) console.log(`  ${String(mid).padEnd(24)} ${arr.length}`);
+    if (!APLICAR_R) { console.log('\nDRY-RUN. Junte --apply para gravar.'); process.exit(0); }
+    const { getFirestore, FieldValue } = admin.firestore;
+    let escritos = 0;
+    for (const [mid, arr] of porMod) {
+        const ref = db.collection('system/data/classModules').doc(mid);
+        const snap = await ref.get();
+        const itens = (snap.data().itensPredefinidos || []).map(it => {
+            const achado = arr.find(a => a.itemId === it.id) || arr.find(a => a.nome === it.nome);
+            if (!achado) return it;
+            escritos++;
+            return { ...it, regua: achado.regua };
+        });
+        await ref.update({ itensPredefinidos: itens, atualizadoEm: admin.firestore.Timestamp.now() });
+    }
+    console.log(`\n✅ ${escritos} habilidades carimbadas.`);
+    process.exit(0);
+}
+
+console.log('Só leitura, salvo --gravar-regua. --naoclassificadas lista as não alcançadas · --folha gera o markdown.');
 console.log('═'.repeat(78) + '\n');
 process.exit(0);

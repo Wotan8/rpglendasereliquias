@@ -1080,6 +1080,19 @@ function _cmValidarECobrar(mod, predef) {
  * Executa a adição de um item após validação/cobrança.
  * @param {Object|null} predef - Item pré-cadastrado escolhido (ou null para item livre)
  */
+/**
+ * Valor na Régua de uma habilidade. Mora no item PRÉ-DEFINIDO (campo `regua`,
+ * carimbado por functions/audit-regua-controle.mjs --gravar-regua), não na
+ * cópia do jogador — assim uma remedição do sistema chega a todas as fichas
+ * sem tocar em ficha nenhuma. Item livre do jogador não tem régua.
+ */
+function _cmReguaDoItem(mod, data) {
+    if (!data?._predefId || !Array.isArray(mod?.itensPredefinidos)) return null;
+    const pd = mod.itensPredefinidos.find(p => p.id === data._predefId);
+    const r = pd?.regua;
+    return (r && typeof r.razao === 'number') ? r : null;
+}
+
 function _doAddModuleItem(mod, predef) {
     if (!state.classModuleData) state.classModuleData = {};
     if (!state.classModuleData[mod.id]) state.classModuleData[mod.id] = [];
@@ -1261,6 +1274,21 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
     numSpan.className = 'module-item-number';
     numSpan.textContent = data._predefNome ? `#${idx + 1} · ${data._predefNome}` : `#${idx + 1}`;
     header.appendChild(numSpan);
+
+    // Valor na Régua de Balanceamento — carimbado pelo audit-regua-controle
+    // (--gravar-regua). Miúdo ao lado do nome: quanto a habilidade entrega
+    // por ponto de recurso que ela cobra. 1,00× é o mínimo da casa.
+    const _regua = _cmReguaDoItem(mod, data);
+    if (_regua) {
+        const rSpan = document.createElement('span');
+        rSpan.className = 'module-item-regua';
+        rSpan.textContent = `${_regua.razao.toFixed(2).replace('.', ',')}×`;
+        rSpan.title = `Régua: entrega ${_regua.unidades} unidades por ${_regua.custo} de custo`
+            + (_regua.em ? ` · medido em ${_regua.em}` : '')
+            + '\n1 unidade = uma rodada de guerreiro. Abaixo de 1,00× a habilidade cobra mais do que entrega.';
+        if (_regua.razao < 1) rSpan.classList.add('abaixo');
+        header.appendChild(rSpan);
+    }
 
     if (data._predefId) {
         const predefHidden = document.createElement('input');
@@ -1695,6 +1723,16 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
             wrap.appendChild(btn);
             fieldWrap.appendChild(wrap);
         } else if (field.tipo === 'select_botao') {
+            // Sem mecânica configurada não há o que pagar — um custo como
+            // "2 Ações" se paga na mesa, não no clique. O botão só existia
+            // para reclamar que não tinha mecânica; agora nem aparece.
+            let _mechId = data[field.key];
+            if (!_mechId && data._predefId && Array.isArray(mod?.itensPredefinidos)) {
+                const _pd = mod.itensPredefinidos.find(p => p.id === data._predefId);
+                _mechId = _pd?.valores?.[field.key];
+            }
+            if (!_mechId) return;   // forEach: `return` é o continue daqui
+
             const wrap = document.createElement('div');
             wrap.className = 'cm-action-wrap';
             const btn = document.createElement('button');
