@@ -365,6 +365,34 @@ export function medirEfeito(texto, duracaoTxt, tipados) {
         else { u += bruto; }
         achados.push(`${nome}${decl?.nivel != null ? ` Nv${decl.nivel}` : ''} ${valor.porRodada ? `×${Math.min(rodCond, RODADAS_CENA)}r ` : ''}${decl?.alvos > 1 ? `×${decl.alvos}alv ` : ''}= ${(bruto * (decl?.alvos ?? 1)).toFixed(2)}${chance < 1 ? ` (C${(chance * 10).toFixed(0)})` : ''}`);
     }
+    /* ── CATEGORIAS QUE A RÉGUA TINHA TAXA E NÃO ACIONAVA ──────────────────
+       As taxas de Desarme e Reposicionar existem em TAXA desde o início e
+       nenhum texto as disparava: o Desarme do Guerreiro media zero tendo uma
+       taxa de 1,000 esperando por ele. */
+    if (/\ba arma d[oa] alvo cai|desarma(?:r|do)?\b|toma a arma/i.test(s)) {
+        u += TAXA.desarme; achados.push('desarme');
+    }
+    /* Mover-se sem comer o ataque de oportunidade é o reposicionamento de
+       graça — a âncora de 1/3 de turno da §1.1. */
+    /* `[^.;]` não servia: "D. Terrestre" tem ponto no meio e cortava a busca
+       antes de chegar ao "sem provocar". */
+    if (/(?:mov[ea]|desloca|recua|retira)\w*[^;]{0,60}sem provocar/i.test(s)) {
+        u += TAXA.reposicionar; achados.push('reposicionar de graça');
+    }
+    /* Dano FIXO, sem dado: "1 de dano sônico". O parser de dados não vê, e
+       era o que deixava a Nota Penetrante inteira em branco. */
+    if (!dado) {
+        const fixo = /(\d+)\s+de\s+dano/i.exec(s);
+        if (fixo) { const n = +fixo[1]; u += n * TAXA.dano; achados.push(`dano fixo ${n}`); }
+    }
+    /* Reação é a rolagem de defesa: −1 nela é −1 no Alvo daquele teste. Mesma
+       taxa, sem inventar categoria nova. */
+    const reacao = /([+-])\s*(\d+)\s*(?:na |de |a )?Rea[çc][ãa]o/i.exec(s);
+    if (reacao) { u += +reacao[2] * TAXA.alvo * rod; achados.push(`${reacao[1]}${reacao[2]} Reação ×${rod}r`); }
+    /* "+1 em testes relacionados" é modificador de Alvo escrito sem a palavra. */
+    const emTestes = /([+-])\s*(\d+)\s+em\s+testes/i.exec(s);
+    if (emTestes) { u += +emTestes[2] * TAXA.alvo * rod; achados.push(`${emTestes[1]}${emTestes[2]} em testes ×${rod}r`); }
+
     /* Ação negada genérica, para o que não tem nome de condição. */
     if (!/atordoad/i.test(s) && /paralis|imobiliz|não pode agir|perde a (próxima )?a[çc][ãa]o/i.test(s)) {
         u += TAXA.acaoNegada * Math.min(rod, RODADAS_CENA); achados.push(`ação negada ×${Math.min(rod, RODADAS_CENA)}r`);
@@ -422,7 +450,9 @@ export function medirEfeito(texto, duracaoTxt, tipados) {
     }
     /* AÇÃO EXTRA — a coisa mais cara do jogo. Uma ação a mais por turno é uma
        rodada inteira de DPR a mais, por rodada que durar. */
-    const acaoExtra = /\+?\s*(\d+)?\s*a[çc][ãa]o (adicional|extra)|ganha(?:r)? (\d+ )?a[çc][ãa]o/i.exec(s);
+    /* "gratuita"/"livre" faltavam: o Ladino executa Furto "como ação gratuita"
+       e a manobra media zero — a coisa mais cara do jogo, em branco. */
+    const acaoExtra = /\+?\s*(\d+)?\s*a[çc][ãa]o (adicional|extra|gratuita|livre)|ganha(?:r)? (\d+ )?a[çc][ãa]o/i.exec(s);
     if (acaoExtra) { const n = +(acaoExtra[1] || 1); u += n * TAXA.acaoNegada * rod; achados.push(`+${n} ação ×${rod}r`); }
     /* Roubar ação por turno é o espelho: mesma taxa, sinal trocado. */
     const acaoPerdida = /perde(?:m)?\s+(\d+)\s+a[çc][ãa]o(?:\/|\s+por\s+)turno/i.exec(s);
@@ -498,6 +528,15 @@ assert.equal(VALOR_CONDICAO['Cego']?.porRodada, true, 'Cego vale por rodada');
    é medido pelo topo — 13× no Congelamento, 14× no Acelerado. */
 for (const [t, esperado] of [['Congelamento', { 1: 0.10, 2: 1.00, 3: 1.32 }], ['Acelerado', { 1: 0.10, 2: 0.43, 3: 1.43 }]]) {
     assert.deepEqual(VALOR_CONDICAO[t]?.porNivel, esperado, `trilha ${t} mal lida`);
+}
+{   /* as taxas que existiam e nada acionava */
+    assert.equal(medirEfeito('Sucesso: a arma do alvo cai.').unidades, TAXA.desarme, 'desarme aciona a própria taxa');
+    assert.equal(medirEfeito('Após atacar, move até metade do D. Terrestre, sem provocar contra-ataques.').unidades,
+        TAXA.reposicionar, 'reposicionar de graça');
+    assert.equal(medirEfeito('Executa Furto como ação gratuita.').unidades, TAXA.acaoNegada, 'ação extra vale 1,000');
+    assert.ok(medirEfeito('Cone de 3m: 1 de dano sônico.').unidades > 0, 'dano fixo sem dado tem que contar');
+    assert.equal(medirEfeito('1d6 de dano').achados.filter(a => /dano/.test(a)).length, 1,
+        'dado e dano fixo não podem contar duas vezes');
 }
 {   /* remover condição não é aplicá-la — nos dois caminhos */
     const txt = 'Restaura 2 Energia a 1 aliado e remove 1 condição mental (Amedrontado, Ofuscado ou Cego).';
