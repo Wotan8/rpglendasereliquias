@@ -313,18 +313,27 @@
             const done = es.sessoesFeitas || 0;
             const row = document.createElement('div');
             row.className = 'runo-study-row';
+            const restante = Math.max(0, need - done);
+            const metade = Math.floor(restante / 2);
             row.innerHTML = `
                 <span class="nm" title="Ver detalhes">${TIPO_ICON[el.tipoElemento] || 'ᛟ'} ${el.nome} <small style="color:var(--lr-text-2)">Nv${es.nivelAlvo}</small></span>
                 <span class="runo-prog">Sessões: ${done}/${need} · EXP: ${exp}</span>
                 <span>
-                    <button class="runo-btn" title="Registrar sessão de estudo (roleplay)">+1 sessão</button>
+                    ${_podeSomarSessao() ? '<button class="runo-btn add" title="Registrar sessão de estudo (Mestre, Criador ou personagem avulso)">+1 sessão</button>' : ''}
+                    ${restante > 0 && metade >= 1 ? `<button class="runo-btn ace" data-n="${metade}" data-exp="${exp * 2}" title="Queima ${metade} das ${restante} sessões que faltam por ${exp * 2} EXP">⏩ ${metade} sessões (${exp * 2} EXP)</button>` : ''}
+                    ${restante > 0 ? `<button class="runo-btn ace1" data-exp="${exp * 4}" title="Queima 1 sessão por ${exp * 4} EXP — a saída cara, para quando não há metade a cortar">⏩ 1 sessão (${exp * 4} EXP)</button>` : ''}
                     ${done >= need ? `<button class="runo-btn ok" title="Concluir aprendizado gastando ${exp} EXP">✓ Aprender (${exp} EXP)</button>` : ''}
                 </span>
                 <button class="runo-btn rm" title="Abandonar estudo">✕</button>`;
             row.querySelector('.nm').onclick = () => window.runoOpenElementModal(el.id, es.nivelAlvo);
-            const btns = row.querySelectorAll('.runo-btn:not(.rm)');
-            btns[0].onclick = () => { es.sessoesFeitas = done + 1; _refresh(cfg); _save(); };
-            if (btns[1]) btns[1].onclick = () => _concluirEstudo(idx, cfg);
+            const bAdd = row.querySelector('.runo-btn.add');
+            if (bAdd) bAdd.onclick = () => { es.sessoesFeitas = done + 1; _refresh(cfg); _save(); };
+            const bAce = row.querySelector('.runo-btn.ace');
+            if (bAce) bAce.onclick = () => _acelerar(idx, +bAce.dataset.n, +bAce.dataset.exp, cfg);
+            const bAce1 = row.querySelector('.runo-btn.ace1');
+            if (bAce1) bAce1.onclick = () => _acelerar(idx, 1, +bAce1.dataset.exp, cfg);
+            const bOk = row.querySelector('.runo-btn.ok');
+            if (bOk) bOk.onclick = () => _concluirEstudo(idx, cfg);
             row.querySelector('.rm').onclick = () => { if (confirm('Abandonar este estudo? O progresso será perdido.')) { runo.estudos.splice(idx, 1); _refresh(cfg); _save(); } };
             body.appendChild(row);
         });
@@ -406,6 +415,49 @@
             leg.innerHTML = `⚙️ Níveis concedidos automaticamente por: ${fontes.join(', ') || 'mecânicas'} — não consomem EXP nem slots de estudo.`;
             body.appendChild(leg);
         }
+    }
+
+    /**
+     * Quem pode somar sessão à mão. O progresso do estudo é do MESTRE — ele
+     * decide, ao fechar a sessão, quem estudou. O jogador não avança sozinho.
+     * Exceção: personagem avulso (sem mesa) não tem mestre para marcar.
+     */
+    function _podeSomarSessao() {
+        if (window.isMestre || window.isCreator) return true;
+        const semMesa = !(window.state?.mesaId || window.currentMesaId);
+        return semMesa;
+    }
+
+    /**
+     * Acelera o estudo queimando EXP. Duas ofertas, e a diferença de preço é
+     * de propósito: cortar METADE do que falta sai por 2× o custo de aprender;
+     * cortar UMA sessão sai por 4×. Quem tem muito caminho pela frente compra
+     * no atacado; quem está a uma sessão do fim paga caro pela pressa — é lá
+     * que a metade arredonda para zero e o botão caro é a única saída.
+     *
+     * Acelerar NÃO substitui o aprendizado: ao completar as sessões, o custo
+     * normal continua sendo cobrado, como sempre foi.
+     */
+    function _acelerar(idx, sessoes, custo, cfg) {
+        const runo = _runoState();
+        const es = runo.estudos[idx];
+        const el = _elById(es?.elementId);
+        if (!el || sessoes < 1) return;
+        const need = _sessoesNecessarias(el, es.nivelAlvo, cfg);
+        const done = es.sessoesFeitas || 0;
+        const real = Math.min(sessoes, Math.max(0, need - done));
+        if (real < 1) return;
+        const atual = typeof getCurrentExp === 'function' ? getCurrentExp() : 0;
+        if (atual < custo) {
+            alert(`EXP insuficiente: acelerar ${real} sessão(ões) custa ${custo} EXP (você tem ${atual}).`);
+            return;
+        }
+        if (!confirm(`Acelerar o estudo de ${el.nome} Nv${es.nivelAlvo} em ${real} sessão(ões)?\n`
+            + `Custo: ${custo} EXP.\n\nO custo de aprender (${_custoExp(el, es.nivelAlvo, cfg)} EXP) continua sendo cobrado ao concluir.`)) return;
+        if (typeof spendExp === 'function') spendExp(custo);
+        es.sessoesFeitas = done + real;
+        es.aceleradas = (es.aceleradas || 0) + real;
+        _refresh(cfg); _save();
     }
 
     function _concluirEstudo(idx, cfg) {

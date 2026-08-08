@@ -454,12 +454,42 @@ window.sesEncontroIniciar = async function(encId) {
 };
 
 // ===== FASE 3 — COLHEITA =====
+/**
+ * Quem da mesa está estudando Runomancia. O progresso do estudo é decisão do
+ * Mestre — a ficha do jogador não soma sessão sozinha (só avulso ou Mestre).
+ * Aqui ele marca quem, de fato, estudou naquela sessão.
+ */
+async function _runoEstudantesDaMesa() {
+    const out = [];
+    try {
+        const snap = await getDocs(query(collection(db, 'char'), where('mesaId', '==', S.currentMesaId)));
+        snap.forEach(d => {
+            const c = d.data();
+            const estudos = c.runomancia?.estudos;
+            if (!Array.isArray(estudos) || !estudos.length) return;
+            out.push({
+                id: d.id,
+                nome: c.fields?.charName || c.fields?.nome || '(sem nome)',
+                estudos: estudos.length,
+            });
+        });
+    } catch (e) { console.warn('runomancia/estudantes', e); }
+    return out.sort((a, b) => a.nome.localeCompare(b.nome));
+}
+
 window.sesColheitaModal = async function() {
     let frentes = [];
     try {
         const snap = await getDocs(refFrentes());
         snap.forEach(d => { const f = d.data(); if (f.status === 'ativa') frentes.push({ id: d.id, ...f }); });
     } catch (e) { /* sem frentes: colheita só fecha a sessão */ }
+    const runoAlunos = await _runoEstudantesDaMesa();
+    const runoLinhas = runoAlunos.map(a => `
+        <label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:.85rem;cursor:pointer">
+            <input type="checkbox" class="ses-runo-aluno" data-id="${a.id}" checked>
+            <span style="color:var(--ink,var(--light))">${escapeHtml(a.nome)}</span>
+            <span style="color:var(--muted);font-size:.78rem">${a.estudos} em estudo</span>
+        </label>`).join('');
     const inbox = (_sessao.inbox || []).map(x =>
         `<div style="font-size:.82rem;color:var(--ink,var(--light));padding:2px 0">· ${escapeHtml(x.texto)}</div>`).join('');
     const linhas = frentes.map(f => {
@@ -479,6 +509,8 @@ window.sesColheitaModal = async function() {
         ${inbox ? `<div class="form-group"><label class="form-label">📥 Capturado ao vivo (use no resumo e nas frentes)</label>${inbox}</div>` : ''}
         ${linhas ? `<div class="form-group"><label class="form-label">🕰️ Frentes — o mundo reagiu?</label>${linhas}
             <div style="font-size:.72rem;color:var(--muted);margin-top:6px">Regra da casa: frente ignorada avança. Presságios cruzados disparam e aparecem no próximo preparo.</div></div>` : ''}
+        ${runoLinhas ? `<div class="form-group"><label class="form-label">ᛟ Runomancia — quem estudou nesta sessão?</label>${runoLinhas}
+            <div style="font-size:.72rem;color:var(--muted);margin-top:6px">Marcado soma +1 sessão a TODOS os elementos na lista de estudo do personagem. Desmarque quem passou a sessão sem tempo de bancada.</div></div>` : ''}
         <div class="form-group"><label class="form-label">📝 Resumo da sessão</label>
             <textarea class="form-textarea" id="col_resumo" rows="5" placeholder="O que aconteceu...">${escapeHtml(_sessao.resumo || '')}</textarea></div>
         <div style="font-size:.75rem;color:var(--muted);margin-bottom:12px">⭐ EXP: use o modo +EXP em Personagens ou o fluxo de distribuição por rubrica, como hoje.</div>
@@ -507,11 +539,31 @@ window.sesColheitaConfirmar = async function() {
             colheita.push({ frenteId: id, nome: f.nome || '', delta, motivo });
             disparadosTodos.push(...mov.disparados);
         }
+        /* Progresso de Runomancia: +1 sessão em TODOS os estudos de quem o
+           Mestre marcou. Lê o doc na hora da gravação em vez de confiar no que
+           o modal carregou — a ficha pode ter mudado durante a sessão. */
+        const marcados = [...modal.querySelectorAll('.ses-runo-aluno:checked')].map(c => c.dataset.id);
+        const runoNomes = [];
+        for (const charId of marcados) {
+            try {
+                const ref = doc(db, 'char', charId);
+                const snap = await getDoc(ref);
+                if (!snap.exists()) continue;
+                const c = snap.data();
+                const estudos = (c.runomancia?.estudos || []).map(e => ({ ...e, sessoesFeitas: (e.sessoesFeitas || 0) + 1 }));
+                if (!estudos.length) continue;
+                await updateDoc(ref, { 'runomancia.estudos': estudos, lastUpdate: new Date().toISOString() });
+                runoNomes.push(c.fields?.charName || c.fields?.nome || charId);
+            } catch (e) { console.warn('runomancia/progresso', charId, e); }
+        }
+
         await updateDoc(refSessao(), {
             fase: 'fechada', fechadaEm: Date.now(), colheita,
             resumo: document.getElementById('col_resumo')?.value?.trim() || '',
+            runomanciaProgresso: marcados,
         });
         modal.remove();
+        if (runoNomes.length) showAlert(`ᛟ +1 sessão de estudo: ${runoNomes.join(', ')}`, 'success');
         if (disparadosTodos.length) showAlert('🔔 Presságio disparado: ' + disparadosTodos.join(' · '), 'warning');
         else showAlert(`✅ Sessão ${_sessao.numero} fechada`, 'success');
         _sessao = null;
