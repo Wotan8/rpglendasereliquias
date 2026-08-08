@@ -315,13 +315,18 @@
             row.className = 'runo-study-row';
             const restante = Math.max(0, need - done);
             const metade = Math.floor(restante / 2);
+            /* O botão caro leva o estudo ATÉ FALTAR 1 sessão — não acelera uma
+               sessão. Com 4 restando ele queima 3. A última sessão nunca é
+               comprável: sempre sobra uma de bancada de verdade. */
+            const ateUma = Math.max(0, restante - 1);
+            const pl = n => `${n} sess${n === 1 ? 'ão' : 'ões'}`;
             row.innerHTML = `
                 <span class="nm" title="Ver detalhes">${TIPO_ICON[el.tipoElemento] || 'ᛟ'} ${el.nome} <small style="color:var(--lr-text-2)">Nv${es.nivelAlvo}</small></span>
                 <span class="runo-prog">Sessões: ${done}/${need} · EXP: ${exp}</span>
                 <span>
                     ${_podeSomarSessao() ? '<button class="runo-btn add" title="Registrar sessão de estudo (Mestre, Criador ou personagem avulso)">+1 sessão</button>' : ''}
-                    ${restante > 0 && metade >= 1 ? `<button class="runo-btn ace" data-n="${metade}" data-exp="${exp * 2}" title="Queima ${metade} das ${restante} sessões que faltam por ${exp * 2} EXP">⏩ ${metade} sessões (${exp * 2} EXP)</button>` : ''}
-                    ${restante > 0 ? `<button class="runo-btn ace1" data-exp="${exp * 4}" title="Queima 1 sessão por ${exp * 4} EXP — a saída cara, para quando não há metade a cortar">⏩ 1 sessão (${exp * 4} EXP)</button>` : ''}
+                    ${metade >= 1 ? `<button class="runo-btn ace" data-n="${metade}" data-exp="${exp * 2}" title="Queima ${pl(metade)} das ${restante} que faltam, por ${exp * 2} EXP">⏩ ${pl(metade)} (${exp * 2} EXP)</button>` : ''}
+                    ${ateUma > metade ? `<button class="runo-btn ace1" data-n="${ateUma}" data-exp="${exp * 4}" title="Queima ${pl(ateUma)} das ${restante} que faltam e deixa faltando 1, por ${exp * 4} EXP">⏩ ${pl(ateUma)} · resta 1 (${exp * 4} EXP)</button>` : ''}
                     ${done >= need ? `<button class="runo-btn ok" title="Concluir aprendizado gastando ${exp} EXP">✓ Aprender (${exp} EXP)</button>` : ''}
                 </span>
                 <button class="runo-btn rm" title="Abandonar estudo">✕</button>`;
@@ -331,7 +336,7 @@
             const bAce = row.querySelector('.runo-btn.ace');
             if (bAce) bAce.onclick = () => _acelerar(idx, +bAce.dataset.n, +bAce.dataset.exp, cfg);
             const bAce1 = row.querySelector('.runo-btn.ace1');
-            if (bAce1) bAce1.onclick = () => _acelerar(idx, 1, +bAce1.dataset.exp, cfg);
+            if (bAce1) bAce1.onclick = () => _acelerar(idx, +bAce1.dataset.n, +bAce1.dataset.exp, cfg);
             const bOk = row.querySelector('.runo-btn.ok');
             if (bOk) bOk.onclick = () => _concluirEstudo(idx, cfg);
             row.querySelector('.rm').onclick = () => { if (confirm('Abandonar este estudo? O progresso será perdido.')) { runo.estudos.splice(idx, 1); _refresh(cfg); _save(); } };
@@ -452,8 +457,12 @@
             alert(`EXP insuficiente: acelerar ${real} sessão(ões) custa ${custo} EXP (você tem ${atual}).`);
             return;
         }
-        if (!confirm(`Acelerar o estudo de ${el.nome} Nv${es.nivelAlvo} em ${real} sessão(ões)?\n`
-            + `Custo: ${custo} EXP.\n\nO custo de aprender (${_custoExp(el, es.nivelAlvo, cfg)} EXP) continua sendo cobrado ao concluir.`)) return;
+        const sobra = Math.max(0, need - done - real);
+        const plural = n => `${n} sess${n === 1 ? 'ão' : 'ões'}`;
+        if (!confirm(`Acelerar o estudo de ${el.nome} Nv${es.nivelAlvo} em ${plural(real)}?\n`
+            + `Custo: ${custo} EXP.\n`
+            + `Depois de acelerar, ${sobra === 0 ? 'o estudo fica pronto para concluir' : `ainda ${sobra === 1 ? 'falta' : 'faltam'} ${plural(sobra)}`}.\n\n`
+            + `O custo de aprender (${_custoExp(el, es.nivelAlvo, cfg)} EXP) continua sendo cobrado ao concluir.`)) return;
         if (typeof spendExp === 'function') spendExp(custo);
         es.sessoesFeitas = done + real;
         es.aceleradas = (es.aceleradas || 0) + real;
