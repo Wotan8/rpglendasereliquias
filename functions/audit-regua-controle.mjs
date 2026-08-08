@@ -415,6 +415,35 @@ export function medirEfeito(texto, duracaoTxt, tipados) {
         const fixo = /(\d+)\s+de\s+dano/i.exec(s);
         if (fixo) { const n = +fixo[1]; u += n * TAXA.dano; achados.push(`dano fixo ${n}`); }
     }
+    /* DESVANTAGEM — rolar dois e ficar com o pior vale ~2,15 pontos de Alvo
+       (número da frente de condições, §7). Não conta quando uma condição já
+       declarada É a Desvantagem (Ofuscado, Cego): aí o texto está só
+       explicando o que a condição faz, e cobrar de novo é conta dobrada. */
+    const glosa = (tipados?.condicoesAplicadas || []).some(c => /Ofuscado|Cego/.test(c.condicao));
+    if (!glosa && /\bdesvantagem\b/i.test(s)) {
+        /* O qualificador cabe dos DOIS lados: "Desvantagem em Percepção" e
+           "testa Percepção com Desvantagem" são a mesma coisa estreita. Olhar
+           só para a frente dava amplitude total a um teste de uma perícia só —
+           1,83 em vez de 0,46 nos Passos Sombrios. */
+        const depois = /desvantagem\s+(?:em|no|na|de|para)\s+([^.;,]{0,28})/i.exec(s);
+        const antesDe = /([^.;,]{0,28})\s+com\s+desvantagem/i.exec(s);
+        const clausula = (depois?.[1] || antesDe?.[1] || '').trim();
+        const alvoDesv = clausula ? [null, clausula] : null;
+        /* fatorCondicional quer "de <perícia>" colado; a cláusula vem com
+           enfeite em volta ("vista testa Percepção"). Passa só a última
+           palavra, que é onde a perícia mora nas duas formas. */
+        const pericia = clausula.split(/\s+/).pop() || '';
+        const f = clausula ? fatorCondicional('de ' + pericia) : 1;
+        const v = 2.15 * TAXA.alvo * rod * f;
+        u += v; achados.push(`Desvantagem${alvoDesv ? ` em ${alvoDesv[1].trim()}` : ''} ×${rod}r = ${v.toFixed(2)}`);
+    }
+    /* ECONOMIA DE AÇÃO — o padrão é 1 Ação Padrão (Livro §0.5). Habilidade que
+       cobra só a Ação de MOVIMENTO devolve a Padrão para o mesmo turno, e isso
+       vale a diferença entre as duas (2/3 − 1/3 do turno). */
+    if (/custa\s+1\s+a[çc][ãa]o de movimento|1\s+a[çc][ãa]o de movimento\s+(?:e|,)/i.test(s)
+        && !/a[çc][ãa]o padr[ãa]o/i.test(s)) {
+        u += 1 / 3; achados.push('cobra só a Ação de Movimento (guarda a Padrão)');
+    }
     /* Reação com sinal negativo em SI MESMO é preço, não entrega. */
     const reacaoPropria = /-\s*(\d+)\s*(?:na |de |a )?(?:sua )?Rea[çc][ãa]o/i.exec(s);
     if (reacaoPropria && /\bsua Rea/i.test(s)) {
@@ -610,6 +639,13 @@ for (const [t, esperado] of [['Congelamento', { 1: 0.10, 2: 1.00, 3: 1.32 }], ['
     /* Preço que o personagem paga em si mesmo SUBTRAI. */
     assert.ok(medirEfeito('+2 de dano em cada golpe e -2 na sua Reação.').unidades
         < medirEfeito('+2 de dano em cada golpe.').unidades, 'penalidade própria tem que descontar');
+    /* Desvantagem vale, mas não quando é só a glosa de uma condição declarada. */
+    assert.ok(medirEfeito('O alvo testa Percepção com Desvantagem.').unidades > 0, 'Desvantagem conta');
+    assert.equal(medirEfeito('Fica Ofuscado: Desvantagem em ataques e defesas.', '',
+        { condicoesAplicadas: [{ condicao: 'Ofuscado', portao: 'chance', chance: 10, alvos: 1, rodadas: 1 }] })
+        .achados.some(a => /Desvantagem/.test(a)), false, 'glosa de condição declarada não conta duas vezes');
+    /* Cobrar só a Ação de Movimento guarda a Padrão do turno. */
+    assert.ok(medirEfeito('Custa 1 Ação de Movimento e 1 Energia.').unidades > 0.3, 'economia de ação conta');
 }
 {   /* remover condição não é aplicá-la — nos dois caminhos */
     const txt = 'Restaura 2 Energia a 1 aliado e remove 1 condição mental (Amedrontado, Ofuscado ou Cego).';
