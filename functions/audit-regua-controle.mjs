@@ -98,10 +98,20 @@ export function lerCondicoes(docs) {
         /* A condição declara a PRÓPRIA duração. Quando a habilidade não diz
            quanto dura, é essa que vale — "enquanto o agarrador pagar" é a cena,
            não uma rodada. Sem isso, condição sustentada valia um quinto. */
+        /* TRILHAS: a descrição declara o topo primeiro e depois os degraus, no
+           formato "Nível 2 vale 1,00 ... nível 1 vale 0,10". Sem ler isso, quem
+           aplica Acelerado 1 é medido como Acelerado 3 — 14× a mais. */
+        const porNivel = {};
+        for (const g of d.matchAll(/n[íi]vel\s*(\d)\s*(?:vale|=)\s*([\d]+[,.][\d]+)/gi)) {
+            porNivel[+g[1]] = parseFloat(g[2].replace(',', '.'));
+        }
+        const topo = /(?:no|do)\s+n[íi]vel\s*(\d)/i.exec(d);
+        if (topo && Object.keys(porNivel).length) porNivel[+topo[1]] = un;
         mapa[nome] = {
             un,
             porRodada: POR_RODADA_FORCADO.has(nome) || /un\/rod|unidades?\s*\/\s*rodada|por rodada/i.test(d),
             rodadas: duracaoEmRodadas(String(c.duracao || '')),
+            ...(Object.keys(porNivel).length ? { porNivel } : {}),
         };
     }
     return mapa;
@@ -323,22 +333,37 @@ export function medirEfeito(texto, duracaoTxt, tipados) {
        que dura: o item declara duração 0, mas o Prostrado do Marcha custa uma
        ação para levantar. Ler a duração do item ali dava zero. */
     const declaradas = Array.isArray(tipados?.condicoesAplicadas) ? tipados.condicoesAplicadas : [];
+    /* Declarar VAZIO é declarar: "esta habilidade não aplica condição nenhuma".
+       Sem isso, nomear as condições que a magia REMOVE ("remove 1 condição
+       mental: Amedrontado, Ofuscado ou Cego") faz a régua cobrar por aplicá-las
+       — a Luz da Vontade saltou para 5,30× só por trocar apelido por nome. */
+    const declarouVazio = Array.isArray(tipados?.condicoesAplicadas) && !declaradas.length;
     let uCondPropria = 0;   /* condição com alvos próprios: fora do ×alvos global */
     for (const [nome, valor] of Object.entries(VALOR_CONDICAO)) {
         const decl = declaradas.find(x => x.condicao === nome);
+        if (!decl && declarouVazio) continue;
         if (!decl && !new RegExp(`\\b${nome}`, 'i').test(s)) continue;
+        /* Rede de segurança para quem ainda não declarou o campo: condição
+           citada logo depois de "remove/dissipa/imune" é o que sai, não o que entra. */
+        if (!decl && new RegExp(`(?:remove|dissipa|encerra|imune a|protege contra)\\b[^.;]{0,60}\\b${nome}`, 'i').test(s)) continue;
         const c = /chance\s*(\d+)/i.exec(s);
         const chance = (decl?.portao === 'chance' && decl.chance != null)
             ? Math.min(10, decl.chance) / 10
             : (c ? Math.min(10, +c[1]) / 10 : 1);
+        /* TRILHAS (Congelamento, Acelerado, Exaustão) declaram o nível MAIS
+           ALTO na descrição de propósito — errar para cima faz a régua reclamar,
+           errar para baixo passa calado. Quem aplica nível menor declara
+           `nivel`, e o valor daquele degrau sai da própria descrição. */
+        const un = (decl?.nivel != null && valor.porNivel?.[decl.nivel] != null)
+            ? valor.porNivel[decl.nivel] : valor.un;
         /* Duração: a declarada na condição manda; depois a da habilidade; por
            último a que a própria condição traz do banco. */
         const rodCond = decl?.rodadas ?? (tipados?.duracaoUnidade ? rod : (valor.rodadas ?? rod));
-        const v = valor.porRodada ? valor.un * Math.min(rodCond, RODADAS_CENA) : valor.un;
+        const v = valor.porRodada ? un * Math.min(rodCond, RODADAS_CENA) : un;
         const bruto = v * chance;
         if (decl?.alvos != null) { uCondPropria += bruto * decl.alvos; }
         else { u += bruto; }
-        achados.push(`${nome} ${valor.porRodada ? `×${Math.min(rodCond, RODADAS_CENA)}r ` : ''}${decl?.alvos > 1 ? `×${decl.alvos}alv ` : ''}= ${(bruto * (decl?.alvos ?? 1)).toFixed(2)}${chance < 1 ? ` (C${(chance * 10).toFixed(0)})` : ''}`);
+        achados.push(`${nome}${decl?.nivel != null ? ` Nv${decl.nivel}` : ''} ${valor.porRodada ? `×${Math.min(rodCond, RODADAS_CENA)}r ` : ''}${decl?.alvos > 1 ? `×${decl.alvos}alv ` : ''}= ${(bruto * (decl?.alvos ?? 1)).toFixed(2)}${chance < 1 ? ` (C${(chance * 10).toFixed(0)})` : ''}`);
     }
     /* Ação negada genérica, para o que não tem nome de condição. */
     if (!/atordoad/i.test(s) && /paralis|imobiliz|não pode agir|perde a (próxima )?a[çc][ãa]o/i.test(s)) {
@@ -469,6 +494,24 @@ assert.ok(Object.keys(VALOR_CONDICAO).length >= 25,
     `só ${Object.keys(VALOR_CONDICAO).length} condições resolveram valor (esperado ≥25)`);
 assert.equal(VALOR_CONDICAO['Atordoado']?.un, 1.32, 'Atordoado tem que bater com o que a frente mediu');
 assert.equal(VALOR_CONDICAO['Cego']?.porRodada, true, 'Cego vale por rodada');
+/* Trilhas: os três degraus lidos da descrição. Sem isso, quem aplica o nível 1
+   é medido pelo topo — 13× no Congelamento, 14× no Acelerado. */
+for (const [t, esperado] of [['Congelamento', { 1: 0.10, 2: 1.00, 3: 1.32 }], ['Acelerado', { 1: 0.10, 2: 0.43, 3: 1.43 }]]) {
+    assert.deepEqual(VALOR_CONDICAO[t]?.porNivel, esperado, `trilha ${t} mal lida`);
+}
+{   /* remover condição não é aplicá-la — nos dois caminhos */
+    const txt = 'Restaura 2 Energia a 1 aliado e remove 1 condição mental (Amedrontado, Ofuscado ou Cego).';
+    assert.equal(medirEfeito(txt, '', { condicoesAplicadas: [] }).achados.some(a => /Cego|Ofuscado|Amedrontado/.test(a)), false,
+        'campo declarado vazio: nenhuma condição pode ser cobrada');
+    assert.equal(medirEfeito(txt).achados.some(a => /Cego|Ofuscado|Amedrontado/.test(a)), false,
+        'sem o campo, "remove" ainda tem que proteger');
+}
+{   /* declarar nivel 1 tem que valer o degrau 1, não o topo */
+    const nv1 = medirEfeito('O alvo fica Congelamento.', '', { condicoesAplicadas: [{ condicao: 'Congelamento', portao: 'resistencia', alvos: 1, rodadas: 1, nivel: 1 }] });
+    const topo = medirEfeito('O alvo fica Congelamento.', '', { condicoesAplicadas: [{ condicao: 'Congelamento', portao: 'resistencia', alvos: 1, rodadas: 1 }] });
+    assert.equal(Math.round(nv1.unidades * 100) / 100, 0.10, 'Congelamento Nv1 = 0,10');
+    assert.equal(Math.round(topo.unidades * 100) / 100, 1.32, 'sem nivel, mede pelo topo declarado');
+}
 /* Agora que a tabela existe, os asserts que dependem dela. */
 assert.equal(medirEfeito('Atordoado 1 turno').unidades, 1.32, 'Atordoado = turno roubado + sem Reação');
 assert.equal(medirEfeito('Atordoado, Chance 5').unidades, 0.66, 'Chance 5 corta o valor pela metade');
