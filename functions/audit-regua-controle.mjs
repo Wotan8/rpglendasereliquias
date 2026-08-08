@@ -254,7 +254,10 @@ export function medirEfeito(texto, duracaoTxt, tipados) {
        vem depois é o efeito normal da magia ("VIG vs GS. Falha: Atordoado").
        Sem teste, a falha é do conjurador e é punição, que não se mede como
        entrega. Cortar sempre decapita toda magia baseada em resistência. */
-    const bruto = String(texto || '');
+    /* Tipografia bonita quebra parser: "−2" com sinal de menos (U+2212) ou
+       "–2" com meia-risca não são "-2" para regex nenhuma daqui, e a
+       penalidade some sem aviso. Normaliza antes de qualquer leitura. */
+    const bruto = String(texto || '').replace(/[−–—]/g, '-');
     const temResistencia = /\b(testa|testam|teste de|vs|contra)\s+[\w\s+:]{0,20}\b(gs|graus|percepção|aut|vig|prs|for|des|int|rac|pre|man)\b/i.test(bruto);
     const s = temResistencia ? bruto
         : bruto.split(/(?:^|[.;]\s*)(?:Falha(?:\s+Crítica)?|Consequência)\s*:/i)[0];
@@ -315,8 +318,22 @@ export function medirEfeito(texto, duracaoTxt, tipados) {
         /* Penalidade que o atacante aceita em si mesmo (Golpe Giratório: "ataca
            todos os adjacentes, -2 no Alvo") não é debuff — é preço. Contar como
            benefício inverte o sinal do que a manobra faz. */
-        if (m[1] === '-' && /\batac\w+\b|\bseu ataque\b|\bneste ataque\b/i.test(frase) && !/inimigo|alvo recebe|sofrem/i.test(frase)) {
-            achados.push(`(-${m[2]} Alvo é preço do atacante, não conta)`);
+        /* Antes isto era ignorado ("não conta"). Ignorar subestima a entrega ao
+           contrário: uma postura que dá +2 de dano E tira 2 da sua Reação vale
+           MENOS que uma que só dá +2. O preço que o próprio personagem paga
+           SUBTRAI — é a única leitura que deixa desenhar troca. */
+        /* Quem leva o modificador está logo DEPOIS dele, não na frase inteira:
+           "+3 de Blindagem e -1 no Alvo dos seus ataques" está na mesma frase
+           que "resistir aos golpes inimigos", e olhar a frase toda fazia o
+           preço do próprio guerreiro virar debuff no inimigo — +0,85 em vez de
+           −0,85, um erro de 1,70 numa manobra que vale 1,35. */
+        const logoDepois = s.slice(m.index, m.index + 42);
+        const ehProprio = /\b(?:seus?|suas?|si mesmo|pr[óo]prio|voc[êe])\b/i.test(logoDepois);
+        if (m[1] === '-' && (ehProprio
+            || (/\batac\w+\b|\bneste ataque\b/i.test(frase) && !/inimigo|alvo recebe|sofrem/i.test(frase)))) {
+            const preco = +m[2] * TAXA.alvo * rod;
+            u -= preco;
+            achados.push(`−${m[2]} Alvo em si mesmo = −${preco.toFixed(2)}`);
             continue;
         }
         const n = +m[2], cond = fatorCondicional(frase);
@@ -392,9 +409,17 @@ export function medirEfeito(texto, duracaoTxt, tipados) {
     }
     /* Dano FIXO, sem dado: "1 de dano sônico". O parser de dados não vê, e
        era o que deixava a Nota Penetrante inteira em branco. */
-    if (!dado) {
+    /* Só quando NÃO há dado E NÃO há "+N de dano" — este último tem parser
+       próprio mais abaixo, e contar os dois dobrava a Investida. */
+    if (!dado && !/[+−–]\s*\d+\s*(?:de\s+)?dano/i.test(s)) {
         const fixo = /(\d+)\s+de\s+dano/i.exec(s);
         if (fixo) { const n = +fixo[1]; u += n * TAXA.dano; achados.push(`dano fixo ${n}`); }
+    }
+    /* Reação com sinal negativo em SI MESMO é preço, não entrega. */
+    const reacaoPropria = /-\s*(\d+)\s*(?:na |de |a )?(?:sua )?Rea[çc][ãa]o/i.exec(s);
+    if (reacaoPropria && /\bsua Rea/i.test(s)) {
+        const preco = +reacaoPropria[1] * TAXA.alvo * rod;
+        u -= preco; achados.push(`−${reacaoPropria[1]} na própria Reação = −${preco.toFixed(2)}`);
     }
     /* Reação é a rolagem de defesa: −1 nela é −1 no Alvo daquele teste. Mesma
        taxa, sem inventar categoria nova. */
@@ -577,6 +602,14 @@ for (const [t, esperado] of [['Congelamento', { 1: 0.10, 2: 1.00, 3: 1.32 }], ['
     assert.ok(medirEfeito('Cone de 3m: 1 de dano sônico.').unidades > 0, 'dano fixo sem dado tem que contar');
     assert.equal(medirEfeito('1d6 de dano').achados.filter(a => /dano/.test(a)).length, 1,
         'dado e dano fixo não podem contar duas vezes');
+    assert.equal(medirEfeito('+4 de dano neste ataque.').achados.filter(a => /dano/.test(a)).length, 1,
+        '"+N de dano" tem UM parser, não dois — foi o que dobrou a Investida');
+    /* Tipografia: o menos "de verdade" (U+2212) tem que valer como '-'. */
+    assert.equal(medirEfeito('−2 no Alvo do inimigo por 1 cena.').unidades,
+        medirEfeito('-2 no Alvo do inimigo por 1 cena.').unidades, 'traço unicode = hífen');
+    /* Preço que o personagem paga em si mesmo SUBTRAI. */
+    assert.ok(medirEfeito('+2 de dano em cada golpe e -2 na sua Reação.').unidades
+        < medirEfeito('+2 de dano em cada golpe.').unidades, 'penalidade própria tem que descontar');
 }
 {   /* remover condição não é aplicá-la — nos dois caminhos */
     const txt = 'Restaura 2 Energia a 1 aliado e remove 1 condição mental (Amedrontado, Ofuscado ou Cego).';
