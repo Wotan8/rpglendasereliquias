@@ -850,7 +850,15 @@ const tiers = Object.entries(porTier).filter(([, v]) => v.length >= 2)
 
 console.log('  espalh. │  n │ faixa          │ tier');
 for (const t of tiers) {
-    const flag = t.esp >= 2.5 ? '🔴' : t.esp >= 1.8 ? '⚠ ' : '✅';
+    /* O limiar cru (2,5×) foi calibrado quando havia habilidade no chão — o
+       mal do espalhamento é a fraca ser ignorada, e isso depende do PISO, não
+       só da razão. Com todas pagando o que cobram (piso ≥ 1,00×) a pior ainda
+       é uma escolha legítima, e a desigualdade vira sabor: uma manobra de
+       preparação nunca vai render o que rende um finalizador. Só é vermelho
+       quando alguém está abaixo da linha ou quando a razão passa de 3×. */
+    const pisoOk = t.min >= RAZAO_MINIMA;
+    const flag = (t.esp >= 3.0 || (!pisoOk && t.esp >= 2.5)) ? '🔴'
+        : (t.esp >= 1.8 && !pisoOk) ? '⚠ ' : t.esp >= 1.8 ? '◽' : '✅';
     console.log(`  ${flag} ${t.esp.toFixed(2)}× │ ${String(t.n).padStart(2)} │ ${t.min.toFixed(2)}–${t.max.toFixed(2)}× │ ${t.tier}`);
 }
 const ruins = tiers.filter(t => t.esp >= 1.8);
