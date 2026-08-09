@@ -12,6 +12,12 @@
             "runtimeExecutable": "python",
             "runtimeArgs": ["-m", "http.server", "5193"],
             "port": 5193
+        },
+        {
+            "name": "site-5194",
+            "runtimeExecutable": "python",
+            "runtimeArgs": ["-m", "http.server", "5194"],
+            "port": 5194
         }
     ]
 }

@@ -4,7 +4,7 @@
 // =============================================
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
     getFirestore,
     collection,
@@ -15,6 +15,7 @@ import {
     deleteDoc,
     updateDoc,
     addDoc,
+    setDoc,
     doc
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
@@ -47,6 +48,11 @@ try {
     db = getFirestore(app);
 }
 const functions = getFunctions(app, 'southamerica-east1');
+
+// Compartilha as instâncias com módulos irmãos (menu-wiki.js usa window.db,
+// mesmo padrão do livro-vinculado.js no resto do site).
+window.db = db;
+window.auth = auth;
 
 let currentUser = null;
 let characters = [];
@@ -123,13 +129,30 @@ onAuthStateChanged(auth, async (user) => {
             }
         } catch (e) { /* ignore */ }
 
-        // Esconder loading, mostrar conteúdo
+        // Esconder loading, mostrar conteúdo (e esconder o login embutido)
         if (loadingScreen) loadingScreen.style.display = 'none';
         if (toolbar) toolbar.style.display = '';
         if (wrap) wrap.style.display = '';
+        const secaoLogin = document.getElementById('secaoLogin');
+        if (secaoLogin) secaoLogin.hidden = true;
+        const btnEntrar = document.getElementById('btnEntrarTop');
+        if (btnEntrar) btnEntrar.hidden = true;
+        document.body.classList.add('portal-logado');
+        document.body.classList.remove('portal-deslogado');
+        document.dispatchEvent(new CustomEvent('portal:logado'));
     } else {
-        // Não autenticado → redirecionar
-        window.location.href = '../index.html';
+        // Não autenticado → SEM redirect: a própria página vira o login.
+        currentUser = null;
+        if (loadingScreen) loadingScreen.style.display = 'none';
+        if (toolbar) toolbar.style.display = 'none';
+        if (wrap) wrap.style.display = 'none';
+        const secaoLogin = document.getElementById('secaoLogin');
+        if (secaoLogin) secaoLogin.hidden = false;
+        const btnEntrar = document.getElementById('btnEntrarTop');
+        if (btnEntrar) btnEntrar.hidden = false;
+        document.body.classList.add('portal-deslogado');
+        document.body.classList.remove('portal-logado');
+        document.dispatchEvent(new CustomEvent('portal:deslogado'));
     }
 });
 
@@ -850,7 +873,8 @@ window.logout = async function () {
     if (confirm('🚪 Tem certeza que deseja sair?')) {
         try {
             await signOut(auth);
-            window.location.href = '../index.html';
+            // Sem redirect: o onAuthStateChanged mostra o login nesta página.
+            window.scrollTo({ top: 0, behavior: 'auto' });
         } catch (error) {
             console.error('Erro ao fazer logout:', error);
             showAlert('❌ Erro ao sair: ' + error.message, 'danger');
@@ -1303,3 +1327,160 @@ window.confirmPurchaseFrag = async function () {
     url.searchParams.delete('compra');
     window.history.replaceState({}, '', url);
 })();
+
+// =============================================
+// 🔐 AUTH DO PORTAL — login + cadastro embutidos
+// Portado do index.html antigo (mesmos ids, mesmo fluxo, mesmo código de
+// mestre). Diferença única: NÃO redireciona — o onAuthStateChanged acima
+// troca o estado da própria página.
+// =============================================
+const MASTER_SECRET_CODE = "MESTRE5253";
+
+function authAlert(message, type) {
+    const mapa = { success: 'alertSuccess', danger: 'alertError', warning: 'alertWarning' };
+    ['alertSuccess', 'alertError', 'alertWarning'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    const el = document.getElementById(mapa[type] || 'alertWarning');
+    if (!el) return;
+    el.textContent = message;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 6000);
+}
+
+function showAuthLoading(mostrar) {
+    const el = document.getElementById('loading');
+    if (el) el.style.display = mostrar ? 'block' : 'none';
+}
+
+window.toggleForm = function () {
+    const loginForm = document.getElementById('loginForm');
+    const cadastroForm = document.getElementById('cadastroForm');
+    ['alertSuccess', 'alertError', 'alertWarning'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    if (loginForm.style.display === 'none') {
+        loginForm.style.display = 'block';
+        cadastroForm.style.display = 'none';
+    } else {
+        loginForm.style.display = 'none';
+        cadastroForm.style.display = 'block';
+    }
+};
+
+window.toggleMasterCode = function () {
+    const roleInput = document.querySelector('input[name="role"]:checked');
+    const masterCodeField = document.getElementById('masterCodeField');
+    const roleJogador = document.getElementById('roleJogador');
+    const roleMestre = document.getElementById('roleMestre');
+    roleJogador.classList.remove('selected');
+    roleMestre.classList.remove('selected');
+    if (roleInput.value === 'mestre') {
+        masterCodeField.classList.add('show');
+        roleMestre.classList.add('selected');
+    } else {
+        masterCodeField.classList.remove('show');
+        roleJogador.classList.add('selected');
+    }
+};
+
+document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    showAuthLoading(true);
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+        authAlert('✅ Login realizado com sucesso!', 'success');
+        // onAuthStateChanged assume daqui: esconde o login, mostra a mesa.
+    } catch (error) {
+        console.error('Erro no login:', error);
+        let errorMsg = '❌ Erro ao fazer login. ';
+        if (error.code === 'auth/user-not-found') errorMsg += 'Usuário não encontrado.';
+        else if (error.code === 'auth/wrong-password') errorMsg += 'Senha incorreta.';
+        else if (error.code === 'auth/invalid-email') errorMsg += 'Email inválido.';
+        else if (error.code === 'auth/invalid-credential') errorMsg += 'Email ou senha incorretos.';
+        else errorMsg += error.message;
+        authAlert(errorMsg, 'danger');
+    } finally {
+        showAuthLoading(false);
+    }
+});
+
+document.getElementById('cadastroForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nome = document.getElementById('cadastroNome').value;
+    const email = document.getElementById('cadastroEmail').value;
+    const password = document.getElementById('cadastroPassword').value;
+    const passwordConfirm = document.getElementById('cadastroPasswordConfirm').value;
+    const roleInput = document.querySelector('input[name="role"]:checked');
+    const role = roleInput ? roleInput.value : 'jogador';
+
+    if (password !== passwordConfirm) {
+        authAlert('❌ As senhas não coincidem!', 'danger');
+        return;
+    }
+    if (password.length < 6) {
+        authAlert('❌ A senha deve ter pelo menos 6 caracteres!', 'danger');
+        return;
+    }
+    if (role === 'mestre') {
+        const masterCode = document.getElementById('masterCode').value;
+        if (!masterCode) {
+            authAlert('❌ Digite o código secreto do Mestre!', 'danger');
+            return;
+        }
+        if (masterCode !== MASTER_SECRET_CODE) {
+            authAlert('❌ Código do Mestre incorreto! Apenas o administrador possui este código.', 'danger');
+            return;
+        }
+    }
+
+    showAuthLoading(true);
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(userCredential.user, { displayName: nome });
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+            email: userCredential.user.email,
+            displayName: nome,
+            role: role,
+            createdAt: new Date().toISOString()
+        });
+        authAlert(role === 'mestre'
+            ? '✅ Conta de MESTRE criada com sucesso! 👑'
+            : '✅ Conta criada com sucesso!', 'success');
+    } catch (error) {
+        console.error('Erro no cadastro:', error);
+        let errorMsg = '❌ Erro ao criar conta. ';
+        if (error.code === 'auth/email-already-in-use') errorMsg += 'Este email já está cadastrado.';
+        else if (error.code === 'auth/invalid-email') errorMsg += 'Email inválido.';
+        else if (error.code === 'auth/weak-password') errorMsg += 'Senha muito fraca.';
+        else errorMsg += error.message;
+        authAlert(errorMsg, 'danger');
+        showAuthLoading(false);
+    }
+});
+
+// Seleção visual dos radio buttons de papel
+document.querySelectorAll('.role-option').forEach(option => {
+    option.addEventListener('click', function () {
+        document.querySelectorAll('.role-option').forEach(opt => opt.classList.remove('selected'));
+        this.classList.add('selected');
+    });
+});
+
+// ===== NAVEGAÇÃO DO PORTAL =====
+window.portalIrLogin = function () {
+    const secao = document.getElementById('secaoLogin');
+    if (secao && !secao.hidden) {
+        secao.scrollIntoView({ behavior: 'smooth' });
+        setTimeout(() => document.getElementById('loginEmail')?.focus(), 400);
+    }
+};
+
+window.portalIrBusca = function () {
+    document.getElementById('secaoWiki')?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => document.getElementById('wikiBusca')?.focus(), 400);
+};

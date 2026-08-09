@@ -1812,3 +1812,683 @@ html:not(.dark) .meta-card {
         grid-template-columns: 1fr;
     }
 }
+
+/* =====================================================================
+   PORTAL — topo fixo, hero, login embutido e Wiki (Fase 1 do redesign)
+   Material: body no gradiente do tema; conteúdo em FOLHA --lr-surface
+   (branca no claro, ferro no escuro — o que faz o claro ser claro).
+   Tudo via var(--lr-…).
+   ===================================================================== */
+
+/* ---------- topo ---------- */
+.portal-topo {
+    position: sticky;
+    top: 0;
+    z-index: var(--lr-z-sticky);
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-2);
+    min-height: 54px;
+    padding: 0 var(--lr-space-4);
+    background: var(--lr-surface);
+    border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.portal-topo::-webkit-scrollbar { display: none; }
+
+.portal-topo .spacer { flex: 1; }
+
+.portal-marca {
+    font-family: var(--lr-font-title);
+    font-weight: 600;
+    font-size: var(--lr-fs-md);
+    letter-spacing: var(--lr-track-title);
+    color: var(--lr-text-1);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.portal-marca em { font-style: normal; color: var(--lr-gold); }
+
+.portal-busca-atalho {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lr-space-1);
+    background: var(--lr-bg-1);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-sm);
+    padding: var(--lr-space-2) var(--lr-space-3);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color var(--lr-t-base) var(--lr-ease);
+}
+
+.portal-busca-atalho:hover { border-color: var(--lr-gold); }
+
+.portal-tema {
+    background: transparent;
+    border: none;
+    padding: var(--lr-space-2);
+    cursor: pointer;
+    border-radius: var(--lr-radius);
+}
+
+.portal-entrar {
+    background: var(--lr-gold);
+    color: var(--lr-bg-0); /* inverte com o tema: tinta clara no ouro escuro */
+    border: none;
+    font-weight: 700;
+    padding: var(--lr-space-2) var(--lr-space-4);
+    border-radius: var(--lr-radius);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--lr-t-base) var(--lr-ease);
+}
+
+.portal-entrar:hover { background: var(--lr-gold-2); }
+
+/* o grupo logado reaproveita a .toolbar do menu — zera o layout antigo */
+.portal-topo .toolbar {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    gap: var(--lr-space-2);
+    overflow: visible;
+}
+
+.portal-topo .toolbar #userDisplayName {
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-xs);
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---------- hero: selo rúnico guiado pelo scroll ---------- */
+.portal-hero-trilho { height: 220vh; }
+
+.portal-hero-palco {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100svh;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+}
+
+#heroCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* véu que garante o contraste do texto sobre o canvas nos dois temas */
+.portal-hero-veu {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,
+            color-mix(in srgb, var(--lr-bg-0) 50%, transparent) 0%,
+            transparent 35%,
+            transparent 55%,
+            color-mix(in srgb, var(--lr-bg-0) 92%, transparent) 100%);
+    pointer-events: none;
+}
+
+.portal-hero-texto {
+    position: relative;
+    z-index: var(--lr-z-base);
+    text-align: center;
+    padding: 0 var(--lr-space-5);
+    max-width: 860px;
+}
+
+.portal-hero-texto h1 {
+    font-size: clamp(1.8rem, 5.5vw, 3.6rem);
+    margin: 0 0 var(--lr-space-2);
+}
+
+.portal-tagline {
+    font-family: var(--lr-font-subtitle);
+    font-style: italic;
+    font-size: clamp(var(--lr-fs-md), 2.4vw, var(--lr-fs-xl));
+    color: var(--lr-text-2);
+    margin: 0;
+}
+
+.portal-hero-cta {
+    display: inline-block;
+    margin-top: var(--lr-space-5);
+    background: var(--lr-gold);
+    color: var(--lr-bg-0);
+    font-weight: 700;
+    text-decoration: none;
+    padding: var(--lr-space-3) var(--lr-space-6);
+    border-radius: var(--lr-radius);
+    transition: background var(--lr-t-base) var(--lr-ease), transform var(--lr-t-fast) var(--lr-ease);
+}
+
+.portal-hero-cta:hover { background: var(--lr-gold-2); }
+
+.portal-hero-cta:active { transform: translateY(1px); }
+
+.portal-hero-dica {
+    position: absolute;
+    bottom: var(--lr-space-5);
+    left: 50%;
+    translate: -50% 0;
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-lg);
+    opacity: var(--lr-op-muted);
+    transition: opacity var(--lr-t-slow) var(--lr-ease);
+}
+
+.portal-hero-dica.some { opacity: 0; }
+
+/* logado: sem trilho — faixa compacta com o selo aceso */
+body.portal-logado .portal-hero-trilho { height: auto; }
+
+body.portal-logado .portal-hero-palco {
+    position: relative;
+    height: clamp(240px, 34vh, 380px);
+}
+
+body.portal-logado .portal-hero-dica,
+body.portal-logado .portal-hero-cta { display: none; }
+
+body.portal-logado .portal-hero-texto h1 { font-size: clamp(1.5rem, 3.6vw, 2.4rem); }
+
+/* movimento reduzido: sem trilho, quadro final estático */
+@media (prefers-reduced-motion: reduce) {
+    .portal-hero-trilho { height: auto; }
+
+    .portal-hero-palco { position: relative; height: 60vh; }
+
+    .portal-hero-dica { display: none; }
+}
+
+/* ---------- login embutido ---------- */
+.portal-login {
+    display: grid;
+    place-items: center;
+    padding: 0 var(--lr-space-4) var(--lr-space-6);
+}
+
+.login-folha {
+    width: min(440px, 100%);
+    background: var(--lr-surface);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-top: 2px solid var(--lr-gold); /* assinatura de modal do DS */
+    border-radius: var(--lr-radius-lg);
+    box-shadow: var(--lr-shadow-2);
+    padding: var(--lr-space-6);
+}
+
+.login-folha h2 { margin: 0 0 var(--lr-space-2); }
+
+.login-sub {
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-sm);
+    margin: 0 0 var(--lr-space-5);
+    line-height: var(--lr-lh-body);
+}
+
+.login-folha .form-group { margin-bottom: var(--lr-space-4); }
+
+.login-folha .form-group label {
+    display: block;
+    font-size: var(--lr-fs-sm);
+    font-weight: 600;
+    color: var(--lr-text-2);
+    margin-bottom: var(--lr-space-1);
+}
+
+.login-folha .form-group input { width: 100%; }
+
+.btn-login {
+    width: 100%;
+    background: var(--lr-gold);
+    color: var(--lr-bg-0);
+    border: none;
+    font-weight: 700;
+    font-size: var(--lr-fs-md);
+    padding: var(--lr-space-3);
+    border-radius: var(--lr-radius);
+    cursor: pointer;
+    margin-top: var(--lr-space-2);
+    transition: background var(--lr-t-base) var(--lr-ease);
+}
+
+.btn-login:hover { background: var(--lr-gold-2); }
+
+.toggle-form {
+    text-align: center;
+    margin-top: var(--lr-space-4);
+    font-size: var(--lr-fs-sm);
+    color: var(--lr-text-2);
+}
+
+.toggle-form a {
+    color: var(--lr-arcane);
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.toggle-form a:hover { text-decoration: underline; }
+
+.role-selector { margin: var(--lr-space-5) 0 var(--lr-space-4); }
+
+.role-option {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-3);
+    background: var(--lr-bg-1);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    padding: var(--lr-space-3) var(--lr-space-4);
+    margin-bottom: var(--lr-space-2);
+    cursor: pointer;
+    transition: border-color var(--lr-t-base) var(--lr-ease);
+}
+
+.role-option:hover { border-color: var(--lr-gold); }
+
+.role-option.selected {
+    border-color: var(--lr-gold);
+    background: var(--lr-gold-soft);
+}
+
+.role-option .role-title { font-weight: 700; font-size: var(--lr-fs-sm); }
+
+.role-option .role-desc { color: var(--lr-text-2); font-size: var(--lr-fs-xs); }
+
+.master-code-field { display: none; }
+
+.master-code-field.show { display: block; }
+
+.master-code-field .code-info {
+    font-size: var(--lr-fs-sm);
+    font-weight: 600;
+    margin-bottom: var(--lr-space-2);
+}
+
+.master-code-field .code-hint {
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2);
+    text-align: center;
+    margin-top: var(--lr-space-1);
+}
+
+.auth-loading {
+    text-align: center;
+    color: var(--lr-text-2);
+    margin-top: var(--lr-space-4);
+}
+
+/* ---------- wiki ---------- */
+.portal-wiki { padding: 0 var(--lr-space-4) var(--lr-space-6); }
+
+.wiki-folha {
+    max-width: 1100px;
+    margin: 0 auto;
+    background: var(--lr-surface);
+    border: var(--lr-border-w) solid var(--lr-border-soft);
+    border-radius: var(--lr-radius-lg);
+    box-shadow: var(--lr-shadow-2);
+    padding: var(--lr-space-6) var(--lr-space-5);
+}
+
+.wiki-cabeca { text-align: center; margin-bottom: var(--lr-space-5); }
+
+.wiki-cabeca h2 { margin: 0 0 var(--lr-space-1); }
+
+.wiki-sub {
+    font-family: var(--lr-font-subtitle);
+    font-style: italic;
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-lg);
+    margin: 0;
+}
+
+.wiki-busca-caixa {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-2);
+    max-width: 640px;
+    margin: 0 auto var(--lr-space-5);
+    background: var(--lr-bg-1);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
+    padding: var(--lr-space-2) var(--lr-space-4);
+    transition: border-color var(--lr-t-base) var(--lr-ease), box-shadow var(--lr-t-base) var(--lr-ease);
+}
+
+.wiki-busca-caixa:focus-within {
+    border-color: var(--lr-gold);
+    box-shadow: var(--lr-glow-gold);
+}
+
+.wiki-busca-caixa input {
+    flex: 1;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    min-width: 0;
+    font-size: var(--lr-fs-md);
+    padding: var(--lr-space-1) 0;
+}
+
+.wiki-busca-limpar {
+    background: transparent;
+    border: none;
+    color: var(--lr-text-2);
+    cursor: pointer;
+    padding: var(--lr-space-1);
+}
+
+.wiki-resultados { max-width: 640px; margin: 0 auto; }
+
+.wiki-res-resumo {
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-sm);
+    margin-bottom: var(--lr-space-3);
+}
+
+.wiki-res-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--lr-bg-1);
+    border: var(--lr-border-w) solid var(--lr-border-soft);
+    border-radius: var(--lr-radius);
+    padding: var(--lr-space-3) var(--lr-space-4);
+    margin-bottom: var(--lr-space-2);
+    cursor: pointer;
+    color: var(--lr-text-1);
+    font-family: var(--lr-font-body);
+    transition: border-color var(--lr-t-base) var(--lr-ease);
+}
+
+.wiki-res-item:hover { border-color: var(--lr-gold); }
+
+.wiki-res-cam { font-size: var(--lr-fs-xs); color: var(--lr-text-2); margin-bottom: var(--lr-space-1); }
+
+.wiki-res-titulo { font-weight: 600; margin-bottom: var(--lr-space-1); }
+
+.wiki-res-trecho { font-size: var(--lr-fs-sm); color: var(--lr-text-2); line-height: var(--lr-lh-body); }
+
+.wiki-res-trecho mark,
+.leitor-corpo mark {
+    background: var(--lr-gold-soft);
+    color: inherit;
+    border-radius: var(--lr-radius-sm);
+    padding: 0 2px;
+}
+
+.wiki-estante {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+    gap: var(--lr-space-4);
+}
+
+.wiki-vazio {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--lr-text-2);
+    padding: var(--lr-space-6) var(--lr-space-4);
+}
+
+.wiki-vazio-icone { font-size: 1.8rem; margin-bottom: var(--lr-space-2); }
+
+.wiki-vazio p { margin: 0 0 var(--lr-space-3); }
+
+.livro-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--lr-bg-1);
+    border: var(--lr-border-w) solid var(--lr-border-soft);
+    border-radius: var(--lr-radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    text-align: left;
+    padding: 0;
+    color: var(--lr-text-1);
+    font-family: var(--lr-font-body);
+    transition: border-color var(--lr-t-base) var(--lr-ease), box-shadow var(--lr-t-base) var(--lr-ease);
+}
+
+.livro-card:hover { border-color: var(--lr-gold); box-shadow: var(--lr-shadow-2); }
+
+.livro-capa {
+    aspect-ratio: 21 / 9;
+    background:
+        radial-gradient(ellipse at 30% 120%, var(--lr-abyssal-soft), transparent 60%),
+        radial-gradient(ellipse at 80% -20%, var(--lr-arcane-soft), transparent 55%),
+        var(--lr-surface);
+    display: grid;
+    place-items: center;
+    font-size: 1.8rem;
+    border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
+}
+
+.livro-capa img { width: 100%; height: 100%; object-fit: cover; }
+
+.livro-info { padding: var(--lr-space-4) var(--lr-space-4) var(--lr-space-5); }
+
+.livro-titulo {
+    font-family: var(--lr-font-subtitle);
+    font-weight: 600;
+    font-size: var(--lr-fs-xl);
+    line-height: var(--lr-lh-tight);
+    margin: 0 0 var(--lr-space-2);
+}
+
+.livro-desc {
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-sm);
+    line-height: var(--lr-lh-body);
+    margin: 0 0 var(--lr-space-3);
+}
+
+.livro-caps { color: var(--lr-text-2); font-size: var(--lr-fs-xs); }
+
+/* ---------- leitor ---------- */
+.leitor-topo {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-4);
+    margin-bottom: var(--lr-space-5);
+    position: relative;
+    padding-bottom: var(--lr-space-3);
+}
+
+.leitor-voltar {
+    background: transparent;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    color: var(--lr-text-2);
+    padding: var(--lr-space-2) var(--lr-space-3);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.leitor-voltar:hover { border-color: var(--lr-gold); color: var(--lr-text-1); }
+
+.leitor-livro-nome {
+    font-family: var(--lr-font-title);
+    letter-spacing: var(--lr-track-title);
+    font-size: var(--lr-fs-md);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.leitor-progresso {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: var(--lr-border-soft);
+}
+
+.leitor-progresso div { height: 100%; width: 0; background: var(--lr-gold); }
+
+.leitor-grade {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: var(--lr-space-6);
+    align-items: start;
+}
+
+.leitor-toc {
+    position: sticky;
+    top: calc(54px + var(--lr-space-4));
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-space-1);
+}
+
+.leitor-toc button {
+    text-align: left;
+    background: transparent;
+    border: none;
+    border-left: var(--lr-border-w) solid var(--lr-border);
+    border-radius: 0;
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-sm);
+    padding: var(--lr-space-2) var(--lr-space-3);
+    cursor: pointer;
+    line-height: var(--lr-lh-tight);
+    transition: color var(--lr-t-base) var(--lr-ease), border-color var(--lr-t-base) var(--lr-ease);
+}
+
+.leitor-toc button:hover { color: var(--lr-text-1); }
+
+.leitor-toc button.ativo {
+    color: var(--lr-gold-2);
+    border-left-color: var(--lr-gold);
+    font-weight: 600;
+}
+
+.leitor-corpo {
+    max-width: 72ch;
+    line-height: var(--lr-lh-body);
+    font-size: var(--lr-fs-md);
+}
+
+.leitor-corpo h1 { font-size: var(--lr-fs-2xl); margin: 0 0 var(--lr-space-4); }
+
+.leitor-corpo h2 { font-size: var(--lr-fs-xl); margin: var(--lr-space-6) 0 var(--lr-space-3); }
+
+.leitor-corpo h3, .leitor-corpo h4 { margin: var(--lr-space-5) 0 var(--lr-space-2); }
+
+.leitor-corpo p { margin: 0 0 var(--lr-space-4); }
+
+.leitor-corpo blockquote {
+    font-family: var(--lr-font-subtitle);
+    font-style: italic;
+    font-size: var(--lr-fs-lg);
+    color: var(--lr-text-2);
+    border-left: var(--lr-border-w) solid var(--lr-gold);
+    margin: var(--lr-space-5) 0;
+    padding: var(--lr-space-2) 0 var(--lr-space-2) var(--lr-space-5);
+}
+
+.leitor-corpo table {
+    width: 100%;
+    max-width: 100%;
+    display: block;
+    overflow-x: auto;
+    margin: var(--lr-space-4) 0;
+}
+
+.leitor-corpo img { max-width: 100%; border-radius: var(--lr-radius); }
+
+.leitor-corpo ul, .leitor-corpo ol { padding-left: var(--lr-space-5); margin: 0 0 var(--lr-space-4); }
+
+.leitor-corpo li { margin-bottom: var(--lr-space-2); }
+
+.leitor-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--lr-space-3);
+    margin-top: var(--lr-space-6);
+    padding-top: var(--lr-space-5);
+    border-top: var(--lr-border-w) solid var(--lr-border-soft);
+}
+
+.leitor-nav button {
+    background: var(--lr-bg-1);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    color: var(--lr-text-1);
+    padding: var(--lr-space-3) var(--lr-space-4);
+    cursor: pointer;
+    transition: border-color var(--lr-t-base) var(--lr-ease);
+}
+
+.leitor-nav button:hover:not(:disabled) { border-color: var(--lr-gold); }
+
+.leitor-nav button:disabled { opacity: var(--lr-op-disabled); cursor: default; }
+
+/* ---------- rodapé ---------- */
+.portal-rodape {
+    text-align: center;
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-sm);
+    padding: var(--lr-space-6) var(--lr-space-4);
+    opacity: var(--lr-op-muted);
+}
+
+/* ---------- responsivo ---------- */
+@media (max-width: 900px) {
+    .leitor-grade { grid-template-columns: minmax(0, 1fr); gap: var(--lr-space-4); }
+
+    /* TOC vira trilho horizontal (regra de abas do DS) */
+    .leitor-toc {
+        position: static;
+        max-height: none;
+        flex-direction: row;
+        overflow-x: auto;
+        gap: var(--lr-space-2);
+        padding-bottom: var(--lr-space-2);
+        scrollbar-width: none;
+    }
+
+    .leitor-toc::-webkit-scrollbar { display: none; }
+
+    .leitor-toc button {
+        white-space: nowrap;
+        border: var(--lr-border-w) solid var(--lr-border);
+        border-radius: var(--lr-radius);
+        flex: none;
+    }
+
+    .leitor-toc button.ativo {
+        border-color: var(--lr-gold);
+        background: var(--lr-gold-soft);
+    }
+}
+
+@media (max-width: 768px) {
+    .portal-busca-rotulo { display: none; }
+
+    .portal-hero { padding: var(--lr-space-6) var(--lr-space-4) var(--lr-space-5); }
+
+    .wiki-folha { padding: var(--lr-space-5) var(--lr-space-4); }
+
+    .leitor-nav button span { display: none; }
+}
+

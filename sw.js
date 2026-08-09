@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v175';
+const VERSION = 'v176';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -95,6 +95,8 @@ const PRECACHE_URLS = [
   '/laboratorium-runarum/laboratorium.html',
   '/menu/css/menu.css',
   '/menu/js/menu-firebase.js',
+  '/menu/js/menu-wiki.js',
+  '/menu/js/menu-hero.js',
   '/menu/menu.html',
   '/painel-criador/css/painel-criador.css',
   '/painel-criador/js/painel-firebase.js',

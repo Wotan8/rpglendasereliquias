@@ -5,20 +5,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0E1117">
-    <title>Menu</title>
-    <link rel="stylesheet" href="css/menu.css?v=13">
+    <title>Lendas &amp; Relíquias — Portal</title>
+    <link rel="stylesheet" href="css/menu.css?v=14">
     <link rel="stylesheet" href="../shared/tokens.css?v=11">
     <script src="../shared/theme.js"></script>
-    <!-- reCAPTCHA v3 (invisível) — protege a criação de checkout PagBank contra bots/abuso.
-         ⚠️ Substitua SUA_CHAVE_DE_SITE_RECAPTCHA pela Site Key do reCAPTCHA v3 (console do Google). -->
+    <!-- reCAPTCHA v3 (invisível) — protege a criação de checkout PagBank contra bots/abuso. -->
     <script src="https://www.google.com/recaptcha/api.js?render=6Lc3_lUtAAAAAFhlPCUXgJSdL3zLnzFUwx_ZbIzT"></script>
     <script type="module" src="/js/global-favicon.js"></script>
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0E1117">
     <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="../shared/lendas-reliquias.css?v=2">
 </head>
 
@@ -27,40 +26,143 @@
     <!-- Loading Screen -->
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-spinner"></div>
-        <div class="loading-text">⚔️ Carregando personagens...</div>
+        <div class="loading-text">⚔️ Abrindo o Portal...</div>
     </div>
 
-    <!-- Toolbar — ordem padronizada: [🚪 Sair] [🏠 Menu] [contextuais] [spacer] [🌙 Tema] [Nome] -->
-    <div class="toolbar" style="display:none">
-        <button onclick="logout()" title="Sair da conta"
-            style="background:var(--lr-blood-2);color:var(--lr-divine);border:none;font-weight:700">🚪 Sair</button>
-
-        <button id="btnPainelMestre"
-            style="display:none;background:rgba(212, 175, 55,.2);border-color:rgba(212, 175, 55,.5);color:var(--lr-gold)"
-            onclick="window.location.href='../painel-mestre/painel-mestre.html'">👑 Painel de Mestre</button>
-        <button id="btnPainelCriador"
-            style="display:none;background:rgba(212, 175, 55,.2);border-color:rgba(212, 175, 55,.5);color:var(--lr-gold-2)"
-            onclick="window.location.href='../painel-criador/painel-criador.html'">🔧 Painel Criador</button>
-        <button id="btnWorldbuilding"
-            style="display:none;background:rgba(212, 175, 55,.2);border-color:rgba(212, 175, 55,.5);color:var(--lr-gold-2)"
-            onclick="window.location.href='../worldbuilding/worldbuilding.html'">🌐 Worldbuilding</button>
+    <!-- ================= TOPO DO PORTAL =================
+         O grupo .toolbar (contextuais de quem está logado) é mostrado/oculto
+         pelo menu-firebase.js — mesma mecânica do menu antigo. -->
+    <header class="portal-topo">
+        <a class="portal-marca" href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false">
+            Lendas <em>&amp;</em> Relíquias
+        </a>
         <div class="spacer"></div>
-        <span class="hint-toolbar">Menu</span>
-        <button id="btnThemeToggle" onclick="toggleTheme()" title="Alternar tema">🌙</button>
-        <span id="userDisplayName"
-            style="color:var(--lr-text-2);font-size:.8rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
-            title=""></span>
-    </div>
+        <button class="portal-busca-atalho" onclick="portalIrBusca()" title="Buscar no cânone (atalho: /)">
+            🔎<span class="portal-busca-rotulo"> Buscar no cânone</span></button>
+        <button id="btnThemeToggle" class="portal-tema" onclick="toggleTheme()" title="Alternar tema">🌙</button>
+        <button id="btnEntrarTop" class="portal-entrar" onclick="portalIrLogin()" hidden>Entrar</button>
 
-    <!-- Main Content -->
+        <!-- Toolbar — ordem padronizada: [🚪 Sair] [contextuais] [Nome] -->
+        <div class="toolbar" style="display:none">
+            <button onclick="logout()" title="Sair da conta"
+                style="background:var(--lr-blood-2);color:var(--lr-divine);border:none;font-weight:700">🚪</button>
+            <button id="btnPainelMestre" style="display:none" class="portal-cargo" title="Painel de Mestre"
+                onclick="window.location.href='../painel-mestre/painel-mestre.html'">👑</button>
+            <button id="btnPainelCriador" style="display:none" class="portal-cargo" title="Painel Criador"
+                onclick="window.location.href='../painel-criador/painel-criador.html'">🔧</button>
+            <button id="btnWorldbuilding" style="display:none" class="portal-cargo" title="Worldbuilding"
+                onclick="window.location.href='../worldbuilding/worldbuilding.html'">🌐</button>
+            <span id="userDisplayName" title=""></span>
+        </div>
+    </header>
+
+    <!-- ================= HERO — selo rúnico guiado pelo scroll =========
+         Visitante: trilho longo, o selo acende conforme rola.
+         Logado (body.portal-logado): faixa compacta, quadro final. -->
+    <section class="portal-hero-trilho" id="heroTrilho">
+        <div class="portal-hero-palco">
+            <canvas id="heroCanvas" aria-hidden="true"></canvas>
+            <div class="portal-hero-veu" aria-hidden="true"></div>
+            <div class="portal-hero-texto">
+                <h1>Lendas &amp; Relíquias</h1>
+                <p class="portal-tagline">O berço e o túmulo das lendas que jamais serão esquecidas.</p>
+                <a class="portal-hero-cta" href="#secaoWiki"
+                    onclick="document.getElementById('secaoWiki').scrollIntoView({behavior:'smooth'});return false">
+                    Explorar o cânone</a>
+            </div>
+            <div class="portal-hero-dica" id="heroDica" aria-hidden="true">▾</div>
+        </div>
+    </section>
+
+    <!-- ================= LOGIN + CADASTRO (visitante) =================
+         Mesmos ids e fluxo do index.html antigo — inclusive papel
+         jogador/mestre com código secreto. Sem redirect: logar troca o
+         estado da própria página. -->
+    <section class="portal-login" id="secaoLogin" hidden>
+        <div class="login-folha">
+            <h2>Entrar na mesa</h2>
+            <p class="login-sub">Suas fichas, seus tomos e sua história continuam de onde pararam.</p>
+
+            <div class="alert alert-success" id="alertSuccess" style="display:none"></div>
+            <div class="alert alert-danger" id="alertError" style="display:none"></div>
+            <div class="alert alert-warning" id="alertWarning" style="display:none"></div>
+
+            <!-- FORMULÁRIO DE LOGIN -->
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginEmail">📧 Email</label>
+                    <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">🔒 Senha</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"
+                        required>
+                </div>
+                <button type="submit" class="btn-login">ENTRAR</button>
+                <div class="toggle-form">Não tem conta? <a onclick="toggleForm()">Cadastre-se aqui</a></div>
+            </form>
+
+            <!-- FORMULÁRIO DE CADASTRO -->
+            <form id="cadastroForm" style="display:none">
+                <div class="form-group">
+                    <label for="cadastroNome">👤 Nome do Jogador</label>
+                    <input type="text" id="cadastroNome" placeholder="Seu nome completo" required>
+                </div>
+                <div class="form-group">
+                    <label for="cadastroEmail">📧 Email</label>
+                    <input type="email" id="cadastroEmail" placeholder="seu@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="cadastroPassword">🔒 Senha</label>
+                    <input type="password" id="cadastroPassword" placeholder="Mínimo 6 caracteres" required
+                        minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="cadastroPasswordConfirm">🔒 Confirmar Senha</label>
+                    <input type="password" id="cadastroPasswordConfirm" placeholder="Digite a senha novamente" required>
+                </div>
+
+                <!-- SELETOR DE ROLE -->
+                <div class="role-selector">
+                    <label style="margin-bottom:12px;display:block;text-align:center">👤 Escolha seu tipo de
+                        conta:</label>
+                    <label class="role-option selected" id="roleJogador">
+                        <input type="radio" name="role" value="jogador" checked onchange="toggleMasterCode()">
+                        <div class="role-info">
+                            <div class="role-title">🎭 Jogador</div>
+                            <div class="role-desc">Crie e gerencie seu personagem</div>
+                        </div>
+                    </label>
+                    <label class="role-option" id="roleMestre">
+                        <input type="radio" name="role" value="mestre" onchange="toggleMasterCode()">
+                        <div class="role-info">
+                            <div class="role-title">👑 Mestre</div>
+                            <div class="role-desc">Veja e monitore todos os jogadores</div>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- CÓDIGO SECRETO DO MESTRE -->
+                <div class="master-code-field" id="masterCodeField">
+                    <div class="code-info">🔐 Digite o código secreto do Mestre:</div>
+                    <div class="form-group">
+                        <input type="password" id="masterCode" placeholder="Código fornecido pelo administrador"
+                            autocomplete="off">
+                    </div>
+                    <div class="code-hint">Apenas quem possui o código pode ser Mestre</div>
+                </div>
+
+                <button type="submit" class="btn-login">CRIAR CONTA</button>
+                <div class="toggle-form">Já tem conta? <a onclick="toggleForm()">Fazer login</a></div>
+            </form>
+
+            <div class="auth-loading" id="loading" style="display:none">⏳ Carregando...</div>
+        </div>
+    </section>
+
+    <!-- ================= MESA (logado — conteúdo original do menu) ===== -->
     <div class="wrap" style="display:none">
         <div class="sheet">
-
-            <!-- Header -->
-            <div class="menu-header">
-                <h1>✨🌀RPG LeR🛡️🗡️</h1>
-                <p class="subtitle">O berço e o túmulo das lendas que jamais serão esquecidas.</p>
-            </div>
 
             <div id="alertArea"></div>
 
@@ -204,6 +306,52 @@
         </div>
     </div>
 
+    <!-- ================= WIKI — O Cânone de Vasteluna ================= -->
+    <section class="portal-wiki" id="secaoWiki">
+        <div class="wiki-folha">
+            <header class="wiki-cabeca">
+                <h2>O Cânone de Vasteluna</h2>
+                <p class="wiki-sub">Tudo o que o Cronista publicou ao mundo — regras, compêndios e a memória da Alta
+                    Era.</p>
+            </header>
+
+            <div class="wiki-busca-caixa">
+                <span aria-hidden="true">🔎</span>
+                <input type="search" id="wikiBusca" placeholder="Buscar no cânone — regras, magia, mundo…"
+                    autocomplete="off" aria-label="Buscar no cânone">
+                <button class="wiki-busca-limpar" id="wikiBuscaLimpar" onclick="wikiLimparBusca()" hidden
+                    title="Limpar busca">✕</button>
+            </div>
+
+            <div class="wiki-resultados" id="wikiResultados" hidden></div>
+
+            <div class="wiki-estante" id="wikiEstante"></div>
+
+            <!-- Leitor -->
+            <div class="wiki-leitor" id="wikiLeitor" hidden>
+                <div class="leitor-topo">
+                    <button class="leitor-voltar" onclick="wikiFecharLivro()">← Estante</button>
+                    <div class="leitor-livro-nome" id="leitorLivroNome"></div>
+                    <div class="leitor-progresso" aria-hidden="true">
+                        <div id="leitorProgressoBarra"></div>
+                    </div>
+                </div>
+
+                <div class="leitor-grade">
+                    <aside class="leitor-toc" id="leitorToc" aria-label="Capítulos"></aside>
+                    <article class="leitor-corpo" id="leitorCorpo"></article>
+                </div>
+
+                <nav class="leitor-nav">
+                    <button id="leitorAnterior" onclick="wikiCapVizinho(-1)">← <span>Anterior</span></button>
+                    <button id="leitorProximo" onclick="wikiCapVizinho(1)"><span>Próximo</span> →</button>
+                </nav>
+            </div>
+        </div>
+    </section>
+
+    <footer class="portal-rodape">🜲 Lendas &amp; Relíquias</footer>
+
     <!-- Modal de Exclusão -->
     <div class="modal" id="deleteModal">
         <div class="modal-content">
@@ -250,7 +398,9 @@
     </div>
 
     <!-- Firebase Module -->
-    <script type="module" src="js/menu-firebase.js?v=7"></script>
+    <script type="module" src="js/menu-firebase.js?v=8"></script>
+    <script type="module" src="js/menu-wiki.js?v=1"></script>
+    <script src="js/menu-hero.js?v=1"></script>
 
 </body>
 
