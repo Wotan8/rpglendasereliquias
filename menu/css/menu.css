@@ -1901,6 +1901,36 @@ html:not(.dark) .meta-card {
     padding: 0;
     gap: var(--lr-space-2);
     overflow: visible;
+    align-items: center;
+}
+
+/* botões de cargo: quadrados fantasma com ícone do sprite — nada de
+   blocos coloridos com emoji */
+.portal-topo .toolbar .portal-cargo {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    background: transparent;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    color: var(--lr-text-2);
+    cursor: pointer;
+    transition: border-color var(--lr-t-base) var(--lr-ease), color var(--lr-t-base) var(--lr-ease);
+}
+
+.portal-topo .toolbar .portal-cargo:hover {
+    border-color: var(--lr-gold);
+    color: var(--lr-gold-2);
+    background: transparent;
+}
+
+.portal-topo .toolbar .portal-cargo .lr-ico { width: 17px; height: 17px; }
+
+.portal-topo .toolbar .portal-sair:hover {
+    border-color: var(--lr-blood-2);
+    color: var(--lr-blood-2);
 }
 
 .portal-topo .toolbar #userDisplayName {
@@ -1994,18 +2024,8 @@ html:not(.dark) .meta-card {
 
 .portal-hero-dica.some { opacity: 0; }
 
-/* logado: sem trilho — faixa compacta com o selo aceso */
-body.portal-logado .portal-hero-trilho { height: auto; }
-
-body.portal-logado .portal-hero-palco {
-    position: relative;
-    height: clamp(240px, 34vh, 380px);
-}
-
-body.portal-logado .portal-hero-dica,
-body.portal-logado .portal-hero-cta { display: none; }
-
-body.portal-logado .portal-hero-texto h1 { font-size: clamp(1.5rem, 3.6vw, 2.4rem); }
+/* logado: a animação continua para todos; só o convite de scroll some
+   mais rápido e o CTA leva para a Home (o Cânone) */
 
 /* movimento reduzido: sem trilho, quadro final estático */
 @media (prefers-reduced-motion: reduce) {
@@ -2022,6 +2042,10 @@ body.portal-logado .portal-hero-texto h1 { font-size: clamp(1.5rem, 3.6vw, 2.4re
     place-items: center;
     padding: 0 var(--lr-space-4) var(--lr-space-6);
 }
+
+/* O bug do estado duplo: display:grid acima vencia o atributo [hidden]
+   do navegador — logado ficava com login E mesa na tela. Nunca mais. */
+.portal-login[hidden] { display: none; }
 
 .login-folha {
     width: min(440px, 100%);
@@ -2134,17 +2158,15 @@ body.portal-logado .portal-hero-texto h1 { font-size: clamp(1.5rem, 3.6vw, 2.4re
     margin-top: var(--lr-space-4);
 }
 
-/* ---------- wiki ---------- */
-.portal-wiki { padding: 0 var(--lr-space-4) var(--lr-space-6); }
+/* ---------- wiki (dentro da aba Home, na folha da mesa) ---------- */
+.wiki-em-aba { padding: var(--lr-space-2) 0; }
 
-.wiki-folha {
-    max-width: 1100px;
-    margin: 0 auto;
-    background: var(--lr-surface);
-    border: var(--lr-border-w) solid var(--lr-border-soft);
-    border-radius: var(--lr-radius-lg);
-    box-shadow: var(--lr-shadow-2);
-    padding: var(--lr-space-6) var(--lr-space-5);
+/* ícones das abas seguem a cor e o estado do botão */
+.tabs .tab .lr-ico {
+    width: 15px;
+    height: 15px;
+    vertical-align: -2px;
+    margin-right: 2px;
 }
 
 .wiki-cabeca { text-align: center; margin-bottom: var(--lr-space-5); }
@@ -2442,6 +2464,85 @@ body.portal-logado .portal-hero-texto h1 { font-size: clamp(1.5rem, 3.6vw, 2.4re
 .leitor-nav button:hover:not(:disabled) { border-color: var(--lr-gold); }
 
 .leitor-nav button:disabled { opacity: var(--lr-op-disabled); cursor: default; }
+
+/* ---------- aba Portal (config do Criador) ---------- */
+.cfg-dropzone {
+    border: 2px dashed var(--lr-border);
+    border-radius: var(--lr-radius-lg);
+    padding: var(--lr-space-6) var(--lr-space-4);
+    text-align: center;
+    color: var(--lr-text-2);
+    cursor: pointer;
+    transition: border-color var(--lr-t-base) var(--lr-ease), background var(--lr-t-base) var(--lr-ease);
+}
+
+.cfg-dropzone:hover,
+.cfg-dropzone.arrastando {
+    border-color: var(--lr-gold);
+    background: var(--lr-gold-soft);
+    color: var(--lr-text-1);
+}
+
+.cfg-dropzone-sub { font-size: var(--lr-fs-xs); margin-top: var(--lr-space-2); }
+
+.cfg-status {
+    margin-top: var(--lr-space-3);
+    padding: var(--lr-space-2) var(--lr-space-3);
+    border-radius: var(--lr-radius-sm);
+    background: var(--lr-arcane-soft);
+    color: var(--lr-arcane-2);
+    font-size: var(--lr-fs-sm);
+}
+
+.cfg-seq-lista {
+    margin-top: var(--lr-space-4);
+    display: grid;
+    gap: var(--lr-space-2);
+}
+
+.cfg-seq-item {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-3);
+    background: var(--lr-bg-1);
+    border: var(--lr-border-w) solid var(--lr-border-soft);
+    border-radius: var(--lr-radius);
+    padding: var(--lr-space-2) var(--lr-space-3);
+    font-size: var(--lr-fs-sm);
+}
+
+.cfg-seq-item img {
+    width: 64px;
+    height: 36px;
+    object-fit: cover;
+    border-radius: var(--lr-radius-sm);
+    flex: none;
+    background: var(--lr-surface-2);
+}
+
+.cfg-seq-nome {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cfg-seq-item button {
+    background: transparent;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius-sm);
+    color: var(--lr-text-2);
+    cursor: pointer;
+    padding: var(--lr-space-1) var(--lr-space-2);
+    flex: none;
+}
+
+.cfg-seq-item button:hover { border-color: var(--lr-gold); color: var(--lr-text-1); }
+
+.cfg-seq-item button.remover:hover { border-color: var(--lr-blood-2); color: var(--lr-blood-2); }
+
+.cfg-acoes { margin-top: var(--lr-space-5); }
 
 /* ---------- rodapé ---------- */
 .portal-rodape {

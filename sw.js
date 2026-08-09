@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v176';
+const VERSION = 'v177';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -97,6 +97,7 @@ const PRECACHE_URLS = [
   '/menu/js/menu-firebase.js',
   '/menu/js/menu-wiki.js',
   '/menu/js/menu-hero.js',
+  '/menu/js/menu-portal-config.js',
   '/menu/menu.html',
   '/painel-criador/css/painel-criador.css',
   '/painel-criador/js/painel-firebase.js',

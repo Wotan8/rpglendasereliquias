@@ -66,7 +66,7 @@ function mostrarConvite() {
     $('wikiEstante').innerHTML =
         '<div class="wiki-vazio">' +
         '<div class="wiki-vazio-icone">🔐</div>' +
-        '<p>Entre na mesa para folhear o cânone de Vasteluna.</p>' +
+        '<p>Entre na conta para folhear o cânone de Vasteluna.</p>' +
         '<button class="portal-entrar" onclick="portalIrLogin()">Entrar</button></div>';
 }
 
@@ -118,8 +118,9 @@ window.wikiAbrirCap = function (i, marcar) {
     $('leitorAnterior').disabled = capAberto === 0;
     $('leitorProximo').disabled = capAberto === l.capitulos.length - 1;
 
-    const topo = $('secaoWiki').offsetTop - 64;
-    window.scrollTo({ top: topo, behavior: 'auto' });
+    // offsetTop seria relativo ao pai posicionado (a folha) — usar o rect
+    const topo = $('secaoWiki').getBoundingClientRect().top + window.scrollY - 64;
+    window.scrollTo({ top: Math.max(0, topo), behavior: 'auto' });
     if (marcar) corpo.querySelector('mark')?.scrollIntoView({ block: 'center' });
 };
 

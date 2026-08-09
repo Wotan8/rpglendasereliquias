@@ -331,6 +331,13 @@ service cloud.firestore {
       allow create, update, delete: if isMaster();
     }
 
+    // Config do Portal (hero de imagens etc.) — leitura pública: o hero
+    // aparece antes do login. Só o Criador escreve.
+    match /portal-config/{docId} {
+      allow read: if true;
+      allow write: if isCriador();
+    }
+
     // ========== ADICIONADO: Coleções de Session Logs ==========
     match /campaigns/{docId} {
       allow read: if isSignedIn();

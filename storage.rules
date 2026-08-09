@@ -18,6 +18,13 @@ service firebase.storage {
       allow write: if request.auth != null;
     }
 
+    // Hero do Portal (sequencia de imagens do scroll) - leitura publica
+    // (aparece antes do login); escrita autenticada (UI restringe a criador)
+    match /app-assets/portal-hero/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
     // Loja items images - authenticated users can read/write
     match /loja-itens/{allPaths=**} {
       allow read: if request.auth != null;

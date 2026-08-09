@@ -125,7 +125,12 @@ onAuthStateChanged(auth, async (user) => {
                     if (btnMestre) btnMestre.style.display = '';
                     if (btnCriador) btnCriador.style.display = '';
                     if (btnWorldbuilding) btnWorldbuilding.style.display = '';
+                    // aba de configuração do Portal (upload do hero etc.)
+                    const tabCfg = document.getElementById('tabPortalCfg');
+                    if (tabCfg) tabCfg.style.display = '';
+                    document.dispatchEvent(new CustomEvent('portal:criador'));
                 }
+                window.portalRole = role;
             }
         } catch (e) { /* ignore */ }
 
@@ -1481,6 +1486,15 @@ window.portalIrLogin = function () {
 };
 
 window.portalIrBusca = function () {
-    document.getElementById('secaoWiki')?.scrollIntoView({ behavior: 'smooth' });
+    if (!document.body.classList.contains('portal-logado')) { window.portalIrLogin(); return; }
+    document.querySelector('.tab[onclick*="home"]')?.click();
+    document.querySelector('.wrap')?.scrollIntoView({ behavior: 'smooth' });
     setTimeout(() => document.getElementById('wikiBusca')?.focus(), 400);
+};
+
+// CTA do hero: visitante vai ao login; logado vai à Home (o Cânone)
+window.portalIrCanone = function () {
+    if (!document.body.classList.contains('portal-logado')) { window.portalIrLogin(); return; }
+    document.querySelector('.tab[onclick*="home"]')?.click();
+    document.querySelector('.wrap')?.scrollIntoView({ behavior: 'smooth' });
 };

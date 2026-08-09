@@ -24,6 +24,8 @@
 
     var alvo = 0, atual = -1;
     var rodando = false;
+    var frames = [];          // imagens configuradas pelo Criador (vazio = selo)
+    var configTentada = false;
 
     function medidas() {
         var dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -140,8 +142,50 @@
         ctx.globalAlpha = 1;
     }
 
+    /* Com imagens do Criador: quadro = t × (N−1), desenhado em cover. */
+    function desenharFrames(t) {
+        medidas();
+        var w = canvas.width, h = canvas.height;
+        var img = frames[Math.round(t * (frames.length - 1))];
+        if (!img || !w || !h) return;
+        var escc = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+        var dw = img.naturalWidth * escc, dh = img.naturalHeight * escc;
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+    }
+
+    var desenharSelo = desenhar;
+    desenhar = function (t) { frames.length ? desenharFrames(t) : desenharSelo(t); };
+
+    /* Sequência configurada pelo Criador (portal-config/hero — leitura
+       pública). Sem doc ou sem imagens: o selo continua. */
+    function carregarConfig() {
+        if (configTentada || !window.db) return;
+        configTentada = true;
+        import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js')
+            .then(function (m) { return m.getDoc(m.doc(window.db, 'portal-config', 'hero')); })
+            .then(function (snap) {
+                var urls = snap.exists() ? (snap.data().imagens || []) : [];
+                if (!urls.length) return;
+                return Promise.allSettled(urls.map(function (u) {
+                    return new Promise(function (ok, erro) {
+                        var img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        img.onload = function () { ok(img); };
+                        img.onerror = erro;
+                        img.src = u;
+                    });
+                })).then(function (rs) {
+                    var ok = rs.filter(function (r) { return r.status === 'fulfilled'; })
+                        .map(function (r) { return r.value; });
+                    if (ok.length) { frames = ok; redesenhar(); }
+                });
+            })
+            .catch(function (e) { console.warn('Hero: sem config de imagens, usando o selo.', e); });
+    }
+
     function progresso() {
-        if (document.body.classList.contains('portal-logado') || reduzMovimento) return 1;
+        if (reduzMovimento) return 1;
         var alt = trilho.offsetHeight - window.innerHeight;
         if (alt <= 0) return 1;
         return Math.min(1, Math.max(0, (window.scrollY - trilho.offsetTop) / alt));
