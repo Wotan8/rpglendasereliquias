@@ -3030,7 +3030,7 @@
 
         .search-select-row .btn-add-from-select {
             padding: 8px 16px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            background: var(--lr-gold);
             border: none;
             border-radius: var(--lr-radius-lg);
             color: var(--lr-bg-0);
