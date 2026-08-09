@@ -628,4 +628,92 @@ assert.equal(bonusIniciativa({ [DV_INICIATIVA]: 'abc' }), 0, 'valor não numéri
 assert.equal(bonusIniciativa({ [DV_INICIATIVA]: 0, INI: 7 }), 0, 'zero é um bônus válido, não "vazio"');
 assert.equal(bonusIniciativa({ [DV_INICIATIVA]: -2 }), -2, 'bônus negativo é respeitado');
 
+// =====================================================================
+// 🎯 Testes da cena — Alvo pela ficha, Graus do d10, formato +2/0/-1
+// =====================================================================
+import { normChave, valorComponente, alvoDoTeste, grausDoDado, fmtGraus,
+         deslocamentosDoToken, limiteDeslocamento, melhorGrauDoUsuario, lootOculto } from './tab-state.js';
+
+assert.equal(normChave('Percepção Visual'), 'PERCEPCAO_VISUAL', 'normaliza como as chaves de derivedTotals');
+
+// char real: derivedTotals (VD) + dots (atributos attr_* e pericias sk_*)
+const fichaChar = {
+    derivedTotals: { PERCEPCAO: 3, PERCEPCAO_VISUAL: 7, INICIATIVA: 2 },
+    dots: { attr_rac: 3, attr_for: 10, sk_mental_alquimancia: 3, sk_classe_precis_o: 2, sk_classe_marcar_presa: 1, sk_classe_erudi__o_ofensiva: 4 },
+};
+assert.equal(valorComponente('Percepção', fichaChar), 3, 'VD ganha do resto');
+assert.equal(valorComponente('Raciocínio', fichaChar), 3, 'atributo por nome completo');
+assert.equal(valorComponente('FOR', fichaChar), 10, 'atributo por sigla');
+assert.equal(valorComponente('Alquimancia', fichaChar), 3, 'pericia direta');
+assert.equal(valorComponente('Precisão', fichaChar), 2, 'pericia com acento (o _ da chave e curinga)');
+assert.equal(valorComponente('Marcar Presa', fichaChar), 1, 'pericia com espaco no nome');
+assert.equal(valorComponente('Erudição Ofensiva', fichaChar), 4, 'pericia com 2 chars especiais');
+assert.equal(valorComponente('Inexistente', fichaChar), null, 'nao achou = null (Alvo manual)');
+
+// NPC real: valoresDer (siglas legadas + extras) + atributos + pericias em texto
+const fichaNpc = {
+    valoresDer: { PERC: 5, INI: 1, extras: [{ nome: 'Conexão com Raízes', valor: '4' }] },
+    atributos: { INT: 4, RAC: 3 },
+    pericias: 'Cura Mística 5 = 10d10\nHerbalismo 4 = 8d10',
+};
+assert.equal(valorComponente('Percepção', fichaNpc), 5, 'sigla legada PERC resolve Percepcao');
+assert.equal(valorComponente('INT', fichaNpc), 4, 'atributo do NPC');
+assert.equal(valorComponente('Herbalismo', fichaNpc), 4, 'pericia parseada da linha');
+assert.equal(valorComponente('Cura Mística', fichaNpc), 5, 'pericia com espaco e acento');
+assert.equal(valorComponente('Conexão com Raízes', fichaNpc), 4, 'extra nomeado');
+
+// Alvo composto: Atributo + Pericia + numero, com modificador
+const r1 = alvoDoTeste('Raciocínio + Alquimancia + 2', fichaChar, -1);
+assert.equal(r1.alvo, 3 + 3 + 2 - 1); assert.equal(r1.incompleto, false);
+const r2 = alvoDoTeste('Raciocínio + NadaDisso', fichaChar);
+assert.equal(r2.incompleto, true, 'componente nao resolvido marca incompleto');
+assert.equal(r2.alvo, 3, 'e o resolvido ainda soma');
+
+// Graus: Roll Under d10 — Alvo - dado; 1 critico, 10 falha critica
+assert.equal(grausDoDado(6, 4), 2);
+assert.equal(grausDoDado(6, 6), 0, 'igual ao Alvo = sucesso sem Graus');
+assert.equal(grausDoDado(6, 8), -2);
+assert.equal(grausDoDado(0, 1), 0, 'dado 1 = sucesso automatico mesmo com Alvo 0');
+assert.equal(grausDoDado(9, 1), 8, 'critico mantem os Graus');
+assert.equal(grausDoDado(12, 10), -1, 'dado 10 = falha mesmo com Alvo acima de 10');
+assert.equal(fmtGraus(2), '+2'); assert.equal(fmtGraus(0), '0'); assert.equal(fmtGraus(-1), '-1');
+
+// =====================================================================
+// 👣 Deslocamentos da ficha + limite do arrasto
+// =====================================================================
+const chars = [{ id: 'c1', derivedTotals: { DESLOC_TERRESTRE: 13.1, DESLOC_AQUATICO: 7.45, DESLOC_AEREO: 0, DESLOC_VERTICAL: 0 } }];
+const npcs = [{ id: 'n1', valoresDer: { DESLOCAMENTO: '8m, Carga 12m', extras: [{ nome: 'Deslocamento', valor: '8m' }, { nome: 'Desloc. Aéreo', valor: '15m' }] } }];
+const dc = deslocamentosDoToken({ vinculo: { tipo: 'char', id: 'c1' } }, chars, npcs);
+assert.deepEqual(dc, [{ tipo: 'Terrestre', metros: 13.1 }, { tipo: 'Aquático', metros: 7.5 }], 'zeros ficam de fora, maior primeiro');
+const dn = deslocamentosDoToken({ vinculo: { tipo: 'npc', id: 'n1' } }, chars, npcs);
+assert.deepEqual(dn, [{ tipo: 'Terrestre', metros: 8 }, { tipo: 'Aéreo', metros: 15 }], 'extra + legado sem duplicar o Terrestre');
+
+assert.equal(limiteDeslocamento(13.1, 1.5, true), 13.5, 'snap: arredonda P/ CIMA ate a celula cheia');
+assert.equal(limiteDeslocamento(13.5, 1.5, true), 13.5, 'multiplo exato nao ganha celula extra');
+assert.equal(limiteDeslocamento(13.1, 1.5, false), 13.1, 'sem snap o limite e cru');
+assert.equal(limiteDeslocamento(0, 1.5, true), 0);
+
+// =====================================================================
+// 📦 Loot oculto por teste
+// =====================================================================
+const combate = { cenas: [{ id: 'c', participantes: [
+        { id: 'p1', characterId: 'c1' }, { id: 'p2', characterId: 'c2' }],
+    testes: [
+        { id: 't1', nome: 'Percepção', resultados: { p1: { graus: -1 }, p2: { graus: 3 } } },
+        { id: 't2', nome: 'Raciocínio', resultados: { p1: { graus: 2 } } },
+    ] }], cenaAtiva: 'c' };
+assert.equal(melhorGrauDoUsuario(combate, ['c1']), 2, 'melhor resultado entre os testes');
+assert.equal(melhorGrauDoUsuario(combate, ['c9']), null, 'sem participante = nunca testou');
+assert.equal(melhorGrauDoUsuario(null, ['c1']), null);
+
+const item = (t, extra) => ({ tipo: 'loot', testeGraus: t, ...extra });
+assert.equal(lootOculto(item(null), 5), false, 'sem teste configurado = visivel normal');
+assert.equal(lootOculto(item(2), 2), false, 'bateu os Graus = ve');
+assert.equal(lootOculto(item(2), 1), true, 'ficou abaixo = nao ve');
+assert.equal(lootOculto(item(0), null), true, 'limiar 0 SEM teste feito continua oculto');
+assert.equal(lootOculto(item(0), 0), false, 'limiar 0 com sucesso sem Graus = ve');
+assert.equal(lootOculto(item(0), -1), true, 'falha nao revela nem com limiar 0');
+assert.equal(lootOculto(item(5, { reveladoPublico: true }), null), false, 'interagido = todos veem');
+assert.equal(lootOculto({ tipo: 'token', testeGraus: 3 }, null), false, 'so vale para loot');
+
 console.log('✅ tab-state: escala, unidades, larguraReal, cenário, paredes, vínculo de NPC, navegação, viagem, card, fog, alcance, cone, passo do fog, iniciativa, eco atrasado e cache de mapas OK');

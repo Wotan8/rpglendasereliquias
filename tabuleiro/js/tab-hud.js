@@ -6,7 +6,7 @@
 // - Rolar iniciativa direto do mapa (1d10 + VD Iniciativa)
 // =============================================
 import { db, doc, onSnapshot, setDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, ico, toast, markDirty, uid, can, selecionar, bonusIniciativa, DADO_INICIATIVA } from './tab-state.js';
+import { T, esc, ico, toast, markDirty, uid, can, selecionar, bonusIniciativa, DADO_INICIATIVA, tokenDoUsuario, deslocamentosDoToken } from './tab-state.js';
 import { refCombate } from './tab-main.js';
 import { updObj, delObj, abrirPropriedades } from './tab-objects.js';
 import { SENSORES } from './tab-fog.js';
@@ -38,6 +38,8 @@ export function initHud() {
             const ch = T.chars.find(x => x.id === c.id);
             if (ch) ch.derivedTotals = d.derivedTotals || ch.derivedTotals || {};
             markDirty();
+            // Atributos/perícias ao vivo também: o Alvo dos 🎯 Testes lê de dots
+            if (ch) ch.dots = d.effectiveDots || d.dots || ch.dots || {};
             // A janela de Combate lê os vitais do personagem DAQUI (VITAIS), então
             // sem este repinte ela ficava com o número velho quando o dano vinha do
             // Painel do Mestre ou da própria ficha. É barato: sai na hora se a
@@ -178,6 +180,15 @@ export function abrirMenuRadial(o, sx, sy) {
     if (o.vinculo?.tipo === 'npc' && (secreto || can('abrirNpc'))) {
         acoes.push({ ic: 'prancheta', tip: 'Abrir ficha do NPC', fn: () => window.tbAbrirNpcModal?.(o.vinculo.id, !secreto) });
     }
+    // 👣 Mover pelo deslocamento da ficha: só no TURNO do token (mestre em
+    // qualquer token com ficha — ajuda a deslocar NPC na medida; jogador no
+    // próprio token, com a permissão de mover).
+    const meuTurno = tokenAtivoDoCombate()?.id === o.id;
+    const deslocs = (!o.bloqueado && meuTurno && (secreto || (tokenDoUsuario(o) && can('moverToken'))))
+        ? deslocamentosDoToken(o, T.chars, T.npcs) : [];
+    if (deslocs.length) {
+        acoes.push({ ic: 'mover', tip: 'Mover pelo deslocamento da ficha (até o máximo em metros)', fn: () => abrirPickerDesloc(o, deslocs, sx, sy) });
+    }
     // 🔒 Token bloqueado: nenhuma ação de manipulação; Mestre vê apenas o desbloqueio
     if (o.bloqueado) {
         if (secreto) acoes.push({ ic: 'cadeado', tip: 'Desbloquear objeto', fn: () => window.tbDesbloquearObj?.(o.id) });
@@ -197,12 +208,15 @@ export function abrirMenuRadial(o, sx, sy) {
         }});
         acoes.push({ ic: 'engrenagem', tip: 'Propriedades', fn: () => { selecionar(o.id); abrirPropriedades(o.id); markDirty(); } });
         acoes.push({ ic: 'lixeira', tip: 'Remover token', fn: () => delObj(o.id), danger: true });
+    } else if (tokenDoUsuario(o) && !o.bloqueado) {
+        // Jogador no PRÓPRIO token: iniciativa direto do mapa
+        acoes.push({ ic: 'dado', tip: `Rolar iniciativa (1d${DADO_INICIATIVA} + Iniciativa)`, fn: () => rolarIniciativa(o) });
     }
     if (!acoes.length) return;
 
     const R = 74;
-    el.innerHTML = `<div class="tb-radial-centro">${esc((o.nome||'?')[0].toUpperCase())}</div>` +
-        acoes.map((a, i) => {
+    // (sem o círculo central com a inicial — só ocupava o meio do clique)
+    el.innerHTML = acoes.map((a, i) => {
             const ang = -Math.PI / 2 + (i / acoes.length) * Math.PI * 2;
             const x = Math.cos(ang) * R, y = Math.sin(ang) * R;
             return `<button class="tb-radial-item ${a.danger ? 'tb-radial-danger' : ''}" data-i="${i}" title="${esc(a.tip)}"
@@ -221,6 +235,36 @@ export function abrirMenuRadial(o, sx, sy) {
     }), 10);
 }
 export function fecharMenuRadial() { document.getElementById('tbRadial')?.remove(); }
+
+/**
+ * Escolha do tipo de deslocamento (terrestre/aquático/vertical/aéreo/extras da
+ * ficha). Um tipo só pula o menu e já arma o arrasto limitado — quem executa é
+ * o tab-tools, lendo `T.moverDesloc` no próximo arrasto do token.
+ */
+function abrirPickerDesloc(o, deslocs, sx, sy) {
+    if (deslocs.length === 1) { armarDesloc(o, deslocs[0]); return; }
+    const menu = document.createElement('div');
+    menu.id = 'tbDeslocPicker';
+    menu.className = 'tb-ctx open';
+    menu.style.left = Math.min(sx, window.innerWidth - 240) + 'px';
+    menu.style.top = Math.min(sy, window.innerHeight - deslocs.length * 38 - 12) + 'px';
+    menu.innerHTML = deslocs.map((d, i) =>
+        `<div class="tb-ctx-item" data-i="${i}">👣 ${esc(d.tipo)} — <b>${d.metros} m</b></div>`).join('');
+    document.body.appendChild(menu);
+    menu.querySelectorAll('.tb-ctx-item').forEach(it => it.onclick = () => {
+        armarDesloc(o, deslocs[+it.dataset.i]);
+        menu.remove();
+    });
+    setTimeout(() => document.addEventListener('pointerdown', function fecha(ev) {
+        if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('pointerdown', fecha); }
+    }), 10);
+}
+function armarDesloc(o, d) {
+    T.moverDesloc = { tokenId: o.id, tipo: d.tipo, metros: d.metros };
+    selecionar(o.id);
+    toast(`👣 ${d.tipo}: arraste o token — até ${d.metros} m. Esc cancela.`);
+    markDirty();
+}
 
 async function adicionarCondicao(o) {
     const p = participanteDoToken(o);

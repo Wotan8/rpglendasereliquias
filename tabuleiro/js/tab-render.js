@@ -628,6 +628,13 @@ function drawLoot(o) {
         ctx.font = `${s*0.45}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('🔒', o.x + s * 0.32, o.y + s * 0.32);
     }
+    // 🔍 Oculto por teste — selo só na tela do MESTRE (Graus exigidos, ✔ = revelado)
+    if (o.testeGraus != null && T.mode === 'secret') {
+        ctx.font = `bold ${hud(11)}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        const selo = `🔍${o.reveladoPublico ? '✔' : o.testeGraus}`;
+        ctx.lineWidth = hud(3); ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.strokeText(selo, o.x - s * 0.32, o.y - s * 0.38);
+        ctx.fillStyle = '#7dd3fc'; ctx.fillText(selo, o.x - s * 0.32, o.y - s * 0.38);
+    }
     ctx.restore();
 }
 

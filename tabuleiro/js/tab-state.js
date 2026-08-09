@@ -2,9 +2,11 @@
 // TABULEIRO — Estado Global
 // Lendas e Relíquias — VTT
 // =============================================
-// tab-perf.js é módulo folha (não importa ninguém), então esta é a única
-// dependência daqui e não fecha ciclo. Serve ao cache de mapas por versão.
+// As duas dependências são módulos folha (não importam ninguém), então não
+// fecham ciclo: tab-perf serve ao cache de mapas por versão, e combate-cenas
+// dá a cena ativa para a visibilidade do loot oculto por teste.
 import { PERF } from './tab-perf.js';
+import { cenaAtiva } from '../../shared/combate-cenas.js';
 
 export const T = {
     // Contexto
@@ -96,6 +98,7 @@ export function mesclarCamadasPadrao(camadas) {
 
 export const PERMISSOES_LISTA = [
     { key: 'moverToken',   label: 'Mover o próprio token' },
+    { key: 'moverSoNoTurno', label: 'Mover SÓ como ação de turno (deslocamento da ficha, no turno do token)' },
     { key: 'verAlemDoMapa',label: 'Ver o canva além do mapa' },
     { key: 'desenhar',     label: 'Desenhar no canva' },
     { key: 'addTexto',     label: 'Adicionar texto' },
@@ -502,6 +505,182 @@ export function bonusIniciativa(fonte) {
     return v ?? 0;
 }
 
+// ===== TESTES DA CENA (Roll Under d10, Graus de Sucesso) =====
+// Regra (Livro do Jogador, cap. 2): Alvo = Atributo + Perícia + Bônus − Redutor;
+// rola 1d10, resultado ≤ Alvo é sucesso; Graus = Alvo − dado. 1 é crítico
+// (sucesso automático), 10 é falha crítica (falha automática).
+
+const semAcento = (s) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+/** "Percepção Visual" → "PERCEPCAO_VISUAL" (formato das chaves de derivedTotals). */
+export function normChave(nome) {
+    return semAcento(nome).trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+const ATRIBUTOS_SIGLA = {
+    INT: 'int', INTELIGENCIA: 'int', RAC: 'rac', RACIOCINIO: 'rac', PRS: 'prs', PERSEVERANCA: 'prs',
+    FOR: 'for', FORCA: 'for', DES: 'des', DESTREZA: 'des', VIG: 'vig', VIGOR: 'vig',
+    PRE: 'pre', PRESENCA: 'pre', MAN: 'man', MANIPULACAO: 'man', AUT: 'aut', AUTOCONTROLE: 'aut',
+};
+// Siglas legadas do espelho do NPC (valoresDer)
+const VD_ALIAS_NPC = { PERCEPCAO: 'PERC', INICIATIVA: 'INI', REACAO: 'REA', BLINDAGEM: 'BLD', VITALIDADE: 'VIT', ENERGIA: 'ENER', SANIDADE: 'SAN', DETERMINACAO: 'DET' };
+
+/**
+ * Valor de UM componente de teste na ficha. Ordem: VD → atributo → perícia.
+ * @param fonte char do Tabuleiro ({ derivedTotals, dots }) ou NPC ({ valoresDer, atributos, pericias })
+ * @returns número ou null quando não achou (o Alvo fica editável na UI)
+ */
+export function valorComponente(nome, fonte) {
+    if (!fonte) return null;
+    const norm = normChave(nome);
+    if (!norm) return null;
+    // 1) VD — ficha espelha em derivedTotals; NPC em valoresDer (+ extras nomeados)
+    const vd = numOuNulo(fonte.derivedTotals?.[norm]);
+    if (vd != null) return vd;
+    if (fonte.valoresDer) {
+        const k = fonte.valoresDer[norm] != null ? norm : VD_ALIAS_NPC[norm];
+        const v = k != null ? numOuNulo(fonte.valoresDer[k]) : null;
+        if (v != null) return v;
+        for (const x of fonte.valoresDer.extras || []) {
+            if (normChave(x.nome) === norm) { const n = parseFloat(x.valor); if (!isNaN(n)) return n; }
+        }
+    }
+    // 2) atributo (sigla ou nome completo)
+    const sig = ATRIBUTOS_SIGLA[norm];
+    if (sig) {
+        const d = numOuNulo(fonte.dots?.['attr_' + sig]);
+        if (d != null) return d;
+        const a = numOuNulo(fonte.atributos?.[sig.toUpperCase()]);
+        if (a != null) return a;
+    }
+    // 3) perícia — char: dots `sk_<grupo>_<nome>`, onde cada caractere especial
+    // virou `_` ("precisão" → precis_o). O `_` do nome vira curinga de 0–1 chars
+    // para casar tanto espaço removido quanto acento normalizado.
+    const alvoMin = semAcento(nome).trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+    if (fonte.dots) {
+        for (const [k, v] of Object.entries(fonte.dots)) {
+            if (!k.startsWith('sk_')) continue;
+            const resto = k.replace(/^sk_[a-z]+_/, '');
+            const re = new RegExp('^' + resto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/_/g, '.?') + '$');
+            if (re.test(alvoMin)) { const n = numOuNulo(v); if (n != null) return n; }
+        }
+    }
+    // NPC: perícias em texto, uma por linha ("Herbalismo 4 = 8d10")
+    if (typeof fonte.pericias === 'string') {
+        for (const linha of fonte.pericias.split('\n')) {
+            const m = linha.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*(=|$)/);
+            if (m && normChave(m[1]) === norm) return parseFloat(m[2].replace(',', '.'));
+        }
+    }
+    return null;
+}
+
+/**
+ * Alvo de um teste "Raciocínio + Observação + 2" contra uma ficha.
+ * Termos numéricos somam direto; termos não resolvidos marcam `incompleto`
+ * (a UI deixa o mestre digitar o Alvo na mão).
+ */
+export function alvoDoTeste(componentes, fonte, mod = 0) {
+    const partes = [];
+    let alvo = Number(mod) || 0, incompleto = false;
+    for (const bruto of String(componentes || '').split('+')) {
+        const t = bruto.trim();
+        if (!t) continue;
+        const num = Number(t.replace(',', '.'));
+        if (!isNaN(num)) { alvo += num; partes.push({ nome: t, valor: num }); continue; }
+        const v = valorComponente(t, fonte);
+        partes.push({ nome: t, valor: v });
+        if (v == null) incompleto = true; else alvo += v;
+    }
+    return { alvo, partes, incompleto };
+}
+
+/** Graus de Sucesso de um d10 contra o Alvo (1 = crítico, 10 = falha crítica). */
+export function grausDoDado(alvo, dado) {
+    if (dado === 1) return Math.max(alvo - 1, 0);    // sucesso automático
+    if (dado === 10) return Math.min(alvo - 10, -1); // falha automática
+    return alvo - dado;
+}
+/** +2 / 0 / -1 — como a mesa fala. */
+export function fmtGraus(g) { return g > 0 ? '+' + g : String(g); }
+
+// ===== DESLOCAMENTOS DA FICHA =====
+const DESLOC_LABEL = { DESLOC_TERRESTRE: 'Terrestre', DESLOC_AQUATICO: 'Aquático', DESLOC_VERTICAL: 'Vertical', DESLOC_AEREO: 'Aéreo' };
+
+/**
+ * Tipos de deslocamento disponíveis do token, em metros (>0 apenas).
+ * Char: VDs DESLOC_* dos derivedTotals. NPC: extras "Desloc. Aéreo = 15m" +
+ * legado valoresDer.DESLOCAMENTO ("8m, Carga 12m" → 8).
+ */
+export function deslocamentosDoToken(o, chars, npcs) {
+    const out = [];
+    if (o?.vinculo?.tipo === 'char') {
+        const dt = (chars || []).find(c => c.id === o.vinculo.id)?.derivedTotals || {};
+        for (const k of Object.keys(dt)) {
+            if (!k.startsWith('DESLOC_')) continue;
+            const v = numOuNulo(dt[k]);
+            if (v > 0) out.push({
+                tipo: DESLOC_LABEL[k] || (k.slice(7).charAt(0) + k.slice(8).toLowerCase()).replace(/_/g, ' '),
+                metros: Math.round(v * 10) / 10,
+            });
+        }
+        out.sort((a, b) => b.metros - a.metros);
+    }
+    if (o?.vinculo?.tipo === 'npc') {
+        const vd = (npcs || []).find(x => x.id === o.vinculo.id)?.valoresDer || {};
+        const visto = new Set();
+        const add = (tipo, valor) => {
+            const m = parseFloat(String(valor ?? '').replace(',', '.'));
+            const chave = normChave(tipo);
+            if (m > 0 && !visto.has(chave)) { visto.add(chave); out.push({ tipo, metros: m }); }
+        };
+        for (const x of vd.extras || []) {
+            const nm = String(x.nome || '');
+            if (!/desloc/i.test(nm)) continue;
+            add(nm.replace(/^desloc(amento)?\.?\s*/i, '').trim() || 'Terrestre', x.valor);
+        }
+        if (vd.DESLOCAMENTO) add('Terrestre', vd.DESLOCAMENTO);
+    }
+    return out;
+}
+
+/**
+ * Limite do arrasto em unidades do canvas. Com o snap de grid ativo, arredonda
+ * PARA CIMA até a célula cheia — senão 13,1 m num grid de 1,5 m/célula
+ * travaria o token a meio passo da última célula que ele alcançaria.
+ */
+export function limiteDeslocamento(metros, upc, snapAtivo) {
+    if (!(metros > 0)) return 0;
+    if (!snapAtivo || !(upc > 0)) return metros;
+    return Math.ceil(metros / upc - 1e-9) * upc;
+}
+
+// ===== LOOT OCULTO POR TESTE =====
+/**
+ * Melhor resultado (em Graus) do usuário entre TODOS os testes da cena ativa.
+ * null = nunca fez teste nenhum (item com teste configurado fica invisível,
+ * inclusive com limiar 0 — 0 é um sucesso sem Graus, não ausência de teste).
+ */
+export function melhorGrauDoUsuario(combate, meusCharIds) {
+    if (!combate || !meusCharIds?.length) return null;
+    const cena = cenaAtiva(combate);
+    const meusPids = (cena.participantes || [])
+        .filter(p => meusCharIds.includes(p.characterId)).map(p => p.id);
+    let melhor = null;
+    for (const t of cena.testes || []) {
+        for (const pid of meusPids) {
+            const g = t.resultados?.[pid]?.graus;
+            if (typeof g === 'number') melhor = melhor == null ? g : Math.max(melhor, g);
+        }
+    }
+    return melhor;
+}
+
+/** O loot está escondido deste jogador? (só faz sentido no modo público) */
+export function lootOculto(o, melhorGrau) {
+    if (o?.tipo !== 'loot' || o.testeGraus == null || o.reveladoPublico) return false;
+    return !(typeof melhorGrau === 'number' && melhorGrau >= o.testeGraus);
+}
+
 /** De qual VD o alcance saiu — para explicar o número na UI. */
 export function fonteDoAlcance(visao, derived) {
     if (visao?.alcanceFonte !== 'percepcao') return 'fixo';
@@ -576,6 +755,9 @@ export function objVisivel(o) {
     if (cam.tipo === 'luz') return CENARIO_INTERATIVO.has(o.tipo) && can('interagirCenario');
     if (cam.visivelPublico === false) return false;
     if (o.visivelPublico === false) return false;
+    // 📦 Loot escondido por teste: invisível no público até o jogador bater os
+    // Graus (T._meuMelhorGrau é recalculado no snapshot do combate — ver tab-main)
+    if (o.tipo === 'loot' && lootOculto(o, T._meuMelhorGrau)) return false;
     return true;
 }
 

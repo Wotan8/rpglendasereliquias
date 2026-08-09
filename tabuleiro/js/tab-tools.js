@@ -6,7 +6,7 @@
 // =============================================
 import { setDoc, deleteDoc } from '../../painel-mestre/js/firebase-config.js';
 import { T, esc, toast, markDirty, gridSize, can, camadasVisiveis, objVisivel, tokenDoUsuario, pxParaUnidades, fmtDist, fmtViagem, getCamada, cfgGrid, upcEm, unidadeEm, sincLarguraReal, selecionar, CENARIO_INTERATIVO,
-         deveAtualizarPasso, DRAG_WRITE_MS, DRAG_PASSO_CELULA } from './tab-state.js';
+         deveAtualizarPasso, DRAG_WRITE_MS, DRAG_PASSO_CELULA, limiteDeslocamento, deslocamentosDoToken } from './tab-state.js';
 import { refReguas, abrirModal, fecharModal } from './tab-main.js';
 import { screenToWorld, worldToScreen, bboxOf, handlesOf, centerCamera, paredesDeMovimento, getImg } from './tab-render.js';
 import { addObj, updObj, updObjLocal, moverEmLote, delObj, maxZ, abrirPropriedades } from './tab-objects.js';
@@ -154,7 +154,10 @@ function converterEmRota(o) {
 }
 
 function deslocDoToken(o) {
-    // limite de deslocamento vindo da ficha (se existir)
+    // limite de deslocamento vindo da ficha (se existir) — o terrestre é a referência
+    const ds = deslocamentosDoToken(o, T.chars, T.npcs);
+    const terrestre = ds.find(d => d.tipo === 'Terrestre') || ds[0];
+    if (terrestre) return terrestre.metros;
     if (o.vinculo?.tipo === 'char') {
         const ch = T.chars.find(c => c.id === o.vinculo.id);
         if (ch && ch.desloc != null && !isNaN(ch.desloc)) return ch.desloc;
@@ -166,11 +169,30 @@ function podeMoverObj(o) {
     // 🔒 Objeto bloqueado: ninguém move — nem o Mestre (desbloqueie antes)
     if (o.bloqueado) return false;
     if (T.isMaster) return true;
-    if (o.tipo === 'token' && tokenDoUsuario(o)) return can('moverToken');
+    if (o.tipo === 'token' && tokenDoUsuario(o)) {
+        if (!can('moverToken')) return false;
+        // "Mover só como ação de turno": o arrasto livre é bloqueado — o token
+        // só anda armado pelo menu radial (👣 deslocamento, no turno dele)
+        if (can('moverSoNoTurno')) return T.moverDesloc?.tokenId === o.id;
+        return true;
+    }
     // loot segue a MESMA permissão de interação do cenário (portas/janelas/luzes)
     if (o.tipo === 'loot') return can('interagirCenario');
     if (o.criadoPor === T.user?.uid) return true;
     return false;
+}
+
+/**
+ * 📦 Loot escondido por teste: a PRIMEIRA interação de quem consegue vê-lo
+ * (clicar, arrastar, abrir menu) revela o item para o resto da mesa. Só quem
+ * bateu os Graus chega aqui — o hit-test respeita objVisivel.
+ */
+function revelarLootSeInteragiu(o) {
+    if (!o || o.tipo !== 'loot' || T.mode === 'secret' || T.isMaster) return;
+    if (o.testeGraus != null && !o.reveladoPublico) {
+        updObj(o.id, { reveladoPublico: true });
+        toast('📦 Você encontrou um item — agora todos o veem');
+    }
 }
 /**
  * Pode acionar porta/janela/luz? Mestre sempre; jogador precisa da permissão
@@ -350,6 +372,7 @@ function onDown(e) {
                 }
                 selecionar(o.id);
                 abrirPropriedades(o.id);
+                revelarLootSeInteragiu(o);
                 markDirty();
                 if (podeMoverObj(o)) {
                     iniciarDragObj(o, w, e.pointerId);
@@ -371,6 +394,7 @@ function onDown(e) {
             const o = pickObject(w);
             if (o && podeMoverObj(o)) {
                 selecionar(o.id); abrirPropriedades(o.id);
+                revelarLootSeInteragiu(o);
                 iniciarDragObj(o, w, e.pointerId);
                 cv.style.cursor = 'grabbing';
             } else ponteiro = { tipo: 'pan', scr, cam: { ...T.cam }, botao: 0, moveu: false };
@@ -529,6 +553,13 @@ function iniciarDragObj(o, w, pointerId) {
         lo.__dragging = true;
         if (lo.tipo === 'token') lo.__fogPos = { x: lo.x, y: lo.y }; // ponto de partida do fog; anda em passos junto com o arrasto
     }
+    // 👣 Deslocamento armado (menu radial) para ESTE token: trava dura no custo
+    // do trajeto. Com snap de grid, o limite arredonda p/ cima até a célula cheia.
+    if (o.tipo === 'token' && T.moverDesloc?.tokenId === o.id) {
+        const snapAtivo = T.canvas?.grid?.snap !== false && (T.canvas?.grid?.tipo || 'quad') !== 'none';
+        ponteiro.limite = limiteDeslocamento(T.moverDesloc.metros, upcEm({ x: o.x, y: o.y }), snapAtivo);
+        ponteiro.deslocTipo = T.moverDesloc.tipo;
+    }
     T.dragAtivo = true;   // segura o save da exploração até soltar (ver tab-fog)
 }
 
@@ -608,13 +639,24 @@ function onMove(e) {
             } else {
                 let nx = ponteiro.x0 + dx, ny = ponteiro.y0 + dy;
                 if (o.tipo === 'token') { const s = snapToken({ x: nx, y: ny }); nx = s.x; ny = s.y; }
-                if (ponteiro.segs) {
-                    // parede segura aqui: o token para nela e continua deslizando pelos lados
+                if (ponteiro.segs || ponteiro.limite != null) {
+                    // parede e limite de deslocamento seguram aqui: o token para
+                    // no bloqueio e continua deslizando pelo que ainda é válido
                     const v = ponteiro.ultimoValido;
                     if (nx !== v.x || ny !== v.y) {
-                        if (trajetoColide([v, { x: nx, y: ny }], ponteiro.segs)) {
+                        let bloqueio = null;
+                        if (ponteiro.segs && trajetoColide([v, { x: nx, y: ny }], ponteiro.segs)) {
+                            bloqueio = '🧱 Parede no caminho';
+                        }
+                        // 👣 o custo REAL do trajeto (terreno difícil, escala do
+                        // mapa, waypoints) não pode passar do deslocamento da ficha
+                        if (!bloqueio && ponteiro.limite != null &&
+                            labelMedida([...(ponteiro.trail || [v]), { x: nx, y: ny }]).info.valor > ponteiro.limite + 1e-9) {
+                            bloqueio = `👣 Limite do deslocamento ${ponteiro.deslocTipo} atingido`;
+                        }
+                        if (bloqueio) {
                             nx = v.x; ny = v.y;
-                            if (!ponteiro.avisou) { ponteiro.avisou = true; toast('🧱 Parede no caminho', 'warning'); }
+                            if (ponteiro.avisou !== bloqueio) { ponteiro.avisou = bloqueio; toast(bloqueio, 'warning'); }
                         } else ponteiro.ultimoValido = { x: nx, y: ny };
                     }
                 }
@@ -641,7 +683,7 @@ function onMove(e) {
                 if (o.tipo === 'token' && (T.measureCfg.medirToken || ponteiro.trail?.length > 1)) medir('regua', () => {
                     const pts = [...ponteiro.trail, { x: nx, y: ny }];
                     const l = labelMedida(pts);
-                    const limite = deslocDoToken(o);
+                    const limite = ponteiro.limite ?? deslocDoToken(o);
                     const excede = limite != null && l.info.valor > limite + 1e-9;
                     T.temp = {
                         tipo: 'medida', pontos: pts, atual: null,
@@ -746,6 +788,8 @@ async function onUp(e) {
     if (!p) return;
     // Cobre todos os fins de arrasto (soltar, cancelar, colisão) num lugar só
     if (p.tipo === 'dragObj' || p.tipo === 'dragMulti') T.dragAtivo = false;
+    // 👣 uma armada = um movimento; para andar de novo (2ª ação), radial de novo
+    if (p.tipo === 'dragObj' && p.limite != null) T.moverDesloc = null;
 
     if (p.tipo === 'pan' && p.botao === 2 && !p.moveu && p.alvoCtx) {
         abrirCtxOuRadial(p.alvoCtx, e.clientX, e.clientY);
@@ -933,8 +977,10 @@ function tokenSobPonto(w, ignorarId) {
 }
 
 function abrirCtxOuRadial(o, x, y) {
-    // Tokens abrem o menu radial (F5.5); demais objetos o menu clássico
-    if (o.tipo === 'token' && (T.mode === 'secret' || (o.vinculo?.tipo === 'npc' && can('abrirNpc')))) {
+    revelarLootSeInteragiu(o);
+    // Tokens abrem o menu radial (F5.5) — no público também, para o DONO do
+    // token (as ações lá dentro respeitam as permissões da mesa)
+    if (o.tipo === 'token' && (T.mode === 'secret' || tokenDoUsuario(o) || (o.vinculo?.tipo === 'npc' && can('abrirNpc')))) {
         abrirMenuRadial(o, x, y);
         return;
     }
@@ -1000,7 +1046,7 @@ function onKey(e) {
         if (!espacoApertado) { espacoApertado = true; if (cv) cv.style.cursor = 'grab'; }
         return;
     }
-    if (e.key === 'Escape') { T.temp = null; selecionar(null); abrirPropriedades(null); limparReguaCompartilhada(); markDirty(); return; }
+    if (e.key === 'Escape') { T.temp = null; T.moverDesloc = null; selecionar(null); abrirPropriedades(null); limparReguaCompartilhada(); markDirty(); return; }
     if (e.key === 'Enter' && T.temp?.tipo === 'medida' && T.temp.modoClique) { finalizarMedida(); return; }
     if (e.key === 'Enter' && T.tool === 'terreno' && T.temp?.tipo === 'terreno') {
         const pts = T.temp.pontos; T.temp = null; markDirty();

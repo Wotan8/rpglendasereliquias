@@ -3,8 +3,8 @@
 // Sincroniza com Painel do Mestre > Mesas > Combate
 // =============================================
 import { db, doc, setDoc, updateDoc, getDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, uid } from './tab-state.js';
-import { refCombate, refEstado } from './tab-main.js';
+import { T, esc, toast, uid, alvoDoTeste, grausDoDado, fmtGraus } from './tab-state.js';
+import { refCombate, refEstado, abrirModal, fecharModal } from './tab-main.js';
 import { VITAIS } from './tab-hud.js';
 import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena } from '../../shared/combate-cenas.js';
 
@@ -103,12 +103,49 @@ function abasDeCena() {
     </div>`;
 }
 
+// ===== 🎯 TESTES DA CENA (Graus de Sucesso) =====
+/** Ficha de onde sai o Alvo do participante (char do Tabuleiro ou NPC). */
+function fonteDoParticipante(p) {
+    if (p.characterId) return T.chars.find(c => c.id === p.characterId) || null;   // { derivedTotals, dots }
+    if (p.npcId) {
+        const n = T.npcs.find(x => x.id === p.npcId);
+        return n ? { valoresDer: n.valoresDer, atributos: n.atributos, pericias: n.pericias } : null;
+    }
+    return null;
+}
+/** Alvo resolvido pela ficha, ou null (mestre digita/edita na mão). */
+function alvoSugerido(t, p) {
+    const r = alvoDoTeste(t.nome, fonteDoParticipante(p), t.mod || 0);
+    return (!r.partes.length || r.incompleto) ? null : r.alvo;
+}
+/** Linhas de teste do card de um participante. */
+function testesDoCard(testes, p, secreto) {
+    const linhas = testes.filter(t => (t.participantes || []).includes(p.id)).map(t => {
+        const r = t.resultados?.[p.id];
+        const rotulo = `<span class="tb-teste-nome">${esc(t.nome)}${t.mod ? ` (${t.mod > 0 ? '+' : ''}${t.mod})` : ''}</span>`;
+        if (r) {
+            const cls = r.graus > 0 ? 'pos' : r.graus < 0 ? 'neg' : 'zero';
+            return `<div class="tb-teste-row">${rotulo}
+                <span class="tb-grau ${cls}" title="${r.dado ? `d10: ${r.dado} · Alvo ${r.alvo}` : 'resultado inserido na mão'}">${fmtGraus(r.graus)}</span>
+                ${secreto ? `<button class="tb-mini-btn" title="Rolar de novo" onclick="tbTesteRolar('${t.id}','${p.id}')">🎲</button>` : ''}</div>`;
+        }
+        if (!secreto) return `<div class="tb-teste-row">${rotulo}<span class="tb-grau aguarda" title="aguardando o teste">…</span></div>`;
+        const alvo = alvoSugerido(t, p);
+        return `<div class="tb-teste-row">${rotulo}
+            <span class="tb-teste-alvo-lb">Alvo</span><input type="number" class="tb-teste-alvo" id="tstAlvo_${t.id}_${p.id}" value="${alvo ?? ''}" placeholder="?">
+            <button class="tb-mini-btn" title="Rolar 1d10 (1 crítico · 10 falha crítica)" onclick="tbTesteRolar('${t.id}','${p.id}')">🎲</button>
+            <button class="tb-mini-btn" title="Inserir os Graus (teste feito fisicamente)" onclick="tbTesteInserir('${t.id}','${p.id}')">✏️</button></div>`;
+    });
+    return linhas.length ? `<div class="tb-testes-card">${linhas.join('')}</div>` : '';
+}
+
 function render() {
     const body = document.getElementById('tbCombatBody');
     if (!body || !janelaAberta) return;
     const secreto = T.mode === 'secret';
     const cena = cenaAtiva(T.combate);
     const parts = (cena.participantes || []).slice().sort((a, b) => (b.initiative||0) - (a.initiative||0));
+    const testes = cena.testes || [];
     // As abas são do mestre: o público vê só a cena que ele deixou aberta.
     const abas = secreto ? abasDeCena() : '';
 
@@ -130,6 +167,16 @@ function render() {
         </div>`;
     } else {
         topo = `<div class="tb-combat-controls"><span class="tb-combat-round">Ordem dos turnos${c?.rodada ? ' · Rodada ' + c.rodada : ''}</span></div>`;
+    }
+
+    // 🎯 Testes pedidos pelo mestre (além da iniciativa) — gerência só no secreto
+    if (secreto) {
+        topo += `<div class="tb-testes-sec">
+            <span class="tb-testes-titulo">🎯 Testes</span>
+            ${testes.map(t => `<span class="tb-teste-tag">${esc(t.nome)}${t.mod ? ` (${t.mod > 0 ? '+' : ''}${t.mod})` : ''}
+                <b class="tb-teste-x" title="Apagar teste" onclick="tbTesteApagar('${t.id}')">✕</b></span>`).join('')}
+            <button class="tb-btn tb-btn-small" onclick="tbTesteNovo()">➕ Pedir teste</button>
+        </div>`;
     }
 
     body.innerHTML = abas + topo + parts.map((p, i) => {
@@ -189,6 +236,7 @@ function render() {
                 <div class="tb-combat-nome" ${abrirNpc}>${esc(p.name || '?')} ${p.npcId && secreto ? '📋' : ''} <span class="tb-combat-tipo">${esc(p.type || '')}</span></div>
                 ${secreto && p.details ? `<div class="tb-muted" style="font-size:.72rem">${esc(p.details)}</div>` : ''}
                 ${stats}
+                ${testesDoCard(testes, p, secreto)}
                 <div class="tb-conds">${conds}${secreto ? `<button class="tb-cond-add" onclick="tbCombCondAdd('${p.id}')">➕ condição</button>` : ''}</div>
             </div>
             ${secreto ? `<button class="tb-mini-btn tb-danger" onclick="tbCombRemover('${p.id}')" title="Remover">🗑️</button>` : ''}
@@ -482,4 +530,79 @@ window.tbCombRemover = async function(pid) {
     if (!confirm('Remover do combate?')) return;
     const parts = partsDaCena().filter(p => p.id !== pid);
     await salvar(parts);
+};
+
+// ===== 🎯 AÇÕES DOS TESTES DA CENA =====
+/** Cópia rasa dos testes da cena aberta, pronta para editar e salvar. */
+const testesDaCena = () => (cenaAtiva(T.combate).testes || []).map(t => ({ ...t, resultados: { ...(t.resultados || {}) } }));
+
+window.tbTesteNovo = function() {
+    const parts = partsDaCena();
+    if (!parts.length) { toast('⚠️ A cena não tem participantes', 'warning'); return; }
+    abrirModal('🎯 Pedir teste', `
+        <div class="tb-form-grid tb-form-grid-1">
+            <label>Teste (componentes somados: perícia, atributo ou VD)
+                <input type="text" id="tst_nome" placeholder="Ex.: Raciocínio + Observação · Percepção + Furtividade"></label>
+        </div>
+        <div class="tb-form-grid">
+            <label>Modificador (dificuldade: −2 difícil, +1 fácil...)<input type="number" id="tst_mod" value="0"></label>
+        </div>
+        <div class="tb-form-grid tb-form-grid-1">
+            <label>Quem faz o teste</label>
+            ${parts.map(p => `<label class="tb-check tb-check-sm"><input type="checkbox" data-tstpid="${p.id}" checked> ${esc(p.name || '?')} <span class="tb-muted">${esc(p.type || '')}</span></label>`).join('')}
+        </div>
+        <div class="tb-modal-actions"><button class="tb-btn tb-btn-success" onclick="tbTesteCriar()">🎯 Pedir</button></div>`);
+};
+
+window.tbTesteCriar = async function() {
+    const nome = document.getElementById('tst_nome')?.value?.trim();
+    if (!nome) { toast('⚠️ Diga qual é o teste (ex.: Raciocínio + Observação)', 'warning'); return; }
+    const mod = parseFloat(document.getElementById('tst_mod')?.value) || 0;
+    const pids = [...document.querySelectorAll('#tbModal input[data-tstpid]:checked')].map(i => i.dataset.tstpid);
+    if (!pids.length) { toast('⚠️ Escolha pelo menos um participante', 'warning'); return; }
+    const testes = [...testesDaCena(), { id: 't' + uid(), nome, mod, participantes: pids, resultados: {} }];
+    await salvar(partsDaCena(), { testes });
+    fecharModal();
+    toast(`🎯 Teste "${nome}" pedido para ${pids.length} participante(s)`);
+};
+
+window.tbTesteApagar = async function(tid) {
+    const t = testesDaCena().find(x => x.id === tid);
+    if (!confirm(`Apagar o teste "${t?.nome || ''}" e os resultados dele?`)) return;
+    await salvar(partsDaCena(), { testes: testesDaCena().filter(x => x.id !== tid) });
+};
+
+/** Rola 1d10 contra o Alvo (do input, do resultado anterior ou da ficha). */
+window.tbTesteRolar = async function(tid, pid) {
+    const testes = testesDaCena();
+    const t = testes.find(x => x.id === tid); if (!t) return;
+    const p = partsDaCena().find(x => x.id === pid); if (!p) return;
+    const input = document.getElementById(`tstAlvo_${tid}_${pid}`);
+    let alvo = input && input.value !== '' ? parseFloat(input.value)
+        : (typeof t.resultados[pid]?.alvo === 'number' ? t.resultados[pid].alvo : alvoSugerido(t, p));
+    if (alvo == null || isNaN(alvo)) {
+        const s = prompt(`Alvo de ${p.name} em "${t.nome}":`);
+        if (s === null) return;
+        alvo = parseFloat(s);
+        if (isNaN(alvo)) { toast('⚠️ Alvo inválido', 'warning'); return; }
+    }
+    const dado = 1 + Math.floor(Math.random() * 10);
+    const graus = grausDoDado(alvo, dado);
+    t.resultados[pid] = { graus, dado, alvo };
+    await salvar(partsDaCena(), { testes });
+    toast(`🎲 ${esc(p.name)} — ${esc(t.nome)}: d10 ${dado} vs Alvo ${alvo} → ${fmtGraus(graus)}` +
+        (dado === 1 ? ' ✨ crítico!' : dado === 10 ? ' 💀 falha crítica!' : ''));
+};
+
+/** Teste feito fisicamente na mesa: o mestre digita os Graus direto. */
+window.tbTesteInserir = async function(tid, pid) {
+    const testes = testesDaCena();
+    const t = testes.find(x => x.id === tid); if (!t) return;
+    const p = partsDaCena().find(x => x.id === pid); if (!p) return;
+    const s = prompt(`Graus de ${p.name} em "${t.nome}" (+2, 0, -1...):`);
+    if (s === null) return;
+    const graus = parseInt(String(s).replace('+', ''), 10);
+    if (isNaN(graus)) { toast('⚠️ Valor inválido — digite um número de Graus', 'warning'); return; }
+    t.resultados[pid] = { graus, dado: null, alvo: null };
+    await salvar(partsDaCena(), { testes });
 };

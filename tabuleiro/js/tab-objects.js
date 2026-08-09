@@ -515,6 +515,13 @@ export function abrirPropriedades(id, soAtualizar) {
         <label>Nome do item<input type="text" value="${esc(o.nome||'')}" onchange="tbProp('${id}','nome',this.value)"></label>
         <label>Quantidade<input type="number" value="${o.quantidade||1}" min="1" onchange="tbProp('${id}','quantidade',parseInt(this.value)||1)"></label>
         ${o.item?.ehContainer ? `<label class="tb-check"><input type="checkbox" ${o.fixo?'checked':''} onchange="tbProp('${id}','fixo',this.checked)"> 📌 Fixo no mapa</label>` : ''}
+        ${T.mode === 'secret' ? `
+        <label>🔍 Oculto por teste — Graus p/ enxergar (vazio = sempre visível)
+            <input type="number" value="${o.testeGraus ?? ''}" placeholder="ex.: 2 (0 = sucesso sem Graus)"
+                onchange="tbProp('${id}','testeGraus',this.value===''?null:(parseInt(this.value)||0))"></label>
+        ${o.testeGraus != null ? `
+        <label class="tb-check"><input type="checkbox" ${o.reveladoPublico?'checked':''} onchange="tbProp('${id}','reveladoPublico',this.checked)"> 👁️ Revelado a todos</label>
+        <label class="tb-muted tb-form-full" style="font-size:.72rem">Compara com o MELHOR resultado do jogador nos 🎯 Testes da cena ativa. Com teste configurado, ninguém vê o item antes de bater os Graus; quem vê e interage revela para o resto.</label>` : ''}` : ''}
         <label class="tb-muted" style="font-size:.72rem">📦 Duplo-clique entrega/abre · arraste sobre um token para entregar.</label>`;
 
     document.getElementById('tbPropsBody').innerHTML = `

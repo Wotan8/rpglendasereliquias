@@ -6,7 +6,7 @@ import {
     collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc,
     onSnapshot, query, where, writeBatch
 } from '../../painel-mestre/js/firebase-config.js';
-import { T, CAMADAS_PADRAO, mesclarCamadasPadrao, PERMISSOES_LISTA, esc, uid, toast, markDirty, camadasVisiveis, optsUnidade, popNavegacaoValida, refViagemPorDia, HORAS_DE_MARCHA, ehEcoAtrasado, duracaoLerp, marcarRecebimentoReguas, configDoCanvasMudou } from './tab-state.js';
+import { T, CAMADAS_PADRAO, mesclarCamadasPadrao, PERMISSOES_LISTA, esc, uid, toast, markDirty, camadasVisiveis, optsUnidade, popNavegacaoValida, refViagemPorDia, HORAS_DE_MARCHA, ehEcoAtrasado, duracaoLerp, marcarRecebimentoReguas, configDoCanvasMudou, melhorGrauDoUsuario } from './tab-state.js';
 import { notifyObjectChange, notifyCanvasConfigChange } from './tab-perf.js';
 import { npcNaMesa } from '../../shared/npc-mesas.js';
 import { startRenderLoop, centerCamera } from './tab-render.js';
@@ -115,6 +115,8 @@ async function carregarChars() {
             desloc: isNaN(desloc) ? null : desloc,
             // VDs prontos espelhados pela ficha — o alcance de visão por Percepção lê daqui
             derivedTotals: raw.derivedTotals || {},
+            // atributos + perícias (com bônus aplicados) — o Alvo dos 🎯 Testes lê daqui
+            dots: raw.effectiveDots || raw.dots || {},
             // livros que o MESTRE amarrou neste personagem (📖 Livros → 🎭 Vincular).
             // Vem de carona nesta query, que já traz o doc inteiro — leitura zero.
             livrosVinculados: raw.livrosVinculados || [],
@@ -196,8 +198,13 @@ async function iniciarSync() {
     // Combate
     T.unsubs.push(onSnapshot(refCombate(), s => {
         T.combate = s.exists() ? s.data() : null;
+        // 📦 Loot oculto por teste: o melhor Grau do usuário muda junto com o
+        // combate (raro), nunca por frame — objVisivel só lê o valor pronto.
+        const meus = T.chars.filter(c => c.ownerUid === T.user?.uid).map(c => c.id);
+        T._meuMelhorGrau = melhorGrauDoUsuario(T.combate, meus);
         window._renderCombate && window._renderCombate();
         atualizarBarraCanvas();
+        markDirty();
     }));
 
     // Réguas compartilhadas — expiração pelo relógio LOCAL de recebimento,
