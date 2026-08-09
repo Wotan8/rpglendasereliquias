@@ -26,7 +26,7 @@
 .wbt-chips { display: flex; gap: .35rem; flex-wrap: wrap; }
 .wbt-chip {
     background: var(--lr-bg-1); border: var(--lr-border-w) solid var(--lr-border);
-    color: var(--lr-text-2); border-radius: 999px; padding: .3rem .8rem;
+    color: var(--lr-text-2); border-radius: var(--lr-radius-sm); padding: .3rem .8rem;
     font-family: var(--lr-font-body); font-size: var(--lr-fs-xs); cursor: pointer;
     transition: all var(--lr-t-base) var(--lr-ease);
 }
@@ -40,7 +40,7 @@
 .wbt-x { background: none; border: none; color: var(--lr-text-2); cursor: pointer; font-size: var(--lr-fs-md); padding: .15rem .35rem; border-radius: var(--lr-radius-sm); }
 .wbt-x:hover { color: var(--lr-blood); background: var(--lr-blood-soft); }
 
-.wbt-tag { font-size: var(--lr-fs-xs); padding: .1rem .5rem; border-radius: 999px; border: var(--lr-border-w) solid var(--lr-border); color: var(--lr-text-2); background: var(--lr-bg-1); }
+.wbt-tag { font-size: var(--lr-fs-xs); padding: .1rem .5rem; border-radius: var(--lr-radius-sm); border: var(--lr-border-w) solid var(--lr-border); color: var(--lr-text-2); background: var(--lr-bg-1); }
 
 .wbt-empty { border: 1px dashed var(--lr-border); border-radius: var(--lr-radius); padding: 2.5rem; text-align: center; color: var(--lr-text-2); }
 
@@ -99,7 +99,8 @@
 .wbt-legdot { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: .3rem; vertical-align: middle; }
 
 /* ── Editor ────────────────────────────────────────────── */
-.wbt-editor-layout { display: grid; grid-template-columns: 1fr 320px; gap: 1.2rem; transition: grid-template-columns var(--lr-t-slow) var(--lr-ease); }
+/* 340px: o painel agora carrega o dossiê inteiro, não só nome + resumo. */
+.wbt-editor-layout { display: grid; grid-template-columns: 1fr 340px; gap: 1.2rem; align-items: start; transition: grid-template-columns var(--lr-t-slow) var(--lr-ease); }
 .wbt-editor-layout.refs-closed { grid-template-columns: 1fr 0; }
 .wbt-editor-layout.refs-closed .wbt-refs { opacity: 0; pointer-events: none; }
 .wbt-editor-main { position: relative; min-width: 0; }
@@ -108,13 +109,31 @@
 /* Só a "moldura" do editor. A tipografia do texto (títulos, citação,
    imagens, colunas…) vem de shared/texto-mundo.css — a MESMA folha que a
    ficha e o Laboratorium usam, para o autor ver o que o jogador verá. */
-.wbt-rich { min-height: 55vh; background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius); padding: 1.4rem clamp(1rem, 4vw, 2.2rem); max-width: 72ch; }
+/* Sem raio no topo e sem borda dupla: o texto e a barra de formatação
+   acima dele formam uma peça só. */
+.wbt-rich { min-height: 55vh; background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-border); border-top: none; border-radius: 0 0 var(--lr-radius) var(--lr-radius); padding: 1.4rem clamp(1rem, 4vw, 2.2rem); max-width: 72ch; }
 .wbt-rich:empty::before { content: attr(data-placeholder); color: var(--lr-text-2); font-style: italic; }
 .wbt-mention { color: var(--lr-arcane); text-decoration: none; border-bottom: 1px dotted var(--lr-arcane); cursor: pointer; font-family: var(--lr-font-body); font-size: .95em; padding: 0 .1em; }
 .wbt-mention:hover { background: var(--lr-arcane-soft); }
 
-/* ── Barra de diagramação (wb-rich.js) ─────────────────── */
-.wb-richbar { flex-wrap: wrap; gap: .25rem; align-items: center; margin-bottom: .7rem; padding: .4rem; background: var(--lr-bg-1); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); }
+/* ── Barra de diagramação (wb-rich.js) ─────────────────────
+   Mora colada no texto (logo acima do #richEditor) e gruda no topo
+   quando a página rola: quem escreve nunca precisa voltar ao topo
+   para negritar uma palavra. O contêiner de rolagem no desktop é
+   .content-body; no mobile (≤860px) é o próprio documento — sticky
+   funciona nos dois sem ajuste. */
+.wb-richbar {
+    position: sticky;
+    top: 0;
+    z-index: var(--lr-z-sticky);
+    flex-wrap: wrap; gap: .25rem; align-items: center;
+    margin-bottom: 0; padding: .4rem;
+    background: var(--lr-bg-1);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius) var(--lr-radius) 0 0;
+    max-width: 72ch;                  /* mesma medida do texto: são uma peça só */
+    box-shadow: var(--lr-shadow-1);   /* sem JS: já se separa do texto ao grudar */
+}
 .wb-richbar .btn { min-width: 2rem; padding: .3rem .45rem; }
 .wb-rich-sep { width: 1px; align-self: stretch; background: var(--lr-border); margin: 0 .25rem; }
 .wb-rich-sel { background: var(--lr-surface); color: var(--lr-text-1); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); padding: .3rem .4rem; font-size: var(--lr-fs-xs); font-family: var(--lr-font-body); }
@@ -140,13 +159,72 @@
 .wbt-mentionbox button { display: flex; gap: .5rem; align-items: center; width: 100%; background: none; border: none; color: var(--lr-text-1); padding: .5rem .7rem; text-align: left; font-family: var(--lr-font-body); font-size: var(--lr-fs-sm); cursor: pointer; }
 .wbt-mentionbox button.is-hover, .wbt-mentionbox button:hover { background: var(--lr-bg-1); }
 
-.wbt-refs { background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius); padding: .9rem; display: flex; flex-direction: column; gap: .7rem; max-height: 78vh; overflow: hidden; transition: opacity var(--lr-t-base); }
+/* Acompanha a rolagem: a consulta ao ecossistema é para ser usada NO meio
+   da escrita, não só no começo do texto. `align-self: start` impede o item
+   de grid de esticar — sem isso o sticky nunca teria folga para grudar. */
+.wbt-refs {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius); padding: .9rem;
+    display: flex; flex-direction: column; gap: .7rem;
+    max-height: 88vh; overflow: hidden;
+    transition: opacity var(--lr-t-base);
+}
 .wbt-refs__list { overflow-y: auto; display: flex; flex-direction: column; gap: .5rem; }
 .wbt-refcard { background: var(--lr-bg-1); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); padding: .6rem .7rem; cursor: pointer; }
 .wbt-refcard:hover { border-color: var(--lr-gold); }
+.wbt-refcard.is-detailed { border-color: var(--lr-gold); cursor: default; }
 .wbt-refcard__name { font-weight: 600; font-size: var(--lr-fs-sm); color: var(--lr-text-1); }
 .wbt-refcard__sum { color: var(--lr-text-2); font-size: var(--lr-fs-xs); margin: .25rem 0 0; line-height: var(--lr-lh-body); display: none; }
-.wbt-refcard.is-open .wbt-refcard__sum { display: block; }
+.wbt-refcard.is-open .wbt-refcard__sum,
+.wbt-refcard.is-detailed .wbt-refcard__sum { display: block; }
+
+/* Micro-botão: discreto no repouso, evidente no alvo de toque (28px). */
+.wbt-refcard__acoes { display: flex; justify-content: flex-end; margin-top: .35rem; }
+.wbt-microbtn {
+    background: none; border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius-sm); color: var(--lr-text-2);
+    font-family: var(--lr-font-body); font-size: var(--lr-fs-xs); font-weight: 600;
+    padding: .18rem .5rem; min-height: 28px; cursor: pointer;
+    transition: color var(--lr-t-base) var(--lr-ease), border-color var(--lr-t-base) var(--lr-ease);
+}
+.wbt-microbtn:hover { color: var(--lr-gold-2); border-color: var(--lr-gold); }
+
+/* ── Dossiê completo da entidade (wb-dossie.js) ─────────────
+   Coluna estreita: tudo empilha, nada de tabela de duas colunas
+   que quebraria a 320px. */
+.wbt-refcard__full { margin-top: .6rem; padding-top: .6rem; border-top: var(--lr-border-w) solid var(--lr-border); cursor: auto; }
+.wbt-refcard__full[hidden] { display: none; }
+
+.wb-dos__head { display: flex; gap: .6rem; align-items: flex-start; margin-bottom: .7rem; }
+.wb-dos__img { width: 64px; height: 64px; flex: 0 0 auto; object-fit: cover; object-position: top; border-radius: var(--lr-radius-sm); border: var(--lr-border-w) solid var(--lr-border); background: var(--lr-surface); }
+.wb-dos__id { min-width: 0; }
+.wb-dos__kind { display: block; font-size: var(--lr-fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--lr-text-2); }
+.wb-dos__nome { margin: .1rem 0 0; font-family: var(--lr-font-title); font-size: var(--lr-fs-md); font-weight: 600; letter-spacing: var(--lr-track-title); line-height: var(--lr-lh-tight); color: var(--lr-text-1); }
+.wb-dos__sub { margin: .2rem 0 0; font-size: var(--lr-fs-xs); color: var(--lr-text-2); }
+
+/* Ficha: rótulo em cima, valor embaixo — a única forma que sobrevive a 320px. */
+.wb-dos__ficha { margin: 0 0 .6rem; display: flex; flex-direction: column; gap: .35rem; }
+/* Grade de pares curtos (atributos e afins) — cabe até em 320px. */
+.wb-dos__ficha--grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: .35rem .5rem; }
+.wb-dos__ficha--grade .wb-dos__row { border-bottom: none; padding-bottom: 0; background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); padding: .25rem .4rem; }
+.wb-dos__ficha--grade .wb-dos__v { font-variant-numeric: tabular-nums; }
+.wb-dos__row { display: grid; grid-template-columns: 1fr; gap: 1px; padding-bottom: .35rem; border-bottom: var(--lr-border-w) solid var(--lr-border-soft); }
+.wb-dos__row:last-child { border-bottom: none; padding-bottom: 0; }
+.wb-dos__k { font-size: var(--lr-fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--lr-text-2); }
+.wb-dos__v { margin: 0; font-size: var(--lr-fs-sm); color: var(--lr-text-1); line-height: var(--lr-lh-body); overflow-wrap: anywhere; }
+
+.wb-dos__bloco { margin-top: .7rem; }
+.wb-dos__blocotitulo { margin: 0 0 .3rem; font-family: var(--lr-font-subtitle); font-size: var(--lr-fs-md); font-weight: 600; color: var(--lr-text-1); }
+.wb-dos__texto { margin: 0 0 .4rem; font-size: var(--lr-fs-sm); color: var(--lr-text-1); line-height: var(--lr-lh-body); overflow-wrap: anywhere; }
+.wb-dos__subbloco { margin: .35rem 0; padding-left: .6rem; border-left: 2px solid var(--lr-border); }
+.wb-dos__chips { display: flex; flex-wrap: wrap; gap: .25rem; }
+/* --lr-surface, não --lr-bg-1: o card que hospeda o dossiê já é bg-1,
+   e selo da mesma cor do fundo não é selo. */
+.wb-dos__chip { background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); padding: .1rem .4rem; font-size: var(--lr-fs-xs); color: var(--lr-text-1); }
+.wb-dos__vazio { font-size: var(--lr-fs-sm); color: var(--lr-text-2); margin: 0; }
 
 /* Modo Foco */
 body.wbt-focus .sidebar,
@@ -188,9 +266,13 @@ body.wbt-focus .wbt-etoolbar { justify-content: flex-end; }
 /* ── Responsivo ────────────────────────────────────────── */
 @media (max-width: 900px) {
     .wbt-editor-layout { grid-template-columns: 1fr; }
-    .wbt-refs { max-height: 40vh; order: -1; }
+    /* Empilhado acima do texto, o painel não gruda: grudado ele comeria
+       metade da tela justamente enquanto se escreve. A barra de formatação
+       continua sticky — essa sim é usada o tempo todo. */
+    .wbt-refs { position: static; max-height: 40vh; order: -1; }
     .wbt-editor-layout.refs-closed .wbt-refs { display: none; }
     .wbt-graph { height: 60vh; }
+    .wb-richbar, .wbt-rich { max-width: 100%; }
 }
 
 /* ── Adições: dossiê mecânico + linhagens ──────────────── */
@@ -227,22 +309,22 @@ body.wbt-focus .wbt-etoolbar { justify-content: flex-end; }
 /* ── Timeline: Gerações (barras de vida) ───────────────── */
 .wbt-life-track { position: relative; height: 26px; }
 .wbt-life-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--lin-cor); box-shadow: 0 0 6px var(--lin-cor); }
-.wbt-life-bar { position: absolute; top: 50%; transform: translateY(-50%); height: 16px; border-radius: 8px; background: color-mix(in srgb, var(--lin-cor) 55%, transparent); border: 1px solid var(--lin-cor); cursor: pointer; color: var(--lr-text-0); font-size: 10px; display: flex; align-items: center; padding: 0 .4rem; overflow: hidden; white-space: nowrap; transition: filter var(--lr-t-base); }
+.wbt-life-bar { position: absolute; top: 50%; transform: translateY(-50%); height: 16px; border-radius: 8px; background: color-mix(in srgb, var(--lin-cor) 55%, transparent); border: 1px solid var(--lin-cor); cursor: pointer; color: var(--lr-text-1); font-size: 10px; display: flex; align-items: center; padding: 0 .4rem; overflow: hidden; white-space: nowrap; transition: filter var(--lr-t-base); }
 .wbt-life-bar:hover { filter: brightness(1.3); z-index: 5; }
 .wbt-life-bar.is-alive { background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--lin-cor) 45%, transparent), color-mix(in srgb, var(--lin-cor) 45%, transparent) 5px, transparent 5px, transparent 10px); }
 .wbt-life-bar span { text-shadow: 0 1px 2px rgba(0,0,0,.6); }
 
 /* ── Busca Global (palette Ctrl-K) ─────────────────────── */
-.wbt-palette { display: none; position: fixed; inset: 0; z-index: var(--lr-z-modal, 1000); }
+.wbt-palette { display: none; position: fixed; inset: 0; z-index: var(--lr-z-modal); }
 .wbt-palette.active { display: block; }
 .wbt-palette__backdrop { position: absolute; inset: 0; background: rgba(6,8,12,.72); backdrop-filter: blur(3px); }
 .wbt-palette__box { position: relative; max-width: 620px; margin: 10vh auto 0; background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-gold); border-radius: var(--lr-radius); box-shadow: 0 20px 60px rgba(0,0,0,.6); overflow: hidden; }
-.wbt-palette__input { width: 100%; background: var(--lr-bg-1); border: none; border-bottom: var(--lr-border-w) solid var(--lr-border); color: var(--lr-text-0); font-family: var(--lr-font-body); font-size: 1.05rem; padding: 1rem 1.2rem; outline: none; }
+.wbt-palette__input { width: 100%; background: var(--lr-bg-1); border: none; border-bottom: var(--lr-border-w) solid var(--lr-border); color: var(--lr-text-1); font-family: var(--lr-font-body); font-size: 1.05rem; padding: 1rem 1.2rem; outline: none; }
 .wbt-palette__list { max-height: 50vh; overflow-y: auto; }
 .wbt-palette__item { display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: .6rem; width: 100%; background: none; border: none; color: var(--lr-text-1); padding: .6rem 1.2rem; text-align: left; cursor: pointer; }
 .wbt-palette__item.is-sel, .wbt-palette__item:hover { background: var(--lr-gold-soft); }
 .wbt-palette__icon { font-size: 1.1rem; text-align: center; }
-.wbt-palette__name { font-family: var(--lr-font-title); color: var(--lr-text-0); }
+.wbt-palette__name { font-family: var(--lr-font-title); color: var(--lr-text-1); }
 .wbt-palette__sub { font-size: var(--lr-fs-xs); color: var(--lr-text-2); }
 .wbt-palette__empty { padding: 1.5rem; text-align: center; color: var(--lr-text-2); }
 .wbt-palette__foot { padding: .5rem 1.2rem; border-top: var(--lr-border-w) solid var(--lr-border); font-size: var(--lr-fs-xs); color: var(--lr-text-2); }
@@ -325,10 +407,10 @@ body.wb-sidebar-collapsed .nav-category { position: relative; }
 body.wb-sidebar-collapsed .nav-category:hover::after {
     content: attr(data-tip);
     position: absolute; left: 74px; top: 50%; transform: translateY(-50%);
-    background: var(--lr-surface, #1b2029); color: var(--lr-text-1, #e9e2d2);
+    background: var(--lr-surface); color: var(--lr-text-1);
     padding: 5px 10px; border-radius: 6px; white-space: nowrap;
     font-size: .8rem; font-weight: 600; z-index: 50;
-    border: 1px solid var(--lr-border, #333); box-shadow: 0 6px 18px rgba(0,0,0,.4);
+    border: 1px solid var(--lr-border); box-shadow: 0 6px 18px rgba(0,0,0,.4);
     pointer-events: none;
 }
 
@@ -337,73 +419,73 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
     display: flex; align-items: center; justify-content: space-between;
     gap: 1rem; flex-wrap: wrap;
     background: linear-gradient(135deg, rgba(91,63,184,.18), rgba(0,0,0,.15));
-    border: 1px solid var(--lr-border, #333);
+    border: 1px solid var(--lr-border);
     border-radius: 14px; padding: 18px 22px; margin-bottom: 18px;
 }
-.wb-dash-hero__total { font-size: 2.4rem; font-weight: 800; line-height: 1; color: var(--lr-gold, #D4AF37); }
-.wb-dash-hero__label { color: var(--lr-text-2, #a99f8c); font-size: .9rem; margin-top: 4px; }
+.wb-dash-hero__total { font-size: 2.4rem; font-weight: 800; line-height: 1; color: var(--lr-gold); }
+.wb-dash-hero__label { color: var(--lr-text-2); font-size: .9rem; margin-top: 4px; }
 .wb-quickactions { display: flex; gap: 8px; flex-wrap: wrap; }
 .wb-quickaction {
     display: inline-flex; align-items: center; gap: 6px;
-    background: var(--lr-bg-1, #1f2630); color: var(--lr-text-1, #e9e2d2);
-    border: 1px solid var(--lr-border, #333); border-radius: 10px;
+    background: var(--lr-bg-1); color: var(--lr-text-1);
+    border: 1px solid var(--lr-border); border-radius: 10px;
     padding: 9px 14px; font-weight: 600; font-size: .85rem; cursor: pointer;
     transition: border-color .2s, transform .2s;
 }
-.wb-quickaction:hover { border-color: var(--lr-gold, #D4AF37); transform: translateY(-2px); }
+.wb-quickaction:hover { border-color: var(--lr-gold); transform: translateY(-2px); }
 .wb-dash-health { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 4px 0 22px; }
 .wb-health-card {
-    border: 1px solid var(--lr-border, #333); border-radius: 12px;
-    padding: 14px 16px; cursor: pointer; background: var(--lr-bg-1, #1f2630);
+    border: 1px solid var(--lr-border); border-radius: 12px;
+    padding: 14px 16px; cursor: pointer; background: var(--lr-bg-1);
     transition: transform .2s, border-color .2s;
 }
 .wb-health-card:hover { transform: translateY(-2px); }
 .wb-health-card__v { font-size: 1.6rem; font-weight: 800; line-height: 1; }
-.wb-health-card__l { font-size: .82rem; color: var(--lr-text-2, #a99f8c); margin-top: 4px; }
+.wb-health-card__l { font-size: .82rem; color: var(--lr-text-2); margin-top: 4px; }
 .wb-health-card.is-warn { border-color: rgba(212,175,55,.5); }
-.wb-health-card.is-warn .wb-health-card__v { color: var(--lr-gold, #D4AF37); }
+.wb-health-card.is-warn .wb-health-card__v { color: var(--lr-gold); }
 .wb-health-card.is-info { border-color: rgba(58,166,255,.5); }
 /* As irmas is-warn/is-ok usam token; esta tinha azul cravado, que no card
    claro (var(--lr-bg-1)) dava 2.60:1. */
 .wb-health-card.is-info .wb-health-card__v { color: var(--lr-arcane); }
-.wb-health-card.is-ok .wb-health-card__v { color: var(--lr-nature, #3FAE6A); }
+.wb-health-card.is-ok .wb-health-card__v { color: var(--lr-nature); }
 
 /* ── Campos read-only das fichas (NPC / Tribo do Criador) ──── */
 .wb-readonly-field {
-    background: var(--lr-bg-1); border: 1px solid var(--lr-border, #333);
-    border-radius: 8px; padding: 9px 12px; color: var(--lr-text-1, #e9e2d2);
+    background: var(--lr-bg-1); border: 1px solid var(--lr-border);
+    border-radius: 8px; padding: 9px 12px; color: var(--lr-text-1);
     font-size: .9rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
 }
 .wb-chips-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .wb-chip {
-    background: var(--lr-bg-1); border: 1px solid var(--lr-border, #333);
-    border-radius: 999px; padding: 5px 11px; font-size: .82rem; color: var(--lr-text-1, #e9e2d2);
+    background: var(--lr-bg-1); border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-sm); padding: 5px 11px; font-size: .82rem; color: var(--lr-text-1);
 }
-.wb-chip b { color: var(--lr-gold, #D4AF37); font-weight: 700; }
+.wb-chip b { color: var(--lr-gold); font-weight: 700; }
 .wb-attr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 8px; }
 .wb-attr {
     display: flex; flex-direction: column; align-items: center;
-    background: var(--lr-bg-1); border: 1px solid var(--lr-border, #333);
+    background: var(--lr-bg-1); border: 1px solid var(--lr-border);
     border-radius: 8px; padding: 8px 4px;
 }
-.wb-attr__k { font-size: .68rem; color: var(--lr-text-2, #a99f8c); font-weight: 700; letter-spacing: .04em; }
-.wb-attr__v { font-size: 1.15rem; font-weight: 800; color: var(--lr-text-1, #e9e2d2); }
+.wb-attr__k { font-size: .68rem; color: var(--lr-text-2); font-weight: 700; letter-spacing: .04em; }
+.wb-attr__v { font-size: 1.15rem; font-weight: 800; color: var(--lr-text-1); }
 
 /* ═══════════════════════════════════════════════════════════
    Escritório do Cronista — Biblioteca (livros e capítulos)
    ═══════════════════════════════════════════════════════════ */
 .wb-library { max-width: 1000px; margin: 0 auto; }
 .wb-lib-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-.wb-lib-stats { display: flex; gap: 16px; color: var(--lr-text-2, #a99f8c); font-size: .85rem; }
-.wb-lib-stats b { color: var(--lr-gold, #D4AF37); }
-.wb-lib-section { margin: 20px 0 10px; font-family: 'Cinzel', serif; color: var(--lr-text-1, #e9e2d2); font-size: 1.05rem; border-bottom: 1px solid var(--lr-border, #333); padding-bottom: 6px; }
+.wb-lib-stats { display: flex; gap: 16px; color: var(--lr-text-2); font-size: .85rem; }
+.wb-lib-stats b { color: var(--lr-gold); }
+.wb-lib-section { margin: 20px 0 10px; font-family: var(--lr-font-title); color: var(--lr-text-1); font-size: 1.05rem; border-bottom: 1px solid var(--lr-border); padding-bottom: 6px; }
 .wb-shelf { display: grid; gap: 14px; }
 
-.wb-book { border: 1px solid var(--lr-border, #333); border-radius: 14px; background: var(--lr-bg-1, #1f2630); overflow: hidden; }
+.wb-book { border: 1px solid var(--lr-border); border-radius: 14px; background: var(--lr-bg-1); overflow: hidden; }
 .wb-book__head { display: flex; gap: 14px; padding: 14px; align-items: flex-start; cursor: pointer; list-style: none; }
 .wb-book__head::-webkit-details-marker { display: none; }
 .wb-book__head:hover { background: rgba(212,175,55,.06); }
-.wb-book__caret { flex: 0 0 auto; align-self: center; color: var(--lr-gold, #D4AF37); transition: transform .15s; }
+.wb-book__caret { flex: 0 0 auto; align-self: center; color: var(--lr-gold); transition: transform .15s; }
 .wb-book[open] .wb-book__caret { transform: rotate(90deg); }
 .wb-book__cover {
     width: 60px; height: 82px; flex: 0 0 auto; border-radius: 8px;
@@ -412,48 +494,48 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
     border: 1px solid rgba(255,255,255,.1);
 }
 .wb-book__meta { flex: 1; min-width: 0; }
-.wb-book__title { font-family: 'Cinzel', serif; font-size: 1.15rem; font-weight: 700; color: var(--lr-text-1, #e9e2d2); }
+.wb-book__title { font-family: var(--lr-font-title); font-size: 1.15rem; font-weight: 700; color: var(--lr-text-1); }
 .wb-book__badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
-.wb-book__desc { color: var(--lr-text-2, #a99f8c); font-size: .85rem; margin: 4px 0 0; line-height: 1.4; }
+.wb-book__desc { color: var(--lr-text-2); font-size: .85rem; margin: 4px 0 0; line-height: 1.4; }
 .wb-book__actions { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
-.wb-book__chapters { border-top: 1px solid var(--lr-border, #333); background: var(--lr-bg-1); }
+.wb-book__chapters { border-top: 1px solid var(--lr-border); background: var(--lr-bg-1); }
 
 .wb-loose-list { display: grid; gap: 8px; }
 .wb-chapter {
     display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer;
     transition: background .15s; border-bottom: 1px solid rgba(255,255,255,.04);
 }
-.wb-loose-list .wb-chapter { border: 1px solid var(--lr-border, #333); border-radius: 10px; background: var(--lr-bg-1, #1f2630); }
+.wb-loose-list .wb-chapter { border: 1px solid var(--lr-border); border-radius: 10px; background: var(--lr-bg-1); }
 .wb-chapter:hover { background: rgba(212,175,55,.08); }
 .wb-chapter__num {
     width: 26px; height: 26px; flex: 0 0 auto; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    background: rgba(212,175,55,.15); color: var(--lr-gold, #D4AF37); font-weight: 700; font-size: .8rem;
+    background: rgba(212,175,55,.15); color: var(--lr-gold); font-weight: 700; font-size: .8rem;
 }
 .wb-chapter__body { flex: 1; min-width: 0; }
-.wb-chapter__title { font-weight: 600; color: var(--lr-text-1, #e9e2d2); }
-.wb-chapter__syn { color: var(--lr-text-2, #a99f8c); font-size: .82rem; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-chapter__title { font-weight: 600; color: var(--lr-text-1); }
+.wb-chapter__syn { color: var(--lr-text-2); font-size: .82rem; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wb-chapter__meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 5px; font-size: .75rem; }
 
-.wb-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; font-size: .72rem; font-weight: 600; border: 1px solid transparent; }
+.wb-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: var(--lr-radius-sm); font-size: .72rem; font-weight: 600; border: 1px solid transparent; }
 /* Os tres badges tinham texto no tom CLARO do acento em cima do mesmo acento
    a ~15%: no tema claro isso e claro sobre claro (1.38:1 a 1.54:1). Os tokens
    acompanham o tema e ficam escuros no papel, claros no escuro. */
 .wb-badge--pub { background: rgba(58,166,255,.14); color: var(--lr-arcane); border-color: rgba(58,166,255,.35); }
-.wb-badge--priv { background: rgba(255,255,255,.06); color: var(--lr-text-2, #a99f8c); border-color: var(--lr-border, #333); }
-.wb-badge--soft { background: rgba(255,255,255,.05); color: var(--lr-text-2, #a99f8c); }
+.wb-badge--priv { background: rgba(255,255,255,.06); color: var(--lr-text-2); border-color: var(--lr-border); }
+.wb-badge--soft { background: rgba(255,255,255,.05); color: var(--lr-text-2); }
 .wb-badge--draft { background: rgba(160,160,160,.14); color: var(--lr-text-2); }
-.wb-badge--rev { background: rgba(212,175,55,.16); color: var(--lr-gold, #D4AF37); }
+.wb-badge--rev { background: rgba(212,175,55,.16); color: var(--lr-gold); }
 .wb-badge--done { background: rgba(63,174,106,.16); color: var(--lr-nature); }
 
 /* Campos extras do editor de escrita */
 .wb-article-syn {
-    width: 100%; background: transparent; border: none; border-bottom: 1px dashed var(--lr-border, #333);
-    color: var(--lr-text-2, #a99f8c); font-size: .95rem; font-style: italic; padding: 6px 2px; margin-bottom: 10px;
+    width: 100%; background: transparent; border: none; border-bottom: 1px dashed var(--lr-border);
+    color: var(--lr-text-2); font-size: .95rem; font-style: italic; padding: 6px 2px; margin-bottom: 10px;
 }
-.wb-article-syn:focus { outline: none; border-bottom-color: var(--lr-gold, #D4AF37); }
-.wb-editor-props { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 12px; padding: 10px 12px; background: var(--lr-bg-1); border: 1px solid var(--lr-border, #333); border-radius: 10px; }
-.wb-editor-props label { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: var(--lr-text-2, #a99f8c); }
+.wb-article-syn:focus { outline: none; border-bottom-color: var(--lr-gold); }
+.wb-editor-props { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 12px; padding: 10px 12px; background: var(--lr-bg-1); border: 1px solid var(--lr-border); border-radius: 10px; }
+.wb-editor-props label { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: var(--lr-text-2); }
 .wb-editor-props select, .wb-editor-props input[type=number] { margin-left: 4px; }
 .wb-editor-props .wbt-check { gap: 6px; }
 

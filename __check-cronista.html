@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0E1117">
+<title>Check — Escritório do Cronista</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+
+<link rel="stylesheet" href="worldbuilding/css/worldbuilding.css?b=2">
+<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?b=2">
+<link rel="stylesheet" href="shared/texto-mundo.css">
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/lendas-reliquias.css">
+<script src="shared/theme.js"></script>
+<style>
+  /* Só do harness. */
+  .chk-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+      display: flex; gap: var(--lr-space-2); align-items: center; flex-wrap: wrap;
+      padding: var(--lr-space-2) var(--lr-space-3); background: var(--lr-bg-1);
+      border-bottom: var(--lr-border-w) solid var(--lr-border);
+      font: 600 var(--lr-fs-sm)/1 var(--lr-font-body); color: var(--lr-text-1); }
+  .chk-bar button { padding: var(--lr-space-1) var(--lr-space-3);
+      border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius);
+      background: var(--lr-surface); color: var(--lr-text-1); font: inherit; }
+  /* O harness nao pode furar a altura fechada do body: a barra flutua. */
+  .chk-bar { pointer-events: auto; }
+  .content-header { padding-top: 46px !important; }
+</style>
+</head>
+<body>
+
+<div class="chk-bar">
+    <strong>Check — Escritório do Cronista</strong>
+    <button onclick="document.documentElement.classList.toggle('dark')">🌙 Tema</button>
+    <span id="chkInfo"></span>
+</div>
+
+<div class="sidebar">
+    <div class="sidebar-header"><span style="font-size:1.5rem">🌐</span><span class="sidebar-title">Worldbuilding</span></div>
+    <nav class="sidebar-nav"><div class="nav-category active"><span class="nav-icon">✒️</span><span class="nav-label">Cronista</span></div></nav>
+</div>
+
+<main class="main-content">
+    <div class="content-header"><h1 class="content-title">✒️ Escritório do Cronista</h1></div>
+    <div class="content-body" id="contentBody"></div>
+</main>
+
+<script type="module">
+import { dossieHTML } from './worldbuilding/js/wb-dossie.js';
+
+const KIND = {
+    npcs: { label: 'NPC', icon: '👥' }, factions: { label: 'Tribo', icon: '⚔️' },
+    geography: { label: 'Local', icon: '📍' }, races: { label: 'Raça', icon: '🧬' },
+    history: { label: 'História', icon: '📜' },
+};
+
+/* Entidades com a MESMA forma dos docs reais (campos vindos de wb-core
+   saveEntry e da coleção npcs), para o dossiê ser exercitado de verdade. */
+const DADOS = {
+  npcs: [{
+    id:'n1', nome:'Brida, a Ferreira de Vaugh', tipo:'NPC',
+    imagem:'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23555"/><text x="60" y="70" font-size="48" text-anchor="middle" fill="%23ddd">B</text></svg>',
+    descricao:'Ferreira de mãos queimadas que herdou a bigorna do pai e a dívida junto ao Consórcio. Trabalha de madrugada porque não consegue dormir.',
+    nivel:3, raca:'Humana', classe:'Ferreira', porte:'Médio', papel:'Comerciante', local:'Vaugh',
+    tags:'ferreira, vaugh, dívida',
+    atributos:{ FOR:5, DES:3, VIG:4, INT:3, RAC:2, PRS:2, PRE:1, MAN:4, AUT:2 },
+    peculiaridades:[{nome:'Couro Endurecido',nivel:2,fonte:'raça'},{nome:'Mão de Fogo',nivel:1,fonte:'avulsa'}],
+    rolePlay:{ personalidade:['Teimosa','Leal','Desconfiada'], trejeitos:'Estala os dedos antes de falar.',
+        motivacao:'Quitar a dívida antes que cobrem do irmão.',
+        segredos:'Forjou a lâmina que matou o antigo xerife — e sabe disso.',
+        frases:'"Ferro não mente. Gente mente."' },
+    loot:{ itens:'Martelo de forja, 2 lingotes', luns:'34', pistas:'Recibo do Consórcio com selo falso' },
+    submundo:{ papelSubmundo:'mercador', nomeDeSombra:'Bigorna', nivelAcesso:2,
+        especialidade:'armas brancas', marcas:['Quebrado'], feirasQueFrequenta:['Feira do Beco Torto'] },
+    ataques:'Martelada 2d6+4', skillsTexto:'Ofício (forja) 4, Barganha 3',
+    lastUpdate:'2026-08-01T00:00:00Z', lastUpdateBy:'mestre@x.com', _interno:'nao deve aparecer',
+    vazio1:'', vazio2:[], vazio3:{}, ownerUid:'abc123',
+  }],
+  geography: [{
+    id:'g1', nome:'Vaugh', tipo:'Vila',
+    descricao:'Vila de fundição encravada no vale, viva por causa do minério e morta por causa dele.',
+    clima:'Frio úmido, névoa de manhã', populacao:'≈ 400', governo:'Conselho de mestres de ofício',
+    recursos:'Minério de ferro, carvão', perigos:'Desabamentos na mina velha; cobradores do Consórcio',
+    landmarks:'A Grande Fornalha, a Ponte Partida',
+    historiaLocal:'Fundada por desertores da Terceira Guerra do Sal, que trocaram a lança pelo malho. Por três gerações ninguém de fora entrou sem convite — até o Consórcio comprar a mina em 812.',
+    pertenceA:{ id:'g0', nome:'Vale de Korr', tipo:'Região' },
+    linkedNpcs:[{id:'n1',nome:'Brida'},{id:'n2',nome:'Velho Torv'}],
+    linkedTribos:[{id:'f1',nome:'Consórcio de Ferro'}],
+  }],
+  races: [{
+    id:'r1', nome:'Elorin', descricao:'Povo de ossos leves e memória longa.',
+    expectativaVida:'180 anos', tendencia:'Neutra', habitat:'Florestas altas',
+  }],
+};
+window.WB = { data: DADOS, user: {} };
+
+/* Réplica da estrutura que wb-editor.js renderiza. */
+const refs = Object.entries(DADOS).flatMap(([cat, arr]) => arr.map(e => ({ cat, e })));
+document.getElementById('contentBody').innerHTML = `
+<div class="wbt-editor-layout" id="editorLayout">
+  <div class="wbt-editor-main" id="editorMain">
+    <div class="wbt-toolbar wbt-etoolbar">
+      <button class="btn btn-secondary btn-sm">← Biblioteca</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-secondary btn-sm">Consulta ⇄</button>
+      <button class="btn btn-secondary btn-sm">Foco ⛶</button>
+      <button class="btn btn-success btn-sm">💾 Salvar</button>
+    </div>
+
+    <input class="wbt-article-title" placeholder="Título do conto, capítulo ou cena…" value="A Noite da Bigorna Fria">
+    <input class="wb-article-syn" placeholder="Sinopse curta (opcional)…" value="Brida descobre quem comprou a dívida.">
+
+    <div class="wb-editor-props">
+      <label>📗 Livro <select class="form-select"><option>📗 Crônicas de Vaugh</option></select></label>
+      <label>🔢 Ordem <input type="number" class="form-input" value="3" style="width:80px"></label>
+      <label>📊 Status <select class="form-select"><option>✏️ Rascunho</option></select></label>
+      <label class="wbt-check"><input type="checkbox" checked> 🌐 Público</label>
+    </div>
+
+    <div class="wbt-toolbar wb-richbar" id="richToolbar">
+      <button class="btn btn-secondary btn-sm"><b>B</b></button>
+      <button class="btn btn-secondary btn-sm"><i>I</i></button>
+      <button class="btn btn-secondary btn-sm"><u>U</u></button>
+      <span class="wb-rich-sep"></span>
+      <select class="wb-rich-sel"><option>Parágrafo</option><option>Título</option></select>
+      <span class="wb-rich-sep"></span>
+      <button class="btn btn-secondary btn-sm">“ ”</button>
+      <button class="btn btn-secondary btn-sm">🖼️</button>
+      <button class="btn btn-secondary btn-sm">⁘</button>
+    </div>
+
+    <div class="wbt-rich texto-mundo" contenteditable="true"></div>
+    <p class="wbt-muted">✓ Salvo às 21:14</p>
+  </div>
+
+  <aside class="wbt-refs" id="refsPanel">
+    <input class="form-input" placeholder="Buscar no ecossistema…">
+    <div class="wbt-chips">
+      <button class="wbt-chip is-active">Tudo</button>
+      <button class="wbt-chip">👥 NPCs</button>
+      <button class="wbt-chip">⚔️ Tribos</button>
+      <button class="wbt-chip">📍 Locais</button>
+      <button class="wbt-chip">📜 História</button>
+      <button class="wbt-chip">🧬 Raças</button>
+    </div>
+    <div id="refsList" class="wbt-refs__list">
+      ${refs.map(({cat, e}) => `
+      <div class="wbt-refcard" data-ref="${e.id}" data-refcat="${cat}">
+        <div class="wbt-refcard__name">${KIND[cat].icon} ${e.nome} <span class="wbt-tag">${KIND[cat].label}</span></div>
+        <p class="wbt-refcard__sum">${(e.descricao||'').slice(0,200)}</p>
+        <div class="wbt-refcard__acoes">
+          <button type="button" class="wbt-microbtn" data-detalhes aria-expanded="false">Detalhes ▾</button>
+        </div>
+        <div class="wbt-refcard__full" hidden></div>
+      </div>`).join('')}
+    </div>
+  </aside>
+</div>`;
+
+// Texto longo para haver rolagem de verdade.
+document.querySelector('.wbt-rich').innerHTML =
+  Array.from({length: 26}, (_, i) =>
+    `<p>Parágrafo ${i+1}. A fornalha ainda guardava brasa quando Brida empurrou a porta. O frio de fora entrou junto com ela e assentou no chão de terra batida, como um cão que conhece o lugar.</p>`).join('');
+
+document.getElementById('refsList').onclick = (ev) => {
+  const card = ev.target.closest('[data-ref]'); if (!card) return;
+  if (ev.target.closest('[data-detalhes]')) {
+    const btn = card.querySelector('[data-detalhes]');
+    const box = card.querySelector('.wbt-refcard__full');
+    const abrir = box.hidden;
+    if (abrir && !box.dataset.pronto) {
+      const cat = card.dataset.refcat;
+      box.innerHTML = dossieHTML(DADOS[cat].find(x => x.id === card.dataset.ref), KIND[cat]);
+      box.dataset.pronto = '1';
+    }
+    box.hidden = !abrir;
+    card.classList.toggle('is-detailed', abrir);
+    btn.setAttribute('aria-expanded', String(abrir));
+    btn.textContent = abrir ? 'Detalhes ▴' : 'Detalhes ▾';
+    return;
+  }
+  if (ev.target.closest('.wbt-refcard__full')) return;
+  card.classList.toggle('is-open');
+};
+
+window.chkOverflow = () => document.documentElement.scrollWidth > document.documentElement.clientWidth;
+document.getElementById('chkInfo').textContent = window.innerWidth + 'px';
+</script>
+</body>
+</html>

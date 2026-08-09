@@ -1,41 +1,17 @@
 {
-  "version": "0.0.1",
-  "configurations": [
-    {
-      "name": "site-5180",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5180"],
-      "port": 5180
-    },
-    {
-      "name": "site-5181",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5181"],
-      "port": 5181
-    },
-    {
-      "name": "site-5183",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5183"],
-      "port": 5183
-    },
-    {
-      "name": "site-5184",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5184"],
-      "port": 5184
-    },
-    {
-      "name": "site-5190",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5190"],
-      "port": 5190
-    },
-    {
-      "name": "site-5193",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5193"],
-      "port": 5193
-    }
-  ]
+    "version": "0.0.1",
+    "configurations": [
+        {
+            "name": "portal-redesign",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": ["-y", "serve", "-l", "4173", "C:/Users/Soberano/Documents/rpglendasereliquias-redesign"],
+            "port": 4173
+        },
+        {
+            "name": "site-5193",
+            "runtimeExecutable": "python",
+            "runtimeArgs": ["-m", "http.server", "5193"],
+            "port": 5193
+        }
+    ]
 }

@@ -20,11 +20,19 @@
             --border: var(--lr-surface-2);
         }
 
+        /* `height`, não `min-height`: o resto da folha já foi escrito como
+           app shell (sidebar 100vh, .main-content overflow:hidden,
+           .content-body overflow-y:auto), mas com min-height o body crescia
+           junto com o conteúdo e quem rolava era o documento — o
+           .content-body nunca rolava por dentro. Consequência: cabeçalho e
+           barra lateral iam embora na rolagem e nenhum `position: sticky`
+           tinha contra o que grudar. O bloco @media (max-width: 860px) no fim
+           do arquivo devolve `height: auto` no celular. */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
             background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
             color: var(--light);
-            min-height: 100vh;
+            height: 100vh;
             display: flex;
         }
 

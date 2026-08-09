@@ -19,7 +19,8 @@
    ═══════════════════════════════════════════════════════════ */
 
 import { db, collection, getDocs, doc, setDoc, deleteDoc } from './firebase-config.js';
-import { WB, esc, uid, ToolModal, setTitle, contentBody, searchables, KIND } from './wb-utils.js';
+import { WB, esc, uid, ToolModal, setTitle, contentBody, searchables, KIND, poolOf } from './wb-utils.js';
+import { dossieHTML } from './wb-dossie.js';
 import { TOOLBAR_HTML, bindRich } from './wb-rich.js';
 import { PUBLICACOES, pubDoLivro } from '../../shared/livros-pub.js';
 
@@ -255,8 +256,6 @@ export const Editor = (() => {
                     <button class="btn btn-secondary btn-sm" id="focusMode" title="Modo foco">Foco ⛶</button>
                     <button class="btn btn-success btn-sm" id="saveArticle">💾 Salvar</button>
                 </div>
-                <div class="wbt-toolbar wb-richbar" id="richToolbar">${TOOLBAR_HTML}</div>
-
                 <input id="articleTitle" class="wbt-article-title" placeholder="Título do conto, capítulo ou cena…" value="${esc(a.title || '')}">
                 <input id="articleSyn" class="wb-article-syn" placeholder="Sinopse curta (opcional)…" value="${esc(a.synopsis || '')}">
 
@@ -276,6 +275,9 @@ export const Editor = (() => {
                     </label>
                     <label class="wbt-check"><input type="checkbox" id="artPublic" ${a.public ? 'checked' : ''}> 🌐 Público</label>
                 </div>
+
+                <!-- Colada no texto e grudada no topo quando a página rola. -->
+                <div class="wbt-toolbar wb-richbar" id="richToolbar">${TOOLBAR_HTML}</div>
 
                 <div id="richEditor" class="wbt-rich texto-mundo" contenteditable="true"
                      data-placeholder="Escreva aqui. Digite @ para vincular NPCs, Tribos, Locais ou eventos…">${a.contentHTML || ''}</div>
@@ -309,8 +311,33 @@ export const Editor = (() => {
             const k = KIND[x.cat];
             return `<div class="wbt-refcard" data-ref="${x.id}" data-refcat="${x.cat}">
                 <div class="wbt-refcard__name">${k.icon} ${esc(x.nome)} <span class="wbt-tag">${k.label}</span></div>
-                <p class="wbt-refcard__sum">${esc((x.descricao || 'Sem descrição.').slice(0, 200))}</p></div>`;
+                <p class="wbt-refcard__sum">${esc((x.descricao || 'Sem descrição.').slice(0, 200))}</p>
+                <div class="wbt-refcard__acoes">
+                    <button type="button" class="wbt-microbtn" data-detalhes
+                            aria-expanded="false">Detalhes ▾</button>
+                </div>
+                <div class="wbt-refcard__full" hidden></div>
+            </div>`;
         }).join('') : `<p class="wbt-muted">Nada encontrado no ecossistema.</p>`;
+    }
+
+    /* Dossiê completo, montado só quando pedido (a lista tem centenas de
+       fichas — renderizar todas de véspera travava o painel). */
+    function toggleDossie(card) {
+        const btn = card.querySelector('[data-detalhes]');
+        const box = card.querySelector('.wbt-refcard__full');
+        const abrir = box.hidden;
+        if (abrir && !box.dataset.pronto) {
+            const cat = card.dataset.refcat;
+            // `doc` aqui sombrearia o doc() do Firestore importado no topo.
+            const entidade = poolOf(cat).find(x => x.id === card.dataset.ref);
+            box.innerHTML = dossieHTML(entidade, KIND[cat]);
+            box.dataset.pronto = '1';
+        }
+        box.hidden = !abrir;
+        card.classList.toggle('is-detailed', abrir);
+        btn.setAttribute('aria-expanded', String(abrir));
+        btn.textContent = abrir ? 'Detalhes ▴' : 'Detalhes ▾';
     }
 
     /* ── @Mentions ──────────────────────────────────────── */
@@ -418,6 +445,8 @@ export const Editor = (() => {
         };
         $('#refsList').onclick = (e) => {
             const c = e.target.closest('[data-ref]'); if (!c) return;
+            if (e.target.closest('[data-detalhes]')) { toggleDossie(c); return; }
+            if (e.target.closest('.wbt-refcard__full')) return;   // clicar dentro do dossiê não fecha
             if (e.detail === 2) ToolModal.openEntry(c.dataset.refcat, c.dataset.ref);
             else c.classList.toggle('is-open');
         };

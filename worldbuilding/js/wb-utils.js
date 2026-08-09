@@ -34,7 +34,9 @@ export const KIND = {
     classes:   { label: 'Classe',     icon: '⚔️', origem: 'mecanica' },
 };
 
-function poolOf(cat) {
+/* Doc CRU de uma categoria. Exportado porque o dossiê (wb-dossie.js)
+   precisa do documento inteiro, não do resumo que `searchables` devolve. */
+export function poolOf(cat) {
     if (cat === 'races') return Eco.races;
     if (cat === 'classes') return Eco.classes;
     return WB().data[cat] || [];
