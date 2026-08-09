@@ -260,8 +260,8 @@ function initPhase7(container) {
             </div>
 
             <div class="field">
-                <label>Imagem (URL)</label>
-                <input type="text" id="customItemImagem" placeholder="https://..." value="${escHtml(wizardState.customItem?.imagemUrl || '')}" oninput="updateCustomItem()">
+                <label>Imagem</label>
+                ${CampoImagem.html({ id: 'customItemImagem', valor: wizardState.customItem?.imagemUrl || '', pasta: 'imagens/itens', attrs: 'oninput="updateCustomItem()"' })}
             </div>
         </div>
     `;

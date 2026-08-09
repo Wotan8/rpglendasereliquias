@@ -1573,11 +1573,12 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
             wrap.appendChild(anchor);
             fieldWrap.appendChild(wrap);
         } else if (field.tipo === 'imagem') {
-            const inp = document.createElement('input');
-            inp.type = 'url';
+            const campo = CampoImagem.el({
+                valor: data[field.key] || '', pasta: 'imagens/modulos', preview: false,
+                placeholder: field.placeholder || 'URL da imagem ou envie um arquivo',
+            });
+            const inp = campo.querySelector('input[type="text"]');
             inp.dataset.modField = field.key;
-            inp.placeholder = field.placeholder || 'URL da imagem (https://...)';
-            inp.value = data[field.key] || '';
             if (field.somenteLeitura) inp.readOnly = true;
             const img = document.createElement('img');
             img.className = 'cm-img-preview';
@@ -1591,7 +1592,7 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
             img.addEventListener('error', () => { img.style.display = 'none'; });
             syncImg();
             inp.addEventListener('input', () => { syncImg(); _saveModuleData(mod.id); });
-            fieldWrap.appendChild(inp);
+            fieldWrap.appendChild(campo);
             fieldWrap.appendChild(img);
         } else if (field.tipo === 'avaliacao') {
             const stars = document.createElement('div');

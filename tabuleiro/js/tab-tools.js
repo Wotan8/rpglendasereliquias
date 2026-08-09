@@ -9,7 +9,7 @@ import { T, esc, toast, markDirty, gridSize, can, camadasVisiveis, objVisivel, t
          deveAtualizarPasso, DRAG_WRITE_MS, DRAG_PASSO_CELULA } from './tab-state.js';
 import { refReguas, abrirModal, fecharModal } from './tab-main.js';
 import { screenToWorld, worldToScreen, bboxOf, handlesOf, centerCamera, paredesDeMovimento, getImg } from './tab-render.js';
-import { addObj, updObj, updObjLocal, moverEmLote, delObj, maxZ, abrirPropriedades, uploadArquivo } from './tab-objects.js';
+import { addObj, updObj, updObjLocal, moverEmLote, delObj, maxZ, abrirPropriedades } from './tab-objects.js';
 import { snapPonto, medirTrajeto, trajetoColide, simplificarPontos, normalizarRet, bboxDentroDoRet } from './tab-grid.js';
 import { criarFilaDeEscrita } from './tab-write-queue.js';
 import { publicarCursor, enviarPing } from './tab-presenca.js';
@@ -1171,7 +1171,7 @@ window.tbEditarAlfinete = function(id) {
         </div>
         <div class="tb-form-grid">
             <label>Cor<input type="color" id="pin_c" value="${o.cor || '#ef4444'}"></label>
-            <label>Imagem<input type="file" id="pin_img" accept="image/*"></label>
+            <label>Imagem${CampoImagem.html({ id: 'pin_img', valor: o.imagem || '', pasta: `tabuleiro-images/${T.mesaId}`, preview: false })}</label>
             ${T.mode === 'secret' ? `<label>Vincular NPC<select id="pin_npc"><option value="">— nenhum —</option>${npcs.map(n => `<option value="${n.id}" ${o.refTipo==='npc'&&o.refId===n.id?'selected':''}>${esc(n.nome)}</option>`).join('')}</select></label>` : ''}
             ${T.mode === 'secret' ? `<label>🗺️ Mapa vinculado (abre outro canvas)<select id="pin_mapa"><option value="">— nenhum —</option>${(T.canvases || []).filter(c => c.id !== T.canvasId).map(c => `<option value="${c.id}" ${o.linkedCanvasId===c.id?'selected':''}>${esc(c.nome)}</option>`).join('')}</select></label>` : ''}
             ${T.mode === 'secret' ? `<label>📖 Geografia/Propriedade (card de info)<select id="pin_geo"><option value="${esc(o.geoRef || '')}">⏳ carregando…</option></select></label>` : ''}
@@ -1191,10 +1191,8 @@ window.tbEditarAlfinete = function(id) {
         if (mapa) patch.linkedCanvasId = mapa.value || null;
         const geo = document.getElementById('pin_geo');
         if (geo) patch.geoRef = geo.value || null;   // opção "carregando" já carrega o valor atual
-        const file = document.getElementById('pin_img').files[0];
-        if (file) {
-            try { patch.imagem = await uploadArquivo(file); } catch (e) { toast('❌ Falha no upload da imagem', 'danger'); }
-        }
+        // O campo padrão já subiu o arquivo (se houve) e deixou a URL aqui.
+        patch.imagem = document.getElementById('pin_img').value.trim();
         updObj(id, patch);
         fecharModal();
     };

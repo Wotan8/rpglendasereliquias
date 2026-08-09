@@ -184,21 +184,22 @@ function execCmd(cmd) {
     document.getElementById('noteEditorBody').focus();
 }
 
-function initCharImg() {
-    document.getElementById('charImgInput').addEventListener('change', function (e) {
-        const f = e.target.files[0];
-        if (!f) return;
-        const r = new FileReader();
-        r.onload = function (ev) {
-            state.charImg = ev.target.result;
-            const img = document.getElementById('charImgPreview');
-            img.src = state.charImg;
-            img.style.display = 'block';
-            document.getElementById('charImgPlaceholder').style.display = 'none';
-            scheduleAutosave();
-        };
-        r.readAsDataURL(f);
+/** Retrato do personagem: URL colada ou arquivo do aparelho (shared/campo-imagem.js).
+ *  O arquivo já sobe para o Storage aqui, então `charImg` sai como URL — o save
+ *  em firebase.js só faz upload quando ainda é `data:` (retrato antigo). */
+async function escolherFotoPersonagem() {
+    const url = await CampoImagem.escolher({
+        titulo: '📷 Foto do personagem',
+        valor: state.charImg && !String(state.charImg).startsWith('data:') ? state.charImg : '',
+        pasta: 'char-images',
     });
+    if (!url) return;
+    state.charImg = url;
+    const img = document.getElementById('charImgPreview');
+    img.src = url;
+    img.style.display = 'block';
+    document.getElementById('charImgPlaceholder').style.display = 'none';
+    scheduleAutosave();
 }
 
 // === ORDENAÇÃO E FIXAÇÃO ===

@@ -298,7 +298,7 @@ function openItemFormModal(title, item) {
             <div class="form-group" id="multPressaoGroupMestre" style="display:${item?.ehContainer?'block':'none'}"><label class="form-label">Multiplicador Pressão</label><input type="number" class="form-input" id="itemMultPressaoMestre" value="${item?.multiplicadorPressao||1}" min="0" step="0.1"></div>
             <div class="form-group" id="capContainerGroupMestre" style="display:${item?.ehContainer?'block':'none'}"><label class="form-label">Capacidade</label><input type="number" class="form-input" id="itemCapContainerMestre" value="${item?.capacidadeContainer||10}" min="1"></div>
         </div>
-        <div class="form-group"><label class="form-label">Imagem (URL)</label><input type="text" class="form-input" id="itemImagemMestre" value="${escapeHtml(item?.imagem||item?.imagemUrl||'')}"></div>
+        <div class="form-group"><label class="form-label">Imagem</label>${CampoImagem.html({ id: 'itemImagemMestre', classe: 'form-input', valor: item?.imagem||item?.imagemUrl||'', pasta: 'imagens/itens' })}</div>
         <input type="hidden" id="itemModeloIdMestre" value="${item?.modeloId||''}">
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
             <button class="btn btn-secondary" onclick="closeItemModalMestre()">Cancelar</button>

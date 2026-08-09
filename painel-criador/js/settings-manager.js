@@ -1,6 +1,5 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, getDocs, doc, updateDoc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
@@ -13,7 +12,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
 const faviconsConfig = [
     { id: 'pwa-icon', name: 'Ícone do App (PWA - 512x512)' },
@@ -187,71 +185,48 @@ async function loadFavicons() {
                     <img id="fav-preview-${fav.id}" src="${currentUrl}" alt="Preview" onerror="this.style.display='none'">
                 </div>
                 <h4>${fav.name}</h4>
-                <label class="btn-upload" style="cursor:pointer">
-                    Selecionar Imagem
-                    <input type="file" id="fav-input-${fav.id}" accept=".png,.ico,.svg">
-                </label>
+                ${CampoImagem.html({ id: `fav-input-${fav.id}`, pasta: 'app-assets/favicons', preview: false, placeholder: 'Cole uma URL ou envie um arquivo' })}
                 <button class="btn-upload" id="fav-save-${fav.id}" disabled style="margin-top:5px; background:var(--success)">Salvar Alteração</button>
             `;
-            
+
             container.appendChild(card);
 
             const input = document.getElementById(`fav-input-${fav.id}`);
             const saveBtn = document.getElementById(`fav-save-${fav.id}`);
             const preview = document.getElementById(`fav-preview-${fav.id}`);
-            
-            let selectedFile = null;
 
-            input.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    if (file.size > 2 * 1024 * 1024) {
-                        alert("A imagem não pode ter mais de 2MB.");
-                        input.value = "";
+            // A imagem só é aceita depois de carregar — e, no ícone do app, só se
+            // for quadrada. Vale igual para arquivo enviado e para URL colada.
+            input.addEventListener('input', () => {
+                const url = input.value.trim();
+                saveBtn.disabled = true;
+                if (!url) return;
+                const img = new Image();
+                img.onload = () => {
+                    if ((fav.id === 'app-windows' || fav.id === 'pwa-icon') && img.width !== img.height) {
+                        alert("O Ícone do App deve ser uma imagem quadrada (ex: 256x256, 512x512).");
                         return;
                     }
-
-                    const tempUrl = URL.createObjectURL(file);
-                    const img = new Image();
-                    img.onload = () => {
-                        if (fav.id === 'app-windows' || fav.id === 'pwa-icon') {
-                            if (img.width !== img.height) {
-                                alert("O Ícone do App deve ser uma imagem quadrada (ex: 256x256, 512x512).");
-                                input.value = "";
-                                return;
-                            }
-                        }
-                        
-                        selectedFile = file;
-                        preview.src = tempUrl;
-                        preview.style.display = 'block';
-                        saveBtn.disabled = false;
-                    };
-                    img.onerror = () => {
-                        alert("Arquivo de imagem inválido.");
-                        input.value = "";
-                    };
-                    img.src = tempUrl;
-                }
+                    preview.src = url;
+                    preview.style.display = 'block';
+                    saveBtn.disabled = false;
+                };
+                img.onerror = () => { alert("Não consegui carregar essa imagem."); };
+                img.src = url;
             });
 
             saveBtn.addEventListener('click', async () => {
-                if(!selectedFile) return;
-                
+                const downloadURL = input.value.trim();
+                if (!downloadURL) return;
+
                 saveBtn.innerText = 'Salvando...';
                 saveBtn.disabled = true;
-                
+
                 try {
-                    const ext = selectedFile.name.split('.').pop();
-                    const storageRef = ref(storage, `app-assets/favicons/${fav.id}-${Date.now()}.${ext}`);
-                    
-                    await uploadBytes(storageRef, selectedFile);
-                    const downloadURL = await getDownloadURL(storageRef);
-                    
                     await setDoc(doc(db, 'app-config', 'favicons'), {
                         [fav.id]: downloadURL
                     }, { merge: true });
-                    
+
                     alert('Favicon atualizado com sucesso!');
                     saveBtn.innerText = 'Salvo';
                 } catch (err) {

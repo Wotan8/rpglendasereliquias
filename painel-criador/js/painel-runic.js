@@ -5,15 +5,12 @@
 // Este módulo é importado por painel-firebase.js e fornece:
 //  - RUNIC_MODULE_DEF  → definição do módulo "Elementos Rúnicos"
 //  - buildRunicField / collectRunicField → tipos de campo customizados:
-//      runic_image_upload      (upload de imagem p/ Firebase Storage)
+//      runic_image_upload      (imagem do glifo — shared/campo-imagem.js)
 //      runic_connection_points (editor visual de pontos de conexão)
 //      runic_levels_editor     (tabela de níveis: Ess/EXP/sessões/props)
 //  - importRunicSeed → importa os 64 elementos do Compêndio (5 Artus,
 //    14 Aspectus, 45 Sigilus) para o Firestore, uma única vez.
 // =====================================================================
-
-import { getApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 function _esc(t) {
     return String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -77,53 +74,28 @@ export function buildRunicField(field, value) {
     return '';
 }
 
-// ---- Upload de imagem (Firebase Storage: runic-elements/*) ----
+// ---- Imagem do glifo (campo padrão: URL colada ou arquivo do aparelho) ----
 function _buildImageUpload(field, value) {
     const url = typeof value === 'string' ? value : '';
     return `
     <label>${_esc(field.label)}</label>
     <div class="runic-img-upload" id="runicImg_${field.key}">
-        <input type="hidden" id="field_${field.key}" value="${_esc(url)}">
         <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap">
             <div class="runic-img-preview" id="runicImgPrev_${field.key}"
                  style="width:120px;height:120px;border:1px dashed var(--soft,#334);border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--lr-bg-1)">
                 ${url ? `<img src="${_esc(url)}" style="width:100%;height:100%;object-fit:contain">` : '<span style="font-size:.65rem;color:var(--muted)">sem imagem</span>'}
             </div>
             <div style="flex:1;min-width:200px">
-                <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                    onchange="window.runicUploadImage(this,'${field.key}')" style="font-size:.75rem">
-                <div id="runicImgStatus_${field.key}" style="font-size:.68rem;color:var(--muted);margin-top:6px">
+                ${CampoImagem.html({ id: `field_${field.key}`, valor: url, pasta: 'runic-elements', preview: false, attrs: `oninput="window.runicSetImageUrl(this.value,'${field.key}')"` })}
+                <div style="font-size:.68rem;color:var(--muted);margin-top:6px">
                     PNG/SVG com fundo transparente rende melhor no Canvas.
                 </div>
-                <input type="text" placeholder="…ou cole uma URL" value="${_esc(url)}" style="margin-top:6px;width:100%"
-                    oninput="window.runicSetImageUrl(this.value,'${field.key}')">
             </div>
         </div>
     </div>`;
 }
 
-window.runicUploadImage = async function (input, key) {
-    const file = input.files && input.files[0];
-    if (!file) return;
-    const status = document.getElementById(`runicImgStatus_${key}`);
-    try {
-        status.textContent = '⏳ Enviando para o Storage…';
-        const storage = getStorage(getApp());
-        const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const path = `runic-elements/${Date.now()}_${safe}`;
-        const snap = await uploadBytes(ref(storage, path), file);
-        const url = await getDownloadURL(snap.ref);
-        window.runicSetImageUrl(url, key);
-        status.textContent = '✅ Upload concluído.';
-    } catch (e) {
-        console.error(e);
-        status.textContent = '❌ Falha no upload: ' + e.message + ' (verifique storage.rules: runic-elements/**)';
-    }
-};
-
 window.runicSetImageUrl = function (url, key) {
-    const hidden = document.getElementById(`field_${key}`);
-    if (hidden) hidden.value = url || '';
     const prev = document.getElementById(`runicImgPrev_${key}`);
     if (prev) prev.innerHTML = url ? `<img src="${_esc(url)}" style="width:100%;height:100%;object-fit:contain">` : '<span style="font-size:.65rem;color:var(--muted)">sem imagem</span>';
     // Atualiza o fundo do editor de pontos, se aberto

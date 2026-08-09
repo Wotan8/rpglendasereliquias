@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="../shared/texto-mundo.css?v=1">
     <script src="../shared/theme.js?v=1"></script>
     <script src="../shared/livro-vinculado.js?v=5"></script>
+    <script src="../shared/campo-imagem.js?v=1"></script>
 </head>
 <body>
     <!-- Sprite de ícones (traço fino, herda currentColor). Script clássico no topo
@@ -628,8 +629,8 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Imagem</label>
-                        <input type="file" class="form-input" id="loja_imagem" accept="image/*">
-                        <div id="loja_imagem_preview" style="margin-top:6px;max-height:80px;display:none;"></div>
+                        <!-- Campo padrão de imagem (shared/campo-imagem.js), montado ao abrir o modal -->
+                        <div id="loja_imagem_wrap"></div>
                     </div>
                 </div>
 

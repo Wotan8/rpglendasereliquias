@@ -3,8 +3,9 @@
    ───────────────────────────────────────────────────────────
    Tudo que o escritor usa para dar forma ao texto: títulos,
    ênfases, cor, alinhamento, listas, citação, filete, link,
-   capitular, duas colunas e IMAGENS (upload ou URL) com
-   tamanho e posição.
+   capitular, duas colunas e IMAGENS com tamanho e posição —
+   estas pelo campo padrão (shared/campo-imagem.js), que aceita
+   tanto uma URL colada quanto um arquivo do aparelho.
 
    O que sai daqui é sempre o vocabulário de shared/texto-mundo.css
    (classes `tm-*` + estilo inline curto). Por isso o capítulo
@@ -15,7 +16,6 @@
    devolve eventos. Quem salva é o wb-editor.
    ═══════════════════════════════════════════════════════════ */
 
-import { storage, ref, uploadBytes, getDownloadURL } from './firebase-config.js';
 import { limparHTML } from './wb-rich-sanitize.js';
 
 /* Blocos que o autor escolhe no seletor de estilo. */
@@ -57,7 +57,6 @@ export const TOOLBAR_HTML = `
 <button class="btn btn-secondary btn-sm" data-rich="imagem" title="Inserir imagem">🖼️</button>
 <button class="btn btn-secondary btn-sm" data-rich="tabela" title="Inserir tabela">▦</button>
 <button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="removeFormat" title="Limpar formatação">🧹</button>
-<input type="file" data-rich="arquivo" accept="image/*" hidden>
 `;
 
 /* Barra flutuante que aparece ao clicar numa imagem. */
@@ -99,9 +98,7 @@ export function bindRich(ed, toolbar, onChange) {
     try { document.execCommand('styleWithCSS', false, true); } catch { /* Safari antigo */ }
 
     const avisar = () => { if (typeof onChange === 'function') onChange(); };
-    const arquivo = toolbar.querySelector('[data-rich="arquivo"]');
     let figuraAtual = null;   // figura que a barra flutuante está editando
-    let trocando = false;     // o file picker foi aberto para TROCAR a imagem?
 
     /* ── Barra flutuante das imagens ─────────────────────── */
     const barra = document.createElement('div');
@@ -143,7 +140,7 @@ export function bindRich(ed, toolbar, onChange) {
         } else if (b.dataset.acao === 'remover') {
             fig.remove(); esconderBarra(); avisar(); return;
         } else if (b.dataset.acao === 'trocar') {
-            trocando = true; arquivo.value = ''; arquivo.click(); return;
+            pedirImagem(true); return;
         }
         mostrarBarra(fig);
         avisar();
@@ -180,43 +177,27 @@ export function bindRich(ed, toolbar, onChange) {
         avisar();
     }
 
-    async function enviarImagem(file) {
-        if (!file) return null;
-        if (!file.type.startsWith('image/')) { alert('Só imagens, por favor.'); return null; }
-        if (file.size > 8 * 1024 * 1024) { alert('Imagem acima de 8 MB. Reduza antes de subir.'); return null; }
-        const nome = `${Date.now()}_${file.name.replace(/[^\w.-]/g, '_')}`;
-        const snap = await uploadBytes(ref(storage, `worldbuilding-images/${nome}`), file);
-        return await getDownloadURL(snap.ref);
-    }
-
-    async function comAviso(fn) {
-        const antes = document.body.style.cursor;
-        document.body.style.cursor = 'progress';
-        try { return await fn(); }
-        catch (e) { console.error('[rich] upload', e); alert('Não consegui subir a imagem. Tente de novo.'); return null; }
-        finally { document.body.style.cursor = antes; }
-    }
-
-    arquivo.addEventListener('change', async () => {
-        const file = arquivo.files && arquivo.files[0];
-        const paraTrocar = trocando; trocando = false;
-        if (!file) return;
-        const url = await comAviso(() => enviarImagem(file));
-        arquivo.value = '';
+    /** Pergunta a imagem no campo padrão (URL colada ou arquivo do aparelho) e
+     *  ou insere uma figura nova, ou troca a da barra flutuante. */
+    async function pedirImagem(paraTrocar) {
+        const url = await CampoImagem.escolher({
+            titulo: paraTrocar ? '🖼️ Trocar imagem' : '🖼️ Inserir imagem',
+            pasta: 'worldbuilding-images',
+        });
         if (!url) return;
         if (paraTrocar && figuraAtual) {
             const img = figuraAtual.querySelector('img');
             if (img) img.src = url;
             avisar();
         } else {
-            inserirFigura(url, file.name);
+            inserirFigura(url, '');
         }
-    });
+    }
 
     /* ── Botões da barra ─────────────────────────────────── */
     toolbar.addEventListener('click', (e) => {
         const alvo = e.target.closest('[data-rich]');
-        if (!alvo || alvo.dataset.rich === 'arquivo' || alvo.dataset.rich === 'cor') return;
+        if (!alvo || alvo.dataset.rich === 'cor') return;
         e.preventDefault();
         ed.focus();
 
@@ -235,13 +216,7 @@ export function bindRich(ed, toolbar, onChange) {
                 if (url) document.execCommand('createLink', false, url);
                 break;
             }
-            case 'imagem': {
-                const url = prompt('Cole o endereço da imagem — ou deixe vazio para escolher um arquivo do computador:', '');
-                if (url === null) break;
-                if (url.trim()) inserirFigura(url.trim(), '');
-                else { trocando = false; arquivo.value = ''; arquivo.click(); }
-                break;
-            }
+            case 'imagem': pedirImagem(false); break;
             case 'tabela': inserirTabela(); break;
         }
         avisar();

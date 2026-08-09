@@ -524,7 +524,7 @@ function buildNpcForm() {
     <div class="npcv2-section" id="npcSec_identidade">
       <div class="npcv2-card">
         <div class="npcv2-block-title">📋 Quem é</div>
-        <div class="form-group"><label class="form-label">🖼️ Imagem URL</label><input type="text" class="form-input" id="npcImagem" placeholder="https://..."><div id="npcImgPreview" style="display:none;margin-top:8px;text-align:center"><img id="npcImgTag" style="max-height:200px;border-radius:10px"></div></div>
+        <div class="form-group"><label class="form-label">🖼️ Imagem</label>${CampoImagem.html({ id: 'npcImagem', classe: 'form-input', pasta: 'imagens/npcs', preview: false })}<div id="npcImgPreview" style="display:none;margin-top:8px;text-align:center"><img id="npcImgTag" style="max-height:200px;border-radius:10px"></div></div>
         <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px">
             <div class="form-group"><label class="form-label">Nome *</label><input type="text" class="form-input" id="npcNome" placeholder="Nome do NPC"></div>
             <div class="form-group"><label class="form-label">Tipo *</label><select class="form-select" id="npcTipo"><option value="npc">👤 NPC</option><option value="criatura">🐉 Criatura</option></select></div>

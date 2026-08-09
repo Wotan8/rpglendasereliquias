@@ -122,24 +122,22 @@ function lerDimensoes(url) {
 }
 
 export function initObjects() {
-    document.getElementById('tbFileInput').addEventListener('change', async (e) => {
-        const file = e.target.files[0]; e.target.value = '';
-        if (!file) return;
-        toast('⏳ Enviando imagem...', 'warning');
-        try {
-            // F7.5: detecta a grade no ARQUIVO local (o Storage devolve imagem "tainted")
-            const [grade, url] = await Promise.all([
-                detectarGradeDeArquivo(file).catch(() => null),
-                uploadArquivo(file),
-            ]);
-            window._tbGradeDetectada = (grade && grade.forca > 0.2 && grade.cell >= 20) ? grade : null;
-            abrirModalNovaImagem(url);
-        } catch (err) { console.error(err); toast('❌ Erro no upload', 'danger'); }
-    });
     window._renderCamadasPanel = renderCamadasPanel;
 }
 
-window.tbUploadImagem = () => document.getElementById('tbFileInput').click();
+// Imagem nova no canvas: URL colada ou arquivo do aparelho, pelo campo padrão.
+// F7.5: a grade só dá para detectar no ARQUIVO local (o Storage devolve imagem
+// "tainted" para o canvas) — por isso o `comArquivo`. Quem cola URL entra sem
+// detecção e dimensiona na mão, como sempre foi para imagem de fora.
+window.tbUploadImagem = async () => {
+    const { url, file } = await CampoImagem.escolher({
+        titulo: '🖼️ Nova imagem', pasta: `tabuleiro-images/${T.mesaId}`, comArquivo: true,
+    });
+    if (!url) return;
+    const grade = file ? await detectarGradeDeArquivo(file).catch(() => null) : null;
+    window._tbGradeDetectada = (grade && grade.forca > 0.2 && grade.cell >= 20) ? grade : null;
+    abrirModalNovaImagem(url);
+};
 
 function abrirModalNovaImagem(url) {
     const camadas = (T.canvas?.camadas || []).filter(c => c.tipo !== 'luz');
@@ -244,7 +242,7 @@ window.tbAbrirToken = function() {
             <label>Tipo de visão<select id="tk_sensor">${SENSORES.map(x => `<option value="${x.id}">${x.nome}</option>`).join('')}</select></label>
         </div>
         <div class="tb-form-grid" style="margin-top:6px">
-            <label class="tb-check"><input type="checkbox" id="tk_temImg"> Usar imagem personalizada (upload)</label>
+            <label class="tb-check"><input type="checkbox" id="tk_temImg"> Usar imagem personalizada (URL ou arquivo)</label>
         </div>
         <div class="tb-modal-actions"><button class="tb-btn tb-btn-success" onclick="tbCriarToken()">✅ Criar Token</button></div>
     `);
@@ -296,13 +294,10 @@ window.tbCriarToken = async function() {
         fecharModal(); toast('✅ Token criado');
     };
     if (document.getElementById('tk_temImg').checked) {
-        const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*';
-        input.onchange = async () => {
-            if (!input.files[0]) return finish(url);
-            toast('⏳ Enviando imagem...', 'warning');
-            try { finish(await uploadArquivo(input.files[0])); } catch (e) { toast('❌ Upload falhou', 'danger'); finish(url); }
-        };
-        input.click();
+        const escolhida = await CampoImagem.escolher({
+            titulo: '🎭 Imagem do token', valor: url, pasta: `tabuleiro-images/${T.mesaId}`,
+        });
+        finish(escolhida || url);
     } else finish(url);
 };
 

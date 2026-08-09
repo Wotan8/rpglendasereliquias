@@ -1122,45 +1122,31 @@ function openTerrainEditor() {
     modal.style.display = 'flex';
 }
 
-function selectTerrainImage(terrainKey) {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = (e) => handleTerrainImageUpload(e, terrainKey);
-    input.click();
-}
+/** Imagem do terreno pelo campo padrão: URL colada ou arquivo do aparelho.
+ *  Mapas antigos guardam `data:` aqui e continuam desenhando igual — quem
+ *  comprime na hora de salvar já ignora o que não é `data:`. */
+async function selectTerrainImage(terrainKey) {
+    const url = await CampoImagem.escolher({
+        titulo: `🖼️ Imagem de ${terrains[terrainKey]?.name || 'terreno'}`,
+        valor: (state.terrainImages[terrainKey] || '').startsWith('data:') ? '' : (state.terrainImages[terrainKey] || ''),
+        pasta: 'hexmap-terrain',
+    });
+    if (!url) return;
 
-function handleTerrainImageUpload(event, terrainKey) {
-    const file = event.target.files[0];
-    if (!file) return;
+    state.terrainImages[terrainKey] = url;
 
-    if (!file.type.startsWith('image/')) {
-        alert('❌ Por favor, selecione um arquivo de imagem!');
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        const imageData = e.target.result;
-
-        state.terrainImages[terrainKey] = imageData;
-
-        const img = new Image();
-        img.onload = function () {
-            state.loadedImages[terrainKey] = img;
-
-            saveTerrainImagesToStorage();
-
-            drawMap();
-            drawMinimap();
-            createTerrainGrid();
-            openTerrainEditor();
-
-            alert('✅ Imagem carregada com sucesso!');
-        };
-        img.src = imageData;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function () {
+        state.loadedImages[terrainKey] = img;
+        saveTerrainImagesToStorage();
+        drawMap();
+        drawMinimap();
+        createTerrainGrid();
+        openTerrainEditor();
     };
-    reader.readAsDataURL(file);
+    img.onerror = function () { alert('❌ Não consegui carregar essa imagem.'); };
+    img.src = url;
 }
 
 function removeTerrainImage(terrainKey) {

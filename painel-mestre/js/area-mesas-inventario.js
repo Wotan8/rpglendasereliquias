@@ -456,8 +456,8 @@ window._openMestreItemFormModal = async function(mesaId, editItemId, targetCharI
                     <textarea id="invFormDesc" class="inv-form-textarea" rows="3" placeholder="Descrição do item">${escapeHtml(item?.descricao || '')}</textarea>
                 </div>
                 <div class="inv-form-group inv-form-wide">
-                    <label class="inv-form-label">Imagem (URL)</label>
-                    <input type="text" id="invFormImagem" class="inv-form-input" value="${escapeHtml(item?.imagem || item?.imagemUrl || '')}" placeholder="https://...">
+                    <label class="inv-form-label">Imagem</label>
+                    ${CampoImagem.html({ id: 'invFormImagem', classe: 'inv-form-input', valor: item?.imagem || item?.imagemUrl || '', pasta: 'imagens/itens' })}
                 </div>
                 <div class="inv-form-group inv-form-wide">
                     ${(() => {

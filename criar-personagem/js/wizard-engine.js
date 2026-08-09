@@ -57,7 +57,7 @@ window.wizardState = {
     nomeCompleto: '',
     idade: '',
     aparencia: '',
-    imagemPersonagem: null, // base64 data URL da imagem do personagem
+    imagemPersonagem: null, // URL da imagem do personagem (Storage ou colada pelo jogador)
     motivacao: '',
     medo: '',
     ultimaPergunta: '',

@@ -2423,8 +2423,8 @@ window.openItemFormModal = function(title, item, containerId) {
                     <textarea id="invFormDesc" class="inv-form-textarea" rows="3" placeholder="Descrição do item">${_escHtml(item?.descricao || '')}</textarea>
                 </div>
                 <div class="inv-form-group inv-form-wide">
-                    <label class="inv-form-label">Imagem (URL)</label>
-                    <input type="text" id="invFormImagem" class="inv-form-input" value="${_escHtml(item?.imagem || item?.imagemUrl || '')}" placeholder="https://...">
+                    <label class="inv-form-label">Imagem</label>
+                    ${CampoImagem.html({ id: 'invFormImagem', classe: 'inv-form-input', valor: item?.imagem || item?.imagemUrl || '', pasta: 'imagens/itens' })}
                 </div>
                 <div class="inv-form-group inv-form-wide" id="invFormMechanicsGroup" style="display:none; margin-top: 8px;">
                     <label class="inv-form-label" style="color: var(--accent-color);">✨ Efeitos do Item</label>

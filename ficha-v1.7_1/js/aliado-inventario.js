@@ -271,8 +271,8 @@
                         <textarea id="aif_desc" class="inv-form-textarea" rows="3">${esc(item?.descricao || '')}</textarea>
                     </div>
                     <div class="inv-form-group inv-form-wide">
-                        <label class="inv-form-label">Imagem (URL)</label>
-                        <input type="text" id="aif_imagem" class="inv-form-input" value="${esc(item?.imagem || item?.imagemUrl || '')}" placeholder="https://...">
+                        <label class="inv-form-label">Imagem</label>
+                        ${CampoImagem.html({ id: 'aif_imagem', classe: 'inv-form-input', valor: item?.imagem || item?.imagemUrl || '', pasta: 'imagens/itens' })}
                     </div>
                 </div>
                 ${isEdit ? `<input type="hidden" id="aif_editId" value="${item.id}">` : ''}

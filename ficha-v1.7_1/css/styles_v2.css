@@ -621,10 +621,6 @@ body {
     margin-bottom: 4px
 }
 
-#charImgInput {
-    display: none
-}
-
 /* ===== SKILLS — 5 BLOCKS SIDE BY SIDE ===== */
 .skills-row {
     display: grid;

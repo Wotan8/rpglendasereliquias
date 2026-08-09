@@ -1,5 +1,5 @@
 // ÁREA APOIO — Apoios, Metas, Notificações (Full Migration)
-import { db, collection, query, where, getDocs, getDoc, setDoc, doc, updateDoc, addDoc, deleteDoc, storage, ref, uploadBytes, getDownloadURL, runTransaction, functions, httpsCallable } from './firebase-config.js';
+import { db, collection, query, where, getDocs, getDoc, setDoc, doc, updateDoc, addDoc, deleteDoc, runTransaction, functions, httpsCallable } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
@@ -1138,6 +1138,14 @@ window.toggleLojaFields = function() {
     document.getElementById('loja_modo_meta_fields').style.display = modoSelecao ? 'block' : 'none';
 };
 
+/** Campo padrão de imagem do item da loja: URL colada ou arquivo do aparelho.
+ *  Remontado a cada abertura porque o modal é o mesmo para todos os itens. */
+function lojaCampoImagem(url) {
+    const wrap = document.getElementById('loja_imagem_wrap');
+    wrap.innerHTML = '';
+    wrap.appendChild(CampoImagem.el({ id: 'loja_imagem', valor: url || '', pasta: 'loja-itens' }));
+}
+
 window.openLojaModal = async function(itemId = null) {
     document.getElementById('lojaModal').style.display = 'flex';
     
@@ -1169,8 +1177,7 @@ window.openLojaModal = async function(itemId = null) {
     // Limpar campos
     document.getElementById('loja_id').value = '';
     document.getElementById('loja_nome').value = '';
-    document.getElementById('loja_imagem').value = '';
-    document.getElementById('loja_imagem_preview').style.display = 'none';
+    lojaCampoImagem('');
     document.getElementById('loja_descricao').value = '';
     document.getElementById('loja_valor_rs').value = '';
     document.getElementById('loja_valor_frag').value = '';
@@ -1225,15 +1232,7 @@ window.openLojaModal = async function(itemId = null) {
             document.getElementById('loja_valor_frag').value = item.valorFrag || '';
             document.getElementById('loja_is_venda_ativa').checked = item.isVendaAtiva !== false;
             
-            if (item.imagem) {
-                const preview = document.getElementById('loja_imagem_preview');
-                preview.innerHTML = `<img src="${escapeHtml(item.imagem)}" style="max-height:80px;border-radius:4px;">`;
-                preview.style.display = 'block';
-                // Armazena URL original no dataset para caso não mude a imagem
-                preview.dataset.url = item.imagem;
-            } else {
-                document.getElementById('loja_imagem_preview').dataset.url = '';
-            }
+            lojaCampoImagem(item.imagem || '');
 
             document.getElementById('loja_is_exp').checked = !!item.isExp;
             document.getElementById('loja_exp_amount').value = item.expAmount || '';
@@ -1270,7 +1269,6 @@ window.openLojaModal = async function(itemId = null) {
         }
     } else {
         document.getElementById('lojaModalTitle').innerText = 'Novo Item da Loja';
-        document.getElementById('loja_imagem_preview').dataset.url = '';
     }
     
     toggleLojaFields();
@@ -1290,17 +1288,8 @@ window.saveLojaItem = async function() {
         const nome = document.getElementById('loja_nome').value.trim();
         if (!nome) throw new Error("O nome do item é obrigatório.");
 
-        const fileInput = document.getElementById('loja_imagem');
-        let imageUrl = document.getElementById('loja_imagem_preview').dataset.url || '';
-
-        // Se houver arquivo selecionado, fazer upload
-        if (fileInput.files.length > 0) {
-            const file = fileInput.files[0];
-            const fileName = `loja-itens/${Date.now()}_${file.name}`;
-            const storageRef = ref(storage, fileName);
-            await uploadBytes(storageRef, file);
-            imageUrl = await getDownloadURL(storageRef);
-        }
+        // O campo padrão já subiu o arquivo (se houve) e deixou a URL aqui.
+        const imageUrl = document.getElementById('loja_imagem').value.trim();
 
         const data = {
             nome,

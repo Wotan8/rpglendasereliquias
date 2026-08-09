@@ -334,11 +334,8 @@ export const Grafos = (() => {
                 <div class="wbt-brasao-field">
                     <div class="wbt-brasao-preview" id="linBrasaoPreview">${l.brasao ? `<img src="${esc(l.brasao)}" alt="brasão">` : '<span class="wbt-muted">sem brasão</span>'}</div>
                     <div>
-                        <label>Brasão da Casa
-                            <input id="linBrasaoFile" type="file" accept="image/*" class="form-input">
-                        </label>
-                        <input id="linBrasaoUrl" class="form-input" value="${esc(l.brasao || '')}" placeholder="…ou cole uma URL de imagem">
-                        <p class="wbt-muted">Envie uma imagem (fica salva na linhagem) ou use uma URL.</p>
+                        <label>Brasão da Casa ${CampoImagem.html({ id: 'linBrasaoUrl', classe: 'form-input', valor: l.brasao || '', pasta: 'worldbuilding-images/brasoes', preview: false })}</label>
+                        <p class="wbt-muted">Cole uma URL ou envie uma imagem do seu aparelho.</p>
                     </div>
                 </div>
                 <h3 class="wbt-subhead">Membros (${(l.members || []).length})</h3>
@@ -368,18 +365,7 @@ export const Grafos = (() => {
         };
         bindMemberBtns();
 
-        // brasão: upload → base64
-        document.getElementById('linBrasaoFile').onchange = (e) => {
-            const file = e.target.files[0]; if (!file) return;
-            if (file.size > 900 * 1024) { WB().showAlert('Imagem muito grande (máx. ~900 KB). Otimize antes.', 'warning'); return; }
-            const reader = new FileReader();
-            reader.onload = () => {
-                brasao = reader.result;
-                document.getElementById('linBrasaoPreview').innerHTML = `<img src="${brasao}" alt="brasão">`;
-                document.getElementById('linBrasaoUrl').value = '';
-            };
-            reader.readAsDataURL(file);
-        };
+        // Brasão: o campo padrão já sobe o arquivo e devolve a URL aqui.
         document.getElementById('linBrasaoUrl').oninput = (e) => {
             brasao = e.target.value.trim();
             document.getElementById('linBrasaoPreview').innerHTML = brasao ? `<img src="${esc(brasao)}" alt="brasão">` : '<span class="wbt-muted">sem brasão</span>';

@@ -224,9 +224,8 @@ function initPhase8(container) {
             </div>
             <div class="field" style="margin-bottom:8px;">
                 <label>📷 Imagem do Personagem (opcional)</label>
-                <p style="font-size:.8rem;color:var(--muted);margin:0 0 8px;">Faça upload de uma imagem para o seu personagem. Ela aparecerá na ficha.</p>
-                <input type="file" id="charImgUpload" accept="image/*" onchange="handleCharImgUpload(this)"
-                    style="font-size:.85rem;font-family:var(--font);">
+                <p style="font-size:.8rem;color:var(--muted);margin:0 0 8px;">Cole o endereço de uma imagem ou envie um arquivo do seu aparelho. Ela aparecerá na ficha.</p>
+                ${CampoImagem.html({ id: 'charImgUpload', valor: wizardState.imagemPersonagem || '', pasta: 'char-images', preview: false, attrs: 'oninput="handleCharImgUpload(this.value)"' })}
                 <div id="charImgPreviewWrap" style="margin-top:10px;text-align:center;${wizardState.imagemPersonagem ? '' : 'display:none;'}">
                     <img id="charImgPreviewImg" src="${escHtml(wizardState.imagemPersonagem || '')}"
                         style="max-width:200px;max-height:200px;border-radius:12px;border:2px solid var(--soft);object-fit:cover;">
@@ -263,29 +262,19 @@ function initPhase8(container) {
     container.innerHTML = html;
 }
 
-function handleCharImgUpload(input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function (ev) {
-        wizardState.imagemPersonagem = ev.target.result;
-        const wrap = document.getElementById('charImgPreviewWrap');
-        const img = document.getElementById('charImgPreviewImg');
-        if (img) img.src = ev.target.result;
-        if (wrap) wrap.style.display = '';
-        saveWizardToStorage();
-    };
-    reader.readAsDataURL(file);
+function handleCharImgUpload(url) {
+    wizardState.imagemPersonagem = (url || '').trim();
+    const wrap = document.getElementById('charImgPreviewWrap');
+    const img = document.getElementById('charImgPreviewImg');
+    if (img) img.src = wizardState.imagemPersonagem;
+    if (wrap) wrap.style.display = wizardState.imagemPersonagem ? '' : 'none';
+    saveWizardToStorage();
 }
 
 function removeCharImg() {
-    wizardState.imagemPersonagem = null;
-    const wrap = document.getElementById('charImgPreviewWrap');
-    if (wrap) wrap.style.display = 'none';
     const input = document.getElementById('charImgUpload');
     if (input) input.value = '';
-    saveWizardToStorage();
+    handleCharImgUpload('');
 }
 
 /* ===== PHASE 9 — Resumo Final ===== */

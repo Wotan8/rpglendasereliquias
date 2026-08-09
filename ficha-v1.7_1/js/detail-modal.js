@@ -614,8 +614,7 @@ function buildIdentityDetailHTML() {
                 ${state.charImg ? '<img id="identityImgPreview" src="' + state.charImg + '" style="max-width: 100%; max-height: 300px; border-radius: 12px; object-fit: cover; border: 2px solid var(--soft);">' : '<div style="padding: 40px; border: 2px dashed var(--soft); border-radius: 12px; color: var(--muted);">Nenhuma imagem definida</div>'}
             </div>
             <div style="margin-top: 10px;">
-                <input type="file" id="identityImgUpload" accept="image/*" onchange="handleIdentityImgUpload(this)" style="display:none;">
-                <button class="btn" style="font-size: 0.8rem; padding: 6px 12px;" onclick="document.getElementById('identityImgUpload').click()">📷 Alterar Imagem</button>
+                <button class="btn" style="font-size: 0.8rem; padding: 6px 12px;" onclick="handleIdentityImgUpload()">📷 Alterar Imagem</button>
             </div>
         </div>
 
@@ -655,26 +654,25 @@ function buildIdentityDetailHTML() {
     return html;
 }
 
-function handleIdentityImgUpload(input) {
-    const file = input.files[0];
-    if (!file) return;
+async function handleIdentityImgUpload() {
+    const url = await CampoImagem.escolher({
+        titulo: '📷 Imagem do personagem',
+        valor: state.charImg && !String(state.charImg).startsWith('data:') ? state.charImg : '',
+        pasta: 'char-images',
+    });
+    if (!url) return;
+    state.charImg = url;
 
-    const reader = new FileReader();
-    reader.onload = function (ev) {
-        state.charImg = ev.target.result;
-        
-        // Atualiza a imagem na ficha principal caso exista e seja visível
-        const mainImg = document.getElementById('charImgPreview');
-        if (mainImg) {
-            mainImg.src = state.charImg;
-            mainImg.style.display = 'block';
-            const placeholder = document.getElementById('charImgPlaceholder');
-            if (placeholder) placeholder.style.display = 'none';
-        }
+    // Atualiza a imagem na ficha principal caso exista e seja visível
+    const mainImg = document.getElementById('charImgPreview');
+    if (mainImg) {
+        mainImg.src = state.charImg;
+        mainImg.style.display = 'block';
+        const placeholder = document.getElementById('charImgPlaceholder');
+        if (placeholder) placeholder.style.display = 'none';
+    }
 
-        // Reabre o modal para atualizar a visualização da imagem
-        openIdentityDetail();
-        if (typeof scheduleAutosave === 'function') scheduleAutosave();
-    };
-    reader.readAsDataURL(file);
+    // Reabre o modal para atualizar a visualização da imagem
+    openIdentityDetail();
+    if (typeof scheduleAutosave === 'function') scheduleAutosave();
 }

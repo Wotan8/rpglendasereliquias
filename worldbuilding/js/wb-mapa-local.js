@@ -17,7 +17,7 @@
    via shared/local-tatico.js — o Local vira um "prefab".
    ═══════════════════════════════════════════════════════════ */
 
-import { db, doc, updateDoc, collection, getDocs, storage, ref, uploadBytes, getDownloadURL } from './firebase-config.js';
+import { db, doc, updateDoc, collection, getDocs } from './firebase-config.js';
 import { localPronto, pontosDaForma, comprimentoDaLinha, importarDungeonAlchemist, importarUVTT } from '../../shared/local-tatico.js';
 
 const esc = (s = '') => String(s).replace(/[&<>"']/g, c =>
@@ -196,14 +196,12 @@ function montar() {
             <button class="btn btn-secondary" onclick="document.getElementById('wbmlImportDA').click()">⚗️ Importar do Dungeon Alchemist</button>
         </div>
     </div>
-    <input type="file" id="wbmlArquivo" accept="image/*" hidden>
     <input type="file" id="wbmlArquivoDA" accept=".txt,.dd2vtt,.uvtt,.df2vtt,image/*" multiple hidden>`;
     document.body.appendChild(root);
 
     $('#wbmlFechar').onclick = fechar;
     $('#wbmlSalvar').onclick = salvar;
-    $('#wbmlTrocarImg').onclick = () => $('#wbmlArquivo').click();
-    $('#wbmlArquivo').addEventListener('change', enviarMapa);
+    $('#wbmlTrocarImg').onclick = enviarMapa;
     $('#wbmlImportDA').onclick = () => $('#wbmlArquivoDA').click();
     $('#wbmlArquivoDA').addEventListener('change', importarDA);
     $('#wbmlUnidade').addEventListener('change', () => { $('#wbmlUnLuz').textContent = $('#wbmlUnidade').value; desenhar(); });
@@ -353,9 +351,11 @@ function dica(t) { const el = $('#wbmlDica'); if (el) el.textContent = t; }
 
 /* ── Upload do mapa ──────────────────────────────────────── */
 async function subirImagem(file) {
-    const nome = `${Date.now()}_${file.name.replace(/[^\w.-]/g, '_')}`;
-    const snap = await uploadBytes(ref(storage, `worldbuilding-images/locais/${nome}`), file);
-    const url = await getDownloadURL(snap.ref);
+    return aplicarImagem(await CampoImagem.subir(file, 'worldbuilding-images/locais'));
+}
+
+/** Põe a imagem (venha de arquivo ou de URL colada) como mapa do local. */
+async function aplicarImagem(url) {
     const dim = await new Promise(res => {
         const i = new Image();
         i.onload = () => res({ w: i.naturalWidth, h: i.naturalHeight });
@@ -369,15 +369,16 @@ async function subirImagem(file) {
 }
 
 async function enviarMapa() {
-    const file = $('#wbmlArquivo').files[0];
-    $('#wbmlArquivo').value = '';
-    if (!file || !file.type.startsWith('image/')) return;
-    dica('⏳ Enviando mapa…');
+    const url = await CampoImagem.escolher({
+        titulo: '🖼️ Imagem do mapa', pasta: 'worldbuilding-images/locais',
+    });
+    if (!url) return;
+    dica('⏳ Carregando mapa…');
     try {
-        await subirImagem(file);
+        await aplicarImagem(url);
         desenhar();
         dica('✅ Mapa carregado. Desenhe as paredes por cima.');
-    } catch (e) { console.error(e); dica('❌ Falha no upload — tente de novo.'); }
+    } catch (e) { console.error(e); dica('❌ Não consegui usar essa imagem — tente outra.'); }
 }
 
 /* ── Import Dungeon Alchemist (.dd2vtt OU .jpg + .txt Roll20) ── */

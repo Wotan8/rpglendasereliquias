@@ -46,7 +46,7 @@ window.initApp = function () {
     if (_appInitialized) return;
     _appInitialized = true;
 
-    initTabs(); initDots(); initSkills(); initCharImg();
+    initTabs(); initDots(); initSkills();
     if (typeof renderConditions === 'function') renderConditions();
 
     // Se o Firebase já carregou dados, não recarregar do localStorage

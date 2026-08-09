@@ -42,6 +42,14 @@ service firebase.storage {
       allow write: if request.auth != null;
     }
 
+    // Campo padrão de imagem (shared/campo-imagem.js) — o que não tem pasta
+    // própria cai aqui: itens de inventário, NPCs, aliados, catálogo do
+    // criador e campos de imagem dos módulos de classe.
+    match /imagens/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
     // Default: deny all other paths
     match /{allPaths=**} {
       allow read, write: if false;

@@ -1373,8 +1373,8 @@ import {
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">🖼️ URL da Imagem</label>
-                        <input type="text" id="feiraImagem" class="form-input" value="${currentEditingFeira?.imagem || ''}" placeholder="https://...">
+                        <label class="form-label">🖼️ Imagem</label>
+                        ${CampoImagem.html({ id: 'feiraImagem', classe: 'form-input', valor: currentEditingFeira?.imagem || '', pasta: 'worldbuilding-images/feiras' })}
                     </div>
                     
                     <div class="form-group">
@@ -2775,8 +2775,10 @@ import {
                 <div class="form-section">
                     <h3 class="form-section-title">🖼️ Imagem${criadorLocked ? ' <span style="font-size:0.72rem;opacity:0.7;font-weight:400">(do Painel do Criador)</span>' : ''}</h3>
                     <div class="form-group">
-                        <label class="form-label">URL da Imagem</label>
-                        <input type="url" class="form-input" id="entryImagem" value="${entry?.imagem || ''}" placeholder="https://..." oninput="updateImagePreview()" ${criadorLocked ? 'readonly title="Editável no Painel do Criador"' : ''}>
+                        <label class="form-label">Imagem</label>
+                        ${criadorLocked
+                            ? `<input type="url" class="form-input" id="entryImagem" value="${entry?.imagem || ''}" placeholder="https://..." oninput="updateImagePreview()" readonly title="Editável no Painel do Criador">`
+                            : CampoImagem.html({ id: 'entryImagem', classe: 'form-input', valor: entry?.imagem || '', pasta: 'worldbuilding-images', preview: false, attrs: 'oninput="updateImagePreview()"' })}
                         <div class="image-preview-container">
                             <img src="${entry?.imagem || ''}" class="image-preview ${entry?.imagem ? 'visible' : ''}" id="imagePreview" onerror="this.classList.remove('visible')" onload="this.classList.add('visible')">
                         </div>
@@ -4556,7 +4558,7 @@ import {
                     <div class="collapsible-content">
                         <div class="session-gallery-container">
                             <div class="session-gallery-input-row">
-                                <input type="text" class="form-input" id="galleryImageUrl" placeholder="URL da imagem...">
+                                ${CampoImagem.html({ id: 'galleryImageUrl', classe: 'form-input', pasta: 'worldbuilding-images/sessoes', preview: false, placeholder: 'URL da imagem ou envie um arquivo' })}
                                 <input type="text" class="form-input" id="galleryImageLabel" placeholder="Legenda (opcional)" style="max-width: 200px;">
                                 <button type="button" class="btn-add-from-select" onclick="addSessionImage()">+ Adicionar</button>
                             </div>

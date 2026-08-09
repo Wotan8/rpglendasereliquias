@@ -181,7 +181,7 @@ export const Editor = (() => {
             <div class="wbt-form">
                 <label>Título do livro <input id="bkTitle" class="form-input" value="${esc(b.title)}" placeholder="Ex: Crônicas de Eldoria — Vol. I"></label>
                 <label>Sinopse / descrição <textarea id="bkDesc" class="form-textarea" placeholder="Do que trata este livro?">${esc(b.description || '')}</textarea></label>
-                <label>Capa (URL de imagem) <input id="bkCover" class="form-input" value="${esc(b.cover || '')}" placeholder="https://…"></label>
+                <label>Capa do livro ${CampoImagem.html({ id: 'bkCover', classe: 'form-input', valor: b.cover || '', pasta: 'worldbuilding-images/capas' })}</label>
                 <div class="wbt-muted" style="margin:.6rem 0 .2rem;font-weight:700">📖 Publicações</div>
                 ${PUBLICACOES.map(([k, label, dica]) => `
                     <label class="wbt-check"><input type="checkbox" id="bkPub_${k}" ${pub[k] ? 'checked' : ''}>

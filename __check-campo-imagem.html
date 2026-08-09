@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Check — campo de imagem padrão</title>
+    <style>
+        body { font: 15px system-ui; background: #14141c; color: #e8e8f0; padding: 24px; max-width: 720px; }
+        input[type=text] { padding: 7px 9px; border-radius: 8px; border: 1px solid #3a3a4a; background: #1b1b28; color: inherit; }
+        .caixa { border: 1px solid #2c2c3a; border-radius: 10px; padding: 14px; margin: 14px 0; }
+        h2 { font-size: .95rem; margin: 0 0 10px; color: #d4af37; }
+        #saida { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: .8rem; }
+        .ok { color: #4ade80; } .ruim { color: #f87171; }
+    </style>
+</head>
+<body>
+    <h1 style="font-size:1.1rem">Campo de imagem padrão (shared/campo-imagem.js)</h1>
+    <p style="color:#9aa0b0;font-size:.85rem">Sem Firebase: só o comportamento de tela. O upload de arquivo
+        precisa de sessão logada e é testado nas páginas reais.</p>
+
+    <div class="caixa">
+        <h2>1. Campo de formulário</h2>
+        <div id="campo1"></div>
+    </div>
+
+    <div class="caixa">
+        <h2>2. Diálogo (caixa de foto, token, mapa)</h2>
+        <button id="abrir">Escolher imagem…</button>
+        <div id="escolhido" style="margin-top:8px;color:#9aa0b0;font-size:.85rem">— nada escolhido —</div>
+    </div>
+
+    <div class="caixa">
+        <h2>Resultado</h2>
+        <div id="saida">rodando…</div>
+    </div>
+
+    <script src="shared/campo-imagem.js"></script>
+    <script>
+        const saida = document.getElementById('saida');
+        const linhas = [];
+        const conf = (nome, ok) => linhas.push(`<span class="${ok ? 'ok' : 'ruim'}">${ok ? '✅' : '❌'} ${nome}</span>`);
+
+        // 1. Campo montado com valor, id e classe preservados
+        document.getElementById('campo1').innerHTML = CampoImagem.html({
+            id: 'meuCampo', valor: 'https://placehold.co/120', pasta: 'imagens/teste', classe: 'x-classe',
+        });
+        const campo = document.getElementById('meuCampo');
+        conf('input mantém o id pedido', !!campo);
+        conf('input mantém a classe pedida', campo.classList.contains('x-classe'));
+        conf('input já vem com o valor', campo.value === 'https://placehold.co/120');
+        conf('botão de arquivo existe', !!campo.closest('[data-ci]').querySelector('[data-ci-btn]'));
+        conf('input de arquivo aceita só imagem',
+            campo.closest('[data-ci]').querySelector('[data-ci-file]').accept === 'image/*');
+        conf('pasta vai no dataset', campo.closest('[data-ci]').dataset.ciPasta === 'imagens/teste');
+        conf('preview já aparece com valor inicial',
+            campo.closest('[data-ci]').querySelector('[data-ci-prev]').classList.contains('on'));
+
+        // 2. Digitar limpa/acende o preview (delegação no document)
+        campo.value = '';
+        campo.dispatchEvent(new Event('input', { bubbles: true }));
+        conf('preview some quando o campo esvazia',
+            !campo.closest('[data-ci]').querySelector('[data-ci-prev]').classList.contains('on'));
+
+        // 3. Handler externo (oninput) continua sendo chamado
+        let avisos = 0;
+        const campo2 = CampoImagem.el({ id: 'campo2', attrs: 'oninput="window.__viu=1"' });
+        document.body.appendChild(campo2);
+        campo2.querySelector('input[type=text]').addEventListener('input', () => avisos++);
+        campo2.querySelector('input[type=text]').dispatchEvent(new Event('input', { bubbles: true }));
+        conf('quem escuta o input continua sendo avisado', avisos === 1);
+        campo2.remove();
+
+        // 4. Dentro de <label> (padrão do worldbuilding/tabuleiro): clicar no
+        //    texto do rótulo tem que cair no campo de URL, nunca abrir o seletor
+        //    de arquivo por engano.
+        const lab = document.createElement('label');
+        lab.innerHTML = 'Capa do livro ' + CampoImagem.html({ id: 'campo3', pasta: 'imagens/teste' });
+        document.body.appendChild(lab);
+        conf('rótulo aponta para o campo de URL, não para o de arquivo',
+            lab.control === document.getElementById('campo3'));
+        lab.remove();
+
+        // 5. Diálogo abre, devolve o valor digitado e some da tela
+        document.getElementById('abrir').onclick = async () => {
+            const url = await CampoImagem.escolher({ titulo: '🖼️ Teste', pasta: 'imagens/teste' });
+            document.getElementById('escolhido').textContent = url || '— cancelado —';
+        };
+        (async () => {
+            const p = CampoImagem.escolher({ titulo: 'auto', pasta: 'imagens/teste' });
+            await new Promise(r => setTimeout(r, 30));
+            const dlg = document.querySelector('dialog.ci-dlg');
+            conf('diálogo abre modal', !!dlg && dlg.open);
+            dlg.querySelector('input[type=text]').value = 'https://exemplo/x.png';
+            dlg.querySelector('[data-ci-ok]').click();
+            conf('diálogo devolve a URL digitada', (await p) === 'https://exemplo/x.png');
+            conf('diálogo sai do DOM ao fechar', !document.querySelector('dialog.ci-dlg'));
+
+            const p2 = CampoImagem.escolher({ pasta: 'imagens/teste' });
+            await new Promise(r => setTimeout(r, 30));
+            document.querySelector('dialog.ci-dlg [data-ci-cancel]').click();
+            conf('cancelar devolve null', (await p2) === null);
+
+            saida.innerHTML = linhas.join('<br>') +
+                `<br><br>${linhas.filter(l => l.includes('❌')).length ? 'FALHOU' : 'TUDO OK'}`;
+        })();
+    </script>
+</body>
+</html>

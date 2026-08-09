@@ -271,7 +271,7 @@ function buildAliadoForm() {
         <div class="section">
             <div class="section-title">Informações Básicas</div>
             <div class="row">
-                <div class="field"><label>🖼️ Imagem URL</label><input type="text" id="al_imagem" placeholder="https://..." oninput="alRefreshPortrait()"></div>
+                <div class="field"><label>🖼️ Imagem</label>${CampoImagem.html({ id: 'al_imagem', pasta: 'imagens/aliados', preview: false, attrs: 'oninput="alRefreshPortrait()"' })}</div>
             </div>
             <div class="row" style="grid-template-columns: 2fr 1fr 1fr;">
                 <div class="field"><label>Nome *</label><input type="text" id="al_nome" placeholder="Nome do NPC" oninput="alRefreshHeadName()"></div>
