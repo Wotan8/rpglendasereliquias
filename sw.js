@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v174';
+const VERSION = 'v175';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -171,6 +171,7 @@ const PRECACHE_URLS = [
   '/shared/combate-cenas.js',
   '/shared/equip-slots.js',
   '/shared/ficha-aliado.css',
+  '/shared/imagem-zoom.js',
   '/shared/lendas-reliquias.css',
   '/shared/livro-vinculado.js',
   '/shared/livros-pub.js',

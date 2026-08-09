@@ -176,18 +176,24 @@ function renderConhecimento() {
         totalLiberados += liberadosNoLivro;
         totalCapitulos += visiveisNoLivro;
 
+        // Livro fechado por padrão (igual à estante do Cronista): a aba abre
+        // mostrando a lombada de tudo que o personagem alcança, e o sumário de
+        // um livro só aparece quando ele pede.
         blocos.push(`
-            <div class="cnh-livro">
-                <div class="cnh-livro-head">
-                    ${livro.cover ? `<div class="cnh-capa" style="background-image:url('${_esc(livro.cover)}')"></div>` : '<div class="cnh-capa">📖</div>'}
+            <details class="cnh-livro">
+                <summary class="cnh-livro-head">
+                    <span class="cnh-caret">▸</span>
+                    ${livro.cover
+                        ? `<div class="cnh-capa" style="background-image:url('${_esc(livro.cover)}')" data-zoom="${_esc(livro.cover)}" data-zoom-alt="${_esc(livro.title || '')}" title="Ver a capa maior"></div>`
+                        : '<div class="cnh-capa">📖</div>'}
                     <div style="flex:1;min-width:0">
                         <div class="cnh-livro-titulo">${_esc(livro.title || 'Livro sem título')}</div>
                         ${livro.description ? `<div class="cnh-livro-desc">${_esc(livro.description)}</div>` : ''}
                         <div class="cnh-progresso">📖 ${liberadosNoLivro} de ${visiveisNoLivro} capítulos desbloqueados</div>
                     </div>
-                </div>
+                </summary>
                 <div class="cnh-capitulos">${linhas.join('')}</div>
-            </div>`);
+            </details>`);
     }
 
     // Sinal para abas-condicionais.js: e o mesmo numero que o jogador ve, ja

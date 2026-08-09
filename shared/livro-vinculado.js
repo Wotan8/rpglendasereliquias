@@ -230,7 +230,8 @@
                    background:var(--lr-surface-2,rgba(255,255,255,.06));color:inherit;font:inherit;
                    border:1px solid var(--lr-border,#333);border-radius:10px;padding:10px 12px">
             <span style="width:44px;height:60px;flex:none;border-radius:6px;display:flex;align-items:center;justify-content:center;
-                background:${l.cover ? `url('${esc(l.cover)}') center/cover` : 'var(--lr-bg-1,rgba(255,255,255,.06))'}">${l.cover ? '' : '📖'}</span>
+                background:${l.cover ? `url('${esc(l.cover)}') center/cover` : 'var(--lr-bg-1,rgba(255,255,255,.06))'}"
+                ${l.cover ? `data-zoom="${esc(l.cover)}" data-zoom-alt="${esc(l.title || '')}" title="Ver a capa maior"` : ''}>${l.cover ? '' : '📖'}</span>
             <span style="flex:1;min-width:0">
                 <span style="display:block;font-weight:700">${esc(l.title || 'Livro sem título')}</span>
                 ${l.description ? `<span style="display:block;opacity:.75;font-size:.85rem">${esc(l.description)}</span>` : ''}

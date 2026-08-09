@@ -122,7 +122,8 @@ export const Editor = (() => {
         <details class="wb-book" data-book="${b.id}">
             <summary class="wb-book__head">
                 <span class="wb-book__caret">▸</span>
-                <div class="wb-book__cover" style="${b.cover ? `background-image:url('${esc(b.cover)}')` : ''}">${b.cover ? '' : '📖'}</div>
+                <div class="wb-book__cover" style="${b.cover ? `background-image:url('${esc(b.cover)}')` : ''}"
+                     ${b.cover ? `data-zoom="${esc(b.cover)}" data-zoom-alt="${esc(b.title || '')}" title="Ver a capa maior"` : ''}>${b.cover ? '' : '📖'}</div>
                 <div class="wb-book__meta">
                     <div class="wb-book__title">${esc(b.title || 'Livro sem título')}</div>
                     <div class="wb-book__badges">${pubBadgesLivro(b)} <span class="wb-badge wb-badge--soft">${caps.length} cap.</span> <span class="wb-badge wb-badge--soft">${palavras.toLocaleString('pt-BR')} palavras</span></div>

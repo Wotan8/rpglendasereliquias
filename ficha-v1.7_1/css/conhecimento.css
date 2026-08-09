@@ -28,7 +28,32 @@
     gap: 12px;
     padding: 12px;
     background: var(--lr-surface-2);
+    cursor: pointer;
+    /* o triângulo padrão do <summary> sai: quem gira é o .cnh-caret */
+    list-style: none;
+}
+
+.cnh-livro-head::-webkit-details-marker {
+    display: none;
+}
+
+.cnh-livro-head:hover {
+    background: rgba(212, 175, 55, .06);
+}
+
+.cnh-livro[open] .cnh-livro-head {
     border-bottom: 1px solid var(--line);
+}
+
+.cnh-caret {
+    flex: none;
+    align-self: center;
+    color: var(--lr-gold-2);
+    transition: transform .18s ease;
+}
+
+.cnh-livro[open] .cnh-caret {
+    transform: rotate(90deg);
 }
 
 .cnh-capa {

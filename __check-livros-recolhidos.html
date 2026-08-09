@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Check — livros recolhidos e capa ampliada</title>
+    <link rel="stylesheet" href="shared/tokens.css">
+    <link rel="stylesheet" href="ficha-v1.7_1/css/conhecimento.css">
+    <style>
+        body { font: 15px system-ui; background: #14141c; color: #e8e8f0; padding: 24px; max-width: 760px; }
+        #saida { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: .8rem;
+                 border: 1px solid #2c2c3a; border-radius: 10px; padding: 14px; margin-top: 16px; }
+        .ok { color: #4ade80; } .ruim { color: #f87171; }
+    </style>
+</head>
+<body>
+    <h1 style="font-size:1.05rem">Estante do personagem — recolhida, e capa que amplia</h1>
+    <div id="conhecimentoContainer"></div>
+    <div id="saida">rodando…</div>
+
+    <script src="shared/imagem-zoom.js"></script>
+    <script>
+        // Mesma marcação que conhecimento.js monta para cada livro.
+        const CAPA = 'data:image/svg+xml,' + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="280"><rect width="200" height="280" fill="#4a3a7a"/></svg>');
+        document.getElementById('conhecimentoContainer').innerHTML = `
+            <div class="cnh-resumo">📚 3 de 5 capítulos ao seu alcance</div>
+            <details class="cnh-livro">
+                <summary class="cnh-livro-head">
+                    <span class="cnh-caret">▸</span>
+                    <div class="cnh-capa" style="background-image:url('${CAPA}')" data-zoom="${CAPA}" data-zoom-alt="Livro de Regras" title="Ver a capa maior"></div>
+                    <div style="flex:1;min-width:0">
+                        <div class="cnh-livro-titulo">Lendas &amp; Relíquias — Livro de Regras</div>
+                        <div class="cnh-livro-desc">Tudo que o jogador precisa.</div>
+                        <div class="cnh-progresso">📖 3 de 5 capítulos desbloqueados</div>
+                    </div>
+                </summary>
+                <div class="cnh-capitulos">
+                    <div class="cnh-cap cnh-cap--aberto"><span class="cnh-cap-num">1</span>
+                        <div style="flex:1"><div class="cnh-cap-titulo">Introdução</div></div>
+                        <span class="cnh-selo cnh-selo--ok">📖 Ler</span></div>
+                </div>
+            </details>`;
+
+        const linhas = [];
+        const conf = (nome, ok) => linhas.push(`<span class="${ok ? 'ok' : 'ruim'}">${ok ? '✅' : '❌'} ${nome}</span>`);
+        const livro = document.querySelector('.cnh-livro');
+        const capa = document.querySelector('.cnh-capa');
+        const caps = document.querySelector('.cnh-capitulos');
+
+        conf('livro nasce recolhido', livro.open === false);
+        // checkVisibility(), não offsetParent: <details> fechado usa
+        // content-visibility, então o elemento ainda tem caixa e altura.
+        conf('capítulos escondidos enquanto fechado', caps.checkVisibility() === false);
+        conf('o marcador padrão do <summary> sai da frente',
+            getComputedStyle(document.querySelector('.cnh-livro-head')).listStyleType === 'none');
+
+        // Clicar no cabeçalho expande; clicar de novo recolhe.
+        document.querySelector('.cnh-livro-titulo').click();
+        conf('clicar no cabeçalho expande', livro.open === true);
+        conf('capítulos aparecem ao expandir', caps.offsetParent !== null);
+        document.querySelector('.cnh-livro-titulo').click();
+        conf('clicar de novo recolhe', livro.open === false);
+
+        // Clicar na CAPA amplia — e não pode abrir/fechar o livro junto.
+        capa.click();
+        const dlg = document.querySelector('dialog.iz-dlg');
+        conf('clicar na capa abre a imagem grande', !!dlg && dlg.open);
+        conf('a imagem grande é a capa do livro', !!dlg && dlg.querySelector('img').src === CAPA);
+        conf('ampliar a capa NÃO mexe no recolhido/expandido', livro.open === false);
+
+        dlg.click();   // clique em qualquer lugar fecha
+        setTimeout(() => {
+            conf('clicar fora fecha e o diálogo sai do DOM', !document.querySelector('dialog.iz-dlg'));
+            // Ampliar de novo não pode empilhar diálogo morto no body.
+            capa.click(); document.querySelector('dialog.iz-dlg').click();
+            capa.click(); document.querySelector('dialog.iz-dlg').click();
+            conf('abrir e fechar várias vezes não deixa sobra no DOM',
+                document.querySelectorAll('dialog.iz-dlg').length === 0);
+
+            // Estante do leitor compartilhado e do Painel do Mestre: a capa mora
+            // DENTRO do card clicável. Clicar nela amplia, e não abre o livro.
+            const card = document.createElement('button');
+            let abriuLivro = false;
+            card.onclick = () => { abriuLivro = true; };
+            card.innerHTML = `<span class="cnh-capa" data-zoom="${CAPA}"></span><span>Livro</span>`;
+            document.body.appendChild(card);
+            card.querySelector('[data-zoom]').click();
+            conf('capa dentro de card clicável amplia sem abrir o livro',
+                !abriuLivro && !!document.querySelector('dialog.iz-dlg'));
+            document.querySelector('dialog.iz-dlg')?.click();
+            card.click();
+            conf('o resto do card continua abrindo o livro', abriuLivro === true);
+            card.remove();
+            document.getElementById('saida').innerHTML = linhas.join('<br>') +
+                `<br><br>${linhas.filter(l => l.includes('❌')).length ? 'FALHOU' : 'TUDO OK'}`;
+        }, 30);
+    </script>
+</body>
+</html>

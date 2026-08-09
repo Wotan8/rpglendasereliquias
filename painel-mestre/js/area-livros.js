@@ -28,7 +28,8 @@ export async function onTabActivated() {
             <div class="card" style="display:flex;gap:14px;align-items:center;cursor:pointer;margin-bottom:10px;padding:12px"
                 onclick="window.lvAbrirLivroId('${esc(l.id)}')">
                 <div style="width:52px;height:70px;flex:none;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;
-                    background:${l.cover ? `url('${esc(l.cover)}') center/cover` : 'var(--lr-surface-2,rgba(255,255,255,.06))'}">${l.cover ? '' : '📖'}</div>
+                    background:${l.cover ? `url('${esc(l.cover)}') center/cover` : 'var(--lr-surface-2,rgba(255,255,255,.06))'}"
+                    ${l.cover ? `data-zoom="${esc(l.cover)}" data-zoom-alt="${esc(l.title || '')}" title="Ver a capa maior"` : ''}>${l.cover ? '' : '📖'}</div>
                 <div style="flex:1;min-width:0">
                     <div style="font-weight:700">${esc(l.title || 'Livro sem título')}</div>
                     ${l.description ? `<div style="color:var(--muted);font-size:.88rem">${esc(l.description)}</div>` : ''}
