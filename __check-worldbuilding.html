@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0E1117">
+<title>Check — Worldbuilding (shell + dashboard)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="worldbuilding/css/worldbuilding.css?v=1786287358860">
+<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=1786287358860">
+<link rel="stylesheet" href="shared/texto-mundo.css">
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/lendas-reliquias.css">
+<script src="shared/theme.js"></script>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="sidebar-header"><span style="font-size:1.5rem">🌐</span><span class="sidebar-title">Worldbuilding</span></div>
+    <div class="sidebar-search"><input type="text" class="search-input" placeholder="🔍 Buscar em tudo..."></div>
+    <nav class="sidebar-nav">
+        <div class="nav-category active"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></div>
+        <div class="nav-category"><span class="nav-icon">📍</span><span class="nav-label">Geografia</span></div>
+        <div class="nav-category"><span class="nav-icon">🏠</span><span class="nav-label">Propriedades</span></div>
+        <div class="nav-category"><span class="nav-icon">👥</span><span class="nav-label">NPCs</span></div>
+        <div class="nav-category"><span class="nav-icon">⚔️</span><span class="nav-label">Tribos</span></div>
+        <div class="nav-category"><span class="nav-icon">📜</span><span class="nav-label">História</span></div>
+        <div class="nav-category"><span class="nav-icon">🎭</span><span class="nav-label">Culturas</span></div>
+        <div class="nav-divider"></div>
+        <div class="nav-category"><span class="nav-icon">🌙</span><span class="nav-label">Submundo</span></div>
+    </nav>
+    <button class="btn-new-entry">➕ Nova Entrada</button>
+</div>
+
+<main class="main-content">
+    <div class="content-header">
+        <button class="btn-logout">🚪 SAIR</button>
+        <button class="btn-mestre">🏠</button>
+        <h1 class="content-title">Dashboard</h1>
+        <button class="theme-toggle" onclick="document.documentElement.classList.toggle('dark')">🌙</button>
+        <span class="user-display-name">mestre@reliera</span>
+    </div>
+    <div class="content-body" id="contentBody"></div>
+</main>
+
+<script>
+const cats = [['📍','Geografia',24],['🏠','Propriedades',11],['👥','NPCs',68],['⚔️','Tribos',9],
+              ['📜','História',31],['🎭','Culturas',7],['✨','Magia/Tecnologia',15],['🏛️','Religião',6],['💬','Rumores',12]];
+const card = (icon, nome, tipo, desc, img) => `
+  <div class="entry-card">
+    ${img ? `<img src="${img}" class="entry-image">` : ''}
+    <span class="entry-type">${icon} ${tipo}</span>
+    <div class="entry-name">${nome}</div>
+    <div class="entry-desc">${desc}</div>
+  </div>`;
+const ph = (t) => `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="220"><rect width="400" height="220" fill="%23444"/><text x="200" y="125" font-size="42" text-anchor="middle" fill="%23bbb">${t}</text></svg>`;
+
+document.getElementById('contentBody').innerHTML = `
+<div class="wb-dash-hero">
+  <div>
+    <div class="wb-dash-hero__total">183</div>
+    <div class="wb-dash-hero__label">entradas no seu mundo · 4 tribos do Criador</div>
+  </div>
+  <div class="wb-quickactions">
+    <button class="wb-quickaction"><span>➕</span>Nova entrada</button>
+    <button class="wb-quickaction"><span>🕸️</span>Grafos</button>
+    <button class="wb-quickaction"><span>✒️</span>Escritório</button>
+    <button class="wb-quickaction"><span>📜</span>Linha do Tempo</button>
+  </div>
+</div>
+
+<div class="dashboard-grid">
+  ${cats.map(([i,t,n]) => `<div class="stat-card"><div class="stat-icon">${i}</div><div class="stat-value">${n}</div><div class="stat-label">${t}</div></div>`).join('')}
+</div>
+
+<div class="wb-dash-health">
+  <div class="wb-health-card is-warn"><div class="wb-health-card__v">37</div><div class="wb-health-card__l">🖼️ sem imagem</div></div>
+  <div class="wb-health-card is-warn"><div class="wb-health-card__v">12</div><div class="wb-health-card__l">📝 descrição curta</div></div>
+  <div class="wb-health-card is-info"><div class="wb-health-card__v">5</div><div class="wb-health-card__l">💬 rumores ativos</div></div>
+</div>
+
+<div class="entries-section">
+  <div class="section-header"><h2 class="section-title">🕒 Editados recentemente</h2></div>
+  <div class="entries-grid">
+    ${card('📍','Vaugh','Vila','Vila de fundição encravada no vale, viva por causa do minério e morta por causa dele.', ph('Vaugh'))}
+    ${card('👥','Brida, a Ferreira','NPC','Ferreira de mãos queimadas que herdou a bigorna do pai e a dívida junto ao Consórcio.', ph('Brida'))}
+    ${card('⚔️','Consórcio de Ferro','Organização','Compra minas falidas e cobra em favores. Nunca em Luns.','')}
+    ${card('📜','A Terceira Guerra do Sal','Guerra','Durou onze anos e acabou sem tratado — só sem gente para lutar.','')}
+    ${card('🎭','Os Caminhantes de Korr','Cultura','Enterram os mortos de pé, virados para a estrada.','')}
+    ${card('🏛️','O Fogo Quieto','Culto','Adoram a brasa que não apaga. Proíbem lamparinas.','')}
+  </div>
+</div>`;
+</script>
+</body>
+</html>
