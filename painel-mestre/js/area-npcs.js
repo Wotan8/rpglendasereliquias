@@ -77,7 +77,7 @@ function renderNpcs(npcs) {
     el.innerHTML = npcs.map(n => {
         const tags = (n.tags||'').split(',').filter(t=>t.trim()).map(t=>`<span class="npc-tag">${escapeHtml(t.trim())}</span>`).join('');
         return `<div class="npc-card" onclick="if(!event.target.classList.contains('npc-checkbox'))openNpcModal('${n.id}')">
-            <div class="npc-card-header"><input type="checkbox" class="npc-checkbox" data-npc-id="${n.id}" onclick="event.stopPropagation()"><div class="npc-card-info"><div class="npc-name">${escapeHtml(n.nome||'Sem nome')}</div><span class="npc-type-badge">${n.tipo==='criatura'?'🐉 Criatura':'👤 NPC'}</span></div></div>
+            <div class="npc-card-header"><input type="checkbox" class="npc-checkbox" data-npc-id="${n.id}" onclick="event.stopPropagation()"><div class="npc-card-info"><div class="npc-name">${escapeHtml(n.nome||'Sem nome')}</div><span class="npc-type-badge">${n.tipo==='criatura'?'🐉 Criatura':n.tipo==='eco'?'ᛉ Eco':'👤 NPC'}</span></div></div>
             ${n.imagem?`<div class="npc-image-container"><img src="${n.imagem}" class="npc-card-image"></div>`:''}
             ${n.rolePlay?.personalidade?.[0]?`<div style="font-size:.82rem;color:var(--muted);margin-top:6px">- ${escapeHtml(n.rolePlay.personalidade[0])}</div>`:''}
             ${n.rolePlay?.trejeitos?`<div style="font-size:.82rem;color:var(--muted)">🎭 ${escapeHtml(n.rolePlay.trejeitos)}</div>`:''}
@@ -527,7 +527,7 @@ function buildNpcForm() {
         <div class="form-group"><label class="form-label">🖼️ Imagem</label>${CampoImagem.html({ id: 'npcImagem', classe: 'form-input', pasta: 'imagens/npcs', preview: false })}<div id="npcImgPreview" style="display:none;margin-top:8px;text-align:center"><img id="npcImgTag" style="max-height:200px;border-radius:10px"></div></div>
         <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px">
             <div class="form-group"><label class="form-label">Nome *</label><input type="text" class="form-input" id="npcNome" placeholder="Nome do NPC"></div>
-            <div class="form-group"><label class="form-label">Tipo *</label><select class="form-select" id="npcTipo"><option value="npc">👤 NPC</option><option value="criatura">🐉 Criatura</option></select></div>
+            <div class="form-group"><label class="form-label">Tipo *</label><select class="form-select" id="npcTipo"><option value="npc">👤 NPC</option><option value="criatura">🐉 Criatura</option><option value="eco">ᛉ Eco da Alma</option></select></div>
             <div class="form-group"><label class="form-label">Nível</label><input type="number" class="form-input" id="npcNivel" value="1" min="1" oninput="F_set('nivel',parseInt(this.value)||1);recalcStats()"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
@@ -570,6 +570,29 @@ function buildNpcForm() {
                 <div class="form-group"><label class="form-label">Dieta</label><input type="text" class="form-input" id="npcDieta"></div>
                 <div class="form-group"><label class="form-label">Nível de Ameaça</label><select class="form-select" id="npcNivelAmeaca"><option value="">Selecione</option><option value="inofensivo">Inofensivo</option><option value="baixo">Baixo</option><option value="medio">Médio</option><option value="alto">Alto</option><option value="letal">Letal</option></select></div>
             </div>
+        </div>
+
+        <!-- ᛉ ECO DA ALMA — o vestígio com que o Xamã comunga (Totemancia).
+             Bloco irmão do de Criatura: aparece só quando tipo === 'eco'.
+             Disposição e Máscara são do MESTRE — é o que o Eco esconde. -->
+        <div id="ecoFieldsSection" class="npcv2-card" style="display:none"><div class="npcv2-block-title">ᛉ Campos de Eco da Alma</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="form-group"><label class="form-label">Dádiva</label><select class="form-select" id="ecoDadiva"><option value="">Selecione</option><option value="braco">Braço — lutou, caçou, matou</option><option value="pele">Pele — aguentou; fera de couro</option><option value="olho">Olho — batedor, vigia, ave</option><option value="passo">Passo — corria; fera veloz</option><option value="boca">Boca — orador, líder, sacerdote</option></select></div>
+                <div class="form-group"><label class="form-label">Estado</label><select class="form-select" id="ecoEstado"><option value="">Selecione</option><option value="sereno">Sereno</option><option value="inquieto">Inquieto</option><option value="furioso">Furioso</option><option value="corrompido">Corrompido</option><option value="ancestral">Ancestral</option></select></div>
+            </div>
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px">
+                <div class="form-group"><label class="form-label">Personalidade</label><select class="form-select" id="ecoPersonalidade"><option value="">Role 1d10</option><option value="1">1 · Sereno</option><option value="2">2 · Zeloso</option><option value="3">3 · Curioso</option><option value="4">4 · Saudoso</option><option value="5">5 · Orgulhoso</option><option value="6">6 · Silente</option><option value="7">7 · Sofrido</option><option value="8">8 · Malicioso</option><option value="9">9 · Faminto</option><option value="10">10 · Rancoroso</option></select></div>
+                <div class="form-group"><label class="form-label" title="0–10. O que o Eco realmente sente. Segredo do Mestre.">Disposição 🔒</label><input type="number" class="form-input" id="ecoDisposicao" min="0" max="10"></div>
+                <div class="form-group"><label class="form-label" title="Redutor do teste de Supressão do Xamã">PRS do Eco</label><input type="number" class="form-input" id="ecoPRS" min="0"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="form-group"><label class="form-label">Perícia emprestada</label><input type="text" class="form-input" id="ecoPericia" placeholder="Nome · valor 3 (Comum) ou 5 (Ancestral)"></div>
+                <div class="form-group"><label class="form-label">Onde vive</label><input type="text" class="form-input" id="ecoTerritorio" placeholder="Território, Andarilho ou Totem de Antiqua"></div>
+            </div>
+            <div class="form-group"><label class="form-label">Preço / oferenda <span style="font-weight:400;opacity:.7">(Lei da Reciprocidade)</span></label><input type="text" class="form-input" id="ecoPreco" placeholder="O que ele cobra por comungar"></div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:.85rem;cursor:pointer;margin-top:4px">
+                <input type="checkbox" id="ecoMascara"> 🎭 Usa máscara — esconde a Disposição real do Xamã
+            </label>
         </div>
     </div>
 
@@ -1549,8 +1572,19 @@ function fillNpcForm(n) {
     set('npcItens', n.loot?.itens); set('npcLuns', n.loot?.luns); set('npcPistas', n.loot?.pistas); set('npcComplicacoes', n.loot?.complicacoes);
     set('npcHabitat', n.criatura?.habitat); set('npcComportamento', n.criatura?.comportamento); set('npcDieta', n.criatura?.dieta); set('npcNivelAmeaca', n.criatura?.nivelAmeaca);
 
-    const cs = document.getElementById('creatureFieldsSection'); if (cs) cs.style.display = n.tipo === 'criatura' ? 'block' : 'none';
-    document.getElementById('npcTipo')?.addEventListener('change', function() { const c = document.getElementById('creatureFieldsSection'); if (c) c.style.display = this.value === 'criatura' ? 'block' : 'none'; });
+    set('ecoDadiva', n.eco?.dadiva); set('ecoEstado', n.eco?.estado); set('ecoPersonalidade', n.eco?.personalidade);
+    set('ecoDisposicao', n.eco?.disposicao); set('ecoPRS', n.eco?.prs); set('ecoPericia', n.eco?.pericia);
+    set('ecoTerritorio', n.eco?.territorio); set('ecoPreco', n.eco?.preco);
+    const mk = document.getElementById('ecoMascara'); if (mk) mk.checked = !!n.eco?.mascara;
+
+    /* Um bloco por tipo: Criatura e Eco nunca aparecem juntos. */
+    const _npcTipoSecoes = () => {
+        const t = document.getElementById('npcTipo')?.value || n.tipo || 'npc';
+        const c = document.getElementById('creatureFieldsSection'); if (c) c.style.display = t === 'criatura' ? 'block' : 'none';
+        const e = document.getElementById('ecoFieldsSection'); if (e) e.style.display = t === 'eco' ? 'block' : 'none';
+    };
+    _npcTipoSecoes();
+    document.getElementById('npcTipo')?.addEventListener('change', _npcTipoSecoes);
     document.getElementById('npcImagem')?.addEventListener('input', function() { const u = this.value.trim(), p = document.getElementById('npcImgPreview'); if (p) p.style.display = (u.startsWith('http') ? 'block' : 'none'); const img = document.getElementById('npcImgTag'); if (img) { img.src = u; img.onerror = () => { if (p) p.style.display = 'none'; }; } });
     if (n.imagem?.startsWith('http')) { const p = document.getElementById('npcImgPreview'); const img = document.getElementById('npcImgTag'); if (p && img) { img.src = n.imagem; p.style.display = 'block'; img.onerror = () => { p.style.display = 'none'; }; } }
 
@@ -1778,6 +1812,11 @@ function collectNpcData() {
         rolePlay: { personalidade: [g('npcPersonalidade1'), g('npcPersonalidade2'), g('npcPersonalidade3')], trejeitos: g('npcTrejeitos'), motivacao: g('npcMotivacao'), segredos: g('npcSegredos'), relacoes: { aliado: g('npcAliado'), rival: g('npcRival'), devedor: g('npcDevedor') }, frases: g('npcFrases'), historia: g('npcHistoria') },
         loot: { itens: g('npcItens'), luns: g('npcLuns'), pistas: g('npcPistas'), complicacoes: g('npcComplicacoes') },
         criatura: tipo === 'criatura' ? { habitat: g('npcHabitat'), comportamento: g('npcComportamento'), dieta: g('npcDieta'), nivelAmeaca: g('npcNivelAmeaca') } : null,
+        /* ᛉ Eco da Alma — Disposição e Máscara são segredo do Mestre. */
+        eco: tipo === 'eco' ? { dadiva: g('ecoDadiva'), estado: g('ecoEstado'), personalidade: g('ecoPersonalidade'),
+            disposicao: parseInt(g('ecoDisposicao')) || 0, prs: parseInt(g('ecoPRS')) || 0,
+            pericia: g('ecoPericia'), territorio: g('ecoTerritorio'), preco: g('ecoPreco'),
+            mascara: !!document.getElementById('ecoMascara')?.checked } : null,
 
         vinculos: n.vinculos,
         mesaId: mesaEspelho, // espelho legado da 1ª mesa (ver comentário acima)
