@@ -1,0 +1,999 @@
+{
+  "data": "2026-08-02T12:01:38.753Z",
+  "peculiarities": {
+    "1LotEGqT4Zw8Tx27MQJ1": {
+      "nome": "Cicatriz Notável",
+      "mecanicaExpCriacao": []
+    },
+    "1wNfDxhhyjUtQuEhnFxd": {
+      "nome": "Resistente à Dor",
+      "mecanicaExpCriacao": [
+        "hwkDhVusaeNhFnG8ypOa"
+      ]
+    },
+    "2yclUbUxJtkfppaj4NBs": {
+      "nome": "Nanismo",
+      "mecanicaExpCriacao": [
+        "IwkYIfNeRG4chAJRkETk"
+      ]
+    },
+    "5lDEw6vtUzzXkbouSSig": {
+      "nome": "Manco",
+      "mecanicaExpCriacao": [
+        "EOV1wwBnml53sfs3dxSE"
+      ]
+    },
+    "79w8G9cPFpBE9NzlTaNY": {
+      "nome": "Gigantismo",
+      "mecanicaExpCriacao": [
+        "2f8eJ3Ufe21DqKo6iGoQ"
+      ]
+    },
+    "7FJM3vTEuY1kwEH14p9w": {
+      "nome": "Caolho",
+      "mecanicaExpCriacao": [
+        "EOV1wwBnml53sfs3dxSE"
+      ]
+    },
+    "7Y0nZDnXxKWyPfP5k4Yn": {
+      "nome": "Azarado",
+      "mecanicaExpCriacao": [
+        "EOV1wwBnml53sfs3dxSE"
+      ]
+    },
+    "A44OrO0d7mCX8Wc2Zk7E": {
+      "nome": "Albino",
+      "mecanicaExpCriacao": []
+    },
+    "ByribV7BwY5emzPfXd5a": {
+      "nome": "Sortudo",
+      "mecanicaExpCriacao": [
+        "AnDrAbTcI4MCMAlP6wVK"
+      ]
+    },
+    "Cu8YLarZoZtHTTmPmdud": {
+      "nome": "Desajeitado",
+      "mecanicaExpCriacao": [
+        "Q0tCgr3vN782oQzlzjHY"
+      ]
+    },
+    "IJi4Fsjc5Dp4fhm4m7th": {
+      "nome": "Dupla-Face",
+      "mecanicaExpCriacao": [
+        "5mLSGHMeaaIVqpcLqYbx"
+      ]
+    },
+    "K3xEf81mSV7aPYE5Pxwh": {
+      "nome": "Medroso",
+      "mecanicaExpCriacao": [
+        "Q0tCgr3vN782oQzlzjHY"
+      ]
+    },
+    "LHS2j2967lCetPWaDOiU": {
+      "nome": "Memória Prodigiosa",
+      "mecanicaExpCriacao": [
+        "5mLSGHMeaaIVqpcLqYbx"
+      ]
+    },
+    "Lrs1PU39ffoL6ZLx4PI7": {
+      "nome": "Roncador",
+      "mecanicaExpCriacao": [
+        "Q0tCgr3vN782oQzlzjHY"
+      ]
+    },
+    "RIGTKykuRmWp9OrxRTfr": {
+      "nome": "Olfato Apurado",
+      "mecanicaExpCriacao": [
+        "5mLSGHMeaaIVqpcLqYbx"
+      ]
+    },
+    "TTRc0zlmej8hzoJSDMGU": {
+      "nome": "Sono Leve",
+      "mecanicaExpCriacao": []
+    },
+    "YnXo6GHu6xuqf6X7jIHm": {
+      "nome": "Glutão",
+      "mecanicaExpCriacao": []
+    },
+    "azYOAixFAWc9g3481ksO": {
+      "nome": "Franzino",
+      "mecanicaExpCriacao": [
+        "Q0tCgr3vN782oQzlzjHY"
+      ]
+    },
+    "iLiv4XDCvNnrHwg2oqwn": {
+      "nome": "Vegetariano",
+      "mecanicaExpCriacao": []
+    },
+    "iLmStxXBfcQGqwRJW25k": {
+      "nome": "Hipermóvel",
+      "mecanicaExpCriacao": []
+    },
+    "jV8IGHNMQUgww4GQNQBv": {
+      "nome": "Veterano de Guerra",
+      "mecanicaExpCriacao": [
+        "5mLSGHMeaaIVqpcLqYbx"
+      ]
+    },
+    "rdNt8zyiXqTz2HT8JkZt": {
+      "nome": "Voz Marcante",
+      "mecanicaExpCriacao": [
+        "5mLSGHMeaaIVqpcLqYbx"
+      ]
+    },
+    "rwcFOPuLi5AAqpheMnVW": {
+      "nome": "Alérgico",
+      "mecanicaExpCriacao": [
+        "Q0tCgr3vN782oQzlzjHY"
+      ]
+    },
+    "sJLGq31pseo9lJuxVVNC": {
+      "nome": "Feio",
+      "mecanicaExpCriacao": [
+        "Q0tCgr3vN782oQzlzjHY"
+      ]
+    },
+    "tejrCWYVrRVV1u4wuGTy": {
+      "nome": "Gago",
+      "mecanicaExpCriacao": [
+        "Q0tCgr3vN782oQzlzjHY"
+      ]
+    },
+    "xZLI2K6SmQHNVMEOyDZa": {
+      "nome": "Teimoso",
+      "mecanicaExpCriacao": []
+    },
+    "ye1QIuKPw3XLIFYGau21": {
+      "nome": "Bonito",
+      "mecanicaExpCriacao": [
+        "5mLSGHMeaaIVqpcLqYbx"
+      ]
+    },
+    "ymFydOOVd1NmkHNVT6sg": {
+      "nome": "Corpulento",
+      "mecanicaExpCriacao": []
+    }
+  },
+  "mechanics": {
+    "9H5sFLRRMTcWNh0xOOfd": {
+      "nome": "Cicatriz Notável (Níveis)",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ +1 situacional em Intimidação quando a cicatriz é visível."
+        },
+        "2": {
+          "custoExp": 0,
+          "descricao": "▲ +1 situacional em Intimidação; +1 situacional em AUT contra dor. ▼ −1 situacional em Diplomacia com quem associa cicatrizes a perigo."
+        },
+        "3": {
+          "custoExp": 0,
+          "descricao": "▲ +2 situacional em Intimidação; +1 situacional em AUT contra dor; reputação de sobrevivente. ▼ Civis fogem ao vê-lo."
+        }
+      }
+    },
+    "FSEvoUXkaELiGU9Q8QrG": {
+      "nome": "CICATRIZ NOTÁVEL — Diplomacia",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 0
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 0
+          }
+        },
+        "3": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1
+          }
+        }
+      }
+    },
+    "YMPXyFEmPUYaDlKWkXLg": {
+      "nome": "CICATRIZ NOTÁVEL — Sedução",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 0
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 0
+          }
+        },
+        "3": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1
+          }
+        }
+      }
+    },
+    "vlP3IUnTWS2i4ib57Yxc": {
+      "nome": "Resistente à Dor (Níveis)",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ +1 situacional em VIG contra dor; ignora o redutor do 1º nível de condição por VIT baixa/dor. ▼ Pode não perceber ferimentos internos (Narrador oculta informações de saúde)."
+        },
+        "2": {
+          "custoExp": 4,
+          "descricao": "▲ +2 situacional em VIG contra dor; ignora o redutor do 2º nível de condição por VIT baixa/dor. ▼ Narrador controla e oculta as condições, sem avisar quando um ferimento piora."
+        },
+        "3": {
+          "custoExp": 12,
+          "descricao": "▲ +3 situacional em VIG contra dor; ignora 3 níveis de penalidade; imune a Intimidação por ameaça de dor. ▼ Desconectado dos avisos do corpo; pode morrer sem perceber a gravidade."
+        }
+      }
+    },
+    "9diSnZkUHId3jpCgkJE5": {
+      "nome": "Nanismo (Níveis)",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ −10% de altura; +1 situacional em Furtividade atrás de coberturas baixas. ▼ Armas de tamanho padrão −1 no Alvo."
+        },
+        "2": {
+          "custoExp": 10,
+          "descricao": "▲ −20% de altura; espreme-se em espaços minúsculos (teste de DES sem penalidade). ▼ Armas padrão −2 no Alvo; equipamento sob medida ×1,5."
+        },
+        "3": {
+          "custoExp": 15,
+          "descricao": "▲ −30% de altura; praticamente impossível de encontrar em multidões. ▼ Armas padrão −2 no Alvo; equipamento sob medida ×2; não alcança nem opera mecanismos feitos para adultos médios."
+        }
+      }
+    },
+    "5MphwJNZazf7NlK7WEh9": {
+      "nome": "NANISMO — Altura",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 0.9
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 0.8
+          }
+        },
+        "3": {
+          "custoExp": 0,
+          "termos": {
+            "0": 0.7
+          }
+        }
+      }
+    },
+    "9fcvKMKPGuyjINfSUlcd": {
+      "nome": "NANISMO — D.Vertical",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 2
+          }
+        },
+        "3": {
+          "custoExp": 0,
+          "termos": {
+            "0": 3
+          }
+        }
+      }
+    },
+    "Dr45To4QjhdHcLzlmjw7": {
+      "nome": "Manco (Níveis)",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ Bengala como arma improvisada sem penalidade (+1 situacional em Arma com bastões e bengalas). ▼ Desvantagem em Agilidade para corrida."
+        },
+        "2": {
+          "custoExp": 4,
+          "descricao": "▲ +1 situacional em Arma com bastões e bengalas; +1 situacional em Intimidação (presença de veterano). ▼ Desvantagem em Agilidade e Atletismo; não pode correr o dobro do deslocamento."
+        }
+      }
+    },
+    "1yQ3LWk0dJCTGxZU0UcL": {
+      "nome": "MANCO — D.Terrestre",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 2
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 3
+          }
+        }
+      }
+    },
+    "SoK9LhzhpzYDRAWX4GjB": {
+      "nome": "MANCO — D.Vertical",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 2
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 3
+          }
+        }
+      }
+    },
+    "6am2ws5eCo20Jumf4r6K": {
+      "nome": "Gigantismo (Níveis)",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ +10% de altura — notavelmente maior que os seus. ▼ Desvantagem situacional em Furtividade em ambientes fechados; roupas e armaduras sob medida custam ×1,5."
+        },
+        "2": {
+          "custoExp": 10,
+          "descricao": "▲ +20% de altura. ▼ Desvantagem em Furtividade; equipamento sob medida ×2; precisa se curvar em portas e passagens de tamanho padrão."
+        },
+        "3": {
+          "custoExp": 15,
+          "descricao": "▲ +30% de altura — porte de gigante, impossível de ignorar numa sala. ▼ Impossível ser furtivo em ambiente civilizado; equipamento ×3 ou mais; móveis, montarias e embarcações comuns não o suportam."
+        }
+      }
+    },
+    "zylRcOdp6IDWqGROZYWR": {
+      "nome": "GIGANTISMO — Altura",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1.1
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1.2
+          }
+        },
+        "3": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1.3
+          }
+        }
+      }
+    },
+    "cwrRtiWoYoDRsaydpf9b": {
+      "nome": "GIGANTISMO — D.Vertical",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 2
+          }
+        },
+        "3": {
+          "custoExp": 0,
+          "termos": {
+            "0": 3
+          }
+        }
+      }
+    },
+    "LNVA8RkNqD5oUitXHfIy": {
+      "nome": "Azarado (Níveis)",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▼ 1×/sessão, o Narrador pode forçar re-rolagem de um teste bem-sucedido."
+        },
+        "2": {
+          "custoExp": 6,
+          "descricao": "▼ 2×/sessão re-rolagem forçada; equipamentos quebram com mais frequência."
+        },
+        "3": {
+          "custoExp": 8,
+          "descricao": "▼ 3×/sessão re-rolagem forçada; Falha Crítica em 9 e 10 (em vez de só 10)."
+        }
+      }
+    },
+    "BAoH7mUWYJdPVATSYHDl": {
+      "nome": "Sortudo (Níveis)",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ 1×/sessão: re-rola um teste que resultou em Falha Crítica (10). Aceita o segundo resultado."
+        },
+        "2": {
+          "custoExp": 12,
+          "descricao": "▲ 1×/sessão re-rola Falha Crítica; +1×/sessão pode re-rolar qualquer teste falhado."
+        },
+        "3": {
+          "custoExp": 30,
+          "descricao": "▲ 2×/sessão re-rola Falha Crítica; +1×/sessão re-rola qualquer teste falhado."
+        }
+      }
+    },
+    "nxU0gG1YGthMxCeiTLSU": {
+      "nome": "Desajeitado (Níveis)",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▼ -1 situacional em DES para tarefas delicadas (fechaduras, armadilhas, ofícios finos)."
+        },
+        "2": {
+          "custoExp": 4,
+          "descricao": "▼ -2 situacional em DES para tarefas delicadas; desvantagem em Furtividade em ambientes com objetos frágeis."
+        }
+      }
+    },
+    "5g35tjzVWtBhlqAz6XQ7": {
+      "nome": "Dupla-Face (Níveis)",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ +1 situacional em Enganação e Disfarce. ▼ Aliados podem desconfiar de inconsistências."
+        },
+        "2": {
+          "custoExp": 8,
+          "descricao": "▲ +2 situacional em Enganação e Disfarce; mantém mentiras prolongadas sem nervosismo. ▼ -1 situacional em Empatia; aliados que descubram perdem confiança."
+        },
+        "3": {
+          "custoExp": 12,
+          "descricao": "▲ +2 situacional em Enganação e Disfarce; vantagem contra magias de detecção de mentiras. ▼ -2 situacional em Empatia; risco de perder a identidade (teste de Sanidade em crises existenciais)."
+        }
+      }
+    },
+    "XakI5skkpLBnmTOS9uXG": {
+      "nome": "Medroso (Níveis)",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ +1 situacional em Percepção para detectar emboscadas (o medo aguça os sentidos). ▼ Desvantagem no 1º teste de AUT contra medo por cena."
+        },
+        "2": {
+          "custoExp": 4,
+          "descricao": "▲ +1 situacional em Percepção contra perigos. ▼ Desvantagem em todos os testes de AUT contra medo; Falha Crítica causa congelamento (perde 1 rodada)."
+        }
+      }
+    },
+    "183popy94LDrb7Yd4r6A": {
+      "nome": "MEDROSO — Iniciativa",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 0
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1
+          }
+        }
+      }
+    },
+    "pAiuJ7cyVjm8HnTc2CpY": {
+      "nome": "Memória Prodigiosa (Níveis)",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ +1 situacional em História, Investigação e Relíquia ao recordar informações vistas. ▼ -1 situacional em Sanidade contra gatilhos de traumas."
+        },
+        "2": {
+          "custoExp": 8,
+          "descricao": "▲ +1 situacional nos mesmos testes; reproduz textos, mapas e símbolos de memória. ▼ -2 situacional em Sanidade contra gatilhos; pesadelos frequentes."
+        },
+        "3": {
+          "custoExp": 12,
+          "descricao": "▲ +2 situacional; memória fotográfica. ▼ -3 situacional em Sanidade contra gatilhos; incapaz de esquecer; traumas se acumulam."
+        }
+      }
+    },
+    "eoaLgywaR1wkZXdndSKd": {
+      "nome": "Roncador (Níveis)",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▼ Aliados próximos sofrem -1 na recuperação de descanso. Impossível acampamento oculto."
+        },
+        "2": {
+          "custoExp": 4,
+          "descricao": "▼ Aliados -2 no descanso no mesmo ambiente; inimigos a até 50m localizam o acampamento automaticamente."
+        }
+      }
+    },
+    "IResBr3tAyzIFIDUApHU": {
+      "nome": "Olfato Apurado (Níveis)",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ Detecta veneno em alimentos e bebidas com teste de Percepção. ▼ −1 em todos os testes enquanto exposto a odores fortes."
+        },
+        "2": {
+          "custoExp": 8,
+          "descricao": "▲ Rastreia criaturas pelo cheiro em trilha fresca. ▼ −2 em todos os testes sob odores fortes; pode ficar nauseado (perde 1 ação)."
+        },
+        "3": {
+          "custoExp": 12,
+          "descricao": "▲ Rastreia trilhas de até 24h; identifica emoções fortes pelo cheiro. ▼ −3 em todos os testes sob odores fortes; pode ser incapacitado temporariamente."
+        }
+      }
+    },
+    "ARAImjaVRRrQ3B3hy9hp": {
+      "nome": "OLFATO APURADO — Percepção Olfativa",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 2
+          }
+        },
+        "3": {
+          "custoExp": 0,
+          "termos": {
+            "0": 3
+          }
+        }
+      }
+    },
+    "ALjcXEjWtfccAmSDBXMo": {
+      "nome": "Sono Leve (Níveis)",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ +2 situacional em Percepção enquanto dorme. ▼ Precisa do dobro do tempo para descanso completo."
+        },
+        "2": {
+          "custoExp": 4,
+          "descricao": "▲ +3 situacional em Percepção dormindo. ▼ Dobro do tempo de descanso; -1 situacional em PRS após noites mal dormidas (acumulativo em viagens)."
+        }
+      }
+    },
+    "jUCCP0MXYJ1mexeQyXkI": {
+      "nome": "Glutão (Níveis)",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ +1 situacional em VIG contra fome e exaustão alimentar. ▼ Consome o dobro de alimento."
+        },
+        "2": {
+          "custoExp": 0,
+          "descricao": "▲ +2 situacional em VIG contra fome; +1 dia extra sem comer antes de sofrer penalidades. ▼ Consome o triplo de alimento."
+        }
+      }
+    },
+    "gN00obQUeVXcje64mITm": {
+      "nome": "GLUTÃO — Peso",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1.1
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1.2
+          }
+        }
+      }
+    },
+    "YOOjFyJ7KGwKxFJgk8vq": {
+      "nome": "GLUTÃO — D.Terrestre",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 0
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1
+          }
+        }
+      }
+    },
+    "nNRFZe8tDcBiU3A6D5HM": {
+      "nome": "Franzino (Níveis)",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ +1 situacional em Furtividade em espaços apertados. ▼ −1 situacional em VIG contra doenças."
+        },
+        "2": {
+          "custoExp": 2,
+          "descricao": "▲ Espreme-se por frestas impossíveis (teste de DES sem penalidade). ▼ −2 situacional em VIG contra doenças e exaustão; −1 situacional em Briga."
+        },
+        "3": {
+          "custoExp": 2,
+          "descricao": "▲ Quase impossível de ser agarrado em Briga. ▼ −3 situacional em VIG contra doenças; −2 situacional em Briga; ventos fortes podem derrubá-lo."
+        }
+      }
+    },
+    "70wJwlRC7pwwckhYovGt": {
+      "nome": "FRANZINO — Peso",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 0.85
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 0.7
+          }
+        },
+        "3": {
+          "custoExp": 0,
+          "termos": {
+            "0": 0.55
+          }
+        }
+      }
+    },
+    "prW4wJv6ZEpvFYU6m6Rn": {
+      "nome": "FRANZINO — D.Aquático",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1
+          }
+        },
+        "3": {
+          "custoExp": 0,
+          "termos": {
+            "0": 2
+          }
+        }
+      }
+    },
+    "UorrW8eHtgBcXmTCpVpB": {
+      "nome": "Hipermóvel (Níveis)",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ +2 situacional para escapar de amarras, agarrões e contenções. ▼ -1 situacional em FOR para sustentar peso ou empurrar."
+        },
+        "2": {
+          "custoExp": 4,
+          "descricao": "▲ +3 situacional para escapar contenções; espreme-se em espaços ridiculamente pequenos. ▼ -1 situacional em FOR; articulações podem deslocar sob esforço extremo."
+        },
+        "3": {
+          "custoExp": 6,
+          "descricao": "▲ +4 situacional para escapar contenções; +1 situacional em Agilidade para acrobacias. ▼ -2 situacional em FOR; após Falha Crítica em teste físico, -1 temporário em DES por 1 cena."
+        }
+      }
+    },
+    "eylv7cDouU5s3DzaQaiX": {
+      "nome": "Veterano de Guerra (Níveis)",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ Não sofre penalidade de surpresa em emboscadas. ▼ 1×/sessão, o Narrador pode exigir teste de AUT ao ouvir sons de batalha; falha = congelamento por 1 rodada."
+        },
+        "2": {
+          "custoExp": 8,
+          "descricao": "▲ Ignora surpresa; +1 situacional em Percepção contra emboscadas. ▼ 2×/sessão teste de AUT; falha = congelamento ou fúria descontrolada."
+        },
+        "3": {
+          "custoExp": 16,
+          "descricao": "▲ Ignora surpresa; +1 situacional em Percepção contra emboscadas. ▼ Traumas profundos; pesadelos reduzem o descanso; 3×/sessão teste de AUT."
+        }
+      }
+    },
+    "Sjz9FgW5fRpviJVIkbwY": {
+      "nome": "VETERANO DE GUERRA — Iniciativa",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1
+          }
+        },
+        "3": {
+          "custoExp": 0,
+          "termos": {
+            "0": 3
+          }
+        }
+      }
+    },
+    "8UZTOLTPFja83jrTOPSZ": {
+      "nome": "Voz Marcante (Níveis)",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ +1 situacional em Diplomacia, Intimidação ou Performance quando a voz for o veículo principal."
+        },
+        "2": {
+          "custoExp": 8,
+          "descricao": "▲ +2 situacional nos mesmos testes; pode ser ouvido em meio a barulho moderado sem gritar."
+        },
+        "3": {
+          "custoExp": 12,
+          "descricao": "▲ +2 situacional nos mesmos testes; vantagem em testes de Comando em batalha ao gritar ordens."
+        }
+      }
+    },
+    "tleiehj0VufFCWaFcnrt": {
+      "nome": "Alérgico (Níveis)",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▼ Exposto à propriedade alérgena: -1 em todos os testes por 1d10 rodadas. Espirros e coceira."
+        },
+        "2": {
+          "custoExp": 3,
+          "descricao": "▼ Exposto: -2 em todos os testes por 1d4 horas; espirros impedem Furtividade; inchaço visível."
+        },
+        "3": {
+          "custoExp": 5,
+          "descricao": "▼ Exposto: -3 em todos os testes por 2d4 horas; reação anafilática possível — teste de VIG ou Incapacitado por 1 cena; risco de morte sem tratamento."
+        }
+      }
+    },
+    "erZwobJ8GalBLPwfyDKa": {
+      "nome": "Feio (Níveis)",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ +1 situacional em Intimidação. ▼ -1 situacional em Diplomacia e Sedução no primeiro encontro."
+        },
+        "2": {
+          "custoExp": 4,
+          "descricao": "▲ +1 situacional em Intimidação; ninguém o reconhece facilmente. ▼ -2 situacional em Diplomacia e Sedução."
+        }
+      }
+    },
+    "rpKCJZUbY4Ug9gdAumlX": {
+      "nome": "Gago (Níveis)",
+      "progressaoTipoExp": "ganho",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▼ -1 situacional em testes sociais de fala rápida (Diplomacia, Barganha, Enganação) sob pressão."
+        },
+        "2": {
+          "custoExp": 4,
+          "descricao": "▼ -2 situacional em testes sociais de fala sob pressão; encantamentos verbais sofrem -1 no Alvo."
+        }
+      }
+    },
+    "EtwTRnEVSRP5O2cnQt2Q": {
+      "nome": "Teimoso (Níveis)",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ +1 situacional em PRS e AUT contra persuasão e efeitos mentais. ▼ -1 situacional em testes sociais que exijam compromisso ou mudança de plano."
+        },
+        "2": {
+          "custoExp": 4,
+          "descricao": "▲ +2 situacional em PRS e AUT contra influência mental. ▼ -2 situacional em negociação e compromisso."
+        },
+        "3": {
+          "custoExp": 6,
+          "descricao": "▲ +3 situacional contra influência mental; vantagem contra magias de controle de vontade de baixo nível. ▼ -3 em negociação; incapaz de aceitar ordens que contradigam suas convicções."
+        }
+      }
+    },
+    "VqOKhou2KacmTVVv8Fpo": {
+      "nome": "Bonito (Níveis)",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ +1 situacional em Diplomacia e Sedução quando aparência influencia. ▼ -1 situacional em testes sociais com indivíduos invejosos."
+        },
+        "2": {
+          "custoExp": 6,
+          "descricao": "▲ +1 situacional em Diplomacia e Sedução; NPCs tendem a ajudá-lo espontaneamente. ▼ Rosto memorável, difícil passar despercebido; alvo de ciúmes e intrigas."
+        }
+      }
+    },
+    "DZHmxRM20oJck2v3ZESZ": {
+      "nome": "Corpulento (Níveis)",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "descricao": "▲ +1 situacional para resistir a ser empurrado, derrubado ou movido."
+        },
+        "2": {
+          "custoExp": 0,
+          "descricao": "▲ +2 situacional contra empurrões e derrubadas. ▼ Desvantagem em Atletismo para escalada."
+        },
+        "3": {
+          "custoExp": 0,
+          "descricao": "▲ +3 situacional contra empurrões; investida corpo-a-corpo causa +1 de dano por impacto. ▼ Desvantagem em Atletismo e Agilidade; consome rações extras."
+        }
+      }
+    },
+    "Ut7O1nEmi04WZV81Ve9M": {
+      "nome": "CORPULENTO — Peso",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1.2
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1.4
+          }
+        },
+        "3": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1.6
+          }
+        }
+      }
+    },
+    "tEOwKFQ5pI9hdQPHhvsp": {
+      "nome": "CORPULENTO — D.Terrestre",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 2
+          }
+        },
+        "3": {
+          "custoExp": 0,
+          "termos": {
+            "0": 3
+          }
+        }
+      }
+    },
+    "Ow67zf775O2dd5ekQ77x": {
+      "nome": "CORPULENTO — D.Aquático",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 0
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1
+          }
+        },
+        "3": {
+          "custoExp": 0,
+          "termos": {
+            "0": 2
+          }
+        }
+      }
+    },
+    "i9VPDFwg0iDIQVh8f0Vt": {
+      "nome": "CORPULENTO — D.Vertical",
+      "progressaoTipoExp": "custo",
+      "progressao": {
+        "1": {
+          "custoExp": 0,
+          "termos": {
+            "0": 0
+          }
+        },
+        "2": {
+          "custoExp": 0,
+          "termos": {
+            "0": 1
+          }
+        },
+        "3": {
+          "custoExp": 0,
+          "termos": {
+            "0": 2
+          }
+        }
+      }
+    }
+  }
+}

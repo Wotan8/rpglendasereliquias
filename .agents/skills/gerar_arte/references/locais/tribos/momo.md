@@ -1,0 +1,7 @@
+MOMO — "Os Pesadelos Noturnos"
+Conceito: Acampamento de pesadelo. Desorientação visual. Tudo parece saído de um sonho ruim.
+Estrutura: Tendas de formatos distorcidos — linhas tortas, inclinações incomuns e volumes assimétricos. Sem padrão claro. Cada estrutura parece improvisada e perturbadora, criando paisagem caótica que confunde a percepção. Agrupamento denso e desordenado, formando corredores estreitos e sombrios que parecem se mover.
+Materiais: Remendados e heterogêneos — tecidos rasgados, peles curtidas de forma grosseira, cordas puídas, pedaços de madeira torta, ossos de animais como estrutura. Sobrepostos em camadas irregulares. Cores escuras — preto, roxo profundo, vermelho-sangue — com manchas irregulares e símbolos pintados que parecem olhos, bocas ou rostos distorcidos.
+Elementos perturbadores: Partes de tendas que balançam ou penduram de forma estranha — tiras de couro, sinos de osso, bonecas de palha, máscaras grotescas penduradas em estacas, frascos com líquidos coloridos brilhando fracamente. Fumaça densa e colorida (alucinógenos) emanando de braseiros dentro das tendas.
+Atmosfera visual: Pesadelo acordado. Instabilidade. Nada parece totalmente fixo ou confiável. As sombras parecem mais vivas do que deveriam. Uma neblina baixa e densa com tonalidade roxa ou esverdeada cobre o chão. Figuras com fantasias grotescas e máscaras se movem como sombras.
+Cenário ao redor: Noite sempre. Lua cheia distorcida atrás de nuvens. Árvores retorcidas. Neblina densa. Nem os próprios arredores parecem normais.

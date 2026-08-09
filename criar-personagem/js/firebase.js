@@ -76,6 +76,8 @@ onAuthStateChanged(auth, async (user) => {
                         nome: mesaData.nome || 'Mesa',
                         mestreNome: mesaData.createdBy || 'Mestre',
                         expInicial: cfg.expInicial ?? 100,
+                        maxPecVantagens: cfg.maxPecVantagens ?? 3,
+                        maxPecDesvantagens: cfg.maxPecDesvantagens ?? 3,
                         introducao: cfg.textoIntroducao || '',
                         mecanicasObjetoPessoal: cfg.mecanicasObjetoPessoal || []
                     };

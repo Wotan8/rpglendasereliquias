@@ -4,6 +4,43 @@
    - pec.ehVantagem === false → 🔴 Desvantagem (concede EXP ao selecionar)
    A mecânica de EXP aplicada na criação é pec.mecanicaExpCriacao (array de IDs) */
 
+/* Quantas avulsas de cada tipo a mesa deixa pegar na criação (Painel do Mestre →
+   Configurações da Campanha). Mesa antiga sem o campo cai no mesmo padrão que o
+   painel mostra; criação avulsa (sem mesa) é livre, porque não há Mestre para
+   configurar o teto. Isto limita a CONTAGEM; o teto de EXP em exp-tracker.js
+   limita o ORÇAMENTO — os dois valem juntos. */
+const LIMITE_PADRAO_AVULSAS = 3;
+
+function limiteAvulsas(ehVantagem) {
+    const mesa = wizardState.mesaVinculada;
+    if (!mesa) return Infinity;
+    const v = ehVantagem ? mesa.maxPecVantagens : mesa.maxPecDesvantagens;
+    return Number.isFinite(v) ? v : LIMITE_PADRAO_AVULSAS;
+}
+
+/** "2/3" numa mesa com teto; só "2" na criação avulsa, que não tem teto. */
+function rotuloContagemAvulsas(ehVantagem) {
+    const lim = limiteAvulsas(ehVantagem);
+    return Number.isFinite(lim) ? `${contarAvulsas(ehVantagem)}/${lim}` : `${contarAvulsas(ehVantagem)}`;
+}
+
+/** Quantas avulsas do mesmo tipo já estão escolhidas. */
+function contarAvulsas(ehVantagem) {
+    const todas = window.INDIVIDUAL_PECULIARITIES || [];
+    return (wizardState.peculiaridadesIndividuais || []).filter(sel => {
+        const pec = todas.find(p => p.id === sel.id);
+        return pec && (pec.ehVantagem === true) === ehVantagem;
+    }).length;
+}
+
+/** Repinta os contadores "(2/3)" dos dois títulos de seção. */
+function atualizarContadoresAvulsas() {
+    for (const [id, ehVantagem] of [['pecContaVantagens', true], ['pecContaDesvantagens', false]]) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = rotuloContagemAvulsas(ehVantagem);
+    }
+}
+
 function initPhase2B(container) {
     try {
         let html = createNarratorBox(NARRADOR_TEXTOS.peculiaridades);
@@ -60,7 +97,7 @@ function initPhase2B(container) {
         }
 
         if (vantagens.length) {
-            html += `<div class="section"><div class="section-title">🟢 Vantagens <span style="font-size:.78rem;font-weight:400;color:var(--muted);">(custam EXP)</span></div>`;
+            html += `<div class="section"><div class="section-title">🟢 Vantagens <span style="font-size:.78rem;font-weight:400;color:var(--muted);">(custam EXP · <span id="pecContaVantagens">${rotuloContagemAvulsas(true)}</span>)</span></div>`;
             html += `<div class="pec-list" id="pecPosGrid">`;
             for (const pec of vantagens) {
                 const sel = savedPecs.some(p => p.id === pec.id) ? 'selected' : '';
@@ -70,7 +107,7 @@ function initPhase2B(container) {
         }
 
         if (desvantagens.length) {
-            html += `<div class="section"><div class="section-title">🔴 Desvantagens <span style="font-size:.78rem;font-weight:400;color:var(--muted);">(concedem EXP)</span></div>`;
+            html += `<div class="section"><div class="section-title">🔴 Desvantagens <span style="font-size:.78rem;font-weight:400;color:var(--muted);">(concedem EXP · <span id="pecContaDesvantagens">${rotuloContagemAvulsas(false)}</span>)</span></div>`;
             html += `<div class="pec-list" id="pecNegGrid">`;
             for (const pec of desvantagens) {
                 const sel = savedPecs.some(p => p.id === pec.id) ? 'selected' : '';
@@ -372,6 +409,17 @@ function togglePeculiarity2(pecId) {
     } else {
         // === SELECIONAR: aplicar a mecânica ===
 
+        // Teto de contagem da mesa, antes de qualquer conta de EXP: uma vantagem
+        // que o jogador não pode pegar não deveria nem checar se ele tem EXP.
+        const limite = limiteAvulsas(isVantagem);
+        if (contarAvulsas(isVantagem) >= limite) {
+            const rotulo = isVantagem ? 'vantagens' : 'desvantagens';
+            showWizardToast(limite === 0
+                ? `⚠️ Esta mesa não permite ${rotulo} avulsas.`
+                : `⚠️ Limite de ${limite} ${rotulo} avulsas nesta mesa. Desmarque uma para trocar.`, 'error');
+            return;
+        }
+
         // Calcular quanto EXP vai mudar
         let expDelta = 0;
         if (expInfo.expAmount > 0) {
@@ -421,6 +469,7 @@ function togglePeculiarity2(pecId) {
         });
     }
 
+    atualizarContadoresAvulsas();
     saveWizardToStorage();
 }
 

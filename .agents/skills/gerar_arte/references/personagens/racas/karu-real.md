@@ -1,0 +1,10 @@
+KARU-REAL — "Os Ruivos / Os Escolhidos / Os Aristocratas"
+Altura: 1,70m a 2,00m (porte elegante e altivo).
+Referência étnica: Traços de povos claros do norte europeu — pele alva como alabastro ou levemente rosada, estrutura óssea aristocrática e angulosa, mandíbula afiada e queixo proeminente, nariz reto e fino com ponte alta e estreita (nariz nórdico/germânico), maçãs do rosto altas e salientes, sobrancelhas arqueadas com elegância, testa alta e nobre. Lábios finos e bem definidos. Estrutura corporal alta e esbelta com ombros largos, como de realeza escandinava medieval — postura impecável, coluna ereta, queixo levemente erguido em sinal de superioridade. Mãos longas e elegantes, pele sem imperfeições.
+Pele: Tons de bronze claro a dourado, branco ou pardo, sempre com subtom luminoso e aristocrático.
+Cabelos: Ruivos — tons de dourado, loiro platinado, cobre ou vermelho-ouro. Sempre lisos ou ondulados, brilhantes, fluindo como seda. Penteados elaborados ou soltos com elegância.
+Olhos: Âmbar ou dourados que parecem faiscar com luz própria, pupilas com brilho sobrenatural dourado.
+Orelhas: Redondas ou cortadas/aparadas para parecerem redondas.
+Vestimenta medieval nobre: Trajes aristocráticos medievais de alta qualidade — gibões de veludo bordados com fios de ouro, capas longas com forro de pele de arminho, golas altas estruturadas, mantos com brasões de linhagem, túnicas de seda com cintos de couro e fivela de prata, luvas de couro fino, botas altas polidas, coroas ou tiaras de metal forjado discretas. Armaduras cerimoniais de placas de aço polido com ornamentos gravados, capas heráldicas sobre a armadura. Armas refinadas — espadas longas de lâmina brilhante com guardas ornamentadas, adagas cerimoniais, cetros.
+Expressão/Postura: Altivos, imponentes, aristocráticos — presença que domina o ambiente, olhar que inspira respeito ou temor reverencial. Jamais curvados ou desleixados.
+ENQUADRAMENTO ESPECIAL: Mostrar do joelho para cima apenas, pois a geração de pernas completas pode sair inconsistente. Cortar a imagem na altura dos joelhos.

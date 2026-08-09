@@ -1,0 +1,200 @@
+{
+  "pec:1LotEGqT4Zw8Tx27MQJ1": {
+    "nome": "Cicatriz Notável",
+    "mecanicaIds": [
+      "9H5sFLRRMTcWNh0xOOfd",
+      "FSEvoUXkaELiGU9Q8QrG",
+      "YMPXyFEmPUYaDlKWkXLg"
+    ],
+    "mecanicaExpCriacao": []
+  },
+  "mec:FSEvoUXkaELiGU9Q8QrG": {
+    "nome": "CICATRIZ NOTÁVEL — Diplomacia",
+    "descricao": "CICATRIZ NOTÁVEL — Diplomacia",
+    "fonte": "generica",
+    "tipo": "modificar",
+    "duracao": "permanente",
+    "duracaoTurnos": null,
+    "duracaoEspecial": "",
+    "escopo": "proprio",
+    "condicaoAplicacao": "",
+    "empilhamento": "soma",
+    "config": {
+      "calculos": [
+        {
+          "alvo": "Perícia: Diplomacia",
+          "operacao": "-",
+          "equacao": [
+            {
+              "tipo": "fixo",
+              "valor": 0
+            }
+          ]
+        }
+      ]
+    },
+    "evoluivel": true,
+    "nivelMaximo": 3,
+    "progressao": {
+      "1": {
+        "custoExp": 0,
+        "termos": {
+          "0": 0
+        }
+      },
+      "2": {
+        "custoExp": 0,
+        "termos": {
+          "0": 0
+        }
+      },
+      "3": {
+        "custoExp": 0,
+        "termos": {
+          "0": 1
+        }
+      }
+    },
+    "progressaoApenasCriacao": false,
+    "tags": [
+      "Avulsa"
+    ],
+    "previewTexto": "-0 em Perícia: Diplomacia 📈 Nv1-3",
+    "publicado": true,
+    "versao": 1,
+    "criadoPor": "M2rZzlQkzxTrrddeFQ10S6zsfX62",
+    "criadoEm": {
+      "_seconds": 1785242892,
+      "_nanoseconds": 491000000
+    },
+    "atualizadoEm": {
+      "_seconds": 1785242892,
+      "_nanoseconds": 491000000
+    },
+    "progressaoTipoExp": "ganho"
+  },
+  "mec:YMPXyFEmPUYaDlKWkXLg": {
+    "nome": "CICATRIZ NOTÁVEL — Sedução",
+    "descricao": "CICATRIZ NOTÁVEL — Sedução",
+    "fonte": "generica",
+    "tipo": "modificar",
+    "duracao": "permanente",
+    "duracaoTurnos": null,
+    "duracaoEspecial": "",
+    "escopo": "proprio",
+    "condicaoAplicacao": "",
+    "empilhamento": "soma",
+    "config": {
+      "calculos": [
+        {
+          "alvo": "Perícia: Sedução",
+          "operacao": "-",
+          "equacao": [
+            {
+              "tipo": "fixo",
+              "valor": 0
+            }
+          ]
+        }
+      ]
+    },
+    "evoluivel": true,
+    "nivelMaximo": 3,
+    "progressao": {
+      "1": {
+        "custoExp": 0,
+        "termos": {
+          "0": 0
+        }
+      },
+      "2": {
+        "custoExp": 0,
+        "termos": {
+          "0": 0
+        }
+      },
+      "3": {
+        "custoExp": 0,
+        "termos": {
+          "0": 1
+        }
+      }
+    },
+    "progressaoApenasCriacao": false,
+    "tags": [
+      "Avulsa"
+    ],
+    "previewTexto": "-0 em Perícia: Sedução 📈 Nv1-3",
+    "publicado": true,
+    "versao": 1,
+    "criadoPor": "M2rZzlQkzxTrrddeFQ10S6zsfX62",
+    "criadoEm": {
+      "_seconds": 1785242892,
+      "_nanoseconds": 540000000
+    },
+    "atualizadoEm": {
+      "_seconds": 1785242892,
+      "_nanoseconds": 540000000
+    },
+    "progressaoTipoExp": "ganho"
+  },
+  "mec:9H5sFLRRMTcWNh0xOOfd": {
+    "nome": "Cicatriz Notável (Níveis)",
+    "progressao": {
+      "1": {
+        "custoExp": 0,
+        "descricao": "▲ +1 situacional em Intimidação quando a cicatriz é visível."
+      },
+      "2": {
+        "custoExp": 0,
+        "descricao": "▲ +1 situacional em Intimidação; +1 situacional em AUT contra dor. ▼ −1 situacional em Diplomacia com quem associa cicatrizes a perigo."
+      },
+      "3": {
+        "custoExp": 12,
+        "descricao": "▲ +2 situacional em Intimidação; +1 situacional em AUT contra dor; reputação de sobrevivente. ▼ Civis fogem ao vê-lo."
+      }
+    }
+  },
+  "mec:eoaLgywaR1wkZXdndSKd": {
+    "nome": "Roncador (Níveis)",
+    "progressao": {
+      "1": {
+        "custoExp": 0,
+        "descricao": "▼ Aliados próximos sofrem -1 na recuperação de descanso. Impossível acampamento oculto."
+      },
+      "2": {
+        "custoExp": 5,
+        "descricao": "▼ Aliados -2 no descanso no mesmo ambiente; inimigos a até 50m localizam o acampamento automaticamente."
+      }
+    }
+  },
+  "mec:Sjz9FgW5fRpviJVIkbwY": {
+    "nome": "VETERANO DE GUERRA — Iniciativa",
+    "progressao": {
+      "1": {
+        "custoExp": 0,
+        "termos": {
+          "0": 1
+        }
+      },
+      "2": {
+        "custoExp": 0,
+        "termos": {
+          "0": 1
+        }
+      },
+      "3": {
+        "custoExp": 0,
+        "termos": {
+          "0": 3
+        }
+      }
+    }
+  },
+  "dv:nFaeIo9iz8KwNA0lKhNa": {
+    "nome": "Percepção",
+    "mecanicaIds": [
+      "V6ez1DsXH7QYeA34lL1l"
+    ]
+  }
+}

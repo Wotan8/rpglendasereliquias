@@ -1,0 +1,134 @@
+{
+  "5MphwJNZazf7NlK7WEh9": {
+    "nome": "NANISMO — Altura",
+    "nivelMaximo": 3,
+    "progressao": {
+      "1": {
+        "custoExp": 0,
+        "termos": {
+          "0": 0.9
+        }
+      },
+      "2": {
+        "custoExp": 0,
+        "termos": {
+          "0": 0.8
+        }
+      },
+      "3": {
+        "custoExp": 0,
+        "termos": {
+          "0": 0.7
+        }
+      }
+    }
+  },
+  "6am2ws5eCo20Jumf4r6K": {
+    "nome": "Gigantismo (Níveis)",
+    "nivelMaximo": 3,
+    "progressao": {
+      "1": {
+        "custoExp": 0,
+        "descricao": "▲ +10% de altura — notavelmente maior que os seus. ▼ Desvantagem situacional em Furtividade em ambientes fechados; roupas e armaduras sob medida custam ×1,5."
+      },
+      "2": {
+        "custoExp": 8,
+        "descricao": "▲ +20% de altura. ▼ Desvantagem em Furtividade; equipamento sob medida ×2; precisa se curvar em portas e passagens de tamanho padrão."
+      },
+      "3": {
+        "custoExp": 8,
+        "descricao": "▲ +30% de altura — porte de gigante, impossível de ignorar numa sala. ▼ Impossível ser furtivo em ambiente civilizado; equipamento ×3 ou mais; móveis, montarias e embarcações comuns não o suportam."
+      }
+    }
+  },
+  "9diSnZkUHId3jpCgkJE5": {
+    "nome": "Nanismo (Níveis)",
+    "nivelMaximo": 3,
+    "progressao": {
+      "1": {
+        "custoExp": 0,
+        "descricao": "▲ −10% de altura; +1 situacional em Furtividade atrás de coberturas baixas. ▼ Armas de tamanho padrão −1 no Alvo."
+      },
+      "2": {
+        "custoExp": 8,
+        "descricao": "▲ −20% de altura; espreme-se em espaços minúsculos (teste de DES sem penalidade). ▼ Armas padrão −2 no Alvo; equipamento sob medida ×1,5."
+      },
+      "3": {
+        "custoExp": 8,
+        "descricao": "▲ −30% de altura; praticamente impossível de encontrar em multidões. ▼ Armas padrão −2 no Alvo; equipamento sob medida ×2; não alcança nem opera mecanismos feitos para adultos médios."
+      }
+    }
+  },
+  "9fcvKMKPGuyjINfSUlcd": {
+    "nome": "NANISMO — D.Vertical",
+    "nivelMaximo": 3,
+    "progressao": {
+      "1": {
+        "custoExp": 0,
+        "termos": {
+          "0": 1
+        }
+      },
+      "2": {
+        "custoExp": 0,
+        "termos": {
+          "0": 2
+        }
+      },
+      "3": {
+        "custoExp": 0,
+        "termos": {
+          "0": 3
+        }
+      }
+    }
+  },
+  "cwrRtiWoYoDRsaydpf9b": {
+    "nome": "GIGANTISMO — D.Vertical",
+    "nivelMaximo": 3,
+    "progressao": {
+      "1": {
+        "custoExp": 0,
+        "termos": {
+          "0": 1
+        }
+      },
+      "2": {
+        "custoExp": 0,
+        "termos": {
+          "0": 2
+        }
+      },
+      "3": {
+        "custoExp": 0,
+        "termos": {
+          "0": 3
+        }
+      }
+    }
+  },
+  "zylRcOdp6IDWqGROZYWR": {
+    "nome": "GIGANTISMO — Altura",
+    "nivelMaximo": 3,
+    "progressao": {
+      "1": {
+        "custoExp": 0,
+        "termos": {
+          "0": 1.1
+        }
+      },
+      "2": {
+        "custoExp": 0,
+        "termos": {
+          "0": 1.2
+        }
+      },
+      "3": {
+        "custoExp": 0,
+        "termos": {
+          "0": 1.3
+        }
+      }
+    }
+  }
+}
