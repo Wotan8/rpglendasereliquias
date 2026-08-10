@@ -84,7 +84,10 @@ function initPhase2B(container) {
 
         const vantagens = [];
         const desvantagens = [];
-        const indPecs = window.INDIVIDUAL_PECULIARITIES || [];
+        // Domínio herdado da classe é o MESMO doc que a avulsa: sem este filtro o
+        // Guerreiro compra de novo o próprio Domínio e leva o teto em dobro.
+        const idsHerdados = new Set(pecsHerdadas.map(h => h.pec.id).filter(Boolean));
+        const indPecs = (window.INDIVIDUAL_PECULIARITIES || []).filter(p => !idsHerdados.has(p.id));
         const savedPecs = wizardState.peculiaridadesIndividuais || [];
 
         for (const pec of indPecs) {
