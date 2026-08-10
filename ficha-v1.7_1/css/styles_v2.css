@@ -2030,11 +2030,12 @@ button:hover {
     border-color: var(--ink);
 }
 
-.pec-dots-inline .dot:hover:not([disabled]) {
+.pec-dots-inline .dot:hover:not([disabled]):not([data-locked]) {
     border-color: var(--lr-gold);
 }
 
-.pec-dots-inline .dot[disabled] {
+.pec-dots-inline .dot[disabled],
+.pec-dots-inline .dot[data-locked] {
     opacity: .35;
     cursor: not-allowed;
 }

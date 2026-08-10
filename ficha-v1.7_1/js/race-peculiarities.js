@@ -598,9 +598,10 @@ function renderEvolutableDotsInline(dotsDiv, raceKey, pec, minLevel, maxLevel) {
             dot.disabled = true;
         }
 
-        // Se é "Apenas na Criação", desabilitar todos os dots acima do nível atual
+        // Se é "Apenas na Criação": trava com aviso ao clicar (não usa disabled,
+        // que engole o click e deixa o jogador sem explicação)
         if (isCreationOnly && i > minLevel) {
-            dot.disabled = true;
+            dot.dataset.locked = 'criacao';
             dot.title = '🏗️ Apenas na Criação (não pode upar depois)';
         }
 
@@ -611,6 +612,11 @@ function renderEvolutableDotsInline(dotsDiv, raceKey, pec, minLevel, maxLevel) {
 
         dot.addEventListener('click', () => {
             if (dot.disabled) return;
+            if (dot.dataset.locked === 'criacao') {
+                if (typeof showUpgradeBlocked === 'function')
+                    showUpgradeBlocked(`🏗️ "${pec.nome}" só pode ser evoluída na criação de personagem.`);
+                return;
+            }
             const current = state.dots[dotKey] || minLevel;
 
             // Click ≤ nível atual → nada acontece

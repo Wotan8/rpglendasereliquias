@@ -330,6 +330,14 @@ function buildPeculiarityDetailHTML(pecKey, sourceKey) {
         }
     }
 
+    // Individuais (avulsas): não vivem em RACES/CLASS/TRIBES, resolver do system data
+    if (!pec && typeof _resolvePeculiaridade === 'function') {
+        const entry = (state.peculiaridadesIndividuais || [])
+            .find(p => (typeof p === 'object' ? p.id : p) === pecKey);
+        pec = _resolvePeculiaridade(entry || pecKey, 'Individual');
+        if (pec) fonteLabel = '👤 Peculiaridade Individual';
+    }
+
     if (!pec) return `<div class="detail-empty">Peculiaridade não encontrada.</div>`;
 
     const dotKey = 'pec_' + pec.key;
