@@ -84,4 +84,15 @@ for (const [nomePec, nomeDV] of CASOS) {
 
 assert.equal(falhas, 0, `${falhas} Domínio(s) com escada errada`);
 console.log(`\n✅ ${CASOS.length} Domínios: cada nível soma exatamente +10 no seu Teto.`);
+
+/* As duas pontas: a mecânica calcular não basta — se a peculiaridade não declara
+   o Teto em derivedValueIds e o VD não é todoPersonagem, o campo não aparece na
+   ficha e o jogador não vê o próprio limite. Foi o bug do Caolho. */
+for (const [nomePec, nomeDV] of CASOS) {
+    const pec = pecPorNome(nomePec), dv = dvPorNome(nomeDV);
+    const declarados = (pec.derivedValueIds || []).map(x => typeof x === 'object' ? x.id : x);
+    const visivel = declarados.includes(dv.id) || dv.todoPersonagem;
+    assert.ok(visivel, `"${nomePec}" não declara "${nomeDV}" em derivedValueIds e o VD não é universal — o campo some da ficha`);
+}
+console.log(`✅ ${CASOS.length} Domínios: cada um declara o seu Teto, o campo aparece na ficha.`);
 process.exit(0);

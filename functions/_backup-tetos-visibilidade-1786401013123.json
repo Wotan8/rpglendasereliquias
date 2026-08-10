@@ -1,0 +1,118 @@
+{
+  "pec:MBUBvDuJrHYLbRM73Y7F": {
+    "nome": "Domínio de Armas de Braço",
+    "derivedValueIds": []
+  },
+  "pec:Pe11wtDDa2yvSRtr4rva": {
+    "nome": "Domínio de Armas de Precisão",
+    "derivedValueIds": []
+  },
+  "pec:IsH5ccmMl5rdRtAQgG5L": {
+    "nome": "Domínio de Disparo",
+    "derivedValueIds": []
+  },
+  "pec:uyaQNt3623R4mqoLuuMO": {
+    "nome": "Domínio de Proteção",
+    "derivedValueIds": []
+  },
+  "dv:LptL8gdpouDMZQW3xtSL": {
+    "nome": "Teto de Ofício: Necromancia",
+    "todoPersonagem": true
+  },
+  "pec:X9Ov5fRXoWSP3ykN8sTQ": {
+    "nome": "Domínio de Necromancia",
+    "derivedValueIds": []
+  },
+  "pec:Ju00igw27XWbZPQrV8Jo": {
+    "nome": "Necromancia",
+    "derivedValueIds": [
+      {
+        "id": "wPmZbzLjDQU0SDwwlNg1",
+        "valorInicial": 1,
+        "characterCreationMax": 0,
+        "characterCreationMin": 0
+      }
+    ]
+  },
+  "dv:F5ALcuF0hZSHmkiy4cY3": {
+    "nome": "Teto de Ofício: Abismancia",
+    "todoPersonagem": true
+  },
+  "pec:XMEBJ2bng8uMFySzFX4c": {
+    "nome": "Domínio de Abismancia",
+    "derivedValueIds": []
+  },
+  "pec:rtdK823VypC8FGvyByJw": {
+    "nome": "Abismancia",
+    "derivedValueIds": [
+      {
+        "valorInicial": 0,
+        "id": "lenTvK0nknsYEmcVS6RW",
+        "characterCreationMax": 0,
+        "characterCreationMin": 0
+      }
+    ]
+  },
+  "dv:OSjwm4aOr7yk8BLwKgzJ": {
+    "nome": "Teto de Ofício: Sonoromancia",
+    "todoPersonagem": true
+  },
+  "pec:BFoPT4LEUSh2nmKa9NgL": {
+    "nome": "Domínio de Sonoromancia",
+    "derivedValueIds": []
+  },
+  "pec:1WpcMGanUQNoEtwzXuL2": {
+    "nome": "Sonoromancia",
+    "derivedValueIds": [
+      {
+        "characterCreationMax": 0,
+        "characterCreationMin": 0,
+        "valorInicial": 1,
+        "id": "IUCXEjKasLU9rXyKgzkS"
+      }
+    ]
+  },
+  "dv:lVhJFIJLLwSxvBhh94MG": {
+    "nome": "Teto de Ofício: Pallomancia",
+    "todoPersonagem": true
+  },
+  "pec:dTMyc096BNZn50cHiwUK": {
+    "nome": "Domínio de Pallomancia",
+    "derivedValueIds": []
+  },
+  "pec:jxTlYDz8EPoHlSSNsyBc": {
+    "nome": "Pallomancia",
+    "derivedValueIds": [
+      {
+        "id": "A8q4s2q0QcnGXmR8ePXJ",
+        "valorInicial": 1,
+        "characterCreationMax": 0,
+        "characterCreationMin": 0
+      }
+    ]
+  },
+  "dv:Qb45OnuznkANgLKDmo61": {
+    "nome": "Teto de Ofício: Runomancia",
+    "todoPersonagem": true
+  },
+  "pec:mfAj2ZOXnwzJCykGJW5k": {
+    "nome": "Domínio de Runomancia",
+    "derivedValueIds": []
+  },
+  "pec:BwtPCy3wLcNqK1P6lRCI": {
+    "nome": "Runomancia",
+    "derivedValueIds": []
+  },
+  "dv:4LD77v26EBLDH0bufEYD": {
+    "nome": "Teto de Ofício: Totemancia",
+    "todoPersonagem": true
+  },
+  "pec:N3kbzmoORgyDB1NITyJY": {
+    "nome": "Domínio de Totemancia",
+    "derivedValueIds": []
+  },
+  "pec:ekws3sw5gzCvu6Th6Edo": {
+    "nome": "Totemancia",
+    "derivedValueIds": []
+  }
+}
