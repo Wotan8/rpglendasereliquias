@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v184';
+const VERSION = 'v187';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -99,6 +99,10 @@ const PRECACHE_URLS = [
   '/menu/js/menu-hero.js',
   '/menu/js/menu-portal-config.js',
   '/menu/menu.html',
+  '/mapa-conflito/mapa-conflito.html',
+  '/mapa-conflito/css/mapa-conflito.css',
+  '/mapa-conflito/js/conflito-dados.js',
+  '/mapa-conflito/js/mapa-conflito.js',
   '/painel-criador/css/painel-criador.css',
   '/painel-criador/js/painel-firebase.js',
   '/painel-criador/js/painel-mechanics.js',

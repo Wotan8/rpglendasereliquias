@@ -1,0 +1,335 @@
+/* =====================================================================
+   ⚔️ MAPA DE CONFLITO — o turno de uma classe, numa tela
+   ---------------------------------------------------------------------
+   A página não guarda nada: lê system/data/{classes,classModules,
+   derivedValues,skills,conditions} e desenha. Cor e tipografia saem de
+   /shared/tokens.css — nada de valor cravado aqui.
+   ===================================================================== */
+
+body {
+    margin: 0;
+    background: var(--lr-bg-0);
+    color: var(--lr-text-1);
+    font-family: var(--lr-font-body);
+    font-size: var(--lr-fs-md);
+    line-height: var(--lr-lh-body);
+}
+
+/* ---------- Topo ---------------------------------------------------- */
+.mc-topo {
+    position: sticky;
+    top: 0;
+    z-index: var(--lr-z-sticky);
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-3);
+    flex-wrap: wrap;
+    padding: var(--lr-space-3) var(--lr-space-5);
+    background: var(--lr-surface);
+    border-bottom: var(--lr-border-w) solid var(--lr-border);
+    box-shadow: var(--lr-shadow-1);
+}
+
+.mc-topo h1 {
+    margin: 0;
+    font-family: var(--lr-font-title);
+    font-size: var(--lr-fs-xl);
+    letter-spacing: var(--lr-track-title);
+    white-space: nowrap;
+}
+
+.mc-voltar {
+    font-size: var(--lr-fs-xl);
+    line-height: 1;
+    text-decoration: none;
+    color: var(--lr-text-2);
+    padding: 0 var(--lr-space-2);
+    border-radius: var(--lr-radius-sm);
+}
+
+.mc-voltar:hover {
+    color: var(--lr-gold);
+    background: var(--lr-gold-soft);
+}
+
+.mc-controles {
+    display: flex;
+    gap: var(--lr-space-2);
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.mc-select,
+.mc-busca {
+    font-family: inherit;
+    font-size: var(--lr-fs-sm);
+    padding: var(--lr-space-2) var(--lr-space-3);
+    background: var(--lr-bg-1);
+    color: var(--lr-text-1);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+}
+
+.mc-select:focus,
+.mc-busca:focus {
+    outline: none;
+    box-shadow: var(--lr-glow-gold);
+}
+
+.mc-busca {
+    min-width: 190px;
+}
+
+.theme-toggle {
+    background: none;
+    border: none;
+    font-size: var(--lr-fs-lg);
+    cursor: pointer;
+}
+
+/* ---------- Faixa da economia de ação ------------------------------- */
+.mc-economia {
+    display: flex;
+    gap: var(--lr-space-3);
+    flex-wrap: wrap;
+    align-items: baseline;
+    padding: var(--lr-space-3) var(--lr-space-5);
+    background: var(--lr-gold-soft);
+    border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
+    font-size: var(--lr-fs-sm);
+    color: var(--lr-text-2);
+}
+
+.mc-economia strong {
+    font-family: var(--lr-font-title);
+    color: var(--lr-text-1);
+}
+
+/* ---------- Colunas de classe --------------------------------------- */
+.mc-colunas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: var(--lr-space-5);
+    padding: var(--lr-space-5);
+    align-items: start;
+}
+
+.mc-carregando,
+.mc-vazio {
+    color: var(--lr-text-2);
+    font-style: italic;
+}
+
+.mc-classe {
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
+    background: var(--lr-surface);
+    overflow: hidden;
+}
+
+.mc-classe-topo {
+    padding: var(--lr-space-4);
+    border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
+    background: var(--lr-surface-2);
+}
+
+.mc-classe-topo h2 {
+    margin: 0;
+    font-family: var(--lr-font-title);
+    font-size: var(--lr-fs-lg);
+    letter-spacing: var(--lr-track-title);
+}
+
+.mc-arquetipo {
+    display: block;
+    margin-top: 2px;
+    font-family: var(--lr-font-subtitle);
+    font-style: italic;
+    color: var(--lr-text-2);
+}
+
+/* Papel em cena — texto que o Criador já escreveu, em bullets */
+.mc-papel {
+    margin: var(--lr-space-3) 0 0;
+    padding-left: var(--lr-space-4);
+    font-size: var(--lr-fs-sm);
+    color: var(--lr-text-2);
+}
+
+.mc-papel li {
+    margin-bottom: 2px;
+}
+
+/* ---------- Chips ---------------------------------------------------- */
+.mc-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lr-space-1);
+    margin-top: var(--lr-space-3);
+}
+
+.mc-chip {
+    font-size: var(--lr-fs-xs);
+    padding: 2px var(--lr-space-2);
+    border-radius: var(--lr-radius-sm);
+    background: var(--lr-bg-1);
+    border: var(--lr-border-w) solid var(--lr-border-soft);
+    color: var(--lr-text-2);
+    white-space: nowrap;
+}
+
+.mc-chip-attr {
+    background: var(--lr-gold-soft);
+    color: var(--lr-gold-2);
+    font-weight: 700;
+}
+
+.mc-chip-custo {
+    background: var(--lr-abyssal-soft);
+    color: var(--lr-abyssal-2);
+    font-weight: 600;
+}
+
+.mc-chip-teste {
+    background: var(--lr-arcane-soft);
+    color: var(--lr-arcane-2);
+}
+
+.mc-chip-cond {
+    background: var(--lr-blood-soft);
+    color: var(--lr-blood-3);
+}
+
+.mc-chip-regua {
+    opacity: var(--lr-op-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Faixas de custo de ação ---------------------------------- */
+.mc-faixa {
+    border-top: var(--lr-border-w) solid var(--lr-border-soft);
+}
+
+.mc-faixa-topo {
+    display: flex;
+    align-items: baseline;
+    gap: var(--lr-space-2);
+    padding: var(--lr-space-3) var(--lr-space-4);
+    background: var(--lr-bg-1);
+}
+
+.mc-faixa-nome {
+    font-family: var(--lr-font-title);
+    font-size: var(--lr-fs-sm);
+    letter-spacing: var(--lr-track-title);
+    text-transform: uppercase;
+}
+
+.mc-faixa-glosa {
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2);
+}
+
+.mc-faixa-conta {
+    margin-left: auto;
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Faixa de aviso: habilidade sem custo de ação no cadastro */
+.mc-faixa-alerta .mc-faixa-topo {
+    background: var(--lr-blood-soft);
+}
+
+.mc-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-space-2);
+    padding: var(--lr-space-3) var(--lr-space-4);
+}
+
+.mc-card {
+    padding: var(--lr-space-3);
+    border: var(--lr-border-w) solid var(--lr-border-soft);
+    border-left: 3px solid var(--lr-gold);
+    border-radius: var(--lr-radius);
+    background: var(--lr-bg-0);
+}
+
+.mc-card h3 {
+    margin: 0;
+    font-size: var(--lr-fs-md);
+    font-weight: 700;
+}
+
+.mc-card-modulo {
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2);
+}
+
+.mc-card p {
+    margin: var(--lr-space-2) 0 0;
+    font-size: var(--lr-fs-sm);
+}
+
+.mc-card-falha {
+    color: var(--lr-blood-3);
+    font-size: var(--lr-fs-xs) !important;
+}
+
+/* ---------- Defesas --------------------------------------------------- */
+.mc-defesas {
+    padding: var(--lr-space-5);
+    border-top: 2px solid var(--lr-border);
+    background: var(--lr-surface-2);
+}
+
+.mc-defesas h2 {
+    margin: 0;
+    font-family: var(--lr-font-title);
+    font-size: var(--lr-fs-lg);
+    letter-spacing: var(--lr-track-title);
+}
+
+.mc-defesas-nota {
+    margin: var(--lr-space-2) 0 var(--lr-space-4);
+    font-size: var(--lr-fs-sm);
+    color: var(--lr-text-2);
+}
+
+.mc-defesas-grade {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--lr-space-3);
+}
+
+.mc-defesa {
+    padding: var(--lr-space-3);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-surface);
+}
+
+.mc-defesa summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.mc-defesa p {
+    margin: var(--lr-space-2) 0 0;
+    font-size: var(--lr-fs-sm);
+    color: var(--lr-text-2);
+}
+
+@media print {
+
+    .mc-topo,
+    .mc-controles {
+        position: static;
+    }
+
+    .mc-defesa[open] p {
+        display: block;
+    }
+}

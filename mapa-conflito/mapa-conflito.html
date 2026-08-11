@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Conflito</title>
+
+    <script type="module" src="/js/global-favicon.js"></script>
+
+    <!-- Design System — Lendas & Relíquias -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+
+    <!-- 1. CSS local da página  2. Tokens  3. Identidade -->
+    <link rel="stylesheet" href="css/mapa-conflito.css?v=1">
+    <link rel="stylesheet" href="../shared/tokens.css?v=11">
+    <link rel="stylesheet" href="../shared/lendas-reliquias.css?v=2">
+    <script src="../shared/theme.js?v=1"></script>
+</head>
+
+<body>
+    <header class="mc-topo">
+        <a class="mc-voltar" href="../menu/menu.html" title="Voltar ao Portal">←</a>
+        <h1>⚔️ Mapa de Conflito</h1>
+        <div class="mc-controles">
+            <select id="selA" class="mc-select" aria-label="Classe"></select>
+            <select id="selB" class="mc-select" aria-label="Classe para comparar"></select>
+            <input id="busca" class="mc-busca" type="search" placeholder="🔍 filtrar habilidade…"
+                aria-label="Filtrar habilidades pelo nome ou efeito">
+        </div>
+        <button id="btnThemeToggle" class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">🌙</button>
+    </header>
+
+    <!-- A economia do turno, sempre à vista: é a régua que dá sentido às faixas -->
+    <section class="mc-economia" aria-label="Economia de ação">
+        <strong>O turno tem 2 ações.</strong>
+        <span>Toda habilidade custa <b>1 Ação Padrão</b>, salvo quando o cadastro diz outra coisa — é o que as faixas
+            abaixo mostram.</span>
+    </section>
+
+    <main id="colunas" class="mc-colunas" aria-live="polite">
+        <p class="mc-carregando">Carregando cadastros…</p>
+    </main>
+
+    <!-- A outra metade do conflito: comum a todo personagem, independe de classe -->
+    <section class="mc-defesas">
+        <h2>🛡️ Defesas — iguais para todos</h2>
+        <p class="mc-defesas-nota">Você declara uma defesa por golpe recebido. O limite por rodada é
+            <b>Reflexo − 1</b> (mínimo 1); cada defesa além disso custa 1 Energia.</p>
+        <div id="gradeDefesas" class="mc-defesas-grade"></div>
+    </section>
+
+    <script type="module" src="js/mapa-conflito.js?v=1"></script>
+</body>
+
+</html>
