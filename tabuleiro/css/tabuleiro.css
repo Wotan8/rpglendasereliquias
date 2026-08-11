@@ -690,9 +690,26 @@ html, body {
     width: 16px; padding: 0; font-size: var(--lr-fs-xs); line-height: 1; flex: 0 0 auto;
 }
 .tb-fwin-item.dentro { margin-left: 22px; border-left: 1px dashed var(--lr-border); }
-.tb-fwin-item[draggable="true"] { cursor: grab; }
 .tb-fwin-cont-vazio { margin-left: 30px; font-size: .7rem; padding: 2px 0; }
 .tb-fwin-drop-alvo { outline: 1px dashed var(--lr-gold); background: var(--lr-gold-soft); border-radius: var(--lr-radius-sm); }
+/* Alça de arrasto: touch-action none SÓ aqui — o resto da linha continua rolando a lista */
+.tb-fwin-grab {
+    flex: 0 0 auto; width: 24px; min-height: 24px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--lr-text-2); cursor: grab; touch-action: none; user-select: none;
+}
+.tb-fwin-grab:active { cursor: grabbing; color: var(--lr-gold-2); }
+/* Fantasma que segue o dedo/mouse durante o arrasto */
+.tb-fwin-ghost {
+    position: fixed; z-index: 300; pointer-events: none;
+    transform: translate(-50%, -130%);
+    background: var(--lr-surface); border: 1px solid var(--lr-gold);
+    border-radius: var(--lr-radius); padding: 2px 10px;
+    font-size: var(--lr-fs-xs); font-weight: 600; color: var(--lr-text-1);
+    box-shadow: var(--lr-shadow-3); white-space: nowrap;
+}
+.tb-fwin-ghost.no-mapa { border-color: var(--lr-arcane, #06b6d4); }
+.tb-fwin-ghost.no-mapa::after { content: ' → 🗺️'; }
 .tb-fwin-inv-sec {
     font-size: var(--lr-fs-xs); font-weight: 700; color: var(--lr-text-2);
     text-transform: uppercase; letter-spacing: .05em;

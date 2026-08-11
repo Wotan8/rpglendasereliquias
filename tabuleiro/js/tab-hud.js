@@ -43,6 +43,7 @@ export function initHud() {
             // Atributos/perícias ao vivo também: o Alvo dos 🎯 Testes lê de dots
             if (ch) ch.dots = d.effectiveDots || d.dots || ch.dots || {};
             if (ch) ch.classModuleData = d.classModuleData || ch.classModuleData || {};
+            if (ch) ch.peculiaridadesIndividuais = d.peculiaridadesIndividuais || ch.peculiaridadesIndividuais || [];
             // A janela de Combate lê os vitais do personagem DAQUI (VITAIS), então
             // sem este repinte ela ficava com o número velho quando o dano vinha do
             // Painel do Mestre ou da própria ficha. É barato: sai na hora se a

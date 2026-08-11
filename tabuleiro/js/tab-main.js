@@ -112,6 +112,9 @@ async function carregarChars() {
         T.chars.push({
             id: d.id, nome: f.nome || raw.nome || 'Sem nome', charImg: raw.charImg || '',
             ownerUid: raw.ownerUid, ownerEmail: raw.ownerEmail, raca: f.raca, classe: f.classe,
+            tribo: f.tribo || raw.tribo || '',
+            // peculiaridades compradas na ficha — decidem quais VDs valem p/ o personagem
+            peculiaridadesIndividuais: raw.peculiaridadesIndividuais || [],
             desloc: isNaN(desloc) ? null : desloc,
             // VDs prontos espelhados pela ficha — o alcance de visão por Percepção lê daqui
             derivedTotals: raw.derivedTotals || {},

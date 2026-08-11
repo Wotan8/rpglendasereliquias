@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>__check — Janelas de Ficha de Combate</title>
 <link rel="stylesheet" href="../shared/tokens.css">
 <link rel="stylesheet" href="css/tabuleiro.css">
@@ -17,15 +18,15 @@
 <!-- o boot do tab-main escreve aqui quando não acha `?mesa=` -->
 <div id="tbLoading" hidden></div>
 <div id="tbToasts"></div>
-<canvas id="tbCanvas" style="position:fixed;inset:0;width:1px;height:1px"></canvas>
+<canvas id="tbCanvas" style="position:fixed;left:0;top:0;width:8px;height:8px"></canvas>
 <div class="tb-modal" id="tbModal"><div class="tb-modal-content"><span class="tb-modal-title"></span><div class="tb-modal-body"></div></div></div>
 
 <div id="saida">
   <h1>🪟 Janelas de Ficha de Combate — multi-instância</h1>
-  <p>Registro semeado com chaves = <b>id de doc</b> (como no Firestore real): os VDs
-     só aparecem se o casamento por <code>normChave(nome)</code> funcionar — era o bug
-     dos VDs sumidos do personagem. Edições disparam writes reais que <b>falham sem
-     login</b> — toasts ❌ são esperados; valida-se o caminho local e o render.</p>
+  <p>Registro semeado com chaves = <b>id de doc</b> (como no Firestore real) e vínculos
+     de VD por raça/classe/peculiaridade — o personagem só pode exibir os VDs
+     vinculados, como na ficha. Arrasto é por pointer events (mouse E toque).
+     Edições disparam writes reais que <b>falham sem login</b> — toasts ❌ esperados.</p>
   <div id="res"></div>
   <div id="placar">rodando…</div>
 </div>
@@ -37,9 +38,9 @@ import { abrirFichaWin, _WINS } from './js/tab-ficha-win.js';
 
 // ===== Registros do sistema (chaves de doc, como ensureNpcSystemData devolve) =====
 const dv = (id, nome, extra) => ({ id, key: id, nome, icone: extra.icone || '📊', prefixo: '', sufixo: extra.sufixo || '',
-    descricao: '', mecanicaIds: [], campoAtual: false, todoPersonagem: false,
+    descricao: '', mecanicaIds: [], campoAtual: false, todoPersonagem: !!extra.todos,
     blocoId: extra.bloco || 'geral', blocoNome: extra.bloco || 'Geral', blocoOrdem: extra.ordem ?? 999,
-    escopoItem: extra.escopo || '', statusCombate: false, arredondaMesa: extra.mesa || false, espelhaVD: '' });
+    escopoItem: extra.escopo || '', statusCombate: false, arredondaMesa: extra.mesa || false, espelhaVD: extra.espelha || '' });
 const modManobras = { id: 'm1', tipo: 'lista', titulo: 'Manobras', icone: '🌀', permitirCriacaoJogador: true,
     itensPredefinidos: [],
     schema: [
@@ -47,36 +48,49 @@ const modManobras = { id: 'm1', tipo: 'lista', titulo: 'Manobras', icone: '🌀'
         { key: 'usos', label: 'Usos', tipo: 'contador' },
         { key: 'desc', label: 'Efeito', tipo: 'textarea' },
     ] };
+const RACA = { id: 'r1', nome: 'Humana', derivedValueIds: ['dv_perc'], peculiaridadeIds: [] };
+const CLASSE = { id: 'cl1', nome: 'Bruxa', derivedValueIds: [{ id: 'dv_acerto', valorInicial: 0 }], bonusIniciais: [], peculiaridadeIds: [] };
 window._npcSys = {
     loaded: true, norm: s => String(s || '').trim().toLowerCase(),
-    races: [], classes: [], tribes: [], mechanics: [],
+    races: [RACA], classes: [CLASSE], tribes: [], mechanics: [],
+    racesByNome: { humana: RACA }, classesByNome: { bruxa: CLASSE }, tribesByNome: {},
     equipment: [{ id: 'tpl1', nome: 'Adaga de Lastro (modelo)', formulaDano: '1d6', descricao: 'Lâmina curta lastreada.' }],
     skills: [
         { id: 'sk1', nome: 'Lâminas', categoria: 'Combate', descricao: 'Armas de corte' },
         { id: 'sk2', nome: 'Observação', categoria: 'Mentais', descricao: 'Notar detalhes' },
     ],
     derivedValues: [
-        dv('dv_bld', 'Blindagem', { icone: '🛡️', bloco: 'Combate', ordem: 1, mesa: true }),
-        dv('dv_dano', 'Dano Físico', { icone: '⚔️', bloco: 'Combate', ordem: 1, escopo: 'dano' }),
-        dv('dv_acerto', 'Acerto', { icone: '🎯', bloco: 'Combate', ordem: 1, escopo: 'coluna' }),
-        dv('dv_perc', 'Percepção', { icone: '👁️', bloco: 'Sentidos', ordem: 2 }),
-        dv('dv_igneo', 'Golpe Ígneo', { icone: '🔥', bloco: 'Essências', ordem: 40, escopo: 'dano-canal' }),
+        dv('dv_bld', 'Blindagem', { icone: '🛡️', bloco: 'Combate', ordem: 1, mesa: true, todos: true }),
+        dv('dv_bldc', 'Blindagem Cortante', { icone: '🗡️', bloco: 'Combate', ordem: 1, mesa: true, todos: true, espelha: 'Blindagem' }),
+        dv('dv_dano', 'Dano Físico', { icone: '⚔️', bloco: 'Combate', ordem: 1, escopo: 'dano', todos: true }),
+        dv('dv_acerto', 'Acerto', { icone: '🎯', bloco: 'Combate', ordem: 1, escopo: 'coluna' }),      // vem pela CLASSE
+        dv('dv_perc', 'Percepção', { icone: '👁️', bloco: 'Sentidos', ordem: 2 }),                     // vem pela RAÇA
+        dv('dv_igneo', 'Golpe Ígneo', { icone: '🔥', bloco: 'Essências', ordem: 40, escopo: 'dano-canal' }), // vem por PECULIARIDADE individual
+        dv('dv_folego', 'Fôlego', { icone: '🫁', bloco: 'Extra', ordem: 50 }),                          // SEM vínculo: não pode aparecer
     ],
     vitalStats: [
         { id: 'vs1', key: 'VIT_MAX', nome: 'Vitalidade' }, { id: 'vs2', key: 'ENER_MAX', nome: 'Energia' }, { id: 'vs3', key: 'SAN_MAX', nome: 'Sanidade' },
     ],
     classModules: [modManobras],
     classModulesById: { m1: modManobras },
-    pecsById: { pec1: { id: 'pec1', nome: 'Pele de Ferro', icone: '🛡️', descricao: '+Blindagem' } },
-    racesById: {}, classesById: {}, tribesById: {}, mechsById: {}, racesByNome: {}, classesByNome: {}, tribesByNome: {},
+    pecsById: {
+        pec1: { id: 'pec1', nome: 'Pele de Ferro', icone: '🛡️', descricao: '+Blindagem' },
+        pec2: { id: 'pec2', nome: 'Chama Interior', icone: '🔥', derivedValueIds: [{ id: 'dv_igneo', valorInicial: 0 }] },
+    },
+    mechsById: {},
 };
 
 // ===== Mesa semeada =====
 function semear() {
+    // o bootError do tab-main preenche o #tbLoading (fixed, inset 0, z 200) — o
+    // CSS display:flex vence o atributo hidden e ele taparia o elementFromPoint
+    const ld = document.getElementById('tbLoading');
+    if (ld) ld.style.display = 'none';
     T.mesaId = 'check'; T.mode = 'secret'; T.isMaster = true;
     T.user = { uid: 'u1', email: 'check@check' };
-    T.chars = [{ id: 'c1', nome: 'Vesna', ownerUid: 'u1', raca: 'Humana', classe: 'Bruxa', charImg: '',
-        derivedTotals: { BLINDAGEM: 2.2, PERCEPCAO: 5, DANO_FISICO: 2, GOLPE_IGNEO: 1.5, ACERTO: 7 },
+    T.chars = [{ id: 'c1', nome: 'Vesna', ownerUid: 'u1', raca: 'Humana', classe: 'Bruxa', tribo: '', charImg: '',
+        peculiaridadesIndividuais: [{ id: 'pec2', nivel: 1 }],
+        derivedTotals: { BLINDAGEM: 2.2, BLINDAGEM_CORTANTE: 2.2, PERCEPCAO: 5, DANO_FISICO: 2, GOLPE_IGNEO: 1.5, ACERTO: 7, FOLEGO: 4 },
         dots: { attr_for: 3, attr_des: 2, attr_vig: 2, sk_fisicas_l_minas: 2, sk_mentais_observa__o: 3 },
         classModuleData: {
             m1: [{ _predefNome: 'Truque da Fumaça', custo: '1 Ação', usos: 2, desc: 'Some numa nuvem.' }],
@@ -113,6 +127,7 @@ const ITENS_NPC = [
     { id: 'i2', nome: 'Poção Vermelha', tipo: 'Consumível', peso: 0.5, quantidade: 3, descricao: 'Cura 2 VIT.' },
     { id: 'i3', nome: 'Mochila', tipo: 'Container', ehContainer: true, peso: 1, pesoMaximoContainer: 10, multiplicadorPressao: 0.5 },
     { id: 'i4', nome: 'Flechas', tipo: 'Projétil', parentItemId: 'i3', quantidade: 12, peso: 0.05 },
+    { id: 'i5', nome: 'Poção Vermelha', tipo: 'Consumível', peso: 0.5, quantidade: 2, descricao: 'Cura 2 VIT.' },
 ];
 
 const linhas = [];
@@ -121,6 +136,8 @@ const $ = (sel, raiz) => (raiz || document).querySelector(sel);
 const $$ = (sel, raiz) => [...(raiz || document).querySelectorAll(sel)];
 const winEl = (chave) => _WINS.get(chave)?.el;
 const txt = (el) => (el?.textContent || '').replace(/\s+/g, ' ');
+const pev = (tipo, x, y) => new PointerEvent(tipo, { clientX: x, clientY: y, pointerId: 7, bubbles: true });
+const centro = (el) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
 
 async function rodar() {
     await new Promise(r => setTimeout(r, 60));   // deixa o boot do tab-main passar
@@ -174,7 +191,7 @@ async function rodar() {
         n1.valoresDer.atual.VIT === 16.5 && n1.valoresDer.atual.VITALIDADE === 16.5 &&
         T.combate.participantes[0].hpCurrent === 16.5);
 
-    // ===== Inventário: contêiner, qty, detalhe completo, DnD =====
+    // ===== Inventário: contêiner, qty, detalhe completo =====
     $('[data-aba="inv"]', w1).click();
     teste('T11 · contêiner fechado esconde o conteúdo; chevron abre e mostra Flechas',
         !txt(w1).includes('Flechas') &&
@@ -185,58 +202,91 @@ async function rodar() {
         win1.itens.find(i => i.id === 'i2').quantidade === 4);
     teste('T13 · Arma e contêiner sem stepper de quantidade',
         !$$('[data-qdelta]', w1).some(b => b.dataset.item === 'i1' || b.dataset.item === 'i3'));
-    // clique no item expande TODAS as informações
-    $('[data-toggleitem="i1"]', w1).click();
+    $('[data-toggleitem="i1"] .tb-fwin-item-info', w1).click();
     const det = $('.tb-fwin-item-det', w1);
     teste('T14 · clique no item expande info completa (tipo, peso, dano do modelo, equipe)',
         det && txt(det).includes('Tipo:') && txt(det).includes('Peso:') &&
         txt(det).includes('1d6') && txt(det).includes('do modelo') && txt(det).includes('Empunhado'));
-    teste('T15 · DnD armado: linhas arrastáveis, contêiner e raiz são alvos de drop',
-        $$('[data-drag]', w1).length >= 3 &&
-        !!$('[data-drop="cont:i3"]', w1) && !!$('[data-drop="root"]', w1));
 
-    // ===== Personagem: VDs por bloco, ataques, módulos, ordem =====
+    // ===== Arrasto por POINTER (funciona em touch): alvo acende, fantasma segue =====
+    // O painel de resultados cobre a tela no mobile e fica acima das janelas —
+    // some durante a simulação, senão o elementFromPoint acerta nele.
+    const saida = document.getElementById('saida');
+    saida.style.display = 'none';
+    w1.style.left = Math.min(560, window.innerWidth - w1.offsetWidth - 4) + 'px';
+    w1.style.top = '20px';
+    const grab = $('[data-grab="i2"]', w1);
+    const pi = centro(grab);
+    grab.dispatchEvent(pev('pointerdown', pi.x, pi.y));
+    const pMochila = centro($('[data-toggleitem="i3"]', w1));
+    grab.dispatchEvent(pev('pointermove', pMochila.x, pMochila.y));
+    const ghostOk = !!$('.tb-fwin-ghost');
+    const alvoCont = $('[data-toggleitem="i3"]', w1).classList.contains('tb-fwin-drop-alvo');
+    const pIgual = centro($('[data-toggleitem="i5"]', w1));
+    grab.dispatchEvent(pev('pointermove', pIgual.x, pIgual.y));
+    const alvoMerge = $('[data-toggleitem="i5"]', w1).classList.contains('tb-fwin-drop-alvo');
+    grab.dispatchEvent(pev('pointermove', 4, 4));   // sobre o canvas
+    const modoMapa = $('.tb-fwin-ghost')?.classList.contains('no-mapa');
+    grab.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 7, bubbles: true }));
+    saida.style.display = '';
+    teste('T15 · arrasto por ponteiro: fantasma segue e contêiner acende como alvo', ghostOk && alvoCont);
+    teste('T16 · pilha idêntica acende para JUNTAR quantidades', alvoMerge);
+    teste('T17 · sobre o canvas o fantasma indica drop no mapa; cancelar limpa tudo',
+        modoMapa && !$('.tb-fwin-ghost'));
+
+    // ===== Personagem: SÓ VDs vinculados, ataques, módulos, ordem =====
     const wc = winEl('char:c1');
     const winC = _WINS.get('char:c1');
     winC.itens = [{ id: 'e1', nome: 'Adaga de Lastro', tipo: 'Arma', equipado: true, estadoEquip: 'empunhado', peso: 1, quantidade: 1, origemTemplateId: 'tpl1' }];
     window._renderFichaWins();
 
-    teste('T16 · char: VIT 12/18 dos VITAIS ao vivo',
+    teste('T18 · char: VIT 12/18 dos VITAIS ao vivo',
         $('[data-vcur][data-sig="VIT"]', wc).value === '12' && txt($('.tb-fwin-vmax', wc)).includes('18'));
 
-    const blocosC = $$('.tb-fwin-bloco', wc);
     const chipsC = $$('.tb-fwin-chip', wc).map(txt);
-    teste('T17 · char: VDs aparecem MESMO com registro por id de doc (Blindagem 2 de mesa, Percepção 5, Golpe Ígneo 1.5)',
+    teste('T19 · char: VDs vinculados aparecem (Blindagem 2 de mesa, Percepção via raça, Golpe Ígneo via peculiaridade)',
         chipsC.some(c => c.includes('Blindagem') && /\b2\b/.test(c)) &&
         chipsC.some(c => c.includes('Percepção') && c.includes('5')) &&
         chipsC.some(c => c.includes('Golpe Ígneo')));
-    teste('T18 · char: blocos 2 primeiros abertos, Essências fechado',
+    teste('T20 · char: VD SEM vínculo não aparece (Fôlego) e espelho igual não repete (Blindagem Cortante)',
+        !chipsC.some(c => c.includes('Fôlego')) && !chipsC.some(c => c.includes('Cortante')));
+    const blocosC = $$('.tb-fwin-bloco', wc);
+    teste('T21 · char: blocos 2 primeiros abertos, Essências fechado',
         blocosC.length >= 3 && blocosC[0].open && blocosC[1].open && !blocosC[2].open);
-    teste('T19 · char: ataque com dano do modelo composto (1d6+2) e Acerto 7 no golpe',
+    teste('T22 · char: ataque com dano do modelo composto (1d6+2) e Acerto 7 (vindo da classe) no golpe',
         $$('.tb-fwin-atk', wc).some(a => txt(a).includes('1d6+2') && txt(a).includes('Acerto') && txt(a).includes('7')));
-    teste('T20 · char: módulos da ficha (Truque da Fumaça usos=2) + módulo sem registro não some',
+    teste('T23 · char: módulos da ficha (Truque da Fumaça usos=2) + módulo sem registro não some',
         txt(wc).includes('Truque da Fumaça') &&
         $$('[data-mod][data-mkey="usos"]', wc).some(i => i.value === '2') &&
         txt(wc).includes('Golpe Sombrio'));
     const secoes = $$('.tb-fwin-sec > summary', wc).map(txt);
-    teste('T21 · ordem: Ataques → Habilidades & Módulos → Atributos',
+    teste('T24 · ordem: Ataques → Habilidades & Módulos → Atributos',
         secoes.findIndex(s => s.includes('Ataques')) < secoes.findIndex(s => s.includes('Habilidades')) &&
         secoes.findIndex(s => s.includes('Habilidades')) < secoes.findIndex(s => s.includes('Atributos')));
-    teste('T22 · char: perícias dos dots (Lâminas 2, Observação 3) e condição do doc',
+    teste('T25 · char: perícias dos dots (Lâminas 2, Observação 3) e condição do doc',
         $$('.tb-fwin-per', wc).some(p => txt(p).includes('Lâminas') && txt(p).includes('2')) &&
         $$('.tb-fwin-per', wc).some(p => txt(p).includes('Observação') && txt(p).includes('3')) &&
         txt(wc).includes('Cansada'));
 
+    // ===== Viewport: janela nunca fica fora da área visível =====
+    w1.style.left = '5000px'; w1.style.top = '4000px';
+    window.dispatchEvent(new Event('resize'));
+    teste('T26 · resize/rotação reclampa a janela para dentro do viewport',
+        w1.offsetLeft + w1.offsetWidth <= window.innerWidth + 1 && w1.offsetTop < window.innerHeight);
+
     // ===== Arrastar janela / resize / fechar =====
     const head = $('.tb-fwin-head', w1);
+    w1.style.top = '300px';
     const l0 = w1.offsetLeft, t0 = w1.offsetTop;
-    head.dispatchEvent(new PointerEvent('pointerdown', { clientX: 200, clientY: 100, pointerId: 7, bubbles: true }));
-    head.dispatchEvent(new PointerEvent('pointermove', { clientX: 260, clientY: 140, pointerId: 7, bubbles: true }));
+    head.dispatchEvent(pev('pointerdown', 200, 100));
+    head.dispatchEvent(pev('pointermove', 140, 60));
     head.dispatchEvent(new PointerEvent('pointerup', { pointerId: 7, bubbles: true }));
-    teste('T23 · arrastar pelo cabeçalho move; resize nativo ligado',
-        w1.offsetLeft === l0 + 60 && w1.offsetTop === t0 + 40 && getComputedStyle(w1).resize === 'both');
+    // No mobile o CSS trava left em 3vw (arrasto de janela é só vertical, de propósito)
+    const mob = window.innerWidth < 700;
+    teste('T27 · arrastar pelo cabeçalho move; resize nativo ligado',
+        w1.offsetTop === t0 - 40 && (mob || w1.offsetLeft === l0 - 60) && getComputedStyle(w1).resize === 'both');
     $('[data-fechar]', winEl('npc:npc2')).click();
-    teste('T24 · fechar remove a janela e o registro', $$('.tb-fwin').length === 2 && !_WINS.has('npc:npc2'));
+    teste('T28 · fechar remove a janela e o registro', $$('.tb-fwin').length === 2 && !_WINS.has('npc:npc2'));
 
     // relatório
     document.getElementById('res').innerHTML = '<table>' + linhas.map(([n, ok]) =>
@@ -250,7 +300,7 @@ rodar().catch(e => {
     document.getElementById('placar').innerHTML = `<span class="fail">💥 ${e.message}</span>`;
     console.error(e);
     document.getElementById('res').innerHTML = '<table>' + linhas.map(([n, ok]) =>
-        `<tr><td>${n}</td><td class="${ok ? 'ok' : 'fail'}">${ok ? 'PASS' : 'FAIL'}</td></tr>`).join('') + '</table>';
+        `<tr><td>${n}</td><td class="${ok ? 'ok' : 'fail'}">${ok ? 'FAIL' : 'FAIL'}</td></tr>`).join('') + '</table>';
 });
 </script>
 </body></html>

@@ -176,6 +176,7 @@ function criarJanela(tipo, id, chave) {
     el.addEventListener('pointerdown', () => { if ([...WINS.values()].at(-1) !== win) focar(win); }, true);
 
     el.addEventListener('click', e => {
+        if (e.target.closest('[data-grab]')) return;   // alça de arrasto não expande o item
         if (e.target.closest('[data-fechar]')) { fechar(win); return; }
         const aba = e.target.closest('[data-aba]');
         if (aba) { win.aba = aba.dataset.aba; render(win); return; }
@@ -219,54 +220,31 @@ function criarJanela(tipo, id, chave) {
         if (win.pendente) { win.pendente = false; render(win); }
     });
 
-    // ===== Arrastar-e-soltar do inventário (item → contêiner / raiz / mapa) =====
-    // ponytail: HTML5 DnD — não funciona em toque; se a mesa precisar disso no
-    // celular, trocar por arrasto via pointer events.
-    el.addEventListener('dragstart', e => {
-        const row = e.target.closest?.('[data-drag]');
-        if (!row) return;
-        e.dataTransfer.setData('text/lr-item', JSON.stringify({ win: chave, id: row.dataset.drag }));
-        e.dataTransfer.effectAllowed = 'move';
-    });
-    el.addEventListener('dragover', e => {
-        if (![...(e.dataTransfer?.types || [])].includes('text/lr-item')) return;
-        const alvo = e.target.closest?.('[data-drop]');
-        if (!alvo) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        el.querySelectorAll('.tb-fwin-drop-alvo').forEach(x => x.classList.remove('tb-fwin-drop-alvo'));
-        alvo.classList.add('tb-fwin-drop-alvo');
-    });
-    el.addEventListener('dragleave', e => {
-        e.target.closest?.('[data-drop]')?.classList.remove('tb-fwin-drop-alvo');
-    });
-    el.addEventListener('drop', e => {
-        const alvo = e.target.closest?.('[data-drop]');
-        if (!alvo) return;
-        let dados = null;
-        try { dados = JSON.parse(e.dataTransfer.getData('text/lr-item') || 'null'); } catch (err) {}
-        el.querySelectorAll('.tb-fwin-drop-alvo').forEach(x => x.classList.remove('tb-fwin-drop-alvo'));
-        if (!dados || dados.win !== chave) return;   // transferir entre fichas é fluxo da ficha, não daqui
-        e.preventDefault(); e.stopPropagation();
-        moverItem(win, dados.id, alvo.dataset.drop);
+    // ===== Arrastar-e-soltar do inventário (item → contêiner / raiz / mapa / pilha) =====
+    // Pointer events, não HTML5 DnD: funciona igual no mouse e no TOQUE (o
+    // celular é o hardware-alvo). A alça ⠿ tem touch-action:none — arrastar
+    // por ela não briga com o scroll da lista, que segue no resto da linha.
+    el.addEventListener('pointerdown', e => {
+        const grab = e.target.closest?.('[data-grab]');
+        if (grab) iniciarArrasto(win, grab, e);
     });
 
+    clampJanela(win);
     return win;
 }
 
-// Soltar um item sobre o CANVAS dropa no mapa — mesma regra do "🗺️ Dropar" do
-// inventário do jogador (tab-mostrar): loot comum via addObj, visão respeitada.
-document.addEventListener('dragover', e => {
-    if (e.target?.id === 'tbCanvas' && [...(e.dataTransfer?.types || [])].includes('text/lr-item')) e.preventDefault();
-});
-document.addEventListener('drop', e => {
-    if (e.target?.id !== 'tbCanvas') return;
-    let dados = null;
-    try { dados = JSON.parse(e.dataTransfer.getData('text/lr-item') || 'null'); } catch (err) {}
-    if (!dados) return;
-    e.preventDefault();
-    droparNoMapa(dados, { x: e.clientX, y: e.clientY });
-});
+// Rotação/resize do navegador não pode deixar janela fora da área visível.
+window.addEventListener('resize', () => { for (const w of WINS.values()) clampJanela(w); });
+
+/** Mantém a janela inteira dentro do viewport (abre, arrasta, gira o celular). */
+function clampJanela(win) {
+    const el = win.el;
+    if (!el.isConnected) return;
+    if (el.offsetHeight > window.innerHeight - 8) el.style.height = Math.max(220, window.innerHeight - 8) + 'px';
+    if (el.offsetWidth > window.innerWidth - 6) el.style.width = Math.max(240, window.innerWidth - 6) + 'px';
+    el.style.left = Math.max(0, Math.min(el.offsetLeft, window.innerWidth - el.offsetWidth)) + 'px';
+    el.style.top = Math.max(0, Math.min(el.offsetTop, window.innerHeight - Math.min(el.offsetHeight, 48))) + 'px';
+}
 
 // ===== Fontes de dados =====
 const dadosNpc = (id) => T.npcs.find(x => x.id === id) || null;
@@ -405,6 +383,95 @@ function escolherQtd(i, msg) {
     const s = prompt(`${msg} (1–${total})`, total);
     if (s === null) return null;
     return parseInt(s) || total;
+}
+
+/** Duas pilhas são do MESMO item? (nome + tipo + modelo do catálogo; contêiner nunca) */
+function itensIdenticos(a, b) {
+    if (!a || !b || a.id === b.id || ehContainer(a) || ehContainer(b)) return false;
+    const nome = (s) => String(s || '').trim().toLowerCase();
+    return nome(a.nome) === nome(b.nome) && (a.tipo || '') === (b.tipo || '')
+        && (a.modeloId || a.origemTemplateId || '') === (b.modeloId || b.origemTemplateId || '');
+}
+
+/** O que está sob o dedo/mouse durante o arrasto (o fantasma é pointer-events:none). */
+function alvoSob(win, item, x, y) {
+    const sob = document.elementFromPoint(x, y);
+    if (!sob) return null;
+    if (sob.id === 'tbCanvas') return { tipo: 'mapa' };
+    const row = sob.closest?.('[data-toggleitem]');
+    if (row && win.el.contains(row) && row.dataset.toggleitem !== item.id) {
+        const outro = (win.itens || []).find(z => z.id === row.dataset.toggleitem);
+        if (itensIdenticos(item, outro)) return { tipo: 'merge', id: outro.id, el: row };
+        if (outro && ehContainer(outro) && !ehContainer(item) && item.parentItemId !== outro.id) {
+            return { tipo: 'drop', drop: 'cont:' + outro.id, el: row };
+        }
+        return null;
+    }
+    const raiz = sob.closest?.('[data-drop="root"]');
+    if (raiz && win.el.contains(raiz) && item.parentItemId) return { tipo: 'drop', drop: 'root', el: raiz };
+    return null;
+}
+
+/** Arrasto por ponteiro: fantasma segue o dedo, alvo acende, soltar executa. */
+function iniciarArrasto(win, grab, e) {
+    const id = grab.dataset.grab;
+    const item = (win.itens || []).find(x => x.id === id); if (!item) return;
+    e.preventDefault();
+    try { grab.setPointerCapture(e.pointerId); } catch (err) { /* evento sintético (__check) */ }
+
+    const ghost = document.createElement('div');
+    ghost.className = 'tb-fwin-ghost';
+    ghost.textContent = `${EMOJI_TIPO[item.tipo] || '📦'} ${item.nome || 'Item'} ×${qtdDe(item)}`;
+    document.body.appendChild(ghost);
+
+    let alvoEl = null;
+    const pintar = (ev) => {
+        ghost.style.left = ev.clientX + 'px';
+        ghost.style.top = ev.clientY + 'px';
+        const alvo = alvoSob(win, item, ev.clientX, ev.clientY);
+        ghost.classList.toggle('no-mapa', alvo?.tipo === 'mapa');
+        if (alvoEl && alvoEl !== alvo?.el) alvoEl.classList.remove('tb-fwin-drop-alvo');
+        alvoEl = alvo?.el || null;
+        alvoEl?.classList.add('tb-fwin-drop-alvo');
+    };
+    const limpar = () => {
+        grab.removeEventListener('pointermove', pintar);
+        grab.removeEventListener('pointerup', soltar);
+        grab.removeEventListener('pointercancel', limpar);
+        ghost.remove();
+        alvoEl?.classList.remove('tb-fwin-drop-alvo');
+    };
+    const soltar = (ev) => {
+        const alvo = alvoSob(win, item, ev.clientX, ev.clientY);
+        limpar();
+        if (!alvo) return;
+        if (alvo.tipo === 'mapa') droparNoMapa({ win: win.chave, id }, { x: ev.clientX, y: ev.clientY });
+        else if (alvo.tipo === 'merge') fundirPilhas(win, id, alvo.id);
+        else moverItem(win, id, alvo.drop);
+    };
+    grab.addEventListener('pointermove', pintar);
+    grab.addEventListener('pointerup', soltar);
+    grab.addEventListener('pointercancel', limpar);
+    pintar(e);
+}
+
+/** Soltar sobre pilha idêntica: soma as quantidades e junta. */
+async function fundirPilhas(win, origemId, alvoId) {
+    const a = (win.itens || []).find(x => x.id === origemId);
+    const b = (win.itens || []).find(x => x.id === alvoId);
+    if (!a || !b || !itensIdenticos(a, b)) return;
+    const q = escolherQtd(a, `Juntar quantos "${a.nome || 'item'}" nesta pilha?`);
+    if (q == null) return;
+    const plano = dividirPilha(a, q);
+    const total = qtdDe(b) + plano.qtd;
+    try {
+        const lote = writeBatch(db);
+        lote.update(doc(db, 'items', b.id), { quantidade: total });
+        if (plano.move) lote.delete(doc(db, 'items', a.id));
+        else lote.update(doc(db, 'items', a.id), { quantidade: plano.restante });
+        await lote.commit();
+        toast(`🧺 ${plano.qtd}× ${esc(a.nome || 'Item')} juntado — pilha com ${total}`);
+    } catch (e) { errWrite(e); }
 }
 
 /** Drop DENTRO da janela: `alvo` = 'root' (fora de contêiner) ou 'cont:<id>'. */
@@ -562,9 +629,40 @@ function secaoValores(blocos) {
     return detalhe('📊 Valores de Combate', inner, true);
 }
 
-/** Todos os VDs da ficha do personagem, agrupados pelos blocos do registro.
- *  Nenhum fica de fora: chave sem par no registro cai no bloco "Outros". */
-function blocosChar(ch) {
+/**
+ * IDs de VD VINCULADOS ao personagem — mesma regra do renderDerivedValuesGrid
+ * da ficha (derived-values.js): raça e classe por `derivedValueIds`, mais os
+ * VDs trazidos por peculiaridade de raça, classe, tribo e individuais.
+ * `derivedTotals` sozinho não serve de filtro: o motor calcula TODOS os VDs do
+ * registro, mas a ficha só EXIBE os vinculados.
+ */
+function dvsVinculadosChar(ch) {
+    const ids = new Set();
+    const addIds = (lista) => (lista || []).forEach(x => {
+        const id = (typeof x === 'object' && x) ? x.id : x;
+        if (id) ids.add(id);
+    });
+    const addPecs = (lista) => (lista || []).forEach(p => {
+        const pid = (typeof p === 'object' && p) ? p.id : p;
+        addIds(_sys.pecsById?.[pid]?.derivedValueIds);
+    });
+    const norm = _sys.norm;
+    const raca = ch.raca ? _sys.racesByNome?.[norm(ch.raca)] : null;
+    const classe = ch.classe ? _sys.classesByNome?.[norm(ch.classe)] : null;
+    const tribo = ch.tribo ? _sys.tribesByNome?.[norm(ch.tribo)] : null;
+    addIds(raca?.derivedValueIds);
+    addIds(classe?.derivedValueIds);
+    addPecs(raca?.peculiaridadeIds);
+    addPecs(classe?.bonusIniciais);       // a ficha soma bonusIniciais + peculiaridadeIds
+    addPecs(classe?.peculiaridadeIds);
+    addPecs(tribo?.peculiaridadeIds);
+    addPecs(ch.peculiaridadesIndividuais);
+    return ids;
+}
+const dvAplicaChar = (dv, vinc) => dv.todoPersonagem || vinc.has(dv.id);
+
+/** VDs do personagem: SÓ os vinculados (regra da ficha), nos blocos do registro. */
+function blocosChar(ch, vinc) {
     const dt = ch.derivedTotals || {};
     const { vitais } = idx();
     const blocos = new Map();
@@ -578,12 +676,15 @@ function blocosChar(ch) {
     for (const dv of _sys.derivedValues) {                    // ordem do registro
         const k = normChave(dv.nome);
         if (usados.has(k) || dt[k] == null || vitais.has(k)) continue;
+        if (!dvAplicaChar(dv, vinc)) continue;
+        // Espelho valendo o mesmo que o espelhado só repete o número — a ficha
+        // também o esconde (dv-espelho-igual).
+        if (dv.espelhaVD) {
+            const base = _sys.derivedValues.find(d => d.nome === dv.espelhaVD);
+            if (base && Number(dt[normChave(base.nome)] ?? 0) === Number(dt[k])) continue;
+        }
         usados.add(k);
         add(dv.blocoNome || 'Geral', dv.blocoOrdem ?? 999, chip(dv.icone, dv.nome, fmtDV(dt[k], dv), dv.descricao));
-    }
-    for (const [k, v] of Object.entries(dt)) {                // o que sobrou não some
-        if (usados.has(k) || vitais.has(k) || /_MAX$/.test(k)) continue;
-        add('Outros', 9998, chip('📊', tituloDeChave(k), fmtN(v)));
     }
     return [...blocos.values()].sort((a, b) => a.ordem - b.ordem);
 }
@@ -652,10 +753,14 @@ function valorVdNpc(n, dv) {
 }
 
 /** Linhas de golpe: acerto (VDs de coluna), dano composto e canais de Essência. */
-function htmlAtaques(win, fonte) {
+function htmlAtaques(win, fonte, vincChar) {
     const valorDV = win.tipo === 'npc'
         ? (dv) => valorVdNpc(fonte, dv)
-        : (dv) => { const v = (fonte.derivedTotals || {})[normChave(dv.nome)]; return v == null ? null : Number(v); };
+        : (dv) => {
+            if (!dvAplicaChar(dv, vincChar)) return null;   // golpe só soma VD vinculado
+            const v = (fonte.derivedTotals || {})[normChave(dv.nome)];
+            return v == null ? null : Number(v);
+        };
     const colunas = _sys.derivedValues.filter(d => d.escopoItem === 'coluna')
         .map(d => ({ d, v: valorDV(d) })).filter(x => x.v != null);
     const somaDano = _sys.derivedValues.filter(d => d.escopoItem === 'dano')
@@ -789,8 +894,9 @@ function htmlCombateChar(win, ch) {
             <span>${esc(x.s.nome)}</span><b>${fmtN(x.v)}</b>
         </div>`).join('');
 
-    return secaoValores(blocosChar(ch))
-        + detalhe('⚔️ Ataques', htmlAtaques(win, ch), true)
+    const vinc = dvsVinculadosChar(ch);
+    return secaoValores(blocosChar(ch, vinc))
+        + detalhe('⚔️ Ataques', htmlAtaques(win, ch, vinc), true)
         + detalhe('📦 Habilidades & Módulos', htmlModulos(win, ch), true)
         + detalhe('💪 Atributos', atrs ? `<div class="tb-fwin-atrs">${atrs}</div>` : '')
         + detalhe('🎯 Perícias', periciasHtml);
@@ -855,8 +961,8 @@ function itemRow(win, i, dentro) {
     const podeQtd = !(i.tipo === 'Arma' || cont);
     const detalhes = [];
     if (i.equipado) detalhes.push(ESTADO_EQUIP[i.estadoEquip] || 'Equipado');
-    return `<div class="tb-fwin-item ${i.equipado ? 'eq' : ''} ${dentro ? 'dentro' : ''}" draggable="true"
-             data-drag="${i.id}" data-toggleitem="${i.id}" ${cont ? `data-drop="cont:${i.id}"` : ''}>
+    return `<div class="tb-fwin-item ${i.equipado ? 'eq' : ''} ${dentro ? 'dentro' : ''}" data-toggleitem="${i.id}">
+        <span class="tb-fwin-grab" data-grab="${i.id}" title="Arraste: contêiner, pilha igual ou mapa">⠿</span>
         ${cont ? `<button class="tb-fwin-chev" data-conttoggle="${i.id}" title="Abrir/fechar contêiner">${win.contAbertos.has(i.id) ? '▾' : '▸'}</button>` : ''}
         ${img ? `<img class="tb-fwin-item-img" src="${esc(img)}" alt="">` : `<span class="tb-fwin-item-ic">${EMOJI_TIPO[i.tipo] || '📦'}</span>`}
         <div class="tb-fwin-item-info">
