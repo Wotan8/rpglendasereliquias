@@ -12,7 +12,8 @@ Estimativas para uma sessão típica: **1 mestre + 4 jogadores, 3 horas**, mesa 
 | Exploração do fog | 1 write / **3s** (debounce, só se houver célula nova) | tab-fog |
 | Combate (painel mestre) | debounce **600ms** | painel-mestre/combat.js |
 | Janela de ficha: vitais/quantidade/nível/módulo | 1 write / **600ms** por doc+campo (`criarFilaDeEscrita`) | tab-ficha-win |
-| Janela de ficha: mover p/ contêiner · juntar pilha · dropar no mapa | 1 write ou 1 batch por soltar (ação explícita, sem throttle) | tab-ficha-win |
+| Janela de ficha: mover p/ contêiner · juntar pilha · dropar no mapa · equipar/desequipar | 1 write ou 1 batch por soltar (ação explícita, sem throttle) | tab-ficha-win |
+| Soltos ficam para trás (token andou ≥ ½ célula) | 1 query de itens + 1 batch, com debounce de **1,5s por token** (rajada de setas/arrastos = 1 viagem) | tab-mostrar / tab-tools |
 | Ping | 1 write por ping (ação explícita) | tab-presenca |
 
 ## Leituras

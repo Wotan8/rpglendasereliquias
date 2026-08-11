@@ -710,6 +710,10 @@ html, body {
 }
 .tb-fwin-ghost.no-mapa { border-color: var(--lr-arcane, #06b6d4); }
 .tb-fwin-ghost.no-mapa::after { content: ' → 🗺️'; }
+/* Seções do inventário como alvo de equipar/desequipar */
+.tb-fwin-inv [data-sec] { border-radius: var(--lr-radius-sm); }
+.tb-fwin-inv [data-sec].tb-fwin-drop-alvo { outline-offset: 2px; }
+.tb-fwin-equip-corpo { padding: var(--lr-space-3); }
 .tb-fwin-inv-sec {
     font-size: var(--lr-fs-xs); font-weight: 700; color: var(--lr-text-2);
     text-transform: uppercase; letter-spacing: .05em;

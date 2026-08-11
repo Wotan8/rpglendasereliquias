@@ -405,6 +405,13 @@ function alvoSob(win, item, x, y) {
         if (outro && ehContainer(outro) && !ehContainer(item) && item.parentItemId !== outro.id) {
             return { tipo: 'drop', drop: 'cont:' + outro.id, el: row };
         }
+        // linha sem ação própria: vale a SEÇÃO onde ela está (equipar/desequipar)
+    }
+    const sec = sob.closest?.('[data-sec]');
+    if (sec && win.el.contains(sec)) {
+        if (sec.dataset.sec === 'eq' && !item.equipado) return { tipo: 'equipar', el: sec };
+        if (sec.dataset.sec === 'soltos' && item.equipado) return { tipo: 'desequipar', el: sec };
+        if (sec.dataset.sec === 'soltos' && item.parentItemId) return { tipo: 'drop', drop: 'root', el: sec };
         return null;
     }
     const raiz = sob.closest?.('[data-drop="root"]');
@@ -447,12 +454,130 @@ function iniciarArrasto(win, grab, e) {
         if (!alvo) return;
         if (alvo.tipo === 'mapa') droparNoMapa({ win: win.chave, id }, { x: ev.clientX, y: ev.clientY });
         else if (alvo.tipo === 'merge') fundirPilhas(win, id, alvo.id);
+        else if (alvo.tipo === 'equipar') abrirEquipar(win, id);
+        else if (alvo.tipo === 'desequipar') desequipar(win, id);
         else moverItem(win, id, alvo.drop);
     };
     grab.addEventListener('pointermove', pintar);
     grab.addEventListener('pointerup', soltar);
     grab.addEventListener('pointercancel', limpar);
     pintar(e);
+}
+
+// ===== Equipar / desequipar (arrasto entre as seções) =====
+const FORMA_EQUIP = { empunhado: ['✊', 'empunhar'], segurar: ['🖐️', 'segurar'], vestido: ['👕', 'vestir'], fixado: ['📌', 'fixar'] };
+
+/** Partes do corpo do dono: NPC = da ficha; personagem = da RAÇA (registro);
+ *  fallback: anatomia padrão do sistema (ehPadrao) — mesma ordem da ficha. */
+function partesDoCorpo(win) {
+    let partes = [];
+    if (win.tipo === 'npc') {
+        partes = dadosNpc(win.id)?.partesDoCorpo || [];
+    } else {
+        const ch = dadosChar(win.id);
+        const raca = ch?.raca ? _sys.racesByNome?.[_sys.norm(ch.raca)] : null;
+        partes = (raca?.partesDoCorpo || []).map(ref => {
+            const bp = (_sys.bodyParts || []).find(b => b.id === ref.id);
+            return bp ? { ...bp, slots: ref.slots || 1 } : null;
+        }).filter(Boolean);
+    }
+    if (!partes.length) partes = (_sys.bodyParts || []).filter(b => b.ehPadrao).map(b => ({ ...b, slots: b.slots || 1 }));
+    return partes;
+}
+
+/** slotKey → {label, icon, partId}; parte com N slots vira `${id}_1..N` (padrão da ficha). */
+function slotsDoCorpo(partes) {
+    const slots = {};
+    for (const bp of partes) {
+        const qtd = Math.max(1, parseInt(bp.slots) || 1);
+        for (let i = 0; i < qtd; i++) {
+            const k = qtd > 1 ? `${bp.id}_${i + 1}` : bp.id;
+            slots[k] = { label: qtd > 1 ? `${bp.nome} ${i + 1}` : bp.nome, icon: bp.icone || '🦴', partId: bp.id };
+        }
+    }
+    return slots;
+}
+
+/** Picker de equipar — mesmas opções da ficha: slot anatômico + estado,
+ *  desabilitando ocupado/não permitido; slots extras via EquipSlots. */
+function abrirEquipar(win, itemId) {
+    const item = (win.itens || []).find(x => x.id === itemId);
+    if (!item || !_sys) return;
+    const partes = partesDoCorpo(win);
+    const slots = slotsDoCorpo(partes);
+    const chaves = Object.keys(slots);
+    if (!chaves.length) { toast('⚠️ A ficha não tem partes do corpo definidas', 'warning'); return; }
+
+    const ES = window.EquipSlots;
+    const ocupados = new Set((win.itens || []).filter(i => i.equipado && i.id !== itemId)
+        .flatMap(i => ES ? ES.slotsDoItem(i) : [i.slotAnatomico]).filter(Boolean));
+    const permitidas = Array.isArray(item.equipavelEm) && item.equipavelEm.length ? new Set(item.equipavelEm) : null;
+    const optsSlot = chaves.map(k => {
+        const s = slots[k];
+        const bloq = permitidas && !permitidas.has(s.partId);
+        const ocup = ocupados.has(k);
+        return `<option value="${esc(k)}" ${bloq || ocup ? 'disabled' : ''}>${esc(s.icon)} ${esc(s.label)}${ocup ? ' (ocupado)' : ''}${bloq ? ' (não permitido)' : ''}</option>`;
+    }).join('');
+    const forma = item.formaEquipar;
+    const optsEstado = Object.entries(ESTADO_EQUIP).map(([v, rot]) => {
+        const [ic, f] = FORMA_EQUIP[v];
+        const bloq = forma && f !== forma;
+        return `<option value="${v}" ${bloq ? 'disabled' : ''} ${!bloq && forma ? 'selected' : ''}>${ic} ${rot}</option>`;
+    }).join('');
+
+    document.getElementById('tbFwinEquip')?.remove();
+    const ov = document.createElement('div');
+    ov.id = 'tbFwinEquip';
+    ov.className = 'tb-cond-picker-overlay';
+    ov.innerHTML = `<div class="tb-cond-picker" style="max-width:340px">
+        <div class="tb-cond-picker-head"><span>🎽 Equipar: ${esc(item.nome || 'Item')}</span>
+            <button class="tb-mini-btn" data-eqx title="Cancelar">✕</button></div>
+        <div class="tb-fwin-equip-corpo">
+            <div class="tb-form-grid tb-form-grid-1">
+                <label>Slot anatômico<select id="tbEqSlot">${optsSlot}</select></label>
+                <label>Estado<select id="tbEqEstado">${optsEstado}</select></label>
+            </div>
+            <div class="tb-modal-actions"><button class="tb-btn tb-btn-success" data-eqok>✅ Equipar</button></div>
+        </div>
+    </div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener('click', async e => {
+        if (e.target === ov || e.target.closest('[data-eqx]')) { ov.remove(); return; }
+        if (!e.target.closest('[data-eqok]')) return;
+        const slot = document.getElementById('tbEqSlot')?.value;
+        const estado = document.getElementById('tbEqEstado')?.value;
+        if (!slot || !estado) return;
+        // Arma de duas mãos e afins: reserva os slots extras ou recusa dizendo o que falta
+        let extras = [];
+        if (ES) {
+            const plano = ES.planejarEquipar(item, slot, win.itens || [], slots, {
+                catalog: _sys.equipment,
+                labelParte: pid => partes.find(b => b.id === pid)?.nome || pid,
+            });
+            if (!plano.ok) { toast(`⚠️ "${esc(item.nome)}" precisa de slots livres: ${esc(plano.faltando.join(', '))}`, 'warning'); return; }
+            extras = plano.extras;
+        }
+        try {
+            await updateDoc(doc(db, 'items', itemId), {
+                equipado: true, slotAnatomico: slot, slotsOcupados: extras,
+                estadoEquip: estado, parentItemId: null,
+            });
+            ov.remove();
+            toast(`🎽 ${esc(item.nome || 'Item')} equipado`);
+        } catch (err) { errWrite(err); }
+    });
+}
+
+/** Arrastar de Equipados para Soltos: solta o item (mesmo patch da ficha). */
+async function desequipar(win, itemId) {
+    const item = (win.itens || []).find(x => x.id === itemId);
+    if (!item?.equipado) return;
+    try {
+        await updateDoc(doc(db, 'items', itemId), {
+            equipado: false, slotAnatomico: null, slotsOcupados: [], estadoEquip: null,
+        });
+        toast(`📤 ${esc(item.nome || 'Item')} desequipado`);
+    } catch (e) { errWrite(e); }
 }
 
 /** Soltar sobre pilha idêntica: soma as quantidades e junta. */
@@ -997,8 +1122,8 @@ function htmlInventario(win) {
 
     return `<div class="tb-fwin-inv" data-drop="root">
         <div class="tb-fwin-pressao">⚖️ Pressão (equipados): <b>${fmtN(pressao)}</b>
-            <span class="tb-fwin-dica">arraste: item → contêiner · contêiner → fora · item → mapa</span></div>
-        ${secao('🎽 Equipados', eq)}
-        ${secao('📋 Soltos', soltos)}
+            <span class="tb-fwin-dica">arraste: equipar/desequipar entre seções · contêiner · pilha igual · mapa</span></div>
+        <div data-sec="eq">${secao('🎽 Equipados', eq)}</div>
+        <div data-sec="soltos">${secao('📋 Soltos', soltos)}</div>
     </div>`;
 }

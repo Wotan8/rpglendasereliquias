@@ -4,6 +4,7 @@
 <title>__check — Janelas de Ficha de Combate</title>
 <link rel="stylesheet" href="../shared/tokens.css">
 <link rel="stylesheet" href="css/tabuleiro.css">
+<script src="../shared/equip-slots.js"></script>
 <style>
   html,body{margin:0;min-height:100%;background:#0b0e14;color:#e6e8ef;font:14px/1.6 Inter,system-ui,sans-serif}
   #saida{position:fixed;inset:12px auto 12px 12px;width:540px;z-index:210;background:#12161f;
@@ -34,7 +35,8 @@
 <script type="module">
 import { T } from './js/tab-state.js';
 import { VITAIS } from './js/tab-hud.js';
-import { abrirFichaWin, _WINS } from './js/tab-ficha-win.js';
+// ?v= bust: o http.server local deixa o navegador segurar o módulo antigo
+import { abrirFichaWin, _WINS } from './js/tab-ficha-win.js?v=4';
 
 // ===== Registros do sistema (chaves de doc, como ensureNpcSystemData devolve) =====
 const dv = (id, nome, extra) => ({ id, key: id, nome, icone: extra.icone || '📊', prefixo: '', sufixo: extra.sufixo || '',
@@ -48,7 +50,8 @@ const modManobras = { id: 'm1', tipo: 'lista', titulo: 'Manobras', icone: '🌀'
         { key: 'usos', label: 'Usos', tipo: 'contador' },
         { key: 'desc', label: 'Efeito', tipo: 'textarea' },
     ] };
-const RACA = { id: 'r1', nome: 'Humana', derivedValueIds: ['dv_perc'], peculiaridadeIds: [] };
+const RACA = { id: 'r1', nome: 'Humana', derivedValueIds: ['dv_perc'], peculiaridadeIds: [],
+    partesDoCorpo: [{ id: 'mao', slots: 2 }, { id: 'torso', slots: 1 }] };
 const CLASSE = { id: 'cl1', nome: 'Bruxa', derivedValueIds: [{ id: 'dv_acerto', valorInicial: 0 }], bonusIniciais: [], peculiaridadeIds: [] };
 window._npcSys = {
     loaded: true, norm: s => String(s || '').trim().toLowerCase(),
@@ -73,6 +76,10 @@ window._npcSys = {
     ],
     classModules: [modManobras],
     classModulesById: { m1: modManobras },
+    bodyParts: [
+        { id: 'mao', nome: 'Mão', icone: '✋', slots: 2, ehPadrao: true },
+        { id: 'torso', nome: 'Torso', icone: '🥋', slots: 1, ehPadrao: true },
+    ],
     pecsById: {
         pec1: { id: 'pec1', nome: 'Pele de Ferro', icone: '🛡️', descricao: '+Blindagem' },
         pec2: { id: 'pec2', nome: 'Chama Interior', icone: '🔥', derivedValueIds: [{ id: 'dv_igneo', valorInicial: 0 }] },
@@ -110,6 +117,7 @@ function semear() {
           modulosClasse: [{ refId: 'm1', fonte: 'manual', itens: [{ _predefNome: 'Investida', custo: '1 Ação · 2 ENER', usos: 3, desc: 'Avança 6m e golpeia.' }] }],
           peculiaridades: [{ refId: 'pec1', nivel: 2 }, { nome: 'Cicatriz do Cerco', nivel: 1 }],
           conditions: [{ nome: 'Sangrando', icone: '🩸', descricao: 'Perde 0,5 VIT por turno', tempoRestante: '3 turnos' }],
+          partesDoCorpo: [{ id: 'mao', nome: 'Mão', icone: '✋', slots: 2 }, { id: 'torso', nome: 'Torso', icone: '🥋', slots: 1 }],
           ataques: 'Espada longa +4 (1d10+4 corte)\nEscudada: empurra 2m', skills: 'Grito de guerra: aliados +1 INI' },
         { id: 'npc2', nome: 'Lobo Cinzento', nivel: 2, tipo: 'criatura',
           valoresDer: { VIT: 9, ENER: 4, SAN: 100, atual: {}, overrides: {}, extras: [], vinculados: [] },
@@ -123,7 +131,7 @@ window.addEventListener('DOMContentLoaded', semear);
 
 // Itens injetados na janela (o listener real morre sem login — esperado)
 const ITENS_NPC = [
-    { id: 'i1', nome: 'Punhal', tipo: 'Arma', equipado: true, estadoEquip: 'empunhado', peso: 1, quantidade: 1, origemTemplateId: 'tpl1' },
+    { id: 'i1', nome: 'Punhal', tipo: 'Arma', equipado: true, estadoEquip: 'empunhado', slotAnatomico: 'mao_1', peso: 1, quantidade: 1, origemTemplateId: 'tpl1' },
     { id: 'i2', nome: 'Poção Vermelha', tipo: 'Consumível', peso: 0.5, quantidade: 3, descricao: 'Cura 2 VIT.' },
     { id: 'i3', nome: 'Mochila', tipo: 'Container', ehContainer: true, peso: 1, pesoMaximoContainer: 10, multiplicadorPressao: 0.5 },
     { id: 'i4', nome: 'Flechas', tipo: 'Projétil', parentItemId: 'i3', quantidade: 12, peso: 0.05 },
@@ -222,17 +230,43 @@ async function rodar() {
     grab.dispatchEvent(pev('pointermove', pMochila.x, pMochila.y));
     const ghostOk = !!$('.tb-fwin-ghost');
     const alvoCont = $('[data-toggleitem="i3"]', w1).classList.contains('tb-fwin-drop-alvo');
+    $('[data-toggleitem="i5"]', w1).scrollIntoView({ block: 'center' });
     const pIgual = centro($('[data-toggleitem="i5"]', w1));
     grab.dispatchEvent(pev('pointermove', pIgual.x, pIgual.y));
     const alvoMerge = $('[data-toggleitem="i5"]', w1).classList.contains('tb-fwin-drop-alvo');
     grab.dispatchEvent(pev('pointermove', 4, 4));   // sobre o canvas
     const modoMapa = $('.tb-fwin-ghost')?.classList.contains('no-mapa');
     grab.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 7, bubbles: true }));
+
+    // Equipar: Solto (Poção) arrastado sobre o CABEÇALHO de Equipados → soltar abre o picker
+    const secEq = $('[data-sec="eq"]', w1);
+    grab.dispatchEvent(pev('pointerdown', pi.x, pi.y));
+    const pe = centro($('.tb-fwin-inv-sec', secEq));
+    grab.dispatchEvent(pev('pointermove', pe.x, pe.y));
+    const alvoEq = secEq.classList.contains('tb-fwin-drop-alvo');
+    grab.dispatchEvent(pev('pointerup', pe.x, pe.y));
+    const picker = document.getElementById('tbFwinEquip');
+    const optsSlot = picker ? [...picker.querySelectorAll('#tbEqSlot option')].map(o => ({ t: o.textContent.trim(), d: o.disabled })) : [];
+    picker?.remove();
+    // Desequipar: Equipado (Punhal) arrastado sobre o cabeçalho de Soltos → alvo acende
+    const grab1 = $('[data-grab="i1"]', w1);
+    const p1 = centro(grab1);
+    grab1.dispatchEvent(pev('pointerdown', p1.x, p1.y));
+    const ps = centro($('[data-sec="soltos"] .tb-fwin-inv-sec', w1));
+    grab1.dispatchEvent(pev('pointermove', ps.x, ps.y));
+    const alvoDeseq = $('[data-sec="soltos"]', w1).classList.contains('tb-fwin-drop-alvo');
+    grab1.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 7, bubbles: true }));
     saida.style.display = '';
     teste('T15 · arrasto por ponteiro: fantasma segue e contêiner acende como alvo', ghostOk && alvoCont);
     teste('T16 · pilha idêntica acende para JUNTAR quantidades', alvoMerge);
     teste('T17 · sobre o canvas o fantasma indica drop no mapa; cancelar limpa tudo',
         modoMapa && !$('.tb-fwin-ghost'));
+    teste('T17b · Solto → seção Equipados acende e soltar abre o picker de equipar (3 slots)',
+        alvoEq && optsSlot.length === 3);
+    teste('T17c · picker igual ao da ficha: Mão 1 (ocupada pelo Punhal) desabilitada, Mão 2 livre',
+        optsSlot.some(o => o.t.includes('Mão 1') && o.t.includes('ocupado') && o.d) &&
+        optsSlot.some(o => o.t.includes('Mão 2') && !o.d));
+    teste('T17d · Equipado → seção Soltos acende para desequipar', alvoDeseq);
 
     // ===== Personagem: SÓ VDs vinculados, ataques, módulos, ordem =====
     const wc = winEl('char:c1');
@@ -300,7 +334,7 @@ rodar().catch(e => {
     document.getElementById('placar').innerHTML = `<span class="fail">💥 ${e.message}</span>`;
     console.error(e);
     document.getElementById('res').innerHTML = '<table>' + linhas.map(([n, ok]) =>
-        `<tr><td>${n}</td><td class="${ok ? 'ok' : 'fail'}">${ok ? 'FAIL' : 'FAIL'}</td></tr>`).join('') + '</table>';
+        `<tr><td>${n}</td><td class="${ok ? 'ok' : 'fail'}">${ok ? 'PASS' : 'FAIL'}</td></tr>`).join('') + '</table>';
 });
 </script>
 </body></html>

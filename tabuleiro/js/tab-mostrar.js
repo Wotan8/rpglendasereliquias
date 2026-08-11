@@ -653,6 +653,57 @@ function dropClique(ev) {
     })();
 }
 
+// ===== 🎒 SOLTOS FICAM PARA TRÁS =====
+// Regra da mesa: item "Solto" (nem equipado, nem em contêiner) está no CHÃO ao
+// lado do personagem. Token andou → os soltos viram loot no ponto de PARTIDA.
+// Só roda no cliente de quem moveu (os outros recebem o loot pelo snapshot).
+// Debounce por token: uma caminhada de setas/arrastos emendados é UMA viagem —
+// checa (e paga a query de itens) só no primeiro passo da rajada.
+const _dropSoltosTs = new Map();   // tokenId -> último disparo
+window.tbDroparSoltosDoToken = async function(o, origem) {
+    try {
+        const tipo = o?.vinculo?.tipo, donoId = o?.vinculo?.id;
+        if (!donoId || (tipo !== 'char' && tipo !== 'npc')) return;
+        const agora = Date.now();
+        const antes = _dropSoltosTs.get(o.id) || 0;
+        _dropSoltosTs.set(o.id, agora);          // renova até no skip: rajada estende a janela
+        if (agora - antes < 1500) return;
+
+        const snap = await getDocs(query(collection(db, 'items'), where('characterId', '==', donoId)));
+        const itens = []; snap.forEach(d => itens.push({ id: d.id, ...d.data() }));
+        const soltos = itens.filter(i => !i.equipado && !i.parentItemId);
+        if (!soltos.length) return;
+
+        const lote = writeBatch(db);
+        const objetos = [];
+        soltos.forEach((item, ix) => {
+            lote.delete(doc(db, 'items', item.id));
+            const filhos = (item.ehContainer || item.tipo === 'Container')
+                ? itens.filter(x => x.parentItemId === item.id) : [];
+            filhos.forEach(f => lote.delete(doc(db, 'items', f.id)));
+            // espalha num anel para os loots não empilharem no mesmo pixel
+            const ang = (ix / soltos.length) * Math.PI * 2;
+            const r = soltos.length > 1 ? gridSize() * 0.45 : 0;
+            const obj = {
+                tipo: 'loot', layerId: 'tokens',
+                x: origem.x + Math.cos(ang) * r, y: origem.y + Math.sin(ang) * r,
+                nome: item.nome || 'Item', url: item.imagem || item.imagemUrl || '',
+                quantidade: item.quantidade || 1,
+                item: semId(item), visivelPublico: true,
+            };
+            if (item.ehContainer || item.tipo === 'Container') {
+                obj.itensDentro = filhos.map(f => ({ id: f.id, ...semId(f) }));
+                obj.fixo = false;
+            }
+            objetos.push(obj);
+        });
+        await lote.commit();
+        for (const obj of objetos) await addObj(obj);
+        toast(`🎒 ${soltos.length} item(ns) soltos de ${esc(o.nome || 'token')} ficaram para trás`);
+        window._renderFichaWins?.();
+    } catch (e) { console.warn('soltos para trás', e); }
+};
+
 // ===== MENU DE CONTEXTO (botão direito) =====
 function menuMostrar(objId, x, y) {
     const o = T.objects.get(objId); if (!o) return;

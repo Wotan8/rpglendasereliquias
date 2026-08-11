@@ -537,6 +537,18 @@ function selecionarNoRetangulo(r) {
     else if (!ids.length) toast('Nada dentro do laço', 'warning');
 }
 
+/**
+ * 🎒 Token com ficha andou de verdade (≥ meia célula)? Os itens "Soltos" do
+ * dono ficam no chão, no ponto de partida — regra da mesa: solto = não está
+ * sendo carregado. Quem executa (query + batch + loot) é o tab-mostrar; a
+ * chamada é fire-and-forget para não segurar o fim do arrasto.
+ */
+function tokenAndou(o, origem) {
+    if (!o || o.tipo !== 'token' || !o.vinculo?.id) return;
+    if (Math.hypot((o.x || 0) - origem.x, (o.y || 0) - origem.y) < gridSize() * 0.45) return;
+    window.tbDroparSoltosDoToken?.(o, origem);
+}
+
 function iniciarDragObj(o, w, pointerId) {
     ponteiro = {
         tipo: 'dragObj', id: o.id, w0: w, x0: o.x, y0: o.y, pointerId,
@@ -815,6 +827,7 @@ async function onUp(e) {
                     o.x = volta.x; o.y = volta.y;
                     delete o.__fogPos;
                     updObj(o.id, { x: volta.x, y: volta.y, movendo: false });
+                    tokenAndou(o, { x: p.x0, y: p.y0 });   // andou até a parede: soltos ficam na partida
                     toast('🧱 Parede no caminho — o token parou onde deu para chegar', 'warning');
                     if (T.temp?.tipo === 'medida') { T.temp = null; limparReguaCompartilhada(); }
                     markDirty();
@@ -851,6 +864,8 @@ async function onUp(e) {
                 const alvo = tokenSobPonto({ x: o.x, y: o.y }, o.id);
                 if (alvo && window.tbEntregarLoot) window.tbEntregarLoot(o.id, alvo);
             }
+            // 🎒 Token andou: itens "Soltos" do dono ficam no ponto de partida
+            if (p.moveu) tokenAndou(o, { x: p.x0, y: p.y0 });
         }
         if (T.temp?.tipo === 'medida') { T.temp = null; limparReguaCompartilhada(); markDirty(); }
         return;
@@ -885,6 +900,7 @@ async function onUp(e) {
                 registrarOp(it.pontos0
                     ? { tipo: 'patch', id: it.id, antes: { pontos: it.pontos0 }, depois: { pontos: o.pontos } }
                     : { tipo: 'patch', id: it.id, antes: { x: it.x0, y: it.y0 }, depois: { x: o.x, y: o.y } });
+                tokenAndou(o, { x: it.x0, y: it.y0 });   // 🎒 soltos de cada token do grupo
             }
             toast(`✅ ${patches.length} objetos movidos juntos`);
         } catch (err) {
@@ -1082,6 +1098,7 @@ function onKey(e) {
             o.x = destino.x; o.y = destino.y;
             updObj(o.id, { x: o.x, y: o.y, movendo: false });
             registrarOp({ tipo: 'patch', id: o.id, antes, depois: { x: o.x, y: o.y } });
+            tokenAndou(o, antes);   // 🎒 soltos ficam na casa de onde saiu
             markDirty();
         }
         return;
