@@ -12,6 +12,7 @@ import {
     rotParaCanvas, anguloDoMovimento, deveAtualizarPasso, FOG_PASSO_CELULA, FOG_INTERVALO_MS,
     DRAG_WRITE_MS, DRAG_PASSO_CELULA, LERP_TOKEN_MS, LERP_MIN_MS, LERP_MAX_MS, duracaoLerp,
     ehEcoAtrasado, mapaSobPonto, T as TT,
+    vNum, dvMesa, patchVitalAtualNpc, dividirPilha,
 } from './tab-state.js';
 import { trajetoColide } from './tab-grid.js';
 import { comMesa, npcNaMesa, mesasDoNpc, espelhoMesaId, patchVinculoMesa } from '../../shared/npc-mesas.js';
@@ -716,4 +717,50 @@ assert.equal(lootOculto(item(0), -1), true, 'falha nao revela nem com limiar 0')
 assert.equal(lootOculto(item(5, { reveladoPublico: true }), null), false, 'interagido = todos veem');
 assert.equal(lootOculto({ tipo: 'token', testeGraus: 3 }, null), false, 'so vale para loot');
 
-console.log('✅ tab-state: escala, unidades, larguraReal, cenário, paredes, vínculo de NPC, navegação, viagem, card, fog, alcance, cone, passo do fog, iniciativa, eco atrasado e cache de mapas OK');
+// =====================================================================
+// ❤️ Vitais: arredondamento e espelho legacy ⇄ sistema do NPC
+// =====================================================================
+assert.equal(vNum(9.899999999999999), 9.9, 'lixo de float morre na conta');
+assert.equal(vNum('7,5'.replace(',', '.')), 7.5);
+assert.equal(vNum(null), 0);
+
+assert.equal(dvMesa(3.9), 3, 'Blindagem 3,9 vale 3 na mesa');
+assert.equal(dvMesa(0.4), 1, 'positivo nunca cai a zero');
+assert.equal(dvMesa(0), 0);
+assert.equal(dvMesa(-1.2), -2, 'negativo é piso puro');
+
+// espelho por NOME: chave do sistema que começa com a sigla (ou o nome longo)
+{
+    const p = patchVitalAtualNpc({ VIT: 5, VITALIDADE: 5, FOLEGO: 3 }, 'VIT', 4);
+    assert.deepEqual(p, {
+        'valoresDer.atual.VIT': 4,
+        'valoresDer.atual.VITALIDADE': 4,
+    }, 'sigla + chave do sistema; FOLEGO (3 ≠ 5) fica quieto');
+}
+// espelho por VALOR: chave do sistema pareada por valer o mesmo que a sigla
+{
+    const p = patchVitalAtualNpc({ SAN: 7, PONTOS_DE_ALMA: 7 }, 'SAN', 6.5);
+    assert.deepEqual(p, {
+        'valoresDer.atual.SAN': 6.5,
+        'valoresDer.atual.PONTOS_DE_ALMA': 6.5,
+    }, 'par formado pelo valor igual acompanha');
+}
+// outra sigla legada nunca é arrastada junto
+{
+    const p = patchVitalAtualNpc({ VIT: 5, ENER: 5, SAN: 2 }, 'VIT', 3);
+    assert.deepEqual(p, { 'valoresDer.atual.VIT': 3 }, 'ENER vale 5 como VIT, mas é legada — não espelha');
+}
+// atual vazio (NPC nunca tocado): grava só a sigla
+assert.deepEqual(patchVitalAtualNpc(undefined, 'ENER', 2), { 'valoresDer.atual.ENER': 2 });
+
+// =====================================================================
+// 🎒 dividirPilha — mover/dropar parte de uma pilha de itens
+// =====================================================================
+assert.deepEqual(dividirPilha({ quantidade: 12 }, 5), { move: false, qtd: 5, restante: 7 }, 'parte da pilha: clone + resto');
+assert.deepEqual(dividirPilha({ quantidade: 12 }, 12), { move: true, qtd: 12 }, 'pilha inteira: só muda o dono/pai');
+assert.deepEqual(dividirPilha({ quantidade: 12 }, 99), { move: true, qtd: 12 }, 'pedir mais do que tem move tudo');
+assert.deepEqual(dividirPilha({ quantidade: 12 }, 0), { move: false, qtd: 1, restante: 11 }, 'zero vira 1 — nunca move nada à toa');
+assert.deepEqual(dividirPilha({ quantidade: 1 }, 1), { move: true, qtd: 1 }, 'pilha de 1 sempre move inteira');
+assert.deepEqual(dividirPilha({}, 3), { move: true, qtd: 1 }, 'sem quantidade = pilha de 1');
+
+console.log('✅ tab-state: escala, unidades, larguraReal, cenário, paredes, vínculo de NPC, navegação, viagem, card, fog, alcance, cone, passo do fog, iniciativa, eco atrasado, cache de mapas e vitais do NPC OK');

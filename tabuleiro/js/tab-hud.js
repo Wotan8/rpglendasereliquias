@@ -32,6 +32,8 @@ export function initHud() {
                 ener: d.enerCurrent !== undefined ? d.enerCurrent : enerMax, enerMax,
                 san: d.sanCurrent !== undefined ? d.sanCurrent : sanMax, sanMax,
                 conds: (d.conditions || []).map(x => ({ icone: x.icone || '💀', nome: x.nome || '' })),
+                // objetos completos (descrição, tempo) — a janela de ficha exibe e edita
+                condsFull: d.conditions || [],
             });
             // VDs ao vivo: subir a Percepção na ficha muda o alcance de visão do
             // token na hora, sem precisar reabrir o Tabuleiro.
@@ -40,11 +42,13 @@ export function initHud() {
             markDirty();
             // Atributos/perícias ao vivo também: o Alvo dos 🎯 Testes lê de dots
             if (ch) ch.dots = d.effectiveDots || d.dots || ch.dots || {};
+            if (ch) ch.classModuleData = d.classModuleData || ch.classModuleData || {};
             // A janela de Combate lê os vitais do personagem DAQUI (VITAIS), então
             // sem este repinte ela ficava com o número velho quando o dano vinha do
             // Painel do Mestre ou da própria ficha. É barato: sai na hora se a
             // janela estiver fechada.
             window._renderCombate?.();
+            window._renderFichaWins?.();
         }, () => {});
         unsubsVitais.push(u);
         T.unsubs.push(u);
@@ -179,6 +183,13 @@ export function abrirMenuRadial(o, sx, sy) {
 
     if (o.vinculo?.tipo === 'npc' && (secreto || can('abrirNpc'))) {
         acoes.push({ ic: 'prancheta', tip: 'Abrir ficha do NPC', fn: () => window.tbAbrirNpcModal?.(o.vinculo.id, !secreto) });
+    }
+    // 🪟 Janela de combate (ficha ao vivo): mestre em NPC/char; jogador no próprio token
+    if (o.vinculo?.tipo === 'npc' && secreto) {
+        acoes.push({ ic: 'espadas', tip: 'Janela de combate do NPC', fn: () => window.tbFichaWin?.('npc', o.vinculo.id) });
+    }
+    if (o.vinculo?.tipo === 'char' && (secreto || tokenDoUsuario(o))) {
+        acoes.push({ ic: 'espadas', tip: 'Janela de combate (ficha ao vivo)', fn: () => window.tbFichaWin?.('char', o.vinculo.id) });
     }
     // 👣 Mover pelo deslocamento da ficha: só no TURNO do token (mestre em
     // qualquer token com ficha — ajuda a deslocar NPC na medida; jogador no

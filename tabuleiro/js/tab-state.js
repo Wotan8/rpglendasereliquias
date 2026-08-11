@@ -603,6 +603,60 @@ export function grausDoDado(alvo, dado) {
 /** +2 / 0 / -1 — como a mesa fala. */
 export function fmtGraus(g) { return g > 0 ? '+' + g : String(g); }
 
+// ===== VITAIS (Combate ⇄ Ficha) =====
+// Vitais aceitam meio ponto (VIT 21,9) e somar/subtrair 1 em float acumula lixo:
+// virava "9.899999999999999/21.9". Arredonda na CONTA (o que é gravado e
+// sincronizado com a ficha) e na exibição, que também recebe valor sujo de fora.
+export const vNum = (v) => Math.round((Number(v) || 0) * 100) / 100;
+
+/** Valor "de mesa" de um VD com `arredondaMesa` — mesma regra da ficha
+ *  (dvValorDeMesa): piso, com mínimo 1 quando o valor é positivo. */
+export function dvMesa(v) {
+    if (!(v > 0)) return Math.floor(v) || 0;
+    return Math.max(1, Math.floor(v));
+}
+
+// Siglas legadas que o combate escreve direto em valoresDer.atual do NPC.
+const NPC_ATUAL_LEGADO = new Set(['VIT', 'ENER', 'SAN', 'PERC', 'INI', 'REA', 'BLD']);
+const NPC_VITAL_LONGO = { vit: 'vitalidade', ener: 'energia', san: 'sanidade' };
+
+/**
+ * Patch (updateDoc) que grava um vital ATUAL do NPC na sigla legada E nas
+ * chaves do sistema que a espelham dentro de `valoresDer.atual` — por nome
+ * ("VITALIDADE" começa com "vit") ou por valor igual ao da sigla (par formado
+ * pelo editor). Sem o espelho, a Ficha de NPC abre com o número velho.
+ * @param atualObj  valoresDer.atual como está no doc
+ * @param stat      'VIT' | 'ENER' | 'SAN'
+ * @param valor     novo valor atual
+ */
+export function patchVitalAtualNpc(atualObj, stat, valor) {
+    const patch = { [`valoresDer.atual.${stat}`]: valor };
+    const sigNorm = stat.toLowerCase();
+    for (const [k, v] of Object.entries(atualObj || {})) {
+        if (NPC_ATUAL_LEGADO.has(k)) continue;
+        const nomeNorm = k.toLowerCase().replace(/[^a-z]/g, '');
+        if (nomeNorm.startsWith(sigNorm) || nomeNorm.startsWith(NPC_VITAL_LONGO[sigNorm] || sigNorm)) {
+            patch[`valoresDer.atual.${k}`] = valor;
+        } else if (v === atualObj[stat]) {
+            patch[`valoresDer.atual.${k}`] = valor;
+        }
+    }
+    return patch;
+}
+
+/**
+ * Divide uma pilha de itens para mover/dropar `qtd` unidades.
+ * `move: true` = a pilha inteira vai (basta trocar o dono/pai do doc);
+ * `move: false` = sai um clone com `qtd` e o doc original fica com `restante`.
+ * Clampa em [1, total] — pedir 99 de 12 move os 12, pedir 0 move 1.
+ */
+export function dividirPilha(item, qtd) {
+    const total = Math.max(1, parseInt(item?.quantidade) || 1);
+    const q = Math.max(1, Math.min(parseInt(qtd) || 1, total));
+    if (q >= total) return { move: true, qtd: total };
+    return { move: false, qtd: q, restante: total - q };
+}
+
 // ===== DESLOCAMENTOS DA FICHA =====
 const DESLOC_LABEL = { DESLOC_TERRESTRE: 'Terrestre', DESLOC_AQUATICO: 'Aquático', DESLOC_VERTICAL: 'Vertical', DESLOC_AEREO: 'Aéreo' };
 

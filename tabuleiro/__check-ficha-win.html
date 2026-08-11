@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<title>__check — Janelas de Ficha de Combate</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="css/tabuleiro.css">
+<style>
+  html,body{margin:0;min-height:100%;background:#0b0e14;color:#e6e8ef;font:14px/1.6 Inter,system-ui,sans-serif}
+  #saida{position:fixed;inset:12px auto 12px 12px;width:540px;z-index:210;background:#12161f;
+         border:1px solid #2a3040;border-radius:12px;padding:14px;overflow:auto;max-height:calc(100vh - 24px)}
+  h1{font-size:1rem;margin:0 0 4px} p{margin:0 0 10px;color:#8b93a7;font-size:.8rem}
+  table{border-collapse:collapse;font:11px ui-monospace,monospace;width:100%}
+  td{border:1px solid #2a3040;padding:2px 6px}
+  .ok{color:#34d399}.fail{color:#f87171;font-weight:700}
+  #placar{font-weight:800;margin-top:10px;padding-top:10px;border-top:1px solid #2a3040}
+</style></head>
+<body>
+<!-- o boot do tab-main escreve aqui quando não acha `?mesa=` -->
+<div id="tbLoading" hidden></div>
+<div id="tbToasts"></div>
+<canvas id="tbCanvas" style="position:fixed;inset:0;width:1px;height:1px"></canvas>
+<div class="tb-modal" id="tbModal"><div class="tb-modal-content"><span class="tb-modal-title"></span><div class="tb-modal-body"></div></div></div>
+
+<div id="saida">
+  <h1>🪟 Janelas de Ficha de Combate — multi-instância</h1>
+  <p>Registro semeado com chaves = <b>id de doc</b> (como no Firestore real): os VDs
+     só aparecem se o casamento por <code>normChave(nome)</code> funcionar — era o bug
+     dos VDs sumidos do personagem. Edições disparam writes reais que <b>falham sem
+     login</b> — toasts ❌ são esperados; valida-se o caminho local e o render.</p>
+  <div id="res"></div>
+  <div id="placar">rodando…</div>
+</div>
+
+<script type="module">
+import { T } from './js/tab-state.js';
+import { VITAIS } from './js/tab-hud.js';
+import { abrirFichaWin, _WINS } from './js/tab-ficha-win.js';
+
+// ===== Registros do sistema (chaves de doc, como ensureNpcSystemData devolve) =====
+const dv = (id, nome, extra) => ({ id, key: id, nome, icone: extra.icone || '📊', prefixo: '', sufixo: extra.sufixo || '',
+    descricao: '', mecanicaIds: [], campoAtual: false, todoPersonagem: false,
+    blocoId: extra.bloco || 'geral', blocoNome: extra.bloco || 'Geral', blocoOrdem: extra.ordem ?? 999,
+    escopoItem: extra.escopo || '', statusCombate: false, arredondaMesa: extra.mesa || false, espelhaVD: '' });
+const modManobras = { id: 'm1', tipo: 'lista', titulo: 'Manobras', icone: '🌀', permitirCriacaoJogador: true,
+    itensPredefinidos: [],
+    schema: [
+        { key: 'custo', label: 'Custo', tipo: 'text' },
+        { key: 'usos', label: 'Usos', tipo: 'contador' },
+        { key: 'desc', label: 'Efeito', tipo: 'textarea' },
+    ] };
+window._npcSys = {
+    loaded: true, norm: s => String(s || '').trim().toLowerCase(),
+    races: [], classes: [], tribes: [], mechanics: [],
+    equipment: [{ id: 'tpl1', nome: 'Adaga de Lastro (modelo)', formulaDano: '1d6', descricao: 'Lâmina curta lastreada.' }],
+    skills: [
+        { id: 'sk1', nome: 'Lâminas', categoria: 'Combate', descricao: 'Armas de corte' },
+        { id: 'sk2', nome: 'Observação', categoria: 'Mentais', descricao: 'Notar detalhes' },
+    ],
+    derivedValues: [
+        dv('dv_bld', 'Blindagem', { icone: '🛡️', bloco: 'Combate', ordem: 1, mesa: true }),
+        dv('dv_dano', 'Dano Físico', { icone: '⚔️', bloco: 'Combate', ordem: 1, escopo: 'dano' }),
+        dv('dv_acerto', 'Acerto', { icone: '🎯', bloco: 'Combate', ordem: 1, escopo: 'coluna' }),
+        dv('dv_perc', 'Percepção', { icone: '👁️', bloco: 'Sentidos', ordem: 2 }),
+        dv('dv_igneo', 'Golpe Ígneo', { icone: '🔥', bloco: 'Essências', ordem: 40, escopo: 'dano-canal' }),
+    ],
+    vitalStats: [
+        { id: 'vs1', key: 'VIT_MAX', nome: 'Vitalidade' }, { id: 'vs2', key: 'ENER_MAX', nome: 'Energia' }, { id: 'vs3', key: 'SAN_MAX', nome: 'Sanidade' },
+    ],
+    classModules: [modManobras],
+    classModulesById: { m1: modManobras },
+    pecsById: { pec1: { id: 'pec1', nome: 'Pele de Ferro', icone: '🛡️', descricao: '+Blindagem' } },
+    racesById: {}, classesById: {}, tribesById: {}, mechsById: {}, racesByNome: {}, classesByNome: {}, tribesByNome: {},
+};
+
+// ===== Mesa semeada =====
+function semear() {
+    T.mesaId = 'check'; T.mode = 'secret'; T.isMaster = true;
+    T.user = { uid: 'u1', email: 'check@check' };
+    T.chars = [{ id: 'c1', nome: 'Vesna', ownerUid: 'u1', raca: 'Humana', classe: 'Bruxa', charImg: '',
+        derivedTotals: { BLINDAGEM: 2.2, PERCEPCAO: 5, DANO_FISICO: 2, GOLPE_IGNEO: 1.5, ACERTO: 7 },
+        dots: { attr_for: 3, attr_des: 2, attr_vig: 2, sk_fisicas_l_minas: 2, sk_mentais_observa__o: 3 },
+        classModuleData: {
+            m1: [{ _predefNome: 'Truque da Fumaça', custo: '1 Ação', usos: 2, desc: 'Some numa nuvem.' }],
+            mx_legado: [{ nome: 'Golpe Sombrio', custo: '2 ENER' }],
+        } }];
+    VITAIS.set('c1', { hp: 12, hpMax: 18, ener: 5, enerMax: 7, san: 88, sanMax: 100,
+        conds: [], condsFull: [{ nome: 'Cansada', icone: '😮‍💨', descricao: 'Sem descanso', tempoRestante: '' }] });
+    T.npcs = [
+        { id: 'npc1', nome: 'Capitão Ferrus', nivel: 4, classe: 'Guerreiro', tipo: 'npc', imagem: '',
+          valoresDer: { VIT: 22, ENER: 8, SAN: 100, PERC: 6, INI: 4, REA: 5, BLD: 3.9,
+              atual: { VIT: 15.5, VITALIDADE: 15.5, ENER: 8, SAN: 92 },
+              overrides: { dv_perc: 6, dv_bld: 3.9 },   // chaves de DOC, como o editor grava
+              extras: [{ nome: 'Desloc. Terrestre', valor: '9m' }, { nome: 'Iniciativa', valor: '10' }, { nome: 'Altura', valor: '1.75m' }],
+              vinculados: ['dv_perc', 'dv_bld'] },
+          atributos: { FOR: 4, DES: 3, VIG: 4, INT: 2, RAC: 2, PRS: 3, PRE: 2, MAN: 1, AUT: 3 },
+          periciasEstruturadas: [{ refId: 'sk1', nivel: 3 }, { refId: 'sk2', nivel: 2 }],
+          modulosClasse: [{ refId: 'm1', fonte: 'manual', itens: [{ _predefNome: 'Investida', custo: '1 Ação · 2 ENER', usos: 3, desc: 'Avança 6m e golpeia.' }] }],
+          peculiaridades: [{ refId: 'pec1', nivel: 2 }, { nome: 'Cicatriz do Cerco', nivel: 1 }],
+          conditions: [{ nome: 'Sangrando', icone: '🩸', descricao: 'Perde 0,5 VIT por turno', tempoRestante: '3 turnos' }],
+          ataques: 'Espada longa +4 (1d10+4 corte)\nEscudada: empurra 2m', skills: 'Grito de guerra: aliados +1 INI' },
+        { id: 'npc2', nome: 'Lobo Cinzento', nivel: 2, tipo: 'criatura',
+          valoresDer: { VIT: 9, ENER: 4, SAN: 100, atual: {}, overrides: {}, extras: [], vinculados: [] },
+          atributos: { FOR: 3, DES: 4, VIG: 2 }, periciasEstruturadas: [], conditions: [] },
+    ];
+    T.combate = { participantes: [{ id: 'p1', npcId: 'npc1', name: 'Capitão Ferrus', initiative: 5, hpCurrent: 15.5, hpMax: 22 }] };
+}
+semear();
+// o boot do tab-main (DOMContentLoaded, sem ?mesa=) zera T.mesaId — re-semeia depois dele
+window.addEventListener('DOMContentLoaded', semear);
+
+// Itens injetados na janela (o listener real morre sem login — esperado)
+const ITENS_NPC = [
+    { id: 'i1', nome: 'Punhal', tipo: 'Arma', equipado: true, estadoEquip: 'empunhado', peso: 1, quantidade: 1, origemTemplateId: 'tpl1' },
+    { id: 'i2', nome: 'Poção Vermelha', tipo: 'Consumível', peso: 0.5, quantidade: 3, descricao: 'Cura 2 VIT.' },
+    { id: 'i3', nome: 'Mochila', tipo: 'Container', ehContainer: true, peso: 1, pesoMaximoContainer: 10, multiplicadorPressao: 0.5 },
+    { id: 'i4', nome: 'Flechas', tipo: 'Projétil', parentItemId: 'i3', quantidade: 12, peso: 0.05 },
+];
+
+const linhas = [];
+const teste = (nome, cond) => linhas.push([nome, !!cond]);
+const $ = (sel, raiz) => (raiz || document).querySelector(sel);
+const $$ = (sel, raiz) => [...(raiz || document).querySelectorAll(sel)];
+const winEl = (chave) => _WINS.get(chave)?.el;
+const txt = (el) => (el?.textContent || '').replace(/\s+/g, ' ');
+
+async function rodar() {
+    await new Promise(r => setTimeout(r, 60));   // deixa o boot do tab-main passar
+
+    // ===== T1–T2: multi-janela =====
+    await abrirFichaWin('npc', 'npc1');
+    await abrirFichaWin('npc', 'npc2');
+    await abrirFichaWin('char', 'c1');
+    await new Promise(r => setTimeout(r, 80));   // registros (import dinâmico) + repinte
+    teste('T1 · 3 janelas abertas ao mesmo tempo', $$('.tb-fwin').length === 3);
+    const zAntes = winEl('npc:npc1').style.zIndex;
+    await abrirFichaWin('npc', 'npc1');
+    teste('T2 · reabrir NÃO duplica, traz para a frente', $$('.tb-fwin').length === 3 &&
+        Number(winEl('npc:npc1').style.zIndex) > Number(zAntes));
+
+    // ===== NPC: vitais, blocos de VD, dedup =====
+    const w1 = winEl('npc:npc1');
+    const win1 = _WINS.get('npc:npc1');
+    win1.itens = ITENS_NPC.map(i => ({ ...i }));
+    window._renderFichaWins();
+
+    teste('T3 · VIT do NPC 15.5 / 22 (atual da ficha, teto no máximo)',
+        $('[data-vcur][data-sig="VIT"]', w1)?.value === '15.5' && txt($('.tb-fwin-vmax', w1)).includes('22'));
+
+    const chipsN = $$('.tb-fwin-chip', w1).map(txt);
+    teste('T4 · Blindagem 3,9 vira 3 (valor de mesa); Iniciativa e Percepção SEM duplicar',
+        chipsN.some(c => c.includes('Blindagem') && /\b3\b/.test(c)) &&
+        chipsN.filter(c => c.includes('Iniciativa')).length === 1 &&
+        chipsN.filter(c => c.includes('Percepção')).length === 1);
+
+    const blocosN = $$('.tb-fwin-bloco', w1);
+    teste('T5 · blocos de VD aninhados: 2 primeiros abertos, resto fechado, Extras sem sumir',
+        blocosN.length >= 3 && blocosN[0].open && blocosN[1].open && !blocosN[2].open &&
+        txt(blocosN[blocosN.length - 1]).includes('Altura'));
+
+    // ===== NPC: perícias, módulos, condições, ataques =====
+    teste('T6 · perícia Lâminas nível 3 editável', $$('[data-pernivel]', w1).some(i => i.value === '3'));
+    teste('T7 · módulo Manobras: "Investida" com contador Usos=3',
+        txt(w1).includes('Investida') && $$('[data-mod][data-mkey="usos"]', w1).some(i => i.value === '3'));
+    teste('T8 · condição da ficha "Sangrando" com ✕ de remover',
+        txt(w1).includes('Sangrando') && !!$('[data-condrm]', w1));
+    teste('T9 · ataque do NPC: dano 1d6 vem do MODELO do catálogo + texto da ficha',
+        $$('.tb-fwin-atk', w1).some(a => txt(a).includes('Punhal') && txt(a).includes('1d6')) &&
+        txt(w1).includes('Espada longa +4'));
+
+    // ===== T10: edição de vital (otimista + espelhos) =====
+    $('[data-vdelta="1"][data-sig="VIT"]', w1).click();
+    const n1 = T.npcs.find(n => n.id === 'npc1');
+    teste('T10 · +1 VIT: input 16.5, espelho VITALIDADE e participante do combate',
+        $('[data-vcur][data-sig="VIT"]', w1).value === '16.5' &&
+        n1.valoresDer.atual.VIT === 16.5 && n1.valoresDer.atual.VITALIDADE === 16.5 &&
+        T.combate.participantes[0].hpCurrent === 16.5);
+
+    // ===== Inventário: contêiner, qty, detalhe completo, DnD =====
+    $('[data-aba="inv"]', w1).click();
+    teste('T11 · contêiner fechado esconde o conteúdo; chevron abre e mostra Flechas',
+        !txt(w1).includes('Flechas') &&
+        ($('[data-conttoggle="i3"]', w1).click(), txt(w1).includes('Flechas')));
+    const btnMais = $$('[data-qdelta="1"]', w1).find(b => b.dataset.item === 'i2');
+    btnMais.click();
+    teste('T12 · +1 na Poção: quantidade local 4 (write throttled na ficha)',
+        win1.itens.find(i => i.id === 'i2').quantidade === 4);
+    teste('T13 · Arma e contêiner sem stepper de quantidade',
+        !$$('[data-qdelta]', w1).some(b => b.dataset.item === 'i1' || b.dataset.item === 'i3'));
+    // clique no item expande TODAS as informações
+    $('[data-toggleitem="i1"]', w1).click();
+    const det = $('.tb-fwin-item-det', w1);
+    teste('T14 · clique no item expande info completa (tipo, peso, dano do modelo, equipe)',
+        det && txt(det).includes('Tipo:') && txt(det).includes('Peso:') &&
+        txt(det).includes('1d6') && txt(det).includes('do modelo') && txt(det).includes('Empunhado'));
+    teste('T15 · DnD armado: linhas arrastáveis, contêiner e raiz são alvos de drop',
+        $$('[data-drag]', w1).length >= 3 &&
+        !!$('[data-drop="cont:i3"]', w1) && !!$('[data-drop="root"]', w1));
+
+    // ===== Personagem: VDs por bloco, ataques, módulos, ordem =====
+    const wc = winEl('char:c1');
+    const winC = _WINS.get('char:c1');
+    winC.itens = [{ id: 'e1', nome: 'Adaga de Lastro', tipo: 'Arma', equipado: true, estadoEquip: 'empunhado', peso: 1, quantidade: 1, origemTemplateId: 'tpl1' }];
+    window._renderFichaWins();
+
+    teste('T16 · char: VIT 12/18 dos VITAIS ao vivo',
+        $('[data-vcur][data-sig="VIT"]', wc).value === '12' && txt($('.tb-fwin-vmax', wc)).includes('18'));
+
+    const blocosC = $$('.tb-fwin-bloco', wc);
+    const chipsC = $$('.tb-fwin-chip', wc).map(txt);
+    teste('T17 · char: VDs aparecem MESMO com registro por id de doc (Blindagem 2 de mesa, Percepção 5, Golpe Ígneo 1.5)',
+        chipsC.some(c => c.includes('Blindagem') && /\b2\b/.test(c)) &&
+        chipsC.some(c => c.includes('Percepção') && c.includes('5')) &&
+        chipsC.some(c => c.includes('Golpe Ígneo')));
+    teste('T18 · char: blocos 2 primeiros abertos, Essências fechado',
+        blocosC.length >= 3 && blocosC[0].open && blocosC[1].open && !blocosC[2].open);
+    teste('T19 · char: ataque com dano do modelo composto (1d6+2) e Acerto 7 no golpe',
+        $$('.tb-fwin-atk', wc).some(a => txt(a).includes('1d6+2') && txt(a).includes('Acerto') && txt(a).includes('7')));
+    teste('T20 · char: módulos da ficha (Truque da Fumaça usos=2) + módulo sem registro não some',
+        txt(wc).includes('Truque da Fumaça') &&
+        $$('[data-mod][data-mkey="usos"]', wc).some(i => i.value === '2') &&
+        txt(wc).includes('Golpe Sombrio'));
+    const secoes = $$('.tb-fwin-sec > summary', wc).map(txt);
+    teste('T21 · ordem: Ataques → Habilidades & Módulos → Atributos',
+        secoes.findIndex(s => s.includes('Ataques')) < secoes.findIndex(s => s.includes('Habilidades')) &&
+        secoes.findIndex(s => s.includes('Habilidades')) < secoes.findIndex(s => s.includes('Atributos')));
+    teste('T22 · char: perícias dos dots (Lâminas 2, Observação 3) e condição do doc',
+        $$('.tb-fwin-per', wc).some(p => txt(p).includes('Lâminas') && txt(p).includes('2')) &&
+        $$('.tb-fwin-per', wc).some(p => txt(p).includes('Observação') && txt(p).includes('3')) &&
+        txt(wc).includes('Cansada'));
+
+    // ===== Arrastar janela / resize / fechar =====
+    const head = $('.tb-fwin-head', w1);
+    const l0 = w1.offsetLeft, t0 = w1.offsetTop;
+    head.dispatchEvent(new PointerEvent('pointerdown', { clientX: 200, clientY: 100, pointerId: 7, bubbles: true }));
+    head.dispatchEvent(new PointerEvent('pointermove', { clientX: 260, clientY: 140, pointerId: 7, bubbles: true }));
+    head.dispatchEvent(new PointerEvent('pointerup', { pointerId: 7, bubbles: true }));
+    teste('T23 · arrastar pelo cabeçalho move; resize nativo ligado',
+        w1.offsetLeft === l0 + 60 && w1.offsetTop === t0 + 40 && getComputedStyle(w1).resize === 'both');
+    $('[data-fechar]', winEl('npc:npc2')).click();
+    teste('T24 · fechar remove a janela e o registro', $$('.tb-fwin').length === 2 && !_WINS.has('npc:npc2'));
+
+    // relatório
+    document.getElementById('res').innerHTML = '<table>' + linhas.map(([n, ok]) =>
+        `<tr><td>${n}</td><td class="${ok ? 'ok' : 'fail'}">${ok ? 'PASS' : 'FAIL'}</td></tr>`).join('') + '</table>';
+    const falhas = linhas.filter(([, ok]) => !ok).length;
+    const placar = document.getElementById('placar');
+    placar.textContent = falhas ? `❌ ${falhas} de ${linhas.length} testes falharam` : `✅ ${linhas.length}/${linhas.length} — janelas de ficha OK`;
+    placar.className = falhas ? 'fail' : 'ok';
+}
+rodar().catch(e => {
+    document.getElementById('placar').innerHTML = `<span class="fail">💥 ${e.message}</span>`;
+    console.error(e);
+    document.getElementById('res').innerHTML = '<table>' + linhas.map(([n, ok]) =>
+        `<tr><td>${n}</td><td class="${ok ? 'ok' : 'fail'}">${ok ? 'PASS' : 'FAIL'}</td></tr>`).join('') + '</table>';
+});
+</script>
+</body></html>

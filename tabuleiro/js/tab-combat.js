@@ -3,17 +3,19 @@
 // Sincroniza com Painel do Mestre > Mesas > Combate
 // =============================================
 import { db, doc, setDoc, updateDoc, getDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, uid, alvoDoTeste, grausDoDado, fmtGraus } from './tab-state.js';
+import { T, esc, toast, uid, alvoDoTeste, grausDoDado, fmtGraus, vNum, patchVitalAtualNpc } from './tab-state.js';
 import { refCombate, refEstado, abrirModal, fecharModal } from './tab-main.js';
 import { VITAIS } from './tab-hud.js';
 import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena } from '../../shared/combate-cenas.js';
 
 let janelaAberta = false;
 
-// Vitais aceitam meio ponto (VIT 21,9) e somar/subtrair 1 em float acumula lixo:
-// virava "9.899999999999999/21.9". Arredonda na CONTA (o que é gravado e
-// sincronizado com a ficha) e na exibição, que também recebe valor sujo de fora.
-const vNum = (v) => Math.round((Number(v) || 0) * 100) / 100;
+// Janela flutuante de ficha de combate (NPC/personagem) — módulo carregado só
+// quando alguém abre a primeira janela.
+window.tbFichaWin = async function(tipo, id) {
+    try { (await import('./tab-ficha-win.js')).abrirFichaWin(tipo, id); }
+    catch (e) { console.error(e); toast('❌ Erro ao abrir a janela de combate', 'danger'); }
+};
 
 export function initCombat() {
     window._renderCombate = render;
@@ -230,6 +232,12 @@ function render() {
             `<span class="tb-cond">${esc(cd)}${secreto ? ` <b onclick="tbCombCondRm('${p.id}',${ci})">✕</b>` : ''}</span>`).join('')
             + daFicha.map(n => `<span class="tb-cond" title="Aplicada na ficha — remova por lá">${esc(n)}</span>`).join('');
         const abrirNpc = secreto && p.npcId ? `onclick="tbAbrirNpcModal('${p.npcId}')" style="cursor:pointer" title="Abrir ficha do NPC"` : '';
+        // 🪟 Janela de combate: mestre no secreto abre de NPC e personagem;
+        // no público cada jogador abre só a do PRÓPRIO personagem.
+        const fichaRef = p.npcId ? ['npc', p.npcId] : p.characterId ? ['char', p.characterId] : null;
+        const donoDoChar = p.characterId && T.chars.find(c => c.id === p.characterId)?.ownerUid === T.user?.uid;
+        const btnJanela = fichaRef && (secreto || donoDoChar)
+            ? `<button class="tb-mini-btn" title="Janela de combate (ficha ao vivo)" onclick="tbFichaWin('${fichaRef[0]}','${fichaRef[1]}')">⚔️</button>` : '';
         return `<div class="tb-combat-p ${atual ? 'atual' : ''}">
             <div class="tb-combat-init">${p.initiative ?? 0}</div>
             <div style="flex:1;min-width:0">
@@ -239,7 +247,10 @@ function render() {
                 ${testesDoCard(testes, p, secreto)}
                 <div class="tb-conds">${conds}${secreto ? `<button class="tb-cond-add" onclick="tbCombCondAdd('${p.id}')">➕ condição</button>` : ''}</div>
             </div>
-            ${secreto ? `<button class="tb-mini-btn tb-danger" onclick="tbCombRemover('${p.id}')" title="Remover">🗑️</button>` : ''}
+            <div class="tb-combat-acoes">
+                ${btnJanela}
+                ${secreto ? `<button class="tb-mini-btn tb-danger" onclick="tbCombRemover('${p.id}')" title="Remover">🗑️</button>` : ''}
+            </div>
         </div>`;
     }).join('');
 }
@@ -318,22 +329,8 @@ window.tbCombStat = async function(pid, stat, amt) {
         try {
             const npcSnap = await getDoc(doc(db, 'npcs', p.npcId));
             if (npcSnap.exists()) {
-                const npcData = npcSnap.data();
-                const atualObj = npcData.valoresDer?.atual || {};
-                const patch = { [`valoresDer.atual.${stat}`]: p[cur] };
-                // Também atualizar chaves do sistema que existam no atual
-                const LEGACY_KEYS = new Set(['VIT','ENER','SAN','PERC','INI','REA','BLD']);
-                for (const [k, v] of Object.entries(atualObj)) {
-                    if (LEGACY_KEYS.has(k)) continue;
-                    const nomeNorm = k.toLowerCase().replace(/[^a-z]/g, '');
-                    const sigNorm = stat.toLowerCase();
-                    if (nomeNorm.startsWith(sigNorm) || nomeNorm.startsWith(sigNorm === 'vit' ? 'vitalidade' : sigNorm === 'ener' ? 'energia' : 'sanidade')) {
-                        patch[`valoresDer.atual.${k}`] = p[cur];
-                    } else if (v === atualObj[stat]) {
-                        patch[`valoresDer.atual.${k}`] = p[cur];
-                    }
-                }
-                await updateDoc(doc(db, 'npcs', p.npcId), patch);
+                await updateDoc(doc(db, 'npcs', p.npcId),
+                    patchVitalAtualNpc(npcSnap.data().valoresDer?.atual, stat, p[cur]));
             }
         } catch (e) { console.warn('sync npc stat', e); }
     }
@@ -342,7 +339,7 @@ window.tbCombStat = async function(pid, stat, amt) {
 // ===== Cache de condições do sistema =====
 let _systemConditions = null;
 
-async function carregarCondicoesSistema() {
+export async function carregarCondicoesSistema() {
     if (_systemConditions) return _systemConditions;
     try {
         const { getDocs: gd, collection: col } = await import('../../painel-mestre/js/firebase-config.js');
@@ -364,7 +361,12 @@ function fecharCondPicker() {
     document.getElementById('tbCondPickerOverlay')?.remove();
 }
 
-window.tbCombCondAdd = async function(pid) {
+/**
+ * Picker de condição (registro do sistema + personalizada), desacoplado de quem
+ * aplica: o combate aplica no participante, a janela de ficha aplica no doc.
+ * @param aplicar (nome, tplOuNull) => Promise
+ */
+export async function escolherCondicao(aplicar) {
     const conditions = await carregarCondicoesSistema();
     const overlay = document.createElement('div');
     overlay.id = 'tbCondPickerOverlay';
@@ -413,7 +415,7 @@ window.tbCombCondAdd = async function(pid) {
             const idx = parseInt(el.dataset.idx);
             const c = conditions[idx];
             if (!c) return;
-            await aplicarCondicaoCombate(pid, c.nome, c);
+            await aplicar(c.nome, c);
             fecharCondPicker();
         };
     });
@@ -422,13 +424,15 @@ window.tbCombCondAdd = async function(pid) {
     document.getElementById('tbCondCustomBtn').onclick = async () => {
         const nome = document.getElementById('tbCondCustomNome')?.value?.trim();
         if (!nome) { toast('⚠️ Insira o nome da condição', 'warning'); return; }
-        await aplicarCondicaoCombate(pid, nome, null);
+        await aplicar(nome, null);
         fecharCondPicker();
     };
 
     // Fechar ao clicar fora
     overlay.addEventListener('click', e => { if (e.target === overlay) fecharCondPicker(); });
-};
+}
+
+window.tbCombCondAdd = (pid) => escolherCondicao((nome, tpl) => aplicarCondicaoCombate(pid, nome, tpl));
 
 /**
  * Aplica uma condição ao participante do combate e sincroniza com a ficha.

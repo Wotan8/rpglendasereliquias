@@ -45,3 +45,17 @@ consertos que não cabiam no escopo da vez.
 - **Risco:** médio — mexer nele sem atualizar TODOS os leitores tira a
   iniciativa da tela do jogador. O teste `shared/combate-cenas.test.mjs` tranca
   o espelho justamente por isso.
+
+## 4. `tbCombStat` relê o NPC antes de cada write de vital
+
+- **Local:** `js/tab-combat.js` → `tbCombStat`, ramo `p.npcId`.
+- **Problema:** cada clique em ± faz um `getDoc(npcs/{id})` antes do
+  `updateDoc`, mas a coleção `npcs` inteira já chega ao vivo por `onSnapshot`
+  (`carregarNpcs` em tab-main) — `T.npcs` tem o mesmo dado, de graça.
+- **Impacto:** 1 read extra por clique de vida/energia/sanidade de NPC. Num
+  combate longo com o mestre clicando, dezenas de reads que não precisavam
+  existir. Latência também: o write espera a volta do read.
+- **Conserto:** montar o patch a partir de `T.npcs` (a janela de ficha nova,
+  `tab-ficha-win.js`, já faz assim com a mesma `patchVitalAtualNpc`).
+- **Risco:** baixo — o único caso que o `getDoc` cobre a mais é NPC excluído no
+  meio do clique, e o `updateDoc` falharia igual, com o mesmo `catch`.

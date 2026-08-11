@@ -11,6 +11,8 @@ Estimativas para uma sessão típica: **1 mestre + 4 jogadores, 3 horas**, mesa 
 | Régua compartilhada | 1 write / **130ms** | tab-tools |
 | Exploração do fog | 1 write / **3s** (debounce, só se houver célula nova) | tab-fog |
 | Combate (painel mestre) | debounce **600ms** | painel-mestre/combat.js |
+| Janela de ficha: vitais/quantidade/nível/módulo | 1 write / **600ms** por doc+campo (`criarFilaDeEscrita`) | tab-ficha-win |
+| Janela de ficha: mover p/ contêiner · dropar no mapa | 1 write ou 1 batch por soltar (ação explícita, sem throttle) | tab-ficha-win |
 | Ping | 1 write por ping (ação explícita) | tab-presenca |
 
 ## Leituras
@@ -20,6 +22,14 @@ Estimativas para uma sessão típica: **1 mestre + 4 jogadores, 3 horas**, mesa 
 - **Listeners**: cada `onSnapshot` cobra 1 read por documento *alterado*; documentos
   parados não cobram de novo. Custo dominante: objetos alterados durante a sessão.
 - **Vitais (F5)**: 1 listener por personagem (≈5 docs) — cobra apenas quando a ficha muda.
+- **Janela de ficha de combate**: dados de NPC/char saem dos listeners que JÁ existem
+  (coleção `npcs` e vitais por char) — custo zero. O que ela adiciona: 1 listener de
+  itens por janela ABERTA (N itens no 1º snapshot, depois só o que mudar) e, uma vez
+  por sessão, os registros do sistema (`system/data/*`, ~10 coleções pequenas,
+  compartilhados com o modal de NPC via `window._npcSys`).
+- **Escrita da janela**: cada edição grava o DELTA no doc da ficha (`updateDoc` de
+  campo), com espelho no participante do combate quando o NPC está em cena — mesmo
+  padrão de dupla-escrita do painel de combate.
 
 ## Escritas (cenário pesado: combate com movimentação intensa)
 

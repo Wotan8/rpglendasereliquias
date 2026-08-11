@@ -117,6 +117,8 @@ async function carregarChars() {
             derivedTotals: raw.derivedTotals || {},
             // atributos + perícias (com bônus aplicados) — o Alvo dos 🎯 Testes lê daqui
             dots: raw.effectiveDots || raw.dots || {},
+            // Módulos de Classe da ficha ({ moduleId: itens[] }) — a janela de combate exibe
+            classModuleData: raw.classModuleData || {},
             // livros que o MESTRE amarrou neste personagem (📖 Livros → 🎭 Vincular).
             // Vem de carona nesta query, que já traz o doc inteiro — leitura zero.
             livrosVinculados: raw.livrosVinculados || [],
@@ -138,6 +140,7 @@ async function carregarNpcs() {
             else {
                 if (window._renderCombate) window._renderCombate();
                 if (window._renderVincNpcs) window._renderVincNpcs();
+                window._renderFichaWins?.();
                 // trigger HUD update for tokens
                 import('./tab-state.js').then(m => m.markDirty());
             }

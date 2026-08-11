@@ -65,8 +65,13 @@ export async function ensureNpcSystemData() {
                     todoPersonagem: dv.todoPersonagem || false,
                     blocoId: dv.blocoId || 'geral',
                     blocoNome: dv.blocoNome || 'Geral',
+                    blocoOrdem: Number(dv.blocoOrdem) || 999,
                     // '' = global | 'coluna' = por item | 'dano' = concatena no dano
-                    escopoItem: dv.escopoItem || ''
+                    escopoItem: dv.escopoItem || '',
+                    // usados pela janela de combate do Tabuleiro
+                    statusCombate: dv.statusCombate || false,
+                    arredondaMesa: dv.arredondaMesa || false,
+                    espelhaVD: dv.espelhaVD || ''
                 })),
             vitalStats: (sd.vitalStats || [])
                 .slice().sort((a, b) => (a.ordem || 99) - (b.ordem || 99))
