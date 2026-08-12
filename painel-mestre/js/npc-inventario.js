@@ -15,11 +15,11 @@ import * as SEL from '../../painel-criador/js/painel-mechanics.js';
 import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
     htmlInventario, tratarClique, iniciarArrasto, tplDoItem,
-} from '../../shared/inventario-motor.js';
+} from '../../shared/inventario-motor.js?v=2';
 import {
     camposDaInstancia, valorDoItem, htmlCampo, coletarCampos, aplicarVisibilidade,
     instanciarDoModelo,
-} from '../../shared/equip-campos.js';
+} from '../../shared/equip-campos.js?v=3';
 
 // Estado local. `abertos`/`contAbertos` são do motor de inventário
 // (shared/inventario-motor.js), o mesmo da Ficha de Combate do Tabuleiro.

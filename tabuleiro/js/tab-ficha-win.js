@@ -31,7 +31,7 @@ import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, itensIdenticos, escolherQtd,
     tplDoItem as tplDoItemMotor, formulaDanoDoItem as formulaDanoMotor, fmtN,
     htmlInventario as htmlInvMotor, tratarClique as tratarCliqueInv, iniciarArrasto,
-} from '../../shared/inventario-motor.js';
+} from '../../shared/inventario-motor.js?v=2';
 
 // Mesmo ritmo do painel de combate (ver CUSTOS-FIRESTORE.md): cliques rápidos
 // em ± não viram um write por clique.

@@ -854,7 +854,12 @@ async function abrirFichaMestreNpc(npc) {
         await window.openNpcModal(npc.id);
     } catch (e) {
         console.error('❌ Erro ao abrir a Ficha de NPC (Painel do Mestre):', e);
-        toast('❌ Erro ao abrir a ficha do Mestre', 'danger');
+        // A mensagem VAI no toast: um "erro ao abrir" mudo já custou uma sessão
+        // inteira de caça. Erro de módulo aqui costuma ser cache do Service
+        // Worker servindo dependência velha — a dica aponta o caminho.
+        const cacheVelho = e instanceof SyntaxError || /module|import|export/i.test(e?.message || '');
+        toast('❌ Ficha do Mestre: ' + (e?.message || e)
+            + (cacheVelho ? ' — recarregue com Ctrl+Shift+R' : ''), 'danger');
     }
 }
 
