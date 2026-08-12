@@ -6,6 +6,10 @@
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/area-npcs.css">
 <link rel="stylesheet" href="../shared/inventario-motor.css">
+<!-- mesmas folhas do painel-mestre.html: o formulário de item depende das três -->
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="../ficha-v1.7_1/css/inventory.css">
+<link rel="stylesheet" href="../shared/equip-campos.css">
 <style>
   body { margin: 0; padding: 16px; font: 14px/1.6 Inter, system-ui, sans-serif; }
   .col { display: grid; grid-template-columns: 460px 1fr; gap: 16px; align-items: start; }
@@ -38,7 +42,7 @@
 </div>
 
 <script type="module">
-import { renderNpcInventoryList } from './js/npc-inventario.js?c=2';
+import { renderNpcInventoryList } from './js/npc-inventario.js?c=3';
 
 const linhas = [];
 let ok = 0;
@@ -79,6 +83,7 @@ teste('T5 · cada linha traz editar / transferir / excluir',
 
 // ---- T6: clique no botão do Mestre NÃO expande o item ----
 let chamou = null;
+const abrirFormReal = window.openNpcItemForm;   // devolvido no T16
 window.openNpcItemForm = (id) => { chamou = id; };
 $('[data-toggleitem="i2"] [data-npcitem="editar"]', lista).click();
 teste('T6 · clique em ✏️ abre o formulário do item e não expande a linha',
@@ -170,6 +175,48 @@ grabFlecha.dispatchEvent(pev('pointerup', pRaiz.x, pRaiz.y));
 teste('T15 · com o corpo do modal rolado, arrastar Flechas para Soltos ainda tira do contêiner',
     corpo.scrollTop > 0 && movRolado?.[0] === 'f1' && movRolado?.[1] === 'root');
 corpo.scrollTop = 0;
+
+// ---- T16..T19: formulário de item = mesmos campos do cadastro do Criador ----
+window._npcSys = {
+    derivedValues: [{ id: 'dv1', nome: 'Acerto Corpo a Corpo', icone: '⚔️', publicado: true }],
+    vitalStats: [{ id: 'vs1', nome: 'Vitalidade', icone: '❤️', publicado: true }],
+    skills: [{ id: 'sk1', nome: 'Lâminas', publicado: true }],
+    mechanics: [{ id: 'me1', nome: 'Corte Profundo', tipo: 'modificar', publicado: true }],
+    conditions: [{ id: 'cd1', nome: 'Sangrando', icone: '🩸', publicado: true }],
+    bodyParts: [{ id: 'bp-mao', nome: 'Mão', icone: '🤚', publicado: true }],
+    equipment: [{ id: 'mod1', nome: 'Adaga de Lastro (modelo)', liga: '3', qualidade: '2', preco: 90 }],
+};
+window._npcInv.items.push({ id: 'i9', nome: 'Adaga Herdada', tipo: 'Arma', peso: 1,
+    modeloId: 'mod1', qualidade: '4' });
+window.openNpcItemForm = abrirFormReal;   // o T6 tinha trocado por um espião
+window.openNpcItemForm('i9');
+const form = $('#npcItemFormModal');
+const campo = (k) => $(`#field_${k}`, form);
+
+teste('T16 · o formulário traz os campos do cadastro que faltavam',
+    ['liga','qualidade','afiacao','reforco','blindagemQ0','preco','tags','pressaoBase','capacidadeContainer']
+        .every(k => !!campo(k)));
+
+teste('T17 · os seletores do Criador vieram junto (VD com equação, vitais, atributos, perícias, condições, mecânicas)',
+    ['valoresDerivadosVinculados','statusVitaisVinculados','atributosVinculados',
+     'periciasVinculadas','condicaoIds','mecanicaIds','slotsAdicionais']
+        .every(k => !!$(`#field_${k}_wrap`, form)));
+
+teste('T18 · avisa que a edição é só desta peça e mostra o que herda do modelo',
+    !!$('.inv-form-nota', form)
+    && $('.inv-form-nota', form).textContent.includes('só para este item')
+    && campo('qualidade').value === '4'                                   // valor próprio vence
+    && [...campo('liga').options].some(o => o.text.includes('herda do modelo: 3')));
+
+// campos condicionais: Arma mostra Categoria; trocar para Objeto esconde
+const grupo = (k) => $(`[data-campo="${k}"]`, form);
+const catVisivelComArma = grupo('categoriaArma').style.display !== 'none';
+const contOcultoSemContainer = grupo('pesoMaximoContainer').style.display === 'none';
+campo('tipo').value = 'Objeto';
+campo('tipo').dispatchEvent(new Event('change', { bubbles: true }));
+teste('T19 · Categoria da Arma e campos de Container aparecem só quando cabem',
+    catVisivelComArma && contOcultoSemContainer && grupo('categoriaArma').style.display === 'none');
+form.remove();
 
 // ---- placar ----
 $('#saida').innerHTML = linhas.map(([n, p]) =>

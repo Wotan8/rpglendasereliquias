@@ -4,6 +4,7 @@
 // =============================================
 
 import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, ATRIBUTOS_VINCULAVEIS, periciaOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=16';
+import { CAMPOS_EQUIPAMENTO } from '../../shared/equip-campos.js?v=1';
 import { RUNIC_MODULE_DEF, buildRunicField, collectRunicField, importRunicSeed } from './painel-runic.js?v=1';
 import { versaoDoLivro } from '../../shared/livros-pub.js';
 
@@ -224,95 +225,9 @@ const MODULE_DEFS = {
     equipment: {
         name: 'Equipamento', namePlural: 'Equipamentos', icon: '🗡️',
         collection: 'system/data/equipment',
-        fields: [
-            { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Espada Longa, Cota de Malha' },
-            {
-                key: 'tipo', label: 'Tipo', type: 'select', required: true, options: [
-                    { value: 'Arma', label: '⚔️ Arma' },
-                    { value: 'Vestimenta', label: '🧥 Vestimenta' },
-                    { value: 'Acessório', label: '💍 Acessório' },
-                    { value: 'Projétil', label: '🎯 Projétil' },
-                    { value: 'Container', label: '📦 Container' },
-                    { value: 'Objeto', label: '📦 Objeto' },
-                    { value: 'Consumível', label: '🧪 Consumível' },
-                    { value: 'Relíquia', label: '✨ Relíquia' }
-                ]
-            },
-            { key: 'tags', label: '🏷️ Tags', type: 'tags', placeholder: 'Digite e Enter para adicionar (Ex: metálico, mágico, leve)' },
-            { key: 'equipavelEm', label: 'Equipável em', type: 'body_parts_selector' },
-            // Slots ALÉM do principal. Espada de duas mãos = +1 Mão; armadura
-            // completa = +1 Pernas, +2 Braço. Bloqueia equipar se faltar slot livre.
-            { key: 'slotsAdicionais', label: '🧩 Slots Adicionais Ocupados (além do slot principal)', type: 'mechanic_selector', selectorTarget: 'bodyPartsQuantidade' },
-            {
-                key: 'formaEquipar', label: 'Forma de equipar', type: 'select', options: [
-                    { value: 'segurar', label: 'Segurar' },
-                    { value: 'empunhar', label: 'Empunhar' },
-                    { value: 'vestir', label: 'Vestir' },
-                    { value: 'fixar', label: 'Fixar' }
-                ]
-            },
-            {
-                key: 'categoriaArma', label: 'Categoria da Arma', type: 'select', options: [
-                    { value: 'uma_mao', label: '🗡️ Arma de Uma Mão' },
-                    { value: 'duas_maos', label: '⚔️ Arma de Duas Mãos' },
-                    { value: 'versatil', label: '🔄 Arma Versátil' },
-                    { value: 'escudo', label: '🛡️ Escudo' },
-                    { value: 'distancia', label: '🏹 Arma a Distância' }
-                ], showWhen: { field: 'tipo', value: 'Arma' }
-            },
-            {
-                key: 'liga', label: '⚒️ Liga (qualidade da peça)', type: 'select', options: [
-                    { value: '0', label: '0 — Sem Liga (improvisado)' },
-                    { value: '1', label: '1 — Liga Bruta (baixa)' },
-                    { value: '2', label: '2 — Liga Justa (comum)' },
-                    { value: '3', label: '3 — Liga Nobre (boa)' },
-                    { value: '4', label: '4 — Liga Pura (alta)' },
-                    { value: '5', label: '5 — Liga Superior' }
-                ]
-            },
-            {
-                // A Qualidade é o poder da peça e o nome da faixa vai junto no rótulo.
-                // Trava do Livro (5.5): a Qualidade nunca passa da Liga.
-                key: 'qualidade', label: '⭐ Qualidade (poder da peça — nunca passa da Liga)', type: 'select', options: [
-                    { value: '0', label: '0 — Inicial' },
-                    { value: '1', label: '1 — Veterano' },
-                    { value: '2', label: '2 — Especialista' },
-                    { value: '3', label: '3 — Mestre' },
-                    { value: '4', label: '4 — Obra-Prima' },
-                    { value: '5', label: '5 — Graal' }
-                ]
-            },
-            // Afiação comum (ferreiro, dano físico). A Arcana é tipada e entra
-            // pelos Valores Derivados de Dano por Essência, um vínculo por canal.
-            { key: 'afiacao', label: '⚔️ Afiação (acabamento — teto é a Qualidade da peça)', type: 'number', placeholder: '0 a 5' },
-            // Reforço é a Afiação da proteção. Como a Qualidade, soma na Blindagem
-            // GRAVADA da peça — o campo é o registro do que foi pago, e o audit
-            // cobra que a Blindagem tenha subido junto.
-            { key: 'reforco', label: '🛡️ Reforço (acabamento de proteção — teto é a Qualidade)', type: 'number', placeholder: '0 a 5' },
-            { key: 'blindagemQ0', label: '⚓ Blindagem quando nova (âncora do audit — não editar à toa)', type: 'number', placeholder: '0' },
-            { key: 'preco', label: '💰 Preço base (L$)', type: 'number', placeholder: 'Ex: 1100' },
-            { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
-            { key: 'imagemUrl', label: 'Imagem (URL)', type: 'text', placeholder: 'https://...' },
-            { key: 'peso', label: 'Peso', type: 'number', required: true, placeholder: '1' },
-            { key: 'tamanho', label: 'Tamanho', type: 'number', required: true, placeholder: '1' },
-            { key: 'pressaoBase', label: 'Pressão Base (peso efetivo ao equipar)', type: 'number', placeholder: '0 = mesmo que Peso' },
-            { key: 'quantidade', label: 'Quantidade (Padrão ao instanciar)', type: 'number', placeholder: '1' },
-            { key: 'ehContainer', label: '📦 É Container?', type: 'boolean' },
-            { key: 'multiplicadorPressao', label: 'Multiplicador de Pressão (conteúdo)', type: 'number', placeholder: '1', showWhenBoolean: 'ehContainer' },
-            { key: 'pesoMaximoContainer', label: 'Peso Máximo Suportado (Container)', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
-            { key: 'capacidadeContainer', label: 'Capacidade do Container (slots antigos)', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
-            { key: 'formulaDano', label: '💥 Fórmula de Dano', type: 'text', placeholder: 'Ex: 1d10, 2d6 — bônus numéricos vêm dos Valores Derivados' },
-            { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: 'item' },
-            { key: 'valoresDerivadosVinculados', label: 'Valores Derivados Vinculados', type: 'mechanic_selector', selectorTarget: 'equipmentDerivedValues' },
-            // "Máxima" = bônus enquanto equipado. "Atual" = efeito de uso único,
-            // só dispara no botão "Usar" da ficha (item consumível).
-            { key: 'statusVitaisVinculados', label: '❤️ Status Vitais Vinculados (Máxima = ao equipar · Atual = ao usar)', type: 'mechanic_selector', selectorTarget: 'vitalStatus' },
-            // Dispensa criar mecânica só para somar/subtrair: a penalidade da peça
-            // mora na própria peça. Aplicados enquanto o item está equipado.
-            { key: 'atributosVinculados', label: '🎲 Atributos Vinculados (modificador ao equipar)', type: 'mechanic_selector', selectorTarget: 'attributes' },
-            { key: 'periciasVinculadas', label: '🎯 Perícias Vinculadas (modificador ao equipar)', type: 'mechanic_selector', selectorTarget: 'skillsModificador' },
-            { key: 'condicaoIds', label: '💀 Condições Aplicadas ao Usar', type: 'mechanic_selector', selectorTarget: 'conditions' },
-        ]
+        // Mesma lista que a Ficha de NPC usa para editar UMA instância
+        // (shared/equip-campos.js). Campo novo aqui aparece nos dois.
+        fields: CAMPOS_EQUIPAMENTO,
     },
     conditions: {
         name: 'Condição', namePlural: 'Condições', icon: '💀',

@@ -8,13 +8,17 @@ import { db, collection, getDocs, getDoc, setDoc, deleteDoc, doc, query, where, 
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
-import { buildMechanicSelectorHTML } from '../../painel-criador/js/painel-mechanics.js';
+// Os construtores de seletor do Criador (mecânicas, VDs com Equação de Valor,
+// status vitais, atributos, perícias, condições) — o formulário de item mostra
+// exatamente os mesmos controles do cadastro de Equipamento.
+import * as SEL from '../../painel-criador/js/painel-mechanics.js';
 import {
-    EMOJI_TIPO, ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
-    htmlInventario, tratarClique, iniciarArrasto,
+    ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
+    htmlInventario, tratarClique, iniciarArrasto, tplDoItem,
 } from '../../shared/inventario-motor.js';
-
-const _emoji = t => EMOJI_TIPO[t] || '📦';
+import {
+    camposDaInstancia, valorDoItem, htmlCampo, coletarCampos, aplicarVisibilidade,
+} from '../../shared/equip-campos.js';
 
 // Estado local. `abertos`/`contAbertos` são do motor de inventário
 // (shared/inventario-motor.js), o mesmo da Ficha de Combate do Tabuleiro.
@@ -371,6 +375,15 @@ function _logItem(acao, changes) {
 /* ===================================================================
    CRIAR / EDITAR ITEM DO NPC
    =================================================================== */
+/**
+ * Formulário de item — MESMOS campos do cadastro de Equipamento do Painel do
+ * Criador (shared/equip-campos.js), só que gravando em `items/<id>`: mexe
+ * nesta peça e em mais nenhuma, o catálogo fica intacto.
+ *
+ * Campo deixado em branco continua HERDANDO do modelo do catálogo (o motor lê
+ * `instancia.campo ?? modelo.campo`), e o placeholder mostra o que seria
+ * herdado — por isso o formulário não vem pré-preenchido com o modelo.
+ */
 window.openNpcItemForm = function(editItemId) {
     const n = _npc();
     const npcId = _npcId();
@@ -379,105 +392,38 @@ window.openNpcItemForm = function(editItemId) {
 
     const item = editItemId ? NI.items.find(i => i.id === editItemId) : null;
     const isEdit = !!item;
+    const sys = window._npcSys || window._systemData || {};
+    const modelo = item ? tplDoItem(item, sys) : null;
+
+    // Partes do NPC mandam no "Equipável em": a anatomia é dele, não do catálogo
+    const caches = {
+        derivedValues: sys.derivedValues || [],
+        vitalStats: sys.vitalStats || [],
+        skills: sys.skills || [],
+        mechanics: sys.mechanics || window._systemData?.mechanics || [],
+        conditions: sys.conditions || window._systemData?.conditions || [],
+        bodyParts: (n.partesDoCorpo && n.partesDoCorpo.length) ? n.partesDoCorpo : (sys.bodyParts || []),
+    };
+    window._mechCache = caches.mechanics;   // os construtores de seletor leem daqui
+
+    const campos = camposDaInstancia();
+    const corpo = campos.map(f => htmlCampo(f, valorDoItem(item, f), { sel: SEL, caches, modelo })).join('');
 
     document.getElementById('npcItemFormModal')?.remove();
-
-    const partes = (n.partesDoCorpo && n.partesDoCorpo.length) ? n.partesDoCorpo : [];
     const modal = document.createElement('div');
     modal.className = 'inv-modal active';
     modal.id = 'npcItemFormModal';
     modal.style.zIndex = '10001';
-    modal.innerHTML = `<div class="inv-modal-content" style="max-width:600px">
+    modal.innerHTML = `<div class="inv-modal-content" style="max-width:760px">
         <div class="inv-modal-header">
             <span class="inv-modal-title">${isEdit ? '✏️ Editar Item' : '➕ Criar Item'} — ${escapeHtml(_npcNome())}</span>
             <button class="inv-modal-close" onclick="this.closest('.inv-modal').remove()">✕</button>
         </div>
         <div class="inv-modal-body">
-            <div class="inv-form-grid">
-                <div class="inv-form-group inv-form-wide">
-                    <label class="inv-form-label">Nome *</label>
-                    <input type="text" id="nif_nome" class="inv-form-input" value="${escapeHtml(item?.nome || '')}" placeholder="Nome do item">
-                </div>
-                <div class="inv-form-group">
-                    <label class="inv-form-label">Tipo</label>
-                    <select id="nif_tipo" class="inv-form-select" onchange="window._npcToggleItemFormFields()">
-                        ${['Objeto', 'Arma', 'Vestimenta', 'Acessório', 'Projétil', 'Container', 'Consumível', 'Relíquia'].map(t =>
-                            `<option value="${t}" ${item?.tipo === t ? 'selected' : ''}>${_emoji(t)} ${t}</option>`).join('')}
-                    </select>
-                </div>
-                <div class="inv-form-group">
-                    <label class="inv-form-label">Equipável em (partes do NPC)</label>
-                    <select id="nif_equipavelEm" class="inv-form-select" multiple size="4">
-                        ${partes.map(bp => {
-                            const sel = Array.isArray(item?.equipavelEm) && item.equipavelEm.includes(bp.id) ? 'selected' : '';
-                            return `<option value="${bp.id}" ${sel}>${bp.icone || '🦴'} ${escapeHtml(bp.nome)}</option>`;
-                        }).join('')}
-                    </select>
-                    <small style="color:var(--muted);font-size:.8rem">Ctrl p/ múltiplos. Vazio = Livre.</small>
-                </div>
-                <div class="inv-form-group">
-                    <label class="inv-form-label">Forma de equipar</label>
-                    <select id="nif_formaEquipar" class="inv-form-select">
-                        <option value="" ${!item?.formaEquipar ? 'selected' : ''}>— Livre —</option>
-                        <option value="segurar" ${item?.formaEquipar === 'segurar' ? 'selected' : ''}>Segurar</option>
-                        <option value="empunhar" ${item?.formaEquipar === 'empunhar' ? 'selected' : ''}>Empunhar</option>
-                        <option value="vestir" ${item?.formaEquipar === 'vestir' ? 'selected' : ''}>Vestir</option>
-                        <option value="fixar" ${item?.formaEquipar === 'fixar' ? 'selected' : ''}>Fixar</option>
-                    </select>
-                </div>
-                <div class="inv-form-group" id="nif_catArmaGroup" style="display:${item?.tipo === 'Arma' ? 'flex' : 'none'}">
-                    <label class="inv-form-label">Categoria da Arma *</label>
-                    <select id="nif_categoriaArma" class="inv-form-select">
-                        <option value="" disabled ${!item?.categoriaArma ? 'selected' : ''}>— Selecione —</option>
-                        <option value="uma_mao" ${item?.categoriaArma === 'uma_mao' ? 'selected' : ''}>🗡️ Arma de Uma Mão</option>
-                        <option value="duas_maos" ${item?.categoriaArma === 'duas_maos' ? 'selected' : ''}>⚔️ Arma de Duas Mãos</option>
-                        <option value="versatil" ${item?.categoriaArma === 'versatil' ? 'selected' : ''}>🔄 Arma Versátil</option>
-                        <option value="escudo" ${item?.categoriaArma === 'escudo' ? 'selected' : ''}>🛡️ Escudo</option>
-                        <option value="distancia" ${item?.categoriaArma === 'distancia' ? 'selected' : ''}>🏹 Arma a Distância</option>
-                    </select>
-                </div>
-                <div class="inv-form-group">
-                    <label class="inv-form-label">Peso</label>
-                    <input type="number" id="nif_peso" class="inv-form-input" value="${item?.peso ?? 1}" min="0" step="0.1">
-                </div>
-                <div class="inv-form-group">
-                    <label class="inv-form-label">Tamanho</label>
-                    <input type="number" id="nif_tamanho" class="inv-form-input" value="${item?.tamanho ?? 1}" min="0">
-                </div>
-                <div class="inv-form-group" id="nif_qtyGroup" style="display:${(item?.tipo === 'Container' || item?.tipo === 'Arma' || item?.ehContainer) ? 'none' : 'flex'}">
-                    <label class="inv-form-label">Quantidade</label>
-                    <input type="number" id="nif_quantidade" class="inv-form-input" value="${(item?.tipo === 'Container' || item?.tipo === 'Arma' || item?.ehContainer) ? 1 : (item?.quantidade || 1)}" min="1">
-                </div>
-                <div id="nif_containerFields" class="inv-form-group inv-form-wide" style="display:${(item?.tipo === 'Container' || item?.ehContainer) ? 'grid' : 'none'};grid-template-columns:1fr 1fr;gap:12px">
-                    <div class="inv-form-group">
-                        <label class="inv-form-label">⚖️ Peso Máximo</label>
-                        <input type="number" id="nif_pesoMaximo" class="inv-form-input" value="${item?.pesoMaximoContainer || 10}" min="0" step="0.1">
-                    </div>
-                    <div class="inv-form-group">
-                        <label class="inv-form-label">✖️ Mult. Pressão</label>
-                        <input type="number" id="nif_multPressao" class="inv-form-input" value="${item?.multiplicadorPressao || 1}" min="0" step="0.01">
-                    </div>
-                </div>
-                <div class="inv-form-group inv-form-wide">
-                    <label class="inv-form-label">💥 Fórmula de Dano</label>
-                    <input type="text" id="nif_formulaDano" class="inv-form-input" value="${escapeHtml(item?.formulaDano || '')}" placeholder="Ex: 1d10 — só o dado; bônus numéricos vêm dos Valores Derivados">
-                </div>
-                <div class="inv-form-group inv-form-wide">
-                    <label class="inv-form-label">Descrição</label>
-                    <textarea id="nif_desc" class="inv-form-textarea" rows="3">${escapeHtml(item?.descricao || '')}</textarea>
-                </div>
-                <div class="inv-form-group inv-form-wide">
-                    <label class="inv-form-label">Imagem</label>
-                    ${CampoImagem.html({ id: 'nif_imagem', classe: 'inv-form-input', valor: item?.imagem || item?.imagemUrl || '', pasta: 'imagens/itens' })}
-                </div>
-                <div class="inv-form-group inv-form-wide">
-                    ${(() => {
-                        window._mechCache = (window._npcSys?.mechanics) || window._systemData?.mechanics || [];
-                        return buildMechanicSelectorHTML('nifMecanicaIds', 'Mecânicas Vinculadas', item?.mecanicaIdsProprias || [], window._mechCache, 'item');
-                    })()}
-                </div>
-            </div>
-            ${isEdit ? `<input type="hidden" id="nif_editId" value="${item.id}">` : ''}
+            ${modelo ? `<div class="inv-form-nota">📘 Instância de <b>${escapeHtml(modelo.nome || 'modelo do catálogo')}</b> —
+                o que você mudar aqui vale <b>só para este item</b>. Campo em branco continua herdando do modelo.</div>` : ''}
+            <div class="inv-form-grid">${corpo}</div>
+            ${isEdit ? `<input type="hidden" id="nif_editId" value="${escapeHtml(item.id)}">` : ''}
         </div>
         <div class="inv-modal-footer">
             <button class="inv-btn-cancel" onclick="this.closest('.inv-modal').remove()">Cancelar</button>
@@ -485,67 +431,55 @@ window.openNpcItemForm = function(editItemId) {
         </div>
     </div>`;
     document.body.appendChild(modal);
-};
 
-window._npcToggleItemFormFields = function() {
-    const tipo = document.getElementById('nif_tipo')?.value;
-    const cat = document.getElementById('nif_catArmaGroup');
-    const qty = document.getElementById('nif_qtyGroup');
-    const cont = document.getElementById('nif_containerFields');
-    if (cat) cat.style.display = tipo === 'Arma' ? 'flex' : 'none';
-    if (cont) cont.style.display = tipo === 'Container' ? 'grid' : 'none';
-    if (qty) {
-        if (tipo === 'Container' || tipo === 'Arma') {
-            qty.style.display = 'none';
-            const qi = document.getElementById('nif_quantidade'); if (qi) qi.value = 1;
-        } else qty.style.display = 'flex';
-    }
+    const corpoEl = modal.querySelector('.inv-modal-body');
+    aplicarVisibilidade(corpoEl);
+    // Tipo e "É Container?" abrem/fecham os campos dependentes
+    corpoEl.addEventListener('change', e => {
+        if (e.target.id === 'field_tipo' || e.target.id === 'field_ehContainer') aplicarVisibilidade(corpoEl);
+    });
 };
 
 window.saveNpcItemForm = async function() {
-    const nome = document.getElementById('nif_nome')?.value?.trim();
-    if (!nome) { showAlert('⚠️ Nome obrigatório', 'warning'); return; }
-
     const npcId = _npcId();
     if (!npcId) { showAlert('⚠️ Salve o NPC antes de criar itens.', 'warning'); return; }
 
+    const campos = camposDaInstancia();
+    const dados = coletarCampos(campos);
+
+    const nome = String(dados.nome || '').trim();
+    if (!nome) { showAlert('⚠️ Nome obrigatório', 'warning'); return; }
+    if (dados.tipo === 'Arma' && !dados.categoriaArma) { showAlert('⚠️ Selecione a categoria da arma', 'warning'); return; }
+
     const editId = document.getElementById('nif_editId')?.value || '';
-    const tipo = document.getElementById('nif_tipo')?.value || 'Objeto';
-    const isContainer = tipo === 'Container';
-    const categoriaArma = document.getElementById('nif_categoriaArma')?.value || null;
-    if (tipo === 'Arma' && !categoriaArma) { showAlert('⚠️ Selecione a categoria da arma', 'warning'); return; }
-
-    const equipOpts = document.getElementById('nif_equipavelEm')?.selectedOptions;
-    const equipavelEm = equipOpts ? Array.from(equipOpts).map(o => o.value) : [];
-
-    let mecanicaIds = [];
-    const mecEl = document.getElementById('field_nifMecanicaIds');
-    if (mecEl) { try { mecanicaIds = JSON.parse(mecEl.value || '[]'); } catch { mecanicaIds = []; } }
-
     const old = editId ? NI.items.find(i => i.id === editId) : null;
+    const isContainer = dados.tipo === 'Container' || !!dados.ehContainer;
 
     const itemData = {
-        nome, tipo,
-        categoriaArma: tipo === 'Arma' ? categoriaArma : null,
-        peso: parseFloat(document.getElementById('nif_peso')?.value) || 1,
-        tamanho: parseInt(document.getElementById('nif_tamanho')?.value) || 1,
-        quantidade: (isContainer || tipo === 'Arma') ? 1 : Math.max(1, parseInt(document.getElementById('nif_quantidade')?.value) || 1),
-        descricao: document.getElementById('nif_desc')?.value?.trim() || '',
-        formulaDano: document.getElementById('nif_formulaDano')?.value?.trim() || '',
-        imagem: document.getElementById('nif_imagem')?.value?.trim() || '',
-        equipavelEm: equipavelEm.length ? equipavelEm : null,
-        formaEquipar: document.getElementById('nif_formaEquipar')?.value || null,
-        mecanicaIdsProprias: mecanicaIds,
+        ...dados,
+        nome,
+        // A instância guarda a imagem em `imagem`; `imagemUrl` é chave do catálogo
+        imagem: dados.imagemUrl || '',
+        // Mecânicas da instância não se misturam com as do modelo
+        mecanicaIdsProprias: dados.mecanicaIds || [],
+        ehContainer: isContainer,
+        equipavelEm: (dados.equipavelEm || []).length ? dados.equipavelEm : null,
+        formaEquipar: dados.formaEquipar || null,
+        categoriaArma: dados.tipo === 'Arma' ? dados.categoriaArma : null,
+        peso: Number(dados.peso) || 1,
+        tamanho: Number(dados.tamanho) || 1,
+        pressaoBase: dados.pressaoBase != null ? Number(dados.pressaoBase) : (Number(dados.peso) || 1),
         characterId: npcId,
         ownerType: 'npc',
         ownerUid: old?.ownerUid || S.currentUser?.uid || '',
         ownerId: old?.ownerId || S.currentUser?.uid || '',
-        ehContainer: isContainer,
-        pesoMaximoContainer: isContainer ? (parseFloat(document.getElementById('nif_pesoMaximo')?.value) || 10) : null,
-        multiplicadorPressao: isContainer ? (parseFloat(document.getElementById('nif_multPressao')?.value) || 1) : null,
-        pressaoBase: parseFloat(document.getElementById('nif_peso')?.value) || 1,
-        lastModified: new Date().toISOString()
+        lastModified: new Date().toISOString(),
     };
+    delete itemData.imagemUrl;
+    delete itemData.mecanicaIds;
+    if (!isContainer) { itemData.pesoMaximoContainer = null; itemData.multiplicadorPressao = null; itemData.capacidadeContainer = null; }
+    // Arma e contêiner não empilham; a quantidade da instância não vem do formulário
+    itemData.quantidade = (isContainer || dados.tipo === 'Arma') ? 1 : Math.max(1, parseInt(old?.quantidade) || 1);
 
     try {
         if (editId) {
@@ -569,7 +503,7 @@ window.saveNpcItemForm = async function() {
                 changes: [
                     { label: 'NPC', from: '', to: _npcNome() },
                     { label: 'Item', from: editId ? (old?.nome || nome) : '—', to: nome },
-                    { label: 'Tipo', from: editId ? (old?.tipo || '') : '', to: tipo },
+                    { label: 'Tipo', from: editId ? (old?.tipo || '') : '', to: dados.tipo || '' },
                     { label: 'Quantidade', from: editId ? String(old?.quantidade ?? '') : '', to: String(itemData.quantidade) }
                 ]
             });
