@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 import {
     CAMPOS_EQUIPAMENTO, camposDaInstancia, valorDoItem, herdaDoModelo, htmlCampo,
+    instanciarDoModelo,
 } from './equip-campos.js';
 
 // ===== integridade da spec =====
@@ -83,4 +84,46 @@ assert.equal(campo('multiplicadorPressao').showWhenBoolean, 'ehContainer');
 // escape: rótulo e valor são dado, nunca HTML
 assert.match(htmlCampo(campo('nome'), '<img onerror=1>', {}), /&lt;img onerror=1&gt;/);
 
-console.log('✅ campos de equipamento: spec, herança instância→modelo e render OK');
+// ===== instanciar a partir do catálogo =====
+const tpl = {
+    id: 'eq-adaga', nome: 'Adaga de Lastro', tipo: 'Arma', peso: 1, tamanho: 1,
+    descricao: 'Lâmina curta lastreada.', imagemUrl: 'adaga.png',
+    formaEquipar: 'empunhar', categoriaArma: 'uma_mao', equipavelEm: ['bp-mao'],
+    ehContainer: false, pressaoBase: 1,
+    // tudo abaixo HERDA — não pode ser copiado para a instância
+    liga: '3', qualidade: '2', afiacao: 1, reforco: 0, blindagemQ0: 0, preco: 90,
+    formulaDano: '1d4', tags: ['metálico'],
+    valoresDerivadosVinculados: [{ id: 'dv1', modificador: 2 }],
+    statusVitaisVinculados: [{ id: 'vs1', modificador: 1 }],
+    atributosVinculados: [{ id: 'FOR', modificador: -1 }],
+    periciasVinculadas: [{ id: 'sk1', modificador: 1 }],
+    condicaoIds: [{ id: 'cd1' }], slotsAdicionais: [{ id: 'bp-mao', quantidade: 1 }],
+    quantidade: 5,   // "padrão ao instanciar": é de catálogo, não vai junto
+};
+const semente = instanciarDoModelo(tpl);
+
+assert.equal(semente.modeloId, 'eq-adaga', 'a instância aponta para o modelo');
+// o que É copiado: identidade e físico, que a instância pode divergir livremente
+assert.equal(semente.nome, 'Adaga de Lastro');
+assert.equal(semente.tipo, 'Arma');
+assert.equal(semente.peso, 1);
+assert.equal(semente.categoriaArma, 'uma_mao');
+assert.deepEqual(semente.equipavelEm, ['bp-mao']);
+assert.equal(semente.descricao, 'Lâmina curta lastreada.');
+assert.equal(semente.imagem, 'adaga.png', 'imagemUrl do catálogo vira imagem na instância');
+assert.equal(semente.imagemUrl, undefined, 'e a chave do catálogo não fica sobrando');
+
+// o que NÃO é copiado: se fosse, mexer no catálogo depois não alcançaria a peça
+for (const k of ['liga', 'qualidade', 'afiacao', 'reforco', 'blindagemQ0', 'preco', 'formulaDano',
+                 'tags', 'valoresDerivadosVinculados', 'statusVitaisVinculados',
+                 'atributosVinculados', 'periciasVinculadas', 'condicaoIds', 'slotsAdicionais']) {
+    assert.equal(semente[k], undefined, `${k} fica em branco para herdar do modelo`);
+}
+assert.equal(semente.quantidade, undefined, 'quantidade do catálogo é "padrão ao instanciar", não vem');
+
+// a semente renderiza anunciando tudo que herda
+const hSemente = htmlCampo(CAMPOS_EQUIPAMENTO.find(f => f.key === 'liga'), semente.liga, { modelo: tpl });
+assert.match(hSemente, /herda do modelo: 3/);
+assert.deepEqual(instanciarDoModelo(null), {}, 'sem modelo, sem semente');
+
+console.log('✅ campos de equipamento: spec, herança instância→modelo, semente do catálogo e render OK');

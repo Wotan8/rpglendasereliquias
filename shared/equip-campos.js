@@ -125,6 +125,26 @@ const HERDA_DO_MODELO = new Set([
 ]);
 export const herdaDoModelo = (key) => HERDA_DO_MODELO.has(key);
 
+/**
+ * Semente de uma instância a partir de um modelo do catálogo.
+ * Copia só o que NÃO herda (identidade e físico); Liga, Qualidade, Afiação,
+ * vínculos e afins ficam em branco de propósito — assim seguem o modelo, e
+ * mexer no catálogo depois ainda alcança esta peça. Mesmo recorte que o
+ * repertório do Mestre já usava, agora derivado de `herdaDoModelo`.
+ */
+export function instanciarDoModelo(tpl) {
+    if (!tpl) return {};
+    const semente = { modeloId: tpl.id };
+    for (const f of CAMPOS_EQUIPAMENTO) {
+        if (f.soCatalogo || herdaDoModelo(f.key)) continue;
+        const v = f.key === 'imagemUrl' ? (tpl.imagemUrl ?? tpl.imagem) : tpl[f.key];
+        if (v !== undefined && v !== null && v !== '') semente[f.key] = v;
+    }
+    // a instância guarda a imagem em `imagem`; o valorDoItem lê as duas
+    if (semente.imagemUrl) { semente.imagem = semente.imagemUrl; delete semente.imagemUrl; }
+    return semente;
+}
+
 const esc = (t) => t == null ? '' : String(t)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');

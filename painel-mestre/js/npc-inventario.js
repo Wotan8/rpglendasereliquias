@@ -18,6 +18,7 @@ import {
 } from '../../shared/inventario-motor.js';
 import {
     camposDaInstancia, valorDoItem, htmlCampo, coletarCampos, aplicarVisibilidade,
+    instanciarDoModelo,
 } from '../../shared/equip-campos.js';
 
 // Estado local. `abertos`/`contAbertos` são do motor de inventário
@@ -375,6 +376,43 @@ function _logItem(acao, changes) {
 /* ===================================================================
    CRIAR / EDITAR ITEM DO NPC
    =================================================================== */
+/** Registros que os seletores do formulário consomem. */
+function _cachesDoForm() {
+    const n = _npc();
+    const sys = window._npcSys || window._systemData || {};
+    return {
+        derivedValues: sys.derivedValues || [],
+        vitalStats: sys.vitalStats || [],
+        skills: sys.skills || [],
+        mechanics: sys.mechanics || window._systemData?.mechanics || [],
+        conditions: sys.conditions || window._systemData?.conditions || [],
+        // Partes do NPC mandam no "Equipável em": a anatomia é dele, não do catálogo
+        bodyParts: (n?.partesDoCorpo && n.partesDoCorpo.length) ? n.partesDoCorpo : (sys.bodyParts || []),
+    };
+}
+
+const _catalogo = () => (window._npcSys?.equipment || window._systemData?.equipment || [])
+    .filter(t => t.publicado !== false);
+
+/** Redesenha os campos do formulário para um item (ou semente de modelo). */
+function _pintarCamposItem(item, modelo) {
+    const corpoEl = document.querySelector('#npcItemFormModal .inv-modal-body');
+    const grade = corpoEl?.querySelector('.inv-form-grid');
+    if (!grade) return;
+    const caches = _cachesDoForm();
+    window._mechCache = caches.mechanics;   // os construtores de seletor leem daqui
+    grade.innerHTML = camposDaInstancia()
+        .map(f => htmlCampo(f, valorDoItem(item, f), { sel: SEL, caches, modelo })).join('');
+
+    const nota = corpoEl.querySelector('[data-nota-modelo]');
+    nota.innerHTML = modelo
+        ? `<div class="inv-form-nota">📘 Instância de <b>${escapeHtml(modelo.nome || 'modelo do catálogo')}</b> —
+            o que você mudar aqui vale <b>só para este item</b>. Campo em branco continua herdando do modelo.</div>`
+        : '';
+    corpoEl.querySelector('#nif_modeloId').value = modelo?.id || '';
+    aplicarVisibilidade(corpoEl);
+}
+
 /**
  * Formulário de item — MESMOS campos do cadastro de Equipamento do Painel do
  * Criador (shared/equip-campos.js), só que gravando em `items/<id>`: mexe
@@ -395,19 +433,20 @@ window.openNpcItemForm = function(editItemId) {
     const sys = window._npcSys || window._systemData || {};
     const modelo = item ? tplDoItem(item, sys) : null;
 
-    // Partes do NPC mandam no "Equipável em": a anatomia é dele, não do catálogo
-    const caches = {
-        derivedValues: sys.derivedValues || [],
-        vitalStats: sys.vitalStats || [],
-        skills: sys.skills || [],
-        mechanics: sys.mechanics || window._systemData?.mechanics || [],
-        conditions: sys.conditions || window._systemData?.conditions || [],
-        bodyParts: (n.partesDoCorpo && n.partesDoCorpo.length) ? n.partesDoCorpo : (sys.bodyParts || []),
-    };
-    window._mechCache = caches.mechanics;   // os construtores de seletor leem daqui
-
-    const campos = camposDaInstancia();
-    const corpo = campos.map(f => htmlCampo(f, valorDoItem(item, f), { sel: SEL, caches, modelo })).join('');
+    // Buscar no catálogo só ao CRIAR: trocar o modelo de um item que já existe
+    // apagaria o que o Mestre ajustou nele.
+    const cat = _catalogo();
+    const buscaHtml = (!isEdit && cat.length) ? `
+        <div class="inv-form-catalogo">
+            <label class="inv-form-label" for="nif_buscaCat">📚 Partir de um equipamento do catálogo</label>
+            <input type="search" id="nif_buscaCat" class="inv-form-input" autocomplete="off"
+                placeholder="🔍 Buscar por nome, tipo ou tag — ou deixe em branco para item personalizado"
+                oninput="window._npcFiltrarCatalogo()">
+            <select id="nif_listaCat" class="inv-form-select" size="6"
+                onchange="window._npcUsarModelo(this.value)"></select>
+            <small class="inv-form-hint">O item nasce vinculado ao modelo: o que você não preencher
+                continua seguindo o catálogo.</small>
+        </div>` : '';
 
     document.getElementById('npcItemFormModal')?.remove();
     const modal = document.createElement('div');
@@ -420,9 +459,10 @@ window.openNpcItemForm = function(editItemId) {
             <button class="inv-modal-close" onclick="this.closest('.inv-modal').remove()">✕</button>
         </div>
         <div class="inv-modal-body">
-            ${modelo ? `<div class="inv-form-nota">📘 Instância de <b>${escapeHtml(modelo.nome || 'modelo do catálogo')}</b> —
-                o que você mudar aqui vale <b>só para este item</b>. Campo em branco continua herdando do modelo.</div>` : ''}
-            <div class="inv-form-grid">${corpo}</div>
+            ${buscaHtml}
+            <div data-nota-modelo></div>
+            <div class="inv-form-grid"></div>
+            <input type="hidden" id="nif_modeloId" value="${escapeHtml(item?.modeloId || '')}">
             ${isEdit ? `<input type="hidden" id="nif_editId" value="${escapeHtml(item.id)}">` : ''}
         </div>
         <div class="inv-modal-footer">
@@ -432,12 +472,39 @@ window.openNpcItemForm = function(editItemId) {
     </div>`;
     document.body.appendChild(modal);
 
-    const corpoEl = modal.querySelector('.inv-modal-body');
-    aplicarVisibilidade(corpoEl);
+    _pintarCamposItem(item, modelo);
+    if (!isEdit && cat.length) window._npcFiltrarCatalogo();
+
     // Tipo e "É Container?" abrem/fecham os campos dependentes
+    const corpoEl = modal.querySelector('.inv-modal-body');
     corpoEl.addEventListener('change', e => {
         if (e.target.id === 'field_tipo' || e.target.id === 'field_ehContainer') aplicarVisibilidade(corpoEl);
     });
+};
+
+/** Filtra o catálogo por nome, tipo ou tag. Sem busca, mostra tudo. */
+window._npcFiltrarCatalogo = function() {
+    const lista = document.getElementById('nif_listaCat');
+    if (!lista) return;
+    const q = (document.getElementById('nif_buscaCat')?.value || '').trim().toLowerCase();
+    const casa = (t) => !q || [t.nome, t.tipo, ...(t.tags || [])]
+        .some(v => String(v || '').toLowerCase().includes(q));
+    const achados = _catalogo().filter(casa)
+        .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+
+    lista.innerHTML = achados.length
+        ? achados.slice(0, 200).map(t => {
+            const det = [t.tipo, t.liga != null ? 'Liga ' + t.liga : '', t.formulaDano].filter(Boolean).join(' · ');
+            return `<option value="${escapeHtml(t.id)}">${escapeHtml(t.nome || 'Sem nome')}${det ? ' — ' + escapeHtml(det) : ''}</option>`;
+        }).join('')
+        : '<option value="" disabled>Nenhum equipamento encontrado</option>';
+};
+
+/** Escolheu um modelo: semeia os campos e vincula a instância a ele. */
+window._npcUsarModelo = function(templateId) {
+    const tpl = _catalogo().find(t => t.id === templateId);
+    if (!tpl) return;
+    _pintarCamposItem(instanciarDoModelo(tpl), tpl);
 };
 
 window.saveNpcItemForm = async function() {
@@ -469,6 +536,8 @@ window.saveNpcItemForm = async function() {
         peso: Number(dados.peso) || 1,
         tamanho: Number(dados.tamanho) || 1,
         pressaoBase: dados.pressaoBase != null ? Number(dados.pressaoBase) : (Number(dados.peso) || 1),
+        // Vínculo com o catálogo: é ele que faz campo em branco herdar do modelo
+        modeloId: document.getElementById('nif_modeloId')?.value || null,
         characterId: npcId,
         ownerType: 'npc',
         ownerUid: old?.ownerUid || S.currentUser?.uid || '',

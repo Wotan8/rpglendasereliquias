@@ -838,7 +838,7 @@ async function abrirFichaMestreNpc(npc) {
         _tbInjectCss('../ficha-v1.7_1/css/inventory.css?v=3', 'tbCssInventory');
         _tbInjectCss('../ficha-v1.7_1/css/equip-modal.css?v=2', 'tbCssEquipModal');
         // Campos de equipamento no formulário de item (construtor de Equação de Valor)
-        _tbInjectCss('../shared/equip-campos.css?v=1', 'tbCssEquipCampos');
+        _tbInjectCss('../shared/equip-campos.css?v=2', 'tbCssEquipCampos');
         _tbEnsureNpcModalDom();
 
         const [S] = await Promise.all([

@@ -42,7 +42,7 @@
 </div>
 
 <script type="module">
-import { renderNpcInventoryList } from './js/npc-inventario.js?c=3';
+import { renderNpcInventoryList } from './js/npc-inventario.js?c=4';
 
 const linhas = [];
 let ok = 0;
@@ -184,7 +184,13 @@ window._npcSys = {
     mechanics: [{ id: 'me1', nome: 'Corte Profundo', tipo: 'modificar', publicado: true }],
     conditions: [{ id: 'cd1', nome: 'Sangrando', icone: '🩸', publicado: true }],
     bodyParts: [{ id: 'bp-mao', nome: 'Mão', icone: '🤚', publicado: true }],
-    equipment: [{ id: 'mod1', nome: 'Adaga de Lastro (modelo)', liga: '3', qualidade: '2', preco: 90 }],
+    equipment: [
+        { id: 'mod1', nome: 'Adaga de Lastro (modelo)', tipo: 'Arma', liga: '3', qualidade: '2', preco: 90,
+          peso: 1, formulaDano: '1d4', categoriaArma: 'uma_mao', tags: ['metálico'] },
+        { id: 'mod2', nome: 'Cota de Malha', tipo: 'Vestimenta', liga: '2', peso: 8, tags: ['metálico'] },
+        { id: 'mod3', nome: 'Poção de Cura', tipo: 'Consumível', peso: 0.5 },
+        { id: 'mod4', nome: 'Rascunho não publicado', tipo: 'Objeto', publicado: false },
+    ],
 };
 window._npcInv.items.push({ id: 'i9', nome: 'Adaga Herdada', tipo: 'Arma', peso: 1,
     modeloId: 'mod1', qualidade: '4' });
@@ -217,6 +223,68 @@ campo('tipo').dispatchEvent(new Event('change', { bubbles: true }));
 teste('T19 · Categoria da Arma e campos de Container aparecem só quando cabem',
     catVisivelComArma && contOcultoSemContainer && grupo('categoriaArma').style.display === 'none');
 form.remove();
+
+// ---- T20..T23: buscar no catálogo ao CRIAR item ----
+window.openNpcItemForm(null);
+const novo = $('#npcItemFormModal');
+const busca = $('#nif_buscaCat', novo), listaCat = $('#nif_listaCat', novo);
+const opts = () => [...listaCat.options].map(o => o.textContent);
+
+teste('T21 · a busca aparece ao criar e lista só o catálogo publicado',
+    !!busca && opts().length === 3 && !opts().some(t => t.includes('não publicado')));
+
+busca.value = 'cota';
+busca.dispatchEvent(new Event('input', { bubbles: true }));
+const porNome = opts();
+busca.value = 'metálico';
+busca.dispatchEvent(new Event('input', { bubbles: true }));
+const porTag = opts();
+busca.value = 'consumível';
+busca.dispatchEvent(new Event('input', { bubbles: true }));
+const porTipo = opts();
+teste('T22 · filtra por nome, por tag e por tipo',
+    porNome.length === 1 && porNome[0].includes('Cota de Malha')
+    && porTag.length === 2
+    && porTipo.length === 1 && porTipo[0].includes('Poção de Cura'));
+
+// escolher um modelo semeia o formulário e vincula
+// (limpa a busca antes: o T22 deixou o filtro em "consumível" e mod1 sairia da lista)
+busca.value = '';
+busca.dispatchEvent(new Event('input', { bubbles: true }));
+listaCat.value = 'mod1';
+listaCat.dispatchEvent(new Event('change', { bubbles: true }));
+const campoNovo = (k) => $(`#field_${k}`, novo);
+teste('T23 · escolher o modelo copia identidade/físico e VINCULA a instância',
+    campoNovo('nome').value === 'Adaga de Lastro (modelo)'
+    && campoNovo('tipo').value === 'Arma'
+    && campoNovo('peso').value === '1'
+    && $('#nif_modeloId', novo).value === 'mod1'
+    && $('.inv-form-nota', novo)?.textContent.includes('só para este item'));
+
+teste('T24 · o que herda fica em branco anunciando o modelo, não copiado',
+    campoNovo('liga').value === ''
+    && campoNovo('preco').value === ''
+    && campoNovo('formulaDano').value === ''
+    && [...campoNovo('liga').options].some(o => o.text.includes('herda do modelo: 3'))
+    && campoNovo('formulaDano').placeholder.includes('herda do modelo: 1d4'));
+
+// o formulário ficou alto: o Salvar não pode depender de rolar até o fim
+const contNovo = $('.inv-modal-content', novo), corpoNovo = $('.inv-modal-body', novo);
+const rodNovo = $('.inv-modal-footer', novo);
+const rodDentro = () => rodNovo.getBoundingClientRect().bottom <= contNovo.getBoundingClientRect().bottom + 1;
+const antesDeRolar = rodDentro();
+corpoNovo.scrollTop = corpoNovo.scrollHeight;
+teste('T26 · com 29 campos o corpo rola e o Salvar continua à vista',
+    getComputedStyle(corpoNovo).overflowY === 'auto'
+    && corpoNovo.scrollHeight > corpoNovo.clientHeight
+    && antesDeRolar && rodDentro());
+
+// editar item existente não oferece troca de modelo
+novo.remove();
+window.openNpcItemForm('i9');
+teste('T25 · ao EDITAR não há troca de modelo (apagaria o ajuste feito na peça)',
+    !$('#nif_buscaCat', $('#npcItemFormModal')));
+$('#npcItemFormModal').remove();
 
 // ---- placar ----
 $('#saida').innerHTML = linhas.map(([n, p]) =>

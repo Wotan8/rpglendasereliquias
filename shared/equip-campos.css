@@ -200,3 +200,24 @@ html.dark .eq-term-op {
     background: var(--lr-arcane-soft);
     font-size: var(--lr-fs-xs); color: var(--lr-text-1);
 }
+
+/* ----- Buscar no catálogo (ao criar item para um NPC) ----- */
+.inv-form-catalogo {
+    margin-bottom: var(--lr-space-3);
+    padding: var(--lr-space-3);
+    border: var(--lr-border-w) dashed var(--lr-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-bg-1);
+}
+.inv-form-catalogo .inv-form-input { margin-bottom: var(--lr-space-2); }
+.inv-form-catalogo select { width: 100%; }
+.inv-form-catalogo select option { padding: 3px var(--lr-space-2); }
+
+/* O formulário de item ficou alto (30 campos + busca no catálogo). Cabeçalho e
+   rodapé fixos, corpo rolando — senão o Salvar só aparece no fim da rolagem.
+   Escopado no modal do NPC de propósito: os .inv-modal da ficha do jogador são
+   curtos e não devem mudar de comportamento por tabela. */
+#npcItemFormModal .inv-modal-content { display: flex; flex-direction: column; overflow: hidden; }
+#npcItemFormModal .inv-modal-header,
+#npcItemFormModal .inv-modal-footer { flex: 0 0 auto; }
+#npcItemFormModal .inv-modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
