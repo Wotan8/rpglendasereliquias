@@ -126,22 +126,35 @@ const HERDA_DO_MODELO = new Set([
 export const herdaDoModelo = (key) => HERDA_DO_MODELO.has(key);
 
 /**
- * Semente de uma instância a partir de um modelo do catálogo.
- * Copia só o que NÃO herda (identidade e físico); Liga, Qualidade, Afiação,
- * vínculos e afins ficam em branco de propósito — assim seguem o modelo, e
- * mexer no catálogo depois ainda alcança esta peça. Mesmo recorte que o
- * repertório do Mestre já usava, agora derivado de `herdaDoModelo`.
+ * Semente de uma instância a partir de um modelo do catálogo — CÓPIA INTEGRAL.
+ *
+ * Traz TODO o cadastro: identidade, físico, Liga/Qualidade/Afiação/Reforço,
+ * preço, tags, e os vínculos completos (Valores Derivados COM suas equações,
+ * Status Vitais, Atributos, Perícias, Condições, Slots Adicionais). O Mestre
+ * abre a janela com a peça inteira preenchida e ajusta o que quiser.
+ *
+ * ⚠️ Cópia é retrato, não espelho: a partir daqui a peça tem vida própria e
+ * afinar o modelo no Criador NÃO alcança mais os itens já criados — mesma
+ * regra que o loot do mapa já segue. O `modeloId` fica só como procedência
+ * (e como rede: campo que o Mestre esvaziar volta a cair no modelo).
+ *
+ * Clone profundo de propósito: as equações são arrays de objetos, e sem clonar
+ * o item e o catálogo apontariam para a MESMA equação em memória.
  */
 export function instanciarDoModelo(tpl) {
     if (!tpl) return {};
+    const clonar = (v) => (v && typeof v === 'object') ? JSON.parse(JSON.stringify(v)) : v;
     const semente = { modeloId: tpl.id };
     for (const f of CAMPOS_EQUIPAMENTO) {
-        if (f.soCatalogo || herdaDoModelo(f.key)) continue;
         const v = f.key === 'imagemUrl' ? (tpl.imagemUrl ?? tpl.imagem) : tpl[f.key];
-        if (v !== undefined && v !== null && v !== '') semente[f.key] = v;
+        if (v === undefined || v === null || v === '') continue;
+        semente[f.key] = clonar(v);
     }
     // a instância guarda a imagem em `imagem`; o valorDoItem lê as duas
     if (semente.imagemUrl) { semente.imagem = semente.imagemUrl; delete semente.imagemUrl; }
+    // "Quantidade (Padrão ao instanciar)" do catálogo existe exatamente para
+    // isto: é a pilha com que a peça nasce.
+    semente.quantidade = Math.max(1, parseInt(tpl.quantidade) || 1);
     return semente;
 }
 

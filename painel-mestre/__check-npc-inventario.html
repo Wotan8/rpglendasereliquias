@@ -42,7 +42,8 @@
 </div>
 
 <script type="module">
-import { renderNpcInventoryList } from './js/npc-inventario.js?c=5';
+import { renderNpcInventoryList } from './js/npc-inventario.js?c=7';
+import { coletarCampos, camposDaInstancia } from '../shared/equip-campos.js?v=4';
 
 const linhas = [];
 let ok = 0;
@@ -186,7 +187,11 @@ window._npcSys = {
     bodyParts: [{ id: 'bp-mao', nome: 'Mão', icone: '🤚', publicado: true }],
     equipment: [
         { id: 'mod1', nome: 'Adaga de Lastro (modelo)', tipo: 'Arma', liga: '3', qualidade: '2', preco: 90,
-          peso: 1, formulaDano: '1d4', categoriaArma: 'uma_mao', tags: ['metálico'] },
+          peso: 1, formulaDano: '1d4', categoriaArma: 'uma_mao', tags: ['metálico'],
+          afiacao: 1, reforco: 0, descricao: 'Lâmina curta lastreada.', quantidade: 3,
+          valoresDerivadosVinculados: [{ id: 'dv1', equacao: [{ tipo: 'ficha', ref: 'DES' }] }],
+          statusVitaisVinculados: [{ id: 'vs1', modificador: 2 }],
+          condicaoIds: [{ id: 'cd1' }] },
         { id: 'mod2', nome: 'Cota de Malha', tipo: 'Vestimenta', liga: '2', peso: 8, tags: ['metálico'] },
         { id: 'mod3', nome: 'Poção de Cura', tipo: 'Consumível', peso: 0.5 },
         { id: 'mod4', nome: 'Rascunho não publicado', tipo: 'Objeto', publicado: false },
@@ -254,19 +259,40 @@ busca.dispatchEvent(new Event('input', { bubbles: true }));
 listaCat.value = 'mod1';
 listaCat.dispatchEvent(new Event('change', { bubbles: true }));
 const campoNovo = (k) => $(`#field_${k}`, novo);
-teste('T23 · escolher o modelo copia identidade/físico e VINCULA a instância',
+const hidden = (k) => { try { return JSON.parse($(`#field_${k}`, novo).value || '[]'); } catch { return null; } };
+teste('T23 · escolher o modelo traz o cadastro INTEIRO, não só identidade/físico',
     campoNovo('nome').value === 'Adaga de Lastro (modelo)'
     && campoNovo('tipo').value === 'Arma'
     && campoNovo('peso').value === '1'
-    && $('#nif_modeloId', novo).value === 'mod1'
-    && $('.inv-form-nota', novo)?.textContent.includes('só para este item'));
+    && campoNovo('liga').value === '3'
+    && campoNovo('qualidade').value === '2'
+    && campoNovo('afiacao').value === '1'
+    && campoNovo('preco').value === '90'
+    && campoNovo('formulaDano').value === '1d4'
+    && campoNovo('tags').value === 'metálico'
+    && campoNovo('descricao').value === 'Lâmina curta lastreada.'
+    && $('#nif_modeloId', novo).value === 'mod1');
 
-teste('T24 · o que herda fica em branco anunciando o modelo, não copiado',
-    campoNovo('liga').value === ''
-    && campoNovo('preco').value === ''
-    && campoNovo('formulaDano').value === ''
-    && [...campoNovo('liga').options].some(o => o.text.includes('herda do modelo: 3'))
-    && campoNovo('formulaDano').placeholder.includes('herda do modelo: 1d4'));
+teste('T24 · vínculos vêm junto, e o VD com a EQUAÇÃO termo a termo',
+    JSON.stringify(hidden('valoresDerivadosVinculados'))
+        === JSON.stringify([{ id: 'dv1', equacao: [{ tipo: 'ficha', ref: 'DES' }] }])
+    && JSON.stringify(hidden('statusVitaisVinculados')) === JSON.stringify([{ id: 'vs1', modificador: 2 }])
+    && JSON.stringify(hidden('condicaoIds')) === JSON.stringify([{ id: 'cd1' }]));
+
+teste('T24b · "padrão ao instanciar" do catálogo vira a pilha inicial',
+    $('#nif_qtdInicial', novo).value === '3');
+
+// o que o SALVAR realmente gravaria: o coletor tem de devolver a equação inteira
+const paraSalvar = coletarCampos(camposDaInstancia());
+teste('T24d · o que vai para o banco carrega os vínculos e a equação do VD',
+    JSON.stringify(paraSalvar.valoresDerivadosVinculados)
+        === JSON.stringify([{ id: 'dv1', equacao: [{ tipo: 'ficha', ref: 'DES' }] }])
+    && JSON.stringify(paraSalvar.condicaoIds) === JSON.stringify([{ id: 'cd1' }])
+    && paraSalvar.liga === '3' && paraSalvar.preco === 90);
+
+teste('T24c · o aviso diz que é cópia e que o catálogo não alcança mais a peça',
+    $('.inv-form-nota', novo)?.textContent.includes('só para este item')
+    && $('.inv-form-nota', novo)?.textContent.includes('não altera'));
 
 // o formulário ficou alto: o Salvar não pode depender de rolar até o fim
 const contNovo = $('.inv-modal-content', novo), corpoNovo = $('.inv-modal-body', novo);

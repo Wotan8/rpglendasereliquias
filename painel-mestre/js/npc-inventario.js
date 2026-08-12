@@ -19,7 +19,7 @@ import {
 import {
     camposDaInstancia, valorDoItem, htmlCampo, coletarCampos, aplicarVisibilidade,
     instanciarDoModelo,
-} from '../../shared/equip-campos.js?v=3';
+} from '../../shared/equip-campos.js?v=4';
 
 // Estado local. `abertos`/`contAbertos` são do motor de inventário
 // (shared/inventario-motor.js), o mesmo da Ficha de Combate do Tabuleiro.
@@ -406,10 +406,14 @@ function _pintarCamposItem(item, modelo) {
 
     const nota = corpoEl.querySelector('[data-nota-modelo]');
     nota.innerHTML = modelo
-        ? `<div class="inv-form-nota">📘 Instância de <b>${escapeHtml(modelo.nome || 'modelo do catálogo')}</b> —
-            o que você mudar aqui vale <b>só para este item</b>. Campo em branco continua herdando do modelo.</div>`
+        ? `<div class="inv-form-nota">📘 Cópia completa de <b>${escapeHtml(modelo.nome || 'modelo do catálogo')}</b> —
+            cadastro inteiro trazido, inclusive vínculos e equações. O que você mudar aqui vale
+            <b>só para este item</b>, e mexer no catálogo depois <b>não altera</b> esta peça.</div>`
         : '';
     corpoEl.querySelector('#nif_modeloId').value = modelo?.id || '';
+    // Quantidade não é campo do formulário da instância (a pilha se ajusta pelo
+    // ± da lista), mas o "padrão ao instanciar" do catálogo tem de valer.
+    corpoEl.querySelector('#nif_qtdInicial').value = item?.quantidade ?? '';
     aplicarVisibilidade(corpoEl);
 }
 
@@ -463,6 +467,7 @@ window.openNpcItemForm = function(editItemId) {
             <div data-nota-modelo></div>
             <div class="inv-form-grid"></div>
             <input type="hidden" id="nif_modeloId" value="${escapeHtml(item?.modeloId || '')}">
+            <input type="hidden" id="nif_qtdInicial" value="${escapeHtml(String(item?.quantidade ?? ''))}">
             ${isEdit ? `<input type="hidden" id="nif_editId" value="${escapeHtml(item.id)}">` : ''}
         </div>
         <div class="inv-modal-footer">
@@ -548,7 +553,12 @@ window.saveNpcItemForm = async function() {
     delete itemData.mecanicaIds;
     if (!isContainer) { itemData.pesoMaximoContainer = null; itemData.multiplicadorPressao = null; itemData.capacidadeContainer = null; }
     // Arma e contêiner não empilham; a quantidade da instância não vem do formulário
-    itemData.quantidade = (isContainer || dados.tipo === 'Arma') ? 1 : Math.max(1, parseInt(old?.quantidade) || 1);
+    // Arma e contêiner nunca empilham. Nos demais: mantém a pilha atual ao
+    // editar; ao criar do catálogo, nasce com o "padrão ao instanciar" do modelo.
+    const qtdSemente = parseInt(document.getElementById('nif_qtdInicial')?.value) || 0;
+    itemData.quantidade = (isContainer || dados.tipo === 'Arma')
+        ? 1
+        : Math.max(1, parseInt(old?.quantidade) || qtdSemente || 1);
 
     try {
         if (editId) {

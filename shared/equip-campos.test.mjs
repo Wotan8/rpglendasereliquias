@@ -102,28 +102,50 @@ const tpl = {
 };
 const semente = instanciarDoModelo(tpl);
 
-assert.equal(semente.modeloId, 'eq-adaga', 'a instância aponta para o modelo');
-// o que É copiado: identidade e físico, que a instância pode divergir livremente
-assert.equal(semente.nome, 'Adaga de Lastro');
-assert.equal(semente.tipo, 'Arma');
-assert.equal(semente.peso, 1);
-assert.equal(semente.categoriaArma, 'uma_mao');
-assert.deepEqual(semente.equipavelEm, ['bp-mao']);
-assert.equal(semente.descricao, 'Lâmina curta lastreada.');
-assert.equal(semente.imagem, 'adaga.png', 'imagemUrl do catálogo vira imagem na instância');
-assert.equal(semente.imagemUrl, undefined, 'e a chave do catálogo não fica sobrando');
+assert.equal(semente.modeloId, 'eq-adaga', 'a instância guarda a procedência');
 
-// o que NÃO é copiado: se fosse, mexer no catálogo depois não alcançaria a peça
-for (const k of ['liga', 'qualidade', 'afiacao', 'reforco', 'blindagemQ0', 'preco', 'formulaDano',
-                 'tags', 'valoresDerivadosVinculados', 'statusVitaisVinculados',
-                 'atributosVinculados', 'periciasVinculadas', 'condicaoIds', 'slotsAdicionais']) {
-    assert.equal(semente[k], undefined, `${k} fica em branco para herdar do modelo`);
+// CÓPIA INTEGRAL: todo campo do cadastro que tem valor vem junto.
+// Nada de "fica em branco para herdar" — o Mestre quer a peça inteira na mão.
+for (const f of CAMPOS_EQUIPAMENTO) {
+    const orig = f.key === 'imagemUrl' ? tpl.imagemUrl : tpl[f.key];
+    if (orig === undefined || orig === null || orig === '') continue;
+    const chave = f.key === 'imagemUrl' ? 'imagem' : f.key;
+    assert.deepEqual(semente[chave], orig, `${chave} veio do cadastro`);
 }
-assert.equal(semente.quantidade, undefined, 'quantidade do catálogo é "padrão ao instanciar", não vem');
+assert.equal(semente.imagemUrl, undefined, 'chave do catálogo não fica sobrando');
+assert.equal(semente.quantidade, 5, '"padrão ao instanciar" vira a pilha inicial');
 
-// a semente renderiza anunciando tudo que herda
-const hSemente = htmlCampo(CAMPOS_EQUIPAMENTO.find(f => f.key === 'liga'), semente.liga, { modelo: tpl });
-assert.match(hSemente, /herda do modelo: 3/);
+// o que motivou a mudança: vínculos COM as equações
+assert.deepEqual(semente.valoresDerivadosVinculados, [{ id: 'dv1', modificador: 2 }]);
+assert.deepEqual(semente.statusVitaisVinculados, [{ id: 'vs1', modificador: 1 }]);
+assert.deepEqual(semente.atributosVinculados, [{ id: 'FOR', modificador: -1 }]);
+assert.deepEqual(semente.periciasVinculadas, [{ id: 'sk1', modificador: 1 }]);
+assert.deepEqual(semente.condicaoIds, [{ id: 'cd1' }]);
+assert.deepEqual(semente.slotsAdicionais, [{ id: 'bp-mao', quantidade: 1 }]);
+assert.deepEqual(semente.tags, ['metálico']);
+assert.equal(semente.liga, '3');
+assert.equal(semente.qualidade, '2');
+assert.equal(semente.preco, 90);
+assert.equal(semente.formulaDano, '1d4');
+
+// VD com equação: a estrutura aninhada tem de vir inteira
+const comEq = instanciarDoModelo({ id: 'x', nome: 'Y', valoresDerivadosVinculados: [
+    { id: 'dv1', equacao: [{ tipo: 'ficha', ref: 'DES' }, { op: '+', tipo: 'ficha', ref: 'Arma' }] },
+] });
+assert.deepEqual(comEq.valoresDerivadosVinculados[0].equacao,
+    [{ tipo: 'ficha', ref: 'DES' }, { op: '+', tipo: 'ficha', ref: 'Arma' }],
+    'a equação do VD vem junto, termo a termo');
+
+// clone PROFUNDO: mexer na cópia não pode tocar o catálogo
+const orig = { id: 'z', nome: 'Z', valoresDerivadosVinculados: [{ id: 'dv1', equacao: [{ tipo: 'fixo', valor: 1 }] }] };
+const c1 = instanciarDoModelo(orig);
+c1.valoresDerivadosVinculados[0].equacao[0].valor = 999;
+assert.equal(orig.valoresDerivadosVinculados[0].equacao[0].valor, 1,
+    'editar o item não pode alterar o modelo do catálogo em memória');
+
+// esvaziar um campo à mão ainda derruba para o modelo (rede de segurança)
+const hVazio = htmlCampo(CAMPOS_EQUIPAMENTO.find(f => f.key === 'liga'), null, { modelo: tpl });
+assert.match(hVazio, /herda do modelo: 3/);
 assert.deepEqual(instanciarDoModelo(null), {}, 'sem modelo, sem semente');
 
 console.log('✅ campos de equipamento: spec, herança instância→modelo, semente do catálogo e render OK');
