@@ -461,21 +461,13 @@ function renderIndividualPeculiaridades() {
         state.peculiaridadesIndividuais = [];
     }
 
-    // Auto-reconstruct from dots (backward compatibility)
-    const sysPecs = window._systemData?.peculiarities || [];
-    Object.keys(state.dots || {}).forEach(k => {
-        if (k.startsWith('pec_')) {
-            const id = k.replace('pec_', '');
-            const pData = sysPecs.find(p => p.id === id);
-            if (pData && (pData.fonte === 'individual' || pData.fonte === 'Individual')) {
-                const exists = state.peculiaridadesIndividuais.find(p => (typeof p === 'object' ? p.id === id : p === id));
-                if (!exists) {
-                    state.peculiaridadesIndividuais.push({ id: id, nivelInicial: state.dots[k] });
-                }
-            }
-        }
-    });
-
+    /* NÃO reconstruir a lista a partir de state.dots['pec_*']. O dot é escrito
+       por QUALQUER fonte que renderize a pec (a de classe inclusive), e quase
+       toda pec de raça/classe tem fonte 'individual' no catálogo — então a
+       reconstrução inventava uma cópia avulsa da pec herdada, e ressuscitava o
+       que o Mestre apagava pelo painel. Auditoria em 11/08/2026: os 4 únicos
+       personagens com dot fora da lista eram todos esse falso positivo, nenhum
+       dependia da reconstrução (functions/audit-pec-dots-orfaos.mjs). */
     const indPecs = state.peculiaridadesIndividuais.map(p => {
         if (typeof _resolvePeculiaridade === 'function') {
             return _resolvePeculiaridade(p, 'Individual');

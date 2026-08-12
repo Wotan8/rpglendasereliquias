@@ -1,7 +1,7 @@
 // =============================================
 // AREA MESAS — Peculiaridades dos Personagens
 // =============================================
-import { db, collection, getDocs, doc, getDoc, updateDoc } from './firebase-config.js';
+import { db, collection, getDocs, doc, getDoc, updateDoc, deleteField } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 
@@ -527,7 +527,15 @@ window._deleteMestrePeculiaridade = async function(charId, idx) {
             const removida = peculiaridadesIndividuais[idx];
             const removidaId = typeof removida === 'object' ? removida.id : removida;
             peculiaridadesIndividuais.splice(idx, 1);
-            await updateDoc(doc(db, 'char', charId), { peculiaridadesIndividuais });
+
+            /* O nível da pec mora em dots['pec_<id>'], fora da lista. Deixar o
+               dot para trás mantinha o nível pendurado — e, se a mesma pec vier
+               da raça/classe, ela passaria a exibir o nível comprado de graça. */
+            const patch = { peculiaridadesIndividuais };
+            if (removidaId && (charData.dots || {})['pec_' + removidaId] !== undefined) {
+                patch[`dots.pec_${removidaId}`] = deleteField();
+            }
+            await updateDoc(doc(db, 'char', charId), patch);
 
             // 📜 Log da remoção
             if (window.addLog) {
@@ -542,6 +550,7 @@ window._deleteMestrePeculiaridade = async function(charId, idx) {
             const charInCache = (S.mesaCharacters || []).find(c => c.id === charId);
             if (charInCache) {
                 charInCache.peculiaridadesIndividuais = peculiaridadesIndividuais;
+                if (charInCache.dots) delete charInCache.dots['pec_' + removidaId];
             }
 
             showAlert('Peculiaridade excluída', 'success');

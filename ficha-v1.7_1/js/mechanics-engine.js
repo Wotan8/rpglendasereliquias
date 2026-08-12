@@ -1208,9 +1208,38 @@ function _resolveSheetRef(ref, mult) {
     return 0;
 }
 
+/* Uma peculiaridade aplica suas mecânicas UMA vez por passada, mesmo quando
+   chega por dois caminhos — o Guerreiro que herda "Domínio de Armas de Braço"
+   da classe E comprou o mesmo doc como avulsa. Sem isto o Teto de Ofício soma
+   [FOR] duas vezes. O nível é o mesmo nos dois: sai de state.dots['pec_'+key]. */
+const _pecsAplicadas = new Set();
+
+function _aplicarPecUmaVez(pec) {
+    const chave = pec && (pec.id || pec.key);
+    if (!chave || _pecsAplicadas.has(chave)) return;
+    _pecsAplicadas.add(chave);
+
+    for (const mech of pec.mecanicas || []) {
+        applyMechanicToSheet(mech, pec);
+    }
+
+    // === AURA SYSTEM: apply linked aura from peculiarity ===
+    if (pec.auraVinculadaId && window.AURAS) {
+        const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
+        if (!auraDef) return;
+        const grau = pec.auraGrauConcedido || 1;
+        if (!state.auras) state.auras = {};
+        const existing = state.auras[pec.auraVinculadaId];
+        if (!existing || existing.grauDesbloqueado < grau) {
+            state.auras[pec.auraVinculadaId] = { grauDesbloqueado: grau, fonte: 'peculiaridade', fonteId: pec.id };
+        }
+    }
+}
+
 /* ===== APLICAR TODAS AS MECÂNICAS DE UMA RAÇA ===== */
 function applyAllRaceMechanics(racaNome) {
     clearMechanicBonuses();
+    _pecsAplicadas.clear();
 
     // Clear auras that came from peculiarities (will be re-applied below)
     if (state.auras) {
@@ -1257,24 +1286,7 @@ function applyAllRaceMechanics(racaNome) {
     }
 
     for (const pec of raca.peculiaridades) {
-        if (pec.mecanicas) {
-            for (const mech of pec.mecanicas) {
-                applyMechanicToSheet(mech, pec);
-            }
-        }
-
-        // === AURA SYSTEM: apply linked aura from peculiarity ===
-        if (pec.auraVinculadaId && window.AURAS) {
-            const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
-            if (auraDef) {
-                const grau = pec.auraGrauConcedido || 1;
-                if (!state.auras) state.auras = {};
-                const existing = state.auras[pec.auraVinculadaId];
-                if (!existing || existing.grauDesbloqueado < grau) {
-                    state.auras[pec.auraVinculadaId] = { grauDesbloqueado: grau, fonte: 'peculiaridade', fonteId: pec.id };
-                }
-            }
-        }
+        _aplicarPecUmaVez(pec);
     }
 
     // === Aplicar mecânicas de peculiaridades de CLASSE ===
@@ -1312,23 +1324,7 @@ function _applyClassPeculiarityMechanics() {
     if (!classeNome || !window.CLASS_PECULIARITIES || !window.CLASS_PECULIARITIES[classeNome]) return;
 
     for (const pec of window.CLASS_PECULIARITIES[classeNome]) {
-        if (pec.mecanicas) {
-            for (const mech of pec.mecanicas) {
-                applyMechanicToSheet(mech, pec);
-            }
-        }
-        // Aura from class peculiarity
-        if (pec.auraVinculadaId && window.AURAS) {
-            const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
-            if (auraDef) {
-                const grau = pec.auraGrauConcedido || 1;
-                if (!state.auras) state.auras = {};
-                const existing = state.auras[pec.auraVinculadaId];
-                if (!existing || existing.grauDesbloqueado < grau) {
-                    state.auras[pec.auraVinculadaId] = { grauDesbloqueado: grau, fonte: 'peculiaridade', fonteId: pec.id };
-                }
-            }
-        }
+        _aplicarPecUmaVez(pec);
     }
 }
 
@@ -1340,23 +1336,7 @@ function _applyTribePeculiarityMechanics() {
     if (!triboNome || !window.TRIBES || !window.TRIBES[triboNome]) return;
 
     for (const pec of window.TRIBES[triboNome].peculiaridades) {
-        if (pec.mecanicas) {
-            for (const mech of pec.mecanicas) {
-                applyMechanicToSheet(mech, pec);
-            }
-        }
-        // Aura from tribe peculiarity
-        if (pec.auraVinculadaId && window.AURAS) {
-            const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
-            if (auraDef) {
-                const grau = pec.auraGrauConcedido || 1;
-                if (!state.auras) state.auras = {};
-                const existing = state.auras[pec.auraVinculadaId];
-                if (!existing || existing.grauDesbloqueado < grau) {
-                    state.auras[pec.auraVinculadaId] = { grauDesbloqueado: grau, fonte: 'peculiaridade', fonteId: pec.id };
-                }
-            }
-        }
+        _aplicarPecUmaVez(pec);
     }
 }
 
@@ -1375,24 +1355,7 @@ function _applyIndividualPeculiarityMechanics() {
     }).filter(Boolean);
 
     for (const pec of indPecs) {
-        if (pec.mecanicas) {
-            for (const mech of pec.mecanicas) {
-                applyMechanicToSheet(mech, pec);
-            }
-        }
-        
-        // Aura from individual peculiarity
-        if (pec.auraVinculadaId && window.AURAS) {
-            const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
-            if (auraDef) {
-                const grau = pec.auraGrauConcedido || 1;
-                if (!state.auras) state.auras = {};
-                const existing = state.auras[pec.auraVinculadaId];
-                if (!existing || existing.grauDesbloqueado < grau) {
-                    state.auras[pec.auraVinculadaId] = { grauDesbloqueado: grau, fonte: 'peculiaridade', fonteId: pec.id };
-                }
-            }
-        }
+        _aplicarPecUmaVez(pec);
     }
 }
 

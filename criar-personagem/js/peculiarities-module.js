@@ -41,6 +41,21 @@ function atualizarContadoresAvulsas() {
     }
 }
 
+/* Tirar a peculiaridade herdada da vitrine não basta: o jogador pode tê-la
+   comprado como avulsa ANTES de escolher a classe/raça/tribo que a concede, ou
+   voltado no wizard e trocado a classe. A escolha velha fica no estado e chega
+   na ficha como peculiaridade dobrada — que soma as mecânicas duas vezes.
+   Quem herda já muda o nível pelo card de Herdadas; o EXP pago volta. */
+function purgarAvulsasHerdadas(idsHerdados) {
+    const sel = wizardState.peculiaridadesIndividuais || [];
+    const dobradas = sel.filter(p => p && idsHerdados.has(p.id));
+    if (dobradas.length === 0) return;
+
+    wizardState.peculiaridadesIndividuais = sel.filter(p => !dobradas.includes(p));
+    for (const p of dobradas) ExpTracker.removeSource('pec_' + p.id);
+    saveWizardToStorage();
+}
+
 function initPhase2B(container) {
     try {
         let html = createNarratorBox(NARRADOR_TEXTOS.peculiaridades);
@@ -87,6 +102,7 @@ function initPhase2B(container) {
         // Domínio herdado da classe é o MESMO doc que a avulsa: sem este filtro o
         // Guerreiro compra de novo o próprio Domínio e leva o teto em dobro.
         const idsHerdados = new Set(pecsHerdadas.map(h => h.pec.id).filter(Boolean));
+        purgarAvulsasHerdadas(idsHerdados);
         const indPecs = (window.INDIVIDUAL_PECULIARITIES || []).filter(p => !idsHerdados.has(p.id));
         const savedPecs = wizardState.peculiaridadesIndividuais || [];
 
