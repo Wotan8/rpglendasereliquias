@@ -56,17 +56,21 @@ const fila = criarFilaDeEscrita({
 // ===== Registros do sistema (nomes de perícias, VDs, módulos, peculiaridades) =====
 // Mesmo cache do modal de NPC do Painel do Mestre (window._npcSys): abrir os
 // dois não carrega nada duas vezes. ~10 leituras de coleção, uma vez por sessão.
-let _sys = null, _resolveMod = null, _calcNpc = null;
+let _sys = null, _resolveMod = null, _calcNpc = null, _golpes = null;
 async function carregarSys() {
     if (_sys) return _sys;
     // O motor de cálculo vem junto: os golpes do NPC saem de calcularNpc — a
     // MESMA conta do modal do Painel do Mestre (?v igual = mesma instância).
+    // item-scope-calc é script clássico (só window.*): o import executa e
+    // publica computeGolpesDesarmados — a MESMA função da tabela da ficha.
     const [m, eng] = await Promise.all([
         import('../../painel-mestre/js/npc-system-data.js'),
         import('../../painel-mestre/js/npc-calc-engine.js?v=1.8'),
+        import('../../ficha-v1.7_1/js/item-scope-calc.js'),
     ]);
     _resolveMod = m.resolveNpcClassModule;
     _calcNpc = eng.calcularNpc;
+    _golpes = window.computeGolpesDesarmados;
     _sys = await m.ensureNpcSystemData();
     return _sys;
 }
@@ -422,7 +426,10 @@ function slotsDoCorpo(partes) {
         const qtd = Math.max(1, parseInt(bp.slots) || 1);
         for (let i = 0; i < qtd; i++) {
             const k = qtd > 1 ? `${bp.id}_${i + 1}` : bp.id;
-            slots[k] = { label: qtd > 1 ? `${bp.nome} ${i + 1}` : bp.nome, icon: bp.icone || '🦴', partId: bp.id };
+            // `parte`/`podeGolpear` são o que computeGolpesDesarmados espera:
+            // o nome da parte funde "Mão 1"/"Mão 2" numa linha ×2 de golpe.
+            slots[k] = { label: qtd > 1 ? `${bp.nome} ${i + 1}` : bp.nome, icon: bp.icone || '🦴',
+                partId: bp.id, parte: bp.nome, podeGolpear: !!bp.podeGolpear };
         }
     }
     return slots;
@@ -835,26 +842,33 @@ function propDoItem(i, prop) {
     return isNaN(n) ? 0 : n;
 }
 
-/** Ref de equação no contexto do personagem. O prefixo "Perícia:" resolve SÓ
- *  como perícia (fonte sem derivedTotals) — é ele que separa a perícia de um
- *  VD homônimo; cair no lookup geral pegaria o VD. */
-function refChar(win, ch, ref, item) {
+/** Ref de equação no contexto do DONO da janela (personagem ou NPC).
+ *  O prefixo "Perícia:" resolve SÓ como perícia — é ele que separa a perícia
+ *  de um VD homônimo; cair no lookup geral pegaria o VD. NPC guarda perícia
+ *  em periciasEstruturadas (refId+nível), que valorComponente não conhece. */
+function refFonte(win, fonte, ref, item) {
     if (!ref) return 0;
-    if (ref === 'Nível') return Number(ch.nivel) || 0;
+    if (ref === 'Nível') return Number(fonte.nivel) || 0;
     if (ref.startsWith('Item: ')) return propDoItem(item, ref.slice(6));
     if (ref.startsWith('Projétil: ')) {
         const p = (win.itens || []).find(x => x.id === item?.projetilId);
         return p ? propDoItem(p, ref.slice(10)) : 0;
     }
-    if (ref.startsWith('Perícia: ')) return valorComponente(ref.slice(9), { dots: ch.dots, pericias: ch.pericias }) ?? 0;
-    return valorComponente(ref, ch) ?? 0;
+    if (ref.startsWith('Perícia: ')) {
+        const nome = ref.slice(9);
+        const s = (_sys?.skills || []).find(x => x.nome === nome);
+        const ps = s && (fonte.periciasEstruturadas || []).find(p => p.refId === s.id);
+        if (ps) return ps.nivel || 0;
+        return valorComponente(nome, { dots: fonte.dots, pericias: fonte.pericias }) ?? 0;
+    }
+    return valorComponente(ref, fonte) ?? 0;
 }
 
 /** Equação de Valor de um vínculo, com o item em escopo (mesmas ops do motor). */
-function eqChar(win, ch, eq, item) {
+function eqFonte(win, fonte, eq, item) {
     // ponytail: termo 'sort' vale o mínimo — sortear a cada repinte faria o número dançar na tela
     const termo = (t) => !t ? 0
-        : t.tipo === 'ficha' ? refChar(win, ch, t.ref, item)
+        : t.tipo === 'ficha' ? refFonte(win, fonte, t.ref, item)
         : t.tipo === 'sort' ? Math.min(parseFloat(t.min) || 0, parseFloat(t.max) || parseFloat(t.min) || 0)
         : parseFloat(t.valor) || 0;
     let r = termo(eq[0]);
@@ -872,8 +886,40 @@ function eqChar(win, ch, eq, item) {
     return r;
 }
 
-/** Golpes do NPC: porItem do motor, cacheado por identidade (os snapshots
- *  trocam o objeto do NPC e o array de itens — identidade nova = reconta). */
+/** Linhas de golpe DESARMADO — computeGolpesDesarmados, a MESMA função da
+ *  tabela da ficha: parte com podeGolpear e slot livre vira golpe 1d4, e
+ *  partes idênticas fundem numa linha só com ×N (Mão 1/Mão 2 → "Mão ×2").
+ *  `dvsCtx`/`derived` chegam na MESMA chave: o personagem usa normChave(nome)
+ *  contra derivedTotals; o NPC usa a key do registro contra os finais do motor. */
+function linhasDesarmado(win, fonte, dvsCtx, derived) {
+    if (!_golpes) return [];
+    const partes = partesDoCorpo(win);
+    const bodySlots = slotsDoCorpo(partes);
+    if (!Object.values(bodySlots).some(s => s.podeGolpear)) return [];
+    const ES = window.EquipSlots;
+    const ocupados = (win.itens || []).filter(i => i.equipado)
+        .flatMap(i => ES ? ES.slotsDoItem(i) : [i.slotAnatomico]).filter(Boolean);
+    // Vínculos de VD da própria parte ("golpe desta parte", do registro de
+    // Partes do Corpo): a Perna sobe o chute sem mexer no soco.
+    const parteBonuses = {};
+    const keyDe = new Map(dvsCtx.map(d => [d.id, d.key]));
+    for (const bp of partes) {
+        for (const v of (bp.valoresDerivadosVinculados || [])) {
+            const k = keyDe.get(v.id || v);
+            if (!k) continue;
+            const val = (Array.isArray(v.equacao) && v.equacao.length)
+                ? eqFonte(win, fonte, v.equacao, null) : (Number(v.modificador) || 0);
+            if (!val) continue;
+            const bag = parteBonuses[bp.id] = parteBonuses[bp.id] || {};
+            bag['DERIVED:' + k] = (bag['DERIVED:' + k] || 0) + val;
+        }
+    }
+    return _golpes({ derivedValues: dvsCtx, derived, bodySlots, slotsOcupados: ocupados, parteBonuses });
+}
+
+/** Golpes do NPC: porItem do motor + desarmados, cacheado por identidade (os
+ *  snapshots trocam o objeto do NPC e o array de itens — identidade nova =
+ *  reconta). */
 function linhasAtaqueNpc(win, n) {
     if (win._atkNpc === n && win._atkItens === win.itens) return win._atkLinhas;
     let linhas = [];
@@ -883,10 +929,15 @@ function linhasAtaqueNpc(win, n) {
             // `origemTemplateId` e perderia dano e vínculos em silêncio.
             const itens = (win.itens || []).map(i =>
                 (!i.modeloId && i.origemTemplateId) ? { ...i, modeloId: i.origemTemplateId } : i);
-            linhas = (_calcNpc(n, _sys, { items: itens }).porItem || []).map(l => ({
+            const r = _calcNpc(n, _sys, { items: itens });
+            linhas = (r.porItem || []).map(l => ({
                 nome: l.nome, estadoEquip: ESTADO_EQUIP[l.estadoEquip] || l.estadoEquip || '',
                 dano: l.dano, canais: [], colunas: l.colunas || [],
+                tipoGolpe: window.getItemTipoGolpe?.(itens.find(x => x.id === l.itemId), _sys.equipment) || null,
             }));
+            const finais = {};
+            for (const [k, d] of Object.entries(r.derived || {})) finais[k] = d.final;
+            linhas.push(...linhasDesarmado(win, n, _sys.derivedValues, finais));
         } catch (e) { console.warn('golpes do NPC', e); }
     }
     win._atkNpc = n; win._atkItens = win.itens; win._atkLinhas = linhas;
@@ -907,7 +958,7 @@ function linhasAtaqueChar(win, ch) {
             if (!def || !def.escopoItem) continue;   // vínculo global: a ficha já somou em derivedTotals
             if (v.escopo === 'global') continue;      // idem — forçado ao total pelo cadastro
             const val = (Array.isArray(v.equacao) && v.equacao.length)
-                ? eqChar(win, ch, v.equacao, i) : (Number(v.modificador) || 0);
+                ? eqFonte(win, ch, v.equacao, i) : (Number(v.modificador) || 0);
             if (!val) continue;
             const k = normChave(def.nome);
             delta[k] = (delta[k] || 0) + val;
@@ -934,21 +985,36 @@ function linhasAtaqueChar(win, ch) {
 
         if (dano || colunas.some(c => c.bonus !== 0)) {
             linhas.push({ nome: i.nome || 'Item', estadoEquip: ESTADO_EQUIP[i.estadoEquip] || '',
-                dano, canais: formula ? canais : [], colunas });
+                dano, canais: formula ? canais : [], colunas,
+                tipoGolpe: window.getItemTipoGolpe?.(i, _sys.equipment) || null });
         }
     }
+    const dvsCtx = _sys.derivedValues.map(d => ({ ...d, key: normChave(d.nome) }));
+    linhas.push(...linhasDesarmado(win, ch, dvsCtx, dt));
     return linhas;
 }
 
 function htmlAtaques(win, fonte) {
     const linhas = win.tipo === 'npc' ? linhasAtaqueNpc(win, fonte) : linhasAtaqueChar(win, fonte);
-    const html = linhas.map(l => `<div class="tb-fwin-atk eq">
-        <span class="tb-fwin-atk-nome">✊ ${esc(l.nome)}${l.estadoEquip ? ` <i class="tb-fwin-atk-est">${esc(l.estadoEquip)}</i>` : ''}</span>
-        ${l.colunas.filter(c => c.bonus !== 0).map(c =>
-            `<span class="tb-fwin-canal" title="${esc(`${c.nome}: base ${fmtN(c.base)} ${c.bonus >= 0 ? '+' : '−'} ${fmtN(Math.abs(c.bonus))} (item)`)}">${esc(c.icone || '🎯')} ${esc(c.nome)} <b>${esc(String(c.prefixo || ''))}${fmtN(c.total)}${esc(String(c.sufixo || ''))}</b></span>`).join('')}
-        ${l.dano ? `<b class="tb-fwin-atk-dano" title="Fórmula de dano">💥 ${esc(l.dano)}</b>` : ''}
+    const html = linhas.map(l => {
+        // Item: chip só onde ELE mete a mão (bônus ≠ 0) — o global mora em 📊.
+        // Desarmado: o punho não tem vínculo próprio, o acerto dele É o VD
+        // global (FOR + Briga, Livro 6.3) — mostra o que for ≠ 0.
+        const chips = l.colunas
+            .filter(c => l.desarmado ? (c.bonus !== 0 || c.total !== 0) : c.bonus !== 0)
+            .map(c => `<span class="tb-fwin-canal" title="${esc(`${c.nome}: base ${fmtN(c.base)} ${c.bonus >= 0 ? '+' : '−'} ${fmtN(Math.abs(c.bonus))} (${l.desarmado ? 'parte' : 'item'})`)}">${esc(c.icone || '🎯')} ${esc(c.nome)} <b>${esc(String(c.prefixo || ''))}${fmtN(c.total)}${esc(String(c.sufixo || ''))}</b></span>`)
+            .join('');
+        const nome = l.desarmado ? `${l.nome}${l.qtd > 1 ? ` ×${l.qtd}` : ''}` : l.nome;
+        const rotulo = l.desarmado ? '👊 Desarmado' : l.estadoEquip;
+        const tg = l.tipoGolpe;
+        return `<div class="tb-fwin-atk eq">
+        <span class="tb-fwin-atk-nome">${l.desarmado ? esc(l.icone || '👊') : '✊'} ${esc(nome)}${rotulo ? ` <i class="tb-fwin-atk-est">${esc(rotulo)}</i>` : ''}</span>
+        ${chips}
+        ${l.dano ? `<b class="tb-fwin-atk-dano" title="Fórmula de dano${tg ? ` — barrado pela Blindagem ${tg.nome} do alvo` : ''}">💥 ${esc(l.dano)}</b>` : ''}
+        ${tg ? `<i class="tb-fwin-atk-est" title="Barrado pela Blindagem ${esc(tg.nome)} do alvo">${esc(tg.icone)} ${esc(tg.nome)}</i>` : ''}
         ${(l.canais || []).map(c => `<span class="tb-fwin-canal" title="${esc(c.nome)}">${esc(c.icone || '💥')}${fmtN(c.total)}</span>`).join('')}
-    </div>`).join('');
+    </div>`;
+    }).join('');
 
     // Arsenal fora de uso: arma carregada mas sem efeitos ativos — só a fórmula
     const guardadas = (win.itens || [])
