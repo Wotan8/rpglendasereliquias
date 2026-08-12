@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — Inventário da Ficha de NPC</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/area-npcs.css">
+<link rel="stylesheet" href="../shared/inventario-motor.css">
+<style>
+  body { margin: 0; padding: 16px; font: 14px/1.6 Inter, system-ui, sans-serif; }
+  .col { display: grid; grid-template-columns: 460px 1fr; gap: 16px; align-items: start; }
+  table { border-collapse: collapse; font: 11px ui-monospace, monospace; width: 100%; }
+  td { border: 1px solid var(--lr-border); padding: 2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight: 700; }
+  #placar { font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--lr-border); }
+  h1 { font-size: 1rem; margin: 0 0 4px; } p { margin: 0 0 10px; color: var(--lr-text-2); font-size: .8rem; }
+</style></head>
+<body>
+<div class="col">
+  <div>
+    <h1>🎒 Inventário da Ficha de NPC — motor compartilhado</h1>
+    <p>Mesma lista da Ficha de Combate do Tabuleiro, com os botões do Mestre.
+       Sem Firestore: os itens são semeados na mão e só a pintura/interação local
+       é exercitada (equipar e mover gravam, e aqui só se confere que chamam).</p>
+    <table id="saida"></table>
+    <div id="placar"></div>
+  </div>
+  <div class="npcv2-card">
+    <div class="npcv2-block-title">🎒 Itens do NPC
+      <span class="npcv2-hint">clique na linha para abrir · arraste ⠿</span>
+    </div>
+    <div id="npcInventoryList"></div>
+  </div>
+</div>
+
+<script type="module">
+import { renderNpcInventoryList } from './js/npc-inventario.js?c=2';
+
+const linhas = [];
+let ok = 0;
+const teste = (nome, passou) => { linhas.push([nome, passou]); if (passou) ok++; };
+const $ = (s, r = document) => r.querySelector(s);
+
+// ---- semeadura ----
+window.F = { npc: { id: 'npc-teste', nome: 'Hesk, o Cinza', partesDoCorpo: [
+    { id: 'bp-mao', nome: 'Mão', icone: '🤚', slots: 2, podeEmpunhar: true },
+    { id: 'bp-torso', nome: 'Torso', icone: '🧍', slots: 1, podeVestir: true },
+] } };
+const itens = [
+    { id: 'i1', nome: 'Punhal', tipo: 'Arma', peso: 1, equipado: true, estadoEquip: 'empunhado', slotAnatomico: 'bp-mao_1', formulaDano: '1d4' },
+    { id: 'i2', nome: 'Poção Vermelha', tipo: 'Consumível', peso: 0.5, quantidade: 4 },
+    { id: 'c1', nome: 'Bolsa de Couro', tipo: 'Container', peso: 1, ehContainer: true, multiplicadorPressao: 0.5, pesoMaximoContainer: 8 },
+    { id: 'f1', nome: 'Flechas', tipo: 'Projétil', peso: 0.05, quantidade: 12, parentItemId: 'c1' },
+];
+window._npcInv.items = itens;
+renderNpcInventoryList();
+
+const lista = $('#npcInventoryList');
+
+// ---- T1..T4: estrutura ----
+teste('T1 · lista montada com as duas seções e a raiz de soltar',
+    !!$('.lr-inv[data-drop="root"]', lista) && !!$('[data-sec="eq"]', lista) && !!$('[data-sec="soltos"]', lista));
+teste('T2 · Punhal em Equipados com estado e slot legível ("Mão 1", não a chave)',
+    $('[data-sec="eq"] .lr-inv-item-meta', lista)?.textContent.includes('Empunhado · Mão 1'));
+teste('T3 · pressão dos equipados = 1',
+    $('.lr-inv-pressao', lista)?.textContent.replace(/\s+/g, ' ').includes('Pressão (equipados): 1'));
+teste('T4 · Flechas escondidas: o contêiner nasce fechado',
+    !$('[data-toggleitem="f1"]', lista));
+
+// ---- T5: botões do Mestre em toda linha (o acréscimo sobre o Tabuleiro) ----
+const acoes = $('[data-toggleitem="i2"] .lr-inv-acoes', lista);
+teste('T5 · cada linha traz editar / transferir / excluir',
+    acoes?.querySelectorAll('[data-npcitem]').length === 3
+    && !!acoes.querySelector('[data-npcitem="editar"]'));
+
+// ---- T6: clique no botão do Mestre NÃO expande o item ----
+let chamou = null;
+window.openNpcItemForm = (id) => { chamou = id; };
+$('[data-toggleitem="i2"] [data-npcitem="editar"]', lista).click();
+teste('T6 · clique em ✏️ abre o formulário do item e não expande a linha',
+    chamou === 'i2' && !$('.lr-inv-item-det', lista));
+
+// ---- T7: clique na linha expande o detalhe completo ----
+$('[data-toggleitem="i1"] .lr-inv-item-info', lista).click();
+const det = $('.lr-inv-item-det', lista);
+teste('T7 · clique na linha expande tipo, dano, pressão e estado de equipe',
+    !!det && det.textContent.includes('1d4') && det.textContent.includes('Empunhado · Mão 1'));
+
+// ---- T8: chevron abre o contêiner e revela o conteúdo indentado ----
+$('[data-conttoggle="c1"]', lista).click();
+const filho = $('[data-toggleitem="f1"]', lista);
+teste('T8 · chevron abre a Bolsa e as Flechas saem indentadas',
+    !!filho && filho.classList.contains('dentro'));
+
+// ---- T9: stepper só onde faz sentido ----
+teste('T9 · Arma e contêiner sem stepper; Poção e Flechas com',
+    !$('[data-toggleitem="i1"] [data-qdelta]', lista) && !$('[data-toggleitem="c1"] [data-qdelta]', lista)
+    && !!$('[data-toggleitem="i2"] [data-qdelta]', lista) && !!$('[data-toggleitem="f1"] [data-qdelta]', lista));
+
+// ---- T10: alça de arrasto em toda linha, pronta para o toque ----
+const grabs = lista.querySelectorAll('[data-grab]');
+teste('T10 · toda linha tem alça ⠿ com touch-action:none (arrasto no celular)',
+    grabs.length === 4 && getComputedStyle(grabs[0]).touchAction === 'none');
+
+// ---- T11: arrastar Solto sobre a seção Equipados acende o alvo ----
+const pev = (t, x, y) => new PointerEvent(t, { pointerId: 9, clientX: x, clientY: y, bubbles: true });
+const centro = (el) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+const grabPocao = $('[data-grab="i2"]', lista);
+const p0 = centro(grabPocao);
+grabPocao.dispatchEvent(pev('pointerdown', p0.x, p0.y));
+const fantasma = !!$('.lr-inv-ghost');
+const secEq = $('[data-sec="eq"]', lista);
+const pEq = centro($('.lr-inv-sec', secEq));
+grabPocao.dispatchEvent(pev('pointermove', pEq.x, pEq.y));
+const acendeu = secEq.classList.contains('lr-inv-alvo');
+grabPocao.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 9, bubbles: true }));
+teste('T11 · arrasto: fantasma segue e a seção Equipados acende como alvo',
+    fantasma && acendeu && !$('.lr-inv-ghost') && !secEq.classList.contains('lr-inv-alvo'));
+
+// ---- T12: soltar sobre o contêiner chama mover (não grava aqui) ----
+let mov = null;
+window._npcInv.ctx.acoes.mover = (id, alvo) => { mov = [id, alvo]; };
+const p1 = centro(grabPocao);
+grabPocao.dispatchEvent(pev('pointerdown', p1.x, p1.y));
+const pCont = centro($('[data-toggleitem="c1"] .lr-inv-item-info', lista));
+grabPocao.dispatchEvent(pev('pointermove', pCont.x, pCont.y));
+grabPocao.dispatchEvent(pev('pointerup', pCont.x, pCont.y));
+teste('T12 · soltar a Poção na Bolsa pede para mover para dentro dela',
+    mov?.[0] === 'i2' && mov?.[1] === 'cont:c1');
+
+// ---- T13: bloco de anatomia recolhido por padrão ----
+const dobra = document.createElement('details');
+dobra.className = 'npcv2-card npcv2-dobra';
+dobra.innerHTML = '<summary class="npcv2-block-title">🦴 Partes do Corpo</summary><div id="alvoDobra">x</div>';
+document.body.appendChild(dobra);
+// details fechado no Chrome usa content-visibility, não display:none —
+// offsetParent mente aqui, checkVisibility() é quem diz a verdade.
+const fechado = !$('#alvoDobra').checkVisibility();
+const marcadorFechado = getComputedStyle($('summary', dobra), '::before').content;
+$('summary', dobra).click();
+teste('T13 · 🦴 Partes do Corpo nasce recolhido e o clique no título abre',
+    fechado && dobra.open && $('#alvoDobra').checkVisibility()
+    && marcadorFechado.includes('▸') && getComputedStyle($('summary', dobra), '::before').content.includes('▾'));
+dobra.remove();
+
+// ---- placar ----
+$('#saida').innerHTML = linhas.map(([n, p]) =>
+    `<tr><td>${n}</td><td class="${p ? 'ok' : 'fail'}">${p ? 'PASS' : 'FAIL'}</td></tr>`).join('');
+$('#placar').textContent = `${ok === linhas.length ? '✅' : '❌'} ${ok}/${linhas.length} — inventário da ficha de NPC`;
+$('#placar').className = ok === linhas.length ? 'ok' : 'fail';
+</script>
+</body></html>

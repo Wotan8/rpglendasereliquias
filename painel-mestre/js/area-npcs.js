@@ -708,10 +708,12 @@ function buildNpcForm() {
 
     <!-- ============ SEÇÃO: INVENTÁRIO ============ -->
     <div class="npcv2-section" id="npcSec_inventario">
-        <div class="npcv2-card">
-            <div class="npcv2-block-title">🦴 Partes do Corpo &amp; Slots
+        <!-- Anatomia: mexe-se nela uma vez e pronto — fica recolhida para o
+             inventário, que é o trabalho do dia a dia, ficar em primeiro. -->
+        <details class="npcv2-card npcv2-dobra">
+            <summary class="npcv2-block-title">🦴 Partes do Corpo &amp; Slots
                 <span class="npcv2-hint">NPCs comuns usam a anatomia padrão (humanoide); criaturas podem ter anatomias personalizadas</span>
-            </div>
+            </summary>
             <div class="npcv2-pec-add" style="margin-top:0;margin-bottom:8px">
                 <button class="btn btn-secondary btn-small" onclick="npcApplyDefaultBodyParts()" title="Aplica as partes marcadas como padrão no Painel de Criador (mesmas de Humano)">🧍 Aplicar Padrão Humanoide</button>
                 <select class="form-select" id="npcBodyPartPicker" style="max-width:220px"></select>
@@ -719,11 +721,12 @@ function buildNpcForm() {
                 <button class="btn btn-secondary btn-small" onclick="npcAddBodyPartCustom()">✏️ Parte personalizada</button>
             </div>
             <div id="npcBodyPartsList"></div>
-        </div>
+        </details>
 
         <div class="npcv2-card">
             <div class="npcv2-block-title">🎒 Itens do NPC
-                <span class="npcv2-hint">criação e gerenciamento completo — os itens ficam na coleção de itens e podem ser transferidos</span>
+                <span class="npcv2-hint">clique na linha para abrir · arraste ⠿ para equipar, guardar ou juntar</span>
+                <button class="btn btn-success btn-small" style="margin-left:auto" onclick="window.openNpcItemForm(null)">➕ Criar Item</button>
             </div>
             <div id="npcInventoryList"></div>
         </div>

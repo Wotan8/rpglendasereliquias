@@ -4,27 +4,21 @@
 // anatomia/slots do NPC e transferências (NPC ⇄ NPC / Personagem / Caixa).
 // Respeita a lógica de logs do painel (addLog → coleção 'logs').
 // =============================================
-import { db, collection, getDocs, getDoc, setDoc, deleteDoc, doc, query, where } from './firebase-config.js';
+import { db, collection, getDocs, getDoc, setDoc, deleteDoc, doc, query, where, updateDoc, writeBatch } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { buildMechanicSelectorHTML } from '../../painel-criador/js/painel-mechanics.js';
+import {
+    EMOJI_TIPO, ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
+    htmlInventario, tratarClique, iniciarArrasto,
+} from '../../shared/inventario-motor.js';
 
-const TIPO_EMOJI_MAP = {
-    'Arma': '⚔️', 'Vestimenta': '🧥', 'Acessório': '💍', 'Projétil': '🎯',
-    'Container': '📦', 'Objeto': '📦', 'Consumível': '🧪', 'Relíquia': '✨'
-};
-const _emoji = t => TIPO_EMOJI_MAP[t] || '📦';
+const _emoji = t => EMOJI_TIPO[t] || '📦';
 
-const EQUIP_STATES = {
-    empunhado: { label: 'Empunhado', icon: '✊' },
-    segurar:   { label: 'Segurado',  icon: '🖐️' },
-    vestido:   { label: 'Vestido',   icon: '👕' },
-    fixado:    { label: 'Fixado',    icon: '📌' }
-};
-
-// Estado local
-const NI = { items: [], loadedFor: null };
+// Estado local. `abertos`/`contAbertos` são do motor de inventário
+// (shared/inventario-motor.js), o mesmo da Ficha de Combate do Tabuleiro.
+const NI = { items: [], loadedFor: null, abertos: new Set(), contAbertos: new Set(), ctx: null };
 window._npcInv = NI;
 
 function _F() { return window.F || {}; }
@@ -209,6 +203,8 @@ export async function loadNpcInventory() {
         const q = query(collection(db, 'items'), where('characterId', '==', npcId));
         const snap = await getDocs(q);
         const items = []; snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+        items.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        if (NI.loadedFor !== npcId) { NI.abertos.clear(); NI.contAbertos.clear(); }
         NI.items = items; NI.loadedFor = npcId;
         renderNpcInventoryList();
         // Reavaliar mecânicas com Verificação de Equipamento (booleano / cond. encadeada)
@@ -220,72 +216,156 @@ export async function loadNpcInventory() {
 }
 window.loadNpcInventory = loadNpcInventory;
 
-function _itemPressure(item) {
-    const base = item.pressaoOverride != null ? item.pressaoOverride
-        : (item.pressaoBase != null ? item.pressaoBase : (item.peso || 0));
-    if (item.ehContainer) {
-        const inside = NI.items.filter(i => i.parentItemId === item.id);
-        const w = inside.reduce((s, i) => s + ((i.peso || 0) * Math.max(1, parseInt(i.quantidade) || 1)), 0);
-        return base + (w * (item.multiplicadorPressao || 1));
-    }
-    return base * Math.max(1, parseInt(item.quantidade) || 1);
-}
-
-function renderNpcInventoryList() {
+/**
+ * Contexto do motor de inventário — mesmo motor da Ficha de Combate do
+ * Tabuleiro (shared/inventario-motor.js). O que muda aqui: além de arrastar,
+ * cada linha traz os botões do Mestre (editar / transferir / excluir), e toda
+ * escrita passa pelo log do painel.
+ */
+function _ctxInventario() {
     const listEl = document.getElementById('npcInventoryList');
-    const n = _npc();
-    if (!listEl || !n) return;
+    if (!listEl) return null;
+    if (NI.ctx && NI.ctx.raiz === listEl) return NI.ctx;
 
-    const top = NI.items.filter(i => !i.parentItemId);
-    const equipped = top.filter(i => i.equipado);
-    const loose = top.filter(i => !i.equipado);
-    const pressao = equipped.reduce((s, i) => s + _itemPressure(i), 0);
-    const slots = _npcBodySlots(n.partesDoCorpo);
-
-    const row = (item, isEq) => {
-        const img = item.imagem || item.imagemUrl;
-        const slotLbl = isEq && item.slotAnatomico ? (slots[item.slotAnatomico]?.label || item.slotAnatomico) : '';
-        const estado = isEq && item.estadoEquip ? (EQUIP_STATES[item.estadoEquip]?.label || item.estadoEquip) : '';
-        return `<div class="inv-item-row ${isEq ? 'inv-equipped' : ''}" style="display:flex;align-items:center;padding:8px;gap:6px">
-            ${img ? `<img src="${escapeHtml(img)}" style="max-height:1.5em;border-radius:4px;object-fit:contain">` : `<span>${_emoji(item.tipo)}</span>`}
-            <div class="inv-item-info" style="flex:1">
-                <span class="inv-item-name">${escapeHtml(item.nome || 'Sem nome')}</span>
-                <span class="inv-item-meta">${escapeHtml(item.tipo || '')} | Peso: ${parseFloat(item.peso || 0).toFixed(2)}${slotLbl ? ' | ' + escapeHtml(slotLbl) : ''}${estado ? ' | ' + estado : ''}</span>
-            </div>
-            <span class="inv-badge inv-badge-qty">×${Math.max(1, parseInt(item.quantidade) || 1)}</span>
-            <div class="inv-item-actions" onclick="event.stopPropagation()" style="display:flex;gap:4px">
-                ${isEq
-                    ? `<button class="inv-btn" title="Desequipar" onclick="window.npcUnequipItem('${item.id}')">⬇️</button>`
-                    : `<button class="inv-btn" title="Equipar" onclick="window.openNpcEquipModal('${item.id}')">⬆️</button>`}
-                <button class="inv-btn" style="background:rgba(6,182,212,.12);color:var(--lr-arcane)" title="Transferir" onclick="window.openNpcTransferModal('${item.id}')">🔄</button>
-                <button class="inv-btn" style="background:rgba(139,92,246,.12);color:var(--primary)" title="Editar" onclick="window.openNpcItemForm('${item.id}')">✏️</button>
-                <button class="inv-btn inv-btn-delete" title="Excluir" onclick="window.deleteNpcItem('${item.id}')">🗑️</button>
-            </div>
-        </div>`;
+    NI.ctx = {
+        raiz: listEl,
+        get itens() { return NI.items; },
+        get sys() { return window._npcSys || window._systemData || null; },
+        abertos: NI.abertos,
+        contAbertos: NI.contAbertos,
+        dica: 'arraste ⠿: equipar/desequipar entre seções · guardar em contêiner · juntar pilha igual',
+        rotuloSlot: (k) => _npcBodySlots(_npc()?.partesDoCorpo)[k]?.label || k,
+        botoes: (i) => `
+            <button type="button" class="lr-inv-btn" title="Editar item" data-npcitem="editar" data-id="${escapeHtml(i.id)}">✏️</button>
+            <button type="button" class="lr-inv-btn" title="Transferir" data-npcitem="transferir" data-id="${escapeHtml(i.id)}">🔄</button>
+            <button type="button" class="lr-inv-btn perigo" title="Excluir" data-npcitem="excluir" data-id="${escapeHtml(i.id)}">🗑️</button>`,
+        repintar: renderNpcInventoryList,
+        acoes: {
+            equipar: (id) => window.openNpcEquipModal(id),
+            desequipar: (id) => window.npcUnequipItem(id),
+            mover: moverItemNpc,
+            fundir: fundirPilhasNpc,
+            qtd: setQtdNpc,
+        },
     };
 
-    let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span class="inv-badge" style="background:rgba(245,158,11,.15);color:var(--lr-gold);padding:3px 10px;border-radius:8px;font-size:.78rem;font-weight:700">⚖️ Pressão (equipados): ${pressao.toFixed(2)}</span>
-        <button class="btn btn-success btn-small" onclick="window.openNpcItemForm(null)">➕ Criar Item</button>
-    </div>`;
+    // Delegação: cliques do motor (expandir, contêiner, ±) e os botões do Mestre
+    listEl.addEventListener('click', e => {
+        const bt = e.target.closest('[data-npcitem]');
+        if (bt) {
+            const { npcitem, id } = bt.dataset;
+            if (npcitem === 'editar') window.openNpcItemForm(id);
+            else if (npcitem === 'transferir') window.openNpcTransferModal(id);
+            else if (npcitem === 'excluir') window.deleteNpcItem(id);
+            return;
+        }
+        tratarClique(NI.ctx, e);
+    });
+    listEl.addEventListener('pointerdown', e => {
+        const grab = e.target.closest?.('[data-grab]');
+        if (grab) iniciarArrasto(NI.ctx, grab, e);
+    });
+    return NI.ctx;
+}
 
-    html += `<div class="inv-section"><div class="inv-section-title">🎒 Equipados <span class="inv-section-count">${equipped.length}</span></div><div class="inv-section-grid">`;
-    html += equipped.length ? equipped.map(i => row(i, true)).join('') : '<div class="inv-empty-small">Nenhum item equipado</div>';
-    html += `</div></div>`;
+// exportado para __check-npc-inventario.html (pintar a lista sem Firestore)
+export function renderNpcInventoryList() {
+    const ctx = _ctxInventario();
+    if (!ctx || !_npc()) return;
+    ctx.raiz.innerHTML = htmlInventario(ctx);
+}
 
-    html += `<div class="inv-section" style="margin-top:12px"><div class="inv-section-title">📋 Itens Soltos <span class="inv-section-count">${loose.length}</span></div><div class="inv-section-grid">`;
-    html += loose.length ? loose.map(i => row(i, false)).join('') : '<div class="inv-empty-small">Nenhum item solto</div>';
-    html += `</div></div>`;
+/* ---- Ações de arrasto (mesmas do Tabuleiro, com o log do painel) ---- */
 
-    // Itens dentro de containers (visão simples)
-    const inside = NI.items.filter(i => i.parentItemId);
-    if (inside.length) {
-        html += `<div class="inv-section" style="margin-top:12px"><div class="inv-section-title">📂 Dentro de Containers <span class="inv-section-count">${inside.length}</span></div><div class="inv-section-grid">`;
-        html += inside.map(i => row(i, false)).join('');
-        html += `</div></div>`;
+/** ± na quantidade da pilha. */
+async function setQtdNpc(itemId, delta) {
+    const i = NI.items.find(x => x.id === itemId); if (!i) return;
+    const q = Math.max(1, qtdDe(i) + delta);
+    if (q === qtdDe(i)) return;
+    i.quantidade = q;              // otimista: a lista repinta na hora
+    renderNpcInventoryList();
+    try { await updateDoc(doc(db, 'items', itemId), { quantidade: q }); }
+    catch (e) { console.error(e); showAlert('❌ Erro: ' + e.message, 'danger'); await loadNpcInventory(); }
+}
+
+/** Soltar sobre pilha idêntica: soma as quantidades e junta. */
+async function fundirPilhasNpc(origemId, alvoId) {
+    const a = NI.items.find(x => x.id === origemId);
+    const b = NI.items.find(x => x.id === alvoId);
+    if (!a || !b) return;
+    const q = escolherQtd(a, `Juntar quantos "${a.nome || 'item'}" nesta pilha?`);
+    if (q == null) return;
+    const plano = dividirPilha(a, q);
+    const total = qtdDe(b) + plano.qtd;
+    try {
+        const lote = writeBatch(db);
+        lote.update(doc(db, 'items', b.id), { quantidade: total });
+        if (plano.move) lote.delete(doc(db, 'items', a.id));
+        else lote.update(doc(db, 'items', a.id), { quantidade: plano.restante });
+        await lote.commit();
+        _logItem(`🧺 ${plano.qtd}× "${a.nome || 'Item'}" juntado na pilha do NPC`, [
+            { label: 'Item', from: a.nome || origemId, to: b.nome || alvoId },
+            { label: 'Quantidade', from: String(qtdDe(b)), to: String(total) },
+        ]);
+        await loadNpcInventory();
+    } catch (e) { console.error(e); showAlert('❌ Erro: ' + e.message, 'danger'); }
+}
+
+/** Soltar em contêiner ('cont:<id>') ou fora dele ('root'). */
+async function moverItemNpc(itemId, alvo) {
+    const i = NI.items.find(x => x.id === itemId); if (!i) return;
+
+    if (alvo === 'root') {
+        if (!i.parentItemId) return;
+        try {
+            await updateDoc(doc(db, 'items', itemId), { parentItemId: null });
+            _logItem(`📤 Item "${i.nome || itemId}" tirado do contêiner`, [
+                { label: 'Item', from: i.nome || itemId, to: i.nome || itemId },
+                { label: 'Contêiner', from: 'dentro', to: '—' },
+            ]);
+            await loadNpcInventory();
+        } catch (e) { console.error(e); showAlert('❌ Erro: ' + e.message, 'danger'); }
+        return;
     }
 
-    listEl.innerHTML = html;
+    const contId = alvo.slice(5);
+    if (contId === itemId || i.parentItemId === contId) return;
+    const c = NI.items.find(x => x.id === contId); if (!c) return;
+    if (ehContainer(i)) { showAlert('⚠️ Contêiner não entra em contêiner', 'warning'); return; }
+
+    const q = escolherQtd(i, `Mover quantos "${i.nome || 'item'}" para ${c.nome || 'o contêiner'}?`);
+    if (q == null) return;
+    const plano = dividirPilha(i, q);
+    const dentro = { parentItemId: contId, equipado: false, estadoEquip: null, slotAnatomico: null, slotsOcupados: [] };
+    try {
+        if (plano.move) {
+            await updateDoc(doc(db, 'items', itemId), dentro);
+        } else {
+            // divide a pilha: o original fica com o resto, o clone entra no contêiner
+            const lote = writeBatch(db);
+            lote.update(doc(db, 'items', itemId), { quantidade: plano.restante });
+            const { id: _id, ...campos } = i;
+            const novoId = 'item-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+            lote.set(doc(db, 'items', novoId), { ...campos, id: novoId, quantidade: plano.qtd, ...dentro });
+            await lote.commit();
+        }
+        NI.contAbertos.add(contId);
+        _logItem(`📦 ${plano.qtd}× "${i.nome || 'Item'}" guardado em "${c.nome || 'contêiner'}"`, [
+            { label: 'Item', from: i.nome || itemId, to: i.nome || itemId },
+            { label: 'Contêiner', from: '—', to: c.nome || contId },
+            { label: 'Quantidade', from: String(qtdDe(i)), to: String(plano.qtd) },
+        ]);
+        await loadNpcInventory();
+    } catch (e) { console.error(e); showAlert('❌ Erro: ' + e.message, 'danger'); }
+}
+
+/** Log de inventário no padrão do painel (mesmos campos dos demais). */
+function _logItem(acao, changes) {
+    addLog(S.currentUser?.email, acao, _npcNome(), 'items', {
+        charId: _npcId(), mesaId: _npcMesaId() || S.currentMesaId || null,
+        category: 'Inventário',
+        changes: [{ label: 'NPC', from: _npcNome(), to: _npcNome() }, ...changes],
+    });
 }
 
 /* ===================================================================
@@ -550,10 +630,10 @@ window.openNpcEquipModal = function(itemId) {
     }).join('');
 
     const forma = item.formaEquipar;
-    const estadoOpts = Object.entries(EQUIP_STATES).map(([v, s]) => {
-        const map = { empunhado: 'empunhar', segurar: 'segurar', vestido: 'vestir', fixado: 'fixar' };
-        const bloqueado = forma && map[v] !== forma;
-        return `<option value="${v}" ${bloqueado ? 'disabled' : ''} ${!bloqueado && forma ? 'selected' : ''}>${s.icon} ${s.label}</option>`;
+    const estadoOpts = Object.entries(ESTADO_EQUIP).map(([v, rot]) => {
+        const [icone, formaDoEstado] = FORMA_EQUIP[v];
+        const bloqueado = forma && formaDoEstado !== forma;
+        return `<option value="${v}" ${bloqueado ? 'disabled' : ''} ${!bloqueado && forma ? 'selected' : ''}>${icone} ${rot}</option>`;
     }).join('');
 
     document.getElementById('npcEquipModal')?.remove();

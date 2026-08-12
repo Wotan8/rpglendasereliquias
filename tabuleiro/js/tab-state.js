@@ -649,13 +649,9 @@ export function patchVitalAtualNpc(atualObj, stat, valor) {
  * `move: true` = a pilha inteira vai (basta trocar o dono/pai do doc);
  * `move: false` = sai um clone com `qtd` e o doc original fica com `restante`.
  * Clampa em [1, total] — pedir 99 de 12 move os 12, pedir 0 move 1.
+ * Mora no motor de inventário: o Painel do Mestre divide pilha do mesmo jeito.
  */
-export function dividirPilha(item, qtd) {
-    const total = Math.max(1, parseInt(item?.quantidade) || 1);
-    const q = Math.max(1, Math.min(parseInt(qtd) || 1, total));
-    if (q >= total) return { move: true, qtd: total };
-    return { move: false, qtd: q, restante: total - q };
-}
+export { dividirPilha } from '../../shared/inventario-motor.js';
 
 // ===== DESLOCAMENTOS DA FICHA =====
 const DESLOC_LABEL = { DESLOC_TERRESTRE: 'Terrestre', DESLOC_AQUATICO: 'Aquático', DESLOC_VERTICAL: 'Vertical', DESLOC_AEREO: 'Aéreo' };

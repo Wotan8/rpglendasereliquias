@@ -4,6 +4,7 @@
 <title>__check — Janelas de Ficha de Combate</title>
 <link rel="stylesheet" href="../shared/tokens.css">
 <link rel="stylesheet" href="css/tabuleiro.css">
+<link rel="stylesheet" href="../shared/inventario-motor.css">
 <script src="../shared/equip-slots.js"></script>
 <style>
   html,body{margin:0;min-height:100%;background:#0b0e14;color:#e6e8ef;font:14px/1.6 Inter,system-ui,sans-serif}
@@ -210,8 +211,8 @@ async function rodar() {
         win1.itens.find(i => i.id === 'i2').quantidade === 4);
     teste('T13 · Arma e contêiner sem stepper de quantidade',
         !$$('[data-qdelta]', w1).some(b => b.dataset.item === 'i1' || b.dataset.item === 'i3'));
-    $('[data-toggleitem="i1"] .tb-fwin-item-info', w1).click();
-    const det = $('.tb-fwin-item-det', w1);
+    $('[data-toggleitem="i1"] .lr-inv-item-info', w1).click();
+    const det = $('.lr-inv-item-det', w1);
     teste('T14 · clique no item expande info completa (tipo, peso, dano do modelo, equipe)',
         det && txt(det).includes('Tipo:') && txt(det).includes('Peso:') &&
         txt(det).includes('1d6') && txt(det).includes('do modelo') && txt(det).includes('Empunhado'));
@@ -228,22 +229,22 @@ async function rodar() {
     grab.dispatchEvent(pev('pointerdown', pi.x, pi.y));
     const pMochila = centro($('[data-toggleitem="i3"]', w1));
     grab.dispatchEvent(pev('pointermove', pMochila.x, pMochila.y));
-    const ghostOk = !!$('.tb-fwin-ghost');
-    const alvoCont = $('[data-toggleitem="i3"]', w1).classList.contains('tb-fwin-drop-alvo');
+    const ghostOk = !!$('.lr-inv-ghost');
+    const alvoCont = $('[data-toggleitem="i3"]', w1).classList.contains('lr-inv-alvo');
     $('[data-toggleitem="i5"]', w1).scrollIntoView({ block: 'center' });
     const pIgual = centro($('[data-toggleitem="i5"]', w1));
     grab.dispatchEvent(pev('pointermove', pIgual.x, pIgual.y));
-    const alvoMerge = $('[data-toggleitem="i5"]', w1).classList.contains('tb-fwin-drop-alvo');
+    const alvoMerge = $('[data-toggleitem="i5"]', w1).classList.contains('lr-inv-alvo');
     grab.dispatchEvent(pev('pointermove', 4, 4));   // sobre o canvas
-    const modoMapa = $('.tb-fwin-ghost')?.classList.contains('no-mapa');
+    const modoMapa = $('.lr-inv-ghost')?.classList.contains('no-mapa');
     grab.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 7, bubbles: true }));
 
     // Equipar: Solto (Poção) arrastado sobre o CABEÇALHO de Equipados → soltar abre o picker
     const secEq = $('[data-sec="eq"]', w1);
     grab.dispatchEvent(pev('pointerdown', pi.x, pi.y));
-    const pe = centro($('.tb-fwin-inv-sec', secEq));
+    const pe = centro($('.lr-inv-sec', secEq));
     grab.dispatchEvent(pev('pointermove', pe.x, pe.y));
-    const alvoEq = secEq.classList.contains('tb-fwin-drop-alvo');
+    const alvoEq = secEq.classList.contains('lr-inv-alvo');
     grab.dispatchEvent(pev('pointerup', pe.x, pe.y));
     const picker = document.getElementById('tbFwinEquip');
     const optsSlot = picker ? [...picker.querySelectorAll('#tbEqSlot option')].map(o => ({ t: o.textContent.trim(), d: o.disabled })) : [];
@@ -252,15 +253,15 @@ async function rodar() {
     const grab1 = $('[data-grab="i1"]', w1);
     const p1 = centro(grab1);
     grab1.dispatchEvent(pev('pointerdown', p1.x, p1.y));
-    const ps = centro($('[data-sec="soltos"] .tb-fwin-inv-sec', w1));
+    const ps = centro($('[data-sec="soltos"] .lr-inv-sec', w1));
     grab1.dispatchEvent(pev('pointermove', ps.x, ps.y));
-    const alvoDeseq = $('[data-sec="soltos"]', w1).classList.contains('tb-fwin-drop-alvo');
+    const alvoDeseq = $('[data-sec="soltos"]', w1).classList.contains('lr-inv-alvo');
     grab1.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 7, bubbles: true }));
     saida.style.display = '';
     teste('T15 · arrasto por ponteiro: fantasma segue e contêiner acende como alvo', ghostOk && alvoCont);
     teste('T16 · pilha idêntica acende para JUNTAR quantidades', alvoMerge);
     teste('T17 · sobre o canvas o fantasma indica drop no mapa; cancelar limpa tudo',
-        modoMapa && !$('.tb-fwin-ghost'));
+        modoMapa && !$('.lr-inv-ghost'));
     teste('T17b · Solto → seção Equipados acende e soltar abre o picker de equipar (3 slots)',
         alvoEq && optsSlot.length === 3);
     teste('T17c · picker igual ao da ficha: Mão 1 (ocupada pelo Punhal) desabilitada, Mão 2 livre',

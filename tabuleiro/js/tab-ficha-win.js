@@ -27,6 +27,11 @@ import { pontoVisivelAgora } from './tab-fog.js';
 import { criarFilaDeEscrita } from './tab-write-queue.js';
 import { escolherCondicao } from './tab-combat.js';
 import { cenaAtiva, comCenaAtivaPatch } from '../../shared/combate-cenas.js';
+import {
+    ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, itensIdenticos, escolherQtd,
+    tplDoItem as tplDoItemMotor, formulaDanoDoItem as formulaDanoMotor, fmtN,
+    htmlInventario as htmlInvMotor, tratarClique as tratarCliqueInv, iniciarArrasto,
+} from '../../shared/inventario-motor.js';
 
 // Mesmo ritmo do painel de combate (ver CUSTOS-FIRESTORE.md): cliques rápidos
 // em ± não viram um write por clique.
@@ -158,6 +163,34 @@ function criarJanela(tipo, id, chave) {
         pendente: false, unsubItems: null,
     };
 
+    // Motor de inventário compartilhado com a Ficha de NPC do Painel do Mestre
+    // (shared/inventario-motor.js): ele desenha e detecta o alvo do arrasto;
+    // as escritas continuam aqui, no ritmo e nos docs do Tabuleiro.
+    win.inv = {
+        raiz: el,
+        get itens() { return win.itens || []; },
+        get sys() { return _sys; },
+        abertos: win.abertos,
+        contAbertos: win.contAbertos,
+        idCanvas: 'tbCanvas',
+        dica: 'arraste: equipar/desequipar entre seções · contêiner · pilha igual · mapa',
+        // Cache por repinte: a anatomia não muda no meio de uma lista
+        rotuloSlot: (k) => {
+            if (!_sys) return k;
+            win._slots = win._slots || slotsDoCorpo(partesDoCorpo(win));
+            return win._slots[k]?.label || k;
+        },
+        repintar: () => render(win, true),
+        acoes: {
+            equipar: (iid) => abrirEquipar(win, iid),
+            desequipar: (iid) => desequipar(win, iid),
+            mover: (iid, alvo) => moverItem(win, iid, alvo),
+            fundir: (a, b) => fundirPilhas(win, a, b),
+            mapa: (iid, ponto) => droparNoMapa({ win: win.chave, id: iid }, ponto),
+            qtd: (iid, d) => setQtd(win, iid, d),
+        },
+    };
+
     // Arrastar pelo cabeçalho (mesmo padrão da janela de Combate)
     const head = el.querySelector('.tb-fwin-head');
     let drag = null;
@@ -176,7 +209,6 @@ function criarJanela(tipo, id, chave) {
     el.addEventListener('pointerdown', () => { if ([...WINS.values()].at(-1) !== win) focar(win); }, true);
 
     el.addEventListener('click', e => {
-        if (e.target.closest('[data-grab]')) return;   // alça de arrasto não expande o item
         if (e.target.closest('[data-fechar]')) { fechar(win); return; }
         const aba = e.target.closest('[data-aba]');
         if (aba) { win.aba = aba.dataset.aba; render(win); return; }
@@ -188,21 +220,7 @@ function criarJanela(tipo, id, chave) {
         }
         const crm = e.target.closest('[data-condrm]');
         if (crm) { rmCondicao(win, Number(crm.dataset.condrm)); return; }
-        const q = e.target.closest('[data-qdelta]');
-        if (q) { setQtd(win, q.dataset.item, Number(q.dataset.qdelta)); return; }
-        const chev = e.target.closest('[data-conttoggle]');
-        if (chev) {
-            const cid = chev.dataset.conttoggle;
-            win.contAbertos.has(cid) ? win.contAbertos.delete(cid) : win.contAbertos.add(cid);
-            render(win, true);
-            return;
-        }
-        const row = e.target.closest('[data-toggleitem]');
-        if (row) {
-            const iid = row.dataset.toggleitem;
-            win.abertos.has(iid) ? win.abertos.delete(iid) : win.abertos.add(iid);
-            render(win, true);
-        }
+        tratarCliqueInv(win.inv, e);
     });
 
     el.addEventListener('input', e => {
@@ -220,13 +238,10 @@ function criarJanela(tipo, id, chave) {
         if (win.pendente) { win.pendente = false; render(win); }
     });
 
-    // ===== Arrastar-e-soltar do inventário (item → contêiner / raiz / mapa / pilha) =====
-    // Pointer events, não HTML5 DnD: funciona igual no mouse e no TOQUE (o
-    // celular é o hardware-alvo). A alça ⠿ tem touch-action:none — arrastar
-    // por ela não briga com o scroll da lista, que segue no resto da linha.
+    // Arrastar-e-soltar do inventário (item → contêiner / raiz / mapa / pilha)
     el.addEventListener('pointerdown', e => {
         const grab = e.target.closest?.('[data-grab]');
-        if (grab) iniciarArrasto(win, grab, e);
+        if (grab) iniciarArrasto(win.inv, grab, e);
     });
 
     clampJanela(win);
@@ -371,101 +386,10 @@ function setCampoMod(win, input) {
 }
 
 // ===== Mover / dropar itens =====
-const qtdDe = (i) => Math.max(1, parseInt(i?.quantidade) || 1);
-const ehContainer = (i) => !!(i && (i.ehContainer || i.tipo === 'Container'));
 // Mesmo recorte do tab-mostrar: o item embutido no loot não leva ids nem estado de equipe.
 const semId = ({ id, parentItemId, characterId, equipado, ...campos }) => campos;
 
-/** Quantos mover/dropar. null = cancelou. Pilha de 1 nem pergunta. */
-function escolherQtd(i, msg) {
-    const total = qtdDe(i);
-    if (total === 1) return 1;
-    const s = prompt(`${msg} (1–${total})`, total);
-    if (s === null) return null;
-    return parseInt(s) || total;
-}
-
-/** Duas pilhas são do MESMO item? (nome + tipo + modelo do catálogo; contêiner nunca) */
-function itensIdenticos(a, b) {
-    if (!a || !b || a.id === b.id || ehContainer(a) || ehContainer(b)) return false;
-    const nome = (s) => String(s || '').trim().toLowerCase();
-    return nome(a.nome) === nome(b.nome) && (a.tipo || '') === (b.tipo || '')
-        && (a.modeloId || a.origemTemplateId || '') === (b.modeloId || b.origemTemplateId || '');
-}
-
-/** O que está sob o dedo/mouse durante o arrasto (o fantasma é pointer-events:none). */
-function alvoSob(win, item, x, y) {
-    const sob = document.elementFromPoint(x, y);
-    if (!sob) return null;
-    if (sob.id === 'tbCanvas') return { tipo: 'mapa' };
-    const row = sob.closest?.('[data-toggleitem]');
-    if (row && win.el.contains(row) && row.dataset.toggleitem !== item.id) {
-        const outro = (win.itens || []).find(z => z.id === row.dataset.toggleitem);
-        if (itensIdenticos(item, outro)) return { tipo: 'merge', id: outro.id, el: row };
-        if (outro && ehContainer(outro) && !ehContainer(item) && item.parentItemId !== outro.id) {
-            return { tipo: 'drop', drop: 'cont:' + outro.id, el: row };
-        }
-        // linha sem ação própria: vale a SEÇÃO onde ela está (equipar/desequipar)
-    }
-    const sec = sob.closest?.('[data-sec]');
-    if (sec && win.el.contains(sec)) {
-        if (sec.dataset.sec === 'eq' && !item.equipado) return { tipo: 'equipar', el: sec };
-        if (sec.dataset.sec === 'soltos' && item.equipado) return { tipo: 'desequipar', el: sec };
-        if (sec.dataset.sec === 'soltos' && item.parentItemId) return { tipo: 'drop', drop: 'root', el: sec };
-        return null;
-    }
-    const raiz = sob.closest?.('[data-drop="root"]');
-    if (raiz && win.el.contains(raiz) && item.parentItemId) return { tipo: 'drop', drop: 'root', el: raiz };
-    return null;
-}
-
-/** Arrasto por ponteiro: fantasma segue o dedo, alvo acende, soltar executa. */
-function iniciarArrasto(win, grab, e) {
-    const id = grab.dataset.grab;
-    const item = (win.itens || []).find(x => x.id === id); if (!item) return;
-    e.preventDefault();
-    try { grab.setPointerCapture(e.pointerId); } catch (err) { /* evento sintético (__check) */ }
-
-    const ghost = document.createElement('div');
-    ghost.className = 'tb-fwin-ghost';
-    ghost.textContent = `${EMOJI_TIPO[item.tipo] || '📦'} ${item.nome || 'Item'} ×${qtdDe(item)}`;
-    document.body.appendChild(ghost);
-
-    let alvoEl = null;
-    const pintar = (ev) => {
-        ghost.style.left = ev.clientX + 'px';
-        ghost.style.top = ev.clientY + 'px';
-        const alvo = alvoSob(win, item, ev.clientX, ev.clientY);
-        ghost.classList.toggle('no-mapa', alvo?.tipo === 'mapa');
-        if (alvoEl && alvoEl !== alvo?.el) alvoEl.classList.remove('tb-fwin-drop-alvo');
-        alvoEl = alvo?.el || null;
-        alvoEl?.classList.add('tb-fwin-drop-alvo');
-    };
-    const limpar = () => {
-        grab.removeEventListener('pointermove', pintar);
-        grab.removeEventListener('pointerup', soltar);
-        grab.removeEventListener('pointercancel', limpar);
-        ghost.remove();
-        alvoEl?.classList.remove('tb-fwin-drop-alvo');
-    };
-    const soltar = (ev) => {
-        const alvo = alvoSob(win, item, ev.clientX, ev.clientY);
-        limpar();
-        if (!alvo) return;
-        if (alvo.tipo === 'mapa') droparNoMapa({ win: win.chave, id }, { x: ev.clientX, y: ev.clientY });
-        else if (alvo.tipo === 'merge') fundirPilhas(win, id, alvo.id);
-        else if (alvo.tipo === 'equipar') abrirEquipar(win, id);
-        else if (alvo.tipo === 'desequipar') desequipar(win, id);
-        else moverItem(win, id, alvo.drop);
-    };
-    grab.addEventListener('pointermove', pintar);
-    grab.addEventListener('pointerup', soltar);
-    grab.addEventListener('pointercancel', limpar);
-    pintar(e);
-}
-
 // ===== Equipar / desequipar (arrasto entre as seções) =====
-const FORMA_EQUIP = { empunhado: ['✊', 'empunhar'], segurar: ['🖐️', 'segurar'], vestido: ['👕', 'vestir'], fixado: ['📌', 'fixar'] };
 
 /** Partes do corpo do dono: NPC = da ficha; personagem = da RAÇA (registro);
  *  fallback: anatomia padrão do sistema (ehPadrao) — mesma ordem da ficha. */
@@ -673,7 +597,6 @@ async function droparNoMapa(dados, ponto) {
 function renderTodas() { for (const w of WINS.values()) render(w); }
 window._renderFichaWins = renderTodas;
 
-const fmtN = (v) => { const n = Number(v); return isNaN(n) ? String(v ?? '') : (Number.isInteger(n) ? n : parseFloat(n.toFixed(2))); };
 const fmtDV = (v, dv) => `${dv?.prefixo || ''}${dv?.arredondaMesa ? dvMesa(Number(v) || 0) : fmtN(v)}${dv?.sufixo || ''}`;
 const tituloDeChave = (k) => String(k).split('_').map(p => p.charAt(0) + p.slice(1).toLowerCase()).join(' ');
 const CARREGANDO = '<div class="tb-muted" style="padding:10px">⏳ Carregando registros do sistema…</div>';
@@ -852,14 +775,8 @@ function blocosNpc(n) {
 }
 
 /* ---- ⚔️ Ataques ---- */
-/** Modelo do catálogo do item (o dano costuma morar LÁ, não na instância). */
-function tplDoItem(i) {
-    const ref = i.modeloId || i.origemTemplateId;
-    return ref ? (_sys?.equipment || []).find(t => t.id === ref) : null;
-}
-function formulaDanoDoItem(i) {
-    return i.formulaDano || tplDoItem(i)?.formulaDano || '';
-}
+const tplDoItem = (i) => tplDoItemMotor(i, _sys);
+const formulaDanoDoItem = (i) => formulaDanoMotor(i, _sys);
 
 /** Valor de um VD do registro na ficha do NPC (overrides → espelho legado → extras). */
 function valorVdNpc(n, dv) {
@@ -1027,103 +944,11 @@ function htmlCombateChar(win, ch) {
         + detalhe('🎯 Perícias', periciasHtml);
 }
 
-// ---- Aba Inventário ----
-const EMOJI_TIPO = { 'Arma': '⚔️', 'Vestimenta': '🧥', 'Acessório': '💍', 'Projétil': '🎯', 'Container': '📦', 'Objeto': '📦', 'Consumível': '🧪', 'Relíquia': '✨' };
-const ESTADO_EQUIP = { empunhado: 'Empunhado', segurar: 'Segurado', vestido: 'Vestido', fixado: 'Fixado' };
-const CAT_ARMA = { uma_mao: '🗡️ Uma mão', duas_maos: '⚔️ Duas mãos', versatil: '🔄 Versátil', escudo: '🛡️ Escudo', distancia: '🏹 A distância' };
-
-/** Pressão de um item (mesma conta do inventário de aliado da ficha). */
-function pressaoItem(i, itens) {
-    const base = i.pressaoOverride != null ? i.pressaoOverride : (i.pressaoBase != null ? i.pressaoBase : (i.peso || 0));
-    if (ehContainer(i)) {
-        const dentro = itens.filter(x => x.parentItemId === i.id);
-        const w = dentro.reduce((s, x) => s + ((x.peso || 0) * qtdDe(x)), 0);
-        return base + w * (i.multiplicadorPressao || 1);
-    }
-    return base * qtdDe(i);
-}
-
-/** Detalhe expandido: TODAS as informações do item (instância + modelo do catálogo). */
-function detalheItem(win, i) {
-    const l = [];
-    const tpl = tplDoItem(i);
-    l.push(`<b>Tipo:</b> ${esc(i.tipo || 'Objeto')}${i.categoriaArma ? ' · ' + (CAT_ARMA[i.categoriaArma] || esc(i.categoriaArma)) : ''}`);
-    l.push(`<b>Peso:</b> ${fmtN(i.peso || 0)} · <b>Tamanho:</b> ${fmtN(i.tamanho ?? 1)} · <b>Qtd:</b> ${qtdDe(i)} · <b>Pressão:</b> ${fmtN(pressaoItem(i, win.itens || []))}`);
-    const f = formulaDanoDoItem(i);
-    if (f) l.push(`<b>💥 Dano:</b> ${esc(f)}${!i.formulaDano && tpl ? ' <i>(do modelo)</i>' : ''}`);
-    l.push(i.equipado
-        ? `<b>🎽 Equipado:</b> ${esc(ESTADO_EQUIP[i.estadoEquip] || 'sim')}${i.slotAnatomico ? ' · ' + esc(i.slotAnatomico) : ''}`
-        : '🎽 Não equipado');
-    if (i.formaEquipar) l.push(`<b>Forma de equipar:</b> ${esc(i.formaEquipar)}`);
-    if (ehContainer(i)) {
-        const nDentro = (win.itens || []).filter(x => x.parentItemId === i.id).length;
-        l.push(`<b>📦 Contêiner:</b> peso máx ${fmtN(i.pesoMaximoContainer || 0)} · pressão ×${fmtN(i.multiplicadorPressao ?? 1)} · ${nDentro} item(ns) dentro`);
-    }
-    // Vínculos com VDs e Status Vitais — instância vence o modelo, como na ficha
-    const dvs = (Array.isArray(i.valoresDerivadosVinculados) && i.valoresDerivadosVinculados.length)
-        ? i.valoresDerivadosVinculados : (tpl?.valoresDerivadosVinculados || []);
-    for (const v of dvs) {
-        const def = (_sys?.derivedValues || []).find(d => d.id === (v.id || v));
-        const eq = Array.isArray(v.equacao) && v.equacao.length;
-        l.push(`<b>📊 ${esc(def?.nome || 'Valor Derivado')}:</b> ${eq ? 'por equação (ver ficha)' : (Number(v.modificador) > 0 ? '+' : '') + fmtN(v.modificador || 0)}`);
-    }
-    const svs = (Array.isArray(i.statusVitaisVinculados) && i.statusVitaisVinculados.length)
-        ? i.statusVitaisVinculados : (tpl?.statusVitaisVinculados || []);
-    for (const s of svs) {
-        const def = (_sys?.vitalStats || []).find(v => v.id === (s.id || s));
-        const mod = Number(s.modificador) || 0;
-        l.push(`<b>❤️ ${esc(def?.nome || 'Status Vital')}:</b> ${mod > 0 ? '+' : ''}${fmtN(mod)}`);
-    }
-    if (i.descricao || tpl?.descricao) l.push(esc(i.descricao || tpl.descricao));
-    if (tpl) l.push(`<i>Modelo do catálogo: ${esc(tpl.nome || '')}</i>`);
-    return `<div class="tb-fwin-item-det">${l.join('<br>')}</div>`;
-}
-
-function itemRow(win, i, dentro) {
-    const cont = ehContainer(i);
-    const aberto = win.abertos.has(i.id);
-    const img = i.imagem || i.imagemUrl;
-    const podeQtd = !(i.tipo === 'Arma' || cont);
-    const detalhes = [];
-    if (i.equipado) detalhes.push(ESTADO_EQUIP[i.estadoEquip] || 'Equipado');
-    return `<div class="tb-fwin-item ${i.equipado ? 'eq' : ''} ${dentro ? 'dentro' : ''}" data-toggleitem="${i.id}">
-        <span class="tb-fwin-grab" data-grab="${i.id}" title="Arraste: contêiner, pilha igual ou mapa">⠿</span>
-        ${cont ? `<button class="tb-fwin-chev" data-conttoggle="${i.id}" title="Abrir/fechar contêiner">${win.contAbertos.has(i.id) ? '▾' : '▸'}</button>` : ''}
-        ${img ? `<img class="tb-fwin-item-img" src="${esc(img)}" alt="">` : `<span class="tb-fwin-item-ic">${EMOJI_TIPO[i.tipo] || '📦'}</span>`}
-        <div class="tb-fwin-item-info">
-            <span class="tb-fwin-item-nome">${esc(i.nome || 'Sem nome')}</span>
-            <span class="tb-fwin-item-meta">${esc(i.tipo || '')} · ⚖️ ${fmtN(i.peso || 0)}${detalhes.length ? ' · ' + esc(detalhes.join(' · ')) : ''}</span>
-        </div>
-        <span class="tb-fwin-qty">${podeQtd ? `<button data-qdelta="-1" data-item="${i.id}">−</button>` : ''}<b>×${qtdDe(i)}</b>${podeQtd ? `<button data-qdelta="1" data-item="${i.id}">+</button>` : ''}</span>
-    </div>
-    ${aberto ? detalheItem(win, i) : ''}`;
-}
-
-/** Item de topo + conteúdo do contêiner (quando aberto), indentado. */
-function grupoItem(win, i) {
-    let html = itemRow(win, i, false);
-    if (ehContainer(i) && win.contAbertos.has(i.id)) {
-        const filhos = (win.itens || []).filter(x => x.parentItemId === i.id);
-        html += filhos.map(f => itemRow(win, f, true)).join('')
-            || '<div class="tb-muted tb-fwin-cont-vazio">vazio — arraste um item para cá</div>';
-    }
-    return html;
-}
-
+/* ---- Aba Inventário ----
+   Toda a lista (linhas, contêineres, pilhas, detalhe e arrasto) vem do motor
+   compartilhado; aqui só se diz de onde vêm os itens e o que cada ação grava. */
 function htmlInventario(win) {
     if (!win.itens) return '<div class="tb-muted" style="padding:14px;text-align:center">⏳ Carregando itens…</div>';
-    const top = win.itens.filter(i => !i.parentItemId);
-    const eq = top.filter(i => i.equipado);
-    const soltos = top.filter(i => !i.equipado);
-    const pressao = eq.reduce((s, i) => s + pressaoItem(i, win.itens), 0);
-
-    const secao = (t, lista) => `<div class="tb-fwin-inv-sec">${t} <span class="tb-fwin-inv-count">${lista.length}</span></div>`
-        + (lista.length ? lista.map(i => grupoItem(win, i)).join('') : '<div class="tb-muted" style="font-size:.75rem;padding:2px 4px">Nada aqui.</div>');
-
-    return `<div class="tb-fwin-inv" data-drop="root">
-        <div class="tb-fwin-pressao">⚖️ Pressão (equipados): <b>${fmtN(pressao)}</b>
-            <span class="tb-fwin-dica">arraste: equipar/desequipar entre seções · contêiner · pilha igual · mapa</span></div>
-        <div data-sec="eq">${secao('🎽 Equipados', eq)}</div>
-        <div data-sec="soltos">${secao('📋 Soltos', soltos)}</div>
-    </div>`;
+    win._slots = null;   // anatomia recalculada uma vez por repinte
+    return htmlInvMotor(win.inv);
 }

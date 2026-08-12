@@ -342,6 +342,8 @@
     box-shadow: inset 0 -2px 0 var(--lr-gold);
 }
 
+/* A aba Inventário usa o motor compartilhado (shared/inventario-motor.css) —
+   a página precisa carregá-lo junto com este arquivo. */
 .npcv2-section { display: none; padding: var(--lr-space-4); }
 .npcv2-section.active { display: block; }
 
@@ -372,6 +374,17 @@
     font-size: var(--lr-fs-xs); font-weight: 500;
     text-transform: none; letter-spacing: 0;
     color: var(--lr-text-2);
+}
+
+/* Card dobrável: o próprio título é o botão de abrir. Fechado, não gasta
+   régua nem borda — o card vira uma linha só. */
+.npcv2-dobra > summary { cursor: pointer; list-style: none; }
+.npcv2-dobra > summary::-webkit-details-marker { display: none; }
+.npcv2-dobra > summary::before { content: '▸'; color: var(--lr-text-2); }
+.npcv2-dobra[open] > summary::before { content: '▾'; }
+.npcv2-dobra:not([open]) > summary { margin: 0; padding-bottom: 0; border-bottom: none; }
+.npcv2-dobra > summary:focus-visible {
+    outline: none; box-shadow: var(--lr-glow-gold); border-radius: var(--lr-radius-sm);
 }
 
 /* Modo rápido esconde tudo que depende dos registros */
