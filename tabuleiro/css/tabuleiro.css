@@ -646,14 +646,27 @@ html, body {
 }
 .tb-fwin-per b { font-variant-numeric: tabular-nums; color: var(--lr-gold-2); }
 
-/* Ataques */
+/* Ataques — DUAS linhas fixas por golpe (as mesmas que a linha já ocupava
+   quando o estado quebrava sozinho): nome ⟷ VDs vinculados em cima,
+   estado ⟷ dano + tipo embaixo. Lados opostos = nada sobrepõe nada. */
 .tb-fwin-atk {
-    display: flex; align-items: center; gap: var(--lr-space-2); flex-wrap: wrap;
     font-size: var(--lr-fs-xs); padding: 3px 4px; border-bottom: 1px dashed var(--lr-border);
 }
 .tb-fwin-atk:last-child { border-bottom: none; }
+.tb-fwin-atk-l1, .tb-fwin-atk-l2 {
+    display: flex; align-items: center; gap: var(--lr-space-2);
+    justify-content: space-between; min-width: 0;
+}
 .tb-fwin-atk.eq .tb-fwin-atk-nome { color: var(--lr-text-1); font-weight: 700; }
-.tb-fwin-atk-nome { flex: 1; min-width: 0; color: var(--lr-text-2); }
+.tb-fwin-atk-nome {
+    flex: 1 1 auto; min-width: 0; color: var(--lr-text-2);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tb-fwin-atk-chips {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    justify-content: flex-end; flex: 0 1 auto;
+}
+.tb-fwin-atk-fim { display: inline-flex; align-items: center; gap: var(--lr-space-2); margin-left: auto; }
 .tb-fwin-atk-dano { color: var(--lr-blood-3); font-variant-numeric: tabular-nums; }
 .tb-fwin-atk-est { font-style: normal; font-size: .66rem; color: var(--lr-text-2); }
 .tb-fwin-atk.off { opacity: .6; }

@@ -1008,11 +1008,18 @@ function htmlAtaques(win, fonte) {
         const rotulo = l.desarmado ? '👊 Desarmado' : l.estadoEquip;
         const tg = l.tipoGolpe;
         return `<div class="tb-fwin-atk eq">
-        <span class="tb-fwin-atk-nome">${l.desarmado ? esc(l.icone || '👊') : '✊'} ${esc(nome)}${rotulo ? ` <i class="tb-fwin-atk-est">${esc(rotulo)}</i>` : ''}</span>
-        ${chips}
-        ${l.dano ? `<b class="tb-fwin-atk-dano" title="Fórmula de dano${tg ? ` — barrado pela Blindagem ${tg.nome} do alvo` : ''}">💥 ${esc(l.dano)}</b>` : ''}
-        ${tg ? `<i class="tb-fwin-atk-est" title="Barrado pela Blindagem ${esc(tg.nome)} do alvo">${esc(tg.icone)} ${esc(tg.nome)}</i>` : ''}
-        ${(l.canais || []).map(c => `<span class="tb-fwin-canal" title="${esc(c.nome)}">${esc(c.icone || '💥')}${fmtN(c.total)}</span>`).join('')}
+        <div class="tb-fwin-atk-l1">
+            <span class="tb-fwin-atk-nome">${l.desarmado ? esc(l.icone || '👊') : '✊'} ${esc(nome)}</span>
+            ${chips ? `<span class="tb-fwin-atk-chips">${chips}</span>` : ''}
+        </div>
+        <div class="tb-fwin-atk-l2">
+            ${rotulo ? `<i class="tb-fwin-atk-est">${esc(rotulo)}</i>` : ''}
+            <span class="tb-fwin-atk-fim">
+                ${l.dano ? `<b class="tb-fwin-atk-dano" title="Fórmula de dano${tg ? ` — barrado pela Blindagem ${tg.nome} do alvo` : ''}">💥 ${esc(l.dano)}</b>` : ''}
+                ${tg ? `<i class="tb-fwin-atk-est" title="Barrado pela Blindagem ${esc(tg.nome)} do alvo">${esc(tg.icone)} ${esc(tg.nome)}</i>` : ''}
+                ${(l.canais || []).map(c => `<span class="tb-fwin-canal" title="${esc(c.nome)}">${esc(c.icone || '💥')}${fmtN(c.total)}</span>`).join('')}
+            </span>
+        </div>
     </div>`;
     }).join('');
 
@@ -1020,8 +1027,10 @@ function htmlAtaques(win, fonte) {
     const guardadas = (win.itens || [])
         .filter(i => i.tipo === 'Arma' && !temEfeitosAtivos(i))
         .map(i => `<div class="tb-fwin-atk off">
-            <span class="tb-fwin-atk-nome">${esc(i.nome || 'Arma')} <i class="tb-fwin-atk-est">guardada</i></span>
-            <b class="tb-fwin-atk-dano">💥 ${esc(formulaDanoDoItem(i) || '—')}</b>
+            <div class="tb-fwin-atk-l1">
+                <span class="tb-fwin-atk-nome">${esc(i.nome || 'Arma')} <i class="tb-fwin-atk-est">guardada</i></span>
+                <b class="tb-fwin-atk-dano">💥 ${esc(formulaDanoDoItem(i) || '—')}</b>
+            </div>
         </div>`).join('');
 
     const texto = win.tipo === 'npc' && fonte.ataques ? `<div class="tb-fwin-pre">${esc(fonte.ataques)}</div>` : '';
