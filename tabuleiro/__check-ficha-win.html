@@ -323,6 +323,31 @@ async function rodar() {
     $('[data-fechar]', winEl('npc:npc2')).click();
     teste('T28 · fechar remove a janela e o registro', $$('.tb-fwin').length === 2 && !_WINS.has('npc:npc2'));
 
+    // T29 · .inv-modal alto (formulário de item do NPC) tem de ROLAR, não cortar.
+    // O Tabuleiro sobrepõe .inv-modal-content com coluna flex + overflow:hidden;
+    // sem um filho rolável o rodapé de Salvar/Cancelar sai da tela.
+    await new Promise(r => {
+        const l = document.createElement('link');
+        l.rel = 'stylesheet'; l.href = '../ficha-v1.7_1/css/inventory.css';
+        l.onload = r; l.onerror = r; document.head.appendChild(l);
+    });
+    const mo = document.createElement('div');
+    mo.className = 'inv-modal active';
+    mo.innerHTML = `<div class="inv-modal-content" style="max-width:600px">
+        <div class="inv-modal-header"><span class="inv-modal-title">✏️ Editar Item</span></div>
+        <div class="inv-modal-body">${'<p style="height:120px;margin:0">campo alto</p>'.repeat(12)}</div>
+        <div class="inv-modal-footer"><button class="inv-btn-save" id="btSalvar">💾 Salvar</button></div>
+    </div>`;
+    document.body.appendChild(mo);
+    const cont = $('.inv-modal-content', mo), corpo = $('.inv-modal-body', mo), rodape = $('.inv-modal-footer', mo);
+    const cr = cont.getBoundingClientRect(), rr = rodape.getBoundingClientRect();
+    teste('T29 · formulário alto: o corpo rola e o rodapé de Salvar continua visível',
+        corpo.scrollHeight > corpo.clientHeight          // há o que rolar
+        && getComputedStyle(corpo).overflowY === 'auto'   // e é o corpo que rola
+        && cr.bottom <= window.innerHeight + 1            // a caixa cabe na tela
+        && rr.bottom <= cr.bottom + 1 && rr.height > 0);  // o rodapé está dentro dela
+    mo.remove();
+
     // relatório
     document.getElementById('res').innerHTML = '<table>' + linhas.map(([n, ok]) =>
         `<tr><td>${n}</td><td class="${ok ? 'ok' : 'fail'}">${ok ? 'PASS' : 'FAIL'}</td></tr>`).join('') + '</table>';

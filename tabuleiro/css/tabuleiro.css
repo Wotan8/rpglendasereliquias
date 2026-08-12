@@ -947,6 +947,12 @@ html, body {
     width: 100%; max-height: 88vh; display: flex; flex-direction: column;
     box-shadow: var(--lr-shadow-3); overflow: hidden;
 }
+/* Coluna flex + overflow:hidden acima precisa de alguém que role, senão
+   formulário alto (o de item, com mecânicas) é cortado e o rodapé de
+   Salvar/Cancelar some da tela. Cabeçalho e rodapé ficam; o corpo rola. */
+.inv-modal .inv-modal-header,
+.inv-modal .inv-modal-footer { flex: 0 0 auto; }
+.inv-modal .inv-modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 
 /* .detail-modal (non-#aliadoNpcModal) — fallback genérico */
 .detail-modal:not(#aliadoNpcModal) {

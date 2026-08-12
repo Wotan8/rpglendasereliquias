@@ -25,11 +25,15 @@
     <table id="saida"></table>
     <div id="placar"></div>
   </div>
-  <div class="npcv2-card">
-    <div class="npcv2-block-title">🎒 Itens do NPC
-      <span class="npcv2-hint">clique na linha para abrir · arraste ⠿</span>
+  <!-- Mesmo aninhamento do modal real: a lista vive dentro de um corpo de
+       modal que ROLA. Foi aqui que o arrasto precisava continuar valendo. -->
+  <div class="modal-body" id="corpoModal" style="max-height:340px;overflow-y:auto">
+    <div class="npcv2-card">
+      <div class="npcv2-block-title">🎒 Itens do NPC
+        <span class="npcv2-hint">clique na linha para abrir · arraste ⠿</span>
+      </div>
+      <div id="npcInventoryList"></div>
     </div>
-    <div id="npcInventoryList"></div>
   </div>
 </div>
 
@@ -118,8 +122,11 @@ teste('T11 · arrasto: fantasma segue e a seção Equipados acende como alvo',
     fantasma && acendeu && !$('.lr-inv-ghost') && !secEq.classList.contains('lr-inv-alvo'));
 
 // ---- T12: soltar sobre o contêiner chama mover (não grava aqui) ----
+// Alvo precisa estar VISÍVEL: elementFromPoint não enxerga linha rolada para
+// fora do corpo do modal — e soltar no que não se vê seria errado mesmo.
 let mov = null;
 window._npcInv.ctx.acoes.mover = (id, alvo) => { mov = [id, alvo]; };
+$('[data-toggleitem="c1"]', lista).scrollIntoView({ block: 'center' });
 const p1 = centro(grabPocao);
 grabPocao.dispatchEvent(pev('pointerdown', p1.x, p1.y));
 const pCont = centro($('[data-toggleitem="c1"] .lr-inv-item-info', lista));
@@ -127,6 +134,7 @@ grabPocao.dispatchEvent(pev('pointermove', pCont.x, pCont.y));
 grabPocao.dispatchEvent(pev('pointerup', pCont.x, pCont.y));
 teste('T12 · soltar a Poção na Bolsa pede para mover para dentro dela',
     mov?.[0] === 'i2' && mov?.[1] === 'cont:c1');
+$('#corpoModal').scrollTop = 0;
 
 // ---- T13: bloco de anatomia recolhido por padrão ----
 const dobra = document.createElement('details');
@@ -142,6 +150,26 @@ teste('T13 · 🦴 Partes do Corpo nasce recolhido e o clique no título abre',
     fechado && dobra.open && $('#alvoDobra').checkVisibility()
     && marcadorFechado.includes('▸') && getComputedStyle($('summary', dobra), '::before').content.includes('▾'));
 dobra.remove();
+
+// ---- T14: um único botão "Criar Item" (o do cabeçalho; a lista não emite o seu) ----
+teste('T14 · só um ➕ Criar Item — a lista não desenha um segundo',
+    [...document.querySelectorAll('button')].filter(b => b.textContent.includes('Criar Item')).length === 0
+    && !lista.innerHTML.includes('Criar Item'));
+
+// ---- T15: a lista rola dentro do corpo do modal sem quebrar o arrasto ----
+const corpo = $('#corpoModal');
+const grabFlecha = $('[data-grab="f1"]', lista);
+let movRolado = null;
+window._npcInv.ctx.acoes.mover = (id, alvo) => { movRolado = [id, alvo]; };
+$('[data-toggleitem="f1"]', lista).scrollIntoView({ block: 'center' });
+const pf = centro(grabFlecha);
+grabFlecha.dispatchEvent(pev('pointerdown', pf.x, pf.y));
+const pRaiz = centro($('[data-sec="soltos"] .lr-inv-sec', lista));
+grabFlecha.dispatchEvent(pev('pointermove', pRaiz.x, pRaiz.y));
+grabFlecha.dispatchEvent(pev('pointerup', pRaiz.x, pRaiz.y));
+teste('T15 · com o corpo do modal rolado, arrastar Flechas para Soltos ainda tira do contêiner',
+    corpo.scrollTop > 0 && movRolado?.[0] === 'f1' && movRolado?.[1] === 'root');
+corpo.scrollTop = 0;
 
 // ---- placar ----
 $('#saida').innerHTML = linhas.map(([n, p]) =>
