@@ -43,6 +43,11 @@ function buildTargetMap(sys) {
     
     (sys.skills || []).forEach(s => {
         map[s.nome] = 'SKILL:' + s.id;
+        // O construtor de equações do Criador grava a ref COM o prefixo
+        // ("Perícia: Lâminas") — é ele que separa a perícia de um VD homônimo.
+        // Sem esta entrada, toda equação de arma com perícia resolvia 0 no NPC
+        // (o furo "perícia vale 0"): a ref não casava e caía no aviso.
+        map['Perícia: ' + s.nome] = 'SKILL:' + s.id;
     });
 
     Object.entries(VITAL_ALIASES).forEach(([nome, key]) => {

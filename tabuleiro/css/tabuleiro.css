@@ -655,6 +655,8 @@ html, body {
 .tb-fwin-atk.eq .tb-fwin-atk-nome { color: var(--lr-text-1); font-weight: 700; }
 .tb-fwin-atk-nome { flex: 1; min-width: 0; color: var(--lr-text-2); }
 .tb-fwin-atk-dano { color: var(--lr-blood-3); font-variant-numeric: tabular-nums; }
+.tb-fwin-atk-est { font-style: normal; font-size: .66rem; color: var(--lr-text-2); }
+.tb-fwin-atk.off { opacity: .6; }
 .tb-fwin-canal { background: var(--lr-bg-0); border-radius: 999px; padding: 0 6px; }
 
 /* Módulos de classe */

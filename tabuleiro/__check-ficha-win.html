@@ -37,7 +37,7 @@
 import { T } from './js/tab-state.js';
 import { VITAIS } from './js/tab-hud.js';
 // ?v= bust: o http.server local deixa o navegador segurar o módulo antigo
-import { abrirFichaWin, _WINS } from './js/tab-ficha-win.js?v=4';
+import { abrirFichaWin, _WINS } from './js/tab-ficha-win.js?v=5';
 
 // ===== Registros do sistema (chaves de doc, como ensureNpcSystemData devolve) =====
 const dv = (id, nome, extra) => ({ id, key: id, nome, icone: extra.icone || '📊', prefixo: '', sufixo: extra.sufixo || '',
@@ -58,7 +58,12 @@ window._npcSys = {
     loaded: true, norm: s => String(s || '').trim().toLowerCase(),
     races: [RACA], classes: [CLASSE], tribes: [], mechanics: [],
     racesByNome: { humana: RACA }, classesByNome: { bruxa: CLASSE }, tribesByNome: {},
-    equipment: [{ id: 'tpl1', nome: 'Adaga de Lastro (modelo)', formulaDano: '1d6', descricao: 'Lâmina curta lastreada.' }],
+    equipment: [{ id: 'tpl1', nome: 'Adaga de Lastro (modelo)', formulaDano: '1d6', descricao: 'Lâmina curta lastreada.',
+        // O cenário do bug: a arma vincula o acerto TIPADO com Equação de Valor.
+        // O golpe tem de mostrar ESTA coluna com DES + Perícia — e não repetir
+        // o Acerto global em cada linha.
+        valoresDerivadosVinculados: [{ id: 'dv_acertocac',
+            equacao: [{ tipo: 'ficha', ref: 'DES' }, { op: '+', tipo: 'ficha', ref: 'Perícia: Lâminas' }] }] }],
     skills: [
         { id: 'sk1', nome: 'Lâminas', categoria: 'Combate', descricao: 'Armas de corte' },
         { id: 'sk2', nome: 'Observação', categoria: 'Mentais', descricao: 'Notar detalhes' },
@@ -68,6 +73,7 @@ window._npcSys = {
         dv('dv_bldc', 'Blindagem Cortante', { icone: '🗡️', bloco: 'Combate', ordem: 1, mesa: true, todos: true, espelha: 'Blindagem' }),
         dv('dv_dano', 'Dano Físico', { icone: '⚔️', bloco: 'Combate', ordem: 1, escopo: 'dano', todos: true }),
         dv('dv_acerto', 'Acerto', { icone: '🎯', bloco: 'Combate', ordem: 1, escopo: 'coluna' }),      // vem pela CLASSE
+        dv('dv_acertocac', 'Acerto Corpo a Corpo', { icone: '🗡️', bloco: 'Combate', ordem: 1, escopo: 'coluna' }), // a ARMA vincula
         dv('dv_perc', 'Percepção', { icone: '👁️', bloco: 'Sentidos', ordem: 2 }),                     // vem pela RAÇA
         dv('dv_igneo', 'Golpe Ígneo', { icone: '🔥', bloco: 'Essências', ordem: 40, escopo: 'dano-canal' }), // vem por PECULIARIDADE individual
         dv('dv_folego', 'Fôlego', { icone: '🫁', bloco: 'Extra', ordem: 50 }),                          // SEM vínculo: não pode aparecer
@@ -188,8 +194,10 @@ async function rodar() {
         txt(w1).includes('Investida') && $$('[data-mod][data-mkey="usos"]', w1).some(i => i.value === '3'));
     teste('T8 · condição da ficha "Sangrando" com ✕ de remover',
         txt(w1).includes('Sangrando') && !!$('[data-condrm]', w1));
-    teste('T9 · ataque do NPC: dano 1d6 vem do MODELO do catálogo + texto da ficha',
-        $$('.tb-fwin-atk', w1).some(a => txt(a).includes('Punhal') && txt(a).includes('1d6')) &&
+    teste('T9 · golpe do NPC pelo MOTOR: Alvo tipado 6 (DES 3 + Lâminas 3, via equação do modelo legado origemTemplateId), dano 1d6, SEM repetir o Acerto global zerado',
+        $$('.tb-fwin-atk', w1).some(a => txt(a).includes('Punhal') && txt(a).includes('1d6')
+            && txt(a).includes('Acerto Corpo a Corpo') && /\b6\b/.test(txt(a))
+            && !/Acerto 0/.test(txt(a))) &&
         txt(w1).includes('Espada longa +4'));
 
     // ===== T10: edição de vital (otimista + espelhos) =====
@@ -288,8 +296,11 @@ async function rodar() {
     const blocosC = $$('.tb-fwin-bloco', wc);
     teste('T21 · char: blocos 2 primeiros abertos, Essências fechado',
         blocosC.length >= 3 && blocosC[0].open && blocosC[1].open && !blocosC[2].open);
-    teste('T22 · char: ataque com dano do modelo composto (1d6+2) e Acerto 7 (vindo da classe) no golpe',
-        $$('.tb-fwin-atk', wc).some(a => txt(a).includes('1d6+2') && txt(a).includes('Acerto') && txt(a).includes('7')));
+    teste('T22 · char: golpe por item — Acerto CaC 4 (DES 2 + Lâminas 2 da equação), dano 1d6+2, canal Ígneo, SEM repetir o Acerto global 7 na linha',
+        $$('.tb-fwin-atk', wc).some(a => txt(a).includes('1d6+2')
+            && txt(a).includes('Acerto Corpo a Corpo') && /\b4\b/.test(txt(a))
+            && txt(a).includes('1.5')
+            && !txt(a).includes('Acerto 7')));
     teste('T23 · char: módulos da ficha (Truque da Fumaça usos=2) + módulo sem registro não some',
         txt(wc).includes('Truque da Fumaça') &&
         $$('[data-mod][data-mkey="usos"]', wc).some(i => i.value === '2') &&
