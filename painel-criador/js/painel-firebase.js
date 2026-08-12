@@ -482,6 +482,8 @@ const MODULE_DEFS = {
             { key: 'ordem', label: 'Ordem de Exibição', type: 'number', placeholder: '0' },
             { key: 'ehPadrao', label: 'Esta é uma parte padrão?', type: 'boolean' },
             { key: 'podeGolpear', label: 'Pode Golpear?', type: 'boolean' },
+            // Muda o Acerto e o Dano do golpe desarmado DESTA parte, e só dele.
+            { key: 'valoresDerivadosVinculados', label: 'Valores Derivados Vinculados (golpe desta parte)', type: 'mechanic_selector', selectorTarget: 'equipmentDerivedValues' },
             { key: 'podeSegurar', label: 'Pode Segurar?', type: 'boolean' },
             { key: 'podeEmpunhar', label: 'Pode Empunhar?', type: 'boolean' },
             { key: 'podeVestir', label: 'Pode Vestir?', type: 'boolean' },

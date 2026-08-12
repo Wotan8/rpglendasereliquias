@@ -13,11 +13,17 @@ function _getCharacterBodySlots() {
         const qty = bp.slots || 1;
         for (let i = 0; i < qty; i++) {
             const slotKey = qty > 1 ? `${bp.id}_${i+1}` : bp.id;
+            /* state.partesDoCorpo é uma CÓPIA congelada no personagem: flag nova
+               no catálogo não chega sozinha até quem já existe. O catálogo manda
+               em podeGolpear; a cópia só responde se ele não tiver a parte. */
+            const cat = (window._systemData?.bodyParts || []).find(b => b.id === bp.id);
             slots[slotKey] = {
                 label: qty > 1 ? `${bp.nome} ${i+1}` : bp.nome,
+                parte: bp.nome,
                 icon: bp.icone || '🦴',
                 max: 1, // dynamically 1 item per generated slot instance
                 partId: bp.id,
+                podeGolpear: !!(cat ? cat.podeGolpear : bp.podeGolpear),
                 podeSegurar: !!bp.podeSegurar,
                 podeEmpunhar: !!bp.podeEmpunhar,
                 podeVestir: !!bp.podeVestir,
@@ -527,6 +533,31 @@ function _desequipaItensBloqueados() {
     })();
 }
 
+/* Valores Derivados vinculados à Parte do Corpo, no mesmo contrato dos itens
+   (Painel do Criador → Partes do Corpo): equação vence modificador fixo, e o
+   resultado vira um bag por parte, lido pelo golpe desarmado daquela parte.
+   É o que deixa a Perna somar Dano no chute sem tocar no soco.
+
+   Só o escopo do próprio golpe: vínculo de parte não mexe no personagem
+   inteiro. Bônus global continua sendo peculiaridade de raça, que é onde
+   "criatura com garras acerta melhor" pertence. */
+function _bagsDasPartes() {
+    const bags = {};
+    for (const bp of (window._systemData?.bodyParts || [])) {
+        for (const dvObj of (bp.valoresDerivadosVinculados || [])) {
+            const dvDef = (window.DERIVED_VALUES || []).find(d => d.id === (dvObj.id || dvObj));
+            if (!dvDef) continue;
+            const temEq = Array.isArray(dvObj.equacao) && dvObj.equacao.length && typeof resolveEquation === 'function';
+            const total = temEq ? (Number(resolveEquation(dvObj.equacao)) || 0) : (Number(dvObj.modificador) || 0);
+            if (!total) continue;
+            const chave = `DERIVED:${dvDef.key}`;
+            if (!bags[bp.id]) bags[bp.id] = {};
+            bags[bp.id][chave] = (bags[bp.id][chave] || 0) + total;
+        }
+    }
+    return bags;
+}
+
 // ===== RENDER: ABA COMBATE — ATAQUES E EFEITOS ATIVOS =====
 /**
  * Tabela com uma linha por item que está com Efeitos Ativos e contribui com
@@ -556,6 +587,23 @@ function renderActiveEffects() {
         if (r.temAlgo) linhas.push({ item, ...r });
     }
 
+    /* Parte do corpo que golpeia e está desocupada vira linha de ataque, com o
+       mesmo Acerto e Dano de uma arma. Qualquer item equipado no slot ocupa a
+       parte — mão com escudo ou tocha não soca. */
+    if (typeof computeGolpesDesarmados === 'function') {
+        const ocupados = [];
+        for (const it of window._inventoryState.items) {
+            if (it.equipado) ocupados.push(..._slotsDoItem(it));
+        }
+        linhas.push(...computeGolpesDesarmados({
+            derivedValues: ctx.derivedValues,
+            derived: ctx.derived,
+            bodySlots: _getCharacterBodySlots(),
+            slotsOcupados: ocupados,
+            parteBonuses: _bagsDasPartes(),
+        }));
+    }
+
     if (linhas.length === 0) { section.style.display = 'none'; return; }
 
     // Colunas exibidas: só as que algum item realmente usa (evita tabela larga
@@ -579,13 +627,25 @@ function renderActiveEffects() {
     html += '</tr></thead><tbody>';
 
     for (const l of linhas) {
-        const estado = EQUIP_STATES[l.item.estadoEquip];
-        html += `<tr onclick="openItemDetail('${l.item.id}')">
+        const estado = l.item ? EQUIP_STATES[l.item.estadoEquip] : null;
+        const abre = l.item ? ` onclick="openItemDetail('${l.item.id}')"` : '';
+        const icone = l.item ? _getTipoEmoji(l.item.tipo) : l.icone;
+        const nome = l.item ? (l.item.nome || 'Sem nome') : `${l.nome}${l.qtd > 1 ? ` ×${l.qtd}` : ''}`;
+        const rotulo = l.desarmado
+            ? `<small class="atk-item-state" title="${l.qtd > 1 ? `${l.qtd} partes com o mesmo golpe. ` : ''}Parte do corpo sem item equipado. Alvo = FOR + Perícia: Briga (Livro, 6.3).">👊 Desarmado</small>`
+            : (estado ? `<small class="atk-item-state">${estado.icon} ${estado.label}</small>` : '');
+        html += `<tr${abre}>
             <td class="atk-col-item">
-                <span class="atk-item-name">${_getTipoEmoji(l.item.tipo)} ${_escHtml(l.item.nome || 'Sem nome')}</span>
-                ${estado ? `<small class="atk-item-state">${estado.icon} ${estado.label}</small>` : ''}
+                <span class="atk-item-name">${icone} ${_escHtml(nome)}</span>
+                ${rotulo}
             </td>`;
-        if (temDano) html += `<td class="atk-dano">${l.dano ? _escHtml(l.dano) : '—'}</td>`;
+        if (temDano) {
+            // O tipo diz qual das três Blindagens do alvo barra este golpe.
+            const tg = l.tipoGolpe;
+            html += `<td class="atk-dano">${l.dano ? _escHtml(l.dano) : '—'}`
+                + (tg ? `<small class="atk-tipo-golpe" title="Barrado pela Blindagem ${_escHtml(tg.nome)} do alvo">${tg.icone} ${_escHtml(tg.nome)}</small>` : '')
+                + '</td>';
+        }
         if (temCanais) {
             const cs = (l.canais || []).map(c =>
                 `<span class="atk-canal" title="${_escHtml(c.nome)}">${c.icone} ${c.total}</span>`).join('');
@@ -594,7 +654,7 @@ function renderActiveEffects() {
         for (const cd of colDefs) {
             const c = l.colunas.find(x => x.key === cd.key);
             if (!c) { html += '<td class="atk-val">—</td>'; continue; }
-            const title = `Base ${c.base} ${c.bonus >= 0 ? '+' : '−'} ${Math.abs(c.bonus)} (item) = ${c.total}`;
+            const title = `Base ${c.base} ${c.bonus >= 0 ? '+' : '−'} ${Math.abs(c.bonus)} (${l.desarmado ? 'parte' : 'item'}) = ${c.total}`;
             html += `<td class="atk-val" title="${_escHtml(title)}">
                 ${_escHtml(c.prefixo)}<strong>${c.total}</strong>${_escHtml(c.sufixo)}
                 ${c.bonus !== 0 ? `<small class="atk-delta">${c.bonus > 0 ? '+' : ''}${c.bonus}</small>` : ''}
@@ -1822,7 +1882,9 @@ window.openItemDetail = function(itemId) {
         if (r.dano || canaisHtml || linhas) {
             escopoHtml = `<div class="inv-detail-escopo${ativo ? '' : ' inv-escopo-inativo'}">
                 <span class="inv-detail-label">⚔️ Com este item${ativo ? '' : ' <em>(efeitos inativos — equipe na forma prevista)</em>'}</span>
-                ${r.dano ? `<div class="inv-escopo-row"><span class="inv-escopo-nome">💥 Dano</span><span class="inv-escopo-total inv-escopo-dano">${_escHtml(r.dano)}</span></div>` : ''}
+                ${r.dano ? `<div class="inv-escopo-row"><span class="inv-escopo-nome">💥 Dano</span>${
+                    r.tipoGolpe ? `<span class="inv-escopo-calc" title="Barrado pela Blindagem ${_escHtml(r.tipoGolpe.nome)} do alvo">${r.tipoGolpe.icone} ${_escHtml(r.tipoGolpe.nome)}</span>` : ''
+                }<span class="inv-escopo-total inv-escopo-dano">${_escHtml(r.dano)}</span></div>` : ''}
                 ${canaisHtml}
                 ${linhas}
             </div>`;

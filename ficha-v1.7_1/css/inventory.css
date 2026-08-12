@@ -1288,6 +1288,17 @@
     font-weight: 700;
 }
 
+/* Tipo de golpe: qual das três Blindagens tipadas do alvo barra este dano. */
+.atk-tipo-golpe {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: var(--lr-text-dim, rgba(255, 255, 255, .55));
+    white-space: nowrap;
+}
+
 /* Breakdown no modal de detalhe do item */
 .inv-detail-escopo {
     margin: 12px 0;

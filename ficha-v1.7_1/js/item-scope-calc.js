@@ -45,6 +45,26 @@ function getItemFormulaDano(item, catalog) {
     return '';
 }
 
+/** Rótulos do tipo de golpe físico. É o que diz qual das três Blindagens
+ *  tipadas do alvo (Cortante, Perfurante, Contundente) barra este dano. */
+const TIPOS_GOLPE = {
+    cortante: { nome: 'Cortante', icone: '🗡️' },
+    perfurante: { nome: 'Perfurante', icone: '🏹' },
+    contundente: { nome: 'Contundente', icone: '🔨' },
+};
+
+/** Tipo de golpe do item: o da instância vence o do modelo do catálogo. */
+function getItemTipoGolpe(item, catalog) {
+    if (!item) return null;
+    let t = item.tipoGolpe;
+    if (!t && item.modeloId && Array.isArray(catalog)) {
+        const tpl = catalog.find(x => x.id === item.modeloId);
+        if (tpl) t = tpl.tipoGolpe;
+    }
+    t = String(t || '').toLowerCase().trim();
+    return TIPOS_GOLPE[t] ? { chave: t, ...TIPOS_GOLPE[t] } : null;
+}
+
 /** Formata um número para exibição: inteiro puro, senão até 2 casas decimais. */
 function _fmtNum(v) {
     return Number.isInteger(v) ? v : parseFloat(Number(v).toFixed(2));
@@ -136,15 +156,120 @@ function computeItemScopedTotals(item, ctx) {
     // dano ou algum delta numa coluna. Armadura neutra fica fora.
     const temAlgo = !!formula || colunas.some(c => c.bonus !== 0);
 
-    return { dano, canais, colunas, temAlgo };
+    // Sem dado não há golpe: o tipo só significa algo grudado numa fórmula.
+    const tipoGolpe = formula ? getItemTipoGolpe(item, ctx.catalog) : null;
+
+    return { dano, tipoGolpe, canais, colunas, temAlgo };
+}
+
+/* Dado do golpe desarmado. Livro do Jogador, Cap. 6: "Desarmado: o dado é 1d4".
+   Soco, chute e cabeçada são Contundentes — é a Blindagem Contundente do alvo
+   que barra. Garra e presa de raça não cabem aqui: isso é arma natural, entra
+   como item com fórmula e tipo próprios. */
+const DADO_DESARMADO = '1d4';
+
+/**
+ * Linhas de golpe desarmado — uma por parte do corpo que golpeia e está com as
+ * mãos livres. Mesmo formato das linhas de item, para a tabela de Ataques
+ * desenhar os dois do mesmo jeito.
+ *
+ * A parte pode vincular Valores Derivados com equação, igual a um equipamento:
+ * o bag dela entra por cima da base do personagem, então a Perna sobe o Dano do
+ * chute sem mexer no soco. Sem vínculo, a coluna é a base pura (bonus 0).
+ *
+ * Duas partes de mesmo nome e mesmos números viram UMA linha com `qtd`: mão
+ * esquerda e direita socam igual, listar as duas é ruído. Basta um vínculo ou
+ * um item numa delas para os números divergirem e as linhas se separarem.
+ *
+ * @param {object} ctx
+ * @param {Array}  ctx.derivedValues  window.DERIVED_VALUES
+ * @param {object} ctx.derived        state.derived (bases globais)
+ * @param {object} ctx.bodySlots      slotKey → {label, parte, icon, partId, podeGolpear}
+ * @param {Iterable} ctx.slotsOcupados slotKeys tomados por item equipado
+ * @param {object} ctx.parteBonuses   partId → bag, no formato de state.itemBonuses
+ * @returns {Array} { desarmado, slotKey, qtd, nome, icone, dano, tipoGolpe, canais, colunas }
+ */
+function computeGolpesDesarmados(ctx) {
+    ctx = ctx || {};
+    const dvs = Array.isArray(ctx.derivedValues) ? ctx.derivedValues : [];
+    const derived = ctx.derived || {};
+    const bodySlots = ctx.bodySlots || {};
+    const ocupados = new Set(ctx.slotsOcupados || []);
+    const parteBonuses = ctx.parteBonuses || {};
+
+    const livres = Object.keys(bodySlots)
+        .filter(k => bodySlots[k] && bodySlots[k].podeGolpear && !ocupados.has(k));
+    if (livres.length === 0) return [];
+
+    // Mão 1 e Mão 2 são a mesma parte: resolve o bag dela uma vez só.
+    const porParte = {};
+    const golpeDaParte = partId => {
+        if (porParte[partId]) return porParte[partId];
+        const bag = parteBonuses[partId] || null;
+        const colunas = [];
+        let somaDano = 0;
+        for (const dv of dvs) {
+            if (!dv || !dv.escopoItem) continue;
+            const base = _fmtNum(Number(derived[dv.key]) || 0);
+            const total = _fmtNum(applyItemBag(base, dv.key, bag));
+            if (dv.escopoItem === 'dano') { somaDano += total; continue; }
+            if (dv.escopoItem === 'dano-canal') continue;  // canal é da arma, não do punho
+            colunas.push({
+                key: dv.key, nome: dv.nome, icone: dv.icone || '📊',
+                prefixo: dv.prefixo || '', sufixo: dv.sufixo || '',
+                base, bonus: _fmtNum(total - base), total,
+            });
+        }
+        const soma = _fmtNum(somaDano);
+        porParte[partId] = {
+            colunas,
+            dano: soma !== 0 ? `${DADO_DESARMADO}${soma > 0 ? '+' : ''}${soma}` : DADO_DESARMADO,
+        };
+        return porParte[partId];
+    };
+
+    const linhas = [];
+    const porAssinatura = {};
+    for (const slotKey of livres) {
+        const slot = bodySlots[slotKey];
+        const golpe = golpeDaParte(slot.partId);
+        const parte = slot.parte || slot.label || slotKey;
+        // Nome fora da assinatura de propósito: "Mão 1" e "Mão 2" só juntam
+        // porque a PARTE é a mesma; parte diferente com número igual não junta.
+        const assinatura = JSON.stringify([parte, golpe.dano, golpe.colunas.map(c => c.total)]);
+
+        const igual = porAssinatura[assinatura];
+        if (igual) { igual.qtd++; continue; }
+
+        const linha = {
+            desarmado: true,
+            slotKey,
+            qtd: 1,
+            parte,
+            nome: slot.label || slotKey,
+            icone: slot.icon || '👊',
+            dano: golpe.dano,
+            tipoGolpe: { chave: 'contundente', ...TIPOS_GOLPE.contundente },
+            canais: [],
+            colunas: golpe.colunas,
+        };
+        porAssinatura[assinatura] = linha;
+        linhas.push(linha);
+    }
+
+    // Linha que juntou perde o número do slot: "Mão 1" viraria mentira com ×2.
+    for (const l of linhas) if (l.qtd > 1) l.nome = l.parte;
+    return linhas;
 }
 
 // Exposto para o browser (script tag) e para o node (autoteste)
 if (typeof window !== 'undefined') {
     window.computeItemScopedTotals = computeItemScopedTotals;
+    window.computeGolpesDesarmados = computeGolpesDesarmados;
     window.getItemFormulaDano = getItemFormulaDano;
+    window.getItemTipoGolpe = getItemTipoGolpe;
     window.applyItemBag = applyItemBag;
 }
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { computeItemScopedTotals, getItemFormulaDano, applyItemBag };
+    module.exports = { computeItemScopedTotals, computeGolpesDesarmados, getItemFormulaDano, getItemTipoGolpe, applyItemBag };
 }

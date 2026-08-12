@@ -3,7 +3,29 @@
  * Sem framework — só assert. Falha ruidosamente se a lógica quebrar. */
 
 const assert = require('assert');
-const { computeItemScopedTotals, applyItemBag, getItemFormulaDano } = require('./item-scope-calc.js');
+const { computeItemScopedTotals, computeGolpesDesarmados, applyItemBag, getItemFormulaDano, getItemTipoGolpe } = require('./item-scope-calc.js');
+
+// --- 0) Tipo de golpe: diz qual Blindagem tipada do alvo barra o dano ---
+{
+    const cat = [{ id: 'tpl-maca', nome: 'Maça', formulaDano: '1d6', tipoGolpe: 'contundente' }];
+    const ctx0 = { derivedValues: [], derived: {}, itemBonuses: {}, catalog: cat };
+
+    assert.strictEqual(getItemTipoGolpe({ tipoGolpe: 'cortante' }, cat).nome, 'Cortante');
+    assert.strictEqual(getItemTipoGolpe({ tipoGolpe: 'PERFURANTE' }, cat).nome, 'Perfurante');
+    assert.strictEqual(getItemTipoGolpe({ tipoGolpe: 'laser' }, cat), null, 'tipo inválido não vira rótulo');
+    assert.strictEqual(getItemTipoGolpe({}, cat), null, 'item sem tipo não inventa um');
+    // herda do modelo do catálogo
+    assert.strictEqual(getItemTipoGolpe({ modeloId: 'tpl-maca' }, cat).chave, 'contundente');
+    // a instância vence o modelo
+    assert.strictEqual(getItemTipoGolpe({ modeloId: 'tpl-maca', tipoGolpe: 'cortante' }, cat).chave, 'cortante');
+
+    // Sem fórmula de dano não há golpe onde pendurar o tipo.
+    const semDado = computeItemScopedTotals({ id: 'x', tipoGolpe: 'cortante' }, ctx0);
+    assert.strictEqual(semDado.tipoGolpe, null, 'sem fórmula de dano o tipo não aparece');
+    const comDado = computeItemScopedTotals({ id: 'y', modeloId: 'tpl-maca' }, ctx0);
+    assert.strictEqual(comDado.tipoGolpe.nome, 'Contundente');
+    assert.strictEqual(comDado.dano, '1d6');
+}
 
 const DVS = [
     { key: 'ACERTO', nome: 'Acerto', icone: '🎯', escopoItem: 'coluna' },
@@ -159,4 +181,72 @@ const CATALOG = [{ id: 'tpl-espada', nome: 'Espada Longa', formulaDano: '1d10' }
     assert.strictEqual(getItemFormulaDano({}, CATALOG), '', 'sem fórmula = string vazia');
 }
 
-console.log('✅ item-scope-calc: 12 grupos de asserções passaram.');
+// --- 10) Golpe desarmado: parte que golpeia e está livre vira linha de ataque ---
+{
+    const SLOTS = {
+        mao_1: { label: 'Mão 1', parte: 'Mão', partId: 'mao', icon: '🖐️', podeGolpear: true },
+        mao_2: { label: 'Mão 2', parte: 'Mão', partId: 'mao', icon: '🖐️', podeGolpear: true },
+        pe: { label: 'Pé', parte: 'Pé', partId: 'pe', icon: '🥾', podeGolpear: true },
+        torso: { label: 'Torso', parte: 'Torso', partId: 'torso', icon: '👕', podeGolpear: false },
+    };
+    const base = { derivedValues: DVS, derived: DERIVED, bodySlots: SLOTS };
+
+    // Nada equipado: as duas mãos socam igual e viram UMA linha; o torso nunca entra.
+    const todas = computeGolpesDesarmados({ ...base, slotsOcupados: [] });
+    assert.deepStrictEqual(todas.map(l => l.nome), ['Mão', 'Pé'], 'partes iguais colapsam');
+    assert.deepStrictEqual(todas.map(l => l.qtd), [2, 1], 'e a linha diz quantas são');
+    assert.ok(todas.every(l => l.desarmado), 'linha marcada como desarmada');
+
+    // Dado 1d4 + o Dano do personagem (BONUS_DANO base 2).
+    assert.strictEqual(todas[0].dano, '1d4+2', `dano desarmado errado: ${todas[0].dano}`);
+    assert.strictEqual(todas[0].tipoGolpe.nome, 'Contundente', 'punho é barrado pela Blindagem Contundente');
+
+    // Acerto sai da base do personagem, sem bônus de item.
+    const ac = todas[0].colunas.find(c => c.key === 'ACERTO');
+    assert.strictEqual(ac.total, 5, 'acerto = base global');
+    assert.strictEqual(ac.bonus, 0, 'parte sem vínculo não altera nada');
+    assert.ok(!todas[0].colunas.some(c => c.key === 'BONUS_DANO'), 'DV de dano vira fórmula, não coluna');
+    assert.deepStrictEqual(todas[0].canais, [], 'canal de Essência é da arma, não do punho');
+
+    // Qualquer item equipado ocupa a parte — a mão com escudo não soca.
+    // Sobrando uma mão só, a linha volta a dizer QUAL mão.
+    const comEscudo = computeGolpesDesarmados({ ...base, slotsOcupados: ['mao_1'] });
+    assert.deepStrictEqual(comEscudo.map(l => l.nome), ['Mão 2', 'Pé']);
+    assert.deepStrictEqual(comEscudo.map(l => l.qtd), [1, 1]);
+
+    // Espada de duas mãos toma as duas.
+    const duasMaos = computeGolpesDesarmados({ ...base, slotsOcupados: ['mao_1', 'mao_2'] });
+    assert.deepStrictEqual(duasMaos.map(l => l.slotKey), ['pe']);
+
+    // --- VD vinculado à parte: muda o golpe DAQUELA parte, como um equipamento ---
+    const comVinculo = computeGolpesDesarmados({
+        ...base, slotsOcupados: [],
+        parteBonuses: { pe: { 'DERIVED:BONUS_DANO': 3, 'DERIVED:ACERTO': -1 } },
+    });
+    const pe = comVinculo.find(l => l.parte === 'Pé');
+    const mao = comVinculo.find(l => l.parte === 'Mão');
+    assert.strictEqual(pe.dano, '1d4+5', 'chute: Dano 2 do personagem + 3 da Perna');
+    assert.strictEqual(pe.colunas.find(c => c.key === 'ACERTO').total, 4, 'acerto 5 − 1 da parte');
+    assert.strictEqual(pe.colunas.find(c => c.key === 'ACERTO').bonus, -1, 'delta da parte isolado');
+    assert.strictEqual(mao.dano, '1d4+2', 'o vínculo do Pé não vaza para a Mão');
+
+    // Parte com nome igual mas número diferente NÃO colapsa.
+    const maoTorta = computeGolpesDesarmados({
+        ...base, slotsOcupados: [],
+        bodySlots: { ...SLOTS, mao_2: { ...SLOTS.mao_2, partId: 'mao_protese' } },
+        parteBonuses: { mao_protese: { 'DERIVED:BONUS_DANO': 1 } },
+    });
+    assert.deepStrictEqual(maoTorta.map(l => l.nome), ['Mão 1', 'Mão 2', 'Pé'], 'valores diferentes, linhas separadas');
+    assert.deepStrictEqual(maoTorta.map(l => l.qtd), [1, 1, 1]);
+
+    // Sem bônus de dano o dado sai limpo, sem "+0".
+    const semBonus = computeGolpesDesarmados({ ...base, derived: { ACERTO: 5 }, slotsOcupados: [] });
+    assert.strictEqual(semBonus[0].dano, '1d4');
+
+    // Personagem sem nenhuma parte que golpeia não gera linha nenhuma.
+    assert.deepStrictEqual(
+        computeGolpesDesarmados({ ...base, bodySlots: { torso: SLOTS.torso }, slotsOcupados: [] }), []);
+    assert.deepStrictEqual(computeGolpesDesarmados({}), [], 'contexto vazio não quebra');
+}
+
+console.log('✅ item-scope-calc: 13 grupos de asserções passaram.');
