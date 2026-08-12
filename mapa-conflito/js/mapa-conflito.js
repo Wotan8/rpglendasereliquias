@@ -19,7 +19,7 @@ import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/
 import {
     getFirestore, collection, getDocs, onSnapshot
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { colunaClasse, cardDefesa, esc, norm } from './conflito-dados.js';
+import { colunaClasse, cardDefesa, esc, norm, perfilDaClasse, mapaSVG, radarSVG, PALETA } from './conflito-dados.js?v=2';
 
 const firebaseConfig = {
     apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
@@ -39,13 +39,49 @@ const $ = (id) => document.getElementById(id);
 /* ── Estado ───────────────────────────────────────────────────────── */
 let classes = [];
 let modulos = {};   // id → doc
-let mapas = { pericias: {}, condicoes: {} };
+let mapas = { vds: {}, pericias: {} };
+let visao = localStorage.getItem('mc_visao') || 'turno';
+/* Quais classes entram no radar. `null` = ainda não escolheram nada, e aí
+   valem TODAS — abrir o mapa mostrando o sistema inteiro é o ponto dele. */
+let noRadar = null;
+try { const g = localStorage.getItem('mc_radar'); if (g) noRadar = new Set(JSON.parse(g)); } catch { /* storage podre, segue com todas */ }
+
+let _comHab = [];   // perfis com repertório de verdade — a lista das fichas
+const gravarRadar = () => noRadar
+    ? localStorage.setItem('mc_radar', JSON.stringify([...noRadar]))
+    : localStorage.removeItem('mc_radar');
 
 /* ── Render ───────────────────────────────────────────────────────── */
 function render() {
     const escolhidas = [$('selA').value, $('selB').value]
         .map(id => classes.find(c => c.id === id))
         .filter(Boolean);
+
+    const noMapa = visao === 'mapa';
+    $('colunas').hidden = noMapa;
+    $('visaoMapa').hidden = !noMapa;
+    $('busca').hidden = noMapa;              // a busca é da lista, não do gráfico
+    $('vTurno').classList.toggle('is-ativa', !noMapa);
+    $('vMapa').classList.toggle('is-ativa', noMapa);
+    $('vTurno').setAttribute('aria-selected', String(!noMapa));
+    $('vMapa').setAttribute('aria-selected', String(noMapa));
+
+    if (noMapa) {
+        /* O mapa mostra TODAS as classes — o que interessa nele é onde ninguém
+           está. Os selects só destacam. */
+        const perfis = classes.map(c => perfilDaClasse(c, modulos, mapas));
+        $('grafMapa').innerHTML = mapaSVG(perfis, escolhidas.map(c => c.id));
+        /* Fichas e séries saem do MESMO array: a cor da ficha é a posição da
+           classe entre as séries, e classe com módulo mas sem habilidade
+           (Runimago) não pode entrar numa lista e sair da outra — isso
+           deslocava a cor de todas as classes depois dela. */
+        _comHab = perfis.filter(p => p.n);
+        const series = _comHab.filter(p => !noRadar || noRadar.has(p.id));
+        renderFichas(_comHab, series);
+        $('grafRadar').innerHTML = radarSVG(series);
+        return;
+    }
+
     $('colunas').innerHTML = escolhidas.length
         ? escolhidas.map(c => colunaClasse(c, modulos, mapas)).join('')
         : '<p class="mc-vazio">Escolha uma classe acima.</p>';
@@ -67,6 +103,26 @@ function filtrar() {
     }
 }
 
+/* Uma ficha por classe. A cor da ficha marcada é a MESMA da linha dela no
+   radar — sem isso, com dez séries ninguém liga legenda a polígono. */
+function renderFichas(todos, series) {
+    $('fichas').innerHTML = todos.map(p => {
+        const i = series.findIndex(s => s.id === p.id);
+        const on = i >= 0;
+        return `<button class="mc-ficha${on ? ' is-on' : ''}" data-classe="${esc(p.id)}"
+            ${on ? `style="--ficha:${PALETA[i % PALETA.length]}"` : ''}
+            aria-pressed="${on}" title="${p.n} habilidades">${esc(p.nome)}</button>`;
+    }).join('') || '<span class="mc-vazio">Nenhuma classe com repertório.</span>';
+
+    for (const b of $('fichas').querySelectorAll('[data-classe]'))
+        b.onclick = () => {
+            if (!noRadar) noRadar = new Set(_comHab.map(p => p.id));   // null = todas
+            const id = b.dataset.classe;
+            noRadar.has(id) ? noRadar.delete(id) : noRadar.add(id);
+            gravarRadar(); render();
+        };
+}
+
 function preencherSelects() {
     const ops = classes.map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('');
     for (const [id, vazio, chave] of [['selA', '— classe —', 'mc_a'], ['selB', '— comparar com… —', 'mc_b']]) {
@@ -83,11 +139,10 @@ const lista = async (nome) =>
     (await getDocs(collection(db, 'system/data/' + nome))).docs.map(d => ({ id: d.id, ...d.data() }));
 
 async function iniciar() {
-    const [peric, conds, vds] = await Promise.all(
-        ['skills', 'conditions', 'derivedValues'].map(lista));
+    const [peric, vds] = await Promise.all(['skills', 'derivedValues'].map(lista));
     mapas = {
+        vds: Object.fromEntries(vds.map(v => [v.id, v.nome])),
         pericias: Object.fromEntries(peric.map(p => [p.id, p.nome])),
-        condicoes: Object.fromEntries(conds.map(c => [c.id, c.nome])),
     };
 
     const defesas = vds.filter(v => v.blocoId === 'defesa').sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
@@ -108,6 +163,12 @@ async function iniciar() {
 }
 
 $('busca').addEventListener('input', filtrar);
+for (const [id, qual] of [['vTurno', 'turno'], ['vMapa', 'mapa']])
+    $(id).addEventListener('click', () => { visao = qual; localStorage.setItem('mc_visao', qual); render(); });
+/* `null` já significa "todas", e sobrevive a uma classe nova entrar no
+   Painel do Criador — enumerar os ids de hoje não sobreviveria. */
+$('fichasTodas').addEventListener('click', () => { noRadar = null; gravarRadar(); render(); });
+$('fichasNenhuma').addEventListener('click', () => { noRadar = new Set(); gravarRadar(); render(); });
 
 /* Firestore só libera system/data para quem está logado (firestore.rules). */
 onAuthStateChanged(auth, user => {

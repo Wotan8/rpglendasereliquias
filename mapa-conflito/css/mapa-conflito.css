@@ -278,6 +278,152 @@ body {
     font-size: var(--lr-fs-xs) !important;
 }
 
+/* ---------- Alternador de visão --------------------------------------- */
+.mc-visoes {
+    display: flex;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    overflow: hidden;
+}
+
+.mc-visao {
+    font: 600 var(--lr-fs-sm) var(--lr-font-body);
+    padding: var(--lr-space-2) var(--lr-space-3);
+    background: var(--lr-bg-1);
+    color: var(--lr-text-2);
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.mc-visao.is-ativa {
+    background: var(--lr-gold-soft);
+    color: var(--lr-gold-2);
+}
+
+.mc-visao:focus-visible {
+    outline: none;
+    box-shadow: var(--lr-glow-gold);
+}
+
+/* ---------- Mapa 2D e radar ------------------------------------------- */
+.mc-mapa {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: var(--lr-space-5);
+    padding: var(--lr-space-5);
+    align-items: start;
+}
+
+.mc-mapa-quadro {
+    padding: var(--lr-space-4);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
+    background: var(--lr-surface);
+}
+
+.mc-mapa-quadro h2 {
+    margin: 0 0 var(--lr-space-2);
+    font-family: var(--lr-font-title);
+    font-size: var(--lr-fs-lg);
+    letter-spacing: var(--lr-track-title);
+}
+
+.mc-mapa-nota {
+    margin: 0 0 var(--lr-space-4);
+    font-size: var(--lr-fs-sm);
+    color: var(--lr-text-2);
+}
+
+/* O SVG manda na altura pelo viewBox; a largura acompanha o quadro. */
+.mc-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+/* ---------- Fichas de classe (quem entra no radar) -------------------- */
+.mc-fichas-topo {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-2);
+    margin-bottom: var(--lr-space-2);
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--lr-text-2);
+}
+
+.mc-mini {
+    font: 600 var(--lr-fs-xs) var(--lr-font-body);
+    text-transform: none;
+    letter-spacing: 0;
+    padding: 2px var(--lr-space-2);
+    background: var(--lr-bg-1);
+    color: var(--lr-text-2);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius-sm);
+    cursor: pointer;
+}
+
+.mc-mini:hover {
+    color: var(--lr-gold-2);
+    border-color: var(--lr-gold);
+}
+
+.mc-fichas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lr-space-1);
+    margin-bottom: var(--lr-space-4);
+}
+
+.mc-ficha {
+    font: 600 var(--lr-fs-xs) var(--lr-font-body);
+    padding: 3px var(--lr-space-2);
+    background: var(--lr-bg-1);
+    color: var(--lr-text-2);
+    border: var(--lr-border-w) solid var(--lr-border-soft);
+    border-radius: var(--lr-radius-sm);
+    cursor: pointer;
+}
+
+/* Marcada: a borda esquerda usa a cor exata da série no radar. */
+.mc-ficha.is-on {
+    color: var(--lr-text-1);
+    background: var(--lr-surface-2);
+    border-color: var(--lr-border);
+    border-left: 4px solid var(--ficha, var(--lr-gold));
+}
+
+.mc-ficha:focus-visible {
+    outline: none;
+    box-shadow: var(--lr-glow-gold);
+}
+
+.mc-radar-legenda {
+    display: flex;
+    gap: var(--lr-space-4);
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: var(--lr-space-3);
+    font-size: var(--lr-fs-sm);
+}
+
+.mc-radar-chave {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lr-space-2);
+}
+
+.mc-radar-chave i {
+    width: 14px;
+    height: 4px;
+    border-radius: 2px;
+}
+
 /* ---------- Defesas --------------------------------------------------- */
 .mc-defesas {
     padding: var(--lr-space-5);

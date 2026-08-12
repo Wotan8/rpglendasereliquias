@@ -9,6 +9,7 @@
       "graphify-out/**",
       "sistema antigo e lore/**",
       "**/__check-*",
+      "**/__previa.html",
       "**/*.test.mjs",
       "BRIEFING.md",
       "temp_path.txt",

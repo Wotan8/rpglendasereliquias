@@ -4,9 +4,10 @@
 
      node functions/__check-mapa-conflito.mjs                                 */
 import assert from 'node:assert/strict';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { agruparPorAcao, habilidadesDaClasse, colunaClasse, cardDefesa }
+import { agruparPorAcao, habilidadesDaClasse, colunaClasse, cardDefesa,
+         perfilDaClasse, mapaSVG, radarSVG, vocacaoDominante }
     from '../mapa-conflito/js/conflito-dados.js';
 const require = createRequire(import.meta.url);
 const admin = require('firebase-admin');
@@ -19,8 +20,8 @@ const [classes, mods, peric, conds, vds] = await Promise.all(
     ['classes','classModules','skills','conditions','derivedValues'].map(lista));
 const modulos = Object.fromEntries(mods.map(m=>[m.id,m]));
 const mapas = {
-    pericias:  Object.fromEntries(peric.map(p=>[p.id,p.nome])),
-    condicoes: Object.fromEntries(conds.map(c=>[c.id,c.nome])),
+    vds:      Object.fromEntries(vds.map(v=>[v.id,v.nome])),   // Teste: aponta pra ca
+    pericias: Object.fromEntries(peric.map(p=>[p.id,p.nome])),
 };
 classes.sort((a,b)=>String(a.nome).localeCompare(String(b.nome),'pt-BR'));
 const defesas = vds.filter(v=>v.blocoId==='defesa').sort((a,b)=>(a.ordem||0)-(b.ordem||0));
@@ -39,6 +40,27 @@ for (const c of classes) {
             if (v && /^[A-Za-z0-9]{20}$/.test(v)) idsCrus.push(`${c.nome}/${h.nome}: id cru "${v}"`);
 }
 
+/* ═══ Os dois eixos do mapa ═══ */
+const perfis = classes.map(c => perfilDaClasse(c, modulos, mapas));
+console.log('\n=== EIXOS DO MAPA ===');
+console.log('classe                  n   ritmo   VD%   vocação        cond.');
+for (const p of [...perfis].sort((a, b) => b.ritmo - a.ritmo)) {
+    if (!p.n) { console.log(`${p.nome.padEnd(22)}  —   (sem repertório)`); continue; }
+    console.log(`${p.nome.padEnd(22)} ${String(p.n).padStart(2)}  ${p.ritmo >= 0 ? '+' : ''}${p.ritmo.toFixed(2)}  ${String(Math.round(p.portao * 100)).padStart(3)}%   ${(vocacaoDominante(p) || '—').padEnd(12)} ${p.condicoes}`);
+}
+
+/* Os dois chips que estavam mortos: Teste apontava para derivedValues (eu lia
+   skills) e condicoesAplicadas é objeto (eu lia como id). Sem número aqui, a
+   regressão volta calada — foi exatamente assim que passou despercebida. */
+const chips = classes.flatMap(c => habilidadesDaClasse(c, modulos, mapas));
+console.log('\nchips que estavam MORTOS:');
+console.log('  teste (VD) resolvido:', chips.filter(h => h.teste).length, 'de', chips.length);
+console.log('  condição legível:    ', chips.filter(h => h.condicoes.length).length, 'de', chips.length);
+assert.ok(chips.filter(h => h.teste).length > 0, 'o chip de teste tem que voltar a aparecer');
+assert.ok(chips.filter(h => h.condicoes.length).length > 0, 'o chip de condição também');
+assert.equal(chips.filter(h => h.condicoes.some(c => /\[object/.test(c.nome))).length, 0,
+    'nenhuma condição pode virar "[object Object]" de novo');
+
 console.log('\n─────────────────────────────');
 console.log('classes sem habilidade pré-cadastrada:', semNada.join(', ') || '—');
 console.log('faixas fora do catálogo de ação:', semAcao.join(' | ') || 'nenhuma');
@@ -49,18 +71,32 @@ assert.equal(idsCrus.length, 0, 'nenhum hash do Firestore pode aparecer na tela'
 assert.equal(defesas.length, 8, 'as 8 Defesas têm que estar no rodapé');
 assert.ok(classes.length > 0 && Object.keys(modulos).length > 0);
 
-/* ═══ Prévia: a tela inteira, todas as classes lado a lado ═══ */
+/* ═══ Prévia: a tela inteira, todas as classes lado a lado ═══
+   O CSS vai EMBUTIDO: assim o arquivo abre sozinho, de qualquer pasta, sem
+   servidor — e sem o service worker servir folha velha, que já enganou uma
+   verificação inteira aqui. */
+const css = ['../mapa-conflito/css/mapa-conflito.css', '../shared/tokens.css', '../shared/lendas-reliquias.css']
+    .map(f => readFileSync(new URL(f, import.meta.url), 'utf8')).join('\n');
 const previa = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prévia — Mapa de Conflito</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/mapa-conflito.css">
-<link rel="stylesheet" href="../shared/tokens.css">
-<link rel="stylesheet" href="../shared/lendas-reliquias.css">
+<style>${css}</style>
 </head><body>
 <header class="mc-topo"><h1>⚔️ Mapa de Conflito — prévia (${classes.length} classes)</h1></header>
 <section class="mc-economia"><strong>O turno tem 2 ações.</strong>
 <span>Toda habilidade custa <b>1 Ação Padrão</b>, salvo quando o cadastro diz outra coisa.</span></section>
+<section class="mc-mapa">
+  <div class="mc-mapa-quadro"><h2>🗺️ Ritmo × Portão</h2><div>${mapaSVG(perfis, [])}</div></div>
+  <div class="mc-mapa-quadro"><h2>🎯 Vocação — todas as classes</h2>
+    ${radarSVG(perfis)}</div>
+</section>
+<section class="mc-mapa">
+  <div class="mc-mapa-quadro"><h2>🎯 Vocação — duas (silhueta cheia)</h2>
+    ${radarSVG(perfis.filter(p=>['Guerreiro','Xamã'].includes(p.nome)))}</div>
+  <div class="mc-mapa-quadro"><h2>🎯 Vocação — quatro</h2>
+    ${radarSVG(perfis.filter(p=>['Guerreiro','Xamã','Bardo','Sangral'].includes(p.nome)))}</div>
+</section>
 <main class="mc-colunas">${classes.map(c=>colunaClasse(c, modulos, mapas)).join('')}</main>
 <section class="mc-defesas"><h2>🛡️ Defesas — iguais para todos</h2>
 <p class="mc-defesas-nota">Você declara uma defesa por golpe recebido. O limite por rodada é
