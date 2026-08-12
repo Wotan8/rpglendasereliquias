@@ -111,6 +111,10 @@ export function lerHabilidade(mod, it, mapas = {}) {
         alcance,
         condicoes: lerCondicoes(it),
         razao: it.regua?.razao || null,
+        /* A medição da Régua de Balanceamento, como foi gravada no cadastro:
+           { razao, unidades, custo, em }. É o único número EXATO que existe
+           sobre o que a habilidade entrega — o resto da tela é estimativa. */
+        regua: (it.regua && typeof it.regua.razao === 'number') ? it.regua : null,
     };
 }
 
@@ -423,6 +427,129 @@ export function radarSVG(perfis) {
         </svg>
         <div class="mc-radar-legenda">${legenda || '<span class="mc-vazio">Nenhuma classe marcada.</span>'}</div>
     </div>`;
+}
+
+/* ══════════════════ AUDITORIA — só número exato ════════════════════
+   O radar de vocação é heurística sobre texto. Isto aqui NÃO é: cada
+   número vem de `regua` gravada no próprio cadastro pelo processo de
+   balanceamento — { razao, unidades, custo }.
+
+   A régua (livro "Régua de Balanceamento", §0.3 e §4.1):
+     1 unidade = o que um guerreiro entrega em 1 rodada (DPR 3,445 em Q0)
+     1 Energia = 1,00 unidade — a âncora de todo o resto
+     razão = unidades ÷ custo
+
+   Abaixo de 1,00 a habilidade entrega menos que sacar a espada, que é de
+   graça (§0.3). O teto de 1,70 é a faixa que os scripts de balanceamento
+   usam nos asserts (ver functions/manobra-atordoar.mjs).
+
+   O que NÃO dá para auditar daqui: dano é texto livre no cadastro, então
+   nenhuma soma de dano sai estruturada. Por isso a auditoria se apoia na
+   régua já medida, e a COBERTURA é a primeira coisa que ela mostra —
+   classe sem régua não está aprovada, está sem medição. */
+
+export const FAIXA_REGUA = [1.00, 1.70];
+
+/** @returns {{id,nome,n,medidas,cobertura,foraDaFaixa,unidades,custo}} */
+export function auditoriaDaClasse(classe, modulos, mapas) {
+    const habs = habilidadesDaClasse(classe, modulos, mapas);
+    const medidas = habs.filter(h => h.regua).map(h => ({
+        nome: h.nome, modulo: h.modulo,
+        razao: h.regua.razao, unidades: h.regua.unidades, custo: h.regua.custo,
+    }));
+    const [piso, teto] = FAIXA_REGUA;
+    return {
+        id: classe.id, nome: classe.nome || '?',
+        n: habs.length, medidas,
+        cobertura: habs.length ? medidas.length / habs.length : 0,
+        foraDaFaixa: medidas.filter(m => m.razao < piso || m.razao > teto)
+            .sort((a, b) => b.razao - a.razao),
+        unidades: medidas.reduce((s, m) => s + (m.unidades || 0), 0),
+        custo: medidas.reduce((s, m) => s + (m.custo || 0), 0),
+    };
+}
+
+const br = (x, casas = 2) => Number(x).toFixed(casas).replace('.', ',');
+
+/**
+ * Uma faixa por classe, um ponto por habilidade medida, na escala da razão.
+ * A zona aprovada é pintada; o que sai dela salta à vista sem legenda.
+ * Razão acima do teto do eixo é fixada na borda com o valor escrito ao lado —
+ * cortar o 9,14× do Sangral esconderia justamente o pior caso.
+ */
+export function auditoriaSVG(auditorias) {
+    const linhas = auditorias.filter(a => a.n);
+    const ml = 168, mr = 54, mt = 46, alt = 34, MAX = 3;
+    const W = 760, H = mt + linhas.length * alt + 44;
+    const px = (r) => ml + Math.min(r, MAX) / MAX * (W - ml - mr);
+    const [piso, teto] = FAIXA_REGUA;
+
+    const eixo = [0, 1, 1.7, 2, 3].map(v => `
+        <line x1="${px(v)}" y1="${mt - 12}" x2="${px(v)}" y2="${H - 40}"
+              stroke="var(--lr-border-soft)" stroke-width="1"/>
+        <text x="${px(v)}" y="${mt - 18}" text-anchor="middle" font-size="10"
+              fill="var(--lr-text-2)">${br(v, v % 1 ? 2 : 0)}×</text>`).join('');
+
+    const corpo = linhas.map((a, i) => {
+        const y = mt + i * alt + alt / 2;
+        const nunca = a.medidas.length === 0;
+        const pontos = a.medidas.map(m => {
+            const fora = m.razao < piso || m.razao > teto;
+            const estourou = m.razao > MAX;
+            return `<g>
+                <circle cx="${px(m.razao)}" cy="${y}" r="${fora ? 6 : 5}"
+                    fill="${fora ? 'var(--lr-blood-2)' : 'var(--lr-nature)'}" fill-opacity=".8"
+                    stroke="var(--lr-surface)" stroke-width="1"><title>${esc(m.nome)} — ${br(m.razao)}× (${br(m.unidades)} unidades ÷ custo ${m.custo}) · ${esc(m.modulo)}</title></circle>
+                ${estourou ? `<text x="${px(MAX) + 8}" y="${y + 4}" font-size="10" font-weight="700"
+                    fill="var(--lr-blood-2)">${br(m.razao)}×</text>` : ''}
+            </g>`;
+        }).join('');
+        return `<g>
+            <rect x="0" y="${mt + i * alt}" width="${W}" height="${alt}"
+                  fill="${i % 2 ? 'var(--lr-bg-1)' : 'transparent'}" opacity=".5"/>
+            <text x="${ml - 12}" y="${y - 2}" text-anchor="end" font-size="12"
+                  font-weight="600" fill="var(--lr-text-1)">${esc(a.nome)}</text>
+            <text x="${ml - 12}" y="${y + 11}" text-anchor="end" font-size="10"
+                  fill="${nunca ? 'var(--lr-blood-2)' : 'var(--lr-text-2)'}">${nunca
+                ? 'nunca auditada'
+                : `${a.medidas.length}/${a.n} medidas · ${Math.round(a.cobertura * 100)}%`}</text>
+            ${pontos}
+        </g>`;
+    }).join('');
+
+    return `<svg viewBox="0 0 ${W} ${H}" class="mc-svg" role="img"
+        aria-label="Auditoria: razão da régua por habilidade, classe a classe">
+        <rect x="${px(piso)}" y="${mt - 12}" width="${px(teto) - px(piso)}" height="${H - 28 - mt}"
+              fill="var(--lr-nature-soft)"/>
+        <text x="${(px(piso) + px(teto)) / 2}" y="${H - 26}" text-anchor="middle" font-size="10"
+              fill="var(--lr-text-2)">faixa aprovada</text>
+        <text x="${px(0) + 4}" y="${H - 26}" font-size="10" fill="var(--lr-blood-2)">↤ pior que sacar a espada</text>
+        ${eixo}${corpo}
+    </svg>`;
+}
+
+/** A lista do que está fora da faixa, com a conta aberta. */
+export function tabelaAuditoria(auditorias) {
+    const fora = auditorias.flatMap(a => a.foraDaFaixa.map(m => ({ ...m, classe: a.nome })))
+        .sort((x, y) => y.razao - x.razao);
+    const semMedida = auditorias.filter(a => a.n && !a.medidas.length);
+
+    const linhas = fora.map(m => `<tr>
+        <td class="mc-num ${m.razao > FAIXA_REGUA[1] ? 'mc-alto' : 'mc-baixo'}">${br(m.razao)}×</td>
+        <td>${esc(m.classe)}</td>
+        <td>${esc(m.nome)}</td>
+        <td class="mc-num">${br(m.unidades)}</td>
+        <td class="mc-num">${m.custo}</td>
+    </tr>`).join('');
+
+    return `
+    ${semMedida.length ? `<p class="mc-aviso">⚠️ Sem régua nenhuma:
+        <b>${semMedida.map(a => esc(a.nome)).join(', ')}</b>.
+        Não estão aprovadas — estão sem medição.</p>` : ''}
+    ${fora.length ? `<table class="mc-tabela">
+        <thead><tr><th>razão</th><th>classe</th><th>habilidade</th><th>unid.</th><th>custo</th></tr></thead>
+        <tbody>${linhas}</tbody>
+    </table>` : '<p class="mc-vazio">Nada fora da faixa entre o que foi medido.</p>'}`;
 }
 
 /** O rodapé: as 8 Defesas, iguais para todo personagem. */

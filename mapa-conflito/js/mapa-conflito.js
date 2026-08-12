@@ -19,7 +19,8 @@ import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/
 import {
     getFirestore, collection, getDocs, onSnapshot
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { colunaClasse, cardDefesa, esc, norm, perfilDaClasse, mapaSVG, radarSVG, PALETA } from './conflito-dados.js?v=2';
+import { colunaClasse, cardDefesa, esc, norm, perfilDaClasse, mapaSVG, radarSVG, PALETA,
+         auditoriaDaClasse, auditoriaSVG, tabelaAuditoria } from './conflito-dados.js?v=3';
 
 const firebaseConfig = {
     apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
@@ -57,14 +58,27 @@ function render() {
         .map(id => classes.find(c => c.id === id))
         .filter(Boolean);
 
-    const noMapa = visao === 'mapa';
-    $('colunas').hidden = noMapa;
+    const noMapa = visao === 'mapa', naAudit = visao === 'audit';
+    $('colunas').hidden = noMapa || naAudit;
     $('visaoMapa').hidden = !noMapa;
-    $('busca').hidden = noMapa;              // a busca é da lista, não do gráfico
-    $('vTurno').classList.toggle('is-ativa', !noMapa);
-    $('vMapa').classList.toggle('is-ativa', noMapa);
-    $('vTurno').setAttribute('aria-selected', String(!noMapa));
-    $('vMapa').setAttribute('aria-selected', String(noMapa));
+    $('visaoAudit').hidden = !naAudit;
+    $('busca').hidden = noMapa || naAudit;   // a busca é da lista, não do gráfico
+    for (const [id, qual] of [['vTurno', 'turno'], ['vMapa', 'mapa'], ['vAudit', 'audit']]) {
+        $(id).classList.toggle('is-ativa', visao === qual);
+        $(id).setAttribute('aria-selected', String(visao === qual));
+    }
+
+    if (naAudit) {
+        /* Ordena pela pior razão: o que estoura a faixa aparece primeiro, e as
+           classes sem medição nenhuma ficam no fim, que é onde incomodam. */
+        const aud = classes.map(c => auditoriaDaClasse(c, modulos, mapas))
+            .filter(a => a.n)
+            .sort((a, b) => (b.foraDaFaixa[0]?.razao || 0) - (a.foraDaFaixa[0]?.razao || 0)
+                || b.cobertura - a.cobertura);
+        $('grafAudit').innerHTML = auditoriaSVG(aud);
+        $('tabAudit').innerHTML = tabelaAuditoria(aud);
+        return;
+    }
 
     if (noMapa) {
         /* O mapa mostra TODAS as classes — o que interessa nele é onde ninguém
@@ -163,7 +177,7 @@ async function iniciar() {
 }
 
 $('busca').addEventListener('input', filtrar);
-for (const [id, qual] of [['vTurno', 'turno'], ['vMapa', 'mapa']])
+for (const [id, qual] of [['vTurno', 'turno'], ['vMapa', 'mapa'], ['vAudit', 'audit']])
     $(id).addEventListener('click', () => { visao = qual; localStorage.setItem('mc_visao', qual); render(); });
 /* `null` já significa "todas", e sobrevive a uma classe nova entrar no
    Painel do Criador — enumerar os ids de hoje não sobreviveria. */

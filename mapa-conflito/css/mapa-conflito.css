@@ -424,6 +424,73 @@ body {
     border-radius: 2px;
 }
 
+/* ---------- Auditoria -------------------------------------------------- */
+.mc-audit {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: var(--lr-space-5);
+    padding: var(--lr-space-5);
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .mc-audit {
+        grid-template-columns: 1fr;
+    }
+}
+
+.mc-aviso {
+    margin: 0 0 var(--lr-space-4);
+    padding: var(--lr-space-3);
+    font-size: var(--lr-fs-sm);
+    background: var(--lr-blood-soft);
+    border-left: 3px solid var(--lr-blood-2);
+    border-radius: var(--lr-radius-sm);
+}
+
+/* Tabela larga rola dentro de si mesma; a página nunca rola de lado. */
+.mc-tabela {
+    display: block;
+    overflow-x: auto;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--lr-fs-sm);
+}
+
+.mc-tabela th,
+.mc-tabela td {
+    padding: var(--lr-space-2) var(--lr-space-3);
+    text-align: left;
+    border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
+    white-space: nowrap;
+}
+
+.mc-tabela th {
+    font-size: var(--lr-fs-xs);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--lr-text-2);
+}
+
+.mc-tabela tbody tr:hover {
+    background: var(--lr-surface-2);
+}
+
+.mc-num {
+    text-align: right !important;
+    font-variant-numeric: tabular-nums;
+}
+
+.mc-alto {
+    color: var(--lr-blood-2);
+    font-weight: 700;
+}
+
+.mc-baixo {
+    color: var(--lr-gold-2);
+    font-weight: 700;
+}
+
 /* ---------- Defesas --------------------------------------------------- */
 .mc-defesas {
     padding: var(--lr-space-5);

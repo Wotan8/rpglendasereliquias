@@ -15,7 +15,7 @@
         href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
 
     <!-- 1. CSS local da página  2. Tokens  3. Identidade -->
-    <link rel="stylesheet" href="css/mapa-conflito.css?v=2">
+    <link rel="stylesheet" href="css/mapa-conflito.css?v=3">
     <link rel="stylesheet" href="../shared/tokens.css?v=11">
     <link rel="stylesheet" href="../shared/lendas-reliquias.css?v=2">
     <script src="../shared/theme.js?v=1"></script>
@@ -29,6 +29,7 @@
             <div class="mc-visoes" role="tablist" aria-label="Visão">
                 <button id="vTurno" class="mc-visao is-ativa" role="tab" aria-selected="true">⚔️ Turno</button>
                 <button id="vMapa" class="mc-visao" role="tab" aria-selected="false">🗺️ Mapa</button>
+                <button id="vAudit" class="mc-visao" role="tab" aria-selected="false">🧮 Auditoria</button>
             </div>
             <select id="selA" class="mc-select" aria-label="Classe"></select>
             <select id="selB" class="mc-select" aria-label="Classe para comparar"></select>
@@ -75,6 +76,28 @@
         </div>
     </section>
 
+    <!-- Visão AUDITORIA — só número exato. Nada aqui é heurística: cada valor
+         vem de `regua` gravada no cadastro pelo processo de balanceamento. -->
+    <section id="visaoAudit" class="mc-audit" hidden>
+        <div class="mc-mapa-quadro">
+            <h2>🧮 Razão da Régua</h2>
+            <p class="mc-mapa-nota">Um ponto por habilidade <b>medida</b>.
+                <b>1 unidade</b> = o que um guerreiro entrega numa rodada (DPR 3,445 em Q0);
+                <b>1 Energia</b> = 1,00 unidade; <b>razão</b> = unidades ÷ custo.
+                Abaixo de 1,00 a habilidade rende menos que sacar a espada, que é de graça.
+                Faixa aprovada 1,00–1,70×, a mesma dos scripts de balanceamento.
+                <b>Isto não é estimativa</b> — ao contrário do radar de vocação, todo número
+                aqui foi gravado no cadastro pela auditoria da Régua de Balanceamento.</p>
+            <div id="grafAudit"></div>
+        </div>
+        <div class="mc-mapa-quadro">
+            <h2>📋 Fora da faixa</h2>
+            <p class="mc-mapa-nota">A conta aberta de cada caso, do maior para o menor.
+                Cobertura baixa não é aprovação: o que não tem régua não foi medido.</p>
+            <div id="tabAudit"></div>
+        </div>
+    </section>
+
     <!-- A outra metade do conflito: comum a todo personagem, independe de classe -->
     <section class="mc-defesas">
         <h2>🛡️ Defesas — iguais para todos</h2>
@@ -83,7 +106,7 @@
         <div id="gradeDefesas" class="mc-defesas-grade"></div>
     </section>
 
-    <script type="module" src="js/mapa-conflito.js?v=2"></script>
+    <script type="module" src="js/mapa-conflito.js?v=3"></script>
 </body>
 
 </html>

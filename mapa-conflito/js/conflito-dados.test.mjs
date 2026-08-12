@@ -4,6 +4,7 @@ import {
     lerHabilidade, agruparPorAcao, habilidadesDaClasse, norm, SEM_ACAO,
     lerCondicoes, rotuloCondicao, perfilDaClasse, vocacaoDominante, FAIXAS,
     radarSVG, opacidadeRadar, PALETA, VOCACOES,
+    auditoriaDaClasse, auditoriaSVG, tabelaAuditoria, FAIXA_REGUA,
 } from './conflito-dados.js';
 
 /* Fixtures com o formato REAL do banco (copiado de system/data/classModules).
@@ -205,5 +206,58 @@ assert.ok(r1.includes('fill-opacity="0.22"'), 'com uma só, a silhueta é cheia'
 
 // Os oito eixos aparecem, e o valor é % do repertório DAQUELA classe.
 assert.equal(conta(r11, /🎯|💥|🕸️|🛡️|💚|⬆️|💨|👁️|🔎/g) >= VOCACOES.length, true);
+
+/* --- auditoria: SÓ número exato ---
+   A diferença para o radar é justamente esta: aqui nada é inferido de texto.
+   Habilidade sem `regua` não conta como aprovada nem como reprovada — ela
+   não foi medida, e a cobertura tem que dizer isso. */
+const modAud = {
+    m: {
+        titulo: 'Manobras', schema: [{ key: 'e', label: 'Efeito:' }],
+        itensPredefinidos: [
+            { nome: 'Boa', valores: { e: 'x', acao: 'Ação Padrão' }, regua: { razao: 1.36, unidades: 1.36, custo: 1 } },
+            { nome: 'No piso', valores: { e: 'x', acao: 'Ação Padrão' }, regua: { razao: 1.00, unidades: 1.00, custo: 1 } },
+            { nome: 'No teto', valores: { e: 'x', acao: 'Ação Padrão' }, regua: { razao: 1.70, unidades: 3.40, custo: 2 } },
+            { nome: 'Estourada', valores: { e: 'x', acao: 'Ação Padrão' }, regua: { razao: 9.14, unidades: 9.14, custo: 1 } },
+            { nome: 'Fraca', valores: { e: 'x', acao: 'Ação Padrão' }, regua: { razao: 0.4, unidades: 0.4, custo: 1 } },
+            { nome: 'Sem régua', valores: { e: 'x', acao: 'Ação Padrão' } },
+            { nome: 'Régua podre', valores: { e: 'x', acao: 'Ação Padrão' }, regua: { em: '2026-01-01' } },
+        ],
+    },
+};
+const aud = auditoriaDaClasse({ id: 'g', nome: 'Guerreiro', modulosDaClasse: ['m'] }, modAud, {});
+
+assert.equal(aud.n, 7);
+assert.equal(aud.medidas.length, 5, 'sem régua e régua sem razão não entram na medição');
+assert.equal(aud.cobertura, 5 / 7, 'cobertura é medidas ÷ total, não medidas ÷ medidas');
+assert.deepEqual(aud.foraDaFaixa.map(m => m.nome), ['Estourada', 'Fraca'],
+    'os dois extremos, do maior para o menor');
+assert.deepEqual(FAIXA_REGUA, [1.00, 1.70]);
+// As bordas da faixa são INCLUSIVAS: 1,00 e 1,70 passam.
+assert.ok(!aud.foraDaFaixa.some(m => m.nome === 'No piso'), '1,00 exato está dentro');
+assert.ok(!aud.foraDaFaixa.some(m => m.nome === 'No teto'), '1,70 exato está dentro');
+assert.equal(aud.custo, 1 + 1 + 2 + 1 + 1, 'soma o custo só do que foi medido');
+
+// Classe nunca auditada: cobertura 0, e NÃO pode passar por "tudo aprovado".
+const zero = auditoriaDaClasse({ id: 'x', nome: 'Xamã', modulosDaClasse: ['m'] },
+    { m: { titulo: 'M', schema: [], itensPredefinidos: [{ nome: 'A', valores: { acao: 'Ação Padrão' } }] } }, {});
+assert.equal(zero.cobertura, 0);
+assert.equal(zero.foraDaFaixa.length, 0, 'sem medida não há como estar fora da faixa…');
+const tab = tabelaAuditoria([zero]);
+assert.ok(/Sem régua nenhuma/.test(tab) && /Xamã/.test(tab), '…então a tabela precisa DENUNCIAR a falta');
+assert.ok(/sem medição/i.test(tab), 'e dizer que falta medida, não que está tudo certo');
+// A classe sem régua não pode sumir da tela por "não ter nada fora da faixa".
+assert.ok(tab.indexOf('Xamã') < tab.indexOf('Nada fora da faixa'),
+    'o aviso de falta de medição vem ANTES do "nada fora da faixa", senão engana');
+
+// O pior caso não pode ser cortado pelo eixo: 9,14× fica fixado na borda COM o número.
+const svgAud = auditoriaSVG([aud]);
+assert.ok(svgAud.includes('9,14×'), 'razão acima do teto do eixo aparece escrita');
+assert.equal((svgAud.match(/<circle/g) || []).length, 5, 'um ponto por habilidade medida');
+assert.ok(auditoriaSVG([zero]).includes('nunca auditada'));
+assert.equal(auditoriaSVG([]).includes('<circle'), false, 'sem classe, sem ponto');
+
+// Número em português: vírgula decimal, como no resto do site.
+assert.ok(svgAud.includes('1,36×') || svgAud.includes('>1,36'), 'decimal com vírgula');
 
 console.log('✅ conflito-dados: todos os asserts passaram.');

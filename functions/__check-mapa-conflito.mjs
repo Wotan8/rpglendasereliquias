@@ -7,7 +7,8 @@ import assert from 'node:assert/strict';
 import { writeFileSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { agruparPorAcao, habilidadesDaClasse, colunaClasse, cardDefesa,
-         perfilDaClasse, mapaSVG, radarSVG, vocacaoDominante }
+         perfilDaClasse, mapaSVG, radarSVG, vocacaoDominante,
+         auditoriaDaClasse, auditoriaSVG, tabelaAuditoria, FAIXA_REGUA }
     from '../mapa-conflito/js/conflito-dados.js';
 const require = createRequire(import.meta.url);
 const admin = require('firebase-admin');
@@ -61,6 +62,30 @@ assert.ok(chips.filter(h => h.condicoes.length).length > 0, 'o chip de condiçã
 assert.equal(chips.filter(h => h.condicoes.some(c => /\[object/.test(c.nome))).length, 0,
     'nenhuma condição pode virar "[object Object]" de novo');
 
+/* ═══ Auditoria: só número exato, vindo de `regua` ═══ */
+const auds = classes.map(c => auditoriaDaClasse(c, modulos, mapas)).filter(a => a.n);
+const [piso, teto] = FAIXA_REGUA;
+console.log(`\n=== AUDITORIA DA RÉGUA ===  (faixa ${piso.toFixed(2)}–${teto.toFixed(2)}×)`);
+for (const a of [...auds].sort((x, y) => y.cobertura - x.cobertura)) {
+    const rs = a.medidas.map(m => m.razao).sort((x, y) => x - y);
+    console.log(`${a.nome.padEnd(22)} ${String(a.medidas.length).padStart(2)}/${String(a.n).padEnd(2)} ${String(Math.round(a.cobertura * 100)).padStart(3)}%  ${(rs.length ? `${rs[0].toFixed(2)}–${rs.at(-1).toFixed(2)}×` : 'nunca auditada').padEnd(15)} fora: ${a.foraDaFaixa.length}`);
+}
+const medidas = auds.reduce((s, a) => s + a.medidas.length, 0);
+const totalHab = auds.reduce((s, a) => s + a.n, 0);
+const foraTudo = auds.flatMap(a => a.foraDaFaixa);
+console.log(`\nCOBERTURA GERAL: ${medidas}/${totalHab} = ${Math.round(100 * medidas / totalHab)}%`);
+console.log(`SEM RÉGUA NENHUMA: ${auds.filter(a => !a.medidas.length).map(a => a.nome).join(', ') || '—'}`);
+console.log(`FORA DA FAIXA: ${foraTudo.length} de ${medidas} medidas`);
+for (const m of [...foraTudo].sort((x, y) => y.razao - x.razao).slice(0, 6))
+    console.log(`   ${m.razao.toFixed(2)}×  ${m.nome}  (${m.unidades} un ÷ custo ${m.custo})`);
+
+/* A cobertura parcial É o achado. Se um dia der 100%, ótimo; se der 0, a
+   leitura de `regua` quebrou e a tela mostraria "nada fora da faixa". */
+assert.ok(medidas > 0, 'a leitura da régua quebrou — nenhuma habilidade medida');
+for (const a of auds) for (const m of a.medidas)
+    assert.ok(Number.isFinite(m.razao) && Number.isFinite(m.unidades),
+        `régua com número inválido em ${a.nome}/${m.nome}`);
+
 console.log('\n─────────────────────────────');
 console.log('classes sem habilidade pré-cadastrada:', semNada.join(', ') || '—');
 console.log('faixas fora do catálogo de ação:', semAcao.join(' | ') || 'nenhuma');
@@ -96,6 +121,13 @@ const previa = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
     ${radarSVG(perfis.filter(p=>['Guerreiro','Xamã'].includes(p.nome)))}</div>
   <div class="mc-mapa-quadro"><h2>🎯 Vocação — quatro</h2>
     ${radarSVG(perfis.filter(p=>['Guerreiro','Xamã','Bardo','Sangral'].includes(p.nome)))}</div>
+</section>
+<section class="mc-audit">
+  <div class="mc-mapa-quadro"><h2>🧮 Razão da Régua</h2>
+    <p class="mc-mapa-nota">1 unidade = uma rodada de guerreiro (DPR 3,445 em Q0). Faixa aprovada 1,00–1,70×.
+    Nada aqui é heurística: todo número vem de <code>regua</code> gravada no cadastro.</p>
+    ${auditoriaSVG([...auds].sort((x,y)=>(y.foraDaFaixa[0]?.razao||0)-(x.foraDaFaixa[0]?.razao||0)||y.cobertura-x.cobertura))}</div>
+  <div class="mc-mapa-quadro"><h2>📋 Fora da faixa</h2>${tabelaAuditoria(auds)}</div>
 </section>
 <main class="mc-colunas">${classes.map(c=>colunaClasse(c, modulos, mapas)).join('')}</main>
 <section class="mc-defesas"><h2>🛡️ Defesas — iguais para todos</h2>
