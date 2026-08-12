@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Check — Versão do livro</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+
+<!-- Os TRÊS css que desenham selo de versão, cada um do seu módulo.
+     O ?v= não é enfeite: menu.css e conhecimento.css estão no PRECACHE do
+     service worker, e sem furar esse cache o check mede o CSS de ontem. -->
+<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?check=1">
+<link rel="stylesheet" href="menu/css/menu.css?check=1">
+<link rel="stylesheet" href="ficha-v1.7_1/css/conhecimento.css?check=1">
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/lendas-reliquias.css">
+<script src="shared/theme.js"></script>
+<style>
+  body { font-family: var(--lr-font-body); background: var(--lr-bg-0); color: var(--lr-text-1);
+         padding: 20px; max-width: 70ch; margin: 0 auto; }
+  h1 { font-family: var(--lr-font-title); font-size: 1.2rem; }
+  p.nota { color: var(--lr-text-2); font-size: .85rem; }
+  #res div { margin: 3px 0; font-size: .9rem; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight: 700; }
+  .amostra { margin: 14px 0; padding: 12px; border: 1px solid var(--lr-border);
+             border-radius: var(--lr-radius); background: var(--lr-surface); }
+</style>
+</head>
+<body>
+
+<h1>🔖 Versão do livro — check</h1>
+<p class="nota">
+    O selo tem que sair <strong>igual</strong> nas telas que listam livro, e o
+    <code>shared/livro-vinculado.js</code> é <strong>script clássico</strong>: ele busca a função
+    por <code>import()</code> dinâmico, cujo especificador resolve contra a URL da
+    <em>página</em>, não a do script. Como esse arquivo é carregado de cinco pastas
+    diferentes, o caminho tem que ser absoluto — é o que se confere aqui.
+</p>
+
+<button onclick="document.documentElement.classList.toggle('dark')">🌙 Alternar tema</button>
+
+<div class="amostra">
+    <div>Cronista: <span class="wb-badge wb-badge--ver">🔖 v2.1</span></div>
+    <div style="margin-top:8px">Wiki do Portal: <span class="livro-versao">🔖 v2.1</span> · 8 capítulo(s)</div>
+    <div style="margin-top:8px">Ficha: Compêndio de Cristalomancia <span class="cnh-versao">🔖 v2.1</span></div>
+</div>
+
+<div id="res"></div>
+
+<script type="module">
+const res = document.getElementById('res');
+let falhas = 0;
+const diz = (ok, txt) => {
+    if (!ok) falhas++;
+    res.insertAdjacentHTML('beforeend',
+        `<div class="${ok ? 'ok' : 'fail'}">${ok ? '✅' : '❌'} ${txt}</div>`);
+};
+const eq = (nome, obtido, esperado) =>
+    diz(obtido === esperado, `${nome} → <code>${obtido}</code>` +
+        (obtido === esperado ? '' : ` (esperado <code>${esperado}</code>)`));
+
+/* 1. O caminho ABSOLUTO que livro-vinculado.js usa. Se este import quebrar,
+      o selo some calado nas cinco páginas que carregam aquele script. */
+let versaoDoLivro;
+try {
+    ({ versaoDoLivro } = await import('/shared/livros-pub.js'));
+    diz(true, 'import(\'/shared/livros-pub.js\') resolveu — caminho absoluto vale de qualquer pasta');
+} catch (e) {
+    diz(false, `import absoluto FALHOU: ${e.message}`);
+}
+
+if (versaoDoLivro) {
+    eq('versao "2.1"', versaoDoLivro({ versao: '2.1' }), 'v2.1');
+    eq('versao "v2"', versaoDoLivro({ versao: 'v2' }), 'v2');
+    eq('versao "Ed. revista"', versaoDoLivro({ versao: 'Ed. revista' }), 'Ed. revista');
+    eq('livro sem versao', versaoDoLivro({}), '');
+    eq('so espaco', versaoDoLivro({ versao: '  ' }), '');
+}
+
+/* 2. As três classes de selo existem de verdade no CSS de cada módulo.
+      Classe sem regra = selo invisível, e ninguém percebe olhando o JS. */
+const temEstilo = (cls, prop) => {
+    const el = document.querySelector('.' + cls);
+    if (!el) return false;
+    const v = getComputedStyle(el)[prop];
+    return !!v && v !== 'none' && v !== 'rgba(0, 0, 0, 0)';
+};
+diz(temEstilo('wb-badge--ver', 'backgroundColor'), '.wb-badge--ver tem fundo (wb-ferramentas.css)');
+diz(Number(getComputedStyle(document.querySelector('.livro-versao')).fontWeight) >= 700,
+    '.livro-versao tem peso forte (menu.css)');
+diz(parseFloat(getComputedStyle(document.querySelector('.cnh-versao')).borderTopWidth) > 0,
+    '.cnh-versao tem chip com borda (conhecimento.css)');
+
+/* 3. Os três selos precisam ser legíveis nos DOIS temas — o cronista escreve
+      de dia e o jogador lê de noite.
+      ATENÇÃO: os selos usam fundo TRANSLÚCIDO (rgba .16). Comparar a cor do
+      texto com esse rgba cru dá 1.00:1 e reprova selo que está ótimo — o
+      fundo precisa ser COMPOSTO sobre o que está atrás antes da conta. */
+const rgba = (c) => { const n = c.match(/[\d.]+/g).map(Number); return [n[0], n[1], n[2], n[3] ?? 1]; };
+const sobre = (frente, fundo) => frente.slice(0, 3)
+    .map((v, i) => v * frente[3] + fundo[i] * (1 - frente[3])).concat(1);
+const lum = ([r, g, b]) => {
+    const f = [r, g, b].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; });
+    return .2126 * f[0] + .7152 * f[1] + .0722 * f[2];
+};
+/** Fundo real do elemento: empilha os fundos translúcidos até achar um opaco. */
+const fundoReal = (el) => {
+    const pilha = [];
+    for (let no = el; no; no = no.parentElement) {
+        const c = rgba(getComputedStyle(no).backgroundColor);
+        if (c[3] === 0) continue;
+        pilha.push(c);
+        if (c[3] === 1) break;
+    }
+    if (!pilha.length || pilha[pilha.length - 1][3] < 1) pilha.push([255, 255, 255, 1]);
+    return pilha.reduceRight((fundo, frente) => sobre(frente, fundo));
+};
+const contraste = (el) => {
+    const texto = sobre(rgba(getComputedStyle(el).color), fundoReal(el));
+    const [a, b] = [lum(texto), lum(fundoReal(el))].sort((x, y) => y - x);
+    return (a + .05) / (b + .05);
+};
+/* Controle: `.wb-badge--rev` já está em produção com exatamente as mesmas
+   cores do selo novo. Se o CONTROLE reprovar, quem está errada é a conta
+   acima — não o CSS. */
+const controle = document.createElement('span');
+controle.className = 'wb-badge wb-badge--rev';
+controle.textContent = '🔍 Em revisão';
+document.querySelector('.amostra').append(controle);
+
+for (const tema of ['claro', 'escuro']) {
+    document.documentElement.classList.toggle('dark', tema === 'escuro');
+    const cc = contraste(controle);
+    diz(cc >= 4.5, `tema ${tema} — CONTROLE .wb-badge--rev (já em produção) ${cc.toFixed(2)}:1`);
+    for (const cls of ['wb-badge--ver', 'livro-versao', 'cnh-versao']) {
+        const c = contraste(document.querySelector('.' + cls));
+        diz(c >= 4.5, `tema ${tema} — .${cls} contraste ${c.toFixed(2)}:1 (mínimo 4.5)`);
+    }
+}
+document.documentElement.classList.remove('dark');
+
+res.insertAdjacentHTML('beforeend',
+    `<div style="margin-top:12px;font-weight:700" class="${falhas ? 'fail' : 'ok'}">
+        ${falhas ? falhas + ' FALHA(S)' : 'Tudo verde.'}</div>`);
+window.__falhas = falhas;
+</script>
+</body>
+</html>

@@ -6,7 +6,7 @@
 // compartilhado — o mesmo da ficha e do tabuleiro.
 // =============================================
 import { db } from './firebase-config.js';
-import { livroDoMestre } from '../../shared/livros-pub.js';
+import { livroDoMestre, versaoDoLivro } from '../../shared/livros-pub.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -33,7 +33,7 @@ export async function onTabActivated() {
                 <div style="flex:1;min-width:0">
                     <div style="font-weight:700">${esc(l.title || 'Livro sem título')}</div>
                     ${l.description ? `<div style="color:var(--muted);font-size:.88rem">${esc(l.description)}</div>` : ''}
-                    <div style="color:var(--muted);font-size:.8rem">${n} ${n === 1 ? 'capítulo' : 'capítulos'}</div>
+                    <div style="color:var(--muted);font-size:.8rem">${versaoDoLivro(l) ? `<b style="color:var(--lr-gold,#D4AF37)">🔖 ${esc(versaoDoLivro(l))}</b> · ` : ''}${n} ${n === 1 ? 'capítulo' : 'capítulos'}</div>
                 </div>
                 <div style="color:var(--muted)">›</div>
             </div>`;

@@ -16,13 +16,20 @@
 
 import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { statusDoCapitulo } from './conhecimento-calc.js';
-import { pubDoLivro } from '../../shared/livros-pub.js';
+import { pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
 
 let _carregado = false;
 let _livros = [], _capitulos = [], _regras = {};
 
 const _esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* Selo de versão do livro — o jogador vê qual edição está lendo sem abrir.
+   Vazio quando o autor não marcou versão (ver shared/livros-pub.js). */
+const _seloVersao = (livro) => {
+    const v = versaoDoLivro(livro);
+    return v ? ` <span class="cnh-versao">🔖 ${_esc(v)}</span>` : '';
+};
 
 /* Ligações com o motor da ficha. Tudo com guarda: se um script não carregou,
    o requisito falha fechado em vez de liberar leitura por engano. */
@@ -187,7 +194,7 @@ function renderConhecimento() {
                         ? `<div class="cnh-capa" style="background-image:url('${_esc(livro.cover)}')" data-zoom="${_esc(livro.cover)}" data-zoom-alt="${_esc(livro.title || '')}" title="Ver a capa maior"></div>`
                         : '<div class="cnh-capa">📖</div>'}
                     <div style="flex:1;min-width:0">
-                        <div class="cnh-livro-titulo">${_esc(livro.title || 'Livro sem título')}</div>
+                        <div class="cnh-livro-titulo">${_esc(livro.title || 'Livro sem título')}${_seloVersao(livro)}</div>
                         ${livro.description ? `<div class="cnh-livro-desc">${_esc(livro.description)}</div>` : ''}
                         <div class="cnh-progresso">📖 ${liberadosNoLivro} de ${visiveisNoLivro} capítulos desbloqueados</div>
                     </div>
@@ -250,7 +257,7 @@ window.lerCapitulo = function (capId) {
     const livro = _livros.find(l => l.id === cap.bookId);
     body.innerHTML = `
         <div class="cnh-leitura">
-            ${livro ? `<div class="cnh-leitura-livro">📗 ${_esc(livro.title || '')}</div>` : ''}
+            ${livro ? `<div class="cnh-leitura-livro">📗 ${_esc(livro.title || '')}${_seloVersao(livro)}</div>` : ''}
             <h2 class="cnh-leitura-titulo">${_esc(cap.title || 'Sem título')}</h2>
             ${cap.synopsis ? `<p class="cnh-leitura-syn">${_esc(cap.synopsis)}</p>` : ''}
             <div class="cnh-leitura-corpo texto-mundo">${cap.contentHTML || '<p><em>Capítulo ainda sem conteúdo.</em></p>'}</div>

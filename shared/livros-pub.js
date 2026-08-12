@@ -50,3 +50,22 @@ export function livroDoMestre(livro) {
     const p = pubDoLivro(livro);
     return p.mestre || p.geral;
 }
+
+/**
+ * 🔖 VERSÃO DO LIVRO — o selo que o leitor vê ANTES de abrir.
+ *
+ * O campo é texto livre (`versao`), escrito pelo autor no Escritório do
+ * Cronista a cada revisão: cabe "2", "2.1", "3 — revisão de combate" ou
+ * "Ed. revista". Quem manda no formato é o autor; aqui só normalizamos a
+ * exibição, para que as sete telas que listam livro mostrem a MESMA coisa.
+ *
+ * Um "v" é prefixado quando o autor não escreveu letra nenhuma na frente
+ * ("2.1" → "v2.1"), e respeitado quando escreveu ("Ed. revista" fica como
+ * está). Livro sem versão devolve '' — e aí nenhuma tela desenha selo, que
+ * é o certo: os 13 livros que já existem não nascem com selo mentiroso.
+ */
+export function versaoDoLivro(livro) {
+    const v = String(livro?.versao ?? '').trim();
+    if (!v) return '';
+    return /^[a-zà-ú]/i.test(v) ? v : 'v' + v;
+}

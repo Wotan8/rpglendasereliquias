@@ -22,7 +22,7 @@ import { db, collection, getDocs, doc, setDoc, deleteDoc } from './firebase-conf
 import { WB, esc, uid, ToolModal, setTitle, contentBody, searchables, KIND, poolOf } from './wb-utils.js';
 import { dossieHTML } from './wb-dossie.js';
 import { TOOLBAR_HTML, bindRich } from './wb-rich.js';
-import { PUBLICACOES, pubDoLivro } from '../../shared/livros-pub.js';
+import { PUBLICACOES, pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
 
 export const Editor = (() => {
     let books = [], artigos = [], atual = null;
@@ -66,6 +66,12 @@ export const Editor = (() => {
         const selos = PUBLICACOES.filter(([k]) => p[k])
             .map(([, label]) => `<span class="wb-badge wb-badge--pub">${label.replace('Publicar ', '')}</span>`);
         return selos.join(' ') || '<span class="wb-badge wb-badge--priv">🔒 Não publicado</span>';
+    };
+    /* Selo de versão — vem primeiro na fila de badges, e some se o autor
+       não escreveu versão nenhuma (ver shared/livros-pub.js). */
+    const seloVersao = (b) => {
+        const v = versaoDoLivro(b);
+        return v ? `<span class="wb-badge wb-badge--ver" title="Versão do livro">🔖 ${esc(v)}</span> ` : '';
     };
     const statusBadge = (st) => {
         const map = { rascunho: ['✏️ Rascunho', 'draft'], revisao: ['🔍 Em revisão', 'rev'], publicado: ['✅ Publicado', 'done'] };
@@ -126,7 +132,7 @@ export const Editor = (() => {
                      ${b.cover ? `data-zoom="${esc(b.cover)}" data-zoom-alt="${esc(b.title || '')}" title="Ver a capa maior"` : ''}>${b.cover ? '' : '📖'}</div>
                 <div class="wb-book__meta">
                     <div class="wb-book__title">${esc(b.title || 'Livro sem título')}</div>
-                    <div class="wb-book__badges">${pubBadgesLivro(b)} <span class="wb-badge wb-badge--soft">${caps.length} cap.</span> <span class="wb-badge wb-badge--soft">${palavras.toLocaleString('pt-BR')} palavras</span></div>
+                    <div class="wb-book__badges">${seloVersao(b)}${pubBadgesLivro(b)} <span class="wb-badge wb-badge--soft">${caps.length} cap.</span> <span class="wb-badge wb-badge--soft">${palavras.toLocaleString('pt-BR')} palavras</span></div>
                     ${b.description ? `<p class="wb-book__desc">${esc(b.description)}</p>` : ''}
                 </div>
                 <div class="wb-book__actions">
@@ -181,6 +187,9 @@ export const Editor = (() => {
             <h2>${book ? '⚙️ Editar livro' : '📗 Novo livro'}</h2>
             <div class="wbt-form">
                 <label>Título do livro <input id="bkTitle" class="form-input" value="${esc(b.title)}" placeholder="Ex: Crônicas de Eldoria — Vol. I"></label>
+                <label>Versão <input id="bkVersao" class="form-input" value="${esc(b.versao || '')}" placeholder="Ex: 2.1">
+                    <span class="wbt-muted" style="font-size:.8rem">Aparece como selo em toda tela que lista o livro, antes de abrir.
+                    Texto livre — mude a cada revisão. Vazio = sem selo.</span></label>
                 <label>Sinopse / descrição <textarea id="bkDesc" class="form-textarea" placeholder="Do que trata este livro?">${esc(b.description || '')}</textarea></label>
                 <label>Capa do livro ${CampoImagem.html({ id: 'bkCover', classe: 'form-input', valor: b.cover || '', pasta: 'worldbuilding-images/capas' })}</label>
                 <div class="wbt-muted" style="margin:.6rem 0 .2rem;font-weight:700">📖 Publicações</div>
@@ -197,6 +206,7 @@ export const Editor = (() => {
             </div>`);
         $('#bkSave').onclick = async () => {
             b.title = $('#bkTitle').value.trim() || 'Livro sem título';
+            b.versao = $('#bkVersao').value.trim();
             b.description = $('#bkDesc').value.trim();
             b.cover = $('#bkCover').value.trim();
             b.pub = Object.fromEntries(PUBLICACOES.map(([k]) => [k, $('#bkPub_' + k).checked]));
@@ -231,7 +241,7 @@ export const Editor = (() => {
     /* ══════════════ EDITOR (escrita) ══════════════ */
     function bookOptions(sel) {
         return `<option value="">— texto avulso —</option>` +
-            books.map(b => `<option value="${b.id}" ${b.id === sel ? 'selected' : ''}>📗 ${esc(b.title || 'Sem título')}</option>`).join('');
+            books.map(b => `<option value="${b.id}" ${b.id === sel ? 'selected' : ''}>📗 ${esc(b.title || 'Sem título')}${versaoDoLivro(b) ? ' · ' + esc(versaoDoLivro(b)) : ''}</option>`).join('');
     }
 
     function openArticle(article, bookId) {

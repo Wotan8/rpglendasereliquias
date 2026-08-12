@@ -2322,6 +2322,9 @@ html:not(.dark) .meta-card {
 }
 
 .livro-caps { color: var(--lr-text-2); font-size: var(--lr-fs-xs); }
+/* Versao do livro: o leitor precisa enxergar antes de abrir, entao ganha o
+   ouro em cima da linha de meta, que e cinza. */
+.livro-versao { color: var(--lr-gold); font-weight: 700; }
 
 /* ---------- leitor ---------- */
 .leitor-topo {

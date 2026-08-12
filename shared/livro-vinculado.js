@@ -37,9 +37,25 @@
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
         ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+    /* Versão do livro. Este arquivo é script CLÁSSICO, então não dá para
+       `import` no topo — vem junto do acervo, em carregar(), e todo caminho
+       que desenha livro já espera essa promise. Até lá, sem selo.
+       Caminho ABSOLUTO de propósito: em script clássico o especificador de
+       import() resolve contra a URL da PÁGINA, e este arquivo é carregado de
+       cinco pastas diferentes. */
+    let versaoDoLivro = () => '';
+    const seloVersao = (l, estilo) => {
+        const v = versaoDoLivro(l);
+        return v ? `<span style="${estilo}">🔖 ${esc(v)}</span>` : '';
+    };
+
     function carregar() {
         if (!_p) _p = (async () => {
-            const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+            const [{ collection, getDocs }, pub] = await Promise.all([
+                import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'),
+                import('/shared/livros-pub.js'),
+            ]);
+            versaoDoLivro = pub.versaoDoLivro;
             const [bSnap, aSnap] = await Promise.all([
                 getDocs(collection(window.db, 'worldbuilding-books')),
                 getDocs(collection(window.db, 'worldbuilding-articles')),
@@ -97,7 +113,7 @@
                         📖 Abrir livro “${esc(livro.title || 'Sem título')}”
                     </button>
                     <div style="font-size:.78rem;opacity:.7;margin-top:6px">
-                        ${lista.length} ${lista.length === 1 ? 'capítulo disponível' : 'capítulos disponíveis'} para leitura
+                        ${seloVersao(livro, 'font-weight:700;color:var(--lr-gold,#D4AF37)') ? seloVersao(livro, 'font-weight:700;color:var(--lr-gold,#D4AF37)') + ' · ' : ''}${lista.length} ${lista.length === 1 ? 'capítulo disponível' : 'capítulos disponíveis'} para leitura
                     </div>`;
             }).filter(Boolean);
             if (!blocos.length) { el.remove(); return; }
@@ -235,7 +251,7 @@
             <span style="flex:1;min-width:0">
                 <span style="display:block;font-weight:700">${esc(l.title || 'Livro sem título')}</span>
                 ${l.description ? `<span style="display:block;opacity:.75;font-size:.85rem">${esc(l.description)}</span>` : ''}
-                <span style="display:block;opacity:.6;font-size:.78rem">${n} ${n === 1 ? 'capítulo' : 'capítulos'}</span>
+                <span style="display:block;opacity:.6;font-size:.78rem">${seloVersao(l, 'font-weight:700;color:var(--lr-gold,#D4AF37)') ? seloVersao(l, 'font-weight:700;color:var(--lr-gold,#D4AF37)') + ' · ' : ''}${n} ${n === 1 ? 'capítulo' : 'capítulos'}</span>
             </span>
             <span style="opacity:.6">›</span>
         </button>`;
@@ -258,7 +274,7 @@
 
             _pintar(`
                 ${_bib ? _btnVoltar(_bib.titulo || 'Biblioteca', 'bib') : ''}
-                <div style="font-size:.8rem;opacity:.7;margin-bottom:4px">📖 Livro</div>
+                <div style="font-size:.8rem;opacity:.7;margin-bottom:4px">📖 Livro ${seloVersao(livro, 'font-weight:700;color:var(--lr-gold,#D4AF37)')}</div>
                 <h2 style="margin:0 0 8px">${esc(livro.title || 'Sem título')}</h2>
                 ${livro.description ? `<p style="opacity:.8;font-style:italic;margin:0 0 18px">${esc(livro.description)}</p>` : ''}
                 ${(_bib && _bib.acaoLivro) ? `<div style="margin:0 0 16px">${_bib.acaoLivro(livro, lista)}</div>` : ''}
@@ -317,7 +333,7 @@
             const { cap, livro } = achado;
             _pintar(`
                 ${_sum ? _btnVoltar('Sumário', 'sum') : (_bib ? _btnVoltar(_bib.titulo || 'Biblioteca', 'bib') : '')}
-                ${livro ? `<div style="font-size:.8rem;opacity:.7;margin-bottom:4px">📗 ${esc(livro.title || '')}</div>` : ''}
+                ${livro ? `<div style="font-size:.8rem;opacity:.7;margin-bottom:4px">📗 ${esc(livro.title || '')} ${seloVersao(livro, 'font-weight:700;color:var(--lr-gold,#D4AF37)')}</div>` : ''}
                 <h2 style="margin:0 0 8px">${esc(cap.title || 'Sem título')}</h2>
                 ${cap.synopsis ? `<p style="opacity:.8;font-style:italic;margin:0 0 16px">${esc(cap.synopsis)}</p>` : ''}
                 ${(_bib && _bib.acaoCapitulo) ? `<div style="margin:0 0 14px">${_bib.acaoCapitulo(cap)}</div>` : ''}

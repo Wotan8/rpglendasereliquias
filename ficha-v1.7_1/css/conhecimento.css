@@ -76,6 +76,22 @@
     color: var(--lr-gold-2);
 }
 
+/* Versao do livro. O titulo ja e dourado, entao o selo vira chip neutro
+   com borda em vez de mais ouro em cima de ouro. */
+.cnh-versao {
+    font-family: var(--lr-font-body);
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
+    letter-spacing: 0;
+    color: var(--lr-text-2);
+    background: var(--lr-bg-1);
+    border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-sm);
+    padding: 1px 6px;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
 .cnh-livro-desc {
     font-family: var(--lr-font-subtitle);
     font-size: var(--lr-fs-sm);

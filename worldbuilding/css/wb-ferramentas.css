@@ -527,6 +527,9 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
 .wb-badge--draft { background: rgba(160,160,160,.14); color: var(--lr-text-2); }
 .wb-badge--rev { background: rgba(212,175,55,.16); color: var(--lr-gold); }
 .wb-badge--done { background: rgba(63,174,106,.16); color: var(--lr-nature); }
+/* Versao do livro: mesmo ouro do "em revisao", classe propria porque o
+   significado e outro (selo do livro, nao status do capitulo). */
+.wb-badge--ver { background: rgba(212,175,55,.16); color: var(--lr-gold); border-color: rgba(212,175,55,.35); }
 
 /* Campos extras do editor de escrita */
 .wb-article-syn {

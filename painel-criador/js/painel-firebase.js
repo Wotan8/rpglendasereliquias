@@ -3,8 +3,9 @@
 // Lendas e Relíquias (ficha-v1.7_1 style)
 // =============================================
 
-import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, ATRIBUTOS_VINCULAVEIS, periciaOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=15';
+import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, ATRIBUTOS_VINCULAVEIS, periciaOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=16';
 import { RUNIC_MODULE_DEF, buildRunicField, collectRunicField, importRunicSeed } from './painel-runic.js?v=1';
+import { versaoDoLivro } from '../../shared/livros-pub.js';
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -480,6 +481,7 @@ const MODULE_DEFS = {
             { key: 'icone', label: 'Ícone / Emoji', type: 'text', placeholder: 'Ex: 🗣️, 💪, 🦵' },
             { key: 'ordem', label: 'Ordem de Exibição', type: 'number', placeholder: '0' },
             { key: 'ehPadrao', label: 'Esta é uma parte padrão?', type: 'boolean' },
+            { key: 'podeGolpear', label: 'Pode Golpear?', type: 'boolean' },
             { key: 'podeSegurar', label: 'Pode Segurar?', type: 'boolean' },
             { key: 'podeEmpunhar', label: 'Pode Empunhar?', type: 'boolean' },
             { key: 'podeVestir', label: 'Pode Vestir?', type: 'boolean' },
@@ -1774,7 +1776,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                 
                 const wrap = document.getElementById(parentFieldPeculiaridade.id + '_wrap');
                 if (wrap) {
-                    import('./painel-mechanics.js?v=15').then(m => {
+                    import('./painel-mechanics.js?v=16').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
                         
@@ -1802,7 +1804,7 @@ window.saveSubFormPeculiaridade = async function (e, pid, parentFieldKey) {
                 const wrap = document.getElementById(legacyField.id + '_wrap');
                 if (wrap) {
                     const currentIds = JSON.parse(legacyField.value || '[]');
-                    import('./painel-mechanics.js?v=15').then(m => {
+                    import('./painel-mechanics.js?v=16').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Peculiaridades';
                         
@@ -1990,7 +1992,7 @@ window.saveSubFormValorDerivado = async function (e, vid, parentFieldKey) {
                 
                 const wrap = document.getElementById(parentFieldValorDerivado.id + '_wrap');
                 if (wrap) {
-                    import('./painel-mechanics.js?v=15').then(m => {
+                    import('./painel-mechanics.js?v=16').then(m => {
                         const labelSpan = wrap.querySelector('.mechsel-label');
                         const labelText = labelSpan ? labelSpan.textContent : 'Valores Derivados';
                         
@@ -3002,7 +3004,7 @@ function _buildWbChapterSelectorHTML(fieldKey, label, value, required) {
     wbBooksCache.forEach(b => {
         const caps = byBook[b.id] || [];
         if (!caps.length) return;
-        opts += `<optgroup label="📗 ${escapeHtml(b.title || 'Livro sem título')}">`;
+        opts += `<optgroup label="📗 ${escapeHtml(b.title || 'Livro sem título')}${versaoDoLivro(b) ? ' · ' + escapeHtml(versaoDoLivro(b)) : ''}">`;
         caps.forEach((c, i) => {
             const titulo = `${b.title || 'Livro'} — ${i + 1}. ${c.title || 'Sem título'}`;
             opts += `<option value="${escapeHtml(c.id)}" data-titulo="${escapeHtml(titulo)}" ${value === c.id ? 'selected' : ''}>${i + 1}. ${escapeHtml(c.title || 'Sem título')}</option>`;
@@ -3041,7 +3043,7 @@ function _buildBookLinkHTML(fieldKey, label, vincs) {
 function _buildBookLinkRowHTML(fieldKey, vinc) {
     vinc = vinc || {};
     const opts = '<option value="">— nenhum livro —</option>' + wbBooksCache
-        .map(b => `<option value="${escapeHtml(b.id)}" ${vinc.bookId === b.id ? 'selected' : ''}>📗 ${escapeHtml(b.title || 'Livro sem título')}</option>`)
+        .map(b => `<option value="${escapeHtml(b.id)}" ${vinc.bookId === b.id ? 'selected' : ''}>📗 ${escapeHtml(b.title || 'Livro sem título')}${versaoDoLivro(b) ? ' · ' + escapeHtml(versaoDoLivro(b)) : ''}</option>`)
         .join('');
 
     return `

@@ -11,7 +11,7 @@
      portal:logado    → carrega e renderiza o cânone
      portal:deslogado → mostra o convite de login
    ===================================================================== */
-import { pubDoLivro } from '../../shared/livros-pub.js';
+import { pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
 
 let livros = [];        // [{id, title, description, cover, capitulos:[...]}]
 let indice = [];        // busca: {livroI, capI, titulo, texto}
@@ -23,6 +23,13 @@ const $ = (id) => document.getElementById(id);
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* Selo de versão do livro, na linha de meta do card. Some quando o autor
+   não marcou versão nenhuma (ver shared/livros-pub.js). */
+const seloVersao = (l) => {
+    const v = versaoDoLivro(l);
+    return v ? '<span class="livro-versao">🔖 ' + esc(v) + '</span> · ' : '';
+};
 
 function stripHtml(html) {
     const d = document.createElement('div');
@@ -84,7 +91,7 @@ function renderEstante() {
         '</div><div class="livro-info">' +
         '<div class="livro-titulo">' + esc(l.title || 'Sem título') + '</div>' +
         (l.description ? '<p class="livro-desc">' + esc(l.description) + '</p>' : '') +
-        '<div class="livro-caps">' + l.capitulos.length + ' capítulo(s)</div>' +
+        '<div class="livro-caps">' + seloVersao(l) + l.capitulos.length + ' capítulo(s)</div>' +
         '</div></button>').join('');
 }
 
@@ -93,7 +100,8 @@ window.wikiAbrirLivro = function (i, capI, marcar) {
     livroAberto = i;
     $('wikiEstante').hidden = true;
     $('wikiLeitor').hidden = false;
-    $('leitorLivroNome').textContent = livros[i].title || '';
+    const ver = versaoDoLivro(livros[i]);
+    $('leitorLivroNome').textContent = (livros[i].title || '') + (ver ? ' · 🔖 ' + ver : '');
     $('leitorToc').innerHTML = livros[i].capitulos.map((c, ci) =>
         '<button data-cap="' + ci + '" onclick="wikiAbrirCap(' + ci + ')">' + esc(c.title || '') + '</button>').join('');
     window.wikiAbrirCap(capI || 0, marcar);
@@ -210,7 +218,8 @@ function buscar() {
             trecho = trecho.replace(new RegExp('(' + reQ + ')', 'gi'), '<mark>$1</mark>');
             return '<button class="wiki-res-item" onclick="wikiAbrirLivro(' + a.e.livroI + ',' + a.e.capI +
                 ',\'' + q.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;') + '\')">' +
-                '<div class="wiki-res-cam">' + esc(l.title || '') + '</div>' +
+                '<div class="wiki-res-cam">' + esc(l.title || '') +
+                (versaoDoLivro(l) ? ' · 🔖 ' + esc(versaoDoLivro(l)) : '') + '</div>' +
                 '<div class="wiki-res-titulo">' + esc(a.e.titulo) + '</div>' +
                 '<div class="wiki-res-trecho">…' + trecho + '…</div></button>';
         }).join('');
