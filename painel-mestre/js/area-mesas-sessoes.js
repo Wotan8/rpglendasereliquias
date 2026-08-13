@@ -6,6 +6,7 @@ import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { notifyUsers } from './notify.js';
+import { expDeltas } from '../../shared/exp-deltas.js';
 
 // Register global loader
 window._loadSessionLogs = loadSessionLogs;
@@ -36,6 +37,7 @@ function renderSessionLogs() {
                 <div class="sessao-titulo">📝 Sessão #${log.sessionNumber || '?'}</div>
                 <div style="display:flex;gap:6px;align-items:center">
                     <span class="sessao-data">📅 ${log.dateReal || '-'}</span>
+                    <button class="btn btn-secondary btn-small" onclick="event.stopPropagation();editSessionLog('${log.id}')" style="padding:4px 8px" title="Editar log">✏️</button>
                     <button class="btn btn-danger btn-small" onclick="event.stopPropagation();deleteSessionLog('${log.id}')" style="padding:4px 8px">🗑️</button>
                 </div>
             </div>
@@ -47,124 +49,131 @@ function renderSessionLogs() {
         </div>`).join('');
 }
 
-// ===== CREATE SESSION LOG =====
-window.openCreateSessionLogModal = async function() {
-    if (!S.currentMesaId) return;
-    // Load characters for selection
-    let chars = S.mesaCharacters || [];
-    if (!chars.length) {
-        try {
-            const snap = await getDocs(query(collection(db, 'char'), where('mesaId', '==', S.currentMesaId)));
-            snap.forEach(d => {
-                const raw = d.data();
-                const f = raw.fields || {};
-                chars.push({
-                    id: d.id,
-                    nome: f.nome || raw.nome || '',
-                    ownerUid: raw.ownerUid || '',
-                    ...raw
-                });
-            });
-        } catch (e) { /* use empty */ }
-    }
-    const nextNum = (S.mesaSessionLogs.length > 0) ? Math.max(...S.mesaSessionLogs.map(l => l.sessionNumber || 0)) + 1 : 1;
-    const charCheckboxes = chars.map(c => `
-        <div style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
-            <input type="checkbox" class="sl-char-cb" value="${c.id}" data-name="${escapeHtml(c.nome || '')}" data-owner="${c.ownerUid || ''}" style="width:18px;height:18px">
-            <span style="flex:1;color:var(--light);font-weight:600">${escapeHtml(c.nome || 'Sem nome')}</span>
-            <input type="number" class="form-input sl-char-exp" data-char-id="${c.id}" placeholder="EXP" value="0" style="width:80px;text-align:center;padding:6px">
-            <select class="form-select sl-char-exp-type" data-char-id="${c.id}" style="width:60px;padding:6px"><option value="add">+</option><option value="sub">−</option></select>
-        </div>`).join('');
+// ===== CAMPOS DO LOG (compartilhados com a Colheita da Sessão) =====
+// O formulário e a gravação vivem aqui e são reusados pela colheita
+// (area-mesas-sessao.js) — fechar a sessão já grava o log completo.
+export async function carregarCharsMesa() {
+    if ((S.mesaCharacters || []).length) return S.mesaCharacters;
+    const chars = [];
+    try {
+        const snap = await getDocs(query(collection(db, 'char'), where('mesaId', '==', S.currentMesaId)));
+        snap.forEach(d => chars.push({ ...d.data(), id: d.id }));
+    } catch (e) { /* segue sem personagens */ }
+    return chars;
+}
+const nomeChar = (c) => c.fields?.charName || c.fields?.nome || c.nome || 'Sem nome';
 
-    const m = document.createElement('div'); m.className = 'modal active'; m.id = 'createSessionModal';
-    m.innerHTML = `<div class="modal-content" style="max-width:800px"><div class="modal-header"><span class="modal-title">📝 Novo Log de Sessão</span><button class="modal-close" onclick="this.closest('.modal').remove()">✕</button></div><div class="modal-body" style="max-height:75vh;overflow-y:auto">
+export function proximoNumeroSessao() {
+    return S.mesaSessionLogs.length ? Math.max(...S.mesaSessionLogs.map(l => l.sessionNumber || 0)) + 1 : 1;
+}
+
+/** @param log valores iniciais (log existente, ou prefill vindo da sessão). */
+export function logCamposHtml(log, chars) {
+    const sel = new Map((log.participants || []).map(p => [p.characterId, p]));
+    const linhas = chars.map(c => {
+        const p = sel.get(c.id);
+        return `<div style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
+            <input type="checkbox" class="sl-char-cb" value="${c.id}" data-name="${escapeHtml(nomeChar(c))}" data-owner="${c.ownerUid || ''}" ${p ? 'checked' : ''} style="width:18px;height:18px">
+            <span style="flex:1;color:var(--light);font-weight:600">${escapeHtml(nomeChar(c))}</span>
+            <input type="number" class="form-input sl-char-exp" data-char-id="${c.id}" placeholder="EXP" value="${Math.abs(parseInt(p?.expAmount, 10) || 0)}" style="width:80px;text-align:center;padding:6px">
+            <select class="form-select sl-char-exp-type" data-char-id="${c.id}" style="width:60px;padding:6px"><option value="add">+</option><option value="sub" ${p?.expType === 'sub' ? 'selected' : ''}>−</option></select>
+        </div>`;
+    }).join('');
+    const ta = (id, rot, ph, rows) => `<div class="form-group"><label class="form-label">${rot}</label><textarea class="form-textarea" id="sl_${id}" rows="${rows}" placeholder="${ph}">${escapeHtml(log[id] || '')}</textarea></div>`;
+    return `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="form-group"><label class="form-label">Nº da Sessão</label><input type="number" class="form-input" id="sl_num" value="${nextNum}" min="1"></div>
-            <div class="form-group"><label class="form-label">Data Real</label><input type="date" class="form-input" id="sl_dateReal" value="${new Date().toISOString().split('T')[0]}"></div>
+            <div class="form-group"><label class="form-label">Nº da Sessão</label><input type="number" class="form-input" id="sl_num" value="${log.sessionNumber || 1}" min="1"></div>
+            <div class="form-group"><label class="form-label">Data Real</label><input type="date" class="form-input" id="sl_dateReal" value="${escapeHtml(log.dateReal || '')}"></div>
         </div>
-        <div class="form-group"><label class="form-label">Data no Jogo</label><input type="text" class="form-input" id="sl_gameDate" placeholder="Ex: 15 de Aura, Ano 10 EBA"></div>
-        <div class="form-group"><label class="form-label">Resumo Geral *</label><textarea class="form-textarea" id="sl_summary" rows="4" placeholder="O que aconteceu nesta sessão..."></textarea></div>
-        <div class="form-group"><label class="form-label">Resumo por Jogador</label><textarea class="form-textarea" id="sl_playerSummaries" rows="3" placeholder="Jogador 1: fez X. Jogador 2: fez Y."></textarea></div>
-        <div class="form-group"><label class="form-label">Personagens Participantes & EXP</label>${charCheckboxes || '<div style="color:var(--muted)">Nenhum personagem na mesa</div>'}</div>
-        <div class="form-group"><label class="form-label">NPCs Importantes</label><textarea class="form-textarea" id="sl_npcs" rows="2" placeholder="NPCs envolvidos..."></textarea></div>
-        <div class="form-group"><label class="form-label">Locais Visitados</label><textarea class="form-textarea" id="sl_locations" rows="2" placeholder="Locais..."></textarea></div>
-        <div class="form-group"><label class="form-label">Combates</label><textarea class="form-textarea" id="sl_combats" rows="2" placeholder="Descrição dos combates..."></textarea></div>
-        <div class="form-group"><label class="form-label">Loot / Recompensas</label><textarea class="form-textarea" id="sl_loot" rows="2" placeholder="Itens encontrados..."></textarea></div>
-        <div class="form-group"><label class="form-label">Ganchos para Próxima Sessão</label><textarea class="form-textarea" id="sl_hooks" rows="2" placeholder="O que vem a seguir..."></textarea></div>
-        <div class="form-group"><label class="form-label">Momentos Memoráveis</label><textarea class="form-textarea" id="sl_moments" rows="2" placeholder="Momentos épicos, engraçados..."></textarea></div>
-        <div class="form-group"><label class="form-label">Notas do Mestre (privado)</label><textarea class="form-textarea" id="sl_dmNotes" rows="3" placeholder="Anotações privadas..."></textarea></div>
+        <div class="form-group"><label class="form-label">Data no Jogo</label><input type="text" class="form-input" id="sl_gameDate" value="${escapeHtml(log.gameDate || '')}" placeholder="Ex: 15 de Aura, Ano 10 EBA"></div>
+        ${ta('summary', 'Resumo Geral *', 'O que aconteceu nesta sessão...', 4)}
+        ${ta('playerSummaries', 'Resumo por Jogador', 'Jogador 1: fez X. Jogador 2: fez Y.', 3)}
+        <div class="form-group"><label class="form-label">Personagens Participantes &amp; EXP</label>${linhas || '<div style="color:var(--muted)">Nenhum personagem na mesa</div>'}</div>
+        ${ta('npcs', 'NPCs Importantes', 'NPCs envolvidos...', 2)}
+        ${ta('locations', 'Locais Visitados', 'Locais...', 2)}
+        ${ta('combats', 'Combates', 'Descrição dos combates...', 2)}
+        ${ta('loot', 'Loot / Recompensas', 'Itens encontrados...', 2)}
+        ${ta('hooks', 'Ganchos para Próxima Sessão', 'O que vem a seguir...', 2)}
+        ${ta('moments', 'Momentos Memoráveis', 'Momentos épicos, engraçados...', 2)}
+        ${ta('dmNotes', 'Notas do Mestre (privado)', 'Anotações privadas...', 3)}`;
+}
+
+const val = (id) => document.getElementById('sl_' + id)?.value?.trim() || '';
+/** Lê o formulário. `null` se o resumo estiver vazio (avisa o mestre). */
+export function coletarLogCampos() {
+    const summary = val('summary');
+    if (!summary) { showAlert('⚠️ Resumo é obrigatório', 'warning'); return null; }
+    const participants = [];
+    document.querySelectorAll('.sl-char-cb:checked').forEach(cb => {
+        const id = cb.value;
+        participants.push({
+            characterId: id,
+            characterName: cb.dataset.name || '',
+            ownerUid: cb.dataset.owner || '',
+            expAmount: parseInt(document.querySelector(`.sl-char-exp[data-char-id="${id}"]`)?.value) || 0,
+            expType: document.querySelector(`.sl-char-exp-type[data-char-id="${id}"]`)?.value || 'add',
+        });
+    });
+    return {
+        sessionNumber: parseInt(document.getElementById('sl_num')?.value) || 1,
+        dateReal: document.getElementById('sl_dateReal')?.value || '',
+        gameDate: val('gameDate'), summary, playerSummaries: val('playerSummaries'), participants,
+        npcs: val('npcs'), locations: val('locations'), combats: val('combats'), loot: val('loot'),
+        hooks: val('hooks'), moments: val('moments'), dmNotes: val('dmNotes'),
+    };
+}
+
+/** Grava o log (novo ou edição) e move na ficha só o DELTA de EXP. */
+export async function gravarSessionLog(dados, anterior) {
+    if (anterior?.id) await updateDoc(doc(db, 'session-logs', anterior.id), dados);
+    else await addDoc(collection(db, 'session-logs'), {
+        ...dados, mesaId: S.currentMesaId,
+        createdAt: new Date().toISOString(), createdBy: S.currentUser?.email,
+    });
+    for (const { p, delta } of expDeltas(anterior?.participants, dados.participants)) {
+        try {
+            const charRef = doc(db, 'char', p.characterId);
+            const snap = await getDoc(charRef);
+            if (!snap.exists()) continue;
+            const f = snap.data().fields || {};
+            await updateDoc(charRef, {
+                'fields.exp': Math.max(0, (parseInt(f.exp || 0, 10) || 0) + delta),
+                'fields.exp_total': Math.max(0, (parseInt(f.exp_total || 0, 10) || 0) + delta),
+            });
+            if (p.ownerUid) await notifyUsers([p.ownerUid], {
+                type: 'exp_received', highlight: 'importante',
+                message: `Sessão #${dados.sessionNumber}: ${delta > 0 ? 'Ganhou' : 'Perdeu'} ${Math.abs(delta)} EXP em ${p.characterName}!`,
+                data: { direction: delta > 0 ? 'up' : 'down', amount: Math.abs(delta), characterName: p.characterName },
+            });
+        } catch (e) { console.warn('exp/log-sessao', p.characterId, e); }
+    }
+}
+
+// ===== CREATE / EDIT SESSION LOG =====
+window.openCreateSessionLogModal = async function(logId) {
+    if (!S.currentMesaId) return;
+    const chars = await carregarCharsMesa();
+    const log = logId ? S.mesaSessionLogs.find(l => l.id === logId) : null;
+    const inicial = log || { sessionNumber: proximoNumeroSessao(), dateReal: new Date().toISOString().split('T')[0] };
+    const m = document.createElement('div'); m.className = 'modal active'; m.id = 'createSessionModal';
+    m._log = log;
+    m.innerHTML = `<div class="modal-content" style="max-width:800px"><div class="modal-header"><span class="modal-title">📝 ${log ? 'Editar' : 'Novo'} Log de Sessão</span><button class="modal-close" onclick="this.closest('.modal').remove()">✕</button></div><div class="modal-body" style="max-height:75vh;overflow-y:auto">
+        ${logCamposHtml(inicial, chars)}
+        ${log ? '<div style="font-size:.75rem;color:var(--muted);margin-bottom:10px">⭐ Mudar o EXP aqui move na ficha só a diferença — não reaplica o que já foi dado.</div>' : ''}
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px"><button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancelar</button><button class="btn btn-success" onclick="saveSessionLog()">💾 Salvar</button></div>
     </div></div>`;
     document.body.appendChild(m);
 };
+window.editSessionLog = (logId) => window.openCreateSessionLogModal(logId);
 
 window.saveSessionLog = async function() {
-    const summary = document.getElementById('sl_summary')?.value?.trim();
-    if (!summary) { showAlert('⚠️ Resumo é obrigatório', 'warning'); return; }
-    // Collect participants
-    const participants = [];
-    document.querySelectorAll('.sl-char-cb:checked').forEach(cb => {
-        const charId = cb.value;
-        const expInput = document.querySelector(`.sl-char-exp[data-char-id="${charId}"]`);
-        const typeInput = document.querySelector(`.sl-char-exp-type[data-char-id="${charId}"]`);
-        participants.push({
-            characterId: charId,
-            characterName: cb.dataset.name || '',
-            ownerUid: cb.dataset.owner || '',
-            expAmount: parseInt(expInput?.value) || 0,
-            expType: typeInput?.value || 'add'
-        });
-    });
-    const logData = {
-        mesaId: S.currentMesaId,
-        sessionNumber: parseInt(document.getElementById('sl_num')?.value) || 1,
-        dateReal: document.getElementById('sl_dateReal')?.value || '',
-        gameDate: document.getElementById('sl_gameDate')?.value?.trim() || '',
-        summary,
-        playerSummaries: document.getElementById('sl_playerSummaries')?.value?.trim() || '',
-        participants,
-        npcs: document.getElementById('sl_npcs')?.value?.trim() || '',
-        locations: document.getElementById('sl_locations')?.value?.trim() || '',
-        combats: document.getElementById('sl_combats')?.value?.trim() || '',
-        loot: document.getElementById('sl_loot')?.value?.trim() || '',
-        hooks: document.getElementById('sl_hooks')?.value?.trim() || '',
-        moments: document.getElementById('sl_moments')?.value?.trim() || '',
-        dmNotes: document.getElementById('sl_dmNotes')?.value?.trim() || '',
-        createdAt: new Date().toISOString(),
-        createdBy: S.currentUser?.email
-    };
+    const modal = document.getElementById('createSessionModal');
+    const dados = coletarLogCampos();
+    if (!dados) return;
     try {
-        await addDoc(collection(db, 'session-logs'), logData);
-        // Apply EXP to characters
-        for (const p of participants) {
-            if (p.expAmount > 0) {
-                const charRef = doc(db, 'char', p.characterId);
-                const charSnap = await getDoc(charRef);
-                if (charSnap.exists()) {
-                    const cd = charSnap.data();
-                    const f = cd.fields || {};
-                    const isAdd = p.expType === 'add';
-                    const curExp = parseInt(f.exp || 0, 10) || 0;
-                    const curExpTotal = parseInt(f.exp_total || 0, 10) || 0;
-                    const newExp = isAdd ? curExp + p.expAmount : Math.max(0, curExp - p.expAmount);
-                    const newTotal = isAdd ? curExpTotal + p.expAmount : Math.max(0, curExpTotal - p.expAmount);
-                    await updateDoc(charRef, { 'fields.exp': newExp, 'fields.exp_total': newTotal });
-                    // Notify owner
-                    if (p.ownerUid) {
-                        try {
-                            await notifyUsers([p.ownerUid], {
-                                type: 'exp_received',
-                                highlight: 'importante',
-                                message: `Sessão #${logData.sessionNumber}: ${isAdd?'Ganhou':'Perdeu'} ${p.expAmount} EXP em ${p.characterName}!`,
-                                data: { direction: isAdd ? 'up' : 'down', amount: p.expAmount, characterName: p.characterName }
-                            });
-                        } catch (ne) { /* ignore */ }
-                    }
-                }
-            }
-        }
+        await gravarSessionLog(dados, modal?._log);
         showAlert('✅ Log de sessão salvo!', 'success');
-        document.getElementById('createSessionModal')?.remove();
+        modal?.remove();
         await loadSessionLogs();
     } catch (e) { showAlert('❌ Erro: ' + e.message, 'danger'); }
 };
@@ -186,7 +195,9 @@ window.viewSessionLog = function(logId) {
         log.moments ? `<div class="form-group"><label class="form-label">Momentos</label><div style="color:var(--ink);white-space:pre-wrap">${escapeHtml(log.moments)}</div></div>` : '',
         log.dmNotes ? `<div class="form-group"><label class="form-label">Notas do Mestre</label><div style="color:var(--lr-blood-2);white-space:pre-wrap">${escapeHtml(log.dmNotes)}</div></div>` : '',
     ].filter(Boolean).join('');
-    m.innerHTML = `<div class="modal-content" style="max-width:800px"><div class="modal-header"><span class="modal-title">📝 Sessão #${log.sessionNumber || '?'} — ${log.dateReal || ''}</span><button class="modal-close" onclick="this.closest('.modal').remove()">✕</button></div><div class="modal-body" style="max-height:75vh;overflow-y:auto">
+    m.innerHTML = `<div class="modal-content" style="max-width:800px"><div class="modal-header"><span class="modal-title">📝 Sessão #${log.sessionNumber || '?'} — ${log.dateReal || ''}</span>
+        <button class="btn btn-secondary btn-small" style="margin-left:auto;padding:4px 10px" onclick="this.closest('.modal').remove();editSessionLog('${log.id}')">✏️ Editar</button>
+        <button class="modal-close" onclick="this.closest('.modal').remove()">✕</button></div><div class="modal-body" style="max-height:75vh;overflow-y:auto">
         ${log.gameDate ? `<div style="font-size:.88rem;color:var(--primary);margin-bottom:14px">🎮 Data no jogo: ${escapeHtml(log.gameDate)}</div>` : ''}
         ${sections}
     </div></div>`;

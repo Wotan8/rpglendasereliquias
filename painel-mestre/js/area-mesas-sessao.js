@@ -13,6 +13,7 @@ import * as S from './state.js';
 import { comCena, comCenaNova } from '../../shared/combate-cenas.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { computeAvanco } from './area-mesas-frentes.js';
+import { carregarCharsMesa, logCamposHtml, coletarLogCampos, gravarSessionLog } from './area-mesas-sessoes.js';
 
 window._loadMesaSessao = loadMesaSessao;
 
@@ -504,16 +505,28 @@ window.sesColheitaModal = async function() {
             <input type="text" class="form-input ses-colheita-motivo" placeholder="Motivo (se mexeu)" style="flex:1;min-width:160px;padding:4px">
         </div>`;
     }).join('');
+    // Fechar a sessão já grava o log dela: os mesmos campos do Histórico,
+    // prefilados com o que a sessão sabe. Todo mundo da mesa entra marcado
+    // com 0 EXP — o mestre digita o que cada um levou.
+    const chars = await carregarCharsMesa();
+    const prefill = {
+        sessionNumber: _sessao.numero || 1,
+        dateReal: _sessao.dataReal || new Date().toISOString().split('T')[0],
+        gameDate: _sessao.dataJogo || '',
+        summary: _sessao.resumo || '',
+        loot: _sessao.recompensas || '',
+        moments: (_sessao.inbox || []).map(x => '· ' + x.texto).join('\n'),
+        participants: chars.map(c => ({ characterId: c.id, expAmount: 0, expType: 'add' })),
+    };
     const m = document.createElement('div'); m.className = 'modal active'; m.id = 'sesColheitaModal';
-    m.innerHTML = `<div class="modal-content" style="max-width:720px"><div class="modal-header"><span class="modal-title">🏁 Colheita — Sessão ${_sessao.numero}</span><button class="modal-close" onclick="this.closest('.modal').remove()">✕</button></div><div class="modal-body" style="max-height:75vh;overflow-y:auto">
+    m.innerHTML = `<div class="modal-content" style="max-width:800px"><div class="modal-header"><span class="modal-title">🏁 Colheita — Sessão ${_sessao.numero}</span><button class="modal-close" onclick="this.closest('.modal').remove()">✕</button></div><div class="modal-body" style="max-height:75vh;overflow-y:auto">
         ${inbox ? `<div class="form-group"><label class="form-label">📥 Capturado ao vivo (use no resumo e nas frentes)</label>${inbox}</div>` : ''}
         ${linhas ? `<div class="form-group"><label class="form-label">🕰️ Frentes — o mundo reagiu?</label>${linhas}
             <div style="font-size:.72rem;color:var(--muted);margin-top:6px">Regra da casa: frente ignorada avança. Presságios cruzados disparam e aparecem no próximo preparo.</div></div>` : ''}
         ${runoLinhas ? `<div class="form-group"><label class="form-label">ᛟ Runomancia — quem estudou nesta sessão?</label>${runoLinhas}
             <div style="font-size:.72rem;color:var(--muted);margin-top:6px">Marcado soma +1 sessão a TODOS os elementos na lista de estudo do personagem. Desmarque quem passou a sessão sem tempo de bancada.</div></div>` : ''}
-        <div class="form-group"><label class="form-label">📝 Resumo da sessão</label>
-            <textarea class="form-textarea" id="col_resumo" rows="5" placeholder="O que aconteceu...">${escapeHtml(_sessao.resumo || '')}</textarea></div>
-        <div style="font-size:.75rem;color:var(--muted);margin-bottom:12px">⭐ EXP: use o modo +EXP em Personagens ou o fluxo de distribuição por rubrica, como hoje.</div>
+        <div style="border-top:1px solid var(--border);margin:14px 0 10px;padding-top:10px;font-weight:800;color:var(--light)">📝 Log da sessão <span style="font-weight:400;font-size:.75rem;color:var(--muted)">— salvo no Histórico; o EXP marcado vai para as fichas</span></div>
+        ${logCamposHtml(prefill, chars)}
         <div style="display:flex;gap:10px;justify-content:flex-end">
             <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Voltar</button>
             <button class="btn btn-warning" onclick="sesColheitaConfirmar()">🏁 Fechar sessão</button></div>
@@ -526,6 +539,8 @@ window.sesColheitaConfirmar = async function() {
     const modal = document.getElementById('sesColheitaModal'); if (!modal) return;
     const frentes = modal._frentes || [];
     const colheita = []; const disparadosTodos = [];
+    // Antes de mexer em frente ou ficha: se o log não está válido, nada acontece.
+    const logDados = coletarLogCampos(); if (!logDados) return;
     try {
         for (const row of modal.querySelectorAll('.ses-colheita-frente')) {
             const id = row.dataset.id;
@@ -557,15 +572,17 @@ window.sesColheitaConfirmar = async function() {
             } catch (e) { console.warn('runomancia/progresso', charId, e); }
         }
 
+        await gravarSessionLog(logDados, null);
+
         await updateDoc(refSessao(), {
             fase: 'fechada', fechadaEm: Date.now(), colheita,
-            resumo: document.getElementById('col_resumo')?.value?.trim() || '',
-            runomanciaProgresso: marcados,
+            resumo: logDados.summary, runomanciaProgresso: marcados,
         });
         modal.remove();
         if (runoNomes.length) showAlert(`ᛟ +1 sessão de estudo: ${runoNomes.join(', ')}`, 'success');
         if (disparadosTodos.length) showAlert('🔔 Presságio disparado: ' + disparadosTodos.join(' · '), 'warning');
-        else showAlert(`✅ Sessão ${_sessao.numero} fechada`, 'success');
+        showAlert(`✅ Sessão ${_sessao.numero} fechada — log gravado no Histórico`, 'success');
+        if (window._loadSessionLogs) window._loadSessionLogs();
         _sessao = null;
         await loadMesaSessao();
     } catch (e) { showAlert('❌ Erro: ' + e.message, 'danger'); }
