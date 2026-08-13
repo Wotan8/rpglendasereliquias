@@ -177,16 +177,15 @@ function computeItemScopedTotals(item, ctx) {
     return { dano, tiposGolpe, tipoGolpe: tiposGolpe[0] || null, canais, colunas, temAlgo };
 }
 
-/* Dado do golpe desarmado. Livro do Jogador, Cap. 6: "Desarmado: o dado é 1d4".
-   Soco, chute e cabeçada são Contundentes — é a Blindagem Contundente do alvo
-   que barra. Garra e presa de raça não cabem aqui: isso é arma natural, entra
-   como item com fórmula e tipo próprios. */
-const DADO_DESARMADO = '1d4';
-
 /**
  * Linhas de golpe desarmado — uma por parte do corpo que golpeia e está com as
  * mãos livres. Mesmo formato das linhas de item, para a tabela de Ataques
  * desenhar os dois do mesmo jeito.
+ *
+ * NADA de regra cravada aqui: o dado (`formulaDano`), os tipos (`tipoGolpe`)
+ * e os vínculos de VD do golpe vêm do CADASTRO de Partes do Corpo, que os
+ * hosts entregam em cada slot. Parte sem dado e sem vínculo não vira linha —
+ * mesma regra do item sem fórmula.
  *
  * A parte pode vincular Valores Derivados com equação, igual a um equipamento:
  * o bag dela entra por cima da base do personagem, então a Perna sobe o Dano do
@@ -199,10 +198,11 @@ const DADO_DESARMADO = '1d4';
  * @param {object} ctx
  * @param {Array}  ctx.derivedValues  window.DERIVED_VALUES
  * @param {object} ctx.derived        state.derived (bases globais)
- * @param {object} ctx.bodySlots      slotKey → {label, parte, icon, partId, podeGolpear}
+ * @param {object} ctx.bodySlots      slotKey → {label, parte, icon, partId, podeGolpear,
+ *                                    formulaDano, tiposGolpe} — os três últimos do cadastro
  * @param {Iterable} ctx.slotsOcupados slotKeys tomados por item equipado
  * @param {object} ctx.parteBonuses   partId → bag, no formato de state.itemBonuses
- * @returns {Array} { desarmado, slotKey, qtd, nome, icone, dano, tipoGolpe, canais, colunas }
+ * @returns {Array} { desarmado, slotKey, qtd, nome, icone, dano, tipoGolpe, tiposGolpe, canais, colunas }
  */
 function computeGolpesDesarmados(ctx) {
     ctx = ctx || {};
@@ -218,9 +218,9 @@ function computeGolpesDesarmados(ctx) {
 
     // Mão 1 e Mão 2 são a mesma parte: resolve o bag dela uma vez só.
     const porParte = {};
-    const golpeDaParte = partId => {
-        if (porParte[partId]) return porParte[partId];
-        const bag = parteBonuses[partId] || null;
+    const golpeDaParte = slot => {
+        if (porParte[slot.partId]) return porParte[slot.partId];
+        const bag = parteBonuses[slot.partId] || null;
         const colunas = [];
         let somaDano = 0;
         for (const dv of dvs) {
@@ -235,19 +235,26 @@ function computeGolpesDesarmados(ctx) {
                 base, bonus: _fmtNum(total - base), total,
             });
         }
+        // O dado vem do cadastro da parte. Sem dado não há dano — o bônus
+        // global de Dano só significa algo grudado num dado, como no item.
+        const formula = String(slot.formulaDano || '').trim();
         const soma = _fmtNum(somaDano);
-        porParte[partId] = {
-            colunas,
-            dano: soma !== 0 ? `${DADO_DESARMADO}${soma > 0 ? '+' : ''}${soma}` : DADO_DESARMADO,
+        let dano = '';
+        if (formula) dano = soma !== 0 ? `${formula}${soma > 0 ? '+' : ''}${soma}` : formula;
+        porParte[slot.partId] = {
+            colunas, dano,
+            tiposGolpe: formula ? getItemTiposGolpe({ tipoGolpe: slot.tiposGolpe }) : [],
         };
-        return porParte[partId];
+        return porParte[slot.partId];
     };
 
     const linhas = [];
     const porAssinatura = {};
     for (const slotKey of livres) {
         const slot = bodySlots[slotKey];
-        const golpe = golpeDaParte(slot.partId);
+        const golpe = golpeDaParte(slot);
+        // Parte sem dado e sem delta próprio não é golpe: nada a exibir.
+        if (!golpe.dano && !golpe.colunas.some(c => c.bonus !== 0)) continue;
         const parte = slot.parte || slot.label || slotKey;
         // Nome fora da assinatura de propósito: "Mão 1" e "Mão 2" só juntam
         // porque a PARTE é a mesma; parte diferente com número igual não junta.
@@ -264,8 +271,8 @@ function computeGolpesDesarmados(ctx) {
             nome: slot.label || slotKey,
             icone: slot.icon || '👊',
             dano: golpe.dano,
-            tipoGolpe: { chave: 'contundente', ...TIPOS_GOLPE.contundente },
-            tiposGolpe: [{ chave: 'contundente', ...TIPOS_GOLPE.contundente }],
+            tipoGolpe: golpe.tiposGolpe[0] || null,
+            tiposGolpe: golpe.tiposGolpe,
             canais: [],
             colunas: golpe.colunas,
         };

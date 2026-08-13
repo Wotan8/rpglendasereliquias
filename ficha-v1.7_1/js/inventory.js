@@ -24,6 +24,10 @@ function _getCharacterBodySlots() {
                 max: 1, // dynamically 1 item per generated slot instance
                 partId: bp.id,
                 podeGolpear: !!(cat ? cat.podeGolpear : bp.podeGolpear),
+                // Dado e tipos do golpe desarmado: 100% do cadastro (catálogo
+                // manda; a cópia só responde se ele não tiver a parte).
+                formulaDano: (cat ? cat.formulaDano : bp.formulaDano) || '',
+                tiposGolpe: (cat ? cat.tipoGolpe : bp.tipoGolpe) || null,
                 podeSegurar: !!bp.podeSegurar,
                 podeEmpunhar: !!bp.podeEmpunhar,
                 podeVestir: !!bp.podeVestir,
@@ -632,7 +636,7 @@ function renderActiveEffects() {
         const icone = l.item ? _getTipoEmoji(l.item.tipo) : l.icone;
         const nome = l.item ? (l.item.nome || 'Sem nome') : `${l.nome}${l.qtd > 1 ? ` ×${l.qtd}` : ''}`;
         const rotulo = l.desarmado
-            ? `<small class="atk-item-state" title="${l.qtd > 1 ? `${l.qtd} partes com o mesmo golpe. ` : ''}Parte do corpo sem item equipado. Alvo = FOR + Perícia: Briga (Livro, 6.3).">👊 Desarmado</small>`
+            ? `<small class="atk-item-state" title="${l.qtd > 1 ? `${l.qtd} partes com o mesmo golpe. ` : ''}Parte do corpo sem item equipado — dado, tipos e acerto vêm do cadastro de Partes do Corpo.">👊 Desarmado</small>`
             : (estado ? `<small class="atk-item-state">${estado.icon} ${estado.label}</small>` : '');
         html += `<tr${abre}>
             <td class="atk-col-item">

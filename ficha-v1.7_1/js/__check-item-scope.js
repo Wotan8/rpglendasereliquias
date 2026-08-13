@@ -183,10 +183,12 @@ const CATALOG = [{ id: 'tpl-espada', nome: 'Espada Longa', formulaDano: '1d10' }
 
 // --- 10) Golpe desarmado: parte que golpeia e está livre vira linha de ataque ---
 {
+    // Dado e tipos vêm do CADASTRO da parte (nada cravado no motor): os hosts
+    // preenchem formulaDano/tiposGolpe em cada slot a partir do registro.
     const SLOTS = {
-        mao_1: { label: 'Mão 1', parte: 'Mão', partId: 'mao', icon: '🖐️', podeGolpear: true },
-        mao_2: { label: 'Mão 2', parte: 'Mão', partId: 'mao', icon: '🖐️', podeGolpear: true },
-        pe: { label: 'Pé', parte: 'Pé', partId: 'pe', icon: '🥾', podeGolpear: true },
+        mao_1: { label: 'Mão 1', parte: 'Mão', partId: 'mao', icon: '🖐️', podeGolpear: true, formulaDano: '1d4', tiposGolpe: ['contundente'] },
+        mao_2: { label: 'Mão 2', parte: 'Mão', partId: 'mao', icon: '🖐️', podeGolpear: true, formulaDano: '1d4', tiposGolpe: ['contundente'] },
+        pe: { label: 'Pé', parte: 'Pé', partId: 'pe', icon: '🥾', podeGolpear: true, formulaDano: '1d4', tiposGolpe: ['contundente'] },
         torso: { label: 'Torso', parte: 'Torso', partId: 'torso', icon: '👕', podeGolpear: false },
     };
     const base = { derivedValues: DVS, derived: DERIVED, bodySlots: SLOTS };
@@ -197,9 +199,10 @@ const CATALOG = [{ id: 'tpl-espada', nome: 'Espada Longa', formulaDano: '1d10' }
     assert.deepStrictEqual(todas.map(l => l.qtd), [2, 1], 'e a linha diz quantas são');
     assert.ok(todas.every(l => l.desarmado), 'linha marcada como desarmada');
 
-    // Dado 1d4 + o Dano do personagem (BONUS_DANO base 2).
+    // Dado do CADASTRO (1d4) + o Dano do personagem (BONUS_DANO base 2).
     assert.strictEqual(todas[0].dano, '1d4+2', `dano desarmado errado: ${todas[0].dano}`);
-    assert.strictEqual(todas[0].tipoGolpe.nome, 'Contundente', 'punho é barrado pela Blindagem Contundente');
+    assert.strictEqual(todas[0].tipoGolpe.nome, 'Contundente', 'tipo vem do cadastro da parte');
+    assert.deepStrictEqual(todas[0].tiposGolpe.map(t => t.chave), ['contundente']);
 
     // Acerto sai da base do personagem, sem bônus de item.
     const ac = todas[0].colunas.find(c => c.key === 'ACERTO');
@@ -229,6 +232,30 @@ const CATALOG = [{ id: 'tpl-espada', nome: 'Espada Longa', formulaDano: '1d10' }
     assert.strictEqual(pe.colunas.find(c => c.key === 'ACERTO').total, 4, 'acerto 5 − 1 da parte');
     assert.strictEqual(pe.colunas.find(c => c.key === 'ACERTO').bonus, -1, 'delta da parte isolado');
     assert.strictEqual(mao.dano, '1d4+2', 'o vínculo do Pé não vaza para a Mão');
+
+    // SEM dado no cadastro: só entra se a parte tiver vínculo próprio — nada
+    // de 1d4 implícito saindo do motor.
+    const semDado = computeGolpesDesarmados({
+        ...base, slotsOcupados: [],
+        bodySlots: { ...SLOTS, pe: { ...SLOTS.pe, formulaDano: '' } },
+        parteBonuses: { pe: { 'DERIVED:ACERTO': 2 } },
+    });
+    const peSemDado = semDado.find(l => l.parte === 'Pé');
+    assert.strictEqual(peSemDado.dano, '', 'sem fórmula no cadastro, sem dano — e sem dado inventado');
+    assert.deepStrictEqual(peSemDado.tiposGolpe, [], 'tipo só significa algo grudado num dado');
+    const mudoTotal = computeGolpesDesarmados({
+        ...base, slotsOcupados: [],
+        bodySlots: { pe: { ...SLOTS.pe, formulaDano: '' } },
+    });
+    assert.deepStrictEqual(mudoTotal, [], 'parte sem dado E sem vínculo não vira linha');
+
+    // Parte pode ter dado e tipos PRÓPRIOS (garra que corta) — tudo do cadastro.
+    const garra = computeGolpesDesarmados({
+        ...base, slotsOcupados: [],
+        bodySlots: { garra: { label: 'Garra', parte: 'Garra', partId: 'garra', podeGolpear: true, formulaDano: '1d6', tiposGolpe: ['cortante', 'perfurante'] } },
+    });
+    assert.strictEqual(garra[0].dano, '1d6+2', 'dado próprio da parte');
+    assert.deepStrictEqual(garra[0].tiposGolpe.map(t => t.chave), ['cortante', 'perfurante'], 'tipos próprios, 1 ou mais');
 
     // Parte com nome igual mas número diferente NÃO colapsa.
     const maoTorta = computeGolpesDesarmados({

@@ -13,7 +13,7 @@ let janelaAberta = false;
 // Janela flutuante de ficha de combate (NPC/personagem) — módulo carregado só
 // quando alguém abre a primeira janela.
 window.tbFichaWin = async function(tipo, id) {
-    try { (await import('./tab-ficha-win.js?v=5')).abrirFichaWin(tipo, id); }
+    try { (await import('./tab-ficha-win.js?v=6')).abrirFichaWin(tipo, id); }
     catch (e) { console.error(e); toast('❌ Erro ao abrir a janela de combate', 'danger'); }
 };
 

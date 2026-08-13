@@ -66,7 +66,7 @@ async function carregarSys() {
     const [m, eng] = await Promise.all([
         import('../../painel-mestre/js/npc-system-data.js'),
         import('../../painel-mestre/js/npc-calc-engine.js?v=1.9'),
-        import('../../ficha-v1.7_1/js/item-scope-calc.js?v=2'),
+        import('../../ficha-v1.7_1/js/item-scope-calc.js?v=3'),
     ]);
     _resolveMod = m.resolveNpcClassModule;
     _calcNpc = eng.calcularNpc;
@@ -406,7 +406,14 @@ const semId = ({ id, parentItemId, characterId, equipado, ...campos }) => campos
 function partesDoCorpo(win) {
     let partes = [];
     if (win.tipo === 'npc') {
-        partes = dadosNpc(win.id)?.partesDoCorpo || [];
+        // Cópia congelada na ficha do NPC + o CADASTRO por cima (regra da
+        // ficha do jogador: o catálogo manda em golpe/dado/tipos/vínculos;
+        // a cópia responde por slots e pelo que o catálogo não tiver).
+        partes = (dadosNpc(win.id)?.partesDoCorpo || []).map(bp => {
+            const cat = (_sys?.bodyParts || []).find(b => b.id === bp.id);
+            return cat ? { ...bp, podeGolpear: !!cat.podeGolpear, formulaDano: cat.formulaDano,
+                tipoGolpe: cat.tipoGolpe, valoresDerivadosVinculados: cat.valoresDerivadosVinculados } : bp;
+        });
     } else {
         const ch = dadosChar(win.id);
         const raca = ch?.raca ? _sys.racesByNome?.[_sys.norm(ch.raca)] : null;
@@ -429,7 +436,8 @@ function slotsDoCorpo(partes) {
             // `parte`/`podeGolpear` são o que computeGolpesDesarmados espera:
             // o nome da parte funde "Mão 1"/"Mão 2" numa linha ×2 de golpe.
             slots[k] = { label: qtd > 1 ? `${bp.nome} ${i + 1}` : bp.nome, icon: bp.icone || '🦴',
-                partId: bp.id, parte: bp.nome, podeGolpear: !!bp.podeGolpear };
+                partId: bp.id, parte: bp.nome, podeGolpear: !!bp.podeGolpear,
+                formulaDano: bp.formulaDano || '', tiposGolpe: bp.tipoGolpe || null };
         }
     }
     return slots;
@@ -1013,11 +1021,11 @@ function compactarAtaques(win) {
 function htmlAtaques(win, fonte) {
     const linhas = win.tipo === 'npc' ? linhasAtaqueNpc(win, fonte) : linhasAtaqueChar(win, fonte);
     const html = linhas.map(l => {
-        // Item: chip só onde ELE mete a mão (bônus ≠ 0) — o global mora em 📊.
-        // Desarmado: o punho não tem vínculo próprio, o acerto dele É o VD
-        // global (FOR + Briga, Livro 6.3) — mostra o que for ≠ 0.
+        // Chip só onde a LINHA mete a mão (bônus ≠ 0) — vale para item E para
+        // parte do corpo: o acerto do golpe desarmado vem do VÍNCULO que a
+        // parte carrega no cadastro, e o valor global mora em 📊.
         const chips = l.colunas
-            .filter(c => l.desarmado ? (c.bonus !== 0 || c.total !== 0) : c.bonus !== 0)
+            .filter(c => c.bonus !== 0)
             .map(c => `<span class="tb-fwin-canal" title="${esc(`${c.nome}: base ${fmtN(c.base)} ${c.bonus >= 0 ? '+' : '−'} ${fmtN(Math.abs(c.bonus))} (${l.desarmado ? 'parte' : 'item'})`)}">${esc(c.icone || '🎯')} <span class="tb-fwin-chip-nome">${esc(c.nome)}</span> <b>${esc(String(c.prefixo || ''))}${fmtN(c.total)}${esc(String(c.sufixo || ''))}</b></span>`)
             .join('');
         const nome = l.desarmado ? `${l.nome}${l.qtd > 1 ? ` ×${l.qtd}` : ''}` : l.nome;

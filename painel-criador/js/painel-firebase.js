@@ -397,6 +397,17 @@ const MODULE_DEFS = {
             { key: 'ordem', label: 'Ordem de Exibição', type: 'number', placeholder: '0' },
             { key: 'ehPadrao', label: 'Esta é uma parte padrão?', type: 'boolean' },
             { key: 'podeGolpear', label: 'Pode Golpear?', type: 'boolean' },
+            // O golpe desarmado é 100% daqui: dado, tipos e vínculos vêm DESTE
+            // cadastro — nada de 1d4 ou Contundente cravado no código.
+            { key: 'formulaDano', label: '💥 Fórmula de Dano do golpe (ex: 1d4)', type: 'text', placeholder: 'Ex: 1d4 — vazio = a parte golpeia sem dado de dano', showWhenBoolean: 'podeGolpear' },
+            {
+                key: 'tipoGolpe', label: '🗡️ Tipos de Golpe (qual Blindagem tipada barra — 1 ou mais)', type: 'multi_select',
+                options: [
+                    { value: 'cortante', label: '🗡️ Cortante' },
+                    { value: 'perfurante', label: '🏹 Perfurante' },
+                    { value: 'contundente', label: '🔨 Contundente' },
+                ], showWhenBoolean: 'podeGolpear'
+            },
             // Muda o Acerto e o Dano do golpe desarmado DESTA parte, e só dele.
             { key: 'valoresDerivadosVinculados', label: 'Valores Derivados Vinculados (golpe desta parte)', type: 'mechanic_selector', selectorTarget: 'equipmentDerivedValues' },
             { key: 'podeSegurar', label: 'Pode Segurar?', type: 'boolean' },

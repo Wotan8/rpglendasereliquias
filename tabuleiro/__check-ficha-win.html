@@ -37,7 +37,7 @@
 import { T } from './js/tab-state.js';
 import { VITAIS } from './js/tab-hud.js';
 // ?v= bust: o http.server local deixa o navegador segurar o módulo antigo
-import { abrirFichaWin, _WINS } from './js/tab-ficha-win.js?v=8';
+import { abrirFichaWin, _WINS } from './js/tab-ficha-win.js?v=9';
 
 // ===== Registros do sistema (chaves de doc, como ensureNpcSystemData devolve) =====
 const dv = (id, nome, extra) => ({ id, key: id, nome, icone: extra.icone || '📊', prefixo: '', sufixo: extra.sufixo || '',
@@ -75,6 +75,7 @@ window._npcSys = {
         dv('dv_dano', 'Dano Físico', { icone: '⚔️', bloco: 'Combate', ordem: 1, escopo: 'dano', todos: true }),
         dv('dv_acerto', 'Acerto', { icone: '🎯', bloco: 'Combate', ordem: 1, escopo: 'coluna' }),      // vem pela CLASSE
         dv('dv_acertocac', 'Acerto Corpo a Corpo', { icone: '🗡️', bloco: 'Combate', ordem: 1, escopo: 'coluna' }), // a ARMA vincula
+        dv('dv_acertodes', 'Acerto Desarmado', { icone: '👊', bloco: 'Combate', ordem: 1, escopo: 'coluna' }), // a PARTE vincula (cadastro)
         dv('dv_perc', 'Percepção', { icone: '👁️', bloco: 'Sentidos', ordem: 2 }),                     // vem pela RAÇA
         dv('dv_igneo', 'Golpe Ígneo', { icone: '🔥', bloco: 'Essências', ordem: 40, escopo: 'dano-canal' }), // vem por PECULIARIDADE individual
         dv('dv_folego', 'Fôlego', { icone: '🫁', bloco: 'Extra', ordem: 50 }),                          // SEM vínculo: não pode aparecer
@@ -85,7 +86,10 @@ window._npcSys = {
     classModules: [modManobras],
     classModulesById: { m1: modManobras },
     bodyParts: [
-        { id: 'mao', nome: 'Mão', icone: '✋', slots: 2, ehPadrao: true, podeGolpear: true },
+        { id: 'mao', nome: 'Mão', icone: '✋', slots: 2, ehPadrao: true, podeGolpear: true,
+          formulaDano: '1d4', tipoGolpe: ['contundente'],
+          valoresDerivadosVinculados: [{ id: 'dv_acertodes',
+              equacao: [{ tipo: 'ficha', ref: 'FOR' }, { op: '+', tipo: 'ficha', ref: 'Perícia: Briga' }] }] },
         { id: 'torso', nome: 'Torso', icone: '🥋', slots: 1, ehPadrao: true },
     ],
     pecsById: {
@@ -125,7 +129,7 @@ function semear() {
           modulosClasse: [{ refId: 'm1', fonte: 'manual', itens: [{ _predefNome: 'Investida', custo: '1 Ação · 2 ENER', usos: 3, desc: 'Avança 6m e golpeia.' }] }],
           peculiaridades: [{ refId: 'pec1', nivel: 2 }, { nome: 'Cicatriz do Cerco', nivel: 1 }],
           conditions: [{ nome: 'Sangrando', icone: '🩸', descricao: 'Perde 0,5 VIT por turno', tempoRestante: '3 turnos' }],
-          partesDoCorpo: [{ id: 'mao', nome: 'Mão', icone: '✋', slots: 2, podeGolpear: true }, { id: 'torso', nome: 'Torso', icone: '🥋', slots: 1 }],
+          partesDoCorpo: [{ id: 'mao', nome: 'Mão', icone: '✋', slots: 2 }, { id: 'torso', nome: 'Torso', icone: '🥋', slots: 1 }],   // cópia LEGADA: sem golpe/dado — o catálogo manda
           ataques: 'Espada longa +4 (1d10+4 corte)\nEscudada: empurra 2m', skills: 'Grito de guerra: aliados +1 INI' },
         { id: 'npc2', nome: 'Lobo Cinzento', nivel: 2, tipo: 'criatura',
           valoresDer: { VIT: 9, ENER: 4, SAN: 100, atual: {}, overrides: {}, extras: [], vinculados: [] },
@@ -200,8 +204,9 @@ async function rodar() {
             && txt(a).includes('Acerto Corpo a Corpo') && /\b6\b/.test(txt(a))
             && !/Acerto 0/.test(txt(a))) &&
         txt(w1).includes('Espada longa +4'));
-    teste('T9b · NPC desarmado: Mão 2 livre golpeia 1d4; Mão 1 (com o Punhal) não vira linha',
-        $$('.tb-fwin-atk', w1).some(a => txt(a).includes('Mão 2') && txt(a).includes('Desarmado') && txt(a).includes('1d4')) &&
+    teste('T9b · NPC desarmado, TUDO do cadastro na cópia legada: Mão 2 com 1d4, Contundente e Acerto Desarmado 4 (FOR); Mão 1 ocupada não vira linha',
+        $$('.tb-fwin-atk', w1).some(a => txt(a).includes('Mão 2') && txt(a).includes('Desarmado') && txt(a).includes('1d4')
+            && txt(a).includes('Contundente') && txt(a).includes('Acerto Desarmado 4')) &&
         !$$('.tb-fwin-atk', w1).some(a => txt(a).includes('Mão 1')));
     teste('T9d · tipos de golpe em LISTA: Punhal do NPC mostra Perfurante E Cortante (do modelo legado)',
         $$('.tb-fwin-atk', w1).some(a => txt(a).includes('Punhal')
@@ -337,9 +342,11 @@ async function rodar() {
         teste('T22d · janela apertada: some o nome (fica emoji+valor) nos chips e nos tipos',
             (c1 || c2) && nomeChipOculto && nomeTipoOculto && antes === 0);
     }
-    teste('T22b · char desarmado: duas Mãos livres fundem em "Mão ×2" com 1d4+2 e o Acerto global 7 (que É o alvo do punho)',
+    teste('T22b · char desarmado: "Mão ×2" com 1d4+2 do cadastro, Acerto Desarmado 3 (FOR, vínculo da parte) e SEM o Acerto genérico 7',
         $$('.tb-fwin-atk', wc).filter(a => txt(a).includes('Mão')).length === 1 &&
-        $$('.tb-fwin-atk', wc).some(a => txt(a).includes('Mão ×2') && txt(a).includes('1d4+2') && txt(a).includes('Acerto 7')));
+        $$('.tb-fwin-atk', wc).some(a => txt(a).includes('Mão ×2') && txt(a).includes('1d4+2')
+            && txt(a).includes('Acerto Desarmado 3')
+            && !txt(a).includes('Acerto 7')));
     teste('T23 · char: módulos da ficha (Truque da Fumaça usos=2) + módulo sem registro não some',
         txt(wc).includes('Truque da Fumaça') &&
         $$('[data-mod][data-mkey="usos"]', wc).some(i => i.value === '2') &&
