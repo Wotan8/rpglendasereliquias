@@ -1784,6 +1784,19 @@ function collectNpcData() {
     const desloc = (n.valoresDer.extras || []).find(x => F.sys.norm(x.nome).startsWith('desloc'));
     if (desloc) legacyDv.DESLOCAMENTO = String(desloc.valor ?? '');
 
+    // Espelho dos VDs VINCULADOS pelo nome normalizado ("Desloc. Aéreo" →
+    // DESLOC_AEREO). É o formato que o Tabuleiro resolve (valorComponente):
+    // sem isto o doc só guardava overrides/atual por id e os VDs de Status de
+    // Combate, deslocamentos e Tamanho do NPC não existiam fora do editor.
+    const normEspelho = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    for (const key of (n.valoresDer.vinculados || [])) {
+        const d = calc.derived[key];
+        if (!d || d.isVital) continue;
+        const nk = normEspelho(d.nome);
+        if (nk && legacyDv[nk] === undefined) legacyDv[nk] = d.final;
+    }
+
     const funcao = [];
     if (document.getElementById('npcFuncAliado')?.checked) funcao.push('aliado');
 

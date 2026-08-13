@@ -105,6 +105,54 @@ const S_CUSTO = (it) => {
     return '';
 };
 
+/** "Ação Padrão"/"Ação Livre"/... (rótulo do cadastro) → custo de ação (§6.2). */
+function acaoDoRotulo(rotulo) {
+    const r = String(rotulo || '').toLowerCase();
+    if (/livre/.test(r)) return 'livre';
+    if (/movimento/.test(r)) return 'movimento';
+    if (/completa|inteira|turno inteiro/.test(r)) return 'completa';
+    return 'padrao';
+}
+
+/**
+ * MIRA no formato da Régua v2 — os pré-definidos auditados já carregam
+ * formaArea/tamanhoArea/alcance/alvosMax/anguloCone/faccao/condicoesAplicadas.
+ * Converte para o formato do runtime; null quando o predef não tem nada disso.
+ * "onda" = área a partir do próprio conjurador (círculo da borda do token).
+ */
+function miraDaReguaV2(pd) {
+    if (!pd) return null;
+    const temArea = !!pd.formaArea && Number(pd.tamanhoArea) > 0;
+    const temAlvos = Number(pd.alvosMax) > 0;
+    if (!temArea && !temAlvos) return null;
+    const afeta = pd.faccao === 'inimigo' ? 'inimigos' : pd.faccao === 'aliado' ? 'aliados' : 'todos';
+    const cond = (pd.condicoesAplicadas || [])[0] || null;
+    const base = {
+        afeta,
+        condicaoNome: cond?.condicao || null,
+        condicaoRodadas: Number(cond?.rodadas) || 0,
+        condicaoMaxAlvos: Number(cond?.alvos) || 0,   // 0 = todos os atingidos
+    };
+    if (temArea) {
+        const forma = /cone/i.test(pd.formaArea) ? 'cone' : /linha/i.test(pd.formaArea) ? 'linha' : 'circulo';
+        return {
+            ...base, tipo: 'geometria', forma,
+            origem: (forma === 'circulo' && Number(pd.alcance) > 0) ? 'livre' : 'token',
+            alcanceM: Number(pd.alcance) || 0,
+            raioM: Number(pd.tamanhoArea) || 0,
+            comprimentoM: Number(pd.tamanhoArea) || 0,
+            larguraM: Math.max(1, (Number(pd.tamanhoArea) || 0) / 3),
+            angGraus: Number(pd.anguloCone) || 60,
+            maxAlvos: 99,
+        };
+    }
+    return {
+        ...base, tipo: 'alvos',
+        alcanceM: Number(pd.alcance) || Number(pd.tamanhoArea) || 0,
+        maxAlvos: Number(pd.alvosMax) || 1,
+    };
+}
+
 let skillsCache = null;   // { chave: 'tipo:id', lista } — resolvido 1x por vez/turno
 
 function itensBrutos(p) {
@@ -143,22 +191,36 @@ async function carregarSkills(chave, p) {
         const sys = await m.registroSistema();
         for (const mod of Object.values(sys.classModulesById || {})) {
             for (const pd of mod.itensPredefinidos || []) {
-                predefPorId.set(pd.id, pd);
-                predefPorNome.set(normNome(pd.nome), pd);
+                const ref = { pd, schema: mod.schema || [] };
+                predefPorId.set(pd.id, ref);
+                predefPorNome.set(normNome(pd.nome), ref);
             }
         }
     } catch (e) { console.warn('registro do sistema p/ skills do turno', e); }
+
+    // Custo pelo SCHEMA: o campo cujo LABEL fala em custo (a key é numérica nos
+    // módulos — "3" pode ser "Redutor", que NÃO é custo). Sem label de custo,
+    // vale o custo auditado pela Régua v2 (regua.custo, em ENER).
+    const custoDoSchema = (it, schema) => {
+        for (const f of schema || []) {
+            if (!/custo/i.test(f.label || '')) continue;
+            const v = it?.[f.key];
+            if (v != null && v !== '' && v !== '0') return v;
+        }
+        return '';
+    };
     const lista = itensBrutos(p).map(it => {
         // item de NPC nem sempre carrega _predefId — o nome resolve o registro
-        const pd = (it._predefId && predefPorId.get(it._predefId)) || predefPorNome.get(normNome(S_NOME(it))) || null;
+        const ref = (it._predefId && predefPorId.get(it._predefId)) || predefPorNome.get(normNome(S_NOME(it))) || null;
+        const pd = ref?.pd || null;
+        const custo = custoDoSchema(it, ref?.schema) || S_CUSTO(it) || S_CUSTO(pd?.valores || {})
+            || (pd?.regua?.custo > 0 ? `${pd.regua.custo} ENER` : '');
         return {
             nome: S_NOME(it),
-            // o pré-definido guarda os campos pré-preenchidos em `valores` — é de
-            // lá que sai o custo/efeito quando a instância não os copiou (NPCs)
             efeito: S_EFEITO(it) || S_EFEITO(pd?.valores || {}) || pd?.descricao || '',
-            custo: S_CUSTO(it) || S_CUSTO(pd?.valores || {}),
-            mira: it.mira || pd?.mira || null,
-            acao: it.custoAcao || pd?.custoAcao || pd?.mira?.custoAcao || 'padrao',   // §6.2
+            custo,
+            mira: it.mira || pd?.mira || miraDaReguaV2(pd),
+            acao: it.custoAcao || pd?.custoAcao || pd?.mira?.custoAcao || acaoDoRotulo(it.acao || pd?.valores?.acao),   // §6.2
         };
     });
     skillsCache = { chave, lista };
@@ -423,7 +485,7 @@ function miraDoCadastro(m, s, custo) {
         afeta: m.afeta || 'todos',
         meta: {
             nome: s.nome, efeito: s.efeito, custoSkill: s.custo, custoAcao: custo,
-            condicao: m.condicaoNome ? { nome: m.condicaoNome, rodadas: Number(m.condicaoRodadas) || 0 } : null,
+            condicao: m.condicaoNome ? { nome: m.condicaoNome, rodadas: Number(m.condicaoRodadas) || 0, maxAlvos: Number(m.condicaoMaxAlvos) || 0 } : null,
         },
     };
 }
@@ -606,10 +668,15 @@ window.tbTurnoConfirmarMira = async () => {
     markDirty();
     await gastar(custo);
     if (custo === 'livre') render();
-    // ☠️ Condição vinculada da skill: aplica em todos os alvos atingidos que
-    // participam da cena (o motor de rodadas expira sozinho, com aviso ao mestre)
+    // ☠️ Condição vinculada da skill: aplica nos atingidos que participam da
+    // cena (o motor de rodadas expira sozinho, com aviso ao mestre). Quando o
+    // cadastro limita quantos sofrem a condição, valem os N primeiros.
     if (meta.condicao?.nome && atingidos.length) {
-        const pids = atingidos.map(o => participanteDoToken(o)?.id).filter(Boolean);
+        let pids = atingidos.map(o => participanteDoToken(o)?.id).filter(Boolean);
+        if (meta.condicao.maxAlvos > 0 && pids.length > meta.condicao.maxAlvos) {
+            pids = pids.slice(0, meta.condicao.maxAlvos);
+            toast(`☠️ Condição limitada a ${meta.condicao.maxAlvos} alvo(s) pelo cadastro — valem os primeiros`, 'warning');
+        }
         if (pids.length) aplicarCondicaoEmVarios(pids, meta.condicao.nome, meta.condicao.rodadas || 0).catch(e => console.warn('condição da skill', e));
     }
     toast(nomes.length ? `${icone} ${nomes.length} alvo(s): ${nomes.join(', ')}` : `${icone} Nenhum alvo na área`);

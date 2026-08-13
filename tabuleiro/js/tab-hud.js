@@ -71,7 +71,12 @@ export function vdsCombateDaFonte(fonte) {
     r = [];
     for (const dv of VDS_COMBATE) {
         if (!vdAplicaFonte(dv, fonte, vincChar)) continue;
-        const v = valorComponente(dv.nome, fonte);
+        let v = valorComponente(dv.nome, fonte);
+        // NPC salvo antes do espelho por nome: o valor travado vive em overrides[id]
+        if (v == null && fonte.valoresDer?.overrides) {
+            const o = parseFloat(fonte.valoresDer.overrides[dv.key]);
+            if (!isNaN(o)) v = o;
+        }
         if (v == null || v === 0) continue;   // 0/ausente = ruído, fica de fora
         // valor ATUAL (VDs com campo Atual/Máx): char grava em
         // derivedValues['dv_<key>_atual'] na ficha; NPC em valoresDer.atual[key]
