@@ -4,7 +4,7 @@
 // =============================================
 
 import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, ATRIBUTOS_VINCULAVEIS, periciaOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=16';
-import { CAMPOS_EQUIPAMENTO, normalizaFormaEquipar } from '../../shared/equip-campos.js?v=5';
+import { CAMPOS_EQUIPAMENTO, normalizaFormaEquipar } from '../../shared/equip-campos.js?v=6';
 import { RUNIC_MODULE_DEF, buildRunicField, collectRunicField, importRunicSeed } from './painel-runic.js?v=1';
 import { versaoDoLivro } from '../../shared/livros-pub.js';
 
@@ -3959,8 +3959,74 @@ function _buildPredefItemRow(moduleIdx, itemIdx, data, schema) {
                 </div>
                 <div class="cm-pv-grid">${_buildPredefValoresGrid(schema, data.valores)}</div>
             </div>
+            ${_buildPredefMira(data)}
         </div>
     `;
+}
+
+/**
+ * 🎯 Mira & Ação do TABULEIRO (combate por turno). Distâncias em METROS;
+ * todo alcance com o token como eixo conta a partir da BORDA dele.
+ * `tipo` vazio = sem mira cadastrada (o Tabuleiro pergunta na hora de usar).
+ */
+function _buildPredefMira(data) {
+    const m = data.mira || {};
+    const custoAcao = data.custoAcao || 'padrao';
+    const sel = (v, atual) => v === atual ? 'selected' : '';
+    return `
+        <details class="cm-predef-mira" ${m.tipo ? 'open' : ''}>
+            <summary class="cm-mini-title">🎯 Mira & Ação (Tabuleiro — combate por turno)</summary>
+            <div class="form-grid" style="margin-top:6px">
+                <div class="form-group">
+                    <label>Custo de ação (§6.2: padrão = 1 Ação Padrão)</label>
+                    <select data-pd-key="custoAcao">
+                        <option value="padrao" ${sel('padrao', custoAcao)}>⚡ Ação Padrão</option>
+                        <option value="movimento" ${sel('movimento', custoAcao)}>👣 Ação de Movimento</option>
+                        <option value="livre" ${sel('livre', custoAcao)}>🕊️ Ação Livre</option>
+                        <option value="completa" ${sel('completa', custoAcao)}>⏳ Ação Completa (as duas)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de mira</label>
+                    <select data-pd-key="miraTipo">
+                        <option value="" ${sel('', m.tipo || '')}>— sem mira (pergunta na hora) —</option>
+                        <option value="alvos" ${sel('alvos', m.tipo)}>🎯 Alvos escolhidos</option>
+                        <option value="geometria" ${sel('geometria', m.tipo)}>📐 Área geométrica</option>
+                        <option value="cac" ${sel('cac', m.tipo)}>⚔️ Golpe (arco no token)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Forma (área)</label>
+                    <select data-pd-key="miraForma">
+                        <option value="circulo" ${sel('circulo', m.forma || 'circulo')}>⭕ Círculo</option>
+                        <option value="cone" ${sel('cone', m.forma)}>📐 Cone</option>
+                        <option value="linha" ${sel('linha', m.forma)}>📏 Linha</option>
+                        <option value="ret" ${sel('ret', m.forma)}>⬛ Retângulo</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Origem da área</label>
+                    <select data-pd-key="miraOrigem">
+                        <option value="token" ${sel('token', m.origem || 'token')}>No conjurador (da borda do token)</option>
+                        <option value="livre" ${sel('livre', m.origem)}>Ponto livre dentro do alcance</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Alcance (m)</label><input type="number" step="0.5" min="0" data-pd-key="miraAlcanceM" value="${m.alcanceM ?? ''}" placeholder="até onde mira/alvo"></div>
+                <div class="form-group"><label>Raio (m — círculo)</label><input type="number" step="0.5" min="0" data-pd-key="miraRaioM" value="${m.raioM ?? ''}" placeholder="raio da área"></div>
+                <div class="form-group"><label>Comprimento (m — cone/linha)</label><input type="number" step="0.5" min="0" data-pd-key="miraComprimentoM" value="${m.comprimentoM ?? ''}" placeholder=""></div>
+                <div class="form-group"><label>Largura (m — linha/retângulo)</label><input type="number" step="0.5" min="0" data-pd-key="miraLarguraM" value="${m.larguraM ?? ''}" placeholder=""></div>
+                <div class="form-group"><label>Ângulo (graus — cone)</label><input type="number" min="10" max="180" data-pd-key="miraAngGraus" value="${m.angGraus ?? ''}" placeholder="60"></div>
+                <div class="form-group"><label>Máx. de alvos</label><input type="number" min="1" data-pd-key="miraMaxAlvos" value="${m.maxAlvos ?? ''}" placeholder="1"></div>
+                <div class="form-group">
+                    <label>Afeta</label>
+                    <select data-pd-key="miraAfeta">
+                        <option value="todos" ${sel('todos', m.afeta || 'todos')}>Todos na área</option>
+                        <option value="inimigos" ${sel('inimigos', m.afeta)}>Só inimigos (outra facção)</option>
+                        <option value="aliados" ${sel('aliados', m.afeta)}>Só aliados (mesma facção)</option>
+                    </select>
+                </div>
+            </div>
+        </details>`;
 }
 
 window.addPredefItem = function (btn) {
@@ -4236,6 +4302,23 @@ function _collectSingleModuleData(item) {
             });
             valores[stepsKey] = stepsArr;
         });
+        // 🎯 Mira & Ação do Tabuleiro (combate por turno)
+        const pdv = (k) => pd.querySelector(`[data-pd-key="${k}"]`)?.value ?? '';
+        const num = (k) => { const n = parseFloat(pdv(k)); return isNaN(n) ? null : n; };
+        const miraTipo = pdv('miraTipo');
+        const mira = miraTipo ? {
+            tipo: miraTipo,
+            forma: pdv('miraForma') || 'circulo',
+            origem: pdv('miraOrigem') || 'token',
+            alcanceM: num('miraAlcanceM') ?? 0,
+            raioM: num('miraRaioM') ?? 0,
+            comprimentoM: num('miraComprimentoM') ?? 0,
+            larguraM: num('miraLarguraM') ?? 0,
+            angGraus: num('miraAngGraus') ?? 60,
+            maxAlvos: Math.max(1, parseInt(pdv('miraMaxAlvos'), 10) || 1),
+            afeta: pdv('miraAfeta') || 'todos',
+        } : null;
+
         mod.itensPredefinidos.push({
             id: pdId,
             nome,
@@ -4243,6 +4326,8 @@ function _collectSingleModuleData(item) {
             custoExpProprio: custoExpRaw !== '' ? Math.max(0, parseInt(custoExpRaw, 10) || 0) : null,
             custoEquipamentos: usarCustoEq ? _collectEquipCostArea(pd.querySelector('.cm-custo-eq-predef')) : null,
             custoCriacaoMecanicaIds: usarMecanica ? Array.from(pd.querySelectorAll('.cm-predef-custo-criacao-mechs .mech-tag')).map(t => t.dataset.id).filter(Boolean) : null,
+            custoAcao: pdv('custoAcao') || 'padrao',
+            mira,
             valores
         });
     });

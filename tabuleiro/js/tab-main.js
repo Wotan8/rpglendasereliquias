@@ -22,6 +22,7 @@ import { initTemplates } from './tab-templates.js';
 import { initMusica } from './tab-musica.js';
 import { initDados } from './tab-dados.js';
 import { initChat, sincChatDoCanvas } from './tab-chat.js';
+import { initTurno } from './tab-turno.js';
 import './tab-local.js';   // 📍 Locais do Worldbuilding (registra window.tbAbrirLocal)
 import { initGirar } from './tab-girar.js';
 import { initSessao } from './tab-sessao.js';
@@ -91,6 +92,7 @@ window.addEventListener('DOMContentLoaded', () => {
             initMusica();
             initDados();
             initChat();   // o listener do chat já assinou no trocarCanvas do iniciarSync
+            initTurno();
             initSessao();
             startRenderLoop();
             document.getElementById('tbLoading').style.display = 'none';
@@ -213,6 +215,7 @@ async function iniciarSync() {
         const meus = T.chars.filter(c => c.ownerUid === T.user?.uid).map(c => c.id);
         T._meuMelhorGrau = melhorGrauDoUsuario(T.combate, meus);
         window._renderCombate && window._renderCombate();
+        window._renderTurno?.();   // ⚔️ painel do turno acompanha o doc de combate
         atualizarBarraCanvas();
         markDirty();
     }));

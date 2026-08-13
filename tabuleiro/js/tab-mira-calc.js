@@ -1,0 +1,86 @@
+// =============================================
+// TABULEIRO — Geometria da MIRA (decisões puras, testável em Node)
+// Módulo "folha": não importa nada.
+//
+// Regra da mesa: todo posicionamento com o token como eixo conta o alcance a
+// partir do FIM DA BORDA do token, nunca do centro. Por isso as funções
+// recebem o raio do token em px e somam/deslocam por ele.
+//
+// O shape devolvido usa o MESMO formato dos templates de área
+// ({ forma, origem, destino, raio, ang }) — o hit-test é o
+// templateAtingeCirculo de tab-templates.js, já testado.
+// =============================================
+
+/** Ângulo (rad) do centro do token até o cursor. 0 quando coincidem. */
+export function direcaoAte(centro, ponto) {
+    const dx = (ponto?.x || 0) - centro.x, dy = (ponto?.y || 0) - centro.y;
+    if (!dx && !dy) return 0;
+    return Math.atan2(dy, dx);
+}
+
+/** Ponto na BORDA do token na direção `dir` (rad). */
+export function origemNaBorda(centro, rTokenPx, dir) {
+    return { x: centro.x + Math.cos(dir) * rTokenPx, y: centro.y + Math.sin(dir) * rTokenPx };
+}
+
+/** Clampa `ponto` ao disco de alcance (borda do token + alcance). */
+export function clampAoAlcance(centro, rTokenPx, alcancePx, ponto) {
+    const max = rTokenPx + Math.max(0, alcancePx);
+    const dx = ponto.x - centro.x, dy = ponto.y - centro.y;
+    const d = Math.hypot(dx, dy);
+    if (d <= max || d === 0) return { x: ponto.x, y: ponto.y };
+    return { x: centro.x + dx / d * max, y: centro.y + dy / d * max };
+}
+
+/** O alvo está ao alcance? Medido BORDA a BORDA (agente e alvo). */
+export function alvoAoAlcance(centroA, rA, centroB, rB, alcancePx) {
+    return Math.hypot(centroB.x - centroA.x, centroB.y - centroA.y) - rA - rB <= alcancePx + 1e-6;
+}
+
+/**
+ * Shape do preview/confirmação da mira, no formato dos templates.
+ * @param mira  { tipo: 'cac'|'geometria', forma, alcancePx, raioPx, angGraus,
+ *                larguraPx, comprimentoPx, origem: 'token'|'livre' }
+ * @param token { x, y, r }  — centro e raio em px
+ * @param cursor{ x, y }     — último clique/movimento (direção ou posição)
+ * @returns { forma, origem, destino, raio, ang } ou null (mira de alvos não tem shape)
+ */
+export function shapeDaMira(mira, token, cursor) {
+    if (!mira || mira.tipo === 'alvos') return null;
+    const c = { x: token.x, y: token.y };
+    const dir = direcaoAte(c, cursor);
+
+    if (mira.tipo === 'cac') {
+        // golpe: setor a partir da borda, comprimento = alcance do golpe
+        const o = origemNaBorda(c, token.r, dir);
+        return {
+            forma: 'cone', origem: o,
+            destino: { x: o.x + Math.cos(dir) * mira.alcancePx, y: o.y + Math.sin(dir) * mira.alcancePx },
+            ang: mira.angGraus || 90,
+        };
+    }
+
+    const forma = mira.forma || 'circulo';
+    if (forma === 'circulo') {
+        if (mira.origem === 'livre') {
+            const pos = clampAoAlcance(c, token.r, mira.alcancePx || 0, cursor || c);
+            return { forma: 'circulo', origem: pos, destino: pos, raio: mira.raioPx || 0 };
+        }
+        // centrado no token: o raio conta a partir da borda
+        return { forma: 'circulo', origem: c, destino: c, raio: token.r + (mira.raioPx || 0) };
+    }
+    if (forma === 'cone') {
+        const o = origemNaBorda(c, token.r, dir);
+        const L = mira.comprimentoPx || mira.alcancePx || 0;
+        return { forma: 'cone', origem: o, destino: { x: o.x + Math.cos(dir) * L, y: o.y + Math.sin(dir) * L }, ang: mira.angGraus || 60 };
+    }
+    if (forma === 'linha') {
+        const o = origemNaBorda(c, token.r, dir);
+        const L = mira.comprimentoPx || mira.alcancePx || 0;
+        return { forma: 'linha', origem: o, destino: { x: o.x + Math.cos(dir) * L, y: o.y + Math.sin(dir) * L }, raio: mira.larguraPx || 0 };
+    }
+    // retângulo: centrado no ponto clicado (clampado ao alcance), cantos opostos
+    const pos = clampAoAlcance(c, token.r, mira.alcancePx || 0, cursor || c);
+    const mw = (mira.larguraPx || 0) / 2, mh = (mira.comprimentoPx || mira.larguraPx || 0) / 2;
+    return { forma: 'ret', origem: { x: pos.x - mw, y: pos.y - mh }, destino: { x: pos.x + mw, y: pos.y + mh } };
+}

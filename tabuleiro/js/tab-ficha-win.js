@@ -14,7 +14,7 @@
 // id do doc. Casar os dois é por normChave(dv.nome), nunca por dv.key direto.
 // =============================================
 import {
-    db, doc, setDoc, updateDoc, deleteDoc, addDoc, collection, onSnapshot, query, where, writeBatch
+    db, doc, setDoc, updateDoc, deleteDoc, addDoc, collection, onSnapshot, getDocs, query, where, writeBatch
 } from '../../painel-mestre/js/firebase-config.js';
 import {
     T, esc, toast, markDirty, vNum, dvMesa, normChave, patchVitalAtualNpc, valorComponente, dividirPilha
@@ -1010,6 +1010,34 @@ function linhasAtaqueChar(win, ch) {
     }
     const dvsCtx = _sys.derivedValues.map(d => ({ ...d, key: normChave(d.nome) }));
     linhas.push(...linhasDesarmado(win, ch, dvsCtx, dt));
+    return linhas;
+}
+
+/** Registros do sistema para o ⚔️ Painel do Turno (mira dos itens pré-definidos). */
+export async function registroSistema() { return carregarSys(); }
+
+/**
+ * Golpes prontos para o ⚔️ Painel do Turno: mesma conta das janelas, mas com
+ * UMA query de itens (sem listener — o painel pede na hora de abrir o menu).
+ * Cada linha ganha `alcanceM` (instância > modelo > 0) para a régua do golpe.
+ */
+export async function linhasDeAtaque(tipo, id) {
+    await carregarSys();
+    let itens = [];
+    try {
+        const s = await getDocs(query(collection(db, 'items'), where('characterId', '==', id)));
+        s.forEach(d => itens.push({ id: d.id, ...d.data() }));
+    } catch (e) { console.warn('itens do turno', e); }
+    const win = { tipo, id, itens };
+    const linhas = tipo === 'npc'
+        ? (() => { const n = dadosNpc(id); return n ? linhasAtaqueNpc(win, n) : []; })()
+        : (() => { const ch = dadosChar(id); return ch ? linhasAtaqueChar(win, ch) : []; })();
+    // alcance do golpe: o item da linha (match por nome — as linhas saem do item)
+    for (const l of linhas) {
+        if (l.desarmado) { l.alcanceM = 0; continue; }
+        const i = itens.find(x => (x.nome || 'Item') === l.nome);
+        l.alcanceM = Number(i?.alcanceM ?? (i ? tplDoItem(i)?.alcanceM : 0)) || 0;
+    }
     return linhas;
 }
 

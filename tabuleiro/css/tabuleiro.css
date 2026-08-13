@@ -562,6 +562,39 @@ html, body {
 }
 .tb-cond-t { font-style: normal; font-weight: 700; opacity: .85; margin-left: 2px; }
 
+/* ===== ⚔️ Painel do Turno (combate mecânico) ===== */
+.tb-turno {
+    position: fixed; left: 50%; bottom: calc(var(--lr-space-4) + 54px); transform: translateX(-50%);
+    z-index: 48; display: none; flex-direction: column; gap: var(--lr-space-2);
+    max-width: min(94vw, 640px);
+    background: var(--lr-surface); border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-lg); box-shadow: var(--lr-shadow-3);
+    padding: var(--lr-space-2) var(--lr-space-3);
+}
+.tb-turno.open { display: flex; }
+.tb-turno-head {
+    font-family: var(--lr-font-title); font-size: var(--lr-fs-sm); color: var(--lr-text-1);
+    display: flex; align-items: center; gap: var(--lr-space-2); flex-wrap: wrap;
+}
+.tb-turno-hint { color: var(--lr-text-2); font-family: var(--lr-font-body); font-size: var(--lr-fs-xs); }
+.tb-turno-chips { margin-left: auto; display: flex; gap: 4px; }
+.tb-turno-chip { font-size: var(--lr-fs-sm); transition: opacity var(--lr-t-fast); }
+.tb-turno-chip.off { opacity: .22; filter: grayscale(1); }
+.tb-turno-acoes { display: flex; gap: var(--lr-space-2); flex-wrap: wrap; justify-content: center; }
+.tb-turno-btn { font-size: var(--lr-fs-xs); }
+.tb-turno-lista {
+    display: flex; gap: var(--lr-space-1) var(--lr-space-2); flex-wrap: wrap; align-items: center;
+    max-height: 30vh; overflow-y: auto; justify-content: center;
+}
+.tb-turno-lista .tb-btn i { font-style: normal; opacity: .75; font-size: var(--lr-fs-xs); }
+
+/* facção na janela de Combate */
+.tb-faccao-sel {
+    background: var(--lr-bg-0); border: 1px solid var(--lr-border); border-radius: var(--lr-radius-sm);
+    color: var(--lr-text-2); font-size: var(--lr-fs-xs); padding: 0 2px; max-width: 110px;
+}
+.tb-faccao-dot { font-size: var(--lr-fs-xs); }
+
 /* ===== 💬 Chat da mesa (por canvas) ===== */
 .tb-chat { left: var(--lr-space-4); right: auto; top: auto; bottom: var(--lr-space-4); width: 300px; height: 320px; z-index: 47; }
 .tb-chat-lista { display: flex; flex-direction: column; gap: 3px; font-size: var(--lr-fs-sm); }

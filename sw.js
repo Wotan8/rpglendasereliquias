@@ -170,6 +170,8 @@ const PRECACHE_URLS = [
   '/tabuleiro/js/tab-musica-calc.js',
   '/tabuleiro/js/tab-dados.js',
   '/tabuleiro/js/tab-chat.js',
+  '/tabuleiro/js/tab-turno.js',
+  '/tabuleiro/js/tab-mira-calc.js',
   '/tabuleiro/js/tab-livros.js',
   '/tabuleiro/js/tab-local.js',
   '/tabuleiro/js/tab-sessao.js',

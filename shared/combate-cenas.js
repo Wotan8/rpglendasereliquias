@@ -86,6 +86,78 @@ export function comTrocaDeCena(c, id) {
 }
 
 // =============================================
+// TURNO MECÂNICO (Livro §6.2)
+// O turno tem 1 Ação Padrão + 1 Ação de Movimento; a Livre é incidental
+// (não tem contador). "Ação Completa" consome as duas. A cena guarda:
+//   iniciado: bool            — o mestre deu start (turno 1 só existe depois)
+//   acoesTurno: {padrao, movimento} — o que o participante da vez ainda tem
+// e cada participante ganha `faccao` (aliados|inimigos|neutros).
+// =============================================
+
+export const FACCOES = [
+    ['aliados', '🟢 Aliados'],
+    ['inimigos', '🔴 Inimigos'],
+    ['neutros', '⚪ Neutros'],
+];
+
+/** Facção efetiva: a gravada, ou o palpite pelo tipo (jogador↔aliado, resto inimigo). */
+export function faccaoDoParticipante(p) {
+    if (p?.faccao) return p.faccao;
+    return (p?.characterId || p?.type === 'Jogador') ? 'aliados' : 'inimigos';
+}
+
+/** Ações cheias de um turno recém-começado. */
+export function acoesNovas() { return { padrao: true, movimento: true }; }
+
+/** custoAcao: 'padrao' | 'movimento' | 'livre' | 'completa' (default padrao). */
+export function podeGastar(acoes, custo) {
+    const a = acoes || acoesNovas();
+    if (custo === 'livre') return true;                    // incidental — não consome
+    if (custo === 'movimento') return !!a.movimento;
+    if (custo === 'completa') return !!a.padrao && !!a.movimento;
+    return !!a.padrao;                                     // padrao (default)
+}
+
+/** Devolve o novo estado de ações após pagar `custo` (não muta o recebido). */
+export function gastarAcao(acoes, custo) {
+    const a = { ...(acoes || acoesNovas()) };
+    if (custo === 'movimento') a.movimento = false;
+    else if (custo === 'completa') { a.padrao = false; a.movimento = false; }
+    else if (custo !== 'livre') a.padrao = false;
+    return a;
+}
+
+/**
+ * A skill com `afeta` pode atingir alguém da `faccaoAlvo`?
+ * 'aliados' = mesma facção do agente (inclui ele mesmo);
+ * 'inimigos' = facção diferente; 'todos'/ausente = qualquer um.
+ */
+export function alvoValido(afeta, minhaFaccao, faccaoAlvo) {
+    if (!afeta || afeta === 'todos') return true;
+    if (afeta === 'aliados') return minhaFaccao === faccaoAlvo;
+    return minhaFaccao !== faccaoAlvo;
+}
+
+/**
+ * Alcance do golpe corpo a corpo, em metros:
+ * alcance da arma (cadastro; 0 quando não houver) + 5% do VD Tamanho,
+ * nunca menor que 1 m. O raio conta a partir da BORDA do token.
+ */
+export function alcanceGolpe(alcanceArmaM, tamanhoVD) {
+    const arma = Number(alcanceArmaM) || 0;
+    const tam = Number(tamanhoVD) || 0;
+    return Math.max(1, arma + tam * 0.05);
+}
+
+/** Participante da vez, na MESMA ordenação da janela (iniciativa desc). */
+export function participanteDaVez(cena) {
+    const parts = (cena?.participantes || []).slice().sort((a, b) => (b.initiative || 0) - (a.initiative || 0));
+    if (!parts.length) return null;
+    const turno = ((cena?.turnoAtual || 0) % parts.length + parts.length) % parts.length;
+    return parts[turno];
+}
+
+// =============================================
 // CONDIÇÕES DO PARTICIPANTE (`p.condicoes`)
 // Duas gerações no mesmo array: string solta (legado) e objeto
 // { nome, icone, descricao, expiraNaRodada } — sempre leia por aqui.

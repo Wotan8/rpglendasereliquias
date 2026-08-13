@@ -101,6 +101,9 @@ export const CAMPOS_EQUIPAMENTO = [
     { key: 'pesoMaximoContainer', label: 'Peso Máximo Suportado (Container)', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
     { key: 'capacidadeContainer', label: 'Capacidade do Container (slots antigos)', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
     { key: 'formulaDano', label: '💥 Fórmula de Dano', type: 'text', placeholder: 'Ex: 1d10, 2d6 — bônus numéricos vêm dos Valores Derivados' },
+    // ⚔️ Régua do golpe no Tabuleiro: alcance efetivo = alcanceM + 5% do VD
+    // Tamanho do usuário, nunca menor que 1 m — contado da BORDA do token.
+    { key: 'alcanceM', label: '📏 Alcance do golpe (m) — o Tabuleiro soma 5% do Tamanho; vazio = mínimo 1 m', type: 'number', placeholder: 'Ex: 0,5 adaga · 2 lança', showWhen: { field: 'tipo', value: 'Arma' } },
     {
         // Qual Blindagem TIPADA do alvo barra este dano. 1 ou mais — um machado
         // de guerra corta E esmaga. Antes só existia via script

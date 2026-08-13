@@ -6,7 +6,7 @@ import { db, doc, setDoc, updateDoc, getDoc } from '../../painel-mestre/js/fireb
 import { T, esc, toast, uid, alvoDoTeste, grausDoDado, fmtGraus, vNum, patchVitalAtualNpc } from './tab-state.js';
 import { refCombate, refEstado, abrirModal, fecharModal } from './tab-main.js';
 import { VITAIS } from './tab-hud.js';
-import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena, condDoParticipante, tirarCondicoesExpiradas } from '../../shared/combate-cenas.js';
+import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena, condDoParticipante, tirarCondicoesExpiradas, FACCOES, faccaoDoParticipante, acoesNovas, participanteDaVez } from '../../shared/combate-cenas.js';
 import { logChat } from './tab-chat.js';
 
 let janelaAberta = false;
@@ -163,14 +163,19 @@ function render() {
 
     let topo = '';
     if (secreto) {
+        // ⚔️ Turno mecânico: o turno 1 só existe depois do START do mestre.
+        const btnCena = cena.iniciado
+            ? `<button class="tb-btn tb-btn-small tb-btn-danger" onclick="tbCombEncerrarCena()" title="Encerrar o combate (o painel de turno some)">⏹️</button>`
+            : `<button class="tb-btn tb-btn-small tb-btn-success" onclick="tbCombIniciarCena()" title="Iniciar o combate — trava as iniciativas e abre o turno 1">▶️ Iniciar</button>`;
         topo = `<div class="tb-combat-controls">
-            <button class="tb-btn tb-btn-small" onclick="tbCombTurno(-1)">⏮️</button>
-            <span class="tb-combat-round">Turno ${turno + 1}/${parts.length}${c?.rodada ? ' · Rodada ' + c.rodada : ''}</span>
-            <button class="tb-btn tb-btn-small" onclick="tbCombTurno(1)">⏭️</button>
+            ${btnCena}
+            <button class="tb-btn tb-btn-small" onclick="tbCombTurno(-1)" ${cena.iniciado ? '' : 'disabled'}>⏮️</button>
+            <span class="tb-combat-round">${cena.iniciado ? `Turno ${turno + 1}/${parts.length}${c?.rodada ? ' · Rodada ' + c.rodada : ''}` : '🕰️ Preparando — role as iniciativas'}</span>
+            <button class="tb-btn tb-btn-small" onclick="tbCombTurno(1)" ${cena.iniciado ? '' : 'disabled'}>⏭️</button>
             <button class="tb-btn tb-btn-small" title="${T.estado?.combateVisivelPublico ? 'Ocultar do público' : 'Exibir ao público'}" onclick="tbCombVisibilidade()">${T.estado?.combateVisivelPublico ? '👁️' : '🚫'} público</button>
         </div>`;
     } else {
-        topo = `<div class="tb-combat-controls"><span class="tb-combat-round">Ordem dos turnos${c?.rodada ? ' · Rodada ' + c.rodada : ''}</span></div>`;
+        topo = `<div class="tb-combat-controls"><span class="tb-combat-round">${cena.iniciado ? `Ordem dos turnos${c?.rodada ? ' · Rodada ' + c.rodada : ''}` : '🕰️ O mestre ainda não iniciou o combate'}</span></div>`;
     }
 
     // 🎯 Testes pedidos pelo mestre (além da iniciativa) — gerência só no secreto
@@ -184,7 +189,7 @@ function render() {
     }
 
     body.innerHTML = abas + topo + parts.map((p, i) => {
-        const atual = i === turno % parts.length;
+        const atual = !!cena.iniciado && i === turno % parts.length;
         const podeCtrl = secreto;
         const barra = (label, cur, max, cor) => {
             const pct = max > 0 ? Math.max(0, Math.min(100, (cur / max) * 100)) : 0;
@@ -248,10 +253,17 @@ function render() {
         const fichaRef = p.npcId ? ['npc', p.npcId] : p.characterId ? ['char', p.characterId] : null;
         const btnJanela = fichaRef && (secreto || donoDoChar)
             ? `<button class="tb-mini-btn" title="Janela de combate (ficha ao vivo)" onclick="tbFichaWin('${fichaRef[0]}','${fichaRef[1]}')">⚔️</button>` : '';
+        // Facção: o mestre define no select; todos veem o pontinho de cor
+        const fac = faccaoDoParticipante(p);
+        const facSel = secreto
+            ? `<select class="tb-faccao-sel" onchange="tbCombFaccao('${p.id}',this.value)" title="Facção (define quem é aliado de quem para as skills)">
+                ${FACCOES.map(([v, l]) => `<option value="${v}" ${fac === v ? 'selected' : ''}>${l}</option>`).join('')}
+               </select>`
+            : `<span class="tb-faccao-dot" title="${esc(FACCOES.find(f => f[0] === fac)?.[1] || '')}">${fac === 'aliados' ? '🟢' : fac === 'neutros' ? '⚪' : '🔴'}</span>`;
         return `<div class="tb-combat-p ${atual ? 'atual' : ''}">
             <div class="tb-combat-init">${p.initiative ?? 0}</div>
             <div style="flex:1;min-width:0">
-                <div class="tb-combat-nome" ${abrirNpc}>${esc(p.name || '?')} ${p.npcId && secreto ? '📋' : ''} <span class="tb-combat-tipo">${esc(p.type || '')}</span></div>
+                <div class="tb-combat-nome" ${abrirNpc}>${esc(p.name || '?')} ${p.npcId && secreto ? '📋' : ''} <span class="tb-combat-tipo">${esc(p.type || '')}</span> ${facSel}</div>
                 ${secreto && p.details ? `<div class="tb-muted" style="font-size:.72rem">${esc(p.details)}</div>` : ''}
                 ${stats}
                 ${testesDoCard(testes, p, secreto)}
@@ -266,6 +278,34 @@ function render() {
 }
 
 // ===== Ações (modo secreto) =====
+
+/** ▶️ START do mestre: o turno 1 só existe a partir daqui. */
+window.tbCombIniciarCena = async function() {
+    const c = cenaAtiva(T.combate);
+    const parts = c.participantes || [];
+    if (!parts.length) { toast('⚠️ A cena não tem participantes', 'warning'); return; }
+    const semIni = parts.filter(p => !(p.initiative > 0));
+    if (semIni.length && !confirm(`${semIni.length} participante(s) sem iniciativa (${semIni.map(p => p.name).join(', ')}). Iniciar mesmo assim?`)) return;
+    await salvar(parts, { iniciado: true, turnoAtual: 0, rodada: 1, acoesTurno: acoesNovas() });
+    const vez = participanteDaVez({ ...c, turnoAtual: 0 });
+    toast('⚔️ Combate iniciado!');
+    logChat(`⚔️ Combate iniciado — Rodada 1, vez de ${vez?.name || '?'}`);
+};
+
+window.tbCombEncerrarCena = async function() {
+    if (!confirm('Encerrar o combate desta cena? (participantes e iniciativas ficam; o painel de turno some)')) return;
+    await salvar(partsDaCena(), { iniciado: false });
+    logChat('🕊️ Combate encerrado pelo mestre');
+};
+
+/** Facção do participante — é o que diz quem é aliado de quem para as skills. */
+window.tbCombFaccao = async function(pid, valor) {
+    const parts = partsDaCena().map(p => ({ ...p }));
+    const p = parts.find(x => x.id === pid); if (!p) return;
+    p.faccao = valor;
+    await salvar(parts);
+};
+
 window.tbCombTurno = async function(dir) {
     const c = cenaAtiva(T.combate); const n = (c.participantes || []).length || 1;
     let turno = (c.turnoAtual || 0) + dir;
@@ -277,10 +317,15 @@ window.tbCombTurno = async function(dir) {
     // montado do estado local ainda sem o eco reverteria a rodada.
     let parts = c.participantes || [], expiradas = [];
     if (rodada > rodadaAntes) ({ participantes: parts, expiradas } = tirarCondicoesExpiradas(parts, rodada));
-    await salvar(parts, { turnoAtual: turno, rodada });
+    // ⚔️ turno novo = ações cheias (1 Padrão + 1 Movimento, §6.2)
+    await salvar(parts, { turnoAtual: turno, rodada, acoesTurno: acoesNovas() });
+    if (c.iniciado) {
+        const vez = participanteDaVez({ ...c, participantes: parts, turnoAtual: turno });
+        if (vez) logChat(`▶️ Vez de ${vez.name || '?'}${rodada !== rodadaAntes ? ` (Rodada ${rodada})` : ''}`);
+    }
     // F4.3: expira templates com duração ao virar a rodada
     if (rodada > rodadaAntes) {
-        logChat(`🔄 Rodada ${rodada}`);
+        if (!c.iniciado) logChat(`🔄 Rodada ${rodada}`);   // com cena iniciada a vez já anuncia a rodada
         try { const m = await import('./tab-templates.js'); m.expirarTemplates(rodada); } catch (e) {}
         if (expiradas.length) {
             for (const e of expiradas) sincRemocaoFicha(parts.find(x => x.id === e.pid), e.cond.nome);

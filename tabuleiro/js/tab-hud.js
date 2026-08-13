@@ -119,7 +119,7 @@ export function barrasVisiveis(o) {
 /** Token do participante ativo do combate (anel pulsante). */
 export function tokenAtivoDoCombate() {
     const c = T.combate && cenaAtiva(T.combate);
-    if (!c || !(c.participantes || []).length) return null;
+    if (!c || !c.iniciado || !(c.participantes || []).length) return null;   // sem START não há "vez"
     // O anel de turno vale no público também: é a informação mais básica da mesa
     // ("é a sua vez") e não vaza nada — token fora da visão nem chega a ser
     // desenhado. O painel de combate continua preso ao `combateVisivelPublico`.
@@ -144,6 +144,13 @@ function fonteIniciativa(o) {
 }
 
 export async function rolarIniciativa(o) {
+    // ⚔️ Iniciativa rola UMA vez por cena: quem já tem número não rola de novo
+    // (o mestre ainda pode editar o valor na mão pela janela de Combate).
+    const jaTem = participanteDoToken(o);
+    if (jaTem && jaTem.initiative > 0) {
+        toast(`⚠️ ${o.nome || 'Token'} já rolou iniciativa (${jaTem.initiative}) nesta cena — edite no Painel se precisar`, 'warning');
+        return;
+    }
     const dado = 1 + Math.floor(Math.random() * DADO_INICIATIVA);
     const bonus = bonusIniciativa(fonteIniciativa(o));
     const total = dado + bonus;

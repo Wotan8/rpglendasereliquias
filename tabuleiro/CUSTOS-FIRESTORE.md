@@ -17,6 +17,7 @@ Estimativas para uma sessão típica: **1 mestre + 4 jogadores, 3 horas**, mesa 
 | Ping | 1 write por ping (ação explícita) | tab-presenca |
 | 🎲 Rolagem de dado | 1 write por rolagem (ação explícita; secreta = 0 writes) | tab-dados |
 | 💬 Chat / diário do canvas | 1 write por mensagem ou acontecimento, só de quem AGIU; movimento com debounce de 1,5s por token; boot lê as últimas 80 do canvas | tab-chat |
+| ⚔️ Turno mecânico | preview de mira = 0 writes (local); confirmar/gastar ação = 1 write no doc de combate + 1 no chat; golpes/skills do turno = 1 query de itens por vez | tab-turno |
 
 ## Leituras
 

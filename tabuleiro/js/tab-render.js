@@ -14,6 +14,7 @@ import { snapPonto, axialParaPixel, axialRound, pixelParaAxial, mesmaFaixaElev, 
 import { desenharExploracao, registrarExploracaoCelulas, tokenVisivelParaMim, carregarExploracao, versaoExploracao } from './tab-fog.js';
 import { cursoresParaDesenhar, pingsParaDesenhar, haPingsAtivos, avancarTweenCamera, cursoresAtivados } from './tab-presenca.js';
 import { vitaisDoToken, barrasVisiveis, tokenAtivoDoCombate } from './tab-hud.js';
+import { shapeDaMira } from './tab-mira-calc.js';
 import { desenharClima, climaAtivo, alphaTelhado } from './tab-clima.js';
 import { temCone, podeGirarToken, posicionarBotoesGirar, esconderBotoesGirar } from './tab-girar.js';
 
@@ -322,6 +323,7 @@ function draw() {
         if (camVitrine) drawCamada(camVitrine, viewRect);
         drawSelecao();
         drawTemp();
+        drawMira();
         drawReguasRemotas();
         drawCursores();
         drawPings();
@@ -710,6 +712,43 @@ function drawTemplate(o) {
         ctx.textAlign = 'left';
     }
     ctx.restore();
+}
+
+// ===== 🎯 MIRA DO TURNO (preview local — só quem está mirando vê) =====
+// Reusa drawTemplate com um shape sintético; por cima vão o aro de alcance
+// (contado a partir da BORDA do token) e o anel dos alvos escolhidos.
+function drawMira() {
+    const m = T.mira; if (!m) return;
+    const tok = T.objects.get(m.tokenId); if (!tok) return;
+    const gs = gridSize();
+    const rTok = ((tok.tamanhoCelulas || 1) * gs) / 2;
+    const cor = m.afeta === 'aliados' ? '#22c55e' : m.afeta === 'todos' ? '#eab308' : '#ef4444';
+
+    // aro de alcance (quando a mira tem alcance: alvos, golpe e área livre)
+    if (m.alcancePx > 0 && (m.tipo === 'alvos' || m.tipo === 'cac' || m.origem === 'livre')) {
+        ctx.save();
+        ctx.beginPath(); ctx.arc(tok.x, tok.y, rTok + m.alcancePx, 0, Math.PI * 2);
+        ctx.strokeStyle = hexA(cor, 0.55); ctx.setLineDash([hud(7), hud(6)]); ctx.lineWidth = hud(1.6);
+        ctx.stroke(); ctx.setLineDash([]);
+        ctx.restore();
+    }
+
+    // shape da área/golpe seguindo o cursor
+    const shape = shapeDaMira(m, { x: tok.x, y: tok.y, r: rTok }, m.cursor);
+    if (shape) drawTemplate({ ...shape, cor, alpha: m.travada ? 0.4 : 0.25 });
+
+    // anéis nos alvos marcados (mira de alvos)
+    for (const id of m.alvos || []) {
+        const o = T.objects.get(id); if (!o) continue;
+        const r = ((o.tamanhoCelulas || 1) * gs) / 2;
+        ctx.save();
+        ctx.beginPath(); ctx.arc(o.x, o.y, r + hud(5), 0, Math.PI * 2);
+        ctx.strokeStyle = cor; ctx.lineWidth = hud(3); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(tok.x, tok.y); ctx.lineTo(o.x, o.y);
+        ctx.strokeStyle = hexA(cor, 0.4); ctx.setLineDash([hud(4), hud(4)]); ctx.lineWidth = hud(1.4);
+        ctx.stroke(); ctx.setLineDash([]);
+        ctx.restore();
+    }
 }
 
 // ===== TERRENO DIFÍCIL (F4.5, só secreto) =====

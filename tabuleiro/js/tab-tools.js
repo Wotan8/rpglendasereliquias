@@ -353,6 +353,10 @@ function onDown(e) {
         return;
     }
 
+    // 🎯 MIRA armada (painel do turno): o clique esquerdo é dela — marca
+    // direção/posição ou alterna alvo. Pan/zoom continuam pelos outros botões.
+    if (T.mira) { window._miraClique?.(w); return; }
+
     switch (T.tool) {
         case 'select': {
             const h = pickHandle(w);
@@ -617,6 +621,7 @@ function onMove(e) {
     }
 
     if (!ponteiro) {
+        if (T.mira) { window._miraMove?.(w); }   // 🎯 preview da mira segue o cursor
         if (T.temp?.tipo === 'medida' && !T.temp.caneta) { atualizarMedida(w); }
         if (T.temp?.tipo === 'terreno') { T.temp.atual = w; markDirty(); }
         return;
@@ -803,8 +808,14 @@ async function onUp(e) {
     if (!p) return;
     // Cobre todos os fins de arrasto (soltar, cancelar, colisão) num lugar só
     if (p.tipo === 'dragObj' || p.tipo === 'dragMulti') T.dragAtivo = false;
-    // 👣 uma armada = um movimento; para andar de novo (2ª ação), radial de novo
-    if (p.tipo === 'dragObj' && p.limite != null) T.moverDesloc = null;
+    // 👣 uma armada = um movimento; para andar de novo (2ª ação), radial de novo.
+    // Se a armada veio do ⚔️ Painel do Turno e o token andou, a Ação de
+    // Movimento é gasta (o painel confere se ainda é a vez dele).
+    if (p.tipo === 'dragObj' && p.limite != null) {
+        const doTurno = !!T.moverDesloc?.doTurno;
+        T.moverDesloc = null;
+        if (p.moveu) window._turnoGastouMovimento?.(p.id, doTurno);
+    }
 
     if (p.tipo === 'pan' && p.botao === 2 && !p.moveu && p.alvoCtx) {
         abrirCtxOuRadial(p.alvoCtx, e.clientX, e.clientY);
@@ -1065,7 +1076,10 @@ function onKey(e) {
         if (!espacoApertado) { espacoApertado = true; if (cv) cv.style.cursor = 'grab'; }
         return;
     }
-    if (e.key === 'Escape') { T.temp = null; T.moverDesloc = null; selecionar(null); abrirPropriedades(null); limparReguaCompartilhada(); markDirty(); return; }
+    if (e.key === 'Escape') {
+        if (T.mira) { window._miraCancelar?.(); return; }   // 🎯 Esc só cancela a mira
+        T.temp = null; T.moverDesloc = null; selecionar(null); abrirPropriedades(null); limparReguaCompartilhada(); markDirty(); return;
+    }
     if (e.key === 'Enter' && T.temp?.tipo === 'medida' && T.temp.modoClique) { finalizarMedida(); return; }
     if (e.key === 'Enter' && T.tool === 'terreno' && T.temp?.tipo === 'terreno') {
         const pts = T.temp.pontos; T.temp = null; markDirty();

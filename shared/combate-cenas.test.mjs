@@ -7,6 +7,8 @@ import {
     CENA_PADRAO, novaCena, cenasDoDoc, cenaAtiva, idCenaAtiva,
     docDeCenas, comCena, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena,
     condDoParticipante, tirarCondicoesExpiradas,
+    faccaoDoParticipante, acoesNovas, podeGastar, gastarAcao, alvoValido,
+    alcanceGolpe, participanteDaVez,
 } from './combate-cenas.js';
 
 const p = (n) => ({ id: n, name: n, initiative: 1 });
@@ -101,4 +103,51 @@ assert.equal(r2.expiradas.length, 0, 'antes do prazo nada sai');
 assert.equal(emCena[0].condicoes.length, 2, '🔒 função pura: entrada intacta');
 assert.deepEqual(tirarCondicoesExpiradas(null, 1), { participantes: [], expiradas: [] });
 
-console.log('✅ combate-cenas: doc antigo, espelho da cena ativa, troca, patch isolado, criar e apagar, condições OK');
+// =====================================================================
+// TURNO MECÂNICO — economia de ações (§6.2: 1 Padrão + 1 Movimento)
+// =====================================================================
+const cheias = acoesNovas();
+assert.deepEqual(cheias, { padrao: true, movimento: true });
+assert.equal(podeGastar(cheias, 'padrao'), true);
+assert.equal(podeGastar(cheias, 'completa'), true);
+assert.equal(podeGastar(cheias, undefined), true, 'custo ausente = padrão do sistema (1 Ação Padrão)');
+
+const semPadrao = gastarAcao(cheias, 'padrao');
+assert.deepEqual(semPadrao, { padrao: false, movimento: true });
+assert.equal(cheias.padrao, true, '🔒 gastarAcao não muta o estado recebido');
+assert.equal(podeGastar(semPadrao, 'padrao'), false, 'segunda Padrão no mesmo turno não existe');
+assert.equal(podeGastar(semPadrao, 'completa'), false, 'Completa exige as DUAS ações');
+assert.equal(podeGastar(semPadrao, 'movimento'), true);
+assert.equal(podeGastar(semPadrao, 'livre'), true, 'Livre é incidental — nunca bloqueia');
+assert.deepEqual(gastarAcao(semPadrao, 'livre'), semPadrao, 'Livre não consome nada');
+assert.deepEqual(gastarAcao(cheias, 'completa'), { padrao: false, movimento: false });
+assert.equal(podeGastar(gastarAcao(cheias, 'completa'), 'livre'), true, 'sem ações ainda dá para a Livre');
+assert.equal(podeGastar(null, 'padrao'), true, 'cena antiga sem acoesTurno = turno cheio');
+
+// facções
+assert.equal(faccaoDoParticipante({ characterId: 'c1' }), 'aliados', 'jogador nasce aliado');
+assert.equal(faccaoDoParticipante({ npcId: 'n1' }), 'inimigos', 'NPC nasce inimigo');
+assert.equal(faccaoDoParticipante({ npcId: 'n1', faccao: 'aliados' }), 'aliados', 'a gravada vence o palpite');
+assert.equal(alvoValido('todos', 'aliados', 'inimigos'), true);
+assert.equal(alvoValido('inimigos', 'aliados', 'inimigos'), true);
+assert.equal(alvoValido('inimigos', 'aliados', 'aliados'), false, 'skill hostil não pega aliado');
+assert.equal(alvoValido('aliados', 'aliados', 'aliados'), true, 'buff pega a própria facção (inclui a si)');
+assert.equal(alvoValido('aliados', 'aliados', 'neutros'), false);
+assert.equal(alvoValido('inimigos', 'aliados', 'neutros'), true, 'neutro é "diferente" para skill hostil');
+assert.equal(alvoValido(undefined, 'aliados', 'inimigos'), true, 'sem cadastro = todos');
+
+// alcance do golpe CaC: arma + 5% do Tamanho, mínimo 1 m
+assert.equal(alcanceGolpe(0, 5.1), 1, 'desarmado humano (Tam 5,1): 0,255 → piso de 1 m');
+assert.equal(alcanceGolpe(2, 5.1), 2.255, 'lança 2 m + 5% de 5,1');
+assert.equal(alcanceGolpe(0, 15.75), 1, 'Yotun desarmado (Tam 15,75): 0,79 → ainda no piso');
+assert.equal(alcanceGolpe(2, 15.75), 2.7875, 'Yotun com lança sente o tamanho');
+assert.equal(alcanceGolpe(null, null), 1, 'sem cadastro nenhum: 1 m');
+
+// participante da vez segue a MESMA ordenação da janela (iniciativa desc)
+const cenaT = { participantes: [{ id: 'a', initiative: 3 }, { id: 'b', initiative: 9 }, { id: 'c', initiative: 6 }], turnoAtual: 0 };
+assert.equal(participanteDaVez(cenaT).id, 'b', 'turno 0 = maior iniciativa');
+assert.equal(participanteDaVez({ ...cenaT, turnoAtual: 2 }).id, 'a');
+assert.equal(participanteDaVez({ ...cenaT, turnoAtual: 3 }).id, 'b', 'wrap de rodada');
+assert.equal(participanteDaVez({ participantes: [] }), null);
+
+console.log('✅ combate-cenas: doc antigo, espelho da cena ativa, troca, patch isolado, criar e apagar, condições, turno mecânico OK');
