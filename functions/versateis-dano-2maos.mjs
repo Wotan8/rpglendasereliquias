@@ -3,9 +3,12 @@
  * Decisão do Mestre, 13/08/2026.
  *
  * COMO isso é gravado: um SEGUNDO vínculo do mesmo Valor Derivado Dano, com
- * `maos: 2`. O vínculo que já existe (equação Qualidade+Afiação+FOR) fica sem
- * pegada e continua valendo nas duas — os motores somam os dois vínculos, então
- * com uma mão sai a equação e com duas sai a equação + 2.
+ * `maos: 2` e o valor numa EQUAÇÃO ([{tipo:'fixo', valor:2}]) — nunca no campo
+ * `modificador`, que é legado. O vínculo que já existe (equação
+ * Qualidade+Afiação+FOR) fica sem pegada e continua valendo nas duas: os
+ * motores somam os dois, então com uma mão sai a equação e com duas sai +2.
+ *
+ * Reexecutar MIGRA vínculo que ainda esteja no `modificador`.
  *
  * Dois vínculos do mesmo VD só são seguros depois do conserto do seletor do
  * Painel do Criador (painel-mechanics.js chaveia o chip por POSIÇÃO, não pelo
@@ -33,20 +36,41 @@ const eq = (await db.collection('system/data/equipment').get()).docs
     .map(d => ({ id: d.id, ref: d.ref, ...d.data() }))
     .filter(i => i.tipo === 'Arma' && i.categoriaArma === 'versatil');
 
+/**
+ * O valor mora na EQUAÇÃO, nunca no campo `modificador`.
+ * `modificador` é o formato legado — a ficha, o NPC e o Tabuleiro só o leem
+ * quando NÃO há equação, e o próprio editor do Criador o zera assim que a
+ * equação existe. Bônus gravado ali fica preso: não escala, não referencia
+ * nada da ficha e some no primeiro toque pela UI.
+ */
+const equacaoDoBonus = () => [{ tipo: 'fixo', valor: BONUS }];
+const ehBonus2Maos = (v) => v.id === DANO.id && Number(v.maos) === 2;
+const jaCerto = (v) => Array.isArray(v.equacao) && v.equacao.length
+    && !Number(v.modificador);
+
 const planos = [];
 for (const a of eq) {
     const vincs = a.valoresDerivadosVinculados || [];
-    // Idempotente: se já existe um vínculo de Dano preso às duas mãos, não repete.
-    if (vincs.some(v => v.id === DANO.id && Number(v.maos) === 2)) {
-        console.log(`   = ${a.nome}: já tem bônus de Dano com 2 mãos — pulando`);
+    const atual = vincs.find(ehBonus2Maos);
+
+    if (atual && jaCerto(atual)) {
+        console.log(`   = ${a.nome}: já tem o bônus por equação — pulando`);
         continue;
     }
     if (!vincs.some(v => v.id === DANO.id)) {
         console.log(`   ⚠️ ${a.nome}: não tem vínculo de Dano nenhum — pulando (cadastre o Dano antes)`);
         continue;
     }
-    planos.push({ a, novo: vincs.concat([{ id: DANO.id, modificador: BONUS, maos: 2 }]) });
-    console.log(`   + ${a.nome}: ${vincs.length} vínculo(s) → +1 de Dano ${BONUS >= 0 ? '+' : ''}${BONUS} só com 2 mãos`);
+
+    // Migra o vínculo que já existe (tirando o modificador legado) ou cria um.
+    const novo = atual
+        ? vincs.map(v => ehBonus2Maos(v)
+            ? { id: DANO.id, maos: 2, modificador: 0, equacao: equacaoDoBonus() } : v)
+        : vincs.concat([{ id: DANO.id, maos: 2, modificador: 0, equacao: equacaoDoBonus() }]);
+
+    planos.push({ a, novo });
+    console.log(`   ${atual ? '~' : '+'} ${a.nome}: Dano só com 2 mãos → equação [fixo ${BONUS}]`
+        + (atual ? `  (era modificador: ${atual.modificador})` : ''));
 }
 
 if (!planos.length) { console.log('\nNada a gravar.'); process.exit(0); }
