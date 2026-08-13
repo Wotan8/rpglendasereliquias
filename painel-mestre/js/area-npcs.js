@@ -370,7 +370,14 @@ function normalizeNpc(raw, sys) {
         n.valoresDer = { overrides, atual: {}, extras: [] };
         if (vd.DESLOCAMENTO) n.valoresDer.extras.push({ nome: 'Deslocamento', valor: String(vd.DESLOCAMENTO) });
     } else {
-        n.valoresDer = { overrides: vd.overrides || {}, atual: vd.atual || {}, extras: vd.extras || [] };
+        // ⚠️ `vinculados` TEM de sobreviver à normalização: sem ele aqui, todo
+        // reopen descartava a lista salva e a migração lá embaixo refazia só com
+        // universais + overrides — VD vinculado sem override (ex.: Desloc. Aéreo
+        // recém-adicionado) sumia do formulário a cada salvar/abrir.
+        n.valoresDer = {
+            overrides: vd.overrides || {}, atual: vd.atual || {}, extras: vd.extras || [],
+            ...(Array.isArray(vd.vinculados) ? { vinculados: vd.vinculados } : {}),
+        };
     }
 
     // Espelhar chaves legacy (VIT/ENER/SAN) → chaves do sistema no atual.

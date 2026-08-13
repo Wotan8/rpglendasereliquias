@@ -689,6 +689,15 @@ export function deslocamentosDoToken(o, chars, npcs) {
             add(nm.replace(/^desloc(amento)?\.?\s*/i, '').trim() || 'Terrestre', x.valor);
         }
         if (vd.DESLOCAMENTO) add('Terrestre', vd.DESLOCAMENTO);
+        // VDs DESLOC_* vinculados no editor MECÂNICO do NPC (valor travado em
+        // overrides, ou espelhado direto). Sem isto, a Pixie com Desloc. Aéreo
+        // vinculado não ganhava a opção de voar no Tabuleiro.
+        for (const fonte of [vd.overrides || {}, vd]) {
+            for (const [k, v] of Object.entries(fonte)) {
+                if (!String(k).startsWith('DESLOC_')) continue;
+                add(DESLOC_LABEL[k] || (k.slice(7).charAt(0) + k.slice(8).toLowerCase()).replace(/_/g, ' '), v);
+            }
+        }
     }
     return out;
 }

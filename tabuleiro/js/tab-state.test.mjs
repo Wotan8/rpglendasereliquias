@@ -688,6 +688,11 @@ const dc = deslocamentosDoToken({ vinculo: { tipo: 'char', id: 'c1' } }, chars, 
 assert.deepEqual(dc, [{ tipo: 'Terrestre', metros: 13.1 }, { tipo: 'Aquático', metros: 7.5 }], 'zeros ficam de fora, maior primeiro');
 const dn = deslocamentosDoToken({ vinculo: { tipo: 'npc', id: 'n1' } }, chars, npcs);
 assert.deepEqual(dn, [{ tipo: 'Terrestre', metros: 8 }, { tipo: 'Aéreo', metros: 15 }], 'extra + legado sem duplicar o Terrestre');
+// NPC do editor MECÂNICO: VD de deslocamento vinculado com override (a Pixie voadora)
+const npcsMec = [{ id: 'n2', valoresDer: { DESLOCAMENTO: '9,25', overrides: { DESLOC_AEREO: 12, DESLOC_TERRESTRE: 9.25, VIT_MAX: 13 }, extras: [] } }];
+const dm = deslocamentosDoToken({ vinculo: { tipo: 'npc', id: 'n2' } }, chars, npcsMec);
+assert.deepEqual(dm, [{ tipo: 'Terrestre', metros: 9.25 }, { tipo: 'Aéreo', metros: 12 }],
+    '🔒 override de VD DESLOC_* entra na lista, sem duplicar o Terrestre do legado e sem vazar outros VDs');
 
 assert.equal(limiteDeslocamento(13.1, 1.5, true), 13.5, 'snap: arredonda P/ CIMA ate a celula cheia');
 assert.equal(limiteDeslocamento(13.5, 1.5, true), 13.5, 'multiplo exato nao ganha celula extra');

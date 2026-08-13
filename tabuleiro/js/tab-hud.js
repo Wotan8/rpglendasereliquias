@@ -6,7 +6,7 @@
 // - Rolar iniciativa direto do mapa (1d10 + VD Iniciativa)
 // =============================================
 import { db, doc, onSnapshot, setDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, ico, toast, markDirty, uid, can, selecionar, bonusIniciativa, DADO_INICIATIVA, tokenDoUsuario, deslocamentosDoToken } from './tab-state.js';
+import { T, esc, ico, toast, markDirty, uid, can, selecionar, bonusIniciativa, DADO_INICIATIVA, tokenDoUsuario, deslocamentosDoToken, valorComponente } from './tab-state.js';
 import { refCombate } from './tab-main.js';
 import { updObj, delObj, abrirPropriedades } from './tab-objects.js';
 import { SENSORES } from './tab-fog.js';
@@ -17,7 +17,50 @@ import { logChat } from './tab-chat.js';
 export const VITAIS = new Map();
 const unsubsVitais = [];
 
+// ⚔️ VDs marcados como "Status de Combate" no Criador (statusCombate: true) —
+// exibidos no card da janela de Combate e sobre o token, abaixo das barras.
+// Registro carregado 1x por sessão (mesmo cache das janelas de ficha).
+export let VDS_COMBATE = [];   // [{ nome, icone, prefixo, sufixo }]
+const _vdsCache = new WeakMap();   // derivedTotals/valoresDer (obj do snapshot) -> valores prontos
+
+export function vdsCombateDaFonte(fonte) {
+    if (!fonte || !VDS_COMBATE.length) return [];
+    const base = fonte.derivedTotals || fonte.valoresDer;
+    if (!base || typeof base !== 'object') return [];
+    let r = _vdsCache.get(base);
+    if (r) return r;
+    r = [];
+    for (const dv of VDS_COMBATE) {
+        const v = valorComponente(dv.nome, fonte);
+        if (v != null && v !== 0) r.push({ ...dv, valor: v });   // 0/ausente = ruído, fica de fora
+    }
+    _vdsCache.set(base, r);
+    return r;
+}
+
+export function vdsCombateDoToken(o) {
+    if (o.vinculo?.tipo === 'char') {
+        const ch = T.chars.find(c => c.id === o.vinculo.id);
+        return ch ? vdsCombateDaFonte(ch) : [];
+    }
+    if (o.vinculo?.tipo === 'npc') {
+        const n = T.npcs.find(x => x.id === o.vinculo.id);
+        return n?.valoresDer ? vdsCombateDaFonte(n) : [];
+    }
+    return [];
+}
+
 export function initHud() {
+    // ⚔️ registro dos VDs de Status de Combate (lazy, sem segurar o boot)
+    import('../../painel-mestre/js/npc-system-data.js')
+        .then(m => m.ensureNpcSystemData())
+        .then(sys => {
+            VDS_COMBATE = (sys.derivedValues || []).filter(d => d.statusCombate)
+                .map(d => ({ nome: d.nome, icone: d.icone || '📊', prefixo: d.prefixo || '', sufixo: d.sufixo || '' }));
+            markDirty();
+            window._renderCombate?.();
+        })
+        .catch(e => console.warn('VDs de Status de Combate', e));
     // Listener por personagem da mesa (poucos docs; barato)
     for (const c of T.chars) {
         const u = onSnapshot(doc(db, 'char', c.id), snap => {

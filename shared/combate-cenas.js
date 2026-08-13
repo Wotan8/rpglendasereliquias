@@ -157,6 +157,51 @@ export function participanteDaVez(cena) {
     return parts[turno];
 }
 
+/** Posição do participante na ordem de iniciativa (desc). −1 se não está na cena. */
+export function indiceNaOrdem(cena, pid) {
+    return (cena?.participantes || []).slice()
+        .sort((a, b) => (b.initiative || 0) - (a.initiative || 0))
+        .findIndex(p => p.id === pid);
+}
+
+/**
+ * Turno GUARDADO (delay): guarda as duas ações e pode agir depois, antes de
+ * qualquer outro turno — mas só DENTRO DA MESMA RODADA. Virou a rodada sem
+ * usar? Perdeu (não acumula, e ninguém joga dois turnos seguidos).
+ */
+export function guardadoValido(cena, p) {
+    if (p?.guardadoNaRodada == null) return false;
+    return (cena?.rodada || 1) === p.guardadoNaRodada;
+}
+
+// ---- 💰 Custo vital das habilidades ("2 ENER", "1 Energia e 1 SAN") ----
+// Os recursos são os vitalStats canônicos do sistema: Vitalidade, Energia,
+// Sanidade. Texto sem par número+sigla não vira custo (nada é inventado).
+const SIGLA_RECURSO = { ENER: 'ener', ENERGIA: 'ener', VIT: 'vit', VITALIDADE: 'vit', SAN: 'san', SANIDADE: 'san' };
+export const RECURSO_NOME = { vit: 'Vitalidade', ener: 'Energia', san: 'Sanidade' };
+
+/** "2 ENER + 1 SAN" → [{ recurso: 'ener', qtd: 2 }, { recurso: 'san', qtd: 1 }] */
+export function custoVital(texto) {
+    const out = [];
+    for (const m of String(texto || '').matchAll(/(\d+(?:[.,]\d+)?)\s*(ENERGIA|ENER|VITALIDADE|VIT|SANIDADE|SAN)\b/gi)) {
+        out.push({ recurso: SIGLA_RECURSO[m[2].toUpperCase()], qtd: parseFloat(m[1].replace(',', '.')) });
+    }
+    return out;
+}
+
+/**
+ * O personagem paga o custo? `atuais` = { vit, ener, san } (valores atuais).
+ * @returns null quando paga (ou o custo não é parseável/o atual é desconhecido);
+ *          senão { recurso, qtd, tem } do primeiro recurso que falta.
+ */
+export function recursoInsuficiente(custoTexto, atuais) {
+    for (const c of custoVital(custoTexto)) {
+        const tem = atuais?.[c.recurso];
+        if (tem != null && Number(tem) < c.qtd) return { recurso: c.recurso, qtd: c.qtd, tem: Number(tem) };
+    }
+    return null;
+}
+
 // =============================================
 // CONDIÇÕES DO PARTICIPANTE (`p.condicoes`)
 // Duas gerações no mesmo array: string solta (legado) e objeto

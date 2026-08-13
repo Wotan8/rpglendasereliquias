@@ -5,7 +5,7 @@
 import { db, doc, setDoc, updateDoc, getDoc } from '../../painel-mestre/js/firebase-config.js';
 import { T, esc, toast, uid, alvoDoTeste, grausDoDado, fmtGraus, vNum, patchVitalAtualNpc } from './tab-state.js';
 import { refCombate, refEstado, abrirModal, fecharModal } from './tab-main.js';
-import { VITAIS } from './tab-hud.js';
+import { VITAIS, vdsCombateDaFonte } from './tab-hud.js';
 import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena, condDoParticipante, tirarCondicoesExpiradas, FACCOES, faccaoDoParticipante, acoesNovas, participanteDaVez } from '../../shared/combate-cenas.js';
 import { logChat } from './tab-chat.js';
 
@@ -20,6 +20,7 @@ window.tbFichaWin = async function(tipo, id) {
 
 export function initCombat() {
     window._renderCombate = render;
+    window._checarCondicoesRodada = checarCondicoesRodada;
     const win = document.getElementById('tbCombatWin');
     // Arrastar a janela
     const head = win.querySelector('.tb-win-head');
@@ -226,10 +227,17 @@ function render() {
             }
         }
 
+        // ⚔️ VDs de Status de Combate (statusCombate no Criador) abaixo de SAN
+        const vdsChips = secreto ? vdsCombateDaFonte(fonteDoParticipante(p)) : [];
+        const vdsHtml = vdsChips.length
+            ? `<div class="tb-combat-vds">${vdsChips.map(d =>
+                `<span class="tb-combat-vd" title="${esc(d.nome)}">${esc(d.icone)} <span class="tb-combat-vd-nome">${esc(d.nome)}</span> <b>${esc(String(d.prefixo))}${d.valor}${esc(String(d.sufixo))}</b></span>`).join('')}</div>`
+            : '';
         const stats = secreto ? `
             ${barra('VIT', hpC, hpM, 'linear-gradient(90deg,#10b981,#34d399)')}
             ${barra('ENER', enerC, enerM, 'linear-gradient(90deg,#f59e0b,#fbbf24)')}
-            ${barra('SAN', sanC, sanM, 'linear-gradient(90deg,#6366f1,#8b5cf6)')}` : '';
+            ${barra('SAN', sanC, sanM, 'linear-gradient(90deg,#6366f1,#8b5cf6)')}
+            ${vdsHtml}` : '';
         const donoDoChar = p.characterId && T.chars.find(c => c.id === p.characterId)?.ownerUid === T.user?.uid;
         // Condição tem DUAS fontes: a do combate (`p.condicoes`) e a da ficha do
         // personagem/NPC. Quem aplica pelo combate grava nas duas, mas quem aplica
@@ -286,7 +294,7 @@ window.tbCombIniciarCena = async function() {
     if (!parts.length) { toast('⚠️ A cena não tem participantes', 'warning'); return; }
     const semIni = parts.filter(p => !(p.initiative > 0));
     if (semIni.length && !confirm(`${semIni.length} participante(s) sem iniciativa (${semIni.map(p => p.name).join(', ')}). Iniciar mesmo assim?`)) return;
-    await salvar(parts, { iniciado: true, turnoAtual: 0, rodada: 1, acoesTurno: acoesNovas() });
+    await salvar(parts.map(p => ({ ...p, guardadoNaRodada: null })), { iniciado: true, turnoAtual: 0, rodada: 1, acoesTurno: acoesNovas(), retomar: null });
     const vez = participanteDaVez({ ...c, turnoAtual: 0 });
     toast('⚔️ Combate iniciado!');
     logChat(`⚔️ Combate iniciado — Rodada 1, vez de ${vez?.name || '?'}`);
@@ -294,7 +302,7 @@ window.tbCombIniciarCena = async function() {
 
 window.tbCombEncerrarCena = async function() {
     if (!confirm('Encerrar o combate desta cena? (participantes e iniciativas ficam; o painel de turno some)')) return;
-    await salvar(partsDaCena(), { iniciado: false });
+    await salvar(partsDaCena(), { iniciado: false, retomar: null });
     logChat('🕊️ Combate encerrado pelo mestre');
 };
 
@@ -308,32 +316,54 @@ window.tbCombFaccao = async function(pid, valor) {
 
 window.tbCombTurno = async function(dir) {
     const c = cenaAtiva(T.combate); const n = (c.participantes || []).length || 1;
+    // ⚡ Fim de um turno GUARDADO em uso: não avança — volta ao turno que foi
+    // interrompido, com as ações que ele ainda tinha.
+    if (c.retomar && dir > 0) {
+        const volta = c.retomar;
+        await salvar(c.participantes || [], { turnoAtual: volta.turnoAtual || 0, acoesTurno: volta.acoes || acoesNovas(), retomar: null });
+        const vez = participanteDaVez({ ...c, turnoAtual: volta.turnoAtual || 0 });
+        logChat(`↩️ De volta ao turno de ${vez?.name || '?'}`);
+        return;
+    }
     let turno = (c.turnoAtual || 0) + dir;
     let rodada = c.rodada || 1;
     const rodadaAntes = rodada;
     if (turno >= n) { turno = 0; rodada++; }
     if (turno < 0) { turno = n - 1; rodada = Math.max(1, rodada - 1); }
-    // ⏱️ Condições com prazo saem no MESMO write da virada — um segundo write
-    // montado do estado local ainda sem o eco reverteria a rodada.
-    let parts = c.participantes || [], expiradas = [];
-    if (rodada > rodadaAntes) ({ participantes: parts, expiradas } = tirarCondicoesExpiradas(parts, rodada));
-    // ⚔️ turno novo = ações cheias (1 Padrão + 1 Movimento, §6.2)
-    await salvar(parts, { turnoAtual: turno, rodada, acoesTurno: acoesNovas() });
+    // ⚔️ turno novo = ações cheias (1 Padrão + 1 Movimento, §6.2).
+    // A expiração de condições NÃO acontece aqui: quem vira a rodada pode ser
+    // um jogador (encerrando o próprio turno) e as rules não deixam ele limpar
+    // ficha de NPC — o MESTRE expira pelo snapshot (checarCondicoesRodada).
+    await salvar(c.participantes || [], { turnoAtual: turno, rodada, acoesTurno: acoesNovas() });
     if (c.iniciado) {
-        const vez = participanteDaVez({ ...c, participantes: parts, turnoAtual: turno });
+        const vez = participanteDaVez({ ...c, turnoAtual: turno });
         if (vez) logChat(`▶️ Vez de ${vez.name || '?'}${rodada !== rodadaAntes ? ` (Rodada ${rodada})` : ''}`);
     }
     // F4.3: expira templates com duração ao virar a rodada
     if (rodada > rodadaAntes) {
         if (!c.iniciado) logChat(`🔄 Rodada ${rodada}`);   // com cena iniciada a vez já anuncia a rodada
         try { const m = await import('./tab-templates.js'); m.expirarTemplates(rodada); } catch (e) {}
-        if (expiradas.length) {
-            for (const e of expiradas) sincRemocaoFicha(parts.find(x => x.id === e.pid), e.cond.nome);
-            logChat(`⏱️ Acabou: ${expiradas.map(e => `${e.cond.icone} ${e.cond.nome} (${e.pNome})`).join(' · ')}`);
-            avisoCondicoesExpiradas(expiradas);
-        }
     }
 };
+
+// ---- ⏱️ Expiração de condições — SEMPRE no cliente do mestre (secreto) ----
+// Disparada pelo snapshot do doc de combate: qualquer cliente pode ter virado a
+// rodada, mas quem remove (participante + ficha) e recebe o aviso é o mestre.
+let _rodadaChecada = null;
+export async function checarCondicoesRodada() {
+    if (!T.isMaster || T.mode !== 'secret') return;
+    const c = cenaAtiva(T.combate);
+    if (!c?.iniciado) { _rodadaChecada = null; return; }
+    const chave = `${c.id}:${c.rodada || 1}`;
+    if (_rodadaChecada === chave) return;
+    _rodadaChecada = chave;
+    const { participantes, expiradas } = tirarCondicoesExpiradas(c.participantes || [], c.rodada || 1);
+    if (!expiradas.length) return;
+    await salvar(participantes);
+    for (const e of expiradas) await sincRemocaoFicha(participantes.find(x => x.id === e.pid), e.cond.nome);
+    logChat(`⏱️ Acabou: ${expiradas.map(e => `${e.cond.icone} ${e.cond.nome} (${e.pNome})`).join(' · ')}`);
+    avisoCondicoesExpiradas(expiradas);
+}
 
 // ---- ⏱️ Aviso do mestre: condições cujo tempo acabou (com direito a prolongar) ----
 let _expiradas = [];
@@ -588,6 +618,32 @@ async function sincAdicaoFicha(p, cond, tpl) {
         });
         await updateDoc(doc(db, alvo[0], alvo[1]), { conditions });
     } catch (e) { console.warn('sync condition to ficha', e); }
+}
+
+/**
+ * ✨ Skill com condição vinculada: aplica a condição em VÁRIOS participantes de
+ * uma vez (1 write no doc + espelho nas fichas). O nome resolve contra o
+ * registro do sistema (ícone/descrição); sem registro vira personalizada.
+ */
+export async function aplicarCondicaoEmVarios(pids, nome, rodadas) {
+    if (!pids?.length || !nome) return;
+    const tpl = (await carregarCondicoesSistema()).find(c => (c.nome || '').toLowerCase() === nome.toLowerCase()) || null;
+    const rodada = cenaAtiva(T.combate).rodada || 1;
+    const parts = partsDaCena().map(p => ({ ...p }));
+    const cond = {
+        nome: tpl?.nome || nome, icone: tpl?.icone || '☠️', descricao: tpl?.descricao || '',
+        expiraNaRodada: rodadas > 0 ? rodada + rodadas : null,
+    };
+    const alvos = [];
+    for (const pid of pids) {
+        const p = parts.find(x => x.id === pid); if (!p) continue;
+        p.condicoes = [...(p.condicoes || []), { ...cond }];
+        alvos.push(p);
+    }
+    if (!alvos.length) return;
+    await salvar(parts);
+    logChat(`☠️ ${cond.icone} ${cond.nome}${rodadas > 0 ? ` (${rodadas} rodada${rodadas > 1 ? 's' : ''})` : ''} em: ${alvos.map(p => p.name || '?').join(', ')}`);
+    for (const p of alvos) await sincAdicaoFicha(p, { nome: cond.nome, icone: cond.icone, descricao: cond.descricao, duracao: rodadas || 0 }, tpl);
 }
 
 /** Tira da ficha (char ou NPC) a condição removida do combate, pelo nome. */

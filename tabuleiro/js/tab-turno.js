@@ -18,10 +18,12 @@ import { refCombate } from './tab-main.js';
 import {
     cenaAtiva, comCenaAtivaPatch, participanteDaVez, faccaoDoParticipante,
     acoesNovas, podeGastar, gastarAcao, alvoValido, alcanceGolpe,
+    guardadoValido, indiceNaOrdem, recursoInsuficiente, RECURSO_NOME,
 } from '../../shared/combate-cenas.js';
 import { shapeDaMira, alvoAoAlcance } from './tab-mira-calc.js';
 import { templateAtingeCirculo } from './tab-templates.js';
-import { tokenAtivoDoCombate, participanteDoToken } from './tab-hud.js';
+import { tokenAtivoDoCombate, participanteDoToken, VITAIS } from './tab-hud.js';
+import { carregarCondicoesSistema, aplicarCondicaoEmVarios } from './tab-combat.js';
 import { logChat } from './tab-chat.js';
 
 // Abertura do arco do golpe corpo a corpo (graus). Régua de mesa da UI —
@@ -60,13 +62,48 @@ const fonteDoParticipante = (p) => {
     return null;
 };
 
+/** Vitais ATUAIS do participante ({ vit, ener, san }) — para checar custo de skill. */
+function recursosDe(p) {
+    if (p?.characterId) {
+        const v = VITAIS.get(p.characterId);
+        return v ? { vit: v.hp, ener: v.ener, san: v.san } : null;
+    }
+    if (p?.npcId) {
+        const vd = T.npcs.find(x => x.id === p.npcId)?.valoresDer || {};
+        const at = vd.atual || {};
+        return { vit: at.VIT ?? vd.VIT, ener: at.ENER ?? vd.ENER, san: at.SAN ?? vd.SAN };
+    }
+    return { vit: p?.hpCurrent, ener: p?.enerCurrent, san: p?.sanCurrent };
+}
+
+/** Botão de skill: custo sempre visível; sem recurso = desabilitado com o motivo. */
+function skillBtnHtml(s, custoAcao, i, recursos) {
+    const falta = recursoInsuficiente(s.custo, recursos);
+    const custoTxt = s.custo ? ` <i>(${esc(String(s.custo))})</i>` : '';
+    if (falta) {
+        return `<button class="tb-btn tb-btn-small tb-turno-sem-recurso" disabled
+            title="Custo: ${esc(String(s.custo))} — ${RECURSO_NOME[falta.recurso]} atual ${falta.tem}, precisa de ${falta.qtd}">
+            ✨ ${esc(s.nome)}${custoTxt} <b>Não tem ${RECURSO_NOME[falta.recurso]} o suficiente</b></button>`;
+    }
+    return `<button class="tb-btn tb-btn-small" onclick="tbTurnoSkill('${custoAcao}',${i})" title="${esc(s.efeito)}">✨ ${esc(s.nome)}${custoTxt}</button>`;
+}
+
 // ---------- skills do participante (classModuleData / modulosClasse) ----------
 // A instância na ficha guarda `_predefId`; a MIRA e o custo de ação vivem no
 // item pré-definido do REGISTRO (system/data/classModules) — cadastrados no
 // Painel do Criador. Skill sem cadastro cai no formulário manual da hora.
 const S_NOME = (it) => it._predefNome || it.nome || it.Nome || 'Habilidade';
 const S_EFEITO = (it) => it.efeito || it.Efeito || it.descricao || it.Descricao || '';
-const S_CUSTO = (it) => it.custo || it.Custo || '';
+// O campo de custo vem do SCHEMA do módulo (key livre): pega a primeira chave
+// com "custo" que não seja meta (custoAcao/custoExp/custoEquip/custoCriacao).
+const S_CUSTO = (it) => {
+    if (it?.custo != null && it.custo !== '') return it.custo;
+    if (it?.Custo != null && it.Custo !== '') return it.Custo;
+    for (const [k, v] of Object.entries(it || {})) {
+        if (/custo/i.test(k) && !/acao|exp|equip|criacao|remocao/i.test(k) && v != null && v !== '') return v;
+    }
+    return '';
+};
 
 let skillsCache = null;   // { chave: 'tipo:id', lista } — resolvido 1x por vez/turno
 
@@ -96,26 +133,27 @@ function skillsDe(p) {
 
 async function carregarSkills(chave, p) {
     skillsCache = { chave, lista: [] };
-    let lista = [];
+    // índice global de pré-definidos (o id `pdi_...` é único entre módulos).
+    // Se o registro falhar, as skills da FICHA continuam listadas — só ficam
+    // sem a mira cadastrada (caem no fluxo de "mira não cadastrada").
+    const predefPorId = new Map();
     try {
         const m = await import('./tab-ficha-win.js?v=8');
         const sys = await m.registroSistema();
-        // índice global de pré-definidos (o id `pdi_...` é único entre módulos)
-        const predefPorId = new Map();
         for (const mod of Object.values(sys.classModulesById || {})) {
             for (const pd of mod.itensPredefinidos || []) predefPorId.set(pd.id, pd);
         }
-        lista = itensBrutos(p).map(it => {
-            const pd = it._predefId ? predefPorId.get(it._predefId) : null;
-            return {
-                nome: S_NOME(it),
-                efeito: S_EFEITO(it) || pd?.descricao || '',
-                custo: S_CUSTO(it),
-                mira: it.mira || pd?.mira || null,
-                acao: it.custoAcao || pd?.custoAcao || pd?.mira?.custoAcao || 'padrao',   // §6.2
-            };
-        });
-    } catch (e) { console.warn('skills do turno', e); }
+    } catch (e) { console.warn('registro do sistema p/ skills do turno', e); }
+    const lista = itensBrutos(p).map(it => {
+        const pd = it._predefId ? predefPorId.get(it._predefId) : null;
+        return {
+            nome: S_NOME(it),
+            efeito: S_EFEITO(it) || pd?.descricao || '',
+            custo: S_CUSTO(it),
+            mira: it.mira || pd?.mira || null,
+            acao: it.custoAcao || pd?.custoAcao || pd?.mira?.custoAcao || 'padrao',   // §6.2
+        };
+    });
     skillsCache = { chave, lista };
     render();
 }
@@ -147,6 +185,18 @@ function render() {
         if (T.mira) { T.mira = null; markDirty(); }
     }
     if (!p || !controlaVez(p) || (T.isMaster && T.mode === 'public')) {
+        // 🛡️ Fora da minha vez: se tenho turno GUARDADO válido, o painel vira o
+        // botão de agir agora (interromper). Sem interrupção encadeada.
+        const guardados = (c?.iniciado && !c.retomar && !(T.isMaster && T.mode === 'public'))
+            ? (c.participantes || []).filter(x => guardadoValido(c, x) && controlaVez(x)) : [];
+        if (guardados.length) {
+            el.classList.add('open');
+            el.innerHTML = `<div class="tb-turno-head">🛡️ Turno guardado <span class="tb-turno-hint">vale até o fim desta rodada</span></div>
+                <div class="tb-turno-acoes">${guardados.map(g =>
+                    `<button class="tb-btn tb-turno-btn tb-btn-primary" onclick="tbTurnoAgirAgora('${g.id}')">⚡ ${esc(g.name || '?')}: agir agora</button>`).join('')}
+                </div>`;
+            return;
+        }
         el.classList.remove('open'); el.innerHTML = '';
         if (T.mira) { T.mira = null; markDirty(); }
         return;
@@ -179,18 +229,21 @@ function render() {
     else {
         const btn = (id, rot, habil, titulo) =>
             `<button class="tb-btn tb-turno-btn" onclick="tbTurnoSub('${id}')" ${habil ? '' : 'disabled'} title="${esc(titulo || '')}">${rot}</button>`;
+        // 🛡️ Guardar = delay: só faz sentido com o turno INTEIRO (as duas ações)
+        // e nunca no meio de uma interrupção (não se encadeia guardado).
+        const podeGuardar = acoes.padrao && acoes.movimento && !c.retomar;
         body = `<div class="tb-turno-acoes">
             ${semAcoes ? '' : btn('padrao', ROTULO_ACAO.padrao, acoes.padrao, 'Atacar, usar habilidade, magia ou item')}
             ${semAcoes ? '' : btn('movimento', ROTULO_ACAO.movimento, acoes.movimento, 'Mover pelo deslocamento da ficha')}
             ${temLivre ? btn('livre', ROTULO_ACAO.livre, true, 'Incidental — não consome ação') : ''}
             ${temCompleta && !semAcoes ? btn('completa', ROTULO_ACAO.completa, acoes.padrao && acoes.movimento, 'Habilidades que consomem o turno inteiro') : ''}
-            ${semAcoes ? '' : `<button class="tb-btn tb-turno-btn" onclick="tbTurnoGuardar()" title="Guarda as ações que restam e passa a vez">🛡️ Guardar Turno</button>`}
+            ${podeGuardar ? `<button class="tb-btn tb-turno-btn" onclick="tbTurnoGuardar()" title="Guarda as DUAS ações: você pode interromper e agir a qualquer momento até o fim DESTA rodada — depois perde">🛡️ Guardar Turno</button>` : ''}
             <button class="tb-btn tb-turno-btn ${semAcoes ? 'tb-btn-primary' : ''}" onclick="tbTurnoEncerrar()">⏭️ Encerrar Turno</button>
         </div>`;
     }
 
     el.innerHTML = `<div class="tb-turno-head">
-            ⚔️ Vez de <b>${esc(p.name || '?')}</b> · Rodada ${c.rodada || 1}
+            ${c.retomar ? '⚡' : '⚔️'} Vez de <b>${esc(p.name || '?')}</b>${c.retomar ? ' <span class="tb-turno-hint">(turno guardado — interrompendo)</span>' : ''} · Rodada ${c.rodada || 1}
             <span class="tb-turno-chips">${chip(acoes.padrao, '⚡')}${chip(acoes.movimento, '👣')}</span>
         </div>${body}`;
 }
@@ -212,17 +265,19 @@ function subMenu(qual, p, skills, acoes) {
         const golpes = golpesCache?.chave === chave ? golpesCache.linhas : null;
         if (golpes === null && (p.npcId || p.characterId)) carregarGolpes(chave, p);
         const skillsPadrao = skills.filter(s => s.acao === 'padrao');
+        const rec = recursosDe(p);
         return `<div class="tb-turno-lista">${voltar}
             ${golpes === null ? '<span class="tb-muted">⏳ golpes…</span>'
                 : golpes.map((g, i) => `<button class="tb-btn tb-btn-small" onclick="tbTurnoGolpe(${i})" title="${esc(g.dano ? 'Dano ' + g.dano : '')}">⚔️ ${esc(g.nome)}${g.dano ? ` <i>💥${esc(g.dano)}</i>` : ''}</button>`).join('')}
-            ${skillsPadrao.map((s, i) => `<button class="tb-btn tb-btn-small" onclick="tbTurnoSkill('padrao',${i})" title="${esc(s.efeito)}">✨ ${esc(s.nome)}${s.custo ? ` <i>(${esc(String(s.custo))})</i>` : ''}</button>`).join('')}
+            ${skillsPadrao.map((s, i) => skillBtnHtml(s, 'padrao', i, rec)).join('')}
             <button class="tb-btn tb-btn-small" onclick="tbTurnoGastarAvulso('padrao')" title="Qualquer outra Ação Padrão (descreva no chat)">✅ Outra ação</button>
         </div>`;
     }
     // livre / completa: só as skills com esse custo
     const lista = skills.filter(s => s.acao === qual);
+    const rec = recursosDe(p);
     return `<div class="tb-turno-lista">${voltar}
-        ${lista.map((s, i) => `<button class="tb-btn tb-btn-small" onclick="tbTurnoSkill('${qual}',${i})" title="${esc(s.efeito)}">✨ ${esc(s.nome)}${s.custo ? ` <i>(${esc(String(s.custo))})</i>` : ''}</button>`).join('')}
+        ${lista.map((s, i) => skillBtnHtml(s, qual, i, rec)).join('')}
     </div>`;
 }
 
@@ -245,12 +300,37 @@ window.tbTurnoEncerrar = async () => {
     await window.tbCombTurno(1);
 };
 
+/**
+ * 🛡️ Guardar = DELAY: guarda as duas ações e passa a vez. O dono pode
+ * interromper e agir a qualquer momento até o fim DESTA rodada (⚡ Agir agora);
+ * virou a rodada, perdeu — não acumula e ninguém joga dois turnos seguidos.
+ */
 window.tbTurnoGuardar = async () => {
     sub = null;
-    const p = participanteDaVez(cena());
-    await salvarCena({ acoesTurno: { padrao: false, movimento: false } });
-    logChat(`🛡️ ${p?.name || '?'} guardou o turno`);
+    const c = cena();
+    const p = participanteDaVez(c);
+    if (!p) return;
+    const parts = (c.participantes || []).map(x => x.id === p.id ? { ...x, guardadoNaRodada: c.rodada || 1 } : x);
+    // otimista: o tbCombTurno logo abaixo monta o write a partir do T.combate —
+    // sem isto, a virada sobrescreveria o guardado com a lista velha.
+    T.combate = { ...comCenaAtivaPatch(T.combate, { participantes: parts }) };
+    logChat(`🛡️ ${p.name || '?'} guardou o turno (pode agir até o fim da rodada)`);
     await window.tbCombTurno(1);
+};
+
+/** ⚡ Usa o turno guardado AGORA: interrompe a ordem; ao encerrar, volta. */
+window.tbTurnoAgirAgora = async (pid) => {
+    const c = cena();
+    const p = (c.participantes || []).find(x => x.id === pid);
+    if (!p || !guardadoValido(c, p) || c.retomar) return;
+    const parts = (c.participantes || []).map(x => x.id === pid ? { ...x, guardadoNaRodada: null } : x);
+    await salvarCena({
+        participantes: parts,
+        retomar: { turnoAtual: c.turnoAtual || 0, acoes: c.acoesTurno || acoesNovas() },
+        turnoAtual: Math.max(0, indiceNaOrdem(c, pid)),
+        acoesTurno: acoesNovas(),
+    });
+    logChat(`⚡ ${p.name || '?'} interrompe com o turno guardado!`);
 };
 
 /** Ação gasta sem mira (descrita pelo jogador): pede o texto, gasta e loga. */
@@ -300,15 +380,27 @@ window.tbTurnoGolpe = (i) => {
 };
 
 // ---------- skills ----------
-window.tbTurnoSkill = (custo, i) => {
+window.tbTurnoSkill = async (custo, i) => {
     const p = participanteDaVez(cena());
     const s = skillsDe(p).filter(x => x.acao === custo)[i];
     if (!s) return;
+    // re-checa o custo na hora do clique (o HTML pode estar velho)
+    const falta = recursoInsuficiente(s.custo, recursosDe(p));
+    if (falta) { toast(`⚠️ Não tem ${RECURSO_NOME[falta.recurso]} o suficiente (${falta.tem}/${falta.qtd})`, 'warning'); return; }
     const tok = tokenAtivoDoCombate();
     if (!tok) { toast('⚠️ O participante da vez não tem token neste canvas', 'warning'); return; }
     if (s.mira?.tipo) {
         armarMira(miraDoCadastro(s.mira, s, custo), tok);
         sub = null;
+        return;
+    }
+    // Sem mira cadastrada: os PARÂMETROS são regra — só o mestre os define.
+    // O jogador usa a ação assim mesmo (gasta e loga); a resolução fica na mesa.
+    if (!(T.isMaster && T.mode === 'secret')) {
+        sub = null;
+        await gastar(custo);
+        logChat(`✨ ${p?.name || '?'} usou ${s.nome}${s.custo ? ` · custo: ${s.custo}` : ''} — sem mira cadastrada, efeitos com o mestre`);
+        toast(`✨ ${s.nome} usada — a mira desta habilidade ainda não foi cadastrada; o mestre resolve os alvos`);
         return;
     }
     abrirMiraManual(s, custo, tok);
@@ -322,15 +414,20 @@ function miraDoCadastro(m, s, custo) {
         comprimentoM: Number(m.comprimentoM) || 0, larguraM: Number(m.larguraM) || 0,
         angGraus: Number(m.angGraus) || 60, maxAlvos: Number(m.maxAlvos) || 1,
         afeta: m.afeta || 'todos',
-        meta: { nome: s.nome, efeito: s.efeito, custoSkill: s.custo, custoAcao: custo },
+        meta: {
+            nome: s.nome, efeito: s.efeito, custoSkill: s.custo, custoAcao: custo,
+            condicao: m.condicaoNome ? { nome: m.condicaoNome, rodadas: Number(m.condicaoRodadas) || 0 } : null,
+        },
     };
 }
 
-/** Skill sem mira cadastrada: o jogador configura na hora (nada é inventado). */
-function abrirMiraManual(s, custo, tok) {
+/** Skill sem mira cadastrada: o MESTRE configura na hora (parâmetro é regra). */
+async function abrirMiraManual(s, custo, tok) {
     const un = unidadeEm({ x: tok.x, y: tok.y }) || 'm';
+    let conds = [];
+    try { conds = await carregarCondicoesSistema(); } catch (e) {}
     window._tbAbrirModal(`🎯 Como aplicar “${esc(s.nome)}”?`, `
-        <div class="tb-muted" style="font-size:.78rem;margin-bottom:8px">Esta habilidade ainda não tem mira cadastrada no Criador — configure aqui (vale só para este uso).</div>
+        <div class="tb-muted" style="font-size:.78rem;margin-bottom:8px">Esta habilidade ainda não tem mira cadastrada no Criador — defina aqui (vale só para este uso; cadastre no Criador para valer sempre).</div>
         <div class="tb-form-grid">
             <label>Tipo<select id="mm_tipo">
                 <option value="alvos">🎯 Alvos escolhidos</option>
@@ -348,6 +445,11 @@ function abrirMiraManual(s, custo, tok) {
             <label>Raio/Comprimento (${esc(un)})<input type="number" id="mm_raio" value="3" min="0" step="0.5"></label>
             <label>Ângulo (cone)<input type="number" id="mm_ang" value="60" min="10" max="180"></label>
             <label>Máx. de alvos<input type="number" id="mm_max" value="1" min="1" max="20"></label>
+            <label>☠️ Aplica condição<select id="mm_cond">
+                <option value="">— nenhuma —</option>
+                ${conds.map(cd => `<option value="${esc(cd.nome)}">${esc(cd.icone || '☠️')} ${esc(cd.nome)}</option>`).join('')}
+            </select></label>
+            <label>⏱️ Por quantas rodadas<input type="number" id="mm_condRod" min="0" placeholder="vazio = até remover"></label>
         </div>
         <div class="tb-modal-actions"><button class="tb-btn tb-btn-success" onclick="tbTurnoMiraManualOk('${esc(s.nome)}','${custo}')">🎯 Mirar</button></div>
     `);
@@ -358,6 +460,7 @@ window.tbTurnoMiraManualOk = (nome, custo) => {
     const s = window._miraManualSkill; if (!s) return;
     const tipo = v('mm_tipo');
     const tok = tokenAtivoDoCombate(); if (!tok) return;
+    const condNome = v('mm_cond');
     armarMira({
         tipo: tipo === 'alvos' ? 'alvos' : tipo === 'cac' ? 'cac' : 'geometria',
         forma: tipo, origem: tipo === 'circulo' ? 'livre' : 'token',
@@ -368,7 +471,10 @@ window.tbTurnoMiraManualOk = (nome, custo) => {
         angGraus: parseInt(v('mm_ang')) || 60,
         maxAlvos: parseInt(v('mm_max')) || 1,
         afeta: v('mm_afeta') || 'todos',
-        meta: { nome: s.nome, efeito: s.efeito, custoSkill: s.custo, custoAcao: custo },
+        meta: {
+            nome: s.nome, efeito: s.efeito, custoSkill: s.custo, custoAcao: custo,
+            condicao: condNome ? { nome: condNome, rodadas: parseInt(v('mm_condRod')) || 0 } : null,
+        },
     }, tok);
     window.tbFecharModal();
     sub = null;
@@ -493,5 +599,11 @@ window.tbTurnoConfirmarMira = async () => {
     markDirty();
     await gastar(custo);
     if (custo === 'livre') render();
+    // ☠️ Condição vinculada da skill: aplica em todos os alvos atingidos que
+    // participam da cena (o motor de rodadas expira sozinho, com aviso ao mestre)
+    if (meta.condicao?.nome && atingidos.length) {
+        const pids = atingidos.map(o => participanteDoToken(o)?.id).filter(Boolean);
+        if (pids.length) aplicarCondicaoEmVarios(pids, meta.condicao.nome, meta.condicao.rodadas || 0).catch(e => console.warn('condição da skill', e));
+    }
     toast(nomes.length ? `${icone} ${nomes.length} alvo(s): ${nomes.join(', ')}` : `${icone} Nenhum alvo na área`);
 };

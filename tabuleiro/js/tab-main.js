@@ -216,6 +216,7 @@ async function iniciarSync() {
         T._meuMelhorGrau = melhorGrauDoUsuario(T.combate, meus);
         window._renderCombate && window._renderCombate();
         window._renderTurno?.();   // ⚔️ painel do turno acompanha o doc de combate
+        window._checarCondicoesRodada?.();   // ⏱️ mestre expira condições da rodada
         atualizarBarraCanvas();
         markDirty();
     }));

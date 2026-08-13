@@ -8,7 +8,8 @@ import {
     docDeCenas, comCena, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena,
     condDoParticipante, tirarCondicoesExpiradas,
     faccaoDoParticipante, acoesNovas, podeGastar, gastarAcao, alvoValido,
-    alcanceGolpe, participanteDaVez,
+    alcanceGolpe, participanteDaVez, indiceNaOrdem, guardadoValido,
+    custoVital, recursoInsuficiente,
 } from './combate-cenas.js';
 
 const p = (n) => ({ id: n, name: n, initiative: 1 });
@@ -150,4 +151,26 @@ assert.equal(participanteDaVez({ ...cenaT, turnoAtual: 2 }).id, 'a');
 assert.equal(participanteDaVez({ ...cenaT, turnoAtual: 3 }).id, 'b', 'wrap de rodada');
 assert.equal(participanteDaVez({ participantes: [] }), null);
 
-console.log('✅ combate-cenas: doc antigo, espelho da cena ativa, troca, patch isolado, criar e apagar, condições, turno mecânico OK');
+// turno GUARDADO (delay): vale só dentro da mesma rodada
+assert.equal(indiceNaOrdem(cenaT, 'b'), 0, 'maior iniciativa é o índice 0');
+assert.equal(indiceNaOrdem(cenaT, 'a'), 2);
+assert.equal(indiceNaOrdem(cenaT, 'sumiu'), -1);
+assert.equal(guardadoValido({ rodada: 3 }, { guardadoNaRodada: 3 }), true, 'guardou nesta rodada: pode agir');
+assert.equal(guardadoValido({ rodada: 4 }, { guardadoNaRodada: 3 }), false, '🔒 virou a rodada sem usar: perdeu o turno');
+assert.equal(guardadoValido({ rodada: 3 }, {}), false, 'sem guardar não há o que usar');
+assert.equal(guardadoValido({}, { guardadoNaRodada: 1 }), true, 'cena sem rodada = rodada 1');
+
+// 💰 custo vital das habilidades
+assert.deepEqual(custoVital('2 ENER'), [{ recurso: 'ener', qtd: 2 }]);
+assert.deepEqual(custoVital('1 Energia e 1 SAN'), [{ recurso: 'ener', qtd: 1 }, { recurso: 'san', qtd: 1 }]);
+assert.deepEqual(custoVital('-1 ENER'), [{ recurso: 'ener', qtd: 1 }], 'sinal do cadastro de mecânica não muda o custo');
+assert.deepEqual(custoVital('custa 0,5 Sanidade'), [{ recurso: 'san', qtd: 0.5 }], 'vírgula decimal');
+assert.deepEqual(custoVital('nenhum'), [], 'texto sem par número+sigla não vira custo');
+assert.deepEqual(custoVital('2'), [], 'número sem sigla: não inventa recurso');
+assert.equal(recursoInsuficiente('2 ENER', { ener: 4 }), null, 'tem: pode usar');
+assert.deepEqual(recursoInsuficiente('2 ENER', { ener: 1 }), { recurso: 'ener', qtd: 2, tem: 1 }, 'falta Energia');
+assert.equal(recursoInsuficiente('2 ENER', {}), null, 'atual desconhecido não bloqueia (não inventa)');
+assert.deepEqual(recursoInsuficiente('1 VIT e 3 SAN', { vit: 5, san: 2 }), { recurso: 'san', qtd: 3, tem: 2 }, 'checa todos os recursos do custo');
+assert.equal(recursoInsuficiente('', { ener: 0 }), null, 'sem custo nada falta');
+
+console.log('✅ combate-cenas: doc antigo, espelho da cena ativa, troca, patch isolado, criar e apagar, condições, turno mecânico, turno guardado, custo vital OK');

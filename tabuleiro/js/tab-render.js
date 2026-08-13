@@ -13,7 +13,7 @@ import { PERF, melhorBitmap, construirHashParedes, paredesProximas, medir, inici
 import { snapPonto, axialParaPixel, axialRound, pixelParaAxial, mesmaFaixaElev, faixaDe, pontoEmPoligono, normalizarRet } from './tab-grid.js';
 import { desenharExploracao, registrarExploracaoCelulas, tokenVisivelParaMim, carregarExploracao, versaoExploracao } from './tab-fog.js';
 import { cursoresParaDesenhar, pingsParaDesenhar, haPingsAtivos, avancarTweenCamera, cursoresAtivados } from './tab-presenca.js';
-import { vitaisDoToken, barrasVisiveis, tokenAtivoDoCombate } from './tab-hud.js';
+import { vitaisDoToken, barrasVisiveis, tokenAtivoDoCombate, vdsCombateDoToken } from './tab-hud.js';
 import { shapeDaMira } from './tab-mira-calc.js';
 import { desenharClima, climaAtivo, alphaTelhado } from './tab-clima.js';
 import { temCone, podeGirarToken, posicionarBotoesGirar, esconderBotoesGirar } from './tab-girar.js';
@@ -558,6 +558,9 @@ function drawToken(o) {
     if (barrasVisiveis(o)) {
         const v = vitaisDoToken(o);
         if (v) drawBarras(pos, s, v);
+        // ⚔️ VDs de Status de Combate (Blindagem etc.) acima das barras
+        const vds = vdsCombateDoToken(o);
+        if (vds.length) drawVDsCombate(pos, s, vds);
         // Ícones de condição (F5.2)
         if (v?.conds?.length) drawCondicoes(pos, s, v.conds);
     }
@@ -596,6 +599,17 @@ function drawBarras(pos, s, v) {
     barra(v.hp, v.hpMax, '#34d399');
     barra(v.ener, v.enerMax, '#fbbf24');
     barra(v.san, v.sanMax, '#a78bfa');
+}
+
+// ⚔️ Linha compacta com os VDs de Status de Combate, acima das barras
+function drawVDsCombate(pos, s, vds) {
+    const fs = hud(10.5);
+    ctx.font = `bold ${fs}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    const txt = vds.map(d => `${d.icone}${d.prefixo}${d.valor}${d.sufixo}`).join(' ');
+    const y = pos.y - s / 2 - hud(8) - (hud(4.5) + hud(1.5)) * 3 - hud(3);
+    ctx.lineWidth = hud(3); ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(txt, pos.x, y);
+    ctx.fillStyle = '#e2e8f0'; ctx.fillText(txt, pos.x, y);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 
 function drawCondicoes(pos, s, conds) {

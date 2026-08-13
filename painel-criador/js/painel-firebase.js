@@ -4025,6 +4025,14 @@ function _buildPredefMira(data) {
                         <option value="aliados" ${sel('aliados', m.afeta)}>Só aliados (mesma facção)</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>☠️ Aplica condição (nome exato do registro de Condições)</label>
+                    <input type="text" data-pd-key="miraCondicaoNome" value="${escapeHtml(m.condicaoNome || '')}" placeholder="Ex: Atordoado — vazio = nenhuma">
+                </div>
+                <div class="form-group">
+                    <label>⏱️ Por quantas rodadas (vazio = até remover)</label>
+                    <input type="number" min="0" data-pd-key="miraCondicaoRodadas" value="${m.condicaoRodadas ?? ''}" placeholder="Ex: 1">
+                </div>
             </div>
         </details>`;
 }
@@ -4317,6 +4325,8 @@ function _collectSingleModuleData(item) {
             angGraus: num('miraAngGraus') ?? 60,
             maxAlvos: Math.max(1, parseInt(pdv('miraMaxAlvos'), 10) || 1),
             afeta: pdv('miraAfeta') || 'todos',
+            condicaoNome: (pdv('miraCondicaoNome') || '').trim() || null,
+            condicaoRodadas: num('miraCondicaoRodadas') ?? 0,
         } : null;
 
         mod.itensPredefinidos.push({
