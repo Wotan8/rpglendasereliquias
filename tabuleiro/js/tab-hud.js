@@ -11,6 +11,7 @@ import { refCombate } from './tab-main.js';
 import { updObj, delObj, abrirPropriedades } from './tab-objects.js';
 import { SENSORES } from './tab-fog.js';
 import { cenaAtiva, comCenaAtivaPatch, condDoParticipante } from '../../shared/combate-cenas.js';
+import { logChat } from './tab-chat.js';
 
 // charId -> { hp, hpMax, ener, enerMax, san, sanMax, conds:[{icone,nome}] }
 export const VITAIS = new Map();
@@ -170,6 +171,7 @@ export async function rolarIniciativa(o) {
     try {
         await setDoc(refCombate(), { ...comCenaAtivaPatch(T.combate, { participantes: parts }), atualizadoEm: Date.now() }, { merge: true });
         toast(`🎲 Iniciativa de ${esc(o.nome || 'token')}: ${total} (1d${DADO_INICIATIVA}: ${dado}${bonus ? ` ${bonus > 0 ? '+' : '−'} ${Math.abs(bonus)}` : ''})`);
+        logChat(`🎲 Iniciativa de ${o.nome || 'token'}: ${total} (1d${DADO_INICIATIVA}: ${dado}${bonus ? `, bônus ${bonus > 0 ? '+' : ''}${bonus}` : ''})`);
     } catch (e) { toast('❌ Erro ao rolar iniciativa', 'danger'); }
 }
 

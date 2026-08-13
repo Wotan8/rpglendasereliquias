@@ -8,6 +8,7 @@ import { abrirModal, fecharModal } from './tab-main.js';
 import { addObj, updObj, delObj, vincularNpcNaMesa, trancaConfigHtml } from './tab-objects.js';
 import { screenToWorld } from './tab-render.js';
 import { pontoVisivelAgora } from './tab-fog.js';
+import { logChat } from './tab-chat.js';
 
 let equipCatalogo = null;
 let caixaItens = null;
@@ -510,6 +511,7 @@ window.tbGuardarNoBau = async function(objId, itemId) {
         await deleteDoc(doc(db, 'items', itemId));
         updObj(objId, { itensDentro: [...(o.itensDentro || []), { id: itemId, ...semId(it) }] });
         toast(`⬇️ ${it.nome || 'Item'} guardado no baú`);
+        logChat(`⬇️ ${it.nome || 'Item'} guardado em ${o.nome || 'baú'}`);
         abrirBau(objId);
     } catch (e) { console.error(e); toast('❌ Erro ao guardar no baú', 'danger'); }
 };
@@ -526,6 +528,7 @@ window.tbPegarDoBau = async function(objId, itemId) {
         await addDoc(collection(db, 'items'), { ...semId(it), ...baseNovoItem(alvo.split(':')[1]) });
         updObj(objId, { itensDentro: itens.filter(x => x.id !== itemId) });
         toast(`🎒 ${it.nome || 'Item'} transferido`);
+        logChat(`🎒 ${it.nome || 'Item'} pego de ${o.nome || 'baú'}`);
         abrirBau(objId);
     } catch (e) { console.error(e); toast('❌ Erro ao pegar o item', 'danger'); }
 };

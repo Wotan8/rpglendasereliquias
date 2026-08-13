@@ -21,6 +21,7 @@ import { initCena, transicaoDeCena } from './tab-cena.js';
 import { initTemplates } from './tab-templates.js';
 import { initMusica } from './tab-musica.js';
 import { initDados } from './tab-dados.js';
+import { initChat, sincChatDoCanvas } from './tab-chat.js';
 import './tab-local.js';   // 📍 Locais do Worldbuilding (registra window.tbAbrirLocal)
 import { initGirar } from './tab-girar.js';
 import { initSessao } from './tab-sessao.js';
@@ -89,6 +90,7 @@ window.addEventListener('DOMContentLoaded', () => {
             initTemplates();
             initMusica();
             initDados();
+            initChat();   // o listener do chat já assinou no trocarCanvas do iniciarSync
             initSessao();
             startRenderLoop();
             document.getElementById('tbLoading').style.display = 'none';
@@ -237,6 +239,7 @@ export async function trocarCanvas(id, escreverEstado) {
     T.canvasId = id;
     T.objects = new Map();
     T.anims = new Map();
+    sincChatDoCanvas();   // 💬 o chat acompanha o canvas
     notifyCanvasConfigChange();
     limparHistorico();   // undo/redo é por canvas
     T.selection = null;
@@ -387,6 +390,7 @@ export function aplicarModoUI() {
     show('btnSessao', secret);
     show('btnCursores', true);
     show('btnDados', true);
+    show('btnChat', true);
 }
 
 // ===== RELÓGIOS (F6.2) =====
@@ -510,8 +514,9 @@ window.tbExcluirCanvas = async (id) => {
     if (!confirm('Excluir este canvas e TODO o seu conteúdo?')) return;
     try {
         const objs = await getDocs(refObjetos(id));
-        // F7.2: exclusão em lote (1 commit a cada 400 docs)
-        const docs = objs.docs;
+        const chat = await getDocs(collection(db, 'mesas', T.mesaId, 'tabuleiros', id, 'chat'));
+        // F7.2: exclusão em lote (1 commit a cada 400 docs) — objetos + chat do canvas
+        const docs = [...objs.docs, ...chat.docs];
         for (let i = 0; i < docs.length; i += 400) {
             const lote = writeBatch(db);
             docs.slice(i, i + 400).forEach(d => lote.delete(d.ref));

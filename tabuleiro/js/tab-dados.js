@@ -8,6 +8,7 @@
 import { db, doc, setDoc, onSnapshot } from '../../painel-mestre/js/firebase-config.js';
 import { T, esc, toast, uid } from './tab-state.js';
 import { abrirModal } from './tab-main.js';
+import { logChat } from './tab-chat.js';
 
 const refDados = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'dados');
 const JANELA = uid();          // esta aba já mostrou a própria rolagem na hora
@@ -52,6 +53,7 @@ window.tbRolarDado = async function(faces) {
     registrar(r);
     toast(msgRolagem(r) + (secreta ? ' 🤫' : ''));
     if (!secreta) {
+        logChat(msgRolagem(r));   // fica no diário do canvas
         try { await setDoc(refDados(), { ultimo: r }, { merge: true }); }
         catch (e) { console.error(e); toast('❌ A rolagem não chegou na mesa', 'danger'); }
     }

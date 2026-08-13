@@ -11,6 +11,7 @@ import { detectarGradeDeArquivo, faixaDe } from './tab-grid.js';
 import { registrarOp } from './tab-undo.js';
 import { SENSORES } from './tab-fog.js';
 import { criarFilaDeEscrita } from './tab-write-queue.js';
+import { logChat } from './tab-chat.js';
 
 // ===== CRUD =====
 export async function addObj(data) {
@@ -27,6 +28,8 @@ export async function addObj(data) {
     registrarOp({ tipo: 'add', id, dados: obj });
     notifyObjectChange(obj);
     markDirty();
+    // 💬 todo loot nasce por aqui (drop do Mostrar, da janela de ficha, soltos)
+    if (obj.tipo === 'loot') logChat(`🧰 ${obj.nome || 'Item'}${(obj.quantidade || 1) > 1 ? ` x${obj.quantidade}` : ''} ficou no mapa`);
     try { await setDoc(refObjeto(id), obj); } catch (e) { console.error(e); toast('❌ Erro ao salvar objeto', 'danger'); T.objects.delete(id); markDirty(); }
     return id;
 }
@@ -94,6 +97,8 @@ export async function moverEmLote(itens) {
 export async function delObj(id) {
     const atual = T.objects.get(id);
     if (atual) registrarOp({ tipo: 'del', id, dados: { ...atual } });
+    // 💬 loot só some do mapa quando alguém pega/devolve/apaga
+    if (atual?.tipo === 'loot') logChat(`🎒 ${atual.nome || 'Item'} saiu do mapa`);
     notifyObjectChange(atual);
     T.objects.delete(id);
     T.selecionados = T.selecionados.filter(x => x !== id);

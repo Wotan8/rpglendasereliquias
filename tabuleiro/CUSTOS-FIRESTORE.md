@@ -16,6 +16,7 @@ Estimativas para uma sessão típica: **1 mestre + 4 jogadores, 3 horas**, mesa 
 | Soltos ficam para trás (token andou ≥ ½ célula) | 1 query de itens + 1 batch, com debounce de **1,5s por token** (rajada de setas/arrastos = 1 viagem) | tab-mostrar / tab-tools |
 | Ping | 1 write por ping (ação explícita) | tab-presenca |
 | 🎲 Rolagem de dado | 1 write por rolagem (ação explícita; secreta = 0 writes) | tab-dados |
+| 💬 Chat / diário do canvas | 1 write por mensagem ou acontecimento, só de quem AGIU; movimento com debounce de 1,5s por token; boot lê as últimas 80 do canvas | tab-chat |
 
 ## Leituras
 

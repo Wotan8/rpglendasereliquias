@@ -562,6 +562,37 @@ html, body {
 }
 .tb-cond-t { font-style: normal; font-weight: 700; opacity: .85; margin-left: 2px; }
 
+/* ===== 💬 Chat da mesa (por canvas) ===== */
+.tb-chat { left: var(--lr-space-4); right: auto; top: auto; bottom: var(--lr-space-4); width: 300px; height: 320px; z-index: 47; }
+.tb-chat-lista { display: flex; flex-direction: column; gap: 3px; font-size: var(--lr-fs-sm); }
+.tb-chat-msg { word-break: break-word; line-height: 1.35; }
+.tb-chat-msg b { color: var(--lr-gold-3, #eab308); }
+.tb-chat-hora { font-size: var(--lr-fs-xs); color: var(--lr-text-2); }
+.tb-chat-log { color: var(--lr-text-2); font-size: var(--lr-fs-xs); line-height: 1.35; word-break: break-word; }
+.tb-chat-input {
+    display: flex; gap: 4px; align-items: center;
+    padding: var(--lr-space-2); border-top: 1px solid var(--lr-border); background: var(--lr-bg-1);
+}
+.tb-chat-input select {
+    max-width: 92px; background: var(--lr-bg-0); border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-sm); color: var(--lr-text-2); font-size: var(--lr-fs-xs); padding: 4px 2px;
+}
+.tb-chat-input input {
+    flex: 1; min-width: 0; background: var(--lr-bg-0); border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-sm); color: var(--lr-text-1); font-size: var(--lr-fs-sm); padding: 5px 8px;
+}
+/* fundo transparente: só o texto flutua sobre o mapa (sombra para ler) */
+.tb-chat.transp { background: transparent; border-color: transparent; box-shadow: none; }
+.tb-chat.transp .tb-win-head, .tb-chat.transp .tb-chat-input { background: rgba(10, 14, 22, .55); border-color: transparent; }
+.tb-chat.transp .tb-chat-lista { text-shadow: 0 1px 3px rgba(0, 0, 0, .95), 0 0 6px rgba(0, 0, 0, .8); }
+.tb-chat.transp .tb-chat-lista::-webkit-scrollbar { width: 0; }
+/* selo de não lidas no botão 💬 da barra */
+.tb-chat-badge {
+    position: absolute; top: -5px; right: -5px; min-width: 15px; height: 15px;
+    background: var(--lr-blood-2, #dc2626); color: #fff; border-radius: 999px;
+    font-size: 10px; font-weight: 700; line-height: 15px; padding: 0 3px; text-align: center;
+}
+
 /* Coluna de ações do card de participante (⚔️ janela + 🗑️ remover) */
 .tb-combat-acoes { display: flex; flex-direction: column; gap: var(--lr-space-1); }
 

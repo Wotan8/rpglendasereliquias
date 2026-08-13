@@ -392,6 +392,14 @@ service cloud.firestore {
           allow read: if isSignedIn();
           allow write: if isMaster() || ehJogadorDaMesa();
         }
+
+        // 💬 Chat do canvas: mensagens e diário de acontecimentos.
+        // Só criação (histórico não se edita); apagar é faxina do mestre.
+        match /chat/{msgId} {
+          allow read: if isSignedIn();
+          allow create: if isMaster() || ehJogadorDaMesa();
+          allow delete: if isMaster();
+        }
       }
 
       // Presença (cursores ao vivo): um doc POR USUÁRIO — cada um só escreve o próprio

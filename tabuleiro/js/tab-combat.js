@@ -7,6 +7,7 @@ import { T, esc, toast, uid, alvoDoTeste, grausDoDado, fmtGraus, vNum, patchVita
 import { refCombate, refEstado, abrirModal, fecharModal } from './tab-main.js';
 import { VITAIS } from './tab-hud.js';
 import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena, condDoParticipante, tirarCondicoesExpiradas } from '../../shared/combate-cenas.js';
+import { logChat } from './tab-chat.js';
 
 let janelaAberta = false;
 
@@ -279,9 +280,11 @@ window.tbCombTurno = async function(dir) {
     await salvar(parts, { turnoAtual: turno, rodada });
     // F4.3: expira templates com duração ao virar a rodada
     if (rodada > rodadaAntes) {
+        logChat(`🔄 Rodada ${rodada}`);
         try { const m = await import('./tab-templates.js'); m.expirarTemplates(rodada); } catch (e) {}
         if (expiradas.length) {
             for (const e of expiradas) sincRemocaoFicha(parts.find(x => x.id === e.pid), e.cond.nome);
+            logChat(`⏱️ Acabou: ${expiradas.map(e => `${e.cond.icone} ${e.cond.nome} (${e.pNome})`).join(' · ')}`);
             avisoCondicoesExpiradas(expiradas);
         }
     }
@@ -313,6 +316,7 @@ window.tbCondProlongar = async function(i) {
     await sincAdicaoFicha(p, { ...e.cond, duracao: nr }, null);
     document.getElementById('expRow_' + i)?.remove();
     toast(`↩️ "${e.cond.nome}" prolongada por +${nr} rodada(s)`);
+    logChat(`↩️ ${e.cond.icone} ${e.cond.nome} (${e.pNome}) prolongada por +${nr} rodada(s)`);
 };
 
 window.tbCombVisibilidade = async function() {
@@ -516,6 +520,7 @@ async function aplicarCondicaoCombate(pid, cond, tpl) {
     }];
     await salvar(parts);
     toast(`☠️ Condição "${cond.nome}" aplicada` + (cond.duracao > 0 ? ` por ${cond.duracao} rodada(s)` : ''));
+    logChat(`☠️ ${p.name || '?'}: +${cond.icone || '☠️'} ${cond.nome}${cond.duracao > 0 ? ` (${cond.duracao} rodada${cond.duracao > 1 ? 's' : ''})` : ''}`);
     await sincAdicaoFicha(p, cond, tpl);
 }
 
@@ -563,6 +568,7 @@ window.tbCombCondRm = async function(pid, i) {
     const removida = condDoParticipante((p.condicoes || [])[i]).nome;
     p.condicoes = (p.condicoes || []).filter((_, ci) => ci !== i);
     await salvar(parts);
+    if (removida) logChat(`✨ ${p.name || '?'}: −${removida}`);
     await sincRemocaoFicha(p, removida);
 };
 
@@ -632,6 +638,8 @@ window.tbTesteRolar = async function(tid, pid) {
     await salvar(partsDaCena(), { testes });
     toast(`🎲 ${esc(p.name)} — ${esc(t.nome)}: d10 ${dado} vs Alvo ${alvo} → ${fmtGraus(graus)}` +
         (dado === 1 ? ' ✨ crítico!' : dado === 10 ? ' 💀 falha crítica!' : ''));
+    logChat(`🎯 ${p.name} — ${t.nome}: d10 ${dado} vs Alvo ${alvo} → ${fmtGraus(graus)}` +
+        (dado === 1 ? ' ✨ crítico' : dado === 10 ? ' 💀 falha crítica' : ''));
 };
 
 /** Teste feito fisicamente na mesa: o mestre digita os Graus direto. */
@@ -645,4 +653,5 @@ window.tbTesteInserir = async function(tid, pid) {
     if (isNaN(graus)) { toast('⚠️ Valor inválido — digite um número de Graus', 'warning'); return; }
     t.resultados[pid] = { graus, dado: null, alvo: null };
     await salvar(partsDaCena(), { testes });
+    logChat(`🎯 ${p.name} — ${t.nome}: ${fmtGraus(graus)} (rolado na mesa)`);
 };

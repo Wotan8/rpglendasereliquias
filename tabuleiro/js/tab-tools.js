@@ -13,6 +13,7 @@ import { addObj, updObj, updObjLocal, moverEmLote, delObj, maxZ, abrirPropriedad
 import { snapPonto, medirTrajeto, trajetoColide, simplificarPontos, normalizarRet, bboxDentroDoRet } from './tab-grid.js';
 import { criarFilaDeEscrita } from './tab-write-queue.js';
 import { publicarCursor, enviarPing } from './tab-presenca.js';
+import { logMovimento } from './tab-chat.js';
 import { abrirMenuRadial } from './tab-hud.js';
 import { pontoVisivelAgora } from './tab-fog.js';
 import { confirmarTemplate, confirmarTerreno, terrenosDoCanvas, tplCfg } from './tab-templates.js';
@@ -544,8 +545,10 @@ function selecionarNoRetangulo(r) {
  * chamada é fire-and-forget para não segurar o fim do arrasto.
  */
 function tokenAndou(o, origem) {
-    if (!o || o.tipo !== 'token' || !o.vinculo?.id) return;
+    if (!o || o.tipo !== 'token') return;
     if (Math.hypot((o.x || 0) - origem.x, (o.y || 0) - origem.y) < gridSize() * 0.45) return;
+    logMovimento(o, origem);   // 💬 diário do canvas (com debounce por token)
+    if (!o.vinculo?.id) return;   // token sem ficha não tem "soltos"
     window.tbDroparSoltosDoToken?.(o, origem);
 }
 
