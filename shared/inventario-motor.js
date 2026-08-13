@@ -78,8 +78,11 @@ export function tplDoItem(i, sys) {
     const ref = i?.modeloId || i?.origemTemplateId;
     return ref ? (sys?.equipment || []).find(t => t.id === ref) || null : null;
 }
+/** Dado do modo atual: com 2 mãos, `formulaDano2Maos` vence (equip-slots.js). */
 export function formulaDanoDoItem(i, sys) {
-    return i?.formulaDano || tplDoItem(i, sys)?.formulaDano || '';
+    const tpl = tplDoItem(i, sys);
+    const ES = globalThis.EquipSlots;
+    return ES ? ES.formulaDanoPorMaos(i, tpl) : (i?.formulaDano || tpl?.formulaDano || '');
 }
 
 /** Pressão de um item: contêiner soma o conteúdo pelo multiplicador; pilha multiplica. */

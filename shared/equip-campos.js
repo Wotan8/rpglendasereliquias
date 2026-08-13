@@ -38,7 +38,8 @@ export const CAMPOS_EQUIPAMENTO = [
     { key: 'tags', label: '🏷️ Tags', type: 'tags', placeholder: 'Digite e Enter para adicionar (Ex: metálico, mágico, leve)' },
     { key: 'equipavelEm', label: 'Equipável em', type: 'body_parts_selector' },
     // Slots ALÉM do principal. Espada de duas mãos = +1 Mão; armadura
-    // completa = +1 Pernas, +2 Braço. Bloqueia equipar se faltar slot livre.
+    // completa = +1 Pernas, +2 Braço. É COBERTURA, não requisito: o que não
+    // existir no corpo ou estiver tomado simplesmente não é ocupado.
     { key: 'slotsAdicionais', label: '🧩 Slots Adicionais Ocupados (além do slot principal)', type: 'mechanic_selector', selectorTarget: 'bodyPartsQuantidade' },
     {
         // ⚠️ Segurar NÃO aciona efeito nenhum (ver normalizaFormaEquipar abaixo).
@@ -101,6 +102,10 @@ export const CAMPOS_EQUIPAMENTO = [
     { key: 'pesoMaximoContainer', label: 'Peso Máximo Suportado (Container)', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
     { key: 'capacidadeContainer', label: 'Capacidade do Container (slots antigos)', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
     { key: 'formulaDano', label: '💥 Fórmula de Dano', type: 'text', placeholder: 'Ex: 1d10, 2d6 — bônus numéricos vêm dos Valores Derivados' },
+    // Segundo dado da MESMA peça, para quando ela é empunhada com as duas mãos.
+    // Vale só onde a categoria deixa escolher (Versátil, A Distância); arma de
+    // duas mãos fixa já usa a fórmula normal. Vazio = mesmo dado nos dois modos.
+    { key: 'formulaDano2Maos', label: '💥 Fórmula de Dano (empunhada com 2 mãos)', type: 'text', placeholder: 'Ex: 1d12 — vazio = o mesmo dado de 1 mão' },
     // ⚔️ Régua do golpe no Tabuleiro: alcance efetivo = alcanceM + 5% do VD
     // Tamanho do usuário, nunca menor que 1 m — contado da BORDA do token.
     { key: 'alcanceM', label: '📏 Alcance do golpe (m) — o Tabuleiro soma 5% do Tamanho; vazio = mínimo 1 m', type: 'number', placeholder: 'Ex: 0,5 adaga · 2 lança', showWhen: { field: 'tipo', value: 'Arma' } },
@@ -166,7 +171,7 @@ export const valorDoItem = (item, f) => (f.key === 'imagemUrl' ? (item?.imagem ?
 
 /** Campo cujo valor VAZIO na instância cai no modelo do catálogo. */
 const HERDA_DO_MODELO = new Set([
-    'liga', 'qualidade', 'afiacao', 'reforco', 'blindagemQ0', 'preco', 'formulaDano',
+    'liga', 'qualidade', 'afiacao', 'reforco', 'blindagemQ0', 'preco', 'formulaDano', 'formulaDano2Maos',
     'valoresDerivadosVinculados', 'statusVitaisVinculados', 'atributosVinculados',
     'periciasVinculadas', 'condicaoIds', 'slotsAdicionais', 'tags', 'tipoGolpe',
 ]);

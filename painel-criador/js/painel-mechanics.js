@@ -530,7 +530,30 @@ const CATEGORY_LABELS = {
     'exclusivo': 'Perícias Exclusivas'
 };
 
-function getValueSourceHTML() {
+/**
+ * Marca no HTML de opções a referência já salva no termo.
+ *
+ * Sem isto o `<select>` de Ref abre sempre em "— Ref —", mesmo com a equação
+ * gravada: o preview do Total aparece certo (vem do dado) e os termos aparecem
+ * vazios (vêm do DOM). E como `_collectEquacaoFromContainer` lê o DOM, o
+ * primeiro evento de edição regravava a equação inteira com `ref: ""` — a
+ * fórmula do item sumia ao editar qualquer outra coisa.
+ *
+ * A ref órfã (VD despublicado, perícia renomeada) entra como opção própria em
+ * vez de virar vazio: melhor mostrar uma referência quebrada do que apagá-la
+ * em silêncio.
+ */
+export function _marcarRefSelecionada(html, ref) {
+    const alvo = String(ref ?? '').trim();
+    if (!alvo) return html;
+    const attr = `value="${esc(alvo)}"`;
+    if (html.includes(attr)) return html.replace(attr, `${attr} selected`);
+    return `\n<optgroup label="⚠️ Referência não encontrada">`
+        + `\n<option ${attr} selected>⚠️ ${esc(alvo)}</option>`
+        + `\n</optgroup>` + html;
+}
+
+function getValueSourceHTML(refSelecionada) {
     let html = `
 <optgroup label="Atributos">
 <option value="INT">INT</option><option value="RAC">RAC</option><option value="PRS">PRS</option>
@@ -643,7 +666,7 @@ function getValueSourceHTML() {
     // Limites de Módulos de Classe (dinâmico)
     html += _getModuleLimitOptions();
 
-    return html;
+    return _marcarRefSelecionada(html, refSelecionada);
 }
 
 // ===== MIGRATE OLD CALC FORMAT TO EQUATION =====
@@ -694,7 +717,7 @@ function _renderEquationTerm(term, calcIndex, termIndex) {
         </div>
         <div class="eq-term-ficha-wrap" style="display:${isFicha ? '' : 'none'}">
             <select class="eq-term-ref" onchange="window._mechUpdatePreview()">
-                <option value="">— Ref —</option>${getValueSourceHTML()}
+                <option value="">— Ref —</option>${getValueSourceHTML(t.ref)}
             </select>
         </div>
         <div class="eq-term-sort-wrap" style="display:${isSort ? '' : 'none'}">
@@ -1198,7 +1221,7 @@ function _renderBoolEquationTerm(term, side, termIndex) {
         </div>
         <div class="eq-term-ficha-wrap" style="display:${isFicha ? '' : 'none'}">
             <select class="eq-term-ref" onchange="window._mechUpdatePreview()">
-                <option value="">— Ref —</option>${getValueSourceHTML()}
+                <option value="">— Ref —</option>${getValueSourceHTML(t.ref)}
             </select>
         </div>
         <div class="eq-term-sort-wrap" style="display:${isSort ? '' : 'none'}">
@@ -3709,6 +3732,16 @@ function _eqDvChip(fieldId, dvObj, d) {
              <input type="checkbox" ${escopoOn ? 'checked' : ''} onchange="window._eqDvSelEscopoChange('${fieldId}','${d.id}',this.checked)"> global
            </label>`
         : '';
+    // Modo de uso da peça: o mesmo machado pode dar +4 empunhado com as duas
+    // mãos e +1 com uma. Só nos Valores Derivados (comEquacao) — Status Vital e
+    // Parte do Corpo não mudam com a pegada.
+    const selMaos = reg.comEquacao
+        ? `<label style="margin-left:8px;font-size:.7rem" title="Em que pegada este bônus vale. A fórmula do dado de 2 mãos é o campo 'Fórmula de Dano (empunhada com 2 mãos)' do item.">
+             ✋ <select style="font-size:.7rem;padding:1px" onchange="window._eqDvSelMaosChange('${fieldId}','${d.id}',this.value)">
+               ${[['0', 'sempre'], ['1', 'só com 1 mão'], ['2', 'só com 2 mãos']].map(([v, r]) =>
+            `<option value="${v}" ${String(Number(dvObj.maos) || 0) === v ? 'selected' : ''}>${r}</option>`).join('')}
+             </select></label>`
+        : '';
     const passo = campo === 'quantidade' ? '1" min="1' : '0.01';
     if (reg.comEquacao) {
         // A Equação de Valor SUBSTITUI o Modificador (sem input numérico).
@@ -3722,7 +3755,7 @@ function _eqDvChip(fieldId, dvObj, d) {
         if (!eq.length && Number(mod)) eq = [{ tipo: 'fixo', valor: Number(mod) }];
         const terms = eq.map((t, ti) => _renderBoolEquationTerm(t, side, ti)).join('');
         const syncCall = `window._eqDvEqSync('${fieldId}','${d.id}')`;
-        return `<div class="mechsel-chip" style="border-left-color:#3b82f6;"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div>${toggle ? `<div class="mechsel-chip-preview">${toggle}</div>` : ''}
+        return `<div class="mechsel-chip" style="border-left-color:#3b82f6;"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div>${toggle || selMaos ? `<div class="mechsel-chip-preview">${toggle}${selMaos}</div>` : ''}
         <div class="eq-builder-section" oninput="${syncCall}" onchange="${syncCall}" onclick="${syncCall}">
             <label class="eq-builder-label" style="font-size:.7rem">🧮 Equação de Valor <span id="boolEquacao${side}_preview" style="color:var(--muted);font-weight:normal">${esc(_eqDvEqPreviewStr(eq))}</span></label>
             <div class="eq-terms-container" id="boolEquacao${side}">${terms}</div>
@@ -3798,6 +3831,19 @@ window._eqDvSelEscopoChange = function (fieldId, did, global) {
     hidden.value = JSON.stringify(data);
 };
 
+/** Em que pegada o vínculo vale: 0/ausente = sempre, 1 = uma mão, 2 = duas. */
+window._eqDvSelMaosChange = function (fieldId, did, valor) {
+    const hidden = document.getElementById(fieldId);
+    if (!hidden) return;
+    const data = JSON.parse(hidden.value || '[]');
+    const idx = data.findIndex(p => (typeof p === 'object' ? p.id === did : p === did));
+    if (idx < 0) return;
+    if (typeof data[idx] !== 'object') data[idx] = { id: did, modificador: 0 };
+    const m = Number(valor) || 0;
+    if (m) data[idx].maos = m; else delete data[idx].maos;
+    hidden.value = JSON.stringify(data);
+};
+
 export function buildEquipmentDerivedValueSelectorHTML(fieldKey, label, currentIds, cache, noun = 'Valor Derivado', campo = 'modificador', rotulo = 'Modificador', comEquacao = false) {
     // O confirm redesenha os chips e precisa do MESMO cache que montou as opções
     // (VDs, Status Vitais, Atributos, Perícias, Partes do Corpo). Sem isso ele
@@ -3857,6 +3903,7 @@ window._eqDvSelConfirm = function (fieldId) {
         const novo = { id: cb.value, [campo]: ex ? (ex[campo] || 0) : 0 };
         // Sem isto, reconfirmar o seletor zerava o ON/OFF de escopo já marcado.
         if (ex?.escopo) novo.escopo = ex.escopo;
+        if (ex?.maos) novo.maos = ex.maos;
         if (Array.isArray(ex?.equacao) && ex.equacao.length) novo.equacao = ex.equacao;
         return novo;
     });

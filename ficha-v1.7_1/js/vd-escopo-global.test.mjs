@@ -15,6 +15,9 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const src = readFileSync(new URL('./inventory.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+// O bloco filtra o vínculo pela pegada (window.EquipSlots.vinculoValeComMaos),
+// então o módulo de slots roda junto no mesmo contexto — o de verdade, não um dublê.
+const SLOTS = readFileSync(new URL('../../shared/equip-slots.js', import.meta.url), 'utf8');
 
 // Recorta só o laço que decide o bag — o resto de applyEquippedItemsMechanics
 // depende de DOM, catálogo e do motor de mecânicas.
@@ -44,6 +47,7 @@ function aplicar(item, dvList) {
     ctx.item = item;
     ctx.dvList = dvList;
     vm.createContext(ctx);
+    vm.runInContext(SLOTS, ctx);
     vm.runInContext(BLOCO, ctx);
     return { global: plain(ctx.state.mechanicBonuses), porItem: plain(ctx.state.itemBonuses) };
 }
@@ -114,6 +118,7 @@ const escudo = { id: 'escudo1', nome: 'Escudo Grande' };
     ctx.state = { mechanicBonuses: {}, itemBonuses: {} };
     ctx.DERIVED_VALUES = DVS;
     vm.createContext(ctx);
+    vm.runInContext(SLOTS, ctx);
     for (const [id, mod] of [['e1', -1], ['e2', -2]]) {
         ctx.item = { id };
         ctx.dvList = [{ id: 'dv-acerto', modificador: mod, escopo: 'global' }];
@@ -122,6 +127,31 @@ const escudo = { id: 'escudo1', nome: 'Escudo Grande' };
     assert.deepEqual(plain(ctx.state.mechanicBonuses),
         { 'DERIVED:ACERTO': -3, 'ITEM:DERIVED:ACERTO': -3 },
         'dois itens com escopo global somam — nas duas trilhas');
+}
+
+// --- MODO DE USO: o mesmo machado com dois conjuntos de bônus --------------
+// Régua em shared/equip-slots.js (vinculoValeComMaos). Sem o filtro, os dois
+// vínculos somavam e a arma dava o bônus de duas mãos empunhada com uma.
+{
+    const machado = { id: 'machado', tipo: 'Arma', categoriaArma: 'versatil' };
+    const vincs = [
+        { id: 'dv-dano', modificador: 1, maos: 1 },
+        { id: 'dv-dano', modificador: 4, maos: 2 },
+        { id: 'dv-acerto', modificador: 2 },          // sem maos = vale nas duas
+    ];
+    const comUma = aplicar({ ...machado, maosUsadas: 1 }, vincs);
+    assert.deepEqual(comUma.porItem, { machado: { 'DERIVED:DANO': 1, 'DERIVED:ACERTO': 2 } });
+
+    const comDuas = aplicar({ ...machado, maosUsadas: 2 }, vincs);
+    assert.deepEqual(comDuas.porItem, { machado: { 'DERIVED:DANO': 4, 'DERIVED:ACERTO': 2 } });
+
+    // Categoria fixa ignora maosUsadas: duas mãos é duas mãos.
+    const espadao = aplicar({ id: 'machado', tipo: 'Arma', categoriaArma: 'duas_maos', maosUsadas: 1 }, vincs);
+    assert.deepEqual(espadao.porItem, { machado: { 'DERIVED:DANO': 4, 'DERIVED:ACERTO': 2 } });
+
+    // Peça que não é arma nunca cai no ramo de 2 mãos.
+    const manto = aplicar({ id: 'machado', tipo: 'Vestimenta', maosUsadas: 2 }, vincs);
+    assert.deepEqual(manto.porItem, { machado: { 'DERIVED:DANO': 1, 'DERIVED:ACERTO': 2 } });
 }
 
 console.log('✅ vd-escopo-global: todos os casos passaram');

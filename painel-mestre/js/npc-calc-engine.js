@@ -730,6 +730,8 @@ function gatherItemOperations(sys, targetMap, ctx, avisos) {
         // regra da ficha).
         const dvList = item.valoresDerivadosVinculados || tpl?.valoresDerivadosVinculados || [];
         for (const dvObj of dvList) {
+            // Vínculo preso a uma pegada (dvObj.maos) só vale naquela pegada.
+            if (globalThis.EquipSlots && !globalThis.EquipSlots.vinculoValeComMaos(dvObj, item)) continue;
             const dvId = dvObj.id || dvObj;
             const dvDef = (sys.derivedValues || []).find(d => d.id === dvId);
             if (!dvDef) continue;

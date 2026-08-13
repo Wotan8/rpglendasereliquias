@@ -489,6 +489,10 @@ function abrirEquipar(win, itemId) {
             <div class="tb-form-grid tb-form-grid-1">
                 <label>Slot anatômico<select id="tbEqSlot">${optsSlot}</select></label>
                 <label>Estado<select id="tbEqEstado">${optsEstado}</select></label>
+                ${ES && ES.escolheMaos(item) ? `<label>✋ Mãos<select id="tbEqMaos">
+                    <option value="1" ${Number(item.maosUsadas) === 2 ? '' : 'selected'}>🤚 1 Mão</option>
+                    <option value="2" ${Number(item.maosUsadas) === 2 ? 'selected' : ''}>🤲 2 Mãos</option>
+                </select></label>` : ''}
             </div>
             <div class="tb-modal-actions"><button class="tb-btn tb-btn-success" data-eqok>✅ Equipar</button></div>
         </div>
@@ -500,18 +504,25 @@ function abrirEquipar(win, itemId) {
         const slot = document.getElementById('tbEqSlot')?.value;
         const estado = document.getElementById('tbEqEstado')?.value;
         if (!slot || !estado) return;
-        // Cobertura extra (armadura de várias peças, mão da arma de 2 mãos):
-        // ocupa o que estiver livre e nunca impede o equipar.
-        let extras = [];
+        // Cobertura extra (armadura de várias peças) ocupa o que estiver livre e
+        // nunca impede o equipar; só a 2ª mão da arma de duas mãos é requisito.
+        const maos = Number(document.getElementById('tbEqMaos')?.value)
+            || (ES ? ES.maosDoItem(item) : 1);
+        let plano = { extras: [], maoExtra: null, faltaMao: null };
         if (ES) {
-            extras = ES.planejarEquipar(item, slot, win.itens || [], slots, {
+            plano = ES.planejarEquipar({ ...item, maosUsadas: maos }, slot, win.itens || [], slots, {
                 catalog: _sys.equipment,
                 labelParte: pid => partes.find(b => b.id === pid)?.nome || pid,
-            }).extras;
+            });
+        }
+        if (plano.faltaMao) {
+            toast(`⚠️ Falta ${plano.faltaMao} livre para empunhar esta arma`, 'warning');
+            return;
         }
         try {
             await updateDoc(doc(db, 'items', itemId), {
-                equipado: true, slotAnatomico: slot, slotsOcupados: extras,
+                equipado: true, slotAnatomico: slot, slotsOcupados: plano.extras,
+                slotAnatomico2: plano.maoExtra, maosUsadas: maos,
                 estadoEquip: estado, parentItemId: null,
             });
             ov.remove();
@@ -970,6 +981,8 @@ function linhasAtaqueChar(win, ch) {
             ? i.valoresDerivadosVinculados : (tpl?.valoresDerivadosVinculados || []);
         const delta = {};   // normChave(nome do VD) → soma deste item
         for (const v of vincs) {
+            // Vínculo preso a uma pegada (v.maos) só vale naquela pegada.
+            if (!window.EquipSlots.vinculoValeComMaos(v, i)) continue;
             const def = _sys.derivedValues.find(d => d.id === (v.id || v));
             if (!def || !def.escopoItem) continue;   // vínculo global: a ficha já somou em derivedTotals
             if (v.escopo === 'global') continue;      // idem — forçado ao total pelo cadastro

@@ -664,6 +664,12 @@ window.openNpcEquipModal = function(itemId) {
                 <select id="npcEquipSlot" class="inv-form-select">${opts}</select></div>
             <div class="inv-form-group" style="margin-top:10px"><label class="inv-form-label">Estado</label>
                 <select id="npcEquipEstado" class="inv-form-select">${estadoOpts}</select></div>
+            ${window.EquipSlots.escolheMaos(item) ? `
+            <div class="inv-form-group" style="margin-top:10px"><label class="inv-form-label">✋ Mãos</label>
+                <select id="npcEquipMaos" class="inv-form-select">
+                    <option value="1" ${Number(item.maosUsadas) === 2 ? '' : 'selected'}>🤚 1 Mão</option>
+                    <option value="2" ${Number(item.maosUsadas) === 2 ? 'selected' : ''}>🤲 2 Mãos</option>
+                </select></div>` : ''}
         </div>
         <div class="inv-modal-footer">
             <button class="inv-btn-cancel" onclick="this.closest('.inv-modal').remove()">Cancelar</button>
@@ -681,19 +687,23 @@ window.confirmNpcEquip = async function(itemId) {
 
     const n = _npc();
     const bodySlots = _npcBodySlots(n?.partesDoCorpo);
+    const maos = Number(document.getElementById('npcEquipMaos')?.value)
+        || window.EquipSlots.maosDoItem(item);
+
     const nomeParte = pid => (n?.partesDoCorpo || []).find(b => b.id === pid)?.nome || pid;
-    const plano = window.EquipSlots.planejarEquipar(item, slot, NI.items, bodySlots, {
+    const plano = window.EquipSlots.planejarEquipar({ ...item, maosUsadas: maos }, slot, NI.items, bodySlots, {
         catalog: window._npcSys?.equipment || window._systemData?.equipment,
         labelParte: nomeParte,
     });
-    if (!plano.ok) {
-        showAlert(`⚠️ "${item.nome}" precisa de slots ocupados: ${plano.faltando.join(', ')}`, 'warning');
+    if (plano.faltaMao) {
+        showAlert(`⚠️ Falta ${plano.faltaMao} livre para empunhar esta arma. Desequipe algo antes.`, 'warning');
         return;
     }
 
     try {
         await setDoc(doc(db, 'items', itemId), {
             equipado: true, slotAnatomico: slot, slotsOcupados: plano.extras,
+            slotAnatomico2: plano.maoExtra, maosUsadas: maos,
             estadoEquip: estado, parentItemId: null,
             lastModified: new Date().toISOString()
         }, { merge: true });

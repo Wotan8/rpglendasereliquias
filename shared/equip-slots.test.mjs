@@ -8,12 +8,14 @@
  * Regras verificadas:
  *  • slotsDoItem reúne principal + adicionais + o legado slotAnatomico2;
  *  • espada de duas mãos toma 2 Mãos; armadura completa toma Torso+Pernas+Braços;
- *  • falta de slot livre é recusada, dizendo o que falta e quanto tem;
+ *  • cobertura que não cabe NÃO impede o equipar — ocupa o que dá e avisa no naoCoube;
  *  • slot já tomado por OUTRO item não é reaproveitado;
- *  • exigência parcial não reserva nada pela metade sem acusar;
  *  • quantidade ausente vale 1, e a chave legada 'modificador' ainda é aceita;
  *  • planejarEquipar ignora o próprio item e o que está armazenado;
- *  • principal na MESMA parte que a cobertura só cabe se sobrar slot na parte.
+ *  • principal na MESMA parte que a cobertura só cabe se sobrar slot na parte;
+ *  • MODO DE USO: a 2ª mão é REQUISITO (recusa), a cobertura não é;
+ *  • vínculo de VD com `maos` só vale naquela pegada, e o dado de 2 mãos
+ *    (formulaDano2Maos) troca a fórmula sem trocar a peça.
  *
  * Roda com: node shared/equip-slots.test.mjs
  */
@@ -70,7 +72,7 @@ function ctx(catalog = []) {
   const c = ctx();
   const espada = { nome: 'Montante', slotsAdicionais: [{ id: 'MAO', quantidade: 1 }] };
   const r = c._reservarSlots(c._slotsExtrasNecessarios(espada), BODY, ['mao_1'], label);
-  assert.equal(r.ok, true);
+  assert.deepEqual(plain(r.naoCoube), []);
   assert.deepEqual(plain(r.slots), ['mao_2'], 'pega a mão que sobrou');
 }
 
@@ -82,19 +84,26 @@ function ctx(catalog = []) {
     slotsAdicionais: [{ id: 'PERNAS', quantidade: 1 }, { id: 'BRACO', quantidade: 2 }],
   };
   const r = c._reservarSlots(c._slotsExtrasNecessarios(set), BODY, ['torso'], label);
-  assert.equal(r.ok, true);
+  assert.deepEqual(plain(r.naoCoube), []);
   assert.deepEqual(plain(r.slots), ['pernas', 'braco_1', 'braco_2'],
     'ocupa partes do corpo diferentes de uma vez');
 }
 
-// --- sem slot livre: recusa e diz o que falta ------------------------------
+// --- cobertura sem slot livre: ocupa o que dá, não recusa ------------------
 {
   const c = ctx();
   const set = { slotsAdicionais: [{ id: 'BRACO', quantidade: 2 }] };
   const r = c._reservarSlots(c._slotsExtrasNecessarios(set), BODY, ['torso', 'braco_1'], label);
-  assert.equal(r.ok, false);
-  assert.deepEqual(plain(r.slots), [], 'não reserva nada pela metade');
-  assert.match(r.faltando[0], /2× Braço \(livre: 1\)/, 'a mensagem diz o que falta e quanto tem');
+  assert.deepEqual(plain(r.slots), ['braco_2'], 'reserva o braço que sobrou');
+  assert.match(r.naoCoube[0], /1× Braço/, 'acusa só o que ficou de fora');
+}
+
+// --- parte que o corpo NEM TEM: ignora e segue ----------------------------
+{
+  const c = ctx();
+  const semCauda = c._reservarSlots([{ parteId: 'CAUDA', quantidade: 1 }], BODY, ['torso'], label);
+  assert.deepEqual(plain(semCauda.slots), []);
+  assert.deepEqual(plain(semCauda.naoCoube), ['1× CAUDA']);
 }
 
 // --- slot tomado por outro item não é reaproveitado -----------------------
@@ -103,17 +112,17 @@ function ctx(catalog = []) {
   const outro = { slotAnatomico: 'mao_1', slotsOcupados: ['mao_2'] };  // montante equipado
   const tomados = ['torso', ...c._slotsDoItem(outro)];
   const r = c._reservarSlots([{ parteId: 'MAO', quantidade: 1 }], BODY, tomados, label);
-  assert.equal(r.ok, false, 'as duas mãos estão com o montante');
+  assert.deepEqual(plain(r.slots), [], 'as duas mãos estão com o montante');
 }
 
-// --- exigência mista, uma atendida e outra não ----------------------------
+// --- cobertura mista, uma cabe e outra não -------------------------------
 {
   const c = ctx();
   const r = c._reservarSlots(
     [{ parteId: 'PERNAS', quantidade: 1 }, { parteId: 'CABECA', quantidade: 2 }], BODY, ['torso'], label);
-  assert.equal(r.ok, false);
-  assert.equal(r.faltando.length, 1);
-  assert.match(r.faltando[0], /Cabeça/, 'só a parte impossível é acusada');
+  assert.deepEqual(plain(r.slots), ['pernas', 'cabeca'], 'pega tudo que existe');
+  assert.equal(r.naoCoube.length, 1);
+  assert.match(r.naoCoube[0], /1× Cabeça/, 'só a sobra impossível é acusada');
 }
 
 // --- quantidade ausente = 1; chave legada 'modificador' aceita ------------
@@ -146,7 +155,7 @@ function ctx(catalog = []) {
     { id: 'z', equipado: false, slotAnatomico: 'braco_2' },                           // desequipado
   ];
   const r = c._planejarEquipar(set, 'torso', todos, BODY);
-  assert.equal(r.ok, true, 'reequipar o próprio item não pode colidir consigo mesmo');
+  assert.deepEqual(plain(r.naoCoube), [], 'reequipar o próprio item não pode colidir consigo mesmo');
   assert.deepEqual(plain(r.extras), ['pernas', 'braco_1', 'braco_2']);
 }
 
@@ -155,7 +164,6 @@ function ctx(catalog = []) {
   const c = ctx();
   const espada = { id: 'e', slotsAdicionais: [] };
   const r = c._planejarEquipar(espada, 'mao_1', [], BODY, { extrasJaReservados: ['mao_2'] });
-  assert.equal(r.ok, true);
   assert.deepEqual(plain(r.extras), ['mao_2'], 'a mão extra da arma de 2 mãos entra no resultado');
 }
 
@@ -165,27 +173,112 @@ function ctx(catalog = []) {
   const set = { id: 'x', slotsAdicionais: [{ id: 'BRACO', quantidade: 2 }] };
   const todos = [{ id: 'w', equipado: true, slotAnatomico: 'braco_1' }];
   const r = c._planejarEquipar(set, 'torso', todos, BODY);
-  assert.equal(r.ok, false);
-  assert.match(r.faltando[0], /2× Braço \(livre: 1\)/);
+  assert.deepEqual(plain(r.extras), ['braco_2'], 'o braço do outro item continua fora de alcance');
+  assert.match(r.naoCoube[0], /1× Braço/);
 }
 
 // --- principal na MESMA parte da cobertura ---------------------------------
-// O catálogo tinha 5 itens oferecendo como slot principal uma parte que o
-// próprio slotsAdicionais deles já consumia inteira. A ficha listava a opção e
-// a reserva recusava sempre: Manto de Linho na Cabeça, Cota de Malha no Ombro,
-// Peitoral de Aço nas Costas... A regra é quantidade <= slots_da_parte - 1.
+// O catálogo tem itens cujo slot principal fica na parte que o próprio
+// slotsAdicionais já consome inteira (Manto de Linho na Cabeça, Cota de Malha
+// no Ombro). Antes isso recusava o equipar; agora só cobre menos.
 {
   const c = ctx();
   const manto = { id: 'm', slotsAdicionais: [{ id: 'CABECA', quantidade: 1 }] };
-  assert.equal(c._planejarEquipar(manto, 'cabeca', [], BODY, { labelParte: label }).ok, false,
-    'principal na Cabeça + cobrir a Cabeça pede 2 cabeças — o corpo só tem 1');
-  assert.equal(c._planejarEquipar(manto, 'torso', [], BODY, { labelParte: label }).ok, true,
-    'com o principal fora da parte coberta, o mesmo item equipa');
+  const naCabeca = c._planejarEquipar(manto, 'cabeca', [], BODY, { labelParte: label });
+  assert.deepEqual(plain(naCabeca.extras), [], 'a única cabeça já é o slot principal');
+  assert.match(naCabeca.naoCoube[0], /1× Cabeça/, 'equipa assim mesmo, só não cobre duas vezes');
 
-  // Contraprova: pedir 1 Braço extra com o principal no Braço cabe, são 2.
-  const ombreiras = { id: 'o', slotsAdicionais: [{ id: 'BRACO', quantidade: 1 }] };
-  assert.equal(c._planejarEquipar(ombreiras, 'braco_1', [], BODY, { labelParte: label }).ok, true,
-    'parte de 2 slots aguenta principal + 1 de cobertura');
+  const noTorso = c._planejarEquipar(manto, 'torso', [], BODY, { labelParte: label });
+  assert.deepEqual(plain(noTorso.extras), ['cabeca'], 'com o principal fora da parte, a cobertura cabe');
+}
+
+// === MODO DE USO (mãos) ====================================================
+// A 2ª mão é REQUISITO, ao contrário da cobertura dos slotsAdicionais.
+
+/** O módulo cru, para as funções que não precisam de catálogo. */
+function modulo() {
+  const c = { console: { warn() {}, log() {} } };
+  c.window = c;
+  vm.createContext(c);
+  vm.runInContext(src, c);
+  return c.EquipSlots;
+}
+
+// --- maosDoItem: a categoria manda; onde ela não decide, vale maosUsadas ----
+{
+  const ES = modulo();
+  assert.equal(ES.maosDoItem({ tipo: 'Arma', categoriaArma: 'duas_maos' }), 2);
+  assert.equal(ES.maosDoItem({ tipo: 'Arma', categoriaArma: 'duas_maos', maosUsadas: 1 }), 2,
+    'categoria fixa ignora a escolha do dono');
+  assert.equal(ES.maosDoItem({ tipo: 'Arma', categoriaArma: 'uma_mao' }), 1);
+  assert.equal(ES.maosDoItem({ tipo: 'Arma', categoriaArma: 'versatil', maosUsadas: 2 }), 2);
+  assert.equal(ES.maosDoItem({ tipo: 'Arma', categoriaArma: 'versatil' }), 1, 'sem escolha = 1 mão');
+  assert.equal(ES.maosDoItem({ tipo: 'Vestimenta', maosUsadas: 2 }), 1, 'só arma ocupa mão');
+  assert.equal(ES.escolheMaos({ tipo: 'Arma', categoriaArma: 'versatil' }), true);
+  assert.equal(ES.escolheMaos({ tipo: 'Arma', categoriaArma: 'distancia' }), true, 'arco também');
+  assert.equal(ES.escolheMaos({ tipo: 'Arma', categoriaArma: 'escudo' }), false);
+}
+
+// --- vinculoValeComMaos: o mesmo machado com dois conjuntos de VD ----------
+{
+  const ES = modulo();
+  const machado1 = { tipo: 'Arma', categoriaArma: 'versatil', maosUsadas: 1 };
+  const machado2 = { ...machado1, maosUsadas: 2 };
+  const sempre = { id: 'a' }, so1 = { id: 'b', maos: 1 }, so2 = { id: 'c', maos: 2 };
+  assert.equal(ES.vinculoValeComMaos(sempre, machado1), true);
+  assert.equal(ES.vinculoValeComMaos(sempre, machado2), true, 'sem maos = vale nos dois modos');
+  assert.equal(ES.vinculoValeComMaos(so1, machado1), true);
+  assert.equal(ES.vinculoValeComMaos(so1, machado2), false);
+  assert.equal(ES.vinculoValeComMaos(so2, machado2), true);
+  assert.equal(ES.vinculoValeComMaos(so2, machado1), false);
+  assert.equal(ES.vinculoValeComMaos({ id: 'd', maos: 0 }, machado2), true, '0 = sempre');
+}
+
+// --- formulaDanoPorMaos: instância vence modelo por inteiro ----------------
+{
+  const ES = modulo();
+  const tpl = { formulaDano: '1d8', formulaDano2Maos: '1d12' };
+  const uma = { tipo: 'Arma', categoriaArma: 'versatil', maosUsadas: 1 };
+  const duas = { ...uma, maosUsadas: 2 };
+  assert.equal(ES.formulaDanoPorMaos(uma, tpl), '1d8');
+  assert.equal(ES.formulaDanoPorMaos(duas, tpl), '1d12');
+  assert.equal(ES.formulaDanoPorMaos({ ...duas, formulaDano: '2d6' }, tpl), '2d6',
+    'peça com dado próprio não consulta mais o modelo');
+  assert.equal(ES.formulaDanoPorMaos({ ...duas, formulaDano2Maos: '3d6' }, tpl), '3d6');
+  assert.equal(ES.formulaDanoPorMaos(duas, { formulaDano: '1d6' }), '1d6', 'sem 2 mãos cadastrado, o mesmo dado');
+  assert.equal(ES.formulaDanoPorMaos({}, null), '');
+}
+
+// --- planejarEquipar reserva (e exige) a 2ª mão ----------------------------
+{
+  const c = ctx();
+  const montante = { id: 'm', tipo: 'Arma', categoriaArma: 'duas_maos' };
+
+  const ok = c._planejarEquipar(montante, 'mao_1', [], BODY);
+  assert.equal(ok.faltaMao, null);
+  assert.deepEqual(plain(ok.extras), ['mao_2'], 'a 2ª mão entra sem slotsAdicionais nenhum');
+  assert.equal(ok.maoExtra, 'mao_2');
+
+  const outraArma = [{ id: 'z', equipado: true, slotAnatomico: 'mao_2' }];
+  const falta = c._planejarEquipar(montante, 'mao_1', outraArma, BODY);
+  assert.match(falta.faltaMao, /1× Mão/, 'sem a 2ª mão livre, RECUSA — não é cobertura');
+  assert.deepEqual(plain(falta.extras), []);
+
+  // Versátil escolhendo 1 mão equipa com a outra mão ocupada.
+  const machado = { id: 'x', tipo: 'Arma', categoriaArma: 'versatil', maosUsadas: 1 };
+  assert.equal(c._planejarEquipar(machado, 'mao_1', outraArma, BODY).faltaMao, null);
+  assert.match(c._planejarEquipar({ ...machado, maosUsadas: 2 }, 'mao_1', outraArma, BODY).faltaMao, /Mão/);
+}
+
+// --- a 2ª mão não atropela a cobertura, e vice-versa -----------------------
+{
+  const c = ctx();
+  // Espadão que também prende no Braço: mão extra + cobertura no mesmo plano.
+  const arma = { id: 'a', tipo: 'Arma', categoriaArma: 'duas_maos',
+                 slotsAdicionais: [{ id: 'BRACO', quantidade: 2 }] };
+  const r = c._planejarEquipar(arma, 'mao_1', [], BODY);
+  assert.deepEqual(plain(r.extras), ['mao_2', 'braco_1', 'braco_2']);
+  assert.deepEqual(plain(r.naoCoube), []);
 }
 
 console.log('✅ equip-slots: todos os casos passaram');

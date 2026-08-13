@@ -430,6 +430,12 @@
                     <select id="aliadoEquipSlot" class="inv-form-select">${opts}</select></div>
                 <div class="inv-form-group" style="margin-top:10px"><label class="inv-form-label">Estado</label>
                     <select id="aliadoEquipEstado" class="inv-form-select">${estadoOpts}</select></div>
+                ${window.EquipSlots.escolheMaos(item) ? `
+                <div class="inv-form-group" style="margin-top:10px"><label class="inv-form-label">✋ Mãos</label>
+                    <select id="aliadoEquipMaos" class="inv-form-select">
+                        <option value="1" ${Number(item.maosUsadas) === 2 ? '' : 'selected'}>🤚 1 Mão</option>
+                        <option value="2" ${Number(item.maosUsadas) === 2 ? 'selected' : ''}>🤲 2 Mãos</option>
+                    </select></div>` : ''}
             </div>
             <div class="inv-modal-footer">
                 <button class="inv-btn-cancel" onclick="this.closest('.inv-modal').remove()">Cancelar</button>
@@ -446,13 +452,16 @@
         const estado = document.getElementById('aliadoEquipEstado')?.value;
         if (!slot || !estado) return;
 
+        const maos = Number(document.getElementById('aliadoEquipMaos')?.value)
+            || window.EquipSlots.maosDoItem(item);
+
         const nomeParte = pid => _aliadoBodyParts().find(b => b.id === pid)?.nome || pid;
-        const plano = window.EquipSlots.planejarEquipar(item, slot, AI.items, _bodySlots(), {
+        const plano = window.EquipSlots.planejarEquipar({ ...item, maosUsadas: maos }, slot, AI.items, _bodySlots(), {
             catalog: window._inventoryState?.catalog,
             labelParte: nomeParte,
         });
-        if (!plano.ok) {
-            alert(`"${item.nome}" precisa de slots que nao estao livres: ${plano.faltando.join(", ")}`);
+        if (plano.faltaMao) {
+            alert(`Falta ${plano.faltaMao} livre para empunhar esta arma. Desequipe algo antes.`);
             return;
         }
 
@@ -460,6 +469,7 @@
             const { doc, setDoc } = await _fs();
             await setDoc(doc(window.db, 'items', itemId), {
                 equipado: true, slotAnatomico: slot, slotsOcupados: plano.extras,
+                slotAnatomico2: plano.maoExtra, maosUsadas: maos,
                 estadoEquip: estado, parentItemId: null,
                 lastModified: new Date().toISOString()
             }, { merge: true });

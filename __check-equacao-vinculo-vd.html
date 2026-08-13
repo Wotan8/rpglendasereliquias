@@ -79,6 +79,24 @@ window._mechBoolAddTerm(`_DV_${fieldId}_dv1`);
 window._eqDvEqSync(fieldId, 'dv1');
 log(!('equacao' in hidden().find(p => p.id === 'dv1')), 'termo único vazio não persiste equação');
 
+// 7) pegada do vínculo (✋ mãos) — o mesmo machado com dois conjuntos de VD.
+//    O motor filtra por EquipSlots.vinculoValeComMaos (shared/equip-slots.js).
+const selMaos = () => document.querySelectorAll(`#${fieldId}_chips select`)[0];
+log(!!selMaos() && selMaos().options.length === 3, 'chip de VD tem o seletor de mãos com 3 opções');
+log(selMaos().value === '0', 'padrão é "sempre" (sem pegada gravada)');
+log(!('maos' in hidden().find(p => p.id === 'dv1')), 'pegada "sempre" não grava campo nenhum');
+
+window._eqDvSelMaosChange(fieldId, 'dv1', '2');
+log(hidden().find(p => p.id === 'dv1').maos === 2, 'escolher "só com 2 mãos" grava maos: 2');
+
+// confirm redesenha os chips — a pegada não pode se perder no caminho
+window._eqDvSelConfirm(fieldId);
+log(hidden().find(p => p.id === 'dv1').maos === 2, 'reconfirmar o seletor preserva a pegada');
+log(document.querySelectorAll(`#${fieldId}_chips select`)[0].value === '2', 'o chip redesenhado mostra a pegada gravada');
+
+window._eqDvSelMaosChange(fieldId, 'dv1', '0');
+log(!('maos' in hidden().find(p => p.id === 'dv1')), 'voltar para "sempre" remove o campo');
+
 document.title = (window.__failed ? '✘ FALHOU — ' : '✔ OK — ') + document.title;
 </script>
 </body>

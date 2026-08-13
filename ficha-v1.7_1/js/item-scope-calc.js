@@ -34,15 +34,19 @@ function applyItemBag(base, dvKey, bag) {
     return v;
 }
 
-/** Fórmula de dano do item: a da instância vence a do modelo do catálogo. */
+/**
+ * Fórmula de dano do item: a da instância vence a do modelo do catálogo.
+ * Empunhada com duas mãos, `formulaDano2Maos` vence o dado normal — é o
+ * machado que faz 1d12 nas duas mãos e 1d6 numa (ver shared/equip-slots.js).
+ */
 function getItemFormulaDano(item, catalog) {
     if (!item) return '';
-    if (item.formulaDano) return String(item.formulaDano).trim();
-    if (item.modeloId && Array.isArray(catalog)) {
-        const tpl = catalog.find(t => t.id === item.modeloId);
-        if (tpl && tpl.formulaDano) return String(tpl.formulaDano).trim();
-    }
-    return '';
+    const tpl = (item.modeloId && Array.isArray(catalog))
+        ? catalog.find(t => t.id === item.modeloId) : null;
+    const ES = (typeof window !== 'undefined' ? window : globalThis).EquipSlots;
+    const f = ES ? ES.formulaDanoPorMaos(item, tpl)
+        : (item.formulaDano || (tpl && tpl.formulaDano) || '');
+    return String(f || '').trim();
 }
 
 /** Rótulos do tipo de golpe físico. É o que diz qual das três Blindagens

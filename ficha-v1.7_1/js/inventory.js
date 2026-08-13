@@ -46,10 +46,6 @@ function _getCharacterBodySlots() {
    atalhos que injetam o catálogo/estado desta ficha. */
 const _slotsDoItem      = item => window.EquipSlots.slotsDoItem(item);
 const _itemOcupaSlot    = (item, slotKey) => window.EquipSlots.itemOcupaSlot(item, slotKey);
-const _slotsExtrasNecessarios = item =>
-    window.EquipSlots.slotsExtrasNecessarios(item, window._inventoryState?.catalog);
-const _reservarSlots    = (nec, bodySlots, ocupados, label) =>
-    window.EquipSlots.reservarSlots(nec, bodySlots, ocupados, label);
 
 // ===== EQUIP STATES — Estados de Equipamento =====
 const EQUIP_STATES = {
@@ -398,6 +394,9 @@ function applyEquippedItemsMechanics() {
 
             if (dvList && dvList.length > 0 && window.DERIVED_VALUES) {
                 for (const dvObj of dvList) {
+                    // Vínculo preso a uma pegada só vale naquela pegada: é o
+                    // "+4 de Dano com as duas mãos, +1 com uma" do mesmo machado.
+                    if (!window.EquipSlots.vinculoValeComMaos(dvObj, item)) continue;
                     const dvId = dvObj.id || dvObj;
                     const dvDef = window.DERIVED_VALUES.find(d => d.id === dvId);
                     if (!dvDef) continue;
@@ -1231,7 +1230,10 @@ window.openEquipModal = function(itemId) {
     const compatSlots = _getCompatibleSlots(item);
     const isWeapon = item.tipo === 'Arma';
     const weapCat = item.categoriaArma;
-    const isVersatil = weapCat === 'versatil';
+    // Quem escolhe a pegada: Versátil e Arma a Distância (o arco também é de
+    // duas mãos). A regra mora em shared/equip-slots.js — os quatro inventários
+    // usam a mesma, senão um espadão ocuparia uma mão só no NPC.
+    const isVersatil = window.EquipSlots.escolheMaos(item);
     const isDuasMaos = weapCat === 'duas_maos';
 
     let slotsToShow = compatSlots;
@@ -1468,40 +1470,21 @@ window.confirmEquip = async function(itemId) {
     const hands = st.selectedHands || 1;
 
     const bodySlots = _getCharacterBodySlots();
-    
-    // Validação: para arma de duas mãos ou versátil com 2 mãos
-    let otherHand = null;
-    if ((st.isDuasMaos || (st.isVersatil && hands === 2)) && bodySlots[slotKey]?.podeEmpunhar) {
-        // Encontrar outro slot que pode empunhar e não está ocupado
-        const items = window._inventoryState.items;
-        otherHand = Object.keys(bodySlots).find(k => {
-            if (k === slotKey) return false;
-            if (!bodySlots[k].podeEmpunhar) return false;
-            // Verificar se está ocupado
-            const isOccupied = items.some(i => _itemOcupaSlot(i, k) && i.equipado && i.estadoEquip !== 'armazenado');
-            return !isOccupied;
-        });
-
-        if (!otherHand) {
-            alert(`Não há outra mão/slot livre que possa empunhar a arma. Desequipe algo antes.`);
-            return;
-        }
-    }
-
-    // Slots adicionais do catálogo (armadura completa, set de peças). Somam-se à
-    // mão extra acima, que continua sendo o caso especial das armas de 2 mãos.
-    const jaTomados = [slotKey, otherHand].filter(Boolean);
-    const outrosItens = window._inventoryState.items.filter(i =>
-        i.id !== itemId && i.equipado && i.estadoEquip !== 'armazenado');
-    outrosItens.forEach(i => jaTomados.push(..._slotsDoItem(i)));
-
     const nomeParte = pid => (window.state?.partesDoCorpo || []).find(b => b.id === pid)?.nome || pid;
-    const reserva = _reservarSlots(_slotsExtrasNecessarios(item), bodySlots, jaTomados, nomeParte);
-    if (!reserva.ok) {
-        alert(`"${item.nome}" precisa de slots que não estão livres:\n\n• ${reserva.faltando.join('\n• ')}\n\nDesequipe algo antes.`);
+
+    // A 2ª mão da arma de duas mãos é REQUISITO (recusa se não houver); os
+    // slotsAdicionais do catálogo são COBERTURA (ocupa o que couber e segue).
+    // A pegada ainda não está gravada, então vai no item de mentira.
+    const plano = window.EquipSlots.planejarEquipar(
+        { ...item, maosUsadas: hands }, slotKey, window._inventoryState.items, bodySlots,
+        { catalog: window._inventoryState.catalog, labelParte: nomeParte });
+
+    if (plano.faltaMao) {
+        alert(`Não há outra mão/slot livre que possa empunhar a arma (falta ${plano.faltaMao}). Desequipe algo antes.`);
         return;
     }
-    const slotsExtras = [...(otherHand ? [otherHand] : []), ...reserva.slots];
+    const otherHand = plano.maoExtra;
+    const slotsExtras = plano.extras;
 
     // Desabilitar botão para evitar cliques duplos
     const btn = document.getElementById('btnConfirmEquip');

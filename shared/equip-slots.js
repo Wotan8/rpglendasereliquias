@@ -39,7 +39,7 @@
     }
 
     /**
-     * Slots extras que o item exige, além do principal.
+     * Slots extras que o item cobre, além do principal.
      * @returns {Array<{parteId: string, quantidade: number}>}
      */
     function slotsExtrasNecessarios(item, catalog) {
@@ -53,46 +53,98 @@
     }
 
     /**
-     * Escolhe slots livres para atender às exigências. Ou atende tudo, ou não
-     * reserva nada — meia reserva deixaria o personagem com o item pela metade.
+     * Reserva o que couber. Slot adicional é COBERTURA, não requisito: a armadura
+     * que cobre Torso + Ombros equipa no Torso mesmo que o personagem não tenha
+     * ombro, ou que só um esteja livre — ocupa o que dá e segue. O único slot
+     * exigido é o principal, que a própria ficha escolhe.
      *
      * @param {Array}    necessidades [{parteId, quantidade}]
      * @param {Object}   bodySlots    slotKey → {partId, ...}
      * @param {Array}    ocupados     slotKeys já tomados (inclui o principal)
      * @param {Function} labelParte   parteId → nome legível, para a mensagem
-     * @returns {{ok: boolean, slots: string[], faltando: string[]}}
+     * @returns {{slots: string[], naoCoube: string[]}} naoCoube é informativo
      */
     function reservarSlots(necessidades, bodySlots, ocupados, labelParte) {
         const nome = labelParte || (id => id);
         const usados = new Set(ocupados || []);
         const slots = [];
-        const faltando = [];
+        const naoCoube = [];
 
         for (const need of (necessidades || [])) {
             const livres = Object.keys(bodySlots || {})
                 .filter(k => bodySlots[k].partId === need.parteId && !usados.has(k));
 
-            if (livres.length < need.quantidade) {
-                faltando.push(`${need.quantidade}× ${nome(need.parteId)} (livre: ${livres.length})`);
-                continue;
-            }
-            for (let i = 0; i < need.quantidade; i++) {
+            const pega = Math.min(livres.length, need.quantidade);
+            for (let i = 0; i < pega; i++) {
                 usados.add(livres[i]);
                 slots.push(livres[i]);
             }
+            if (pega < need.quantidade) {
+                naoCoube.push(`${need.quantidade - pega}× ${nome(need.parteId)}`);
+            }
         }
-        return { ok: faltando.length === 0, slots, faltando };
+        return { slots, naoCoube };
+    }
+
+    // ===== MODO DE USO — quantas mãos a peça ocupa =====
+    // Ao contrário dos slotsAdicionais (cobertura, pega o que couber), a 2ª mão
+    // de uma arma de duas mãos é REQUISITO: sem ela a arma não equipa. A regra
+    // morava só em ficha-v1.7_1/js/inventory.js, então aliado, NPC e Tabuleiro
+    // deixavam um espadão ocupar uma mão só.
+
+    /** Categorias que decidem sozinhas; o resto pergunta ao dono. */
+    const MAOS_POR_CATEGORIA = { uma_mao: 1, duas_maos: 2, escudo: 1 };
+
+    /** A arma deixa o dono escolher 1 ou 2 mãos? (versátil, arma a distância) */
+    function escolheMaos(item) {
+        return item?.tipo === 'Arma' && !MAOS_POR_CATEGORIA[item.categoriaArma];
+    }
+
+    /** Mãos que a peça ocupa AGORA. Onde a categoria não decide, vale `maosUsadas`. */
+    function maosDoItem(item) {
+        if (!item || item.tipo !== 'Arma') return 1;
+        return MAOS_POR_CATEGORIA[item.categoriaArma]
+            || (Number(item.maosUsadas) === 2 ? 2 : 1);
+    }
+
+    /**
+     * Vínculo de Valor Derivado vale no modo atual do item?
+     * `maos` ausente ou 0 = vale sempre; 1 ou 2 = só naquele número de mãos.
+     * É o que dá "machado: +4 de Dano em duas mãos, +1 numa" sem regra nova.
+     */
+    function vinculoValeComMaos(vinculo, item) {
+        const m = Number(vinculo && vinculo.maos) || 0;
+        return !m || m === maosDoItem(item);
+    }
+
+    /**
+     * Fórmula de dano do modo atual. Instância vence modelo por INTEIRO — se a
+     * peça define qualquer dado próprio, o modelo não é mais consultado.
+     */
+    function formulaDanoPorMaos(item, tpl) {
+        const duas = maosDoItem(item) === 2;
+        const dado = (o) => (o && ((duas && o.formulaDano2Maos) || o.formulaDano)) || '';
+        return dado(item) || dado(tpl);
+    }
+
+    /** A 2ª mão: mesma parte do corpo do slot principal, +1. */
+    function maoExtraNecessaria(item, slotKey, bodySlots) {
+        if (maosDoItem(item) < 2) return [];
+        const parte = (bodySlots || {})[slotKey] && bodySlots[slotKey].partId;
+        return parte ? [{ parteId: parte, quantidade: 1 }] : [];
     }
 
     /**
      * Fecha o ciclo: dado o slot principal escolhido, devolve os extras a gravar
-     * em `slotsOcupados` — ou o que falta para poder recusar com mensagem.
+     * em `slotsOcupados`. Só recusa por falta da 2ª mão (`faltaMao` preenchido);
+     * a cobertura dos slotsAdicionais nunca recusa — ver reservarSlots.
      *
      * @param {Object} item      o item sendo equipado
      * @param {string} slotKey   slot principal escolhido
      * @param {Array}  todos     todos os itens do dono (para saber o que está tomado)
      * @param {Object} bodySlots mapa de slots do corpo
      * @param {Object} opts      {catalog, labelParte, extrasJaReservados}
+     * @returns {{faltaMao: ?string, maoExtra: ?string, naoCoube: string[], extras: string[]}}
      */
     function planejarEquipar(item, slotKey, todos, bodySlots, opts) {
         const o = opts || {};
@@ -102,12 +154,29 @@
             if (!i.equipado || i.estadoEquip === 'armazenado') return;
             jaTomados.push(...slotsDoItem(i));
         });
+
+        // Requisito, não cobertura: sem a 2ª mão livre, a arma não equipa.
+        const jaTemMao2 = (o.extrasJaReservados || []).length > 0;
+        const mao = reservarSlots(
+            jaTemMao2 ? [] : maoExtraNecessaria(item, slotKey, bodySlots),
+            bodySlots, jaTomados, o.labelParte);
+        if (mao.naoCoube.length) {
+            return { faltaMao: mao.naoCoube[0], maoExtra: null, naoCoube: [], extras: [] };
+        }
+        jaTomados.push(...mao.slots);
+
         const r = reservarSlots(
             slotsExtrasNecessarios(item, o.catalog), bodySlots, jaTomados, o.labelParte);
-        return { ok: r.ok, faltando: r.faltando, extras: (o.extrasJaReservados || []).concat(r.slots) };
+        return {
+            faltaMao: null,
+            maoExtra: mao.slots[0] || (o.extrasJaReservados || [])[0] || null,
+            naoCoube: r.naoCoube,
+            extras: (o.extrasJaReservados || []).concat(mao.slots, r.slots),
+        };
     }
 
     raiz.EquipSlots = {
         slotsDoItem, itemOcupaSlot, slotsExtrasNecessarios, reservarSlots, planejarEquipar,
+        escolheMaos, maosDoItem, vinculoValeComMaos, formulaDanoPorMaos,
     };
 })(typeof window !== 'undefined' ? window : globalThis);
