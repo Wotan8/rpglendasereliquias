@@ -13,7 +13,9 @@ import vm from 'node:vm';
 
 /* Extrai só renderDerivedValuesGrid do arquivo (o resto do módulo depende do DOM
    inteiro). Paramos na primeira linha que fecha a função na coluna 0. */
-const src = readFileSync(new URL('./derived-values.js', import.meta.url), 'utf8');
+// Normaliza CRLF: o recorte procura o fecho da função como '\n}\n', e o arquivo
+// vira CRLF toda vez que alguém o salva por um editor do Windows.
+const src = readFileSync(new URL('./derived-values.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const ini = src.indexOf('function renderDerivedValuesGrid()');
 const fim = src.indexOf('\n}\n', ini) + 3;
 assert.ok(ini > 0 && fim > ini, 'renderDerivedValuesGrid não encontrada');

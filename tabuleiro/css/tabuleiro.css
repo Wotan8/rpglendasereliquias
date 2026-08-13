@@ -622,7 +622,9 @@ html, body {
 /* selo de não lidas no botão 💬 da barra */
 .tb-chat-badge {
     position: absolute; top: -5px; right: -5px; min-width: 15px; height: 15px;
-    background: var(--lr-blood-2, #dc2626); color: #fff; border-radius: 999px;
+    /* --lr-blood é o token de FUNDO; --lr-blood-2 é o de TEXTO e clareia para
+       #C94F5C no tema escuro, deixando o branco em 4.42:1 (abaixo de AA). */
+    background: var(--lr-blood, #8B1E2D); color: #fff; border-radius: 999px;
     font-size: 10px; font-weight: 700; line-height: 15px; padding: 0 3px; text-align: center;
 }
 

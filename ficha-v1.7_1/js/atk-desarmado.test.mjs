@@ -35,7 +35,16 @@ ctx.window = ctx;
 for (const f of ['ficha-v1.7_1/js/item-scope-calc.js', 'shared/equip-slots.js', 'ficha-v1.7_1/js/inventory.js']) {
     vm.runInContext(fs.readFileSync(path.join(raiz, f), 'utf8'), ctx);
 }
-ctx._systemData = { bodyParts: [{ id: 'mao', podeGolpear: true }, { id: 'torso', podeGolpear: false }] };
+/* Dado e tipo do golpe vêm do CADASTRO da parte do corpo, não de constante no
+   código — a `DADO_DESARMADO = '1d4'` que existia em item-scope-calc.js foi
+   removida de propósito. Parte cadastrada sem formulaDano simplesmente não
+   golpeia, então o fixture precisa trazê-la como o Firestore traz. */
+ctx._systemData = {
+    bodyParts: [
+        { id: 'mao', podeGolpear: true, formulaDano: '1d4', tipoGolpe: ['contundente'] },
+        { id: 'torso', podeGolpear: false },
+    ],
+};
 ctx.DERIVED_VALUES = [
     { key: 'ACERTO_DESARMADO', nome: 'Acerto Desarmado', icone: '👊', escopoItem: 'coluna' },
     { key: 'DANO', nome: 'Dano', icone: '💥', escopoItem: 'dano' },
@@ -81,7 +90,7 @@ html = render([]);
 assert.match(html, /1d4\+9/, 'equação (4) vence o modificador (2)');
 
 // --- Vínculo em uma parte não vaza para as outras, e separa as linhas ---
-ctx._systemData.bodyParts.push({ id: 'pe', podeGolpear: true });
+ctx._systemData.bodyParts.push({ id: 'pe', podeGolpear: true, formulaDano: '1d4', tipoGolpe: ['contundente'] });
 ctx.state.partesDoCorpo.push({ id: 'pe', nome: 'Pé', icone: '🥾', slots: 1 });
 html = render([]);
 assert.deepEqual(linhasDesarmadas(html), ['🖐️ Mão ×2', '🥾 Pé'], 'Pé sem vínculo fica na sua própria linha');
