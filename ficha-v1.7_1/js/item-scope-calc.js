@@ -53,16 +53,31 @@ const TIPOS_GOLPE = {
     contundente: { nome: 'Contundente', icone: '🔨' },
 };
 
-/** Tipo de golpe do item: o da instância vence o do modelo do catálogo. */
-function getItemTipoGolpe(item, catalog) {
-    if (!item) return null;
+/** Tipos de golpe do item (1 OU MAIS — machado de guerra corta E esmaga):
+ *  instância vence modelo. O cadastro novo grava lista; docs antigos guardam
+ *  string única — os dois entram, na ordem cadastrada, sem repetição. */
+function getItemTiposGolpe(item, catalog) {
+    if (!item) return [];
     let t = item.tipoGolpe;
-    if (!t && item.modeloId && Array.isArray(catalog)) {
+    if ((t == null || t === '' || (Array.isArray(t) && !t.length)) && item.modeloId && Array.isArray(catalog)) {
         const tpl = catalog.find(x => x.id === item.modeloId);
         if (tpl) t = tpl.tipoGolpe;
     }
-    t = String(t || '').toLowerCase().trim();
-    return TIPOS_GOLPE[t] ? { chave: t, ...TIPOS_GOLPE[t] } : null;
+    const lista = Array.isArray(t) ? t : (t ? [t] : []);
+    const vistos = new Set();
+    const out = [];
+    for (const x of lista) {
+        const chave = String(x || '').toLowerCase().trim();
+        if (!TIPOS_GOLPE[chave] || vistos.has(chave)) continue;
+        vistos.add(chave);
+        out.push({ chave, ...TIPOS_GOLPE[chave] });
+    }
+    return out;
+}
+
+/** Compat: quem ainda espera UM tipo recebe o primeiro da lista. */
+function getItemTipoGolpe(item, catalog) {
+    return getItemTiposGolpe(item, catalog)[0] || null;
 }
 
 /** Formata um número para exibição: inteiro puro, senão até 2 casas decimais. */
@@ -157,9 +172,9 @@ function computeItemScopedTotals(item, ctx) {
     const temAlgo = !!formula || colunas.some(c => c.bonus !== 0);
 
     // Sem dado não há golpe: o tipo só significa algo grudado numa fórmula.
-    const tipoGolpe = formula ? getItemTipoGolpe(item, ctx.catalog) : null;
+    const tiposGolpe = formula ? getItemTiposGolpe(item, ctx.catalog) : [];
 
-    return { dano, tipoGolpe, canais, colunas, temAlgo };
+    return { dano, tiposGolpe, tipoGolpe: tiposGolpe[0] || null, canais, colunas, temAlgo };
 }
 
 /* Dado do golpe desarmado. Livro do Jogador, Cap. 6: "Desarmado: o dado é 1d4".
@@ -250,6 +265,7 @@ function computeGolpesDesarmados(ctx) {
             icone: slot.icon || '👊',
             dano: golpe.dano,
             tipoGolpe: { chave: 'contundente', ...TIPOS_GOLPE.contundente },
+            tiposGolpe: [{ chave: 'contundente', ...TIPOS_GOLPE.contundente }],
             canais: [],
             colunas: golpe.colunas,
         };
@@ -268,8 +284,9 @@ if (typeof window !== 'undefined') {
     window.computeGolpesDesarmados = computeGolpesDesarmados;
     window.getItemFormulaDano = getItemFormulaDano;
     window.getItemTipoGolpe = getItemTipoGolpe;
+    window.getItemTiposGolpe = getItemTiposGolpe;
     window.applyItemBag = applyItemBag;
 }
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { computeItemScopedTotals, computeGolpesDesarmados, getItemFormulaDano, getItemTipoGolpe, applyItemBag };
+    module.exports = { computeItemScopedTotals, computeGolpesDesarmados, getItemFormulaDano, getItemTipoGolpe, getItemTiposGolpe, applyItemBag };
 }

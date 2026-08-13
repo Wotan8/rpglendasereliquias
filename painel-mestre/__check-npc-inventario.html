@@ -42,8 +42,8 @@
 </div>
 
 <script type="module">
-import { renderNpcInventoryList } from './js/npc-inventario.js?c=7';
-import { coletarCampos, camposDaInstancia } from '../shared/equip-campos.js?v=4';
+import { renderNpcInventoryList } from './js/npc-inventario.js?c=8';
+import { coletarCampos, camposDaInstancia } from '../shared/equip-campos.js?v=5';
 
 const linhas = [];
 let ok = 0;
@@ -205,7 +205,7 @@ const form = $('#npcItemFormModal');
 const campo = (k) => $(`#field_${k}`, form);
 
 teste('T16 · o formulário traz os campos do cadastro que faltavam',
-    ['liga','qualidade','afiacao','reforco','blindagemQ0','preco','tags','pressaoBase','capacidadeContainer']
+    ['liga','qualidade','afiacao','reforco','blindagemQ0','preco','tags','pressaoBase','capacidadeContainer','tipoGolpe']
         .every(k => !!campo(k)));
 
 teste('T17 · os seletores do Criador vieram junto (VD com equação, vitais, atributos, perícias, condições, mecânicas)',

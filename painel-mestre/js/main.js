@@ -10,7 +10,8 @@ import { addLog } from './logs.js';
 // Cache-busting dos imports dinâmicos. Antes era Date.now(), que gerava uma URL
 // nova a cada troca de aba e anulava o cache HTTP e o service worker.
 // Subir junto com o VERSION do sw.js quando os módulos mudarem.
-const V = '?v=v56';
+const V = '?v=v57';
+window._pmV = V;   // imports tardios (area-mesas-npcs) usam a MESMA URL — uma instância só
 
 // ===== AREA MODULES (lazy-loaded on tab switch) =====
 let mesasModule = null;

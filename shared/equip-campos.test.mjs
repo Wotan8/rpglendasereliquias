@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import {
     CAMPOS_EQUIPAMENTO, camposDaInstancia, valorDoItem, herdaDoModelo, htmlCampo,
-    instanciarDoModelo,
+    instanciarDoModelo, itemAplicaEfeito, normalizaFormaEquipar,
 } from './equip-campos.js';
 
 // ===== integridade da spec =====
@@ -84,6 +84,22 @@ assert.equal(campo('multiplicadorPressao').showWhenBoolean, 'ehContainer');
 // escape: rótulo e valor são dado, nunca HTML
 assert.match(htmlCampo(campo('nome'), '<img onerror=1>', {}), /&lt;img onerror=1&gt;/);
 
+// ===== tipos de golpe (1 ou mais) =====
+const fTG = campo('tipoGolpe');
+assert.equal(fTG.type, 'multi_select', 'tipoGolpe permite mais de um');
+assert.deepEqual(fTG.options.map(o => o.value), ['cortante', 'perfurante', 'contundente']);
+assert.equal(herdaDoModelo('tipoGolpe'), true, 'em branco herda do modelo');
+// legado string marca a caixinha certa; lista marca as duas
+const hTG1 = htmlCampo(fTG, 'cortante', {});
+assert.match(hTG1, /value="cortante" checked/);
+assert.equal(/value="perfurante" checked/.test(hTG1), false);
+const hTG2 = htmlCampo(fTG, ['perfurante', 'contundente'], {});
+assert.match(hTG2, /value="perfurante" checked/);
+assert.match(hTG2, /value="contundente" checked/);
+// herança anuncia a LISTA legível, não "(definido)"
+const hTGherda = htmlCampo(fTG, null, { modelo: { tipoGolpe: ['perfurante', 'cortante'] } });
+assert.match(hTGherda, /herda do modelo: perfurante, cortante/);
+
 // ===== instanciar a partir do catálogo =====
 const tpl = {
     id: 'eq-adaga', nome: 'Adaga de Lastro', tipo: 'Arma', peso: 1, tamanho: 1,
@@ -92,7 +108,7 @@ const tpl = {
     ehContainer: false, pressaoBase: 1,
     // tudo abaixo HERDA — não pode ser copiado para a instância
     liga: '3', qualidade: '2', afiacao: 1, reforco: 0, blindagemQ0: 0, preco: 90,
-    formulaDano: '1d4', tags: ['metálico'],
+    formulaDano: '1d4', tags: ['metálico'], tipoGolpe: ['perfurante', 'cortante'],
     valoresDerivadosVinculados: [{ id: 'dv1', modificador: 2 }],
     statusVitaisVinculados: [{ id: 'vs1', modificador: 1 }],
     atributosVinculados: [{ id: 'FOR', modificador: -1 }],
@@ -127,6 +143,7 @@ assert.equal(semente.liga, '3');
 assert.equal(semente.qualidade, '2');
 assert.equal(semente.preco, 90);
 assert.equal(semente.formulaDano, '1d4');
+assert.deepEqual(semente.tipoGolpe, ['perfurante', 'cortante'], 'tipos de golpe vêm na cópia');
 
 // VD com equação: a estrutura aninhada tem de vir inteira
 const comEq = instanciarDoModelo({ id: 'x', nome: 'Y', valoresDerivadosVinculados: [
@@ -148,4 +165,36 @@ const hVazio = htmlCampo(CAMPOS_EQUIPAMENTO.find(f => f.key === 'liga'), null, {
 assert.match(hVazio, /herda do modelo: 3/);
 assert.deepEqual(instanciarDoModelo(null), {}, 'sem modelo, sem semente');
 
-console.log('✅ campos de equipamento: spec, herança instância→modelo, semente do catálogo e render OK');
+// ===== trava do "Segurar" =====
+// Segurar não aciona efeito nenhum: peça que faz alguma coisa tem de ser Empunhar.
+assert.equal(itemAplicaEfeito({ tipo: 'Objeto' }), false, 'peça inerte não aplica efeito');
+assert.equal(itemAplicaEfeito({ tipo: 'Arma' }), true, 'arma se empunha, mesmo sem dano cadastrado');
+assert.equal(itemAplicaEfeito({ tipo: 'Objeto', formulaDano: '1d6' }), true);
+for (const k of ['mecanicaIds', 'valoresDerivadosVinculados', 'statusVitaisVinculados',
+                 'condicaoIds', 'atributosVinculados', 'periciasVinculadas']) {
+    assert.equal(itemAplicaEfeito({ tipo: 'Objeto', [k]: [{ id: 'x' }] }), true, `${k} conta como efeito`);
+    assert.equal(itemAplicaEfeito({ tipo: 'Objeto', [k]: [] }), false, `${k} vazio não conta`);
+}
+
+const arco = { tipo: 'Arma', formaEquipar: 'segurar' };
+assert.equal(normalizaFormaEquipar(arco), true, 'avisa que corrigiu');
+assert.equal(arco.formaEquipar, 'empunhar');
+
+const totem = { tipo: 'Objeto', formaEquipar: 'segurar', valoresDerivadosVinculados: [{ id: 'dv1' }] };
+normalizaFormaEquipar(totem);
+assert.equal(totem.formaEquipar, 'empunhar', 'objeto com vínculo também sobe para empunhar');
+
+// o caso que Segurar existe para atender: continua intocado
+const erva = { tipo: 'Objeto', formaEquipar: 'segurar' };
+assert.equal(normalizaFormaEquipar(erva), false);
+assert.equal(erva.formaEquipar, 'segurar', 'peça inerte fica Segurar de propósito');
+
+// as outras formas nunca são mexidas
+for (const f of ['empunhar', 'vestir', 'fixar', undefined]) {
+    const i = { tipo: 'Arma', formaEquipar: f };
+    assert.equal(normalizaFormaEquipar(i), false, `${f} não é assunto desta trava`);
+    assert.equal(i.formaEquipar, f);
+}
+assert.equal(normalizaFormaEquipar(null), false, 'sem dado, sem crash');
+
+console.log('✅ campos de equipamento: spec, herança instância→modelo, semente do catálogo, render e trava do Segurar OK');

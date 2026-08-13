@@ -4,8 +4,8 @@ import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { ensureNpcSystemData, pecsDaOrigem, modulosDaClasseNpc, resolveNpcClassModule } from './npc-system-data.js?v=1.5';
-import { calcularNpc, ATTR_SIGLAS } from './npc-calc-engine.js?v=1.8';
-import './npc-inventario.js?v=6'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
+import { calcularNpc, ATTR_SIGLAS } from './npc-calc-engine.js?v=1.9';
+import './npc-inventario.js?v=7'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
 import { npcNaMesa, mesasDoNpc, espelhoMesaId } from '../../shared/npc-mesas.js';
 
 let currentEditingNpc = null;
@@ -1191,7 +1191,9 @@ function renderNpcAtaques() {
             <span class="atk-item-name">${escapeHtml(l.nome)}</span>
             ${l.estadoEquip ? `<small class="atk-item-state">${escapeHtml(l.estadoEquip)}</small>` : ''}
         </td>`;
-        if (temDano) html += `<td class="atk-dano">${l.dano ? escapeHtml(l.dano) : '—'}</td>`;
+        if (temDano) html += `<td class="atk-dano">${l.dano ? escapeHtml(l.dano) : '—'}${
+            (l.tiposGolpe || []).map(tg => `<small class="atk-tipo-golpe" title="Barrado pela Blindagem ${escapeHtml(tg.nome)} do alvo">${tg.icone} ${escapeHtml(tg.nome)}</small>`).join('')
+        }</td>`;
         for (const cd of colDefs) {
             const c = l.colunas.find(x => x.key === cd.key);
             if (!c) { html += '<td class="atk-val">—</td>'; continue; }

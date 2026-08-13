@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>__check — Janelas de Ficha de Combate</title>
 <link rel="stylesheet" href="../shared/tokens.css">
-<link rel="stylesheet" href="css/tabuleiro.css?v=12">
+<link rel="stylesheet" href="css/tabuleiro.css?v=13">
 <link rel="stylesheet" href="../shared/inventario-motor.css">
 <script src="../shared/equip-slots.js"></script>
 <style>
@@ -37,7 +37,7 @@
 import { T } from './js/tab-state.js';
 import { VITAIS } from './js/tab-hud.js';
 // ?v= bust: o http.server local deixa o navegador segurar o módulo antigo
-import { abrirFichaWin, _WINS } from './js/tab-ficha-win.js?v=7';
+import { abrirFichaWin, _WINS } from './js/tab-ficha-win.js?v=8';
 
 // ===== Registros do sistema (chaves de doc, como ensureNpcSystemData devolve) =====
 const dv = (id, nome, extra) => ({ id, key: id, nome, icone: extra.icone || '📊', prefixo: '', sufixo: extra.sufixo || '',
@@ -59,6 +59,7 @@ window._npcSys = {
     races: [RACA], classes: [CLASSE], tribes: [], mechanics: [],
     racesByNome: { humana: RACA }, classesByNome: { bruxa: CLASSE }, tribesByNome: {},
     equipment: [{ id: 'tpl1', nome: 'Adaga de Lastro (modelo)', formulaDano: '1d6', descricao: 'Lâmina curta lastreada.',
+        tipoGolpe: ['perfurante', 'cortante'],   // LISTA — o cadastro novo permite 1+
         // O cenário do bug: a arma vincula o acerto TIPADO com Equação de Valor.
         // O golpe tem de mostrar ESTA coluna com DES + Perícia — e não repetir
         // o Acerto global em cada linha.
@@ -202,6 +203,9 @@ async function rodar() {
     teste('T9b · NPC desarmado: Mão 2 livre golpeia 1d4; Mão 1 (com o Punhal) não vira linha',
         $$('.tb-fwin-atk', w1).some(a => txt(a).includes('Mão 2') && txt(a).includes('Desarmado') && txt(a).includes('1d4')) &&
         !$$('.tb-fwin-atk', w1).some(a => txt(a).includes('Mão 1')));
+    teste('T9d · tipos de golpe em LISTA: Punhal do NPC mostra Perfurante E Cortante (do modelo legado)',
+        $$('.tb-fwin-atk', w1).some(a => txt(a).includes('Punhal')
+            && txt(a).includes('Perfurante') && txt(a).includes('Cortante')));
     {
         // Layout do golpe: nome ⟷ VDs na linha 1, estado ⟷ dano na linha 2 — sem sobrepor
         const atk = $$('.tb-fwin-atk', w1).find(a => txt(a).includes('Punhal'));
@@ -315,6 +319,24 @@ async function rodar() {
             && txt(a).includes('Acerto Corpo a Corpo') && /\b4\b/.test(txt(a))
             && txt(a).includes('1.5')
             && !txt(a).includes('Acerto 7')));
+    teste('T22c · char: a Adaga (origemTemplateId) também mostra os dois tipos de golpe',
+        $$('.tb-fwin-atk', wc).some(a => txt(a).includes('Adaga')
+            && txt(a).includes('Perfurante') && txt(a).includes('Cortante')));
+    {
+        // Aperto: janela estreita esconde os NOMES (fica emoji + valor)
+        const antes = $$('.tb-fwin-atk.c1', wc).length + $$('.tb-fwin-atk.c2', wc).length;
+        wc.style.width = '230px';
+        _WINS.get('char:c1').aba = 'combate';
+        window._renderFichaWins();
+        const atkC = $$('.tb-fwin-atk', wc).find(a => txt(a).includes('Adaga'));
+        const c1 = atkC.classList.contains('c1'), c2 = atkC.classList.contains('c2');
+        const nomeChipOculto = !c1 || getComputedStyle($('.tb-fwin-chip-nome', atkC)).display === 'none';
+        const nomeTipoOculto = !c2 || getComputedStyle($('.tb-fwin-tg-nome', atkC)).display === 'none';
+        wc.style.width = '';
+        window._renderFichaWins();
+        teste('T22d · janela apertada: some o nome (fica emoji+valor) nos chips e nos tipos',
+            (c1 || c2) && nomeChipOculto && nomeTipoOculto && antes === 0);
+    }
     teste('T22b · char desarmado: duas Mãos livres fundem em "Mão ×2" com 1d4+2 e o Acerto global 7 (que É o alvo do punho)',
         $$('.tb-fwin-atk', wc).filter(a => txt(a).includes('Mão')).length === 1 &&
         $$('.tb-fwin-atk', wc).some(a => txt(a).includes('Mão ×2') && txt(a).includes('1d4+2') && txt(a).includes('Acerto 7')));

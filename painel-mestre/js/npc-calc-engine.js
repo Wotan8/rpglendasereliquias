@@ -767,6 +767,34 @@ function npcPecRefs(ctx) {
     return (ctx && ctx.pecRefs) ? ctx.pecRefs.filter(p => p && p.refId) : [];
 }
 
+/* Tipos de golpe físico — espelho de TIPOS_GOLPE (item-scope-calc.js): os
+ * dois motores são reimplementações paralelas por design. É o que diz quais
+ * das três Blindagens tipadas do alvo barram o dano. */
+const _NPC_TIPOS_GOLPE = {
+    cortante: { nome: 'Cortante', icone: '🗡️' },
+    perfurante: { nome: 'Perfurante', icone: '🏹' },
+    contundente: { nome: 'Contundente', icone: '🔨' },
+};
+
+/** Tipos de golpe do item (1 ou mais): instância vence modelo; string legada
+ *  vira lista de um. Sem repetição, na ordem do cadastro. */
+function _npcTiposGolpe(item, catalog) {
+    let t = item?.tipoGolpe;
+    if ((t == null || t === '' || (Array.isArray(t) && !t.length)) && item?.modeloId) {
+        t = (catalog || []).find(x => x.id === item.modeloId)?.tipoGolpe;
+    }
+    const lista = Array.isArray(t) ? t : (t ? [t] : []);
+    const vistos = new Set();
+    const out = [];
+    for (const x of lista) {
+        const chave = String(x || '').toLowerCase().trim();
+        if (!_NPC_TIPOS_GOLPE[chave] || vistos.has(chave)) continue;
+        vistos.add(chave);
+        out.push({ chave, ..._NPC_TIPOS_GOLPE[chave] });
+    }
+    return out;
+}
+
 /** Fórmula de dano do item: instância vence o modelo do catálogo. */
 function _npcFormulaDano(item, catalog) {
     if (item?.formulaDano) return String(item.formulaDano).trim();
@@ -975,6 +1003,8 @@ export function calcularNpc(npc, sys, opts = {}) {
                 nome: item.nome || 'Item',
                 tipo: item.tipo || 'Objeto',
                 estadoEquip: item.estadoEquip || null,
+                // sem dado não há golpe: o tipo só significa algo grudado numa fórmula
+                tiposGolpe: formula ? _npcTiposGolpe(item, ctx.equipCatalog) : [],
                 dano, colunas
             });
         }

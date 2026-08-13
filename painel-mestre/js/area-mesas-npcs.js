@@ -128,7 +128,7 @@ window._openMesaNpcEdit = async function(npcId) {
     // Dynamically load area-npcs.js if openNpcModal is not available
     if (!window.openNpcModal) {
         try {
-            await import('./area-npcs.js');
+            await import('./area-npcs.js' + (window._pmV || ''));
         } catch (e) { console.error('Erro ao carregar módulo NPC:', e); }
     }
     if (window.openNpcModal) {

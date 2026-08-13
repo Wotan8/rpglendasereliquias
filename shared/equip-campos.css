@@ -221,3 +221,6 @@ html.dark .eq-term-op {
 #npcItemFormModal .inv-modal-header,
 #npcItemFormModal .inv-modal-footer { flex: 0 0 auto; }
 #npcItemFormModal .inv-modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+
+/* ----- Grupo de opções múltiplas (Tipos de Golpe etc.) ----- */
+.inv-form-multi { display: flex; flex-wrap: wrap; gap: var(--lr-space-2) var(--lr-space-3); padding: 4px 0; }

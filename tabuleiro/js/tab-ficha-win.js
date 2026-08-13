@@ -65,8 +65,8 @@ async function carregarSys() {
     // publica computeGolpesDesarmados — a MESMA função da tabela da ficha.
     const [m, eng] = await Promise.all([
         import('../../painel-mestre/js/npc-system-data.js'),
-        import('../../painel-mestre/js/npc-calc-engine.js?v=1.8'),
-        import('../../ficha-v1.7_1/js/item-scope-calc.js'),
+        import('../../painel-mestre/js/npc-calc-engine.js?v=1.9'),
+        import('../../ficha-v1.7_1/js/item-scope-calc.js?v=2'),
     ]);
     _resolveMod = m.resolveNpcClassModule;
     _calcNpc = eng.calcularNpc;
@@ -641,6 +641,7 @@ function render(win, forcar) {
     win.el.querySelectorAll('.tb-fwin-aba').forEach(b => b.classList.toggle('ativa', b.dataset.aba === win.aba));
     win.el.querySelector('.tb-fwin-body').innerHTML =
         win.aba === 'inv' ? htmlInventario(win) : htmlCombate(win, fonte);
+    if (win.aba !== 'inv') compactarAtaques(win);
 }
 
 // ---- Aba Combate ----
@@ -933,7 +934,7 @@ function linhasAtaqueNpc(win, n) {
             linhas = (r.porItem || []).map(l => ({
                 nome: l.nome, estadoEquip: ESTADO_EQUIP[l.estadoEquip] || l.estadoEquip || '',
                 dano: l.dano, canais: [], colunas: l.colunas || [],
-                tipoGolpe: window.getItemTipoGolpe?.(itens.find(x => x.id === l.itemId), _sys.equipment) || null,
+                tiposGolpe: l.tiposGolpe || [],
             }));
             const finais = {};
             for (const [k, d] of Object.entries(r.derived || {})) finais[k] = d.final;
@@ -986,12 +987,27 @@ function linhasAtaqueChar(win, ch) {
         if (dano || colunas.some(c => c.bonus !== 0)) {
             linhas.push({ nome: i.nome || 'Item', estadoEquip: ESTADO_EQUIP[i.estadoEquip] || '',
                 dano, canais: formula ? canais : [], colunas,
-                tipoGolpe: window.getItemTipoGolpe?.(i, _sys.equipment) || null });
+                // getItemTiposGolpe só conhece modeloId; item legado usa origemTemplateId
+                tiposGolpe: window.getItemTiposGolpe?.(
+                    (!i.modeloId && i.origemTemplateId) ? { ...i, modeloId: i.origemTemplateId } : i,
+                    _sys.equipment) || [] });
         }
     }
     const dvsCtx = _sys.derivedValues.map(d => ({ ...d, key: normChave(d.nome) }));
     linhas.push(...linhasDesarmado(win, ch, dvsCtx, dt));
     return linhas;
+}
+
+/** Espremeu? Esconde os NOMES (fica emoji + valor); hover/toque revela.
+ *  Linha 1 aperta = nome da arma truncou; linha 2 aperta = dano encostou no
+ *  estado. Medido depois do repinte, uma classe por linha de golpe. */
+function compactarAtaques(win) {
+    for (const atk of win.el.querySelectorAll('.tb-fwin-atk')) {
+        const nome = atk.querySelector('.tb-fwin-atk-nome');
+        if (nome && nome.scrollWidth > nome.clientWidth + 1) atk.classList.add('c1');
+        const l2 = atk.querySelector('.tb-fwin-atk-l2');
+        if (l2 && l2.scrollWidth > l2.clientWidth + 1) atk.classList.add('c2');
+    }
 }
 
 function htmlAtaques(win, fonte) {
@@ -1002,11 +1018,11 @@ function htmlAtaques(win, fonte) {
         // global (FOR + Briga, Livro 6.3) — mostra o que for ≠ 0.
         const chips = l.colunas
             .filter(c => l.desarmado ? (c.bonus !== 0 || c.total !== 0) : c.bonus !== 0)
-            .map(c => `<span class="tb-fwin-canal" title="${esc(`${c.nome}: base ${fmtN(c.base)} ${c.bonus >= 0 ? '+' : '−'} ${fmtN(Math.abs(c.bonus))} (${l.desarmado ? 'parte' : 'item'})`)}">${esc(c.icone || '🎯')} ${esc(c.nome)} <b>${esc(String(c.prefixo || ''))}${fmtN(c.total)}${esc(String(c.sufixo || ''))}</b></span>`)
+            .map(c => `<span class="tb-fwin-canal" title="${esc(`${c.nome}: base ${fmtN(c.base)} ${c.bonus >= 0 ? '+' : '−'} ${fmtN(Math.abs(c.bonus))} (${l.desarmado ? 'parte' : 'item'})`)}">${esc(c.icone || '🎯')} <span class="tb-fwin-chip-nome">${esc(c.nome)}</span> <b>${esc(String(c.prefixo || ''))}${fmtN(c.total)}${esc(String(c.sufixo || ''))}</b></span>`)
             .join('');
         const nome = l.desarmado ? `${l.nome}${l.qtd > 1 ? ` ×${l.qtd}` : ''}` : l.nome;
         const rotulo = l.desarmado ? '👊 Desarmado' : l.estadoEquip;
-        const tg = l.tipoGolpe;
+        const tgs = l.tiposGolpe || (l.tipoGolpe ? [l.tipoGolpe] : []);
         return `<div class="tb-fwin-atk eq">
         <div class="tb-fwin-atk-l1">
             <span class="tb-fwin-atk-nome">${l.desarmado ? esc(l.icone || '👊') : '✊'} ${esc(nome)}</span>
@@ -1015,8 +1031,8 @@ function htmlAtaques(win, fonte) {
         <div class="tb-fwin-atk-l2">
             ${rotulo ? `<i class="tb-fwin-atk-est">${esc(rotulo)}</i>` : ''}
             <span class="tb-fwin-atk-fim">
-                ${l.dano ? `<b class="tb-fwin-atk-dano" title="Fórmula de dano${tg ? ` — barrado pela Blindagem ${tg.nome} do alvo` : ''}">💥 ${esc(l.dano)}</b>` : ''}
-                ${tg ? `<i class="tb-fwin-atk-est" title="Barrado pela Blindagem ${esc(tg.nome)} do alvo">${esc(tg.icone)} ${esc(tg.nome)}</i>` : ''}
+                ${l.dano ? `<b class="tb-fwin-atk-dano" title="Fórmula de dano">💥 ${esc(l.dano)}</b>` : ''}
+                ${tgs.map(tg => `<i class="tb-fwin-tg" title="Barrado pela Blindagem ${esc(tg.nome)} do alvo">${esc(tg.icone)} <span class="tb-fwin-tg-nome">${esc(tg.nome)}</span></i>`).join('')}
                 ${(l.canais || []).map(c => `<span class="tb-fwin-canal" title="${esc(c.nome)}">${esc(c.icone || '💥')}${fmtN(c.total)}</span>`).join('')}
             </span>
         </div>

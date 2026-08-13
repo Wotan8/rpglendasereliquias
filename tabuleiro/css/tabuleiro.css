@@ -669,6 +669,15 @@ html, body {
 .tb-fwin-atk-fim { display: inline-flex; align-items: center; gap: var(--lr-space-2); margin-left: auto; }
 .tb-fwin-atk-dano { color: var(--lr-blood-3); font-variant-numeric: tabular-nums; }
 .tb-fwin-atk-est { font-style: normal; font-size: .66rem; color: var(--lr-text-2); }
+.tb-fwin-tg { font-style: normal; font-size: .66rem; color: var(--lr-text-2); white-space: nowrap; }
+/* Espremeu (classes c1/c2 medidas no repinte): só o emoji fica; passar o
+   mouse OU segurar o toque no ícone revela o nome — e o title diz o mesmo. */
+.tb-fwin-atk.c1 .tb-fwin-chip-nome { display: none; }
+.tb-fwin-atk.c1 .tb-fwin-canal:hover .tb-fwin-chip-nome,
+.tb-fwin-atk.c1 .tb-fwin-canal:active .tb-fwin-chip-nome { display: inline; }
+.tb-fwin-atk.c2 .tb-fwin-tg-nome { display: none; }
+.tb-fwin-atk.c2 .tb-fwin-tg:hover .tb-fwin-tg-nome,
+.tb-fwin-atk.c2 .tb-fwin-tg:active .tb-fwin-tg-nome { display: inline; }
 .tb-fwin-atk.off { opacity: .6; }
 .tb-fwin-canal { background: var(--lr-bg-0); border-radius: 999px; padding: 0 6px; }
 

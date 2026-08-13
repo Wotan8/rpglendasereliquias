@@ -41,9 +41,11 @@ export const CAMPOS_EQUIPAMENTO = [
     // completa = +1 Pernas, +2 Braço. Bloqueia equipar se faltar slot livre.
     { key: 'slotsAdicionais', label: '🧩 Slots Adicionais Ocupados (além do slot principal)', type: 'mechanic_selector', selectorTarget: 'bodyPartsQuantidade' },
     {
+        // ⚠️ Segurar NÃO aciona efeito nenhum (ver normalizaFormaEquipar abaixo).
+        // Item de mão que faz alguma coisa é Empunhar, sempre.
         key: 'formaEquipar', label: 'Forma de equipar', type: 'select', options: [
-            { value: 'segurar', label: 'Segurar' },
-            { value: 'empunhar', label: 'Empunhar' },
+            { value: 'segurar', label: 'Segurar — só peça inerte (NÃO aplica efeito)' },
+            { value: 'empunhar', label: 'Empunhar — item de mão que aplica efeito' },
             { value: 'vestir', label: 'Vestir' },
             { value: 'fixar', label: 'Fixar' }
         ]
@@ -99,6 +101,18 @@ export const CAMPOS_EQUIPAMENTO = [
     { key: 'pesoMaximoContainer', label: 'Peso Máximo Suportado (Container)', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
     { key: 'capacidadeContainer', label: 'Capacidade do Container (slots antigos)', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
     { key: 'formulaDano', label: '💥 Fórmula de Dano', type: 'text', placeholder: 'Ex: 1d10, 2d6 — bônus numéricos vêm dos Valores Derivados' },
+    {
+        // Qual Blindagem TIPADA do alvo barra este dano. 1 ou mais — um machado
+        // de guerra corta E esmaga. Antes só existia via script
+        // (functions/tipo-golpe-armas.mjs, string única); os leitores
+        // normalizam string → lista, então o legado continua valendo.
+        key: 'tipoGolpe', label: '🗡️ Tipos de Golpe (qual Blindagem tipada barra — 1 ou mais)', type: 'multi_select',
+        options: [
+            { value: 'cortante', label: '🗡️ Cortante' },
+            { value: 'perfurante', label: '🏹 Perfurante' },
+            { value: 'contundente', label: '🔨 Contundente' },
+        ]
+    },
     { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: 'item' },
     { key: 'valoresDerivadosVinculados', label: 'Valores Derivados Vinculados', type: 'mechanic_selector', selectorTarget: 'equipmentDerivedValues' },
     // "Máxima" = bônus enquanto equipado. "Atual" = efeito de uso único,
@@ -111,6 +125,36 @@ export const CAMPOS_EQUIPAMENTO = [
     { key: 'condicaoIds', label: '💀 Condições Aplicadas ao Usar', type: 'mechanic_selector', selectorTarget: 'conditions' },
 ];
 
+// ===== TRAVA DA FORMA DE EQUIPAR =====
+/**
+ * Campos que, preenchidos, fazem a peça produzir efeito em alguém.
+ * Arma entra por tipo: arma se empunha, tendo dano cadastrado ou não.
+ */
+const VINCULOS_DE_EFEITO = ['mecanicaIds', 'valoresDerivadosVinculados', 'statusVitaisVinculados',
+    'condicaoIds', 'atributosVinculados', 'periciasVinculadas'];
+
+export const itemAplicaEfeito = (i) => VINCULOS_DE_EFEITO.some(k => (i?.[k] || []).length > 0)
+    || !!String(i?.formulaDano || '').trim()
+    || i?.tipo === 'Arma';
+
+/**
+ * Trava de gravação: "Segurar" desliga TODO efeito do item — itemFormasAtuais()
+ * em ficha-v1.7_1/js/inventory.js devolve ['segurando'] e nunca 'efeitos' para
+ * o estado 'segurar'. Peça com vínculo mecânico cadastrada como Segurar fica
+ * MUDA na ficha: o arco não soma acerto, o escudo não soma Blindagem.
+ *
+ * Segurar existe só para peça inerte (erva, receita, tinta, comida, moeda).
+ * Qualquer outra coisa de mão é Empunhar — e esta função corrige em silêncio em
+ * vez de deixar passar, porque o erro não dá sintoma nenhum na hora do cadastro.
+ *
+ * Corrige `dados` no lugar. Devolve true se mexeu.
+ */
+export function normalizaFormaEquipar(dados) {
+    if (dados?.formaEquipar !== 'segurar' || !itemAplicaEfeito(dados)) return false;
+    dados.formaEquipar = 'empunhar';
+    return true;
+}
+
 /** Os campos que a edição de UMA instância mostra (tira os de catálogo). */
 export const camposDaInstancia = () => CAMPOS_EQUIPAMENTO.filter(f => !f.soCatalogo);
 
@@ -121,7 +165,7 @@ export const valorDoItem = (item, f) => (f.key === 'imagemUrl' ? (item?.imagem ?
 const HERDA_DO_MODELO = new Set([
     'liga', 'qualidade', 'afiacao', 'reforco', 'blindagemQ0', 'preco', 'formulaDano',
     'valoresDerivadosVinculados', 'statusVitaisVinculados', 'atributosVinculados',
-    'periciasVinculadas', 'condicaoIds', 'slotsAdicionais', 'tags',
+    'periciasVinculadas', 'condicaoIds', 'slotsAdicionais', 'tags', 'tipoGolpe',
 ]);
 export const herdaDoModelo = (key) => HERDA_DO_MODELO.has(key);
 
@@ -175,7 +219,7 @@ export function htmlCampo(f, valor, { sel, caches, modelo, prefixo = '' } = {}) 
     const req = f.required ? ' <span class="required">*</span>' : '';
     const herdado = modelo && herdaDoModelo(f.key) ? modelo[f.key] : undefined;
     const dica = (!vazio(herdado) && vazio(valor))
-        ? `herda do modelo: ${esc(typeof herdado === 'object' ? '(definido)' : herdado)}`
+        ? `herda do modelo: ${esc(Array.isArray(herdado) ? herdado.join(', ') : (typeof herdado === 'object' ? '(definido)' : herdado))}`
         : (f.placeholder || '');
     const rot = `<label class="inv-form-label" for="${id}">${esc(f.label)}${req}</label>`;
     const larga = ['textarea', 'tags', 'mechanic_selector', 'body_parts_selector'].includes(f.type);
@@ -211,6 +255,14 @@ export function htmlCampo(f, valor, { sel, caches, modelo, prefixo = '' } = {}) 
             <small class="inv-form-hint">Separe por vírgula.</small></div>`;
     }
 
+    if (f.type === 'multi_select') {
+        const marcados = Array.isArray(valor) ? valor : (valor ? [valor] : []);
+        const boxes = (f.options || []).map(o =>
+            `<label class="inv-form-check"><input type="checkbox" value="${esc(o.value)}" ${marcados.includes(o.value) ? 'checked' : ''}><span>${esc(o.label)}</span></label>`).join('');
+        return `${abre}${rot}<div id="${id}" class="inv-form-multi">${boxes}</div>
+            ${dica && vazio(valor) ? `<small class="inv-form-hint">${esc(dica)}</small>` : ''}</div>`;
+    }
+
     if (f.type === 'select') {
         const opts = (f.options || []).map(o =>
             `<option value="${esc(o.value)}" ${String(valor ?? '') === String(o.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
@@ -241,6 +293,7 @@ export function coletarCampo(f, prefixo = '') {
         try { return JSON.parse(el.value || '[]'); } catch { return []; }
     }
     if (f.type === 'boolean') return el.checked;
+    if (f.type === 'multi_select') return Array.from(el.querySelectorAll('input:checked')).map(x => x.value);
     if (f.type === 'body_parts_selector') return Array.from(el.selectedOptions).map(o => o.value);
     if (f.type === 'tags') return el.value.split(',').map(s => s.trim()).filter(Boolean);
     if (f.type === 'number') return el.value === '' ? null : Number(el.value);
@@ -256,6 +309,7 @@ export function coletarCampos(campos, prefixo = '') {
         if (v === undefined) continue;
         out[f.key] = (herdaDoModelo(f.key) && vazio(v)) ? null : v;
     }
+    normalizaFormaEquipar(out);
     return out;
 }
 

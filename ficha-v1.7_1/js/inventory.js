@@ -640,10 +640,11 @@ function renderActiveEffects() {
                 ${rotulo}
             </td>`;
         if (temDano) {
-            // O tipo diz qual das três Blindagens do alvo barra este golpe.
-            const tg = l.tipoGolpe;
+            // Os tipos dizem quais das três Blindagens do alvo barram este
+            // golpe (1 ou mais — machado de guerra corta E esmaga).
+            const tgs = l.tiposGolpe || (l.tipoGolpe ? [l.tipoGolpe] : []);
             html += `<td class="atk-dano">${l.dano ? _escHtml(l.dano) : '—'}`
-                + (tg ? `<small class="atk-tipo-golpe" title="Barrado pela Blindagem ${_escHtml(tg.nome)} do alvo">${tg.icone} ${_escHtml(tg.nome)}</small>` : '')
+                + tgs.map(tg => `<small class="atk-tipo-golpe" title="Barrado pela Blindagem ${_escHtml(tg.nome)} do alvo">${tg.icone} ${_escHtml(tg.nome)}</small>`).join('')
                 + '</td>';
         }
         if (temCanais) {
@@ -1883,7 +1884,7 @@ window.openItemDetail = function(itemId) {
             escopoHtml = `<div class="inv-detail-escopo${ativo ? '' : ' inv-escopo-inativo'}">
                 <span class="inv-detail-label">⚔️ Com este item${ativo ? '' : ' <em>(efeitos inativos — equipe na forma prevista)</em>'}</span>
                 ${r.dano ? `<div class="inv-escopo-row"><span class="inv-escopo-nome">💥 Dano</span>${
-                    r.tipoGolpe ? `<span class="inv-escopo-calc" title="Barrado pela Blindagem ${_escHtml(r.tipoGolpe.nome)} do alvo">${r.tipoGolpe.icone} ${_escHtml(r.tipoGolpe.nome)}</span>` : ''
+                    (r.tiposGolpe || []).map(tg => `<span class="inv-escopo-calc" title="Barrado pela Blindagem ${_escHtml(tg.nome)} do alvo">${tg.icone} ${_escHtml(tg.nome)}</span>`).join('')
                 }<span class="inv-escopo-total inv-escopo-dano">${_escHtml(r.dano)}</span></div>` : ''}
                 ${canaisHtml}
                 ${linhas}
@@ -2682,6 +2683,14 @@ window.saveInventoryItemForm = async function() {
         multiplicadorPressao: isContainer ? (parseFloat(document.getElementById('invFormMultPressao')?.value) || 1) : null,
         pressaoBase: parseFloat(document.getElementById('invFormPeso')?.value) || 1
     };
+
+    // "Segurar" desliga TODO efeito do item (ver itemFormasAtuais acima), então
+    // arma ou peça com dano nunca sai daqui como Segurar. Mesma regra de
+    // normalizaFormaEquipar() em shared/equip-campos.js — aqui inline porque
+    // este arquivo é script clássico e não importa módulo.
+    if (itemData.formaEquipar === 'segurar' && (itemData.tipo === 'Arma' || itemData.formulaDano)) {
+        itemData.formaEquipar = 'empunhar';
+    }
 
     // Herdar campos do template se modeloId existe
     if (itemData.modeloId) {

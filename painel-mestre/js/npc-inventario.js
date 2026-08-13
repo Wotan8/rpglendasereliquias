@@ -19,7 +19,7 @@ import {
 import {
     camposDaInstancia, valorDoItem, htmlCampo, coletarCampos, aplicarVisibilidade,
     instanciarDoModelo,
-} from '../../shared/equip-campos.js?v=4';
+} from '../../shared/equip-campos.js?v=5';
 
 // Estado local. `abertos`/`contAbertos` são do motor de inventário
 // (shared/inventario-motor.js), o mesmo da Ficha de Combate do Tabuleiro.
