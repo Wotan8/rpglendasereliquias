@@ -18,6 +18,13 @@ const PING_DUR = 2200;
 let ultEnvio = 0;
 let heartbeatTimer = null;
 let minhaCor = '#f472b6';
+// Doc de presença publicado agora? Evita deleteDoc repetido a cada heartbeat
+// quando o cursor está desligado/oculto (era 1 delete a cada 10s à toa).
+let publicado = false;
+// 🫥 Mestre: cursor invisível para os jogadores (por sessão, alternado pelo atalho)
+let mouseOculto = false;
+const CHAVE_ATALHO_MOUSE = 'tb_atalho_mouse';
+export const atalhoMouseOculto = () => localStorage.getItem(CHAVE_ATALHO_MOUSE) || 'F9';
 // Identidade desta ABA. O uid não serve para dizer "fui eu": o mestre tem duas
 // telas na mesma conta (secreta e o Público na TV), e o que a secreta manda
 // precisa chegar na pública.
@@ -72,7 +79,29 @@ export function initPresenca() {
         };
     }
     window.addEventListener('beforeunload', () => { try { publicarCursor(null, true); } catch (e) {} });
+
+    // 🫥 Atalho do mestre: some/volta o cursor dele nas telas dos jogadores.
+    // A tecla é por aparelho (localStorage) e configurável no ⚙️ do canvas.
+    if (T.isMaster) {
+        window.addEventListener('keydown', e => {
+            if (e.target.matches?.('input,textarea,select')) return;
+            if (e.key !== atalhoMouseOculto()) return;
+            e.preventDefault();
+            mouseOculto = !mouseOculto;
+            if (mouseOculto) publicarCursor(null, true);   // some na hora, não no próximo TTL
+            toast(mouseOculto ? '🫥 Seu cursor está invisível para os jogadores' : '👁️ Seu cursor voltou a aparecer para os jogadores');
+        });
+    }
 }
+
+/** Captura a tecla no campo do ⚙️ e grava como atalho do cursor invisível. */
+window.tbCapturarAtalhoMouse = function(ev, el) {
+    ev.preventDefault(); ev.stopPropagation();
+    if (['Shift', 'Control', 'Alt', 'Meta'].includes(ev.key)) return;   // modificador sozinho não é atalho
+    localStorage.setItem(CHAVE_ATALHO_MOUSE, ev.key);
+    el.value = ev.key;
+    toast(`🫥 Atalho do cursor invisível: ${ev.key}`);
+};
 function atualizarBotao(btn) {
     btn.classList.toggle('tb-btn-primary', cursoresAtivados());
     btn.title = cursoresAtivados() ? 'Cursores ao vivo: ATIVADOS' : 'Cursores ao vivo: desativados';
@@ -87,17 +116,19 @@ function corDeUid(u) {
 /** Publica a posição do cursor (mundo). Chamado no pointermove das ferramentas. */
 export function publicarCursor(mundo, forcado = false) {
     if (!T.user || !T.canvasId) return;
-    if (!cursoresAtivados() && !forcado) return;
+    if ((!cursoresAtivados() || mouseOculto) && !forcado) return;
     const agora = Date.now();
     if (!forcado && agora - ultEnvio < CURSOR_THROTTLE) return;
     ultEnvio = agora;
     T._ultimoCursorMundo = mundo;
     const nome = T.isMaster ? 'Mestre' : (T.usersMap[T.user.uid]?.nome || 'Jogador');
-    const payload = (mundo && cursoresAtivados())
+    const payload = (mundo && cursoresAtivados() && !mouseOculto)
         ? { x: Math.round(mundo.x), y: Math.round(mundo.y), nome, cor: minhaCor, t: agora, canvasId: T.canvasId }
         : null;
-    // doc próprio: overwrite inteiro (é minúsculo); sumir = apagar o doc
-    (payload ? setDoc(refPresenca(T.user.uid), payload) : deleteDoc(refPresenca(T.user.uid))).catch(() => {});
+    // doc próprio: overwrite inteiro (é minúsculo); sumir = apagar o doc.
+    // Só apaga se está publicado — heartbeat com cursor desligado não paga delete.
+    if (payload) { publicado = true; setDoc(refPresenca(T.user.uid), payload).catch(() => {}); }
+    else if (publicado) { publicado = false; deleteDoc(refPresenca(T.user.uid)).catch(() => {}); }
 }
 
 /** Cursores remotos válidos (mesmo canvas, dentro do TTL). */

@@ -10,7 +10,7 @@ import { T, esc, ico, toast, markDirty, uid, can, selecionar, bonusIniciativa, D
 import { refCombate } from './tab-main.js';
 import { updObj, delObj, abrirPropriedades } from './tab-objects.js';
 import { SENSORES } from './tab-fog.js';
-import { cenaAtiva, comCenaAtivaPatch } from '../../shared/combate-cenas.js';
+import { cenaAtiva, comCenaAtivaPatch, condDoParticipante } from '../../shared/combate-cenas.js';
 
 // charId -> { hp, hpMax, ener, enerMax, san, sanMax, conds:[{icone,nome}] }
 export const VITAIS = new Map();
@@ -63,7 +63,7 @@ export function vitaisDoToken(o) {
         if (!v) return null;
         // condições extras vindas do combate
         const p = participanteDoToken(o);
-        const conds = [...v.conds, ...((p?.condicoes || []).map(n => ({ icone: '☠️', nome: n })))];
+        const conds = [...v.conds, ...((p?.condicoes || []).map(condDoParticipante))];
         return { ...v, conds };
     }
     const p = participanteDoToken(o);
@@ -90,7 +90,7 @@ export function vitaisDoToken(o) {
         hp: p.hpCurrent ?? 0, hpMax: p.hpMax ?? 0,
         ener: p.enerCurrent ?? 0, enerMax: p.enerMax ?? 0,
         san: p.sanCurrent ?? 0, sanMax: p.sanMax ?? 100,
-        conds: (p.condicoes || []).map(n => ({ icone: '☠️', nome: n })),
+        conds: (p.condicoes || []).map(condDoParticipante),
     };
 }
 
@@ -101,9 +101,9 @@ export function participanteDoToken(o) {
     return parts.find(p => p.isCustom && p.name === o.nome) || null;
 }
 
-/** Barras visíveis para o usuário atual? (config por token: todos|dono|mestre|off) */
+/** Barras visíveis para o usuário atual? (por token: todos|dono|mestre|off; vazio = padrão do canvas) */
 export function barrasVisiveis(o) {
-    const modo = o.barras || 'todos';
+    const modo = o.barras || T.canvas?.barrasPadrao || 'todos';
     if (modo === 'off') return false;
     if (T.mode === 'secret') return true;   // no público (TV) nem o mestre vê barra de mestre
     if (modo === 'mestre') return false;

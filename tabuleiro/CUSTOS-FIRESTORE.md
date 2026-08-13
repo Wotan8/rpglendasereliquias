@@ -15,6 +15,7 @@ Estimativas para uma sessão típica: **1 mestre + 4 jogadores, 3 horas**, mesa 
 | Janela de ficha: mover p/ contêiner · juntar pilha · dropar no mapa · equipar/desequipar | 1 write ou 1 batch por soltar (ação explícita, sem throttle) | tab-ficha-win |
 | Soltos ficam para trás (token andou ≥ ½ célula) | 1 query de itens + 1 batch, com debounce de **1,5s por token** (rajada de setas/arrastos = 1 viagem) | tab-mostrar / tab-tools |
 | Ping | 1 write por ping (ação explícita) | tab-presenca |
+| 🎲 Rolagem de dado | 1 write por rolagem (ação explícita; secreta = 0 writes) | tab-dados |
 
 ## Leituras
 

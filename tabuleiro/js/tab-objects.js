@@ -459,7 +459,7 @@ export function abrirPropriedades(id, soAtualizar) {
         <label>Tipo de visão<select onchange="tbPropDeep('${id}','visao','tipo',this.value)">${SENSORES.map(x=>`<option value="${x.id}" ${((o.visao?.tipo)||'padrao')===x.id?'selected':''}>${x.nome}</option>`).join('')}</select></label>
         <label class="tb-check"><input type="checkbox" ${o.invisivel?'checked':''} onchange="tbProp('${id}','invisivel',this.checked)"> 👻 Invisível</label>
         <label>Elevação<input type="number" step="0.5" value="${o.elev||0}" onchange="tbProp('${id}','elev',parseFloat(this.value)||0)"></label>
-        <label>Barras de vitais<select onchange="tbProp('${id}','barras',this.value)">${[['todos','Todos veem'],['dono','Só o dono'],['mestre','Só o mestre'],['off','Ocultas']].map(x=>`<option value="${x[0]}" ${((o.barras)||'todos')===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+        <label>Barras de vitais<select onchange="tbProp('${id}','barras',this.value)">${[['','Padrão da mesa'],['todos','Todos veem'],['dono','Só o dono'],['mestre','Só o mestre'],['off','Ocultas']].map(x=>`<option value="${x[0]}" ${((o.barras)||'')===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
         <label class="tb-check"><input type="checkbox" ${o.luz?.ativa?'checked':''} onchange="tbPropDeep('${id}','luz','ativa',this.checked)"> Emite luz</label>
         <label>Alcance luz<input type="number" step="0.5" value="${o.luz?.alcance||3}" onchange="tbPropDeep('${id}','luz','alcance',parseFloat(this.value)||0)"></label>
         <label>Cor da luz<input type="color" value="${o.luz?.cor||'#ffdd99'}" onchange="tbPropDeep('${id}','luz','cor',this.value)"></label>

@@ -74,6 +74,14 @@ export function initMusica() {
         aplicar();
     }, e => console.warn('musica', e)));
 
+    // 🔓 Autoplay barrado era o "às vezes não toca": o jogador abria a página com
+    // música no ar, o navegador segurava o play e o botão de destravar passava
+    // batido. Qualquer gesto na página (que é o que o navegador exige) já
+    // destrava e retenta — o botão continua existindo como aviso.
+    const destravarPorGesto = () => { if (bloqueado) window.tbMusDestravar(); };
+    document.addEventListener('pointerdown', destravarPorGesto, true);
+    document.addEventListener('keydown', destravarPorGesto, true);
+
     render();
 }
 
@@ -236,7 +244,14 @@ window.tbMusToggleFaixa = (fid) => noAr(fid) ? pararRemoto(fid) : tocarRemoto(fi
 window.tbMusPararTudo = () => { dados.tocando = {}; aplicar(); salvar(); };
 window.tbMusRecolher = () => { recolhida = !recolhida; render(); };
 window.tbMusPlaylist = (pid) => { dados.ativa = pid; salvar(); render(); };
-window.tbMusDestravar = () => { bloqueado = false; for (const t of tocadores.values()) t.retomar(); render(); };
+// Destravar retoma o que está pausado E retenta o que falhou (faixa que deu erro
+// de rede uma vez ficava marcada em `falhas` e este cliente nunca mais a tocava).
+window.tbMusDestravar = () => {
+    bloqueado = false;
+    falhas.clear();
+    for (const t of tocadores.values()) t.retomar();
+    aplicar();   // recria os tocadores das faixas que falharam (e já re-renderiza)
+};
 
 /** Volume da faixa (sincroniza com a mesa). Aplica na hora, grava com folga. */
 window.tbMusVolume = (fid, v) => {

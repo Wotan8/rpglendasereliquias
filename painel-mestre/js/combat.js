@@ -451,7 +451,8 @@ function pintarCombate() {
         // Condições: as do combate (aplicadas no Tabuleiro) + as da ficha. Aqui é
         // leitura — quem aplica e tira é o Tabuleiro ou a ficha, e as duas pontas
         // escrevem nos mesmos docs, então isto reflete na hora.
-        const conds = [...new Set([...(p.condicoes || []), ...(p.__conds || [])])];
+        // condição nova é objeto {nome, icone, expiraNaRodada}; a legada é string
+        const conds = [...new Set([...(p.condicoes || []).map(c => (c && c.nome) || c), ...(p.__conds || [])])];
         const condsHtml = conds.length
             ? `<div class="combat-conds">${conds.map(c => `<span class="combat-cond">${escapeHtml(c)}</span>`).join('')}</div>`
             : '';

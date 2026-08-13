@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {
     CENA_PADRAO, novaCena, cenasDoDoc, cenaAtiva, idCenaAtiva,
     docDeCenas, comCena, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena,
+    condDoParticipante, tirarCondicoesExpiradas,
 } from './combate-cenas.js';
 
 const p = (n) => ({ id: n, name: n, initiative: 1 });
@@ -73,4 +74,31 @@ const semNada = semCena(docDeCenas([novaCena('unica', 'Só essa')], 'unica'), 'u
 assert.equal(semNada.cenas.length, 1, 'sempre sobra uma cena para o combate existir');
 assert.deepEqual(semNada.participantes, []);
 
-console.log('✅ combate-cenas: doc antigo, espelho da cena ativa, troca, patch isolado, criar e apagar OK');
+// =====================================================================
+// CONDIÇÕES — legado (string) e objeto convivem no mesmo array
+// =====================================================================
+assert.deepEqual(condDoParticipante('Caído'),
+    { nome: 'Caído', icone: '☠️', descricao: '', expiraNaRodada: null }, 'string legada vira objeto completo');
+assert.equal(condDoParticipante({ nome: 'Queimando', icone: '🔥', expiraNaRodada: 4 }).icone, '🔥');
+assert.equal(condDoParticipante({ nome: 'X' }).expiraNaRodada, null, 'sem prazo = permanente');
+assert.equal(condDoParticipante(null).nome, '', 'lixo não explode');
+
+// expiração pela rodada (mesma régua dos templates: rodada >= expiraNaRodada)
+const emCena = [
+    { id: 'p1', name: 'Goblin', condicoes: ['Caído', { nome: 'Queimando', icone: '🔥', expiraNaRodada: 3 }] },
+    { id: 'p2', name: 'Orc', condicoes: [{ nome: 'Lento', icone: '🐌', expiraNaRodada: 5 }] },
+    { id: 'p3', name: 'Mago' },   // sem condições — não pode explodir
+];
+const r3 = tirarCondicoesExpiradas(emCena, 3);
+assert.deepEqual(r3.expiradas.map(e => e.cond.nome), ['Queimando'], 'expira exatamente na rodada marcada');
+assert.deepEqual(r3.participantes[0].condicoes, ['Caído'], '🔒 string legada (sem prazo) nunca expira');
+assert.equal(r3.participantes[1].condicoes.length, 1, 'prazo futuro fica');
+assert.equal(r3.expiradas[0].pid, 'p1');
+assert.equal(r3.expiradas[0].pNome, 'Goblin');
+const r2 = tirarCondicoesExpiradas(emCena, 2);
+assert.equal(r2.expiradas.length, 0, 'antes do prazo nada sai');
+// pureza: a lista original não pode ser alterada
+assert.equal(emCena[0].condicoes.length, 2, '🔒 função pura: entrada intacta');
+assert.deepEqual(tirarCondicoesExpiradas(null, 1), { participantes: [], expiradas: [] });
+
+console.log('✅ combate-cenas: doc antigo, espelho da cena ativa, troca, patch isolado, criar e apagar, condições OK');

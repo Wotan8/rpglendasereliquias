@@ -1,0 +1,83 @@
+// =============================================
+// TABULEIRO — Rolador de Dados (sincronizado com a mesa)
+// Todo mundo rola; o resultado aparece em toast para a mesa inteira.
+// Fonte: mesas/{id}/tabuleiro-meta/dados { ultimo } — 1 write por rolagem
+// (ação explícita, sem throttle; mesmo padrão do ping).
+// O histórico é local da sessão: guardar rolagem velha no doc seria write à toa.
+// =============================================
+import { db, doc, setDoc, onSnapshot } from '../../painel-mestre/js/firebase-config.js';
+import { T, esc, toast, uid } from './tab-state.js';
+import { abrirModal } from './tab-main.js';
+
+const refDados = () => doc(db, 'mesas', T.mesaId, 'tabuleiro-meta', 'dados');
+const JANELA = uid();          // esta aba já mostrou a própria rolagem na hora
+const FACES = [4, 6, 8, 10, 12, 20, 100];
+const historico = [];          // últimas rolagens vistas nesta sessão (mais nova primeiro)
+
+export function initDados() {
+    T.unsubs.push(onSnapshot(refDados(), s => {
+        const r = s.exists() ? s.data().ultimo : null;
+        if (!r || !r.t || Date.now() - r.t > 15000) return;   // rolagem velha (reload) não re-anuncia
+        if (r.janela === JANELA) return;
+        registrar(r);
+        toast(msgRolagem(r));
+    }, e => console.warn('dados', e)));
+}
+
+function registrar(r) {
+    historico.unshift(r);
+    if (historico.length > 30) historico.pop();
+    const el = document.getElementById('tbDadosHist');
+    if (el) el.innerHTML = histHtml();
+}
+
+/** Texto puro: o toast usa textContent; o histórico escapa com esc(). */
+function msgRolagem(r) {
+    const mod = r.mod ? (r.mod > 0 ? ` + ${r.mod}` : ` − ${Math.abs(r.mod)}`) : '';
+    return `🎲 ${r.nome} rolou ${r.qtd}d${r.faces}${mod}: [${r.dados.join(', ')}]${mod} = ${r.total}`;
+}
+
+window.tbRolarDado = async function(faces) {
+    const qtd = Math.max(1, Math.min(20, parseInt(document.getElementById('dd_qtd')?.value) || 1));
+    const mod = parseInt(document.getElementById('dd_mod')?.value) || 0;
+    const secreta = !!document.getElementById('dd_secreta')?.checked;
+    const dados = Array.from({ length: qtd }, () => 1 + Math.floor(Math.random() * faces));
+    const nome = T.isMaster ? 'Mestre' : (T.usersMap[T.user?.uid]?.nome || 'Jogador');
+    const r = {
+        id: uid(), nome: secreta ? nome + ' (secreta)' : nome,
+        qtd, faces, mod, dados,
+        total: dados.reduce((a, b) => a + b, 0) + mod,
+        t: Date.now(), janela: JANELA,
+    };
+    registrar(r);
+    toast(msgRolagem(r) + (secreta ? ' 🤫' : ''));
+    if (!secreta) {
+        try { await setDoc(refDados(), { ultimo: r }, { merge: true }); }
+        catch (e) { console.error(e); toast('❌ A rolagem não chegou na mesa', 'danger'); }
+    }
+};
+
+function histHtml() {
+    if (!historico.length) return '<div class="tb-muted" style="text-align:center;padding:10px">Nenhuma rolagem ainda nesta sessão.</div>';
+    return historico.map(r => `<div class="tb-list-row" style="gap:8px">
+        <span style="flex:1;min-width:0">${esc(msgRolagem(r))}</span>
+        <span class="tb-muted" style="font-size:.7rem;flex:none">${new Date(r.t).toLocaleTimeString().slice(0, 5)}</span>
+    </div>`).join('');
+}
+
+window.tbAbrirDados = function() {
+    abrirModal('🎲 Rolador de Dados', `
+        <div class="tb-form-grid">
+            <label>Quantidade<input type="number" id="dd_qtd" value="1" min="1" max="20"></label>
+            <label>Modificador<input type="number" id="dd_mod" value="0"></label>
+        </div>
+        ${T.mode === 'secret' ? `<label class="tb-check" style="margin-top:6px"><input type="checkbox" id="dd_secreta"> 🤫 Rolagem secreta (só você vê)</label>` : ''}
+        <div class="tb-subrow" style="margin-top:10px;flex-wrap:wrap">
+            ${FACES.map(f => `<button class="tb-btn tb-btn-small" onclick="tbRolarDado(${f})" title="Rolar ${f} faces">🎲 d${f}</button>`).join('')}
+        </div>
+        <div class="tb-muted" style="font-size:.75rem;margin-top:6px">📡 O resultado aparece para a mesa toda.</div>
+        <hr class="tb-hr">
+        <div class="tb-section-title">🕘 Rolagens da sessão</div>
+        <div class="tb-list" id="tbDadosHist" style="max-height:240px;overflow:auto">${histHtml()}</div>
+    `);
+};

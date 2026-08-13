@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>🗺️ Tabuleiro — Lendas e Relíquias</title>
-    <link rel="stylesheet" href="css/tabuleiro.css?v=14">
+    <link rel="stylesheet" href="css/tabuleiro.css?v=15">
     <script type="module" src="/js/global-favicon.js"></script>
     <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -41,6 +41,7 @@
         <span id="tbCanvasNome" onclick="if(window.tbAbrirCanvases)tbAbrirCanvases()" title="Trocar de canvas"></span>
         <button class="tb-btn tb-btn-small" id="tbNavVoltar" style="display:none" onclick="tbNavVoltar()" title="Voltar ao mapa anterior">← Voltar</button>
         <span class="tb-spacer"></span>
+        <button class="tb-btn tb-btn-small tb-btn-icon" id="btnDados" onclick="tbAbrirDados()" title="Rolador de dados"><svg class="tb-ico"><use href="#i-dado"/></svg></button>
         <button class="tb-btn tb-btn-small tb-btn-icon" id="btnCursores" title="Cursores ao vivo"><svg class="tb-ico"><use href="#i-pessoas"/></svg></button>
         <button class="tb-btn tb-btn-small tb-btn-icon" id="btnRelogio" onclick="tbNovoRelogio()" title="Relógio de progresso"><svg class="tb-ico"><use href="#i-relogio"/></svg></button>
         <button class="tb-btn tb-btn-small tb-btn-icon" id="btnTeleprompter" title="Teleprompter / Legendas"><svg class="tb-ico"><use href="#i-legenda"/></svg></button>

@@ -84,3 +84,42 @@ export function semCena(c, id) {
 export function comTrocaDeCena(c, id) {
     return docDeCenas(cenasDoDoc(c), id);
 }
+
+// =============================================
+// CONDIÇÕES DO PARTICIPANTE (`p.condicoes`)
+// Duas gerações no mesmo array: string solta (legado) e objeto
+// { nome, icone, descricao, expiraNaRodada } — sempre leia por aqui.
+// `expiraNaRodada` null/ausente = dura até alguém remover.
+// =============================================
+
+export function condDoParticipante(c) {
+    if (typeof c === 'string') return { nome: c, icone: '☠️', descricao: '', expiraNaRodada: null };
+    return {
+        nome: c?.nome || '',
+        icone: c?.icone || '☠️',
+        descricao: c?.descricao || '',
+        expiraNaRodada: c?.expiraNaRodada ?? null,
+    };
+}
+
+/**
+ * Tira dos participantes as condições cujo tempo acabou (mesma régua dos
+ * templates: expira quando `rodada >= expiraNaRodada`).
+ * Pura: devolve cópias, não mexe na lista recebida.
+ * @returns { participantes, expiradas: [{ pid, pNome, cond }] }
+ */
+export function tirarCondicoesExpiradas(participantes, rodada) {
+    const expiradas = [];
+    const parts = (participantes || []).map(p => {
+        if (!(p.condicoes || []).length) return { ...p };
+        const ficam = [];
+        for (const cd of p.condicoes) {
+            const c = condDoParticipante(cd);
+            if (c.expiraNaRodada != null && rodada >= c.expiraNaRodada) {
+                expiradas.push({ pid: p.id, pNome: p.name || '?', cond: c });
+            } else ficam.push(cd);
+        }
+        return { ...p, condicoes: ficam };
+    });
+    return { participantes: parts, expiradas };
+}

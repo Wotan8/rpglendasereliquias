@@ -226,7 +226,7 @@ function criarJanela(tipo, id, chave) {
         const vd = e.target.closest('[data-vdelta]');
         if (vd) { setVital(win, vd.dataset.sig, valorVital(win, vd.dataset.sig).cur + Number(vd.dataset.vdelta)); return; }
         if (e.target.closest('[data-condadd]')) {
-            escolherCondicao((nome, tpl) => addCondicao(win, nome, tpl));
+            escolherCondicao((cond, tpl) => addCondicao(win, cond, tpl));
             return;
         }
         const crm = e.target.closest('[data-condrm]');
@@ -347,15 +347,16 @@ function espelharCombateNpc(npcId, sig, v) {
     fila.enviar('combate', { ...comCenaAtivaPatch(T.combate, { participantes: parts }), atualizadoEm: Date.now() }, THROTTLE);
 }
 
-async function addCondicao(win, nome, tpl) {
+async function addCondicao(win, cond, tpl) {
     const lista = [...condicoesDoc(win), {
-        nome: String(nome).trim(), icone: tpl?.icone || '☠️', descricao: tpl?.descricao || '',
-        tempoAtual: '', tempoRestante: tpl?.duracao || '',
+        nome: String(cond.nome).trim(), icone: cond.icone || tpl?.icone || '☠️',
+        descricao: cond.descricao || tpl?.descricao || '',
+        tempoAtual: '', tempoRestante: cond.duracao > 0 ? `${cond.duracao} rodada(s)` : (tpl?.duracao || ''),
         modeloId: tpl?.id || null, efeitoMecanicaIds: tpl?.efeitoMecanicaIds || [],
     }];
     try {
         await updateDoc(doc(db, win.tipo === 'npc' ? 'npcs' : 'char', win.id), { conditions: lista });
-        toast(`☠️ Condição "${esc(nome)}" aplicada na ficha`);
+        toast(`☠️ Condição "${esc(cond.nome)}" aplicada na ficha`);
     } catch (e) { errWrite(e); }
 }
 

@@ -6,14 +6,14 @@ import { db, doc, setDoc, updateDoc, getDoc } from '../../painel-mestre/js/fireb
 import { T, esc, toast, uid, alvoDoTeste, grausDoDado, fmtGraus, vNum, patchVitalAtualNpc } from './tab-state.js';
 import { refCombate, refEstado, abrirModal, fecharModal } from './tab-main.js';
 import { VITAIS } from './tab-hud.js';
-import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena } from '../../shared/combate-cenas.js';
+import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena, condDoParticipante, tirarCondicoesExpiradas } from '../../shared/combate-cenas.js';
 
 let janelaAberta = false;
 
 // Janela flutuante de ficha de combate (NPC/personagem) — módulo carregado só
 // quando alguém abre a primeira janela.
 window.tbFichaWin = async function(tipo, id) {
-    try { (await import('./tab-ficha-win.js?v=7')).abrirFichaWin(tipo, id); }
+    try { (await import('./tab-ficha-win.js?v=8')).abrirFichaWin(tipo, id); }
     catch (e) { console.error(e); toast('❌ Erro ao abrir a janela de combate', 'danger'); }
 };
 
@@ -46,10 +46,11 @@ window.tbToggleCombate = function() {
 /** Participantes da cena ABERTA (é o que a janela mostra e edita). */
 const partsDaCena = () => cenaAtiva(T.combate).participantes || [];
 
-/** Condições que vieram da FICHA do participante (char ao vivo por VITAIS, NPC pelo doc). */
+/** Condições que vieram da FICHA do participante ({icone, nome}; char ao vivo por VITAIS, NPC pelo doc). */
 function condsDaFicha(p) {
-    if (p.characterId) return (VITAIS.get(p.characterId)?.conds || []).map(c => c.nome).filter(Boolean);
-    if (p.npcId) return (T.npcs.find(n => n.id === p.npcId)?.conditions || []).map(c => c?.nome || c).filter(Boolean);
+    if (p.characterId) return (VITAIS.get(p.characterId)?.conds || []).filter(c => c.nome);
+    if (p.npcId) return (T.npcs.find(n => n.id === p.npcId)?.conditions || [])
+        .map(c => ({ icone: c?.icone || '☠️', nome: c?.nome || c })).filter(c => c.nome);
     return [];
 }
 
@@ -223,19 +224,27 @@ function render() {
             ${barra('VIT', hpC, hpM, 'linear-gradient(90deg,#10b981,#34d399)')}
             ${barra('ENER', enerC, enerM, 'linear-gradient(90deg,#f59e0b,#fbbf24)')}
             ${barra('SAN', sanC, sanM, 'linear-gradient(90deg,#6366f1,#8b5cf6)')}` : '';
+        const donoDoChar = p.characterId && T.chars.find(c => c.id === p.characterId)?.ownerUid === T.user?.uid;
         // Condição tem DUAS fontes: a do combate (`p.condicoes`) e a da ficha do
         // personagem/NPC. Quem aplica pelo combate grava nas duas, mas quem aplica
         // pela ficha só tem a de lá — e essa não aparecia aqui. A janela mostra a
         // união; o ✕ só existe para as do combate, que são as que este lado tira.
-        const daFicha = condsDaFicha(p).filter(n => !(p.condicoes || []).includes(n));
+        // Detalhe (nome, descrição, tempo) é do MESTRE e do DONO do token; para o
+        // resto da mesa a condição é só o ícone — igual ao token no mapa.
+        const detalhes = secreto || donoDoChar;
+        const rodadaAtual = c?.rodada || 1;
+        const chip = (cd, titulo, extra = '') => detalhes
+            ? `<span class="tb-cond" title="${esc(titulo || cd.descricao || '')}">${esc(cd.icone)} ${esc(cd.nome)}${cd.expiraNaRodada ? ` <i class="tb-cond-t" title="acaba na rodada ${cd.expiraNaRodada}">⏱${Math.max(0, cd.expiraNaRodada - rodadaAtual)}</i>` : ''}${extra}</span>`
+            : `<span class="tb-cond">${esc(cd.icone)}</span>`;
+        const nomesCombate = (p.condicoes || []).map(cd => condDoParticipante(cd).nome);
+        const daFicha = condsDaFicha(p).filter(x => !nomesCombate.includes(x.nome));
         const conds = (p.condicoes || []).map((cd, ci) =>
-            `<span class="tb-cond">${esc(cd)}${secreto ? ` <b onclick="tbCombCondRm('${p.id}',${ci})">✕</b>` : ''}</span>`).join('')
-            + daFicha.map(n => `<span class="tb-cond" title="Aplicada na ficha — remova por lá">${esc(n)}</span>`).join('');
+            chip(condDoParticipante(cd), '', secreto ? ` <b onclick="tbCombCondRm('${p.id}',${ci})">✕</b>` : '')).join('')
+            + daFicha.map(x => chip({ ...x, expiraNaRodada: null }, 'Aplicada na ficha — remova por lá')).join('');
         const abrirNpc = secreto && p.npcId ? `onclick="tbAbrirNpcModal('${p.npcId}')" style="cursor:pointer" title="Abrir ficha do NPC"` : '';
         // 🪟 Janela de combate: mestre no secreto abre de NPC e personagem;
         // no público cada jogador abre só a do PRÓPRIO personagem.
         const fichaRef = p.npcId ? ['npc', p.npcId] : p.characterId ? ['char', p.characterId] : null;
-        const donoDoChar = p.characterId && T.chars.find(c => c.id === p.characterId)?.ownerUid === T.user?.uid;
         const btnJanela = fichaRef && (secreto || donoDoChar)
             ? `<button class="tb-mini-btn" title="Janela de combate (ficha ao vivo)" onclick="tbFichaWin('${fichaRef[0]}','${fichaRef[1]}')">⚔️</button>` : '';
         return `<div class="tb-combat-p ${atual ? 'atual' : ''}">
@@ -263,11 +272,47 @@ window.tbCombTurno = async function(dir) {
     const rodadaAntes = rodada;
     if (turno >= n) { turno = 0; rodada++; }
     if (turno < 0) { turno = n - 1; rodada = Math.max(1, rodada - 1); }
-    await salvar(c.participantes || [], { turnoAtual: turno, rodada });
+    // ⏱️ Condições com prazo saem no MESMO write da virada — um segundo write
+    // montado do estado local ainda sem o eco reverteria a rodada.
+    let parts = c.participantes || [], expiradas = [];
+    if (rodada > rodadaAntes) ({ participantes: parts, expiradas } = tirarCondicoesExpiradas(parts, rodada));
+    await salvar(parts, { turnoAtual: turno, rodada });
     // F4.3: expira templates com duração ao virar a rodada
     if (rodada > rodadaAntes) {
         try { const m = await import('./tab-templates.js'); m.expirarTemplates(rodada); } catch (e) {}
+        if (expiradas.length) {
+            for (const e of expiradas) sincRemocaoFicha(parts.find(x => x.id === e.pid), e.cond.nome);
+            avisoCondicoesExpiradas(expiradas);
+        }
     }
+};
+
+// ---- ⏱️ Aviso do mestre: condições cujo tempo acabou (com direito a prolongar) ----
+let _expiradas = [];
+function avisoCondicoesExpiradas(lista) {
+    _expiradas = lista;
+    abrirModal('⏱️ Condições que terminaram', `
+        <div class="tb-muted" style="font-size:.8rem;margin-bottom:10px">O tempo destas condições acabou na virada da rodada e elas já saíram dos participantes. Se alguma ainda vale, prolongue:</div>
+        ${lista.map((e, i) => `<div class="tb-list-row" id="expRow_${i}">
+            <span style="flex:1;min-width:0">${esc(e.cond.icone)} <b>${esc(e.cond.nome)}</b> — ${esc(e.pNome)}</span>
+            <input type="number" id="expN_${i}" value="1" min="1" style="width:56px" title="rodadas a mais">
+            <button class="tb-btn tb-btn-small" onclick="tbCondProlongar(${i})">↩️ Prolongar</button>
+        </div>`).join('')}
+        <div class="tb-modal-actions"><button class="tb-btn" onclick="tbFecharModal()">✅ Entendido</button></div>
+    `);
+}
+window.tbCondProlongar = async function(i) {
+    const e = _expiradas[i]; if (!e) return;
+    const nr = Math.max(1, parseInt(document.getElementById('expN_' + i)?.value) || 1);
+    const parts = partsDaCena().map(p => ({ ...p }));
+    const p = parts.find(x => x.id === e.pid);
+    if (!p) { toast('⚠️ O participante não está mais na cena', 'warning'); return; }
+    const rodada = cenaAtiva(T.combate).rodada || 1;
+    p.condicoes = [...(p.condicoes || []), { ...e.cond, expiraNaRodada: rodada + nr }];
+    await salvar(parts);
+    await sincAdicaoFicha(p, { ...e.cond, duracao: nr }, null);
+    document.getElementById('expRow_' + i)?.remove();
+    toast(`↩️ "${e.cond.nome}" prolongada por +${nr} rodada(s)`);
 };
 
 window.tbCombVisibilidade = async function() {
@@ -361,10 +406,14 @@ function fecharCondPicker() {
     document.getElementById('tbCondPickerOverlay')?.remove();
 }
 
+// Emojis prontos da condição personalizada (males, controles e uns buffs)
+const EMOJIS_COND = ['☠️', '💀', '🔥', '❄️', '⚡', '🩸', '💤', '😵', '🤢', '😨', '🕸️', '⛓️', '🌀', '💫', '🐌', '🛡️', '💪', '✨', '🍀', '👁️'];
+
 /**
  * Picker de condição (registro do sistema + personalizada), desacoplado de quem
  * aplica: o combate aplica no participante, a janela de ficha aplica no doc.
- * @param aplicar (nome, tplOuNull) => Promise
+ * @param aplicar (cond, tplOuNull) => Promise — cond = { nome, icone, descricao, duracao }
+ *        `duracao` em rodadas (0 = até remover).
  */
 export async function escolherCondicao(aplicar) {
     const conditions = await carregarCondicoesSistema();
@@ -385,18 +434,28 @@ export async function escolherCondicao(aplicar) {
             <span>☠️ Aplicar Condição</span>
             <button class="tb-mini-btn" onclick="document.getElementById('tbCondPickerOverlay')?.remove()">✕</button>
         </div>
+        <label class="tb-check tb-check-sm" style="padding:6px 10px" title="Ao virar a rodada, o contador desce; no fim, a condição sai sozinha (o mestre é avisado)">
+            ⏱️ Duração <input type="number" id="tbCondDur" min="1" placeholder="∞" style="width:64px"> rodadas (vazio = até remover)
+        </label>
         <input type="text" class="tb-cond-picker-search" id="tbCondSearch" placeholder="🔍 Buscar condição..." autocomplete="off">
         <div class="tb-cond-picker-list" id="tbCondList">
             ${itensHtml || '<div class="tb-muted" style="text-align:center;padding:16px">Nenhuma condição cadastrada no sistema</div>'}
         </div>
         <div class="tb-cond-picker-custom">
             <div class="tb-section-title">✏️ Condição Personalizada</div>
-            <input type="text" id="tbCondCustomNome" placeholder="Nome da condição (ex: Atordoado)">
+            <div style="display:flex;gap:6px">
+                <select id="tbCondCustomIcone" title="Ícone da condição (é o que aparece no token)">
+                    ${EMOJIS_COND.map(e2 => `<option>${e2}</option>`).join('')}
+                </select>
+                <input type="text" id="tbCondCustomNome" placeholder="Nome (ex: Atordoado)" style="flex:1">
+            </div>
+            <input type="text" id="tbCondCustomDesc" placeholder="Descrição / efeito (opcional)">
             <button class="tb-btn tb-btn-success tb-btn-small" id="tbCondCustomBtn">➕ Criar e Aplicar</button>
         </div>
     </div>`;
 
     document.body.appendChild(overlay);
+    const duracaoEscolhida = () => Math.max(0, parseInt(document.getElementById('tbCondDur')?.value) || 0);
 
     // Busca
     const searchEl = document.getElementById('tbCondSearch');
@@ -415,7 +474,7 @@ export async function escolherCondicao(aplicar) {
             const idx = parseInt(el.dataset.idx);
             const c = conditions[idx];
             if (!c) return;
-            await aplicar(c.nome, c);
+            await aplicar({ nome: c.nome, icone: c.icone || '☠️', descricao: c.descricao || '', duracao: duracaoEscolhida() }, c);
             fecharCondPicker();
         };
     });
@@ -424,7 +483,12 @@ export async function escolherCondicao(aplicar) {
     document.getElementById('tbCondCustomBtn').onclick = async () => {
         const nome = document.getElementById('tbCondCustomNome')?.value?.trim();
         if (!nome) { toast('⚠️ Insira o nome da condição', 'warning'); return; }
-        await aplicar(nome, null);
+        await aplicar({
+            nome,
+            icone: document.getElementById('tbCondCustomIcone')?.value || '☠️',
+            descricao: document.getElementById('tbCondCustomDesc')?.value?.trim() || '',
+            duracao: duracaoEscolhida(),
+        }, null);
         fecharCondPicker();
     };
 
@@ -432,102 +496,74 @@ export async function escolherCondicao(aplicar) {
     overlay.addEventListener('click', e => { if (e.target === overlay) fecharCondPicker(); });
 }
 
-window.tbCombCondAdd = (pid) => escolherCondicao((nome, tpl) => aplicarCondicaoCombate(pid, nome, tpl));
+window.tbCombCondAdd = (pid) => escolherCondicao((cond, tpl) => aplicarCondicaoCombate(pid, cond, tpl));
 
 /**
  * Aplica uma condição ao participante do combate e sincroniza com a ficha.
  * @param {string} pid - ID do participante no combate
- * @param {string} nome - Nome da condição
+ * @param {object} cond - { nome, icone, descricao, duracao } vindo do picker
  * @param {object|null} tpl - Template da condição do sistema (ou null para personalizada)
  */
-async function aplicarCondicaoCombate(pid, nome, tpl) {
+async function aplicarCondicaoCombate(pid, cond, tpl) {
     const parts = partsDaCena().map(p => ({ ...p }));
     const p = parts.find(x => x.id === pid); if (!p) return;
-    p.condicoes = [...(p.condicoes || []), nome.trim()];
+    const rodada = cenaAtiva(T.combate).rodada || 1;
+    p.condicoes = [...(p.condicoes || []), {
+        nome: cond.nome.trim(),
+        icone: cond.icone || '☠️',
+        descricao: cond.descricao || '',
+        expiraNaRodada: cond.duracao > 0 ? rodada + cond.duracao : null,
+    }];
     await salvar(parts);
-    toast(`☠️ Condição "${esc(nome)}" aplicada`);
+    toast(`☠️ Condição "${cond.nome}" aplicada` + (cond.duracao > 0 ? ` por ${cond.duracao} rodada(s)` : ''));
+    await sincAdicaoFicha(p, cond, tpl);
+}
 
-    // Sincronizar com a ficha do personagem (char doc)
-    if (p.characterId) {
-        try {
-            const charSnap = await getDoc(doc(db, 'char', p.characterId));
-            if (charSnap.exists()) {
-                const charData = charSnap.data();
-                const conditions = charData.conditions || [];
-                conditions.push({
-                    nome: nome.trim(),
-                    icone: tpl?.icone || '☠️',
-                    descricao: tpl?.descricao || '',
-                    tempoAtual: '',
-                    tempoRestante: tpl?.duracao || '',
-                    modeloId: tpl?.id || null,
-                    efeitoMecanicaIds: tpl?.efeitoMecanicaIds || []
-                });
-                await updateDoc(doc(db, 'char', p.characterId), { conditions });
-            }
-        } catch (e) { console.warn('sync condition to char', e); }
-    }
+/** Espelha a condição recém-aplicada na ficha (char ou NPC) do participante. */
+async function sincAdicaoFicha(p, cond, tpl) {
+    const alvo = p.characterId ? ['char', p.characterId] : p.npcId ? ['npcs', p.npcId] : null;
+    if (!alvo) return;
+    try {
+        const snap = await getDoc(doc(db, alvo[0], alvo[1]));
+        if (!snap.exists()) return;
+        const conditions = snap.data().conditions || [];
+        conditions.push({
+            nome: cond.nome.trim(),
+            icone: cond.icone || tpl?.icone || '☠️',
+            descricao: cond.descricao || tpl?.descricao || '',
+            tempoAtual: '',
+            tempoRestante: cond.duracao > 0 ? `${cond.duracao} rodada(s)` : (tpl?.duracao || ''),
+            modeloId: tpl?.id || null,
+            efeitoMecanicaIds: tpl?.efeitoMecanicaIds || []
+        });
+        await updateDoc(doc(db, alvo[0], alvo[1]), { conditions });
+    } catch (e) { console.warn('sync condition to ficha', e); }
+}
 
-    // Sincronizar com a ficha do NPC (npcs doc)
-    if (p.npcId) {
-        try {
-            const npcSnap = await getDoc(doc(db, 'npcs', p.npcId));
-            if (npcSnap.exists()) {
-                const npcData = npcSnap.data();
-                const conditions = npcData.conditions || [];
-                conditions.push({
-                    nome: nome.trim(),
-                    icone: tpl?.icone || '☠️',
-                    descricao: tpl?.descricao || '',
-                    tempoAtual: '',
-                    tempoRestante: tpl?.duracao || '',
-                    modeloId: tpl?.id || null,
-                    efeitoMecanicaIds: tpl?.efeitoMecanicaIds || []
-                });
-                await updateDoc(doc(db, 'npcs', p.npcId), { conditions });
-            }
-        } catch (e) { console.warn('sync condition to npc', e); }
-    }
+/** Tira da ficha (char ou NPC) a condição removida do combate, pelo nome. */
+async function sincRemocaoFicha(p, nome) {
+    if (!p || !nome) return;
+    const alvo = p.characterId ? ['char', p.characterId] : p.npcId ? ['npcs', p.npcId] : null;
+    if (!alvo) return;
+    try {
+        const snap = await getDoc(doc(db, alvo[0], alvo[1]));
+        if (!snap.exists()) return;
+        const conditions = snap.data().conditions || [];
+        const idx = conditions.findIndex(c => c.nome === nome);
+        if (idx >= 0) {
+            conditions.splice(idx, 1);
+            await updateDoc(doc(db, alvo[0], alvo[1]), { conditions });
+        }
+    } catch (e) { console.warn('sync condition removal to ficha', e); }
 }
 
 window.tbCombCondRm = async function(pid, i) {
     const parts = partsDaCena().map(p => ({ ...p }));
     const p = parts.find(x => x.id === pid); if (!p) return;
-    const removida = (p.condicoes || [])[i];
+    const removida = condDoParticipante((p.condicoes || [])[i]).nome;
     p.condicoes = (p.condicoes || []).filter((_, ci) => ci !== i);
     await salvar(parts);
-
-    // Sincronizar remoção na ficha do personagem
-    if (p.characterId && removida) {
-        try {
-            const charSnap = await getDoc(doc(db, 'char', p.characterId));
-            if (charSnap.exists()) {
-                const charData = charSnap.data();
-                let conditions = charData.conditions || [];
-                const idx = conditions.findIndex(c => c.nome === removida);
-                if (idx >= 0) {
-                    conditions.splice(idx, 1);
-                    await updateDoc(doc(db, 'char', p.characterId), { conditions });
-                }
-            }
-        } catch (e) { console.warn('sync condition removal to char', e); }
-    }
-
-    // Sincronizar remoção na ficha do NPC
-    if (p.npcId && removida) {
-        try {
-            const npcSnap = await getDoc(doc(db, 'npcs', p.npcId));
-            if (npcSnap.exists()) {
-                const npcData = npcSnap.data();
-                let conditions = npcData.conditions || [];
-                const idx = conditions.findIndex(c => c.nome === removida);
-                if (idx >= 0) {
-                    conditions.splice(idx, 1);
-                    await updateDoc(doc(db, 'npcs', p.npcId), { conditions });
-                }
-            }
-        } catch (e) { console.warn('sync condition removal to npc', e); }
-    }
+    await sincRemocaoFicha(p, removida);
 };
 
 window.tbCombRemover = async function(pid) {

@@ -15,11 +15,12 @@ import { initObjects, abrirPropriedades, addObj } from './tab-objects.js';
 import { initCombat } from './tab-combat.js';
 import { initMostrar } from './tab-mostrar.js';
 import { initLivros, sincLivroExibido } from './tab-livros.js';
-import { initPresenca } from './tab-presenca.js';
+import { initPresenca, atalhoMouseOculto } from './tab-presenca.js';
 import { initHud } from './tab-hud.js';
 import { initCena, transicaoDeCena } from './tab-cena.js';
 import { initTemplates } from './tab-templates.js';
 import { initMusica } from './tab-musica.js';
+import { initDados } from './tab-dados.js';
 import './tab-local.js';   // 📍 Locais do Worldbuilding (registra window.tbAbrirLocal)
 import { initGirar } from './tab-girar.js';
 import { initSessao } from './tab-sessao.js';
@@ -87,6 +88,7 @@ window.addEventListener('DOMContentLoaded', () => {
             initCena();
             initTemplates();
             initMusica();
+            initDados();
             initSessao();
             startRenderLoop();
             document.getElementById('tbLoading').style.display = 'none';
@@ -384,6 +386,7 @@ export function aplicarModoUI() {
     show('btnTeleprompter', secret);
     show('btnSessao', secret);
     show('btnCursores', true);
+    show('btnDados', true);
 }
 
 // ===== RELÓGIOS (F6.2) =====
@@ -542,7 +545,11 @@ window.tbAbrirConfig = function() {
                 <option value="cheb" ${g.diagonal==='cheb'?'selected':''}>♟️ 5-5-5 (Chebyshev)</option>
                 <option value="alt" ${g.diagonal==='alt'?'selected':''}>🎲 5-10-5 (alternada)</option>
             </select></label>
+            <label>Barras vitais dos tokens (padrão)<select id="cfg_barras">
+                ${[['todos','❤️ Todos veem'],['dono','👤 Só o dono do token'],['mestre','🕵️ Só o mestre'],['off','🚫 Ocultas']].map(x=>`<option value="${x[0]}" ${(c.barrasPadrao||'todos')===x[0]?'selected':''}>${x[1]}</option>`).join('')}
+            </select></label>
         </div>
+        <div class="tb-muted" style="font-size:.75rem;margin-top:4px">O padrão vale para todo token com barras em “Padrão da mesa”; nas propriedades do token dá para abrir exceção.</div>
         <hr class="tb-hr">
         <div class="tb-section-title">🚶 Movimento & Andares</div>
         <div class="tb-form-grid">
@@ -559,6 +566,15 @@ window.tbAbrirConfig = function() {
             Montado ou de carroça em estrada boa, dobre esse valor; por trilha ruim, mata fechada ou montanha, corte pela metade.
             Um “dia” aqui vale ${HORAS_DE_MARCHA} h de marcha — é essa a base das horas e minutos mostrados nas rotas.
         </div>
+        <hr class="tb-hr">
+        <div class="tb-section-title">🫥 Cursor invisível (mestre)</div>
+        <div class="tb-form-grid">
+            <label>Atalho para ocultar/mostrar seu cursor aos jogadores
+                <input type="text" id="cfg_atalhoMouse" value="${esc(atalhoMouseOculto())}" readonly
+                    onkeydown="tbCapturarAtalhoMouse(event,this)" placeholder="clique e pressione uma tecla">
+            </label>
+        </div>
+        <div class="tb-muted" style="font-size:.75rem;margin-top:4px">Clique no campo e pressione a tecla. Vale só neste aparelho e salva na hora (não precisa do 💾).</div>
         <hr class="tb-hr">
         <div class="tb-section-title">🌦️ Clima</div>
         <div class="tb-form-grid">
@@ -595,6 +611,7 @@ window.tbSalvarConfig = async function() {
             escala: { valorPorCelula: parseFloat(v('cfg_vpc').value)||1.5, unidade: v('cfg_un').value },
             luzDinamica: { ativa: v('cfg_luz').checked, modo: v('cfg_modo').value, fogSecretOpacity: (parseInt(v('cfg_fog').value)||0)/100, memoria: v('cfg_memoria').checked },
             bloquearMovimento: v('cfg_lock').checked,
+            barrasPadrao: v('cfg_barras').value,
             reguaPublica: v('cfg_reguaPub').checked,
             andarAltura: parseFloat(v('cfg_andar').value)||5,
             viagemPorDia: parseFloat(v('cfg_viagem').value)||0,
