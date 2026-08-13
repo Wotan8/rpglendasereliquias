@@ -33,7 +33,7 @@ document.getElementById('host').innerHTML =
 
 const fieldId = 'field_valoresDerivadosVinculados';
 const hidden = () => JSON.parse(document.getElementById(fieldId).value);
-const contId = `boolEquacao_DV_${fieldId}_dv1`;
+const contId = `boolEquacao_DV_${fieldId}_0`;
 const cont = () => document.getElementById(contId);
 const prev = () => document.getElementById(contId + '_preview');
 
@@ -45,18 +45,18 @@ log(prev().textContent.includes('Total: 2'), `preview mostra Total: 2 (got: "${p
 
 // 2) editar e sincronizar grava a equação e ZERA o modificador legado
 cont().querySelector('.eq-term-valor').value = '5';
-window._eqDvEqSync(fieldId, 'dv1');
+window._eqDvEqSync(fieldId, 0);
 let l = hidden()[0];
 log(l.equacao?.length === 1 && l.equacao[0].valor === 5, 'equação editada gravada no hidden');
 log(l.modificador === 0, 'modificador legado zerado ao gravar equação');
 log(prev().textContent.includes('Total: 5'), `preview atualiza para Total: 5 (got: "${prev().textContent}")`);
 
 // 3) termo de ficha → preview simbólico
-window._mechBoolAddTerm(`_DV_${fieldId}_dv1`);
+window._mechBoolAddTerm(`_DV_${fieldId}_0`);
 const t2 = cont().querySelectorAll('.eq-term')[1];
 t2.querySelector('.eq-term-tipo').value = 'ficha';
 t2.querySelector('.eq-term-ref').value = 'FOR';
-window._eqDvEqSync(fieldId, 'dv1');
+window._eqDvEqSync(fieldId, 0);
 l = hidden()[0];
 log(l.equacao.length === 2 && l.equacao[1].tipo === 'ficha' && l.equacao[1].ref === 'FOR',
     'termo de ficha (FOR) gravado no hidden');
@@ -70,13 +70,13 @@ log(after.length === 2 && after.find(p => p.id === 'dv1').equacao?.length === 2,
     'reconfirmar seletor preserva a equação do vínculo');
 
 // 5) limpar remove a equação (e modificador já está zerado ⇒ vínculo neutro)
-window._eqDvEqClear(fieldId, 'dv1');
+window._eqDvEqClear(fieldId, 0);
 l = hidden().find(p => p.id === 'dv1');
 log(!('equacao' in l) && !l.modificador, 'limpar equação remove o campo e não ressuscita o modificador');
 
 // 6) equação com termo único vazio não persiste
-window._mechBoolAddTerm(`_DV_${fieldId}_dv1`);
-window._eqDvEqSync(fieldId, 'dv1');
+window._mechBoolAddTerm(`_DV_${fieldId}_0`);
+window._eqDvEqSync(fieldId, 0);
 log(!('equacao' in hidden().find(p => p.id === 'dv1')), 'termo único vazio não persiste equação');
 
 // 7) pegada do vínculo (✋ mãos) — o mesmo machado com dois conjuntos de VD.
@@ -86,7 +86,7 @@ log(!!selMaos() && selMaos().options.length === 3, 'chip de VD tem o seletor de 
 log(selMaos().value === '0', 'padrão é "sempre" (sem pegada gravada)');
 log(!('maos' in hidden().find(p => p.id === 'dv1')), 'pegada "sempre" não grava campo nenhum');
 
-window._eqDvSelMaosChange(fieldId, 'dv1', '2');
+window._eqDvSelMaosChange(fieldId, 0, '2');
 log(hidden().find(p => p.id === 'dv1').maos === 2, 'escolher "só com 2 mãos" grava maos: 2');
 
 // confirm redesenha os chips — a pegada não pode se perder no caminho
@@ -94,8 +94,53 @@ window._eqDvSelConfirm(fieldId);
 log(hidden().find(p => p.id === 'dv1').maos === 2, 'reconfirmar o seletor preserva a pegada');
 log(document.querySelectorAll(`#${fieldId}_chips select`)[0].value === '2', 'o chip redesenhado mostra a pegada gravada');
 
-window._eqDvSelMaosChange(fieldId, 'dv1', '0');
-log(!('maos' in hidden().find(p => p.id === 'dv1')), 'voltar para "sempre" remove o campo');
+window._eqDvSelMaosChange(fieldId, 0, '0');
+log(!('maos' in hidden()[0]), 'voltar para "sempre" remove o campo');
+
+// 8) DOIS vínculos do MESMO VD — "+2 de Dano só com as duas mãos" ao lado do
+//    Dano que vale sempre. O editor era chaveado por id do VD: o segundo era
+//    ineditável e o confirm o apagava sem avisar.
+window._eqDvSelDuplicar(fieldId, 0);
+let d = hidden();
+log(d.length === 3 && d[0].id === 'dv1' && d[1].id === 'dv1',
+    `duplicar cria um irmão do mesmo VD na posição seguinte (got ${d.length} vínculos)`);
+log(d[1].maos === 2, 'a cópia nasce na outra pegada, para não virar bônus dobrado');
+log(document.querySelectorAll(`#${fieldId}_chips .mechsel-chip`).length === 3, 'os três chips são desenhados');
+
+// cada chip edita o SEU vínculo, não o primeiro de mesmo id
+window._eqDvSelMaosChange(fieldId, 1, '1');
+d = hidden();
+log(d[1].maos === 1 && !('maos' in d[0]), 'editar a pegada do 2º chip não toca no 1º');
+
+window._eqDvSelMaosChange(fieldId, 1, '2');
+const cont2 = document.getElementById(`boolEquacao_DV_${fieldId}_1`);
+log(!!cont2 && cont2 !== document.getElementById(`boolEquacao_DV_${fieldId}_0`),
+    'cada vínculo tem seu próprio container de equação (id único no DOM)');
+window._mechBoolAddTerm(`_DV_${fieldId}_1`);
+cont2.querySelector('.eq-term-valor').value = '2';
+window._eqDvEqSync(fieldId, 1);
+d = hidden();
+log(d[1].equacao?.[0]?.valor === 2, 'a equação do 2º vínculo grava nele mesmo');
+log(!d[0].equacao, 'e não vaza para o 1º');
+
+// o confirm é o ponto onde o irmão morria
+window._eqDvSelConfirm(fieldId);
+d = hidden();
+log(d.filter(p => p.id === 'dv1').length === 2, 'reconfirmar preserva os DOIS vínculos do mesmo VD');
+log(d.find(p => p.id === 'dv1' && p.maos === 2)?.equacao?.[0]?.valor === 2,
+    'e preserva a equação de cada um');
+
+// remover um irmão deixa o outro de pé
+window._eqDvSelRemove(fieldId, 1);
+d = hidden();
+log(d.filter(p => p.id === 'dv1').length === 1 && !d.find(p => p.id === 'dv1').maos,
+    'remover o 2º vínculo deixa o 1º intacto');
+
+// desmarcar o VD no seletor tira os dois
+window._eqDvSelDuplicar(fieldId, 0);
+document.querySelector(`#${fieldId}_results input[value="dv1"]`).checked = false;
+window._eqDvSelConfirm(fieldId);
+log(!hidden().some(p => p.id === 'dv1'), 'desmarcar o VD remove todos os vínculos dele');
 
 document.title = (window.__failed ? '✘ FALHOU — ' : '✔ OK — ') + document.title;
 </script>

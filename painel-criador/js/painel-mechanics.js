@@ -3720,8 +3720,12 @@ export function periciaOptions(skillsCache) {
  * O ON/OFF só aparece em Valor Derivado com `escopoItem` (hoje só Acerto e
  * Dano). Os outros 78 já são globais, e o botão ali seria um controle morto.
  */
-function _eqDvChip(fieldId, dvObj, d) {
+function _eqDvChip(fieldId, dvObj, d, pos) {
     const reg = window._eqSelCache?.[fieldId] || {};
+    // Chave do vínculo é a POSIÇÃO, não o id do VD: a mesma arma pode vincular
+    // Dano duas vezes — uma sempre, outra só com duas mãos. Chaveado por id, o
+    // segundo vínculo era ineditável e o confirm o apagava em silêncio.
+    const k = Number(pos) || 0;
     const campo = reg.campo || 'modificador';
     const rotulo = reg.rotulo || 'Modificador';
     const icon = d.icone || '📊';
@@ -3729,7 +3733,7 @@ function _eqDvChip(fieldId, dvObj, d) {
     const escopoOn = dvObj.escopo === 'global';
     const toggle = d.escopoItem
         ? `<label style="margin-left:8px;font-size:.7rem;cursor:pointer" title="OFF: aplica no ${esc(d.nome)} deste item. ON: aplica no ${esc(d.nome)} do personagem.">
-             <input type="checkbox" ${escopoOn ? 'checked' : ''} onchange="window._eqDvSelEscopoChange('${fieldId}','${d.id}',this.checked)"> global
+             <input type="checkbox" ${escopoOn ? 'checked' : ''} onchange="window._eqDvSelEscopoChange('${fieldId}',${k},this.checked)"> global
            </label>`
         : '';
     // Modo de uso da peça: o mesmo machado pode dar +4 empunhado com as duas
@@ -3737,10 +3741,13 @@ function _eqDvChip(fieldId, dvObj, d) {
     // Parte do Corpo não mudam com a pegada.
     const selMaos = reg.comEquacao
         ? `<label style="margin-left:8px;font-size:.7rem" title="Em que pegada este bônus vale. A fórmula do dado de 2 mãos é o campo 'Fórmula de Dano (empunhada com 2 mãos)' do item.">
-             ✋ <select style="font-size:.7rem;padding:1px" onchange="window._eqDvSelMaosChange('${fieldId}','${d.id}',this.value)">
+             ✋ <select style="font-size:.7rem;padding:1px" onchange="window._eqDvSelMaosChange('${fieldId}',${k},this.value)">
                ${[['0', 'sempre'], ['1', 'só com 1 mão'], ['2', 'só com 2 mãos']].map(([v, r]) =>
             `<option value="${v}" ${String(Number(dvObj.maos) || 0) === v ? 'selected' : ''}>${r}</option>`).join('')}
-             </select></label>`
+             </select></label>
+           <button type="button" class="eq-add-term-btn" style="margin-left:6px;font-size:.7rem"
+             title="Cria um SEGUNDO vínculo deste mesmo Valor Derivado, para dar um valor diferente na outra pegada"
+             onclick="window._eqDvSelDuplicar('${fieldId}',${k})">➕ outra pegada</button>`
         : '';
     const passo = campo === 'quantidade' ? '1" min="1' : '0.01';
     if (reg.comEquacao) {
@@ -3750,20 +3757,20 @@ function _eqDvChip(fieldId, dvObj, d) {
         // das mecânicas: side único ⇒ container id "boolEquacao<side>", que é
         // o que os handlers _mechBool* esperam. O wrapper sincroniza qualquer
         // edição (input/change/click borbulham) via _eqDvEqSync.
-        const side = `_DV_${fieldId}_${d.id}`;
+        const side = `_DV_${fieldId}_${k}`;
         let eq = Array.isArray(dvObj.equacao) ? dvObj.equacao : [];
         if (!eq.length && Number(mod)) eq = [{ tipo: 'fixo', valor: Number(mod) }];
         const terms = eq.map((t, ti) => _renderBoolEquationTerm(t, side, ti)).join('');
-        const syncCall = `window._eqDvEqSync('${fieldId}','${d.id}')`;
+        const syncCall = `window._eqDvEqSync('${fieldId}',${k})`;
         return `<div class="mechsel-chip" style="border-left-color:#3b82f6;"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div>${toggle || selMaos ? `<div class="mechsel-chip-preview">${toggle}${selMaos}</div>` : ''}
         <div class="eq-builder-section" oninput="${syncCall}" onchange="${syncCall}" onclick="${syncCall}">
             <label class="eq-builder-label" style="font-size:.7rem">🧮 Equação de Valor <span id="boolEquacao${side}_preview" style="color:var(--muted);font-weight:normal">${esc(_eqDvEqPreviewStr(eq))}</span></label>
             <div class="eq-terms-container" id="boolEquacao${side}">${terms}</div>
             <button type="button" class="eq-add-term-btn" onclick="window._mechBoolAddTerm('${side}')">➕ Adicionar Termo</button>
-            <button type="button" class="eq-add-term-btn" onclick="window._eqDvEqClear('${fieldId}','${d.id}')">🗑️ Limpar Equação</button>
-        </div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${d.id}')">✕</button></div>`;
+            <button type="button" class="eq-add-term-btn" onclick="window._eqDvEqClear('${fieldId}',${k})">🗑️ Limpar Equação</button>
+        </div></div><button type="button" class="mechsel-chip-remove" onclick="window._eqDvSelRemove('${fieldId}',${k})">✕</button></div>`;
     }
-    return `<div class="mechsel-chip" style="border-left-color:#3b82f6;"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${esc(rotulo)}: <input type="number" step="${passo}" value="${mod}" style="width:60px;padding:2px;font-size:0.7rem;" onchange="window._eqDvSelLevelChange('${fieldId}', '${d.id}', '${campo}', this.value)">${toggle}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('${fieldId}','${d.id}')">✕</button></div>`;
+    return `<div class="mechsel-chip" style="border-left-color:#3b82f6;"><div class="mechsel-chip-info"><div class="mechsel-chip-name">${icon} ${esc(d.nome)}</div><div class="mechsel-chip-preview">${esc(rotulo)}: <input type="number" step="${passo}" value="${mod}" style="width:60px;padding:2px;font-size:0.7rem;" onchange="window._eqDvSelLevelChange('${fieldId}', ${k}, '${campo}', this.value)">${toggle}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._eqDvSelRemove('${fieldId}',${k})">✕</button></div>`;
 }
 
 /** Preview do vínculo: total numérico quando a equação só tem termos fixos,
@@ -3787,61 +3794,91 @@ function _eqDvEqPreviewStr(eq) {
     return `— Total: ${_formatEquation(eq)}`;
 }
 
-/** Sincroniza a equação editada no chip para o hidden do seletor e refaz o preview. */
-window._eqDvEqSync = function (fieldId, did) {
-    const cont = document.getElementById(`boolEquacao_DV_${fieldId}_${did}`);
+/**
+ * Lê o vínculo na POSIÇÃO `k` do hidden, já normalizado para objeto.
+ * Todos os handlers do chip passam por aqui: o mesmo Valor Derivado pode estar
+ * vinculado duas vezes (um valor por pegada), e `findIndex(p => p.id === did)`
+ * sempre devolvia o primeiro — o segundo vínculo era ineditável.
+ */
+function _eqDvVinculo(fieldId, k) {
     const hidden = document.getElementById(fieldId);
-    if (!cont || !hidden) return;
+    if (!hidden) return null;
+    const data = JSON.parse(hidden.value || '[]');
+    const idx = Number(k);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= data.length) return null;
+    if (typeof data[idx] !== 'object') data[idx] = { id: data[idx], modificador: 0 };
+    return { hidden, data, idx, v: data[idx] };
+}
+
+const _eqDvGravar = (c) => { c.hidden.value = JSON.stringify(c.data); };
+
+/** Sincroniza a equação editada no chip para o hidden do seletor e refaz o preview. */
+window._eqDvEqSync = function (fieldId, k) {
+    const cont = document.getElementById(`boolEquacao_DV_${fieldId}_${k}`);
+    const c = _eqDvVinculo(fieldId, k);
+    if (!cont || !c) return;
     let eq = _collectEquacaoFromContainer(cont);
     // Termo único fixo vazio = equação ainda não preenchida ⇒ não persiste
     if (eq.length === 1 && eq[0].tipo === 'fixo' && (eq[0].valor === '' || eq[0].valor === undefined)) eq = [];
-    const data = JSON.parse(hidden.value || '[]');
-    const idx = data.findIndex(p => (typeof p === 'object' ? p.id === did : p === did));
-    if (idx < 0) return;
-    if (typeof data[idx] !== 'object') data[idx] = { id: did, modificador: 0 };
     if (eq.length) {
-        data[idx].equacao = eq;
+        c.v.equacao = eq;
         // Equação substitui o Modificador — zera o legado para o vínculo ter
         // uma fonte de valor só (a ficha ignora modificador quando há equação,
         // mas dado limpo evita confusão em quem ler o Firestore).
-        data[idx].modificador = 0;
+        c.v.modificador = 0;
     } else {
-        delete data[idx].equacao;
+        delete c.v.equacao;
     }
-    hidden.value = JSON.stringify(data);
-    const prev = document.getElementById(`boolEquacao_DV_${fieldId}_${did}_preview`);
+    _eqDvGravar(c);
+    const prev = document.getElementById(`boolEquacao_DV_${fieldId}_${k}_preview`);
     if (prev) prev.textContent = _eqDvEqPreviewStr(eq);
 };
 
-window._eqDvEqClear = function (fieldId, did) {
-    const cont = document.getElementById(`boolEquacao_DV_${fieldId}_${did}`);
+window._eqDvEqClear = function (fieldId, k) {
+    const cont = document.getElementById(`boolEquacao_DV_${fieldId}_${k}`);
     if (cont) cont.innerHTML = '';
-    window._eqDvEqSync(fieldId, did);
+    window._eqDvEqSync(fieldId, k);
 };
 
-window._eqDvSelEscopoChange = function (fieldId, did, global) {
-    const hidden = document.getElementById(fieldId);
-    if (!hidden) return;
-    const data = JSON.parse(hidden.value || '[]');
-    const idx = data.findIndex(p => (typeof p === 'object' ? p.id === did : p === did));
-    if (idx < 0) return;
-    if (typeof data[idx] !== 'object') data[idx] = { id: did, modificador: 0 };
-    if (global) data[idx].escopo = 'global';
-    else delete data[idx].escopo;   // ausente = comportamento padrão do VD
-    hidden.value = JSON.stringify(data);
+window._eqDvSelEscopoChange = function (fieldId, k, global) {
+    const c = _eqDvVinculo(fieldId, k);
+    if (!c) return;
+    if (global) c.v.escopo = 'global';
+    else delete c.v.escopo;   // ausente = comportamento padrão do VD
+    _eqDvGravar(c);
 };
 
 /** Em que pegada o vínculo vale: 0/ausente = sempre, 1 = uma mão, 2 = duas. */
-window._eqDvSelMaosChange = function (fieldId, did, valor) {
-    const hidden = document.getElementById(fieldId);
-    if (!hidden) return;
-    const data = JSON.parse(hidden.value || '[]');
-    const idx = data.findIndex(p => (typeof p === 'object' ? p.id === did : p === did));
-    if (idx < 0) return;
-    if (typeof data[idx] !== 'object') data[idx] = { id: did, modificador: 0 };
+window._eqDvSelMaosChange = function (fieldId, k, valor) {
+    const c = _eqDvVinculo(fieldId, k);
+    if (!c) return;
     const m = Number(valor) || 0;
-    if (m) data[idx].maos = m; else delete data[idx].maos;
-    hidden.value = JSON.stringify(data);
+    if (m) c.v.maos = m; else delete c.v.maos;
+    _eqDvGravar(c);
+};
+
+/** Remove UM vínculo pela posição — o irmão do mesmo VD fica de pé. */
+window._eqDvSelRemove = function (fieldId, k) {
+    const c = _eqDvVinculo(fieldId, k);
+    if (!c) return;
+    c.data.splice(c.idx, 1);
+    _eqDvGravar(c);
+    _eqDvRedesenharChips(fieldId, c.data);
+};
+
+/**
+ * Duplica o vínculo: é assim que a mesma arma ganha "Dano sempre" + "Dano só
+ * com 2 mãos". A cópia nasce na outra pegada para não virar bônus dobrado por
+ * descuido — dois vínculos iguais sem pegada somariam os dois.
+ */
+window._eqDvSelDuplicar = function (fieldId, k) {
+    const c = _eqDvVinculo(fieldId, k);
+    if (!c) return;
+    const copia = JSON.parse(JSON.stringify(c.v));
+    copia.maos = Number(c.v.maos) === 2 ? 1 : 2;
+    c.data.splice(c.idx + 1, 0, copia);
+    _eqDvGravar(c);
+    _eqDvRedesenharChips(fieldId, c.data);
 };
 
 export function buildEquipmentDerivedValueSelectorHTML(fieldKey, label, currentIds, cache, noun = 'Valor Derivado', campo = 'modificador', rotulo = 'Modificador', comEquacao = false) {
@@ -3854,11 +3891,9 @@ export function buildEquipmentDerivedValueSelectorHTML(fieldKey, label, currentI
     const parsedIds = (currentIds || []).map(item => typeof item === 'object' ? item : { id: item, [campo]: 0 });
     const selectedIds = parsedIds.map(p => p.id);
 
-    const chips = parsedIds.map(dvObj => {
-        const did = dvObj.id;
-        const d = cache.find(x => x.id === did);
-        if (!d) return '';
-        return _eqDvChip(`field_${fieldKey}`, dvObj, d);
+    const chips = parsedIds.map((dvObj, i) => {
+        const d = cache.find(x => x.id === dvObj.id);
+        return d ? _eqDvChip(`field_${fieldKey}`, dvObj, d, i) : '';
     }).join('');
 
     const opts = published.map(d => {
@@ -3884,64 +3919,61 @@ export function buildEquipmentDerivedValueSelectorHTML(fieldKey, label, currentI
     </div>`;
 }
 
+/** Repinta a lista de chips a partir do array de vínculos. */
+function _eqDvRedesenharChips(fieldId, data) {
+    const chipsEl = document.getElementById(`${fieldId}_chips`);
+    if (!chipsEl) return;
+    const reg = window._eqSelCache?.[fieldId];
+    const cache = reg?.cache || window._derivedValuesCache || [];
+    const noun = (reg?.noun || 'Valor Derivado').toLowerCase();
+    if (!data.length) {
+        chipsEl.innerHTML = `<span style="color:var(--muted);font-size:.75rem">Nenhum ${noun} vinculado</span>`;
+        return;
+    }
+    chipsEl.innerHTML = data.map((dvObj, i) => {
+        const d = cache.find(x => x.id === dvObj.id);
+        return d ? _eqDvChip(fieldId, dvObj, d, i) : '';
+    }).join('');
+}
+
 window._eqDvSelConfirm = function (fieldId) {
     const results = document.getElementById(`${fieldId}_results`);
     const hidden = document.getElementById(fieldId);
     if (!results || !hidden) return;
 
-    const reg0 = window._eqSelCache?.[fieldId] || {};
-    const existingIds = JSON.parse(hidden.value || '[]');
-    const existingMap = new Map();
-    existingIds.forEach(item => {
-        if (typeof item === 'object') existingMap.set(item.id, item);
-        else existingMap.set(item, { id: item, modificador: 0 });
-    });
+    const campo = (window._eqSelCache?.[fieldId] || {}).campo || 'modificador';
+    const existentes = JSON.parse(hidden.value || '[]')
+        .map(x => (typeof x === 'object' ? x : { id: x, [campo]: 0 }));
+    const marcados = Array.from(results.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
 
-    const checked = Array.from(results.querySelectorAll('input[type="checkbox"]:checked')).map(cb => {
-        const ex = existingMap.get(cb.value);
-        const campo = reg0.campo || 'modificador';
-        const novo = { id: cb.value, [campo]: ex ? (ex[campo] || 0) : 0 };
-        // Sem isto, reconfirmar o seletor zerava o ON/OFF de escopo já marcado.
-        if (ex?.escopo) novo.escopo = ex.escopo;
-        if (ex?.maos) novo.maos = ex.maos;
-        if (Array.isArray(ex?.equacao) && ex.equacao.length) novo.equacao = ex.equacao;
-        return novo;
-    });
+    // TODOS os vínculos de um id marcado sobrevivem — a mesma arma pode ter
+    // Dano duas vezes (um por pegada). Um Map por id, como era antes, ficava
+    // com o último e apagava o irmão sem avisar.
+    const mantidos = existentes.filter(v => marcados.includes(v.id));
+    const novos = marcados
+        .filter(id => !existentes.some(v => v.id === id))
+        .map(id => ({ id, [campo]: 0 }));
+    const data = mantidos.concat(novos);
 
-    hidden.value = JSON.stringify(checked);
+    hidden.value = JSON.stringify(data);
     document.getElementById(`${fieldId}_search`).classList.remove('open');
-
-    // Refresh chips — usa o cache que montou ESTE campo (VDs ou Status Vitais)
-    const reg = window._eqSelCache?.[fieldId];
-    const cache = reg?.cache || window._derivedValuesCache || [];
-    const noun = (reg?.noun || 'Valor Derivado').toLowerCase();
-    const chipsEl = document.getElementById(`${fieldId}_chips`);
-    if (chipsEl) {
-        if (!checked.length) {
-            chipsEl.innerHTML = `<span style="color:var(--muted);font-size:.75rem">Nenhum ${noun} vinculado</span>`;
-        } else {
-            chipsEl.innerHTML = checked.map(dvObj => {
-                const d = cache.find(x => x.id === dvObj.id);
-                return d ? _eqDvChip(fieldId, dvObj, d) : '';
-            }).join('');
-        }
-    }
+    _eqDvRedesenharChips(fieldId, data);
 };
 
-window._eqDvSelLevelChange = function (fieldId, did, prop, val) {
+window._eqDvSelLevelChange = function (fieldId, k, prop, val) {
     const hidden = document.getElementById(fieldId);
     if (!hidden) return;
     const parsed = parseFloat(String(val).replace(',', '.')) || 0;
     let data = JSON.parse(hidden.value || '[]');
-    const idx = data.findIndex(p => (typeof p === 'object' ? p.id === did : p === did));
-    if (idx >= 0) {
+    const idx = Number(k);
+    if (Number.isInteger(idx) && idx >= 0 && idx < data.length) {
         if (typeof data[idx] !== 'object') {
-            data[idx] = { id: did, modificador: 0 };
+            data[idx] = { id: data[idx], modificador: 0 };
         }
         data[idx][prop] = parsed;
         hidden.value = JSON.stringify(data);
         // Mudou o modificador ⇒ refaz o preview do Total da equação (se houver)
-        if (document.getElementById(`boolEquacao_DV_${fieldId}_${did}`)) window._eqDvEqSync(fieldId, did);
+        if (document.getElementById(`boolEquacao_DV_${fieldId}_${idx}`)) window._eqDvEqSync(fieldId, idx);
     }
 };
 
