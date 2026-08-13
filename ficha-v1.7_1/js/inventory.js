@@ -2469,6 +2469,10 @@ window.openItemFormModal = function(title, item, containerId) {
                     <input type="text" id="invFormFormulaDano" class="inv-form-input" value="${_escHtml(item?.formulaDano || '')}" placeholder="Ex: 1d10 — bônus numéricos vêm dos Valores Derivados">
                 </div>
                 <div class="inv-form-group inv-form-wide">
+                    <label class="inv-form-label">💥 Fórmula de Dano (empunhada com 2 mãos)</label>
+                    <input type="text" id="invFormFormulaDano2Maos" class="inv-form-input" value="${_escHtml(item?.formulaDano2Maos || '')}" placeholder="Ex: 1d12 — vazio = o mesmo dado de 1 mão">
+                </div>
+                <div class="inv-form-group inv-form-wide">
                     <label class="inv-form-label">Descrição</label>
                     <textarea id="invFormDesc" class="inv-form-textarea" rows="3" placeholder="Descrição do item">${_escHtml(item?.descricao || '')}</textarea>
                 </div>
@@ -2528,6 +2532,8 @@ window.fillFromCatalog = function(templateId) {
     document.getElementById('invFormImagem').value = tpl.imagemUrl || '';
     const fdEl = document.getElementById('invFormFormulaDano');
     if (fdEl) fdEl.value = tpl.formulaDano || '';
+    const fd2El = document.getElementById('invFormFormulaDano2Maos');
+    if (fd2El) fd2El.value = tpl.formulaDano2Maos || '';
     document.getElementById('invFormModeloId').value = tpl.id;
     document.getElementById('invFormQuantidade').value = 1;
 
@@ -2651,6 +2657,7 @@ window.saveInventoryItemForm = async function() {
             quantidade: (isContainer || tipo === 'Arma') ? 1 : Math.max(1, parseInt(document.getElementById('invFormQuantidade')?.value) || 1),
             descricao: document.getElementById('invFormDesc')?.value?.trim() || '',
             formulaDano: document.getElementById('invFormFormulaDano')?.value?.trim() || '',
+            formulaDano2Maos: document.getElementById('invFormFormulaDano2Maos')?.value?.trim() || '',
             imagem: document.getElementById('invFormImagem')?.value?.trim() || '',
             modeloId: document.getElementById('invFormModeloId')?.value || null,
             equipavelEm: equipavelEm.length > 0 ? equipavelEm : null,
