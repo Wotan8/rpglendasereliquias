@@ -136,20 +136,27 @@ async function carregarSkills(chave, p) {
     // índice global de pré-definidos (o id `pdi_...` é único entre módulos).
     // Se o registro falhar, as skills da FICHA continuam listadas — só ficam
     // sem a mira cadastrada (caem no fluxo de "mira não cadastrada").
-    const predefPorId = new Map();
+    const normNome = (s2) => String(s2 || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const predefPorId = new Map(), predefPorNome = new Map();
     try {
-        const m = await import('./tab-ficha-win.js?v=8');
+        const m = await import('./tab-ficha-win.js?v=9');
         const sys = await m.registroSistema();
         for (const mod of Object.values(sys.classModulesById || {})) {
-            for (const pd of mod.itensPredefinidos || []) predefPorId.set(pd.id, pd);
+            for (const pd of mod.itensPredefinidos || []) {
+                predefPorId.set(pd.id, pd);
+                predefPorNome.set(normNome(pd.nome), pd);
+            }
         }
     } catch (e) { console.warn('registro do sistema p/ skills do turno', e); }
     const lista = itensBrutos(p).map(it => {
-        const pd = it._predefId ? predefPorId.get(it._predefId) : null;
+        // item de NPC nem sempre carrega _predefId — o nome resolve o registro
+        const pd = (it._predefId && predefPorId.get(it._predefId)) || predefPorNome.get(normNome(S_NOME(it))) || null;
         return {
             nome: S_NOME(it),
-            efeito: S_EFEITO(it) || pd?.descricao || '',
-            custo: S_CUSTO(it),
+            // o pré-definido guarda os campos pré-preenchidos em `valores` — é de
+            // lá que sai o custo/efeito quando a instância não os copiou (NPCs)
+            efeito: S_EFEITO(it) || S_EFEITO(pd?.valores || {}) || pd?.descricao || '',
+            custo: S_CUSTO(it) || S_CUSTO(pd?.valores || {}),
             mira: it.mira || pd?.mira || null,
             acao: it.custoAcao || pd?.custoAcao || pd?.mira?.custoAcao || 'padrao',   // §6.2
         };
@@ -284,7 +291,7 @@ function subMenu(qual, p, skills, acoes) {
 async function carregarGolpes(chave, p) {
     golpesCache = { chave, linhas: null };
     try {
-        const m = await import('./tab-ficha-win.js?v=8');
+        const m = await import('./tab-ficha-win.js?v=9');
         const linhas = await m.linhasDeAtaque(p.npcId ? 'npc' : 'char', p.npcId || p.characterId);
         golpesCache = { chave, linhas };
     } catch (e) { console.warn('golpes do turno', e); golpesCache = { chave, linhas: [] }; }

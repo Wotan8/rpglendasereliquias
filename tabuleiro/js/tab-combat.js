@@ -14,7 +14,7 @@ let janelaAberta = false;
 // Janela flutuante de ficha de combate (NPC/personagem) — módulo carregado só
 // quando alguém abre a primeira janela.
 window.tbFichaWin = async function(tipo, id) {
-    try { (await import('./tab-ficha-win.js?v=8')).abrirFichaWin(tipo, id); }
+    try { (await import('./tab-ficha-win.js?v=9')).abrirFichaWin(tipo, id); }
     catch (e) { console.error(e); toast('❌ Erro ao abrir a janela de combate', 'danger'); }
 };
 
@@ -227,11 +227,26 @@ function render() {
             }
         }
 
-        // ⚔️ VDs de Status de Combate (statusCombate no Criador) abaixo de SAN
-        const vdsChips = secreto ? vdsCombateDaFonte(fonteDoParticipante(p)) : [];
-        const vdsHtml = vdsChips.length
-            ? `<div class="tb-combat-vds">${vdsChips.map(d =>
-                `<span class="tb-combat-vd" title="${esc(d.nome)}">${esc(d.icone)} <span class="tb-combat-vd-nome">${esc(d.nome)}</span> <b>${esc(String(d.prefixo))}${d.valor}${esc(String(d.sufixo))}</b></span>`).join('')}</div>`
+        // ⚔️ VDs de Status de Combate (statusCombate no Criador) abaixo de SAN —
+        // com campo Atual/Máx viram BARRA com −/+ (igual VIT/ENER/SAN); sem, chip.
+        const vdsCombate = secreto ? vdsCombateDaFonte(fonteDoParticipante(p)) : [];
+        const vdBarra = (d) => {
+            const max = d.valor, cur = d.atual ?? max;
+            const pct = max > 0 ? Math.max(0, Math.min(100, (cur / max) * 100)) : 0;
+            return `<div class="tb-cstat" title="${esc(d.nome)}">
+                ${podeCtrl ? `<button class="tb-cstat-btn" onclick="tbCombVd('${p.id}','${esc(d.key)}',-1)">−</button>` : ''}
+                <span class="tb-cstat-lb">${esc(d.icone)}</span>
+                <div class="tb-cstat-bar"><div style="width:${pct}%;background:linear-gradient(90deg,#b45309,#f59e0b)"></div></div>
+                <span class="tb-cstat-v">${vNum(cur)}/${vNum(max)}</span>
+                ${podeCtrl ? `<button class="tb-cstat-btn" onclick="tbCombVd('${p.id}','${esc(d.key)}',1)">+</button>` : ''}
+            </div>`;
+        };
+        const vdsHtml = vdsCombate.length
+            ? vdsCombate.filter(d => d.campoAtual && d.valor > 0).map(vdBarra).join('')
+              + (vdsCombate.some(d => !(d.campoAtual && d.valor > 0))
+                ? `<div class="tb-combat-vds">${vdsCombate.filter(d => !(d.campoAtual && d.valor > 0)).map(d =>
+                    `<span class="tb-combat-vd" title="${esc(d.nome)}">${esc(d.icone)} <span class="tb-combat-vd-nome">${esc(d.nome)}</span> <b>${esc(String(d.prefixo))}${d.valor}${esc(String(d.sufixo))}</b></span>`).join('')}</div>`
+                : '')
             : '';
         const stats = secreto ? `
             ${barra('VIT', hpC, hpM, 'linear-gradient(90deg,#10b981,#34d399)')}
@@ -458,6 +473,24 @@ window.tbCombStat = async function(pid, stat, amt) {
             }
         } catch (e) { console.warn('sync npc stat', e); }
     }
+};
+
+/**
+ * ± no ATUAL de um VD de Status de Combate (campoAtual) direto no card.
+ * Grava onde a FICHA lê: char em derivedValues['dv_<key>_atual'];
+ * NPC em valoresDer.atual[<key>]. Os snapshots repintam todo mundo.
+ */
+window.tbCombVd = async function(pid, key, amt) {
+    const p = partsDaCena().find(x => x.id === pid); if (!p) return;
+    const d = vdsCombateDaFonte(fonteDoParticipante(p)).find(x => x.key === key); if (!d) return;
+    const novo = vNum(Math.max(0, Math.min((d.atual ?? d.valor) + amt, d.valor)));
+    try {
+        if (p.characterId) {
+            await updateDoc(doc(db, 'char', p.characterId), { [`derivedValues.dv_${key}_atual`]: String(novo) });
+        } else if (p.npcId) {
+            await updateDoc(doc(db, 'npcs', p.npcId), { [`valoresDer.atual.${key}`]: novo });
+        }
+    } catch (e) { console.warn('vd atual', e); toast('❌ Erro ao salvar o valor', 'danger'); }
 };
 
 // ===== Cache de condições do sistema =====

@@ -846,7 +846,7 @@ async function abrirFichaMestreNpc(npc) {
 
         const [S] = await Promise.all([
             import('../../painel-mestre/js/state.js'),
-            import('../../painel-mestre/js/area-npcs.js?v=v57')
+            import('../../painel-mestre/js/area-npcs.js?v=v58')
         ]);
 
         // Garante o NPC atual no estado compartilhado usado pelo componente

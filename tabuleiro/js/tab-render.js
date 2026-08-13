@@ -605,7 +605,9 @@ function drawBarras(pos, s, v) {
 function drawVDsCombate(pos, s, vds) {
     const fs = hud(10.5);
     ctx.font = `bold ${fs}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-    const txt = vds.map(d => `${d.icone}${d.prefixo}${d.valor}${d.sufixo}`).join(' ');
+    const txt = vds.map(d => d.campoAtual && d.atual != null
+        ? `${d.icone}${d.atual}/${d.valor}`
+        : `${d.icone}${d.prefixo}${d.valor}${d.sufixo}`).join(' ');
     const y = pos.y - s / 2 - hud(8) - (hud(4.5) + hud(1.5)) * 3 - hud(3);
     ctx.lineWidth = hud(3); ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(txt, pos.x, y);
     ctx.fillStyle = '#e2e8f0'; ctx.fillText(txt, pos.x, y);

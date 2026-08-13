@@ -20,8 +20,46 @@ const unsubsVitais = [];
 // ⚔️ VDs marcados como "Status de Combate" no Criador (statusCombate: true) —
 // exibidos no card da janela de Combate e sobre o token, abaixo das barras.
 // Registro carregado 1x por sessão (mesmo cache das janelas de ficha).
-export let VDS_COMBATE = [];   // [{ nome, icone, prefixo, sufixo }]
+export let VDS_COMBATE = [];   // [{ id, key, nome, icone, prefixo, sufixo, campoAtual, todoPersonagem }]
+let _sysHud = null;
 const _vdsCache = new WeakMap();   // derivedTotals/valoresDer (obj do snapshot) -> valores prontos
+
+/**
+ * VDs VINCULADOS ao personagem — a MESMA regra da ficha: derivedValueIds da
+ * raça/classe + peculiaridades da raça/classe/tribo + as individuais.
+ * (Era privada da janela de ficha; mora aqui porque o HUD também filtra.)
+ */
+export function dvsVinculadosChar(ch, sys) {
+    const ids = new Set();
+    const addIds = (lista) => (lista || []).forEach(x => {
+        const id = (typeof x === 'object' && x) ? x.id : x;
+        if (id) ids.add(id);
+    });
+    const addPecs = (lista) => (lista || []).forEach(p => {
+        const pid = (typeof p === 'object' && p) ? p.id : p;
+        addIds(sys.pecsById?.[pid]?.derivedValueIds);
+    });
+    const norm = sys.norm;
+    const raca = ch.raca ? sys.racesByNome?.[norm(ch.raca)] : null;
+    const classe = ch.classe ? sys.classesByNome?.[norm(ch.classe)] : null;
+    const tribo = ch.tribo ? sys.tribesByNome?.[norm(ch.tribo)] : null;
+    addIds(raca?.derivedValueIds);
+    addIds(classe?.derivedValueIds);
+    addPecs(raca?.peculiaridadeIds);
+    addPecs(classe?.bonusIniciais);       // a ficha soma bonusIniciais + peculiaridadeIds
+    addPecs(classe?.peculiaridadeIds);
+    addPecs(tribo?.peculiaridadeIds);
+    addPecs(ch.peculiaridadesIndividuais);
+    return ids;
+}
+export const dvAplicaChar = (dv, vinc) => dv.todoPersonagem || vinc.has(dv.id);
+
+/** O VD statusCombate vale para esta fonte? Char pela regra da ficha; NPC pelos `vinculados`. */
+function vdAplicaFonte(dv, fonte, vincChar) {
+    if (fonte.derivedTotals) return vincChar ? dvAplicaChar(dv, vincChar) : true;
+    const vinc = fonte.valoresDer?.vinculados;
+    return Array.isArray(vinc) ? (dv.todoPersonagem || vinc.includes(dv.key)) : true;   // NPC legado: sem lista, vale o que tem valor
+}
 
 export function vdsCombateDaFonte(fonte) {
     if (!fonte || !VDS_COMBATE.length) return [];
@@ -29,10 +67,23 @@ export function vdsCombateDaFonte(fonte) {
     if (!base || typeof base !== 'object') return [];
     let r = _vdsCache.get(base);
     if (r) return r;
+    const vincChar = (fonte.derivedTotals && _sysHud) ? dvsVinculadosChar(fonte, _sysHud) : null;
     r = [];
     for (const dv of VDS_COMBATE) {
+        if (!vdAplicaFonte(dv, fonte, vincChar)) continue;
         const v = valorComponente(dv.nome, fonte);
-        if (v != null && v !== 0) r.push({ ...dv, valor: v });   // 0/ausente = ruído, fica de fora
+        if (v == null || v === 0) continue;   // 0/ausente = ruído, fica de fora
+        // valor ATUAL (VDs com campo Atual/Máx): char grava em
+        // derivedValues['dv_<key>_atual'] na ficha; NPC em valoresDer.atual[key]
+        let atual = null;
+        if (dv.campoAtual) {
+            const raw = fonte.derivedTotals
+                ? VITAIS.get(fonte.id)?.dvAtuais?.[`dv_${dv.key}_atual`]
+                : fonte.valoresDer?.atual?.[dv.key];
+            const n = parseFloat(String(raw ?? '').replace(',', '.'));
+            atual = isNaN(n) ? null : n;
+        }
+        r.push({ ...dv, valor: v, atual });
     }
     _vdsCache.set(base, r);
     return r;
@@ -55,8 +106,13 @@ export function initHud() {
     import('../../painel-mestre/js/npc-system-data.js')
         .then(m => m.ensureNpcSystemData())
         .then(sys => {
+            _sysHud = sys;
             VDS_COMBATE = (sys.derivedValues || []).filter(d => d.statusCombate)
-                .map(d => ({ nome: d.nome, icone: d.icone || '📊', prefixo: d.prefixo || '', sufixo: d.sufixo || '' }));
+                .map(d => ({
+                    id: d.id, key: d.key, nome: d.nome, icone: d.icone || '📊',
+                    prefixo: d.prefixo || '', sufixo: d.sufixo || '',
+                    campoAtual: d.campoAtual === true, todoPersonagem: d.todoPersonagem === true,
+                }));
             markDirty();
             window._renderCombate?.();
         })
@@ -78,6 +134,8 @@ export function initHud() {
                 conds: (d.conditions || []).map(x => ({ icone: x.icone || '💀', nome: x.nome || '' })),
                 // objetos completos (descrição, tempo) — a janela de ficha exibe e edita
                 condsFull: d.conditions || [],
+                // inputs crus da ficha — o ATUAL dos VDs de combate mora em dv_<key>_atual
+                dvAtuais: d.derivedValues || {},
             });
             // VDs ao vivo: subir a Percepção na ficha muda o alcance de visão do
             // token na hora, sem precisar reabrir o Tabuleiro.

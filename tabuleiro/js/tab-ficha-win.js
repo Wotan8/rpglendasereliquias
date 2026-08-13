@@ -20,7 +20,7 @@ import {
     T, esc, toast, markDirty, vNum, dvMesa, normChave, patchVitalAtualNpc, valorComponente, dividirPilha
 } from './tab-state.js';
 import { refCombate } from './tab-main.js';
-import { VITAIS } from './tab-hud.js';
+import { VITAIS, dvsVinculadosChar, dvAplicaChar } from './tab-hud.js';
 import { addObj } from './tab-objects.js';
 import { screenToWorld } from './tab-render.js';
 import { pontoVisivelAgora } from './tab-fog.js';
@@ -724,30 +724,8 @@ function secaoValores(blocos) {
  * `derivedTotals` sozinho não serve de filtro: o motor calcula TODOS os VDs do
  * registro, mas a ficha só EXIBE os vinculados.
  */
-function dvsVinculadosChar(ch) {
-    const ids = new Set();
-    const addIds = (lista) => (lista || []).forEach(x => {
-        const id = (typeof x === 'object' && x) ? x.id : x;
-        if (id) ids.add(id);
-    });
-    const addPecs = (lista) => (lista || []).forEach(p => {
-        const pid = (typeof p === 'object' && p) ? p.id : p;
-        addIds(_sys.pecsById?.[pid]?.derivedValueIds);
-    });
-    const norm = _sys.norm;
-    const raca = ch.raca ? _sys.racesByNome?.[norm(ch.raca)] : null;
-    const classe = ch.classe ? _sys.classesByNome?.[norm(ch.classe)] : null;
-    const tribo = ch.tribo ? _sys.tribesByNome?.[norm(ch.tribo)] : null;
-    addIds(raca?.derivedValueIds);
-    addIds(classe?.derivedValueIds);
-    addPecs(raca?.peculiaridadeIds);
-    addPecs(classe?.bonusIniciais);       // a ficha soma bonusIniciais + peculiaridadeIds
-    addPecs(classe?.peculiaridadeIds);
-    addPecs(tribo?.peculiaridadeIds);
-    addPecs(ch.peculiaridadesIndividuais);
-    return ids;
-}
-const dvAplicaChar = (dv, vinc) => dv.todoPersonagem || vinc.has(dv.id);
+// dvsVinculadosChar / dvAplicaChar moraram aqui; foram para tab-hud.js quando o
+// HUD do token e o card do combate passaram a filtrar pela MESMA regra da ficha.
 
 /** VDs do personagem: SÓ os vinculados (regra da ficha), nos blocos do registro. */
 function blocosChar(ch, vinc) {
@@ -1217,7 +1195,7 @@ function htmlCombateChar(win, ch) {
             <span>${esc(x.s.nome)}</span><b>${fmtN(x.v)}</b>
         </div>`).join('');
 
-    const vinc = dvsVinculadosChar(ch);
+    const vinc = dvsVinculadosChar(ch, _sys);
     return secaoValores(blocosChar(ch, vinc))
         + detalhe('⚔️ Ataques', htmlAtaques(win, ch), true)
         + detalhe('📦 Habilidades & Módulos', htmlModulos(win, ch), true)
