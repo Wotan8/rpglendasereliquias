@@ -314,11 +314,12 @@ function buildClassDataFromFirebase() {
     for (const cls of window._systemData.classes) {
         if (cls.publicado === false) continue;
 
-        // Skills
-        if (cls.periciasDaClasse && Array.isArray(cls.periciasDaClasse)) {
-            window.CLASS_SKILLS[cls.nome] = cls.periciasDaClasse.map(sk =>
-                typeof sk === 'object' ? sk.nome : sk
-            ).filter(Boolean);
+        // Skills — pericClasse guarda IDs de skill (legado: objeto {nome})
+        if (Array.isArray(cls.pericClasse)) {
+            window.CLASS_SKILLS[cls.nome] = cls.pericClasse.map(sk => {
+                if (sk && typeof sk === 'object') return sk.nome;
+                return window._systemData.skills.find(s => s.id === sk)?.nome || sk;
+            }).filter(Boolean);
         }
 
         // Peculiarities (bonusIniciais)
