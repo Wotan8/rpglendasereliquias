@@ -1,3 +1,9 @@
+/* ⚠️ RÉGUA v1 APOSENTADA — NÃO USE PARA DECIDIR NADA.
+   Mede custo = recursos apenas. A régua vigente é a v2 (§0.6 do livro):
+   custo = recursos + AÇÃO, com faixa dupla (§0.7). Rodar esta aqui em
+   conteúdo balanceado pela v2 produz razões de 18x e espalhamentos falsos.
+   Vigente: functions/__audit-regua-v2-completa.mjs
+   Mantida só pelos parsers de texto, que a v2 reaproveita. */
 /**
  * RÉGUA DE CONTROLE E SUPORTE — só leitura, não grava nada.
  *

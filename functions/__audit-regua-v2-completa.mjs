@@ -10,7 +10,14 @@ admin.initializeApp({ credential: admin.credential.cert(
     require('./rpg-lendasereliquias-firebase-adminsdk-fbsvc-1c3d60aa29.json')) });
 const db = admin.firestore();
 
-const U = 3.445, PISO = 1.00, TETO = 1.70, TETO_HOSTIL = 7, CELULA = 9;
+const U = 3.445, PISO = 1.00, TETO = 1.70, TETO_RESIST = 2.00, TETO_HOSTIL = 7, CELULA = 9;
+/* §0.7 — faixa dupla. Quem precisa vencer resistência entrega em ~40% das
+   vezes; quem abençoa aliado, em ~70%. A folga não é desconto, é tolerância:
+   permite entregar mais QUANDO entrega. Só mexe no teto, nunca no piso. */
+const enfrentaResistencia = it =>
+  (it.condicoesAplicadas || []).some(c => c.portao === 'resistencia' || c.portao === 'chance')
+  || /\b(?:testa|testam|vs|contra)\b[^.;]{0,30}\b(?:GS|Graus|AUT|VIG|PRS|PRE|RAC|Percep)/i.test(
+       String(it.descricao || '') + ' ' + Object.values(it.valores || {}).filter(v => typeof v === 'string').join(' '));
 const ACAO = { 'Ação Livre': 0, 'Ação de Movimento': 0.333, 'Ação Padrão': 1, 
   'Ação Completa (turno inteiro)': 1.333, 'Sustentada (1 Padrão/turno)': 1, 'Fora de combate': 0 };
 const ENERGIA = 1, VIT = 1/U, CARGA = 3*VIT, SAN = VIT;
@@ -51,16 +58,17 @@ for (const c of classes) for (const ref of (c.modulosDaClasse||[])) {
     const alvosAntigo = it.regua.alvosUsados || null;
     const nAlvos = alvosGeo(it);
     const un = it.regua.unidades + alc;
+    const hostil = enfrentaResistencia(it);
     linhas.push({ classe:c.nome, nome:it.nome, acao, forma:it.formaArea||'-', alvos:nAlvos,
-      cR, cA, total, un, r: un/total });
+      cR, cA, total, un, r: un/total, hostil, teto: hostil ? TETO_RESIST : TETO });
   }
 }
 linhas.sort((a,b)=>a.r-b.r);
-console.log('RÉGUA v2 COMPLETA — custo = recursos + ação · faixa 1,00–1,70×\n');
+console.log('RÉGUA v2 COMPLETA — custo = recursos + ação · faixa 1,00–1,70× (2,00× se enfrenta resistência, §0.7)\n');
 console.log('  habilidade                    classe       ação      forma    alv  rec +ação  un    razão');
 for (const l of linhas) {
-  const mk = l.r<PISO?'↓':l.r>TETO?'↑':' ';
+  const mk = l.r<PISO?'↓':l.r>l.teto?'↑':' ';
   console.log(`${mk} ${l.nome.slice(0,28).padEnd(30)}${l.classe.slice(0,11).padEnd(13)}${l.acao.replace('Ação ','').replace(' (turno inteiro)','').slice(0,9).padEnd(10)}${l.forma.slice(0,8).padEnd(9)}${String(l.alvos).padStart(3)} ${l.cR.toFixed(1).padStart(4)}+${l.cA.toFixed(2)} ${l.un.toFixed(2).padStart(5)} ${l.r.toFixed(2).padStart(5)}x`);
 }
-const ab=linhas.filter(l=>l.r<PISO), ac=linhas.filter(l=>l.r>TETO);
+const ab=linhas.filter(l=>l.r<PISO), ac=linhas.filter(l=>l.r>l.teto);
 console.log(`\n  ${linhas.length} medidas · abaixo ${ab.length} · dentro ${linhas.length-ab.length-ac.length} · acima ${ac.length}`);
