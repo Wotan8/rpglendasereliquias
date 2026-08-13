@@ -26,6 +26,17 @@ console.log('por tipo: ' + Object.entries(porTipo).sort((a, b) => b[1] - a[1]).m
 bloco('SEM formaEquipar', eq.filter(i => !i.formaEquipar));
 bloco('SEM equipavelEm (não dá para equipar)', eq.filter(i => !(i.equipavelEm || []).length));
 
+// 1b) Segurar em peça que aplica efeito = item MUDO na ficha.
+// Pega o que a UI não pega: script que grava direto no Firestore (inclusive IA).
+// Conserto: node functions/corrigir-forma-segurar.mjs --aplicar
+const aplicaEfeito = i => !!((i.mecanicaIds || []).length || (i.valoresDerivadosVinculados || []).length
+    || (i.statusVitaisVinculados || []).length || (i.condicaoIds || []).length
+    || (i.atributosVinculados || []).length || (i.periciasVinculadas || []).length
+    || String(i.formulaDano || '').trim() || i.tipo === 'Arma');
+bloco('🔴 formaEquipar=segurar COM EFEITO (item mudo — use empunhar)',
+    eq.filter(i => i.formaEquipar === 'segurar' && aplicaEfeito(i)),
+    i => `${nome(i)}  [${i.tipo}]`);
+
 // 2) Obrigatórios do formulário
 bloco('SEM descrição', eq.filter(i => !String(i.descricao || '').trim()));
 bloco('SEM peso ou tamanho', eq.filter(i => i.peso == null || i.tamanho == null),
