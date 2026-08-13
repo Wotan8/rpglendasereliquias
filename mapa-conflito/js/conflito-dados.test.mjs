@@ -5,6 +5,7 @@ import {
     lerCondicoes, rotuloCondicao, perfilDaClasse, vocacaoDominante, FAIXAS,
     radarSVG, opacidadeRadar, PALETA, VOCACOES,
     auditoriaDaClasse, auditoriaSVG, tabelaAuditoria, FAIXA_REGUA,
+    FAIXA_RESISTE, faixaDe, enfrentaResistencia, rotuloForma,
 } from './conflito-dados.js';
 
 /* Fixtures com o formato REAL do banco (copiado de system/data/classModules).
@@ -259,5 +260,32 @@ assert.equal(auditoriaSVG([]).includes('<circle'), false, 'sem classe, sem ponto
 
 // Número em português: vírgula decimal, como no resto do site.
 assert.ok(svgAud.includes('1,36×') || svgAud.includes('>1,36'), 'decimal com vírgula');
+
+/* --- faixa dupla (§0.7): resistência tem teto 2,00, buff tem 1,70 --- */
+assert.deepEqual(FAIXA_RESISTE, [1.00, 2.00]);
+assert.deepEqual(faixaDe({ condicoes: [{ bruto: 'resistencia' }] }), FAIXA_RESISTE);
+assert.deepEqual(faixaDe({ condicoes: [{ bruto: 'chance' }] }), FAIXA_REGUA, 'Chance não é resistência');
+assert.deepEqual(faixaDe({ condicoes: [], faccao: 'inimigo' }), FAIXA_RESISTE, 'facção inimiga já basta');
+assert.deepEqual(faixaDe({ condicoes: [], faccao: 'aliado' }), FAIXA_REGUA);
+assert.equal(enfrentaResistencia({ condicoes: [] }), false);
+
+/* Uma habilidade a 1,88× está FORA pelo teto antigo e DENTRO pelo novo — foi
+   exatamente esse o falso alarme da Névoa Sanguínea no verificador. */
+const mods3 = { m: { titulo: 'M', schema: [], itensPredefinidos: [
+    { nome: 'Névoa', valores: { acao: 'Ação Padrão' }, faccao: 'inimigo',
+      condicoesAplicadas: [{ condicao: 'Abalado', portao: 'resistencia', alvos: 1, rodadas: 5 }],
+      regua: { razao: 1.88, unidades: 6.79, custo: 3.61 } },
+    { nome: 'Escudo', valores: { acao: 'Ação Padrão' },
+      regua: { razao: 1.88, unidades: 3.76, custo: 2.00 } },
+] } };
+const aud3 = auditoriaDaClasse({ id: 's', nome: 'Sangral', modulosDaClasse: ['m'] }, mods3, {});
+assert.deepEqual(aud3.foraDaFaixa.map(m => m.nome), ['Escudo'],
+    'a de resistência cabe em 2,00; a de buff a 1,88 não cabe em 1,70');
+
+/* --- o rótulo de forma é o que a mesa lê --- */
+assert.equal(rotuloForma({ forma: 'cone', raio: 9, angulo: 60, bloqueavel: true }),
+    '🔺 cone R9m 60° · bloqueável');
+assert.equal(rotuloForma({ forma: 'onda', raio: 6 }), '🌀 onda R6m');
+assert.equal(rotuloForma({ forma: 'unico' }), '🎯 unico');
 
 console.log('✅ conflito-dados: todos os asserts passaram.');

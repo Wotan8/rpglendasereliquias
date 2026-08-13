@@ -8,7 +8,7 @@ import { writeFileSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { agruparPorAcao, habilidadesDaClasse, colunaClasse, cardDefesa,
          perfilDaClasse, mapaSVG, radarSVG, vocacaoDominante,
-         auditoriaDaClasse, auditoriaSVG, tabelaAuditoria, FAIXA_REGUA }
+         auditoriaDaClasse, auditoriaSVG, tabelaAuditoria, FAIXA_REGUA, FAIXA_RESISTE }
     from '../mapa-conflito/js/conflito-dados.js';
 const require = createRequire(import.meta.url);
 const admin = require('firebase-admin');

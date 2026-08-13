@@ -59,6 +59,7 @@ export function lerCondicoes(it) {
         .map(c => ({
             nome: String(c.condicao),
             portao: c.portao === 'chance' ? `chance ${c.chance ?? '?'}` : 'resistência',
+            bruto: c.portao || null,
             alvos: Number(c.alvos) || 1,
             rodadas: Number(c.rodadas) || 1,
         }));
@@ -111,6 +112,13 @@ export function lerHabilidade(mod, it, mapas = {}) {
         alcance,
         condicoes: lerCondicoes(it),
         razao: it.regua?.razao || null,
+        /* Geometria da régua v2: a forma define a área, e a área define quem
+           é atingido — o cadastro não declara mais número de alvos. */
+        forma: it.formaArea && it.formaArea !== 'nenhuma' ? it.formaArea : null,
+        raio: Number(it.tamanhoArea) || null,
+        angulo: Number(it.anguloCone) || null,
+        bloqueavel: !!it.bloqueavel,
+        faccao: it.faccao || null,
         /* A medição da Régua de Balanceamento, como foi gravada no cadastro:
            { razao, unidades, custo, em }. É o único número EXATO que existe
            sobre o que a habilidade entrega — o resto da tela é estimativa. */
@@ -214,11 +222,25 @@ export function perfilDaClasse(classe, modulos, mapas) {
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+const ICONE_FORMA = { circulo:'⭕', onda:'🌀', cone:'🔺', linha:'➖', retangulo:'▭',
+    zona:'🟣', muro:'🧱', corrente:'⛓️', ponto:'📍', unico:'🎯', proprio:'🙋' };
+
+/** A forma como a mesa lê: ícone, medida e se a luz para no primeiro corpo. */
+export function rotuloForma(h) {
+    const ico = ICONE_FORMA[h.forma] || '▪️';
+    const medida = h.raio
+        ? (h.forma === 'cone' ? `R${h.raio}m ${h.angulo || 60}°` : `R${h.raio}m`)
+        : '';
+    return `${ico} ${h.forma}${medida ? ' ' + medida : ''}${h.bloqueavel ? ' · bloqueável' : ''}`;
+}
+
 export function cardHabilidade(h) {
     const chips = [
         h.custo && `<span class="mc-chip mc-chip-custo">${esc(h.custo)}</span>`,
         h.teste && `<span class="mc-chip mc-chip-teste">🎲 ${esc(h.teste)}</span>`,
-        h.alcance && `<span class="mc-chip">📏 ${esc(h.alcance)}</span>`,
+        h.forma && `<span class="mc-chip mc-chip-geo">${rotuloForma(h)}</span>`,
+        (!h.forma && h.alcance) ? `<span class="mc-chip">📏 ${esc(h.alcance)}</span>` : '',
+        h.faccao && `<span class="mc-chip">${h.faccao === 'aliado' ? '🤝' : h.faccao === 'ambos' ? '⚖️' : '🎯'} ${esc(h.faccao)}</span>`,
         h.duracao && `<span class="mc-chip">⏳ ${esc(h.duracao)}</span>`,
         ...h.condicoes.map(c => `<span class="mc-chip mc-chip-cond">${esc(rotuloCondicao(c))}</span>`),
         h.razao && `<span class="mc-chip mc-chip-regua" title="Razão da régua de balanceamento">${h.razao.toFixed(2)}×</span>`,
@@ -448,21 +470,34 @@ export function radarSVG(perfis) {
    régua já medida, e a COBERTURA é a primeira coisa que ela mostra —
    classe sem régua não está aprovada, está sem medição. */
 
-export const FAIXA_REGUA = [1.00, 1.70];
+/* FAIXA DUPLA (livro §0.7): enfrentar a Defesa do alvo é preço, e vira
+   tolerância no teto — não custo no denominador. */
+export const FAIXA_REGUA = [1.00, 1.70];          // buff em si ou aliado
+export const FAIXA_RESISTE = [1.00, 2.00];        // enfrenta resistência
+
+/** A habilidade enfrenta resistência? É o que decide qual teto vale. */
+export const enfrentaResistencia = (h) =>
+    /* `bruto` é o valor do cadastro ('resistencia'); `portao` é o rótulo já
+       traduzido ('resistência'). Olhar os dois evita depender de qual das
+       duas formas chegou aqui. */
+    (h.condicoes || []).some(c => /resist/i.test(`${c.bruto || ''} ${c.portao || ''}`))
+    || h.faccao === 'inimigo' || h.faccao === 'ambos';
+
+export const faixaDe = (h) => enfrentaResistencia(h) ? FAIXA_RESISTE : FAIXA_REGUA;
 
 /** @returns {{id,nome,n,medidas,cobertura,foraDaFaixa,unidades,custo}} */
 export function auditoriaDaClasse(classe, modulos, mapas) {
     const habs = habilidadesDaClasse(classe, modulos, mapas);
-    const medidas = habs.filter(h => h.regua).map(h => ({
-        nome: h.nome, modulo: h.modulo,
-        razao: h.regua.razao, unidades: h.regua.unidades, custo: h.regua.custo,
-    }));
-    const [piso, teto] = FAIXA_REGUA;
+    const medidas = habs.filter(h => h.regua).map(h => {
+        const [piso, teto] = faixaDe(h);
+        return { nome: h.nome, modulo: h.modulo, piso, teto,
+            razao: h.regua.razao, unidades: h.regua.unidades, custo: h.regua.custo };
+    });
     return {
         id: classe.id, nome: classe.nome || '?',
         n: habs.length, medidas,
         cobertura: habs.length ? medidas.length / habs.length : 0,
-        foraDaFaixa: medidas.filter(m => m.razao < piso || m.razao > teto)
+        foraDaFaixa: medidas.filter(m => m.razao < m.piso || m.razao > m.teto)
             .sort((a, b) => b.razao - a.razao),
         unidades: medidas.reduce((s, m) => s + (m.unidades || 0), 0),
         custo: medidas.reduce((s, m) => s + (m.custo || 0), 0),
@@ -483,6 +518,7 @@ export function auditoriaSVG(auditorias) {
     const W = 760, H = mt + linhas.length * alt + 44;
     const px = (r) => ml + Math.min(r, MAX) / MAX * (W - ml - mr);
     const [piso, teto] = FAIXA_REGUA;
+    const tetoMax = FAIXA_RESISTE[1];
 
     const eixo = [0, 1, 1.7, 2, 3].map(v => `
         <line x1="${px(v)}" y1="${mt - 12}" x2="${px(v)}" y2="${H - 40}"
@@ -494,12 +530,14 @@ export function auditoriaSVG(auditorias) {
         const y = mt + i * alt + alt / 2;
         const nunca = a.medidas.length === 0;
         const pontos = a.medidas.map(m => {
-            const fora = m.razao < piso || m.razao > teto;
+            /* Cada medida traz o próprio teto (faixa dupla, §0.7): quem
+               enfrenta resistência tem folga até 2,00. */
+            const fora = m.razao < m.piso || m.razao > m.teto;
             const estourou = m.razao > MAX;
             return `<g>
                 <circle cx="${px(m.razao)}" cy="${y}" r="${fora ? 6 : 5}"
                     fill="${fora ? 'var(--lr-blood-2)' : 'var(--lr-nature)'}" fill-opacity=".8"
-                    stroke="var(--lr-surface)" stroke-width="1"><title>${esc(m.nome)} — ${br(m.razao)}× (${br(m.unidades)} unidades ÷ custo ${m.custo}) · ${esc(m.modulo)}</title></circle>
+                    stroke="var(--lr-surface)" stroke-width="1"><title>${esc(m.nome)} — ${br(m.razao)}× (${br(m.unidades)} unidades ÷ custo ${m.custo}) · faixa ${br(m.piso)}–${br(m.teto)} · ${esc(m.modulo)}</title></circle>
                 ${estourou ? `<text x="${px(MAX) + 8}" y="${y + 4}" font-size="10" font-weight="700"
                     fill="var(--lr-blood-2)">${br(m.razao)}×</text>` : ''}
             </g>`;
@@ -519,8 +557,12 @@ export function auditoriaSVG(auditorias) {
 
     return `<svg viewBox="0 0 ${W} ${H}" class="mc-svg" role="img"
         aria-label="Auditoria: razão da régua por habilidade, classe a classe">
+        <rect x="${px(piso)}" y="${mt - 12}" width="${px(tetoMax) - px(piso)}" height="${H - 28 - mt}"
+              fill="var(--lr-nature-soft)" opacity=".45"/>
         <rect x="${px(piso)}" y="${mt - 12}" width="${px(teto) - px(piso)}" height="${H - 28 - mt}"
               fill="var(--lr-nature-soft)"/>
+        <text x="${(px(teto) + px(tetoMax)) / 2}" y="${H - 38}" text-anchor="middle" font-size="9"
+              fill="var(--lr-text-2)">só quem resiste</text>
         <text x="${(px(piso) + px(teto)) / 2}" y="${H - 26}" text-anchor="middle" font-size="10"
               fill="var(--lr-text-2)">faixa aprovada</text>
         <text x="${px(0) + 4}" y="${H - 26}" font-size="10" fill="var(--lr-blood-2)">↤ pior que sacar a espada</text>
@@ -535,7 +577,7 @@ export function tabelaAuditoria(auditorias) {
     const semMedida = auditorias.filter(a => a.n && !a.medidas.length);
 
     const linhas = fora.map(m => `<tr>
-        <td class="mc-num ${m.razao > FAIXA_REGUA[1] ? 'mc-alto' : 'mc-baixo'}">${br(m.razao)}×</td>
+        <td class="mc-num ${m.razao > m.teto ? 'mc-alto' : 'mc-baixo'}">${br(m.razao)}×</td>
         <td>${esc(m.classe)}</td>
         <td>${esc(m.nome)}</td>
         <td class="mc-num">${br(m.unidades)}</td>

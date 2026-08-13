@@ -20,7 +20,7 @@ import {
     getFirestore, collection, getDocs, onSnapshot
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { colunaClasse, cardDefesa, esc, norm, perfilDaClasse, mapaSVG, radarSVG, PALETA,
-         auditoriaDaClasse, auditoriaSVG, tabelaAuditoria } from './conflito-dados.js?v=3';
+         auditoriaDaClasse, auditoriaSVG, tabelaAuditoria } from './conflito-dados.js?v=4';
 
 const firebaseConfig = {
     apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",

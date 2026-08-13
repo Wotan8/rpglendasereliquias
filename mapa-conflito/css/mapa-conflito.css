@@ -200,6 +200,12 @@ body {
     color: var(--lr-blood-3);
 }
 
+.mc-chip-geo {
+    background: var(--lr-arcane-soft);
+    color: var(--lr-arcane-2);
+    font-weight: 600;
+}
+
 .mc-chip-regua {
     opacity: var(--lr-op-muted);
     font-variant-numeric: tabular-nums;
