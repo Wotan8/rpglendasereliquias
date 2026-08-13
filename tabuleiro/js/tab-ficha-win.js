@@ -129,6 +129,7 @@ export async function abrirFichaWin(tipo, id) {
 }
 
 function fechar(win) {
+    win.ro?.disconnect();
     win.unsubItems?.();
     WINS.delete(win.chave);
     win.el.remove();
@@ -253,6 +254,12 @@ function criarJanela(tipo, id, chave) {
         const grab = e.target.closest?.('[data-grab]');
         if (grab) iniciarArrasto(win.inv, grab, e);
     });
+
+    // Resize nativo da janela não repinta nada — só o compacto precisa ser
+    // re-medido (era o furo: estreitar a janela nunca recolhia os nomes).
+    win.compactar = () => compactarAtaques(win);   // exposto: o __check chama direto (RO não entrega em aba sem compositor)
+    win.ro = new ResizeObserver(win.compactar);
+    win.ro.observe(el);
 
     clampJanela(win);
     return win;
@@ -492,15 +499,14 @@ function abrirEquipar(win, itemId) {
         const slot = document.getElementById('tbEqSlot')?.value;
         const estado = document.getElementById('tbEqEstado')?.value;
         if (!slot || !estado) return;
-        // Arma de duas mãos e afins: reserva os slots extras ou recusa dizendo o que falta
+        // Cobertura extra (armadura de várias peças, mão da arma de 2 mãos):
+        // ocupa o que estiver livre e nunca impede o equipar.
         let extras = [];
         if (ES) {
-            const plano = ES.planejarEquipar(item, slot, win.itens || [], slots, {
+            extras = ES.planejarEquipar(item, slot, win.itens || [], slots, {
                 catalog: _sys.equipment,
                 labelParte: pid => partes.find(b => b.id === pid)?.nome || pid,
-            });
-            if (!plano.ok) { toast(`⚠️ "${esc(item.nome)}" precisa de slots livres: ${esc(plano.faltando.join(', '))}`, 'warning'); return; }
-            extras = plano.extras;
+            }).extras;
         }
         try {
             await updateDoc(doc(db, 'items', itemId), {
@@ -1011,6 +1017,10 @@ function linhasAtaqueChar(win, ch) {
  *  estado. Medido depois do repinte, uma classe por linha de golpe. */
 function compactarAtaques(win) {
     for (const atk of win.el.querySelectorAll('.tb-fwin-atk')) {
+        // Mede sempre do estado EXPANDIDO: tira as classes, força o layout e
+        // decide de novo — senão alargar a janela nunca traria os nomes de
+        // volta (e a medição com nome escondido mentiria).
+        atk.classList.remove('c1', 'c2');
         const nome = atk.querySelector('.tb-fwin-atk-nome');
         if (nome && nome.scrollWidth > nome.clientWidth + 1) atk.classList.add('c1');
         const l2 = atk.querySelector('.tb-fwin-atk-l2');

@@ -666,6 +666,9 @@ html, body {
     display: flex; flex-wrap: wrap; gap: 4px;
     justify-content: flex-end; flex: 0 1 auto;
 }
+/* O chip não quebra POR DENTRO ("Acerto Corpo a / Corpo 8"): apertou, ele
+   estoura a linha — e é esse estouro que a medição usa para recolher o nome. */
+.tb-fwin-atk .tb-fwin-canal { white-space: nowrap; }
 .tb-fwin-atk-fim { display: inline-flex; align-items: center; gap: var(--lr-space-2); margin-left: auto; }
 .tb-fwin-atk-dano { color: var(--lr-blood-3); font-variant-numeric: tabular-nums; }
 .tb-fwin-atk-est { font-style: normal; font-size: .66rem; color: var(--lr-text-2); }
