@@ -488,11 +488,14 @@
 }
 .npcv2-dv-bloco + .npcv2-dv-bloco { margin-top: var(--lr-space-3); }
 .npcv2-dv-bloco-title {
+    display: flex; align-items: baseline; gap: var(--lr-space-2);
     font-size: var(--lr-fs-xs); font-weight: 700;
     color: var(--lr-text-2);
     text-transform: uppercase; letter-spacing: 0.06em;
     margin-bottom: var(--lr-space-2);
 }
+/* Bloco de VD dobrado não deixa o buraco da margem para trás. */
+.npcv2-dv-bloco:not([open]) > .npcv2-dv-bloco-title { margin-bottom: 0; }
 /* Override travado pelo Mestre = estado, e estado é ouro. */
 .npcv2-dv-cell.locked { border-color: var(--lr-gold); }
 .npcv2-dv-label {

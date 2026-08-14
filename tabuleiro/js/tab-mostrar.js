@@ -869,7 +869,7 @@ async function abrirFichaMestreNpc(npc) {
 /* Ficha de Aliado (componente da Ficha de Personagem), forçando Modo Rápido */
 async function abrirFichaAliadoNpc(npc, opts = {}) {
     try {
-        _tbInjectCss('../shared/ficha-aliado.css?v=1', 'tbCssNpcSheet');
+        _tbInjectCss('../shared/ficha-aliado.css?v=2', 'tbCssNpcSheet');
         _tbEnsureAliadoModalDom();
         window.db = window.db || db;
 
@@ -878,7 +878,7 @@ async function abrirFichaAliadoNpc(npc, opts = {}) {
         catch (e) { console.warn('⚠️ aliado-inventario indisponível no tabuleiro:', e); }
 
         if (!window.openAliadoModal) {
-            await import('../../ficha-v1.7_1/js/aliados.js?v=8');
+            await import('../../ficha-v1.7_1/js/aliados.js?v=10');
         }
         await window.openAliadoModal(npc.id, { readonly: !!opts.readonly, forceRapido: true });
     } catch (e) {

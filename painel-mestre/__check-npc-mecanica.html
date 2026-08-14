@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — Aba Mecânica das Fichas de NPC e Aliado</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/area-npcs.css">
+<link rel="stylesheet" href="../shared/ficha-aliado.css">
+<script>
+  // Harness: a folha do componente é editada durante o trabalho e o cache do
+  // navegador (e o service worker do site) devolvia a versão velha. Recarrega
+  // as duas que este check exercita com um selo de tempo.
+  for (const l of document.querySelectorAll('link[href*="area-npcs.css"], link[href*="ficha-aliado.css"]')) {
+      l.href += '?cb=' + Date.now();
+  }
+</script>
+<style>
+  body { margin: 0; padding: 16px; font: 14px/1.6 Inter, system-ui, sans-serif; }
+  table { border-collapse: collapse; font: 11px ui-monospace, monospace; width: 100%; margin-bottom: 12px; }
+  td { border: 1px solid var(--lr-border); padding: 2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight: 700; }
+  #placar { font-weight: 800; margin: 8px 0 16px; padding-top: 8px; border-top: 1px solid var(--lr-border); }
+  h1 { font-size: 1rem; margin: 0 0 4px; } p { margin: 0 0 10px; color: var(--lr-text-2); font-size: .8rem; }
+  .modo { margin-bottom: 10px; }
+</style></head>
+<body>
+<h1>⚙️ Aba Mecânica da Ficha de NPC — blocos dobráveis</h1>
+<p>Sem Firestore: o HTML da seção é o REAL (recortado de <code>area-npcs.js</code>) e
+   a folha de estilo é a real. Confere quais blocos nascem abertos, quais nascem
+   dobrados e o que o Modo Rápido esconde.</p>
+
+<div class="modo">
+  <button onclick="document.getElementById('corpo').classList.remove('npcv2-modo-rapido')">⚙️ Mecânico</button>
+  <button onclick="document.getElementById('corpo').classList.add('npcv2-modo-rapido')">📝 Rápido</button>
+</div>
+
+<table id="saida"></table>
+<div id="placar"></div>
+
+<div id="corpo"><div id="alvo"></div></div>
+
+<h1 style="margin-top:24px">🤝 Ficha de Aliado — mesmos blocos, versão do jogador</h1>
+<div id="aliadoNpcModal"><div id="alvoAliado"></div></div>
+
+<script type="module">
+const ATTR_SIGLAS = ['FOR','DES','VIG','INT','RAC','PRS','PRE','MAN','AUT'];
+
+// Recorta _npcSecaoMecanica() do arquivo real e executa só ela.
+const src = (await (await fetch('js/area-npcs.js')).text()).replace(/\r\n/g, '\n');
+const ini = src.indexOf('function _npcSecaoMecanica()');
+const fim = src.indexOf('\n}\n', ini) + 3;
+const secao = new Function('ATTR_SIGLAS', src.slice(ini, fim) + '\nreturn _npcSecaoMecanica();')(ATTR_SIGLAS);
+document.getElementById('alvo').innerHTML = secao;
+document.getElementById('npcSec_mecanica').classList.add('active');
+
+// Grid de VD de mentira, no formato que renderDvGrid produz — só para conferir
+// a regra "blocoOrdem < 30 nasce aberto".
+document.getElementById('npcDvGrid').innerHTML = [
+  { nome: 'Combate', ordem: 1 }, { nome: 'Blindagens por Essência', ordem: 2 },
+  { nome: 'Ofício', ordem: 25 }, { nome: 'Corpo', ordem: 40 }, { nome: 'Geral', ordem: 999 },
+].map(b => `<details class="npcv2-dv-bloco npcv2-dobra"${b.ordem < 30 ? ' open' : ''}>
+    <summary class="npcv2-dv-bloco-title">${b.nome} <span class="npcv2-hint">3</span></summary>
+    <div class="npcv2-dv-grid"><div class="npcv2-dv-cell">exemplo</div></div>
+  </details>`).join('');
+
+// Avisos e ataques só aparecem quando têm conteúdo (o render liga o display).
+document.getElementById('npcAvisosWrap').style.display = 'block';
+document.getElementById('npcAvisosCount').textContent = '2 ⚠️';
+document.getElementById('npcAvisosList').innerHTML = '<div>⚠️ um</div><div>⚠️ dois</div>';
+
+/* ----- asserções ----- */
+const linhas = [];
+const t = (nome, cond) => linhas.push(`<tr><td>${nome}</td><td class="${cond ? 'ok' : 'fail'}">${cond ? 'OK' : 'FALHOU'}</td></tr>`);
+const $ = s => document.querySelector(s);
+const titulo = el => el?.querySelector('summary')?.textContent.trim().split('\n')[0].trim();
+
+const cards = [...document.querySelectorAll('#npcSec_mecanica > .npcv2-card')];
+t('todo bloco da Mecânica é dobrável (&lt;details&gt;)', cards.length > 0 && cards.every(c => c.tagName === 'DETAILS'));
+t('Peculiaridades nasce DOBRADO', !$('#npcPecsWrap').open);
+t('Atributos nasce DOBRADO', !cards.find(c => titulo(c)?.startsWith('💪')).open);
+t('Avisos nasce DOBRADO', !$('#npcAvisosWrap').open);
+t('Avisos mostra a contagem no título', titulo($('#npcAvisosWrap')).includes('2 ⚠️'));
+t('bloco renomeado para "Status de Combate"', !!cards.find(c => titulo(c)?.includes('Status de Combate')));
+t('não sobrou "Status Vitais"', !cards.some(c => titulo(c)?.includes('Status Vitais')));
+t('Status de Combate nasce ABERTO', cards.find(c => titulo(c)?.includes('Status de Combate')).open);
+t('Valores Derivados nasce ABERTO', cards.find(c => titulo(c)?.startsWith('📊')).open);
+
+const dvBlocos = [...document.querySelectorAll('#npcDvGrid > .npcv2-dv-bloco')];
+t('bloco de VD ordem 1 e 2 abertos', dvBlocos[0].open && dvBlocos[1].open);
+t('bloco de VD ordem 40 e 999 dobrados', !dvBlocos[3].open && !dvBlocos[4].open);
+
+/* ----- Ficha de Aliado: a mesma dobra, com o gerador REAL de aliados.js ----- */
+// CRLF no disco quebraria o recorte por ';\n' — normaliza antes.
+const srcAl = (await (await fetch('../ficha-v1.7_1/js/aliados.js')).text()).replace(/\r\n/g, '\n');
+const iAl = srcAl.indexOf('const _alDobra =');
+const _alDobra = new Function(srcAl.slice(iAl, srcAl.indexOf(';\n', iAl) + 1) + '\nreturn _alDobra;')();
+
+document.getElementById('alvoAliado').innerHTML =
+    _alDobra('⚔️ Status de Combate', '<div class="al-stat-grid"><div class="al-stat"><label>❤️ Vitalidade</label><strong>34</strong></div></div>')
+  + _alDobra('Atributos', '<div class="al-attrs">FOR DES VIG</div>', false)
+  + _alDobra('📊 Valores Derivados', [
+        { nome: 'Combate', ordem: 1 }, { nome: 'Corpo', ordem: 40 },
+      ].map(b => `<details class="al-dv-bloco"${b.ordem < 30 ? ' open' : ''}>
+        <summary class="al-group-title">${b.nome} <span class="al-bloco-count">2</span></summary>
+        <div class="al-stat-grid"><div class="al-stat"><label>📊 X</label><strong>1</strong></div></div>
+      </details>`).join(''));
+
+const alSecoes = [...document.querySelectorAll('#alvoAliado > .section')];
+t('Aliado: seções da Mecânica são dobráveis', alSecoes.length === 3 && alSecoes.every(s => s.tagName === 'DETAILS'));
+t('Aliado: "Status de Combate" nasce ABERTO', alSecoes[0].open);
+t('Aliado: Atributos nasce DOBRADO', !alSecoes[1].open);
+const alDv = [...document.querySelectorAll('#alvoAliado .al-dv-bloco')];
+t('Aliado: bloco de VD ordem 1 aberto, ordem 40 dobrado', alDv[0].open && !alDv[1].open);
+t('Aliado: a seta do dobrável aparece', getComputedStyle(alSecoes[1].querySelector('summary'), '::before').content.includes('▸'));
+
+// Modo rápido: peculiaridades continuam visíveis, os controles somem.
+document.getElementById('corpo').classList.add('npcv2-modo-rapido');
+const visivel = el => el && el.offsetParent !== null;
+t('Modo Rápido MOSTRA o bloco de Peculiaridades', visivel($('#npcPecsWrap')));
+t('Modo Rápido esconde os botões de adicionar peculiaridade', !visivel($('#npcPecsWrap .npcv2-pec-add')));
+t('Modo Rápido esconde o "Vincular VD"', !visivel($('#npcDvPicker')));
+document.getElementById('corpo').classList.remove('npcv2-modo-rapido');
+
+document.getElementById('saida').innerHTML = linhas.join('');
+const falhas = linhas.filter(l => l.includes('FALHOU')).length;
+document.getElementById('placar').innerHTML = falhas
+  ? `<span class="fail">${falhas} FALHA(S) de ${linhas.length}</span>`
+  : `<span class="ok">✅ ${linhas.length} asserções OK</span>`;
+window.__placar = { total: linhas.length, falhas };
+</script>
+</body></html>

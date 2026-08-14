@@ -322,6 +322,11 @@ window.F = F;
 
 const PORTES = ['Minúsculo', 'Pequeno', 'Médio', 'Grande', 'Enorme', 'Colossal'];
 
+/** Blocos de Valor Derivado com blocoOrdem abaixo disto nascem abertos.
+ *  Mesmo número da ficha de personagem (ficha-v1.7_1/js/combat-panel.js) —
+ *  as duas fichas têm de dobrar os mesmos blocos. */
+const NPC_BLOCO_ABERTO_ATE = 30;
+
 /* ===== NORMALIZAÇÃO v1 → v2 ===== */
 function hybFromLegacy(val, mapByNome, sys) {
     if (val && typeof val === 'object') return { refId: val.refId || null, custom: val.custom || '' };
@@ -517,6 +522,8 @@ function _npcTopo() {
                 <button type="button" id="modoMecanicoBtn" class="npcv2-mode-btn" onclick="setNpcModo('mecanico')">⚙️ Mecânico</button>
             </div>
             <div class="npcv2-toolbar-actions">
+                <button class="btn btn-secondary btn-small npcv2-only-mecanico" onclick="sincronizarRegistrosNpc()"
+                    title="Confere raça, classe, tribo e peculiaridades e vincula o que estiver faltando (peculiaridades e Valores Derivados)">🔄 Sincronizar registros</button>
                 <button class="btn btn-secondary btn-small npcv2-only-mecanico" onclick="exportNpcFromForm()">📤 Exportar</button>
                 <button class="btn btn-danger btn-small" onclick="deleteCurrentNpc()">🗑️ Excluir</button>
                 <button class="btn btn-success btn-small" onclick="saveNpc()">💾 Salvar</button>
@@ -620,27 +627,31 @@ function _npcSecaoIdentidade() {
 function _npcSecaoMecanica() {
     return `
     <!-- ============ SEÇÃO: MECÂNICA ============ -->
+    <!-- Todo bloco é <details class="npcv2-dobra">: a ficha de NPC é longa e o
+         Mestre consulta um bloco por vez. Nascem FECHADOS os que se preenchem
+         uma vez e depois só se conferem (Peculiaridades, Atributos) e o de
+         avisos, que é diagnóstico e não conteúdo de mesa. -->
     <div class="npcv2-section" id="npcSec_mecanica">
-        <div id="npcPecsWrap" class="npcv2-card npcv2-only-mecanico">
-            <div class="npcv2-block-title">🧬 Peculiaridades</div>
+        <details id="npcPecsWrap" class="npcv2-card npcv2-dobra">
+            <summary class="npcv2-block-title">🧬 Peculiaridades <span class="npcv2-hint" id="npcPecsCount"></span></summary>
             <div id="npcPecsList"></div>
-            <div class="npcv2-pec-add">
+            <div class="npcv2-pec-add npcv2-only-mecanico">
                 <input type="text" class="form-input" id="pecSearch" placeholder="🔍 Buscar no registro..." oninput="renderPecPicker()">
                 <select class="form-select" id="pecPicker"></select>
                 <button class="btn btn-secondary btn-small" onclick="addPecFromRegistry()">➕ Do registro</button>
                 <button class="btn btn-secondary btn-small" onclick="addPecCustom()">✏️ Personalizada</button>
             </div>
-        </div>
+        </details>
 
-        <div class="npcv2-card">
-            <div class="npcv2-block-title">❤️ Status Vitais
+        <details class="npcv2-card npcv2-dobra" open>
+            <summary class="npcv2-block-title">⚔️ Status de Combate
                 <span class="npcv2-hint npcv2-only-mecanico">calculados pelas mecânicas — clique em um valor para travar um override 🔒</span>
-            </div>
+            </summary>
             <div class="npcv2-dv-grid" id="npcVitalStatsGrid"></div>
-        </div>
+        </details>
 
-        <div class="npcv2-card">
-            <div class="npcv2-block-title">💪 Atributos <span class="npcv2-hint" id="attrHint"></span></div>
+        <details class="npcv2-card npcv2-dobra">
+            <summary class="npcv2-block-title">💪 Atributos <span class="npcv2-hint" id="attrHint"></span></summary>
             <div class="npcv2-attrs-grid" id="npcAttrsGrid">
                 ${ATTR_SIGLAS.map(a => `
                     <div class="npcv2-attr-cell">
@@ -650,59 +661,63 @@ function _npcSecaoMecanica() {
                         <div class="npcv2-attr-eff" id="npcAttrEff_${a}"></div>
                     </div>`).join('')}
             </div>
-        </div>
+        </details>
 
-        <div class="npcv2-card">
-            <div class="npcv2-block-title">📊 Valores Derivados
+        <details class="npcv2-card npcv2-dobra" open>
+            <summary class="npcv2-block-title">📊 Valores Derivados
                 <span class="npcv2-hint npcv2-only-mecanico">calculados pelas mecânicas — clique em um valor para travar um override 🔒</span>
-            </div>
+            </summary>
             <div class="npcv2-hint" style="margin-bottom:8px">A ficha lista apenas os VDs vinculados a este NPC (VDs marcados como "Todo personagem tem este valor?" entram automaticamente). Use ✕ para desvincular.</div>
             <div id="npcDvGrid"></div>
             <div class="npcv2-pec-add npcv2-only-mecanico">
                 <select class="form-select" id="npcDvPicker" style="flex:1"></select>
                 <button class="btn btn-secondary btn-small" onclick="addNpcDv()">➕ Vincular VD</button>
             </div>
-        </div>
+        </details>
 
-        <div id="npcAtaquesWrap" class="npcv2-card npcv2-only-mecanico" style="display:none">
-            <div class="npcv2-block-title">⚔️ Ataques e Efeitos Ativos
+        <details id="npcAtaquesWrap" class="npcv2-card npcv2-dobra npcv2-only-mecanico" style="display:none" open>
+            <summary class="npcv2-block-title">⚔️ Ataques e Efeitos Ativos
                 <span class="npcv2-hint">totais por item equipado (base do NPC + o que o item acrescenta)</span>
-            </div>
+            </summary>
             <div class="atk-table-wrap"><table class="atk-table" id="npcAtaquesTable"></table></div>
-        </div>
+        </details>
 
-        <div id="npcClassModulesWrap" class="npcv2-card npcv2-only-mecanico">
-            <div class="npcv2-block-title">🧩 Módulos de Classe
+        <details id="npcClassModulesWrap" class="npcv2-card npcv2-dobra npcv2-only-mecanico" open>
+            <summary class="npcv2-block-title">🧩 Módulos de Classe
                 <span class="npcv2-hint">herdados da classe selecionada ou vinculados manualmente</span>
-            </div>
+            </summary>
             <div id="npcClassModulesList"></div>
             <div class="npcv2-pec-add">
                 <select class="form-select" id="npcModPicker" style="flex:1"></select>
                 <button class="btn btn-secondary btn-small" onclick="addNpcClassModule()">➕ Vincular módulo</button>
             </div>
-        </div>
+        </details>
 
-        <div class="npcv2-card">
-            <div class="npcv2-block-title">➕ Valores extras <span class="npcv2-hint">informações fora dos registros</span></div>
+        <details class="npcv2-card npcv2-dobra" open>
+            <summary class="npcv2-block-title">➕ Valores extras <span class="npcv2-hint">informações fora dos registros</span></summary>
             <div id="npcExtrasList"></div>
             <button class="btn btn-secondary btn-small" onclick="addExtraDv()">➕ Adicionar valor extra</button>
-        </div>
+        </details>
 
-        <div id="npcInfosWrap" class="npcv2-card" style="display:none">
-            <div class="npcv2-block-title">📜 Efeitos e capacidades (das peculiaridades)</div>
+        <details id="npcInfosWrap" class="npcv2-card npcv2-dobra" style="display:none" open>
+            <summary class="npcv2-block-title">📜 Efeitos e capacidades (das peculiaridades)</summary>
             <div id="npcInfosList"></div>
-        </div>
-        <div id="npcAvisosWrap" class="npcv2-card" style="display:none"><div id="npcAvisosList" class="npcv2-avisos"></div></div>
+        </details>
 
-        <div class="npcv2-card">
-            <div class="npcv2-block-title">⚔️ Combate e perícias em texto livre</div>
+        <details id="npcAvisosWrap" class="npcv2-card npcv2-dobra" style="display:none">
+            <summary class="npcv2-block-title">⚠️ Avisos do cálculo <span class="npcv2-hint" id="npcAvisosCount"></span></summary>
+            <div id="npcAvisosList" class="npcv2-avisos"></div>
+        </details>
+
+        <details class="npcv2-card npcv2-dobra" open>
+            <summary class="npcv2-block-title">⚔️ Combate e perícias em texto livre</summary>
             <div class="form-group"><label class="form-label">Ataques</label><textarea class="form-textarea" id="npcAtaques" rows="3" placeholder="Ataques e danos..."></textarea></div>
             <div class="form-group"><label class="form-label">📚 Perícias</label><textarea class="form-textarea" id="npcSkills" rows="2" placeholder="Perícias relevantes... (Texto Livre)"></textarea></div>
-        </div>
+        </details>
 
         <!-- ============ SEÇÃO: PERÍCIAS ESTRUTURADAS ============ -->
-        <div id="npcStructuredSkillsWrap" class="npcv2-card">
-            <div class="npcv2-block-title">🎯 Perícias Estruturadas</div>
+        <details id="npcStructuredSkillsWrap" class="npcv2-card npcv2-dobra" open>
+            <summary class="npcv2-block-title">🎯 Perícias Estruturadas</summary>
 
             <div class="npcv2-only-mecanico" style="margin-bottom:12px">
                 <label class="npcv2-check">
@@ -726,7 +741,7 @@ function _npcSecaoMecanica() {
             </div>
 
             <div class="npcv2-attrs-grid" id="npcStructuredSkillsGrid" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));"></div>
-        </div>
+        </details>
     </div>
 `;
 }
@@ -924,6 +939,88 @@ function syncInheritedPecs(fonte, prevRefId, newRefId) {
     }
 }
 
+/* ===== SINCRONIZAR COM OS REGISTROS =====
+ * Raça, classe, tribo e peculiaridades vinculam peculiaridades e Valores
+ * Derivados no Painel do Criador. A ficha do NPC só herda isso no momento em
+ * que a origem é ESCOLHIDA — quem mexeu no registro depois, ou importou um
+ * NPC pronto, fica com a ficha defasada e não tem como saber.
+ * Este botão passa o pente fino e vincula o que falta. Só ADICIONA: nada que
+ * o Mestre pôs à mão é removido. */
+
+/** Coleta os IDs de Valor Derivado que um cadastro (raça/classe/tribo/pec)
+ *  concede. Mesma leitura da ficha de personagem: `derivedValueIds` aceita
+ *  id cru ou objeto `{ id, valorInicial }`. */
+function _npcDvIdsDoCadastro(cadastro, destino) {
+    for (const entrada of (cadastro?.derivedValueIds || [])) {
+        const id = (typeof entrada === 'object' && entrada !== null) ? entrada.id : entrada;
+        if (id) destino.add(id);
+    }
+}
+
+window.sincronizarRegistrosNpc = function() {
+    if (!F.npc || !F.sys) return;
+
+    // --- 1) Peculiaridades das três origens ---
+    const pecsNovas = [];
+    for (const [fonte, campo] of [['raca', 'racaRef'], ['classe', 'classeRef'], ['tribo', 'triboRef']]) {
+        const refId = F.npc[campo]?.refId;
+        if (!refId) continue;
+        for (const h of pecsDaOrigem(fonte, refId, F.sys)) {
+            if (F.npc.peculiaridades.some(p => p.refId === h.refId)) continue;
+            F.npc.peculiaridades.push(h);
+            pecsNovas.push(F.sys.pecsById[h.refId]?.nome || h.refId);
+        }
+    }
+
+    // --- 2) Valores Derivados vinculados pelas origens e pelas peculiaridades ---
+    const dvIds = new Set();
+    for (const [campo, indice] of [['racaRef', F.sys.racesById], ['classeRef', F.sys.classesById], ['triboRef', F.sys.tribesById]]) {
+        const refId = F.npc[campo]?.refId;
+        if (refId) _npcDvIdsDoCadastro(indice[refId], dvIds);
+    }
+    for (const p of F.npc.peculiaridades) {
+        if (p.refId) _npcDvIdsDoCadastro(F.sys.pecsById[p.refId], dvIds);
+    }
+    // "Todo personagem tem este valor" também é vínculo — e ele pode ter sido
+    // marcado no registro depois que este NPC nasceu.
+    const dvsUniversais = (F.sys.derivedValues || []).filter(d => d.todoPersonagem);
+
+    const vinc = F.npc.valoresDer.vinculados = F.npc.valoresDer.vinculados || [];
+    const jaTem = new Set(vinc);
+    const dvsNovos = [];
+    const vincular = (dv) => {
+        if (!dv || jaTem.has(dv.key)) return;
+        jaTem.add(dv.key);
+        vinc.push(dv.key);
+        dvsNovos.push(dv.nome);
+    };
+    dvsUniversais.forEach(vincular);
+    (F.sys.derivedValues || []).forEach(dv => { if (dvIds.has(dv.id)) vincular(dv); });
+
+    // --- 3) Módulos de classe (mesma defasagem, mesma cura) ---
+    const modsAntes = F.npc.modulosClasse.length;
+    const classeRefId = F.npc.classeRef?.refId;
+    if (classeRefId) {
+        for (const def of modulosDaClasseNpc(classeRefId, F.sys)) {
+            if (F.npc.modulosClasse.some(m => m.refId === def.id)) continue;
+            F.npc.modulosClasse.push({ refId: def.id, snapshot: null, fonte: 'classe', itens: [] });
+        }
+    }
+    const modsNovos = F.npc.modulosClasse.length - modsAntes;
+
+    renderPecs(); renderPecPicker(); renderNpcClassModules(); recalcStats();
+
+    const partes = [];
+    if (pecsNovas.length) partes.push(`${pecsNovas.length} peculiaridade(s): ${pecsNovas.join(', ')}`);
+    if (dvsNovos.length) partes.push(`${dvsNovos.length} valor(es) derivado(s): ${dvsNovos.join(', ')}`);
+    if (modsNovos) partes.push(`${modsNovos} módulo(s) de classe`);
+
+    showAlert(partes.length
+        ? `🔄 Vinculado — ${partes.join(' · ')}. Salve para gravar.`
+        : '✅ Nada faltando: a ficha já bate com os registros.',
+        partes.length ? 'success' : 'warning');
+};
+
 /* ===== MODO RÁPIDO / MECÂNICO ===== */
 window.setNpcModo = function(modo) {
     F.npc.modoFicha = modo;
@@ -948,16 +1045,30 @@ window.setNpcModo = function(modo) {
         }
     });
     renderStructuredSkills();
+    renderPecs();   // o bloco muda de editável para leitura conforme o modo
     recalcStats();
 };
 
 /* ===== PECULIARIDADES ===== */
 function renderPecs() {
     const el = document.getElementById('npcPecsList'); if (!el) return;
+
+    // Contagem no título: o bloco nasce fechado, então o cabeçalho precisa
+    // dizer o que tem dentro sem obrigar a abrir.
+    const contador = document.getElementById('npcPecsCount');
+    if (contador) contador.textContent = F.npc.peculiaridades.length
+        ? `${F.npc.peculiaridades.length} vinculada(s)` : 'nenhuma';
+
     if (!F.npc.peculiaridades.length) {
         el.innerHTML = '<div class="npcv2-empty">Nenhuma peculiaridade. Selecione uma raça/classe/tribo do registro ou adicione abaixo.</div>';
         return;
     }
+
+    // No Modo Rápido as peculiaridades aparecem, mas só para leitura: o Mestre
+    // que preenche à mão precisa VER o que a origem deu sem poder desfazer o
+    // vínculo por engano. Editar continua sendo trabalho do Modo Mecânico.
+    const soLeitura = F.npc.modoFicha === 'rapido';
+
     el.innerHTML = F.npc.peculiaridades.map((p, idx) => {
         const reg = p.refId ? F.sys.pecsById[p.refId] : null;
         const nome = reg ? reg.nome : (p.nomeCustom || 'Sem nome');
@@ -966,12 +1077,14 @@ function renderPecs() {
         const desc = reg ? (reg.descricao || '') : [p.efeitoManual, p.descricao].filter(Boolean).join(' — ');
         // Nível editável quando a peculiaridade tem mecânica evoluível (ou é custom com nível)
         const evoluivel = reg ? (reg.mecanicaIds || []).some(id => F.sys.mechsById[id]?.evoluivel) : false;
-        const nivelHtml = evoluivel
-            ? `<span class="npcv2-pec-nivel">Nv <input type="number" min="1" value="${p.nivel || 1}" onchange="F.npc.peculiaridades[${idx}].nivel=parseInt(this.value)||1;recalcStats()"></span>`
-            : '';
+        const nivelHtml = !evoluivel ? ''
+            : soLeitura
+                ? `<span class="npcv2-pec-nivel">Nv ${p.nivel || 1}</span>`
+                : `<span class="npcv2-pec-nivel">Nv <input type="number" min="1" value="${p.nivel || 1}" onchange="F.npc.peculiaridades[${idx}].nivel=parseInt(this.value)||1;recalcStats()"></span>`;
+        const delHtml = soLeitura ? ''
+            : `<button class="npcv2-pec-del" onclick="F.npc.peculiaridades.splice(${idx},1);renderPecs();recalcStats()" title="Remover">✕</button>`;
         return `<div class="npcv2-pec-row" title="${escapeHtml(desc)}">
-            <span class="npcv2-pec-nome">${icone} ${escapeHtml(nome)}</span>${fonte}${nivelHtml}
-            <button class="npcv2-pec-del" onclick="F.npc.peculiaridades.splice(${idx},1);renderPecs();recalcStats()" title="Remover">✕</button>
+            <span class="npcv2-pec-nome">${icone} ${escapeHtml(nome)}</span>${fonte}${nivelHtml}${delHtml}
         </div>`;
     }).join('');
 }
@@ -1286,10 +1399,18 @@ function renderDvGrid() {
     
     const rapido = F.npc.modoFicha === 'rapido';
     const allDvs = Object.values(F.calc.derived);
-    const vitals = allDvs.filter(dv => dv.isVital);
+
+    // ⚔️ Status de Combate: os Status Vitais MAIS todo VD que o Painel do
+    // Criador marcou com "exibir em status de combate". É o que o Mestre olha
+    // durante a rodada, junto num lugar só — e sai da grid 📊 abaixo para não
+    // aparecer duas vezes. Os com campo Atual ganham a caixinha atual/máx,
+    // igual a Vitalidade, Energia e Sanidade.
+    const combateKeys = new Set((F.sys.derivedValues || []).filter(d => d.statusCombate).map(d => d.key));
+    const vitals = allDvs.filter(dv => dv.isVital || combateKeys.has(dv.key));
+
     // 📊 VDs: apenas os vinculados ao NPC (não lista mais todos os VDs do sistema)
     const vinc = F.npc.valoresDer.vinculados || [];
-    const dvs = allDvs.filter(dv => !dv.isVital && vinc.includes(dv.key));
+    const dvs = allDvs.filter(dv => !dv.isVital && !combateKeys.has(dv.key) && vinc.includes(dv.key));
 
     const cellHtml = (dv, removable) => {
             const locked = dv.override !== null;
@@ -1343,14 +1464,17 @@ function renderDvGrid() {
         for (const dv of dvs) {
             const ref = blocoPorKey.get(dv.key) || {};
             const id = ref.blocoId || 'geral';
-            if (!blocos.has(id)) blocos.set(id, { nome: ref.blocoNome || 'Geral', dvs: [] });
+            if (!blocos.has(id)) blocos.set(id, { nome: ref.blocoNome || 'Geral', ordem: ref.blocoOrdem ?? 999, dvs: [] });
             blocos.get(id).dvs.push(dv);
         }
+        // Mesma régua da ficha de personagem (combat-panel.js): bloco com
+        // blocoOrdem abaixo de BLOCO_ABERTO_ATE nasce aberto — os primeiros da
+        // escala, que são os de consulta na rodada. O resto fica dobrado.
         dGrid.innerHTML = [...blocos.values()].map(b => `
-            <div class="npcv2-dv-bloco">
-                <div class="npcv2-dv-bloco-title">${escapeHtml(b.nome)}</div>
+            <details class="npcv2-dv-bloco npcv2-dobra"${Number(b.ordem) < NPC_BLOCO_ABERTO_ATE ? ' open' : ''}>
+                <summary class="npcv2-dv-bloco-title">${escapeHtml(b.nome)} <span class="npcv2-hint">${b.dvs.length}</span></summary>
                 <div class="npcv2-dv-grid">${b.dvs.map(dv => cellHtml(dv, true)).join('')}</div>
-            </div>`).join('');
+            </details>`).join('');
     }
 
     renderDvPicker();
@@ -1437,10 +1561,17 @@ function renderInfos() {
             list.innerHTML = F.calc.infos.map(i => `<div class="npcv2-info-row">${i.icone || '📋'} <strong>${escapeHtml(i.fonte)}:</strong> ${escapeHtml(i.texto)}</div>`).join('');
         } else wrap.style.display = 'none';
     }
+    // Avisos: bloco de diagnóstico, nasce dobrado. A contagem vai no título
+    // para o Mestre saber se vale abrir sem ter de abrir.
     const aw = document.getElementById('npcAvisosWrap'), al = document.getElementById('npcAvisosList');
     if (aw && al) {
-        if (F.calc.avisos.length) { aw.style.display = 'block'; al.innerHTML = F.calc.avisos.map(a => `<div>⚠️ ${escapeHtml(a)}</div>`).join(''); }
-        else aw.style.display = 'none';
+        const n = F.calc.avisos.length;
+        if (n) {
+            aw.style.display = 'block';
+            al.innerHTML = F.calc.avisos.map(a => `<div>⚠️ ${escapeHtml(a)}</div>`).join('');
+            const cont = document.getElementById('npcAvisosCount');
+            if (cont) cont.textContent = `${n} ⚠️`;
+        } else aw.style.display = 'none';
     }
 }
 

@@ -257,6 +257,10 @@ const _alSelect = (label, id, opcoes) => _alCampo(label, `<select id="${id}">${o
 /** `cols` vira o grid-template-columns da linha; sem ele, a linha usa o padrão. */
 const _alLinha = (campos, cols) => `<div class="row"${cols ? ` style="grid-template-columns: ${cols};"` : ''}>${campos.join('')}</div>`;
 const _alSecao = (titulo, corpo, attrs = '') => `<div class="section"${attrs}><div class="section-title">${titulo}</div>${corpo}</div>`;
+/** Seção dobrável — mesma casca da seção normal, com o título virando botão.
+ *  A aba Mecânica é longa; quem consulta na mesa quer um bloco por vez. */
+const _alDobra = (titulo, corpo, aberto = true, attrs = '') =>
+    `<details class="section al-dobra"${aberto ? ' open' : ''}${attrs}><summary class="section-title">${titulo}</summary>${corpo}</details>`;
 /** Painel de uma aba. `ativa` marca a que nasce aberta. */
 const _alAba = (sec, corpo, ativa = false) => `<div class="tab-content${ativa ? ' active' : ''}" id="alSec_${sec}">${corpo}</div>`;
 /** Caixa vazia que o JS preenche depois (VDs, módulos, inventário). */
@@ -267,6 +271,9 @@ const _AL_ABAS = [
     ['roleplay', 'Role Play'], ['loot', 'Loot'],
 ];
 const _AL_PORTES = ['Minúsculo', 'Pequeno', 'Médio', 'Grande', 'Enorme', 'Colossal'];
+/** Bloco de VD com blocoOrdem abaixo disto nasce aberto. Mesmo número da ficha
+ *  de personagem (combat-panel.js) e da Ficha de NPC (area-npcs.js). */
+const AL_BLOCO_ABERTO_ATE = 30;
 const _AL_ATRIBUTOS = ['FOR', 'DES', 'VIG', 'INT', 'RAC', 'PRS', 'PRE', 'MAN', 'AUT'];
 const _AL_VITAIS = [
     ['❤️ Vitalidade', 'al_vit_atual', 'al_vit'],
@@ -348,15 +355,20 @@ function _alAbaMecanica() {
                     </div>`).join('');
 
     return _alAba('mecanica', [
-        _alSecao('Status Vitais', `<div class="al-vitals">${vitais}</div>${lealdade}`),
-        _alSecao('Atributos', `<div class="al-attrs" id="al_attr_grid">${atributos}</div>`),
-        _alSecao('Combate e Perícias Livres', [
+        // "Status de Combate" (era "Status Vitais"): além de Vitalidade, Energia
+        // e Sanidade, recebe os Valores Derivados que o Painel do Criador marcou
+        // como status de combate — o mesmo agrupamento da Ficha de NPC.
+        _alDobra('⚔️ Status de Combate',
+            `<div class="al-vitals">${vitais}</div>${lealdade}${_alPlaceholder('al_combate_extra', '')}`),
+        // Atributos se preenchem uma vez e depois só se conferem: nasce dobrado.
+        _alDobra('Atributos', `<div class="al-attrs" id="al_attr_grid">${atributos}</div>`, false),
+        _alDobra('Combate e Perícias Livres', [
             _alLinha([_alArea('⚔️ Ataques', 'al_ataques', 3, { placeholder: 'Ataques e danos...' })]),
             _alLinha([_alArea('📚 Perícias', 'al_skills', 2, { placeholder: 'Perícias relevantes (Texto Livre)...' })]),
         ].join('')),
-        _alSecao('📊 Valores Derivados', _alPlaceholder('al_dv_grid', 'Calculando...')),
-        _alSecao('🎯 Perícias Estruturadas', _alPlaceholder('al_structured_skills_grid', '')),
-        _alSecao('🧩 Módulos de Classe', _alPlaceholder('al_class_modules', 'Carregando módulos...'), ' id="al_class_modules_section"'),
+        _alDobra('📊 Valores Derivados', _alPlaceholder('al_dv_grid', 'Calculando...')),
+        _alDobra('🎯 Perícias Estruturadas', _alPlaceholder('al_structured_skills_grid', '')),
+        _alDobra('🧩 Módulos de Classe', _alPlaceholder('al_class_modules', 'Carregando módulos...'), true, ' id="al_class_modules_section"'),
     ].join(''));
 }
 
@@ -597,29 +609,44 @@ async function renderAliadoDerivedValues(npc) {
         const sys = await ensureNpcSystemData();
         const calc = calcularNpc(npc, sys);
 
+        const statHtml = (dv) => {
+            const val = calc.derived[dv.key]?.final ?? 0;
+            return `<div class="al-stat" title="${escapeHtml(dv.descricao || '')}">
+                <label>${dv.icone || '📊'} ${escapeHtml(dv.nome)}</label>
+                <strong>${escapeHtml(dv.prefixo)}${val}${escapeHtml(dv.sufixo)}</strong>
+            </div>`;
+        };
+
+        // VD marcado como status de combate sobe para o bloco de cima, junto de
+        // Vitalidade/Energia/Sanidade, e sai daqui — senão apareceria duas vezes.
+        const caixaCombate = document.getElementById('al_combate_extra');
+        if (caixaCombate) {
+            const combate = (sys.derivedValues || []).filter(dv => dv.statusCombate);
+            caixaCombate.innerHTML = combate.length
+                ? `<div class="al-stat-grid" style="margin-top:8px">${combate.map(statHtml).join('')}</div>` : '';
+        }
+
         // sys.derivedValues já vem ordenado por blocoOrdem → ordem
         const vinc = new Set(npc.valoresDer?.vinculados || []);
-        const lista = (sys.derivedValues || []).filter(dv => vinc.has(dv.key));
+        const lista = (sys.derivedValues || []).filter(dv => vinc.has(dv.key) && !dv.statusCombate);
         if (!lista.length) {
             box.innerHTML = '<div class="al-empty">Nenhum Valor Derivado vinculado a este NPC.</div>';
             return;
         }
 
-        let html = '', blocoAtual = null;
+        // Mesma régua da ficha de personagem: bloco com blocoOrdem abaixo de 30
+        // nasce aberto (os de consulta na rodada); o resto vem dobrado.
+        const blocos = new Map();
         for (const dv of lista) {
-            if (dv.blocoId !== blocoAtual) {
-                if (blocoAtual !== null) html += '</div>';
-                blocoAtual = dv.blocoId;
-                html += `<div class="al-group-title">${escapeHtml(dv.blocoNome || 'Geral')}</div>`
-                     + `<div class="al-stat-grid">`;
-            }
-            const val = calc.derived[dv.key]?.final ?? 0;
-            html += `<div class="al-stat" title="${escapeHtml(dv.descricao || '')}">
-                <label>${dv.icone || '📊'} ${escapeHtml(dv.nome)}</label>
-                <strong>${escapeHtml(dv.prefixo)}${val}${escapeHtml(dv.sufixo)}</strong>
-            </div>`;
+            const id = dv.blocoId || 'geral';
+            if (!blocos.has(id)) blocos.set(id, { nome: dv.blocoNome || 'Geral', ordem: Number(dv.blocoOrdem) || 999, dvs: [] });
+            blocos.get(id).dvs.push(dv);
         }
-        box.innerHTML = html + '</div>';
+        box.innerHTML = [...blocos.values()].map(b =>
+            `<details class="al-dv-bloco"${b.ordem < AL_BLOCO_ABERTO_ATE ? ' open' : ''}>
+                <summary class="al-group-title">${escapeHtml(b.nome)} <span class="al-bloco-count">${b.dvs.length}</span></summary>
+                <div class="al-stat-grid">${b.dvs.map(statHtml).join('')}</div>
+            </details>`).join('');
     } catch (e) {
         console.warn('⚠️ Não foi possível calcular os Valores Derivados do aliado:', e);
         box.innerHTML = '<div class="al-empty">Valores Derivados indisponíveis.</div>';
