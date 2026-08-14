@@ -361,6 +361,53 @@ const MODULE_DEFS = {
             },
         ]
     },
+    castingForms: {
+        name: 'Forma de Conjuração', namePlural: 'Formas de Conjuração', icon: '🪄',
+        collection: 'system/data/castingForms',
+        fields: [
+            { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Vocal, Inst. Sopro, Bênção, Moldar Sangue' },
+            { key: 'icone', label: 'Ícone / Emoji', type: 'text', placeholder: 'Ex: 🗣️ 🎺 🪕 ✨' },
+            { key: 'descricao', label: 'Descrição', type: 'textarea', placeholder: 'O que é essa forma de conjurar, em uma frase de mesa.' },
+
+            // ═══ O ELO COM O QUE JÁ ESTÁ CADASTRADO ═══
+            // Toda coluna de módulo marcada como "🪄 forma de conjurar" aponta um
+            // Valor Derivado (é ele que dá o Acerto). A Forma se declara dona
+            // desses VDs — assim os módulos que já existem continuam iguais, sem
+            // remigração: o Tabuleiro casa pelo VD que a coluna já usava.
+            {
+                key: 'derivedValueIds', label: '📊 Valores Derivados que esta forma cobre (é daqui que sai o Acerto)',
+                type: 'mechanic_selector', selectorTarget: 'derivedValues'
+            },
+
+            // ═══ O QUE ELA EXIGE PARA PODER SER USADA ═══
+            {
+                key: 'requisito', label: '🔒 Para usar esta forma, o conjurador precisa de...', type: 'select',
+                options: [
+                    { value: 'nenhum', label: '— Nada (a forma está sempre disponível)' },
+                    { value: 'item_tag', label: '🎒 Um item equipado (arma, foco, instrumento)' },
+                    { value: 'parte_corpo', label: '🦴 Uma parte do corpo funcional' },
+                ]
+            },
+            {
+                key: 'itemTags', label: 'Tags do item que serve', type: 'tags',
+                placeholder: 'Ex: instrumento-sopro — o item equipado precisa ter UMA destas tags',
+                showWhen: { field: 'requisito', value: 'item_tag' }
+            },
+            {
+                key: 'partesDoCorpoNomes', label: 'Partes do corpo que servem', type: 'tags',
+                placeholder: 'Ex: Cabeça, Boca — basta UMA delas estar inteira',
+                showWhen: { field: 'requisito', value: 'parte_corpo' }
+            },
+
+            // ═══ O QUE A IMPEDE ═══
+            // É o que faz o "não pode falar" do Afogando virar regra executável.
+            {
+                key: 'condicoesBloqueiam', label: '💀 Condições que impedem esta forma',
+                type: 'mechanic_selector', selectorTarget: 'conditions'
+            },
+            { key: 'ordem', label: 'Ordem no Select', type: 'number', placeholder: '0' },
+        ]
+    },
     mechanics: {
         name: 'Mecânica', namePlural: 'Mecânicas', icon: '🔧',
         collection: 'system/data/mechanics',
@@ -583,6 +630,9 @@ const MODULE_FILTERS = {
         { key: 'liga', label: 'Liga', icon: '⚒️', type: 'static' },
         { key: 'formulaDano', label: 'Dano', icon: '💥', type: 'static' },
         { key: 'ehContainer', label: 'Container', icon: '🎒', type: 'boolean' },
+    ],
+    castingForms: [
+        { key: 'requisito', label: 'Requisito', icon: '🔒', type: 'static' },
     ],
     conditions: [
         { key: 'removivel', label: 'Removível', icon: '♻️', type: 'boolean' },
@@ -1360,6 +1410,15 @@ function _buildCardMetaChips(item) {
             if (item.ehContainer) add(`📦 Container${item.capacidadeContainer ? ' ×' + escapeHtml(item.capacidadeContainer) : ''}`, 'chip-gold');
             if (mechCount) add(`🔧 ${mechCount}`);
             break;
+        case 'castingForms': {
+            const REQ = { item_tag: '🎒 Exige item', parte_corpo: '🦴 Exige parte do corpo', nenhum: '✅ Sempre disponível' };
+            add(REQ[item.requisito] || REQ.nenhum, 'chip-accent');
+            if (Array.isArray(item.derivedValueIds) && item.derivedValueIds.length) add(`📊 ${item.derivedValueIds.length} VD`);
+            if (Array.isArray(item.itemTags) && item.itemTags.length) add(`🏷️ ${item.itemTags.map(escapeHtml).join(', ')}`);
+            if (Array.isArray(item.partesDoCorpoNomes) && item.partesDoCorpoNomes.length) add(`🦴 ${item.partesDoCorpoNomes.map(escapeHtml).join(', ')}`);
+            if (Array.isArray(item.condicoesBloqueiam) && item.condicoesBloqueiam.length) add(`💀 ${item.condicoesBloqueiam.length} bloqueiam`, 'chip-gold');
+            break;
+        }
         case 'conditions': {
             add(item.duracao ? `⏱️ ${escapeHtml(item.duracao)}` : '');
             add(item.removivel ? '🔓 Removível' : '🔒 Permanente');
@@ -4051,6 +4110,7 @@ function _buildSchemaFieldRow(moduleIdx, fieldIdx, data) {
                     placeholder="opções/fórmula" style="width:105px" title="select: opções separadas por vírgula · dado: fórmula fixa (ex: 2d6+1)">
                 <label class="cm-sf-ro" title="Somente leitura para o jogador">🔒<input type="checkbox" data-sf-key="somenteLeitura" ${data.somenteLeitura ? 'checked' : ''}></label>
                 <label class="cm-sf-ro" title="Ocultar se vazio na ficha de personagem" style="margin-left:4px">👁️<input type="checkbox" data-sf-key="ocultarSeVazio" ${data.ocultarSeVazio ? 'checked' : ''}></label>
+                <label class="cm-sf-ro cm-sf-veiculo" title="Esta coluna é uma FORMA DE CONJURAR: o VD dela dá o Acerto, e o Tabuleiro oferece esta opção em vez de arma/parte do corpo" style="margin-left:4px;display:${data.tipo === 'select_vd' ? '' : 'none'}">🪄<input type="checkbox" data-sf-key="ehVeiculo" ${data.ehVeiculo ? 'checked' : ''}></label>
                 <button type="button" class="cm-chip-remove" onclick="this.closest('.schema-field-row').remove()">✕</button>
             </div>
             <div class="schema-field-botao-mechs" style="display:${data.tipo === 'botao' ? '' : 'none'}">
@@ -4084,6 +4144,12 @@ window.cmSchemaTipoChange = function (select) {
     if (btnArea) btnArea.style.display = select.value === 'botao' ? '' : 'none';
     const dvArea = row.querySelector('.schema-field-dv-selector');
     if (dvArea) dvArea.style.display = select.value === 'valor_derivado' ? '' : 'none';
+    // 🪄 "É forma de conjurar" só faz sentido em coluna que aponta um VD.
+    const veic = row.querySelector('.cm-sf-veiculo');
+    if (veic) {
+        veic.style.display = select.value === 'select_vd' ? '' : 'none';
+        if (select.value !== 'select_vd') veic.querySelector('input').checked = false;
+    }
 };
 
 window.cmSetSchemaDV = function (select) {
@@ -4383,6 +4449,7 @@ function _readSchemaFromDOM(modItemEl) {
         if (raw && tipo === 'select') sf.opcoes = raw.split(',').map(o => o.trim()).filter(Boolean);
         if (row.querySelector('[data-sf-key="somenteLeitura"]')?.checked) sf.somenteLeitura = true;
         if (row.querySelector('[data-sf-key="ocultarSeVazio"]')?.checked) sf.ocultarSeVazio = true;
+        if (row.querySelector('[data-sf-key="ehVeiculo"]')?.checked) sf.ehVeiculo = true;
         schema.push(sf);
     });
     return schema;
@@ -4538,6 +4605,9 @@ function _collectSingleModuleData(item) {
             };
             if (row.querySelector('[data-sf-key="somenteLeitura"]')?.checked) sf.somenteLeitura = true;
             if (row.querySelector('[data-sf-key="ocultarSeVazio"]')?.checked) sf.ocultarSeVazio = true;
+            // 🪄 Coluna que é FORMA DE CONJURAR — o Tabuleiro pergunta por ela
+            // em vez de oferecer arma e parte do corpo.
+            if (row.querySelector('[data-sf-key="ehVeiculo"]')?.checked) sf.ehVeiculo = true;
             const opcoesRaw = (row.querySelector('[data-sf-key="opcoes"]')?.value || '').trim();
             if (opcoesRaw && sf.tipo === 'select') {
                 sf.opcoes = opcoesRaw.split(',').map(o => o.trim()).filter(Boolean);

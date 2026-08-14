@@ -1075,6 +1075,10 @@ export async function linhasDeAtaque(tipo, id) {
         l.alcanceM = Number(i?.alcanceM ?? (i ? tplDoItem(i)?.alcanceM : 0)) || 0;
         // 🏹 Arma a distância não tem arco de balanço: mira por alvo (ver tab-turno)
         l.distancia = (i?.categoriaArma || (i ? tplDoItem(i)?.categoriaArma : '')) === 'distancia';
+        // 🏷️ Tags do item + do modelo: é por elas que a Forma de Conjuração
+        // reconhece o foco/instrumento equipado ("instrumento-sopro" na Rabeca).
+        const tpl = i ? tplDoItem(i) : null;
+        l.tags = [...new Set([...(i?.tags || []), ...(tpl?.tags || [])])];
     }
     return linhas;
 }

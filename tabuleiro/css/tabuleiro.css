@@ -1190,3 +1190,16 @@ html, body {
 }
 #tbGirarBar button:hover { background: var(--lr-arcane-soft); }
 #tbGirarBar button:active { transform: scale(.9); }
+
+/* 🪄 Forma de conjuração indisponível: o motivo fica visível na própria opção,
+   porque "não posso" sem explicação vira dúvida no meio do turno. */
+.tb-golpe-bloq {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 0 6px;
+    border-radius: 8px;
+    font-size: .72rem;
+    font-weight: 700;
+    background: var(--lr-blood-soft, rgba(155, 44, 44, .18));
+    color: var(--lr-blood-2);
+}

@@ -24,7 +24,7 @@ import {
     guardadoValido, indiceNaOrdem, recursoInsuficiente, RECURSO_NOME, custoDaMecanica, custoVital,
 } from '../../shared/combate-cenas.js';
 import { shapeDaMira, alvoAoAlcance, fracaoCoberta, COBERTURA_MINIMA_CONJURADOR } from './tab-mira-calc.js';
-import { golpesDe, escolherGolpe, metaDoGolpe, alcanceDoGolpe, limparCacheGolpes } from './tab-golpes.js';
+import { golpesDe, escolherGolpe, metaDoGolpe, alcanceDoGolpe, limparCacheGolpes, formasDeConjurar } from './tab-golpes.js';
 import { templateAtingeCirculo } from './tab-templates.js';
 import { tokenAtivoDoCombate, participanteDoToken, VITAIS, vdsCombateDaFonte } from './tab-hud.js';
 import { carregarCondicoesSistema, aplicarCondicaoEmVarios } from './tab-combat.js';
@@ -235,10 +235,12 @@ async function carregarSkills(chave, p) {
     const normNome = (s2) => String(s2 || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const predefPorId = new Map(), predefPorNome = new Map();
     let mechsById = {};
+    let sysDVs = [];
     try {
         const m = await import('./tab-ficha-win.js?v=9');
         const sys = await m.registroSistema();
         mechsById = sys.mechsById || {};
+        sysDVs = sys.derivedValues || [];
         for (const mod of Object.values(sys.classModulesById || {})) {
             for (const pd of mod.itensPredefinidos || []) {
                 const ref = { pd, schema: mod.schema || [] };
@@ -259,6 +261,24 @@ async function carregarSkills(chave, p) {
             if (!mechId) continue;
             const c = custoDaMecanica(mechsById[mechId]);
             if (c && !out.some(x => x.alvo === c.alvo && x.qtd === c.qtd)) out.push({ ...c, label: f.label || '' });
+        }
+        return out;
+    };
+
+    // 🪄 Formas de conjurar da skill: as colunas do módulo marcadas com
+    // "é forma de conjurar" no Criador. Cada uma aponta o VD que dá o Acerto —
+    // é isso que faz o Bardo escolher entre Vocal e Sopro em vez de entre o
+    // Estilete e a perna. Coluna vazia no item = aquela forma não serve para
+    // ESTA magia (é literalmente o "[V, S]" do nome, em dado).
+    const vdsPorId = new Map((sysDVs || []).map(dv => [dv.id, dv]));
+    const veiculosDaSkill = (it, schema, pd) => {
+        const out = [];
+        for (const f of schema || []) {
+            if (f.tipo !== 'select_vd' || !f.ehVeiculo) continue;
+            const vdId = it?.[f.key] || pd?.valores?.[f.key];
+            if (!vdId) continue;
+            const dv = vdsPorId.get(vdId);
+            out.push({ vdId, label: f.label || dv?.nome || '', vdNome: dv?.nome || f.label || '' });
         }
         return out;
     };
@@ -287,6 +307,7 @@ async function carregarSkills(chave, p) {
             nome: S_NOME(it),
             efeito: S_EFEITO(it) || S_EFEITO(pd?.valores || {}) || pd?.descricao || '',
             custo, custos,
+            veiculos: veiculosDaSkill(it, ref?.schema, pd),
             mira: it.mira || pd?.mira || miraDaReguaV2(pd),
             acao: it.custoAcao || pd?.custoAcao || pd?.mira?.custoAcao || acaoDoRotulo(it.acao || pd?.valores?.acao),   // §6.2
         };
@@ -663,6 +684,28 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
 async function escolherGolpeDaAcao(p, s, cfg) {
     if (cfg.afeta === 'aliados') return null;
     const linhas = await golpesDe(p);
+
+    // 🪄 Magia declara COM O QUE se conjura (colunas marcadas no módulo da
+    // classe). Quando declara, a pergunta é essa e só essa: oferecer o Estilete
+    // e a perna para um Grito Dissonante [V, S] era o bug — nenhum dos dois
+    // conjura, e o Acerto deles não é o da magia.
+    if (s.veiculos?.length) {
+        const formas = await formasDeConjurar(p, s.veiculos, linhas);
+        const livres = formas.filter(f => !f.indisponivel);
+        if (!livres.length) {
+            // Todas bloqueadas: mostra a lista explicando o porquê de cada uma,
+            // em vez de um "não pode" mudo.
+            await escolherGolpe(
+                `🪄 ${esc(p?.name || 'O personagem')} não tem como conjurar “${esc(s.nome)}” agora`, formas,
+                'Nenhuma das formas desta magia está disponível — veja o motivo em cada uma.');
+            return false;
+        }
+        const escolhido = await escolherGolpe(
+            `🪄 Como ${esc(p?.name || 'o personagem')} conjura “${esc(s.nome)}”?`, formas,
+            'O Acerto da rolagem sai da forma escolhida.');
+        return escolhido || (livres.length > 1 ? false : null);
+    }
+
     // arma a distância não serve para uma habilidade de arco/cone que nasce no
     // corpo; para mira de alvos vale tudo que estiver equipado
     const uteis = cfg.tipo === 'cac' ? linhas.filter(l => !l.distancia) : linhas;
