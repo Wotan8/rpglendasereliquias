@@ -239,6 +239,75 @@ const MODULE_DEFS = {
             { key: 'duracao', label: 'Duração', type: 'text', placeholder: 'Ex: 1 turno, permanente' },
             { key: 'removivel', label: 'Removível?', type: 'boolean' },
             { key: 'icone', label: 'Ícone / Emoji', type: 'text', placeholder: 'Ex: 💫' },
+
+            // ===== 🎲 TABULEIRO (VTT) =====
+            // O que a condição TIRA ou MUDA no token, em vocabulário que o motor
+            // do Tabuleiro já fala. Número que muda VD continua sendo trabalho
+            // das Mecânicas (`efeitoMecanicaIds`) — aqui é só o que Mecânica não
+            // consegue dizer: bloquear ação, andar, enxergar, ser alvo.
+            // Os valores batem com shared/combate-cenas.js na letra: 'padrao' |
+            // 'movimento' | 'livre' | 'completa' (podeGastar), 'vit' | 'ener' |
+            // 'san' (RECURSO_NOME) e as facções de FACCOES. Renomear aqui sem
+            // renomear lá quebra em silêncio.
+            { key: 'afetaTabuleiro', label: '🎲 Configura o Tabuleiro (VTT)?', type: 'boolean' },
+
+            {
+                key: 'bloqueiaAcoes', label: '🚫 Ações que a condição impede', type: 'multi_select', showWhenBoolean: 'afetaTabuleiro',
+                options: [
+                    { value: 'padrao', label: '⚔️ Ação Padrão' },
+                    { value: 'movimento', label: '🏃 Ação de Movimento' },
+                    { value: 'livre', label: '🤏 Ação Livre' },
+                    { value: 'completa', label: '💫 Ação Completa' },
+                ]
+            },
+            { key: 'perdeTurno', label: '💤 Perde o turno inteiro (o Tabuleiro pula a vez)', type: 'boolean', showWhenBoolean: 'afetaTabuleiro' },
+
+            {
+                key: 'multiplicadorDeslocamento', label: '🏃 Multiplicador de Deslocamento', type: 'number',
+                placeholder: 'Vazio = normal · 0 = não sai do lugar · 0.5 = metade · 2 = dobro',
+                showWhenBoolean: 'afetaTabuleiro'
+            },
+            {
+                key: 'deslocamentosBloqueados', label: '⛔ Tipos de Deslocamento bloqueados', type: 'tags',
+                placeholder: 'Ex: Aéreo, Aquático — digite e pressione Enter',
+                showWhenBoolean: 'afetaTabuleiro'
+            },
+
+            {
+                key: 'multiplicadorVisao', label: '👁️ Multiplicador de Alcance de Visão', type: 'number',
+                placeholder: 'Vazio = normal · 0 = cego · 0.5 = metade',
+                showWhenBoolean: 'afetaTabuleiro'
+            },
+            { key: 'enxergaNoEscuro', label: '🌑 Enxerga sem luz (ignora a exigência de iluminação)', type: 'boolean', showWhenBoolean: 'afetaTabuleiro' },
+            { key: 'deixaInvisivel', label: '👻 Deixa o token invisível', type: 'boolean', showWhenBoolean: 'afetaTabuleiro' },
+
+            { key: 'naoPodeSerAlvo', label: '🛡️ Não pode ser escolhido como alvo', type: 'boolean', showWhenBoolean: 'afetaTabuleiro' },
+            { key: 'atraiAlvo', label: '🎯 Atrai os ataques (provocação)', type: 'boolean', showWhenBoolean: 'afetaTabuleiro' },
+            {
+                key: 'faccaoForcada', label: '🔀 Força a facção enquanto durar', type: 'select', showWhenBoolean: 'afetaTabuleiro',
+                options: [
+                    { value: 'aliados', label: '🟢 Aliados' },
+                    { value: 'inimigos', label: '🔴 Inimigos' },
+                    { value: 'neutros', label: '⚪ Neutros' },
+                ]
+            },
+
+            {
+                key: 'porRodadaEfeito', label: '🩸 Efeito a cada virada de rodada', type: 'select', showWhenBoolean: 'afetaTabuleiro',
+                options: [
+                    { value: 'dano_vit', label: '🩸 Dano à Vitalidade' },
+                    { value: 'dano_ener', label: '⚡ Dano à Energia' },
+                    { value: 'dano_san', label: '🧠 Dano à Sanidade' },
+                    { value: 'cura_vit', label: '💚 Cura de Vitalidade' },
+                    { value: 'cura_ener', label: '🔋 Cura de Energia' },
+                    { value: 'cura_san', label: '🕯️ Cura de Sanidade' },
+                ]
+            },
+            {
+                key: 'porRodadaValor', label: 'Quanto por rodada', type: 'text',
+                placeholder: 'Ex: 1d4, 2, 1d6+1 — sempre positivo; quem diz dano ou cura é o campo acima',
+                showWhenNotNull: 'porRodadaEfeito'
+            },
         ]
     },
     mechanics: {
@@ -466,6 +535,7 @@ const MODULE_FILTERS = {
     ],
     conditions: [
         { key: 'removivel', label: 'Removível', icon: '♻️', type: 'boolean' },
+        { key: 'afetaTabuleiro', label: 'Configura o Tabuleiro', icon: '🎲', type: 'boolean' },
     ],
     auras: [
         { key: 'tipo', label: 'Tipo', icon: '🌟', type: 'static' },
@@ -1239,11 +1309,26 @@ function _buildCardMetaChips(item) {
             if (item.ehContainer) add(`📦 Container${item.capacidadeContainer ? ' ×' + escapeHtml(item.capacidadeContainer) : ''}`, 'chip-gold');
             if (mechCount) add(`🔧 ${mechCount}`);
             break;
-        case 'conditions':
+        case 'conditions': {
             add(item.duracao ? `⏱️ ${escapeHtml(item.duracao)}` : '');
             add(item.removivel ? '🔓 Removível' : '🔒 Permanente');
             if (mechCount) add(`🔧 ${mechCount}`);
+            // O que a condição faz no Tabuleiro, resumido — dá para bater o olho
+            // na lista e ver quais já estão configuradas e quais faltam.
+            if (item.afetaTabuleiro) {
+                const vtt = [];
+                if (Array.isArray(item.bloqueiaAcoes) && item.bloqueiaAcoes.length) vtt.push(`🚫 ${item.bloqueiaAcoes.length} ação(ões)`);
+                if (item.perdeTurno) vtt.push('💤 Perde o turno');
+                if (item.multiplicadorDeslocamento != null) vtt.push(`🏃 ×${escapeHtml(item.multiplicadorDeslocamento)}`);
+                if (item.multiplicadorVisao != null) vtt.push(`👁️ ×${escapeHtml(item.multiplicadorVisao)}`);
+                if (item.naoPodeSerAlvo) vtt.push('🛡️ Sem alvo');
+                if (item.atraiAlvo) vtt.push('🎯 Atrai');
+                if (item.porRodadaEfeito) vtt.push(`🩸 ${escapeHtml(item.porRodadaValor || '?')}/rodada`);
+                add('🎲 Tabuleiro', 'chip-gold');
+                vtt.forEach(t => add(t));
+            }
             break;
+        }
         case 'derivedValues':
             add(item.blocoNome ? `🗂️ ${escapeHtml(item.blocoNome)}` : '', 'chip-accent');
             if (item.ordem != null) add(`#${escapeHtml(item.ordem)}`);
