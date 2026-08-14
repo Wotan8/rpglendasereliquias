@@ -1464,7 +1464,7 @@ function _buildItemsTableHTML(section) {
     return `${_sectionHeaderHTML(section)}
         <div class="table-container">
             <table class="users-table items-table">
-                <thead><tr><th>Registro</th><th>Informações</th><th>Descrição</th><th>Status</th><th>Ações</th></tr></thead>
+                <thead><tr><th>Registro</th><th>Informações</th><th class="td-desc">Descrição</th><th>Status</th><th>Ações</th></tr></thead>
                 <tbody>${rows}</tbody>
             </table>
         </div>`;

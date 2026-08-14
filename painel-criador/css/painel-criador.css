@@ -1335,8 +1335,14 @@ html.dark .tags-container {
    MESMAS 18 abas e o texto inteiro — rolagem horizontal própria, como manda o
    DESIGN-SYSTEM. Recolher não faz sentido aqui, então o botão sai. */
 @media (max-width: 768px) {
+    /* `align-items: flex-start` faz sentido nas duas colunas do desktop, e é
+       veneno aqui: empilhada, a .sheet passa a se dimensionar pelo CONTEÚDO e
+       fica mais larga que a tela. Como o html tem `overflow-x: clip`, o que
+       passa da borda simplesmente some — sem rolagem, sem aviso. Empilhado,
+       filho ocupa a largura toda. */
     .wrap {
         flex-direction: column;
+        align-items: stretch;
         gap: var(--lr-space-3);
         padding: 0 var(--lr-space-2) var(--lr-space-5);
     }
@@ -3708,3 +3714,74 @@ html.dark .meta-chip.chip-tag {
 }
 
 .items-table .item-card-actions { align-items: center; }
+
+/* ===================================================================
+   CELULAR — Dashboard, modos de exibição e planilha
+   Em tela pequena tudo encolhe junto: fonte, ícone, espaçamento e a
+   largura mínima da coluna. Alvo de toque nunca abaixo de 40px.
+   =================================================================== */
+@media (max-width: 768px) {
+    .dash-head {
+        gap: var(--lr-space-2);
+        margin-bottom: var(--lr-space-2);
+    }
+
+    .dash-total { font-size: var(--lr-fs-xs); }
+    .dash-total strong { font-size: var(--lr-fs-sm); }
+
+    .dash-grid {
+        grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+        gap: 6px;
+        margin-bottom: var(--lr-space-3);
+    }
+
+    .dash-card {
+        padding: var(--lr-space-2) 4px;
+        border-radius: var(--lr-radius);
+        min-height: 72px;
+        justify-content: center;
+    }
+
+    .dash-card-icon { font-size: 1rem; }
+    .dash-card-count { font-size: 1.15rem; }
+
+    .dash-card-label {
+        font-size: .55rem;
+        letter-spacing: .2px;
+        line-height: 1.15;
+    }
+
+    /* Trocar o modo de exibição é toque, não clique de mouse. */
+    .view-switch { margin-left: auto; }
+
+    .view-btn {
+        min-width: 40px;
+        min-height: 36px;
+        font-size: 1rem;
+    }
+
+    /* Planilha no celular: rola na horizontal dentro do próprio quadro (é o
+       que se espera de planilha) e a coluna de descrição sai — ela sozinha
+       empurrava as ações para fora do alcance. */
+    .items-table {
+        font-size: .74rem;
+        min-width: 0;
+    }
+
+    .items-table th,
+    .items-table td { padding: 7px 8px; }
+
+    .items-table .td-desc { display: none; }
+
+    .items-table .item-card-actions { gap: 6px; }
+
+    /* Editar / duplicar / excluir tinham 26px de altura — alvo de ponteiro, não
+       de polegar. Vale para card, lista e planilha de uma vez. */
+    .item-card-actions .btn-edit,
+    .item-card-actions .btn-delete-card,
+    .dash-head .btn-edit {
+        min-width: 40px;
+        min-height: 36px;
+        font-size: .95rem;
+    }
+}
